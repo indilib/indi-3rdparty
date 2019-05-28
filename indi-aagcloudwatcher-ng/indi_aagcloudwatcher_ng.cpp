@@ -45,7 +45,7 @@ AAGCloudWatcher::AAGCloudWatcher()
 
     LOG_DEBUG("Initializing from AAG Cloud Watcher device...");
 
-    cwc = nullptr;
+    cwc = new CloudWatcherController(true);
 
     lastReadPeriod = 3.0;
 
@@ -58,18 +58,43 @@ AAGCloudWatcher::AAGCloudWatcher()
     globalRainSensorHeater   = -1;
 }
 
-AAGCloudWatcher::~AAGCloudWatcher()
+
+bool AAGCloudWatcher::Handshake()
 {
+    cwc->setPortFD(PortFD);
+    int check = cwc->checkCloudWatcher();
+
+    if (check)
+    {
+        IDMessage(getDefaultName(), "Connected to AAG Cloud Watcher\n");
+
+        sendConstants();
+
+        return true;
+    }
+    else
+    {
+        IDMessage(getDefaultName(), "Could not connect to AAG Cloud Watcher. Check port and / or cable.\n");
+
+        return false;
+    }
 }
+
 
 /**********************************************************************
 ** Initialize all properties & set default values.
 **********************************************************************/
 bool AAGCloudWatcher::initProperties()
 {
-    DefaultDevice::initProperties();
+    INDI::Weather::initProperties();
+    serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
     buildSkeleton("indi_aagcloudwatcher_ng_sk.xml");
     return true;
+}
+
+IPState AAGCloudWatcher::updateWeather()
+{
+    return IPS_OK;
 }
 
 /*************************************************************************
@@ -79,7 +104,7 @@ void AAGCloudWatcher::ISGetProperties(const char *dev)
 {
     static int configLoaded = 0;
     // Ask the default driver first to send properties.
-    INDI::DefaultDevice::ISGetProperties(dev);
+    INDI::Weather::ISGetProperties(dev);
 
     // If no configuration is load before, then load it now.
     if (configLoaded == 0)
@@ -94,6 +119,8 @@ void AAGCloudWatcher::ISGetProperties(const char *dev)
 *****************************************************************************/
 bool AAGCloudWatcher::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    INDI::Weather::ISNewText(dev, name, texts, names, n);
+
     // Ignore if not ours
     if (strcmp(dev, getDefaultName()))
     {
@@ -122,6 +149,8 @@ bool AAGCloudWatcher::ISNewText(const char *dev, const char *name, char *texts[]
 
 bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    INDI::Weather::ISNewNumber(dev, name, values, names, n);
+
     // Ignore if not ours
     if (strcmp(dev, getDefaultName()))
     {
@@ -354,7 +383,7 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
         return false;
     }
 
-    if (INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n) == true)
+    if (INDI::Weather::ISNewSwitch(dev, name, states, names, n) == true)
     {
         return true;
     }
@@ -440,7 +469,7 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
         return true;
     }
 
-    return DefaultDevice::ISNewSwitch(dev, name, states, names, n);
+    return false;
 }
 
 int AAGCloudWatcher::getRefreshPeriod()
@@ -684,7 +713,7 @@ void ISPoll(void *p)
 {
     AAGCloudWatcher *cw = (AAGCloudWatcher *)p;
 
-    if (cw->isConnected())
+    if (cloudWatcher->isConnected())
     {
         cw->sendData();
 
@@ -699,16 +728,6 @@ void ISPoll(void *p)
 
         IEAddTimer(secs * 1000, ISPoll, p); // Create a timer to send parameters
     }
-}
-
-bool AAGCloudWatcher::isConnected()
-{
-    if (cwc != nullptr)
-    {
-        return true;
-    }
-
-    return false;
 }
 
 bool AAGCloudWatcher::sendData()
@@ -1333,64 +1352,6 @@ bool AAGCloudWatcher::resetConstants()
     IUUpdateText(tvp, valuesT, namesT, 1);
     tvp->s = IPS_IDLE;
     IDSetText(tvp, nullptr);
-    return true;
-}
-
-bool AAGCloudWatcher::Connect()
-{
-    if (cwc == nullptr)
-    {
-        ITextVectorProperty *tvp = getText("serial");
-
-        if (!tvp)
-        {
-            return false;
-        }
-
-        //  IDLog("%s\n", tvp->tp[0].text);
-
-        cwc = new CloudWatcherController(tvp->tp[0].text, false);
-
-        int check = cwc->checkCloudWatcher();
-
-        if (check)
-        {
-            IDMessage(getDefaultName(), "Connected to AAG Cloud Watcher\n");
-
-            sendConstants();
-
-            IEAddTimer(1., ISPoll, this); // Create a timer to send parameters
-        }
-        else
-        {
-            IDMessage(getDefaultName(), "Could not connect to AAG Cloud Watcher. Check port and / or cable.\n");
-
-            delete cwc;
-
-            cwc = nullptr;
-
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool AAGCloudWatcher::Disconnect()
-{
-    if (cwc != nullptr)
-    {
-        resetData();
-        resetConstants();
-
-        cwc->setPWMDutyCycle(1);
-
-        delete cwc;
-
-        cwc = nullptr;
-
-        IDMessage(getDefaultName(), "Disconnected from AAG Cloud Watcher\n");
-    }
     return true;
 }
 

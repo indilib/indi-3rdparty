@@ -27,7 +27,8 @@
 
 #include "CloudWatcherController_ng.h"
 
-#include <defaultdevice.h>
+#include "indiweather.h"
+#include "connectionplugins/connectionserial.h"
 
 enum HeatingAlgorithmStatus
 {
@@ -36,22 +37,26 @@ enum HeatingAlgorithmStatus
     pulse
 };
 
-class AAGCloudWatcher : public INDI::DefaultDevice
+class AAGCloudWatcher : public INDI::Weather
 {
   public:
     AAGCloudWatcher();
-    ~AAGCloudWatcher();
+    virtual ~AAGCloudWatcher() = default;
 
-    virtual void ISGetProperties(const char *dev);
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-    const char *getDefaultName();
-    bool isConnected();
+    virtual bool Handshake() override;
+    virtual void ISGetProperties(const char *dev) override;
+    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+
+    virtual const char *getDefaultName() override;
     bool sendData();
     int getRefreshPeriod();
     float getLastReadPeriod();
     bool heatingAlgorithm();
+
+  protected:
+    virtual IPState updateWeather() override;
 
   private:
     float lastReadPeriod;
@@ -59,8 +64,6 @@ class AAGCloudWatcher : public INDI::DefaultDevice
     CloudWatcherController *cwc;
 
     virtual bool initProperties();
-    virtual bool Connect();
-    virtual bool Disconnect();
     bool sendConstants();
     bool resetConstants();
     bool resetData();
