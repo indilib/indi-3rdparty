@@ -160,7 +160,7 @@ class CloudWatcherController
     /**
    * true if info verbose output should be shown. Just for debugging pourposes.
    */
-    int verbose;
+    int verbose = false;
 
     /**
    *  File descriptor for the serial or tcp connection
@@ -181,52 +181,52 @@ class CloudWatcherController
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float zenerConstant;
+    float zenerConstant = 3.0;
 
     /**
    * Hard coded constant.
    */
-    float ambPullUpResistance;
+    float ambPullUpResistance = 9.9;
 
     /**
    * Hard coded constant.
    */
-    float ambResAt25;
+    float ambResAt25 = 10;
 
     /**
    * Hard coded constant.
    */
-    float ambBeta;
+    float ambBeta = 3811;
 
     /**
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float LDRMaxResistance;
+    float LDRMaxResistance = 2000;
 
     /**
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float LDRPullUpResistance;
+    float LDRPullUpResistance = 56;
 
     /**
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float rainPullUpResistance;
+    float rainPullUpResistance = 1;
 
     /**
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float rainResAt25;
+    float rainResAt25 = 1;
 
     /**
    * Hard coded constant. May be changed with internal device constants.
    * @see getElectricalConstants()
    */
-    float rainBeta;
+    float rainBeta = 3450;
 
     /**
    * Firmware version. Just read once.
@@ -238,7 +238,7 @@ class CloudWatcherController
     /**
    * The total number of readings performed by the controller
    */
-    int totalReadings;
+    int totalReadings = 0;
 
     /**
    * Print a buffer of chars. Just for debugging

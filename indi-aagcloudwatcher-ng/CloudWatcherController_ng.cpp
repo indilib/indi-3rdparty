@@ -40,35 +40,10 @@
 
 CloudWatcherController::CloudWatcherController()
 {
-    verbose         = false;
-    firmwareVersion = nullptr;
-
-    zenerConstant        = 3.0;
-    ambPullUpResistance  = 9.9;
-    ambResAt25           = 10;
-    ambBeta              = 3811;
-    LDRMaxResistance     = 2000;
-    LDRPullUpResistance  = 56;
-    rainPullUpResistance = 1;
-    rainResAt25          = 1;
-    rainBeta             = 3450;
-    totalReadings        = 0;
 }
 
 CloudWatcherController::CloudWatcherController(bool verbose) : verbose(verbose)
 {
-    firmwareVersion = nullptr;
-
-    zenerConstant        = 3.0;
-    ambPullUpResistance  = 9.9;
-    ambResAt25           = 10;
-    ambBeta              = 3811;
-    LDRMaxResistance     = 2000;
-    LDRPullUpResistance  = 56;
-    rainPullUpResistance = 1;
-    rainResAt25          = 1;
-    rainBeta             = 3450;
-    totalReadings        = 0;
 }
 
 CloudWatcherController::~CloudWatcherController()
