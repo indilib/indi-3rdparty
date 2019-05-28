@@ -77,8 +77,6 @@ CloudWatcherController::~CloudWatcherController()
     {
         delete[] firmwareVersion;
     }
-
-    disconnectSerial();
 }
 
 bool CloudWatcherController::checkCloudWatcher()
@@ -859,71 +857,11 @@ void CloudWatcherController::printBuffer(char *buffer, int num)
     }
 }
 
-bool CloudWatcherController::connectSerial()
-{
-    if (serialportFD == -1)
-    {
-        printMessage("connectSerial: Opening Serial Port %s\n", serialPort);
-        serialportFD = open(serialPort, O_RDWR | O_NOCTTY | O_NDELAY);
-
-        if (serialportFD == -1)
-        {
-            printMessage("connectSerial: : Unable to open port\n");
-
-            return false;
-        }
-        else
-        {
-            fcntl(serialportFD, F_SETFL, 0);
-        }
-
-        tcgetattr(serialportFD, &previousOptions); // Save previous options
-
-        struct termios options;
-
-        tcgetattr(serialportFD, &options);
-
-        cfsetispeed(&options, B9600);
-        cfsetospeed(&options, B9600);
-
-        cfmakeraw(&options);
-
-        // No parity
-        options.c_cflag &= ~PARENB;
-        options.c_cflag &= ~CSTOPB;
-        options.c_cflag &= ~CSIZE;
-        options.c_cflag |= CS8;
-
-        tcsetattr(serialportFD, TCSANOW, &options);
-
-        printMessage("connectSerial: Opened\n");
-    }
-
-    return true;
-}
-
-bool CloudWatcherController::disconnectSerial()
-{
-    if (serialportFD != -1)
-    {
-        printMessage("disconnectSerial: closing\n");
-
-        tcsetattr(serialportFD, TCSANOW, &previousOptions); // Return the port to its original settings
-        close(serialportFD);
-
-        printMessage("disconnectSerial: closed\n");
-    }
-
-    return true;
-}
-
 int CloudWatcherController::writeSerial(const char *buffer, int numberOfBytes)
 {
-    connectSerial();
-
     printMessage("writeSerial: writting %d bytes\n", numberOfBytes);
 
-    int n = write(serialportFD, buffer, numberOfBytes);
+    int n = write(PortFD, buffer, numberOfBytes);
 
     if (n < numberOfBytes)
     {
@@ -938,15 +876,13 @@ int CloudWatcherController::writeSerial(const char *buffer, int numberOfBytes)
 
 int CloudWatcherController::readSerial(char *buffer, int numberOfBytes)
 {
-    connectSerial();
-
     int n = 0;
 
     while (n < numberOfBytes)
     {
         printMessage("readSerial: reading %d bytes\n", numberOfBytes - n);
 
-        int readed = read(serialportFD, &(buffer[n]), numberOfBytes - n);
+        int readed = read(PortFD, &(buffer[n]), numberOfBytes - n);
 
         if (readed <= 0)
         {

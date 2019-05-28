@@ -159,19 +159,13 @@ class CloudWatcherController
   private:
     /**
    * true if info verbose output should be shown. Just for debugging pourposes.
-   * @see CloudWatcherController(char *serialP, bool verbose)
    */
     int verbose;
 
     /**
-   *  File descriptor for the serial port 
+   *  File descriptor for the serial or tcp connection
    */
-    int serialportFD;
-
-    /**
-   * Used to return the serial port to its original state 
-   */
-    struct termios previousOptions;
+    int PortFD = -1;
 
     /**
    * AAG CloudWatcher send information in 15 bytes blocks
@@ -242,14 +236,6 @@ class CloudWatcherController
     char *firmwareVersion;
 
     /**
-   * The serial port where the AAG Cloud Watcher is connected. Set up at 
-   * constructor.
-   * @see CloudWatcherController(char *serialP)
-   * @see CloudWatcherController(char *serialP, bool verbose)
-   */
-    char *serialPort;
-
-    /**
    * The total number of readings performed by the controller
    */
     int totalReadings;
@@ -268,22 +254,6 @@ class CloudWatcherController
    * @see CloudWatcherController(char *serialP, bool verbose)
    */
     void printMessage(const char *fmt, ...);
-
-    /**
-   * Connects to the serial port and set the appropriate flags for 
-   * communication. Also stores the previous configuration data of the
-   * port to be able to restore it when disconnecting.
-   * @return true if successfully connected to the port. false otherwise.
-   * @see disconnectSerial()
-   */
-    bool connectSerial();
-
-    /**
-   * Disconnects from the serial port and restores its previous configuration.
-   * @return true if successfully disconnected. false otherwise.
-   * @see connectSerial()
-   */
-    bool disconnectSerial();
 
     /**
    * Writes a number of chars buffer into the serial port. It opens the serial 
