@@ -38,11 +38,9 @@
 /* PUBLIC MEMBERS                                                */
 /******************************************************************/
 
-CloudWatcherController::CloudWatcherController(char *serialP)
+CloudWatcherController::CloudWatcherController()
 {
     verbose         = false;
-    serialportFD    = -1;
-    serialPort      = serialP;
     firmwareVersion = nullptr;
 
     zenerConstant        = 3.0;
@@ -57,11 +55,8 @@ CloudWatcherController::CloudWatcherController(char *serialP)
     totalReadings        = 0;
 }
 
-CloudWatcherController::CloudWatcherController(char *serialP, bool verbos)
+CloudWatcherController::CloudWatcherController(bool verbose) : verbose(verbose)
 {
-    verbose         = verbos;
-    serialportFD    = -1;
-    serialPort      = serialP;
     firmwareVersion = nullptr;
 
     zenerConstant        = 3.0;

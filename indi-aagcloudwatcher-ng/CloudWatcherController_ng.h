@@ -84,19 +84,15 @@ class CloudWatcherController
   public:
     /**
    * A constructor. 
-   * @param serialP the serial port to which the AAG Cloud Watcher is connected. For 
-   * example: /dev/ttyUSB0
    */
-    CloudWatcherController(char *serialP);
+    CloudWatcherController();
 
     /**
    * A constructor. 
-   * @param serialP the serial port to which the AAG Cloud Watcher is connected. For 
-   * example: /dev/ttyUSB0
    * @param verbose to specify if communication details have to be printed in the 
    * standar output. Do not use, just for testign pourposes.
    */
-    CloudWatcherController(char *serialP, bool verbose);
+    CloudWatcherController(bool verbose);
 
     /**
    * A destructor 
