@@ -54,6 +54,12 @@ CloudWatcherController::~CloudWatcherController()
     }
 }
 
+
+void CloudWatcherController::setPortFD(int newPortFD)
+{
+    PortFD = newPortFD;
+}
+
 bool CloudWatcherController::checkCloudWatcher()
 {
     sendCloudwatcherCommand("A!");

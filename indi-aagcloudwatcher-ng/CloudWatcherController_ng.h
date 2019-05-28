@@ -99,6 +99,12 @@ class CloudWatcherController
    */
     virtual ~CloudWatcherController();
 
+    /**
+   * Sets the file descriptor to use for communication
+   * @param newPortFD The new file descriptor
+   */
+    void setPortFD(int newPortFD);
+
     /** 
    * Checks if the AAG Cloud Watcher is connected and accesible by requesting
    * its device name.
