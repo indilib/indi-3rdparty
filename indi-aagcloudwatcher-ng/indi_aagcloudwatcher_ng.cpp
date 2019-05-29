@@ -480,8 +480,14 @@ bool AAGCloudWatcher::heatingAlgorithm()
     float ambient                  = getNumberValueFromVector(sensors, "ambientTemperatureSensor");
     float rainSensorTemperature    = getNumberValueFromVector(sensors, "rainSensorTemperature");
 
-    INumberVectorProperty *ref = getNumber("refresh");
-    float refresh              = getNumberValueFromVector(ref, "refreshPeriod");
+    float refresh = getRefreshPeriod();
+
+    // XXX FIXME: when the automatic refresh is disabled the refresh period is set to 0, however we can be called in a manual fashion.
+    // this is needed as we divide by refresh later...
+    if (refresh < 3)
+    {
+        refresh = 3;
+    }
 
     if (globalRainSensorHeater == -1)
     { // If not already setted
