@@ -63,7 +63,7 @@ class AAGCloudWatcher : public INDI::Weather
     CloudWatcherConstants constants;
     CloudWatcherController *cwc;
 
-    virtual bool initProperties();
+    virtual bool initProperties() override;
     bool sendConstants();
     bool resetConstants();
     bool resetData();
