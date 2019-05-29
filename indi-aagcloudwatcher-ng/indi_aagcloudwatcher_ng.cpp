@@ -427,18 +427,10 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
     return false;
 }
 
-int AAGCloudWatcher::getRefreshPeriod()
+float AAGCloudWatcher::getRefreshPeriod()
 {
-    INumberVectorProperty *nvp = getNumber("refresh");
-
-    if (!nvp)
-    {
-        return 3;
-    }
-
-    int refreshValue = int(nvp->np[0].value);
-
-    return refreshValue;
+    // XXX: The WEATHER_UPDATE property is defined / deleted when connection status changes, so we just retrieve it from here.
+    return UpdatePeriodN[0].value;
 }
 
 float AAGCloudWatcher::getLastReadPeriod()

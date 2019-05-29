@@ -51,7 +51,7 @@ class AAGCloudWatcher : public INDI::Weather
 
     virtual const char *getDefaultName() override;
     bool sendData();
-    int getRefreshPeriod();
+    float getRefreshPeriod();
     float getLastReadPeriod();
     bool heatingAlgorithm();
 
