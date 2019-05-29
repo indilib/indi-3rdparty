@@ -28,8 +28,6 @@
 
 #include "config.h"
 
-#include <defaultdevice.h>
-
 #include <cstring>
 #include <cmath>
 #include <memory>
@@ -66,7 +64,7 @@ bool AAGCloudWatcher::Handshake()
 
     if (check)
     {
-        IDMessage(getDefaultName(), "Connected to AAG Cloud Watcher\n");
+        LOG_INFO("Connected to AAG Cloud Watcher\n");
 
         sendConstants();
 
@@ -74,7 +72,7 @@ bool AAGCloudWatcher::Handshake()
     }
     else
     {
-        IDMessage(getDefaultName(), "Could not connect to AAG Cloud Watcher. Check port and / or cable.\n");
+        LOG_ERROR("Could not connect to AAG Cloud Watcher. Handshake failed. Check port and / or cable.\n");
 
         return false;
     }
