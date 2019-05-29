@@ -92,6 +92,14 @@ bool AAGCloudWatcher::initProperties()
 
 IPState AAGCloudWatcher::updateWeather()
 {
+    if (!sendData())
+    {
+        LOG_ERROR("Can not get data from device");
+        return IPS_ALERT;
+    }
+
+    heatingAlgorithm();
+
     return IPS_OK;
 }
 
@@ -660,27 +668,6 @@ bool AAGCloudWatcher::heatingAlgorithm()
     svp->s = IPS_OK;
     IDSetSwitch(svp, nullptr);
     return true;
-}
-
-void ISPoll(void *p)
-{
-    AAGCloudWatcher *cw = (AAGCloudWatcher *)p;
-
-    if (cloudWatcher->isConnected())
-    {
-        cw->sendData();
-
-        cw->heatingAlgorithm();
-
-        int secs = cw->getRefreshPeriod() - cw->getLastReadPeriod();
-
-        if (secs < 1)
-        {
-            secs = 1;
-        }
-
-        IEAddTimer(secs * 1000, ISPoll, p); // Create a timer to send parameters
-    }
 }
 
 bool AAGCloudWatcher::sendData()

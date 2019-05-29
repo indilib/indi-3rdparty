@@ -79,11 +79,6 @@ class AAGCloudWatcher : public INDI::Weather
     float globalRainSensorHeater;
 };
 
-/**
- * Used to read periodically the data from the device.
- * @param p the AAGCloudWatcher object
- */
-void ISPoll(void *p);
 
 /**
  *  Send client definitions of all properties.
