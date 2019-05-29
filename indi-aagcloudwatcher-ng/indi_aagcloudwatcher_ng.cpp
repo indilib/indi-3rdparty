@@ -117,32 +117,7 @@ void AAGCloudWatcher::ISGetProperties(const char *dev)
 *****************************************************************************/
 bool AAGCloudWatcher::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    INDI::Weather::ISNewText(dev, name, texts, names, n);
-
-    // Ignore if not ours
-    if (strcmp(dev, getDefaultName()))
-    {
-        return false;
-    }
-
-    ITextVectorProperty *tvp = getText(name);
-
-    if (!tvp)
-    {
-        return false;
-    }
-
-    // Are we updating the serial port
-    if (!strcmp(tvp->name, "serial"))
-    {
-        IUUpdateText(tvp, texts, names, n);
-        tvp->s = IPS_OK;
-        IDSetText(tvp, nullptr);
-
-        return true;
-    }
-
-    return false;
+    return INDI::Weather::ISNewText(dev, name, texts, names, n);
 }
 
 bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -237,24 +212,6 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
                     values[i] = 1000;
                 }
             }
-        }
-
-        IUUpdateNumber(nvp, values, names, n);
-        nvp->s = IPS_OK;
-        IDSetNumber(nvp, nullptr);
-
-        return true;
-    }
-
-    if (!strcmp(nvp->name, "refresh"))
-    {
-        if (values[0] < 10)
-        {
-            values[0] = 10;
-        }
-        if (values[0] > 60)
-        {
-            values[0] = 60;
         }
 
         IUUpdateNumber(nvp, values, names, n);
