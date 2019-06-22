@@ -501,8 +501,13 @@ bool LX200StarGo::ReadScopeStatus()
 
     if (! getMotorStatus(&x, &y))
     {
-        LOG_ERROR("Cannot determine scope status, failed to parse motor state.");
-        return false;
+        LOG_INFO("Failed to parse motor state. Retrying...");
+        // retry once
+        if (! getMotorStatus(&x, &y))
+        {
+            LOG_ERROR("Cannot determine scope status, failed to parse motor state.");
+            return false;
+        }
     }
     LOGF_DEBUG("Motor state = (%d, %d)", x, y);
 
