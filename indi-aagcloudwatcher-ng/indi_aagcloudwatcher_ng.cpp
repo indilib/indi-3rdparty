@@ -1297,7 +1297,7 @@ bool AAGCloudWatcher::resetConstants()
 
 const char *AAGCloudWatcher::getDefaultName()
 {
-    return "AAG Cloud Watcher NG";
+    return AAG_DRIVER_NAME;
 }
 
 void ISGetProperties(const char *dev)
