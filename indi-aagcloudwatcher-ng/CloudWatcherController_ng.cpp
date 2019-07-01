@@ -25,6 +25,10 @@
 
 #include "CloudWatcherController_ng.h"
 
+#include "indicom.h"
+#include "indiweather.h"
+#include "connectionplugins/connectionserial.h"
+
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -33,6 +37,8 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/time.h>
+
+#define READ_TIMEOUT 5
 
 /******************************************************************/
 /* PUBLIC MEMBERS                                                */
@@ -790,10 +796,14 @@ bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks)
 
 bool CloudWatcherController::sendCloudwatcherCommand(const char *command, int size)
 {
-    int n = writeSerial(command, size);
+    int rc = -1;
+    int n = 0;
+    char errstr[MAXRBUF];
 
-    if (n != size)
+    if ((rc = tty_write(PortFD, command, size, &n)) != TTY_OK)
     {
+        tty_error_msg(rc, errstr, MAXRBUF);
+        LOGF_ERROR("%s write error: %s", __FUNCTION__, errstr);
         return false;
     }
 
@@ -807,9 +817,16 @@ bool CloudWatcherController::sendCloudwatcherCommand(const char *command)
 
 bool CloudWatcherController::getCloudWatcherAnswer(char *buffer, int nBlocks)
 {
-    int ret = 0;
+    int rc = -1;
+    int n = 0;
+    char errstr[MAXRBUF];
 
-    ret = readSerial(buffer, nBlocks * BLOCK_SIZE);
+    if ((rc = tty_read(PortFD, buffer, nBlocks * BLOCK_SIZE, READ_TIMEOUT, &n)) != TTY_OK)
+    {
+        tty_error_msg(rc, errstr, MAXRBUF);
+        LOGF_ERROR("%s read error: %s", __FUNCTION__, errstr);
+        return false;
+    }
 
     int valid = checkValidMessage(buffer, nBlocks);
 
@@ -841,45 +858,4 @@ void CloudWatcherController::printBuffer(char *buffer, int num)
     {
         std::cout << buffer[i];
     }
-}
-
-int CloudWatcherController::writeSerial(const char *buffer, int numberOfBytes)
-{
-    printMessage("writeSerial: writting %d bytes\n", numberOfBytes);
-
-    int n = write(PortFD, buffer, numberOfBytes);
-
-    if (n < numberOfBytes)
-    {
-        printMessage("writeSerial: written of %d bytes failed!\n", numberOfBytes);
-        return -1;
-    }
-
-    printMessage("writeSerial: wroten\n");
-
-    return n;
-}
-
-int CloudWatcherController::readSerial(char *buffer, int numberOfBytes)
-{
-    int n = 0;
-
-    while (n < numberOfBytes)
-    {
-        printMessage("readSerial: reading %d bytes\n", numberOfBytes - n);
-
-        int readed = read(PortFD, &(buffer[n]), numberOfBytes - n);
-
-        if (readed <= 0)
-        {
-            printMessage("readSerial: read of %d bytes failed!\n", numberOfBytes);
-            return (-1);
-        }
-
-        n += readed;
-    }
-
-    printMessage("readSerial: read %d bytes\n", n);
-
-    return n;
 }

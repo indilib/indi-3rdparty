@@ -266,24 +266,6 @@ class CloudWatcherController
     void printMessage(const char *fmt, ...);
 
     /**
-   * Writes a number of chars buffer into the serial port. It opens the serial 
-   * port if not already opened.
-   * @param buffer the buffer of chars to be written in the serial port
-   * @param numberOfBytes the number of chars to be written
-   * @return the number of written bytes or -1 if error.
-   */
-    int writeSerial(const char *buffer, int numberOfBytes);
-
-    /**
-   * Reads a number of chars from the serial port.
-   * @param buffer the buffer where the readed chars will be stored. Should be 
-   * big enough por all chars
-   * @param numberOfBytes the number of bytes to be read.
-   * @return the number of bytes that have been read
-   */
-    int readSerial(char *buffer, int numberOfBytes);
-
-    /**
    * Checks if the received message is a AAG CLoud Wathcer valid message.
    * @param buffer the readed message
    * @param nBlocks the number of expected blocks in the message
