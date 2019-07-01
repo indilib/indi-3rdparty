@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <termios.h>
 
 #define AAG_DRIVER_NAME  ((const char *)"AAG Cloud Watcher NG")
 

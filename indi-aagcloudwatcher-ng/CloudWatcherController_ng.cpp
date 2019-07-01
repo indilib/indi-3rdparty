@@ -32,11 +32,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <fcntl.h>
 #include <iostream>
-#include <stdarg.h>
-#include <unistd.h>
-#include <sys/time.h>
 
 #define READ_TIMEOUT 5
 
