@@ -27,6 +27,8 @@
 
 #include <termios.h>
 
+#define AAG_DRIVER_NAME  ((const char *)"AAG Cloud Watcher NG")
+
 /**
  *  A struct to group and send all AAG Cloud Watcher constants
  */
@@ -98,6 +100,8 @@ class CloudWatcherController
    * A destructor 
    */
     virtual ~CloudWatcherController();
+
+    const char *getDeviceName();
 
     /**
    * Sets the file descriptor to use for communication

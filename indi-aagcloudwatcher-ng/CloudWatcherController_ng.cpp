@@ -55,6 +55,11 @@ CloudWatcherController::~CloudWatcherController()
 }
 
 
+const char *CloudWatcherController::getDeviceName()
+{
+    return AAG_DRIVER_NAME;
+}
+
 void CloudWatcherController::setPortFD(int newPortFD)
 {
     PortFD = newPortFD;
