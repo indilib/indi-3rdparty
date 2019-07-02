@@ -87,6 +87,13 @@ bool AAGCloudWatcher::initProperties()
     INDI::Weather::initProperties();
     serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
     buildSkeleton("indi_aagcloudwatcher_ng_sk.xml");
+
+    addParameter("WEATHER_BRIGHTNESS", "Ambient light brightness (K)", 2100, 1000000, 10);
+    addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
+
+    setCriticalParameter("WEATHER_BRIGHTNESS");
+    setCriticalParameter("WEATHER_WIND_SPEED");
+
     return true;
 }
 
@@ -797,6 +804,8 @@ bool AAGCloudWatcher::sendData()
     namesS[5]    = const_cast<char *>("brightnessSensor");
     valuesS[5]   = ambientLight;
 
+    setParameterValue("WEATHER_BRIGHTNESS", ambientLight);
+
     float ambientTemperature = data.ambient;
 
     if (ambientTemperature == -10000)
@@ -1004,10 +1013,12 @@ bool AAGCloudWatcher::sendData()
         {
             statesWind[2] = ISS_ON;
         }
+        setParameterValue("WEATHER_WIND_SPEED", windSpeed);
     }
     else
     {
         statesWind[3] = ISS_ON;
+        setParameterValue("WEATHER_WIND_SPEED", 0);
     }
 
     ISwitchVectorProperty *svpWC = getSwitch("windConditions");
@@ -1127,6 +1138,7 @@ bool AAGCloudWatcher::resetData()
 
     namesS[5]  = const_cast<char *>("brightnessSensor");
     valuesS[5] = 0.0;
+    setParameterValue("WEATHER_BRIGHTNESS", 0);
 
     namesS[6]  = const_cast<char *>("ambientTemperatureSensor");
     valuesS[6] = 0.0;
