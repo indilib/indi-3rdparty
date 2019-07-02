@@ -54,6 +54,8 @@ AAGCloudWatcher::AAGCloudWatcher()
 
     desiredSensorTemperature = 0;
     globalRainSensorHeater   = -1;
+
+    addDebugControl();
 }
 
 
