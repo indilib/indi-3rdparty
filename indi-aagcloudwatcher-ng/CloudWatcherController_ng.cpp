@@ -30,7 +30,6 @@
 #include "connectionplugins/connectionserial.h"
 
 #include <cmath>
-#include <cstdio>
 #include <cstring>
 #include <iostream>
 
