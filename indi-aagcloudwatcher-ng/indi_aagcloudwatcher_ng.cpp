@@ -441,6 +441,22 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
         return true;
     }
 
+    if (!strcmp(svp->name, "anemometerType"))
+    {
+        IUUpdateSwitch(svp, states, names, 2);
+        svp->s = IPS_OK;
+
+        ISwitch *sp = IUFindSwitch(svp, "BLACK");
+        if (sp->s == ISS_ON)
+        {
+            cwc->setAnemometerType(BLACK);
+        }
+        else
+        {
+            cwc->setAnemometerType(GRAY);
+        }
+    }
+
     return false;
 }
 

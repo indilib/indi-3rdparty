@@ -10,6 +10,11 @@
   </defNumberVector>
   
   
+  <defSwitchVector device="AAG Cloud Watcher NG" name="anemometerType" label="Anemometer Type" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
+    <defSwitch name="GRAY"  label="Gray (old)">Off</defSwitch>
+    <defSwitch name="BLACK" label="Black (new)">On</defSwitch>
+  </defSwitchVector>
+
 
   <defSwitchVector device="AAG Cloud Watcher NG" name="cloudConditions" label="Cloud Conditions" group="Weather Conditions" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
     <defSwitch name="clear" label="Clear">Off</defSwitch>
