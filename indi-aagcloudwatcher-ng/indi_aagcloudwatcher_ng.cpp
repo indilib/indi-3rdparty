@@ -773,7 +773,7 @@ bool AAGCloudWatcher::sendData()
     nvpE->s = IPS_OK;
     IDSetNumber(nvpE, nullptr);
 
-    int N_SENS = 8;
+    int N_SENS = 9;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -862,6 +862,9 @@ bool AAGCloudWatcher::sendData()
 
     namesS[7]  = const_cast<char *>("correctedInfraredSky");
     valuesS[7] = correctedTemperature;
+
+    namesS[8]  = const_cast<char *>("windSpeed");
+    valuesS[8] = data.windSpeed;
 
     INumberVectorProperty *nvpS = getNumber("sensors");
     IUUpdateNumber(nvpS, valuesS, namesS, N_SENS);
@@ -965,8 +968,6 @@ bool AAGCloudWatcher::sendData()
     svpRC->s = IPS_OK;
     IDSetSwitch(svpRC, nullptr);
 
-    int windSpeed         = data.windSpeed;
-
     INumberVectorProperty *consts = getNumber("constants");
     int anemometerStatus          = getNumberValueFromVector(consts, "anemometerStatus");
 
@@ -974,7 +975,7 @@ bool AAGCloudWatcher::sendData()
 
     if (anemometerStatus)
     {
-        setParameterValue("WEATHER_WIND_SPEED", windSpeed);
+        setParameterValue("WEATHER_WIND_SPEED", data.windSpeed);
     }
     else
     {
@@ -1072,7 +1073,7 @@ bool AAGCloudWatcher::resetData()
     nvpE->s = IPS_IDLE;
     IDSetNumber(nvpE, nullptr);
 
-    int N_SENS = 8;
+    int N_SENS = 9;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -1100,6 +1101,9 @@ bool AAGCloudWatcher::resetData()
 
     namesS[7]  = const_cast<char *>("correctedInfraredSky");
     valuesS[7] = 0.0;
+
+    namesS[6]  = const_cast<char *>("windSpeed");
+    valuesS[6] = 0.0;
 
     INumberVectorProperty *nvpS = getNumber("sensors");
     IUUpdateNumber(nvpS, valuesS, namesS, N_SENS);

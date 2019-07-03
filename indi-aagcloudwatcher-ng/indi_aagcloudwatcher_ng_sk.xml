@@ -39,6 +39,7 @@
     <defNumber name="rainSensorHeater" label="Rain Sensor Heater (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
     <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.0f" min="0" max="1000000" step="0">0</defNumber> 
     <defNumber name="ambientTemperatureSensor" label="Ambient Temp. Sensor (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
+    <defNumber name="windSpeed" label="Wind Speed (Km/H)" format="%.0f" min="0" max="1000" step="0">0</defNumber>
   </defNumberVector>
   
 
