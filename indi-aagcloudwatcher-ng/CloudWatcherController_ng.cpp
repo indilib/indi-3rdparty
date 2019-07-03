@@ -66,6 +66,11 @@ void CloudWatcherController::setPortFD(int newPortFD)
     PortFD = newPortFD;
 }
 
+void CloudWatcherController::setAnemometerType(enum ANEMOMETER_TYPE type)
+{
+    anemometerType = type;
+}
+
 bool CloudWatcherController::checkCloudWatcher()
 {
     sendCloudwatcherCommand("A!");
@@ -589,7 +594,24 @@ bool CloudWatcherController::getWindSpeed(int *windSpeed)
             return false;
         }
 
-        int res = sscanf(inputBuffer, "!w       %d", windSpeed);
+        int speed = 0;
+        int res = sscanf(inputBuffer, "!w       %d", &speed);
+
+        switch (anemometerType)
+        {
+            case BLACK:
+                if (speed != 0)
+                {
+                    speed = speed * 0.84 + 3;
+                }
+                break;
+
+            case GRAY:
+            default:
+                break;
+        }
+
+        *windSpeed = speed;
 
         if (res != 1)
         {

@@ -49,6 +49,16 @@ struct CloudWatcherConstants
 };
 
 /**
+ *  New models have a black anemometer with a slightly different speed calculation
+ */
+
+enum ANEMOMETER_TYPE
+{
+    GRAY,
+    BLACK
+};
+
+/**
  *  A struct  to group and send all AAG Cloud Watcher gathered data (RAW data, 
  *  directly from the device)
  */
@@ -107,6 +117,11 @@ class CloudWatcherController
    * @param newPortFD The new file descriptor
    */
     void setPortFD(int newPortFD);
+
+    /**
+   * Sets the anemometer type (currently grey for old models, black on newer)
+   */
+    void setAnemometerType(enum ANEMOMETER_TYPE type);
 
     /** 
    * Checks if the AAG Cloud Watcher is connected and accesible by requesting
@@ -175,6 +190,11 @@ class CloudWatcherController
    *  File descriptor for the serial or tcp connection
    */
     int PortFD = -1;
+
+    /**
+   *  Anemometer type
+   */
+    enum ANEMOMETER_TYPE anemometerType = BLACK;
 
     /**
    * AAG CloudWatcher send information in 15 bytes blocks
