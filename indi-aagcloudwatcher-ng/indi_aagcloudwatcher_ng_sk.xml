@@ -25,19 +25,6 @@
     <defSwitch name="unknown" label="Unknown">Off</defSwitch>      
   </defSwitchVector>
   
-  <defSwitchVector device="AAG Cloud Watcher NG" name="brightnessConditions" label="Brightness Conditions" group="Weather Conditions" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
-    <defSwitch name="dark" label="Dark">Off</defSwitch>
-    <defSwitch name="light" label="Light">Off</defSwitch>
-    <defSwitch name="veryLight" label="Very Light">Off</defSwitch>  
-  </defSwitchVector>    
-  
-  <defSwitchVector device="AAG Cloud Watcher NG" name="windConditions" label="Wind Conditions" group="Weather Conditions" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
-    <defSwitch name="calm" label="Calm">Off</defSwitch>
-    <defSwitch name="moderateWind" label="Moderate Wind">Off</defSwitch>
-    <defSwitch name="strongWind" label="Strong Wind">Off</defSwitch> 
-    <defSwitch name="unknown" label="Unknown">Off</defSwitch>
-  </defSwitchVector>    
-
   <defNumberVector device="AAG Cloud Watcher NG" name="sensors" label="Sensors" group="Sensors" state="Idle" perm="ro" timeout="0">
     <defNumber name="infraredSky" label="Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
     <defNumber name="correctedInfraredSky" label="Corrected Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
@@ -62,18 +49,6 @@
     <defNumber name="wet" label="Wet (more than)" format="%.0f" min="0" max="100000" step="0">1700</defNumber>
     <defNumber name="rain" label="Rain (more than)" format="%.0f" min="0" max="100000" step="0">400</defNumber>
   </defNumberVector>
-  
-  <defNumberVector device="AAG Cloud Watcher NG" name="limitsBrightness" label="For Brightness Conditions (K)" group="Limits" state="Idle" perm="rw" timeout="0">
-    <defNumber name="dark" label="Dark (more than)" format="%.0f" min="0" max="1000000" step="0">2100</defNumber>
-    <defNumber name="light" label="Light (more than)" format="%.0f" min="0" max="1000000" step="0">100</defNumber>
-    <defNumber name="veryLight" label="Very Light (more than)" format="%.0f" min="0" max="1000000" step="0">0</defNumber>
-  </defNumberVector>
-  
-  <defNumberVector device="AAG Cloud Watcher NG" name="limitsWind" label="For Wind Conditions (km/h)" group="Limits" state="Idle" perm="rw" timeout="0">
-    <defNumber name="calm" label="Calm (less than)" format="%.0f" min="0" max="100" step="0">5</defNumber>
-    <defNumber name="moderateWind" label="Moderate Wind (less than)" format="%.0f" min="0" max="100" step="0">25</defNumber>
-  </defNumberVector>
-
   
   <defSwitchVector device="AAG Cloud Watcher NG" name="deviceSwitch" label="Switch" group="Switch Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
     <defSwitch name="open" label="Open">Off</defSwitch>

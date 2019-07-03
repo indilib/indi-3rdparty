@@ -949,84 +949,21 @@ bool AAGCloudWatcher::sendData()
     svpRC->s = IPS_OK;
     IDSetSwitch(svpRC, nullptr);
 
-    nvpLimits          = getNumber("limitsBrightness");
-    int darkLimit      = getNumberValueFromVector(nvpLimits, "dark");
-    int lightLimit     = getNumberValueFromVector(nvpLimits, "light");
-//    int veryLightLimit = getNumberValueFromVector(nvpLimits, "veryLight");
-
-    ISState statesBrightness[3];
-    char *namesBrightness[3];
-    namesBrightness[0]  = const_cast<char *>("dark");
-    namesBrightness[1]  = const_cast<char *>("light");
-    namesBrightness[2]  = const_cast<char *>("veryLight");
-    statesBrightness[0] = ISS_OFF;
-    statesBrightness[1] = ISS_OFF;
-    statesBrightness[2] = ISS_OFF;
-    //IDLog("%d\n", data.switchStatus);
-    if (ambientLight > darkLimit)
-    {
-        statesBrightness[0] = ISS_ON;
-    }
-    else if (ambientLight > lightLimit)
-    {
-        statesBrightness[1] = ISS_ON;
-    }
-    else
-    {
-        statesBrightness[2] = ISS_ON;
-    }
-
-    ISwitchVectorProperty *svpBC = getSwitch("brightnessConditions");
-    IUUpdateSwitch(svpBC, statesBrightness, namesBrightness, 3);
-    svpBC->s = IPS_OK;
-    IDSetSwitch(svpBC, nullptr);
-
     int windSpeed         = data.windSpeed;
-    nvpLimits             = getNumber("limitsWind");
-    int calmLimit         = getNumberValueFromVector(nvpLimits, "calm");
-    int moderateWindLimit = getNumberValueFromVector(nvpLimits, "moderateWind");
 
     INumberVectorProperty *consts = getNumber("constants");
     int anemometerStatus          = getNumberValueFromVector(consts, "anemometerStatus");
 
-    ISState statesWind[4];
-    char *namesWind[4];
-    namesWind[0]  = const_cast<char *>("calm");
-    namesWind[1]  = const_cast<char *>("moderateWind");
-    namesWind[2]  = const_cast<char *>("strongWind");
-    namesWind[3]  = const_cast<char *>("unknown");
-    statesWind[0] = ISS_OFF;
-    statesWind[1] = ISS_OFF;
-    statesWind[2] = ISS_OFF;
-    statesWind[3] = ISS_OFF;
     //IDLog("%d\n", data.switchStatus);
 
     if (anemometerStatus)
     {
-        if (windSpeed < calmLimit)
-        {
-            statesWind[0] = ISS_ON;
-        }
-        else if (windSpeed < moderateWindLimit)
-        {
-            statesWind[1] = ISS_ON;
-        }
-        else
-        {
-            statesWind[2] = ISS_ON;
-        }
         setParameterValue("WEATHER_WIND_SPEED", windSpeed);
     }
     else
     {
-        statesWind[3] = ISS_ON;
         setParameterValue("WEATHER_WIND_SPEED", 0);
     }
-
-    ISwitchVectorProperty *svpWC = getSwitch("windConditions");
-    IUUpdateSwitch(svpWC, statesWind, namesWind, 4);
-    svpWC->s = IPS_OK;
-    IDSetSwitch(svpWC, nullptr);
     return true;
 }
 
@@ -1164,10 +1101,6 @@ bool AAGCloudWatcher::resetData()
     ISwitchVectorProperty *svpRC = getSwitch("rainConditions");
     svpRC->s                     = IPS_IDLE;
     IDSetSwitch(svpRC, nullptr);
-
-    ISwitchVectorProperty *svpBC = getSwitch("brightnessConditions");
-    svpBC->s                     = IPS_IDLE;
-    IDSetSwitch(svpBC, nullptr);
 
     ISwitchVectorProperty *svp = getSwitch("heaterStatus");
     svp->s                     = IPS_IDLE;
