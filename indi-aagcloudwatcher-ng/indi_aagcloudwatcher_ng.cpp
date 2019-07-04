@@ -301,48 +301,6 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
         return true;
     }
 
-    if (!strcmp(nvp->name, "limitsBrightness"))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (values[i] < 0)
-            {
-                values[i] = 0;
-            }
-            if (values[i] > 1000000)
-            {
-                values[i] = 1000000;
-            }
-        }
-
-        IUUpdateNumber(nvp, values, names, n);
-        nvp->s = IPS_OK;
-        IDSetNumber(nvp, nullptr);
-
-        return true;
-    }
-
-    if (!strcmp(nvp->name, "limitsWind"))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (values[i] < 0)
-            {
-                values[i] = 0;
-            }
-            if (values[i] > 100)
-            {
-                values[i] = 100;
-            }
-        }
-
-        IUUpdateNumber(nvp, values, names, n);
-        nvp->s = IPS_OK;
-        IDSetNumber(nvp, nullptr);
-
-        return true;
-    }
-
     return false;
 }
 
@@ -1104,6 +1062,7 @@ bool AAGCloudWatcher::resetData()
 
     namesS[6]  = const_cast<char *>("windSpeed");
     valuesS[6] = 0.0;
+    setParameterValue("WEATHER_WIND_SPEED", 0);
 
     INumberVectorProperty *nvpS = getNumber("sensors");
     IUUpdateNumber(nvpS, valuesS, namesS, N_SENS);
