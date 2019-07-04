@@ -92,9 +92,11 @@ bool AAGCloudWatcher::initProperties()
 
     addParameter("WEATHER_BRIGHTNESS", "Ambient light brightness (K)", 2100, 1000000, 10);
     addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
+    addParameter("WEATHER_RAIN", "Rain (cycles)", 2000, 10000, 10);
 
     setCriticalParameter("WEATHER_BRIGHTNESS");
     setCriticalParameter("WEATHER_WIND_SPEED");
+    setCriticalParameter("WEATHER_RAIN");
 
     return true;
 }
@@ -925,6 +927,8 @@ bool AAGCloudWatcher::sendData()
     IUUpdateSwitch(svpRC, statesRain, namesRain, 4);
     svpRC->s = IPS_OK;
     IDSetSwitch(svpRC, nullptr);
+
+    setParameterValue("WEATHER_RAIN", data.rain);
 
     INumberVectorProperty *consts = getNumber("constants");
     int anemometerStatus          = getNumberValueFromVector(consts, "anemometerStatus");
