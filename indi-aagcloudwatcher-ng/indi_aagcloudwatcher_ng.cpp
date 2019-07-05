@@ -282,27 +282,6 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
         return true;
     }
 
-    if (!strcmp(nvp->name, "limitsRain"))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (values[i] < 0)
-            {
-                values[i] = 0;
-            }
-            if (values[i] > 100000)
-            {
-                values[i] = 100000;
-            }
-        }
-
-        IUUpdateNumber(nvp, values, names, n);
-        nvp->s = IPS_OK;
-        IDSetNumber(nvp, nullptr);
-
-        return true;
-    }
-
     return false;
 }
 
@@ -889,44 +868,6 @@ bool AAGCloudWatcher::sendData()
     IUUpdateSwitch(svpCC, statesCloud, namesCloud, 4);
     svpCC->s = IPS_OK;
     IDSetSwitch(svpCC, nullptr);
-
-    nvpLimits     = getNumber("limitsRain");
-    int dryLimit  = getNumberValueFromVector(nvpLimits, "dry");
-    int wetLimit  = getNumberValueFromVector(nvpLimits, "wet");
-    int rainLimit = getNumberValueFromVector(nvpLimits, "rain");
-
-    ISState statesRain[4];
-    char *namesRain[4];
-    namesRain[0]  = const_cast<char *>("dry");
-    namesRain[1]  = const_cast<char *>("wet");
-    namesRain[2]  = const_cast<char *>("rain");
-    namesRain[3]  = const_cast<char *>("unknown");
-    statesRain[0] = ISS_OFF;
-    statesRain[1] = ISS_OFF;
-    statesRain[2] = ISS_OFF;
-    statesRain[3] = ISS_OFF;
-    //IDLog("%d\n", data.switchStatus);
-    if (data.rain < rainLimit)
-    {
-        statesRain[3] = ISS_ON;
-    }
-    else if (data.rain < wetLimit)
-    {
-        statesRain[2] = ISS_ON;
-    }
-    else if (data.rain < dryLimit)
-    {
-        statesRain[1] = ISS_ON;
-    }
-    else
-    {
-        statesRain[0] = ISS_ON;
-    }
-
-    ISwitchVectorProperty *svpRC = getSwitch("rainConditions");
-    IUUpdateSwitch(svpRC, statesRain, namesRain, 4);
-    svpRC->s = IPS_OK;
-    IDSetSwitch(svpRC, nullptr);
 
     setParameterValue("WEATHER_RAIN", data.rain);
 
