@@ -3,6 +3,7 @@
   A driver for the AAG Cloud Watcher (AAGware - http://www.aagware.eu/)
 
   Copyright (C) 2012-2015 Sergio Alonso (zerjioi@ugr.es)
+  Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
 
 
 
@@ -23,6 +24,8 @@
   Anemometer code contributed by Joao Bento.
 #endif
 
+#include "indicom.h"
+#include "indiweather.h"
 #include "CloudWatcherController_ng.h"
 
 #include <iostream>
@@ -32,7 +35,18 @@
  */
 int main(int /*argc*/, char ** /*argv*/)
 {
-    CloudWatcherController *cwc = new CloudWatcherController(const_cast<char *>("/dev/ttyUSB0"), false);
+    int PortFD = 0;
+    int r = tty_connect("/dev/ttyUSB0", 9600, 8, 0, 1, &PortFD);
+
+    if (r != TTY_OK)
+    {
+        std::cout << "Can't open serial port\n";
+        return -1;
+    }
+
+    CloudWatcherController *cwc = new CloudWatcherController(false);
+
+    cwc->setPortFD(PortFD);
 
     int check = cwc->checkCloudWatcher();
 
@@ -43,6 +57,7 @@ int main(int /*argc*/, char ** /*argv*/)
     else
     {
         std::cout << "Cloudwatcher NOT present\n";
+        return -2;
     }
 
     CloudWatcherConstants constants;
@@ -67,6 +82,7 @@ int main(int /*argc*/, char ** /*argv*/)
     else
     {
         std::cout << "Problem getting constants\n";
+        return -4;
     }
 
     CloudWatcherData cwd;
@@ -95,9 +111,60 @@ int main(int /*argc*/, char ** /*argv*/)
     else
     {
         std::cout << "Problem getting data\n";
+        return -8;
     }
 
     delete cwc;
 
     return 0;
+}
+
+void ISGetProperties(const char *dev)
+{
+    INDI_UNUSED(dev);
+}
+
+void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    INDI_UNUSED(dev);
+    INDI_UNUSED(name);
+    INDI_UNUSED(states);
+    INDI_UNUSED(names);
+    INDI_UNUSED(n);
+}
+
+void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    INDI_UNUSED(dev);
+    INDI_UNUSED(name);
+    INDI_UNUSED(texts);
+    INDI_UNUSED(names);
+    INDI_UNUSED(n);
+}
+
+void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    INDI_UNUSED(dev);
+    INDI_UNUSED(name);
+    INDI_UNUSED(values);
+    INDI_UNUSED(names);
+    INDI_UNUSED(n);
+}
+
+void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
+               char *names[], int n)
+{
+    INDI_UNUSED(dev);
+    INDI_UNUSED(name);
+    INDI_UNUSED(sizes);
+    INDI_UNUSED(blobsizes);
+    INDI_UNUSED(blobs);
+    INDI_UNUSED(formats);
+    INDI_UNUSED(names);
+    INDI_UNUSED(n);
+}
+
+void ISSnoopDevice(XMLEle *root)
+{
+    INDI_UNUSED(root);
 }

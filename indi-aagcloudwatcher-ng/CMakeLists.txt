@@ -32,18 +32,19 @@ ENDIF ()
 add_executable(indi_aagcloudwatcher_ng ${indiaag_SRCS})
 target_link_libraries(indi_aagcloudwatcher_ng ${INDI_LIBRARIES})
 
-#set(test_SRCS
-#   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-#   ${CMAKE_CURRENT_SOURCE_DIR}/CloudWatcherController_ng.cpp
-#   )
-#
-#IF (UNITY_BUILD)
-#    ENABLE_UNITY_BUILD(test test_SRCS 10 cpp)
-#ENDIF ()
+set(test_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/CloudWatcherController_ng.cpp
+   )
 
-#add_executable(aagcloudwatcher_test_ng ${test_SRCS})
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(test test_SRCS 10 cpp)
+ENDIF ()
+
+add_executable(aagcloudwatcher_test_ng ${test_SRCS})
+target_link_libraries(aagcloudwatcher_test_ng ${INDI_LIBRARIES})
 
 install(TARGETS indi_aagcloudwatcher_ng RUNTIME DESTINATION bin)
-#install(TARGETS aagcloudwatcher_test_ng RUNTIME DESTINATION bin)
+install(TARGETS aagcloudwatcher_test_ng RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_aagcloudwatcher_ng.xml DESTINATION ${INDI_DATA_DIR})
 install(FILES indi_aagcloudwatcher_ng_sk.xml DESTINATION ${INDI_DATA_DIR})
