@@ -3,6 +3,7 @@ AAG Cloud Watcher INDI Driver v1.3
 A INDI driver for the AAG Cloud Watcher (AAGware - http://www.aagware.eu/)
 
   Copyright (C) 2012-2015 Sergio Alonso (zerjioi@ugr.es)
+  Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
   
   Anemometer code contributed by Joao Bento.
 

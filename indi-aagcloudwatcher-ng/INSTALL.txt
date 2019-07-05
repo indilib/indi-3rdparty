@@ -9,5 +9,5 @@ TEST INSTRUCTIONS:
 
 (INDI 0.9.7 must be installed)
 
-indiserver ./indi_aagcloudwatcher
+indiserver ./indi_aagcloudwatcher_ng
 
