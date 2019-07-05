@@ -44,12 +44,6 @@
   
 
   
-  <defNumberVector device="AAG Cloud Watcher NG" name="limitsCloud" label="For Cloud Conditions (ºC)" group="Limits" state="Idle" perm="rw" timeout="0">
-    <defNumber name="clear" label="Clear (less than)" format="%.0f" min="-50" max="100" step="0">-5</defNumber>
-    <defNumber name="cloudy" label="Cloudy (less than)" format="%.0f" min="-50" max="100" step="0">0</defNumber>
-    <defNumber name="overcast" label="Overcast (less than)" format="%.0f" min="-50" max="100" step="0">30</defNumber>
-  </defNumberVector>
-  
   <defSwitchVector device="AAG Cloud Watcher NG" name="deviceSwitch" label="Switch" group="Switch Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
     <defSwitch name="open" label="Open">Off</defSwitch>
     <defSwitch name="close" label="Close">On</defSwitch>

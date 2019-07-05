@@ -93,10 +93,12 @@ bool AAGCloudWatcher::initProperties()
     addParameter("WEATHER_BRIGHTNESS", "Ambient light brightness (K)", 2100, 1000000, 10);
     addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
     addParameter("WEATHER_RAIN", "Rain (cycles)", 2000, 10000, 10);
+    addParameter("WEATHER_CLOUD", "Cloud (corrected infrared sky temperature °C)", -5, 10, 10);
 
     setCriticalParameter("WEATHER_BRIGHTNESS");
     setCriticalParameter("WEATHER_WIND_SPEED");
     setCriticalParameter("WEATHER_RAIN");
+    setCriticalParameter("WEATHER_CLOUD");
 
     return true;
 }
@@ -251,27 +253,6 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
             if (values[i] > 999)
             {
                 values[i] = 999;
-            }
-        }
-
-        IUUpdateNumber(nvp, values, names, n);
-        nvp->s = IPS_OK;
-        IDSetNumber(nvp, nullptr);
-
-        return true;
-    }
-
-    if (!strcmp(nvp->name, "limitsCloud"))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (values[i] < -50)
-            {
-                values[i] = -50;
-            }
-            if (values[i] > 100)
-            {
-                values[i] = 100;
             }
         }
 
@@ -831,44 +812,9 @@ bool AAGCloudWatcher::sendData()
     svpSw->s = IPS_OK;
     IDSetSwitch(svpSw, nullptr);
 
-    INumberVectorProperty *nvpLimits = getNumber("limitsCloud");
-    int clearLimit                   = getNumberValueFromVector(nvpLimits, "clear");
-    int cloudyLimit                  = getNumberValueFromVector(nvpLimits, "cloudy");
-    int overcastLimit                = getNumberValueFromVector(nvpLimits, "overcast");
-
-    ISState statesCloud[4];
-    char *namesCloud[4];
-    namesCloud[0]  = const_cast<char *>("clear");
-    namesCloud[1]  = const_cast<char *>("cloudy");
-    namesCloud[2]  = const_cast<char *>("overcast");
-    namesCloud[3]  = const_cast<char *>("unknown");
-    statesCloud[0] = ISS_OFF;
-    statesCloud[1] = ISS_OFF;
-    statesCloud[2] = ISS_OFF;
-    statesCloud[3] = ISS_OFF;
     //IDLog("%d\n", data.switchStatus);
-    if (correctedTemperature < clearLimit)
-    {
-        statesCloud[0] = ISS_ON;
-    }
-    else if (correctedTemperature < cloudyLimit)
-    {
-        statesCloud[1] = ISS_ON;
-    }
-    else if (correctedTemperature < overcastLimit)
-    {
-        statesCloud[2] = ISS_ON;
-    }
-    else
-    {
-        statesCloud[3] = ISS_ON;
-    }
 
-    ISwitchVectorProperty *svpCC = getSwitch("cloudConditions");
-    IUUpdateSwitch(svpCC, statesCloud, namesCloud, 4);
-    svpCC->s = IPS_OK;
-    IDSetSwitch(svpCC, nullptr);
-
+    setParameterValue("WEATHER_CLOUD", correctedTemperature);
     setParameterValue("WEATHER_RAIN", data.rain);
 
     INumberVectorProperty *consts = getNumber("constants");
@@ -1017,10 +963,6 @@ bool AAGCloudWatcher::resetData()
     ISwitchVectorProperty *svpSw = getSwitch("deviceSwitch");
     svpSw->s                     = IPS_IDLE;
     IDSetSwitch(svpSw, nullptr);
-
-    ISwitchVectorProperty *svpCC = getSwitch("cloudConditions");
-    svpCC->s                     = IPS_IDLE;
-    IDSetSwitch(svpCC, nullptr);
 
     ISwitchVectorProperty *svpRC = getSwitch("rainConditions");
     svpRC->s                     = IPS_IDLE;
