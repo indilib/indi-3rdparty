@@ -2224,11 +2224,13 @@ int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
         default:
             return 1;
     }
-    if (!sendQuery(cmd, response, 0)) // Don't wait for response - there isn't one
-    {
-        return false;
-    }
-    return true;
+    bool success = !sendQuery(cmd, response, 0); // no response expected
+
+    const struct timespec timeout = {0, 50000000L};
+    // sleep for 50 mseconds to avoid flooding the mount with commands
+    nanosleep(&timeout, nullptr);
+
+    return success;
 }
 
 bool LX200StarGo::SetTrackEnabled(bool enabled)
