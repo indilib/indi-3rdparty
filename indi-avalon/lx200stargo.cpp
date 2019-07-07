@@ -1108,14 +1108,17 @@ bool LX200StarGo::sendQuery(const char* cmd, char* response, char end, int wait)
     }
     lresponse[0] = '\0';
     int lwait = wait;
+    bool found = false;
     while (receive(lresponse, &lbytes, end, lwait))
     {
         //        LOGF_DEBUG("Found response after %ds %s", lwait, lresponse);
         lbytes = 0;
         if(! ParseMotionState(lresponse))
         {
-            // Don't change wait requirement but get the response
-            strcpy(response, lresponse);
+            // Take the first response that is no motion state
+            if (!found)
+                strcpy(response, lresponse);
+            found = true;
             lwait = 0;
         }
     }
