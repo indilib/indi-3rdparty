@@ -509,7 +509,6 @@ bool LX200StarGo::ReadScopeStatus()
             return false;
         }
     }
-    LOGF_DEBUG("Motor state = (%d, %d)", x, y);
 
     char parkHomeStatus[1] = {0};
     if (! getParkHomeStatus(parkHomeStatus))
@@ -614,6 +613,7 @@ bool LX200StarGo::syncHomePosition()
 
 bool LX200StarGo::getEqCoordinates (double *ra, double *dec)
 {
+    LOG_DEBUG(__FUNCTION__);
     // Use X590 for RA DEC
     char response[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
     if(!sendQuery(":X590#", response))
