@@ -2208,6 +2208,13 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
 int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
 {
     LOGF_DEBUG("%s dir=%d dur=%d ms", __FUNCTION__, direction, duration_msec );
+
+    if (TrackState == SCOPE_SLEWING || TrackState == SCOPE_PARKING)
+    {
+        // having pulse guiding while slewing or parking creates confusion
+        LOGF_INFO("Pulse command (dir=%d dur=%d ms) ingnored due to track state %d.", direction, duration_msec, TrackState);
+        return 1;
+    }
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
     switch (direction)
