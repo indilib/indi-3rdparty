@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 PROJECT(indi-avalon C CXX)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 find_package(INDI COMPONENTS driver lx200 REQUIRED)

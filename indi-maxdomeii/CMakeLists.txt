@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(indi_maxdomeii C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set(INDI_MAXDOMEII_VERSION_MAJOR 1)

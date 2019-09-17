@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 PROJECT(libindi-3rdparty CXX C)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+
 include(GNUInstallDirs)
 
 ## Some files like libnova.h and libusb.h are in in subdirectories of the include directory
