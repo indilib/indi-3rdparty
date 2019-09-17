@@ -45,7 +45,9 @@ jobs:
       - run:
           name: Build all
           command: |
-            .circleci/install-libindi.sh
+            apt-add-repository -y ppa:mutlaqja/indinightly
+            apt-get update
+            apt-get -y install libindi
             .circleci/build-core.sh
       - run:
           name: Run tests
