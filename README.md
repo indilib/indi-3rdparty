@@ -1,12 +1,34 @@
 # INDI 3rd Party Drivers
-[![Build Status](https://travis-ci.org/indilib/indi.svg?branch=master)](https://travis-ci.org/indilib/indi)
 [![CircleCI](https://circleci.com/gh/indilib/indi.svg?style=svg)](https://circleci.com/gh/indilib/indi)
 
 INDI 3rd party drivers include all the drivers not included by default in the INDI Core Library.
 
-What decides if the driver needs to belong to the 3rd party repository?
-+ All cameras drivers.
-+ Any drivers with external dependencies not satisfied by INDI core library.
+# Which drivers are in 3rd party?
+
+Check the [Device Driver documentation](https://www.indilib.org/devices.html) for detailed information on how to operate each device driver.
+
+All the driver documentation is community-contributed. Any updates or correction to the documentation in INDI library is greatly appreciated.
+
+The following classes of devices are supported in the INDI 3rd party repository:
+
++ Cameras: CCDs, CMOS, and DSLR
++ Mounts.
++ Focusers.
++ Filter Wheels.
++ Domes.
++ GPS.
++ Adaptive Optics.
++ Radio Astronomy Receivers.
++ Spectrometers.
++ Weather Stations.
++ Auxiliary drivers.
+
+# What decides if a driver belongs to INDI Core or INDI 3rd party?
+
+If a driver meets any of the following criteria, then it needs to be included in the INDI 3rd party repository:
+
++ Any camera driver.
++ Any driver with external dependencies not satisfied by INDI core library.
 + Any driver that would like to remain independent from INDI core library release schedule.
 
 Learn more about INDI:
