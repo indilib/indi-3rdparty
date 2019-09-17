@@ -5,6 +5,10 @@ set -x -e
 FLAGS="-DCMAKE_INSTALL_PREFIX=/usr/ -DFIX_WARNINGS=ON -DCMAKE_BUILD_TYPE=$1"
 FLAGS+=" -DINDI_BUILD_UNITTESTS=ON"
 
+# Install indi-dev?
+echo "==> Install libindi-dev"
+apt-get -y install libindi-dev
+
 # Build everything on master
 echo "==> Building INDI 3rd party drivers"
 mkdir -p build
