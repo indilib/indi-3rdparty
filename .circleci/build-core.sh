@@ -2,17 +2,17 @@
 
 set -x -e
 
-FLAGS="-DCMAKE_INSTALL_PREFIX=/usr/local -DFIX_WARNINGS=ON -DCMAKE_BUILD_TYPE=$1"
+FLAGS="-DCMAKE_INSTALL_PREFIX=/usr/ -DFIX_WARNINGS=ON -DCMAKE_BUILD_TYPE=$1"
 FLAGS+=" -DINDI_BUILD_UNITTESTS=ON"
 
 # Build everything on master
 echo "==> Building INDI 3rd party drivers"
-mkdir -p build/3rdparty
-pushd build/3rdparty
-cmake $FLAGS . ../../3rdparty/
+mkdir -p build
+pushd build
+cmake $FLAGS . ../
 make
 make install
-cmake $FLAGS . ../../3rdparty/
+cmake $FLAGS . ../
 make
 popd
 
