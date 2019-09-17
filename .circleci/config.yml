@@ -45,7 +45,7 @@ jobs:
       - run:
           name: Build all
           command: |
-            apt-get install -y libindi-dev
+            .circleci/install-libindi.sh
             .circleci/build-core.sh
       - run:
           name: Run tests
