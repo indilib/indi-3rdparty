@@ -1,0 +1,16 @@
+Installation instructions
+=========================
+
+Compile Instructions
+  - Assumption: INDI package installed (see https://indilib.org/download.html)
+  - Retrieve the sources for the Herkules-driver
+    git clone https://github.com/escribana/indi-3rdparty.git
+  - cd indi-3rdparty
+    checkout branch "master"
+  - mkdir -p build/indi_herkules
+  - cd build/indi_herkules
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../indi_herkules
+  - sudo make install
+
+And now start the INDI server and kstars.
+

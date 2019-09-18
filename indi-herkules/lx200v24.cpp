@@ -1,0 +1,1726 @@
+/*
+    Herkules V24 driver
+
+    Copyright (C) 2019 T. Schriber
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "lx200v24.h"
+
+//#include <gason.h>
+
+#include <cmath>
+#include <memory>
+#include <cstring>
+#include <unistd.h>
+#ifndef _WIN32
+#include <termios.h>
+#endif
+#include <libnova/julian_day.h>
+#include <libnova/sidereal_time.h>
+
+#include "config.h"
+
+// Unique pointers
+static std::unique_ptr<LX200Herkules> telescope;
+
+
+const char *INFO_TAB = "TCS"; // ToDo: for information about TCS e.g. firmware etc
+
+void ISInit()
+{
+    static int isInit = 0;
+
+    if (isInit)
+        return;
+
+    isInit = 1;
+    if (telescope.get() == nullptr)
+    {
+        LX200Herkules* myScope = new LX200Herkules();
+        telescope.reset(myScope);
+    }
+}
+
+void ISGetProperties(const char *dev)
+{
+    ISInit();
+    telescope->ISGetProperties(dev);
+}
+
+void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    ISInit();
+    telescope->ISNewSwitch(dev, name, states, names, n);
+}
+
+void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    ISInit();
+    telescope->ISNewText(dev, name, texts, names, n);
+}
+
+void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    ISInit();
+    telescope->ISNewNumber(dev, name, values, names, n);
+}
+
+void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
+               char *names[], int n)
+{
+    INDI_UNUSED(dev);
+    INDI_UNUSED(name);
+    INDI_UNUSED(sizes);
+    INDI_UNUSED(blobsizes);
+    INDI_UNUSED(blobs);
+    INDI_UNUSED(formats);
+    INDI_UNUSED(names);
+    INDI_UNUSED(n);
+}
+void ISSnoopDevice(XMLEle *root)
+{
+    //ISInit();
+    telescope->ISSnoopDevice(root);
+    //    focuser->ISSnoopDevice(root);
+}
+
+/**************************************************
+*** LX200 Generic Implementation / Constructor
+***************************************************/
+
+LX200Herkules::LX200Herkules() : LX200Telescope()
+{
+    LOG_DEBUG(__FUNCTION__);
+    setVersion(HERKULES_VERSION_MAJOR, HERKULES_VERSION_MINOR);
+
+    DBG_SCOPE = INDI::Logger::DBG_DEBUG;
+
+    /* TCS has no location/elevation and no time but we have to define these, so it is possible
+     * to store the data to load to TCS (Better solution: new enum class?)
+     * TELESCOPE_HAS_TIME
+     * TELESCOPE_HAS_LOCATION
+     *
+     * TCS has
+     * Alignmenttype?
+     */
+
+    setLX200Capability(LX200_HAS_PULSE_GUIDING);
+
+    SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
+                           TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK | TELESCOPE_HAS_LOCATION |
+                           TELESCOPE_HAS_TIME | TELESCOPE_HAS_PIER_SIDE, 4);
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+const char *LX200Herkules::getDefaultName()
+{
+    return "Herkules V24";
+}
+
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::Handshake()
+{
+    char lstat[20] = {0};
+    if(!getJSONData_gp(1, lstat))
+    {
+        LOG_ERROR("Error communication with telescope.");
+        return false;
+    }
+    else
+    {
+        LOGF_INFO("Handshake ok (Firmwareversion %s)", lstat);
+        return true;
+    }
+}
+
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    bool result = false;
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+         // parking position
+        if (!strcmp(name, MountSetParkSP.name))
+        {
+            return setParkPosition(states, names, n);
+        }
+        // tracking state
+        else if (!strcmp(name, TrackStateSP.name))
+        {
+            if (IUUpdateSwitch(&TrackStateSP, states, names, n) < 0)
+                return false;
+            int trackState = IUFindOnSwitchIndex(&TrackStateSP);
+
+            if (trackState == TRACK_ON)
+            {
+                if (SetTrackEnabled(true))
+                {
+                    TrackState = SCOPE_TRACKING; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
+                    result = true;
+                }
+            }
+            else if (trackState == TRACK_OFF)
+            {
+                if (SetTrackEnabled(false))
+                {
+                    TrackState = SCOPE_IDLE; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
+                    result = true;
+                }
+            }
+            else
+            {
+                LOG_INFO("Trackstate undefined.");
+            }
+            TrackStateSP.s = result ? IPS_OK : IPS_ALERT;
+
+            IDSetSwitch(&TrackStateSP, nullptr);
+            return result;
+        }
+        // tracking mode
+        else if (!strcmp(name, TrackModeSP.name))
+        {
+            if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
+                return false;
+            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+
+            switch (trackMode) // ToDo: Lunar and Custom tracking
+            {
+                case TRACK_SIDEREAL:
+                    LOG_INFO("Sidereal tracking rate selected.");
+                    result = SetTrackMode(trackMode);
+                    break;
+                case TRACK_SOLAR:
+                    LOG_INFO("Solar tracking rate selected.");
+                    result = SetTrackMode(trackMode);
+                    break;
+                case TRACK_LUNAR:
+                    LOG_INFO("Lunar tracking not implemented.");
+                    break;
+                case TRACK_CUSTOM:
+                    LOG_INFO("Custom tracking not yet implemented.");
+                    break;
+            }
+            TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
+
+            IDSetSwitch(&TrackModeSP, nullptr);
+            return result;
+        }
+
+    }
+
+    //  Nobody has claimed this until now, so pass it to the parent
+    return LX200Telescope::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool LX200Herkules::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+
+        if (!strcmp(name, SystemSlewSpeedNP.name))
+        {
+            int slewSpeed  = round(values[0]);
+            bool result  = setSystemSlewSpeed(slewSpeed);
+
+            if(result)
+            {
+                SystemSlewSpeedP[0].value = static_cast<double>(slewSpeed);
+                SystemSlewSpeedNP.s = IPS_OK;
+            }
+            else
+            {
+                SystemSlewSpeedNP.s = IPS_ALERT;
+            }
+            IDSetNumber(&SystemSlewSpeedNP, nullptr);
+            return result;
+        }
+    }
+
+    //  Nobody has claimed this, so pass it to the parent
+    return LX200Telescope::ISNewNumber(dev, name, values, names, n);
+}
+
+
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::initProperties()
+{
+    /* Make sure to init parent properties first */
+    if (!LX200Telescope::initProperties()) return false;
+
+    // System Slewspeed
+    IUFillNumber(&SystemSlewSpeedP[0], "SLEW_SPEED", "Slewspeed", "%.2f", 0.0, 30.0, 1, 0);
+    IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+
+    // overwrite the custom tracking mode button
+    //IUFillSwitch(&TrackModeS[3], "TRACK_NONE", "None", ISS_OFF);
+
+    return true;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::updateProperties()
+{
+    if (! LX200Telescope::updateProperties()) return false;
+    if (isConnected())
+    {
+        // registering "slewspeed" here results in display at bottom of tab
+        defineNumber(&SystemSlewSpeedNP);
+        //defineText(&MountFirmwareInfoTP);
+    }
+    else
+    {
+        deleteProperty(SystemSlewSpeedNP.name);
+        //deleteProperty(MountFirmwareInfoTP.name);
+    }
+
+    return true;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::Connect()
+{
+    if (! DefaultDevice::Connect())
+        return false;
+    return true;
+}
+
+bool LX200Herkules::Disconnect()
+{
+    return DefaultDevice::Disconnect();
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool LX200Herkules::ReadScopeStatus()
+{
+    if (LX200Telescope::ReadScopeStatus())
+    {
+        char response[TCS_RESPONSE_BUFFER_LENGTH];
+        if ((TrackState != SCOPE_TRACKING) & (sendQuery("?#", response))) // only if not tracking
+        {
+            // LOGF_INFO("Status %s", response);
+            if ((TrackState == SCOPE_SLEWING) & (*response == '0'))  // Todo: scope parking?
+            /* Query response == '0', mount is no more (not) slewing */
+            {
+                TrackStateS[TRACK_ON].s = ISS_ON;
+                TrackStateS[TRACK_OFF].s = ISS_OFF;
+                TrackState = SCOPE_TRACKING;
+                TrackStateSP.s = IPS_OK;
+                IDSetSwitch(&TrackStateSP, nullptr);
+                LOG_INFO("Slew completed");
+                char lstat[20] = {0};
+                int li = 0;
+                if (getJSONData_Y(5, lstat))
+                {
+                    li = std::stoi(lstat);
+                    li = li & (1<<7);
+                    LOGF_INFO("Telescope pointing %s", (li > 0) ? "east" : "west");
+                    if (li > 0)
+                    {
+                        setPierSide(INDI::Telescope::PIER_WEST);
+                    }
+                    else
+                        setPierSide(INDI::Telescope::PIER_EAST);
+                }
+            }
+        }
+    }
+    else
+    {
+         return false;
+    }
+    return true;
+}
+
+/**************************************************************************************
+* @author CanisUrsa
+***************************************************************************************/
+
+bool LX200Herkules::setParkPosition(ISState* states, char* names[], int n)
+{
+    LOG_DEBUG(__FUNCTION__);
+    IUUpdateSwitch(&MountSetParkSP, states, names, n);
+    MountSetParkSP.s = setMountParkPosition() ? IPS_OK : IPS_ALERT;
+    MountSetParkS[0].s = ISS_OFF;
+    IDSetSwitch(&MountSetParkSP, nullptr);
+    return true;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+
+void LX200Herkules::getBasicData()
+{
+    LOG_DEBUG(__FUNCTION__);
+    if (!isSimulation())
+    {
+        checkLX200Format();
+
+        if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
+            getAlignment();
+
+        if (genericCapability & LX200_HAS_TRACKING_FREQ)
+        {
+            if (! getTrackFrequency(&TrackFreqN[0].value))
+                LOG_ERROR("Failed to get tracking frequency from device.");
+            else
+                IDSetNumber(&TrackingFreqNP, nullptr);
+        }
+
+        if (INDI::Telescope::capability & TELESCOPE_CAN_CONTROL_TRACK) // && (getTrackState())
+        {
+            TrackStateS[TRACK_ON].s = ISS_ON;
+            TrackStateS[TRACK_OFF].s = ISS_OFF;
+            TrackStateSP.s = IPS_OK;
+            INDI::Telescope::TrackState = SCOPE_TRACKING; // ALWAYS set status! (cf. ISNewSwitch())
+            //LOG_INFO("Tracking is on.");
+        }
+        else
+        {
+            TrackStateSP.s = IPS_ALERT;
+        }
+        IDSetSwitch(&TrackStateSP, nullptr);
+
+        int slewSpeed;
+        if (getSystemSlewSpeed(&slewSpeed))
+        {
+            SystemSlewSpeedP[0].value = static_cast<double>(slewSpeed);
+            SystemSlewSpeedNP.s = IPS_OK;
+        }
+        else
+        {
+            SystemSlewSpeedNP.s = IPS_ALERT;
+        }
+        IDSetNumber(&SystemSlewSpeedNP, nullptr);
+
+        if (INDI::Telescope::capability & TELESCOPE_HAS_TRACK_MODE)
+        {
+           int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+           //int modes = sizeof(TelescopeTrackMode);
+           int modes = TRACK_SOLAR; // ToDo: Lunar and Custom tracking
+           TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
+           IDSetSwitch(&TrackModeSP, nullptr);
+        }
+
+    }
+    /*LOGF_DEBUG("sendLocation %s && %s", sendLocationOnStartup ? "T" : "F",
+               (GetTelescopeCapability() & TELESCOPE_HAS_LOCATION) ? "T" : "F");
+    if (sendLocationOnStartup && (GetTelescopeCapability() & TELESCOPE_HAS_LOCATION))
+        sendScopeLocation();
+
+    LOGF_DEBUG("sendTime %s && %s", sendTimeOnStartup ? "T" : "F",
+               (GetTelescopeCapability() & TELESCOPE_HAS_TIME) ? "T" : "F");
+    if (sendTimeOnStartup && (GetTelescopeCapability() & TELESCOPE_HAS_TIME))
+        sendScopeTime();*/
+
+    //ToDo: collect other fixed data here like Manufacturer, version etc...
+    if (genericCapability & LX200_HAS_PULSE_GUIDING)
+    {
+        UsePulseCmdS[0].s = ISS_ON;
+        UsePulseCmdS[1].s = ISS_OFF,
+        UsePulseCmdSP.s = IPS_OK;
+        usePulseCommand = false; // ALWAYS set status! (cf. ISNewSwitch())
+        IDSetSwitch(&UsePulseCmdSP, nullptr);
+    }
+
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+
+bool LX200Herkules::updateLocation(double latitude, double longitude, double elevation)
+{
+    LOGF_DEBUG("%s Lat:%.3lf Lon:%.3lf", __FUNCTION__, latitude, longitude);
+    INDI_UNUSED(elevation); // Elevation only as info
+
+    if (isSimulation())
+        return true;
+
+    //    LOGF_DEBUG("Setting site longitude '%lf'", longitude);
+    if (!isSimulation() && ! setSiteLongitude(360.0 - longitude))  // Meade defines longitude as 0 to 360 WESTWARD
+    {
+        LOGF_ERROR("Error setting site longitude %lf", longitude);
+        return false;
+    }
+
+    if (!isSimulation() && ! setSiteLatitude(latitude))
+    {
+        LOGF_ERROR("Error setting site latitude %lf", latitude);
+        return false;
+    }
+
+    char l[32] = {0}, L[32] = {0};
+    fs_sexa(l, latitude, 3, 3600);
+    fs_sexa(L, longitude, 4, 3600);
+
+    LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L);
+
+
+    //if(!setLocalSiderealTime(longitude))
+    //{
+    //    LOG_ERROR("Error setting local sidereal time");
+    //    return false;
+    //}
+
+    return true;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+
+bool LX200Herkules::Park()
+{
+    LOG_DEBUG(__FUNCTION__);
+    // in: :X362#
+    // out: "pB#"
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if (sendQuery(":X362#", response) && strcmp(response, "pB") == 0)
+    {
+        LOG_INFO("Parking mount...");
+        TrackState = SCOPE_PARKING;
+        return true;
+    }
+    else
+    {
+        LOGF_ERROR("Parking failed. Response %s", response);
+        return false;
+    }
+}
+
+/**
+ * @brief Set parking state to "parked" and reflect the state
+ *        in the UI.
+ * @param isparked true iff the scope has been parked
+ * @return
+ */
+void LX200Herkules::SetParked(bool isparked)
+{
+    LOGF_DEBUG("%s %s", __FUNCTION__, isparked ? "PARKED" : "UNPARKED");
+    INDI::Telescope::SetParked(isparked);
+}
+
+bool LX200Herkules::UnPark()
+{
+    LOG_DEBUG(__FUNCTION__);
+    // in: :X370#
+    // out: "p0#"
+
+    /*
+    double siteLong;
+
+    // step one: determine site longitude
+    if (!getSiteLongitude(&siteLong))
+    {
+        LOG_WARN("Failed to get site Longitude from device.");
+        return false;
+    }
+    // set LST to avoid errors
+    if (!setLocalSiderealTime(siteLong))
+    {
+        LOGF_ERROR("Failed to set LST before unparking %lf", siteLong);
+        return false;
+    }
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+
+    // and now execute unparking
+    if (sendQuery(":X370#", response) && strcmp(response, "p0") == 0)
+    {
+        LOG_INFO("Unparking mount...");
+        return true;
+    }
+    else
+    {
+        LOGF_ERROR("Unpark failed with response: %s", response);
+        return false;
+    }*/
+    return true;
+}
+
+/*
+ * @brief Determine the LST with format HHMMSS
+ * @return LST value for the current scope locateion
+ *
+
+bool LX200Herkules::getLST_String(char* input)
+{
+    LOG_DEBUG(__FUNCTION__);
+    double siteLong;
+
+    // step one: determine site longitude
+    //if (!getSiteLongitude(&siteLong))
+    if (LocationNP.s == IPS_OK)
+        siteLong = LocationN[LOCATION_LONGITUDE].value;
+    else
+    {
+        LOG_WARN("getLST Failed to get site Longitude from config.");
+        return false;
+    }
+    // determine local sidereal time
+    double lst = LocalSiderealTime(siteLong);
+    int h = 0, m = 0, s = 0;
+    LOGF_DEBUG("Current local sidereal time = %.8lf", lst);
+    // translate into hh:mm:ss
+    getSexComponents(lst, &h, &m, &s);
+
+    sprintf(input, "%02d%02d%02d", h, m, s);
+    return true;
+}*/
+
+/*********************************************************************************
+ * config file
+ *********************************************************************************/
+
+bool LX200Herkules::saveConfigItems(FILE *fp)
+{
+    LOG_DEBUG(__FUNCTION__);
+    IUSaveConfigText(fp, &SiteNameTP);
+
+    return LX200Telescope::saveConfigItems(fp);
+}
+
+
+/*********************************************************************************
+ * Queries
+ *********************************************************************************/
+
+/**
+ * @brief Send a LX200 query to the communication port and read the result.
+ * @param cmd LX200 query
+ * @param response answer
+ * @return true if the command succeeded, false otherwise
+ */
+bool LX200Herkules::sendQuery(const char* cmd, char* response, char end, int wait)
+{
+    LOGF_DEBUG("%s %s End:%c Wait:%ds", __FUNCTION__, cmd, end, wait);
+    response[0] = '\0';
+    char lresponse[TCS_RESPONSE_BUFFER_LENGTH];
+    lresponse [0] = '\0';
+    bool lresult = false;
+    if(!transmit(cmd))
+    {
+        LOGF_ERROR("Command <%s> not transmitted.", cmd);
+    }
+    else if (wait > TCS_NOANSWER)
+    {
+        if (receive(lresponse, end, wait))
+        {
+            strcpy(response, lresponse);
+            return true;
+        }
+    }
+    else
+        lresult = true;
+    return lresult;
+}
+
+
+bool LX200Herkules::setMountParkPosition()
+{
+    LOG_DEBUG(__FUNCTION__);
+    // Command  - :X352#
+    // Response - 0#
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if (!sendQuery(":X352#", response))
+    {
+        LOG_ERROR("Failed to send mount set park position command.");
+        return false;
+    }
+    if (response[0] != '0')
+    {
+        LOGF_ERROR("Invalid mount set park position response '%s'.", response);
+        return false;
+    }
+    return true;
+}
+
+/*
+ * Set the site longitude.
+ */
+bool LX200Herkules::setSiteLongitude(double longitude)
+{
+    LOG_DEBUG(__FUNCTION__);
+    int d, m, s;
+    char command[32] = {0};
+
+    getSexComponents(longitude, &d, &m, &s);
+    snprintf(command, sizeof(command), ":Sg%03d*%02d:%02d#", d, m, s);
+    LOGF_DEBUG("Sending set site longitude request '%s'", command);
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    bool result = sendQuery(command, response);
+    // default wait for TCS_TIMEOUT seconds is ok because longitude is only set at start
+
+    return (result);
+}
+
+
+/*
+ * Set the site latitude
+ */
+bool LX200Herkules::setSiteLatitude(double Lat)
+{
+    LOG_DEBUG(__FUNCTION__);
+    int d, m, s;
+    char command[32];
+
+    getSexComponents(Lat, &d, &m, &s);
+
+    snprintf(command, sizeof(command), ":St%+03d*%02d:%02d#", d, m, s);
+
+    LOGF_DEBUG("Sending set site latitude request '%s'", command);
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    return (sendQuery(command, response));
+    // default wait for TCS_TIMEOUT seconds is ok because latitude is only set at start
+
+}
+
+bool LX200Herkules::getJSONData_gp(int jindex, char *jstr) // preliminary hardcoded  :gp-query
+{
+    char lresponse[128];
+    lresponse [0] = '\0';
+    char lcmd[4] = ":gp";
+    char end = '}';
+    if(!transmit(lcmd))
+    {
+        LOGF_ERROR("Command <%s> not transmitted.", lcmd);
+    }
+    if (receive(lresponse, end, 1))
+        {
+            flush();
+        }
+    else
+    {
+        LOG_ERROR("Failed to get JSONData");
+        return false;
+    }
+    char data[2][20] = {"", ""};
+    int returnCode = sscanf(lresponse, "%*[^[][%[^\"]%[^,]", data[0], data[1]);
+    if (returnCode < 1)
+    {
+       LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
+        return false;
+    }
+    strcpy(jstr,data[jindex]);
+    return true;
+}
+
+bool LX200Herkules::getJSONData_Y(int jindex, char *jstr) // preliminary hardcoded query :Y#-query
+{
+    char lresponse[128];
+    lresponse [0] = '\0';
+    char lcmd[4] = ":Y#";
+    char end = '}';
+    if(!transmit(lcmd))
+    {
+        LOGF_ERROR("Command <%s> not transmitted.", lcmd);
+    }
+    if (receive(lresponse, end, 1))
+        {
+            flush();
+        }
+    else
+    {
+        LOG_ERROR("Failed to get JSONData");
+        return false;
+    }
+    char data[6][20] = {"", "", "", "", "", ""};
+    int returnCode = sscanf(lresponse, "%[^,]%*[,]%[^,]%*[,]%[^#]%*[#\",]%[^,]%*[,]%[^,]%*[,]%[^,]", data[0], data[1], data[2], data[3], data[4], data[5]);
+    if (returnCode < 1)
+    {
+       LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
+        return false;
+    }
+    strcpy(jstr,data[jindex]);
+    return true;
+}
+
+bool LX200Herkules::getMotorStatus(int *xSpeed, int *ySpeed)
+{
+    // Command  - :X34#
+    // the Herkules replies mxy# where x is the RA / AZ motor status and y
+    // the DEC / ALT motor status meaning:
+    //    x (y) = 0 motor x (y) stopped or unpowered
+    //             (use :X3C# if you want  distinguish if stopped or unpowered)
+    //    x (y) = 1 motor x (y) returned in tracking mode
+    //    x (y) = 2 motor x (y) acelerating
+    //    x (y) = 3 motor x (y) decelerating
+    //    x (y) = 4 motor x (y) moving at low speed to refine
+    //    x (y) = 5 motor x (y) moving at high speed to target
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if(!sendQuery(":X34#", response))
+    {
+        LOG_ERROR("Failed to get motor state");
+        return false;
+    }
+    int x, y;
+    int returnCode = sscanf(response, "m%01d%01d", &x, &y);
+    if (returnCode < 2)
+    {
+        LOGF_ERROR("Failed to parse motor state response '%s'.", response);
+        return false;
+    }
+    *xSpeed = x;
+    *ySpeed = y;
+    LOGF_DEBUG("Motor state = (%d, %d)", *xSpeed, *ySpeed);
+    return true;
+}
+
+/**
+ * @brief Check whether the mount is synched or parked.
+ * @param status 0=unparked, 1=at home position, 2=parked
+ *               A=slewing home, B=slewing to park position
+ * @return true if the command succeeded, false otherwise
+ */
+bool LX200Herkules::getParkHomeStatus (char* status)
+{
+    LOG_DEBUG(__FUNCTION__);
+    // Command   - :X38#
+    // Answers:
+    // p0 - unparked
+    // p1 - at home position
+    // p2 - parked
+    // pA - slewing home
+    // pB - slewing to park position
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if (!sendQuery(":X38#", response))
+    {
+        LOG_ERROR("Failed to send get parking status request.");
+        return false;
+    }
+
+    LOGF_DEBUG("%s: response: %s", __FUNCTION__, response);
+
+    if (! sscanf(response, "p%32s[012AB]", status))
+    {
+        LOGF_ERROR("Unexpected park home status response '%s'.", response);
+        return false;
+    }
+
+    return true;
+}
+
+
+/**
+ * @brief Determine the system slew speed mode
+ * @param xx
+ * @return true iff request succeeded
+ */
+bool LX200Herkules::getSystemSlewSpeed (int *xx)
+{
+    LOG_DEBUG(__FUNCTION__);
+    // query status  - :Gm#
+    // response      - <number>#
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+
+    if (!sendQuery(":Gm#", response))
+    {
+        LOG_ERROR("Failed to send query system slew speed request.");
+        return false;
+    }
+    if (! sscanf(response, "%03d#", xx))
+    {
+        LOGF_ERROR("Unexpected system slew speed response '%s'.", response);
+        return false;
+    }
+    *xx /= 15; //TCS: displayed Speed (in °/s) = *xx / 15
+    return true;
+}
+
+bool LX200Herkules::setSystemSlewSpeed (int xx)
+{
+    // set status  - :Sm#
+    // response    - ?
+
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    sprintf(cmd, ":Sm%2d#", xx*15); //TCS: xx = displayed Speed (in °/s) * 15
+    if (xx < 0 && xx > 30)
+    {
+        LOGF_ERROR("Unexpected system slew speed '%02d'.", xx);
+        return false;
+    }
+    else if (sendQuery(cmd, response, TCS_NOANSWER))
+    {
+        return true;
+    }
+    else
+    {
+        LOG_ERROR("Setting system slew speed FAILED");
+        return false;
+    }
+
+}
+
+
+/*
+ * @brief Retrieve pier side of the mount and sync it back to the client
+ * @return true iff synching succeeds
+ *
+bool LX200Herkules::syncSideOfPier()
+{
+    LOG_DEBUG(__FUNCTION__);
+    // Command query side of pier - :X39#
+    //         side unknown       - PX#
+    //         east pointing west - PE#
+    //         west pointing east - PW#
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if (!sendQuery(":X39#", response))
+    {
+        LOG_ERROR("Failed to send query pier side.");
+        return false;
+    }
+    char answer;
+
+    if (! sscanf(response, "P%c", &answer))
+    {
+        LOGF_ERROR("Unexpected query pier side response '%s'.", response);
+        return false;
+    }
+
+    switch (answer)
+    {
+        case 'X':
+            LOG_DEBUG("Detected pier side unknown.");
+            setPierSide(INDI::Telescope::PIER_UNKNOWN);
+            break;
+        case 'W':
+            // seems to be vice versa
+            LOG_DEBUG("Detected pier side west.");
+            setPierSide(INDI::Telescope::PIER_EAST);
+            break;
+        case 'E':
+            LOG_DEBUG("Detected pier side east.");
+            setPierSide(INDI::Telescope::PIER_WEST);
+            break;
+        default:
+            break;
+    }
+
+    return true;
+}*/
+
+/**
+ * @brief Retrieve the firmware info from the mount
+ * @param firmwareInfo - firmware description
+ * @return
+ */
+bool LX200Herkules::getFirmwareInfo ()
+{
+    LOG_INFO("Get firmwareinfo: Not yet implemented.");
+     return true;
+}
+
+/*********************************************************************************
+ * Helper functions
+ *********************************************************************************/
+
+
+/**
+ * @brief Receive answer from the communication port.
+ * @param buffer - buffer holding the answer
+ * @param bytes - number of bytes contained in the answer
+ * @author CanisUrsa
+ * @return true if communication succeeded, false otherwise
+ */
+bool LX200Herkules::receive(char* buffer, char end, int wait)
+{
+    //    LOGF_DEBUG("%s timeout=%ds",__FUNCTION__, wait);
+    int bytes= 0;
+    int timeout = wait;
+    int returnCode = tty_read_section(PortFD, buffer, end, timeout, &bytes);
+    if (returnCode != TTY_OK && (bytes < 1))
+    {
+        char errorString[MAXRBUF];
+        tty_error_msg(returnCode, errorString, MAXRBUF);
+        if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
+        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
+        return false;
+    }
+    if(buffer[bytes - 1] == '#')
+        buffer[bytes - 1] = '\0'; // remove #
+    else
+        buffer[bytes] = '\0';
+
+    return true;
+}
+
+/**
+ * @brief Flush the communication port.
+ * @author CanisUrsa
+ */
+void LX200Herkules::flush()
+{
+    //LOG_DEBUG(__FUNCTION__);
+    //tcflush(PortFD, TCIOFLUSH);
+}
+
+bool LX200Herkules::transmit(const char* buffer)
+{
+    //    LOG_DEBUG(__FUNCTION__);
+    int bytesWritten = 0;
+    flush();
+    int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
+    if (returnCode != TTY_OK)
+    {
+        char errorString[MAXRBUF];
+        tty_error_msg(returnCode, errorString, MAXRBUF);
+        LOGF_WARN("Failed to transmit %s. Wrote %d bytes and got error %s.", buffer, bytesWritten, errorString);
+        return false;
+    }
+    return true;
+}
+
+/*bool LX200Herkules::SetTrackMode(uint8_t mode)
+{
+    LOGF_DEBUG("%s: Set Track Mode %d", __FUNCTION__, mode);
+    if (isSimulation())
+        return true;
+
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    char s_mode[10] = {0};
+
+    switch (mode)
+    {
+        case TRACK_SIDEREAL:
+            strcpy(cmd, ":TQ#");
+            strcpy(s_mode, "Sidereal");
+            break;
+        case TRACK_SOLAR:
+            strcpy(cmd, ":TS#");
+            strcpy(s_mode, "Solar");
+            break;
+        case TRACK_LUNAR:
+            strcpy(cmd, ":TL#");
+            strcpy(s_mode, "Lunar");
+            break;
+        case TRACK_CUSTOM:
+            strcpy(cmd, ":TM#");
+            strcpy(s_mode, "");
+            break;
+        default:
+            return false;
+    }
+    if ( !sendQuery(cmd, response, 0))  // Dont wait for response - there is none
+        return false;
+    LOGF_INFO("Tracking mode set to %s.", s_mode );
+
+    // Only update tracking frequency if it is defined and not deleted by child classes
+    if (genericCapability & LX200_HAS_TRACKING_FREQ)
+    {
+        LOGF_DEBUG("%s: Get Tracking Freq", __FUNCTION__);
+        getTrackFrequency(&TrackFreqN[0].value);
+        IDSetNumber(&TrackingFreqNP, nullptr);
+    }
+    return true;
+}*/
+
+bool LX200Herkules::checkLX200Format()
+{
+    LOG_DEBUG(__FUNCTION__);
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+
+    controller_format = LX200_LONG_FORMAT;
+    //    ::controller_format = LX200_LONG_FORMAT;
+
+    if (!sendQuery(":GR#", response))
+    {
+        LOG_ERROR("Failed to get RA for format check");
+        return false;
+    }
+    /* If it's short format, try to toggle to high precision format */
+    if (strlen(response) <= 5 || response[5] == '.')
+    {
+        LOG_INFO("Detected low precision format, "
+                 "attempting to switch to high precision.");
+        if (!sendQuery(":U#", response, 0))
+        {
+            LOG_ERROR("Failed to switch precision");
+            return false;
+        }
+        if (!sendQuery(":GR#", response))
+        {
+            LOG_ERROR("Failed to get high precision RA");
+            return false;
+        }
+    }
+    if (strlen(response) <= 5 || response[5] == '.')
+    {
+        controller_format = LX200_SHORT_FORMAT;
+        LOG_INFO("Coordinate format is low precision.");
+        return 0;
+
+    }
+    else if (strlen(response) > 8 && response[8] == '.')
+    {
+        controller_format = LX200_LONGER_FORMAT;
+        LOG_INFO("Coordinate format is ultra high precision.");
+        return 0;
+    }
+    else
+    {
+        controller_format = LX200_LONG_FORMAT;
+        LOG_INFO("Coordinate format is high precision.");
+        return 0;
+    }
+}
+
+bool LX200Herkules::SetSlewRate(int index)
+{
+    LOG_DEBUG(__FUNCTION__);
+    // Convert index to Meade format
+    index = 3 - index;
+
+    if (!isSimulation() && !setSlewMode(index))
+    {
+        SlewRateSP.s = IPS_ALERT;
+        IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+        return false;
+    }
+
+    SlewRateSP.s = IPS_OK;
+    IDSetSwitch(&SlewRateSP, nullptr);
+    return true;
+}
+bool LX200Herkules::setSlewMode(int slewMode)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+
+    switch (slewMode)
+    {
+        case LX200_SLEW_MAX:
+            strcpy(cmd, ":RS#");
+            break;
+        case LX200_SLEW_FIND:
+            strcpy(cmd, ":RM#");
+            break;
+        case LX200_SLEW_CENTER:
+            strcpy(cmd, ":RC#");
+            break;
+        case LX200_SLEW_GUIDE:
+            strcpy(cmd, ":RG#");
+            break;
+        default:
+            return false;
+    }
+    if (!sendQuery(cmd, response, 0)) // Don't wait for response - there isn't one
+    {
+        return false;
+    }
+    return true;
+}
+
+IPState LX200Herkules::GuideNorth(uint32_t ms)
+{
+    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
+    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    {
+        LOG_ERROR("Cannot guide while moving.");
+        return IPS_ALERT;
+    }
+
+    // If already moving (no pulse command), then stop movement
+    if (MovementNSSP.s == IPS_BUSY)
+    {
+        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+
+        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
+    }
+
+    if (GuideNSTID)
+    {
+        IERmTimer(GuideNSTID);
+        GuideNSTID = 0;
+    }
+
+    if (usePulseCommand)
+    {
+        SendPulseCmd(LX200_NORTH, ms);
+    }
+    else
+    {
+        if (!setSlewMode(LX200_SLEW_GUIDE))
+        {
+            SlewRateSP.s = IPS_ALERT;
+            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            return IPS_ALERT;
+        }
+
+        MovementNSS[DIRECTION_NORTH].s = ISS_ON;
+        MoveNS(DIRECTION_NORTH, MOTION_START);
+    }
+
+    // Set slew to guiding
+    IUResetSwitch(&SlewRateSP);
+    SlewRateS[SLEW_GUIDE].s = ISS_ON;
+    IDSetSwitch(&SlewRateSP, nullptr);
+    guide_direction_ns = LX200_NORTH;
+    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    return IPS_BUSY;
+}
+
+IPState LX200Herkules::GuideSouth(uint32_t ms)
+{
+    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
+    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    {
+        LOG_ERROR("Cannot guide while moving.");
+        return IPS_ALERT;
+    }
+
+    // If already moving (no pulse command), then stop movement
+    if (MovementNSSP.s == IPS_BUSY)
+    {
+        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+
+        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
+    }
+
+    if (GuideNSTID)
+    {
+        IERmTimer(GuideNSTID);
+        GuideNSTID = 0;
+    }
+
+    if (usePulseCommand)
+    {
+        SendPulseCmd(LX200_SOUTH, ms);
+    }
+    else
+    {
+        if (!setSlewMode(LX200_SLEW_GUIDE))
+        {
+            SlewRateSP.s = IPS_ALERT;
+            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            return IPS_ALERT;
+        }
+
+        MovementNSS[DIRECTION_SOUTH].s = ISS_ON;
+        MoveNS(DIRECTION_SOUTH, MOTION_START);
+    }
+
+    // Set slew to guiding
+    IUResetSwitch(&SlewRateSP);
+    SlewRateS[SLEW_GUIDE].s = ISS_ON;
+    IDSetSwitch(&SlewRateSP, nullptr);
+    guide_direction_ns = LX200_SOUTH;
+    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    return IPS_BUSY;
+}
+
+IPState LX200Herkules::GuideEast(uint32_t ms)
+{
+    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
+    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    {
+        LOG_ERROR("Cannot guide while moving.");
+        return IPS_ALERT;
+    }
+
+    // If already moving (no pulse command), then stop movement
+    if (MovementWESP.s == IPS_BUSY)
+    {
+        int dir = IUFindOnSwitchIndex(&MovementWESP);
+
+        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
+    }
+
+    if (GuideWETID)
+    {
+        IERmTimer(GuideWETID);
+        GuideWETID = 0;
+    }
+
+    if (usePulseCommand)
+    {
+        SendPulseCmd(LX200_EAST, ms);
+    }
+    else
+    {
+        if (!setSlewMode(LX200_SLEW_GUIDE))
+        {
+            SlewRateSP.s = IPS_ALERT;
+            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            return IPS_ALERT;
+        }
+
+        MovementWES[DIRECTION_EAST].s = ISS_ON;
+        MoveWE(DIRECTION_EAST, MOTION_START);
+    }
+
+    // Set slew to guiding
+    IUResetSwitch(&SlewRateSP);
+    SlewRateS[SLEW_GUIDE].s = ISS_ON;
+    IDSetSwitch(&SlewRateSP, nullptr);
+    guide_direction_we = LX200_EAST;
+    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    return IPS_BUSY;
+}
+
+IPState LX200Herkules::GuideWest(uint32_t ms)
+{
+    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
+    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    {
+        LOG_ERROR("Cannot guide while moving.");
+        return IPS_ALERT;
+    }
+
+    // If already moving (no pulse command), then stop movement
+    if (MovementWESP.s == IPS_BUSY)
+    {
+        int dir = IUFindOnSwitchIndex(&MovementWESP);
+
+        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
+    }
+
+    if (GuideWETID)
+    {
+        IERmTimer(GuideWETID);
+        GuideWETID = 0;
+    }
+
+    if (usePulseCommand)
+    {
+        SendPulseCmd(LX200_WEST, ms);
+    }
+    else
+    {
+        if (!setSlewMode(LX200_SLEW_GUIDE))
+        {
+            SlewRateSP.s = IPS_ALERT;
+            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            return IPS_ALERT;
+        }
+
+        MovementWES[DIRECTION_WEST].s = ISS_ON;
+        MoveWE(DIRECTION_WEST, MOTION_START);
+    }
+
+    // Set slew to guiding
+    IUResetSwitch(&SlewRateSP);
+    SlewRateS[SLEW_GUIDE].s = ISS_ON;
+    IDSetSwitch(&SlewRateSP, nullptr);
+    guide_direction_we = LX200_WEST;
+    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    return IPS_BUSY;
+}
+
+int LX200Herkules::SendPulseCmd(int8_t direction, uint32_t duration_msec)
+{
+    LOGF_DEBUG("%s dir=%d dur=%d ms", __FUNCTION__, direction, duration_msec );
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    switch (direction)
+    {
+        case LX200_NORTH:
+            sprintf(cmd, ":Mgn%04u#", duration_msec);
+            break;
+        case LX200_SOUTH:
+            sprintf(cmd, ":Mgs%04u#", duration_msec);
+            break;
+        case LX200_EAST:
+            sprintf(cmd, ":Mge%04u#", duration_msec);
+            break;
+        case LX200_WEST:
+            sprintf(cmd, ":Mgw%04u#", duration_msec);
+            break;
+        default:
+            return 1;
+    }
+    if (!sendQuery(cmd, response, 0)) // Don't wait for response - there isn't one
+    {
+        return false;
+    }
+    return true;
+}
+
+bool LX200Herkules::SetTrackEnabled(bool enabled)
+{
+    // Command set tracking on  - :hT#
+    //         set tracking off - :hN#
+
+    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
+    if (! sendQuery(enabled ? ":hT#" : ":hN#", response, 0))
+    {
+        LOGF_ERROR("Failed to %s tracking", enabled ? "enable" : "disable");
+        return false;
+    }
+    LOGF_INFO("Tracking %s.", enabled ? "enabled" : "disabled");
+    return true;
+}
+
+bool LX200Herkules::SetTrackRate(double raRate, double deRate)
+{
+    LOG_DEBUG(__FUNCTION__);
+    INDI_UNUSED(raRate);
+    INDI_UNUSED(deRate);
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    int rate = raRate;
+    sprintf(cmd, ":X1E%04d", rate);
+    if(!sendQuery(cmd, response, 0))
+    {
+        LOGF_ERROR("Failed to set tracking t %d", rate);
+        return false;
+    }
+    return true;
+}
+
+void LX200Herkules::ISGetProperties(const char *dev)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) != 0)
+        return;
+
+    LX200Telescope::ISGetProperties(dev);
+    if (isConnected())
+    {
+        if (HasTrackMode() && TrackModeS != nullptr)
+            defineSwitch(&TrackModeSP);
+        if (CanControlTrack())
+            defineSwitch(&TrackStateSP);
+        if (HasTrackRate())
+            defineNumber(&TrackRateNP);
+    }
+    /*
+        if (isConnected())
+        {
+            if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
+                defineSwitch(&AlignmentSP);
+
+            if (genericCapability & LX200_HAS_TRACKING_FREQ)
+                defineNumber(&TrackingFreqNP);
+
+            if (genericCapability & LX200_HAS_PULSE_GUIDING)
+                defineSwitch(&UsePulseCmdSP);
+
+            if (genericCapability & LX200_HAS_SITES)
+            {
+                defineSwitch(&SiteSP);
+                defineText(&SiteNameTP);
+            }
+
+            defineNumber(&GuideNSNP);
+            defineNumber(&GuideWENP);
+
+            if (genericCapability & LX200_HAS_FOCUS)
+            {
+                defineSwitch(&FocusMotionSP);
+                defineNumber(&FocusTimerNP);
+                defineSwitch(&FocusModeSP);
+            }
+        }
+        */
+}
+
+bool LX200Herkules::Goto(double ra, double dec)
+{
+    LOG_DEBUG(__FUNCTION__);
+    const struct timespec timeout = {0, 100000000L};
+
+    targetRA  = ra;
+    targetDEC = dec;
+    char RAStr[64] = {0}, DecStr[64] = {0};
+    int fracbase = 3600;
+
+    fs_sexa(RAStr, targetRA, 2, fracbase);
+    fs_sexa(DecStr, targetDEC, 2, fracbase);
+
+    // If moving, let's stop it first.
+    if (EqNP.s == IPS_BUSY)
+    {
+        if (!isSimulation() && !Abort())
+        {
+            AbortSP.s = IPS_ALERT;
+            IDSetSwitch(&AbortSP, "Abort slew failed.");
+            return false;
+        }
+
+        AbortSP.s = IPS_OK;
+        EqNP.s    = IPS_IDLE;
+        IDSetSwitch(&AbortSP, "Slew aborted.");
+        IDSetNumber(&EqNP, nullptr);
+
+        if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+        {
+            MovementNSSP.s = MovementWESP.s = IPS_IDLE;
+            EqNP.s                          = IPS_IDLE;
+            IUResetSwitch(&MovementNSSP);
+            IUResetSwitch(&MovementWESP);
+            IDSetSwitch(&MovementNSSP, nullptr);
+            IDSetSwitch(&MovementWESP, nullptr);
+        }
+
+        // sleep for 100 mseconds
+        nanosleep(&timeout, nullptr);
+    }
+    if(!isSimulation() && !setObjectCoords(ra, dec))
+    {
+        LOG_ERROR("Error setting coords for goto");
+        return false;
+    }
+
+    if (!isSimulation())
+    {
+        char response[TCS_RESPONSE_BUFFER_LENGTH];
+        if(!sendQuery(":MS#", response))
+        /* Query reads '0', mount is not slewing */
+        {
+            LOG_ERROR("Error Slewing");
+            slewError(0);
+            return false;
+        }
+    }
+
+    TrackState = SCOPE_SLEWING;
+    EqNP.s     = IPS_BUSY;
+
+    LOGF_INFO("Slewing to RA: %s / DEC: %s", RAStr, DecStr);
+
+    return true;
+}
+
+bool LX200Herkules::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+
+    sprintf(cmd, ":%s%s#", command == MOTION_START ? "M" : "Q", dir == DIRECTION_NORTH ? "n" : "s");
+    if (!isSimulation() && !sendQuery(cmd, response, 0))
+    {
+        LOG_ERROR("Error N/S motion direction.");
+        return false;
+    }
+
+    return true;
+}
+
+bool LX200Herkules::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+
+    sprintf(cmd, ":%s%s#", command == MOTION_START ? "M" : "Q", dir == DIRECTION_WEST ? "w" : "e");
+
+    if (!isSimulation() && !sendQuery(cmd, response, 0))
+    {
+        LOG_ERROR("Error W/E motion direction.");
+        return false;
+    }
+
+    return true;
+}
+
+bool LX200Herkules::Abort()
+{
+    LOG_DEBUG(__FUNCTION__);
+    //   char cmd[TCS_COMMAND_BUFFER_LENGTH];
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    if (!isSimulation() && !sendQuery(":Q#", response, 0))
+    {
+        LOG_ERROR("Failed to abort slew.");
+        return false;
+    }
+
+    if (GuideNSNP.s == IPS_BUSY || GuideWENP.s == IPS_BUSY)
+    {
+        GuideNSNP.s = GuideWENP.s = IPS_IDLE;
+        GuideNSN[0].value = GuideNSN[1].value = 0.0;
+        GuideWEN[0].value = GuideWEN[1].value = 0.0;
+
+        if (GuideNSTID)
+        {
+            IERmTimer(GuideNSTID);
+            GuideNSTID = 0;
+        }
+
+        if (GuideWETID)
+        {
+            IERmTimer(GuideWETID);
+            GuideNSTID = 0;
+        }
+
+        LOG_INFO("Guide aborted.");
+        IDSetNumber(&GuideNSNP, nullptr);
+        IDSetNumber(&GuideWENP, nullptr);
+
+        return true;
+    }
+
+    return true;
+}
+
+bool LX200Herkules::Sync(double ra, double dec)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char lstat[20] = {0};
+    int li = 0;
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+
+    if(!isSimulation() && !setObjectCoords(ra, dec))
+    {
+        LOG_ERROR("Error setting coords for sync");
+        return false;
+    }
+
+    if (!isSimulation() && !sendQuery(":CM#", response))
+    {
+        EqNP.s = IPS_ALERT;
+        IDSetNumber(&EqNP, "Synchronization failed.");
+        return false;
+    }
+
+    currentRA  = ra;
+    currentDEC = dec;
+
+    LOG_INFO("Synchronization successful.");
+
+    EqNP.s     = IPS_OK;
+
+    NewRaDec(currentRA, currentDEC);
+
+    if (getJSONData_Y(5, lstat))
+    {
+        li = std::stoi(lstat);
+        li = li & (1<<7);
+        LOGF_INFO("Telescope pointing %s", (li > 0) ? "east" : "west");
+        if (li > 0)
+        {
+            setPierSide(INDI::Telescope::PIER_WEST);
+        }
+        else
+            setPierSide(INDI::Telescope::PIER_EAST);
+    }
+
+    return true;
+}
+
+
+bool LX200Herkules::setObjectCoords(double ra, double dec)
+{
+    LOG_DEBUG(__FUNCTION__);
+
+    char RAStr[64] = {0}, DecStr[64] = {0};
+    int h, m, s, d;
+    getSexComponents(ra, &h, &m, &s);
+    snprintf(RAStr, sizeof(RAStr), ":Sr%02d:%02d:%02d#", h, m, s);
+    getSexComponents(dec, &d, &m, &s);
+    /* case with negative zero */
+    if (!d && dec < 0)
+        snprintf(DecStr, sizeof(DecStr), ":Sd-%02d*%02d:%02d#", d, m, s);
+    else
+        snprintf(DecStr, sizeof(DecStr), ":Sd%+03d*%02d:%02d#", d, m, s);
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    if (isSimulation()) return true;
+    // These commands receive a response without a terminating #
+    if(!sendQuery(RAStr, response, '1', 2)  || !sendQuery(DecStr, response, '1', 2) )
+    {
+        EqNP.s = IPS_ALERT;
+        IDSetNumber(&EqNP, "Error setting RA/DEC.");
+        return false;
+    }
+
+    return true;
+}
+
+bool LX200Herkules::setLocalDate(uint8_t days, uint8_t months, uint16_t years)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[RB_MAX_LEN] = {0};
+    char response[RB_MAX_LEN] = {0};
+
+    int yy = years % 100;
+
+    snprintf(cmd, sizeof(cmd), ":SC%02d/%02d/%02d#", months, days, yy);
+    // Correct command string without spaces and with slashes (wrong in lx200driver of INDIcore!)
+    // ":SCMM/DD/YY#" (cf. Meade Telescope Serial Command Protocol; Revision 2010.10)
+    return (sendQuery(cmd, response, 0));
+}
+
+bool LX200Herkules::setLocalTime24(uint8_t hour, uint8_t minute, uint8_t second)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[RB_MAX_LEN] = {0};
+    char response[RB_MAX_LEN] = {0};
+
+    snprintf(cmd, sizeof(cmd), ":SL%02d:%02d:%02d#", hour, minute, second);
+    // Correct command string without spaces (wrong in lx200driver of INDIcore!)
+    // ":SLHH:MM:SS#" (cf. Meade Telescope Serial Command Protocol; Revision 2010.10)
+    return (sendQuery(cmd, response, 0));
+}
+
+bool LX200Herkules::setUTCOffset(double offset)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[RB_MAX_LEN] = {0};
+    char response[RB_MAX_LEN] = {0};
+    int hours = offset * -1.0;
+
+    snprintf(cmd, sizeof(cmd), ":SG%+03d#", hours);
+    // Correct command string without spaces (wrong in lx200driver of INDIcore!)
+    // ":SGsHH.H#" (cf. Meade Telescope Serial Command Protocol; Revision 2010.10)
+    return (sendQuery(cmd, response, 0));
+}
+
+bool LX200Herkules::getTrackFrequency(double *value)
+{
+    LOG_DEBUG(__FUNCTION__);
+    float Freq;
+    char response[RB_MAX_LEN] = {0};
+
+    if (!sendQuery(":GT#", response))
+        return false;
+
+    if (sscanf(response, "%f#", &Freq) < 1)
+    {
+        LOG_ERROR("Unable to parse response");
+        return false;
+    }
+
+    *value = static_cast<double>(Freq);
+    return true;
+}
+
