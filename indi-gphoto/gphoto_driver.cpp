@@ -719,7 +719,7 @@ int find_exposure_setting(gphoto_driver *gphoto, gphoto_widget *widget, uint32_t
         if (exact)
         {
             // Close "enough" to be exact
-            if (std::fabs(delta) < 0.001)
+            if (std::fabs(delta) < 1e-4)
             {
                 best_match = delta;
                 best_idx   = i;
