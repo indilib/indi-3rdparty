@@ -54,14 +54,21 @@ If you plan on contributing to INDI development, then it is recommended to perfo
 git clone https://github.com/indilib/indi-3rdparty.git
 ```
 
-If on the other hand, you are only interested to build INDI 3rd party driver, then it is best to clone a shallow copy as this will be **much** faster and saves lots of space:
+If on the other hand, you are only interested to build an INDI 3rd party driver, then it is best to clone a shallow copy as this will be **much** faster and saves lots of space:
 ```
 git clone --depth=1 https://github.com/indilib/indi-3rdparty
 ```
 
-## Build 3rd party drivers
+## 3rd Party Drivers vs. 3rd Party Libraries
 
-You can build the all the 3rd party drivers at once (not recommended) or build the required 3rd party driver as required (recommended). Each 3rd party driver may have its own pre-requisites and requirements. For example, to build INDI EQMod driver:
+Some of the drivers included in the INDI 3rd party repository require a library (usually made by the device manufacturer) to be installed before the driver can be built and installed.
+For example indi-qsi depends on libqsi, so libqsi must be built and installed before attempting to build and install the indi-qsi driver.
+Many of these libraries are included in the 3rd Party Repository and can be installed just like the drivers.
+
+## Building individual 3rd Party Drivers (typically recommended)
+
+While you can build all the 3rd party drivers and libraries at once, it is typically recommended to build each 3rd party driver as required. 
+Each 3rd party driver may have its own pre-requisites and requirements. For example, to build INDI EQMod driver:
 
 ```
 cd build
@@ -78,15 +85,29 @@ The complete list of system dependancies for all drivers on Debian / Ubuntu
 sudo apt-get install 
 ```
 
-To build **all** 3rd party drivers, you need to run cmake and make install **twice**. First time is to install any dependencies of the 3rd party drivers (for example indi-qsi depends on libqsi, so libqsi must be built and installed first), and second time to install the actual drivers themselves.
+## Building all the 3rd Party Libraries
+
+You can build **all** the 3rd Party Libraries at once if you already have **all** of the requirements for each library installed.
+To install all the libraries, you would want to use the BUILD-LIBS build flag.  
+If you want to build **all** 3rd Party drivers, you need to do this step first.
 
 ```
 cd build
-mkdir indi-3rdparty
-cd indi-3rdparty
-cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../indi-3rdparty
+mkdir indi-3rdparty-Libraries
+cd indi-3rdparty-Libraries
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_LIBS=1 ../../indi-3rdparty
 make
 sudo make install
+```
+## Building all the 3rd Party Drivers
+
+You can build **all** the 3rd Party Drivers at once if you already have **all** of the requirements for each driver installed.
+Before you attempt this, please make sure to install **all** the 3rd Party Libraries first.  Please see the section above.
+
+```
+cd build
+mkdir indi-3rdparty-Drivers
+cd indi-3rdparty-Drivers
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../indi-3rdparty
 make
 sudo make install
