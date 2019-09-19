@@ -67,8 +67,9 @@ Many of these libraries are included in the 3rd Party Repository and can be inst
 
 ## Building individual 3rd Party Drivers (typically recommended)
 
-While you can build all the 3rd party drivers and libraries at once, it is typically recommended to build each 3rd party driver as required. 
-Each 3rd party driver may have its own pre-requisites and requirements. For example, to build INDI EQMod driver:
+While you can build all the 3rd party drivers and libraries at once, it is typically recommended to build/install each 3rd party driver as required, since
+each 3rd party driver may have its own pre-requisites and requirements, and you probably don't need all the drivers. 
+If you want build and install just one driver, please see this example of how to build INDI EQMod driver:
 
 ```
 cd build
@@ -88,8 +89,8 @@ sudo apt-get install
 ## Building all the 3rd Party Libraries
 
 You can build **all** the 3rd Party Libraries at once if you already have **all** of the requirements for each library installed.
-To install all the libraries, you would want to use the BUILD-LIBS build flag.  
-If you want to build **all** 3rd Party drivers, you need to do this step first.
+To install all the libraries, you would want to use the BUILD-LIBS build flag.  If you want to build **all** 3rd Party drivers as described in the section below, you need to do this step first.
+You can use the following commands to install all the libraries:
 
 ```
 cd build
@@ -103,6 +104,7 @@ sudo make install
 
 You can build **all** the 3rd Party Drivers at once if you already have **all** of the requirements for each driver installed.
 Before you attempt this, please make sure to install **all** the 3rd Party Libraries first.  Please see the section above.
+After you have all the requirements, you can run the following commands to install all the drivers:
 
 ```
 cd build
