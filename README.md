@@ -48,15 +48,21 @@ On Debian/Ubuntu:
 ```
 sudo apt-get install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev
 ```
-## Get the code
-If you plan on contributing to INDI development, then it is recommended to perform a full clone:
+
+## Create Project Directory
 ```
-git clone https://github.com/indilib/indi-3rdparty.git
+mkdir -p ~/Projects
+cd ~/Projects
 ```
 
-If on the other hand, you are only interested to build an INDI 3rd party driver, then it is best to clone a shallow copy as this will be **much** faster and saves lots of space:
+## Get the code
+To build INDI in order to run drivers, then it is recommended to perform a quick shallow clone that will save lots of bandwidth and space:
 ```
 git clone --depth=1 https://github.com/indilib/indi-3rdparty
+```
+On the other hand, if you plan to submit a PR or engage in INDI driver development, then getting a full clone is recommended:
+```
+git clone https://github.com/indilib/indi-3rdparty
 ```
 
 ## 3rd Party Drivers vs. 3rd Party Libraries
@@ -72,11 +78,10 @@ each 3rd party driver may have its own pre-requisites and requirements, and you 
 If you want build and install just one driver, please see this example of how to build INDI EQMod driver:
 
 ```
-cd build
-mkdir indi-eqmod
-cd indi-eqmod
-cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../3rdparty/indi-eqmod
-make
+mkdir -p ~/Projects/build/indi-eqmod
+cd ~/Projects/build/indi-eqmod
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/indi-eqmod
+make -j4
 sudo make install
 ```
 
@@ -93,13 +98,13 @@ To install all the libraries, you would want to use the BUILD-LIBS build flag.  
 You can use the following commands to install all the libraries:
 
 ```
-cd build
-mkdir indi-3rdparty-Libraries
-cd indi-3rdparty-Libraries
-cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_LIBS=1 ../../indi-3rdparty
-make
+mkdir -p ~/Projects/build/indi-3rdparty-libs
+cd ~/Projects/build/indi-3rdparty-libs
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_LIBS=1 ~/Projects/indi-3rdparty
+make -j4
 sudo make install
 ```
+
 ## Building all the 3rd Party Drivers
 
 You can build **all** the 3rd Party Drivers at once if you already have **all** of the requirements for each driver installed.
@@ -107,14 +112,12 @@ Before you attempt this, please make sure to install **all** the 3rd Party Libra
 After you have all the requirements, you can run the following commands to install all the drivers:
 
 ```
-cd build
-mkdir indi-3rdparty-Drivers
-cd indi-3rdparty-Drivers
-cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../indi-3rdparty
-make
+mkdir -p ~/Projects/build/indi-3rdparty
+cd ~/Projects/build/indi-3rdparty
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty
+make -j4
 sudo make install
 ```
-
 
 # Support
 
@@ -160,10 +163,6 @@ When submitting a new driver, the driver user **documentation** is required as p
   * Etc: Any other tabs created by the driver.
 * Issues: Any problems or issues or warnings the users should be aware about when using this driver.
 
-### Sample Drivers
-
-You can base a new driver from an existing driver. Look in either the examples or drivers/skeleton directories on how to get started.
-
 # Unit tests
 
 In order to run the unit test suite you must first install the [Google Test Framework](https://github.com/google/googletest). You will need to build and install this from source code as Google does not recommend package managers for distributing distros.(This is because each build system is often unique and a one size fits all aproach does not work well).
@@ -171,12 +170,9 @@ In order to run the unit test suite you must first install the [Google Test Fram
 Once you have the Google Test Framework installed follow this alternative build sequence:-
 
 ```
-mkdir -p build/indi-3rdparty
-cd build/indi-3rdparty
-cmake -DINDI_BUILD_UNITTESTS=ON -DCMAKE_BUILD_TYPE=Debug ../../indi-3rdparty
-make
+cd ~/Projects/build/indi-3rdparty
+cmake -DINDI_BUILD_UNITTESTS=ON -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty
+make -j4
 cd test
 ctest -V
 ```
-
-For more details refer to the scripts in the travis-ci directory.
