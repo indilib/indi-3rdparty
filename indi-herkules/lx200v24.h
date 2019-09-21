@@ -70,15 +70,12 @@ extern const char *INFO_TAB; // Infotab for Versionummer?
 class LX200Herkules : public LX200Telescope
 {
     public:
-        /*enum TrackMode
-        enum MotorsState
+        enum DrivesState
         {
-            MOTORS_OFF = 0,
-            MOTORS_DEC_ONLY = 1,
-            MOTORS_RA_ONLY = 2,
-            MOTORS_ON = 3
+            DRIVES_LOCKED = 0,
+            DRIVES_UNLOCKED = 1
         };
-        MotorsState CurrentMotorsState {MOTORS_OFF};*/
+        DrivesState CurrentDrivesState {DRIVES_LOCKED};
         TelescopeSlewRate CurrentSlewRate {SLEW_MAX};
 
         LX200Herkules();
@@ -90,6 +87,7 @@ class LX200Herkules : public LX200Telescope
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool updateProperties() override;
         virtual bool initProperties() override;
+        virtual bool isSlewComplete() override;
         virtual void ISGetProperties(const char *dev)override;
 
         // helper functions
@@ -101,7 +99,7 @@ class LX200Herkules : public LX200Telescope
 
     protected:
 
-          // parking position
+        // parking position
         ISwitchVectorProperty MountSetParkSP;
         ISwitch MountSetParkS[1];
 
@@ -109,11 +107,19 @@ class LX200Herkules : public LX200Telescope
         INumber SystemSlewSpeedP[1];
         INumberVectorProperty SystemSlewSpeedNP;
 
+        // Drives locked/unlocked
+        ISwitch DrivesStateS[2];
+        ISwitchVectorProperty DrivesStateSP;
+
+        // Info
+        ITextVectorProperty FirmwareVersionTP;
+        IText FirmwareVersionT[1] {};
+
         int controller_format { LX200_LONG_FORMAT };
 
         // override LX200Generic
         virtual void getBasicData() override;
-        virtual bool ReadScopeStatus() override;
+        // virtual bool ReadScopeStatus() override;
         virtual bool Park() override;
         virtual void SetParked(bool isparked);
         virtual bool UnPark() override;
@@ -126,15 +132,15 @@ class LX200Herkules : public LX200Telescope
         bool setParkPosition(ISState *states, char *names[], int n);
         bool getSystemSlewSpeed (int *xx);
         bool setSystemSlewSpeed (int xx);
+        bool getJSONData_Y(int jindex, char *jstr);
+        bool getJSONData_gp(int jindex, char *jstr);
+        bool setPierSide();
+        bool DrivesLocked();
+        bool SetDrivesLock(bool enable);
+
 
         // location
-        //virtual bool sendScopeLocation();
-        //double LocalSiderealTime(double longitude);
-        //bool setLocalSiderealTime(double longitude);
         virtual bool updateLocation(double latitude, double longitude, double elevation) override;
-        //virtual bool getSiteLatitude() {return true;};
-        //virtual bool getSiteLongitude() {return true;};
-        //virtual bool getLST_String(char* input);
         bool getTrackFrequency(double *value);
 
 
@@ -143,19 +149,10 @@ class LX200Herkules : public LX200Telescope
         virtual bool sendQuery(const char* cmd, char* response, char end, int wait = TCS_TIMEOUT);
         // Wait for default "#' character
         virtual bool sendQuery(const char* cmd, char* response, int wait = TCS_TIMEOUT);
-        virtual bool getFirmwareInfo();
+        virtual bool getFirmwareInfo(char* vstring);
         virtual bool setSiteLatitude(double Lat);
         virtual bool setSiteLongitude(double Long);
-        virtual bool getJSONData_Y(int jindex, char *jstr);
-        virtual bool getJSONData_gp(int jindex, char *jstr);
-        virtual bool getMotorStatus(int *xSpeed, int *ySpeed);
-        virtual bool getParkHomeStatus (char* status);
-        //virtual bool setMountGotoHome();
-        virtual bool setMountParkPosition();
 
-        // meridian flip
-
-        //virtual bool syncSideOfPier();
         bool checkLX200Format();
         // Guide Commands
         virtual IPState GuideNorth(uint32_t ms) override;
@@ -164,6 +161,7 @@ class LX200Herkules : public LX200Telescope
         virtual IPState GuideWest(uint32_t ms) override;
         virtual bool SetSlewRate(int index) override;
         virtual int SendPulseCmd(int8_t direction, uint32_t duration_msec) override;
+        bool MountTracking();
         virtual bool SetTrackEnabled(bool enabled) override;
         virtual bool SetTrackRate(double raRate, double deRate) override;
         // NSWE Motion Commands
