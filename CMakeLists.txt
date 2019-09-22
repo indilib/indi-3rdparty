@@ -100,6 +100,7 @@ option(WITH_TOUPBASE "Install Toupbase Driver" On)
 option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
+option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 
 find_package(FFmpeg)
 
@@ -214,6 +215,11 @@ endif(WITH_NEXDOME)
 if (WITH_SPECTRACYBER)
 add_subdirectory(indi-spectracyber)
 endif(WITH_SPECTRACYBER)
+
+## Shelyak
+if (WITH_SHELYAK)
+add_subdirectory(indi-shelyak)
+endif(WITH_SHELYAK)
 
 ## Cloud Watcher
 if (WITH_CLOUDWATCHER)
