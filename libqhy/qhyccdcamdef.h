@@ -338,7 +338,10 @@
 #define DEVICETYPE_QHY600        4061
 #define DEVICETYPE_QHY600C      4062
 #define DEVICETYPE_QHY600M     4063
-#define DEVICETYPE_QHY0204     4064
+#define DEVICETYPE_QHY0204      4064
+
+#define DEVICETYPE_QHY411ERIS  4065
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   4999
@@ -973,6 +976,9 @@
 #define QHY411_MAX_WIDTH        	14304
 #define QHY411_MAX_HEIGHT        	10748
 
+#define QHY411ERIS_MAX_WIDTH        14304
+#define QHY411ERIS_MAX_HEIGHT       10748
+
 #define QHY600_MAX_WIDTH        	9600
 #define QHY600_MAX_HEIGHT        	6422
 
@@ -1227,7 +1233,7 @@
 #define   SINGLE_MODE 								0
 #define   LIVE_MODE 								1
 
-#define   GET_IMAGE_TIMEOUT							30000
+#define   GET_IMAGE_TIMEOUT							60000
 
 #define   IS_OPERATOR_NONE						0
 #define   IS_CAMARA_INIT				1
@@ -1252,6 +1258,7 @@
 
 
 #define CFWSLOTS_NUM9		9
+#define CFWSLOTS_NUM8		8
 #define CFWSLOTS_NUM7		7
 #define CFWSLOTS_NUM6		6
 
