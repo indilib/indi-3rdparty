@@ -37,20 +37,20 @@
 <defLightVector device="Arduino INPUTS" name="STATUS" label="STATUS" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
 
     <defLight name="clouds" label="Cloudy">
-	<indiduino pin="3"/>
-	Off
+        <indiduino pin="3"/>
+        Idle
     </defLight>
     <defLight name="dew" label="Dewing">
-	<indiduino pin="4"/>
-	Off
+        <indiduino pin="4"/>
+        Idle
     </defLight>
     <defLight name="frezzing" label="frezzing">
-	<indiduino pin="5"/>
-	Off
+        <indiduino pin="5"/>
+        Idle
     </defLight>
     <defLight name="daylight" label="Daylight">
-	<indiduino pin="6"/>
-	Off
+        <indiduino pin="6"/>
+        Idle
     </defLight>
 </defLightVector>
 
@@ -115,16 +115,16 @@ On
 
 <defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor FAIL" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
     <defLight name="IR" label="IR Fail">
-	<indiduino pin="7"/>
-	Off
+        <indiduino pin="7"/>
+        Idle
     </defLight>
     <defLight name="HR" label="HR Fail">
-	<indiduino pin="8"/>
-	Off
+        <indiduino pin="8"/>
+        Idle
     </defLight>
     <defLight name="P" label="P Fail">
-	<indiduino pin="9"/>
-	Off
+        <indiduino pin="9"/>
+        Idle
     </defLight>
 </defLightVector>
 
