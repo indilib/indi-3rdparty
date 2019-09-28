@@ -268,7 +268,7 @@ QHYGetImageParam;
 
 
 #if CALLBACK_MODE_SUPPORT
-typedef uint32_t  (*QHYCCDProcCallBack) (void *handle,
+typedef QHYDWORD  (*QHYCCDProcCallBack) (void *handle,
     QHYDWORD message,
     QHYDWORD wParam,
     QHYDWORD lParam);
