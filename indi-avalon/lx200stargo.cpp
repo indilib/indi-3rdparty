@@ -203,8 +203,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                 return false;
             int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
 
-            bool result = true;
-            if (trackMode != TRACK_NONE) result = SetTrackMode(trackMode);
+            bool result = SetTrackMode(trackMode);
 
             switch (trackMode)
             {
@@ -216,10 +215,6 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                     break;
                 case TRACK_LUNAR:
                     LOG_INFO("Lunar tracking rate selected");
-                    break;
-                case TRACK_NONE:
-                    LOG_INFO("Tracking stopped.");
-                    result = SetTrackEnabled(false);
                     break;
             }
             TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
@@ -422,8 +417,7 @@ bool LX200StarGo::initProperties()
     IUFillSwitch(&MeridianFlipModeS[2], "MERIDIAN_FLIP_FORCED", "forced", ISS_OFF);
     IUFillSwitchVector(&MeridianFlipModeSP, MeridianFlipModeS, 3, getDeviceName(), "MERIDIAN_FLIP_MODE", "Meridian Flip", RA_DEC_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    // overwrite the custom tracking mode button
-    IUFillSwitch(&TrackModeS[3], "TRACK_NONE", "None", ISS_OFF);
+    // focuser on AUX1 port
     focuserAux1->initProperties("AUX1 Focuser");
 
     return true;
@@ -1160,7 +1154,7 @@ bool LX200StarGo::ParseMotionState(char* state)
         switch(lmode)
         {
             case 0:
-                CurrentTrackMode = TRACK_NONE;
+                // TRACK_NONE removed, do nothing
                 break;
             case 1:
                 CurrentTrackMode = TRACK_LUNAR;
@@ -1800,10 +1794,6 @@ bool LX200StarGo::SetTrackMode(uint8_t mode)
         case TRACK_LUNAR:
             strcpy(cmd, ":TL#");
             strcpy(s_mode, "Lunar");
-            break;
-        case TRACK_NONE:
-            strcpy(cmd, ":TM#");
-            strcpy(s_mode, "None");
             break;
         default:
             return false;

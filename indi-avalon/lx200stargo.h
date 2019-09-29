@@ -71,8 +71,7 @@ class LX200StarGo : public LX200Telescope
         {
             TRACK_SIDEREAL = 0, //=Telescope::TelescopeTrackMode::TRACK_SIDEREAL,
             TRACK_SOLAR = 1, //=Telescope::TelescopeTrackMode::TRACK_SOLAR,
-            TRACK_LUNAR = 2, //=Telescope::TelescopeTrackMode::TRACK_LUNAR,
-            TRACK_NONE = 3
+            TRACK_LUNAR = 2 //=Telescope::TelescopeTrackMode::TRACK_LUNAR,
         };
         enum MotorsState
         {
