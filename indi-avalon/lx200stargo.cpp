@@ -203,8 +203,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                 return false;
             int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
 
-            bool result = true;
-            if (trackMode != TRACK_NONE) result = SetTrackMode(trackMode);
+            bool result = SetTrackMode(trackMode);
 
             switch (trackMode)
             {
@@ -216,10 +215,6 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                     break;
                 case TRACK_LUNAR:
                     LOG_INFO("Lunar tracking rate selected");
-                    break;
-                case TRACK_NONE:
-                    LOG_INFO("Tracking stopped.");
-                    result = SetTrackEnabled(false);
                     break;
             }
             TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
@@ -422,8 +417,7 @@ bool LX200StarGo::initProperties()
     IUFillSwitch(&MeridianFlipModeS[2], "MERIDIAN_FLIP_FORCED", "forced", ISS_OFF);
     IUFillSwitchVector(&MeridianFlipModeSP, MeridianFlipModeS, 3, getDeviceName(), "MERIDIAN_FLIP_MODE", "Meridian Flip", RA_DEC_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    // overwrite the custom tracking mode button
-    IUFillSwitch(&TrackModeS[3], "TRACK_NONE", "None", ISS_OFF);
+    // focuser on AUX1 port
     focuserAux1->initProperties("AUX1 Focuser");
 
     return true;
@@ -501,10 +495,14 @@ bool LX200StarGo::ReadScopeStatus()
 
     if (! getMotorStatus(&x, &y))
     {
-        LOG_ERROR("Cannot determine scope status, failed to parse motor state.");
-        return false;
+        LOG_INFO("Failed to parse motor state. Retrying...");
+        // retry once
+        if (! getMotorStatus(&x, &y))
+        {
+            LOG_ERROR("Cannot determine scope status, failed to parse motor state.");
+            return false;
+        }
     }
-    LOGF_DEBUG("Motor state = (%d, %d)", x, y);
 
     char parkHomeStatus[1] = {0};
     if (! getParkHomeStatus(parkHomeStatus))
@@ -609,6 +607,7 @@ bool LX200StarGo::syncHomePosition()
 
 bool LX200StarGo::getEqCoordinates (double *ra, double *dec)
 {
+    LOG_DEBUG(__FUNCTION__);
     // Use X590 for RA DEC
     char response[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
     if(!sendQuery(":X590#", response))
@@ -1103,14 +1102,17 @@ bool LX200StarGo::sendQuery(const char* cmd, char* response, char end, int wait)
     }
     lresponse[0] = '\0';
     int lwait = wait;
+    bool found = false;
     while (receive(lresponse, &lbytes, end, lwait))
     {
         //        LOGF_DEBUG("Found response after %ds %s", lwait, lresponse);
         lbytes = 0;
         if(! ParseMotionState(lresponse))
         {
-            // Don't change wait requirement but get the response
-            strcpy(response, lresponse);
+            // Take the first response that is no motion state
+            if (!found)
+                strcpy(response, lresponse);
+            found = true;
             lwait = 0;
         }
     }
@@ -1152,7 +1154,7 @@ bool LX200StarGo::ParseMotionState(char* state)
         switch(lmode)
         {
             case 0:
-                CurrentTrackMode = TRACK_NONE;
+                // TRACK_NONE removed, do nothing
                 break;
             case 1:
                 CurrentTrackMode = TRACK_LUNAR;
@@ -1793,10 +1795,6 @@ bool LX200StarGo::SetTrackMode(uint8_t mode)
             strcpy(cmd, ":TL#");
             strcpy(s_mode, "Lunar");
             break;
-        case TRACK_NONE:
-            strcpy(cmd, ":TM#");
-            strcpy(s_mode, "None");
-            break;
         default:
             return false;
     }
@@ -2200,6 +2198,13 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
 int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
 {
     LOGF_DEBUG("%s dir=%d dur=%d ms", __FUNCTION__, direction, duration_msec );
+
+    if (TrackState == SCOPE_SLEWING || TrackState == SCOPE_PARKING)
+    {
+        // having pulse guiding while slewing or parking creates confusion
+        LOGF_INFO("Pulse command (dir=%d dur=%d ms) ingnored due to track state %d.", direction, duration_msec, TrackState);
+        return 1;
+    }
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
     switch (direction)
@@ -2219,11 +2224,13 @@ int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
         default:
             return 1;
     }
-    if (!sendQuery(cmd, response, 0)) // Don't wait for response - there isn't one
-    {
-        return false;
-    }
-    return true;
+    bool success = !sendQuery(cmd, response, 0); // no response expected
+
+    const struct timespec timeout = {0, 50000000L};
+    // sleep for 50 mseconds to avoid flooding the mount with commands
+    nanosleep(&timeout, nullptr);
+
+    return success;
 }
 
 bool LX200StarGo::SetTrackEnabled(bool enabled)

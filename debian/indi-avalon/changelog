@@ -1,3 +1,12 @@
+indi-avalon (1.7) stretch; urgency=medium
+
+  * Retrying once reading the motor state to capture timeouts
+  * Avoid pulse guiding while slewing or parking
+  * 50ms delay after pulse guiding command to avoid device flooding
+  * Removing tracking speed NONE
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sun 29 Sep 2019 21:47:57 +0200
+
 indi-avalon (1.5) stretch; urgency=medium
 
   * Implemented switch for enabling / disabling the keypad
