@@ -78,7 +78,11 @@ NexDome::NexDome()
 {
     setVersion(INDI_NEXDOME_VERSION_MAJOR, INDI_NEXDOME_VERSION_MINOR);
 
-    SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_CAN_PARK | DOME_HAS_SHUTTER);
+    SetDomeCapability(DOME_CAN_ABORT |
+                      DOME_CAN_ABS_MOVE |
+                      DOME_CAN_PARK |
+                      DOME_HAS_SHUTTER |
+                      DOME_CAN_SYNC);
 }
 
 /************************************************************************************
@@ -107,12 +111,6 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&CalibrateS[0], "Calibrate", "", ISS_OFF);
     IUFillSwitchVector(&CalibrateSP, CalibrateS, 1, getDeviceName(), "DOME_CALIBRATE", "Calibrate", SITE_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
-
-    ///////////////////////////////////////////////////////////////////////////////
-    /// Sync Command
-    ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&SyncPositionN[0], "SYNC_AZ", "AZ Degrees", "%5.1f", 0.0, 360, 0.0, 0);
-    IUFillNumberVector(&SyncPositionNP, SyncPositionN, 1, getDeviceName(), "DOME_SYNC", "Sync", SITE_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Home Position
@@ -153,9 +151,10 @@ bool NexDome::initProperties()
 bool NexDome::Handshake()
 {
     char res[DRIVER_LEN] = {0};
-    if (sendCommand("v\n", res))
+    if (sendCommand("v", res))
     {
         IUSaveText(&FirmwareVersionT[0], &res[1]);
+        LOGF_INFO("Detected firmware %s", res[1]);
         return true;
     }
 
@@ -177,7 +176,6 @@ bool NexDome::updateProperties()
 
         defineSwitch(&HomeSP);
         defineSwitch(&CalibrateSP);
-        defineNumber(&SyncPositionNP);
         defineNumber(&HomePositionNP);
         defineNumber(&BatteryLevelNP);
         defineText(&FirmwareVersionTP);
@@ -189,7 +187,6 @@ bool NexDome::updateProperties()
     {
         deleteProperty(HomeSP.name);
         deleteProperty(CalibrateSP.name);
-        deleteProperty(SyncPositionNP.name);
         deleteProperty(HomePositionNP.name);
         deleteProperty(BatteryLevelNP.name);
         deleteProperty(FirmwareVersionTP.name);
@@ -225,7 +222,7 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 else
                 {
                     HomeSP.s = IPS_BUSY;
-                    sendCommand("h\n");
+                    sendCommand("h");
                     LOG_INFO("Dome finding home...");
                 }
             }
@@ -242,7 +239,7 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             if(AtHome)
             {
                 CalibrateSP.s = IPS_BUSY;
-                sendCommand("c\n");
+                sendCommand("c");
                 m_Calibrating = true;
                 time(&CalStartTime);
                 m_HomeAz = -1;
@@ -268,7 +265,7 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 ReversedSP.s = IPS_OK;
                 ReversedS[0].s = ISS_OFF;
                 ReversedS[1].s = ISS_ON;
-                sendCommand("y 1\n");
+                sendCommand("y 1");
                 LOG_INFO("Dome is reversed.");
             }
             else
@@ -276,7 +273,7 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 ReversedSP.s = IPS_IDLE;
                 ReversedS[0].s = ISS_ON;
                 ReversedS[1].s = ISS_OFF;
-                sendCommand("y 0\n");
+                sendCommand("y 0");
                 LOG_INFO("Dome is not reversed.");
             }
 
@@ -297,36 +294,28 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     return INDI::Dome::ISNewSwitch(dev, name, states, names, n);
 }
 
-bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+///////////////////////////////////////////////////////////////////////////////
+/// Sync
+///////////////////////////////////////////////////////////////////////////////
+bool NexDome::Sync(double az)
 {
-    if(strcmp(dev, getDeviceName()) == 0)
+    char cmd[DRIVER_LEN] = {0}, res[DRIVER_LEN] = {0};
+    snprintf(cmd, DRIVER_LEN, "s %4.1f", az);
+    if (sendCommand(cmd, res))
     {
-        ///////////////////////////////////////////////////////////////////////////////
-        /// Synchronize Position
-        ///////////////////////////////////////////////////////////////////////////////
-        if(!strcmp(name, SyncPositionNP.name))
-        {
-            char cmd[DRIVER_LEN] = {0}, res[DRIVER_LEN] = {0};
-            snprintf(cmd, DRIVER_LEN, "s %4.1f\n", values[0]);
-            if (sendCommand(cmd, res))
-            {
-                SyncPositionN[0].value = values[0];
-                float b1 = atof(&res[1]);
-                SyncPositionNP.s = IPS_OK;
-                LOGF_INFO("Dome sync at %3.0f.", b1);
-                //  refetch the new home azimuth
-                m_HomeAz = -1;
-            }
-            else
-                SyncPositionNP.s =  IPS_ALERT;
-
-            IDSetNumber(&SyncPositionNP, nullptr);
-            return true;
-        }
+        float b1 = atof(&res[1]);
+        LOGF_INFO("Dome sync at %3.0f.", b1);
+        //  refetch the new home azimuth
+        m_HomeAz = -1;
+        return true;
     }
-    return INDI::Dome::ISNewNumber(dev, name, values, names, n);
+
+    return false;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// Timer
+///////////////////////////////////////////////////////////////////////////////
 void NexDome::TimerHit()
 {
     if(isConnected())
@@ -335,6 +324,9 @@ void NexDome::TimerHit()
     SetTimer(POLLMS);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// Read Dome
+///////////////////////////////////////////////////////////////////////////////
 void NexDome::readDomeStatus()
 {
     if(isConnected() == false)
@@ -367,7 +359,7 @@ void NexDome::readDomeStatus()
             return;
 
         // If we need to fetch home position
-        if (m_HomeAz == -1)
+        if (m_HomeAz < 0)
             readHomePosition();
 
         //  get shutter status
@@ -406,7 +398,7 @@ bool NexDome::readMotionStatus()
 {
     char res[DRIVER_LEN] = {0};
 
-    if (!sendCommand("m\n", res))
+    if (!sendCommand("m", res))
         return false;
 
     int m = atoi(&res[1]);
@@ -457,7 +449,7 @@ bool NexDome::readPosition()
 {
     char res[DRIVER_LEN] = {0};
 
-    if (!sendCommand("q\n", res))
+    if (!sendCommand("q", res))
         return false;
 
     DomeAbsPosN[0].value = atof(&res[1]);
@@ -469,7 +461,7 @@ bool NexDome::readPosition()
 bool NexDome::readHomeSensor()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("z\n", res))
+    if (!sendCommand("z", res))
         return false;
 
     int t = atoi(&res[1]);
@@ -513,7 +505,7 @@ bool NexDome::readBatteryLevel()
 {
     char res[DRIVER_LEN] = {0};
 
-    if (!sendCommand("k\n", res))
+    if (!sendCommand("k", res))
         return false;
 
     int b1, b2;
@@ -558,7 +550,7 @@ bool NexDome::readBatteryLevel()
 bool NexDome::readStepsPerRevolution()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("t\n", res))
+    if (!sendCommand("t", res))
         return false;
 
     m_StepsPerDomeTurn = atoi(&res[1]);
@@ -571,11 +563,11 @@ bool NexDome::readStepsPerRevolution()
 bool NexDome::readHomeError()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("o\n", res))
+    if (!sendCommand("o", res))
         return false;
 
     float b1 = atof(&res[1]);
-    if(b1 != m_HomeError)
+    if(std::fabs(b1 - m_HomeError) > 0.001)
     {
         LOGF_DEBUG("Home error %4.2f.", b1);
         m_HomeError = b1;
@@ -587,11 +579,11 @@ bool NexDome::readHomeError()
 bool NexDome::readHomePosition()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("i\n", res))
+    if (!sendCommand("i", res))
         return false;
 
     float b1 = atof(&res[1]);
-    if(b1 != m_HomeAz)
+    if (std::fabs(b1 - m_HomeAz) > 0.001)
     {
         HomePositionN[0].value = b1;
         LOGF_INFO("Home position is %4.1f degrees.", b1);
@@ -605,7 +597,7 @@ bool NexDome::readHomePosition()
 bool NexDome::readShutterStatus()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("u\n", res))
+    if (!sendCommand("u", res))
         return false;
 
     int b = atoi(&res[1]);
@@ -675,12 +667,12 @@ bool NexDome::readShutterStatus()
 bool NexDome::readShutterPosition()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("b\n", res))
+    if (!sendCommand("b", res))
         return false;
 
     float b1 = atof(&res[1]);
 
-    if((b1 != m_ShutterPosition))
+    if(std::fabs(b1 - m_ShutterPosition) > 0.001)
     {
         m_ShutterPosition = b1;
         if(b1 == 90.0)
@@ -721,7 +713,7 @@ bool NexDome::readShutterPosition()
 bool NexDome::readReversedStatus()
 {
     char res[DRIVER_LEN] = {0};
-    if (!sendCommand("y\n", res))
+    if (!sendCommand("y", res))
         return false;
 
     m_DomeReversed = atoi(&res[1]);
@@ -777,7 +769,7 @@ IPState NexDome::MoveAbs(double az)
 
     //  Just write the string
     //  Our main reader loop will check any returns
-    snprintf(cmd, DRIVER_LEN, "g %3.1f\n", az);
+    snprintf(cmd, DRIVER_LEN, "g %3.1f", az);
 
     DomeAbsPosNP.s = sendCommand(cmd) ? IPS_BUSY : IPS_ALERT;
     IDSetNumber(&DomeAbsPosNP, nullptr);
@@ -857,14 +849,14 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
     {
         if(shutterState == SHUTTER_OPENED)
             return IPS_OK;
-        if (sendCommand("d\n"))
+        if (sendCommand("d"))
             shutterState = SHUTTER_MOVING;
     }
     if(operation == SHUTTER_CLOSE)
     {
         if(shutterState == SHUTTER_CLOSED)
             return IPS_OK;
-        if (sendCommand("e\n"))
+        if (sendCommand("e"))
             shutterState = SHUTTER_MOVING;
     }
 
@@ -873,7 +865,7 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
 
 bool NexDome::Abort()
 {
-    sendCommand("a\n");
+    sendCommand("a");
     /*
         // If we abort while in the middle of opening/closing shutter, alert.
         if (DomeShutterSP.s == IPS_BUSY)
@@ -915,7 +907,9 @@ bool NexDome::sendCommand(const char * cmd, char * res, int cmd_len, int res_len
     else
     {
         LOGF_DEBUG("CMD <%s>", cmd);
-        rc = tty_write_string(PortFD, cmd, &nbytes_written);
+        char cmd_terminated[DRIVER_LEN * 2] = {0};
+        snprintf(cmd_terminated, DRIVER_LEN * 2, "%s\n", cmd);
+        rc = tty_write_string(PortFD, cmd_terminated, &nbytes_written);
     }
 
     if (rc != TTY_OK)
@@ -936,10 +930,10 @@ bool NexDome::sendCommand(const char * cmd, char * res, int cmd_len, int res_len
         while (true)
         {
             // Seems only these commands expects a 0xA delimiter?
-            if (cmd[0] == 'm' || cmd[0] == 'q')
-                rc = tty_nread_section(PortFD, res, DRIVER_LEN, 0xA, DRIVER_TIMEOUT, &nbytes_read);
-            else
-                rc = tty_nread_section(PortFD, res, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+            //            if (cmd[0] == 'm' || cmd[0] == 'q')
+            //                rc = tty_nread_section(PortFD, res, DRIVER_LEN, 0xA, DRIVER_TIMEOUT, &nbytes_read);
+            //            else
+            rc = tty_nread_section(PortFD, res, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
 
             if (rc != TTY_OK)
                 break;

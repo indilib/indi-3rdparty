@@ -30,32 +30,32 @@ class NexDome : public INDI::Dome
 {
     public:
         NexDome();
-        virtual ~NexDome() = default;
 
-        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
-        virtual bool initProperties();
-        const char *getDefaultName();
-        bool updateProperties();
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool initProperties() override;
+        const char *getDefaultName() override;
+        bool updateProperties() override;
 
     protected:
 
-        bool Handshake();
-        void TimerHit();
+        bool Handshake() override;
+        void TimerHit() override;
 
-        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation);
-        virtual IPState MoveAbs(double az);
-        virtual IPState Park();
-        virtual IPState UnPark();
-        virtual IPState ControlShutter(ShutterOperation operation);
-        virtual bool Abort();
+        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
+        virtual IPState MoveAbs(double az) override;
+        virtual bool Sync(double az) override;
+        virtual IPState Park() override;
+        virtual IPState UnPark() override;
+        virtual IPState ControlShutter(ShutterOperation operation) override;
+        virtual bool Abort() override;
 
         // Config
-        virtual bool saveConfigItems(FILE * fp);
+        virtual bool saveConfigItems(FILE * fp) override;
 
         // Parking
-        virtual bool SetCurrentPark();
-        virtual bool SetDefaultPark();
+        virtual bool SetCurrentPark() override;
+        virtual bool SetDefaultPark() override;
 
         /////////////////////////////////////////////////////////////////////////////
         /// Properties
@@ -72,9 +72,6 @@ class NexDome : public INDI::Dome
 
         ISwitchVectorProperty CalibrateSP;
         ISwitch CalibrateS[1];
-
-        INumberVectorProperty SyncPositionNP;
-        INumber SyncPositionN[1];
 
         INumberVectorProperty HomePositionNP;
         INumber HomePositionN[1];
@@ -139,18 +136,18 @@ class NexDome : public INDI::Dome
         int m_DomeReversed { -1 };
         int m_StepsPerDomeTurn { 0 };
 
-        time_t CalStartTime;
+        time_t CalStartTime {0};
 
         bool m_InMotion { false };
-        bool AtHome;
+        bool AtHome { false};
         bool m_Calibrating { false };
         int m_TimeSinceUpdate {0};
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
         /////////////////////////////////////////////////////////////////////////////
-        // CR is the stop char
-        static const char DRIVER_STOP_CHAR { 0xD };
+        // # is the stop char
+        static const char DRIVER_STOP_CHAR { '#' };
         // Wait up to a maximum of 3 seconds for serial input
         static constexpr const uint8_t DRIVER_TIMEOUT {3};
         // Maximum buffer for sending/receving.
