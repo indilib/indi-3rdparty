@@ -1047,9 +1047,25 @@ bool GPhotoCCD::Connect()
 
     if (isSimulation())
     {
-        const char * exposureList[] = { "1/8", "1/4", "1/2", "bulb" };
+        const char * exposureList[] =
+        {
+            "1/2000",
+            "1/1000",
+            "1/500",
+            "1/200",
+            "1/100",
+            "1/50",
+            "1/8",
+            "1/4",
+            "1/2",
+            "1",
+            "2",
+            "5",
+            "bulb"
+        };
+
         setidx   = 0;
-        max_opts = 4;
+        max_opts = NARRAY(exposureList);
         options  = const_cast<char **>(exposureList);
     }
     else
