@@ -545,7 +545,7 @@ bool QHYCCD::updateProperties()
                 {
                     USBTrafficN[0].min  = min;
                     USBTrafficN[0].max  = max;
-                    USBTrafficN[0].step = step;
+                    USBTrafficN[0].step = (max - min) / 20.0;
                 }
                 USBTrafficN[0].value = GetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC);
 
@@ -663,7 +663,7 @@ bool QHYCCD::Connect()
         /// Read Modes
         ////////////////////////////////////////////////////////////////////
         ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &readModes);
-        if (ret == QHYCCD_SUCCESS && readModes > 0)
+        if (ret == QHYCCD_SUCCESS && readModes > 1)
         {
             HasReadMode = true;
             LOGF_INFO("Number of read modes: %zu", readModes);
@@ -1868,6 +1868,7 @@ bool QHYCCD::StartStreaming()
     // Set Stream Mode
     SetQHYCCDStreamMode(m_CameraHandle, 1);
 
+#if 0
     if (HasUSBSpeed)
     {
         ret = SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, 2.0);
@@ -1880,6 +1881,7 @@ bool QHYCCD::StartStreaming()
         if (ret != QHYCCD_SUCCESS)
             LOG_WARN("SetQHYCCDParam CONTROL_USBTRAFFIC 20.0 failed.");
     }
+#endif
 
     ret = SetQHYCCDBitsMode(m_CameraHandle, 8);
     if (ret == QHYCCD_SUCCESS)
@@ -1985,11 +1987,12 @@ void QHYCCD::streamVideo()
     {
         pthread_mutex_unlock(&condMutex);
         uint32_t retries = 0;
-
         std::unique_lock<std::mutex> guard(ccdBufferLock);
+        uint8_t *buffer = PrimaryCCD.getFrameBuffer();
+        uint32_t size = PrimaryCCD.getFrameBufferSize();
         while (retries++ < 10)
         {
-            ret = GetQHYCCDLiveFrame(m_CameraHandle, &w, &h, &bpp, &channels, PrimaryCCD.getFrameBuffer());
+            ret = GetQHYCCDLiveFrame(m_CameraHandle, &w, &h, &bpp, &channels, buffer);
             if (ret == QHYCCD_ERROR)
                 usleep(1000);
             else
@@ -1997,7 +2000,7 @@ void QHYCCD::streamVideo()
         }
         guard.unlock();
         if (ret == QHYCCD_SUCCESS)
-            Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
+            Streamer->newFrame(buffer, size);
 
         pthread_mutex_lock(&condMutex);
     }
