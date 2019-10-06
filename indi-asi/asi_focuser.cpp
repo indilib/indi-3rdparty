@@ -207,6 +207,10 @@ bool ASIEAF::initProperties()
     IUFillSwitch(&BeepS[BEEL_OFF], "OFF", "Off", ISS_OFF);
     IUFillSwitchVector(&BeepSP, BeepS, 2, getDeviceName(), "FOCUS_BEEP", "Beep", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
+    // Firmware version
+    IUFillText(&VersionInfoS[0], "VERSION_FIRMWARE", "Firmware", "Unknown");
+    IUFillTextVector(&VersionInfoSP, VersionInfoS, 1, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
     // Enable/Disable backlash
     //    IUFillSwitch(&BacklashCompensationS[BACKLASH_ENABLED], "Enable", "", ISS_OFF);
     //    IUFillSwitch(&BacklashCompensationS[BACKLASH_DISABLED], "Disable", "", ISS_ON);
@@ -258,6 +262,13 @@ bool ASIEAF::updateProperties()
         //        defineSwitch(&FocuserBacklashSP);
         //        defineNumber(&BacklashNP);
 
+        char firmware[12];
+        unsigned char major, minor, build;
+        EAFGetFirmwareVersion(m_ID, &major, &minor, &build);
+        snprintf(firmware, sizeof(firmware), "%d.%d.%d", major, minor, build);
+        IUSaveText(&VersionInfoS[0], firmware);
+        defineText(&VersionInfoSP);
+
         GetFocusParams();
 
         LOG_INFO("ASI EAF parameters updated, focuser ready for use.");
@@ -269,6 +280,7 @@ bool ASIEAF::updateProperties()
         if (TemperatureNP.s != IPS_IDLE)
             deleteProperty(TemperatureNP.name);
         deleteProperty(BeepSP.name);
+        deleteProperty(VersionInfoSP.name);
         //        deleteProperty(FocuserBacklashSP.name);
         //        deleteProperty(BacklashNP.name);
     }

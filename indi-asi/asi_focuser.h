@@ -115,6 +115,9 @@ class ASIEAF : public INDI::Focuser
             BEEL_OFF
         };
 
+        IText VersionInfoS[1] = {};
+        ITextVectorProperty VersionInfoSP;
+
         // Enable/Disable backlash
         //        ISwitch BacklashCompensationS[2];
         //        ISwitchVectorProperty FocuserBacklashSP;
