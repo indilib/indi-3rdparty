@@ -32,7 +32,6 @@ class NexDome : public INDI::Dome
         NexDome();
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool initProperties() override;
         const char *getDefaultName() override;
         bool updateProperties() override;
