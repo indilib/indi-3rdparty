@@ -136,20 +136,41 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&BatteryLevelN[ND::ROTATOR], "BATTERY_ROTATOR", "Rotator", "%.2f", 0.0, 16.0, 0.0, 0);
     IUFillNumber(&BatteryLevelN[ND::SHUTTER], "BATTERY_SHUTTER", "Shutter", "%.2f", 0.0, 16.0, 0.0, 0);
-    IUFillNumberVector(&BatteryLevelNP, BatteryLevelN, 2, getDeviceName(), "BATTERY", "Battery Level", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillNumberVector(&BatteryLevelNP, BatteryLevelN, 2, getDeviceName(), "BATTERY", "Battery Level", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Firmware Info
     ///////////////////////////////////////////////////////////////////////////////
     IUFillText(&FirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Close Shutter on Park?
     ///////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&CloseShutterOnParkS[ND::ENABLED], "ENABLED", "Enabled", ISS_ON);
     IUFillSwitch(&CloseShutterOnParkS[ND::DISABLED], "DISABLED", "Disabled", ISS_OFF);
-    IUFillSwitchVector(&CloseShutterOnParkSP, CloseShutterOnParkS, 2, getDeviceName(), "DOME_CLOSE_SHUTTER_ON_PARK", "Close Shutter on Park", SITE_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+    IUFillSwitchVector(&CloseShutterOnParkSP, CloseShutterOnParkS, 2, getDeviceName(), "DOME_CLOSE_SHUTTER_ON_PARK", "Close Shutter on Park",
+                       ND::SHUTTER_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Rotator Settings
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&RotatorSettingsN[ACCELERATION_RAMP], "ACCELERATION_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&RotatorSettingsN[DEAD_ZONE], "DEAD_ZONE", "Dead Zone (steps)", "%.f", 0.0, 10000, 100.0, 300);
+    IUFillNumber(&RotatorSettingsN[TRAVEL_RANGE], "TRAVEL_RANGE", "Travel Range (steps)", "%.f", 0.0, 64000, 1000.0, 0);
+    IUFillNumber(&RotatorSettingsN[VELOCITY], "VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator", ND::ROTATOR_TAB.c_str(),
+                       IP_RW, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Shutter Settings
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&ShutterSettingsN[ACCELERATION_RAMP], "ACCELERATION_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&ShutterSettingsN[DEAD_ZONE], "DEAD_ZONE", "Dead Zone (steps)", "%.f", 0.0, 10000, 100.0, 300);
+    IUFillNumber(&ShutterSettingsN[TRAVEL_RANGE], "TRAVEL_RANGE", "Travel Range (steps)", "%.f", 0.0, 64000, 1000.0, 0);
+    IUFillNumber(&ShutterSettingsN[VELOCITY], "VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 4, getDeviceName(), "Shutter_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
+                       IP_RW, 60, IPS_IDLE);
 
     return true;
 }
@@ -159,11 +180,17 @@ bool NexDome::initProperties()
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::Handshake()
 {
-    char res[ND::DRIVER_LEN] = {0};
-    if (sendCommand("v", res))
+    std::string value;
+
+    if (getParameter(ND::SEMANTIC_VERSION, ND::ROTATOR, value))
     {
-        IUSaveText(&FirmwareVersionT[0], &res[1]);
-        LOGF_INFO("Detected firmware %s", res[1]);
+        LOGF_INFO("Detected firmware version %s", value.c_str());
+        if (value < ND::MINIMUM_VERSION)
+        {
+            LOGF_ERROR("Version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
+            return false;
+        }
+
         return true;
     }
 
@@ -289,6 +316,19 @@ IPState NexDome::UnPark()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::ControlShutter(ShutterOperation operation)
 {
+    // Check if shutter is open or close.
+
+
+    switch (operation)
+    {
+        case SHUTTER_OPEN:
+
+            break;
+
+        case SHUTTER_CLOSE:
+            break;
+    }
+
     return IPS_BUSY;
 }
 
@@ -324,7 +364,7 @@ bool NexDome::SetDefaultPark()
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::getStartupValues()
 {
-
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -386,8 +426,32 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////
+bool NexDome::checkEvents(std::string &response)
+{
+    int nbytes_read = 0;
+    char res[ND::DRIVER_LEN] = {0};
+
+    int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_STOP_CHAR, ND::DRIVER_TIMEOUT, &nbytes_read);
+
+    if (rc != TTY_OK)
+        return false;
+
+    if (nbytes_read < 3)
+        return false;
+
+    response = res;
+    // Remove ":" and "#"
+    response = response.substr(1, response.size() - 1);
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////
 bool NexDome::processEvent(const std::string &event)
 {
+
+
 
 }
 

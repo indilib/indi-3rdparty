@@ -91,6 +91,21 @@ class NexDome : public INDI::Dome
         ISwitchVectorProperty CloseShutterOnParkSP;
         ISwitch CloseShutterOnParkS[2];
 
+        // Settings
+        enum
+        {
+            ACCELERATION_RAMP,
+            DEAD_ZONE,
+            TRAVEL_RANGE,
+            VELOCITY,
+        } Settings;
+
+        INumberVectorProperty RotatorSettingsNP;
+        INumber RotatorSettingsN[4];
+
+        INumberVectorProperty ShutterSettingsNP;
+        INumber ShutterSettingsN[4];
+
     private:
         ///////////////////////////////////////////////////////////////////////////////
         /// Startup
@@ -102,10 +117,10 @@ class NexDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         bool setParameter(ND::Commands command, ND::Targets target, int32_t value);
         bool getParameter(ND::Commands command, ND::Targets target, std::string value);
+        bool checkEvents(std::string &response);
         bool processEvent(const std::string &event);
         bool sendCommand(const char * cmd, char * res = nullptr, int cmd_len = -1, int res_len = -1);
         void hexDump(char * buf, const char * data, int size);
-
 
 };
 

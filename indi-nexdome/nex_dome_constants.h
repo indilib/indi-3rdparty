@@ -31,106 +31,113 @@
 
 namespace ND
 {
-        enum
-        {
-            ENABLED,
-            DISABLED,
-        };
-
-        typedef enum
-        {
-            ROTATOR,
-            SHUTTER,
-        } Targets;
-
-        typedef enum
-        {
-            ACCELERATION_RAMP,
-            DEAD_ZONE,
-            SEMANTIC_VERSION,
-            GOTO_AZ,
-            GOTO_HOME,
-            HOME_POSITION,
-            AZIMUTH_POSITION,
-            RANGE,
-            REPORT,
-            EMERGENCY_STOP,
-            VELOCITY,
-            EEPROM,
-        }  Commands;
-
-        // Command Strings
-        static const std::map<Commands, std::string> CommandsMap =
-        {
-            {ACCELERATION_RAMP, "A"},
-            {DEAD_ZONE,         "D"},
-            {SEMANTIC_VERSION,  "F"},
-            {GOTO_AZ,           "GA"},
-            {GOTO_HOME,         "GH"},
-            {HOME_POSITION,     "H"},
-            {AZIMUTH_POSITION,  "P"},
-            {RANGE,             "R"},
-            {REPORT,            "SR"},
-            {EMERGENCY_STOP,    "SW"},
-            {VELOCITY,          "V"},
-            {EEPROM,            "Z"},
-        };
-
-        typedef enum
-        {
-            XBEE_START,
-            XBEE_WAIT,
-            XBEE_CONFIG,
-            XBEE_DETECT,
-            XBEE_ONLINE
-        } XBee;
-
-        static const std::map<XBee, std::string> XBeeMap =
-        {
-            {XBEE_START, "Start"},
-            {XBEE_WAIT,  "WaitAt"},
-            {XBEE_CONFIG, "Config"},
-            {XBEE_DETECT, "Detect"},
-            {XBEE_ONLINE, "Online"},
-        };
-
-        typedef enum
-        {
-            XBEE_STATE,
-            ROTATOR_POSITION,
-            SHUTTER_POSITION,
-            ROTATOR_REPORT,
-            SHUTTER_REPORT,
-            ROTATOR_LEFT,
-            ROTATOR_RIGHT,
-            SHUTTER_OPEN,
-            SHUTTER_CLOSE,
-            SHUTTER_BATTERY,
-            RAIN_DETECTED,
-            RAIN_STOPPED,
-        } Events;
-
-        static const std::map<Events, std::string> EventsMap =
-        {
-            {XBEE_STATE,        "XB->"},
-            {ROTATOR_POSITION,  "P"},
-            {SHUTTER_POSITION,  "S"},
-            {ROTATOR_REPORT,    ":SER"},
-            {SHUTTER_REPORT,    ":SES"},
-            {ROTATOR_LEFT,      ":left"},
-            {ROTATOR_RIGHT,     ":right"},
-            {SHUTTER_OPEN,      ":open"},
-            {SHUTTER_CLOSE,     ":close"},
-            {SHUTTER_BATTERY,   ":BV"},
-            {RAIN_DETECTED,     ":Rain"},
-            {RAIN_STOPPED,      ":RainStopped"},
-        };
-
-        // # is the stop char
-        const char DRIVER_STOP_CHAR { '#' };
-        // Wait up to a maximum of 3 seconds for serial input
-        const uint8_t DRIVER_TIMEOUT {3};
-        // Maximum buffer for sending/receving.
-        const uint8_t DRIVER_LEN {64};
+enum
+{
+    ENABLED,
+    DISABLED,
 };
+
+typedef enum
+{
+    ROTATOR,
+    SHUTTER,
+} Targets;
+
+typedef enum
+{
+    ACCELERATION_RAMP,
+    DEAD_ZONE,
+    SEMANTIC_VERSION,
+    GOTO_AZ,
+    GOTO_HOME,
+    HOME_POSITION,
+    AZIMUTH_POSITION,
+    RANGE,
+    REPORT,
+    EMERGENCY_STOP,
+    VELOCITY,
+    EEPROM,
+}  Commands;
+
+// Command Strings
+static const std::map<Commands, std::string> CommandsMap =
+{
+    {ACCELERATION_RAMP, "A"},
+    {DEAD_ZONE,         "D"},
+    {SEMANTIC_VERSION,  "F"},
+    {GOTO_AZ,           "GA"},
+    {GOTO_HOME,         "GH"},
+    {HOME_POSITION,     "H"},
+    {AZIMUTH_POSITION,  "P"},
+    {RANGE,             "R"},
+    {REPORT,            "SR"},
+    {EMERGENCY_STOP,    "SW"},
+    {VELOCITY,          "V"},
+    {EEPROM,            "Z"},
+};
+
+typedef enum
+{
+    XBEE_START,
+    XBEE_WAIT,
+    XBEE_CONFIG,
+    XBEE_DETECT,
+    XBEE_ONLINE
+} XBee;
+
+static const std::map<XBee, std::string> XBeeMap =
+{
+    {XBEE_START, "Start"},
+    {XBEE_WAIT,  "WaitAt"},
+    {XBEE_CONFIG, "Config"},
+    {XBEE_DETECT, "Detect"},
+    {XBEE_ONLINE, "Online"},
+};
+
+typedef enum
+{
+    XBEE_STATE,
+    ROTATOR_POSITION,
+    SHUTTER_POSITION,
+    ROTATOR_REPORT,
+    SHUTTER_REPORT,
+    ROTATOR_LEFT,
+    ROTATOR_RIGHT,
+    SHUTTER_OPEN,
+    SHUTTER_CLOSE,
+    SHUTTER_BATTERY,
+    RAIN_DETECTED,
+    RAIN_STOPPED,
+} Events;
+
+static const std::map<Events, std::string> EventsMap =
+{
+    {XBEE_STATE,        "XB->"},
+    {ROTATOR_POSITION,  "P"},
+    {SHUTTER_POSITION,  "S"},
+    {ROTATOR_REPORT,    ":SER"},
+    {SHUTTER_REPORT,    ":SES"},
+    {ROTATOR_LEFT,      ":left"},
+    {ROTATOR_RIGHT,     ":right"},
+    {SHUTTER_OPEN,      ":open"},
+    {SHUTTER_CLOSE,     ":close"},
+    {SHUTTER_BATTERY,   ":BV"},
+    {RAIN_DETECTED,     ":Rain"},
+    {RAIN_STOPPED,      ":RainStopped"},
+};
+
+// # is the stop char
+const char DRIVER_STOP_CHAR { '#' };
+// Wait up to a maximum of 3 seconds for serial input
+const uint8_t DRIVER_TIMEOUT {3};
+// Wait up to a maximum of 1 for event input
+const uint8_t DRIVER_EVENT_TIMEOUT {1};
+// Maximum buffer for sending/receving.
+const uint8_t DRIVER_LEN {64};
+// Minimim supported version
+const std::string MINIMUM_VERSION { "3.1.0 "};
+// Tabs
+const std::string SHUTTER_TAB {"Shutter"};
+const std::string ROTATOR_TAB {"Rotator"};
+}
 
