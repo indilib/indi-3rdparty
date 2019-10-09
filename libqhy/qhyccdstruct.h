@@ -63,6 +63,7 @@ typedef uint64_t QHYDWORD;
 
 
 
+#define		MAX_READMODE_NUMBER			8
 
 
 /**
@@ -244,6 +245,15 @@ enum CodecID
   NONE_CODEC,
   H261_CODEC
 };
+
+typedef struct _QHYCamReadModeInfo
+{
+  const char *name;
+  const char *RMName[MAX_READMODE_NUMBER];
+  int32_t number;
+}
+QHYCamReadModeInfo;
+
 
 typedef struct _QHYCamMinMaxStepValue
 {
