@@ -732,6 +732,9 @@ EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenParam(
   QHYCamMinMaxStepValue *p,
   CONTROL_ID controlId);
 
+EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenReadMode(QHYCamReadModeInfo *p);
+
+
 EXPORTC uint32_t STDCALL  SetQHYCCDBurstModeStartEnd(
   qhyccd_handle *h,unsigned short start,
   unsigned short end);

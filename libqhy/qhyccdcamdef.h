@@ -1193,6 +1193,10 @@
 #define   	MAXDEVICES 				8
 
 
+#define		MAX_READMODE_NAME			256
+#define		MAX_READMODE_CAM_NUMBER		6
+
+
 #define	SEND_CAMERA_NO_MESSAGE						0
 
 
