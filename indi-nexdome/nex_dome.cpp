@@ -399,28 +399,49 @@ bool NexDome::setParameter(ND::Commands command, ND::Targets target, int32_t val
 bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string value)
 {
     char res[ND::DRIVER_LEN] = {0};
+    bool response_found = false;
 
-    std::string verb = ND::CommandsMap.at(command) + "R" + ((target == ND::ROTATOR) ? "R" : "S");
+    std::string verb = ND::CommandsMap.at(command);
 
     std::ostringstream cmd;
+    // Magic start character
     cmd << "@";
+    // Command
     cmd << verb;
-    cmd << ",";
-    cmd << value;
+    // Read
+    cmd << "R";
+    // Target (Rotator or Shutter)
+    cmd << ((target == ND::ROTATOR) ? "R" : "S");
 
     if (sendCommand(cmd.str().c_str(), res))
     {
         std::string response(res);
-        std::regex re(":" + verb + "(.+)#");
+
+        // Since we can get many unrelated responses from the firmware
+        // i.e. events, we need to parse all responses, and see which
+        // one is related to our get command.
+        std::vector<std::string> all = split(response, "\n");
+
+        // Let's find our match using this regex
+        std::regex re(":" + verb + "(.+)");
         std::smatch match;
-        if (std::regex_match(response, match, re))
+
+        // Not iterate over all responses
+        for (const auto &oneEvent : all)
         {
-            value = match.str(1);
-            return true;
+            // If we find the match, tag it.
+            if (std::regex_match(oneEvent, match, re))
+            {
+                value = match.str(1);
+                response_found = true;
+            }
+            // Otherwise process the event
+            else
+                processEvent(oneEvent);
         }
     }
 
-    return false;
+    return response_found;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -530,4 +551,17 @@ void NexDome::hexDump(char * buf, const char * data, int size)
 
     if (size > 0)
         buf[3 * size - 1] = '\0';
+}
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+std::vector<std::string> NexDome::split(const std::string &input, const std::string &regex)
+{
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+    first{input.begin(), input.end(), re, -1},
+          last;
+    return {first, last};
 }

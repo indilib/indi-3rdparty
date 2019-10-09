@@ -121,6 +121,7 @@ class NexDome : public INDI::Dome
         bool processEvent(const std::string &event);
         bool sendCommand(const char * cmd, char * res = nullptr, int cmd_len = -1, int res_len = -1);
         void hexDump(char * buf, const char * data, int size);
+        std::vector<std::string> split(const std::string &input, const std::string &regex);
 
 };
 
