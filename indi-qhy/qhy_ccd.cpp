@@ -1750,7 +1750,7 @@ void QHYCCD::updateTemperature()
     // No need to spam to log
     if (fabs(ccdtemp - TemperatureN[0].value) > 0.001 || fabs(CoolerN[0].value - (coolpower / 255.0 * 100)) > 0.001)
     {
-        LOGF_DEBUG("CCD T.: %.f (C) Power: %.f (%%.2f)", ccdtemp, coolpower, coolpower / 255.0 * 100);
+        LOGF_DEBUG("CCD T.: %.f (C) Power: %.f (%.2f%%)", ccdtemp, coolpower, coolpower / 255.0 * 100);
     }
 
     TemperatureN[0].value = ccdtemp;
