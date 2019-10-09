@@ -401,15 +401,13 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
     char res[ND::DRIVER_LEN] = {0};
     bool response_found = false;
 
-    std::string verb = ND::CommandsMap.at(command);
+    std::string verb = ND::CommandsMap.at(command) + "R";
 
     std::ostringstream cmd;
     // Magic start character
     cmd << "@";
-    // Command
+    // Command verb
     cmd << verb;
-    // Read
-    cmd << "R";
     // Target (Rotator or Shutter)
     cmd << ((target == ND::ROTATOR) ? "R" : "S");
 
@@ -427,17 +425,19 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         std::smatch match;
 
         // Not iterate over all responses
-        for (const auto &oneEvent : all)
+        for (auto &oneEvent : all)
         {
+            std::string trimmedEvent = trim(oneEvent);
+
             // If we find the match, tag it.
-            if (std::regex_match(oneEvent, match, re))
+            if (std::regex_match(trimmedEvent, match, re))
             {
                 value = match.str(1);
                 response_found = true;
             }
             // Otherwise process the event
             else
-                processEvent(oneEvent);
+                processEvent(trimmedEvent);
         }
     }
 
@@ -564,4 +564,30 @@ std::vector<std::string> NexDome::split(const std::string &input, const std::str
     first{input.begin(), input.end(), re, -1},
           last;
     return {first, last};
+}
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+std::string &NexDome::ltrim(std::string &str, const std::string &chars)
+{
+    str.erase(0, str.find_first_not_of(chars));
+    return str;
+}
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+std::string &NexDome::rtrim(std::string &str, const std::string &chars)
+{
+    str.erase(str.find_last_not_of(chars) + 1);
+    return str;
+}
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+std::string &NexDome::trim(std::string &str, const std::string &chars)
+{
+    return ltrim(rtrim(str, chars), chars);
 }
