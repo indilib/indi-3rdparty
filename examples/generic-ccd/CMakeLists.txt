@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 2.4.7)
+cmake_minimum_required(VERSION 2.8)
 PROJECT(generic_ccd CXX C)
 
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
 
 include(GNUInstallDirs)
 
@@ -25,7 +24,7 @@ include(CMakeCommon)
 
 ############# GENERIC CCD ###############
 set(genericccd_SRCS
-	${CMAKE_CURRENT_SOURCE_DIR}/generic_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/generic_ccd.cpp
 )
 
 add_executable(indi_generic_ccd ${genericccd_SRCS})
