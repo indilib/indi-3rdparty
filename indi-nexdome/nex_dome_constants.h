@@ -51,12 +51,14 @@ typedef enum
     GOTO_AZ,
     GOTO_HOME,
     HOME_POSITION,
-    AZIMUTH_POSITION,
+    POSITION,
     RANGE,
     REPORT,
     EMERGENCY_STOP,
     VELOCITY,
     EEPROM,
+    OPEN_SHUTTER,
+    CLOSE_SHUTTER,
 }  Commands;
 
 // Command Strings
@@ -68,12 +70,14 @@ static const std::map<Commands, std::string> CommandsMap =
     {GOTO_AZ,           "GA"},
     {GOTO_HOME,         "GH"},
     {HOME_POSITION,     "H"},
-    {AZIMUTH_POSITION,  "P"},
+    {POSITION,          "P"},
     {RANGE,             "R"},
     {REPORT,            "SR"},
     {EMERGENCY_STOP,    "SW"},
     {VELOCITY,          "V"},
     {EEPROM,            "Z"},
+    {OPEN_SHUTTER,      "OP"},
+    {CLOSE_SHUTTER,     "CL"},
 };
 
 typedef enum

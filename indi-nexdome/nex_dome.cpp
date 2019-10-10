@@ -155,21 +155,19 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     /// Rotator Settings
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&RotatorSettingsN[ACCELERATION_RAMP], "ACCELERATION_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumber(&RotatorSettingsN[DEAD_ZONE], "DEAD_ZONE", "Dead Zone (steps)", "%.f", 0.0, 10000, 100.0, 300);
-    IUFillNumber(&RotatorSettingsN[TRAVEL_RANGE], "TRAVEL_RANGE", "Travel Range (steps)", "%.f", 0.0, 64000, 1000.0, 0);
-    IUFillNumber(&RotatorSettingsN[VELOCITY], "VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&RotatorSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&RotatorSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (steps/s)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&RotatorSettingsN[S_ZONE], "S_ZONE", "Dead Zone (steps)", "%.f", 0.0, 32000, 100.0, 2400);
+    IUFillNumber(&RotatorSettingsN[S_RANGE], "S_RANGE", "Travel Range (steps)", "%.f", 0.0, 55080, 1000.0, 55080);
     IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator", ND::ROTATOR_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Shutter Settings
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&ShutterSettingsN[ACCELERATION_RAMP], "ACCELERATION_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumber(&ShutterSettingsN[DEAD_ZONE], "DEAD_ZONE", "Dead Zone (steps)", "%.f", 0.0, 10000, 100.0, 300);
-    IUFillNumber(&ShutterSettingsN[TRAVEL_RANGE], "TRAVEL_RANGE", "Travel Range (steps)", "%.f", 0.0, 64000, 1000.0, 0);
-    IUFillNumber(&ShutterSettingsN[VELOCITY], "VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 4, getDeviceName(), "Shutter_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
+    IUFillNumber(&ShutterSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumber(&ShutterSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
+    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "Shutter_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
 
     return true;
@@ -270,7 +268,7 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 ///////////////////////////////////////////////////////////////////////////////
 bool NexDome::Sync(double az)
 {
-    return false;
+    return setParameter(ND::POSITION, ND::ROTATOR, az);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -278,6 +276,11 @@ bool NexDome::Sync(double az)
 ///////////////////////////////////////////////////////////////////////////////
 void NexDome::TimerHit()
 {
+    std::string response;
+
+    while (checkEvents(response))
+        processEvent(response);
+
     SetTimer(POLLMS);
 }
 
@@ -286,7 +289,10 @@ void NexDome::TimerHit()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::MoveAbs(double az)
 {
-    return DomeAbsPosNP.s;
+    if (setParameter(ND::GOTO_AZ, ND::ROTATOR, az))
+        return IPS_BUSY;
+    else
+        return IPS_ALERT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -307,7 +313,7 @@ IPState NexDome::Park()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::UnPark()
 {
-
+    SetParked(false);
     return IPS_OK;
 }
 
@@ -316,20 +322,21 @@ IPState NexDome::UnPark()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::ControlShutter(ShutterOperation operation)
 {
+    bool rc = false;
+
     // Check if shutter is open or close.
-
-
     switch (operation)
     {
         case SHUTTER_OPEN:
-
+            rc = setParameter(ND::OPEN_SHUTTER, ND::SHUTTER);
             break;
 
         case SHUTTER_CLOSE:
+            rc = setParameter(ND::CLOSE_SHUTTER, ND::SHUTTER);
             break;
     }
 
-    return IPS_BUSY;
+    return (rc ? IPS_BUSY : IPS_ALERT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -337,7 +344,7 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::Abort()
 {
-    return true;
+    return setParameter(ND::EMERGENCY_STOP, ND::ROTATOR);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -364,6 +371,24 @@ bool NexDome::SetDefaultPark()
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::getStartupValues()
 {
+    std::string value;
+
+    // Rotator Settings
+    if (getParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, value))
+        RotatorSettingsN[S_RAMP].value = std::stoi(value);
+    if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
+        RotatorSettingsN[S_VELOCITY].value = std::stoi(value);
+    if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
+        RotatorSettingsN[S_ZONE].value = std::stoi(value);
+    if (getParameter(ND::RANGE, ND::ROTATOR, value))
+        RotatorSettingsN[S_RANGE].value = std::stoi(value);
+
+    // Shutter Settings
+    if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
+        ShutterSettingsN[S_RAMP].value = std::stoi(value);
+    if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
+        ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+
     return false;
 }
 
@@ -387,8 +412,12 @@ bool NexDome::setParameter(ND::Commands command, ND::Targets target, int32_t val
     std::ostringstream cmd;
     cmd << "@";
     cmd << ND::CommandsMap.at(command) + "W" + ((target == ND::ROTATOR) ? "R" : "S");
-    cmd << ",";
-    cmd << value;
+
+    if (!isnan(value))
+    {
+        cmd << ",";
+        cmd << value;
+    }
 
     return sendCommand(cmd.str().c_str());
 }
@@ -452,7 +481,7 @@ bool NexDome::checkEvents(std::string &response)
     int nbytes_read = 0;
     char res[ND::DRIVER_LEN] = {0};
 
-    int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_STOP_CHAR, ND::DRIVER_TIMEOUT, &nbytes_read);
+    int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_STOP_CHAR, ND::DRIVER_EVENT_TIMEOUT, &nbytes_read);
 
     if (rc != TTY_OK)
         return false;
@@ -471,9 +500,41 @@ bool NexDome::checkEvents(std::string &response)
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::processEvent(const std::string &event)
 {
+    for (const auto &kv : ND::EventsMap)
+    {
+        std::regex re(kv.second + "(.+)");
+        std::smatch match;
 
+        if (match.empty())
+            continue;
 
+        std::string value = match.str(1);
 
+        switch (kv.first)
+        {
+            case ND::XBEE_STATE:
+                if (!m_ShutterConnected && value == "Online")
+                {
+                    m_ShutterConnected = true;
+                    LOG_INFO("Shutter is connected.");
+                }
+                else if (m_ShutterConnected && value != "Online")
+                {
+                    m_ShutterConnected = false;
+                    LOG_WARN("Lost connection to the shutter!");
+                }
+                break;
+
+            case ND::ROTATOR_POSITION:
+                DomeAbsPosN[0].value = std::stoi(value) / 153.0;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////

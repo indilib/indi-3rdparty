@@ -94,17 +94,17 @@ class NexDome : public INDI::Dome
         // Settings
         enum
         {
-            ACCELERATION_RAMP,
-            DEAD_ZONE,
-            TRAVEL_RANGE,
-            VELOCITY,
-        } Settings;
+            S_RAMP,
+            S_VELOCITY,
+            S_ZONE,
+            S_RANGE,
+        };
 
         INumberVectorProperty RotatorSettingsNP;
         INumber RotatorSettingsN[4];
 
         INumberVectorProperty ShutterSettingsNP;
-        INumber ShutterSettingsN[4];
+        INumber ShutterSettingsN[2];
 
     private:
         ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ class NexDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         /// Utility Functions
         ///////////////////////////////////////////////////////////////////////////////
-        bool setParameter(ND::Commands command, ND::Targets target, int32_t value);
+        bool setParameter(ND::Commands command, ND::Targets target, int32_t value = -1e6);
         bool getParameter(ND::Commands command, ND::Targets target, std::string value);
         bool checkEvents(std::string &response);
         bool processEvent(const std::string &event);
@@ -126,6 +126,11 @@ class NexDome : public INDI::Dome
         std::string &rtrim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
         std::string &trim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
         std::vector<std::string> split(const std::string &input, const std::string &regex);
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Private Members
+        ///////////////////////////////////////////////////////////////////////////////
+        bool m_ShutterConnected { false };
 
 };
 
