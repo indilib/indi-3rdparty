@@ -589,7 +589,15 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         std::vector<std::string> all = split(response, "\n");
 
         // Let's find our match using this regex
-        std::regex re(":" + verb + "(.+)");
+        std::regex re;
+
+        // Firmware is exception since the response does not include the target
+        // for everything else, the echo back includes the target.
+        if (command != ND::SEMANTIC_VERSION)
+            re = (":" + verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+)");
+        else
+            re = (":" + verb + "(.+)");
+
         std::smatch match;
 
         // Not iterate over all responses

@@ -40,8 +40,7 @@ enum
 typedef enum
 {
     ROTATOR,
-    SHUTTER,
-    FIRMWARE,
+    SHUTTER
 } Targets;
 
 typedef enum
