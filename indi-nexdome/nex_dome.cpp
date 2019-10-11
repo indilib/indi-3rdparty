@@ -385,6 +385,8 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
                 LOGF_INFO("Home position is updated to %.2f degrees.", values[0]);
                 HomePositionN[0].value = values[0];
                 HomePositionNP.s = IPS_OK;
+
+                setDomeState(DOME_MOVING);
             }
             else
                 HomePositionNP.s = IPS_ALERT;
@@ -579,7 +581,15 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::Abort()
 {
-    return setParameter(ND::EMERGENCY_STOP, ND::ROTATOR);
+    bool rc = setParameter(ND::EMERGENCY_STOP, ND::ROTATOR);
+    if (rc && GoHomeSP.s == IPS_BUSY)
+    {
+        GoHomeS[0].s = ISS_OFF;
+        GoHomeSP.s = IPS_IDLE;
+        IDSetSwitch(&GoHomeSP, nullptr);
+    }
+
+    return rc;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -597,7 +607,7 @@ bool NexDome::SetCurrentPark()
 bool NexDome::SetDefaultPark()
 {
     // default park position is pointed south
-    SetAxis1Park(180);
+    SetAxis1Park(0);
     return true;
 }
 
@@ -635,6 +645,18 @@ bool NexDome::getStartupValues()
     // Shutter State
     if (getParameter(ND::REPORT, ND::SHUTTER, value))
         processEvent(value);
+
+    if (InitPark())
+    {
+        // If loading parking data is successful, we just set the default parking values.
+        SetAxis1ParkDefault(0);
+    }
+    else
+    {
+        // Otherwise, we set all parking data to default in case no parking data is found.
+        SetAxis1Park(0);
+        SetAxis1ParkDefault(0);
+    }
 
     return false;
 }
