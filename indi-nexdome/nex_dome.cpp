@@ -852,6 +852,8 @@ bool NexDome::processEvent(const std::string &event)
                         setDomeState(DOME_SYNCED);
                     else if (getDomeState() == DOME_PARKING)
                         setDomeState(DOME_PARKED);
+                    else
+                        IDSetNumber(&DomeAbsPosNP, nullptr);
 
                     if (GoHomeSP.s == IPS_BUSY && at_home == 1)
                     {
