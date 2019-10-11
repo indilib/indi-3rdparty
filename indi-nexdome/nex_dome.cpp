@@ -571,8 +571,6 @@ IPState NexDome::UnPark()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::ControlShutter(ShutterOperation operation)
 {
-    bool rc = false;
-
     if (!m_ShutterConnected)
     {
         LOG_ERROR("Shutter is not connected. Check battery and XBEE connection.");
@@ -583,15 +581,23 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
     switch (operation)
     {
         case SHUTTER_OPEN:
-            rc = setParameter(ND::OPEN_SHUTTER, ND::SHUTTER);
+            if (setParameter(ND::OPEN_SHUTTER, ND::SHUTTER))
+            {
+                LOG_INFO("Shutter is opening...");
+                return IPS_BUSY;
+            }
             break;
 
         case SHUTTER_CLOSE:
-            rc = setParameter(ND::CLOSE_SHUTTER, ND::SHUTTER);
+            if (setParameter(ND::CLOSE_SHUTTER, ND::SHUTTER))
+            {
+                LOG_INFO("Shutter is closing...");
+                return IPS_BUSY;
+            }
             break;
     }
 
-    return (rc ? IPS_BUSY : IPS_ALERT);
+    return IPS_ALERT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -999,7 +1005,7 @@ bool NexDome::processRotatorReport(const std::string &report)
 //////////////////////////////////////////////////////////////////////
 bool NexDome::processShutterReport(const std::string &report)
 {
-    std::regex re(R"((\d+),(\d+),(\d+),(\d+))");
+    std::regex re(R"((-?\d+),(\d+),(\d+),(\d+))");
     std::smatch match;
     if (std::regex_search(report, match, re))
     {
