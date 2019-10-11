@@ -836,8 +836,6 @@ bool NexDome::processEvent(const std::string &event)
         std::smatch match;
         std::string value;
 
-        LOGF_DEBUG("Processing event <%s>", event.c_str());
-
         if (event == kv.second)
             value = event;
         else if (std::regex_search(event, match, re))
@@ -845,7 +843,7 @@ bool NexDome::processEvent(const std::string &event)
         else
             continue;
 
-        LOGF_DEBUG("Event value <%s>", value.c_str());
+        LOGF_DEBUG("Processing event <%s> with value <%s>", event.c_str(), value.c_str());
 
         switch (kv.first)
         {
