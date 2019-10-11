@@ -132,6 +132,8 @@ static const std::map<Events, std::string> EventsMap =
 
 // # is the stop char
 const char DRIVER_STOP_CHAR { '#' };
+// \n is the event stop char
+const char DRIVER_EVENT_CHAR { '\n' };
 // Wait up to a maximum of 3 seconds for serial input
 const uint8_t DRIVER_TIMEOUT {3};
 // Wait up to a maximum of 1 for event input

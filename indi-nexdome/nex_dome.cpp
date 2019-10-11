@@ -586,7 +586,7 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         // Since we can get many unrelated responses from the firmware
         // i.e. events, we need to parse all responses, and see which
         // one is related to our get command.
-        std::vector<std::string> all = split(response, "\n");
+        std::vector<std::string> all = split(response, "\r\n");
 
         // Let's find our match using this regex
         std::regex re;
@@ -628,7 +628,7 @@ bool NexDome::checkEvents(std::string &response)
     int nbytes_read = 0;
     char res[ND::DRIVER_LEN] = {0};
 
-    int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_STOP_CHAR, ND::DRIVER_EVENT_TIMEOUT, &nbytes_read);
+    int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_EVENT_CHAR, ND::DRIVER_EVENT_TIMEOUT, &nbytes_read);
 
     if (rc != TTY_OK)
         return false;
@@ -636,11 +636,11 @@ bool NexDome::checkEvents(std::string &response)
     if (nbytes_read < 3)
         return false;
 
-    response = res;
-    // Remove ":" and "#"
-    response = response.substr(1, response.size() - 1);
+    std::string raw_response = res;
+
     // Trim
-    response = trim(response);
+    response = trim(raw_response);
+
     return true;
 }
 
@@ -651,7 +651,7 @@ bool NexDome::processEvent(const std::string &event)
 {
     for (const auto &kv : ND::EventsMap)
     {
-        std::regex re(kv.second + "(.+)");
+        std::regex re(kv.second + "(.+[^#])");
         std::smatch match;
 
         if (!std::regex_match(event, match, re))
