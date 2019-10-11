@@ -131,7 +131,7 @@ class NexDome : public INDI::Dome
         /// Utility Functions
         ///////////////////////////////////////////////////////////////////////////////
         bool setParameter(ND::Commands command, ND::Targets target, int32_t value = -1e6);
-        bool getParameter(ND::Commands command, ND::Targets target, std::string value);
+        bool getParameter(ND::Commands command, ND::Targets target, std::string &value);
         bool checkEvents(std::string &response);
         bool processEvent(const std::string &event);
         bool sendCommand(const char * cmd, char * res = nullptr, int cmd_len = -1, int res_len = -1);
