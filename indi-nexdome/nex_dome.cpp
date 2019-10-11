@@ -631,6 +631,8 @@ bool NexDome::checkEvents(std::string &response)
     response = res;
     // Remove ":" and "#"
     response = response.substr(1, response.size() - 1);
+    // Trim
+    response = trim(response);
     return true;
 }
 

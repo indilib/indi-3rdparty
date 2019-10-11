@@ -140,7 +140,7 @@ const uint8_t DRIVER_EVENT_TIMEOUT {1};
 // Maximum buffer for sending/receving.
 const uint8_t DRIVER_LEN {64};
 // Minimim supported version
-const std::string MINIMUM_VERSION { "3.1.0 "};
+const std::string MINIMUM_VERSION { "3.1.0" };
 // Tabs
 const std::string SHUTTER_TAB {"Shutter"};
 const std::string ROTATOR_TAB {"Rotator"};
