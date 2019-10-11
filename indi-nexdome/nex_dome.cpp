@@ -509,11 +509,11 @@ void NexDome::TimerHit()
 {
     std::string response;
 
-    if (getParameter(ND::REPORT, ND::ROTATOR, response))
-        processRotatorReport(response);
+    //    if (getParameter(ND::REPORT, ND::ROTATOR, response))
+    //        processRotatorReport(response);
 
-    if (getParameter(ND::REPORT, ND::SHUTTER, response))
-        processShutterReport(response);
+    //    if (getParameter(ND::REPORT, ND::SHUTTER, response))
+    //        processShutterReport(response);
 
     while (checkEvents(response))
         processEvent(response);
@@ -540,7 +540,16 @@ IPState NexDome::Park()
     MoveAbs(GetAxis1Park());
 
     if (HasShutter() && IUFindOnSwitchIndex(&CloseShutterOnParkSP) == ND::ENABLED)
+    {
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
+
+        std::string response;
+        if (getParameter(ND::REPORT, ND::ROTATOR, response))
+            processRotatorReport(response);
+
+        if (getParameter(ND::REPORT, ND::SHUTTER, response))
+            processShutterReport(response);
+    }
 
     return IPS_BUSY;
 }
@@ -878,6 +887,21 @@ bool NexDome::processEvent(const std::string &event)
                 }
                 return true;
 
+            case ND::ROTATOR_STOPPED:
+                if (getDomeState() == DOME_MOVING)
+                {
+                    LOG_INFO("Dome reached target position.");
+                    setDomeState(DOME_SYNCED);
+                }
+                else if (getDomeState() == DOME_PARKING)
+                {
+                    LOG_INFO("Dome is parked.");
+                    setDomeState(DOME_PARKED);
+                }
+                else
+                    setDomeState(DOME_IDLE);
+                return true;
+
             case ND::SHUTTER_OPENING:
                 if (getShutterState() != SHUTTER_MOVING)
                 {
@@ -931,13 +955,12 @@ bool NexDome::processRotatorReport(const std::string &report)
         uint32_t home_position = std::stoul(match.str(4));
         uint32_t dead_zone = std::stoul(match.str(5));
 
-        DomeAbsPosN[0].value = range360(position / ND::STEPS_PER_DEGREE);
-        if (getDomeState() == DOME_MOVING)
-            setDomeState(DOME_SYNCED);
-        else if (getDomeState() == DOME_PARKING)
-            setDomeState(DOME_PARKED);
-        else
+        double posAngle = range360(position / ND::STEPS_PER_DEGREE);
+        if (std::fabs(posAngle - DomeAbsPosN[0].value) > 0.01)
+        {
+            DomeAbsPosN[0].value = posAngle;
             IDSetNumber(&DomeAbsPosNP, nullptr);
+        }
 
         if (GoHomeSP.s == IPS_BUSY && at_home == 1)
         {

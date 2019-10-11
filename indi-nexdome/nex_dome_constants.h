@@ -110,6 +110,7 @@ typedef enum
     SHUTTER_BATTERY,
     RAIN_DETECTED,
     RAIN_STOPPED,
+    ROTATOR_STOPPED,
     ROTATOR_POSITION,
     SHUTTER_POSITION,
 } Events;
@@ -126,6 +127,7 @@ static const std::map<Events, std::string> EventsMap =
     {SHUTTER_BATTERY,   "BV"},
     {RAIN_DETECTED,     "Rain"},
     {RAIN_STOPPED,      "RainStopped"},
+    {ROTATOR_STOPPED,   "Stopped"},
     {ROTATOR_POSITION,  "P"},
     {SHUTTER_POSITION,  "S"},
 };
