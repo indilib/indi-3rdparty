@@ -127,6 +127,8 @@ class NexDome : public INDI::Dome
         /// Settings
         ///////////////////////////////////////////////////////////////////////////////
         bool executeFactoryCommand(uint8_t command, ND::Targets target);
+        bool processRotatorReport(const std::string &report);
+        bool processShutterReport(const std::string &report);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Utility Functions

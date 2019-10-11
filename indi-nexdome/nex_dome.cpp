@@ -509,6 +509,12 @@ void NexDome::TimerHit()
 {
     std::string response;
 
+    if (getParameter(ND::REPORT, ND::ROTATOR, response))
+        processRotatorReport(response);
+
+    if (getParameter(ND::REPORT, ND::SHUTTER, response))
+        processShutterReport(response);
+
     while (checkEvents(response))
         processEvent(response);
 
@@ -858,76 +864,10 @@ bool NexDome::processEvent(const std::string &event)
                 return true;
 
             case ND::ROTATOR_REPORT:
-            {
-                std::regex re(R"((\d+),(\d+),(\d+),(\d+),(\d+))");
-                std::smatch match;
-                if (std::regex_search(value, match, re))
-                {
-                    uint32_t position = std::stoul(match.str(1));
-                    uint32_t at_home = std::stoul(match.str(2));
-                    uint32_t cirumference = std::stoul(match.str(3));
-                    uint32_t home_position = std::stoul(match.str(4));
-                    uint32_t dead_zone = std::stoul(match.str(5));
-
-                    DomeAbsPosN[0].value = range360(position / ND::STEPS_PER_DEGREE);
-                    if (getDomeState() == DOME_MOVING)
-                        setDomeState(DOME_SYNCED);
-                    else if (getDomeState() == DOME_PARKING)
-                        setDomeState(DOME_PARKED);
-                    else
-                        IDSetNumber(&DomeAbsPosNP, nullptr);
-
-                    if (GoHomeSP.s == IPS_BUSY && at_home == 1)
-                    {
-                        LOG_INFO("Rotator reached home position.");
-                        GoHomeS[0].s = ISS_OFF;
-                        GoHomeSP.s = IPS_OK;
-                        IDSetSwitch(&GoHomeSP, nullptr);
-                    }
-
-                    double homeAngle = range360(static_cast<double>(home_position) / cirumference);
-                    if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
-                    {
-                        HomePositionN[0].value = homeAngle;
-                        IDSetNumber(&HomePositionNP, nullptr);
-                    }
-
-                    if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
-                    {
-                        RotatorSettingsN[S_ZONE].value = dead_zone;
-                        IDSetNumber(&RotatorSettingsNP, nullptr);
-                    }
-                }
-            }
-            return true;
+                return processRotatorReport(value);
 
             case ND::SHUTTER_REPORT:
-            {
-                std::regex re(R"((\d+),(\d+),(\d+),(\d+))");
-                std::smatch match;
-                if (std::regex_search(value, match, re))
-                {
-                    //uint32_t position = std::stoul(match.str(1));
-                    //uint32_t travel_limit = std::stoul(match.str(2));
-                    bool open_limit_switch = std::stoul(match.str(3)) == 1;
-                    bool close_limit_switch = std::stoul(match.str(4)) == 1;
-
-                    if (getShutterState() == SHUTTER_MOVING)
-                    {
-                        if (open_limit_switch)
-                        {
-                            setShutterState(SHUTTER_OPENED);
-                            LOG_INFO("Shutter is fully opened.");
-                        }
-                        else if (close_limit_switch)
-                        {
-                            setShutterState(SHUTTER_CLOSED);
-                            LOG_INFO("Shutter is fully closed.");
-                        }
-                    }
-                }
-            }
-            return true;
+                return processShutterReport(value);
 
             case ND::ROTATOR_LEFT:
             case ND::ROTATOR_RIGHT:
@@ -975,6 +915,93 @@ bool NexDome::processEvent(const std::string &event)
 
     return false;
 }
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+bool NexDome::processRotatorReport(const std::string &report)
+{
+    std::regex re(R"((\d+),(\d+),(\d+),(\d+),(\d+))");
+    std::smatch match;
+    if (std::regex_search(report, match, re))
+    {
+        uint32_t position = std::stoul(match.str(1));
+        uint32_t at_home = std::stoul(match.str(2));
+        uint32_t cirumference = std::stoul(match.str(3));
+        uint32_t home_position = std::stoul(match.str(4));
+        uint32_t dead_zone = std::stoul(match.str(5));
+
+        DomeAbsPosN[0].value = range360(position / ND::STEPS_PER_DEGREE);
+        if (getDomeState() == DOME_MOVING)
+            setDomeState(DOME_SYNCED);
+        else if (getDomeState() == DOME_PARKING)
+            setDomeState(DOME_PARKED);
+        else
+            IDSetNumber(&DomeAbsPosNP, nullptr);
+
+        if (GoHomeSP.s == IPS_BUSY && at_home == 1)
+        {
+            LOG_INFO("Rotator reached home position.");
+            GoHomeS[0].s = ISS_OFF;
+            GoHomeSP.s = IPS_OK;
+            IDSetSwitch(&GoHomeSP, nullptr);
+        }
+
+        double homeAngle = range360(static_cast<double>(home_position) / cirumference);
+        if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
+        {
+            HomePositionN[0].value = homeAngle;
+            IDSetNumber(&HomePositionNP, nullptr);
+        }
+
+        if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
+        {
+            RotatorSettingsN[S_ZONE].value = dead_zone;
+            IDSetNumber(&RotatorSettingsNP, nullptr);
+        }
+    }
+
+    return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////
+bool NexDome::processShutterReport(const std::string &report)
+{
+    std::regex re(R"((\d+),(\d+),(\d+),(\d+))");
+    std::smatch match;
+    if (std::regex_search(report, match, re))
+    {
+        //uint32_t position = std::stoul(match.str(1));
+        //uint32_t travel_limit = std::stoul(match.str(2));
+        bool open_limit_switch = std::stoul(match.str(3)) == 1;
+        bool close_limit_switch = std::stoul(match.str(4)) == 1;
+
+        if (getShutterState() == SHUTTER_MOVING)
+        {
+            if (open_limit_switch)
+            {
+                setShutterState(SHUTTER_OPENED);
+                LOG_INFO("Shutter is fully opened.");
+            }
+            else if (close_limit_switch)
+            {
+                setShutterState(SHUTTER_CLOSED);
+                LOG_INFO("Shutter is fully closed.");
+            }
+        }
+        else if (open_limit_switch == 0 && close_limit_switch == 0 && getShutterState() != SHUTTER_UNKNOWN)
+        {
+            setShutterState(SHUTTER_UNKNOWN);
+            LOG_WARN("Unknown shutter state. All limit switches are off.");
+        }
+    }
+
+    return true;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 ///
