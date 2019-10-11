@@ -128,7 +128,7 @@ bool NexDome::initProperties()
     /// Home Position
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&HomePositionN[0], "POSITON", "degrees", "%.f", 0.0, 360.0, 0.0, 0);
-    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Battery
