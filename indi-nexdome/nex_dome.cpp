@@ -594,9 +594,9 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         // Firmware is exception since the response does not include the target
         // for everything else, the echo back includes the target.
         if (command != ND::SEMANTIC_VERSION)
-            re = (":" + verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+)");
+            re = (":" + verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+[^#])");
         else
-            re = (":" + verb + "(.+)");
+            re = (":" + verb + "(.+[^#])");
 
         std::smatch match;
 
@@ -606,7 +606,7 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
             std::string trimmedEvent = trim(oneEvent);
 
             // If we find the match, tag it.
-            if (std::regex_match(trimmedEvent, match, re))
+            if (std::regex_search(trimmedEvent, match, re))
             {
                 value = match.str(1);
                 response_found = true;
@@ -654,7 +654,7 @@ bool NexDome::processEvent(const std::string &event)
         std::regex re(kv.second + "(.+[^#])");
         std::smatch match;
 
-        if (!std::regex_match(event, match, re))
+        if (!std::regex_search(event, match, re))
             continue;
 
         std::string value = match.str(1);
