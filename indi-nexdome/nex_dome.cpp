@@ -628,6 +628,14 @@ bool NexDome::getStartupValues()
     if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
         HomePositionN[0].value = std::stoi(value);
 
+    // Rotator State
+    if (getParameter(ND::REPORT, ND::ROTATOR, value))
+        processEvent(value);
+
+    // Shutter State
+    if (getParameter(ND::REPORT, ND::SHUTTER, value))
+        processEvent(value);
+
     return false;
 }
 
