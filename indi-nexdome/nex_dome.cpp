@@ -522,7 +522,7 @@ bool NexDome::setParameter(ND::Commands command, ND::Targets target, int32_t val
     cmd << "@";
     cmd << ND::CommandsMap.at(command) + "W" + ((target == ND::ROTATOR) ? "R" : "S");
 
-    if (!isnan(value))
+    if (value != -1e6)
     {
         cmd << ",";
         cmd << value;
