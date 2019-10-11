@@ -651,7 +651,7 @@ bool NexDome::processEvent(const std::string &event)
 
         std::string value = match.str(1);
 
-        LOGF_DEBUG("Process event <%s>", value.c_str());
+        LOGF_DEBUG("Processing event <%s>", value.c_str());
 
         switch (kv.first)
         {
@@ -666,15 +666,15 @@ bool NexDome::processEvent(const std::string &event)
                     m_ShutterConnected = false;
                     LOG_WARN("Lost connection to the shutter!");
                 }
-                break;
+                return true;
 
             case ND::ROTATOR_POSITION:
                 // 153 = full_steps_circumference / 360 = 55080 / 360
                 DomeAbsPosN[0].value = range360(std::stoi(value) / 153.0);
-                break;
+                return true;
 
             case ND::SHUTTER_POSITION:
-                break;
+                return true;
 
             case ND::ROTATOR_REPORT:
             {
@@ -716,7 +716,7 @@ bool NexDome::processEvent(const std::string &event)
                     }
                 }
             }
-            break;
+            return true;
 
             case ND::SHUTTER_REPORT:
             {
@@ -744,7 +744,7 @@ bool NexDome::processEvent(const std::string &event)
                     }
                 }
             }
-            break;
+            return true;
 
             case ND::ROTATOR_LEFT:
             case ND::ROTATOR_RIGHT:
@@ -753,7 +753,7 @@ bool NexDome::processEvent(const std::string &event)
                     setDomeState(DOME_MOVING);
                     LOGF_INFO("Dome is rotating %s.", ((kv.first == ND::ROTATOR_LEFT) ? "counter-clock wise" : "clock-wise"));
                 }
-                break;
+                return true;
 
             case ND::SHUTTER_OPENING:
                 if (getShutterState() != SHUTTER_MOVING)
@@ -762,7 +762,7 @@ bool NexDome::processEvent(const std::string &event)
                     LOG_INFO("Shutter is opening...");
                     break;
                 }
-                break;
+                return true;
 
             case ND::SHUTTER_CLOSING:
                 if (getShutterState() != SHUTTER_MOVING)
@@ -771,7 +771,7 @@ bool NexDome::processEvent(const std::string &event)
                     LOG_INFO("Shutter is closing...");
                     break;
                 }
-                break;
+                return true;
 
             case ND::SHUTTER_BATTERY:
             {
@@ -795,7 +795,7 @@ bool NexDome::processEvent(const std::string &event)
         }
     }
 
-    return true;
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////
