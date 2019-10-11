@@ -499,7 +499,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
 ///////////////////////////////////////////////////////////////////////////////
 bool NexDome::Sync(double az)
 {
-    return setParameter(ND::POSITION, ND::ROTATOR, az);
+    return setParameter(ND::POSITION, ND::ROTATOR, az * ND::STEPS_PER_DEGREE);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -718,7 +718,8 @@ bool NexDome::setParameter(ND::Commands command, ND::Targets target, int32_t val
         cmd << value;
     }
 
-    return sendCommand(cmd.str().c_str());
+    char res[ND::DRIVER_LEN] = {0};
+    return sendCommand(cmd.str().c_str(), res);
 }
 
 //////////////////////////////////////////////////////////////////////////////
