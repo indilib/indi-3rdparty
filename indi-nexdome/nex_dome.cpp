@@ -686,9 +686,9 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::ROTATOR_REPORT:
             {
-                std::regex re(R"((\d+),(\d+),(\d+),(\d+),(\d+)#)");
+                std::regex re(R"((\d+),(\d+),(\d+),(\d+),(\d+))");
                 std::smatch match;
-                if (!std::regex_match(value, match, re))
+                if (!std::regex_search(value, match, re))
                 {
                     uint32_t position = std::stoul(match.str(1));
                     uint32_t at_home = std::stoul(match.str(2));
@@ -728,9 +728,9 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::SHUTTER_REPORT:
             {
-                std::regex re(R"((\d+),(\d+),(\d+),(\d+)#)");
+                std::regex re(R"((\d+),(\d+),(\d+),(\d+))");
                 std::smatch match;
-                if (!std::regex_match(value, match, re))
+                if (!std::regex_search(value, match, re))
                 {
                     //uint32_t position = std::stoul(match.str(1));
                     //uint32_t travel_limit = std::stoul(match.str(2));
@@ -783,17 +783,12 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::SHUTTER_BATTERY:
             {
-                std::regex re(R"((\d+)#)");
-                std::smatch match;
-                if (!std::regex_match(value, match, re))
-                {
-                    // FIXME check how to go from ADV --> Volts
-                    uint32_t battery_adu = std::stoul(match.str(1));
-                    ShutterBatteryLevelN[0].value = battery_adu;
-                    // TODO: Must check if batter is OK, warning, or in critical level
-                    ShutterBatteryLevelNP.s = IPS_OK;
-                    IDSetNumber(&ShutterBatteryLevelNP, nullptr);
-                }
+                // FIXME check how to go from ADV --> Volts
+                uint32_t battery_adu = std::stoul(value);
+                ShutterBatteryLevelN[0].value = battery_adu;
+                // TODO: Must check if batter is OK, warning, or in critical level
+                ShutterBatteryLevelNP.s = IPS_OK;
+                IDSetNumber(&ShutterBatteryLevelNP, nullptr);
             }
             break;
 
