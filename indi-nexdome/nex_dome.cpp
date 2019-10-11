@@ -545,13 +545,9 @@ IPState NexDome::Park()
     {
         LOG_INFO("Closing shutter on parking...");
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
-
-        //        std::string response;
-        //        if (getParameter(ND::REPORT, ND::ROTATOR, response))
-        //            processRotatorReport(response);
-
-        //        if (getParameter(ND::REPORT, ND::SHUTTER, response))
-        //            processShutterReport(response);
+        DomeShutterS[SHUTTER_OPEN].s = ISS_OFF;
+        DomeShutterS[SHUTTER_CLOSE].s = ISS_ON;
+        setShutterState(SHUTTER_MOVING);
     }
 
     return IPS_BUSY;
@@ -660,7 +656,7 @@ bool NexDome::getStartupValues()
 
     // Home Setting
     if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
-        HomePositionN[0].value = std::stoi(value);
+        HomePositionN[0].value = std::stoi(value) / ND::STEPS_PER_DEGREE;
 
     // Rotator State
     if (getParameter(ND::REPORT, ND::ROTATOR, value))
