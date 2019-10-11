@@ -1,3 +1,11 @@
+Version 0.8 - 2019-10-08
+	+ renamed driver to product line (AOK Skywalker)
+	- removed unpark at start: strange tracking behaviour after some time
+
+Version 0.7 - 2019-09-25
+	+ implemented park/unpark
+	  (initalizing with unpark leads to uncontroled tracking behaviour!!)
+
 Version 0.6 - 2019-09-20
 	+ implemented track lock of TCS
 	+ implemented drives lock of TCS

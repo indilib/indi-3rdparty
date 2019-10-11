@@ -1,7 +1,7 @@
 
 
 /*
-    Herkules V24 driver
+    AOK Skywalker driver
     (based on Avalon driver)
 
     Copyright (C) T. Schriber
@@ -21,8 +21,8 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef HERKULES_H
-#define HERKULES_H
+#ifndef SKYWALKER_H
+#define SKYWALKER_H
 
 #pragma once
 
@@ -64,22 +64,22 @@ enum TFormat
     LX200_LONGER_FORMAT
 };
 
-// Herkules specific tabs
-extern const char *INFO_TAB; // Infotab for Versionummer?
+// Skywalker specific tabs
+extern const char *INFO_TAB; // Infotab for versionumber, etc.
 
-class LX200Herkules : public LX200Telescope
+class LX200Skywalker : public LX200Telescope
 {
     public:
-        enum DrivesState
+        enum MountState
         {
-            DRIVES_LOCKED = 0,
-            DRIVES_UNLOCKED = 1
+            MOUNT_LOCKED = 0,
+            MOUNT_UNLOCKED = 1
         };
-        DrivesState CurrentDrivesState {DRIVES_LOCKED};
+        MountState CurrentMountState {MOUNT_LOCKED};
         TelescopeSlewRate CurrentSlewRate {SLEW_MAX};
 
-        LX200Herkules();
-        ~LX200Herkules() {}
+        LX200Skywalker();
+        ~LX200Skywalker() {}
 
         virtual const char *getDefaultName() override;
         virtual bool Handshake() override;
@@ -107,9 +107,9 @@ class LX200Herkules : public LX200Telescope
         INumber SystemSlewSpeedP[1];
         INumberVectorProperty SystemSlewSpeedNP;
 
-        // Drives locked/unlocked
-        ISwitch DrivesStateS[2];
-        ISwitchVectorProperty DrivesStateSP;
+        // Mount locked/unlocked
+        ISwitch MountStateS[2];
+        ISwitchVectorProperty MountStateSP;
 
         // Info
         ITextVectorProperty FirmwareVersionTP;
@@ -121,22 +121,22 @@ class LX200Herkules : public LX200Telescope
         virtual void getBasicData() override;
         // virtual bool ReadScopeStatus() override;
         virtual bool Park() override;
-        virtual void SetParked(bool isparked);
-        virtual bool UnPark() override;
+        virtual bool UnPark();
+        //virtual bool UnPark() override;
         virtual bool saveConfigItems(FILE *fp) override;
         virtual bool Goto(double ra, double dec) override;
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        // Herkules stuff
+        // Skywalker stuff
         bool setParkPosition(ISState *states, char *names[], int n);
         bool getSystemSlewSpeed (int *xx);
         bool setSystemSlewSpeed (int xx);
         bool getJSONData_Y(int jindex, char *jstr);
         bool getJSONData_gp(int jindex, char *jstr);
         bool setPierSide();
-        bool DrivesLocked();
-        bool SetDrivesLock(bool enable);
+        bool MountLocked();
+        bool SetMountLock(bool enable);
 
 
         // location
@@ -183,13 +183,13 @@ class LX200Herkules : public LX200Telescope
         bool setSlewMode(int slewMode);
 
 };
-inline bool LX200Herkules::sendQuery(const char* cmd, char* response, int wait)
+inline bool LX200Skywalker::sendQuery(const char* cmd, char* response, int wait)
 {
     return sendQuery(cmd, response, '#', wait);
 }
-inline bool LX200Herkules::receive(char* buffer, int wait)
+inline bool LX200Skywalker::receive(char* buffer, int wait)
 {
     return receive(buffer, '#', wait);
 }
 
-#endif // Herkules_V24
+#endif

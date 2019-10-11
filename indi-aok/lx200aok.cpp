@@ -1,5 +1,5 @@
 /*
-    Herkules V24 driver
+    AOK Skywalker driver
 
     Copyright (C) 2019 T. Schriber
 
@@ -18,7 +18,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "lx200v24.h"
+#include "lx200aok.h"
 
 #include <cmath>
 #include <memory>
@@ -33,10 +33,10 @@
 #include "config.h"
 
 // Unique pointers
-static std::unique_ptr<LX200Herkules> telescope;
+static std::unique_ptr<LX200Skywalker> telescope;
 
 
-const char *INFO_TAB = "TCS"; // ToDo: for information about TCS e.g. firmware etc
+const char *INFO_TAB = "TCS"; // information about TCS e.g. firmware etc
 
 void ISInit()
 {
@@ -48,7 +48,7 @@ void ISInit()
     isInit = 1;
     if (telescope.get() == nullptr)
     {
-        LX200Herkules* myScope = new LX200Herkules();
+        LX200Skywalker* myScope = new LX200Skywalker();
         telescope.reset(myScope);
     }
 }
@@ -100,10 +100,10 @@ void ISSnoopDevice(XMLEle *root)
 *** LX200 Generic Implementation / Constructor
 ***************************************************/
 
-LX200Herkules::LX200Herkules() : LX200Telescope()
+LX200Skywalker::LX200Skywalker() : LX200Telescope()
 {
     LOG_DEBUG(__FUNCTION__);
-    setVersion(HERKULES_VERSION_MAJOR, HERKULES_VERSION_MINOR);
+    setVersion(SKYWALKER_VERSION_MAJOR, SKYWALKER_VERSION_MINOR);
 
     DBG_SCOPE = INDI::Logger::DBG_DEBUG;
 
@@ -126,28 +126,30 @@ LX200Herkules::LX200Herkules() : LX200Telescope()
 /**************************************************************************************
 **
 ***************************************************************************************/
-const char *LX200Herkules::getDefaultName()
+const char *LX200Skywalker::getDefaultName()
 {
-    return "Herkules V24";
+    return "AOK Skywalker";
 }
 
 
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool LX200Herkules::Handshake()
+bool LX200Skywalker::Handshake()
 {
     char fwinfo[64] = {0}; // 64 for strcpy
+    char strinfo[1][64] = {""};
     if (!getFirmwareInfo(fwinfo))
     {
-        LOG_ERROR("Error communication with telescope.");
+        LOG_ERROR("Communication with telescope failed");
         return false;
     }
     else
     {
-        strcpy(FirmwareVersionT[0].text, fwinfo);
+        sscanf(fwinfo,"%*[\"]%[^\"]", strinfo[0]);
+        strcpy(FirmwareVersionT[0].text, strinfo[0]);
         IDSetText(&FirmwareVersionTP, nullptr);
-        LOGF_INFO("Handshake ok (Firmwareversion %s)", fwinfo);
+        LOGF_INFO("Handshake ok (Firmwareversion %s)", strinfo[0]);
         return true;
     }
 }
@@ -156,7 +158,7 @@ bool LX200Herkules::Handshake()
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool LX200Herkules::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     bool result = false;
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
@@ -179,7 +181,7 @@ bool LX200Herkules::ISNewSwitch(const char *dev, const char *name, ISState *stat
                 result = true;
             }
             else
-                LOG_ERROR("Trackstate undefined.");
+                LOG_ERROR("Trackstate undefined");
 
             TrackStateSP.s = result ? IPS_OK : IPS_ALERT;
             IDSetSwitch(&TrackStateSP, nullptr);
@@ -214,30 +216,41 @@ bool LX200Herkules::ISNewSwitch(const char *dev, const char *name, ISState *stat
             IDSetSwitch(&TrackModeSP, nullptr);
             return result;
         }
-        // lock state
-        if (!strcmp(name, DrivesStateSP.name))
+        // mount state
+        if (!strcmp(name, MountStateSP.name))
         {
-            if (IUUpdateSwitch(&DrivesStateSP, states, names, n) < 0)
+            if (IUUpdateSwitch(&MountStateSP, states, names, n) < 0)
                 return false;
-            int NewDrivesState = IUFindOnSwitchIndex(&DrivesStateSP);
+            int NewMountState = IUFindOnSwitchIndex(&MountStateSP);
 
-            if ((NewDrivesState == DRIVES_LOCKED) && SetDrivesLock(true))
+            if ((NewMountState == MOUNT_LOCKED) && SetMountLock(true))
             {
-                CurrentDrivesState = DRIVES_LOCKED; // ALWAYS set status!
+                CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
                 result = true;
             }
-            else if ((NewDrivesState == DRIVES_UNLOCKED) && SetDrivesLock(false))
+            else if ((NewMountState == MOUNT_UNLOCKED) && SetMountLock(false))
             {
-                CurrentDrivesState = DRIVES_UNLOCKED; // ALWAYS set status!
+                CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
                 result = true;
             }
             else
-                LOG_INFO("Lock undefined.");
+                LOG_ERROR("Mountlock undefined");
 
-            DrivesStateSP.s = result ? IPS_OK : IPS_ALERT;
-            IDSetSwitch(&DrivesStateSP, nullptr);
+            MountStateSP.s = result ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&MountStateSP, nullptr);
             return result;
         }
+         if (!strcmp(name, ParkSP.name))
+         {
+            if (LX200Telescope::ISNewSwitch(dev, name, states, names, n))
+            {
+                ParkSP.s = IPS_OK; //INDI::Telescope::SetParked(false) sets IPS_IDLE (!?)
+                IDSetSwitch(&ParkSP, nullptr);
+                return true;
+            }
+            else
+                return false;
+         }
 
     }
 
@@ -245,7 +258,7 @@ bool LX200Herkules::ISNewSwitch(const char *dev, const char *name, ISState *stat
     return LX200Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
-bool LX200Herkules::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+bool LX200Skywalker::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
@@ -278,7 +291,7 @@ bool LX200Herkules::ISNewNumber(const char *dev, const char *name, double values
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool LX200Herkules::initProperties()
+bool LX200Skywalker::initProperties()
 {
     /* Make sure to init parent properties first */
     if (!LX200Telescope::initProperties()) return false;
@@ -288,13 +301,19 @@ bool LX200Herkules::initProperties()
     IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Motors Status
-    IUFillSwitch(&DrivesStateS[0], "On", "", ISS_OFF);
-    IUFillSwitch(&DrivesStateS[1], "Off", "", ISS_OFF);
-    IUFillSwitchVector(&DrivesStateSP, DrivesStateS, 2, getDeviceName(), "Driveslock", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitch(&MountStateS[0], "On", "", ISS_OFF);
+    IUFillSwitch(&MountStateS[1], "Off", "", ISS_OFF);
+    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Infotab
     IUFillText(&FirmwareVersionT[0], "Firmware", "Version", "123456");
     IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
+    // Overwrite parking texts: Seems more intelligible to me
+    IUFillSwitch(&ParkS[0], "PARK", "Park(ed)", ISS_OFF);
+    IUFillSwitch(&ParkS[1], "UNPARK", "Unpark(ed)", ISS_OFF);
+    IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "TELESCOPE_PARK", "Mountstate", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     return true;
 }
@@ -302,20 +321,20 @@ bool LX200Herkules::initProperties()
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool LX200Herkules::updateProperties()
+bool LX200Skywalker::updateProperties()
 {
     if (! LX200Telescope::updateProperties()) return false;
     if (isConnected())
     {
         // registering here results in display at bottom of tab
+        defineSwitch(&MountStateSP);
         defineNumber(&SystemSlewSpeedNP);
-        defineSwitch(&DrivesStateSP);
         defineText(&FirmwareVersionTP);
     }
     else
     {
+        deleteProperty(MountStateSP.name);
         deleteProperty(SystemSlewSpeedNP.name);
-        deleteProperty(DrivesStateSP.name);
         deleteProperty(FirmwareVersionTP.name);
     }
 
@@ -325,14 +344,14 @@ bool LX200Herkules::updateProperties()
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool LX200Herkules::Connect()
+bool LX200Skywalker::Connect()
 {
     if (! DefaultDevice::Connect())
         return false;
     return true;
 }
 
-bool LX200Herkules::Disconnect()
+bool LX200Skywalker::Disconnect()
 {
     return DefaultDevice::Disconnect();
 }
@@ -340,36 +359,58 @@ bool LX200Herkules::Disconnect()
 /**************************************************************************************
 **
 ***************************************************************************************
-bool LX200Herkules::ReadScopeStatus()
+bool LX200Skywalker::ReadScopeStatus()
 {
     return (LX200Telescope::ReadScopeStatus());  // TCS does not :D#! -> ovverride isSlewComplete
 }*/
 
-bool LX200Herkules::isSlewComplete()
+bool LX200Skywalker::isSlewComplete()
 {
     char response[TCS_RESPONSE_BUFFER_LENGTH];
     bool result = false;
     if (sendQuery("?#", response)) // Send query is sent only if not tracking (cf. lx200telescope)
     {
         // Slew complete?
-        if (*response == '0') // Query response == '0', mount is no more slewing (not slewing)
+        if (*response == '0') // Query response == '0', mount is not slewing (anymore)
         {
-            TrackStateS[TRACK_ON].s = ISS_ON;
-            TrackStateS[TRACK_OFF].s = ISS_OFF;
-            TrackState = SCOPE_TRACKING;
-            TrackStateSP.s = IPS_OK;
-            IDSetSwitch(&TrackStateSP, nullptr);
-            if ((setPierSide()) && (DrivesLocked())) // Normally lock is set by TCS if slew ends
+            if (TrackState == SCOPE_SLEWING)
             {
-                DrivesStateS[0].s = ISS_ON;
-                DrivesStateS[1].s = ISS_OFF;
-                DrivesStateSP.s = IPS_OK;
-                CurrentDrivesState = DRIVES_LOCKED; // ALWAYS set status!
-                IDSetSwitch(&DrivesStateSP, nullptr);
-                result = true;
+                TrackStateS[TRACK_ON].s = ISS_ON;
+                TrackStateS[TRACK_OFF].s = ISS_OFF;
+                TrackState = SCOPE_TRACKING;
+                TrackStateSP.s = IPS_OK;
+                IDSetSwitch(&TrackStateSP, nullptr);
+                if ((setPierSide()) && (MountLocked())) // Normally lock is set by TCS if slew ends
+                {
+                    MountStateS[0].s = ISS_ON;
+                    MountStateS[1].s = ISS_OFF;
+                    MountStateSP.s = IPS_OK;
+                    CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+                    IDSetSwitch(&MountStateSP, nullptr);
+                    result = true;
+                }
+                else
+                    LOG_ERROR("Mount could not be locked by TCS!");
             }
-            else
-                LOG_ERROR("Driveslock not set by TCS!");
+            else if (TrackState == SCOPE_PARKING)
+            {
+                TrackStateS[TRACK_ON].s = ISS_OFF;
+                TrackStateS[TRACK_OFF].s = ISS_ON;
+                TrackState = SCOPE_PARKED;
+                TrackStateSP.s = IPS_OK;
+                IDSetSwitch(&TrackStateSP, nullptr);
+                if (SetMountLock(false))
+                {
+                    MountStateS[0].s = ISS_OFF;
+                    MountStateS[1].s = ISS_ON;
+                    MountStateSP.s = IPS_OK;
+                    CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
+                    IDSetSwitch(&MountStateSP, nullptr);
+                    result = true;
+                }
+                else
+                    LOG_ERROR("Mount could not be unlocked by TCS!");
+            }
         }
     }
     return result;
@@ -379,12 +420,18 @@ bool LX200Herkules::isSlewComplete()
 **
 ***************************************************************************************/
 
-void LX200Herkules::getBasicData()
+void LX200Skywalker::getBasicData()
 {
     LOG_DEBUG(__FUNCTION__);
     if (!isSimulation())
     {
         checkLX200Format();
+
+        if (INDI::Telescope::capability & TELESCOPE_CAN_PARK)
+        {
+            ParkSP.s = IPS_OK;
+            IDSetSwitch(&ParkSP, nullptr);
+        }
 
         if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
             getAlignment();
@@ -396,10 +443,11 @@ void LX200Herkules::getBasicData()
             else
                 IDSetNumber(&TrackingFreqNP, nullptr);
         }
-
+        /* not necessary?
         if (INDI::Telescope::capability & TELESCOPE_CAN_CONTROL_TRACK)
         {
             if (MountTracking())
+            //if (SetTrackEnabled(false))  // setting tracking disabled on connect makes more sense!
             {
                 TrackStateS[TRACK_ON].s = ISS_ON;
                 TrackStateS[TRACK_OFF].s = ISS_OFF;
@@ -412,13 +460,12 @@ void LX200Herkules::getBasicData()
                 TrackStateS[TRACK_OFF].s = ISS_ON;
                 TrackStateSP.s = IPS_OK;
                 INDI::Telescope::TrackState = SCOPE_IDLE; // ALWAYS set status! (cf. ISNewSwitch())
+                //LOG_WARN("Could not disable tracking on startup!");
+                //TrackStateSP.s = IPS_ALERT;
             }
+            IDSetSwitch(&TrackStateSP, nullptr);
         }
-        else
-        {
-            TrackStateSP.s = IPS_ALERT;
-        }
-        IDSetSwitch(&TrackStateSP, nullptr);
+        */
 
         int slewSpeed;
         if (getSystemSlewSpeed(&slewSpeed))
@@ -431,27 +478,32 @@ void LX200Herkules::getBasicData()
             SystemSlewSpeedNP.s = IPS_ALERT;
         }
         IDSetNumber(&SystemSlewSpeedNP, nullptr);
-
-        if (DrivesLocked())
+        /* not necessary?
+        if (MountLocked())
+        // if (SetMountLock(true))  // setting lock enabled on connect makes more sense!
+        // BUT: TCS has problems and has some offset, which results fast slew to nowhere(why?)
         {
-            DrivesStateS[0].s = ISS_ON;
-            DrivesStateS[1].s = ISS_OFF;
-            DrivesStateSP.s = IPS_OK;
-            CurrentDrivesState = DRIVES_LOCKED; // ALWAYS set status! (cf. ISNewSwitch())
+            MountStateS[0].s = ISS_ON;
+            MountStateS[1].s = ISS_OFF;
+            MountStateSP.s = IPS_OK;
+            CurrentMountState = MOUNT_LOCKED; // ALWAYS set status! (cf. ISNewSwitch())
         }
         else
         {
-            DrivesStateS[0].s = ISS_OFF;
-            DrivesStateS[1].s = ISS_ON;
-            DrivesStateSP.s = IPS_OK;
-            CurrentDrivesState = DRIVES_UNLOCKED; // ALWAYS set status! (cf. ISNewSwitch())
+            MountStateS[0].s = ISS_OFF;
+            MountStateS[1].s = ISS_ON;
+            MountStateSP.s = IPS_OK;
+            CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status! (cf. ISNewSwitch())
+            //LOG_WARN("Could not set mountlock on startup!");
+            //TrackStateSP.s = IPS_ALERT;
         }
-        IDSetSwitch(&DrivesStateSP, nullptr);
+        IDSetSwitch(&MountStateSP, nullptr);
+        */
 
         if (INDI::Telescope::capability & TELESCOPE_HAS_TRACK_MODE)
         {
            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
-           //int modes = sizeof(TelescopeTrackMode);
+           //int modes = sizeof(TelescopeTrackMode); (enum Sidereal, Solar, Lunar, Custom)
            int modes = TRACK_SOLAR; // ToDo: Lunar and Custom tracking
            TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
            IDSetSwitch(&TrackModeSP, nullptr);
@@ -475,7 +527,7 @@ void LX200Herkules::getBasicData()
 **
 ***************************************************************************************/
 
-bool LX200Herkules::updateLocation(double latitude, double longitude, double elevation)
+bool LX200Skywalker::updateLocation(double latitude, double longitude, double elevation)
 {
     LOGF_DEBUG("%s Lat:%.3lf Lon:%.3lf", __FUNCTION__, latitude, longitude);
     INDI_UNUSED(elevation); // Elevation only as info
@@ -502,88 +554,69 @@ bool LX200Herkules::updateLocation(double latitude, double longitude, double ele
 
     LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L);
 
+    /* TCS needs location and localtime to calculate it's internal "earth model"
+     * so we have to call UnPark() here. BUT: We had strange tracking behaviour
+     * after 'return UnPark();' */
+    //So we only SHOW mount as unparked without sending LX200-Unpark command
+    INDI::Telescope::SetParked(false);
+    ParkSP.s = IPS_OK;
+    IDSetSwitch(&ParkSP, nullptr);
     return true;
+
 }
 
 /**************************************************************************************
 **
 ***************************************************************************************/
 
-bool LX200Herkules::Park()
+bool LX200Skywalker::Park()
 {
-    LOG_DEBUG(__FUNCTION__);
-    // in: :X362#
-    // out: "pB#"
-
-    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
-    if (sendQuery(":X362#", response) && strcmp(response, "pB") == 0)
+    if (INDI::Telescope::TrackState == SCOPE_PARKED)  // already parked
     {
-        LOG_INFO("Parking mount...");
-        TrackState = SCOPE_PARKING;
+        INDI::Telescope::SetParked(true);
         return true;
     }
     else
-    {
-        LOGF_ERROR("Parking failed. Response %s", response);
-        return false;
-    }
+        return (LX200Telescope::Park());
 }
 
-/**
- * @brief Set parking state to "parked" and reflect the state
- *        in the UI.
- * @param isparked true iff the scope has been parked
- * @return
- */
-void LX200Herkules::SetParked(bool isparked)
+bool LX200Skywalker::UnPark() // Lx200driver does only gpswakeup()!!
 {
-    LOGF_DEBUG("%s %s", __FUNCTION__, isparked ? "PARKED" : "UNPARKED");
-    INDI::Telescope::SetParked(isparked);
-}
-
-bool LX200Herkules::UnPark()
-{
-    LOG_DEBUG(__FUNCTION__);
-    // in: :X370#
-    // out: "p0#"
-
-    /*
-    double siteLong;
-
-    // step one: determine site longitude
-    if (!getSiteLongitude(&siteLong))
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    if (sendQuery(":hW#", response, 0))
     {
-        LOG_WARN("Failed to get site Longitude from device.");
-        return false;
-    }
-    // set LST to avoid errors
-    if (!setLocalSiderealTime(siteLong))
-    {
-        LOGF_ERROR("Failed to set LST before unparking %lf", siteLong);
-        return false;
-    }
-    char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
-
-    // and now execute unparking
-    if (sendQuery(":X370#", response) && strcmp(response, "p0") == 0)
-    {
-        LOG_INFO("Unparking mount...");
-        return true;
+        INDI::Telescope::SetParked(false);
+        if ((MountLocked()) && (MountTracking())) // TCS sets Mountlock & Tracking
+        {
+            MountStateS[0].s = ISS_ON;
+            MountStateS[1].s = ISS_OFF;
+            MountStateSP.s = IPS_OK;
+            CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+            /* INDI::Telescope::SetParked(false) sets TrackState = SCOPE_IDLE !! (WHY?) */
+            TrackStateS[TRACK_ON].s = ISS_ON;
+            TrackStateS[TRACK_OFF].s = ISS_OFF;
+            TrackStateSP.s = IPS_OK;
+            INDI::Telescope::TrackState = SCOPE_TRACKING;
+            /* INDI::Telescope::SetParked(false) sets ParkSP.S = IPS_IDLE !! (WHY?) */
+            ParkSP.s = IPS_OK;
+            IDSetSwitch(&MountStateSP, nullptr);
+            IDSetSwitch(&TrackStateSP, nullptr);
+            IDSetSwitch(&ParkSP, nullptr);
+            return true;
+            /* Should we do a sync here to show pierside? */
+        }
+        else
+            return false;
     }
     else
-    {
-        LOGF_ERROR("Unpark failed with response: %s", response);
         return false;
-    }*/
-    return true;
 }
-
 
 /*********************************************************************************
  * config file
  *********************************************************************************/
 
-bool LX200Herkules::saveConfigItems(FILE *fp)
+bool LX200Skywalker::saveConfigItems(FILE *fp)
 {
     LOG_DEBUG(__FUNCTION__);
     IUSaveConfigText(fp, &SiteNameTP);
@@ -602,7 +635,7 @@ bool LX200Herkules::saveConfigItems(FILE *fp)
  * @param response answer
  * @return true if the command succeeded, false otherwise
  */
-bool LX200Herkules::sendQuery(const char* cmd, char* response, char end, int wait)
+bool LX200Skywalker::sendQuery(const char* cmd, char* response, char end, int wait)
 {
     LOGF_DEBUG("%s %s End:%c Wait:%ds", __FUNCTION__, cmd, end, wait);
     response[0] = '\0';
@@ -630,7 +663,7 @@ bool LX200Herkules::sendQuery(const char* cmd, char* response, char end, int wai
 /*
  * Set the site longitude.
  */
-bool LX200Herkules::setSiteLongitude(double longitude)
+bool LX200Skywalker::setSiteLongitude(double longitude)
 {
     LOG_DEBUG(__FUNCTION__);
     int d, m, s;
@@ -651,7 +684,7 @@ bool LX200Herkules::setSiteLongitude(double longitude)
 /*
  * Set the site latitude
  */
-bool LX200Herkules::setSiteLatitude(double Lat)
+bool LX200Skywalker::setSiteLatitude(double Lat)
 {
     LOG_DEBUG(__FUNCTION__);
     int d, m, s;
@@ -669,7 +702,7 @@ bool LX200Herkules::setSiteLatitude(double Lat)
 
 }
 
-bool LX200Herkules::getJSONData_gp(int jindex, char *jstr) // preliminary hardcoded  :gp-query
+bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardcoded  :gp-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -699,7 +732,7 @@ bool LX200Herkules::getJSONData_gp(int jindex, char *jstr) // preliminary hardco
     return true;
 }
 
-bool LX200Herkules::getJSONData_Y(int jindex, char *jstr) // preliminary hardcoded query :Y#-query
+bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardcoded query :Y#-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -729,7 +762,7 @@ bool LX200Herkules::getJSONData_Y(int jindex, char *jstr) // preliminary hardcod
     return true;
 }
 
-bool LX200Herkules::setPierSide()
+bool LX200Skywalker::setPierSide()
 {
     char lstat[20] = {0};
     int li = 0;
@@ -752,7 +785,7 @@ bool LX200Herkules::setPierSide()
      }
 }
 
-bool LX200Herkules::DrivesLocked()
+bool LX200Skywalker::MountLocked()
 {
     char lstat[20] = {0};
     int li = 0;
@@ -768,21 +801,21 @@ bool LX200Herkules::DrivesLocked()
     }
 }
 
-bool LX200Herkules::SetDrivesLock(bool enable)
+bool LX200Skywalker::SetMountLock(bool enable)
 {
     // Command set lock on/off  - :hE#
     char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
     bool retval = false;
     if (enable)
     {
-        if (DrivesLocked())
+        if (MountLocked())
             retval = true;
         else if (sendQuery(":hE#", response, 0))
             retval = true;
     }
     else // if disable
     {
-        if (!DrivesLocked())
+        if (!MountLocked())
             retval = true;
         else if (sendQuery(":hE#", response, 0))
             retval = true;
@@ -801,7 +834,7 @@ bool LX200Herkules::SetDrivesLock(bool enable)
  * @param xx
  * @return true iff request succeeded
  */
-bool LX200Herkules::getSystemSlewSpeed (int *xx)
+bool LX200Skywalker::getSystemSlewSpeed (int *xx)
 {
     LOG_DEBUG(__FUNCTION__);
     // query status  - :Gm#
@@ -823,7 +856,7 @@ bool LX200Herkules::getSystemSlewSpeed (int *xx)
     return true;
 }
 
-bool LX200Herkules::setSystemSlewSpeed (int xx)
+bool LX200Skywalker::setSystemSlewSpeed (int xx)
 {
     // set status  - :Sm#
     // response    - ?
@@ -853,7 +886,7 @@ bool LX200Herkules::setSystemSlewSpeed (int xx)
  * @param firmwareInfo - firmware description
  * @return
  */
-bool LX200Herkules::getFirmwareInfo(char* vstring)
+bool LX200Skywalker::getFirmwareInfo(char* vstring)
 {
     char lstat[20] = {0};
     if(!getJSONData_gp(1, lstat))
@@ -877,7 +910,7 @@ bool LX200Herkules::getFirmwareInfo(char* vstring)
  * @author CanisUrsa
  * @return true if communication succeeded, false otherwise
  */
-bool LX200Herkules::receive(char* buffer, char end, int wait)
+bool LX200Skywalker::receive(char* buffer, char end, int wait)
 {
     //    LOGF_DEBUG("%s timeout=%ds",__FUNCTION__, wait);
     int bytes= 0;
@@ -903,13 +936,13 @@ bool LX200Herkules::receive(char* buffer, char end, int wait)
  * @brief Flush the communication port.
  * @author CanisUrsa
  */
-void LX200Herkules::flush()
+void LX200Skywalker::flush()
 {
     //LOG_DEBUG(__FUNCTION__);
     //tcflush(PortFD, TCIOFLUSH);
 }
 
-bool LX200Herkules::transmit(const char* buffer)
+bool LX200Skywalker::transmit(const char* buffer)
 {
     //    LOG_DEBUG(__FUNCTION__);
     int bytesWritten = 0;
@@ -925,7 +958,7 @@ bool LX200Herkules::transmit(const char* buffer)
     return true;
 }
 
-bool LX200Herkules::checkLX200Format()
+bool LX200Skywalker::checkLX200Format()
 {
     LOG_DEBUG(__FUNCTION__);
     char response[TCS_RESPONSE_BUFFER_LENGTH];
@@ -975,7 +1008,7 @@ bool LX200Herkules::checkLX200Format()
     }
 }
 
-bool LX200Herkules::SetSlewRate(int index)
+bool LX200Skywalker::SetSlewRate(int index)
 {
     LOG_DEBUG(__FUNCTION__);
     // Convert index to Meade format
@@ -992,7 +1025,7 @@ bool LX200Herkules::SetSlewRate(int index)
     IDSetSwitch(&SlewRateSP, nullptr);
     return true;
 }
-bool LX200Herkules::setSlewMode(int slewMode)
+bool LX200Skywalker::setSlewMode(int slewMode)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[TCS_COMMAND_BUFFER_LENGTH];
@@ -1015,14 +1048,10 @@ bool LX200Herkules::setSlewMode(int slewMode)
         default:
             return false;
     }
-    if (!sendQuery(cmd, response, 0)) // Don't wait for response - there isn't one
-    {
-        return false;
-    }
-    return true;
+    return (sendQuery(cmd, response, 0)); // Don't wait for response - there isn't one
 }
 
-IPState LX200Herkules::GuideNorth(uint32_t ms)
+IPState LX200Skywalker::GuideNorth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
     if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
@@ -1071,7 +1100,7 @@ IPState LX200Herkules::GuideNorth(uint32_t ms)
     return IPS_BUSY;
 }
 
-IPState LX200Herkules::GuideSouth(uint32_t ms)
+IPState LX200Skywalker::GuideSouth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
     if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
@@ -1120,7 +1149,7 @@ IPState LX200Herkules::GuideSouth(uint32_t ms)
     return IPS_BUSY;
 }
 
-IPState LX200Herkules::GuideEast(uint32_t ms)
+IPState LX200Skywalker::GuideEast(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
     if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
@@ -1169,7 +1198,7 @@ IPState LX200Herkules::GuideEast(uint32_t ms)
     return IPS_BUSY;
 }
 
-IPState LX200Herkules::GuideWest(uint32_t ms)
+IPState LX200Skywalker::GuideWest(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
     if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
@@ -1218,7 +1247,7 @@ IPState LX200Herkules::GuideWest(uint32_t ms)
     return IPS_BUSY;
 }
 
-int LX200Herkules::SendPulseCmd(int8_t direction, uint32_t duration_msec)
+int LX200Skywalker::SendPulseCmd(int8_t direction, uint32_t duration_msec)
 {
     LOGF_DEBUG("%s dir=%d dur=%d ms", __FUNCTION__, direction, duration_msec );
     char cmd[TCS_COMMAND_BUFFER_LENGTH];
@@ -1247,7 +1276,7 @@ int LX200Herkules::SendPulseCmd(int8_t direction, uint32_t duration_msec)
     return true;
 }
 
-bool LX200Herkules::MountTracking()
+bool LX200Skywalker::MountTracking()
 {
     LOG_DEBUG(__FUNCTION__);
     // query status  - :GK#
@@ -1266,7 +1295,7 @@ bool LX200Herkules::MountTracking()
         return true;
 }
 
-bool LX200Herkules::SetTrackEnabled(bool enabled)
+bool LX200Skywalker::SetTrackEnabled(bool enabled)
 {
     // Command set tracking on  - :hT#
     //         set tracking off - :hN#
@@ -1281,7 +1310,7 @@ bool LX200Herkules::SetTrackEnabled(bool enabled)
     return true;
 }
 
-bool LX200Herkules::SetTrackRate(double raRate, double deRate)
+bool LX200Skywalker::SetTrackRate(double raRate, double deRate)
 {
     LOG_DEBUG(__FUNCTION__);
     INDI_UNUSED(raRate);
@@ -1298,7 +1327,7 @@ bool LX200Herkules::SetTrackRate(double raRate, double deRate)
     return true;
 }
 
-void LX200Herkules::ISGetProperties(const char *dev)
+void LX200Skywalker::ISGetProperties(const char *dev)
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) != 0)
         return;
@@ -1344,7 +1373,7 @@ void LX200Herkules::ISGetProperties(const char *dev)
         */
 }
 
-bool LX200Herkules::Goto(double ra, double dec)
+bool LX200Skywalker::Goto(double ra, double dec)
 {
     LOG_DEBUG(__FUNCTION__);
     const struct timespec timeout = {0, 100000000L};
@@ -1411,7 +1440,7 @@ bool LX200Herkules::Goto(double ra, double dec)
     return true;
 }
 
-bool LX200Herkules::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
+bool LX200Skywalker::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[TCS_COMMAND_BUFFER_LENGTH];
@@ -1427,7 +1456,7 @@ bool LX200Herkules::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool LX200Herkules::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200Skywalker::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[TCS_COMMAND_BUFFER_LENGTH];
@@ -1444,7 +1473,7 @@ bool LX200Herkules::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool LX200Herkules::Abort()
+bool LX200Skywalker::Abort()
 {
     LOG_DEBUG(__FUNCTION__);
     //   char cmd[TCS_COMMAND_BUFFER_LENGTH];
@@ -1483,7 +1512,7 @@ bool LX200Herkules::Abort()
     return true;
 }
 
-bool LX200Herkules::Sync(double ra, double dec)
+bool LX200Skywalker::Sync(double ra, double dec)
 {
     LOG_DEBUG(__FUNCTION__);
     char response[TCS_RESPONSE_BUFFER_LENGTH];
@@ -1512,20 +1541,39 @@ bool LX200Herkules::Sync(double ra, double dec)
 
     if (!setPierSide())
         return false;
-    // set Track
-    if (DrivesLocked()) // Normally lock is set by TCS on syncing
+    // show lock
+    if (MountLocked()) // Normally lock is set by TCS on syncing
     {
-        DrivesStateS[0].s = ISS_ON;
-        DrivesStateS[1].s = ISS_OFF;
-        DrivesStateSP.s = IPS_OK;
-        CurrentDrivesState = DRIVES_LOCKED; // ALWAYS set status!
-        IDSetSwitch(&DrivesStateSP, nullptr);
+        MountStateS[0].s = ISS_ON;
+        MountStateS[1].s = ISS_OFF;
+        MountStateSP.s = IPS_OK;
+        CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+        IDSetSwitch(&MountStateSP, nullptr);
     }
+    else if (INDI::Telescope::TrackState == SCOPE_PARKED) // sync is called after parkpos reached
+    {
+        MountStateS[0].s = ISS_OFF;
+        MountStateS[1].s = ISS_ON;
+        MountStateSP.s = IPS_OK;
+        CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
+        IDSetSwitch(&MountStateSP, nullptr);
+        if (SetTrackEnabled(false))
+        {
+            TrackStateS[TRACK_ON].s = ISS_ON;
+            TrackStateS[TRACK_OFF].s = ISS_OFF;
+            TrackStateSP.s = IPS_ALERT;
+            // INDI::Telescope::TrackState = SCOPE_PARKED; // ALWAYS set status!
+            IDSetSwitch(&TrackStateSP, nullptr);
+            LOG_WARN("Telescope still parked!");
+            return false;
+        }
     else
-    {
-        LOG_ERROR("Driveslock not set by TCS!");
-        return false;
+        {
+            LOG_ERROR("Mount not locked on sync!");
+            return false;
+        }
     }
+    // set tracking
     if (MountTracking()) // Normally tracking is set by TCS on syncing
     {
         TrackStateS[TRACK_ON].s = ISS_ON;
@@ -1536,14 +1584,14 @@ bool LX200Herkules::Sync(double ra, double dec)
     }
     else
     {
-        LOG_ERROR("Tracking not set by TCS!");
+        LOG_ERROR("Tracking not set on sync!");
         return false;
     }
     return true;
 }
 
 
-bool LX200Herkules::setObjectCoords(double ra, double dec)
+bool LX200Skywalker::setObjectCoords(double ra, double dec)
 {
     LOG_DEBUG(__FUNCTION__);
 
@@ -1570,7 +1618,7 @@ bool LX200Herkules::setObjectCoords(double ra, double dec)
     return true;
 }
 
-bool LX200Herkules::setLocalDate(uint8_t days, uint8_t months, uint16_t years)
+bool LX200Skywalker::setLocalDate(uint8_t days, uint8_t months, uint16_t years)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[RB_MAX_LEN] = {0};
@@ -1584,7 +1632,7 @@ bool LX200Herkules::setLocalDate(uint8_t days, uint8_t months, uint16_t years)
     return (sendQuery(cmd, response, 0));
 }
 
-bool LX200Herkules::setLocalTime24(uint8_t hour, uint8_t minute, uint8_t second)
+bool LX200Skywalker::setLocalTime24(uint8_t hour, uint8_t minute, uint8_t second)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[RB_MAX_LEN] = {0};
@@ -1596,7 +1644,7 @@ bool LX200Herkules::setLocalTime24(uint8_t hour, uint8_t minute, uint8_t second)
     return (sendQuery(cmd, response, 0));
 }
 
-bool LX200Herkules::setUTCOffset(double offset)
+bool LX200Skywalker::setUTCOffset(double offset)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[RB_MAX_LEN] = {0};
@@ -1609,7 +1657,7 @@ bool LX200Herkules::setUTCOffset(double offset)
     return (sendQuery(cmd, response, 0));
 }
 
-bool LX200Herkules::getTrackFrequency(double *value)
+bool LX200Skywalker::getTrackFrequency(double *value)
 {
     LOG_DEBUG(__FUNCTION__);
     float Freq;
