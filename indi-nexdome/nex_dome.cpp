@@ -1003,19 +1003,19 @@ bool NexDome::processShutterReport(const std::string &report)
     std::smatch match;
     if (std::regex_search(report, match, re))
     {
-        //uint32_t position = std::stoul(match.str(1));
-        //uint32_t travel_limit = std::stoul(match.str(2));
+        int32_t position = std::stoi(match.str(1));
+        int32_t travel_limit = std::stoi(match.str(2));
         bool open_limit_switch = std::stoul(match.str(3)) == 1;
         bool close_limit_switch = std::stoul(match.str(4)) == 1;
 
         if (getShutterState() == SHUTTER_MOVING)
         {
-            if (open_limit_switch)
+            if (open_limit_switch || position == travel_limit)
             {
                 setShutterState(SHUTTER_OPENED);
                 LOG_INFO("Shutter is fully opened.");
             }
-            else if (close_limit_switch)
+            else if (close_limit_switch || position < 0)
             {
                 setShutterState(SHUTTER_CLOSED);
                 LOG_INFO("Shutter is fully closed.");
