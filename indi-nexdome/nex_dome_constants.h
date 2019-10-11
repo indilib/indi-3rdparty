@@ -140,6 +140,8 @@ const uint8_t DRIVER_TIMEOUT {3};
 const uint8_t DRIVER_EVENT_TIMEOUT {1};
 // Maximum buffer for sending/receving.
 const uint8_t DRIVER_LEN {64};
+// Rotator Steps per Degree
+const double STEPS_PER_DEGREE {153.0};
 // Minimim supported version
 const std::string MINIMUM_VERSION { "3.1.0" };
 // Tabs
