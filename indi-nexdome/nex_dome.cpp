@@ -1014,7 +1014,7 @@ bool NexDome::processShutterReport(const std::string &report)
         bool open_limit_switch = std::stoul(match.str(3)) == 1;
         bool close_limit_switch = std::stoul(match.str(4)) == 1;
 
-        if (getShutterState() == SHUTTER_MOVING)
+        if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)
         {
             if (open_limit_switch || position == travel_limit)
             {
