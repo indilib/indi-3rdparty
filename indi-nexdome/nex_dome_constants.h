@@ -101,8 +101,6 @@ static const std::map<XBee, std::string> XBeeMap =
 typedef enum
 {
     XBEE_STATE,
-    ROTATOR_POSITION,
-    SHUTTER_POSITION,
     ROTATOR_REPORT,
     SHUTTER_REPORT,
     ROTATOR_LEFT,
@@ -112,13 +110,13 @@ typedef enum
     SHUTTER_BATTERY,
     RAIN_DETECTED,
     RAIN_STOPPED,
+    ROTATOR_POSITION,
+    SHUTTER_POSITION,
 } Events;
 
 static const std::map<Events, std::string> EventsMap =
 {
     {XBEE_STATE,        "XB->"},
-    {ROTATOR_POSITION,  "P"},
-    {SHUTTER_POSITION,  "S"},
     {ROTATOR_REPORT,    "SER,"},
     {SHUTTER_REPORT,    "SES,"},
     {ROTATOR_LEFT,      "left"},
@@ -128,6 +126,8 @@ static const std::map<Events, std::string> EventsMap =
     {SHUTTER_BATTERY,   "BV"},
     {RAIN_DETECTED,     "Rain"},
     {RAIN_STOPPED,      "RainStopped"},
+    {ROTATOR_POSITION,  "P"},
+    {SHUTTER_POSITION,  "S"},
 };
 
 // # is the stop char

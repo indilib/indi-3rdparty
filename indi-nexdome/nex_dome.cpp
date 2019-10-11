@@ -161,7 +161,7 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&RotatorSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&RotatorSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (steps/s)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumber(&RotatorSettingsN[S_ZONE], "S_ZONE", "Dead Zone (steps)", "%.f", 0.0, 32000, 100.0, 2400);
+    IUFillNumber(&RotatorSettingsN[S_ZONE], "S_ZONE", "Dead Zone (steps)", "%.f", 0.0, 32000, 1000.0, 2400);
     IUFillNumber(&RotatorSettingsN[S_RANGE], "S_RANGE", "Travel Range (steps)", "%.f", 0.0, 55080, 1000.0, 55080);
     IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator", ND::ROTATOR_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
@@ -262,6 +262,7 @@ bool NexDome::updateProperties()
         defineText(&RotatorFirmwareVersionTP);
 
         // Shutter
+        defineNumber(&ShutterSettingsNP);
         defineNumber(&ShutterBatteryLevelNP);
         defineSwitch(&CloseShutterOnParkSP);
         defineSwitch(&ShutterFactorySP);
@@ -272,15 +273,17 @@ bool NexDome::updateProperties()
         deleteProperty(GoHomeSP.name);
         deleteProperty(HomePositionNP.name);
 
-
-        deleteProperty(RotatorFirmwareVersionTP.name);
-        deleteProperty(ShutterFirmwareVersionTP.name);
-
-        deleteProperty(CloseShutterOnParkSP.name);
-        deleteProperty(ShutterBatteryLevelNP.name);
-
+        // Rotator
+        deleteProperty(RotatorSettingsNP.name);
         deleteProperty(RotatorFactorySP.name);
+        deleteProperty(RotatorFirmwareVersionTP.name);
+
+        // Shutter
+        deleteProperty(ShutterSettingsNP.name);
+        deleteProperty(ShutterBatteryLevelNP.name);
+        deleteProperty(CloseShutterOnParkSP.name);
         deleteProperty(ShutterFactorySP.name);
+        deleteProperty(ShutterFirmwareVersionTP.name);
     }
 
     return true;
@@ -727,9 +730,9 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         // Firmware is exception since the response does not include the target
         // for everything else, the echo back includes the target.
         if (command != ND::SEMANTIC_VERSION)
-            re = (":" + verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+[^#])");
+            re = (verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+[^#])");
         else
-            re = (":" + verb + "(.+[^#])");
+            re = (verb + "(.+[^#])");
 
         std::smatch match;
 
