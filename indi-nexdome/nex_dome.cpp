@@ -119,30 +119,34 @@ bool NexDome::initProperties()
     SetParkDataType(PARK_AZ);
 
     ///////////////////////////////////////////////////////////////////////////////
-    /// Operations (Home + Cabliration)
+    /// Homeing
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&OperationS[OP_HOME], "OP_HOME", "Home", ISS_OFF);
-    IUFillSwitch(&OperationS[OP_CALIBRATE], "OP_CALIBRATE", "Calibrate", ISS_OFF);
-    IUFillSwitchVector(&OperationSP, OperationS, 2, getDeviceName(), "DOME_OPERATION", "Operation", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    IUFillSwitch(&GoHomeS[0], "HOME_GO", "Go", ISS_OFF);
+    IUFillSwitchVector(&GoHomeSP, GoHomeS, 1, getDeviceName(), "DOME_HOMING", "Homing", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Home Position
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&HomePositionN[0], "HOME_POSITON", "degrees", "%.f", 0.0, 360.0, 0.0, 0);
-    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POS", "Home Az", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillNumber(&HomePositionN[0], "POSITON", "degrees", "%.f", 0.0, 360.0, 0.0, 0);
+    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", SITE_TAB, IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Battery
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&BatteryLevelN[ND::ROTATOR], "BATTERY_ROTATOR", "Rotator", "%.2f", 0.0, 16.0, 0.0, 0);
-    IUFillNumber(&BatteryLevelN[ND::SHUTTER], "BATTERY_SHUTTER", "Shutter", "%.2f", 0.0, 16.0, 0.0, 0);
-    IUFillNumberVector(&BatteryLevelNP, BatteryLevelN, 2, getDeviceName(), "BATTERY", "Battery Level", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
+    IUFillNumber(&ShutterBatteryLevelN[ND::ROTATOR], "VOLTS", "Voltage", "%.2f", 0.0, 16.0, 0.0, 0);
+    IUFillNumberVector(&ShutterBatteryLevelNP, ShutterBatteryLevelN, 1, getDeviceName(), "BATTERY", "Battery Level", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
-    /// Firmware Info
+    /// Rotator Firmware Info
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillText(&FirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillText(&RotatorFirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
+    IUFillTextVector(&RotatorFirmwareVersionTP, RotatorFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", ND::ROTATOR_TAB.c_str(), IP_RO, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Shutter Firmware Info
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillText(&ShutterFirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
+    IUFillTextVector(&ShutterFirmwareVersionTP, ShutterFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Close Shutter on Park?
@@ -167,8 +171,26 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&ShutterSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&ShutterSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "Shutter_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
+    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "SHUTTER_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Rotator Factory Settings
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&RotatorFactoryS[FACTORY_DEFAULTS], "FACTORY_DEFAULTS", "Defaults", ISS_OFF);
+    IUFillSwitch(&RotatorFactoryS[FACTORY_LOAD], "FACTORY_LOAD", "Load", ISS_OFF);
+    IUFillSwitch(&RotatorFactoryS[FACTORY_SAVE], "FACTORY_SAVE", "Save", ISS_OFF);
+    IUFillSwitchVector(&RotatorFactorySP, RotatorFactoryS, 3, getDeviceName(), "ROTATOR_FACTORY_SETTINGS", "Factory",
+                       ND::ROTATOR_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Shutter Factory Settings
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&ShutterFactoryS[FACTORY_DEFAULTS], "FACTORY_DEFAULTS", "Defaults", ISS_OFF);
+    IUFillSwitch(&ShutterFactoryS[FACTORY_LOAD], "FACTORY_LOAD", "Load", ISS_OFF);
+    IUFillSwitch(&ShutterFactoryS[FACTORY_SAVE], "FACTORY_SAVE", "Save", ISS_OFF);
+    IUFillSwitchVector(&ShutterFactorySP, ShutterFactoryS, 3, getDeviceName(), "SHUTTER_FACTORY_SETTINGS", "Factory",
+                       ND::SHUTTER_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     return true;
 }
@@ -179,20 +201,37 @@ bool NexDome::initProperties()
 bool NexDome::Handshake()
 {
     std::string value;
+    bool rc1 = false, rc2 = false;
 
     if (getParameter(ND::SEMANTIC_VERSION, ND::ROTATOR, value))
     {
-        LOGF_INFO("Detected firmware version %s", value.c_str());
+        LOGF_INFO("Detected rotator firmware version %s", value.c_str());
         if (value < ND::MINIMUM_VERSION)
         {
-            LOGF_ERROR("Version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
+            LOGF_ERROR("Rotator version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
             return false;
         }
 
-        return true;
+        rc1 = true;
+        RotatorFirmwareVersionTP.s = IPS_OK;
+        IUSaveText(&RotatorFirmwareVersionT[0], value.c_str());
     }
 
-    return false;
+    if (getParameter(ND::SEMANTIC_VERSION, ND::SHUTTER, value))
+    {
+        LOGF_INFO("Detected shutter firmware version %s", value.c_str());
+        if (value < ND::MINIMUM_VERSION)
+        {
+            LOGF_ERROR("Shutter version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
+            return false;
+        }
+
+        rc2 = true;
+        ShutterFirmwareVersionTP.s = IPS_OK;
+        IUSaveText(&ShutterFirmwareVersionT[0], value.c_str());
+    }
+
+    return (rc1 && rc2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -214,21 +253,32 @@ bool NexDome::updateProperties()
     {
         getStartupValues();
 
-        defineSwitch(&OperationSP);
+        defineSwitch(&GoHomeSP);
         defineNumber(&HomePositionNP);
-        defineNumber(&BatteryLevelNP);
-        defineText(&FirmwareVersionTP);
-        if (HasShutter())
-            defineSwitch(&CloseShutterOnParkSP);
+
+        defineText(&RotatorFirmwareVersionTP);
+        defineText(&ShutterFirmwareVersionTP);
+
+        defineSwitch(&CloseShutterOnParkSP);
+        defineNumber(&ShutterBatteryLevelNP);
+
+        defineSwitch(&RotatorFactorySP);
+        defineSwitch(&ShutterFactorySP);
     }
     else
     {
-        deleteProperty(OperationSP.name);
+        deleteProperty(GoHomeSP.name);
         deleteProperty(HomePositionNP.name);
-        deleteProperty(BatteryLevelNP.name);
-        deleteProperty(FirmwareVersionTP.name);
-        if (HasShutter())
-            deleteProperty(CloseShutterOnParkSP.name);
+
+
+        deleteProperty(RotatorFirmwareVersionTP.name);
+        deleteProperty(ShutterFirmwareVersionTP.name);
+
+        deleteProperty(CloseShutterOnParkSP.name);
+        deleteProperty(ShutterBatteryLevelNP.name);
+
+        deleteProperty(RotatorFactorySP.name);
+        deleteProperty(ShutterFactorySP.name);
     }
 
     return true;
@@ -242,10 +292,21 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     if(!strcmp(dev, getDeviceName()))
     {
         ///////////////////////////////////////////////////////////////////////////////
-        /// Operation Command
+        /// Home Command
         ///////////////////////////////////////////////////////////////////////////////
-        if(!strcmp(name, OperationSP.name))
+        if(!strcmp(name, GoHomeSP.name))
         {
+            if (setParameter(ND::GOTO_HOME, ND::ROTATOR))
+            {
+                GoHomeS[0].s = ISS_ON;
+                GoHomeSP.s = IPS_BUSY;
+            }
+            else
+            {
+                GoHomeSP.s = IPS_ALERT;
+            }
+
+            IDSetSwitch(&GoHomeSP, nullptr);
             return true;
         }
 
@@ -257,6 +318,44 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             IUUpdateSwitch(&CloseShutterOnParkSP, states, names, n);
             CloseShutterOnParkSP.s = IPS_OK;
             IDSetSwitch(&CloseShutterOnParkSP, nullptr);
+            return true;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Rotator Factory
+        ///////////////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, RotatorFactorySP.name))
+        {
+            const char *requestedOP = IUFindOnSwitchName(states, names, n);
+            bool rc = false;
+            if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_DEFAULTS].name))
+                rc = executeFactoryCommand(FACTORY_DEFAULTS, ND::ROTATOR);
+            else if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_LOAD].name))
+                rc = executeFactoryCommand(FACTORY_LOAD, ND::ROTATOR);
+            else if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_SAVE].name))
+                rc = executeFactoryCommand(FACTORY_SAVE, ND::ROTATOR);
+
+            RotatorFactorySP.s = (rc ? IPS_OK : IPS_ALERT);
+            IDSetSwitch(&RotatorFactorySP, nullptr);
+            return true;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Shutter Factory
+        ///////////////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, ShutterFactorySP.name))
+        {
+            const char *requestedOP = IUFindOnSwitchName(states, names, n);
+            bool rc = false;
+            if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_DEFAULTS].name))
+                rc = executeFactoryCommand(FACTORY_DEFAULTS, ND::SHUTTER);
+            else if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_LOAD].name))
+                rc = executeFactoryCommand(FACTORY_LOAD, ND::SHUTTER);
+            else if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_SAVE].name))
+                rc = executeFactoryCommand(FACTORY_SAVE, ND::SHUTTER);
+
+            ShutterFactorySP.s = (rc ? IPS_OK : IPS_ALERT);
+            IDSetSwitch(&ShutterFactorySP, nullptr);
             return true;
         }
     }
@@ -324,6 +423,12 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
 {
     bool rc = false;
 
+    if (!m_ShutterConnected)
+    {
+        LOG_ERROR("Shutter is not connected. Check battery and XBEE connection.");
+        return IPS_ALERT;
+    }
+
     // Check if shutter is open or close.
     switch (operation)
     {
@@ -389,6 +494,10 @@ bool NexDome::getStartupValues()
     if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
         ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
 
+    // Home Setting
+    if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
+        HomePositionN[0].value = std::stoi(value);
+
     return false;
 }
 
@@ -418,6 +527,36 @@ bool NexDome::setParameter(ND::Commands command, ND::Targets target, int32_t val
         cmd << ",";
         cmd << value;
     }
+
+    return sendCommand(cmd.str().c_str());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////
+bool NexDome::executeFactoryCommand(uint8_t command, ND::Targets target)
+{
+    std::ostringstream cmd;
+    cmd << "@";
+    switch (command)
+    {
+        case FACTORY_DEFAULTS:
+            cmd << "ZD";
+            LOGF_INFO("%s: Loading factory defaults...", (target == ND::ROTATOR) ? "Rotator" : "Shutter");
+            break;
+
+        case FACTORY_LOAD:
+            cmd << "ZR";
+            LOGF_INFO("%s: Loading EEPROM settings...", (target == ND::ROTATOR) ? "Rotator" : "Shutter");
+            break;
+
+        case FACTORY_SAVE:
+            cmd << "ZW";
+            LOGF_INFO("%s: Saving settings to EEPROM...", (target == ND::ROTATOR) ? "Rotator" : "Shutter");
+            break;
+    }
+
+    cmd << ((target == ND::ROTATOR) ? "R" : "W");
 
     return sendCommand(cmd.str().c_str());
 }
@@ -505,10 +644,12 @@ bool NexDome::processEvent(const std::string &event)
         std::regex re(kv.second + "(.+)");
         std::smatch match;
 
-        if (match.empty())
+        if (!std::regex_match(event, match, re))
             continue;
 
         std::string value = match.str(1);
+
+        LOGF_DEBUG("Process event <%s>", value.c_str());
 
         switch (kv.first)
         {
@@ -526,15 +667,133 @@ bool NexDome::processEvent(const std::string &event)
                 break;
 
             case ND::ROTATOR_POSITION:
-                DomeAbsPosN[0].value = std::stoi(value) / 153.0;
+                // 153 = full_steps_circumference / 360 = 55080 / 360
+                DomeAbsPosN[0].value = range360(std::stoi(value) / 153.0);
                 break;
 
+            case ND::SHUTTER_POSITION:
+                break;
+
+            case ND::ROTATOR_REPORT:
+            {
+                std::regex re(R"((\d+),(\d+),(\d+),(\d+),(\d+)#)");
+                std::smatch match;
+                if (!std::regex_match(value, match, re))
+                {
+                    uint32_t position = std::stoul(match.str(1));
+                    uint32_t at_home = std::stoul(match.str(2));
+                    uint32_t cirumference = std::stoul(match.str(3));
+                    uint32_t home_position = std::stoul(match.str(4));
+                    uint32_t dead_zone = std::stoul(match.str(5));
+
+                    DomeAbsPosN[0].value = static_cast<double>(position) / cirumference;
+                    if (getDomeState() == DOME_MOVING)
+                        setDomeState(DOME_SYNCED);
+                    else if (getDomeState() == DOME_PARKING)
+                        setDomeState(DOME_PARKED);
+
+                    if (GoHomeSP.s == IPS_BUSY && at_home == 1)
+                    {
+                        LOG_INFO("Rotator reached home position.");
+                        GoHomeS[0].s = ISS_OFF;
+                        GoHomeSP.s = IPS_OK;
+                        IDSetSwitch(&GoHomeSP, nullptr);
+                    }
+
+                    double homeAngle = range360(static_cast<double>(home_position) / cirumference);
+                    if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
+                    {
+                        HomePositionN[0].value = homeAngle;
+                        IDSetNumber(&HomePositionNP, nullptr);
+                    }
+
+                    if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
+                    {
+                        RotatorSettingsN[S_ZONE].value = dead_zone;
+                        IDSetNumber(&RotatorSettingsNP, nullptr);
+                    }
+                }
+            }
+            break;
+
+            case ND::SHUTTER_REPORT:
+            {
+                std::regex re(R"((\d+),(\d+),(\d+),(\d+)#)");
+                std::smatch match;
+                if (!std::regex_match(value, match, re))
+                {
+                    //uint32_t position = std::stoul(match.str(1));
+                    //uint32_t travel_limit = std::stoul(match.str(2));
+                    bool open_limit_switch = std::stoul(match.str(3)) == 1;
+                    bool close_limit_switch = std::stoul(match.str(4)) == 1;
+
+                    if (getShutterState() == SHUTTER_MOVING)
+                    {
+                        if (open_limit_switch)
+                        {
+                            setShutterState(SHUTTER_OPENED);
+                            LOG_INFO("Shutter is fully opened.");
+                        }
+                        else if (close_limit_switch)
+                        {
+                            setShutterState(SHUTTER_CLOSED);
+                            LOG_INFO("Shutter is fully closed.");
+                        }
+                    }
+                }
+            }
+            break;
+
+            case ND::ROTATOR_LEFT:
+            case ND::ROTATOR_RIGHT:
+                if (getDomeState() != DOME_MOVING && getDomeState() != DOME_PARKING)
+                {
+                    setDomeState(DOME_MOVING);
+                    LOGF_INFO("Dome is rotating %s.", ((kv.first == ND::ROTATOR_LEFT) ? "counter-clock wise" : "clock-wise"));
+                }
+                break;
+
+            case ND::SHUTTER_OPENING:
+                if (getShutterState() != SHUTTER_MOVING)
+                {
+                    setShutterState(SHUTTER_MOVING);
+                    LOG_INFO("Shutter is opening...");
+                    break;
+                }
+                break;
+
+            case ND::SHUTTER_CLOSING:
+                if (getShutterState() != SHUTTER_MOVING)
+                {
+                    setShutterState(SHUTTER_MOVING);
+                    LOG_INFO("Shutter is closing...");
+                    break;
+                }
+                break;
+
+            case ND::SHUTTER_BATTERY:
+            {
+                std::regex re(R"((\d+)#)");
+                std::smatch match;
+                if (!std::regex_match(value, match, re))
+                {
+                    // FIXME check how to go from ADV --> Volts
+                    uint32_t battery_adu = std::stoul(match.str(1));
+                    ShutterBatteryLevelN[0].value = battery_adu;
+                    // TODO: Must check if batter is OK, warning, or in critical level
+                    ShutterBatteryLevelNP.s = IPS_OK;
+                    IDSetNumber(&ShutterBatteryLevelNP, nullptr);
+                }
+            }
+            break;
+
             default:
+                LOGF_DEBUG("Unhandled event: %s", value.c_str());
                 break;
         }
     }
 
-    return false;
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////

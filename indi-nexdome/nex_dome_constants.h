@@ -41,6 +41,7 @@ typedef enum
 {
     ROTATOR,
     SHUTTER,
+    FIRMWARE,
 } Targets;
 
 typedef enum
@@ -107,8 +108,8 @@ typedef enum
     SHUTTER_REPORT,
     ROTATOR_LEFT,
     ROTATOR_RIGHT,
-    SHUTTER_OPEN,
-    SHUTTER_CLOSE,
+    SHUTTER_OPENING,
+    SHUTTER_CLOSING,
     SHUTTER_BATTERY,
     RAIN_DETECTED,
     RAIN_STOPPED,
@@ -119,12 +120,12 @@ static const std::map<Events, std::string> EventsMap =
     {XBEE_STATE,        "XB->"},
     {ROTATOR_POSITION,  "P"},
     {SHUTTER_POSITION,  "S"},
-    {ROTATOR_REPORT,    ":SER"},
-    {SHUTTER_REPORT,    ":SES"},
+    {ROTATOR_REPORT,    ":SER,"},
+    {SHUTTER_REPORT,    ":SES,"},
     {ROTATOR_LEFT,      ":left"},
     {ROTATOR_RIGHT,     ":right"},
-    {SHUTTER_OPEN,      ":open"},
-    {SHUTTER_CLOSE,     ":close"},
+    {SHUTTER_OPENING,   ":open"},
+    {SHUTTER_CLOSING,   ":close"},
     {SHUTTER_BATTERY,   ":BV"},
     {RAIN_DETECTED,     ":Rain"},
     {RAIN_STOPPED,      ":RainStopped"},

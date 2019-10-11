@@ -71,22 +71,32 @@ class NexDome : public INDI::Dome
         /////////////////////////////////////////////////////////////////////////////
         /// Properties
         /////////////////////////////////////////////////////////////////////////////
-        ISwitchVectorProperty OperationSP;
-        ISwitch OperationS[1];
-        enum
-        {
-            OP_HOME,
-            OP_CALIBRATE,
-        };
+        ISwitchVectorProperty GoHomeSP;
+        ISwitch GoHomeS[1];
 
         INumberVectorProperty HomePositionNP;
         INumber HomePositionN[1];
 
-        INumberVectorProperty BatteryLevelNP;
-        INumber BatteryLevelN[2];
+        INumberVectorProperty ShutterBatteryLevelNP;
+        INumber ShutterBatteryLevelN[1];
 
-        ITextVectorProperty FirmwareVersionTP;
-        IText FirmwareVersionT[1] {};
+        ITextVectorProperty RotatorFirmwareVersionTP;
+        IText RotatorFirmwareVersionT[1] {};
+
+        ITextVectorProperty ShutterFirmwareVersionTP;
+        IText ShutterFirmwareVersionT[1] {};
+
+        ISwitchVectorProperty RotatorFactorySP;
+        ISwitch RotatorFactoryS[3];
+
+        ISwitchVectorProperty ShutterFactorySP;
+        ISwitch ShutterFactoryS[3];
+        enum
+        {
+            FACTORY_DEFAULTS,
+            FACTORY_LOAD,
+            FACTORY_SAVE,
+        };
 
         ISwitchVectorProperty CloseShutterOnParkSP;
         ISwitch CloseShutterOnParkS[2];
@@ -111,6 +121,11 @@ class NexDome : public INDI::Dome
         /// Startup
         ///////////////////////////////////////////////////////////////////////////////
         bool getStartupValues();
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Settings
+        ///////////////////////////////////////////////////////////////////////////////
+        bool executeFactoryCommand(uint8_t command, ND::Targets target);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Utility Functions
