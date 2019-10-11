@@ -834,13 +834,18 @@ bool NexDome::processEvent(const std::string &event)
     {
         std::regex re(kv.second + "(.+[^#])");
         std::smatch match;
+        std::string value;
 
-        if (!std::regex_search(event, match, re))
+        LOGF_DEBUG("Processing event <%s>", event.c_str());
+
+        if (event == kv.second)
+            value = event;
+        else if (std::regex_search(event, match, re))
+            value = match.str(1);
+        else
             continue;
 
-        std::string value = match.str(1);
-
-        LOGF_DEBUG("Processing event <%s>", value.c_str());
+        LOGF_DEBUG("Event value <%s>", value.c_str());
 
         switch (kv.first)
         {
