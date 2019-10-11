@@ -564,7 +564,7 @@ bool NexDome::executeFactoryCommand(uint8_t command, ND::Targets target)
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////
-bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string value)
+bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string &value)
 {
     char res[ND::DRIVER_LEN] = {0};
     bool response_found = false;
