@@ -539,16 +539,19 @@ IPState NexDome::Park()
 {
     MoveAbs(GetAxis1Park());
 
+    LOGF_INFO("Parking to %.2f azimuth...", GetAxis1Park());
+
     if (HasShutter() && IUFindOnSwitchIndex(&CloseShutterOnParkSP) == ND::ENABLED)
     {
+        LOG_INFO("Closing shutter on parking...");
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
 
-        std::string response;
-        if (getParameter(ND::REPORT, ND::ROTATOR, response))
-            processRotatorReport(response);
+        //        std::string response;
+        //        if (getParameter(ND::REPORT, ND::ROTATOR, response))
+        //            processRotatorReport(response);
 
-        if (getParameter(ND::REPORT, ND::SHUTTER, response))
-            processShutterReport(response);
+        //        if (getParameter(ND::REPORT, ND::SHUTTER, response))
+        //            processShutterReport(response);
     }
 
     return IPS_BUSY;
