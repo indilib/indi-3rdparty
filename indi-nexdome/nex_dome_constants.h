@@ -144,6 +144,8 @@ const uint8_t DRIVER_EVENT_TIMEOUT {1};
 const uint8_t DRIVER_LEN {64};
 // Rotator Steps per Degree
 const double STEPS_PER_DEGREE {153.0};
+// ADU to VRef
+const double ADU_TO_VREF { 5.0 / 1023 * 3.0 };
 // Minimim supported version
 const std::string MINIMUM_VERSION { "3.1.0" };
 // Tabs

@@ -931,12 +931,15 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::SHUTTER_BATTERY:
             {
-                // FIXME check how to go from ADV --> Volts
                 uint32_t battery_adu = std::stoul(value);
-                ShutterBatteryLevelN[0].value = battery_adu;
-                // TODO: Must check if batter is OK, warning, or in critical level
-                ShutterBatteryLevelNP.s = IPS_OK;
-                IDSetNumber(&ShutterBatteryLevelNP, nullptr);
+                double vref = battery_adu * ND::ADU_TO_VREF;
+                if (std::fabs(vref - ShutterBatteryLevelN[0].value) > 0.01)
+                {
+                    ShutterBatteryLevelN[0].value = vref;
+                    // TODO: Must check if batter is OK, warning, or in critical level
+                    ShutterBatteryLevelNP.s = IPS_OK;
+                    IDSetNumber(&ShutterBatteryLevelNP, nullptr);
+                }
             }
             break;
 
