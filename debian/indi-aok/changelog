@@ -1,6 +1,6 @@
 Version 0.8 - 2019-10-08
 	+ renamed driver to product line (AOK Skywalker)
-	- removed real 'unpark()' at start, TCS unparks automatically
+	- removed real 'unpark()' at start: TCS unparks automatically
 
 Version 0.7 - 2019-09-25
 	+ implemented park/unpark
