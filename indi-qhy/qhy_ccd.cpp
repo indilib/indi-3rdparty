@@ -925,7 +925,7 @@ bool QHYCCD::Disconnect()
 
 bool QHYCCD::setupParams()
 {
-    uint32_t nbuf, ret, imagew, imageh, bpp;
+    uint32_t nbuf, imagew, imageh, bpp;
     double chipw, chiph, pixelw, pixelh;
 
     if (isSimulation())
@@ -937,17 +937,24 @@ bool QHYCCD::setupParams()
     }
     else
     {
-        ret = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
+        int rc = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
 
         /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
-        if (ret != QHYCCD_SUCCESS)
+        if (rc != QHYCCD_SUCCESS)
         {
-            LOGF_ERROR("Error: GetQHYCCDChipInfo() (%d)", ret);
+            LOGF_ERROR("Error: GetQHYCCDChipInfo() (%d)", rc);
             return false;
         }
 
         LOGF_DEBUG("GetQHYCCDChipInfo: chipW :%g chipH: %g imageW: %d imageH: %d pixelW: %g pixelH: %g bbp %d", chipw,
                    chiph, imagew, imageh, pixelw, pixelh, bpp);
+
+        rc = GetQHYCCDEffectiveArea(m_CameraHandle, &effectiveROI.subX, &effectiveROI.subY, &effectiveROI.subW, &effectiveROI.subH);
+        if (rc == QHYCCD_SUCCESS)
+        {
+            LOGF_DEBUG("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effectiveROI.subX, effectiveROI.subY,
+                       effectiveROI.subW, effectiveROI.subH);
+        }
     }
 
     SetCCDParams(imagew, imageh, bpp, pixelw, pixelh);
