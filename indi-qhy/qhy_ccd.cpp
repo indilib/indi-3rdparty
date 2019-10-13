@@ -1816,12 +1816,20 @@ bool QHYCCD::StartStreaming()
     int ret = 0;
     m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
+    uint32_t subX = PrimaryCCD.getSubX() / PrimaryCCD.getBinX();
+    uint32_t subY = PrimaryCCD.getSubY() / PrimaryCCD.getBinY();
+    uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+
     // N.B. There is no corresponding value for GBGR. It is odd that QHY selects this as the default as no one seems to process it
     const std::map<const char *, INDI_PIXEL_FORMAT> formats = { { "GBGR", INDI_MONO },
         { "GRGB", INDI_BAYER_GRBG },
         { "BGGR", INDI_BAYER_BGGR },
         { "RGGB", INDI_BAYER_RGGB }
     };
+
+    // Set Stream Mode
+    SetQHYCCDStreamMode(m_CameraHandle, 1);
 
     // Set binning mode
     if (isSimulation())
@@ -1840,27 +1848,15 @@ bool QHYCCD::StartStreaming()
     if (isSimulation())
         ret = QHYCCD_SUCCESS;
     else
-        ret = SetQHYCCDResolution(m_CameraHandle,
-                                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+        ret = SetQHYCCDResolution(m_CameraHandle, subX, subY, subW, subH);
+
     if (ret != QHYCCD_SUCCESS)
     {
-        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)",
-                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
-                  ret);
+        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)", subX, subY, subW, subH, ret);
         return false;
     }
 
-    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d",
-               PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-               PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d", subX, subY, subW, subH, ret);
 
     INDI_PIXEL_FORMAT qhyFormat = INDI_MONO;
     if (BayerT[2].text && formats.count(BayerT[2].text) != 0)
@@ -1872,23 +1868,19 @@ bool QHYCCD::StartStreaming()
 
     SetQHYCCDParam(m_CameraHandle, CONTROL_EXPOSURE, uSecs);
 
-    // Set Stream Mode
-    SetQHYCCDStreamMode(m_CameraHandle, 1);
-
-#if 0
     if (HasUSBSpeed)
     {
-        ret = SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, 2.0);
+        ret = SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
         if (ret != QHYCCD_SUCCESS)
             LOG_WARN("SetQHYCCDParam CONTROL_SPEED 2.0 failed.");
     }
+
     if (HasUSBTraffic)
     {
-        ret = SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, 20.0);
+        ret = SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
         if (ret != QHYCCD_SUCCESS)
             LOG_WARN("SetQHYCCDParam CONTROL_USBTRAFFIC 20.0 failed.");
     }
-#endif
 
     ret = SetQHYCCDBitsMode(m_CameraHandle, 8);
     if (ret == QHYCCD_SUCCESS)
