@@ -308,7 +308,7 @@ bool LX200Skywalker::initProperties()
     IUFillText(&FirmwareVersionT[0], "Firmware", "Version", "123456");
     IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    // Overwrite parking texts: Seems more intelligible to me
+    // Overwrite parking texts: Seems more intelligible to me -> has to be discussed before change gets into libindi!
     //    IUFillSwitch(&ParkS[0], "PARK", "Park(ed)", ISS_OFF);
     //    IUFillSwitch(&ParkS[1], "UNPARK", "Unpark(ed)", ISS_OFF);
     //    IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "TELESCOPE_PARK", "Mountstate", MAIN_CONTROL_TAB, IP_RW,
@@ -554,8 +554,7 @@ bool LX200Skywalker::updateLocation(double latitude, double longitude, double el
     LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L);
 
     /* TCS needs location and localtime to calculate it's internal "earth model"
-     * so we have to call UnPark() here. BUT: We had strange tracking behaviour
-     * after 'return UnPark();' */
+     * so we have to call UnPark() here. BUT: We had strange movement 'return UnPark();' */
     //So we only SHOW mount as unparked without sending LX200-Unpark command
     INDI::Telescope::SetParked(false);
     ParkSP.s = IPS_OK;
