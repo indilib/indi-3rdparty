@@ -101,6 +101,7 @@ option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
+option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 
 find_package(FFmpeg)
 
@@ -190,6 +191,11 @@ ELSE(BUILD_LIBS)
 if (WITH_EQMOD)
 add_subdirectory(indi-eqmod)
 endif(WITH_EQMOD)
+
+## SkyWalker
+if (WITH_SKYWALKER)
+add_subdirectory(indi-aok)
+endif(WITH_SKYWALKER)
 
 ## Starbook
 if (WITH_STARBOOK)

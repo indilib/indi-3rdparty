@@ -35,8 +35,7 @@
 // Unique pointers
 static std::unique_ptr<LX200Skywalker> telescope;
 
-
-const char *INFO_TAB = "TCS"; // information about TCS e.g. firmware etc
+const char *INFO_TAB = "Info";
 
 void ISInit()
 {
@@ -91,9 +90,7 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
 }
 void ISSnoopDevice(XMLEle *root)
 {
-    //ISInit();
     telescope->ISSnoopDevice(root);
-    //    focuser->ISSnoopDevice(root);
 }
 
 /**************************************************
@@ -138,7 +135,6 @@ const char *LX200Skywalker::getDefaultName()
 bool LX200Skywalker::Handshake()
 {
     char fwinfo[64] = {0}; // 64 for strcpy
-    char strinfo[1][64] = {""};
     if (!getFirmwareInfo(fwinfo))
     {
         LOG_ERROR("Communication with telescope failed");
@@ -146,10 +142,11 @@ bool LX200Skywalker::Handshake()
     }
     else
     {
-        sscanf(fwinfo,"%*[\"]%[^\"]", strinfo[0]);
+        char strinfo[1][64] = {""};
+        sscanf(fwinfo, "%*[\"]%64[^\"]", strinfo[0]);
         strcpy(FirmwareVersionT[0].text, strinfo[0]);
         IDSetText(&FirmwareVersionTP, nullptr);
-        LOGF_INFO("Handshake ok (Firmwareversion %s)", strinfo[0]);
+        LOGF_INFO("Handshake ok. Firmware version: %s", strinfo[0]);
         return true;
     }
 }
@@ -160,7 +157,6 @@ bool LX200Skywalker::Handshake()
 ***************************************************************************************/
 bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    bool result = false;
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         // tracking state
@@ -169,12 +165,13 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             if (IUUpdateSwitch(&TrackStateSP, states, names, n) < 0)
                 return false;
             int trackState = IUFindOnSwitchIndex(&TrackStateSP);
+            bool result = false;
 
             if ((trackState == TRACK_ON) && SetTrackEnabled(true))
-                {
-                    TrackState = SCOPE_TRACKING; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
-                    result = true;
-                }
+            {
+                TrackState = SCOPE_TRACKING; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
+                result = true;
+            }
             else if ((trackState == TRACK_OFF) && SetTrackEnabled(false))
             {
                 TrackState = SCOPE_IDLE; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
@@ -193,6 +190,7 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
                 return false;
             int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+            bool result = false;
 
             switch (trackMode) // ToDo: Lunar and Custom tracking
             {
@@ -222,6 +220,7 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             if (IUUpdateSwitch(&MountStateSP, states, names, n) < 0)
                 return false;
             int NewMountState = IUFindOnSwitchIndex(&MountStateSP);
+            bool result = false;
 
             if ((NewMountState == MOUNT_LOCKED) && SetMountLock(true))
             {
@@ -240,8 +239,8 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             IDSetSwitch(&MountStateSP, nullptr);
             return result;
         }
-         if (!strcmp(name, ParkSP.name))
-         {
+        if (!strcmp(name, ParkSP.name))
+        {
             if (LX200Telescope::ISNewSwitch(dev, name, states, names, n))
             {
                 ParkSP.s = IPS_OK; //INDI::Telescope::SetParked(false) sets IPS_IDLE (!?)
@@ -250,7 +249,7 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             }
             else
                 return false;
-         }
+        }
 
     }
 
@@ -303,17 +302,17 @@ bool LX200Skywalker::initProperties()
     // Motors Status
     IUFillSwitch(&MountStateS[0], "On", "", ISS_OFF);
     IUFillSwitch(&MountStateS[1], "Off", "", ISS_OFF);
-    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "Mount lock", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Infotab
     IUFillText(&FirmwareVersionT[0], "Firmware", "Version", "123456");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // Overwrite parking texts: Seems more intelligible to me
-    IUFillSwitch(&ParkS[0], "PARK", "Park(ed)", ISS_OFF);
-    IUFillSwitch(&ParkS[1], "UNPARK", "Unpark(ed)", ISS_OFF);
-    IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "TELESCOPE_PARK", "Mountstate", MAIN_CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    //    IUFillSwitch(&ParkS[0], "PARK", "Park(ed)", ISS_OFF);
+    //    IUFillSwitch(&ParkS[1], "UNPARK", "Unpark(ed)", ISS_OFF);
+    //    IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "TELESCOPE_PARK", "Mountstate", MAIN_CONTROL_TAB, IP_RW,
+    //                       ISR_1OFMANY, 60, IPS_IDLE);
 
     return true;
 }
@@ -502,11 +501,11 @@ void LX200Skywalker::getBasicData()
 
         if (INDI::Telescope::capability & TELESCOPE_HAS_TRACK_MODE)
         {
-           int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
-           //int modes = sizeof(TelescopeTrackMode); (enum Sidereal, Solar, Lunar, Custom)
-           int modes = TRACK_SOLAR; // ToDo: Lunar and Custom tracking
-           TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
-           IDSetSwitch(&TrackModeSP, nullptr);
+            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+            //int modes = sizeof(TelescopeTrackMode); (enum Sidereal, Solar, Lunar, Custom)
+            int modes = TRACK_SOLAR; // ToDo: Lunar and Custom tracking
+            TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&TrackModeSP, nullptr);
         }
 
     }
@@ -515,7 +514,7 @@ void LX200Skywalker::getBasicData()
     if (genericCapability & LX200_HAS_PULSE_GUIDING)
     {
         UsePulseCmdS[0].s = ISS_ON;
-        UsePulseCmdS[1].s = ISS_OFF,
+        UsePulseCmdS[1].s = ISS_OFF;
         UsePulseCmdSP.s = IPS_OK;
         usePulseCommand = false; // ALWAYS set status! (cf. ISNewSwitch())
         IDSetSwitch(&UsePulseCmdSP, nullptr);
@@ -713,22 +712,22 @@ bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardc
         LOGF_ERROR("Command <%s> not transmitted.", lcmd);
     }
     if (receive(lresponse, end, 1))
-        {
-            flush();
-        }
+    {
+        flush();
+    }
     else
     {
         LOG_ERROR("Failed to get JSONData");
         return false;
     }
     char data[3][20] = {"", "", ""};
-    int returnCode = sscanf(lresponse, "%*[^[][%[^\"]%[^,]%*[,]%[^]]", data[0], data[1], data[2]);
+    int returnCode = sscanf(lresponse, "%*[^[][%20[^\"]%20[^,]%*[,]%20[^]]", data[0], data[1], data[2]);
     if (returnCode < 1)
     {
-       LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
+        LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr,data[jindex]);
+    strcpy(jstr, data[jindex]);
     return true;
 }
 
@@ -743,33 +742,32 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardco
         LOGF_ERROR("Command <%s> not transmitted.", lcmd);
     }
     if (receive(lresponse, end, 1))
-        {
-            flush();
-        }
+    {
+        flush();
+    }
     else
     {
         LOG_ERROR("Failed to get JSONData");
         return false;
     }
     char data[6][20] = {"", "", "", "", "", ""};
-    int returnCode = sscanf(lresponse, "%[^,]%*[,]%[^,]%*[,]%[^#]%*[#\",]%[^,]%*[,]%[^,]%*[,]%[^,]", data[0], data[1], data[2], data[3], data[4], data[5]);
+    int returnCode = sscanf(lresponse, "%20[^,]%*[,]%20[^,]%*[,]%20[^#]%*[#\",]%20[^,]%*[,]%20[^,]%*[,]%20[^,]", data[0], data[1], data[2], data[3], data[4], data[5]);
     if (returnCode < 1)
     {
-       LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
+        LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr,data[jindex]);
+    strcpy(jstr, data[jindex]);
     return true;
 }
 
 bool LX200Skywalker::setPierSide()
 {
     char lstat[20] = {0};
-    int li = 0;
     if (getJSONData_Y(5, lstat))
     {
-        li = std::stoi(lstat);
-        li = li & (1<<7);
+        int li = std::stoi(lstat);
+        li = li & (1 << 7);
         if (li > 0)
             Telescope::setPierSide(INDI::Telescope::PIER_WEST);
         else
@@ -782,18 +780,17 @@ bool LX200Skywalker::setPierSide()
         Telescope::setPierSide(INDI::Telescope::PIER_UNKNOWN);
         LOG_ERROR("Telescope pointing unknown!");
         return false;
-     }
+    }
 }
 
 bool LX200Skywalker::MountLocked()
 {
     char lstat[20] = {0};
-    int li = 0;
     if(!getJSONData_gp(2, lstat))
         return false;
     else
     {
-        li = std::stoi(lstat);
+        int li = std::stoi(lstat);
         if (li > 0)
             return true;
         else
@@ -863,8 +860,8 @@ bool LX200Skywalker::setSystemSlewSpeed (int xx)
 
     char cmd[TCS_COMMAND_BUFFER_LENGTH];
     char response[TCS_RESPONSE_BUFFER_LENGTH] = {0};
-    sprintf(cmd, ":Sm%2d#", xx*15); //TCS: xx = displayed Speed (in °/s) * 15
-    if (xx < 0 && xx > 30)
+    sprintf(cmd, ":Sm%2d#", xx * 15); //TCS: xx = displayed Speed (in °/s) * 15
+    if (xx < 0 || xx > 30)
     {
         LOGF_ERROR("Unexpected system slew speed '%02d'.", xx);
         return false;
@@ -893,7 +890,7 @@ bool LX200Skywalker::getFirmwareInfo(char* vstring)
         return false;
     else
     {
-        strcpy(vstring,lstat);
+        strcpy(vstring, lstat);
         return true;
     }
 }
@@ -913,7 +910,7 @@ bool LX200Skywalker::getFirmwareInfo(char* vstring)
 bool LX200Skywalker::receive(char* buffer, char end, int wait)
 {
     //    LOGF_DEBUG("%s timeout=%ds",__FUNCTION__, wait);
-    int bytes= 0;
+    int bytes = 0;
     int timeout = wait;
     int returnCode = tty_read_section(PortFD, buffer, end, timeout, &bytes);
     if (returnCode != TTY_OK && (bytes < 1))
@@ -1424,7 +1421,7 @@ bool LX200Skywalker::Goto(double ra, double dec)
     {
         char response[TCS_RESPONSE_BUFFER_LENGTH];
         if(!sendQuery(":MS#", response))
-        /* Query reads '0', mount is not slewing */
+            /* Query reads '0', mount is not slewing */
         {
             LOG_ERROR("Error Slewing");
             slewError(0);
@@ -1567,7 +1564,7 @@ bool LX200Skywalker::Sync(double ra, double dec)
             LOG_WARN("Telescope still parked!");
             return false;
         }
-    else
+        else
         {
             LOG_ERROR("Mount not locked on sync!");
             return false;
