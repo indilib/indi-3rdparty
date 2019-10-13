@@ -538,6 +538,20 @@ IPState NexDome::MoveAbs(double az)
         return IPS_ALERT;
 }
 
+IPState NexDome::Move(DomeDirection dir, DomeMotionCommand operation)
+{
+    if (operation == MOTION_START)
+    {
+        double nextTarget = range360(DomeAbsPosN[0].value + (dir == DOME_CW ? 10 : -10));
+        LOGF_INFO("Moving %s by 10 degrees...", (dir == DOME_CW ? "CW" : "CCW"));
+        return MoveAbs(nextTarget);
+    }
+    else
+    {
+        return (Abort() ? IPS_OK : IPS_ALERT);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////

@@ -52,6 +52,7 @@ class NexDome : public INDI::Dome
 
         // Motion
         virtual IPState MoveAbs(double az) override;
+        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
         virtual bool Sync(double az) override;
 
         // Shutter
