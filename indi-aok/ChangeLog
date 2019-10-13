@@ -1,0 +1,24 @@
+Version 0.8 - 2019-10-08
+	+ renamed driver to product line (AOK Skywalker)
+	- removed real 'unpark()' at start, TCS unparks automatically
+
+Version 0.7 - 2019-09-25
+	+ implemented park/unpark
+
+Version 0.6 - 2019-09-20
+	+ implemented track lock of TCS
+	+ implemented drives lock of TCS
+	+ corrected slewing (TCS does not ":D#"!)
+	+ complemented behaviour of "goto" and "sync" following TCS operation mode
+	  (especially automatic management of track lock and drives lock)
+
+Version 0.5 - 2019-09-18
+	- removed correction of lx200 commands from indicore (lx200driver)
+	+ implemented the correct lx200-commands in the driver itself
+	+ organized the driver following the new indi-3rdparty repo
+
+Version 0.3 - 2019-09-10
+	+ Working version (beta)
+
+Version 0.0 - 2019-08-20
+	+ Initial version, based on indi-avalon
