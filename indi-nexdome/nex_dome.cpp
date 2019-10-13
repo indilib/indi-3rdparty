@@ -192,6 +192,9 @@ bool NexDome::initProperties()
     IUFillSwitchVector(&ShutterFactorySP, ShutterFactoryS, 3, getDeviceName(), "SHUTTER_FACTORY_SETTINGS", "Factory",
                        ND::SHUTTER_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
+    // Check every 250ms.
+    setDefaultPollingPeriod(250);
+
     return true;
 }
 
@@ -515,7 +518,10 @@ void NexDome::TimerHit()
     //    if (getParameter(ND::REPORT, ND::SHUTTER, response))
     //        processShutterReport(response);
 
-    while (checkEvents(response))
+    //    while (checkEvents(response))
+    //        processEvent(response);
+
+    if (checkEvents(response))
         processEvent(response);
 
     SetTimer(POLLMS);
