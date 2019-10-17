@@ -185,6 +185,14 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         uint32_t m_LastExposureRequestuS;
         struct timeval ExpStart;
 
+        struct
+        {
+            uint32_t subX = 0;
+            uint32_t subY = 0;
+            uint32_t subW = 0;
+            uint32_t subH = 0;
+        } effectiveROI;
+
         // Gain
         double GainRequest = 1e6;
         double LastGainRequest = 1e6;

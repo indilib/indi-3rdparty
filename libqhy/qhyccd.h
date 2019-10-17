@@ -748,8 +748,10 @@ EXPORTC uint32_t STDCALL ReleaseQHYCCDBurstIDLE(qhyccd_handle *h);
 
 EXPORTC void STDCALL QHYCCDQuit();
 
+#if CALLBACK_MODE_SUPPORT
 EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
+#endif
 
 #if QHYCCD_PCIE_SUPPORT
 
