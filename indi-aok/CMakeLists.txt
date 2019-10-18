@@ -16,7 +16,7 @@ include_directories(${NOVA_INCLUDE_DIR})
 include(CMakeCommon)
 
 set(SKYWALKER_VERSION_MAJOR 0)
-set(SKYWALKER_VERSION_MINOR 8)
+set(SKYWALKER_VERSION_MINOR 9)
 
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )

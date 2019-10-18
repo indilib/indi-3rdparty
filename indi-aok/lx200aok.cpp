@@ -559,6 +559,7 @@ bool LX200Skywalker::updateLocation(double latitude, double longitude, double el
     INDI::Telescope::SetParked(false);
     ParkSP.s = IPS_OK;
     IDSetSwitch(&ParkSP, nullptr);
+    LOG_WARN("Mount needs syncing!"); // mount has to be sync'ed after startup
     return true;
 
 }
@@ -719,8 +720,8 @@ bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardc
         LOG_ERROR("Failed to get JSONData");
         return false;
     }
-    char data[3][20] = {"", "", ""};
-    int returnCode = sscanf(lresponse, "%*[^[][%20[^\"]%20[^,]%*[,]%20[^]]", data[0], data[1], data[2]);
+    char data[3][40] = {"", "", ""};
+    int returnCode = sscanf(lresponse, "%*[^[][%40[^\"]%40[^,]%*[,]%40[^]]", data[0], data[1], data[2]);
     if (returnCode < 1)
     {
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
