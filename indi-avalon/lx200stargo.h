@@ -148,6 +148,10 @@ class LX200StarGo : public LX200Telescope
         ISwitchVectorProperty MeridianFlipForcedSP;
         ISwitch MeridianFlipForcedS[2];
 
+        // configurable delay between two commands to avoid flooding StarGO
+        INumberVectorProperty MountRequestDelayNP;
+        INumber MountRequestDelayN[1];
+
         int controller_format { LX200_LONG_FORMAT };
 
         // override LX200Generic
@@ -169,6 +173,9 @@ class LX200StarGo : public LX200Telescope
         bool setKeyPadEnabled(bool enabled);
         bool getSystemSlewSpeedMode (int *index);
         bool setSystemSlewSpeedMode(int index);
+
+        struct timespec mount_request_delay = {0, 50000000L};
+        void setMountRequestDelay(int secs, long nanosecs) {mount_request_delay.tv_sec = secs; mount_request_delay.tv_nsec = nanosecs; };
 
         // autoguiding
         virtual bool setGuidingSpeeds(int raSpeed, int decSpeed);

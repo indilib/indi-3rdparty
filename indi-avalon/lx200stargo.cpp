@@ -339,8 +339,8 @@ bool LX200StarGo::ISNewNumber(const char *dev, const char *name, double values[]
         // sync home position
         if (!strcmp(name, GuidingSpeedNP.name))
         {
-            int raSpeed  = round(values[0] * 100);
-            int decSpeed = round(values[1] * 100);
+            int raSpeed  = static_cast<int>(round(values[0] * 100.0));
+            int decSpeed = static_cast<int>(round(values[1] * 100.0));
             bool result  = setGuidingSpeeds(raSpeed, decSpeed);
 
             if(result)
@@ -355,6 +355,16 @@ bool LX200StarGo::ISNewNumber(const char *dev, const char *name, double values[]
             }
             IDSetNumber(&GuidingSpeedNP, nullptr);
             return result;
+        } else if (!strcmp(name, MountRequestDelayNP.name))
+        {
+            int secs   = static_cast<int>(floor(values[0] / 1000.0));
+            long nsecs = static_cast<long>(round((values[0] - 1000.0 * secs) * 1000000.0));
+            setMountRequestDelay(secs, nsecs);
+
+            MountRequestDelayN[0].value = secs*1000 + nsecs/1000000;
+            MountRequestDelayNP.s = IPS_OK;
+            IDSetNumber(&MountRequestDelayNP, nullptr);
+            return true;
         }
     }
 
@@ -417,6 +427,10 @@ bool LX200StarGo::initProperties()
     IUFillSwitch(&MeridianFlipModeS[2], "MERIDIAN_FLIP_FORCED", "forced", ISS_OFF);
     IUFillSwitchVector(&MeridianFlipModeSP, MeridianFlipModeS, 3, getDeviceName(), "MERIDIAN_FLIP_MODE", "Meridian Flip", RA_DEC_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
+    // mount command delay
+    IUFillNumber(&MountRequestDelayN[0], "MOUNT_REQUEST_DELAY", "Request Delay (ms)", "%.0f", 0.0, 1000, 1.0, 50.0);
+    IUFillNumberVector(&MountRequestDelayNP, MountRequestDelayN, 1, getDeviceName(), "REQUEST_DELAY", "StarGO", RA_DEC_TAB, IP_RW, 60, IPS_OK);
+
     // focuser on AUX1 port
     focuserAux1->initProperties("AUX1 Focuser");
 
@@ -440,6 +454,7 @@ bool LX200StarGo::updateProperties()
         defineSwitch(&KeypadStatusSP);
         defineSwitch(&SystemSpeedSlewSP);
         defineSwitch(&MeridianFlipModeSP);
+        defineNumber(&MountRequestDelayNP);
         defineText(&MountFirmwareInfoTP);
     }
     else
@@ -453,6 +468,7 @@ bool LX200StarGo::updateProperties()
         deleteProperty(KeypadStatusSP.name);
         deleteProperty(SystemSpeedSlewSP.name);
         deleteProperty(MeridianFlipModeSP.name);
+        deleteProperty(MountRequestDelayNP.name);
         deleteProperty(MountFirmwareInfoTP.name);
     }
 
@@ -1064,6 +1080,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     LOG_DEBUG(__FUNCTION__);
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
+    IUSaveConfigNumber(fp, &MountRequestDelayNP);
 
     focuserAux1->saveConfigItems(fp);
 
@@ -1761,6 +1778,10 @@ bool LX200StarGo::transmit(const char* buffer)
     int bytesWritten = 0;
     flush();
     int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
+
+    // sleep for 50 mseconds to avoid flooding the mount with commands
+    nanosleep(&mount_request_delay, nullptr);
+
     if (returnCode != TTY_OK)
     {
         char errorString[MAXRBUF];
@@ -2225,10 +2246,6 @@ int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
             return 1;
     }
     bool success = !sendQuery(cmd, response, 0); // no response expected
-
-    const struct timespec timeout = {0, 50000000L};
-    // sleep for 50 mseconds to avoid flooding the mount with commands
-    nanosleep(&timeout, nullptr);
 
     return success;
 }
