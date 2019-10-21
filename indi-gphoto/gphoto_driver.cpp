@@ -2126,8 +2126,8 @@ int gphoto_start_preview(gphoto_driver *gphoto)
 
 int gphoto_stop_preview(gphoto_driver *gphoto)
 {
-    // Olympus cameras support streaming but without viewfinder_widget
-    if (strcasestr(gphoto->manufacturer, "OLYMPUS"))
+    // Olympus & Sony cameras support streaming but without viewfinder_widget
+    if (strcasestr(gphoto->manufacturer, "OLYMPUS") || strcasestr(gphoto->manufacturer, "Sony Corporation"))
         return GP_OK;
 
     // If viewfinder not found, nothing to do
