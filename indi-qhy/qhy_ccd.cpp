@@ -955,6 +955,13 @@ bool QHYCCD::setupParams()
             LOGF_DEBUG("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effectiveROI.subX, effectiveROI.subY,
                        effectiveROI.subW, effectiveROI.subH);
         }
+
+        rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
+        if (rc == QHYCCD_SUCCESS)
+        {
+            LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
+                       overscanROI.subW, overscanROI.subH);
+        }
     }
 
     SetCCDParams(imagew, imageh, bpp, pixelw, pixelh);

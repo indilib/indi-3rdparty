@@ -191,7 +191,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subY = 0;
             uint32_t subW = 0;
             uint32_t subH = 0;
-        } effectiveROI;
+        } effectiveROI, overscanROI;
 
         // Gain
         double GainRequest = 1e6;
