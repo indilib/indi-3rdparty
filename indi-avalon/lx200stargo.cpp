@@ -1115,6 +1115,8 @@ bool LX200StarGo::sendQuery(const char* cmd, char* response, char end, int wait)
     if(!transmit(cmd))
     {
         LOGF_ERROR("Command <%s> failed.", cmd);
+        // sleep for 50 mseconds to avoid flooding the mount with commands
+        nanosleep(&mount_request_delay, nullptr);
         return false;
     }
     lresponse[0] = '\0';
@@ -1134,6 +1136,10 @@ bool LX200StarGo::sendQuery(const char* cmd, char* response, char end, int wait)
         }
     }
     flush();
+
+    // sleep for 50 mseconds to avoid flooding the mount with commands
+    nanosleep(&mount_request_delay, nullptr);
+
     return true;
 }
 
@@ -1778,9 +1784,6 @@ bool LX200StarGo::transmit(const char* buffer)
     int bytesWritten = 0;
     flush();
     int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
-
-    // sleep for 50 mseconds to avoid flooding the mount with commands
-    nanosleep(&mount_request_delay, nullptr);
 
     if (returnCode != TTY_OK)
     {
