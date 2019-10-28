@@ -288,11 +288,13 @@ void checkMeteo() {
        digitalWrite(PIN_TO_DIGITAL(5), LOW); // disable internal pull-ups
     }
   
+#ifdef USE_IRRADIANCE_SENSOR
     if (Light>MINIMUM_DAYLIGHT) {
        digitalWrite(PIN_TO_DIGITAL(6), HIGH); // enable internal pull-ups
     } else {
        digitalWrite(PIN_TO_DIGITAL(6), LOW); // disable internal pull-ups
     }
+#endif //USE_IRRADIANCE_SENSOR
 
 }
 
