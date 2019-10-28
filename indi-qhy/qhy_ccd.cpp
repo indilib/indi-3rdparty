@@ -956,6 +956,12 @@ bool QHYCCD::setupParams()
                        effectiveROI.subW, effectiveROI.subH);
         }
 
+        if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
+        {
+            imagew = effectiveROI.subW;
+            imageh = effectiveROI.subH;
+        }
+
         rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
         if (rc == QHYCCD_SUCCESS)
         {
@@ -999,6 +1005,11 @@ int QHYCCD::SetTemperature(double temperature)
 bool QHYCCD::StartExposure(float duration)
 {
     unsigned int ret = QHYCCD_ERROR;
+
+    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
     if (HasStreaming() && Streamer->isBusy())
     {
@@ -1057,27 +1068,15 @@ bool QHYCCD::StartExposure(float duration)
     if (isSimulation())
         ret = QHYCCD_SUCCESS;
     else
-        ret = SetQHYCCDResolution(m_CameraHandle,
-                                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+        ret = SetQHYCCDResolution(m_CameraHandle, subX, subY, subW, subH);
+
     if (ret != QHYCCD_SUCCESS)
     {
-        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)",
-                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
-                  ret);
+        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)", subX, subY, subW, subH, ret);
         return false;
     }
 
-    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d",
-               PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-               PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d", subX, subY, subW, subH);
 
     // Start to expose the frame
     if (isSimulation())
@@ -1823,8 +1822,8 @@ bool QHYCCD::StartStreaming()
     int ret = 0;
     m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    uint32_t subX = PrimaryCCD.getSubX() / PrimaryCCD.getBinX();
-    uint32_t subY = PrimaryCCD.getSubY() / PrimaryCCD.getBinY();
+    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
