@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "USB2ST4_Conv.h"
+#include <USB2ST4_Conv.h>
 
 #include <defaultdevice.h>
 #include <indiguiderinterface.h>
