@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "gxccd.h"
+#include <gxccd.h>
 
 #include <indiccd.h>
 #include <indifilterinterface.h>
