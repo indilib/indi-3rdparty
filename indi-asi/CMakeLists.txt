@@ -15,11 +15,6 @@ find_package(Threads REQUIRED)
 set(ASI_VERSION_MAJOR 1)
 set(ASI_VERSION_MINOR 4)
 
-set(ASICAM /usr/lib/arm-linux-gnueabihf/libASICamera2.so)
-set(ASIEFW /usr/lib/arm-linux-gnueabihf/libEFWFilter.so)
-set(ASIST4 /usr/lib/arm-linux-gnueabihf/libUSB2ST4Conv.so)
-set(ASIEAF /usr/lib/arm-linux-gnueabihf/libEAFFocuser.so)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_asi.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml)
 
@@ -45,7 +40,7 @@ set(indi_asi_SRCS
    )
 
 add_executable(indi_asi_ccd ${indi_asi_SRCS})
-target_link_libraries(indi_asi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ASICAM} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_asi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 if (HAVE_WEBSOCKET)
     target_link_libraries(indi_asi_ccd ${Boost_LIBRARIES})
 endif()
@@ -54,27 +49,27 @@ endif()
 add_executable(indi_asi_wheel ${CMAKE_CURRENT_SOURCE_DIR}/asi_wheel.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
-target_link_libraries(indi_asi_wheel ${INDI_LIBRARIES} ${ASIEFW} ${LIBUSB_LIBRARIES})
+target_link_libraries(indi_asi_wheel ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(indi_asi_wheel ${INDI_LIBRARIES} ${ASIEFW} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_asi_wheel ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
 ########### indi_asi_st4 ###########
 add_executable(indi_asi_st4 ${CMAKE_CURRENT_SOURCE_DIR}/asi_st4.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
-target_link_libraries(indi_asi_st4 ${INDI_LIBRARIES} ${ASIST4} ${LIBUSB_LIBRARIES})
+target_link_libraries(indi_asi_st4 ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(indi_asi_st4 ${INDI_LIBRARIES} ${ASIST4} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_asi_st4 ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
 ########### indi_asi_focuser ###########
 add_executable(indi_asi_focuser ${CMAKE_CURRENT_SOURCE_DIR}/asi_focuser.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
-target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${ASIEAF} ${LIBUSB_LIBRARIES})
+target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${ASIEAF} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
 #####################################
