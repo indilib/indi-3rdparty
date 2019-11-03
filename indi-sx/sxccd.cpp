@@ -4,6 +4,8 @@
  Copyright (c) 2012-2013 Cloudmakers, s. r. o.
  All Rights Reserved.
 
+ Bayer Support Added by Karl Rees, Copyright(c) 2019
+
  Code is based on SX INDI Driver by Gerry Rozema and Jasem Mutlaq
  Copyright(c) 2010 Gerry Rozema.
  Copyright(c) 2012 Jasem Mutlaq.
@@ -192,6 +194,7 @@ SXCCD::SXCCD(DEVICE device, const char *name)
     HasCooler             = false;
     HasST4Port            = false;
     HasGuideHead          = false;
+    HasColor              = false;
     ExposureTimerID       = 0;
     DidFlush              = false;
     DidLatch              = false;
@@ -238,6 +241,12 @@ bool SXCCD::initProperties()
     IUFillSwitch(&ShutterS[1], "SHUTTER_OFF", "Manual close", ISS_ON);
     IUFillSwitchVector(&ShutterSP, ShutterS, 2, getDeviceName(), "CCD_SHUTTER", "Shutter", OPTIONS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
+    //Adding switch to let user indicate whether the CCD has a Bayer filter, since I do not know which models beyond UltraStar C actually do
+    IUFillSwitch(&BayerS[0], "BAYER_TRUE", "True", ISS_OFF);
+    IUFillSwitch(&BayerS[1], "BAYER_FALSE", "False", ISS_ON);
+    IUFillSwitchVector(&BayerSP, BayerS, 2, getDeviceName(), "CCD_BAYER_FILTER", "Bayer Filter", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY,
+                       60, IPS_IDLE);
+    IUSaveText(&BayerT[2], "RGGB");
 
     //  we can expose less than 0.01 seconds at a time
     //  and we need to for an allsky in daytime
@@ -256,6 +265,9 @@ bool SXCCD::updateProperties()
             defineSwitch(&CoolerSP);
         if (HasShutter)
             defineSwitch(&ShutterSP);
+        if (HasColor) {
+            defineSwitch(&BayerSP);
+        }
     }
     else
     {
@@ -263,6 +275,9 @@ bool SXCCD::updateProperties()
             deleteProperty(CoolerSP.name);
         if (HasShutter)
             deleteProperty(ShutterSP.name);
+        if (HasColor) {
+            deleteProperty(BayerSP.name);
+        }
     }
     return true;
 }
@@ -325,6 +340,7 @@ bool SXCCD::Connect()
             HasCooler    = params.extra_caps & SXUSB_CAPS_COOLER;
             HasShutter   = params.extra_caps & SXUSB_CAPS_SHUTTER;
             HasST4Port   = params.extra_caps & SXCCD_CAPS_STAR2K;
+            HasColor     = sxIsColor(model);
 
             uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN;
 
@@ -826,7 +842,29 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
         IDSetNumber(&TemperatureNP, nullptr);
         result = true;
     }
+    else if (strcmp(name, BayerSP.name) == 0)
+    {
+        IUUpdateSwitch(&BayerSP, states, names, n);
+        BayerSP.s = IPS_OK;
+        IDSetSwitch(&BayerSP, nullptr);
+        if (BayerS[0].s == ISS_ON) {
+            SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+            defineText(&BayerTP);
+        }
+        else {
+            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+            deleteProperty(BayerTP.name);
+        }
+        result = true;
+    }
     else
         result = INDI::CCD::ISNewSwitch(dev, name, states, names, n);
     return result;
+}
+
+bool SXCCD::saveConfigItems(FILE *fp)
+{
+    INDI::CCD::saveConfigItems(fp);
+    IUSaveConfigSwitch(fp, &BayerSP);
+    return true;
 }
