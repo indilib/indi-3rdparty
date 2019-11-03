@@ -61,7 +61,7 @@ INDIPORT="7624"
 
 ##### INDI SETTINGS AND DEBUG #####
 #1). Basic indi
-INDIDEVICE="MeteoStation"
+INDIDEVICE="Arduino MeteoStation"
 INDIDEVICEPORT="/dev/ttyUSB0"
 
 #2). Debug
