@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "ASICamera2.h"
+#include <ASICamera2.h>
 
 #include <condition_variable>
 #include <mutex>
