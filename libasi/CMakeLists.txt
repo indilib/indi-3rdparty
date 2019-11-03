@@ -25,28 +25,28 @@ set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 IF (APPLE)
 
 # ASI CAM
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libASICamera2.bin ${CMAKE_BINARY_DIR}/libasicamera${ASICAM_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libasicamera${ASICAM_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libasicamera${ASICAM_VERSION}.dylib ${LIB_INSTALL_DIR}/libasicamera${ASICAM_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libasicamera${ASICAM_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libasicamera.dylib)
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.${ASICAM_VERSION}.dylib)
+install( FILES ${CMAKE_BINARY_DIR}/libASICamera2.${ASICAM_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_VERSION}.dylib ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_SOVERSION}.dylib)
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libASICamera2.dylib)
 
 # ASI EFW
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libefwfilter${ASIEFW_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libefwfilter${ASIEFW_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libefwfilter${ASIEFW_VERSION}.dylib ${LIB_INSTALL_DIR}/libefwfilter${ASIEFW_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libefwfilter${ASIEFW_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libefwfilter.dylib)
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib)
+install( FILES ${CMAKE_BINARY_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_SOVERSION}.dylib)
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libEFWFilter.dylib)
 
 # ASI ST4
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libusb2st4conv${ASIST4_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libusb2st4conv${ASIST4_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libusb2st4conv${ASIST4_VERSION}.dylib ${LIB_INSTALL_DIR}/libusb2st4conv${ASIST4_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libusb2st4conv${ASIST4_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libusb2st4conv.dylib)
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib)
+install( FILES ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_SOVERSION}.dylib)
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libUSB2ST4Conv.dylib)
 
 # ASI EAF
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libeaffocuser${ASIEAF_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libeaffocuser${ASIEAF_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libeaffocuser${ASIEAF_VERSION}.dylib ${LIB_INSTALL_DIR}/libeaffocuser${ASIEAF_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libeaffocuser${ASIEAF_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libeaffocuser.dylib)
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib)
+install( FILES ${CMAKE_BINARY_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_SOVERSION}.dylib)
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libEAFFocuser.dylib)
 
 ELSE(APPLE)
 
