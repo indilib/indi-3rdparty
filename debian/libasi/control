@@ -9,5 +9,5 @@ Package: libasi
 conflicts: asi-common
 replaces: asi-common
 Architecture: i386 amd64 armhf arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libusb-1.0-0
 Description: Library for ASI Cameras, Filter Wheel, Focuser and ST4
