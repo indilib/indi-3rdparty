@@ -135,6 +135,11 @@ if (WITH_APOGEE)
 add_subdirectory(libapogee)
 endif(WITH_APOGEE)
 
+#libasi
+if (WITH_ASICAM)
+add_subdirectory(libasi)
+endif (WITH_ASICAM)
+
 #libatik
 if (WITH_ATIK)
 add_subdirectory(libatik)
@@ -361,8 +366,13 @@ endif(WITH_FISHCAMP)
 
 ## ASI
 if (WITH_ASICAM)
-add_subdirectory(asi-common)
+find_package(ASI)
+if (ASI_FOUND)
 add_subdirectory(indi-asi)
+else (ASI_FOUND)
+add_subdirectory(libasi)
+SET(LIBRARIES_FOUND FALSE)
+endif(ASI_FOUND)
 endif(WITH_ASICAM)
 
 ## DSI
