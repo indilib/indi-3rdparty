@@ -1,3 +1,9 @@
+indi-sx (1.14) bionic; urgency=low
+
+  * Added Bayer filter support option for color cameras
+
+ -- Karl Rees <indidev@karlrees.com>  Mon, 04 Nov 2019 17:45:00 +0300
+
 indi-sx (1.13) bionic; urgency=low
 
   * New release
