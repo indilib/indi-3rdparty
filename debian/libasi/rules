@@ -5,21 +5,22 @@ include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=libasi
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
+
 # ASICAM version
-ASICAM_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASICAM ([0-9].*)/\1/p")
-ASICAM_SO_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASICAM ([0-9]).*/\1/p")
+ASICAM_VERSION=1.14.0715
+ASICAM_SO_VERSION= 1
 
 # ASIEFW Version
-ASIEFW_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIEFW ([0-9].*)/\1/p")
-ASIEFW_SO_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIEFW ([0-9]).*/\1/p")
+ASIEFW_VERSION=0.3.1205
+ASIEFW_SO_VERSION= 0
 
 # ASIST4 Version
-ASIST4_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIST4 ([0-9].*)/\1/p")
-ASIST4_SO_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIST4 ([0-9]).*/\1/p")
+ASIST4_VERSION=1.0
+ASIST4_SO_VERSION=1
 
 # ASIEAF Version
-ASIEAF_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIEAF ([0-9].*)/\1/p")
-ASIEAF_SO_VERSION := $(shell dpkg-parsechangelog | sed -En "s/.*ASIEAF ([0-9]).*/\1/p")
+ASIEAF_VERSION=0.1.0524
+ASIEAF_SO_VERSION= 0
 
 # Links
 DEB_DH_LINK_ARGS := usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_SO_VERSION} \
@@ -29,4 +30,4 @@ DEB_DH_LINK_ARGS := usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_VERS
                     usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_SO_VERSION} \
                     usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so \
                     usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_SO_VERSION} \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so \
+                    usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so
