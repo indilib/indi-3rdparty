@@ -35,6 +35,7 @@
 #include <termios.h>
 
 #include <indicom.h>
+#include <cmath>
 
 #include "config.h"
 
