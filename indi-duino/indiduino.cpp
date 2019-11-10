@@ -382,8 +382,6 @@ bool indiduino::initProperties()
 
     DefaultDevice::initProperties();
 
-    setDefaultPollingPeriod(500);
-
     serialConnection = new Connection::Serial(this);
     serialConnection->registerHandshake([&]() { return Handshake(); });
     serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
@@ -392,6 +390,7 @@ bool indiduino::initProperties()
     registerConnection(serialConnection);
 
     addDebugControl();
+    addPollPeriodControl();
     return true;
 }
 
@@ -551,7 +550,8 @@ bool indiduino::ISNewNumber(const char *dev, const char *name, double values[], 
     }
     else
     {
-        return false;
+        //  Nothing changed, so pass it to the parent
+        return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
     }
 }
 
