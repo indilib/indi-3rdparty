@@ -328,9 +328,10 @@ void indiduino::TimerHit()
     }
 
     time_t sec_since_reply = sf->secondsSinceVersionReply();
-    if (sec_since_reply > 30)
+    time_t max_delay = static_cast<time_t>(5*POLLMS < 30000 ? 30 : 5*POLLMS/1000);
+    if (sec_since_reply > max_delay)
     {
-        LOG_ERROR("No reply from the device for 30 sec, disconnecting");
+        LOGF_ERROR("No reply from the device for %d secs, disconnecting", max_delay);
         setConnected(false, IPS_ALERT);
         Disconnect();
         return;
@@ -688,7 +689,7 @@ bool indiduino::Connect()
     {
         if (sf->initState() != 0)
         {
-            LOG_ERROR("Failed to get Erduino state");
+            LOG_ERROR("Failed to get Arduino state");
             IDSetSwitch(getSwitch("CONNECTION"), "Fail to get Arduino state");
             delete sf;
             this->serialConnection->Disconnect();
