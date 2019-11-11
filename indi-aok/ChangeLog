@@ -1,6 +1,8 @@
 Version 0.9 - 2019-10-?? (minor changes after pull)
-	+ corrected readout off firmwareserial
-	+ included warning after unpark at startup: Mount needs syncing!
+	+ corrected readout of firmwareserial
+	+ included warning "Mount needs syncing!" after unpark at startup
+	+ implementing park position and automatic sync after connecting 
+	  (with automatic unpark!) to supersede snyc warning
 Version 0.8 - 2019-10-08
 	+ renamed driver to product line (AOK Skywalker)
 	- removed real 'unpark()' at start, TCS unparks automatically
