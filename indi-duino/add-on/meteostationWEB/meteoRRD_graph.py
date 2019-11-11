@@ -131,6 +131,7 @@ Pmax=P0+Pdelta
 i=0
 print "Starting GRAPHER"
 while (True):
+  try:
 	graphs(3)
 	print "Generating 3 hours graph"
 	if (i % 4 == 0):
@@ -144,3 +145,6 @@ while (True):
 		graphs(1176)
         i=i+1
 	time.sleep(60)
+  except:
+	print "Updating graphs failed"
+	time.sleep(10)
