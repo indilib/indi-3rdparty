@@ -354,7 +354,21 @@ bool ASICCD::updateProperties()
         if (VideoFormatSP.nsp > 0)
         {
             defineSwitch(&VideoFormatSP);
-            loadConfig(true, "CCD_VIDEO_FORMAT");
+
+            // Try to set 16bit RAW by default.
+            // It can get be overwritten by config value.
+            // If config fails, we try to set 16 if exists.
+            if (loadConfig(true, "CCD_VIDEO_FORMAT") == false)
+            {
+                for (int i = 0; i < VideoFormatSP.nsp; i++)
+                {
+                    if (m_camInfo->SupportedVideoFormat[i] == ASI_IMG_RAW16)
+                    {
+                        setVideoFormat(i);
+                        break;
+                    }
+                }
+            }
         }
 
         defineNumber(&ADCDepthNP);
