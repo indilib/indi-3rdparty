@@ -11,11 +11,11 @@ from indiclient import *
 # ===========================================================================
 
 # ======================== INDI server configuration ========================
-INDISERVER="rasp-star"
+INDISERVER="localhost"
 INDIPORT="7624"
 INDIDEVICE="Arduino MeteoStation"
 
-def getRawParameter():
+def getRawParameter(indi):
         vectorIR=indi.get_vector(INDIDEVICE,"IR")
 	IR=vectorIR.get_element("IR").get_float()
 	Tir=vectorIR.get_element("T").get_float()
@@ -28,10 +28,10 @@ def getRawParameter():
 	P=vectorPressure.get_element("P").get_float()
 	Tp=vectorPressure.get_element("T").get_float()
 
-	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp))
+	return {"HR":HR, "Thr":Thr, "IR":IR, "Tir":Tir, "P":P, "Tp":Tp}
 
 
-def getWeatherStatus():
+def getWeatherStatus(indi):
         vectorMeteo=indi.get_vector(INDIDEVICE,"WEATHER_PARAMETERS")
 	dew=vectorMeteo.get_element("WEATHER_DEWPOINT").get_float()
 	clouds=vectorMeteo.get_element("WEATHER_CLOUD_COVER").get_float()
@@ -43,22 +43,20 @@ def getWeatherStatus():
 	dewFlag=int(statusVector.get_element("dew").is_ok())
 	frezzingFlag=int(statusVector.get_element("frezzing").is_ok())
   
-	return (("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),("frezzingFlag",frezzingFlag))
+	return {"T":T, "clouds":clouds, "skyT":skyT, "cloudFlag":cloudFlag, "dewFlag":dewFlag, "frezzingFlag":frezzingFlag}
 
+weatherStatus={}
+sensorData={}
 
-####### main #########
+def readData():
+    #connect to INDI server
+    indi=indiclient(INDISERVER,int(INDIPORT))
+    vector=indi.get_vector(INDIDEVICE,"CONNECTION")
+    vector.set_by_elementname("CONNECT")
+    indi.send_vector(vector)
+    
+    sensorData.update(getRawParameter(indi))
+    weatherStatus.update(getWeatherStatus(indi))
 
-#connect ones to configure the port
-INDIPORT=int(INDIPORT)
-indi=indiclient(INDISERVER,INDIPORT)
-vector=indi.get_vector(INDIDEVICE,"CONNECTION")
-vector.set_by_elementname("CONNECT")
-indi.send_vector(vector)
-print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
+    indi.quit()
 
-data=getRawParameter()	
-for d in data:
-	print d[0],d[1]
-
-
-indi.quit()
