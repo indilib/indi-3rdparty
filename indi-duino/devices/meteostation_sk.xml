@@ -1,6 +1,6 @@
 <INDIDriver>
 
-<defNumberVector device="Arduino MeteoStation" name="WEATHER_PARAMETERS" label="Parameters" group="METEO" state="Idle" perm="ro" timeout="60">
+<defNumberVector device="Arduino MeteoStation" name="WEATHER_PARAMETERS" label="Parameters" group="Main Control" state="Idle" perm="ro" timeout="60">
     <defNumber name="WEATHER_TEMPERATURE" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
     <indiduino pin="24" type="input" mul="0.05" add="-273"/>
 0
@@ -34,7 +34,7 @@
     </defNumber>
 
 </defNumberVector>
-<defLightVector device="Arduino INPUTS" name="WEATHER_STATUS" label="STATUS" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+<defLightVector device="Arduino INPUTS" name="WEATHER_STATUS" label="STATUS" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
 
     <defLight name="clouds" label="Cloudy">
         <indiduino pin="3"/>
@@ -102,7 +102,7 @@ On
 </defNumberVector>
 
 
-<defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor Failure" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+<defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor Failure" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
     <defLight name="IR" label="IR Failure">
         <indiduino pin="7"/>
         Idle
