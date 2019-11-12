@@ -480,24 +480,24 @@ void runMeteoStation() {
 
 void checkMeteo() {
 
-  if (cloudy == 1) {
-    digitalWrite(PIN_TO_DIGITAL(3), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(3), LOW); // disable internal pull-ups
-  }
+    if (cloudy==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(3), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(3), LOW); // disable internal pull-ups
+    }
+  
+    if (dewing==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(4), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(4), LOW); // disable internal pull-ups
+    }
 
-  if (dewing == 1) {
-    digitalWrite(PIN_TO_DIGITAL(4), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(4), LOW); // disable internal pull-ups
-  }
-
-  if (frezzing == 1) {
-    digitalWrite(PIN_TO_DIGITAL(5), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(5), LOW); // disable internal pull-ups
-  }
-
+    if (frezzing==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(5), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(5), LOW); // disable internal pull-ups
+    }
+  
 #ifdef USE_IRRADIANCE_SENSOR
     if (Light>MINIMUM_DAYLIGHT) {
        digitalWrite(PIN_TO_DIGITAL(6), HIGH); // enable internal pull-ups
