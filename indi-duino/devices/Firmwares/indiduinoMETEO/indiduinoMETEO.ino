@@ -99,7 +99,8 @@
 #define CLOUD_FLAG_PERCENT  30
 #endif //USE_MLX_SENSOR
 
-
+#define IPS_OK    1
+#define IPS_ALERT 3
 
 /*END OFF CUSTOMITATION. YOU SHOULT NOT NEED TO CHANGE ANYTHING BELOW */
 
@@ -394,9 +395,9 @@ void runMeteoStation() {
 
     Dew=dewPoint(Thr,HR);
     if (Thr<=Dew+2) {
-        dewing=1;
+        dewing=IPS_ALERT;
     } else {
-        dewing=0;
+        dewing=IPS_OK;
     }
 #else
   #ifndef USE_TSL_SENSOR
@@ -470,11 +471,11 @@ void runMeteoStation() {
   T = Tp;
 #endif  //T_MAIN
 
-  if (T < FREZZING) {
-    frezzing = 1;
-  } else {
-    frezzing = 0;
-  }
+    if (T<FREZZING) {
+      frezzing=IPS_ALERT;
+    } else {
+      frezzing=IPS_OK;
+    }
 }
 
 void checkMeteo() {
