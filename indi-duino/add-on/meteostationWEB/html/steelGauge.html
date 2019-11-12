@@ -332,15 +332,15 @@
 								dewLed.setLedOnOff(false);
 								frezzingLed.setLedOnOff(false);
 								var warningText='';
-							        if (data.cloudFlag==3) {
+							        if (data.cloudFlag==1) {
 								   warningText=warningText+"  ****** CLOUDY ******  ";
 								   cloudLed.setLedOnOff(true);
 								}
-								if (data.dewFlag==3) {
+								if (data.dewFlag==1) {
 								   warningText=warningText+"  ******  DEWING  ******  ";
 								   dewLed.setLedOnOff(true);
 								}
-								if (data.frezzingFlag==3) {
+								if (data.frezzingFlag==1) {
 								   warningText=warningText+"  ****** FREZZING ******  ";
 								   frezzingLed.setLedOnOff(true);
 								}
