@@ -14,6 +14,7 @@ from indiclient import *
 INDISERVER="localhost"
 INDIPORT="7624"
 INDIDEVICE="Arduino MeteoStation"
+# ======================== INDI server configuration ========================
 
 def getRawParameter(indi):
         vectorIR=indi.get_vector(INDIDEVICE,"IR")
