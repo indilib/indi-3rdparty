@@ -106,6 +106,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumber USBTrafficN[1];
         INumberVectorProperty USBTrafficNP;
 
+        INumber USBBufferN[1];
+        INumberVectorProperty USBBufferNP;
+
         ISwitchVectorProperty CoolerModeSP;
         ISwitch CoolerModeS[2];
         enum
