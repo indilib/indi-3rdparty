@@ -141,7 +141,7 @@ ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c16
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c247", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY247.img -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c128", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY128.img -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c367", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY367.img -D $env{DEVNAME}"
-#ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c600", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY600.img -D $env{DEVNAME}"
+ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c600", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY600.img -D $env{DEVNAME}"
 
 #===============================================================================
 # 3. Post-enumeration device IDs:

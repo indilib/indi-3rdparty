@@ -1274,5 +1274,4 @@
 #define RESET_USB_PIPE		1
 #define ABORT_USB_PIPE		2
 
-
 #endif
