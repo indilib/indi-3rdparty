@@ -1,0 +1,116 @@
+<INDIDriver>
+
+<defNumberVector device="Arduino MeteoStation" name="Meteo" label="Meteo" group="METEO" state="Idle" perm="ro" timeout="60">
+    <defNumber name="T" label="Celsius" format="%4.2f" min="-100" max="100" step="1">
+    <indiduino pin="24" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+    <defNumber name="HR" label="HR" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="18" type="input" mul="0.01" add="0"/>
+0
+    </defNumber>
+
+    <defNumber name="P" label="mBars" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="16" type="input" mul="0.1" add="0"/>
+0
+    </defNumber>
+    <defNumber name="DEW" label="Dew point" format="%4.2f" min="-100" max="100" step="1">
+    <indiduino pin="20" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+
+    <defNumber name="clouds" label="clouds" format="%4.0f" min="0" max="100" step="1">
+    <indiduino pin="22" type="input" mul="1" add="0"/>
+0
+    </defNumber>
+    <defNumber name="SkyT" label="Sky Temp" format="%4.2f" min="-40" max="40" step="1">
+    <indiduino pin="23" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+
+    <defNumber name="Sky_Quality" label="Sky Qual mag/arcsec2" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="21" type="input" mul="0.01" add="0"/>
+0
+    </defNumber>
+
+</defNumberVector>
+<defLightVector device="Arduino INPUTS" name="STATUS" label="STATUS" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+
+    <defLight name="clouds" label="Cloudy">
+        <indiduino pin="3"/>
+        Idle
+    </defLight>
+    <defLight name="dew" label="Dewing">
+        <indiduino pin="4"/>
+        Idle
+    </defLight>
+    <defLight name="freezing" label="Freezing">
+        <indiduino pin="5"/>
+        Idle
+    </defLight>
+    <defLight name="daylight" label="Daylight">
+        <indiduino pin="6"/>
+        Idle
+    </defLight>
+</defLightVector>
+
+<defSwitchVector device="Arduino MeteoStation" name="CONNECTION" label="Connection" group="Connection" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+
+<defNumberVector device="Arduino MeteoStation" name="IR" label="IR Sensor" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+    <defNumber name="IR" label="IR" format="%4.2f" min="-100" max="100" step="1">
+    <indiduino pin="14" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+    <defNumber name="T" label="Celsius" format="%4.2f" min="-100" max="-100" step="1">
+    <indiduino pin="15" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="Arduino MeteoStation" name="Pressure" label="BME280 Sensor" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+
+    <defNumber name="P" label="mBars" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="16" type="input" mul="0.1" add="0"/>
+0
+    </defNumber>
+    <defNumber name="T" label="Celsius" format="%4.2f" min="-100" max="100" step="1">
+    <indiduino pin="17" type="input" mul="0.05" add="-273"/>
+0
+    </defNumber>
+    <defNumber name="HR" label="HR" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="18" type="input" mul="0.01" add="0"/>
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="Arduino MeteoStation" name="LIGHT" label="Sky Quality" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+    <defNumber name="SQM" label="SQM" format="%4.2f" min="0" max="10240" step="1">
+    <indiduino pin="21" type="input" mul="0.01" add="0"/>
+0
+    </defNumber>
+</defNumberVector>
+
+
+<defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor FAIL" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+    <defLight name="IR" label="MLX Fail">
+        <indiduino pin="7"/>
+        Idle
+    </defLight>
+    <defLight name="SQM" label="TSL Fail">
+        <indiduino pin="8"/>
+        Idle
+    </defLight>
+    <defLight name="P" label="BME Fail">
+        <indiduino pin="9"/>
+        Idle
+    </defLight>
+</defLightVector>
+
+
+</INDIDriver>
