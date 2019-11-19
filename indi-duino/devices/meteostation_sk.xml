@@ -27,9 +27,8 @@
     <indiduino pin="23" type="input" mul="0.05" add="-273"/>
 0
     </defNumber>
-
-    <defNumber name="WEATHER_IR_RADIANCE" label="IR Radiance" format="%5.0f" min="0" max="10240" step="1">
-    <indiduino pin="21" type="input" mul="1" add="0"/>
+    <defNumber name="WEATHER_SKY_QUALITY" label="Sky Quality" format="%5.2f" min="0" max="10240" step="1">
+    <indiduino pin="21" type="input" mul="0.01" add="0"/>
 0
     </defNumber>
 
@@ -94,9 +93,9 @@ On
 0
     </defNumber>
 </defNumberVector>
-<defNumberVector device="Arduino MeteoStation" name="LIGHT" label="IR Radiance" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
-    <defNumber name="IR_RADIANCE" label="IR Radiance" format="%5.0f" min="0" max="10240" step="1">
-    <indiduino pin="21" type="input" mul="1" add="0"/>
+<defNumberVector device="Arduino MeteoStation" name="LIGHT" label="Sky Quality" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+    <defNumber name="SQM" label="Sky Quality" format="%5.2f" min="0" max="10240" step="1">
+    <indiduino pin="21" type="input" mul="0.01" add="0"/>
 0
     </defNumber>
 </defNumberVector>
