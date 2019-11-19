@@ -1,3 +1,13 @@
+libasi (1.1) buster; urgency=medium
+
+  * ASICAM 1.14.1108 release:
+    V1, 14, 1108 2019.11.8
+    Multi-position for the anti-dew
+    Add new cameras
+    Fix some bug
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Tue, 19 Nov 2019 11:06:00 +0200
+
 libasi (1.0) buster; urgency=medium
 
   * Initial release
