@@ -115,22 +115,22 @@ class LX200Skywalker : public LX200Telescope
 
         int controller_format { LX200_LONG_FORMAT };
 
-        // override LX200Generic
+        // override
         virtual void getBasicData() override;
-        virtual bool Park() override;
-        virtual bool UnPark() override;
-
         virtual bool saveConfigItems(FILE *fp) override;
         virtual bool Goto(double ra, double dec) override;
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
         // override INDI::Telescope
+        bool Park() override;
+        bool UnPark() override;
         bool SetCurrentPark() override;
         bool SetDefaultPark() override;
 
-        // Skywalker stuff
-        bool SyncDefaultPark();
+        //Skywalker stuff
+        //bool SyncDefaultPark();
+        bool SavePark();
         bool getSystemSlewSpeed (int *xx);
         bool setSystemSlewSpeed (int xx);
         bool getJSONData_Y(int jindex, char *jstr);

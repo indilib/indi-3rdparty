@@ -168,18 +168,23 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             int trackState = IUFindOnSwitchIndex(&TrackStateSP);
             bool result = false;
 
-            if ((trackState == TRACK_ON) && SetTrackEnabled(true))
+            if (INDI::Telescope::TrackState != SCOPE_PARKED)
             {
-                TrackState = SCOPE_TRACKING; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
-                result = true;
-            }
-            else if ((trackState == TRACK_OFF) && SetTrackEnabled(false))
-            {
-                TrackState = SCOPE_IDLE; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
-                result = true;
+                if ((trackState == TRACK_ON) && (SetTrackEnabled(true)))
+                {
+                    TrackState = SCOPE_TRACKING; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
+                    result = true;
+                }
+                else if ((trackState == TRACK_OFF) && SetTrackEnabled(false))
+                {
+                    TrackState = SCOPE_IDLE; // ALWAYS set status! [cf. ReadScopeStatus() -> Inditelescope::NewRaDec()]
+                    result = true;
+                }
+                else
+                    LOG_ERROR("Trackstate undefined");
             }
             else
-                LOG_ERROR("Trackstate undefined");
+                LOG_WARN("Mount still parked");
 
             TrackStateSP.s = result ? IPS_OK : IPS_ALERT;
             IDSetSwitch(&TrackStateSP, nullptr);
@@ -223,18 +228,23 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             int NewMountState = IUFindOnSwitchIndex(&MountStateSP);
             bool result = false;
 
-            if ((NewMountState == MOUNT_LOCKED) && SetMountLock(true))
+            if (INDI::Telescope::TrackState != SCOPE_PARKED)
             {
-                CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
-                result = true;
-            }
-            else if ((NewMountState == MOUNT_UNLOCKED) && SetMountLock(false))
-            {
-                CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
-                result = true;
+                if ((NewMountState == MOUNT_LOCKED) && SetMountLock(true))
+                {
+                    CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+                    result = true;
+                }
+                else if ((NewMountState == MOUNT_UNLOCKED) && SetMountLock(false))
+                {
+                    CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
+                    result = true;
+                }
+                else
+                    LOG_ERROR("Mountlock undefined");
             }
             else
-                LOG_ERROR("Mountlock undefined");
+                LOG_WARN("Mount still parked.");
 
             MountStateSP.s = result ? IPS_OK : IPS_ALERT;
             IDSetSwitch(&MountStateSP, nullptr);
@@ -250,6 +260,40 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             }
             else
                 return false;
+        }
+        if (!strcmp(name, ParkOptionSP.name))
+        {
+            IUUpdateSwitch(&ParkOptionSP, states, names, n);
+            int index = IUFindOnSwitchIndex(&ParkOptionSP);
+            if (index == -1)
+                return false;
+            IUResetSwitch(&ParkOptionSP);
+            if ((TrackState != SCOPE_IDLE && TrackState != SCOPE_TRACKING) || MovementNSSP.s == IPS_BUSY ||
+                    MovementWESP.s == IPS_BUSY)
+            {
+                LOG_WARN("Mount slewing or already parked...");
+                ParkOptionSP.s = IPS_ALERT;
+                IDSetSwitch(&ParkOptionSP, nullptr);
+                return false;
+            }
+            bool result = false;
+            if (index == PARK_WRITE_DATA)
+            {
+                if (SavePark())
+                {
+                    SetParked(true);
+                    if (Disconnect())
+                    {
+                        setConnected(false, IPS_IDLE);
+                        updateProperties();
+                    }
+                    LOG_INFO("Controller is rebooting! Please reconnect.");
+                    result = true;
+                }
+            }
+            else
+                result = INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
+            return result;
         }
 
     }
@@ -319,10 +363,10 @@ bool LX200Skywalker::initProperties()
     IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // Setting the park position in the controller (with webinterface) evokes a restart of the very same!
-    // 4th option "purge" of INDI::Telescope doesn't make any sense, so it is not displayed
-    IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Current", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Get Position", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_WRITE_DATA], "PARK_WRITE_DATA", "Set Position", ISS_OFF);
+    // 4th option "purge" of INDI::Telescope doesn't make any sense here, so it is not displayed
+    IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Copy", ISS_OFF);
+    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read",ISS_OFF);
+    IUFillSwitch(&ParkOptionS[PARK_WRITE_DATA], "PARK_WRITE_DATA", "Write", ISS_OFF);
     IUFillSwitchVector(&ParkOptionSP, ParkOptionS, 3, getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options",
                        SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
@@ -535,6 +579,8 @@ bool LX200Skywalker::Park()
 {
     if (INDI::Telescope::TrackState == SCOPE_PARKED)  // already parked
     {
+        // Important: SetParked() invokes WriteParkData() which saves state and position
+        // in ParkData.XML (this means parkstate will be overwritten with true)
         INDI::Telescope::SetParked(true);
         return true;
     }
@@ -545,8 +591,10 @@ bool LX200Skywalker::Park()
 bool LX200Skywalker::UnPark()
 {
     char response[TCS_RESPONSE_BUFFER_LENGTH];
-    if (sendQuery(":hW#", response, 0))
+    if (sendQuery(":hW#", response, TCS_NOANSWER))
     {
+        // Important: SetParked() invokes WriteParkData() which saves state and position
+        // in ParkData.XML (this means parkstate is overwritten with false!)
         INDI::Telescope::SetParked(false);
         if ((MountLocked()) && (MountTracking())) // TCS sets Mountlock & Tracking
         {
@@ -554,12 +602,12 @@ bool LX200Skywalker::UnPark()
             MountStateS[1].s = ISS_OFF;
             MountStateSP.s = IPS_OK;
             CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
-            // INDI::Telescope::SetParked(false) sets TrackState = SCOPE_IDLE !! (WHY?)
+            // INDI::Telescope::SetParked(false) sets TrackState = SCOPE_IDLE but TCS is tracking
             TrackStateS[TRACK_ON].s = ISS_ON;
             TrackStateS[TRACK_OFF].s = ISS_OFF;
             TrackStateSP.s = IPS_OK;
             INDI::Telescope::TrackState = SCOPE_TRACKING;
-            // INDI::Telescope::SetParked(false) sets ParkSP.S = IPS_IDLE !! (WHY?)
+            // INDI::Telescope::SetParked(false) sets ParkSP.S = IPS_IDLE but mount IS unparked!
             ParkSP.s = IPS_OK;
             IDSetSwitch(&MountStateSP, nullptr);
             IDSetSwitch(&TrackStateSP, nullptr);
@@ -575,6 +623,17 @@ bool LX200Skywalker::UnPark()
         return false;
 }
 
+bool LX200Skywalker::SavePark()
+{
+    char response[TCS_RESPONSE_BUFFER_LENGTH];
+    if (sendQuery(":SP#", response, TCS_NOANSWER))  // Controller sets parkposition and reboots
+        return true;
+    else
+    {
+        LOG_ERROR("Controller did not accept 'SetPark'.");
+        return false;
+    }
+}
 
 /*********************************************************************************
  * config file
@@ -790,7 +849,7 @@ bool LX200Skywalker::SetMountLock(bool enable)
     return retval;
 }
 
-bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and synced
+/*bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and synced
 {
     double parkAZ  = GetAxis1Park();
     double parkAlt = GetAxis2Park();
@@ -825,7 +884,7 @@ bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and syn
     LOGF_DEBUG("Syncing to parked coordinates RA (%s) DEC (%s)...", RAStr, DEStr);
 
     return (Sync(equatorialPos.ra / 15.0, equatorialPos.dec));
-}
+}*/
 
 bool LX200Skywalker::SetCurrentPark() // Current mount position is copied into park position fields
 {
