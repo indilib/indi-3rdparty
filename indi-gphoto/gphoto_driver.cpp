@@ -1021,11 +1021,15 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
 
         ioctl(gphoto->bulb_fd, TIOCMBIS, &RTS_flag);
 
-        usleep(20000);
+        //usleep(20000);
+        // JM 2019-11-18: Changed to 150ms as per the discussion here
+        // https://indilib.org/forum/ccds-dslrs/1564-mirror-lock-on-canon-with-serial-shutter.html
+        usleep(150000);
         ioctl(gphoto->bulb_fd, TIOCMBIC, &RTS_flag);
         close(gphoto->bulb_fd);
         gphoto->bulb_fd = -1;
-        usleep(msec * 1000 - 20000);
+        //usleep(msec * 1000 - 20000);
+        usleep(msec * 1000);
         return 0;
     }
 
@@ -2110,8 +2114,8 @@ int gphoto_capture_preview(gphoto_driver *gphoto, CameraFile *previewFile, char 
 
 int gphoto_start_preview(gphoto_driver *gphoto)
 {
-    // Olympus cameras support streaming but without viewfinder_widget
-    if (strcasestr(gphoto->manufacturer, "OLYMPUS"))
+    // Olympus & Sony cameras support streaming but without viewfinder_widget
+    if (strcasestr(gphoto->manufacturer, "OLYMPUS") || strcasestr(gphoto->manufacturer, "Sony Corporation"))
         return GP_OK;
 
     // If viewfinder not found, nothing to do
@@ -2126,8 +2130,8 @@ int gphoto_start_preview(gphoto_driver *gphoto)
 
 int gphoto_stop_preview(gphoto_driver *gphoto)
 {
-    // Olympus cameras support streaming but without viewfinder_widget
-    if (strcasestr(gphoto->manufacturer, "OLYMPUS"))
+    // Olympus & Sony cameras support streaming but without viewfinder_widget
+    if (strcasestr(gphoto->manufacturer, "OLYMPUS") || strcasestr(gphoto->manufacturer, "Sony Corporation"))
         return GP_OK;
 
     // If viewfinder not found, nothing to do

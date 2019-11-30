@@ -1,3 +1,9 @@
+indi-avalon (1.8) buster; urgency=medium
+
+  * Make mount command delay configurable
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sat, 19 Oct 2019 22:16:11 +0200
+
 indi-avalon (1.7) stretch; urgency=medium
 
   * Retrying once reading the motor state to capture timeouts
@@ -5,7 +11,7 @@ indi-avalon (1.7) stretch; urgency=medium
   * 50ms delay after pulse guiding command to avoid device flooding
   * Removing tracking speed NONE
 
- -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sun 29 Sep 2019 21:47:57 +0200
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sun, 29 Sep 2019 21:47:57 +0200
 
 indi-avalon (1.5) stretch; urgency=medium
 

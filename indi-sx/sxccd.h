@@ -4,6 +4,8 @@
   Copyright (c) 2012-2013 Cloudmakers, s. r. o.
   All Rights Reserved.
 
+  Bayer Support Added by Karl Rees, Copyright(c) 2019
+
   Code is based on SX INDI Driver by Gerry Rozema and Jasem Mutlaq
   Copyright(c) 2010 Gerry Rozema.
   Copyright(c) 2012 Jasem Mutlaq.
@@ -51,6 +53,8 @@ class SXCCD : public INDI::CCD
     ISwitchVectorProperty CoolerSP;
     ISwitch ShutterS[2];
     ISwitchVectorProperty ShutterSP;
+    ISwitch BayerS[2];
+    ISwitchVectorProperty BayerSP;
     float TemperatureRequest;
     float TemperatureReported;
     float ExposureTimeLeft;
@@ -84,6 +88,7 @@ class SXCCD : public INDI::CCD
     void GuideExposureTimerHit();
     void WEGuiderTimerHit();
     void NSGuiderTimerHit();
+    bool saveConfigItems(FILE *fp);
     IPState GuideWest(uint32_t ms);
     IPState GuideEast(uint32_t ms);
     IPState GuideNorth(uint32_t ms);
@@ -94,6 +99,7 @@ class SXCCD : public INDI::CCD
     bool HasShutter;
     bool HasST4Port;
     bool HasGuideHead;
+    bool HasColor;
     SXCCD(DEVICE device, const char *name);
     virtual ~SXCCD();
     void debugTriggered(bool enable);

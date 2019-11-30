@@ -19,7 +19,7 @@
 */
 
 #include "asi_focuser.h"
-#include "EAF_focuser.h"
+
 #include "indicom.h"
 
 #include <cmath>

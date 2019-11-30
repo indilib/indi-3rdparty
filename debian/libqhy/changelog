@@ -1,3 +1,21 @@
+libqhy (6.0.5) bionic; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 15 Nov 2019 10:00:00 +0300
+
+libqhy (6.0.4) bionic; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 23 Oct 2019 17:00:00 +0300
+
+libqhy (6.0.3) bionic; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 17 Oct 2019 17:00:00 +0300
+
 libqhy (6.0.2) bionic; urgency=medium
 
   * Upstream release.

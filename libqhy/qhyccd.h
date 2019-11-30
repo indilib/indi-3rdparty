@@ -27,9 +27,10 @@ typedef struct libusb_device_handle qhyccd_handle;
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
-#if defined(__linux__ )&&!defined (__ANDROID__)
+#if ( defined(__linux__ ) || defined(__APPLE__) ) && !defined (__ANDROID__)
 
 EXPORTC void STDCALL SetQHYCCDLogFunction(std::function<void(const std::string &message)> logFunction);
+EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 
 #endif
 

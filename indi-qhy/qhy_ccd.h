@@ -106,6 +106,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumber USBTrafficN[1];
         INumberVectorProperty USBTrafficNP;
 
+        INumber USBBufferN[1];
+        INumberVectorProperty USBBufferNP;
+
         ISwitchVectorProperty CoolerModeSP;
         ISwitch CoolerModeS[2];
         enum
@@ -191,7 +194,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subY = 0;
             uint32_t subW = 0;
             uint32_t subH = 0;
-        } effectiveROI;
+        } effectiveROI, overscanROI;
 
         // Gain
         double GainRequest = 1e6;

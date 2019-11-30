@@ -293,24 +293,28 @@ bool QHYCCD::initProperties()
     IUFillNumberVector(&GainNP, GainN, 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // CCD Offset
-    IUFillNumber(&OffsetN[0], "Offset", "Offset", "%.f", 0, 0, 1, 0);
+    IUFillNumber(&OffsetN[0], "OFFSET", "Offset", "%.f", 0, 0, 1, 0);
     IUFillNumberVector(&OffsetNP, OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", MAIN_CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
     // USB Speed
-    IUFillNumber(&SpeedN[0], "Speed", "Speed", "%.f", 0, 0, 1, 0);
+    IUFillNumber(&SpeedN[0], "SPEED", "Speed", "%.f", 0, 0, 1, 0);
     IUFillNumberVector(&SpeedNP, SpeedN, 1, getDeviceName(), "USB_SPEED", "USB Speed", MAIN_CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
     // Read Modes (initial support for QHY42Pro)
-    IUFillNumber(&ReadModeN[0], "Read Mode", "Read Mode", "%.f", 0, 1, 1, 0);
+    IUFillNumber(&ReadModeN[0], "MODE", "Mode", "%.f", 0, 1, 1, 0);
     IUFillNumberVector(&ReadModeNP, ReadModeN, 1, getDeviceName(), "READ_MODE", "Read Mode", MAIN_CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
-
     // USB Traffic
-    IUFillNumber(&USBTrafficN[0], "Speed", "Speed", "%.f", 0, 0, 1, 0);
+    IUFillNumber(&USBTrafficN[0], "TRAFFIC", "Speed", "%.f", 0, 0, 1, 0);
     IUFillNumberVector(&USBTrafficNP, USBTrafficN, 1, getDeviceName(), "USB_TRAFFIC", "USB Traffic", MAIN_CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
+
+    // USB Buffer
+    IUFillNumber(&USBBufferN[0], "BUFFER", "Bytes", "%.f", 512, 4096, 512, 512);
+    IUFillNumberVector(&USBBufferNP, USBBufferN, 1, getDeviceName(), "USB_BUFFER", "USB Buffer", MAIN_CONTROL_TAB,
                        IP_RW, 60, IPS_IDLE);
 
     // Cooler Mode
@@ -366,6 +370,8 @@ void QHYCCD::ISGetProperties(const char *dev)
 
         if (HasUSBTraffic)
             defineNumber(&USBTrafficNP);
+
+        defineNumber(&USBBufferNP);
     }
 }
 
@@ -555,6 +561,8 @@ bool QHYCCD::updateProperties()
             defineNumber(&USBTrafficNP);
         }
 
+        defineNumber(&USBBufferNP);
+
         // Let's get parameters now from CCD
         setupParams();
     }
@@ -599,6 +607,8 @@ bool QHYCCD::updateProperties()
 
         if (HasUSBTraffic)
             deleteProperty(USBTrafficNP.name);
+
+        deleteProperty(USBBufferNP.name);
     }
 
     return true;
@@ -955,6 +965,19 @@ bool QHYCCD::setupParams()
             LOGF_DEBUG("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effectiveROI.subX, effectiveROI.subY,
                        effectiveROI.subW, effectiveROI.subH);
         }
+
+        if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
+        {
+            imagew = effectiveROI.subW;
+            imageh = effectiveROI.subH;
+        }
+
+        rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
+        if (rc == QHYCCD_SUCCESS)
+        {
+            LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
+                       overscanROI.subW, overscanROI.subH);
+        }
     }
 
     SetCCDParams(imagew, imageh, bpp, pixelw, pixelh);
@@ -992,6 +1015,11 @@ int QHYCCD::SetTemperature(double temperature)
 bool QHYCCD::StartExposure(float duration)
 {
     unsigned int ret = QHYCCD_ERROR;
+
+    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
     if (HasStreaming() && Streamer->isBusy())
     {
@@ -1050,27 +1078,15 @@ bool QHYCCD::StartExposure(float duration)
     if (isSimulation())
         ret = QHYCCD_SUCCESS;
     else
-        ret = SetQHYCCDResolution(m_CameraHandle,
-                                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+        ret = SetQHYCCDResolution(m_CameraHandle, subX, subY, subW, subH);
+
     if (ret != QHYCCD_SUCCESS)
     {
-        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)",
-                  PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
-                  ret);
+        LOGF_INFO("Set QHYCCD ROI resolution (%d,%d) (%d,%d) failed (%d)", subX, subY, subW, subH, ret);
         return false;
     }
 
-    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d",
-               PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubY() / PrimaryCCD.getBinY(),
-               PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-               PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
+    LOGF_DEBUG("SetQHYCCDResolution x: %d y: %d w: %d h: %d", subX, subY, subW, subH);
 
     // Start to expose the frame
     if (isSimulation())
@@ -1592,6 +1608,19 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             return true;
         }
 
+        //////////////////////////////////////////////////////////////////////
+        /// USB Buffer Control
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, USBBufferNP.name))
+        {
+            IUUpdateNumber(&USBBufferNP, values, names, n);
+            SetQHYCCDBufferNumber(USBBufferN[0].value);
+            LOGF_INFO("USB Buffer updated to %.f", USBBufferN[0].value);
+            USBBufferNP.s = IPS_OK;
+            saveConfig(true, USBBufferNP.name);
+            IDSetNumber(&USBBufferNP, nullptr);
+            return true;
+        }
 
         //////////////////////////////////////////////////////////////////////
         /// Read Modes Control
@@ -1808,16 +1837,23 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
 
+    IUSaveConfigNumber(fp, &USBTrafficNP);
+
     return true;
 }
 
 bool QHYCCD::StartStreaming()
 {
+#if defined(__arm__) || defined(__aarch64__)
+    if (USBBufferN[0].value < USBBufferN[0].min * 4)
+        LOGF_INFO("For better streaming performance, set USB buffer to %.f or higher.", USBBufferN[0].min * 4);
+#endif
+
     int ret = 0;
     m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    uint32_t subX = PrimaryCCD.getSubX() / PrimaryCCD.getBinX();
-    uint32_t subY = PrimaryCCD.getSubY() / PrimaryCCD.getBinY();
+    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 

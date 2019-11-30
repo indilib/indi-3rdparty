@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <EAF_focuser.h>
+
 #include "indifocuser.h"
 
 #include <chrono>

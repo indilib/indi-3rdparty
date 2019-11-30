@@ -342,6 +342,9 @@
 
 #define DEVICETYPE_QHY411ERIS  4065
 
+#define DEVICETYPE_QHY367PROC  4066
+
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   4999
@@ -1270,6 +1273,5 @@
 
 #define RESET_USB_PIPE		1
 #define ABORT_USB_PIPE		2
-
 
 #endif
