@@ -1,3 +1,9 @@
+indi-avalon (1.9) buster; urgency=medium
+
+  * Bug fix, ignoring unsolicitated ge#
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Mon, 02 Dec 2019 17:06:15 +0100
+
 indi-avalon (1.8) buster; urgency=medium
 
   * Make mount command delay configurable
