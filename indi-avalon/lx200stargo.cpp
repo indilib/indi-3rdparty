@@ -1211,6 +1211,12 @@ bool LX200StarGo::ParseMotionState(char* state)
         };
         return true;
     }
+    else if (strcmp(state, "ge"))
+    {
+        // ignore ge#, which signals that a goto ended or stopped
+        LOG_DEBUG("Received motion state ge#");
+        return true;
+    }
     else
     {
         return false;
