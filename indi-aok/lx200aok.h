@@ -129,7 +129,7 @@ class LX200Skywalker : public LX200Telescope
         bool SetDefaultPark() override;
 
         //Skywalker stuff
-        //bool SyncDefaultPark();
+        bool SyncDefaultPark();
         bool SavePark();
         bool getSystemSlewSpeed (int *xx);
         bool setSystemSlewSpeed (int xx);

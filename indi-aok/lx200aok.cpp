@@ -612,9 +612,9 @@ bool LX200Skywalker::UnPark()
             IDSetSwitch(&MountStateSP, nullptr);
             IDSetSwitch(&TrackStateSP, nullptr);
             IDSetSwitch(&ParkSP, nullptr);
-            return true;
+            // return true;
             // Should we do a sync here to show pierside?
-            // return SyncDefaultPark();
+            return SyncDefaultPark();
         }
         else
             return false;
@@ -849,7 +849,7 @@ bool LX200Skywalker::SetMountLock(bool enable)
     return retval;
 }
 
-/*bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and synced
+bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and synced
 {
     double parkAZ  = GetAxis1Park();
     double parkAlt = GetAxis2Park();
@@ -884,7 +884,7 @@ bool LX200Skywalker::SetMountLock(bool enable)
     LOGF_DEBUG("Syncing to parked coordinates RA (%s) DEC (%s)...", RAStr, DEStr);
 
     return (Sync(equatorialPos.ra / 15.0, equatorialPos.dec));
-}*/
+}
 
 bool LX200Skywalker::SetCurrentPark() // Current mount position is copied into park position fields
 {
