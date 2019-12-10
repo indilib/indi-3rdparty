@@ -99,10 +99,18 @@
 #define CLOUD_FLAG_PERCENT  30
 #endif //USE_MLX_SENSOR
 
-
+#define IPS_OK    1
+#define IPS_ALERT 3
 
 /*END OFF CUSTOMITATION. YOU SHOULT NOT NEED TO CHANGE ANYTHING BELOW */
 
+/*
+ * Pin settings
+ */
+ #define PIN_STATUS_CLOUDY   3
+ #define PIN_STATUS_DEW      4
+ #define PIN_STATUS_FREZZY   5
+ #define PIN_STATUS_DAYLIGHT 6
 
 /*
    Firmata is a generic protocol for communicating with microcontrollers
@@ -394,9 +402,9 @@ void runMeteoStation() {
 
     Dew=dewPoint(Thr,HR);
     if (Thr<=Dew+2) {
-        dewing=1;
+        dewing=IPS_ALERT;
     } else {
-        dewing=0;
+        dewing=IPS_OK;
     }
 #else
   #ifndef USE_TSL_SENSOR
@@ -470,38 +478,38 @@ void runMeteoStation() {
   T = Tp;
 #endif  //T_MAIN
 
-  if (T < FREZZING) {
-    frezzing = 1;
-  } else {
-    frezzing = 0;
-  }
+    if (T<FREZZING) {
+      frezzing=IPS_ALERT;
+    } else {
+      frezzing=IPS_OK;
+    }
 }
 
 void checkMeteo() {
 
-  if (cloudy == 1) {
-    digitalWrite(PIN_TO_DIGITAL(3), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(3), LOW); // disable internal pull-ups
-  }
+    if (cloudy==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_CLOUDY), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_CLOUDY), LOW); // disable internal pull-ups
+    }
+  
+    if (dewing==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DEW), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DEW), LOW); // disable internal pull-ups
+    }
 
-  if (dewing == 1) {
-    digitalWrite(PIN_TO_DIGITAL(4), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(4), LOW); // disable internal pull-ups
-  }
-
-  if (frezzing == 1) {
-    digitalWrite(PIN_TO_DIGITAL(5), HIGH); // enable internal pull-ups
-  } else {
-    digitalWrite(PIN_TO_DIGITAL(5), LOW); // disable internal pull-ups
-  }
-
+    if (frezzing==IPS_ALERT) {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_FREZZY), HIGH); // enable internal pull-ups
+    } else {
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_FREZZY), LOW); // disable internal pull-ups
+    }
+  
 #ifdef USE_IRRADIANCE_SENSOR
     if (Light>MINIMUM_DAYLIGHT) {
-       digitalWrite(PIN_TO_DIGITAL(6), HIGH); // enable internal pull-ups
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DAYLIGHT), HIGH); // enable internal pull-ups
     } else {
-       digitalWrite(PIN_TO_DIGITAL(6), LOW); // disable internal pull-ups
+       digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DAYLIGHT), LOW); // disable internal pull-ups
     }
 #endif //USE_IRRADIANCE_SENSOR
 

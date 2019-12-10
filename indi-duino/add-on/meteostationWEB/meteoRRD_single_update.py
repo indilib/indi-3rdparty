@@ -29,7 +29,7 @@ def recv_indi_old():
         IR=indi.get_float(INDIDEVICE,"IR","IR")
         Tir=indi.get_float(INDIDEVICE,"IR","T")
         dew=indi.get_float(INDIDEVICE,"Meteo","DEW")
-        light=indi.get_float(INDIDEVICE,"LIGHT","LIGHT")
+        light=indi.get_float(INDIDEVICE,"SQM","SQM")
         T=indi.get_float(INDIDEVICE,"Meteo","T")
         clouds=indi.get_float(INDIDEVICE,"Meteo","clouds") 
         skyT=indi.get_float(INDIDEVICE,"Meteo","SkyT") 
@@ -61,84 +61,51 @@ def recv_indi():
 	T=vectorMeteo.get_element("WEATHER_TEMPERATURE").get_float()
         skyT=vectorMeteo.get_element("WEATHER_SKY_TEMPERATURE").get_float()
 
-        vectorLIGHT=indi.get_vector(INDIDEVICE,"LIGHT")
-	light=vectorLIGHT.get_element("LIGHT").get_float()
+        vectorSQM=indi.get_vector(INDIDEVICE,"Sky Quality")
+	sqm=vectorSQM.get_element("SQM").get_float()
    
         statusVector=indi.get_vector(INDIDEVICE,"WEATHER_STATUS")
 	cloudFlag=int(statusVector.get_element("clouds").is_ok())
 	dewFlag=int(statusVector.get_element("dew").is_ok())
 	frezzingFlag=int(statusVector.get_element("frezzing").is_ok())
   
-	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp),("Dew",dew),("Light",light),
+	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp),("Dew",dew),("SQM",sqm),
            ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),
            ("frezzingFlag",frezzingFlag))
 
 
 
 ############# MAIN #############
-
-print "Starting UPDATER"
-## Write configuration javascript
-fi=open(CHARTPATH+"meteoconfig.js","w")
-fi.write("var altitude=%s\n" % ALTITUDE)
-fi.write("var sitename=\"%s\"\n" % SITENAME)
-fi.write("var INDISERVER=\"%s\"\n" % INDISERVER)
-fi.write("var INDIPORT=%s\n" % INDIPORT)
-fi.write("var INDIDEVICE=\"%s\"\n" % INDIDEVICE)
-fi.write("var INDIDEVICEPORT=\"%s\"\n" % INDIDEVICEPORT)
-fi.write("var OWNERNAME=\"%s\"\n" % OWNERNAME)
-fi.close()
-
-#connect ones to configure the port
 INDIPORT=int(INDIPORT)
+
 indi=indiclient(INDISERVER,INDIPORT)
-indi.set_and_send_text(INDIDEVICE,"DEVICE_PORT","PORT",INDIDEVICEPORT)
-vector=indi.get_vector(INDIDEVICE,"CONNECTION")
-vector.set_by_elementname("CONNECT")
-indi.send_vector(vector)
-print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
-time.sleep(5)
+#indi.tell()
+indi.process_events()
+now=time.localtime()
+json_dict={"TIME":time.strftime("%c",now)}
+data=recv_indi()	
+updateString="N"
+for d in data:
+	#print d[0],d[1]
+	updateString=updateString+":"+str(d[1])
+	json_dict[d[0]]=int(d[1]*100)/100.
+#print updateString
+ret = rrdtool.update(RRDFILE,updateString);
+if ret:
+	print rrdtool.error() 
+x = simplejson.dumps(json_dict)
+#print x
+fi=open(CHARTPATH+"RTdata.json","w")
+fi.write(x)
+fi.close()
 indi.quit()
-time.sleep(1)
-
-
-#connect an retrive info
-while (True):
-  try:
-	
-	#print "Garbage collector: collected %d objects." % (collected)
-	indi=indiclient(INDISERVER,INDIPORT)
-	#indi.tell()
-	indi.process_events()
-	now=time.localtime()
-	json_dict={"TIME":time.strftime("%c",now)}
-    	data=recv_indi()	
-	updateString="N"
-	for d in data:
-		#print d[0],d[1]
-		updateString=updateString+":"+str(d[1])
-		json_dict[d[0]]=int(d[1]*100)/100.
-        #print updateString
- 	ret = rrdtool.update('meteo.rrd',updateString);
- 	if ret:
- 		print rrdtool.error() 
-        x = simplejson.dumps(json_dict)
-	#print x
-        fi=open(CHARTPATH+"RTdata.json","w")
-	fi.write(x)
-	fi.close()
-	indi.quit()
-	del indi
-        del data
-	del json_dict 
-	collected = gc.collect()
-	#h = hpy()
-	#print h.heap()
-
-	time.sleep(10)
-  except:
-	print "UPDATER FAIL"
-	time.sleep(10)
+del indi
+del data
+del json_dict 
+collected = gc.collect()
+#print "Garbage collector: collected %d objects." % (collected)
+#h = hpy()
+#print h.heap()
 
 
 

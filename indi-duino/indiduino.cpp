@@ -328,9 +328,10 @@ void indiduino::TimerHit()
     }
 
     time_t sec_since_reply = sf->secondsSinceVersionReply();
-    if (sec_since_reply > 30)
+    time_t max_delay = static_cast<time_t>(5*POLLMS < 30000 ? 30 : 5*POLLMS/1000);
+    if (sec_since_reply > max_delay)
     {
-        LOG_ERROR("No reply from the device for 30 sec, disconnecting");
+        LOGF_ERROR("No reply from the device for %d secs, disconnecting", max_delay);
         setConnected(false, IPS_ALERT);
         Disconnect();
         return;
@@ -382,8 +383,6 @@ bool indiduino::initProperties()
 
     DefaultDevice::initProperties();
 
-    setDefaultPollingPeriod(500);
-
     serialConnection = new Connection::Serial(this);
     serialConnection->registerHandshake([&]() { return Handshake(); });
     serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
@@ -392,6 +391,7 @@ bool indiduino::initProperties()
     registerConnection(serialConnection);
 
     addDebugControl();
+    addPollPeriodControl();
     return true;
 }
 
@@ -551,7 +551,8 @@ bool indiduino::ISNewNumber(const char *dev, const char *name, double values[], 
     }
     else
     {
-        return false;
+        //  Nothing changed, so pass it to the parent
+        return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
     }
 }
 
@@ -688,7 +689,7 @@ bool indiduino::Connect()
     {
         if (sf->initState() != 0)
         {
-            LOG_ERROR("Failed to get Erduino state");
+            LOG_ERROR("Failed to get Arduino state");
             IDSetSwitch(getSwitch("CONNECTION"), "Fail to get Arduino state");
             delete sf;
             this->serialConnection->Disconnect();
