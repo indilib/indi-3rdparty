@@ -1,5 +1,6 @@
-indi-aok (0.8) bionic; urgency=low
-
+indi-aok (0.9) bionic; urgency=low
+  * implemented park position management
+  * corrected readout of firmwareserial
   * renamed driver to product line (AOK Skywalker)
   * removed real unpark() at start: TCS unparks automatically
 
