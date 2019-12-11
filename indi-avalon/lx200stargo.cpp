@@ -507,6 +507,7 @@ bool LX200StarGo::ReadScopeStatus()
         return true;
     }
 
+    LOG_DEBUG("################################ ReadScopeStatus (start) ################################");
     int x, y;
 
     if (! getMotorStatus(&x, &y))
@@ -580,6 +581,8 @@ bool LX200StarGo::ReadScopeStatus()
         LOG_ERROR("Cannot determine scope status, failed to determine pier side.");
         return false;
     }
+
+    LOG_DEBUG("################################ ReadScopeStatus (finish) ###############################");
 
     if (focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
         return focuserAux1.get()->ReadFocuserStatus();
@@ -1209,12 +1212,6 @@ bool LX200StarGo::ParseMotionState(char* state)
                 CurrentSlewRate = SLEW_MAX;
                 break;
         };
-        return true;
-    }
-    else if (strcmp(state, "ge") == 0)
-    {
-        // ignore ge#, which signals that a goto ended or stopped
-        LOG_DEBUG("Received motion state 'ge#' (goto finished or stopped)");
         return true;
     }
     else
