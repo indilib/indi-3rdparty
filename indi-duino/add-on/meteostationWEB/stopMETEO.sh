@@ -21,7 +21,10 @@ fi
 
 unset IFS
 
-killall meteoRRD_updater.py
-killall meteoRRD_graph.py
-killall sounding.py
-killall meteoRRD_MaxMinAvg.py
+if [ "$UPDATE" != "cron" ];
+then
+    killall meteoRRD_updater.py
+    killall meteoRRD_graph.py
+    killall sounding.py
+    killall meteoRRD_MaxMinAvg.py
+fi

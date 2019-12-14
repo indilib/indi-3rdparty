@@ -105,6 +105,9 @@ REMOTEKILLEXEC="ssh -f $SSHTUNNEL '$KILLEXEC' $EXECNOOUTPUT"
 #6). Remote tunnel only
 INDIREMOTEEXEC="$SSH -fN -o ExitOnForwardFailure=yes $SSHTUNNEL"
 
+##### UPDATE METHOD #####
+# Select "cron" if a cron job updates the data regularly
+UPDATE="cron"
 
 ##### SITE RELATED ####
 OWNERNAME="Magnus W. Eriksen"

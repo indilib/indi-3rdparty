@@ -23,15 +23,20 @@ fi
 
 unset IFS
 
-if [ -f "meteo.rrd" ];
+if [ -f $RRDFILE ];
 then
    echo "RRD file exists."
 else
    echo "RRD file exists does not exist. Creating"
    ./meteoRRD_createRRD.py $EXECNOOUTPUT
 fi
-./meteoRRD_updater.py $EXECNOOUTPUT &
-./meteoRRD_graph.py $EXECNOOUTPUT &
-./sounding.py $EXECNOOUTPUT &
-./meteoRRD_MaxMinAvg.py $EXECNOOUTPUT &
+
+if [ "$UPDATE" != "cron" ];
+then
+    echo "Starting python scripts for data update..."
+    ./meteoRRD_updater.py $EXECNOOUTPUT &
+    ./meteoRRD_graph.py $EXECNOOUTPUT &
+    ./sounding.py $EXECNOOUTPUT &
+    ./meteoRRD_MaxMinAvg.py $EXECNOOUTPUT &
+fi
 
