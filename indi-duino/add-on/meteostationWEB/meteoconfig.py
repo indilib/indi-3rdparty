@@ -117,6 +117,7 @@ SOUNDINGSTATION="ENZV"
 ##### RRD RELATED #####
 #PATH TO GRAPHs
 CHARTPATH="./html/CHART/"
+RRDFILE="./meteo.rrd"
 #EUMETSAT lastimagen. Choose one from:
 #http://oiswww.eumetsat.org/IPPS/html/latestImages.html
 #This is nice but only work at daylight time:

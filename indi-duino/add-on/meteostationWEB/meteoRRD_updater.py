@@ -119,7 +119,7 @@ while (True):
 		updateString=updateString+":"+str(d[1])
 		json_dict[d[0]]=int(d[1]*100)/100.
         #print updateString
- 	ret = rrdtool.update('meteo.rrd',updateString);
+ 	ret = rrdtool.update(RRDFILE,updateString);
  	if ret:
  		print rrdtool.error() 
         x = simplejson.dumps(json_dict)
