@@ -21,7 +21,7 @@ def writeJson(consolidation,resolution):
    #print now,start,end
    filename=CHARTPATH+consolidation+"values.json"
    try:
-	ret = rrdtool.fetch('meteo.rrd',consolidation,"--start",str(start),"--end",str(end),"--resolution",str(res));
+	ret = rrdtool.fetch(RRDFILE,consolidation,"--start",str(start),"--end",str(end),"--resolution",str(res));
 	if ret:
 	 	print rrdtool.error()
 	#print ret

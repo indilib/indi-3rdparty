@@ -133,9 +133,13 @@ def graphs(time):
 	 "LINE1:skyT#"+blue+":Corrected Sky T",
 	 "LINE1:IR#"+orange+":Actual Sky T",
 	 "LINE1:Thr#"+red+":Ambient T",
+	 "LINE1:Tc#"+white+":Correction",
+	 "HRULE:0#00FFFFAA:ZERO",
+	 "COMMENT:\\n",
+	 "GPRINT:skyT:AVERAGE:Avg Sky Temp\: %6.2lf %S\\r")
 
 
-def recv_indi_old():
+def recv_indi_old(indi):
 	tim=time.localtime()
         HR=indi.get_float(INDIDEVICE,"HR","HR")
         Thr=indi.get_float(INDIDEVICE,"HR","T")
@@ -156,7 +160,7 @@ def recv_indi_old():
            ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),
            ("frezzingFlag",frezzingFlag))
 
-def recv_indi():
+def recv_indi(indi):
 	tim=time.localtime()
         vectorHR=indi.get_vector(INDIDEVICE,"Humidity")
 	HR=vectorHR.get_element("HR").get_float()
@@ -188,3 +192,28 @@ def recv_indi():
            ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),
            ("frezzingFlag",frezzingFlag))
 
+
+def connect(indi):
+    #connect ones to configure the port
+    connection = indi.get_vector(INDIDEVICE, "CONNECTION")
+    if connection.get_element("CONNECT").get_active() == False:
+        # set the configured port
+        indi.set_and_send_text(INDIDEVICE,"DEVICE_PORT","PORT",INDIDEVICEPORT)
+
+        # connect driver
+        connection.set_by_elementname("CONNECT")
+        indi.send_vector(connection)
+        print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
+        time.sleep(5)
+
+def init():
+        ## Write configuration javascript
+        fi=open(CHARTPATH+"meteoconfig.js","w")
+        fi.write("var altitude=%s\n" % ALTITUDE)
+        fi.write("var sitename=\"%s\"\n" % SITENAME)
+        fi.write("var INDISERVER=\"%s\"\n" % INDISERVER)
+        fi.write("var INDIPORT=%s\n" % INDIPORT)
+        fi.write("var INDIDEVICE=\"%s\"\n" % INDIDEVICE)
+        fi.write("var INDIDEVICEPORT=\"%s\"\n" % INDIDEVICEPORT)
+        fi.write("var OWNERNAME=\"%s\"\n" % OWNERNAME)
+        fi.close()

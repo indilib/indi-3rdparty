@@ -105,6 +105,9 @@ REMOTEKILLEXEC="ssh -f $SSHTUNNEL '$KILLEXEC' $EXECNOOUTPUT"
 #6). Remote tunnel only
 INDIREMOTEEXEC="$SSH -fN -o ExitOnForwardFailure=yes $SSHTUNNEL"
 
+##### UPDATE METHOD #####
+# Select "cron" if a cron job updates the data regularly
+UPDATE="cron"
 
 ##### SITE RELATED ####
 OWNERNAME="Magnus W. Eriksen"
@@ -117,6 +120,7 @@ SOUNDINGSTATION="ENZV"
 ##### RRD RELATED #####
 #PATH TO GRAPHs
 CHARTPATH="./html/CHART/"
+RRDFILE="./meteo.rrd"
 #EUMETSAT lastimagen. Choose one from:
 #http://oiswww.eumetsat.org/IPPS/html/latestImages.html
 #This is nice but only work at daylight time:
