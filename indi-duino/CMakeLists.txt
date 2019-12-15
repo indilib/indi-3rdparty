@@ -7,7 +7,7 @@ set(FIRMATA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/src/")
 include(GNUInstallDirs)
 
 set (DUINO_VERSION_MAJOR 0)
-set (DUINO_VERSION_MINOR 4)
+set (DUINO_VERSION_MINOR 5)
  
 find_package(INDI REQUIRED)
 
