@@ -397,8 +397,8 @@ void runMeteoStation() {
 
 #ifdef USE_MLX_SENSOR
   if (mlxSuccess) {
-    Tir = mlx.readAmbientTempC();
-    IR = mlx.readObjectTempC();
+    Tir = mlx.readAmbientTempC() / 100.0;
+    IR = mlx.readObjectTempC() / 100.0;
   } else if (mlxSuccess = mlx.begin()) {
     // Retry mlx.begin(), and clear MLX sensor fail flag
     digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_MLX), STATUS_OK);
