@@ -15,7 +15,7 @@ fi
 
 libgphoto_ppa="/etc/apt/sources.list.d/mutlaqja-ubuntu-libgphoto2-$(lsb_release -sc).list"
 
-if [ ! -f  $libgphoto_ppa ] ;
+if `lsb_release -i | grep -q "Ubuntu"` && [ ! -f  $libgphoto_ppa ] ;
 then
     echo "libgphoto2 PPA is not installed. Will enable it now..."
     apt-add-repository -y ppa:mutlaqja/libgphoto2
