@@ -1,3 +1,12 @@
+libasi (1.2) buster; urgency=medium
+
+  * ASICAM 1.14.1119 release:
+    V1, 14, 1119 2019.11.19
+    Add new cameras
+    Fix some bug
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 16 Dec 2019 10:30:33 +0200
+
 libasi (1.1) buster; urgency=medium
 
   * ASICAM 1.14.1108 release:
