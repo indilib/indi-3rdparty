@@ -242,10 +242,10 @@ bool SXCCD::initProperties()
     IUFillSwitchVector(&ShutterSP, ShutterS, 2, getDeviceName(), "CCD_SHUTTER", "Shutter", OPTIONS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
     //Adding switch to let user indicate whether the CCD has a Bayer filter, since I do not know which models beyond UltraStar C actually do
-    IUFillSwitch(&BayerS[0], "BAYER_TRUE", "True", ISS_OFF);
-    IUFillSwitch(&BayerS[1], "BAYER_FALSE", "False", ISS_ON);
-    IUFillSwitchVector(&BayerSP, BayerS, 2, getDeviceName(), "CCD_BAYER_FILTER", "Bayer Filter", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY,
-                       60, IPS_IDLE);
+    //    IUFillSwitch(&BayerS[0], "BAYER_TRUE", "True", ISS_OFF);
+    //    IUFillSwitch(&BayerS[1], "BAYER_FALSE", "False", ISS_ON);
+    //    IUFillSwitchVector(&BayerSP, BayerS, 2, getDeviceName(), "CCD_BAYER_FILTER", "Bayer Filter", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY,
+    //                       60, IPS_IDLE);
     IUSaveText(&BayerT[2], "RGGB");
 
     //  we can expose less than 0.01 seconds at a time
@@ -265,9 +265,9 @@ bool SXCCD::updateProperties()
             defineSwitch(&CoolerSP);
         if (HasShutter)
             defineSwitch(&ShutterSP);
-        if (HasColor) {
-            defineSwitch(&BayerSP);
-        }
+        //        if (HasColor) {
+        //            defineSwitch(&BayerSP);
+        //        }
     }
     else
     {
@@ -275,9 +275,9 @@ bool SXCCD::updateProperties()
             deleteProperty(CoolerSP.name);
         if (HasShutter)
             deleteProperty(ShutterSP.name);
-        if (HasColor) {
-            deleteProperty(BayerSP.name);
-        }
+        //        if (HasColor) {
+        //            deleteProperty(BayerSP.name);
+        //        }
     }
     return true;
 }
@@ -344,6 +344,9 @@ bool SXCCD::Connect()
 
             uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN;
 
+            if (HasColor)
+                cap |= CCD_HAS_BAYER;
+
             if (HasCooler)
                 cap |= CCD_HAS_COOLER;
 
@@ -393,7 +396,7 @@ void SXCCD::SetupParms()
         params.height = 2016;
     }
     SetCCDParams(params.width, params.height, params.bits_per_pixel, params.pix_width, params.pix_height);
- 
+
     int nbuf = params.width * params.height;
     if (params.bits_per_pixel == 16)
         nbuf *= 2;
@@ -596,10 +599,13 @@ void SXCCD::ExposureTimerHit()
                 }
             }
             else if (isICX453)
-            {   rc = sxLatchPixels(handle, CCD_EXP_FLAGS_FIELD_BOTH, 0, subX * 2, subY / 2, subW * 2, subH / 2, binX, binY);
+            {
+                rc = sxLatchPixels(handle, CCD_EXP_FLAGS_FIELD_BOTH, 0, subX * 2, subY / 2, subW * 2, subH / 2, binX, binY);
                 if (rc)
-                {   if (binX == 1 && binY == 1)
-                    {   rc = sxReadPixels(handle, evenBuf, size * 2);
+                {
+                    if (binX == 1 && binY == 1)
+                    {
+                        rc = sxReadPixels(handle, evenBuf, size * 2);
                         if (rc)
                         {
                             uint16_t *buf16 = (uint16_t *)buf;
@@ -842,29 +848,29 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
         IDSetNumber(&TemperatureNP, nullptr);
         result = true;
     }
-    else if (strcmp(name, BayerSP.name) == 0)
-    {
-        IUUpdateSwitch(&BayerSP, states, names, n);
-        BayerSP.s = IPS_OK;
-        IDSetSwitch(&BayerSP, nullptr);
-        if (BayerS[0].s == ISS_ON) {
-            SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-            defineText(&BayerTP);
-        }
-        else {
-            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-            deleteProperty(BayerTP.name);
-        }
-        result = true;
-    }
+    //    else if (strcmp(name, BayerSP.name) == 0)
+    //    {
+    //        IUUpdateSwitch(&BayerSP, states, names, n);
+    //        BayerSP.s = IPS_OK;
+    //        IDSetSwitch(&BayerSP, nullptr);
+    //        if (BayerS[0].s == ISS_ON) {
+    //            SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+    //            defineText(&BayerTP);
+    //        }
+    //        else {
+    //            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+    //            deleteProperty(BayerTP.name);
+    //        }
+    //        result = true;
+    //    }
     else
         result = INDI::CCD::ISNewSwitch(dev, name, states, names, n);
     return result;
 }
 
-bool SXCCD::saveConfigItems(FILE *fp)
-{
-    INDI::CCD::saveConfigItems(fp);
-    IUSaveConfigSwitch(fp, &BayerSP);
-    return true;
-}
+//bool SXCCD::saveConfigItems(FILE *fp)
+//{
+//    INDI::CCD::saveConfigItems(fp);
+//    IUSaveConfigSwitch(fp, &BayerSP);
+//    return true;
+//}
