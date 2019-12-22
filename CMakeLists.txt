@@ -102,6 +102,7 @@ option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
+option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 
 find_package(FFmpeg)
 
@@ -215,6 +216,11 @@ endif(WITH_MAXDOME)
 if (WITH_NEXDOME)
 add_subdirectory(indi-nexdome)
 endif(WITH_NEXDOME)
+
+## Talon6
+if (WITH_TALON6)
+add_subdirectory(indi-talon6)
+endif(WITH_TALON6)
 
 ## SpectraCyber
 if (WITH_SPECTRACYBER)
