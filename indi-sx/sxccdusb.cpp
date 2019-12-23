@@ -236,7 +236,8 @@ bool sxIsColor(short model)
 {
     //return model & 0x80;
     // JM 2019-12-22 This mask should detect color cameras
-    return model & 0x200;
+    DEBUG(log(true, "Checking model %d type: %s", model, (model & 0x200) ? "Color camera" : "Mono camera"));
+    return (model & 0x200);
 }
 
 bool sxIsICX453(short model)

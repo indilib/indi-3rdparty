@@ -226,13 +226,15 @@ void SXCCD::simulationTriggered(bool enable)
 
 const char *SXCCD::getDefaultName()
 {
-    return (char *)"SX CCD";
+    return "SX CCD";
 }
 
 bool SXCCD::initProperties()
 {
     INDI::CCD::initProperties();
+
     addDebugControl();
+
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "On", ISS_OFF);
     IUFillSwitch(&CoolerS[1], "COOLER_OFF", "Off", ISS_ON);
     IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", OPTIONS_TAB, IP_RW, ISR_1OFMANY,
@@ -241,6 +243,7 @@ bool SXCCD::initProperties()
     IUFillSwitch(&ShutterS[1], "SHUTTER_OFF", "Manual close", ISS_ON);
     IUFillSwitchVector(&ShutterSP, ShutterS, 2, getDeviceName(), "CCD_SHUTTER", "Shutter", OPTIONS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
+
     //Adding switch to let user indicate whether the CCD has a Bayer filter, since I do not know which models beyond UltraStar C actually do
     //    IUFillSwitch(&BayerS[0], "BAYER_TRUE", "True", ISS_OFF);
     //    IUFillSwitch(&BayerS[1], "BAYER_FALSE", "False", ISS_ON);
@@ -333,14 +336,24 @@ bool SXCCD::Connect()
         if (rc >= 0)
         {
             struct t_sxccd_params params;
-            model             = sxGetCameraModel(handle);
+            model = sxGetCameraModel(handle);
+            LOGF_DEBUG("Camera model: %u", model);
             sxGetCameraParams(handle, 0, &params);
 
             HasGuideHead = params.extra_caps & SXCCD_CAPS_GUIDER;
+            LOGF_DEBUG("Camera guide head: %s", HasGuideHead ? "Yes" : "No");
+
             HasCooler    = params.extra_caps & SXUSB_CAPS_COOLER;
+            LOGF_DEBUG("Camera cooler: %s", HasCooler ? "Yes" : "No");
+
             HasShutter   = params.extra_caps & SXUSB_CAPS_SHUTTER;
+            LOGF_DEBUG("Camera shutter: %s", HasShutter ? "Yes" : "No");
+
             HasST4Port   = params.extra_caps & SXCCD_CAPS_STAR2K;
+            LOGF_DEBUG("Camera ST4 Port: %s", HasGuideHead ? "Yes" : "No");
+
             HasColor     = sxIsColor(model);
+            LOGF_DEBUG("Camera color: %s", HasGuideHead ? "Yes" : "No");
 
             uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN;
 
