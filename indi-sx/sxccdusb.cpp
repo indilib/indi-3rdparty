@@ -234,10 +234,12 @@ bool sxIsInterlaced(short model)
 
 bool sxIsColor(short model)
 {
+    // JM 2019-12-24: This cannot be used to detect color camera as it fails
+    // to detect some cameras like M25C
     //return model & 0x80;
-    // JM 2019-12-22 This mask should detect color cameras
-    DEBUG(log(true, "Checking model %d type: %s", model, (model & 0x200) ? "Color camera" : "Mono camera"));
-    return (model & 0x200);
+
+    // From checking SX sources, appears anything above 0x50 is color
+    return (model > 0x50);
 }
 
 bool sxIsICX453(short model)
