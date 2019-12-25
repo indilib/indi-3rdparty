@@ -9,10 +9,14 @@ include(GNUInstallDirs)
 set (DUINO_VERSION_MAJOR 0)
 set (DUINO_VERSION_MINOR 6)
  
+set (WEATHERRADIO_VERSION_MAJOR 0)
+set (WEATHERRADIO_VERSION_MINOR 1)
+
 find_package(INDI REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_duino.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_duino.xml )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_weatherradio.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -55,6 +59,16 @@ target_link_libraries(indi_duino ${INDI_LIBRARIES} firmata)
 
 install(TARGETS indi_duino RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_duino.xml DESTINATION ${INDI_DATA_DIR})
+##################### meteoradio #####################
+set(weatherradio_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/weatherradio.cpp
+   )
+
+add_executable(indi_weatherradio ${weatherradio_SRCS})
+target_link_libraries(indi_weatherradio ${INDI_LIBRARIES})
+
+install(TARGETS indi_weatherradio RUNTIME DESTINATION bin)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml DESTINATION ${INDI_DATA_DIR})
 ################### DEVICES XML  #####################
 add_subdirectory(devices)
 
