@@ -28,9 +28,13 @@
 
 #include <sys/stat.h>
 
+#include "connectionplugins/connectionserial.h"
+#include "indicom.h"
+
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
+#define MAX_WEATHERBUFFER 256
 
 /**************************************************************************************
 **
@@ -89,6 +93,15 @@ bool WeatherRadio::initProperties()
 
     addConfigurationControl();
     addPollPeriodControl();
+    addDebugControl();
+
+    serialConnection = new Connection::Serial(this);
+    serialConnection->registerHandshake([&]()
+    {
+        PortFD = serialConnection->getPortFD();
+        return Handshake();
+    });
+    registerConnection(serialConnection);
 
     return true;
 }
@@ -147,14 +160,61 @@ bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 /**************************************************************************************
 **
 ***************************************************************************************/
+bool WeatherRadio::Handshake()
+{
+    char data[MAX_WEATHERBUFFER] = {0};
+    bool result = readWeatherData(data);
+
+    return result;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+void WeatherRadio::TimerHit()
+{
+    if (isConnected())
+    {
+        char data[MAX_WEATHERBUFFER] = {0};
+        if (readWeatherData(data) == true)
+            LOGF_DEBUG("Weather data: %s", data);
+
+        SetTimer(POLLMS);
+    }
+    return;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool WeatherRadio::readWeatherData(char *data)
+{
+    int n_bytes;
+    int returnCode = tty_read_section(PortFD, data, '\n', 0, &n_bytes);
+
+    if (returnCode == TTY_OK)
+        return true;
+    else
+    {
+        char errorString[MAXRBUF];
+        tty_error_msg(returnCode, errorString, MAXRBUF);
+        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
+        return false;
+    }
+}
+
+
+/**************************************************************************************
+**
+***************************************************************************************/
 bool WeatherRadio::Connect()
 {
-    return true;
+    return DefaultDevice::Connect();
 }
 
 bool WeatherRadio::Disconnect()
 {
-    return true;
+    return DefaultDevice::Disconnect();
 }
 
 const char *WeatherRadio::getDefaultName()

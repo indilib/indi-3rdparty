@@ -37,9 +37,21 @@ class WeatherRadio : public INDI::DefaultDevice
     virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
                            char *formats[], char *names[], int n);
 
-  private:
+    /** \brief perform handshake with device to check communication */
+    virtual bool Handshake();
+
+    /** \brief Called when setTimer() time is up */
+    virtual void TimerHit();
+
+protected:
+    bool readWeatherData(char *data);
+
+private:
     const char *getDefaultName();
     virtual bool initProperties();
     virtual bool Connect();
     virtual bool Disconnect();
+
+    int PortFD                           = -1;
+    Connection::Serial *serialConnection { nullptr };
 };
