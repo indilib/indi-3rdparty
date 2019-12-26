@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "defaultdevice.h"
+#include "indiweather.h"
 
-class WeatherRadio : public INDI::DefaultDevice
+class WeatherRadio : public INDI::Weather
 {
   public:
     WeatherRadio() = default;
@@ -51,7 +51,4 @@ private:
     virtual bool initProperties();
     virtual bool Connect();
     virtual bool Disconnect();
-
-    int PortFD                           = -1;
-    Connection::Serial *serialConnection { nullptr };
 };

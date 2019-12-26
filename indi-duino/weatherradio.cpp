@@ -35,6 +35,7 @@
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 256
+#define MAX_WAIT 2
 
 /**************************************************************************************
 **
@@ -89,19 +90,12 @@ void ISSnoopDevice(XMLEle *root)
 **************************************************************************************/
 bool WeatherRadio::initProperties()
 {
-    DefaultDevice::initProperties();
+    INDI::Weather::initProperties();
 
     addConfigurationControl();
     addPollPeriodControl();
     addDebugControl();
-
-    serialConnection = new Connection::Serial(this);
-    serialConnection->registerHandshake([&]()
-    {
-        PortFD = serialConnection->getPortFD();
-        return Handshake();
-    });
-    registerConnection(serialConnection);
+    setWeatherConnection(CONNECTION_SERIAL);
 
     return true;
 }
@@ -114,7 +108,7 @@ void WeatherRadio::ISGetProperties(const char *dev)
     static int configLoaded = 0;
 
     // Ask the default driver first to send properties.
-    INDI::DefaultDevice::ISGetProperties(dev);
+    INDI::Weather::ISGetProperties(dev);
 
     // If no configuration is load before, then load it now.
     if (configLoaded == 0)
@@ -129,7 +123,7 @@ void WeatherRadio::ISGetProperties(const char *dev)
 ***************************************************************************************/
 bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    return DefaultDevice::ISNewText(dev, name, texts, names, n);
+    return INDI::Weather::ISNewText(dev, name, texts, names, n);
 }
 
 /**************************************************************************************
@@ -137,7 +131,7 @@ bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], c
 ***************************************************************************************/
 bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    return DefaultDevice::ISNewNumber(dev, name, values, names, n);
+    return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
 
 /**************************************************************************************
@@ -145,7 +139,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
 ***************************************************************************************/
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    return DefaultDevice::ISNewSwitch(dev, name, states, names, n);
+    return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
 }
 
 /**************************************************************************************
@@ -154,7 +148,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
                                char *formats[], char *names[], int n)
 {
-    return DefaultDevice::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    return INDI::Weather::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 /**************************************************************************************
@@ -190,7 +184,7 @@ void WeatherRadio::TimerHit()
 bool WeatherRadio::readWeatherData(char *data)
 {
     int n_bytes;
-    int returnCode = tty_read_section(PortFD, data, '\n', 0, &n_bytes);
+    int returnCode = tty_read_section(PortFD, data, '\n', MAX_WAIT, &n_bytes);
 
     if (returnCode == TTY_OK)
         return true;
@@ -209,12 +203,12 @@ bool WeatherRadio::readWeatherData(char *data)
 ***************************************************************************************/
 bool WeatherRadio::Connect()
 {
-    return DefaultDevice::Connect();
+    return INDI::Weather::Connect();
 }
 
 bool WeatherRadio::Disconnect()
 {
-    return DefaultDevice::Disconnect();
+    return INDI::Weather::Disconnect();
 }
 
 const char *WeatherRadio::getDefaultName()
