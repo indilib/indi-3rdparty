@@ -27,7 +27,7 @@
 #include <algorithm>
 #include <math.h>
 
-#define TEMP_THRESHOLD       0.2   /* Differential temperature threshold (C)*/
+#define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
 #define MAX_DEVICES          4     /* Max device cameraCount */
 
 //NB Disable for real driver
@@ -1808,9 +1808,17 @@ void QHYCCD::updateTemperature()
 
     if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - m_TemperatureRequest) <= TEMP_THRESHOLD)
     {
-        TemperatureN[0].value = m_TemperatureRequest;
+        TemperatureN[0].value = ccdtemp;
         TemperatureNP.s       = IPS_OK;
     }
+
+    // Restart regulation if needed.
+    else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > TEMP_THRESHOLD)
+    {
+        TemperatureN[0].value = ccdtemp;
+        TemperatureNP.s       = IPS_BUSY;
+    }
+
 
     IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&CoolerNP, nullptr);
