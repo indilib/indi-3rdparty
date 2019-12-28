@@ -15,21 +15,6 @@
     <defSwitch name="BLACK" label="Black (new)">On</defSwitch>
   </defSwitchVector>
 
-
-  <defSwitchVector device="AAG Cloud Watcher NG" name="cloudConditions" label="Cloud Conditions" group="Weather Conditions" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
-    <defSwitch name="clear" label="Clear">Off</defSwitch>
-    <defSwitch name="cloudy" label="Cloudy">Off</defSwitch>
-    <defSwitch name="overcast" label="Overcast">Off</defSwitch>
-    <defSwitch name="unknown" label="Unknown">Off</defSwitch>      
-  </defSwitchVector>
-  
-  <defSwitchVector device="AAG Cloud Watcher NG" name="rainConditions" label="Rain Conditions" group="Weather Conditions" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
-    <defSwitch name="dry" label="Dry">Off</defSwitch>
-    <defSwitch name="wet" label="Wet">Off</defSwitch>
-    <defSwitch name="rain" label="Rain">Off</defSwitch>
-    <defSwitch name="unknown" label="Unknown">Off</defSwitch>      
-  </defSwitchVector>
-  
   <defNumberVector device="AAG Cloud Watcher NG" name="sensors" label="Sensors" group="Sensors" state="Idle" perm="ro" timeout="0">
     <defNumber name="infraredSky" label="Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
     <defNumber name="correctedInfraredSky" label="Corrected Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
