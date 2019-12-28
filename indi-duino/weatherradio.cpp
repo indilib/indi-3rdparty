@@ -31,6 +31,8 @@
 #include "connectionplugins/connectionserial.h"
 #include "indicom.h"
 
+#include "gason/gason.h"
+
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
@@ -170,8 +172,7 @@ void WeatherRadio::TimerHit()
     if (isConnected())
     {
         char data[MAX_WEATHERBUFFER] = {0};
-        if (readWeatherData(data) == true)
-            LOGF_DEBUG("Weather data: %s", data);
+        readWeatherData(data);
 
         SetTimer(POLLMS);
     }
@@ -187,7 +188,34 @@ bool WeatherRadio::readWeatherData(char *data)
     int returnCode = tty_read_section(PortFD, data, '\n', MAX_WAIT, &n_bytes);
 
     if (returnCode == TTY_OK)
+    {
+        char srcBuffer[n_bytes];
+        // duplicate the buffer since the parser will modify it
+        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
+        char *source = srcBuffer;
+        char *endptr;
+        JsonValue value;
+        JsonAllocator allocator;
+        int status = jsonParse(source, &endptr, &value, allocator);
+        if (status != JSON_OK)
+        {
+            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+            return false;
+        }
+
+        JsonIterator deviceIter;
+        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+        {
+            char *name = deviceIter->key;
+            JsonIterator sensorIter;
+            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+            {
+                LOGF_DEBUG("Sensor %s - %s: %f", name, sensorIter->key, sensorIter->value.toNumber());
+            }
+
+        }
         return true;
+    }
     else
     {
         char errorString[MAXRBUF];

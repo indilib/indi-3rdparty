@@ -60,7 +60,9 @@ target_link_libraries(indi_duino ${INDI_LIBRARIES} firmata)
 install(TARGETS indi_duino RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_duino.xml DESTINATION ${INDI_DATA_DIR})
 ##################### meteoradio #####################
+SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/gason/gason.cpp PROPERTIES COMPILE_FLAGS "-Wno-implicit-fallthrough")
 set(weatherradio_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/gason/gason.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/weatherradio.cpp
    )
 
