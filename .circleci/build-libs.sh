@@ -3,8 +3,8 @@
 # This is a script building libraries for circle-ci
 # It is *not* for general audience
 
-SRC=../../3rdparty/
-FLAGS="-DCMAKE_INSTALL_PREFIX=/usr/local -DFIX_WARNINGS=ON -DCMAKE_BUILD_TYPE=$1"
+SRC=../../indi-3rdparty/
+FLAGS="-DCMAKE_INSTALL_PREFIX=/usr -DFIX_WARNINGS=ON -DCMAKE_BUILD_TYPE=$1"
 
 LIBS="libapogee libfishcamp libfli libqhy libqsi libsbig libinovasdk"
 
