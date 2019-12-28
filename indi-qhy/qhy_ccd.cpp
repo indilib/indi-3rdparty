@@ -1778,6 +1778,11 @@ void QHYCCD::updateTemperature()
         {
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, m_PWMRequest);
         }
+        // Temperature Readout does not work, if we do not set "something", so lets set the current value...
+ 	else if (TemperatureNP.s == IPS_OK) 
+        {
+            SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 /100 );
+        }
 
         ccdtemp   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
         coolpower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
