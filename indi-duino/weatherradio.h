@@ -44,11 +44,17 @@ class WeatherRadio : public INDI::Weather
     virtual void TimerHit();
 
 protected:
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
+
     bool readWeatherData(char *data);
+
+    /** \brief find the matching raw sensor INDI property vector */
+    INumberVectorProperty *findRawSensorProperty(char *name);
+    std::vector<INumberVectorProperty> rawSensors;
 
 private:
     const char *getDefaultName();
-    virtual bool initProperties();
     virtual bool Connect();
     virtual bool Disconnect();
 };

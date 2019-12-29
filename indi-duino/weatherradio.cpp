@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <map>
 
 #include <sys/stat.h>
 
@@ -99,6 +100,22 @@ bool WeatherRadio::initProperties()
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
 
+    return true;
+}
+
+bool WeatherRadio::updateProperties()
+{
+    if (! INDI::Weather::updateProperties()) return false;
+    if (isConnected())
+    {
+        for (size_t i = 0; i < rawSensors.size(); i++)
+            defineNumber(&rawSensors[i]);
+    }
+    else
+    {
+        for (size_t i = 0; i < rawSensors.size(); i++)
+            deleteProperty(rawSensors[i].name);
+    }
     return true;
 }
 
@@ -189,7 +206,7 @@ bool WeatherRadio::readWeatherData(char *data)
 
     if (returnCode == TTY_OK)
     {
-        char srcBuffer[n_bytes];
+        char *srcBuffer{new char[n_bytes]};
         // duplicate the buffer since the parser will modify it
         strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
         char *source = srcBuffer;
@@ -206,11 +223,48 @@ bool WeatherRadio::readWeatherData(char *data)
         JsonIterator deviceIter;
         for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
         {
-            char *name = deviceIter->key;
+            char *name {new char[strlen(deviceIter->key)]};
+            strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
             JsonIterator sensorIter;
-            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+            INumberVectorProperty *deviceProp = findRawSensorProperty(name);
+
+            if (deviceProp == nullptr)
             {
-                LOGF_DEBUG("Sensor %s - %s: %f", name, sensorIter->key, sensorIter->value.toNumber());
+                // new device found
+                std::vector<std::pair<char*, double>> sensorData;
+                // read all sensor data
+                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+                {
+                    std::pair<char*, double> entry;
+                    entry.first = sensorIter->key;
+                    entry.second = sensorIter->value.toNumber();
+                    sensorData.push_back(entry);
+                }
+                // fill the sensor data
+                INumber *sensors {new INumber[sensorData.size()]};
+                for (size_t i = 0; i < sensorData.size(); i++)
+                {
+                    IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
+                }
+                // create a new number vector for the device
+                deviceProp = new INumberVectorProperty;
+                IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
+                // make it visible
+                if (isConnected())
+                    defineNumber(deviceProp);
+                rawSensors.push_back(*deviceProp);
+            }
+            else {
+                // read all sensor data
+                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+                {
+                    INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
+                    if (sensor != nullptr)
+                        sensor->value = sensorIter->value.toNumber();
+                }
+                // update device values
+                IDSetNumber(deviceProp, nullptr);
             }
 
         }
@@ -225,6 +279,20 @@ bool WeatherRadio::readWeatherData(char *data)
     }
 }
 
+/**************************************************************************************
+**
+***************************************************************************************/
+INumberVectorProperty *WeatherRadio::findRawSensorProperty(char *name)
+{
+    for (size_t i = 0; i < rawSensors.size(); i++)
+    {
+        if (strcmp(name, rawSensors[i].name) == 0)
+            return &rawSensors[i];
+    }
+
+    // not found
+    return nullptr;
+}
 
 /**************************************************************************************
 **
