@@ -223,7 +223,7 @@ bool WeatherRadio::readWeatherData(char *data)
         JsonIterator deviceIter;
         for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
         {
-            char *name {new char[strlen(deviceIter->key)]};
+            char *name {new char[strlen(deviceIter->key)+1] {0}};
             strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
 
             JsonIterator sensorIter;
