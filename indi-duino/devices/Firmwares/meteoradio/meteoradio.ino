@@ -11,8 +11,6 @@
 #include <ArduinoJson.h>
 // #include <MemoryFree.h> // only necessary for debugging
 
-// uncomment to write sensor data to console
-#define DEBUG
 
 #define USE_BME_SENSOR            //USE BME280 ENVIRONMENT SENSOR. Comment if not.
 
@@ -27,15 +25,12 @@ struct {
 } bmeData;
 
 
-JsonDocument serializeBME() {
-  StaticJsonDocument<JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3)> bmeJO;
+void serializeBME(JsonDocument &doc) {
 
-  JsonObject data = bmeJO.createNestedObject("BME280");
+  JsonObject data = doc.createNestedObject("BME280");
   data["T"] = bmeData.temperature;
   data["P"] = bmeData.pressure;
   data["H"] = bmeData.humidity;
-
-  return bmeJO;
 }
 
 void updateBME() {
@@ -48,11 +43,6 @@ void updateBME() {
     bmeData.status = false;
     Serial.println("BME sensor initialization FAILED!");
   }
-
-#ifdef DEBUG
-  serializeJson(serializeBME(), Serial);
-  Serial.println();
-#endif //DEBUG  
 }
 #endif //USE_BME_SENSOR
 
@@ -66,10 +56,16 @@ void setup() {
 
 void loop() {
 
+  StaticJsonDocument <JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3)> weatherDoc;
+
 #ifdef USE_BME_SENSOR
   updateBME();
+  serializeBME(weatherDoc);
 #endif //USE_BME_SENSOR
 
-  delay(500);
+  serializeJson(weatherDoc, Serial);
+  Serial.println();
+
+  delay(1000);
   //Serial.print("free Memory="); Serial.println(freeMemory());
 }
