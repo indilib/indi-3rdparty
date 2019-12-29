@@ -260,7 +260,7 @@ bool WeatherRadio::readWeatherData(char *data)
                 for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
                 {
                     INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
-                    if (sensor != nullptr)
+                    if (sensor != nullptr && sensorIter->value.isDouble())
                         sensor->value = sensorIter->value.toNumber();
                 }
                 // update device values
