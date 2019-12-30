@@ -235,6 +235,7 @@ endif(WITH_SHELYAK)
 ## Cloud Watcher
 if (WITH_CLOUDWATCHER)
 add_subdirectory(indi-aagcloudwatcher)
+add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
 
 ## Nexstar Evo
