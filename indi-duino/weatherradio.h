@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <map>
+
 #include "indiweather.h"
 
 class WeatherRadio : public INDI::Weather
@@ -30,18 +32,18 @@ class WeatherRadio : public INDI::Weather
     WeatherRadio() = default;
     ~WeatherRadio() = default;
 
-    virtual void ISGetProperties(const char *dev);
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
+    virtual void ISGetProperties(const char *dev) override;
+    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
     virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                           char *formats[], char *names[], int n);
+                           char *formats[], char *names[], int n) override;
 
     /** \brief perform handshake with device to check communication */
-    virtual bool Handshake();
+    virtual bool Handshake() override;
 
     /** \brief Called when setTimer() time is up */
-    virtual void TimerHit();
+    virtual void TimerHit() override;
 
 protected:
     virtual bool initProperties() override;
@@ -53,8 +55,34 @@ protected:
     INumberVectorProperty *findRawSensorProperty(char *name);
     std::vector<INumberVectorProperty> rawSensors;
 
-private:
-    const char *getDefaultName();
-    virtual bool Connect();
-    virtual bool Disconnect();
+    /**
+      *Device specific definitions
+      */
+    enum SENSOR_TYPES
+    {
+        TEMPERATURE_SENSOR,
+        IR_TEMPERATURE_SENSOR,
+        PRESSURE_SENSOR,
+        HUMIDITY_SENSOR,
+        LUMINANCE_SENSOR
+    };
+
+    struct sensor_config
+    {
+        std::string label;
+        SENSOR_TYPES type;
+        std::string format;
+        double min;
+        double max;
+        double steps;
+    };
+
+    typedef std::map<std::string, sensor_config> sensorsConfigType;
+    typedef std::map<std::string, sensorsConfigType> deviceConfigType;
+
+    deviceConfigType deviceConfig;
+
+    const char *getDefaultName() override;
+    virtual bool Connect() override;
+    virtual bool Disconnect() override;
 };

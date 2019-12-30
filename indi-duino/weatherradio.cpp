@@ -100,6 +100,15 @@ bool WeatherRadio::initProperties()
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
 
+    // define INDI config values for known sensors
+    deviceConfig["BME280"]["T"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["BME280"]["P"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
+    deviceConfig["BME280"]["H"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["To"] = {"Sky Temp. (°C)", IR_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINANCE_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+;
+
     return true;
 }
 
@@ -245,7 +254,14 @@ bool WeatherRadio::readWeatherData(char *data)
                 INumber *sensors {new INumber[sensorData.size()]};
                 for (size_t i = 0; i < sensorData.size(); i++)
                 {
-                    IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
+                    sensorsConfigType devConfig = deviceConfig[name];
+                    if (devConfig.count(sensorData[i].first) > 0)
+                    {
+                        sensor_config config = devConfig[sensorData[i].first];
+                        IUFillNumber(&sensors[i], sensorData[i].first, config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                    }
+                    else
+                        IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
                 }
                 // create a new number vector for the device
                 deviceProp = new INumberVectorProperty;
