@@ -56,21 +56,14 @@ protected:
     std::vector<INumberVectorProperty> rawSensors;
 
     /**
-      *Device specific definitions
+      * Device specific configurations
       */
-    enum SENSOR_TYPES
-    {
-        TEMPERATURE_SENSOR,
-        IR_TEMPERATURE_SENSOR,
-        PRESSURE_SENSOR,
-        HUMIDITY_SENSOR,
-        LUMINANCE_SENSOR
-    };
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, AMBIENT_TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR};
 
     struct sensor_config
     {
         std::string label;
-        SENSOR_TYPES type;
+        SENSOR_TYPE type;
         std::string format;
         double min;
         double max;
@@ -81,6 +74,39 @@ protected:
     typedef std::map<std::string, sensorsConfigType> deviceConfigType;
 
     deviceConfigType deviceConfig;
+
+    /**
+     * Sensor type specifics
+     */
+    struct sensor_name
+    {
+        std::string device;
+        std::string sensor;
+    };
+
+    std::string canonicalName(sensor_name sensor) {return sensor.device + "." + sensor.sensor;}
+
+    struct
+    {
+        sensor_name temperature;
+        sensor_name pressure;
+        sensor_name humidity;
+        sensor_name luminosity;
+        sensor_name temp_ambient;
+        sensor_name temp_object;
+    } currentSensors;
+
+    struct
+    {
+        std::vector<sensor_name> temperature;
+        std::vector<sensor_name> pressure;
+        std::vector<sensor_name> humidity;
+        std::vector<sensor_name> luminosity;
+        std::vector<sensor_name> temp_ambient;
+        std::vector<sensor_name> temp_object;
+    } allSensors;
+
+    void registerSensor(sensor_name sensor, SENSOR_TYPE type);
 
     const char *getDefaultName() override;
     virtual bool Connect() override;

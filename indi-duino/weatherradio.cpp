@@ -104,10 +104,9 @@ bool WeatherRadio::initProperties()
     deviceConfig["BME280"]["T"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["BME280"]["P"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
     deviceConfig["BME280"]["H"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["MLX90614"]["To"] = {"Sky Temp. (°C)", IR_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINANCE_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
-;
+    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", AMBIENT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["To"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
 
     return true;
 }
@@ -215,7 +214,7 @@ bool WeatherRadio::readWeatherData(char *data)
 
     if (returnCode == TTY_OK)
     {
-        char *srcBuffer{new char[n_bytes]};
+        char *srcBuffer{new char[n_bytes+1]};
         // duplicate the buffer since the parser will modify it
         strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
         char *source = srcBuffer;
@@ -257,8 +256,10 @@ bool WeatherRadio::readWeatherData(char *data)
                     sensorsConfigType devConfig = deviceConfig[name];
                     if (devConfig.count(sensorData[i].first) > 0)
                     {
+                        sensor_name sensor = {name, sensorData[i].first};
                         sensor_config config = devConfig[sensorData[i].first];
-                        IUFillNumber(&sensors[i], sensorData[i].first, config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                        IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                        registerSensor(sensor, config.type);
                     }
                     else
                         IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
@@ -294,6 +295,34 @@ bool WeatherRadio::readWeatherData(char *data)
         return false;
     }
 }
+
+/**************************************************************************************
+**
+***************************************************************************************/
+void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE type)
+{
+    switch (type) {
+    case TEMPERATURE_SENSOR:
+        allSensors.temperature.push_back(sensor);
+        break;
+    case PRESSURE_SENSOR:
+        allSensors.pressure.push_back(sensor);
+        break;
+    case HUMIDITY_SENSOR:
+        allSensors.humidity.push_back(sensor);
+        break;
+    case LUMINOSITY_SENSOR:
+        allSensors.luminosity.push_back(sensor);
+        break;
+    case AMBIENT_TEMPERATURE_SENSOR:
+        allSensors.temp_ambient.push_back(sensor);
+        break;
+    case OBJECT_TEMPERATURE_SENSOR:
+        allSensors.temp_object.push_back(sensor);
+        break;
+    }
+}
+
 
 /**************************************************************************************
 **
