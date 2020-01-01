@@ -49,6 +49,8 @@ protected:
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
 
+    ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP, humiditySensorSP, luminositySensorSP;
+
     bool readWeatherData(char *data);
 
     /** \brief find the matching raw sensor INDI property vector */
@@ -58,7 +60,7 @@ protected:
     /**
       * Device specific configurations
       */
-    enum SENSOR_TYPE {TEMPERATURE_SENSOR, AMBIENT_TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR};
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR};
 
     struct sensor_config
     {
@@ -84,7 +86,7 @@ protected:
         std::string sensor;
     };
 
-    std::string canonicalName(sensor_name sensor) {return sensor.device + "." + sensor.sensor;}
+    std::string canonicalName(sensor_name sensor) {return sensor.device + " - " + sensor.sensor;}
 
     struct
     {
@@ -102,11 +104,11 @@ protected:
         std::vector<sensor_name> pressure;
         std::vector<sensor_name> humidity;
         std::vector<sensor_name> luminosity;
-        std::vector<sensor_name> temp_ambient;
         std::vector<sensor_name> temp_object;
     } allSensors;
 
     void registerSensor(sensor_name sensor, SENSOR_TYPE type);
+    void addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char *name, const char *label);
 
     const char *getDefaultName() override;
     virtual bool Connect() override;

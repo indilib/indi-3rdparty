@@ -104,13 +104,16 @@ bool WeatherRadio::initProperties()
     deviceConfig["BME280"]["T"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["BME280"]["P"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
     deviceConfig["BME280"]["H"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", AMBIENT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["MLX90614"]["To"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
 
     return true;
 }
 
+/**************************************************************************************
+**
+***************************************************************************************/
 bool WeatherRadio::updateProperties()
 {
     if (! INDI::Weather::updateProperties()) return false;
@@ -118,13 +121,42 @@ bool WeatherRadio::updateProperties()
     {
         for (size_t i = 0; i < rawSensors.size(); i++)
             defineNumber(&rawSensors[i]);
+
+        addWeatherProperty(&temperatureSensorSP, allSensors.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
+        addWeatherProperty(&pressureSensorSP, allSensors.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
+        addWeatherProperty(&humiditySensorSP, allSensors.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
+        addWeatherProperty(&luminositySensorSP, allSensors.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+        addWeatherProperty(&ambientTemperatureSensorSP, allSensors.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
+        addWeatherProperty(&objectTemperatureSensorSP, allSensors.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
     }
     else
     {
         for (size_t i = 0; i < rawSensors.size(); i++)
             deleteProperty(rawSensors[i].name);
+
+        deleteProperty(temperatureSensorSP.name);
+        deleteProperty(pressureSensorSP.name);
+        deleteProperty(humiditySensorSP.name);
+        deleteProperty(luminositySensorSP.name);
+        deleteProperty(ambientTemperatureSensorSP.name);
+        deleteProperty(objectTemperatureSensorSP.name);
     }
     return true;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+void WeatherRadio::addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char* name, const char* label)
+{
+    ISwitch *switches {new ISwitch[sensors.size()]};
+    for (size_t i = 0; i < sensors.size(); i++)
+    {
+        std::string name = canonicalName(sensors[i]).c_str();
+        IUFillSwitch(&switches[i], name.c_str(), name.c_str(), ISS_OFF);
+    }
+    IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, "Settings", IP_RW, ISR_1OFMANY, 60, IPS_OK);
+    defineSwitch(sensor);
 }
 
 /**************************************************************************************
@@ -313,9 +345,6 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
         break;
     case LUMINOSITY_SENSOR:
         allSensors.luminosity.push_back(sensor);
-        break;
-    case AMBIENT_TEMPERATURE_SENSOR:
-        allSensors.temp_ambient.push_back(sensor);
         break;
     case OBJECT_TEMPERATURE_SENSOR:
         allSensors.temp_object.push_back(sensor);
