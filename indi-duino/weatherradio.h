@@ -86,7 +86,7 @@ protected:
         std::string sensor;
     };
 
-    std::string canonicalName(sensor_name sensor) {return sensor.device + " - " + sensor.sensor;}
+    std::string canonicalName(sensor_name sensor) {return sensor.device + " (" + sensor.sensor + ")";}
 
     struct
     {

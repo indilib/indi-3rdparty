@@ -20,6 +20,6 @@ void updateMLX() {
 void serializeMLX(JsonDocument & doc) {
 
   JsonObject data = doc.createNestedObject("MLX90614");
-  data["Ta"] = mlxData.ambient_t;
-  data["To"] = mlxData.object_t;
+  data["T amb"] = mlxData.ambient_t;
+  data["T obj"] = mlxData.object_t;
 }

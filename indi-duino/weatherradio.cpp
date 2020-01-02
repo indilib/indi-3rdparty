@@ -101,11 +101,11 @@ bool WeatherRadio::initProperties()
     setWeatherConnection(CONNECTION_SERIAL);
 
     // define INDI config values for known sensors
-    deviceConfig["BME280"]["T"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["BME280"]["P"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
-    deviceConfig["BME280"]["H"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["MLX90614"]["Ta"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["MLX90614"]["To"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["BME280"]["Temp"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["BME280"]["Pres"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
+    deviceConfig["BME280"]["Hum"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["MLX90614"]["T amb"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["T obj"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
 
     return true;
@@ -246,7 +246,7 @@ bool WeatherRadio::readWeatherData(char *data)
 
     if (returnCode == TTY_OK)
     {
-        char *srcBuffer{new char[n_bytes+1]};
+        char *srcBuffer{new char[n_bytes+1] {0}};
         // duplicate the buffer since the parser will modify it
         strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
         char *source = srcBuffer;

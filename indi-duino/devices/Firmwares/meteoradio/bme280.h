@@ -23,7 +23,7 @@ void updateBME() {
 void serializeBME(JsonDocument &doc) {
 
   JsonObject data = doc.createNestedObject("BME280");
-  data["T"] = bmeData.temperature;
-  data["P"] = bmeData.pressure;
-  data["H"] = bmeData.humidity;
+  data["Temp"] = bmeData.temperature;
+  data["Pres"] = bmeData.pressure;
+  data["Hum"] = bmeData.humidity;
 }
