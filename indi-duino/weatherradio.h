@@ -137,7 +137,18 @@ protected:
      */
     void addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char *name, const char *label);
 
+    /**
+     * @brief Update the selected sensor indicating a weather property
+     */
     sensor_name updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected);
+
+    /**
+     * @brief Send a string to the serial device
+     */
+    // helper functions
+    bool receive(char* buffer, int* bytes, char end, int wait);
+    bool transmit(const char* buffer);
+    bool sendQuery(const char* cmd, char* response, int *length);
 
     // override default INDI methods
     const char *getDefaultName() override;

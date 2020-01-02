@@ -34,10 +34,7 @@ void setup() {
 
 }
 
-void loop() {
-
-  StaticJsonDocument < JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(1) > weatherDoc;
-
+void sendSensorData(JsonDocument &weatherDoc) {
 #ifdef USE_BME_SENSOR
   updateBME();
   serializeBME(weatherDoc);
@@ -56,6 +53,19 @@ void loop() {
   serializeJson(weatherDoc, Serial);
   Serial.println();
 
-  delay(1000);
-  //Serial.print("free Memory="); Serial.println(freeMemory());
 }
+
+void loop() {
+
+
+  while (Serial.available() > 0) {
+    switch (Serial.read()) {
+      case 'w':
+        StaticJsonDocument < JSON_OBJECT_SIZE(2) + 2 * JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(1) > weatherDoc;
+        sendSensorData(weatherDoc);
+        break;
+    }
+  }
+
+    delay(50);
+  }

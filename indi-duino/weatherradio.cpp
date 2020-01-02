@@ -332,10 +332,10 @@ void WeatherRadio::TimerHit()
 ***************************************************************************************/
 bool WeatherRadio::readWeatherData(char *data)
 {
-    int n_bytes;
-    int returnCode = tty_read_section(PortFD, data, '\n', MAX_WAIT, &n_bytes);
+    int n_bytes = 0;
+    bool result = sendQuery("w", data, &n_bytes);
 
-    if (returnCode == TTY_OK)
+    if (result == true)
     {
         char *srcBuffer{new char[n_bytes+1] {0}};
         // duplicate the buffer since the parser will modify it
@@ -411,12 +411,7 @@ bool WeatherRadio::readWeatherData(char *data)
         return true;
     }
     else
-    {
-        char errorString[MAXRBUF];
-        tty_error_msg(returnCode, errorString, MAXRBUF);
-        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
         return false;
-    }
 }
 
 /**************************************************************************************
@@ -491,6 +486,51 @@ bool WeatherRadio::parseCanonicalName(sensor_name *sensor, std::string name)
     sensor->device = name.substr(0, found_open);
     sensor->sensor = name.substr(found_open+2, found_close-found_open-2);
     return true;
+}
+
+/**************************************************************************************
+** Helper functions for serial communication
+***************************************************************************************/
+bool WeatherRadio::receive(char* buffer, int* bytes, char end, int wait)
+{
+    int timeout = wait;
+    int returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
+    if (returnCode != TTY_OK)
+    {
+        char errorString[MAXRBUF];
+        tty_error_msg(returnCode, errorString, MAXRBUF);
+        if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
+        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
+        return false;
+    }
+
+    return true;
+}
+
+
+bool WeatherRadio::transmit(const char* buffer)
+{
+    int bytesWritten = 0;
+    int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
+
+    if (returnCode != TTY_OK)
+    {
+        char errorString[MAXRBUF];
+        tty_error_msg(returnCode, errorString, MAXRBUF);
+        LOGF_WARN("Failed to transmit %s. Wrote %d bytes and got error %s.", buffer, bytesWritten, errorString);
+        return false;
+    }
+    return true;
+}
+
+bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
+{
+    if(!transmit(cmd))
+    {
+        LOGF_ERROR("Command <%s> failed.", cmd);
+        return false;
+    }
+    return receive(response, length, '\n', MAX_WAIT);;
 }
 
 /**************************************************************************************
