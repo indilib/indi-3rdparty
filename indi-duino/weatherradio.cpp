@@ -122,12 +122,12 @@ bool WeatherRadio::updateProperties()
         for (size_t i = 0; i < rawSensors.size(); i++)
             defineNumber(&rawSensors[i]);
 
-        addWeatherProperty(&temperatureSensorSP, allSensors.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
-        addWeatherProperty(&pressureSensorSP, allSensors.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
-        addWeatherProperty(&humiditySensorSP, allSensors.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
-        addWeatherProperty(&luminositySensorSP, allSensors.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
-        addWeatherProperty(&ambientTemperatureSensorSP, allSensors.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
-        addWeatherProperty(&objectTemperatureSensorSP, allSensors.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+        addWeatherProperty(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
+        addWeatherProperty(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
+        addWeatherProperty(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
+        addWeatherProperty(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+        addWeatherProperty(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
+        addWeatherProperty(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
     }
     else
     {
@@ -141,7 +141,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
     }
-    return true;
+    return INDI::Weather::updateProperties();
 }
 
 /**************************************************************************************
@@ -155,7 +155,7 @@ void WeatherRadio::addWeatherProperty(ISwitchVectorProperty *sensor, std::vector
         std::string name = canonicalName(sensors[i]).c_str();
         IUFillSwitch(&switches[i], name.c_str(), name.c_str(), ISS_OFF);
     }
-    IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, "Settings", IP_RW, ISR_1OFMANY, 60, IPS_OK);
+    IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, "Options", IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineSwitch(sensor);
 }
 
@@ -196,8 +196,92 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
 /**************************************************************************************
 **
 ***************************************************************************************/
+WeatherRadio::sensor_name WeatherRadio::updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected)
+{
+    sensor_name sensor;
+    if (selected != nullptr && parseCanonicalName(&sensor, selected))
+    {
+        weatherParameter->s = IPS_OK;
+    }
+    else
+        weatherParameter->s = IPS_IDLE;
+
+    IDSetSwitch(weatherParameter, nullptr);
+    return sensor;
+}
+
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+
+        if (strcmp(name, temperatureSensorSP.name) == 0)
+        {
+            // temperature sensor selected
+            IUUpdateSwitch(&temperatureSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&temperatureSensorSP, selected);
+            currentSensors.temperature = sensor;
+
+            return (temperatureSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, pressureSensorSP.name) == 0)
+        {
+            // pressure sensor selected
+            IUUpdateSwitch(&pressureSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&pressureSensorSP, selected);
+            currentSensors.pressure = sensor;
+
+            return (pressureSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, humiditySensorSP.name) == 0)
+        {
+            // humidity sensor selected
+            IUUpdateSwitch(&humiditySensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&humiditySensorSP, selected);
+            currentSensors.humidity = sensor;
+
+            return (humiditySensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, luminositySensorSP.name) == 0)
+        {
+            // luminosity sensor selected
+            IUUpdateSwitch(&luminositySensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&luminositySensorSP, selected);
+            currentSensors.luminosity = sensor;
+
+            return (luminositySensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, ambientTemperatureSensorSP.name) == 0)
+        {
+            // ambient temperature sensor selected
+            IUUpdateSwitch(&ambientTemperatureSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&ambientTemperatureSensorSP, selected);
+            currentSensors.temp_ambient = sensor;
+
+            return (ambientTemperatureSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, objectTemperatureSensorSP.name) == 0)
+        {
+            // object temperature sensor selected
+            IUUpdateSwitch(&objectTemperatureSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorConfig(&objectTemperatureSensorSP, selected);
+            currentSensors.temp_object = sensor;
+
+            return (objectTemperatureSensorSP.s == IPS_OK);
+        }
+    }
     return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
 }
 
@@ -218,7 +302,7 @@ bool WeatherRadio::Handshake()
     char data[MAX_WEATHERBUFFER] = {0};
     bool result = readWeatherData(data);
 
-    return result;
+    return loadConfig() || result;
 }
 
 /**************************************************************************************
@@ -335,23 +419,40 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
 {
     switch (type) {
     case TEMPERATURE_SENSOR:
-        allSensors.temperature.push_back(sensor);
+        sensorRegistry.temperature.push_back(sensor);
         break;
     case PRESSURE_SENSOR:
-        allSensors.pressure.push_back(sensor);
+        sensorRegistry.pressure.push_back(sensor);
         break;
     case HUMIDITY_SENSOR:
-        allSensors.humidity.push_back(sensor);
+        sensorRegistry.humidity.push_back(sensor);
         break;
     case LUMINOSITY_SENSOR:
-        allSensors.luminosity.push_back(sensor);
+        sensorRegistry.luminosity.push_back(sensor);
         break;
     case OBJECT_TEMPERATURE_SENSOR:
-        allSensors.temp_object.push_back(sensor);
+        sensorRegistry.temp_object.push_back(sensor);
         break;
     }
 }
 
+
+/*********************************************************************************
+ * config file
+ *********************************************************************************/
+
+bool WeatherRadio::saveConfigItems(FILE *fp)
+{
+    LOG_DEBUG(__FUNCTION__);
+    IUSaveConfigSwitch(fp, &temperatureSensorSP);
+    IUSaveConfigSwitch(fp, &pressureSensorSP);
+    IUSaveConfigSwitch(fp, &humiditySensorSP);
+    IUSaveConfigSwitch(fp, &luminositySensorSP);
+    IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
+    IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
+
+    return INDI::Weather::saveConfigItems(fp);
+}
 
 /**************************************************************************************
 **
@@ -366,6 +467,23 @@ INumberVectorProperty *WeatherRadio::findRawSensorProperty(char *name)
 
     // not found
     return nullptr;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+bool WeatherRadio::parseCanonicalName(sensor_name *sensor, std::string name)
+{
+    // find " (" and ")"
+    size_t found_open = name.find(" (");
+    size_t found_close = name.find(")");
+    if (found_open == std::string::npos || found_close == std::string::npos)
+        return false;
+
+    // OK, limiters found
+    sensor->device = name.substr(0, found_open);
+    sensor->sensor = name.substr(found_open+2, found_close-found_open-2);
+    return true;
 }
 
 /**************************************************************************************

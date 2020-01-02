@@ -51,6 +51,11 @@ protected:
 
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP, humiditySensorSP, luminositySensorSP;
 
+    /**
+     * @brief Read the weather data from the JSON document
+     * @param JSON document
+     * @return parse success
+     */
     bool readWeatherData(char *data);
 
     /** \brief find the matching raw sensor INDI property vector */
@@ -86,7 +91,16 @@ protected:
         std::string sensor;
     };
 
+    /**
+     * @brief Create a canonical name as <device> (<sensor>)
+     * @param sensor weather sensor
+     */
     std::string canonicalName(sensor_name sensor) {return sensor.device + " (" + sensor.sensor + ")";}
+
+    /**
+     * @brief Inverse function of canonicalName(..)
+     */
+    bool parseCanonicalName(sensor_name *sensor, std::string name);
 
     struct
     {
@@ -105,12 +119,29 @@ protected:
         std::vector<sensor_name> humidity;
         std::vector<sensor_name> luminosity;
         std::vector<sensor_name> temp_object;
-    } allSensors;
+    } sensorRegistry;
 
+    /**
+     * @brief Add a sensor to the sensor registry
+     * @param sensor device name and sensor name
+     * @param type sensor type
+     */
     void registerSensor(sensor_name sensor, SENSOR_TYPE type);
+
+    /**
+     * @brief Add a INDI switch property for a specific weather parameter to the Settings panel
+     * @param sensor property vector to be filled
+     * @param sensors vector of sensor names that record the same weather parameter (temperature, pressure, etc.)
+     * @param name name of the INDI property
+     * @param label label of the INDI property
+     */
     void addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char *name, const char *label);
 
+    sensor_name updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected);
+
+    // override default INDI methods
     const char *getDefaultName() override;
     virtual bool Connect() override;
     virtual bool Disconnect() override;
+    virtual bool saveConfigItems(FILE *fp) override;
 };
