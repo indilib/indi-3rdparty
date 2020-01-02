@@ -631,10 +631,22 @@ void SXCCD::ExposureTimerHit()
                                     int isubW = i * subW;
                                     int i1subW = (i + 1) * subW;
                                     int j2 = j * 2;
+
+#if 0
                                     buf16[isubW + j]  = evenBuf16[isubW + j2];
                                     buf16[isubW + j + 1]  = evenBuf16[isubW + j2 + 2];
                                     buf16[i1subW + j]  = evenBuf16[isubW + j2 + 1];
                                     buf16[i1subW + j + 1]  = evenBuf16[isubW + j2 + 3];
+#endif
+
+                                    // Patch by Greg Bosch on 2020-01-02 to fix bayer pattern
+                                    // on SXVF-M25C. If this should be different from other SXV*-M25C
+                                    // Models, please file a bug report to raise the issue.
+                                    buf16[isubW + j]  = evenBuf16[isubW + j2];
+                                    buf16[isubW + j + 1]  = evenBuf16[isubW + j2 + 3];
+                                    buf16[i1subW + j]  = evenBuf16[isubW + j2 + 1];
+                                    buf16[i1subW + j + 1]  = evenBuf16[isubW + j2 + 2];
+
                                 }
                             }
                         }
