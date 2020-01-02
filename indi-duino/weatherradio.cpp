@@ -34,6 +34,8 @@
 
 #include "gason/gason.h"
 
+#include "config.h"
+
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
@@ -162,6 +164,11 @@ void WeatherRadio::addWeatherProperty(ISwitchVectorProperty *sensor, std::vector
 /**************************************************************************************
 ** Define Basic properties to clients.
 ***************************************************************************************/
+WeatherRadio::WeatherRadio()
+{
+    setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
+}
+
 void WeatherRadio::ISGetProperties(const char *dev)
 {
     static int configLoaded = 0;

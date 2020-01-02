@@ -29,7 +29,7 @@
 class WeatherRadio : public INDI::Weather
 {
   public:
-    WeatherRadio() = default;
+    WeatherRadio();
     ~WeatherRadio() = default;
 
     virtual void ISGetProperties(const char *dev) override;
