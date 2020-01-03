@@ -18,6 +18,8 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+    Cloud coverage calculation taken from the INDI driver for the AAG Cloud Watcher
+    (Lunatico https://www.lunatico.es), implemented by Sergio Alonso (zerjioi@ugr.es)
 */
 
 #include "weatherradio.h"
