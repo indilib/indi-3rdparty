@@ -106,6 +106,12 @@ bool WeatherRadio::initProperties()
     addParameter("WEATHER_CLOUD_COVER", "Clouds (%)", 0, 100, 15);
     addParameter("WEATHER_SQM", "SQM", 0, 100, 15);
 
+    setCriticalParameter("WEATHER_TEMPERATURE");
+    setCriticalParameter("WEATHER_PRESSURE");
+    setCriticalParameter("WEATHER_HUMIDITY");
+    setCriticalParameter("WEATHER_CLOUD_COVER");
+    setCriticalParameter("WEATHER_SQM");
+
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
 
@@ -128,8 +134,8 @@ bool WeatherRadio::updateProperties()
     if (! INDI::Weather::updateProperties()) return false;
     if (isConnected())
     {
-        for (size_t i = 0; i < rawSensors.size(); i++)
-            defineNumber(&rawSensors[i]);
+        for (size_t i = 0; i < rawDevices.size(); i++)
+            defineNumber(&rawDevices[i]);
 
         addWeatherProperty(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
         addWeatherProperty(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
@@ -140,8 +146,8 @@ bool WeatherRadio::updateProperties()
     }
     else
     {
-        for (size_t i = 0; i < rawSensors.size(); i++)
-            deleteProperty(rawSensors[i].name);
+        for (size_t i = 0; i < rawDevices.size(); i++)
+            deleteProperty(rawDevices[i].name);
 
         deleteProperty(temperatureSensorSP.name);
         deleteProperty(pressureSensorSP.name);
@@ -365,7 +371,7 @@ IPState WeatherRadio::updateWeather()
             strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
 
             JsonIterator sensorIter;
-            INumberVectorProperty *deviceProp = findRawSensorProperty(name);
+            INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
 
             if (deviceProp == nullptr)
             {
@@ -400,7 +406,7 @@ IPState WeatherRadio::updateWeather()
                 // make it visible
                 if (isConnected())
                     defineNumber(deviceProp);
-                rawSensors.push_back(*deviceProp);
+                rawDevices.push_back(*deviceProp);
             }
             else {
                 // read all sensor data
@@ -468,18 +474,29 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
 }
 
 /**************************************************************************************
-**
+** access to device and sensor INDI properties
 ***************************************************************************************/
-INumberVectorProperty *WeatherRadio::findRawSensorProperty(char *name)
+INumberVectorProperty *WeatherRadio::findRawDeviceProperty(const char *name)
 {
-    for (size_t i = 0; i < rawSensors.size(); i++)
+    for (size_t i = 0; i < rawDevices.size(); i++)
     {
-        if (strcmp(name, rawSensors[i].name) == 0)
-            return &rawSensors[i];
+        if (strcmp(name, rawDevices[i].name) == 0)
+            return &rawDevices[i];
     }
 
     // not found
     return nullptr;
+}
+
+INumber *WeatherRadio::findRawSensorProperty(WeatherRadio::sensor_name sensor)
+{
+    INumberVectorProperty *deviceProp = findRawDeviceProperty(sensor.device.c_str());
+
+    INumber *sensorProp = nullptr;
+    if (deviceProp != nullptr)
+        sensorProp = IUFindNumber(deviceProp, sensor.sensor.c_str());
+
+    return sensorProp;
 }
 
 /**************************************************************************************

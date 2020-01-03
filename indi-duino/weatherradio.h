@@ -52,11 +52,7 @@ protected:
      * @brief Read the weather data from the JSON document
      * @return parse success
      */
-    IPState updateWeather();
-
-    /** \brief find the matching raw sensor INDI property vector */
-    INumberVectorProperty *findRawSensorProperty(char *name);
-    std::vector<INumberVectorProperty> rawSensors;
+    IPState updateWeather() override;
 
     /**
       * Device specific configurations
@@ -86,6 +82,16 @@ protected:
         std::string device;
         std::string sensor;
     };
+
+    std::vector<INumberVectorProperty> rawDevices;
+    /**
+     * \brief find the matching raw device INDI property vector
+    */
+    INumberVectorProperty *findRawDeviceProperty(const char *name);
+    /**
+     * @brief find the matching sensor INDI property
+     */
+    INumber *findRawSensorProperty(const sensor_name sensor);
 
     /**
      * @brief Create a canonical name as <device> (<sensor>)
