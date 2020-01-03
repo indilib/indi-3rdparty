@@ -60,6 +60,11 @@ protected:
     double cloudCoverage(double ambientTemperature, double skyTemperature);
 
     /**
+     * @brief Calculate the Sky quality SQM from the measured illuminance.
+     */
+    double sqmValue(double lux);
+
+    /**
       * Device specific configurations
       */
     enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR};

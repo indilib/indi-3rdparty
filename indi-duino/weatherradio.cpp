@@ -267,7 +267,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     }
     else if (currentSensors.temp_object == sensor)
     {
-        // obtain the current object temperature
+        // obtain the current ambient temperature
         INumber *ambientProp = findRawSensorProperty(currentSensors.temp_ambient);
         if (ambientProp != nullptr)
         {
@@ -275,6 +275,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
             setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
         }
     }
+    else if (currentSensors.luminosity == sensor)
+        setParameterValue(WEATHER_SQM, sqmValue(value));
 }
 
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -483,6 +485,15 @@ double WeatherRadio::cloudCoverage(double ambientTemperature, double skyTemperat
     if (correctedTemperature > CLOUD_TEMP_OVERCAST) correctedTemperature = CLOUD_TEMP_OVERCAST;
 
     return (correctedTemperature - CLOUD_TEMP_CLEAR) * 100 / (CLOUD_TEMP_OVERCAST - CLOUD_TEMP_CLEAR);
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+double WeatherRadio::sqmValue(double lux)
+{
+    double mag_arcsec2 = log10(lux/108000)/-0.4;
+    return mag_arcsec2;
 }
 
 /**************************************************************************************
