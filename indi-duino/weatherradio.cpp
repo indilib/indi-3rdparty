@@ -99,6 +99,13 @@ bool WeatherRadio::initProperties()
 
     addConfigurationControl();
     addPollPeriodControl();
+
+    addParameter("WEATHER_TEMPERATURE", "Temperature (C)", -10, 30, 15);
+    addParameter("WEATHER_PRESSURE", "Pressure (hPa)", 900, 1100, 15);
+    addParameter("WEATHER_HUMIDITY", "Humidity (%)", 0, 100, 15);
+    addParameter("WEATHER_CLOUD_COVER", "Clouds (%)", 0, 100, 15);
+    addParameter("WEATHER_SQM", "SQM", 0, 100, 15);
+
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
 
@@ -143,7 +150,16 @@ bool WeatherRadio::updateProperties()
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
     }
-    return INDI::Weather::updateProperties();
+
+    // If no configuration is load before, then load it now.
+    static int configLoaded = 0;
+    if (configLoaded == 0)
+    {
+        loadConfig();
+        configLoaded = 1;
+    }
+
+    return true;
 }
 
 /**************************************************************************************
@@ -171,17 +187,9 @@ WeatherRadio::WeatherRadio()
 
 void WeatherRadio::ISGetProperties(const char *dev)
 {
-    static int configLoaded = 0;
 
     // Ask the default driver first to send properties.
     INDI::Weather::ISGetProperties(dev);
-
-    // If no configuration is load before, then load it now.
-    if (configLoaded == 0)
-    {
-        loadConfig();
-        configLoaded = 1;
-    }
 }
 
 /**************************************************************************************
@@ -215,6 +223,19 @@ WeatherRadio::sensor_name WeatherRadio::updateSensorConfig(ISwitchVectorProperty
 
     IDSetSwitch(weatherParameter, nullptr);
     return sensor;
+}
+
+/**************************************************************************************
+**
+***************************************************************************************/
+void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
+{
+    if (currentSensors.temperature.device == sensor.device && currentSensors.temperature.sensor == sensor.sensor)
+        setParameterValue("WEATHER_TEMPERATURE", value);
+    else if (currentSensors.pressure.device == sensor.device && currentSensors.pressure.sensor == sensor.sensor)
+        setParameterValue("WEATHER_PRESSURE", value);
+    else if (currentSensors.humidity.device == sensor.device && currentSensors.humidity.sensor == sensor.sensor)
+        setParameterValue("WEATHER_HUMIDITY", value);
 }
 
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -306,32 +327,18 @@ bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 ***************************************************************************************/
 bool WeatherRadio::Handshake()
 {
+    IPState result = updateWeather();
+
+    return result == IPS_OK;
+}
+
+
+/**************************************************************************************
+**
+***************************************************************************************/
+IPState WeatherRadio::updateWeather()
+{
     char data[MAX_WEATHERBUFFER] = {0};
-    bool result = readWeatherData(data);
-
-    return loadConfig() || result;
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void WeatherRadio::TimerHit()
-{
-    if (isConnected())
-    {
-        char data[MAX_WEATHERBUFFER] = {0};
-        readWeatherData(data);
-
-        SetTimer(POLLMS);
-    }
-    return;
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-bool WeatherRadio::readWeatherData(char *data)
-{
     int n_bytes = 0;
     bool result = sendQuery("w", data, &n_bytes);
 
@@ -348,7 +355,7 @@ bool WeatherRadio::readWeatherData(char *data)
         if (status != JSON_OK)
         {
             LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return false;
+            return IPS_ALERT;
         }
 
         JsonIterator deviceIter;
@@ -401,17 +408,21 @@ bool WeatherRadio::readWeatherData(char *data)
                 {
                     INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
                     if (sensor != nullptr && sensorIter->value.isDouble())
+                    {
                         sensor->value = sensorIter->value.toNumber();
+                        // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
+                        updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
+                    }
                 }
                 // update device values
                 IDSetNumber(deviceProp, nullptr);
             }
 
         }
-        return true;
+        return IPS_OK;
     }
     else
-        return false;
+        return IPS_ALERT;
 }
 
 /**************************************************************************************

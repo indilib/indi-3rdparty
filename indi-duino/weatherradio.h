@@ -42,9 +42,6 @@ class WeatherRadio : public INDI::Weather
     /** \brief perform handshake with device to check communication */
     virtual bool Handshake() override;
 
-    /** \brief Called when setTimer() time is up */
-    virtual void TimerHit() override;
-
 protected:
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
@@ -53,10 +50,9 @@ protected:
 
     /**
      * @brief Read the weather data from the JSON document
-     * @param JSON document
      * @return parse success
      */
-    bool readWeatherData(char *data);
+    IPState updateWeather();
 
     /** \brief find the matching raw sensor INDI property vector */
     INumberVectorProperty *findRawSensorProperty(char *name);
@@ -141,6 +137,11 @@ protected:
      * @brief Update the selected sensor indicating a weather property
      */
     sensor_name updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected);
+
+    /**
+     * @brief Select the weather parameter from the sensor registry and update it.
+     */
+    void updateWeatherParameter(sensor_name sensor, double value);
 
     /**
      * @brief Send a string to the serial device
