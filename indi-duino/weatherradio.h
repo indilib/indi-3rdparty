@@ -55,6 +55,11 @@ protected:
     IPState updateWeather() override;
 
     /**
+     * @brief Calculate the cloud coverage from the ambient and cloud temperature.
+     */
+    double cloudCoverage(double ambientTemperature, double skyTemperature);
+
+    /**
       * Device specific configurations
       */
     enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR};
@@ -81,6 +86,11 @@ protected:
     {
         std::string device;
         std::string sensor;
+
+        inline bool operator==(sensor_name other)
+        {
+            return (other.device == device) && (other.sensor == sensor);
+        }
     };
 
     std::vector<INumberVectorProperty> rawDevices;
@@ -162,4 +172,5 @@ protected:
     virtual bool Connect() override;
     virtual bool Disconnect() override;
     virtual bool saveConfigItems(FILE *fp) override;
+
 };

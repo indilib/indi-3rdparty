@@ -26,6 +26,7 @@
 #include <cstring>
 #include <memory>
 #include <map>
+#include <math.h>
 
 #include <sys/stat.h>
 
@@ -41,6 +42,18 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 256
 #define MAX_WAIT 2
+
+#define WEATHER_TEMPERATURE "WEATHER_TEMPERATURE"
+#define WEATHER_PRESSURE    "WEATHER_PRESSURE"
+#define WEATHER_HUMIDITY    "WEATHER_HUMIDITY"
+#define WEATHER_CLOUD_COVER "WEATHER_CLOUD_COVER"
+#define WEATHER_SQM         "WEATHER_SQM"
+
+//Clear sky corrected temperature (temp below means 0% clouds)
+#define CLOUD_TEMP_CLEAR  -8
+//Totally cover sky corrected temperature (temp above means 100% clouds)
+#define CLOUD_TEMP_OVERCAST  0
+
 
 /**************************************************************************************
 **
@@ -100,17 +113,17 @@ bool WeatherRadio::initProperties()
     addConfigurationControl();
     addPollPeriodControl();
 
-    addParameter("WEATHER_TEMPERATURE", "Temperature (C)", -10, 30, 15);
-    addParameter("WEATHER_PRESSURE", "Pressure (hPa)", 900, 1100, 15);
-    addParameter("WEATHER_HUMIDITY", "Humidity (%)", 0, 100, 15);
-    addParameter("WEATHER_CLOUD_COVER", "Clouds (%)", 0, 100, 15);
-    addParameter("WEATHER_SQM", "SQM", 0, 100, 15);
+    addParameter(WEATHER_TEMPERATURE, "Temperature (C)", -10, 30, 15);
+    addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 900, 1100, 15);
+    addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
+    addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 15);
+    addParameter(WEATHER_SQM, "SQM", 0, 100, 15);
 
-    setCriticalParameter("WEATHER_TEMPERATURE");
-    setCriticalParameter("WEATHER_PRESSURE");
-    setCriticalParameter("WEATHER_HUMIDITY");
-    setCriticalParameter("WEATHER_CLOUD_COVER");
-    setCriticalParameter("WEATHER_SQM");
+    setCriticalParameter(WEATHER_TEMPERATURE);
+    setCriticalParameter(WEATHER_PRESSURE);
+    setCriticalParameter(WEATHER_HUMIDITY);
+    setCriticalParameter(WEATHER_CLOUD_COVER);
+    setCriticalParameter(WEATHER_SQM);
 
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
@@ -236,12 +249,32 @@ WeatherRadio::sensor_name WeatherRadio::updateSensorConfig(ISwitchVectorProperty
 ***************************************************************************************/
 void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
 {
-    if (currentSensors.temperature.device == sensor.device && currentSensors.temperature.sensor == sensor.sensor)
-        setParameterValue("WEATHER_TEMPERATURE", value);
-    else if (currentSensors.pressure.device == sensor.device && currentSensors.pressure.sensor == sensor.sensor)
-        setParameterValue("WEATHER_PRESSURE", value);
-    else if (currentSensors.humidity.device == sensor.device && currentSensors.humidity.sensor == sensor.sensor)
-        setParameterValue("WEATHER_HUMIDITY", value);
+    if (currentSensors.temperature == sensor)
+        setParameterValue(WEATHER_TEMPERATURE, value);
+    else if (currentSensors.pressure == sensor)
+        setParameterValue(WEATHER_PRESSURE, value);
+    else if (currentSensors.humidity == sensor)
+        setParameterValue(WEATHER_HUMIDITY, value);
+    else if (currentSensors.temp_ambient == sensor)
+    {
+        // obtain the current object temperature
+        INumber *objProp = findRawSensorProperty(currentSensors.temp_object);
+        if (objProp != nullptr)
+        {
+            double objectTemperature = objProp->value;
+            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(value, objectTemperature));
+        }
+    }
+    else if (currentSensors.temp_object == sensor)
+    {
+        // obtain the current object temperature
+        INumber *ambientProp = findRawSensorProperty(currentSensors.temp_ambient);
+        if (ambientProp != nullptr)
+        {
+            double ambientTemperature = ambientProp->value;
+            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
+        }
+    }
 }
 
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -429,6 +462,27 @@ IPState WeatherRadio::updateWeather()
     }
     else
         return IPS_ALERT;
+}
+
+/**************************************************************************************
+** Calculate the cloud coverage from the difference between ambient and sky temperature
+** The original formula stems from the AAG cloud watcher http://lunatico.es/aagcw/enhelp/
+** and the INDI driver indi_aagcloudwatcher.cpp.
+***************************************************************************************/
+double WeatherRadio::cloudCoverage(double ambientTemperature, double skyTemperature)
+{
+    // FIXME: make the parameters k1 .. k5 configurable
+    double k1 = 33.0, k2 = 0.0,  k3 = 4.0, k4 = 100.0, k5 = 100.0;
+
+    double correctedTemperature =
+        skyTemperature - ((k1 / 100.0) * (ambientTemperature - k2 / 10.0) +
+                          (k3 / 100.0) * pow(exp(k4 / 1000. * ambientTemperature), (k5 / 100.0)));
+
+
+    if (correctedTemperature < CLOUD_TEMP_CLEAR) correctedTemperature = CLOUD_TEMP_CLEAR;
+    if (correctedTemperature > CLOUD_TEMP_OVERCAST) correctedTemperature = CLOUD_TEMP_OVERCAST;
+
+    return (correctedTemperature - CLOUD_TEMP_CLEAR) * 100 / (CLOUD_TEMP_OVERCAST - CLOUD_TEMP_CLEAR);
 }
 
 /**************************************************************************************
