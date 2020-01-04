@@ -134,6 +134,8 @@ bool WeatherRadio::initProperties()
     deviceConfig["BME280"]["Temp"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["BME280"]["Pres"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
     deviceConfig["BME280"]["Hum"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["DHT"]["Temp"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["DHT"]["Hum"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["MLX90614"]["T amb"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["MLX90614"]["T obj"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
     deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
