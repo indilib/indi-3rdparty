@@ -157,12 +157,12 @@ protected:
      * @param name name of the INDI property
      * @param label label of the INDI property
      */
-    void addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char *name, const char *label);
+    void addSensorSelection(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char *name, const char *label);
 
     /**
      * @brief Update the selected sensor indicating a weather property
      */
-    sensor_name updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected);
+    sensor_name updateSensorSelection(ISwitchVectorProperty *weatherParameter, const char *selected);
 
     /**
      * @brief Select the weather parameter from the sensor registry and update it.

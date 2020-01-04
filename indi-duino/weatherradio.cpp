@@ -106,6 +106,14 @@ void ISSnoopDevice(XMLEle *root)
 }
 
 /**************************************************************************************
+** Constructor
+***************************************************************************************/
+WeatherRadio::WeatherRadio()
+{
+    setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
+}
+
+/**************************************************************************************
 ** Initialize all properties & set default values.
 **************************************************************************************/
 bool WeatherRadio::initProperties()
@@ -144,7 +152,7 @@ bool WeatherRadio::initProperties()
 }
 
 /**************************************************************************************
-**
+** Update the INDI properties as a reaction on connect or disconnect.
 ***************************************************************************************/
 bool WeatherRadio::updateProperties()
 {
@@ -154,12 +162,12 @@ bool WeatherRadio::updateProperties()
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineNumber(&rawDevices[i]);
 
-        addWeatherProperty(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
-        addWeatherProperty(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
-        addWeatherProperty(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
-        addWeatherProperty(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
-        addWeatherProperty(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
-        addWeatherProperty(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+        addSensorSelection(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
+        addSensorSelection(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
+        addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
+        addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+        addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
+        addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
     }
     else
     {
@@ -186,9 +194,9 @@ bool WeatherRadio::updateProperties()
 }
 
 /**************************************************************************************
-**
+** Create a selection of sensors for a certain weather property.
 ***************************************************************************************/
-void WeatherRadio::addWeatherProperty(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char* name, const char* label)
+void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char* name, const char* label)
 {
     ISwitch *switches {new ISwitch[sensors.size()]};
     for (size_t i = 0; i < sensors.size(); i++)
@@ -203,10 +211,6 @@ void WeatherRadio::addWeatherProperty(ISwitchVectorProperty *sensor, std::vector
 /**************************************************************************************
 ** Define Basic properties to clients.
 ***************************************************************************************/
-WeatherRadio::WeatherRadio()
-{
-    setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
-}
 
 void WeatherRadio::ISGetProperties(const char *dev)
 {
@@ -224,7 +228,7 @@ bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], c
 }
 
 /**************************************************************************************
-**
+** Process Number properties
 ***************************************************************************************/
 bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
@@ -232,72 +236,8 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
 }
 
 /**************************************************************************************
-**
+** Process Switch properties
 ***************************************************************************************/
-WeatherRadio::sensor_name WeatherRadio::updateSensorConfig(ISwitchVectorProperty *weatherParameter, const char *selected)
-{
-    sensor_name sensor;
-    if (selected != nullptr && parseCanonicalName(&sensor, selected))
-    {
-        weatherParameter->s = IPS_OK;
-    }
-    else
-        weatherParameter->s = IPS_IDLE;
-
-    IDSetSwitch(weatherParameter, nullptr);
-    return sensor;
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
-{
-    if (currentSensors.temperature == sensor)
-        setParameterValue(WEATHER_TEMPERATURE, value);
-    else if (currentSensors.pressure == sensor)
-    {
-        double elevation = LocationN[LOCATION_ELEVATION].value;
-
-        const double temp_gradient = 0.0065;
-        double temp = 15.0;
-        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
-        if (temperatureParameter != nullptr)
-            temp = temperatureParameter->value;
-        else
-            temp = 15.0; // default value
-
-        // barometric height formula
-        double pressure_normalized = value / pow(1-temp_gradient*elevation/(temp+elevation*temp_gradient+273.15), 0.03416/temp_gradient);
-
-        setParameterValue(WEATHER_PRESSURE, pressure_normalized);
-    }
-    else if (currentSensors.humidity == sensor)
-        setParameterValue(WEATHER_HUMIDITY, value);
-    else if (currentSensors.temp_ambient == sensor)
-    {
-        // obtain the current object temperature
-        INumber *objProp = findRawSensorProperty(currentSensors.temp_object);
-        if (objProp != nullptr)
-        {
-            double objectTemperature = objProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(value, objectTemperature));
-        }
-    }
-    else if (currentSensors.temp_object == sensor)
-    {
-        // obtain the current ambient temperature
-        INumber *ambientProp = findRawSensorProperty(currentSensors.temp_ambient);
-        if (ambientProp != nullptr)
-        {
-            double ambientTemperature = ambientProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
-        }
-    }
-    else if (currentSensors.luminosity == sensor)
-        setParameterValue(WEATHER_SQM, sqmValue(value));
-}
-
 bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
@@ -309,7 +249,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&temperatureSensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&temperatureSensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&temperatureSensorSP, selected);
             currentSensors.temperature = sensor;
 
             return (temperatureSensorSP.s == IPS_OK);
@@ -320,7 +260,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&pressureSensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&pressureSensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&pressureSensorSP, selected);
             currentSensors.pressure = sensor;
 
             return (pressureSensorSP.s == IPS_OK);
@@ -331,7 +271,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&humiditySensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&humiditySensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&humiditySensorSP, selected);
             currentSensors.humidity = sensor;
 
             return (humiditySensorSP.s == IPS_OK);
@@ -342,7 +282,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&luminositySensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&luminositySensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&luminositySensorSP, selected);
             currentSensors.luminosity = sensor;
 
             return (luminositySensorSP.s == IPS_OK);
@@ -353,7 +293,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&ambientTemperatureSensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&ambientTemperatureSensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&ambientTemperatureSensorSP, selected);
             currentSensors.temp_ambient = sensor;
 
             return (ambientTemperatureSensorSP.s == IPS_OK);
@@ -364,7 +304,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             IUUpdateSwitch(&objectTemperatureSensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
-            sensor_name sensor = updateSensorConfig(&objectTemperatureSensorSP, selected);
+            sensor_name sensor = updateSensorSelection(&objectTemperatureSensorSP, selected);
             currentSensors.temp_object = sensor;
 
             return (objectTemperatureSensorSP.s == IPS_OK);
@@ -374,7 +314,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 }
 
 /**************************************************************************************
-**
+** Manage BLOBs.
 ***************************************************************************************/
 bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
                                char *formats[], char *names[], int n)
@@ -383,7 +323,7 @@ bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 }
 
 /**************************************************************************************
-**
+** Initialization when the driver gets connected.
 ***************************************************************************************/
 bool WeatherRadio::Handshake()
 {
@@ -394,7 +334,7 @@ bool WeatherRadio::Handshake()
 
 
 /**************************************************************************************
-**
+** Read all weather sensor values.
 ***************************************************************************************/
 IPState WeatherRadio::updateWeather()
 {
@@ -483,6 +423,73 @@ IPState WeatherRadio::updateWeather()
     }
     else
         return IPS_ALERT;
+}
+
+/**************************************************************************************
+** Sensor selection changed
+***************************************************************************************/
+WeatherRadio::sensor_name WeatherRadio::updateSensorSelection(ISwitchVectorProperty *weatherParameter, const char *selected)
+{
+    sensor_name sensor;
+    if (selected != nullptr && parseCanonicalName(&sensor, selected))
+    {
+        weatherParameter->s = IPS_OK;
+    }
+    else
+        weatherParameter->s = IPS_IDLE;
+
+    IDSetSwitch(weatherParameter, nullptr);
+    return sensor;
+}
+
+/**************************************************************************************
+** Update the value of the WEATHER_... from its sensor value
+***************************************************************************************/
+void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
+{
+    if (currentSensors.temperature == sensor)
+        setParameterValue(WEATHER_TEMPERATURE, value);
+    else if (currentSensors.pressure == sensor)
+    {
+        double elevation = LocationN[LOCATION_ELEVATION].value;
+
+        const double temp_gradient = 0.0065;
+        double temp = 15.0;
+        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
+        if (temperatureParameter != nullptr)
+            temp = temperatureParameter->value;
+        else
+            temp = 15.0; // default value
+
+        // barometric height formula
+        double pressure_normalized = value / pow(1-temp_gradient*elevation/(temp+elevation*temp_gradient+273.15), 0.03416/temp_gradient);
+
+        setParameterValue(WEATHER_PRESSURE, pressure_normalized);
+    }
+    else if (currentSensors.humidity == sensor)
+        setParameterValue(WEATHER_HUMIDITY, value);
+    else if (currentSensors.temp_ambient == sensor)
+    {
+        // obtain the current object temperature
+        INumber *objProp = findRawSensorProperty(currentSensors.temp_object);
+        if (objProp != nullptr)
+        {
+            double objectTemperature = objProp->value;
+            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(value, objectTemperature));
+        }
+    }
+    else if (currentSensors.temp_object == sensor)
+    {
+        // obtain the current ambient temperature
+        INumber *ambientProp = findRawSensorProperty(currentSensors.temp_ambient);
+        if (ambientProp != nullptr)
+        {
+            double ambientTemperature = ambientProp->value;
+            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
+        }
+    }
+    else if (currentSensors.luminosity == sensor)
+        setParameterValue(WEATHER_SQM, sqmValue(value));
 }
 
 /**************************************************************************************
