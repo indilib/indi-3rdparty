@@ -18,8 +18,8 @@ struct {
 
 void updateMLX() {
   if (mlxData.status || (mlxData.status = mlx.begin())) {
-    mlxData.ambient_t = mlx.readAmbientTempC() / 100.0;
-    mlxData.object_t  = mlx.readObjectTempC() / 100.0;
+    mlxData.ambient_t = mlx.readAmbientTempC();
+    mlxData.object_t  = mlx.readObjectTempC();
   }
   else {
     mlxData.status = false;
