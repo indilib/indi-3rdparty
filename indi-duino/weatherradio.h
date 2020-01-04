@@ -100,13 +100,18 @@ protected:
 
     std::vector<INumberVectorProperty> rawDevices;
     /**
-     * \brief find the matching raw device INDI property vector
+     * \brief Find the matching raw device INDI property vector.
     */
     INumberVectorProperty *findRawDeviceProperty(const char *name);
     /**
      * @brief find the matching sensor INDI property
      */
     INumber *findRawSensorProperty(const sensor_name sensor);
+
+    /**
+     * @brief Find a given weather parameter.
+     */
+    INumber *getWeatherParameter(std::string name);
 
     /**
      * @brief Create a canonical name as <device> (<sensor>)

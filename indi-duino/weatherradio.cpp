@@ -116,10 +116,10 @@ bool WeatherRadio::initProperties()
     addPollPeriodControl();
 
     addParameter(WEATHER_TEMPERATURE, "Temperature (C)", -10, 30, 15);
-    addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 900, 1100, 15);
+    addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
     addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
-    addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 15);
-    addParameter(WEATHER_SQM, "SQM", 0, 100, 15);
+    addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 50);
+    addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
 
     setCriticalParameter(WEATHER_TEMPERATURE);
     setCriticalParameter(WEATHER_PRESSURE);
@@ -256,7 +256,22 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     if (currentSensors.temperature == sensor)
         setParameterValue(WEATHER_TEMPERATURE, value);
     else if (currentSensors.pressure == sensor)
-        setParameterValue(WEATHER_PRESSURE, value);
+    {
+        double elevation = LocationN[LOCATION_ELEVATION].value;
+
+        const double temp_gradient = 0.0065;
+        double temp = 15.0;
+        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
+        if (temperatureParameter != nullptr)
+            temp = temperatureParameter->value;
+        else
+            temp = 15.0; // default value
+
+        // barometric height formula
+        double pressure_normalized = value / pow(1-temp_gradient*elevation/(temp+elevation*temp_gradient+273.15), 0.03416/temp_gradient);
+
+        setParameterValue(WEATHER_PRESSURE, pressure_normalized);
+    }
     else if (currentSensors.humidity == sensor)
         setParameterValue(WEATHER_HUMIDITY, value);
     else if (currentSensors.temp_ambient == sensor)
@@ -538,6 +553,7 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &luminositySensorSP);
     IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
+    IUSaveConfigNumber(fp, ParametersRangeNP);
 
     return INDI::Weather::saveConfigItems(fp);
 }
@@ -567,6 +583,18 @@ INumber *WeatherRadio::findRawSensorProperty(WeatherRadio::sensor_name sensor)
 
     return sensorProp;
 }
+
+INumber *WeatherRadio::getWeatherParameter(std::string name)
+{
+    for (int i = 0; i < ParametersNP.nnp; i++)
+    {
+        if (!strcmp(ParametersN[i].name, name.c_str()))
+            return &ParametersN[i];
+    }
+    // not found
+    return nullptr;
+}
+
 
 /**************************************************************************************
 **
