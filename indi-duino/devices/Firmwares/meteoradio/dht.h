@@ -23,26 +23,28 @@ struct {
   bool status;
   float temperature;
   float humidity;
-} dhtData;
+} dhtData = {false, 0.0, 0.0};
 
 void updateDHT() {
   if (dhtData.status == false) {
     dht.begin();
-    dhtData.status = true;
+    // check if we really get a proper result to ensure
+    // that the initialization succeeded
+    dhtData.status = !isnan(dht.readHumidity());
   }
   if (dhtData.status) {
     dhtData.temperature = dht.readTemperature();
     dhtData.humidity    = dht.readHumidity();
-  }
-  else {
-    dhtData.status = false;
-    Serial.println("dht sensor initialization FAILED!");
   }
 }
 
 void serializeDHT(JsonDocument &doc) {
 
   JsonObject data = doc.createNestedObject("DHT");
-  data["Temp"] = dhtData.temperature;
-  data["Hum"] = dhtData.humidity;
+  data["init"] = dhtData.status;
+
+  if (dhtData.status) {
+    data["Temp"] = dhtData.temperature;
+    data["Hum"] = dhtData.humidity;
+  }
 }

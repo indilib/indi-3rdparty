@@ -372,35 +372,47 @@ IPState WeatherRadio::updateWeather()
                 // new device found
                 std::vector<std::pair<char*, double>> sensorData;
                 // read all sensor data
+                bool initialized = false;
                 for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
                 {
                     std::pair<char*, double> entry;
                     entry.first = sensorIter->key;
-                    entry.second = sensorIter->value.toNumber();
-                    sensorData.push_back(entry);
-                }
-                // fill the sensor data
-                INumber *sensors {new INumber[sensorData.size()]};
-                for (size_t i = 0; i < sensorData.size(); i++)
-                {
-                    sensorsConfigType devConfig = deviceConfig[name];
-                    if (devConfig.count(sensorData[i].first) > 0)
+
+                    // special case: get the information whether the device has been initialized
+                    if (strcmp(entry.first, "init") == 0)
+                        initialized = (sensorIter->value.getTag() == JSON_TRUE);
+
+                    if (sensorIter->value.isDouble())
                     {
-                        sensor_name sensor = {name, sensorData[i].first};
-                        sensor_config config = devConfig[sensorData[i].first];
-                        IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
-                        registerSensor(sensor, config.type);
+                        entry.second = sensorIter->value.toNumber();
+                        sensorData.push_back(entry);
                     }
-                    else
-                        IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
                 }
-                // create a new number vector for the device
-                deviceProp = new INumberVectorProperty;
-                IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
-                // make it visible
-                if (isConnected())
-                    defineNumber(deviceProp);
-                rawDevices.push_back(*deviceProp);
+                if (initialized)
+                {
+                    // fill the sensor data if the sensor has been initialized
+                    INumber *sensors {new INumber[sensorData.size()]};
+                    for (size_t i = 0; i < sensorData.size(); i++)
+                    {
+                        sensorsConfigType devConfig = deviceConfig[name];
+                        if (devConfig.count(sensorData[i].first) > 0)
+                        {
+                            sensor_name sensor = {name, sensorData[i].first};
+                            sensor_config config = devConfig[sensorData[i].first];
+                            IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                            registerSensor(sensor, config.type);
+                        }
+                        else
+                            IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
+                    }
+                    // create a new number vector for the device
+                    deviceProp = new INumberVectorProperty;
+                    IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
+                    // make it visible
+                    if (isConnected())
+                        defineNumber(deviceProp);
+                    rawDevices.push_back(*deviceProp);
+                }
             }
             else {
                 // read all sensor data

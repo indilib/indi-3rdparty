@@ -15,10 +15,10 @@ struct {
   uint32_t full;
   uint16_t ir;
   uint16_t visible;
-  float    lux;
   int      gain;
   int      timing;
-} tslData;
+  float    lux;
+} tslData {false, 0, 0, 0, 0, 0, 0.0};
 
 void configureSensorTSL(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t timeSetting)
 {
@@ -107,14 +107,14 @@ void updateTSL() {
 
     calibrateTSL();
   }
-  else {
-    tslData.status = false;
-    Serial.println("TSL sensor initialization FAILED!");
-  }
 }
 
 void serializeTSL(JsonDocument &doc) {
 
-  JsonObject data   = doc.createNestedObject("TSL2591");
-  data["Lux"]       = tslData.lux;
+  JsonObject data = doc.createNestedObject("TSL2591");
+  data["init"] = tslData.status;
+
+  if (tslData.status) {
+    data["Lux"] = tslData.lux;
+  }
 }

@@ -14,22 +14,33 @@ struct {
   bool status;
   float ambient_t;
   float object_t;
-} mlxData;
+} mlxData {false, 0.0, 0.0};
+
+/**
+   mlx.begin() always returns true, hence we need to check the I2C adress
+*/
+bool isSensorPresent() {
+  Wire.beginTransmission(MLX90614_I2CADDR);
+  byte error = Wire.endTransmission();
+
+  return (error == 0);
+}
 
 void updateMLX() {
-  if (mlxData.status || (mlxData.status = mlx.begin())) {
+  if (mlxData.status || (mlxData.status = isSensorPresent())) {
+    mlx.begin();
     mlxData.ambient_t = mlx.readAmbientTempC();
     mlxData.object_t  = mlx.readObjectTempC();
-  }
-  else {
-    mlxData.status = false;
-    Serial.println("MLX sensor initialization FAILED!");
   }
 }
 
 void serializeMLX(JsonDocument & doc) {
 
   JsonObject data = doc.createNestedObject("MLX90614");
-  data["T amb"] = mlxData.ambient_t;
-  data["T obj"] = mlxData.object_t;
+  data["init"] = mlxData.status;
+
+  if (mlxData.status) {
+    data["T amb"] = mlxData.ambient_t;
+    data["T obj"] = mlxData.object_t;
+  }
 }

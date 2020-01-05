@@ -10,13 +10,13 @@ set (DUINO_VERSION_MAJOR 0)
 set (DUINO_VERSION_MINOR 6)
  
 set (WEATHERRADIO_VERSION_MAJOR 0)
-set (WEATHERRADIO_VERSION_MINOR 1)
+set (WEATHERRADIO_VERSION_MINOR 2)
 
 find_package(INDI REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_duino.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_duino.xml )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_weatherradio.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/weatherradio.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/weatherradio.xml )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
