@@ -121,7 +121,6 @@ bool WeatherRadio::initProperties()
     INDI::Weather::initProperties();
 
     addConfigurationControl();
-    addPollPeriodControl();
 
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
