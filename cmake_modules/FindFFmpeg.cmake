@@ -19,6 +19,31 @@
 # BSD license.
 #
 
+macro(_FFMPEG_PACKAGE_check_version)
+    file(READ "${PACKAGE_INCLUDE_DIR}/version.h" _FFMPEG_PACKAGE_version_header)
+
+    string(REGEX MATCH "#define ${PACKAGE_NAME}_VERSION_MAJOR[ \t]+([0-9]+)" _VERSION_MAJOR_match "${_FFMPEG_PACKAGE_version_header}")
+    set(FFMPEG_PACKAGE_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    string(REGEX MATCH "#define ${PACKAGE_NAME}_VERSION_MINOR[ \t]+([0-9]+)" _VERSION_MINOR_match "${_FFMPEG_PACKAGE_version_header}")
+    set(FFMPEG_PACKAGE_VERSION_MINOR "${CMAKE_MATCH_1}")
+    string(REGEX MATCH "#define ${PACKAGE_NAME}_VERSION_MICRO[ \t]+([0-9]+)" _VERSION_MICRO_match "${_FFMPEG_PACKAGE_version_header}")
+    set(FFMPEG_PACKAGE_VERSION_MICRO "${CMAKE_MATCH_1}")
+
+    set(FFMPEG_PACKAGE_VERSION ${FFMPEG_PACKAGE_VERSION_MAJOR}.${FFMPEG_PACKAGE_VERSION_MINOR}.${FFMPEG_PACKAGE_VERSION_MICRO})
+    if(${FFMPEG_PACKAGE_VERSION} VERSION_LESS ${FFMPEG_PACKAGE_FIND_VERSION})
+        set(FFMPEG_PACKAGE_VERSION_OK FALSE)
+    else(${FFMPEG_PACKAGE_VERSION} VERSION_LESS ${FFMPEG_PACKAGE_FIND_VERSION})
+        set(FFMPEG_PACKAGE_VERSION_OK TRUE)
+    endif(${FFMPEG_PACKAGE_VERSION} VERSION_LESS ${FFMPEG_PACKAGE_FIND_VERSION})
+
+    if(NOT FFMPEG_PACKAGE_VERSION_OK)
+        message(STATUS "${PACKAGE_NAME} version ${FFMPEG_PACKAGE_VERSION} found in ${PACKAGE_INCLUDE_DIR}, "
+                "but at least version ${FFMPEG_PACKAGE_FIND_VERSION} is required")
+    else(NOT FFMPEG_PACKAGE_VERSION_OK)
+        mark_as_advanced(FFMPEG_PACKAGE_VERSION_MAJOR FFMPEG_PACKAGE_VERSION_MINOR FFMPEG_PACKAGE_VERSION_MICRO)
+    endif(NOT FFMPEG_PACKAGE_VERSION_OK)
+endmacro(_FFMPEG_PACKAGE_check_version)
+
 # required ffmpeg library versions, Requiring at least FFMPEG 3.2.11, Hypatia
 set(_avcodec_ver ">=57.64.101")
 set(_avdevice_ver ">=57.1.100")
@@ -42,38 +67,97 @@ pkg_check_modules(AVDEVICE libavdevice${_avdevice_ver})
 pkg_check_modules(AVFORMAT libavformat${_avformat_ver})
 pkg_check_modules(AVUTIL libavutil${_avutil_ver})
 pkg_check_modules(SWSCALE libswscale${_swscale_ver})
-
 endif (PKG_CONFIG_FOUND)
 
-find_path(FFMPEG_AVCODEC_INCLUDE_DIR
+find_path(FFMPEG_INCLUDE_DIR
 NAMES libavcodec/avcodec.h
-PATHS ${AVCODEC_INCLUDE_DIRS} /usr/include /usr/local/include /opt/local/include /sw/include
+PATHS ${FFMPEG_INCLUDE_DIRS} ${CMAKE_INSTALL_PREFIX}/include /usr/include /usr/local/include /opt/local/include /sw/include
 PATH_SUFFIXES ffmpeg libav
 )
 
+if (NOT AVCODEC_VERSION)
+	set(PACKAGE_NAME "LIBAVCODEC")
+	set(PACKAGE_INCLUDE_DIR "${FFMPEG_INCLUDE_DIR}/libavcodec")
+	set(FFMPEG_PACKAGE_FIND_VERSION _avcodec_ver)
+	
+	_FFMPEG_PACKAGE_check_version()
+	
+	if(FFMPEG_PACKAGE_VERSION_OK)
+		set(AVCODEC_VERSION FFMPEG_PACKAGE_VERSION)
+	endif(FFMPEG_PACKAGE_VERSION_OK)
+endif (NOT AVCODEC_VERSION)
+
 find_library(FFMPEG_LIBAVCODEC
 NAMES avcodec libavcodec
-PATHS ${AVCODEC_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+PATHS ${AVCODEC_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}/lib /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
+
+if (NOT LIBAVDEVICE_VERSION)
+	set(PACKAGE_NAME "LIBAVDEVICE")
+	set(PACKAGE_INCLUDE_DIR "${FFMPEG_INCLUDE_DIR}/libavdevice")
+	set(FFMPEG_PACKAGE_FIND_VERSION _avdevice_ver)
+	
+	_FFMPEG_PACKAGE_check_version()
+	
+	if(FFMPEG_PACKAGE_VERSION_OK)
+		set(AVDEVICE_VERSION FFMPEG_PACKAGE_VERSION)
+	endif(FFMPEG_PACKAGE_VERSION_OK)
+endif (NOT LIBAVDEVICE_VERSION)
 
 find_library(FFMPEG_LIBAVDEVICE
 NAMES avdevice libavdevice
-PATHS ${AVDEVICE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+PATHS ${AVDEVICE_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}/lib /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
+
+if (NOT LIBAVFORMAT_VERSION)
+	set(PACKAGE_NAME "LIBAVFORMAT")
+	set(PACKAGE_INCLUDE_DIR "${FFMPEG_INCLUDE_DIR}/libavformat")
+	set(FFMPEG_PACKAGE_FIND_VERSION _avformat_ver)
+	
+	_FFMPEG_PACKAGE_check_version()
+	
+	if(FFMPEG_PACKAGE_VERSION_OK)
+		set(AVFORMAT_VERSION FFMPEG_PACKAGE_VERSION)
+	endif(FFMPEG_PACKAGE_VERSION_OK)
+endif (NOT LIBAVFORMAT_VERSION)
 
 find_library(FFMPEG_LIBAVFORMAT
 NAMES avformat libavformat
-PATHS ${AVFORMAT_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+PATHS ${AVFORMAT_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}/lib /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
+
+if (NOT LIBAVUTIL_VERSION)
+	set(PACKAGE_NAME "LIBAVUTIL")
+	set(PACKAGE_INCLUDE_DIR "${FFMPEG_INCLUDE_DIR}/libavutil")
+	set(FFMPEG_PACKAGE_FIND_VERSION _avutil_ver)
+	
+	_FFMPEG_PACKAGE_check_version()
+	
+	if(FFMPEG_PACKAGE_VERSION_OK)
+		set(AVUTIL_VERSION FFMPEG_PACKAGE_VERSION)
+	endif(FFMPEG_PACKAGE_VERSION_OK)
+endif (NOT LIBAVUTIL_VERSION)
 
 find_library(FFMPEG_LIBAVUTIL
 NAMES avutil libavutil
-PATHS ${AVUTIL_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+PATHS ${AVUTIL_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}/lib /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
+
+if (NOT LIBSWSCALE_VERSION)
+	set(PACKAGE_NAME "LIBSWSCALE")
+	set(PACKAGE_INCLUDE_DIR "${FFMPEG_INCLUDE_DIR}/libswscale")
+	set(FFMPEG_PACKAGE_FIND_VERSION _swscale_ver)
+	
+	_FFMPEG_PACKAGE_check_version()
+	
+	if(FFMPEG_PACKAGE_VERSION_OK)
+		set(SWSCALE_VERSION FFMPEG_PACKAGE_VERSION)
+	endif(FFMPEG_PACKAGE_VERSION_OK)
+endif (NOT LIBSWSCALE_VERSION)
 
 find_library(FFMPEG_LIBSWSCALE
 NAMES swscale libswscale
-PATHS ${SWSCALE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+PATHS ${SWSCALE_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}/lib /usr/lib /usr/local/lib /opt/local/lib /sw/lib
 )
 
 #Only set FFMPEG to found if all the libraries are found in the right versions.
@@ -91,7 +175,6 @@ set(FFMPEG_FOUND TRUE)
 endif()
 
 if (FFMPEG_FOUND)
-set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
 
 set(FFMPEG_LIBRARIES
 ${FFMPEG_LIBAVCODEC}
