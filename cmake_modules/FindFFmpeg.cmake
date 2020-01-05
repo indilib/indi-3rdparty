@@ -13,7 +13,7 @@
 # Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
 # Modified for other libraries by Lasse Kärkkäinen <tronic>
 # Modified for Hedgewars by Stepik777
-# Modified for LIBAVCODECLIB by rlancaste
+# Modified for INDILIB by rlancaste
 #
 # Redistribution and use is allowed according to the terms of the New
 # BSD license.
