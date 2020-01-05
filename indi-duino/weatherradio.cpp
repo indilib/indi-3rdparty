@@ -141,14 +141,18 @@ bool WeatherRadio::initProperties()
     setWeatherConnection(CONNECTION_SERIAL);
 
     // define INDI config values for known sensors
-    deviceConfig["BME280"]["Temp"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["BME280"]["Pres"]    = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
-    deviceConfig["BME280"]["Hum"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["DHT"]["Temp"]    = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["DHT"]["Hum"]    = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["MLX90614"]["T amb"] = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["MLX90614"]["T obj"] = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
-    deviceConfig["TSL2591"]["Lux"] = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["BME280"]["Temp"]     = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["BME280"]["Pres"]     = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
+    deviceConfig["BME280"]["Hum"]      = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["DHT"]["Temp"]        = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["DHT"]["Hum"]         = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["MLX90614"]["T amb"]  = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["T obj"]  = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.2f", -100.0, 100.0, 1.0};
+    deviceConfig["TSL2591"]["Lux"]     = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Visible"] = {"Lightness (Vis)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["IR"]      = {"Lightness (IR)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Gain"]    = {"Gain", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Timing"]  = {"Timing", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
 
     return true;
 }

@@ -36,7 +36,7 @@ void sendSensorData() {
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
-                      JSON_OBJECT_SIZE(2);  // TSL2591 sensor
+                      JSON_OBJECT_SIZE(6);  // TSL2591 sensor
   StaticJsonDocument < docSize > weatherDoc;
 
 #ifdef USE_BME_SENSOR

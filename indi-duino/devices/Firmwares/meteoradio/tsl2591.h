@@ -33,7 +33,7 @@ void configureSensorTSL(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t time
 
 // calibrate TSL gain and integration time
 void calibrateTSL() {
-  if (tslData.full < 100) { //Increase GAIN (and INTEGRATIONTIME) if light level too low
+  if (tslData.visible < 100) { //Increase GAIN (and INTEGRATIONTIME) if light level too low
     switch (tslData.gain)
     {
       case TSL2591_GAIN_LOW :
@@ -46,7 +46,7 @@ void calibrateTSL() {
         configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_MAX :
-        if (tslData.full < 100) {
+        if (tslData.visible < 100) {
           switch (tslData.timing)
           {
             case TSL2591_INTEGRATIONTIME_200MS :
@@ -73,7 +73,7 @@ void calibrateTSL() {
     }
   }
 
-  if (tslData.full > 30000) { //Decrease GAIN (and INTEGRATIONTIME) if light level too high
+  if (tslData.visible > 30000) { //Decrease GAIN (and INTEGRATIONTIME) if light level too high
     switch (tslData.gain)
     {
       case TSL2591_GAIN_LOW :
@@ -101,7 +101,7 @@ void updateTSL() {
     tslData.full    = tsl.getFullLuminosity();
     tslData.ir      = tslData.full >> 16;
     tslData.visible = tslData.full & 0xFFFF;
-    tslData.lux     = tsl.calculateLux(tslData.full, tslData.ir);
+    tslData.lux     = tsl.calculateLux(tslData.visible, tslData.ir);
     tslData.gain    = tsl.getGain();
     tslData.timing  = tsl.getTiming();
 
@@ -115,6 +115,10 @@ void serializeTSL(JsonDocument &doc) {
   data["init"] = tslData.status;
 
   if (tslData.status) {
-    data["Lux"] = tslData.lux;
+    data["Lux"]     = tslData.lux;
+    data["Visible"] = tslData.visible; 
+    data["IR"]      = tslData.ir; 
+    data["Gain"]    = tslData.gain;
+    data["Timing"]  = tslData.timing;
   }
 }
