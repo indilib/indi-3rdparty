@@ -173,7 +173,6 @@ bool WeatherRadio::updateProperties()
         addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
         addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
 
-        defineText(&FirmwareInfoTP);
         getBasicData();
     }
     else
@@ -190,13 +189,8 @@ bool WeatherRadio::updateProperties()
         deleteProperty(FirmwareInfoTP.name);
     }
 
-    // If no configuration is load before, then load it now.
-    static int configLoaded = 0;
-    if (configLoaded == 0)
-    {
-        loadConfig();
-        configLoaded = 1;
-    }
+    // Load the configuration.
+    loadConfig();
 
     return true;
 }
@@ -211,6 +205,7 @@ void WeatherRadio::getBasicData()
     if (FirmwareInfoTP.s != IPS_OK)
         LOG_ERROR("Failed to get firmware from device.");
 
+    defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
 }
 
