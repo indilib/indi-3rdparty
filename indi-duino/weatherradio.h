@@ -46,7 +46,18 @@ protected:
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
 
+    // Initial function to get data after connection is successful
+    void getBasicData();
+
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP, humiditySensorSP, luminositySensorSP;
+
+    /**
+     * @brief get the interface version from the Arduino device.
+     */
+    IPState getFirmwareVersion(char *versionInfo);
+    // firmware info
+    ITextVectorProperty FirmwareInfoTP;
+    IText FirmwareInfoT[1] = {};
 
     /**
      * @brief Read the weather data from the JSON document

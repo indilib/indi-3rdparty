@@ -123,6 +123,9 @@ bool WeatherRadio::initProperties()
     addConfigurationControl();
     addPollPeriodControl();
 
+    IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
+    IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
+
     addParameter(WEATHER_TEMPERATURE, "Temperature (C)", -10, 30, 15);
     addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
     addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
@@ -159,6 +162,7 @@ bool WeatherRadio::updateProperties()
     if (! INDI::Weather::updateProperties()) return false;
     if (isConnected())
     {
+
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineNumber(&rawDevices[i]);
 
@@ -168,6 +172,9 @@ bool WeatherRadio::updateProperties()
         addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
         addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
         addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+
+        defineText(&FirmwareInfoTP);
+        getBasicData();
     }
     else
     {
@@ -180,6 +187,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(luminositySensorSP.name);
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
+        deleteProperty(FirmwareInfoTP.name);
     }
 
     // If no configuration is load before, then load it now.
@@ -194,6 +202,55 @@ bool WeatherRadio::updateProperties()
 }
 
 /**************************************************************************************
+** Retrieve basic data after a successful connect.
+***************************************************************************************/
+void WeatherRadio::getBasicData()
+{
+    FirmwareInfoT[0].text = new char[64];
+    FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
+    if (FirmwareInfoTP.s != IPS_OK)
+        LOG_ERROR("Failed to get firmware from device.");
+
+    IDSetText(&FirmwareInfoTP, nullptr);
+}
+
+/**************************************************************************************
+** Version of the Arduino firmware
+***************************************************************************************/
+IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
+{
+    char data[MAX_WEATHERBUFFER] = {0};
+    int n_bytes = 0;
+    bool result = sendQuery("v", data, &n_bytes);
+
+    if (result == true)
+    {
+        char *srcBuffer{new char[n_bytes+1] {0}};
+        // duplicate the buffer since the parser will modify it
+        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
+        char *source = srcBuffer;
+        char *endptr;
+        JsonValue value;
+        JsonAllocator allocator;
+        int status = jsonParse(source, &endptr, &value, allocator);
+        if (status != JSON_OK)
+        {
+            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+            return IPS_ALERT;
+        }
+
+        JsonIterator docIter;
+        for (docIter = begin(value); docIter != end(value); ++docIter)
+        {
+            if (strcmp(docIter->key, "version") == 0)
+                strcpy(versionInfo, docIter->value.toString());
+        }
+        return IPS_OK;
+    }
+    return IPS_ALERT;
+}
+
+/**************************************************************************************
 ** Create a selection of sensors for a certain weather property.
 ***************************************************************************************/
 void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector<sensor_name> sensors, const char* name, const char* label)
@@ -204,7 +261,7 @@ void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector
         std::string name = canonicalName(sensors[i]).c_str();
         IUFillSwitch(&switches[i], name.c_str(), name.c_str(), ISS_OFF);
     }
-    IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, "Options", IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineSwitch(sensor);
 }
 
@@ -418,6 +475,8 @@ IPState WeatherRadio::updateWeather()
                 // read all sensor data
                 for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
                 {
+                    if (strcmp(sensorIter->key, "init") == 0 || sensorIter->value.getTag() != JSON_NUMBER)
+                        continue;
                     INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
                     if (sensor != nullptr && sensorIter->value.isDouble())
                     {
