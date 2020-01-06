@@ -19,7 +19,7 @@ struct {
 
 
 void updateBME() {
-  if (bmeData.status || (bmeData.status = bme.begin())) {
+  if (bmeData.status || (bmeData.status = bme.begin()) || (bmeData.status = bme.begin(BME280_ADDRESS_ALTERNATE))) {
     bmeData.temperature = bme.readTemperature();
     bmeData.pressure    = bme.readPressure() / 100.0;
     bmeData.humidity    = bme.readHumidity();
