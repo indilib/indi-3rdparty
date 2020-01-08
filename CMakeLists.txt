@@ -102,6 +102,7 @@ option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
+option(WITH_PENTAX "Install Pentax SDK Driver" On)
 
 find_package(FFmpeg)
 
@@ -174,6 +175,11 @@ endif (WITH_QSI)
 if (WITH_SBIG)
 add_subdirectory(libsbig)
 endif (WITH_SBIG)
+
+#libpentax
+if (WITH_PENTAX)
+add_subdirectory(libpentax)
+endif (WITH_PENTAX)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
@@ -466,6 +472,18 @@ if (WITH_AVALON)
 add_subdirectory(indi-avalon)
 endif(WITH_AVALON)
 
+# Pentax
+if (WITH_PENTAX)
+find_package(PENTAX)
+if (PENTAX_FOUND)
+add_subdirectory(indi-pentax)
+else (PENTAX_FOUND)
+add_subdirectory(libpentax)
+SET(LIBRARIES_FOUND FALSE)
+endif (PENTAX_FOUND)
+endif(WITH_PENTAX)
+
+
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
@@ -531,6 +549,10 @@ endif (WITH_LIMESDR AND NOT LIMESDR_FOUND)
 if (WITH_RTLSDR AND NOT RTLSDR)
 message(STATUS "librtlsdr was not found. Please install librtlsdr first before running cmake again to install indi-rtlsdr.")
 endif (WITH_RTLSDR AND NOT RTLSDR)
+
+if (WITH_PENTAX AND NOT PENTAX_FOUND)
+message(STATUS "libpentax was not found. Please install libpentax first before running cmake again to install indi-pentax.")
+endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)
