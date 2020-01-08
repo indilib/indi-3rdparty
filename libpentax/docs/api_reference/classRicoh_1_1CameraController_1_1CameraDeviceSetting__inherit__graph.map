@@ -1,0 +1,4 @@
+<map id="Ricoh::CameraController::CameraDeviceSetting" name="Ricoh::CameraController::CameraDeviceSetting">
+<area shape="rect" id="node2" href="$classRicoh_1_1CameraController_1_1CameraTime.html" title="This class for setting of the date and time of camera. " alt="" coords="220,5,387,47"/>
+<area shape="rect" id="node3" href="$classRicoh_1_1CameraController_1_1LiveViewSpecification.html" title="The class for setting of live view specification. " alt="" coords="220,71,387,112"/>
+</map>

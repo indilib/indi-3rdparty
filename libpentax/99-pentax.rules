@@ -1,0 +1,3 @@
+ACTION=="add", ATTR{idVendor}=="25fb", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
+# All Pentax SDK Supported Cameras
+SUBSYSTEMS=="usb", ATTR{idVendor}=="25fb", MODE="0666" 
