@@ -1,0 +1,96 @@
+
+<INDIDriver>
+
+  <defNumberVector device="AAG Cloud Watcher NG" name="skyCorrection" label="Sky Temp. Correction Parameters" group="Options" state="Idle" perm="rw" timeout="0">
+    <defNumber name="k1" label="K1" format="%.0f" min="-999" max="999" step="0">33</defNumber>
+    <defNumber name="k2" label="K2" format="%.0f" min="-999" max="999" step="0">0</defNumber>
+    <defNumber name="k3" label="K3" format="%.0f" min="-999" max="999" step="0">4</defNumber>
+    <defNumber name="k4" label="K4" format="%.0f" min="-999" max="999" step="0">100</defNumber>
+    <defNumber name="k5" label="K5" format="%.0f" min="-999" max="999" step="0">100</defNumber>
+  </defNumberVector>
+  
+  
+  <defSwitchVector device="AAG Cloud Watcher NG" name="anemometerType" label="Anemometer Type" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
+    <defSwitch name="GRAY"  label="Gray (old)">Off</defSwitch>
+    <defSwitch name="BLACK" label="Black (new)">On</defSwitch>
+  </defSwitchVector>
+
+  <defNumberVector device="AAG Cloud Watcher NG" name="sensors" label="Sensors" group="Sensors" state="Idle" perm="ro" timeout="0">
+    <defNumber name="infraredSky" label="Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
+    <defNumber name="correctedInfraredSky" label="Corrected Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
+    <defNumber name="infraredSensor" label="Infrared Sensor (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
+    <defNumber name="rainSensor" label="Rain Sensor (cycles)" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="rainSensorTemperature" label="Rain Sensor Temperature (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>    
+    <defNumber name="rainSensorHeater" label="Rain Sensor Heater (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
+    <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.0f" min="0" max="1000000" step="0">0</defNumber> 
+    <defNumber name="ambientTemperatureSensor" label="Ambient Temp. Sensor (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
+    <defNumber name="windSpeed" label="Wind Speed (Km/H)" format="%.0f" min="0" max="1000" step="0">0</defNumber>
+  </defNumberVector>
+  
+
+  
+  <defSwitchVector device="AAG Cloud Watcher NG" name="deviceSwitch" label="Switch" group="Switch Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
+    <defSwitch name="open" label="Open">Off</defSwitch>
+    <defSwitch name="close" label="Close">On</defSwitch>
+  </defSwitchVector>
+  
+  <defNumberVector device="AAG Cloud Watcher NG" name="unitErrors" label="Errors" group="Errors" state="Idle" perm="ro" timeout="0">
+    <defNumber name="internalErrors" label="Internal Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="firstAddressByteErrors" label="First Address Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="commandByteErrors" label="Command Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="secondAddressByteErrors" label="Second Address Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="pecByteErrors" label="PEC Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+  </defNumberVector>
+ 
+
+  <defNumberVector device="AAG Cloud Watcher NG" name="heaterParameters" label="Parameters" group="Rain Heater" state="Idle" perm="rw" timeout="0">
+    <defNumber name="tempLow" label="Temperature Low (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
+    <defNumber name="tempHigh" label="Temperature High (ºC)" format="%.1f" min="-50" max="100" step="0">20</defNumber>
+    <defNumber name="deltaLow" label="Delta Low" format="%.1f" min="0" max="50" step="0">6</defNumber>
+    <defNumber name="deltaHigh" label="Delta High" format="%.1f" min="0" max="50" step="0">4</defNumber>
+    <defNumber name="min" label="Min (%)" format="%.1f" min="10" max="20" step="0">10</defNumber>
+    <defNumber name="heatImpulseTemp" label="Impulse Temperature (ºC)" format="%.0f" min="1" max="30" step="0">10</defNumber>
+    <defNumber name="heatImpulseDuration" label="Impulse Duration (s)" format="%.0f" min="0" max="600" step="0">60</defNumber>
+    <defNumber name="heatImpulseCycle" label="Impulse Cycle (s)" format="%.0f" min="60" max="1000" step="0">600</defNumber>
+  </defNumberVector>
+
+  <defSwitchVector device="AAG Cloud Watcher NG" name="heaterStatus" label="Heater Status" group="Rain Heater" state="Idle" perm="ro" rule="OneOfMany" timeout="0">
+    <defSwitch name="normal" label="Normal">On</defSwitch>
+    <defSwitch name="increasing" label="Increasing to Pulse">Off</defSwitch>
+    <defSwitch name="pulse" label="Pulse">Off</defSwitch>    
+  </defSwitchVector>
+
+  <defNumberVector device="AAG Cloud Watcher NG" name="readings" label="Readings" group="Device Raw Readings" state="Idle" perm="ro" timeout="0">
+    <defNumber name="supply" label="Supply" format="%.0f" min="0" max="1000" step="0">0</defNumber>
+    <defNumber name="sky" label="Sky" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="sensor" label="Sensor" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="ambient" label="Ambient" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="rain" label="Rain" format="%.1f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="rainHeater" label="Rain Heater" format="%f" min="-1" max="1023" step="0">0</defNumber>
+    <defNumber name="rainTemp" label="Rain Temp." format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="LDR" label="LDR" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
+    <defNumber name="readCycle" label="Read Cycle (s)" format="%.3f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="windSpeed" label="Wind Speed" format="%.0f" min="0" max="20000000" step="0">0</defNumber>
+    <defNumber name="totalReadings" label="Total Readings" format="%7.0f" min="0" max="20000000" step="0">0</defNumber>
+  </defNumberVector>
+  
+  <defTextVector device="AAG Cloud Watcher NG" name="FW" label="FW" group="Constants" state="Idle" perm="ro" timeout="0">
+    <defText name="firmwareVersion" label="Firmware Version">-</defText>
+  </defTextVector> 
+  
+  <defNumberVector device="AAG Cloud Watcher NG" name="constants" label="Constants" group="Constants" state="Idle" perm="ro" timeout="0">
+    <defNumber name="internalSerialNumber" label="Internal Serial No." format="%.0f" min="0" max="9999" step="1">0</defNumber>
+    <defNumber name="zenerVoltage" label="Zener Voltage (V)" format="%.0f" min="-10" max="20" step="0">0</defNumber>
+    <defNumber name="LDRMaxResistance" label="LDR Max Resistance (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="LDRPullUpResistance" label="LDR PullUp Resistance (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="rainBetaFactor" label="Rain Beta Factor" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="rainResistanceAt25" label="Rain Resistance al 25º (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="rainPullUpResistance" label="Rain PullUp Resistance (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="ambientBetaFactor" label="Ambient Beta Factor" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="ambientResistanceAt25" label="Ambient Resistance at 25º (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="ambientPullUpResistance" label="Ambient PullUp Resistance (K)" format="%.1f" min="0" max="200000" step="0">0</defNumber>
+    <defNumber name="anemometerStatus" label="Anemometer Status" format="%.0f" min="0" max="1" step="0">0</defNumber>
+  </defNumberVector> 
+  
+
+</INDIDriver>

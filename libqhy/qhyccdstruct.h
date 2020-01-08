@@ -63,7 +63,8 @@ typedef uint64_t QHYDWORD;
 
 
 
-#define		MAX_READMODE_NUMBER			8
+#define		MAX_READMODE_NUMBER					8
+#define		MAX_READMODE_CAMARA_NUMBER			8
 
 
 /**

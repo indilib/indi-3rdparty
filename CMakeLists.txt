@@ -102,6 +102,7 @@ option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
+option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax SDK Driver" On)
 
 find_package(FFmpeg)
@@ -222,6 +223,11 @@ if (WITH_NEXDOME)
 add_subdirectory(indi-nexdome)
 endif(WITH_NEXDOME)
 
+## Talon6
+if (WITH_TALON6)
+add_subdirectory(indi-talon6)
+endif(WITH_TALON6)
+
 ## SpectraCyber
 if (WITH_SPECTRACYBER)
 add_subdirectory(indi-spectracyber)
@@ -235,6 +241,7 @@ endif(WITH_SHELYAK)
 ## Cloud Watcher
 if (WITH_CLOUDWATCHER)
 add_subdirectory(indi-aagcloudwatcher)
+add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
 
 ## Nexstar Evo
