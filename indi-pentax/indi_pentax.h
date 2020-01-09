@@ -28,26 +28,27 @@
 
 #include <indiccd.h>
 #include <indiccdchip.h>
+
 #include <iostream>
 
 using namespace std;
 using namespace Ricoh::CameraController;
 
+class PentaxCCD;
+
 class PentaxEventListener : public CameraEventListener
 {
 public:
-    PentaxEventListener(const char *devname, INDI::CCDChip *ccd);
+    PentaxEventListener(PentaxCCD *device); //const char *devname, INDI::CCDChip *ccd, INDI::StreamManager *streamer);
+    PentaxCCD *device;
 
-    INDI::CCDChip *parentCCD;
-    const char *deviceName;
+    //INDI::CCDChip *ccd;
+    //const char *deviceName;
     const char *getDeviceName(); //so we can use the logger
 
-    std::shared_ptr<const CameraImage> lastImage = nullptr;
     void imageStored(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const CameraImage>& image) override;
 
-    std::shared_ptr<const unsigned char> lastLiveViewFrame = nullptr;
-    uint64_t lastLiveViewFrameSize;
-    bool lastLiveViewFrameRendered = true;
+    //INDI::StreamManager *streamer;
     virtual void liveViewFrameUpdated(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const unsigned char>& liveViewFrame, uint64_t frameSize) override;
 };
 
@@ -70,6 +71,7 @@ class PentaxCCD : public INDI::CCD
     bool AbortExposure();
 
   protected:
+    friend class PentaxEventListener;
     void TimerHit();
     virtual bool UpdateCCDFrame(int x, int y, int w, int h);
     virtual bool UpdateCCDBin(int binx, int biny);
@@ -85,9 +87,10 @@ class PentaxCCD : public INDI::CCD
     bool StopStreaming() override;
     void streamLiveView();
 
-    std::mutex liveStreamMutex;
-    bool m_RunLiveStream;
+    //std::mutex liveStreamMutex;
+    //bool m_RunLiveStream;
 
+    bool bufferIsBayered;
   private:
     std::shared_ptr<CameraDevice> device;
     std::shared_ptr<const Capture> pendingCapture;
@@ -109,7 +112,7 @@ class PentaxCCD : public INDI::CCD
     float TemperatureRequest;
 
     float CalcTimeLeft();
-    int grabImage(std::shared_ptr<const CameraImage>);
+    int grabImage();
     bool setupParams();
     bool sim;
 
