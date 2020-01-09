@@ -23,6 +23,7 @@
 #pragma once
 
 #include <map>
+#include <math.h>
 
 #include "indiweather.h"
 
@@ -74,6 +75,34 @@ protected:
      * @brief Calculate the Sky quality SQM from the measured illuminance.
      */
     double sqmValue(double lux);
+
+    /**
+     * @brief Magnus formula constants for values of -45°C < T < 60°C over water.
+     */
+    const double magnus_K1 = 6.112, magnus_K2 = 17.62, magnus_K3 = 243.12;
+    /**
+     * @brief saturation vapour pressure based on the Magnus formula
+     * ps(T) =  K1 * 10^((K2*T)/(K3+T))
+     */
+    double saturationVapourPressure (double temperature) { return magnus_K1 * exp((magnus_K2*temperature)/(magnus_K3 + temperature)); }
+
+    /**
+     * @brief vapour pressure: vapourPressure(r,T) = r/100 * saturationVapourPressure(T)
+     * @param humidity 0 <= humidity <= 1
+     * @param temperature in °C
+     */
+    double vapourPressure (double humidity, double temperature) {return humidity * saturationVapourPressure(temperature);}
+
+    /**
+     * @brief Dew point
+     * dewPoint(humidity, temperature) = K3*v/(K2-v) with v = ln(vapourPressure(humidity, temperature)/0.622)
+     *
+     */
+    double dewPoint(double humidity, double temperature)
+    {
+        double v = log(vapourPressure(humidity, temperature)/0.622);
+        return magnus_K3*v/(magnus_K2-v);
+    }
 
     /**
       * Device specific configurations
