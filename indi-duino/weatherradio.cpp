@@ -50,6 +50,7 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define WEATHER_HUMIDITY    "WEATHER_HUMIDITY"
 #define WEATHER_CLOUD_COVER "WEATHER_CLOUD_COVER"
 #define WEATHER_SQM         "WEATHER_SQM"
+#define WEATHER_DEWPOINT    "WEATHER_DEWPOINT"
 
 //Clear sky corrected temperature (temp below means 0% clouds)
 #define CLOUD_TEMP_CLEAR  -8
@@ -125,11 +126,12 @@ bool WeatherRadio::initProperties()
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
-    addParameter(WEATHER_TEMPERATURE, "Temperature (C)", -10, 30, 15);
+    addParameter(WEATHER_TEMPERATURE, "Temperature (°C)", -10, 30, 15);
     addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
     addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
     addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 50);
     addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
+    addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
 
     setCriticalParameter(WEATHER_TEMPERATURE);
     setCriticalParameter(WEATHER_PRESSURE);
@@ -536,7 +538,15 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         setParameterValue(WEATHER_PRESSURE, pressure_normalized);
     }
     else if (currentSensors.humidity == sensor)
+    {
         setParameterValue(WEATHER_HUMIDITY, value);
+        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
+        if (temperatureParameter != nullptr)
+        {
+            double dp =  dewPoint(value, temperatureParameter->value);
+            setParameterValue(WEATHER_DEWPOINT, dp);
+        }
+     }
     else if (currentSensors.temp_ambient == sensor)
     {
         // obtain the current object temperature
@@ -611,6 +621,9 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
         break;
     case OBJECT_TEMPERATURE_SENSOR:
         sensorRegistry.temp_object.push_back(sensor);
+        break;
+    case INTERNAL_SENSOR:
+        // do nothing
         break;
     }
 }
