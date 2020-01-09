@@ -79,29 +79,29 @@ protected:
     /**
      * @brief Magnus formula constants for values of -45°C < T < 60°C over water.
      */
-    const double magnus_K1 = 6.112, magnus_K2 = 17.62, magnus_K3 = 243.12;
+    const double dp_a = 7.5, dp_b = 237.5, dp_c = 6.1078;
     /**
      * @brief saturation vapour pressure based on the Magnus formula
-     * ps(T) =  K1 * 10^((K2*T)/(K3+T))
+     * ps(T) =  c * pow(10, (a*T)/(b+T))
      */
-    double saturationVapourPressure (double temperature) { return magnus_K1 * exp((magnus_K2*temperature)/(magnus_K3 + temperature)); }
+    double saturationVapourPressure (double temperature) { return dp_c * pow(10, (dp_a*temperature)/(dp_b + temperature)); }
 
     /**
      * @brief vapour pressure: vapourPressure(r,T) = r/100 * saturationVapourPressure(T)
-     * @param humidity 0 <= humidity <= 1
+     * @param humidity 0 <= humidity <= 100
      * @param temperature in °C
      */
-    double vapourPressure (double humidity, double temperature) {return humidity * saturationVapourPressure(temperature);}
+    double vapourPressure (double humidity, double temperature) {return humidity * saturationVapourPressure(temperature) / 100;}
 
     /**
      * @brief Dew point
-     * dewPoint(humidity, temperature) = K3*v/(K2-v) with v = ln(vapourPressure(humidity, temperature)/0.622)
+     * dewPoint(humidity, temperature) = b*v/(a-v) with v = log(vapourPressure(humidity, temperature)/c)
      *
      */
     double dewPoint(double humidity, double temperature)
     {
-        double v = log(vapourPressure(humidity, temperature)/0.622);
-        return magnus_K3*v/(magnus_K2-v);
+        double v = log10(vapourPressure(humidity, temperature)/dp_c);
+        return dp_b*v/(dp_a-v);
     }
 
     /**
