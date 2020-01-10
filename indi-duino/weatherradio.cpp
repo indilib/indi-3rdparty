@@ -45,12 +45,13 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define MAX_WEATHERBUFFER 256
 #define MAX_WAIT 2
 
-#define WEATHER_TEMPERATURE "WEATHER_TEMPERATURE"
-#define WEATHER_PRESSURE    "WEATHER_PRESSURE"
-#define WEATHER_HUMIDITY    "WEATHER_HUMIDITY"
-#define WEATHER_CLOUD_COVER "WEATHER_CLOUD_COVER"
-#define WEATHER_SQM         "WEATHER_SQM"
-#define WEATHER_DEWPOINT    "WEATHER_DEWPOINT"
+#define WEATHER_TEMPERATURE     "WEATHER_TEMPERATURE"
+#define WEATHER_PRESSURE        "WEATHER_PRESSURE"
+#define WEATHER_HUMIDITY        "WEATHER_HUMIDITY"
+#define WEATHER_CLOUD_COVER     "WEATHER_CLOUD_COVER"
+#define WEATHER_SQM             "WEATHER_SQM"
+#define WEATHER_DEWPOINT        "WEATHER_DEWPOINT"
+#define WEATHER_SKY_TEMPERATURE "WEATHER_SKY_TEMPERATURE"
 
 //Clear sky corrected temperature (temp below means 0% clouds)
 #define CLOUD_TEMP_CLEAR  -8
@@ -132,6 +133,7 @@ bool WeatherRadio::initProperties()
     addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 50);
     addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
     addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
+    addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
 
     setCriticalParameter(WEATHER_TEMPERATURE);
     setCriticalParameter(WEATHER_PRESSURE);
@@ -555,6 +557,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         {
             double objectTemperature = objProp->value;
             setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(value, objectTemperature));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, skyTemperatureCorr(value, objectTemperature));
         }
     }
     else if (currentSensors.temp_object == sensor)
@@ -565,6 +568,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         {
             double ambientTemperature = ambientProp->value;
             setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, skyTemperatureCorr(ambientTemperature, value));
         }
     }
     else if (currentSensors.luminosity == sensor)
@@ -576,14 +580,10 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
 ** The original formula stems from the AAG cloud watcher http://lunatico.es/aagcw/enhelp/
 ** and the INDI driver indi_aagcloudwatcher.cpp.
 ***************************************************************************************/
+
 double WeatherRadio::cloudCoverage(double ambientTemperature, double skyTemperature)
 {
-    // FIXME: make the parameters k1 .. k5 configurable
-    double k1 = 33.0, k2 = 0.0,  k3 = 4.0, k4 = 100.0, k5 = 100.0;
-
-    double correctedTemperature =
-        skyTemperature - ((k1 / 100.0) * (ambientTemperature - k2 / 10.0) +
-                          (k3 / 100.0) * pow(exp(k4 / 1000. * ambientTemperature), (k5 / 100.0)));
+    double correctedTemperature = skyTemperatureCorr(ambientTemperature, skyTemperature);
 
 
     if (correctedTemperature < CLOUD_TEMP_CLEAR) correctedTemperature = CLOUD_TEMP_CLEAR;
