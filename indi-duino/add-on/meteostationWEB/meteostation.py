@@ -163,9 +163,9 @@ def recv_indi(indi):
 	sqm=vectorSQM.get_element(WEATHER_SQM_SQM).get_float()
    
         statusVector=indi.get_vector(INDIDEVICE, WEATHER_STATUS)
-	cloudFlag=int(not statusVector.get_element(WEATHER_STATUS_CLOUDS).is_ok())
-	dewFlag=int(not statusVector.get_element(WEATHER_STATUS_DEW).is_ok())
-	frezzingFlag=int(not statusVector.get_element(WEATHER_STATUS_TEMP).is_ok())
+	cloudFlag=int(statusVector.get_element(WEATHER_STATUS_CLOUDS).is_alert())
+	dewFlag=int(statusVector.get_element(WEATHER_STATUS_DEW).is_alert())
+	frezzingFlag=int(statusVector.get_element(WEATHER_STATUS_TEMP).is_alert())
   
 	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp),("Dew",dew),("SQM",sqm),
            ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),
