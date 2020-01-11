@@ -57,11 +57,6 @@
 //#define T_MAIN_Tir
 #define T_MAIN_Tp
 
-#ifdef USE_DHT_SENSOR
-  // what pin we're connected DHT22 to
-  #define DHTPIN 3
-#endif //USE_DHT_SENSOR
-
 #ifdef USE_IRRADIANCE_SENSOR
   //A multitude of solar cells can be used as IRRADIANCE sensor.
   //Set MINIMUM_DAYLIGHT to the IRRADIANCE output at start of dusk.
