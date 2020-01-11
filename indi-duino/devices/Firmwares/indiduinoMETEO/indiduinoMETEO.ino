@@ -57,11 +57,6 @@
 //#define T_MAIN_Tir
 #define T_MAIN_Tp
 
-#ifdef USE_DHT_SENSOR
-  // what pin we're connected DHT22 to
-  #define DHTPIN 3
-#endif //USE_DHT_SENSOR
-
 #ifdef USE_IRRADIANCE_SENSOR
   //A multitude of solar cells can be used as IRRADIANCE sensor.
   //Set MINIMUM_DAYLIGHT to the IRRADIANCE output at start of dusk.
@@ -179,8 +174,16 @@ Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_DHT_SENSOR
-  #include "dht.h"
-  dht DHT;
+#include "DHT.h"
+
+#define DHTPIN 3     // Digital pin connected to the DHT sensor
+
+// Uncomment whatever type you're using!
+#define DHTTYPE DHT11   // DHT 11
+//#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+
+DHT dht(DHTPIN, DHTTYPE);
 #endif //USE_DHT_SENSOR
 
 #ifdef USE_P_SENSOR
@@ -201,7 +204,7 @@ Adafruit_TSL2591 tsl = Adafruit_TSL2591();
 
 float P, HR, IR, T, Tp, Thr, Tir, Dew, Light, brightness, lux, mag_arcsec2, Clouds, skyT;
 int cloudy, dewing, frezzing;
-bool mlxSuccess, bmpSuccess, bmeSuccess, tslSuccess;
+bool mlxSuccess, bmpSuccess, bmeSuccess, tslSuccess, dhtSuccess;
 
 #define TOTAL_ANALOG_PINS       11
 #define TOTAL_PINS              25
@@ -250,6 +253,20 @@ void setupMeteoStation() {
   } else digitalWrite(PIN_TO_DIGITAL(9), LOW); //Make sure P/BME sensor fail flag is off on success
 
 #endif //USE_BME_SENSOR
+
+#ifdef USE_DHT_SENSOR
+ if (dhtSuccess == false) {
+    dht.begin();
+    // check if we really get a proper result to ensure
+    // that the initialization succeeded
+    dhtSuccess = !isnan(dht.readHumidity());
+    if (dhtSuccess)
+      digitalWrite(PIN_TO_DIGITAL(8), HIGH);
+    else
+      digitalWrite(PIN_TO_DIGITAL(8), LOW);
+
+  }
+#endif //USE_DHT_SENSOR
 
 }
 
@@ -389,16 +406,8 @@ void runMeteoStation() {
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_DHT_SENSOR
-     int chk=DHT.read22(DHTPIN);
-     if (chk==DHTLIB_OK) {
-         //OK.clear HR sensor fail flag
-         digitalWrite(PIN_TO_DIGITAL(8), LOW);
-         HR=DHT.humidity;
-         Thr=DHT.temperature;
-     } else {
-         //set HR sensor fail flag
-         digitalWrite(PIN_TO_DIGITAL(8), HIGH);
-     }
+    HR=dht.readHumidity();
+    Thr=dht.readTemperature();
 
     Dew=dewPoint(Thr,HR);
     if (Thr<=Dew+2) {
