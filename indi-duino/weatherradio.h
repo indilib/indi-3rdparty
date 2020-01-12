@@ -67,60 +67,6 @@ protected:
     IPState updateWeather() override;
 
     /**
-     * @brief Calculate the cloud coverage from the ambient and cloud temperature.
-     */
-    double cloudCoverage(double ambientTemperature, double skyTemperature);
-
-    /**
-     * @brief Calculate the Sky quality SQM from the measured illuminance.
-     */
-    double sqmValue(double lux);
-
-    /**
-     * @brief Magnus formula constants for values of -45°C < T < 60°C over water.
-     */
-    const double dp_a = 7.5, dp_b = 237.5, dp_c = 6.1078;
-    /**
-     * @brief saturation vapour pressure based on the Magnus formula
-     * ps(T) =  c * pow(10, (a*T)/(b+T))
-     */
-    double saturationVapourPressure (double temperature) { return dp_c * pow(10, (dp_a*temperature)/(dp_b + temperature)); }
-
-    /**
-     * @brief vapour pressure: vapourPressure(r,T) = r/100 * saturationVapourPressure(T)
-     * @param humidity 0 <= humidity <= 100
-     * @param temperature in °C
-     */
-    double vapourPressure (double humidity, double temperature) {return humidity * saturationVapourPressure(temperature) / 100;}
-
-    /**
-     * @brief Dew point
-     * dewPoint(humidity, temperature) = b*v/(a-v) with v = log(vapourPressure(humidity, temperature)/c)
-     *
-     */
-    double dewPoint(double humidity, double temperature)
-    {
-        double v = log10(vapourPressure(humidity, temperature)/dp_c);
-        return dp_b*v/(dp_a-v);
-    }
-
-    /**
-     * @brief Normalize the sky temperature for the cloud coverage calculation.
-     * The original formula stems from the AAG cloud watcher http://lunatico.es/aagcw/enhelp/
-     * and the INDI driver indi_aagcloudwatcher.cpp.
-     */
-    double skyTemperatureCorr(double ambientTemperature, double skyTemperature)
-    {
-        // FIXME: make the parameters k1 .. k5 configurable
-        double k1 = 33.0, k2 = 0.0,  k3 = 4.0, k4 = 100.0, k5 = 100.0;
-
-        double correctedTemperature =
-            skyTemperature - ((k1 / 100.0) * (ambientTemperature - k2 / 10.0) +
-                              (k3 / 100.0) * pow(exp(k4 / 1000. * ambientTemperature), (k5 / 100.0)));
-
-        return correctedTemperature;
-    }
-    /**
       * Device specific configurations
       */
     enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, INTERNAL_SENSOR};

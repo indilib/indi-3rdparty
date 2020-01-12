@@ -23,12 +23,12 @@
 */
 
 #include "weatherradio.h"
+#include "weathercalculator.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <map>
-#include <math.h>
 
 #include <sys/stat.h>
 
@@ -52,11 +52,6 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define WEATHER_SQM             "WEATHER_SQM"
 #define WEATHER_DEWPOINT        "WEATHER_DEWPOINT"
 #define WEATHER_SKY_TEMPERATURE "WEATHER_SKY_TEMPERATURE"
-
-//Clear sky corrected temperature (temp below means 0% clouds)
-#define CLOUD_TEMP_CLEAR  -8
-//Totally cover sky corrected temperature (temp above means 100% clouds)
-#define CLOUD_TEMP_OVERCAST  0
 
 
 /**************************************************************************************
@@ -545,7 +540,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
         if (temperatureParameter != nullptr)
         {
-            double dp =  dewPoint(value, temperatureParameter->value);
+            double dp =  WeatherCalculator::dewPoint(value, temperatureParameter->value);
             setParameterValue(WEATHER_DEWPOINT, dp);
         }
      }
@@ -556,8 +551,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (objProp != nullptr)
         {
             double objectTemperature = objProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(value, objectTemperature));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, skyTemperatureCorr(value, objectTemperature));
+            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(value, objectTemperature));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(value, objectTemperature));
         }
     }
     else if (currentSensors.temp_object == sensor)
@@ -567,39 +562,14 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (ambientProp != nullptr)
         {
             double ambientTemperature = ambientProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, cloudCoverage(ambientTemperature, value));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, skyTemperatureCorr(ambientTemperature, value));
+            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(ambientTemperature, value));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(ambientTemperature, value));
         }
     }
     else if (currentSensors.luminosity == sensor)
-        setParameterValue(WEATHER_SQM, sqmValue(value));
+        setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
 }
 
-/**************************************************************************************
-** Calculate the cloud coverage from the difference between ambient and sky temperature
-** The original formula stems from the AAG cloud watcher http://lunatico.es/aagcw/enhelp/
-** and the INDI driver indi_aagcloudwatcher.cpp.
-***************************************************************************************/
-
-double WeatherRadio::cloudCoverage(double ambientTemperature, double skyTemperature)
-{
-    double correctedTemperature = skyTemperatureCorr(ambientTemperature, skyTemperature);
-
-
-    if (correctedTemperature < CLOUD_TEMP_CLEAR) correctedTemperature = CLOUD_TEMP_CLEAR;
-    if (correctedTemperature > CLOUD_TEMP_OVERCAST) correctedTemperature = CLOUD_TEMP_OVERCAST;
-
-    return (correctedTemperature - CLOUD_TEMP_CLEAR) * 100 / (CLOUD_TEMP_OVERCAST - CLOUD_TEMP_CLEAR);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-double WeatherRadio::sqmValue(double lux)
-{
-    double mag_arcsec2 = log10(lux/108000)/-0.4;
-    return mag_arcsec2;
-}
 
 /**************************************************************************************
 **
