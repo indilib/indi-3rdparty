@@ -42,7 +42,7 @@
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
-#define MAX_WEATHERBUFFER 256
+#define MAX_WEATHERBUFFER 512
 #define MAX_WAIT 2
 
 #define WEATHER_TEMPERATURE     "WEATHER_TEMPERATURE"
@@ -714,7 +714,7 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         LOGF_ERROR("Command <%s> failed.", cmd);
         return false;
     }
-    return receive(response, length, '\n', MAX_WAIT);;
+    return receive(response, length, '\n', MAX_WAIT);
 }
 
 /**************************************************************************************
