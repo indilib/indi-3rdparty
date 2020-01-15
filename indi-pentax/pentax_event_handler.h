@@ -22,8 +22,11 @@
 #define PENTAXEVENTLISTENER_H
 
 #include <ricoh_camera_sdk.hpp>
+#include <stream/streammanager.h>
+#include <regex>
 
-#include "indi_pentax.h"
+#include "pentax_ccd.h"
+
 
 using namespace Ricoh::CameraController;
 

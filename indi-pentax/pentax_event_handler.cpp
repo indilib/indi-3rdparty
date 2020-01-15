@@ -17,11 +17,8 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <stream/streammanager.h>
-#include <libraw.h>
-#include <regex>
-
 #include "pentax_event_handler.h"
+
 #include "../indi-gphoto/gphoto_readimage.cpp"
 
 const char * getFormatFileExtension(ImageFormat format) {
