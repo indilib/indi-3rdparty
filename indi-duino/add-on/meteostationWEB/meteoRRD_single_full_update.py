@@ -11,6 +11,7 @@ from meteostation import *
 
 # ensure that the driver is connected
 
+print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
 indi=indiclient(INDISERVER,int(INDIPORT))
 connect(indi)
 init()
@@ -34,13 +35,22 @@ x = simplejson.dumps(json_dict)
 fi=open(CHARTPATH+"RTdata.json","w")
 fi.write(x)
 fi.close()
-del indi
-del data
-del json_dict 
-collected = gc.collect()
-#print "Garbage collector: collected %d objects." % (collected)
-#h = hpy()
-#print h.heap()
+print "Updating data from \"%s\"@%s:%s (succeeded)" % (INDIDEVICE,INDISERVER,INDIPORT)
+
+################ update graphs ##################
+
+print "Updating graphs"
+graphs(3)
+minutes = gmtime().tm_hour * gmtime().tm_min
+if (minutes % 4 == 0):
+	graphs(24)
+if (minutes % 21 == 0):
+	graphs(168)
+if (minutes % 147 == 0):
+	graphs(1176)
+print "Updating graphs (succeeded)"
+
+
 
 
 
