@@ -44,6 +44,7 @@ include(CMakeCommon)
 ############# PENTAX CCD ###############
 set(indipentax_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/indi_pentax.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/pentax_event_handler.cpp
 )
 
 add_executable(indi_pentax ${indipentax_SRCS})

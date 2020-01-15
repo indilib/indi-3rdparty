@@ -1,9 +1,6 @@
 /*
- Pentax CCD
- CCD Template for INDI Developers
- Copyright (C) 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
-
- Multiple device support Copyright (C) 2013 Peter Polakovic (peter.polakovic@cloudmakers.eu)
+ Pentax CCD Driver for Indi (using Ricoh Camera SDK)
+ Copyright (C) 2020 Karl Rees
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -25,50 +22,22 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <libraw.h>
 #include <stream/streammanager.h>
 
 #include "config.h"
 #include "indidevapi.h"
 #include "eventloop.h"
-#include "../indi-gphoto/gphoto_readimage.cpp"
 
 #include "indi_pentax.h"
 
-#define MAX_CCD_TEMP   45   /* Max CCD temperature */
-#define MIN_CCD_TEMP   -55  /* Min CCD temperature */
-#define MAX_X_BIN      16   /* Max Horizontal binning */
-#define MAX_Y_BIN      16   /* Max Vertical binning */
-#define MAX_PIXELS     4096 /* Max number of pixels in one dimension */
-#define TEMP_THRESHOLD .25  /* Differential temperature threshold (C)*/
+#define MAX_PIXELS     9196 /* Max number of pixels in one dimension */
 #define MAX_DEVICES    20   /* Max device cameraCount */
 
-
 static int cameraCount;
-static PentaxCCD *cameras[MAX_DEVICES];
-static char *logdevicename = "Pentax Driver";
+static INDI::CCD *cameras[MAX_DEVICES];
+static char logdevicename[14]= "Pentax Driver";
 
 
-/**********************************************************
- *
- *  IMPORTANT: List supported camera models in initializer of deviceTypes structure
- *
- **********************************************************/
-
-static struct
-{
-    int vid;
-    int pid;
-    const char *name;
-    int maxwidth;
-    int maxheight;
-    float pixelsize;
-} deviceTypes[] = { { 0x25fb, 0x017c, "PENTAX K70", 6000, 4000, 3.88 },
-                    { 0x25fb, 0x0130, "PENTAX K-1 Mark II", 7360, 4920, 4.86 },
-                    { 0x25fb, 0, "PENTAX K-1", 7360, 4920, 4.86 },
-                    { 0x25fb, 0, "PENTAX KP", 6016, 4000, 3.88 },
-                    { 0x25fb, 0, "PENTAX 645Z", 8256, 6192, 5.32 },
-                    { 0, 0, nullptr, 0, 0, 0 } };
 
 static void cleanup()
 {
@@ -78,19 +47,20 @@ static void cleanup()
     }
 }
 
+static bool isInit = false;
+
 void ISInit()
 {
-    static bool isInit = false;
+
     if (!isInit)
     {
-
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
         cameraCount = detectedCameraDevices.size();
         if (cameraCount > 0) {
             DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Pentax Camera driver using Ricoh Camera SDK");
             DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Please be sure the camera is on, connected, and in PTP mode!!!");
             DEBUGFDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "%d Pentax camera(s) have been detected.",cameraCount);
-            for (size_t i = 0; (i < cameraCount) && (i < MAX_DEVICES); i++) {
+            for (int i = 0; (i < cameraCount) && (i < MAX_DEVICES); i++) {
                 std::shared_ptr<CameraDevice> camera = detectedCameraDevices[i];
                 cameras[i] = new PentaxCCD(camera);
             }
@@ -105,11 +75,12 @@ void ISInit()
 
 void ISGetProperties(const char *dev)
 {
+    if (cameraCount == 0) isInit = false;
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
-        PentaxCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
+        INDI::CCD *camera = cameras[i];
+        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
         {
             camera->ISGetProperties(dev);
             if (dev != nullptr)
@@ -123,8 +94,8 @@ void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
-        PentaxCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
+        INDI::CCD *camera = cameras[i];
+        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
         {
             camera->ISNewSwitch(dev, name, states, names, num);
             if (dev != nullptr)
@@ -138,8 +109,8 @@ void ISNewText(const char *dev, const char *name, char *texts[], char *names[], 
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
-        PentaxCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
+        INDI::CCD *camera = cameras[i];
+        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
         {
             camera->ISNewText(dev, name, texts, names, num);
             if (dev != nullptr)
@@ -153,8 +124,8 @@ void ISNewNumber(const char *dev, const char *name, double values[], char *names
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
-        PentaxCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
+        INDI::CCD *camera = cameras[i];
+        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
         {
             camera->ISNewNumber(dev, name, values, names, num);
             if (dev != nullptr)
@@ -182,102 +153,16 @@ void ISSnoopDevice(XMLEle *root)
 
     for (int i = 0; i < cameraCount; i++)
     {
-        PentaxCCD *camera = cameras[i];
+        INDI::CCD *camera = cameras[i];
         camera->ISSnoopDevice(root);
     }
 }
 
-PentaxEventListener::PentaxEventListener(PentaxCCD *device) {
-        //const char *devname, INDI::CCDChip *ccd, INDI::StreamManager *streamer) {
-    //deviceName = devname;
-    //this->ccd = ccd;
-    //this->streamer = streamer;
-    this->device = device;
-}
-
-const char * PentaxEventListener::getDeviceName() {
-    return device->getDeviceName();
-}
-
-void PentaxEventListener::imageStored(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const CameraImage>& image)
-{
-
-    uint8_t * memptr = device->PrimaryCCD.getFrameBuffer();
-    size_t memsize = 0;
-    int naxis = 2, w = 0, h = 0, bpp = 8;
-
-    //write image to file
-    std::ofstream o;
-    char filename[32] = "/tmp/indi_pentax_";
-    strcat(filename,image->getName().c_str());
-    o.open(filename, std::ofstream::out | std::ofstream::binary);
-    Response response = image->getData(o);
-    o.close();
-    if (response.getResult() == Result::Ok) {
-        LOGF_DEBUG("Temp Image path: %s",filename);
-    } else {
-        for (const auto& error : response.getErrors()) {
-            LOGF_ERROR("Error Code: %d (%s)", static_cast<int>(error->getCode()), error->getMessage().c_str());
-        }
-        return;
-    }
-
-    //convert it for image buffer
-    if (read_jpeg(filename, &memptr, &memsize, &naxis, &w, &h))
-    {
-        LOG_ERROR("Exposure failed to parse jpeg.");
-        return;
-    }
-    LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis, w, h, bpp);
-
-    device->bufferIsBayered = false;
-    device->PrimaryCCD.setImageExtension("fits");
-
-    uint16_t subW = device->PrimaryCCD.getSubW();
-    uint16_t subH = device->PrimaryCCD.getSubH();
-
-    if (device->PrimaryCCD.getSubW() != 0 && (w > device->PrimaryCCD.getSubW() || h > device->PrimaryCCD.getSubH()))
-        LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purge configuration and update frame size to match camera size.", w, h, device->PrimaryCCD.getSubW(), device->PrimaryCCD.getSubH());
-
-    device->PrimaryCCD.setFrame(0, 0, w, h);
-    device->PrimaryCCD.setFrameBuffer(memptr);
-    device->PrimaryCCD.setFrameBufferSize(memsize, false);
-    device->PrimaryCCD.setResolution(w, h);
-    device->PrimaryCCD.setNAxis(naxis);
-    device->PrimaryCCD.setBPP(bpp);
-
-    //remove image file
-    //std::remove(filename);
-
-    LOG_INFO("Copied to frame buffer.");
-}
-
-void PentaxEventListener::liveViewFrameUpdated(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const unsigned char>& liveViewFrame, uint64_t frameSize)
-{
-    uint8_t * ccdBuffer      = device->PrimaryCCD.getFrameBuffer();
-    size_t size             = 0;
-    int w = 0, h = 0, naxis = 0;
-
-    std::unique_lock<std::mutex> ccdguard(device->ccdBufferLock);
-    int rc = read_jpeg_mem(const_cast<unsigned char *>(liveViewFrame.get()), frameSize, &ccdBuffer, &size, &naxis, &w, &h);
-
-    if (rc != 0)
-    {
-        LOG_ERROR("Error getting live video frame.");
-    }
-
-    device->PrimaryCCD.setFrameBuffer(ccdBuffer);
-    // We are done with writing to CCD buffer
-    ccdguard.unlock();
-    device->Streamer->newFrame(ccdBuffer, size);
-
-    LOG_DEBUG("Hi");
-}
 
 PentaxCCD::PentaxCCD(std::shared_ptr<CameraDevice> camera)
 {
     this->device = camera;
-    snprintf(this->name, 32, "Pentax %s", camera->getModel().c_str());
+    snprintf(this->name, 32, "%s", camera->getModel().c_str());
     setDeviceName(this->name);
 
     setVersion(INDI_PENTAX_VERSION_MAJOR, INDI_PENTAX_VERSION_MINOR);
@@ -297,41 +182,39 @@ bool PentaxCCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    IUFillSwitchVector(&mIsoSP, nullptr, 0, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60,
-                       IPS_IDLE);
-    IUFillSwitchVector(&mFormatSP, nullptr, 0, getDeviceName(), "CAPTURE_FORMAT", "Capture Format", IMAGE_SETTINGS_TAB,
-                       IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    IUFillSwitchVector(&mExposurePresetSP, nullptr, 0, getDeviceName(), "CCD_EXPOSURE_PRESETS", "Presets",
-                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillText(&DeviceInfoT[0], "MANUFACTURER", "Manufacturer", device->getManufacturer().c_str());
+    IUFillText(&DeviceInfoT[1], "MODEL", "Model", device->getModel().c_str());
+    IUFillText(&DeviceInfoT[2], "FIRMWARE_VERSION", "Firmware", device->getFirmwareVersion().c_str());
+    IUFillText(&DeviceInfoT[3], "SERIAL_NUMBER", "Serial", device->getSerialNumber().c_str());
+    IUFillText(&DeviceInfoT[4], "BATTERY", "Battery", "");
+    IUFillText(&DeviceInfoT[5], "EXPPROGRAM", "Program", "");
+    IUFillText(&DeviceInfoT[6], "UCMODE", "User Mode", "");
+    IUFillTextVector(&DeviceInfoTP, DeviceInfoT, NARRAY(DeviceInfoT), getDeviceName(), "DEVICE_INFO", "Device Info", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    registerProperty(&DeviceInfoTP, INDI_TEXT);
 
-    IUFillSwitch(&autoFocusS[0], "Set", "", ISS_OFF);
-    IUFillSwitchVector(&autoFocusSP, autoFocusS, 1, getDeviceName(), "Auto Focus", "", FOCUS_TAB, IP_RW, ISR_1OFMANY, 0,
-                       IPS_IDLE);
+    IUFillSwitch(&autoFocusS[0], "ON", "On", ISS_OFF);
+    IUFillSwitch(&autoFocusS[1], "OFF", "Off", ISS_ON);
+    IUFillSwitchVector(&autoFocusSP, autoFocusS, 2, getDeviceName(), "AUTO_FOCUS", "Auto Focus", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
     IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
-    IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Transfer Format",
-                       IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&livePreviewS[0], "Enable", "", ISS_OFF);
-    IUFillSwitch(&livePreviewS[1], "Disable", "", ISS_ON);
-    IUFillSwitchVector(&livePreviewSP, livePreviewS, 2, getDeviceName(), "AUX_VIDEO_STREAM", "Preview",
-                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitch(&preserveOriginalS[1], "PRESERVE_ON", "Also Copy Native Image", ISS_OFF);
+    IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
+    IUFillSwitchVector(&preserveOriginalSP, preserveOriginalS, 2, getDeviceName(), "PRESERVE_ORIGINAL", "Copy Option", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&SDCardImageS[SD_CARD_SAVE_IMAGE], "Save", "", ISS_ON);
-    IUFillSwitch(&SDCardImageS[SD_CARD_DELETE_IMAGE], "Delete", "", ISS_OFF);
-    IUFillSwitchVector(&SDCardImageSP, SDCardImageS, 2, getDeviceName(), "CCD_SD_CARD_ACTION", "SD Image",
-                       IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 30, 1, false);
 
     IUSaveText(&BayerT[2], "RGGB");
 
     PrimaryCCD.getCCDInfo()->p = IP_RW;
 
-
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_BAYER | CCD_HAS_SHUTTER | CCD_HAS_STREAMING;
+    uint32_t cap = CCD_HAS_BAYER | CCD_HAS_STREAMING;
     SetCCDCapability(cap);
+
+    Streamer->setStreamingExposureEnabled(false);
+    Streamer->setPixelFormat(INDI_JPG);
 
     addConfigurationControl();
     addDebugControl();
@@ -349,38 +232,26 @@ bool PentaxCCD::updateProperties()
 
     if (isConnected())
     {
-        if (mExposurePresetSP.nsp > 0)
-            defineSwitch(&mExposurePresetSP);
-        if (mIsoSP.nsp > 0)
-            defineSwitch(&mIsoSP);
-        if (mFormatSP.nsp > 0)
-            defineSwitch(&mFormatSP);
+        deleteProperty("CCD_COMPRESSION");
+        setupParams();
 
-        defineSwitch(&livePreviewSP);
+        buildCaptureSwitches();
+
         defineSwitch(&transferFormatSP);
         defineSwitch(&autoFocusSP);
-
-        defineSwitch(&SDCardImageSP);
-
-        // Let's get parameters now from CCD
-        setupParams();
+        if (transferFormatS[0].s == ISS_ON) {
+            defineSwitch(&preserveOriginalSP);
+        }
 
         timerID = SetTimer(POLLMS);
     }
     else
     {
-        if (mExposurePresetSP.nsp > 0)
-            deleteProperty(mExposurePresetSP.name);
-        if (mIsoSP.nsp > 0)
-            deleteProperty(mIsoSP.name);
-        if (mFormatSP.nsp > 0)
-            deleteProperty(mFormatSP.name);
+        deleteCaptureSwitches();
 
-        deleteProperty(livePreviewSP.name);
         deleteProperty(autoFocusSP.name);
         deleteProperty(transferFormatSP.name);
-
-        deleteProperty(SDCardImageSP.name);
+        deleteProperty(preserveOriginalSP.name);
 
         rmTimer(timerID);
     }
@@ -388,17 +259,44 @@ bool PentaxCCD::updateProperties()
     return true;
 }
 
+void PentaxCCD::buildCaptureSwitches() {
+    buildCaptureSettingSwitch(&mIsoSP,&iso,"ISO","CCD_ISO");
+    buildCaptureSettingSwitch(&mApertureSP,&aperture,"Aperture");
+    buildCaptureSettingSwitch(&mExpCompSP,&exposurecomp,"Exp Comp");
+    buildCaptureSettingSwitch(&mWhiteBalanceSP,&whitebalance,"White Balance");
+    buildCaptureSettingSwitch(&mIQualitySP,&imagequality,"Quality");
+    buildCaptureSettingSwitch(&mFormatSP,&imageformat,"Format","CAPTURE_FORMAT");
+    buildCaptureSettingSwitch(&mStorageWritingSP,&storagewriting, "Write to SD");
+
+    refreshBatteryStatus();
+    IUSaveText(&DeviceInfoT[5],exposureprogram.toString().c_str());
+    IUSaveText(&DeviceInfoT[6],usercapturesettingsmode.toString().c_str());
+    IDSetText(&DeviceInfoTP,nullptr);
+}
+
+void PentaxCCD::deleteCaptureSwitches() {
+    if (mIsoSP.nsp > 0) deleteProperty(mIsoSP.name);
+    if (mApertureSP.nsp > 0) deleteProperty(mApertureSP.name);
+    if (mExpCompSP.nsp > 0) deleteProperty(mExpCompSP.name);
+    if (mWhiteBalanceSP.nsp > 0) deleteProperty(mWhiteBalanceSP.name);
+    if (mIQualitySP.nsp > 0) deleteProperty(mIQualitySP.name);
+    if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
+    if (mStorageWritingSP.nsp > 0) deleteProperty(mStorageWritingSP.name);
+}
+
+void PentaxCCD::refreshBatteryStatus() {
+    char batterylevel[10];
+    sprintf(batterylevel,"%d%%",device->getStatus().getBatteryLevel());
+    IUSaveText(&DeviceInfoT[4],batterylevel);
+    IDSetText(&DeviceInfoTP,nullptr);
+}
+
 bool PentaxCCD::Connect()
 {
     LOG_INFO("Attempting to connect to the Pentax CCD...");
 
-    LOGF_INFO("    Manufacturer    : %s",device->getManufacturer().c_str());
-    LOGF_INFO("    Model           : %s",device->getModel().c_str());
-    LOGF_INFO("    Firmware Version: %s",device->getFirmwareVersion().c_str());
-    LOGF_INFO("    Serial Number   : %s",device->getSerialNumber().c_str());
-
     if (device->getEventListeners().size() == 0) {
-        listener = std::make_shared<PentaxEventListener>(this);
+        listener = std::make_shared<PentaxEventHandler>(this);
         device->addEventListener(listener);
     }
 
@@ -430,174 +328,127 @@ bool PentaxCCD::Disconnect()
             return false;
         }
     }
-
     return true;
+
 }
 
 bool PentaxCCD::setupParams()
 {
-    float x_pixel_size, y_pixel_size;
+    getCaptureSettingsState();
+
+    //I don't think any of this is needed for the way I'm doing things, but leaving it in comments until I verify
+    /*float x_pixel_size, y_pixel_size;
     int bit_depth = 16;
     int x_1, y_1, x_2, y_2;
 
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Get basic CCD parameters here such as
-   *  + Pixel Size X
-   *  + Pixel Size Y
-   *  + Bit Depth?
-   *  + X, Y, W, H of frame
-   *  + Temperature
-   *  + ...etc
-   *
-   *
-   *
-   **********************************************************/
-
-    ///////////////////////////
-    // 1. Get Pixel size
-    ///////////////////////////
-    // Actucal CALL to CCD to get pixel size here
     x_pixel_size = 3.89;
     y_pixel_size = 3.89;
 
-    ///////////////////////////
-    // 2. Get Frame
-    ///////////////////////////
-
-    // Actucal CALL to CCD to get frame information here
     x_1 = y_1 = 0;
     x_2       = 6000;
     y_2       = 4000;
 
-    ///////////////////////////
-    // 3. Get temperature
-    ///////////////////////////
-    // Setting sample temperature -- MAKE CALL TO API FUNCTION TO GET TEMPERATURE IN REAL DRIVER
-    //TemperatureN[0].value = 25.0;
-    //LOGF_INFO("The CCD Temperature is %f", TemperatureN[0].value);
-    //IDSetNumber(&TemperatureNP, nullptr);
-
-    ///////////////////////////
-    // 4. Get temperature
-    ///////////////////////////
     bit_depth = 16;
     SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
-
-    // Now we usually do the following in the hardware
-    // Set Frame to LIGHT or NORMAL
-    // Set Binning to 1x1
-    /* Default frame type is NORMAL */
 
     // Let's calculate required buffer
     int nbuf;
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
     nbuf += 512;                                                                  //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(nbuf);
+    PrimaryCCD.setFrameBufferSize(nbuf);*/
 
-    Streamer->setSize(720, 480);
     return true;
 }
 
 
 bool PentaxCCD::StartExposure(float duration)
 {
-    if (duration < minDuration)
+    if (InExposure)
     {
-        DEBUGF(INDI::Logger::DBG_WARNING,
-               "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.", duration,
-               minDuration);
-        duration = minDuration;
+        LOG_ERROR("Camera is already exposing.");
+        return false;
     }
-
-    if (imageFrameType == INDI::CCDChip::BIAS_FRAME)
-    {
-        duration = minDuration;
-        LOGF_INFO("Bias Frame (s) : %g\n", minDuration);
-    }
-
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD start exposure here
-   *  Please note that duration passed is in seconds.
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to start exposure due to ...");
-   *  return -1;
-   *
-   *
-   **********************************************************/
-
-    PrimaryCCD.setExposureDuration(duration);
-    ExposureRequest = duration;
-
-    device->setCaptureSettings(std::vector<const CaptureSetting*>{ShutterSpeed::SS5});
-
-    gettimeofday(&ExpStart, nullptr);
-    LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
-
-    InExposure = true;
-
-    /*char cmd[MAXRBUF]={0}, line[256]={0};
-    snprintf(cmd, MAXRBUF, "pktriggercord-cli -t %g -o /home/krees/ptest1.jpg", ExposureRequest);
-
-    FILE *handle = popen(cmd, "r");
-    if (handle == nullptr) {
-        LOG_DEBUG("Failed to run pktriggercord");
+    else if (Streamer->isBusy()) {
+        LOG_WARN("Cannot start exposure because the camera is streaming.  Please stop streaming first.");
+        return false;
     }
     else {
-        while (fgets(line, sizeof(line), handle) != nullptr) {
-                LOGF_DEBUG("%s", line);
+
+        InExposure = true;
+
+        //update shutter speed if needed
+        double ret = updateShutterSpeed(duration);
+        if (ret) duration = ret;
+        PrimaryCCD.setExposureDuration(duration);
+        ExposureRequest = duration;
+
+        //apply any outstanding capture settings changes
+        if (updatedCaptureSettings.size()>0) {
+            LOG_INFO("Updating camera capture settings.");
+            Response response = device->setCaptureSettings(updatedCaptureSettings);
+            if (response.getResult() == Result::Error) {
+                for (const auto& error : response.getErrors()) {
+                    LOGF_ERROR("Error setting updating capture settings (%d): %s", static_cast<int>(error->getCode()), error->getMessage().c_str());
+                }
+            }
+            updatedCaptureSettings.clear();
+            getCaptureSettingsState();
         }
-    }*/
 
-    try
-    {
-        StartCaptureResponse response = device->startCapture();
-        if (response.getResult() == Result::Ok) {
-            pendingCapture = response.getCapture();
-            LOGF_INFO("Capture has started. Capture ID: %s",response.getCapture()->getId().c_str());
-        } else {
-            LOGF_INFO("Capture failed to start (%s)",response.getErrors()[0]->getMessage().c_str());
+        //to do: pktriggercord mode?
+        /*char cmd[MAXRBUF]={0}, line[256]={0};
+        snprintf(cmd, MAXRBUF, "pktriggercord-cli -t %g -o /home/krees/ptest1.jpg", ExposureRequest);
+        FILE *handle = popen(cmd, "r");
+        if (handle == nullptr) {
+            LOG_DEBUG("Failed to run pktriggercord");
         }
-    }
-    catch (std::runtime_error e){
-        LOGF_INFO("runtime_error: %s",e.what());
-        InExposure = false;
-    }
+        else {
+            while (fgets(line, sizeof(line), handle) != nullptr) {
+                    LOGF_DEBUG("%s", line);
+            }
+        }*/
 
+        //start capture
+        gettimeofday(&ExpStart, nullptr);
+        LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
+        try
+        {
+            StartCaptureResponse response = device->startCapture((autoFocusS[0].s == ISS_ON));
+            if (response.getResult() == Result::Ok) {
+                pendingCapture = response.getCapture();
+                LOGF_INFO("Capture has started. Capture ID: %s",response.getCapture()->getId().c_str());
+                InDownload = false;
+            } else {
+                LOGF_ERROR("Capture failed to start (%s)",response.getErrors()[0]->getMessage().c_str());
+                InExposure = false;
+                return false;
+            }
+        }
+        catch (std::runtime_error e){
+            LOGF_ERROR("runtime_error: %s",e.what());
+            InExposure = false;
+            return false;
+        }
 
-    return true;
+        return true;
+    }
 }
 
 bool PentaxCCD::AbortExposure()
 {
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD abort exposure here
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to abort exposure due to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
-
-    Response response = device->stopCapture();
-    if (response.getResult() == Result::Ok) {
-        LOG_INFO("Capture aborted.");
-        InExposure = false;
-    } else {
-        LOGF_INFO("Capture failed to abort (%s)",response.getErrors()[0]->getMessage().c_str());
-        return false;
+    if (Streamer->isBusy()) {
+        LOG_INFO("Camera is currently streaming.  Driver will abort without stopping camera.");
     }
-
+    else {
+        Response response = device->stopCapture();
+        if (response.getResult() == Result::Ok) {
+            LOG_INFO("Capture aborted.");
+            InExposure = false;
+        } else {
+            LOGF_ERROR("Capture failed to abort (%s)",response.getErrors()[0]->getMessage().c_str());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -654,75 +505,6 @@ bool PentaxCCD::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
     return true;
 }
 
-bool PentaxCCD::UpdateCCDFrame(int x, int y, int w, int h)
-{
-    /* Add the X and Y offsets */
-    long x_1 = x;
-    long y_1 = y;
-
-    long bin_width  = x_1 + (w / PrimaryCCD.getBinX());
-    long bin_height = y_1 + (h / PrimaryCCD.getBinY());
-
-    if (bin_width > PrimaryCCD.getXRes() / PrimaryCCD.getBinX())
-    {
-        LOGF_INFO("Error: invalid width requested %d", w);
-        return false;
-    }
-    else if (bin_height > PrimaryCCD.getYRes() / PrimaryCCD.getBinY())
-    {
-        LOGF_INFO("Error: invalid height request %d", h);
-        return false;
-    }
-
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD Frame dimension call
-   *  The values calculated above are BINNED width and height
-   *  which is what most CCD APIs require, but in case your
-   *  CCD API implementation is different, don't forget to change
-   *  the above calculations.
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to set frame to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
-
-    // Set UNBINNED coords
-    PrimaryCCD.setFrame(x_1, y_1, w, h);
-
-    int nbuf;
-    nbuf = (bin_width * bin_height * PrimaryCCD.getBPP() / 8); //  this is pixel count
-    nbuf += 512;                                               //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(nbuf);
-
-    LOGF_DEBUG("Setting frame buffer size to %d bytes.", nbuf);
-
-    return true;
-}
-
-bool PentaxCCD::UpdateCCDBin(int binx, int biny)
-{
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD Binning call
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to set binning to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
-
-    PrimaryCCD.setBin(binx, biny);
-
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
-}
 
 float PentaxCCD::CalcTimeLeft()
 {
@@ -739,45 +521,6 @@ float PentaxCCD::CalcTimeLeft()
     return timeleft;
 }
 
-/* Downloads the image from the CCD.
- N.B. No processing is done on the image */
-//this is used only for simulation; listeners are doing this for real
-int PentaxCCD::grabImage()
-{
-    uint8_t * memptr = PrimaryCCD.getFrameBuffer();
-    size_t memsize = 0;
-    int naxis = 2, w = 0, h = 0, bpp = 8;
-
-    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
-    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-
-    subW -= subW % 2;
-    subH -= subH % 2;
-
-    uint32_t size = subW * subH;
-
-    if (PrimaryCCD.getFrameBufferSize() < static_cast<int>(size))
-    {
-        PrimaryCCD.setFrameBufferSize(size);
-        memptr = PrimaryCCD.getFrameBuffer();
-    }
-
-    if (PrimaryCCD.getBPP() == 8)
-    {
-        for (uint32_t i = 0 ; i < size; i++)
-            memptr[i] = rand() % 255;
-    }
-    else
-    {
-        uint16_t *buffer = reinterpret_cast<uint16_t*>(memptr);
-        for (uint32_t i = 0 ; i < size; i++)
-            buffer[i] = rand() % 65535;
-    }
-
-    PrimaryCCD.setFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), subW, subH);
-    return true;
-}
-
 void PentaxCCD::TimerHit()
 {
     int timerID = -1;
@@ -789,7 +532,10 @@ void PentaxCCD::TimerHit()
     if (InExposure)
     {
         timeleft = CalcTimeLeft();
-
+        if (pendingCapture->getState()==CaptureState::Complete) {
+            InExposure = false;
+            InDownload = true;
+        }
         if (timeleft < 1.0)
         {
             if (timeleft > 0.25)
@@ -807,26 +553,11 @@ void PentaxCCD::TimerHit()
                 }
                 else
                 {
-                    if (pendingCapture->getState()==CaptureState::Complete) {
-                        /* We're done exposing */
-                        LOG_INFO("Done downloading.  Now copying to frame buffer...");
-
-                        // if simulation, generate fake image; otherwise, the listener will have already copied the image to the buffer
-                        if (isSimulation()) grabImage();
-                        else if (bufferIsBayered) SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-                        else SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-
-                        timeleft=0;
-                        PrimaryCCD.setExposureLeft(0);
-                        InExposure = false;
-                        ExposureComplete(&PrimaryCCD);
-                    }
-                    else if (pendingCapture->getState()==CaptureState::Unknown) {
-                        LOG_ERROR("Capture entered unknown state.  Aborting...");
-                        AbortExposure();
-                    }
-
-                    LOG_INFO("Waiting for download...");
+                    InDownload = true;
+                    LOG_INFO("Capture finished.  Waiting for image download...");
+                    InExposure=false;
+                    timeleft=0;
+                    PrimaryCCD.setExposureLeft(0);
                 }
             }
         }
@@ -837,8 +568,24 @@ void PentaxCCD::TimerHit()
                 IDLog("With time left %ld\n", timeleft);
                 IDLog("image not yet ready....\n");
             }
-
             PrimaryCCD.setExposureLeft(timeleft);
+        }
+    }
+
+    if (InDownload) {
+        if (pendingCapture->getState()==CaptureState::Complete) {
+            if (bufferIsBayered) SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+            else SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+            InDownload = false;
+            ExposureComplete(&PrimaryCCD);
+        }
+        else if (pendingCapture->getState()==CaptureState::Unknown) {
+            LOG_ERROR("Capture entered unknown state.  Aborting...");
+            AbortExposure();
+        }
+        else if (isDebug())
+        {
+            IDLog("Still waiting for download...");
         }
     }
 
@@ -847,226 +594,233 @@ void PentaxCCD::TimerHit()
     return;
 }
 
-IPState PentaxCCD::GuideNorth(uint32_t ms)
-{
-    INDI_UNUSED(ms);
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD Guide call
-   *  Some CCD API support pulse guiding directly (i.e. without timers)
-   *  Others implement GUIDE_ON and GUIDE_OFF for each direction, and you
-   *  will have to start a timer and then stop it after the 'ms' milliseconds
-   *  For an example on timer usage, please refer to indi-sx and indi-gpusb drivers
-   *  available in INDI 3rd party repository
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to guide due ...");
-   *  return IPS_ALERT;
-   *
-   *
-   **********************************************************/
-
-    return IPS_OK;
-}
-
-IPState PentaxCCD::GuideSouth(uint32_t ms)
-{
-    INDI_UNUSED(ms);
-    /**********************************************************
-     *
-     *
-     *
-     *  IMPORTANT: Put here your CCD Guide call
-     *  Some CCD API support pulse guiding directly (i.e. without timers)
-     *  Others implement GUIDE_ON and GUIDE_OFF for each direction, and you
-     *  will have to start a timer and then stop it after the 'ms' milliseconds
-     *  For an example on timer usage, please refer to indi-sx and indi-gpusb drivers
-     *  available in INDI 3rd party repository
-     *  If there is an error, report it back to client
-     *  e.g.
-     *  LOG_INFO( "Error, unable to guide due ...");
-     *  return IPS_ALERT;
-     *
-     *
-     **********************************************************/
-
-    return IPS_OK;
-}
-
-IPState PentaxCCD::GuideEast(uint32_t ms)
-{
-    INDI_UNUSED(ms);
-    /**********************************************************
-     *
-     *
-     *
-     *  IMPORTANT: Put here your CCD Guide call
-     *  Some CCD API support pulse guiding directly (i.e. without timers)
-     *  Others implement GUIDE_ON and GUIDE_OFF for each direction, and you
-     *  will have to start a timer and then stop it after the 'ms' milliseconds
-     *  For an example on timer usage, please refer to indi-sx and indi-gpusb drivers
-     *  available in INDI 3rd party repository
-     *  If there is an error, report it back to client
-     *  e.g.
-     *  LOG_INFO( "Error, unable to guide due ...");
-     *  return IPS_ALERT;
-     *
-     *
-     **********************************************************/
-
-    return IPS_OK;
-}
-
-IPState PentaxCCD::GuideWest(uint32_t ms)
-{
-    INDI_UNUSED(ms);
-    /**********************************************************
-     *
-     *
-     *
-     *  IMPORTANT: Put here your CCD Guide call
-     *  Some CCD API support pulse guiding directly (i.e. without timers)
-     *  Others implement GUIDE_ON and GUIDE_OFF for each direction, and you
-     *  will have to start a timer and then stop it after the 'ms' milliseconds
-     *  For an example on timer usage, please refer to indi-sx and indi-gpusb drivers
-     *  available in INDI 3rd party repository
-     *  If there is an error, report it back to client
-     *  e.g.
-     *  LOG_INFO( "Error, unable to guide due ...");
-     *  return IPS_ALERT;
-     *
-     *
-     **********************************************************/
-
-    return IPS_OK;
-}
-
-
 bool PentaxCCD::StartStreaming()
 {
-    Streamer->setPixelFormat(INDI_RGB);
-    //Streamer->setStream(true);
-    device->startLiveView();
+    if (InExposure) {
+        LOG_WARN("Camera is in the middle of an exposure.  Please wait until finished, or abort.");
+        return false;
+    }
+    else if (Streamer->isBusy()) {
+        LOG_WARN("Streamer is already active.");
+        return false;
+    }
+    else {
+        Response response = device->startLiveView();
+        if (response.getResult() == Result::Ok) {
+            LOG_INFO("Started streamer.");
+            return true;
+        } else {
+            LOG_ERROR("Could not start streamer.");
+            return false;
+        }
+    }
 }
 
 bool PentaxCCD::StopStreaming()
 {
-    device->stopLiveView();
-    //Streamer->setStream(false);
+    Response response = device->stopLiveView();
+    if (response.getResult() == Result::Ok) {
+        LOG_INFO("Stopped streamer.");
+        return true;
+    } else {
+        LOG_ERROR("Could not stop streamer.");
+        return false;
+    }
 }
 
-void PentaxCCD::streamLiveView()
+
+ISwitch * PentaxCCD::create_switch(const char * basestr, std::vector<string> options, int setidx)
 {
 
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), options.size()));
+    ISwitch * one_sw = sw;
 
+    char sw_name[MAXINDINAME];
+    char sw_label[MAXINDILABEL];
+    ISState sw_state;
 
-
-/*    const char * previewData = nullptr;
-    unsigned long int previewSize = 0;
-    CameraFile * previewFile = nullptr;
-
-    int rc = gp_file_new(&previewFile);
-    if (rc != GP_OK)
+    for (int i = 0; i < (int)options.size(); i++)
     {
-        LOGF_ERROR("Error creating gphoto file: %s", gp_result_as_string(rc));
-        return;
+        snprintf(sw_name, MAXINDINAME, "%s%d", basestr, i);
+        strncpy(sw_label, options[i].c_str(), MAXINDILABEL);
+        sw_state = (i == setidx) ? ISS_ON : ISS_OFF;
+
+        IUFillSwitch(one_sw++, sw_name, sw_label, sw_state);
     }
 
-    char errMsg[MAXRBUF] = {0};
-    while (true)
-    {
-        std::unique_lock<std::mutex> guard(liveStreamMutex);
-        if (m_RunLiveStream == false)
+    return sw;
+}
+
+float convertShutterSpeedString(string str) {
+    float num = stof(str);
+    int dividx = str.find("/");
+    int denom = 1;
+    if (dividx>-1) {
+        denom = stoi(str.substr(dividx+1,str.length()-dividx));
+    }
+    return num/denom;
+}
+
+float PentaxCCD::updateShutterSpeed(float requestedSpeed) {
+
+    double lowestdiff = 7200;
+    const CaptureSetting *targetSpeed = nullptr;
+    float targetSpeed_f;
+    for (const auto ss : shutter.getAvailableSettings()) {
+        float ss_f = convertShutterSpeedString(ss->getValue().toString());
+        double currentdiff = abs(ss_f - requestedSpeed);
+        if (currentdiff < lowestdiff) {
+            targetSpeed = ss;
+            targetSpeed_f = ss_f;
+            lowestdiff = currentdiff;
+        }
+        else if (targetSpeed) {
             break;
-        guard.unlock();
-
-
-
-
-
-        rc = gphoto_capture_preview(gphotodrv, previewFile, errMsg);
-        if (rc != GP_OK)
-        {
-            //LOGF_DEBUG("%s", errMsg);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue;
         }
-
-        if (rc >= GP_OK)
-        {
-            rc = gp_file_get_data_and_size(previewFile, &previewData, &previewSize);
-            if (rc != GP_OK)
-            {
-                LOGF_ERROR("Error getting preview image data and size: %s", gp_result_as_string(rc));
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
+    }
+    if (targetSpeed) {
+        if (requestedSpeed != targetSpeed_f) {
+            LOGF_INFO("Requested shutter speed of %f not supported.  Setting to closest supported speed: %f.",requestedSpeed,targetSpeed_f);
         }
-
-        uint8_t * inBuffer = reinterpret_cast<uint8_t *>(const_cast<char *>(previewData));
-
-        //        if (streamSubframeS[1].s == ISS_ON)
-        //        {
-        //            if (liveVideoWidth <= 0)
-        //            {
-        //                read_jpeg_size(inBuffer, previewSize, &liveVideoWidth, &liveVideoHeight);
-        //                Streamer->setSize(liveVideoWidth, liveVideoHeight);
-        //            }
-
-        //            std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-        //            Streamer->newFrame(inBuffer, previewSize);
-        //            ccdguard.unlock();
-        //            continue;
-        //        }
-
-        uint8_t * ccdBuffer      = PrimaryCCD.getFrameBuffer();
-        size_t size             = 0;
-        int w = 0, h = 0, naxis = 0;
-
-        // Read jpeg from memory
-        std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-        rc = read_jpeg_mem(inBuffer, previewSize, &ccdBuffer, &size, &naxis, &w, &h);
-
-        if (rc != 0)
-        {
-            LOG_ERROR("Error getting live video frame.");
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue;
+        if (convertShutterSpeedString(shutter.getValue().toString()) != targetSpeed_f) {
+            //updatedCaptureSettings.push_back(targetSpeed);
+            updatedCaptureSettings.insert(updatedCaptureSettings.begin(),targetSpeed);
         }
-
-        if (liveVideoWidth <= 0)
-        {
-            liveVideoWidth = w;
-            liveVideoHeight = h;
-            Streamer->setSize(liveVideoWidth, liveVideoHeight);
+        else {
+            LOGF_DEBUG("Shutter speed already %f, not setting.",targetSpeed_f);
         }
+        return targetSpeed_f;
+    }
+    LOG_INFO("The camera is currently in an exposure program that does not permit setting the shutter speed externally.  Shutter speed will instead be controlled by camera.");
+    return requestedSpeed;
+}
 
-        PrimaryCCD.setFrameBuffer(ccdBuffer);
-
-        // We are done with writing to CCD buffer
-        ccdguard.unlock();
-
-        if (naxis != PrimaryCCD.getNAxis())
-        {
-            if (naxis == 1)
-                Streamer->setPixelFormat(INDI_MONO);
-
-            PrimaryCCD.setNAxis(naxis);
+void PentaxCCD::updateCaptureSetting(CaptureSetting *setting, string newval) {
+    for (auto i : setting->getAvailableSettings()) {
+        if (i->getValue().toString() == newval) {
+            updatedCaptureSettings.push_back(i);
+            return;
         }
+    }
+    LOGF_ERROR("Error setting %S to %s: not supported in current camera mode", setting->getName(), newval.c_str());
+}
 
-        if (PrimaryCCD.getSubW() != w || PrimaryCCD.getSubH() != h)
-        {
-            Streamer->setSize(w, h);
-            PrimaryCCD.setFrame(0, 0, w, h);
+bool PentaxCCD::ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n)
+{
+
+    if (!strcmp(name, autoFocusSP.name)) {
+        IUUpdateSwitch(&autoFocusSP, states, names, n);
+        autoFocusSP.s = IPS_OK;
+        IDSetSwitch(&autoFocusSP, nullptr);
+    }
+    else if (!strcmp(name, transferFormatSP.name)) {
+        IUUpdateSwitch(&transferFormatSP, states, names, n);
+        transferFormatSP.s = IPS_OK;
+        IDSetSwitch(&transferFormatSP, nullptr);
+        if (transferFormatS[0].s == ISS_ON) {
+            defineSwitch(&preserveOriginalSP);
+        } else {
+            deleteProperty(preserveOriginalSP.name);
         }
+    }
+    else if (!strcmp(name, preserveOriginalSP.name)) {
+        IUUpdateSwitch(&preserveOriginalSP, states, names, n);
+        preserveOriginalSP.s = IPS_OK;
+        IDSetSwitch(&preserveOriginalSP, nullptr);
+    }
+    else if (!strcmp(name, mIsoSP.name)) {
+        updateCaptureSettingSwitch(&iso,&mIsoSP,states,names,n);
+    }
+    else if (!strcmp(name, mApertureSP.name)) {
+        updateCaptureSettingSwitch(&aperture,&mApertureSP,states,names,n);
+    }
+    else if (!strcmp(name, mExpCompSP.name)) {
+        updateCaptureSettingSwitch(&exposurecomp,&mExpCompSP,states,names,n);
+    }
+    else if (!strcmp(name, mWhiteBalanceSP.name)) {
+        updateCaptureSettingSwitch(&whitebalance,&mWhiteBalanceSP,states,names,n);
+    }
+    else if (!strcmp(name, mIQualitySP.name)) {
+        updateCaptureSettingSwitch(&imagequality,&mIQualitySP,states,names,n);
+    }
+    else if (!strcmp(name, mFormatSP.name)) {
+        updateCaptureSettingSwitch(&imageformat,&mFormatSP,states,names,n);
+    }
+    else if (!strcmp(name, mStorageWritingSP.name)) {
+        updateCaptureSettingSwitch(&storagewriting,&mStorageWritingSP,states,names,n);
+    }
+    else {
+        return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+    }
+    return true;
+}
 
-        if (PrimaryCCD.getFrameBufferSize() != static_cast<int>(size))
-            PrimaryCCD.setFrameBufferSize(size, false);
+void PentaxCCD::updateCaptureSettingSwitch(CaptureSetting * setting, ISwitchVectorProperty * sw, ISState * states, char * names[], int n) {
+    ISwitch * previous = IUFindOnSwitch(sw);
+    IUUpdateSwitch(sw, states, names, n);
+    sw->s = IPS_OK;
+    IDSetSwitch(sw, nullptr);
+    ISwitch * selected = IUFindOnSwitch(sw);
+    if (previous != selected) updateCaptureSetting(setting,selected->label);
+}
 
-        Streamer->newFrame(ccdBuffer, size);
+bool PentaxCCD::saveConfigItems(FILE * fp) {
+
+    for (auto sw : std::vector<ISwitchVectorProperty*>{&mIsoSP,&mApertureSP,&mExpCompSP,&mWhiteBalanceSP,&mIQualitySP,&mFormatSP,&mStorageWritingSP}) {
+        if (sw->nsp>0) IUSaveConfigSwitch(fp, sw);
     }
 
-    gp_file_unref(previewFile);*/
+    // Save regular CCD properties
+    return INDI::CCD::saveConfigItems(fp);
+}
+
+void PentaxCCD::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
+{
+    INDI::CCD::addFITSKeywords(fptr, targetChip);
+
+    int status = 0;
+
+    if (mIsoSP.nsp > 0)
+    {
+        ISwitch * onISO = IUFindOnSwitch(&mIsoSP);
+        if (onISO)
+        {
+            int isoSpeed = atoi(onISO->label);
+            if (isoSpeed > 0)
+                fits_update_key_s(fptr, TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+        }
+    }
+}
+
+void PentaxCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control, CaptureSetting *setting, const char *label, const char *name) {
+    std::vector<string> optionList;
+    int set_idx=0, i=0;
+    for (const auto s : setting->getAvailableSettings()) {
+        optionList.push_back(s->getValue().toString());
+        if (s->getValue().toString() == setting->getValue().toString()) set_idx=i;
+        i++;
+    }
+
+    if (optionList.size() > 0)
+    {
+        IUFillSwitchVector(control, create_switch(setting->getName().c_str(), optionList, set_idx),
+                           optionList.size(), getDeviceName(),
+                           name ? name : setting->getName().c_str(),
+                           label ? label : setting->getName().c_str(),
+                           IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        defineSwitch(control);
+    }
+}
+
+void PentaxCCD::getCaptureSettingsState() {
+    Response response = device->getCaptureSettings(std::vector<CaptureSetting*>{&iso,&shutter,&aperture,&exposurecomp,&whitebalance,&imagequality,&imageformat,&exposureprogram,&storagewriting,&usercapturesettingsmode});
+    if (response.getResult() != Result::Ok) {
+        for (const auto& error : response.getErrors()) {
+            LOGF_ERROR("Error getting camera state (%d): %s", static_cast<int>(error->getCode()), error->getMessage().c_str());
+        }
+    }
+}
+
+string PentaxCCD::getUploadFilePrefix() {
+    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
 }
