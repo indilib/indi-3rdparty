@@ -1,3 +1,9 @@
+indi-atik (2.5) bionic; urgency=low
+
+  * Fixed spinning filter wheel in AtikOne.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Web, 15 Jan 2020 16:00:00 +0300
+
 indi-atik (2.4) bionic; urgency=low
 
   * Fixed ST4 guide pulses.
