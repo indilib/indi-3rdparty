@@ -41,7 +41,7 @@ preamble=["--width","600",
 def graphs(time):
 	ret = rrdtool.graph( CHARTPATH+"temp"+str(time)+".png","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Temperature",
+	 "--title","Temperature and Dew Point",
 	 "--vertical-label=Celsius ºC",
 	 "DEF:T="+RRDFILE+":T:AVERAGE",
 	 "DEF:Tmax="+RRDFILE+":T:MAX",
@@ -55,7 +55,7 @@ def graphs(time):
 
 	ret = rrdtool.graph( CHARTPATH+"alltemp"+str(time)+".png","-A","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Temperaturas",
+	 "--title","Temperature",
 	 "--vertical-label=Celsius ºC",
 	 "DEF:IR="+RRDFILE+":IR:AVERAGE",
 	 "DEF:Thr="+RRDFILE+":Thr:AVERAGE",
@@ -99,10 +99,10 @@ def graphs(time):
 
 	ret = rrdtool.graph( CHARTPATH+"light"+str(time)+".png","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Iradiance",
-	 "--vertical-label=rel",
+	 "--title","Sky Quality (SQM)",
+	 "--vertical-label=mag/arcs^2",
 	 "DEF:Light="+RRDFILE+":Light:AVERAGE",
-	 "LINE1:Light#"+blue+":Irradiance\\r",
+	 "LINE1:Light#"+blue+":SQM\\r",
 	 "COMMENT:\\n",
 	 "GPRINT:Light:AVERAGE:Avg Light\: %6.2lf %S\\r")
 
