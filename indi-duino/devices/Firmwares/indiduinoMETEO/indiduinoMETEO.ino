@@ -97,6 +97,12 @@
 #define IPS_OK    1
 #define IPS_ALERT 3
 
+// Having only two states covering IPS_IDLE, IPS_OK, ... is problematic
+// We map IPS_OK to 1 and everything else to 0
+
+#define STATUS_OK HIGH
+#define STATUS_NOT_OK LOW
+
 /*END OFF CUSTOMITATION. YOU SHOULT NOT NEED TO CHANGE ANYTHING BELOW */
 
 /*
@@ -106,6 +112,7 @@
  #define PIN_STATUS_DEW      4
  #define PIN_STATUS_FREZZY   5
  #define PIN_STATUS_DAYLIGHT 6
+ #define PIN_STATUS_SQM      6
 
 /*
    Firmata is a generic protocol for communicating with microcontrollers
@@ -496,26 +503,26 @@ void runMeteoStation() {
 
 void checkMeteo() {
 
-    if (cloudy==IPS_ALERT) {
+    if (cloudy==IPS_OK) {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_CLOUDY), HIGH); // enable internal pull-ups
     } else {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_CLOUDY), LOW); // disable internal pull-ups
     }
   
-    if (dewing==IPS_ALERT) {
+    if (dewing==IPS_OK) {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DEW), HIGH); // enable internal pull-ups
     } else {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DEW), LOW); // disable internal pull-ups
     }
 
-    if (frezzing==IPS_ALERT) {
+    if (frezzing==IPS_OK) {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_FREZZY), HIGH); // enable internal pull-ups
     } else {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_FREZZY), LOW); // disable internal pull-ups
     }
   
 #ifdef USE_IRRADIANCE_SENSOR
-    if (Light>MINIMUM_DAYLIGHT) {
+    if (Light <= MINIMUM_DAYLIGHT) {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DAYLIGHT), HIGH); // enable internal pull-ups
     } else {
        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_DAYLIGHT), LOW); // disable internal pull-ups
@@ -524,9 +531,9 @@ void checkMeteo() {
 
 #ifdef USE_TSL_SENSOR
   if (mag_arcsec2 < DAYLIGHT) {
-    digitalWrite(PIN_TO_DIGITAL(6), HIGH); // enable internal pull-ups
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_SQM), HIGH); // enable internal pull-ups
   } else {
-    digitalWrite(PIN_TO_DIGITAL(6), LOW); // disable internal pull-ups
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_SQM), LOW); // disable internal pull-ups
   }
 #endif //USE_TSL_SENSOR
 
