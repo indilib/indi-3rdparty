@@ -11,15 +11,20 @@ from meteostation import *
 
 # ensure that the driver is connected
 
-print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
-indi=indiclient(INDISERVER,int(INDIPORT))
-connect(indi)
-init()
+try:
+    print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+    indi=indiclient(INDISERVER,int(INDIPORT))
+    connect(indi)
+    init()
 
-now=time.localtime()
-json_dict={"TIME":time.strftime("%c",now)}
-data=recv_indi(indi)	
-indi.quit()
+    now=time.localtime()
+    json_dict={"TIME":time.strftime("%c",now)}
+    data=recv_indi(indi)	
+    indi.quit()
+except:
+    print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
+    sys.exit()
+
 
 updateString="N"
 for d in data:
