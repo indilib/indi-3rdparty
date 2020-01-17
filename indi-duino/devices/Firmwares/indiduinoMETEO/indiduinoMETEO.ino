@@ -107,12 +107,16 @@
 
 /*
  * Pin settings
- */
- #define PIN_STATUS_CLOUDY   3
- #define PIN_STATUS_DEW      4
- #define PIN_STATUS_FREZZY   5
- #define PIN_STATUS_DAYLIGHT 6
- #define PIN_STATUS_SQM      6
+*/
+#define PIN_STATUS_CLOUDY   2
+#define PIN_STATUS_DEW      4
+#define PIN_STATUS_FREZZY   5
+#define PIN_STATUS_DAYLIGHT 6
+#define PIN_STATUS_SQM      6
+#define PIN_STATUS_MLX      7
+#define PIN_STATUS_TSL      8
+#define PIN_STATUS_BMP      9
+#define PIN_STATUS_BME      9
 
 /*
    Firmata is a generic protocol for communicating with microcontrollers
@@ -220,29 +224,29 @@ void setupMeteoStation() {
 #ifdef USE_MLX_SENSOR
   if (!(mlxSuccess = mlx.begin())) {
     //set IR sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(7), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_MLX), STATUS_NOT_OK);
     IR = 0;
     Tir = 0;
-  } else digitalWrite(PIN_TO_DIGITAL(7), STATUS_OK); //Make sure IR sensor fail flag is off on success
+  } else digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_MLX), STATUS_OK); //Make sure IR sensor fail flag is off on success
 
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_TSL_SENSOR
   if (!(tslSuccess = tsl.begin())) {
     //set TSL sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(8), STATUS_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_OK);
     mag_arcsec2 = 0.0;
-  } else digitalWrite(PIN_TO_DIGITAL(8), STATUS_NOT_OK); //Make sure TSL sensor fail flag is off on success
+  } else digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_NOT_OK); //Make sure TSL sensor fail flag is off on success
 
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_P_SENSOR
         if (!(bmpSuccess=bmp.begin())) {
             //set P sensor fail flag
-            digitalWrite(PIN_TO_DIGITAL(9), STATUS_NOT_OK);
+            digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BMP), STATUS_NOT_OK);
             Tp=0;
             P=0;
-        } else digitalWrite(PIN_TO_DIGITAL(9), STATUS_OK); //Make sure P sensor fail flag is off on success
+        } else digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BMP), STATUS_OK); //Make sure P sensor fail flag is off on success
 
 #endif //USE_P_SENSOR
 
@@ -253,11 +257,11 @@ void setupMeteoStation() {
 #ifdef USE_BME_SENSOR
   if (!(bmeSuccess = bme.begin())) {
     //set P sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(9), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BME), STATUS_NOT_OK);
     Tp = 0;
     P = 0;
     HR = 0;
-  } else digitalWrite(PIN_TO_DIGITAL(9), STATUS_OK); //Make sure P/BME sensor fail flag is off on success
+  } else digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BME), STATUS_OK); //Make sure P/BME sensor fail flag is off on success
 
 #endif //USE_BME_SENSOR
 
@@ -268,9 +272,9 @@ void setupMeteoStation() {
     // that the initialization succeeded
     dhtSuccess = !isnan(dht.readHumidity());
     if (dhtSuccess)
-      digitalWrite(PIN_TO_DIGITAL(8), STATUS_OK);
+      digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_OK);
     else
-      digitalWrite(PIN_TO_DIGITAL(8), STATUS_NOT_OK);
+      digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_NOT_OK);
 
   }
 #endif //USE_DHT_SENSOR
@@ -397,7 +401,7 @@ void runMeteoStation() {
     IR = mlx.readObjectTempC();
   } else if (mlxSuccess = mlx.begin()) {
     // Retry mlx.begin(), and clear MLX sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(7), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_MLX), STATUS_OK);
   }
 
   Clouds = cloudIndex();
@@ -409,7 +413,7 @@ void runMeteoStation() {
   }
 #else
   //set MLX sensor fail flag
-  digitalWrite(PIN_TO_DIGITAL(7), STATUS_NOT_OK);
+  digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_MLX), STATUS_NOT_OK);
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_DHT_SENSOR
@@ -425,7 +429,7 @@ void runMeteoStation() {
 #else
   #ifndef USE_TSL_SENSOR
     //set HR sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(8), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_NOT_OK);
   #endif
 #endif //USE_DHT_SENSOR
 
@@ -433,9 +437,9 @@ void runMeteoStation() {
   if (tslSuccess) {
     brightness = advancedLightSensorRead();
     mag_arcsec2 = get_mag_arcsec2(brightness);
-  } else if (tslSuccess = bme.begin()) {
+  } else if (tslSuccess = tsl.begin()) {
     // Retry tsl.begin(), and clear TSL sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(8), STATUS_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_TSL), STATUS_OK);
   }
 #else
   #ifndef USE_DHT_SENSOR
@@ -450,12 +454,12 @@ void runMeteoStation() {
         P=bmp.readPressure();
     } else if (bmpSuccess=bmp.begin()) {
         // Retry bmp.begin(), and clear P sensor fail flag
-        digitalWrite(PIN_TO_DIGITAL(9), STATUS_NOT_OK);
+        digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BMP), STATUS_OK);
     }
 #else
   #ifndef USE_BME_SENSOR
     //set P sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(9), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BME), STATUS_NOT_OK);
   #endif
 #endif //USE_P_SENSOR
 
@@ -473,12 +477,12 @@ void runMeteoStation() {
     }
   } else if (bmeSuccess = bme.begin()) {
     // Retry bme.begin(), and clear BME sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(9), STATUS_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BME), STATUS_OK);
   }
 #else
   #ifndef USE_P_SENSOR
     //set BME sensor fail flag
-    digitalWrite(PIN_TO_DIGITAL(9), STATUS_NOT_OK);
+    digitalWrite(PIN_TO_DIGITAL(PIN_STATUS_BME), STATUS_NOT_OK);
   #endif
 #endif //USE_BME_SENSOR
 
