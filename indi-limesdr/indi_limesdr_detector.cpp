@@ -24,16 +24,18 @@
 #include <indilogger.h>
 #include <memory>
 
-#define min(a,b) \
-  ({ __typeof__ (a) _a = (a); \
-      __typeof__ (b) _b = (b); \
-    _a < _b ? _a : _b; })
-#define MAX_TRIES 20
-#define MAX_DEVICES 4
-#define SUBFRAME_SIZE (16384)
+#define min(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a < _b ? _a : _b;      \
+    })
+#define MAX_TRIES      20
+#define MAX_DEVICES    4
+#define SUBFRAME_SIZE  (16384)
 #define MIN_FRAME_SIZE (512)
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
-#define SPECTRUM_SIZE (256)
+#define SPECTRUM_SIZE  (256)
 
 static int iNumofConnectedDetectors;
 static LIMESDR *receivers[MAX_DEVICES];
@@ -54,7 +56,7 @@ void ISInit()
     {
         iNumofConnectedDetectors = 0;
 
-        iNumofConnectedDetectors = LMS_GetDeviceList (lime_dev_list);
+        iNumofConnectedDetectors = LMS_GetDeviceList(lime_dev_list);
         if (iNumofConnectedDetectors > MAX_DEVICES)
             iNumofConnectedDetectors = MAX_DEVICES;
         if (iNumofConnectedDetectors <= 0)
@@ -169,7 +171,7 @@ void ISSnoopDevice(XMLEle *root)
 
 LIMESDR::LIMESDR(uint32_t index)
 {
-    InCapture = false;
+    InIntegration = false;
     detectorIndex = index;
 
     char name[MAXINDIDEVICE];
@@ -181,22 +183,21 @@ LIMESDR::LIMESDR(uint32_t index)
 ** Client is asking us to establish connection to the device
 ***************************************************************************************/
 bool LIMESDR::Connect()
-{    	
+{
     int r = LMS_Open(&lime_dev, lime_dev_list[detectorIndex], NULL);
     if (r < 0)
     {
         LOGF_ERROR("Failed to open limesdr device index %d.", detectorIndex);
-		return false;
-	}
+        return false;
+    }
     LMS_Init(lime_dev);
     LMS_EnableChannel(lime_dev, LMS_CH_RX, 0, true);
     LOG_INFO("LIME-SDR Detector connected successfully!");
-	// Let's set a timer that checks teleDetectors status every POLLMS milliseconds.
+    // Let's set a timer that checks teleDetectors status every POLLMS milliseconds.
     // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
     //SetTimer(POLLMS);
 
-
-	return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -204,12 +205,11 @@ bool LIMESDR::Connect()
 ***************************************************************************************/
 bool LIMESDR::Disconnect()
 {
-	InCapture = false;
+    InIntegration = false;
     LMS_Close(lime_dev);
-    PrimaryDetector.setContinuumBufferSize(1);
-    PrimaryDetector.setSpectrumBufferSize(1);
-	LOG_INFO("LIME-SDR Detector disconnected successfully!");
-	return true;
+    setBufferSize(1);
+    LOG_INFO("LIME-SDR Detector disconnected successfully!");
+    return true;
 }
 
 /**************************************************************************************
@@ -217,7 +217,7 @@ bool LIMESDR::Disconnect()
 ***************************************************************************************/
 const char *LIMESDR::getDefaultName()
 {
-	return "LIME-SDR Receiver";
+    return "LIME-SDR Receiver";
 }
 
 /**************************************************************************************
@@ -226,19 +226,19 @@ const char *LIMESDR::getDefaultName()
 bool LIMESDR::initProperties()
 {
     // We set the Detector capabilities
-    uint32_t cap = DETECTOR_CAN_ABORT | DETECTOR_HAS_CONTINUUM | DETECTOR_HAS_SPECTRUM | DETECTOR_HAS_STREAMING;
-    SetDetectorCapability(cap);
+    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING;
+    SetSpectrographCapability(cap);
 
-	// Must init parent properties first!
-	INDI::Detector::initProperties();
+    // Must init parent properties first!
+    INDI::Spectrograph::initProperties();
 
-    PrimaryDetector.setMinMaxStep("DETECTOR_CAPTURE", "DETECTOR_CAPTURE_VALUE", 0.001, 86164.092, 0.001, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_FREQUENCY", 400.0e+6, 3.8e+9, 1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_SAMPLERATE", 2.0e+6, 28.0e+6, 1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_GAIN", 0.0, 1.0, 0.01, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BANDWIDTH", 400.0e+6, 3.8e+9, 1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BITSPERSAMPLE", -32, -32, 0, false);
-    PrimaryDetector.setCaptureExtension("fits");
+    setMinMaxStep("DETECTOR_CAPTURE", "DETECTOR_CAPTURE_VALUE", 0.001, 86164.092, 0.001, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_FREQUENCY", 400.0e+6, 3.8e+9, 1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_SAMPLERATE", 2.0e+6, 28.0e+6, 1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_GAIN", 0.0, 1.0, 0.01, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BANDWIDTH", 400.0e+6, 3.8e+9, 1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BITSPERSAMPLE", -32, -32, 0, false);
+    setIntegrationFileExtension("fits");
     /*
     // PrimaryDetector Device Continuum Blob
     IUFillBLOB(&TFitsB[0], "TRMT", "Transmit1", "");
@@ -248,12 +248,12 @@ bool LIMESDR::initProperties()
     IUFillBLOB(&TFitsB[4], "TRMT", "Transmit5", "");
     IUFillBLOBVector(&TFitsBP, TFitsB, 5, getDeviceName(), "LIME_TRMT", "Transmit Data", CAPTURE_INFO_TAB, IP_WO, 60, IPS_IDLE);
 */
-	// Add Debug, Simulator, and Configuration controls
-	addAuxControls();
+    // Add Debug, Simulator, and Configuration controls
+    addAuxControls();
 
     setDefaultPollingPeriod(500);
 
-	return true;
+    return true;
 }
 
 /********************************************************************************************
@@ -262,22 +262,24 @@ bool LIMESDR::initProperties()
 *********************************************************************************************/
 bool LIMESDR::updateProperties()
 {
-	// Call parent update properties first
-	INDI::Detector::updateProperties();
+    // Call parent update properties first
+    INDI::Spectrograph::updateProperties();
 
-	if (isConnected())
-	{
-		// Let's get parameters now from Detector
-		setupParams();
+    if (isConnected())
+    {
+        // Let's get parameters now from Detector
+        setupParams();
         //defineBLOB(&TFitsBP);
 
-		// Start the timer
-		SetTimer(POLLMS);
-    } else {
+        // Start the timer
+        SetTimer(POLLMS);
+    }
+    else
+    {
         //deleteProperty(TFitsBP.name);
     }
 
-	return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -285,58 +287,59 @@ bool LIMESDR::updateProperties()
 ***************************************************************************************/
 void LIMESDR::setupParams()
 {
-	// Our Detector is an 8 bit Detector, 100MHz frequency 1MHz bandwidth.
-    SetDetectorParams(400.0e+6, 28.0e+6, -32, 10.0e+6, 1.0);
+    // Our Detector is an 8 bit Detector, 100MHz frequency 1MHz bandwidth.
+    setParams(400.0e+6, 28.0e+6, -32, 10.0e+6, 1.0);
 }
 
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool LIMESDR::StartCapture(float duration)
+bool LIMESDR::StartIntegration(float duration)
 {
-	CaptureRequest = duration;
+    IntegrationRequest = duration;
 
-	// Since we have only have one Detector with one chip, we set the exposure duration of the primary Detector
-    PrimaryDetector.setCaptureDuration(duration);
-    b_read = 0;
-    to_read = PrimaryDetector.getSampleRate() * PrimaryDetector.getCaptureDuration();
+    // Since we have only have one Detector with one chip, we set the exposure duration of the primary Detector
+    setIntegrationTime(duration);
+    b_read  = 0;
+    to_read = getSampleRate() * getIntegrationTime();
 
-    PrimaryDetector.setContinuumBufferSize(to_read * sizeof(float));
-    PrimaryDetector.setSpectrumBufferSize(SPECTRUM_SIZE * sizeof(float));
+    setBufferSize(to_read * sizeof(float));
 
-    if(to_read > 0) {
-        lime_stream.channel = 0;
-        lime_stream.isTx = false;
-        lime_stream.fifoSize = to_read;
-        lime_stream.dataFmt = lms_stream_t::LMS_FMT_F32;
+    if (to_read > 0)
+    {
+        lime_stream.channel             = 0;
+        lime_stream.isTx                = false;
+        lime_stream.fifoSize            = to_read;
+        lime_stream.dataFmt             = lms_stream_t::LMS_FMT_F32;
         lime_stream.throughputVsLatency = 0.5;
         LMS_SetupStream(lime_dev, &lime_stream);
         LMS_StartStream(&lime_stream);
         gettimeofday(&CapStart, nullptr);
-        InCapture = true;
-        LOG_INFO("Capture started...");
+        InIntegration = true;
+        LOG_INFO("Integration started...");
         return true;
     }
 
-	// We're done
+    // We're done
     return false;
 }
 
 /**************************************************************************************
 ** Client is updating capture settings
 ***************************************************************************************/
-bool LIMESDR::CaptureParamsUpdated(float sr, float freq, float bps, float bw, float gain)
+bool LIMESDR::paramsUpdated(float sr, float freq, float bps, float bw, float gain)
 {
     INDI_UNUSED(bps);
-    PrimaryDetector.setBPS(-32);
+    setBPS(-32);
     int r = 0;
-    r |= LMS_SetAntenna 	(lime_dev, LMS_CH_RX, 0, 0);
+    r |= LMS_SetAntenna(lime_dev, LMS_CH_RX, 0, 0);
     r |= LMS_SetNormalizedGain(lime_dev, LMS_CH_RX, 0, gain);
     r |= LMS_SetLOFrequency(lime_dev, LMS_CH_RX, 0, freq);
     r |= LMS_SetSampleRate(lime_dev, sr, 0);
-    r |= LMS_Calibrate (lime_dev, LMS_CH_RX, 0, bw, 0);
+    r |= LMS_Calibrate(lime_dev, LMS_CH_RX, 0, bw, 0);
 
-    if(r != 0) {
+    if (r != 0)
+    {
         LOG_INFO("Error(s) setting parameters.");
     }
 
@@ -346,13 +349,15 @@ bool LIMESDR::CaptureParamsUpdated(float sr, float freq, float bps, float bw, fl
 /**************************************************************************************
 ** Client is asking us to abort a capture
 ***************************************************************************************/
-bool LIMESDR::AbortCapture()
+bool LIMESDR::AbortIntegration()
 {
-    if(InCapture) {
+    if (InIntegration)
+    {
         lms_stream_status_t status;
         LMS_GetStreamStatus(&lime_stream, &status);
-        if(status.fifoFilledCount <= 0) {
-            InCapture = false;
+        if (status.fifoFilledCount <= 0)
+        {
+            InIntegration = false;
             LMS_StopStream(&lime_stream);
             LMS_DestroyStream(lime_dev, &lime_stream);
         }
@@ -365,17 +370,17 @@ bool LIMESDR::AbortCapture()
 ***************************************************************************************/
 float LIMESDR::CalcTimeLeft()
 {
-	double timesince;
-	double timeleft;
-	struct timeval now;
-	gettimeofday(&now, nullptr);
+    double timesince;
+    double timeleft;
+    struct timeval now;
+    gettimeofday(&now, nullptr);
 
-	timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) -
-				(double)(CapStart.tv_sec * 1000.0 + CapStart.tv_usec / 1000);
-	timesince = timesince / 1000;
+    timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) -
+                (double)(CapStart.tv_sec * 1000.0 + CapStart.tv_usec / 1000);
+    timesince = timesince / 1000;
 
-	timeleft = CaptureRequest - timesince;
-	return timeleft;
+    timeleft = IntegrationRequest - timesince;
+    return timeleft;
 }
 
 /**************************************************************************************
@@ -383,35 +388,37 @@ float LIMESDR::CalcTimeLeft()
 ***************************************************************************************/
 void LIMESDR::TimerHit()
 {
-	long timeleft;
+    long timeleft;
 
-	if (isConnected() == false)
-		return; //  No need to reset timer if we are not connected anymore
+    if (isConnected() == false)
+        return; //  No need to reset timer if we are not connected anymore
 
-	if (InCapture)
-	{
-		timeleft = CalcTimeLeft();
-		if(timeleft < 0.1)
-		{
-			/* We're done capturing */
-            LOG_INFO("Capture done, expecting data...");
+    if (InIntegration)
+    {
+        timeleft = CalcTimeLeft();
+        if (timeleft < 0.1)
+        {
+            /* We're done capturing */
+            LOG_INFO("Integration done, expecting data...");
             lms_stream_status_t status;
             LMS_GetStreamStatus(&lime_stream, &status);
-            if(status.active) {
-                if(status.fifoFilledCount >= status.fifoSize) {
+            if (status.active)
+            {
+                if (status.fifoFilledCount >= status.fifoSize)
+                {
                     n_read = status.fifoFilledCount;
                     grabData();
                 }
             }
-			timeleft = 0.0;
-		}
+            timeleft = 0.0;
+        }
 
-		// This is an over simplified timing method, check DetectorSimulator and limesdrDetector for better timing checks
-		PrimaryDetector.setCaptureLeft(timeleft);
-	}
+        // This is an over simplified timing method, check DetectorSimulator and limesdrDetector for better timing checks
+        setIntegrationLeft(timeleft);
+    }
 
-	SetTimer(POLLMS);
-	return;
+    SetTimer(POLLMS);
+    return;
 }
 
 /**************************************************************************************
@@ -419,21 +426,16 @@ void LIMESDR::TimerHit()
 ***************************************************************************************/
 void LIMESDR::grabData()
 {
-    if(InCapture) {
-        continuum = PrimaryDetector.getContinuumBuffer();
+    if (InIntegration)
+    {
+        continuum = getBuffer();
         LOG_INFO("Downloading...");
         LMS_RecvStream(&lime_stream, continuum, n_read, NULL, 1000);
         LMS_StopStream(&lime_stream);
         LMS_DestroyStream(lime_dev, &lime_stream);
-        InCapture = false;
-
-        //Create the spectrum
-        if(HasSpectrum()) {
-            spectrum = PrimaryDetector.getSpectrumBuffer();
-            Spectrum(continuum, spectrum, n_read * 8 / abs(PrimaryDetector.getBPS()), SPECTRUM_SIZE, PrimaryDetector.getBPS());
-        }
+        InIntegration = false;
 
         LOG_INFO("Download complete.");
-        CaptureComplete(&PrimaryDetector);
+        IntegrationComplete();
     }
 }
