@@ -5,7 +5,7 @@ any question feel free contact us:yang.zhou@zwoptical.com
 here is the suggested procedure.
 
 --> EFWGetNum
---> EFWGetID for each camera
+--> EFWGetID for each filter wheel
 
 --> EFWGetProperty
 --> EFWOpen
@@ -227,6 +227,11 @@ EFW_SUCCESS: operation succeeds
 ***************************************************************************/
 EFW_API	EFW_ERROR_CODE EFWClose(int ID);
 
+/***************************************************************************
+Descriptions£º
+get version string, like "0, 4, 0824"
+***************************************************************************/
+EFW_API char* EFWGetSDKVersion();
 
 #ifdef __cplusplus
 }
