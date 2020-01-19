@@ -1,0 +1,46 @@
+language: android
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-28.0.3
+    - android-28
+  licenses:
+    - 'android-sdk-license-.+'
+addons:
+  apt:
+    packages:
+    - binutils-mingw-w64-i686
+    - g++-mingw-w64-i686
+    - gcc-mingw-w64-i686
+    - wine
+    - groff
+    - gtk2.0
+    - libgtk2.0
+    - libgtk2.0-dev
+before_install:
+  - git clone https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
+  - pushd $HOME/android-ndk-root
+  - git checkout 9afc86eae45a544562bc7052ca6f529772754f16 .
+  - popd
+  - export ANDROID_NDK_HOME=$HOME/android-ndk-root
+  - mkdir -p "/usr/local/android-sdk/licenses"
+  - echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > /usr/local/android-sdk/licenses/android-sdk-license
+before_script:
+  - wget -O astyle_3.1_linux.tar.gz http://sourceforge.net/projects/astyle/files/astyle/astyle%203.1/astyle_3.1_linux.tar.gz/download
+  - tar -xf astyle_3.1_linux.tar.gz -C $HOME
+  - make -C $HOME/astyle/build/gcc
+  - make -C $HOME/astyle/build/gcc prefix=$HOME install
+script:
+  - if [[ -n $(make astyle | grep Formatted) ]]; then echo "Code formatting error. Please check astyle"; exit -1; fi
+  - make android
+  - make localwin
+  - make srczip
+  - make clean
+  - make
+  - ./pktriggercord-cli --version
+  - mkdir -p windows_test
+  - cd windows_test
+  - unzip ../pktriggercord-*-win.zip
+  - wine ./pktriggercord-cli.exe --version
+  - cd ..

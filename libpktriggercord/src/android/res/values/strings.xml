@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PkTriggerCord</string>
+    <string name="titlePrefs">Preferences</string>
+    <string name="titleAbout">About</string>
+    <string name="titleShowPreview">Show preview</string>
+    <string name="summaryShowPreview">Show the preview after taking picture</string>
+    <string name="titleSaveDir">Save directory</string>
+    <string name="summarySaveDir">Images will be saved into this
+    directory under pktriggercord subdirectory</string>
+    <string name="copyright">Copyright (C) 2011-2019 Andras Salamon\n\n\
+Based on:\npslr-shoot (C) 2009 Ramiro Barreiro\n\
+PK-Remote (C) 2008 Pontus Lidman</string>
+    <string name="license">License LGPLv3: GNU LGPL version 3
+    http://gnu.org/licenses/lgpl.html \
+This is free software: you are free to change and redistribute it. \
+There is NO WARRANTY, to the extent permitted by law.</string>
+    <string name="weburl">http://pktriggercord.melda.info</string>
+    <string name="shutter">Shutter</string>
+    <string name="focus">Focus</string>
+    <string name="image">Image</string>
+    <string name="contentDescriptionPreview">Preview image</string>
+</resources>

@@ -1,0 +1,79 @@
+Known bugs of pkTriggerCord
+============================
+
+General
+-------
+
+  Setting jpeg sharpness/contrast/saturation has no effect sometimes.
+
+  Downloading jpeg with non-maximal resolution does not work.
+
+  Taking picture restores jpeg image tone, so jpeg image tone setting
+  is quite useless.
+
+  Setting exposure mode has no effect ( maybe it's not a bug only it's
+  not allowed ).
+
+  ISO table of GUI only shows the extended iso range even is base iso
+  range is set.
+
+  The program stops for approx. 20 minutes after 4-5 hours
+  (e.g. --frames 200 --delay 120)
+
+  --select_af_point Auto-11 changes to Auto-5 instead
+
+  Top LCD panel is flashing
+  
+  Green button does not work for newer cameras. It does nothing.
+
+Linux
+-----
+
+  Sometimes it requires root privileges.
+
+K-x
+---
+
+  K-x: Changing shutter speed to 1/6000 is not working. It changes to 1/8 
+  instead.
+
+  K-x: Cannot change ISO in M mode.
+
+  K-x: Muted jpeg image tone is not working
+
+  K-x firmware 1.02 or 1.03: Image artifacts during timelapse
+  photos. Workaround: Use firmware 1.01
+
+K-50
+----
+
+  K-50: bulb mode is not working
+
+  K-50: Shutter speed change sometime changes the shutter speed to
+  9999s
+
+K-30
+----
+
+  K-30: Shutter speed change sometime changes the shutter speed to
+  9999s
+
+  K-30: Incorrect exposure mode reading
+
+  K-30: Program does not work correctly using old firmwares. Firmware
+  1.06 is recommended.
+
+  K-30: Requires turning on the camera first and connect using USB
+  only after that.
+  
+K-3
+---
+
+  K-3: bulb mode is not working
+
+  K-3: Exposure correction setting is not working
+  
+K-3 II
+------
+
+  K-3 II: bulb mode is not working

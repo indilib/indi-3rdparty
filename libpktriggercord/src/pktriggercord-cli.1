@@ -1,0 +1,495 @@
+.TH "PKTRIGGERCORD" "1"
+.HEAD <STYLE type="text/css"> h3 { margin-left: 5%} </STYLE>
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.SH "NAME"
+pktriggercord-cli - command-line Pentax DSLR tethering software
+.SH "SYNOPSIS"
+.SY pktriggercord-cli
+.OP \-\-model CAMERA_MODEL
+.OP \-\-device DEVICE
+.OP \-\-timeout SECONDS
+.OP \-\-exposure_mode MODE
+.OP \-\-exposure_compensation VALUE
+.OP \-\-drive_mode DRIVE_MODE
+.OP \-\-flash_mode FLASH_MODE
+.OP \-\-flash_exposure_compensation VALUE
+.OP \-\-iso ISO
+.OP \-\-aperture APERTURE
+.OP \-\-shutter_speed SHUTTER_SPEED
+.OP \-\-af_mode AF_MODE
+.OP \-\-select_af_point AF_SELECT_MODE
+.OP \-\-ae_metering AE_METERING
+.OP \-\-resolution RESOLUTION
+.OP \-\-quality QUALITY
+.OP \-\-jpeg_image_tone IMAGE_TONE
+.OP \-\-white_balance_mode WB_MODE
+.OP \-\-white_balance_adjustment WB_ADJ
+.OP \-\-auto_focus
+.OP \-\-reconnect
+.OP \-\-green
+[\fB\-\-warnings\fR | \fB\-\-nowarnings\fR ]
+[\fB\-\-version\fR | \fB\-\-help\fR | \fB\-\-dust_removal\fR | \fB\-\-status\fR |
+\fB\-\-status_hex\fR | \fB\-\-settings\fR | \fB\-\-settings_hex\fR | \fB\-\-read_datetime\fR |
+\fB\-\-read_firmware_version\fR 
+| \fB\-\-dump_memory \fISIZE\fR 
+| \fB\-\-frames \fINUMBER\fR [ \fB\-\-delay
+\fISECONDS\fR ] 
+| \fB\-\-noshutter\fR | \fB\-\-servermode\fR
+[ \fB\-\-servermode_timeout \fISECONDS\fR]  |
+\fB\-\-pentax_debug_mode\fI VALUE\fR]
+[ \fB\-\-file_format\fI FORMAT\fR ] [ \fB\-\-output_file\fI FILENAME\fR ] 
+.OP \-\-debug 
+.YS
+.PP
+Syntax shows only long option names.
+.SH "DESCRIPTION"
+.PP
+.URL http://pktriggercord.melda.info pkTriggerCord
+.HTML <!--
+pkTriggerCord 
+.HTML -->
+is a cross\-platform Pentax DSLR tethering software, and
+pktriggercord-cli is a command\-line client for it\.
+.HnS 2
+.SS Connection
+.HnE
+.PP 
+By default the software connects to the first available Pentax camera\.
+.PP
+\fB\-\-model \fR\fICAMERA_MODEL\fR
+.RS 4
+Specify the camera model. Useful if more than one camera is connected.
+Valid ( case-insensitive ) values are: K20d, K10d, GX10, GX20, K-x,
+K200D, K-7, K-r, K-5, K-2000, K-m, K-30, K100D, K110D, K-01, K-5II,
+K-5IIs, K-3, K-3II, K-500\.
+.RE
+.PP
+\fB\-\-device \fR\fB\fIDEVICE\fR
+.RS 4
+Specify the device. Useful if more than one camera is connected.
+Valid ( case-sensitive ) values are depend on the operating system. 
+Valid values for Linux: sg0, sg1, ..., for Windows: C, D, E, ...\.
+.RE
+.PP
+\fB\-\-timeout \fR\fB\fISECONDS\fR
+.RS 4
+Specify the timeout in seconds for camera connection. 0 means no
+timeout, the program will wait forever. By default there is no
+timeout.
+.RE
+.HnS 2
+.SS Work mode
+.HnE
+.PP 
+Without specifying work mode the program prints out the status info.
+.PP
+\fB\-F\fR, \fB\-\-frames \fR\fB\fINUMBER\fR
+.RS 4
+Specify the number of shots. Maximum number of pictures is 10000.
+.RE
+.PP
+\fB\-d\fR, \fB\-\-delay \fR\fB\fISECONDS\fR\fR
+.RS 4
+Specify the delay between the shots (if number of frames is greater
+than 1). The minimum delay is based on several factors, approximately
+3 seconds\. If auto bracketing is set there is only delay after
+bracketing groups.
+.RE
+.PP
+\fB\-f\fR, \fB\-\-auto_focus\fR
+.RS 4
+Autofocus before first shot.
+.RE
+.PP
+\fB\-\-reconnect\fR
+.RS 4
+Reconnect between shots. Might solve image artifact problems.
+.RE
+.PP
+\fB\-g\fR, \fB\-\-green\fR
+.RS 4
+Green button before first shot.
+.RE
+.PP
+\fB\-s\fR, \fB\-\-status\fR
+.RS 4
+Print human readable status info and do not take pictures.
+.RE
+.PP
+\fB\-\-status_hex\fR
+.RS 4
+Print raw (hexadecimal) and human readable status info and do not take pictures\.
+.RE
+.PP
+\fB\-S\fR, \fB\-\-settings\fR
+.RS 4
+Print human readable settings info and do not take pictures.
+.RE
+.PP
+\fB\-\-settings_hex\fR
+.RS 4
+Print raw (hexadecimal) settings info and do not take pictures\. Since
+the size of the settings buffers is unknown it prints out only the
+first 1024 bytes\.
+.RE
+.PP
+\fB\-\-read_datetime\fR
+.RS 4
+Print the date and time set in the camera and do not take pictures\.
+.RE
+.PP
+\fB\-\-read_firmware_version\fR
+.RS 4
+Print the firmware version of the camera and do not take pictures\.
+.RE
+.PP
+\fB\-\-dump_memory SIZE\fR
+.RS 4
+Dump the memory of the camera to pentax_dump.dat file. Size should be
+specified by bytes, but K, M, and G modifiers can be used. For
+instance: 2K, 10M, 3G. Maximum size of the dump memory is 4GB\.
+.RE
+.PP
+\fB\-\-noshutter\fR
+.RS 4
+Do not send shutter command just wait for new images. Shutter should be
+released by using a cable release or by pressing the shutter button of
+the camera. The latter does not work for all camera models\.
+.RE
+.PP
+\fB\-\-dust_removal\fR
+.RS 4
+Initiate dust removal process\.
+.RE
+.PP
+\fB\-\-servermode\fR
+.RS 4
+The program waits for commands using port number 8888. The program
+ends if no client connects for 30 seconds\. Different timeout value
+can be specified by \-\-servermode_timeout\.
+.RE
+.PP
+\fB\-\-servermode_timeout \fR\fB\fISECONDS\fR
+.RS 4
+Specify timeout for servermode. Default value: 30 seconds
+.RE
+.PP
+\fB\-\-pentax_debug_mode VALUE\fR
+.RS 4
+Enable (VALUE=1) or disable (VALUE=0) the camera debug mode. This is
+DANGEROUS, use it only if you know camera debug mode.\.
+.RE
+.HnS 2
+.SS Setting exposure parameters
+.HnE
+.PP
+\fB-w\fR, \fB\-\-warnings\fR
+.RS 4
+Specify warning mode. The program prints out warning messages if the
+settings are invalid. It will not stop since the camera can fix most
+of the invalid settings. For instance specifying -iso 796 will change the iso to 800\.
+.RE
+.PP
+\fB\-\-nowarnings\fR
+.RS 4
+Turns off warning mode\.
+.RE
+.PP
+\fB\-m\fR, \fB\-\-exposure_mode\fR \fIEXPOSURE_MODE\fR
+.RS 4
+Specify exposure mode. Does NOT work correctly. Please do not use it.
+.RE
+.PP
+\fB\-i\fR, \fB\-\-iso\fR \fIISO\fR
+.RS 4
+Specify ISO settings. Single value (400) or interval (200-800) can be used\. 
+.RE
+.PP
+\fB\-a\fR, \fB\-\-aperture\fR \fIAPERTURE\fR
+.RS 4
+Specify aperture. Sample valid valus: 2.8, 5.6, 11 (depends on the lens).
+.RE
+.PP
+\fB\-t\fR, \fB\-\-shutter_speed\fR \fISHUTTER_SPEED\fR
+.RS 4
+Specify shutter speed\. Value should be specified in the following
+format: 1/50, 1/500, 0.5, 5, \.\.\. Values greater than 30 sec only
+allowed if Bulb mode is already set.
+.RE
+.PP
+\fB\-\-af_mode\fR \fIAF_MODE\fR
+.RS 4
+Specify the autofocus mode. Valid values are: AF.S, AF.C, AF.A\.
+.RE
+.PP
+\fB\-\-select_af_point\fR \fIAF_SELECT_MODE\fR
+.RS 4
+Specify the autofocus point selection mode. Valid values are: Auto-5, Auto-11, Select, Spot\.
+It is also possible to specify the raw numerical value\.
+.RE
+.PP
+\fB\-\-ae_metering\fR \fIAE_METERING\fR
+.RS 4
+Specify the autoexposure metering mode. Valid values are: Multi, Center, Spot\.
+.RE
+.PP
+\fB\-\-exposure_correction\fR \fIVALUE\fR
+.RS 4
+Specify exposure compensation value.
+.RE
+.PP
+\fB\-\-drive_mode\fR \fIDRIVE_MODE\fR
+.RS 4
+Specify the drive mode. Valid values are: Single, Continuous-HI, SelfTimer-12, SelfTimer-2, Remote, Remote-3, Continuous-LO\.
+.RE
+.PP
+\fB\-\-flash_mode\fR \fIFLASH_MODE\fR
+.RS 4
+Specify the flash mode. Valid values are: Manual, Manual-RedEye, Slow, Slow-RedEye, TrailingCurtain, Auto, Auto-RedEye, Wireless\.
+.RE
+.PP
+\fB\-\-flash_exposure_correction\fR \fIVALUE\fR
+.RS 4
+Specify flash exposure compensation value.
+.RE
+.HnS 2
+.SS Output file specification
+.HnE
+.PP
+\fB\-o\fR,\fB\-\-output_file\fR \fIFILENAME\fR
+.RS 4
+Specify the name of the output file prefix. Frame number and
+extension will be automatically added. Use '-' to output to stdout\.
+.RE
+.PP
+\fB\-\-file_format\fR \fIFORMAT\fR
+.RS 4
+Specify the output file format. Valid values are: PEF, DNG, JPEG. It
+also changes the default file format in the camera\.
+.RE
+.PP
+\fB\-\-color_space\fR \fICOLOR_SPACE\fR
+.RS 4
+Specify the color space. Valid values are: sRGB, AdobeRGB\.
+.RE
+.PP
+\fB\-q\fR,\fB\-\-quality\fR \fIQUALITY\fR
+.RS 4
+Specify jpeg quality using the 'star' rating of the camera. 1, 2, 3 can be used for all the cameras, for some cameras 4 is also allowed. It also changes the jpeg quality in the camera\.
+.RE
+.PP
+\fB\-r\fR,\fB\-\-resolution\fR \fIRESOLUTION\fR
+.RS 4
+Specify jpeg resolution. While this changes the jpeg resolution setting in the camera, it will not affect the resolution of the downloaded jpeg file. (it's a bug)\.
+.RE
+.PP
+\fB\-\-jpeg_image_tone\fR \fIIMAGE_TONE\fR
+.RS 4
+Specify the jpeg image tone. Valid values are: Natural, Bright,
+Portrait, Landscape, Vibrant, Monochrome, Muted,
+ReversalFilm, BleachBypass, Radiant, Auto\. Currently this setting is temporary, picture taking
+restores it back to the original, so it's quite useless\.
+.RE
+.PP
+\fB\-\-white_balance_mode\fR \fIWB_MODE\fR
+.RS 4
+Specify the white balance mode. Valid values are: Auto, Daylight, 
+Shade, Cloudy, Fluorescent_D, Fluorescent_N, Fluorescent_W, 
+Fluorescent_L, Tungsten, Flash, Manual, Manual2, Manual3, Kelvin1,
+Kelvin2, Kelvin3, CTE, MultiAuto\.
+.RE
+.PP
+\fB\-\-white_balance_adjustment\fR \fIWB_ADJ\fR
+.RS 4
+Specify the white balance adjustment. Valid values like: G5B2, G3A5, B5, A3, G5, M4\.
+.RE
+.HnS 2
+.SS Other
+.HnE
+.PP
+\fB\-v\fR, \fB\-\-version\fR
+.RS 4
+Display version and exit\.
+.RE
+.PP
+\fB\-h\fR, \fB\-\-help\fR
+.RS 4
+Display a short usage message\.
+.RE
+.PP
+\fB\-\-debug\fR
+.RS 4
+Debug info\.
+.RE
+.HnS 2
+.SS Servermode
+.HnE
+.PP
+The program accepts the following commands in servermode:
+.PP
+\fBconnect\fR
+.RS 4
+Connect to the camera\.
+.RE
+.PP
+\fBfocus\fR
+.RS 4
+Focus (half pressing the shutter)\.
+.RE
+.PP
+\fBshutter\fR
+.RS 4
+Shutter (full pressing)\.
+.RE
+.PP
+\fBdelete_buffer\fR \fIBUFFER_INDEX\fR
+.RS 4
+Delete a buffer image\.
+.RE
+.PP
+\fBupdate_status\fR
+.RS 4
+Read camera status info\.
+.RE
+.PP
+\fBget_camera_name\fR
+.RS 4
+Get camera name\.
+.RE
+.PP
+\fBget_lens_name\fR
+.RS 4
+Get lens name\.
+.RE
+.PP
+\fBget_current_shutter_speed\fR
+.RS 4
+Get current shutter speed\.
+.RE
+.PP
+\fBget_current_aperture\fR
+.RS 4
+Get current aperture\.
+.RE
+.PP
+\fBget_current_iso\fR
+.RS 4
+Get current ISO\.
+.RE
+.PP
+\fBget_bufmask\fR
+.RS 4
+Get buffer mask\.
+.RE
+.PP
+\fBget_auto_bracket_mode\fR
+.RS 4
+Get auto bracket mode\.
+.RE
+.PP
+\fBget_auto_bracket_picture_count\fR
+.RS 4
+Get Auto bracket picture count\.
+.RE
+.PP
+\fBget_preview_buffer\fR \fIBUFFER_INDEX\fR
+.RS 4
+Get the preview buffer\.
+.RE
+.PP
+\fBget_buffer\fR \fIBUFFER_INDEX\fR
+.RS 4
+Get the image buffer\.
+.RE
+.PP
+\fBset_shutter_speed\fR \fISHUTTER_SPEED\fR
+.RS 4
+Set shutter speed\.
+.RE
+.PP
+\fBset_iso\fR \fIISO\fR
+.RS 4
+Set ISO\.
+.RE
+.PP
+\fBdisconnect\fR
+.RS 4
+Disconnects the client\. The server keeps running (for a while) and
+waits for a new client to connect\.
+.RE
+.PP
+\fBstopserver\fR
+.RS 4
+Stops the server\.
+.RE
+.PP
+\fBecho\fR
+.RS 4
+Test command\.
+.RE
+.PP
+\fBusleep\fR \fIMICROSECONDS\fR
+.RS 4
+Sleep some number of microseconds\.
+.RE
+.SH "SEE ALSO"
+.PP
+\fIThe pktriggercord.melda.info website\fR\&[1],
+.SH "EXAMPLES"
+.PP
+.CDS
+\fBpktriggercord\-cli\fR \fB\-\-status\fR
+.CDE
+.RS 4
+\fRConnects to the camera and prints out status info\.
+.RE
+.PP
+.CDS
+\fBpktriggercord\-cli\fR \fB\-\-status_hex\fR
+.CDE
+.RS 4
+\fRConnects to the camera and prints out hexadecimal and human-readable status info\.
+.RE
+.PP
+.CDS
+\fBpktriggercord\-cli\fR \fB\-\-file_format\fR \fBdng\fR \fB-o\fR \fBtest.dng\fR
+.CDE
+.RS 4
+\fRTakes a single image and saves it as test.dng\.
+.RE
+.PP
+.CDS
+\fBpktriggercord\-cli\fR \fB\-\-file_format\fR \fBdng\fR \fB-F\fR \fB5\fR \fB-d\fR \fB20\fR \fB-o\fR \fBtest\fR
+.CDE
+.RS 4
+\fRTakes five images using 20 seconds delay and saves them
+test-0000.dng, test-0001.dng \.\.\. \.
+.RE
+.PP
+To track down errors, you can add the
+\fB\-\-debug\fR
+parameter to the
+\fBpktriggercord-cli\fR
+command line\.
+.\" .SH "AUTHORS"
+.\" .PP
+.\" \fBAndras Salamon\fR
+.\" .sp -1n
+.\" .IP "" 4
+.\" Author.
+.SH "NOTES"
+.IP " 1." 4
+.HTML <!--
+The pktriggercord.melda.info website
+.HTML -->
+.RS 4
+.HTML <!--
+http://pktriggercord.melda.info/
+.HTML -->
+.URL http://pktriggercord.melda.info/ http://pktriggercord.melda.info/
+.RE
+.HR
+.HTML <p>If you need more info, please go to the <a href="https://github.com/asalamon74/pktriggercord">project page</a></p>
