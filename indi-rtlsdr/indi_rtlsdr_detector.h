@@ -20,16 +20,16 @@
 #pragma once
 
 #include <rtl-sdr.h>
-#include "indidetector.h"
+#include "indispectrograph.h"
 
 enum Settings
 {
-	FREQUENCY_N=0,
-	SAMPLERATE_N,
-	BANDWIDTH_N,
-	NUM_SETTINGS
+    FREQUENCY_N = 0,
+    SAMPLERATE_N,
+    BANDWIDTH_N,
+    NUM_SETTINGS
 };
-class RTLSDR : public INDI::Detector
+class RTLSDR : public INDI::Spectrograph
 {
   public:
     RTLSDR(uint32_t index);
@@ -37,36 +37,34 @@ class RTLSDR : public INDI::Detector
     void grabData();
     rtlsdr_dev_t *rtl_dev = { nullptr };
     int to_read;
-    // Are we exposing?
-    bool InCapture;
-    uint8_t* buffer;
+    // Are we integrating?
+    bool InIntegration;
+    uint8_t *buffer;
     int b_read, n_read;
 
   protected:
-	// General device functions
-	bool Connect();
-	bool Disconnect();
-	const char *getDefaultName();
-	bool initProperties();
-	bool updateProperties();
+    // General device functions
+    bool Connect();
+    bool Disconnect();
+    const char *getDefaultName();
+    bool initProperties();
+    bool updateProperties();
 
-	// Detector specific functions
-	bool StartCapture(float duration);
-    bool CaptureParamsUpdated(float sr, float freq, float bps, float bw, float gain);
-    bool AbortCapture();
+    // Detector specific functions
+    bool StartIntegration(float duration);
+    bool paramsUpdated(float sr, float freq, float bps, float bw, float gain);
+    bool AbortIntegration();
     void TimerHit();
 
-
   private:
-	// Utility functions
-	float CalcTimeLeft();
+    // Utility functions
+    float CalcTimeLeft();
     void setupParams();
 
-	// Struct to keep timing
-    struct timeval CapStart;
-    float CaptureRequest;
-    uint8_t *spectrum;
-    uint8_t* continuum;
+    // Struct to keep timing
+    struct timeval IntStart;
+    float IntegrationRequest;
+    uint8_t *continuum;
 
-	uint32_t detectorIndex = { 0 };
+    uint32_t detectorIndex = { 0 };
 };
