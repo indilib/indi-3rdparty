@@ -103,7 +103,7 @@ option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
-option(WITH_PENTAX "Install Pentax SDK Driver" On)
+option(WITH_PENTAX "Install Pentax Driver" On)
 
 find_package(FFmpeg)
 
@@ -179,7 +179,8 @@ endif (WITH_SBIG)
 
 #libpentax
 if (WITH_PENTAX)
-add_subdirectory(libpentax)
+add_subdirectory(libricohcamerasdk)
+add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
 
 #toupbase dependencies
@@ -486,6 +487,7 @@ if (PENTAX_FOUND)
 add_subdirectory(indi-pentax)
 else (PENTAX_FOUND)
 add_subdirectory(libpentax)
+add_subdirectory(libpktriggercord)
 SET(LIBRARIES_FOUND FALSE)
 endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
@@ -558,7 +560,7 @@ message(STATUS "librtlsdr was not found. Please install librtlsdr first before r
 endif (WITH_RTLSDR AND NOT RTLSDR)
 
 if (WITH_PENTAX AND NOT PENTAX_FOUND)
-message(STATUS "libpentax was not found. Please install libpentax first before running cmake again to install indi-pentax.")
+message(STATUS "libpktriggercord and/or libricohcamerasdk were not found and will now be built. Please install these libraries first before running cmake again to install indi-pentax.")
 endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 
 message(STATUS "####################################################################################################################################")

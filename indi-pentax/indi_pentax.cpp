@@ -36,6 +36,8 @@ void ISInit()
     {
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
         cameraCount = detectedCameraDevices.size();
+
+        // look for SDK supported cameras first
         if (cameraCount > 0) {
             DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Pentax Camera driver using Ricoh Camera SDK");
             DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Please be sure the camera is on, connected, and in PTP mode!!!");
@@ -45,7 +47,16 @@ void ISInit()
                 cameras[i] = new PentaxCCD(camera);
             }
         } else {
-            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, or not powered up and connected in PTP mode?");
+            char *model = NULL;
+            char *device = NULL;
+            pslr_handle_t camhandle = pslr_init(model,device);
+            // now look for pktriggercord supported cameras
+            if (camhandle) {
+                    cameras[cameraCount] = new PkTriggerCordCCD(camhandle);
+                    cameraCount++;
+            }
+            if (cameraCount <= 0)
+                DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
         }
 
         atexit(cleanup);

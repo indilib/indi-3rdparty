@@ -23,6 +23,7 @@
 
 #include "pentax_ccd.h"
 #include "pentax_event_handler.h"
+#include "pktriggercord_ccd.h"
 
 #define MAX_DEVICES    20   /* Max device cameraCount */
 

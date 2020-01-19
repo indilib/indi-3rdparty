@@ -1,0 +1,214 @@
+{
+    "0x13222": {
+        "fields": [
+            {
+                "name": "bulb_mode_press_press",
+                "type": "boolean",
+                "address": "0x178"
+            },
+            {
+                "name": "one_push_bracketing",
+                "type": "boolean",
+                "address": "0x17e"
+            },
+            {
+                "name": "bulb_timer",
+                "type": "boolean",
+                "address": "0x133"
+            },
+            {
+                "name": "bulb_timer_sec",
+                "type": "uint16",
+                "address": "0x134"
+            },
+            {
+                "name": "using_aperture_ring",
+                "type": "boolean",
+                "address": "0x18c"
+            },
+            {
+                "name": "shake_reduction",
+                "type": "boolean!",
+                "address": "0x07d"
+            },
+            {
+                "name": "astrotracer",
+                "type": "boolean",
+                "address": "0x087"
+            },
+            {
+                "name": "horizon_correction",
+                "type": "boolean!",
+                "address": "0x080"
+            }
+        ]
+    },
+    "0x12dfe": {
+        "fields": [
+            {
+                "name": "bulb_mode_press_press",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "remote_bulb_mode_press_press",
+                "type": "boolean!",
+                "address": "0x132"
+            },
+            {
+                "name": "one_push_bracketing",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "bulb_timer",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "bulb_timer_sec",
+                "type": "uint16",
+                "value": 0
+            },
+            {
+                "name": "using_aperture_ring",
+                "type": "boolean",
+                "address": "0x142"
+            },
+            {
+                "name": "shake_reduction",
+                "type": "boolean!",
+                "address": "0x065"
+            },
+            {
+                "name": "astrotracer",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "astrotracer_timer_sec",
+                "type": "uint16",
+                "value": "0"
+            },
+            {
+                "name": "horizon_correction",
+                "type": "boolean",
+                "value": "false"
+            }
+        ]
+    },
+    "0x12f70": {
+        "fields": [
+            {
+                "name": "bulb_mode_press_press",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "remote_bulb_mode_press_press",
+                "type": "boolean!",
+                "address": "0x0db"
+            },
+            {
+                "name": "one_push_bracketing",
+                "type": "boolean",
+                "address": "0x0d1"
+            },
+            {
+                "name": "bulb_timer",
+                "type": "boolean",
+                "value": "false"
+            },
+            {
+                "name": "bulb_timer_sec",
+                "type": "uint16",
+                "value": 0
+            },
+            {
+                "name": "using_aperture_ring",
+                "type": "boolean",
+                "address": "0x0e3"
+            },
+            {
+                "name": "shake_reduction",
+                "type": "boolean!",
+                "address": "0x092"
+            },
+            {
+                "name": "astrotracer",
+                "type": "boolean",
+                "address": "0x0be"
+            },
+            {
+                "name": "astrotracer_timer_sec",
+                "type": "uint16",
+                "address": "0x0bf"
+            },
+            {
+                "name": "horizon_correction",
+                "type": "boolean!",
+                "address": "0x091"
+            }
+        ]
+    },
+    "0x12fb6": {
+        "fields": [
+            {
+                "name": "bulb_mode_press_press",
+                "type": "boolean",
+                "address": "0x0f2"
+            }
+        ]
+    },
+    "0x12ef8": {
+        "fields": [
+            {
+                "name": "bulb_mode_press_press",
+                "type": "boolean",
+                "address": "0x0f2"
+            }
+        ]
+    },
+    "0x13092": {
+        "fields": [
+            {
+                "name": "bulb_timer",
+                "type": "boolean",
+                "address": "0x131"
+            },
+            {
+                "name": "bulb_timer_sec",
+                "type": "uint16",
+                "address": "0x132"
+            }
+        ]
+    },
+    "0x1309c": {
+        "fields": [
+            {
+                "name": "astrotracer",
+                "type": "boolean",
+                "address": "0x1ac"
+            },
+            {
+                "name": "astrotracer_timer_sec",
+                "type": "uint16",
+                "address": "0x1ad"
+            }
+        ]
+    },
+    "0x13240": {
+        "fields": [
+            {
+                "name": "bulb_timer",
+                "type": "boolean",
+                "address": "0x131"
+            },
+            {
+                "name": "bulb_timer_sec",
+                "type": "uint16",
+                "address": "0x132"
+            }
+        ]
+    }
+}
