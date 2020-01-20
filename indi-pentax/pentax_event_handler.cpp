@@ -19,7 +19,7 @@
 
 #include "pentax_event_handler.h"
 
-#include "../indi-gphoto/gphoto_readimage.cpp"
+
 
 const char * getFormatFileExtension(ImageFormat format) {
     if (format==ImageFormat::JPEG) {

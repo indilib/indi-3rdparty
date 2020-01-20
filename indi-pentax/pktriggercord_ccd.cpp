@@ -19,13 +19,14 @@
 
 
 #include "pktriggercord_ccd.h"
-#include <unistd.h>
 
-PkTriggerCordCCD::PkTriggerCordCCD(pslr_handle_t device)
+#define TMPFILEBASE "/tmp/indipentax.tmp"
+
+PkTriggerCordCCD::PkTriggerCordCCD(const char * name)
 {
-    snprintf(this->name, 32, "%s", pslr_camera_name(device));
+    snprintf(this->name, 32, "%s", name);
     setDeviceName(this->name);
-    this->device = device;
+
     InExposure = false;
     InDownload = false;
 
@@ -150,7 +151,8 @@ void PkTriggerCordCCD::deleteCaptureSwitches() {
 bool PkTriggerCordCCD::Connect()
 {
     LOG_INFO("Attempting to connect to the Pentax CCD...");
-
+    char *d = nullptr;
+    device = pslr_init(name,d);
     int r;
     if ((r=pslr_connect(device)) ) {
         if ( r != -1 ) {
@@ -161,8 +163,6 @@ bool PkTriggerCordCCD::Connect()
         return false;
     }
     pslr_get_status(device, &status);
-    pslr_disconnect(device);
-    pslr_shutdown(device);
 
     return true;
 }
@@ -212,19 +212,6 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         return false;
     }
     else {
-        //reconnect
-        char *model = nullptr;
-        char *devname = nullptr;
-        int r;
-        device = pslr_init(model,devname);
-        if ((r=pslr_connect(device)) ) {
-            if ( r != -1 ) {
-                LOG_ERROR("Cannot connect to Pentax camera.");
-            } else {
-                LOG_ERROR("Unknown Pentax camera found.");
-            }
-            return false;
-        }
 
         InExposure = true;
 
@@ -234,7 +221,7 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         pslr_rational_t shutter_speed = {duration,1};
 
         //apply any outstanding capture settings changes
-        pslr_get_status(device, &status);
+        //pslr_get_status(device, &status);
 
         uff = USER_FILE_FORMAT_JPEG;
         pslr_set_user_file_format(device, uff);
@@ -266,7 +253,7 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         }
 
         user_file_format_t ufft = *get_file_format_t(uff);
-        char * output_file = "/tmp/indipentax.tmp";
+        char * output_file = TMPFILEBASE;
         fd = open_file(output_file, 1, ufft);
         pslr_get_status(device, &status);
 
@@ -360,6 +347,7 @@ void PkTriggerCordCCD::TimerHit()
     if (InExposure)
     {
         if ( !save_buffer(device, 0, fd, &status, uff, quality )) {
+
             InDownload = false;
             InExposure = false;
             pslr_delete_buffer(device, 0);
@@ -369,11 +357,8 @@ void PkTriggerCordCCD::TimerHit()
             if (need_bulb_new_cleanup) {
                 bulb_new_cleanup(device);
             }
-            if (bufferIsBayered) SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-            else SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+            grabImage();
             ExposureComplete(&PrimaryCCD);
-            pslr_disconnect(device);
-            pslr_shutdown(device);
         } else if (!InDownload && isDebug()) {
             IDLog("Still waiting for download...");
         }
@@ -421,6 +406,104 @@ void PkTriggerCordCCD::TimerHit()
         SetTimer(POLLMS);
     return;
 }
+
+bool PkTriggerCordCCD::grabImage()
+{
+    char tmpfile[256];
+
+    uint8_t * memptr = PrimaryCCD.getFrameBuffer();
+    size_t memsize = 0;
+    int naxis = 2, w = 0, h = 0, bpp = 8;
+
+
+    if (uff==USER_FILE_FORMAT_JPEG)
+    {
+        snprintf(tmpfile, 256, "%s-0001.jpg", TMPFILEBASE);
+        if (read_jpeg(tmpfile, &memptr, &memsize, &naxis, &w, &h))
+        {
+            LOG_ERROR("Exposure failed to parse jpeg.");
+            unlink(tmpfile);
+            return false;
+        }
+
+        LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis,
+                   w, h, bpp);
+
+        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+    }
+    else
+    {
+        if (uff==USER_FILE_FORMAT_DNG) {
+            snprintf(tmpfile, 256, "%s-0001.dng", TMPFILEBASE);
+        }
+        else {
+            snprintf(tmpfile, 256, "%s-0001.pef", TMPFILEBASE);
+        }
+        char bayer_pattern[8] = {};
+
+        if (read_libraw(tmpfile, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+        {
+            LOG_ERROR("Exposure failed to parse raw image.");
+            unlink(tmpfile);
+            return false;
+        }
+
+        LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
+                   memsize, naxis, w, h, bpp, bayer_pattern);
+
+        unlink(tmpfile);
+
+        IUSaveText(&BayerT[2], bayer_pattern);
+        IDSetText(&BayerTP, nullptr);
+        SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+    }
+
+    if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
+        LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purging configuration and update frame size to match camera size.", w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+
+    PrimaryCCD.setFrame(0, 0, w, h);
+    PrimaryCCD.setFrameBuffer(memptr);
+    PrimaryCCD.setFrameBufferSize(memsize, false);
+    PrimaryCCD.setResolution(w, h);
+    PrimaryCCD.setNAxis(naxis);
+    PrimaryCCD.setBPP(bpp);
+
+    //set correct file extension, depending on whether native or fits is selected
+    if (transferFormatS[0].s == ISS_ON)
+    {
+        PrimaryCCD.setImageExtension("fits");
+    }
+    else
+    {
+        PrimaryCCD.setImageExtension(getFormatFileExtension(uff));
+    }
+
+    //(re)move temporary image file
+    if (preserveOriginalS[1].s == ISS_ON) {
+        char ts[32];
+        struct timeval now;
+        struct tm * tp;
+        time_t t = gettimeofday(&now, nullptr);
+        tp = localtime(&t);
+        strftime(ts, sizeof(ts), "%Y-%m-%dT%H-%M-%S", tp);
+        std::string prefix = getUploadFilePrefix();
+        prefix = std::regex_replace(prefix, std::regex("XXX"), string(ts));
+        char newname[255];
+        snprintf(newname, 255, "%s.%s",prefix.c_str(),getFormatFileExtension(uff));
+        if (std::rename(tmpfile, newname)) {
+            LOGF_ERROR("File system error prevented saving original image to %s.  Saved to %s instead.", newname,tmpfile);
+        }
+        else {
+            LOGF_INFO("Saved original image to %s.", newname);
+        }
+    }
+    else {
+        std::remove(tmpfile);
+    }
+
+    return true;
+}
+
 
 ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, std::vector<string> options, int setidx)
 {
@@ -552,3 +635,18 @@ void PkTriggerCordCCD::getCaptureSettingsState() {
 
 }
 
+string PkTriggerCordCCD::getUploadFilePrefix() {
+    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
+}
+
+const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format) {
+    if (format==USER_FILE_FORMAT_JPEG) {
+        return "jpg";
+    }
+    else if (format==USER_FILE_FORMAT_DNG) {
+        return "raw";
+    }
+    else {
+        return "pef";
+    }
+}

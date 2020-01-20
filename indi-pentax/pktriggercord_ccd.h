@@ -23,9 +23,13 @@
 
 #include <indiccd.h>
 #include <stream/streammanager.h>
+#include <unistd.h>
+#include <regex>
 
 #include "config.h"
 #include "eventloop.h"
+
+#include "../indi-gphoto/gphoto_readimage.h"
 
 extern "C" {
 #include "libpktriggercord.h"
@@ -36,7 +40,7 @@ using namespace std;
 class PkTriggerCordCCD : public INDI::CCD
 {
   public:
-    PkTriggerCordCCD(pslr_handle_t device);
+    PkTriggerCordCCD(const char *name);
     virtual ~PkTriggerCordCCD();
 
     const char *getDefaultName();
@@ -110,6 +114,9 @@ protected:
                             char *formats[], char *names[], int n);
 
     void updateCaptureSettingSwitch(ISwitchVectorProperty *sw, ISState *states, char *names[], int n);
+    bool grabImage();
+    string getUploadFilePrefix();
+    const char * getFormatFileExtension(user_file_format format);
 };
 
 #endif // PKTRIGGERCORD_CCD_H

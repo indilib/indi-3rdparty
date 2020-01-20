@@ -49,11 +49,17 @@ void ISInit()
         } else {
             char *model = NULL;
             char *device = NULL;
-            pslr_handle_t camhandle = pslr_init(model,device);
+
             // now look for pktriggercord supported cameras
+            pslr_handle_t camhandle = pslr_init(model,device);
             if (camhandle) {
-                    cameras[cameraCount] = new PkTriggerCordCCD(camhandle);
+                if (!pslr_connect(camhandle)) {
+                    pslr_status status;
+                    cameras[cameraCount] = new PkTriggerCordCCD(pslr_camera_name(camhandle));
                     cameraCount++;
+                    pslr_disconnect(camhandle);
+                    pslr_shutdown(camhandle);
+                }
             }
             if (cameraCount <= 0)
                 DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");

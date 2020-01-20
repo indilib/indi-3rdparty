@@ -13,6 +13,7 @@ find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(LibRaw REQUIRED)
 find_package(JPEG REQUIRED)
+find_package(GPHOTO2 REQUIRED)
 find_package(PENTAX REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
@@ -25,6 +26,7 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${PENTAX_INCLUDE_DIR})
 include_directories( ${PKTRIGGERCORD_INCLUDE_DIR})
+include_directories( ${GPHOTO2_INCLUDE_DIR})
 
 include(CMakeCommon)
 
@@ -34,6 +36,7 @@ set(indipentax_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/pentax_ccd.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pentax_event_handler.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pktriggercord_ccd.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../indi-gphoto/gphoto_readimage.cpp
 )
 
 add_executable(indi_pentax ${indipentax_SRCS})
