@@ -19,8 +19,12 @@
 
 
 #include "pktriggercord_ccd.h"
+#include "pslr.h"
 
-#define TMPFILEBASE "/tmp/indipentax.tmp"
+#define MINISO 100
+#define MAXISO 102400
+
+#define TMPFILEBASE (char *)"/tmp/indipentax.tmp"
 
 PkTriggerCordCCD::PkTriggerCordCCD(const char * name)
 {
@@ -48,13 +52,13 @@ bool PkTriggerCordCCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    IUFillText(&DeviceInfoT[0], "MANUFACTURER", "Manufacturer", "");
-    IUFillText(&DeviceInfoT[1], "MODEL", "Model", "");
-    IUFillText(&DeviceInfoT[2], "FIRMWARE_VERSION", "Firmware", "");
-    IUFillText(&DeviceInfoT[3], "SERIAL_NUMBER", "Serial", "");
-    IUFillText(&DeviceInfoT[4], "BATTERY", "Battery", "");
-    IUFillText(&DeviceInfoT[5], "EXPPROGRAM", "Program", "");
-    IUFillText(&DeviceInfoT[6], "UCMODE", "User Mode", "");
+    IUFillText(&DeviceInfoT[0], "MODEL", "Model", name);
+    IUFillText(&DeviceInfoT[1], "FIRMWARE_VERSION", "Firmware", "");
+    IUFillText(&DeviceInfoT[2], "BATTERY", "Battery", "");
+    IUFillText(&DeviceInfoT[3], "EXPPROGRAM", "Program", "");
+    IUFillText(&DeviceInfoT[4], "UCMODE", "User Mode", "");
+    IUFillText(&DeviceInfoT[5], "SCENEMODE", "Scene Mode", "");
+
     IUFillTextVector(&DeviceInfoTP, DeviceInfoT, NARRAY(DeviceInfoT), getDeviceName(), "DEVICE_INFO", "Device Info", INFO_TAB, IP_RO, 60, IPS_IDLE);
     registerProperty(&DeviceInfoTP, INDI_TEXT);
 
@@ -70,7 +74,7 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
     IUFillSwitchVector(&preserveOriginalSP, preserveOriginalS, 2, getDeviceName(), "PRESERVE_ORIGINAL", "Copy Option", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 30, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 7200, 1, false);
 
     IUSaveText(&BayerT[2], "RGGB");
 
@@ -97,7 +101,7 @@ bool PkTriggerCordCCD::updateProperties()
     {
         setupParams();
 
-        //buildCaptureSwitches();
+        buildCaptureSwitches();
 
         defineSwitch(&transferFormatSP);
         defineSwitch(&autoFocusSP);
@@ -109,7 +113,7 @@ bool PkTriggerCordCCD::updateProperties()
     }
     else
     {
-        //deleteCaptureSwitches();
+        deleteCaptureSwitches();
 
         deleteProperty(autoFocusSP.name);
         deleteProperty(transferFormatSP.name);
@@ -121,19 +125,59 @@ bool PkTriggerCordCCD::updateProperties()
     return true;
 }
 
-/*
+
 void PkTriggerCordCCD::buildCaptureSwitches() {
-    buildCaptureSettingSwitch(&mIsoSP,&iso,"ISO","CCD_ISO");
-    buildCaptureSettingSwitch(&mApertureSP,&aperture,"Aperture");
-    buildCaptureSettingSwitch(&mExpCompSP,&exposurecomp,"Exp Comp");
-    buildCaptureSettingSwitch(&mWhiteBalanceSP,&whitebalance,"White Balance");
-    buildCaptureSettingSwitch(&mIQualitySP,&imagequality,"Quality");
-    buildCaptureSettingSwitch(&mFormatSP,&imageformat,"Format","CAPTURE_FORMAT");
-    buildCaptureSettingSwitch(&mStorageWritingSP,&storagewriting, "Write to SD");
+
+    string iso[] = {"100","200","400","800","1000","1600","3200","6400","12800","25600","51200","102400"};
+    string aperture[] = {    "1.0", "1.1", "1.2", "1.4", "1.6", "1.7", "1.8",
+                             "2.0", "2.2", "2.4", "2.5", "2.8", "3.2", "3.5",
+                             "4.0", "4.5", "5.0", "5.6", "6.3", "6.7", "7.1",
+                             "8.0", "9.0", "9.5", "10.0", "11.0", "13.0", "14.0",
+                             "16.0", "18.0", "19.0", "20.0", "22.0", "25.0", "28.0",
+                             "32.0", "36.0", "40.0", "45.0", "51.0", "57.0"};
+    string exposurecomp1_3[] = {"-3.0", "-2.7", "-2.3", "-2.0", "-1.7", "-1.3", "-1.0", "-0.7", "-0.3", "0", "0.3", "0.7", "1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0"};
+    string exposurecomp1_2[] = { "-3.0", "-2.5", "-2.0", "-1.5", "-1.0", "-0.5", "0", "0.5", "1.0", "1.5", "2.0", "3.0"};
+
+    string whitebalance[] = {"Auto", "Daylight", "Shade", "Cloudy", "Fluorescent_D", "Fluorescent_N", "Fluorescent_W", "Fluorescent_L", "Tungsten", "Flash", "Manual", "Manual2", "Manual3", "Kelvin1", "Kelvin2", "Kelvin3", "CTE", "MultiAuto"};
+    string imagequality[] = {"1","2","3","4"};
+    string imageformat[] = {"JPEG","PEF","DNG"};
+
+    buildCaptureSettingSwitch(&mIsoSP,iso,NARRAY(iso),"ISO","CCD_ISO",to_string(status.current_iso));
+    char current[5];
+    sprintf(current,"%.1f",(float)status.current_aperture.nom/status.current_aperture.denom);
+    buildCaptureSettingSwitch(&mApertureSP,aperture,NARRAY(aperture),"Aperture","CCD_APERTURE",string(current));
+    buildCaptureSettingSwitch(&mWhiteBalanceSP,whitebalance,NARRAY(whitebalance),"White Balance","CCD_WB",string(get_pslr_white_balance_mode_str((pslr_white_balance_mode_t)status.white_balance_mode)));
+    buildCaptureSettingSwitch(&mIQualitySP,imagequality,pslr_get_model_max_jpeg_stars(device),"Quality","CAPTURE_QUALITY",to_string(status.jpeg_quality));
+    sprintf(current,"%.1f",(float)status.ec.nom/status.ec.denom);
+    if (status.custom_ev_steps == PSLR_CUSTOM_EV_STEPS_1_2)
+        buildCaptureSettingSwitch(&mExpCompSP,exposurecomp1_2,NARRAY(exposurecomp1_2),"Exp Comp","CCD_EC",string(current));
+    else
+        buildCaptureSettingSwitch(&mExpCompSP,exposurecomp1_3,NARRAY(exposurecomp1_3),"Exp Comp","CCD_EC",string(current));
+
+    string f = "JPEG";
+    if (uff == USER_FILE_FORMAT_DNG) {
+        f = "DNG";
+    } else if (uff == USER_FILE_FORMAT_PEF) {
+        f = "PEF";
+    }
+    buildCaptureSettingSwitch(&mFormatSP,imageformat,NARRAY(imageformat),"Format","CAPTURE_FORMAT",f);
 
     refreshBatteryStatus();
-    IUSaveText(&DeviceInfoT[5],exposureprogram.toString().c_str());
-    IUSaveText(&DeviceInfoT[6],usercapturesettingsmode.toString().c_str());
+
+    char exposuremode[10];
+    char usermode[10];
+    char firmware[16];
+
+    sprintf(exposuremode,"%d",status.exposure_mode);
+    sprintf(usermode,"%d",status.user_mode_flag);
+
+    pslr_read_dspinfo( (pslr_handle_t *)device, firmware );
+
+    IUSaveText(&DeviceInfoT[1],firmware);
+    IUSaveText(&DeviceInfoT[3],exposuremode);
+    IUSaveText(&DeviceInfoT[4],usermode);
+    IUSaveText(&DeviceInfoT[5],get_pslr_scene_mode_str((pslr_scene_mode_t)status.scene_mode));
+
     IDSetText(&DeviceInfoTP,nullptr);
 }
 
@@ -144,9 +188,24 @@ void PkTriggerCordCCD::deleteCaptureSwitches() {
     if (mWhiteBalanceSP.nsp > 0) deleteProperty(mWhiteBalanceSP.name);
     if (mIQualitySP.nsp > 0) deleteProperty(mIQualitySP.name);
     if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
-    if (mStorageWritingSP.nsp > 0) deleteProperty(mStorageWritingSP.name);
 }
-*/
+
+
+void PkTriggerCordCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control, string optionList[], size_t numOptions, const char *label, const char *name, string currentsetting) {
+
+    int set_idx=0;
+    if (numOptions > 0)
+    {
+        for (size_t i=0; i<numOptions; i++) {
+            if (optionList[i] == currentsetting) set_idx=i;
+        }
+
+        IUFillSwitchVector(control, create_switch(name, optionList, numOptions, set_idx),
+                           numOptions, getDeviceName(), name, label,
+                           IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        defineSwitch(control);
+    }
+}
 
 bool PkTriggerCordCCD::Connect()
 {
@@ -162,8 +221,8 @@ bool PkTriggerCordCCD::Connect()
         }
         return false;
     }
-    pslr_get_status(device, &status);
-
+    InExposure = false;
+    InDownload = false;
     return true;
 }
 
@@ -177,7 +236,8 @@ bool PkTriggerCordCCD::Disconnect()
 
 bool PkTriggerCordCCD::setupParams()
 {
-    getCaptureSettingsState();
+    pslr_get_status(device, &status);
+    uff = get_user_file_format(&status);
 
     //I don't think any of this is needed for the way I'm doing things, but leaving it in until I verify
     float x_pixel_size, y_pixel_size;
@@ -212,21 +272,33 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         return false;
     }
     else {
-
+        if (!duration) {
+            LOG_INFO("Shutter speed must be greater than 0.");
+            return false;
+        }
         InExposure = true;
 
         //update shutter speed
+        if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
+            if (duration>30) {
+                duration = 30;
+                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer expsoures.");
+            }
+            else {
+                LOGF_INFO("Only pre-defined shutter speeds are supported in current mode.  The camera will select the pre-defined shutter speed that most closely matches %f.",duration);
+            }
+        }
         PrimaryCCD.setExposureDuration(duration);
         ExposureRequest = duration;
-        pslr_rational_t shutter_speed = {duration,1};
+        pslr_rational_t shutter_speed = {(int)(duration*100),100};
+        //Doesn't look like we need to actually set the shutter speed in bulb mode
+        if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
+            if (duration != (float)status.current_shutter_speed.nom/status.current_shutter_speed.denom)
+                pslr_set_shutter(device, shutter_speed);
+        }
 
-        //apply any outstanding capture settings changes
-        //pslr_get_status(device, &status);
+        if (autoFocusS[0].s == ISS_ON) pslr_focus(device);
 
-        uff = USER_FILE_FORMAT_JPEG;
-        pslr_set_user_file_format(device, uff);
-        quality = status.jpeg_quality;
-        pslr_set_jpeg_stars(device, quality);
 
         //start capture
         gettimeofday(&ExpStart, nullptr);
@@ -243,7 +315,6 @@ bool PkTriggerCordCCD::StartExposure(float duration)
             }
         } else {
             DPRINT("not bulb\n");
-            //if (!settings.one_push_bracketing.value || bracket_index == 0) {
             if (1) {
                 pslr_shutter(device);
             } else {
@@ -255,7 +326,7 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         user_file_format_t ufft = *get_file_format_t(uff);
         char * output_file = TMPFILEBASE;
         fd = open_file(output_file, 1, ufft);
-        pslr_get_status(device, &status);
+        //pslr_get_status(device, &status);
 
         return true;
     }
@@ -409,95 +480,106 @@ void PkTriggerCordCCD::TimerHit()
 
 bool PkTriggerCordCCD::grabImage()
 {
+    //set correct tmpfile location
     char tmpfile[256];
-
-    uint8_t * memptr = PrimaryCCD.getFrameBuffer();
-    size_t memsize = 0;
-    int naxis = 2, w = 0, h = 0, bpp = 8;
-
-
-    if (uff==USER_FILE_FORMAT_JPEG)
-    {
+    if (uff==USER_FILE_FORMAT_JPEG) {
         snprintf(tmpfile, 256, "%s-0001.jpg", TMPFILEBASE);
-        if (read_jpeg(tmpfile, &memptr, &memsize, &naxis, &w, &h))
-        {
-            LOG_ERROR("Exposure failed to parse jpeg.");
-            unlink(tmpfile);
-            return false;
-        }
-
-        LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis,
-                   w, h, bpp);
-
-        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-    }
-    else
-    {
-        if (uff==USER_FILE_FORMAT_DNG) {
-            snprintf(tmpfile, 256, "%s-0001.dng", TMPFILEBASE);
-        }
-        else {
-            snprintf(tmpfile, 256, "%s-0001.pef", TMPFILEBASE);
-        }
-        char bayer_pattern[8] = {};
-
-        if (read_libraw(tmpfile, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
-        {
-            LOG_ERROR("Exposure failed to parse raw image.");
-            unlink(tmpfile);
-            return false;
-        }
-
-        LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
-                   memsize, naxis, w, h, bpp, bayer_pattern);
-
-        unlink(tmpfile);
-
-        IUSaveText(&BayerT[2], bayer_pattern);
-        IDSetText(&BayerTP, nullptr);
-        SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+    } else if (uff==USER_FILE_FORMAT_DNG) {
+        snprintf(tmpfile, 256, "%s-0001.dng", TMPFILEBASE);
+    } else {
+        snprintf(tmpfile, 256, "%s-0001.pef", TMPFILEBASE);
     }
 
-    if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
-        LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purging configuration and update frame size to match camera size.", w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
-
-    PrimaryCCD.setFrame(0, 0, w, h);
-    PrimaryCCD.setFrameBuffer(memptr);
-    PrimaryCCD.setFrameBufferSize(memsize, false);
-    PrimaryCCD.setResolution(w, h);
-    PrimaryCCD.setNAxis(naxis);
-    PrimaryCCD.setBPP(bpp);
-
-    //set correct file extension, depending on whether native or fits is selected
+    // fits handling code
     if (transferFormatS[0].s == ISS_ON)
     {
         PrimaryCCD.setImageExtension("fits");
+        uint8_t * memptr = PrimaryCCD.getFrameBuffer();
+        size_t memsize = 0;
+        int naxis = 2, w = 0, h = 0, bpp = 8;
+
+        if (uff==USER_FILE_FORMAT_JPEG)
+        {
+            snprintf(tmpfile, 256, "%s-0001.jpg", TMPFILEBASE);
+            if (read_jpeg(tmpfile, &memptr, &memsize, &naxis, &w, &h))
+            {
+                LOG_ERROR("Exposure failed to parse jpeg.");
+                unlink(tmpfile);
+                return false;
+            }
+
+            LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis,
+                       w, h, bpp);
+
+            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+        }
+        else
+        {
+            char bayer_pattern[8] = {};
+
+            if (read_libraw(tmpfile, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+            {
+                LOG_ERROR("Exposure failed to parse raw image.");
+                unlink(tmpfile);
+                return false;
+            }
+
+            LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
+                       memsize, naxis, w, h, bpp, bayer_pattern);
+
+            IUSaveText(&BayerT[2], bayer_pattern);
+            IDSetText(&BayerTP, nullptr);
+            SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+        }
+
+        if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
+            LOGF_WARN("Camera image size (%dx%d) is different than requested size (%d,%d). Purging configuration and updating frame size to match camera size.", w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+
+        PrimaryCCD.setFrame(0, 0, w, h);
+        PrimaryCCD.setFrameBuffer(memptr);
+        PrimaryCCD.setFrameBufferSize(memsize, false);
+        PrimaryCCD.setResolution(w, h);
+        PrimaryCCD.setNAxis(naxis);
+        PrimaryCCD.setBPP(bpp);
+
+        if (preserveOriginalS[1].s == ISS_ON) {
+            char ts[32];
+            struct tm * tp;
+            time_t t;
+            time(&t);
+            tp = localtime(&t);
+            strftime(ts, sizeof(ts), "%Y-%m-%dT%H-%M-%S", tp);
+            std::string prefix = getUploadFilePrefix();
+            prefix = std::regex_replace(prefix, std::regex("XXX"), string(ts));
+            char newname[255];
+            snprintf(newname, 255, "%s.%s",prefix.c_str(),getFormatFileExtension(uff));
+            if (std::rename(tmpfile, newname)) {
+                LOGF_ERROR("File system error prevented saving original image to %s.  Saved to %s instead.", newname,tmpfile);
+            }
+            else {
+                LOGF_INFO("Saved original image to %s.", newname);
+            }
+        }
+        else {
+            std::remove(tmpfile);
+        }
+
     }
+    // native handling code
     else
     {
         PrimaryCCD.setImageExtension(getFormatFileExtension(uff));
-    }
 
-    //(re)move temporary image file
-    if (preserveOriginalS[1].s == ISS_ON) {
-        char ts[32];
-        struct timeval now;
-        struct tm * tp;
-        time_t t = gettimeofday(&now, nullptr);
-        tp = localtime(&t);
-        strftime(ts, sizeof(ts), "%Y-%m-%dT%H-%M-%S", tp);
-        std::string prefix = getUploadFilePrefix();
-        prefix = std::regex_replace(prefix, std::regex("XXX"), string(ts));
-        char newname[255];
-        snprintf(newname, 255, "%s.%s",prefix.c_str(),getFormatFileExtension(uff));
-        if (std::rename(tmpfile, newname)) {
-            LOGF_ERROR("File system error prevented saving original image to %s.  Saved to %s instead.", newname,tmpfile);
-        }
-        else {
-            LOGF_INFO("Saved original image to %s.", newname);
-        }
-    }
-    else {
+        FILE* f = fopen(tmpfile, "r");
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        rewind(f);
+
+        PrimaryCCD.setFrameBufferSize(size);
+        char * memptr = (char *)PrimaryCCD.getFrameBuffer();
+        fread(memptr, sizeof(char), size, f);
+        PrimaryCCD.setFrameBuffer((unsigned char *)memptr);
+        fclose(f);
         std::remove(tmpfile);
     }
 
@@ -505,17 +587,17 @@ bool PkTriggerCordCCD::grabImage()
 }
 
 
-ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, std::vector<string> options, int setidx)
+ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, string options[], size_t numOptions, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), options.size()));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), numOptions));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];
     char sw_label[MAXINDILABEL];
     ISState sw_state;
 
-    for (int i = 0; i < (int)options.size(); i++)
+    for (int i = 0; i < (int)numOptions; i++)
     {
         snprintf(sw_name, MAXINDINAME, "%s%d", basestr, i);
         strncpy(sw_label, options[i].c_str(), MAXINDILABEL);
@@ -552,28 +634,50 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
     }
     else if (!strcmp(name, mIsoSP.name)) {
         updateCaptureSettingSwitch(&mIsoSP,states,names,n);
+        pslr_set_iso(device,atoi(IUFindOnSwitch(&mIsoSP)->label),MINISO,MAXISO);
+        LOG_WARN("Unfortunately, changing the ISO does not appear to work currently on some (all?) models in MSC mode.  You may need to change manually.");
     }
     else if (!strcmp(name, mApertureSP.name)) {
         updateCaptureSettingSwitch(&mApertureSP,states,names,n);
+        pslr_rational_t ap = {(int)(atof(IUFindOnSwitch(&mApertureSP)->label)*10), 10};
+        pslr_set_aperture(device, ap);
     }
     else if (!strcmp(name, mExpCompSP.name)) {
         updateCaptureSettingSwitch(&mExpCompSP,states,names,n);
+        pslr_rational_t ec = {(int)(atof(IUFindOnSwitch(&mExpCompSP)->label)*10), 10};
+        pslr_set_ec( device, ec );
+        LOG_WARN("Unfortunately, changing the exposure compensation does not work currently on some (all?) models in MSC mode.  You may need to change manually.");
     }
     else if (!strcmp(name, mWhiteBalanceSP.name)) {
         updateCaptureSettingSwitch(&mWhiteBalanceSP,states,names,n);
+        pslr_white_balance_mode_t white_balance_mode = get_pslr_white_balance_mode(IUFindOnSwitch(&mWhiteBalanceSP)->label);
+        if ( white_balance_mode == -1 ) {
+            LOG_WARN("Could not set desired white balance: Invalid setting for current camera mode.");
+        }
+        else {
+            pslr_set_white_balance( device, white_balance_mode );
+        }
     }
     else if (!strcmp(name, mIQualitySP.name)) {
         updateCaptureSettingSwitch(&mIQualitySP,states,names,n);
+        pslr_set_jpeg_stars(device, atoi(IUFindOnSwitch(&mIQualitySP)->label));
     }
     else if (!strcmp(name, mFormatSP.name)) {
         updateCaptureSettingSwitch(&mFormatSP,states,names,n);
-    }
-    else if (!strcmp(name, mStorageWritingSP.name)) {
-        updateCaptureSettingSwitch(&mStorageWritingSP,states,names,n);
+        char *f = IUFindOnSwitch(&mFormatSP)->label;
+        if (!strcmp(f, "DNG")) {
+            uff = USER_FILE_FORMAT_DNG;
+        } else if (!strcmp(f, "PEF")) {
+            uff = USER_FILE_FORMAT_PEF;
+        } else {
+            uff = USER_FILE_FORMAT_JPEG;
+        }
+        pslr_set_user_file_format(device, uff);
     }
     else {
         return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
     }
+    pslr_get_status(device, &status);
     return true;
 }
 
@@ -585,7 +689,7 @@ void PkTriggerCordCCD::updateCaptureSettingSwitch(ISwitchVectorProperty * sw, IS
 
 bool PkTriggerCordCCD::saveConfigItems(FILE * fp) {
 
-    for (auto sw : std::vector<ISwitchVectorProperty*>{&mIsoSP,&mApertureSP,&mExpCompSP,&mWhiteBalanceSP,&mIQualitySP,&mFormatSP,&mStorageWritingSP}) {
+    for (auto sw : std::vector<ISwitchVectorProperty*>{&mIsoSP,&mApertureSP,&mExpCompSP,&mWhiteBalanceSP,&mIQualitySP,&mFormatSP}) {
         if (sw->nsp>0) IUSaveConfigSwitch(fp, sw);
     }
 
@@ -649,4 +753,11 @@ const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format) {
     else {
         return "pef";
     }
+}
+
+void PkTriggerCordCCD::refreshBatteryStatus() {
+    char batterylevel[25];
+    sprintf(batterylevel,"%.2fV %.2fV %.2fV %.2fV\n", 0.01 * status.battery_1, 0.01 * status.battery_2, 0.01 * status.battery_3, 0.01 * status.battery_4);
+    IUSaveText(&DeviceInfoT[2],batterylevel);
+    IDSetText(&DeviceInfoTP,nullptr);
 }

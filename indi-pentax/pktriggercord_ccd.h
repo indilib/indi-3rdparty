@@ -85,7 +85,7 @@ protected:
 
     void getCaptureSettingsState();
 
-    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mFormatSP,mStorageWritingSP;
+    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mFormatSP;
 
     ISwitch transferFormatS[2];
     ISwitchVectorProperty transferFormatSP;
@@ -96,9 +96,9 @@ protected:
     ISwitch autoFocusS[2];
     ISwitchVectorProperty autoFocusSP;
 
-    ISwitch * create_switch(const char * basestr, std::vector<string> options, int setidx);
+    ISwitch * create_switch(const char * basestr, string options[], size_t numOptions, int setidx);
 
-    IText DeviceInfoT[7] {};
+    IText DeviceInfoT[6] {};
     ITextVectorProperty DeviceInfoTP;
 
     bool saveConfigItems(FILE * fp);
@@ -117,6 +117,10 @@ protected:
     bool grabImage();
     string getUploadFilePrefix();
     const char * getFormatFileExtension(user_file_format format);
+    void refreshBatteryStatus();
+    void buildCaptureSwitches();
+    void deleteCaptureSwitches();
+    void buildCaptureSettingSwitch(ISwitchVectorProperty *control, string optionList[], size_t numOptions, const char *label, const char *name, string currentsetting = "");
 };
 
 #endif // PKTRIGGERCORD_CCD_H
