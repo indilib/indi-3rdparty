@@ -1,0 +1,35 @@
+body {
+    color: #eeeeee;
+    background: #343E59;
+}
+
+
+.shadow {
+  box-shadow: 0px 1px 15px 1px rgba(69, 65, 78, 0.08);
+}
+.weatherbox {
+    text-align: center;
+    text-shadow: 0 1px 1px 1px #666666;
+    box-shadow: 0px 1px 15px 1px rgba(69, 65, 78, 0.08);
+    position: relative;
+    border-radius: 10px;
+    background-color: #080808;
+}
+.card {
+    padding: 10px 25px;
+    margin: 15px 10px;
+}
+
+.weatherbox .card-footer {
+    padding: 3px 0px;
+    vertical-align: text-bottom;
+    border-width: 1px;
+    border-color: orange;
+    color: orange;
+}
+
+.chart {
+#    width: 400px;
+#    margin: 35px auto;
+}
+
