@@ -28,14 +28,14 @@ include(CMakeCommon)
 if (CFITSIO_FOUND)
 
 set(limesdr_SRCS
-	${CMAKE_CURRENT_SOURCE_DIR}/indi_limesdr_detector.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_limesdr_spectrograph.cpp
 )
 
-add_executable(indi_limesdr_detector ${limesdr_SRCS})
+add_executable(indi_limesdr_spectrograph ${limesdr_SRCS})
 
-target_link_libraries(indi_limesdr_detector ${INDI_LIBRARIES} ${LIMESUITE_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_limesdr_spectrograph ${INDI_LIBRARIES} ${LIMESUITE_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS indi_limesdr_detector RUNTIME DESTINATION bin)
+install(TARGETS indi_limesdr_spectrograph RUNTIME DESTINATION bin)
 
 endif (CFITSIO_FOUND)
 
