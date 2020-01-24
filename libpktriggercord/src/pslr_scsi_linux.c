@@ -81,7 +81,7 @@ char **get_drives(int *drive_num) {
         d = opendir(device_dirs[di]);
         if (d) {
             while ( (ent = readdir(d)) ) {
-                if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0 && strncmp(ent->d_name, "loop",4) != 0) {
                     tmp[j] = malloc( strlen(ent->d_name)+1 );
                     strncpy(tmp[j], ent->d_name, strlen(ent->d_name)+1);
                     ++j;
