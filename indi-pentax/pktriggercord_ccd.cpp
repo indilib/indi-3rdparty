@@ -278,6 +278,9 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         }
         InExposure = true;
 
+        //just need to check if we changed exposure modes before proceeding here
+        pslr_get_status(device, &status);
+
         //update shutter speed
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
             if (duration>30) {
