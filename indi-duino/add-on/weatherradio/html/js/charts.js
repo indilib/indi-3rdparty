@@ -24,13 +24,19 @@ function weatherChart(category, align, series) {
 	offsetX: offsetX,
 	style: {fontSize: '16px', color: '#ccc'}
     };
-
-    xaxis = {type: "datetime"};
+    var xaxis = {
+	type: "datetime",
+	labels: {style: {colors: '#ccc'}}
+    };
+    var yaxis = {
+	labels: {style: {color: '#ccc'}}
+    };
 
     return {chart: chart,
 	    title: title,
 	    subtitle: subtitle,
 	    xaxis: xaxis,
+	    yaxis: yaxis,
 	    series: series,
 	    stroke: {curve: 'smooth'},
 	   dataLabels: {enabled: false}};
