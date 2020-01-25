@@ -24,5 +24,8 @@ License: GPL-3
  Public License can be found in `/usr/share/common-licenses/GPL-3'.
 
 Files: *.bin, *.h
-Copyright: Copyright 2016, Moravian Instruments <http://www.gxccd.com, linux@gxccd.com>
+Copyright:
+  * Copyright 2016, Moravian Instruments <http://www.gxccd.com, linux@gxccd.com>
+  * Copyright (C) 2010-2015 Petr Kubanek <petr@kubanek.net>
+  * Copyright (C) 2010-2015 Moravske pristroje, s.r.o. <http://www.mii.cz>
 License: All rights reserved

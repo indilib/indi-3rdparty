@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libmicam CXX C)
 
-set(MICAM_VERSION "0.4.2")
+set(MICAM_VERSION "0.5.0")
 set(MICAM_VERSION_MAC "0.3.0")
 set(MICAM_SOVERSION "0")
 
