@@ -17,19 +17,16 @@
 #ifndef __QHYCCD_H__
 #define __QHYCCD_H__
 
-#if defined (_WIN32)
-typedef CCyUSBDevice qhyccd_handle;
-#endif
-#if (defined(__linux__ )&&!defined (__ANDROID__)) ||(defined (__APPLE__)&&defined( __MACH__)) ||(defined(__linux__ )&&defined (__ANDROID__))
-typedef struct libusb_device_handle qhyccd_handle;
-#endif
+typedef void qhyccd_handle;
+
 
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
-#if defined(__linux__ )&&!defined (__ANDROID__)
+#if ( defined(__linux__ ) || defined(__APPLE__) ) && !defined (__ANDROID__)
 
 EXPORTC void STDCALL SetQHYCCDLogFunction(std::function<void(const std::string &message)> logFunction);
+EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 
 #endif
 
@@ -412,7 +409,7 @@ EXPORTC uint32_t STDCALL OSXInitQHYCCDFirmwareArray();
 
 
 EXPORTC uint32_t STDCALL OSXInitQHYCCDAndroidFirmwareArray(int idVendor,int idProduct,
-    qhyccd_handle *h);
+    qhyccd_handle *handle);
 
 
 
@@ -753,7 +750,7 @@ EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
 #endif
 
-#if QHYCCD_PCIE_SUPPORT
+#if PCIE_MODE_SUPPORT
 
 #include "riffa.h"
 
@@ -762,7 +759,7 @@ EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
  * Populates the fpga_info_list pointer with all FPGAs registered in the system.
  * Returns 0 on success, non-zero on error.
  */
-EXPORTC int STDCALL QHYCCD_fpga_list(fpga_info_list * list);
+EXPORTC int STDCALL QHYCCD_fpga_list();
 
 /**
  * Initializes the FPGA specified by id. On success, returns a pointer to a
@@ -775,7 +772,7 @@ EXPORTC fpga_t * STDCALL QHYCCD_fpga_open(int id);
 /**
  * Cleans up memory/resources for the FPGA specified by the fd descriptor.
  */
-EXPORTC void STDCALL QHYCCD_fpga_close(fpga_t * fpga);
+EXPORTC void STDCALL QHYCCD_fpga_close();
 
 /**
  * Sends len words (4 byte words) from data to FPGA channel chnl using the
@@ -789,8 +786,8 @@ EXPORTC void STDCALL QHYCCD_fpga_close(fpga_t * fpga);
  * corrupt data or error. This function is thread safe across channels.
  * Returns the number of words sent.
  */
-EXPORTC int STDCALL QHYCCD_fpga_send(fpga_t * fpga, int chnl, void * data, int len,
-                                     int destoff, int last, long long timeout);
+EXPORTC int STDCALL QHYCCD_fpga_send(int chnl, void * data, int len,
+                                     int destoff, int last, uint64_t timeout);
 
 /**
  * Receives data from the FPGA channel chnl to the data pointer, using the
@@ -806,8 +803,8 @@ EXPORTC int STDCALL QHYCCD_fpga_send(fpga_t * fpga, int chnl, void * data, int l
  * corrupt data or error. This function is thread safe across channels.
  * Returns the number of words received to the data array.
  */
-EXPORTC int STDCALL QHYCCD_fpga_recv(fpga_t * fpga, int chnl, void * data, int len,
-                                     long long timeout);
+EXPORTC int STDCALL QHYCCD_fpga_recv( int chnl, void * data, int len,
+                                     uint64_t timeout);
 
 /**
  * Resets the state of the FPGA and all transfers across all channels. This is
@@ -815,7 +812,7 @@ EXPORTC int STDCALL QHYCCD_fpga_recv(fpga_t * fpga, int chnl, void * data, int l
  * sending/receiving. Calling this function while other threads are sending or
  * receiving will result in unexpected behavior.
  */
-EXPORTC void STDCALL QHYCCD_fpga_reset(fpga_t * fpga);
+EXPORTC void STDCALL QHYCCD_fpga_reset();
 #endif
 
 #endif

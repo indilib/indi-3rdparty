@@ -1,6 +1,37 @@
+libasi (1.3) buster; urgency=medium
+
+  * ZWO EFW 0.4.1022 release:
+    V0.4.1022-> 2018.10.22
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sun, 12 Jan 2020 22:34:21 +0200
+
+libasi (1.2) buster; urgency=medium
+
+  * ASICAM 1.14.1119 release:
+    V1, 14, 1119 2019.11.19
+    Add new cameras
+    Fix some bug
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 16 Dec 2019 10:30:33 +0200
+
+libasi (1.1) buster; urgency=medium
+
+  * ASICAM 1.14.1108 release:
+    V1, 14, 1108 2019.11.8
+    Multi-position for the anti-dew
+    Add new cameras
+    Fix some bug
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Tue, 19 Nov 2019 11:06:00 +0200
+
 libasi (1.0) buster; urgency=medium
 
   * Initial release
+  * ASICAM 1.14.0715
+  * ASIEFW 0.3.1205
+  * ASIST4 1.0
+  * ASIEAF 0.1.0524
 
  -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 2 Nov 2019 13:06:00 +0100
 

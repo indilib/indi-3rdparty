@@ -88,6 +88,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             COOLER_OFF,
         };
 
+        IText SDKVersionT[1];
+        ITextVectorProperty SDKVersionTP;
+
         INumber CoolerN[1];
         INumberVectorProperty CoolerNP;
 
@@ -105,6 +108,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 
         INumber USBTrafficN[1];
         INumberVectorProperty USBTrafficNP;
+
+        INumber USBBufferN[1];
+        INumberVectorProperty USBBufferNP;
 
         ISwitchVectorProperty CoolerModeSP;
         ISwitch CoolerModeS[2];

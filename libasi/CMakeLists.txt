@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libasi CXX C)
 
-# Using ASI Camera SDK Version 1.14.0715 updated on 2019-07-22
-# Using ASI EFW SDK Version 0.3.1205 updated on 2017-12-05
+# Using ASI Camera SDK Version 1.14.1119 updated on 2019-12-16
+# Using ASI EFW SDK Version 0.4.1022 updated on 2020-01-12
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
 # Using ASI EAF SDK Version 0.1.0524 updated on 2019-06-20
 
-set(ASICAM_VERSION "1.14.0715")
+set(ASICAM_VERSION "1.14.1119")
 set(ASICAM_SOVERSION "1")
 
-set(ASIEFW_VERSION "0.3.1205")
+set(ASIEFW_VERSION "0.4.1022")
 set(ASIEFW_SOVERSION "0")
 
 set(ASIST4_VERSION "1.0")
@@ -53,30 +53,16 @@ ELSE(APPLE)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv5")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv5/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv5/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv5/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv5/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-    add_definitions(-DLOW_USB_BANDWIDTH)
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv6")
+  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-    add_definitions(-DLOW_USB_BANDWIDTH)
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv7")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv7/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv7/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv7/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv7/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-    add_definitions(-DLOW_USB_BANDWIDTH)
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv8")
+  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-    add_definitions(-DLOW_USB_BANDWIDTH)
   ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})

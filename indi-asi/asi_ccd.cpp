@@ -229,6 +229,9 @@ ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
 
 ASICCD::~ASICCD()
 {
+    // Save all configs before shutting down.
+    saveConfig(true);
+
     if (isConnected())
         Disconnect();
 }
@@ -328,9 +331,9 @@ bool ASICCD::updateProperties()
         if (HasCooler())
         {
             defineNumber(&CoolerNP);
-            loadConfig(true, "CCD_COOLER_POWER");
+            loadConfig(true, CoolerNP.name);
             defineSwitch(&CoolerSP);
-            loadConfig(true, "CCD_COOLER");
+            loadConfig(true, CoolerSP.name);
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
@@ -342,19 +345,33 @@ bool ASICCD::updateProperties()
         if (ControlNP.nnp > 0)
         {
             defineNumber(&ControlNP);
-            loadConfig(true, "CCD_CONTROLS");
+            loadConfig(true, ControlNP.name);
         }
 
         if (ControlSP.nsp > 0)
         {
             defineSwitch(&ControlSP);
-            loadConfig(true, "CCD_CONTROLS_MODE");
+            loadConfig(true, ControlSP.name);
         }
 
         if (VideoFormatSP.nsp > 0)
         {
             defineSwitch(&VideoFormatSP);
-            loadConfig(true, "CCD_VIDEO_FORMAT");
+
+            // Try to set 16bit RAW by default.
+            // It can get be overwritten by config value.
+            // If config fails, we try to set 16 if exists.
+            if (loadConfig(true, VideoFormatSP.name) == false)
+            {
+                for (int i = 0; i < VideoFormatSP.nsp; i++)
+                {
+                    if (m_camInfo->SupportedVideoFormat[i] == ASI_IMG_RAW16)
+                    {
+                        setVideoFormat(i);
+                        break;
+                    }
+                }
+            }
         }
 
         defineNumber(&ADCDepthNP);

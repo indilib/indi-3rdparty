@@ -1,3 +1,9 @@
+indi-asi (1.5) bionic; urgency=medium
+
+  * Making 16bit as default when available.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 11 Nov 2019 09:00:00 +0300
+
 indi-asi (1.4) bionic; urgency=medium
 
   * Separating ASI driver from libraries

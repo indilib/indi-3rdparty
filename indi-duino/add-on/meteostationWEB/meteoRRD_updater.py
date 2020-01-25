@@ -43,28 +43,28 @@ def recv_indi_old():
 
 def recv_indi():
 	tim=time.localtime()
-        vectorHR=indi.get_vector(INDIDEVICE,"HR")
+        vectorHR=indi.get_vector(INDIDEVICE,"Humidity")
 	HR=vectorHR.get_element("HR").get_float()
 	Thr=vectorHR.get_element("T").get_float()
 
-        vectorPresure=indi.get_vector(INDIDEVICE,"Presure")
-	P=vectorPresure.get_element("P").get_float()
-	Tp=vectorPresure.get_element("T").get_float()
+        vectorPressure=indi.get_vector(INDIDEVICE,"Pressure")
+	P=vectorPressure.get_element("P").get_float()
+	Tp=vectorPressure.get_element("T").get_float()
 
         vectorIR=indi.get_vector(INDIDEVICE,"IR")
 	IR=vectorIR.get_element("IR").get_float()
 	Tir=vectorIR.get_element("T").get_float()
 
-        vectorMeteo=indi.get_vector(INDIDEVICE,"Meteo")
-	dew=vectorMeteo.get_element("DEW").get_float()
-	clouds=vectorMeteo.get_element("clouds").get_float()
-	T=vectorMeteo.get_element("T").get_float()
-        skyT=vectorMeteo.get_element("SkyT").get_float()
+        vectorMeteo=indi.get_vector(INDIDEVICE,"WEATHER_PARAMETERS")
+	dew=vectorMeteo.get_element("WEATHER_DEWPOINT").get_float()
+	clouds=vectorMeteo.get_element("WEATHER_CLOUD_COVER").get_float()
+	T=vectorMeteo.get_element("WEATHER_TEMPERATURE").get_float()
+        skyT=vectorMeteo.get_element("WEATHER_SKY_TEMPERATURE").get_float()
 
         vectorLIGHT=indi.get_vector(INDIDEVICE,"LIGHT")
 	light=vectorLIGHT.get_element("LIGHT").get_float()
    
-        statusVector=indi.get_vector(INDIDEVICE,"STATUS")
+        statusVector=indi.get_vector(INDIDEVICE,"WEATHER_STATUS")
 	cloudFlag=int(statusVector.get_element("clouds").is_ok())
 	dewFlag=int(statusVector.get_element("dew").is_ok())
 	frezzingFlag=int(statusVector.get_element("frezzing").is_ok())
@@ -119,7 +119,7 @@ while (True):
 		updateString=updateString+":"+str(d[1])
 		json_dict[d[0]]=int(d[1]*100)/100.
         #print updateString
- 	ret = rrdtool.update('meteo.rrd',updateString);
+ 	ret = rrdtool.update(RRDFILE,updateString);
  	if ret:
  		print rrdtool.error() 
         x = simplejson.dumps(json_dict)

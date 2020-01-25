@@ -24,16 +24,18 @@
 #include <indilogger.h>
 #include <memory>
 
-#define min(a,b) \
-  ({ __typeof__ (a) _a = (a); \
-      __typeof__ (b) _b = (b); \
-    _a < _b ? _a : _b; })
-#define MAX_TRIES 20
-#define MAX_DEVICES 4
-#define SUBFRAME_SIZE (16384)
+#define min(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a < _b ? _a : _b;      \
+    })
+#define MAX_TRIES      20
+#define MAX_DEVICES    4
+#define SUBFRAME_SIZE  (16384)
 #define MIN_FRAME_SIZE (512)
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
-#define SPECTRUM_SIZE (256)
+#define SPECTRUM_SIZE  (256)
 
 static int iNumofConnectedDetectors;
 static RTLSDR *receivers[MAX_DEVICES];
@@ -46,13 +48,14 @@ static void cleanup()
     }
 }
 
-static void *startcap(void *ctx)
+static void *startint(void *ctx)
 {
-    RTLSDR *receiver = (RTLSDR*)ctx;
-    int len = min(MAX_FRAME_SIZE, receiver->to_read);
-    int olen = 0;
+    RTLSDR *receiver   = (RTLSDR *)ctx;
+    int len            = min(MAX_FRAME_SIZE, receiver->to_read);
+    int olen           = 0;
     unsigned char *buf = (unsigned char *)malloc(len);
-    while(receiver->InCapture) {
+    while (receiver->InIntegration)
+    {
         rtlsdr_read_sync(receiver->rtl_dev, buf, len, &olen);
         receiver->buffer = buf;
         receiver->n_read = olen;
@@ -183,7 +186,7 @@ void ISSnoopDevice(XMLEle *root)
 
 RTLSDR::RTLSDR(uint32_t index)
 {
-    InCapture = false;
+    InIntegration = false;
     detectorIndex = index;
 
     char name[MAXINDIDEVICE];
@@ -195,21 +198,20 @@ RTLSDR::RTLSDR(uint32_t index)
 ** Client is asking us to establish connection to the device
 ***************************************************************************************/
 bool RTLSDR::Connect()
-{    	
+{
     int r = rtlsdr_open(&rtl_dev, detectorIndex);
     if (r < 0)
     {
         LOGF_ERROR("Failed to open rtlsdr device index %d.", detectorIndex);
-		return false;
-	}
+        return false;
+    }
 
     LOG_INFO("RTL-SDR Detector connected successfully!");
-	// Let's set a timer that checks teleDetectors status every POLLMS milliseconds.
+    // Let's set a timer that checks teleDetectors status every POLLMS milliseconds.
     // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
     //SetTimer(POLLMS);
 
-
-	return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -217,12 +219,11 @@ bool RTLSDR::Connect()
 ***************************************************************************************/
 bool RTLSDR::Disconnect()
 {
-	InCapture = false;
+    InIntegration = false;
     rtlsdr_close(rtl_dev);
-    PrimaryDetector.setContinuumBufferSize(1);
-    PrimaryDetector.setSpectrumBufferSize(1);
-	LOG_INFO("RTL-SDR Detector disconnected successfully!");
-	return true;
+    setBufferSize(1);
+    LOG_INFO("RTL-SDR Detector disconnected successfully!");
+    return true;
 }
 
 /**************************************************************************************
@@ -230,7 +231,7 @@ bool RTLSDR::Disconnect()
 ***************************************************************************************/
 const char *RTLSDR::getDefaultName()
 {
-	return "RTL-SDR Receiver";
+    return "RTL-SDR Receiver";
 }
 
 /**************************************************************************************
@@ -239,26 +240,26 @@ const char *RTLSDR::getDefaultName()
 bool RTLSDR::initProperties()
 {
     // We set the Detector capabilities
-    uint32_t cap = DETECTOR_CAN_ABORT | DETECTOR_HAS_CONTINUUM | DETECTOR_HAS_SPECTRUM | DETECTOR_HAS_STREAMING;
-    SetDetectorCapability(cap);
+    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING;
+    SetSpectrographCapability(cap);
 
-	// Must init parent properties first!
-	INDI::Detector::initProperties();
+    // Must init parent properties first!
+    INDI::Spectrograph::initProperties();
 
-    PrimaryDetector.setMinMaxStep("DETECTOR_CAPTURE", "DETECTOR_CAPTURE_VALUE", 0.001, 86164.092, 0.001, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_SAMPLERATE", 1.0e+6, 2.0e+6, 1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_GAIN", 0.0, 25.0, 0.1, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BANDWIDTH", 0, 0, 0, false);
-    PrimaryDetector.setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BITSPERSAMPLE", 16, 16, 0, false);
-    PrimaryDetector.setCaptureExtension("fits");
+    setMinMaxStep("DETECTOR_CAPTURE", "DETECTOR_CAPTURE_VALUE", 0.001, 86164.092, 0.001, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_SAMPLERATE", 1.0e+6, 2.0e+6, 1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_GAIN", 0.0, 25.0, 0.1, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BANDWIDTH", 0, 0, 0, false);
+    setMinMaxStep("DETECTOR_SETTINGS", "DETECTOR_BITSPERSAMPLE", 16, 16, 0, false);
+    setIntegrationFileExtension("fits");
 
-	// Add Debug, Simulator, and Configuration controls
-	addAuxControls();
+    // Add Debug, Simulator, and Configuration controls
+    addAuxControls();
 
     setDefaultPollingPeriod(500);
 
-	return true;
+    return true;
 }
 
 /********************************************************************************************
@@ -267,19 +268,19 @@ bool RTLSDR::initProperties()
 *********************************************************************************************/
 bool RTLSDR::updateProperties()
 {
-	// Call parent update properties first
-	INDI::Detector::updateProperties();
+    // Call parent update properties first
+    INDI::Spectrograph::updateProperties();
 
-	if (isConnected())
-	{
-		// Let's get parameters now from Detector
-		setupParams();
+    if (isConnected())
+    {
+        // Let's get parameters now from Detector
+        setupParams();
 
-		// Start the timer
-		SetTimer(POLLMS);
-	}
+        // Start the timer
+        SetTimer(POLLMS);
+    }
 
-	return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -287,50 +288,50 @@ bool RTLSDR::updateProperties()
 ***************************************************************************************/
 void RTLSDR::setupParams()
 {
-	// Our Detector is an 8 bit Detector, 100MHz frequency 1MHz bandwidth.
-    SetDetectorParams(1000000.0, 100000000.0, 16, 0.0, 25.0);
+    // Our Detector is an 16 bit spectrograph, 100MHz frequency 1MHz bandwidth.
+    setParams(1000000.0, 100000000.0, 16, 0.0, 25.0);
 }
 
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool RTLSDR::StartCapture(float duration)
+bool RTLSDR::StartIntegration(float duration)
 {
-	CaptureRequest = duration;
-    AbortCapture();
+    IntegrationRequest = duration;
+    AbortIntegration();
 
-	// Since we have only have one Detector with one chip, we set the exposure duration of the primary Detector
-    PrimaryDetector.setCaptureDuration(duration);
-    b_read = 0;
-    to_read = PrimaryDetector.getSampleRate() * PrimaryDetector.getCaptureDuration() * sizeof(unsigned short);
+    // Since we have only have one Detector with one chip, we set the exposure duration of the primary Detector
+    setIntegrationTime(duration);
+    b_read  = 0;
+    to_read = getSampleRate() * getIntegrationTime() * sizeof(unsigned short);
 
-    PrimaryDetector.setContinuumBufferSize(to_read);
-    PrimaryDetector.setSpectrumBufferSize(SPECTRUM_SIZE * sizeof(unsigned short));
+    setBufferSize(to_read);
 
-    if(to_read > 0) {
-        LOG_INFO("Capture started...");
+    if (to_read > 0)
+    {
+        LOG_INFO("Integration started...");
         rtlsdr_reset_buffer(rtl_dev);
         pthread_t th;
-        pthread_create(&th, NULL, &startcap, this);
-        gettimeofday(&CapStart, nullptr);
-        InCapture = true;
+        pthread_create(&th, NULL, &startint, this);
+        gettimeofday(&IntStart, nullptr);
+        InIntegration = true;
         return true;
     }
 
-	// We're done
+    // We're done
     return false;
 }
 
 /**************************************************************************************
-** Client is updating capture settings
+** Client is updating integration settings
 ***************************************************************************************/
-bool RTLSDR::CaptureParamsUpdated(float sr, float freq, float bps, float bw, float gain)
+bool RTLSDR::paramsUpdated(float sr, float freq, float bps, float bw, float gain)
 {
     INDI_UNUSED(bw);
     INDI_UNUSED(bps);
-    PrimaryDetector.setBandwidth(0);
-    PrimaryDetector.setBPS(16);
-	int r = 0;
+    setBandwidth(0);
+    setBPS(16);
+    int r = 0;
 
     r |= rtlsdr_set_agc_mode(rtl_dev, 0);
     r |= rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
@@ -340,7 +341,8 @@ bool RTLSDR::CaptureParamsUpdated(float sr, float freq, float bps, float bw, flo
     r |= rtlsdr_set_center_freq(rtl_dev, (uint32_t)freq);
     r |= rtlsdr_set_sample_rate(rtl_dev, (uint32_t)sr);
 
-    if(r != 0) {
+    if (r != 0)
+    {
         LOG_INFO("Error(s) setting parameters.");
     }
 
@@ -350,10 +352,11 @@ bool RTLSDR::CaptureParamsUpdated(float sr, float freq, float bps, float bw, flo
 /**************************************************************************************
 ** Client is asking us to abort a capture
 ***************************************************************************************/
-bool RTLSDR::AbortCapture()
+bool RTLSDR::AbortIntegration()
 {
-    if(InCapture) {
-        InCapture = false;
+    if (InIntegration)
+    {
+        InIntegration = false;
     }
     return true;
 }
@@ -363,17 +366,17 @@ bool RTLSDR::AbortCapture()
 ***************************************************************************************/
 float RTLSDR::CalcTimeLeft()
 {
-	double timesince;
-	double timeleft;
-	struct timeval now;
-	gettimeofday(&now, nullptr);
+    double timesince;
+    double timeleft;
+    struct timeval now;
+    gettimeofday(&now, nullptr);
 
-	timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) -
-				(double)(CapStart.tv_sec * 1000.0 + CapStart.tv_usec / 1000);
-	timesince = timesince / 1000;
+    timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) -
+                (double)(IntStart.tv_sec * 1000.0 + IntStart.tv_usec / 1000);
+    timesince = timesince / 1000;
 
-	timeleft = CaptureRequest - timesince;
-	return timeleft;
+    timeleft = IntegrationRequest - timesince;
+    return timeleft;
 }
 
 /**************************************************************************************
@@ -381,27 +384,27 @@ float RTLSDR::CalcTimeLeft()
 ***************************************************************************************/
 void RTLSDR::TimerHit()
 {
-	long timeleft;
+    long timeleft;
 
-	if (isConnected() == false)
-		return; //  No need to reset timer if we are not connected anymore
+    if (isConnected() == false)
+        return; //  No need to reset timer if we are not connected anymore
 
-	if (InCapture)
-	{
-		timeleft = CalcTimeLeft();
-		if(timeleft < 0.1)
-		{
-			/* We're done capturing */
-            LOG_INFO("Capture done, expecting data...");
-			timeleft = 0.0;
-		}
+    if (InIntegration)
+    {
+        timeleft = CalcTimeLeft();
+        if (timeleft < 0.1)
+        {
+            /* We're done capturing */
+            LOG_INFO("Integration done, expecting data...");
+            timeleft = 0.0;
+        }
 
-		// This is an over simplified timing method, check DetectorSimulator and rtlsdrDetector for better timing checks
-		PrimaryDetector.setCaptureLeft(timeleft);
-	}
+        // This is an over simplified timing method, check DetectorSimulator and rtlsdrDetector for better timing checks
+        setIntegrationLeft(timeleft);
+    }
 
-	SetTimer(POLLMS);
-	return;
+    SetTimer(POLLMS);
+    return;
 }
 
 /**************************************************************************************
@@ -409,27 +412,22 @@ void RTLSDR::TimerHit()
 ***************************************************************************************/
 void RTLSDR::grabData()
 {
-    if(InCapture) {
-        n_read = min(to_read, n_read);
-        continuum = PrimaryDetector.getContinuumBuffer();
-        if(n_read > 0) {
+    if (InIntegration)
+    {
+        n_read    = min(to_read, n_read);
+        continuum = getBuffer();
+        if (n_read > 0)
+        {
             memcpy(continuum + b_read, buffer, n_read);
             b_read += n_read;
             to_read -= n_read;
         }
 
-        if(to_read <= 0) {
-            LOG_INFO("Downloading...");
-            InCapture = false;
-
-            //Create the spectrum
-            if(HasSpectrum()) {
-                spectrum = PrimaryDetector.getSpectrumBuffer();
-                Spectrum(continuum, spectrum, b_read * 8 / abs(PrimaryDetector.getBPS()), SPECTRUM_SIZE, PrimaryDetector.getBPS());
-            }
-
+        if (to_read <= 0)
+        {
+            InIntegration = false;
             LOG_INFO("Download complete.");
-            CaptureComplete(&PrimaryDetector);
+            IntegrationComplete();
         }
     }
 }

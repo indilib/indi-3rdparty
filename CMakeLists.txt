@@ -102,16 +102,21 @@ option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
+option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 
 find_package(FFmpeg)
 
-if (FFMPEG_FOUND)
-    message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
-    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
-ELSE(FFMPEG_FOUND)
-    message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
-    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
-ENDIF(FFMPEG_FOUND)
+option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
+
+# JM 2020-01-14: FFMpeg not enough by itself, other libraries like libavdevice-dev is required
+
+# if (FFMPEG_FOUND)
+#     message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
+#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
+# ELSE(FFMPEG_FOUND)
+#     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
+#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
+# ENDIF(FFMPEG_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -134,6 +139,11 @@ IF (BUILD_LIBS)
 if (WITH_APOGEE)
 add_subdirectory(libapogee)
 endif(WITH_APOGEE)
+
+#libasi
+if (WITH_ASICAM)
+add_subdirectory(libasi)
+endif (WITH_ASICAM)
 
 #libatik
 if (WITH_ATIK)
@@ -211,6 +221,11 @@ if (WITH_NEXDOME)
 add_subdirectory(indi-nexdome)
 endif(WITH_NEXDOME)
 
+## Talon6
+if (WITH_TALON6)
+add_subdirectory(indi-talon6)
+endif(WITH_TALON6)
+
 ## SpectraCyber
 if (WITH_SPECTRACYBER)
 add_subdirectory(indi-spectracyber)
@@ -224,6 +239,7 @@ endif(WITH_SHELYAK)
 ## Cloud Watcher
 if (WITH_CLOUDWATCHER)
 add_subdirectory(indi-aagcloudwatcher)
+add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
 
 ## Nexstar Evo
@@ -361,8 +377,13 @@ endif(WITH_FISHCAMP)
 
 ## ASI
 if (WITH_ASICAM)
-add_subdirectory(asi-common)
+find_package(ASI)
+if (ASI_FOUND)
 add_subdirectory(indi-asi)
+else (ASI_FOUND)
+add_subdirectory(libasi)
+SET(LIBRARIES_FOUND FALSE)
+endif(ASI_FOUND)
 endif(WITH_ASICAM)
 
 ## DSI

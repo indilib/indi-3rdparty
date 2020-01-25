@@ -20,54 +20,53 @@
 #pragma once
 
 #include <lime/LimeSuite.h>
-#include "indidetector.h"
+#include "indispectrograph.h"
 
 enum Settings
 {
-	FREQUENCY_N=0,
-	SAMPLERATE_N,
-	BANDWIDTH_N,
-	NUM_SETTINGS
+    FREQUENCY_N = 0,
+    SAMPLERATE_N,
+    BANDWIDTH_N,
+    NUM_SETTINGS
 };
-class LIMESDR : public INDI::Detector
+class LIMESDR : public INDI::Spectrograph
 {
   public:
     LIMESDR(uint32_t index);
 
   protected:
-	// General device functions
-	bool Connect();
-	bool Disconnect();
-	const char *getDefaultName();
-	bool initProperties();
-	bool updateProperties();
+    // General device functions
+    bool Connect();
+    bool Disconnect();
+    const char *getDefaultName();
+    bool initProperties();
+    bool updateProperties();
 
-	// Detector specific functions
-	bool StartCapture(float duration);
-    bool CaptureParamsUpdated(float sr, float freq, float bps, float bw, float gain);
-    bool AbortCapture();
+    // Detector specific functions
+    bool StartIntegration(float duration);
+    bool paramsUpdated(float sr, float freq, float bps, float bw, float gain);
+    bool AbortIntegration();
     void TimerHit();
 
     void grabData();
 
   private:
     lms_device_t *lime_dev = { nullptr };
-	// Utility functions
-	float CalcTimeLeft();
+    // Utility functions
+    float CalcTimeLeft();
     void setupParams();
     lms_stream_t lime_stream;
-	// Are we exposing?
-	bool InCapture;
-	// Struct to keep timing
-	struct timeval CapStart;
+    // Are we exposing?
+    bool InIntegration;
+    // Struct to keep timing
+    struct timeval CapStart;
     int to_read;
     int b_read;
     int n_read;
-	float CaptureRequest;
-	uint8_t* continuum;
-    uint8_t *spectrum;
+    float IntegrationRequest;
+    uint8_t *continuum;
 
-	uint32_t detectorIndex = { 0 };
+    uint32_t detectorIndex = { 0 };
 
     IBLOB TFitsB[5];
     IBLOBVectorProperty TFitsBP;

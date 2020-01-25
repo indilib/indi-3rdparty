@@ -1,0 +1,7 @@
+indi-aagcloudwatcher-ng (1.5) bionic; urgency=medium
+
+  * New release
+  * Upgrade to use INDI Weather API
+  * Add support for old and new anemometers
+
+ -- Adrián Pardini  <github@tangopardo.com.ar>  Mon, 30 Dec 2019 12:50:00 -0300

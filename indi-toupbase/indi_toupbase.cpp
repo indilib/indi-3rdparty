@@ -714,8 +714,8 @@ void ToupBase::setupParams()
         for (uint32_t i = 0; i < m_Instance->model->maxfanspeed; i++)
         {
             char name[MAXINDINAME] = {0}, label[MAXINDINAME] = {0};
-            snprintf(name, MAXINDINAME, "FAN_SPEED_%d", i + 1);
-            snprintf(label, MAXINDINAME, "%dx", i + 1);
+            snprintf(name, MAXINDINAME, "FAN_SPEED_%u", i + 1);
+            snprintf(label, MAXINDINAME, "%ux", i + 1);
             IUFillSwitch(FanSpeedS + i, name, label, (activeFan == i + 1) ? ISS_ON : ISS_OFF);
         }
         FanSpeedSP.sp = FanSpeedS;
@@ -791,10 +791,15 @@ void ToupBase::setupParams()
     rc = FP(get_Speed(m_CameraHandle, &nDef));
     LOGF_DEBUG("Speed Control: %d", nDef);
 
-    // JM 2019-01-17: Always set it to 0 on ARM due to USB limitations
-#ifdef __arm__
-    ControlN[TC_SPEED].value = 0;
-    FP(put_Speed(m_CameraHandle, 0));
+    // JM 2019-11-16: Reduce speed on ARM for high resolution
+#if defined(__arm__) || defined (__aarch64__)
+    if (w[currentResolutionIndex] > 1000)
+    {
+        ControlN[TC_SPEED].value = nDef - 1;
+        FP(put_Speed(m_CameraHandle, nDef - 1));
+    }
+    else
+        ControlN[TC_SPEED].value = nDef;
 #else
     ControlN[TC_SPEED].value = nDef;
 #endif
@@ -1624,7 +1629,7 @@ bool ToupBase::StartExposure(float duration)
     {
         ExposureRequest = duration;
 
-        if ( (rc = FP(put_ExpoTime(m_CameraHandle, uSecs)) < 0))
+        if ( (rc = FP(put_ExpoTime(m_CameraHandle, uSecs))) < 0)
         {
             LOGF_ERROR("Failed to set exposure time. Error: %s", errorCodes[rc].c_str());
             return false;
@@ -1671,7 +1676,7 @@ bool ToupBase::StartExposure(float duration)
     //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
 
     // Trigger an exposure
-    if ( (rc = FP(Trigger(m_CameraHandle, 1) < 0) ))
+    if ( (rc = FP(Trigger(m_CameraHandle, 1) < 0)) )
     {
         LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
         return false;

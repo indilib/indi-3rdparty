@@ -4,6 +4,8 @@
   Copyright (c) 2012-2013 Cloudmakers, s. r. o.
   All Rights Reserved.
 
+  Bayer Support Added by Karl Rees, Copyright(c) 2019
+
   Code is based on SX INDI Driver by Gerry Rozema and Jasem Mutlaq
   Copyright(c) 2010 Gerry Rozema.
   Copyright(c) 2012 Jasem Mutlaq.
@@ -40,76 +42,80 @@ void NSGuiderTimerCallback(void *p);
 
 class SXCCD : public INDI::CCD
 {
-  private:
-    DEVICE device;
-    HANDLE handle;
-    unsigned short model;
-    char name[32];
-    char *evenBuf, *oddBuf;
-    long wipeDelay;
-    ISwitch CoolerS[2];
-    ISwitchVectorProperty CoolerSP;
-    ISwitch ShutterS[2];
-    ISwitchVectorProperty ShutterSP;
-    float TemperatureRequest;
-    float TemperatureReported;
-    float ExposureTimeLeft;
-    float GuideExposureTimeLeft;
-    int ExposureTimerID;
-    int GuideExposureTimerID;
-    int WEGuiderTimerID;
-    int NSGuiderTimerID;
-    bool DidFlush;
-    bool DidLatch;
-    bool DidGuideLatch;
-    bool InGuideExposure;
-    char GuideStatus;
+    private:
+        DEVICE device;
+        HANDLE handle;
+        unsigned short model;
+        char name[32];
+        char *evenBuf, *oddBuf;
+        long wipeDelay;
+        ISwitch CoolerS[2];
+        ISwitchVectorProperty CoolerSP;
+        ISwitch ShutterS[2];
+        ISwitchVectorProperty ShutterSP;
+        //    ISwitch BayerS[2];
+        //    ISwitchVectorProperty BayerSP;
+        float TemperatureRequest;
+        float TemperatureReported;
+        float ExposureTimeLeft;
+        float GuideExposureTimeLeft;
+        int ExposureTimerID;
+        int GuideExposureTimerID;
+        int WEGuiderTimerID;
+        int NSGuiderTimerID;
+        bool DidFlush;
+        bool DidLatch;
+        bool DidGuideLatch;
+        bool InGuideExposure;
+        char GuideStatus;
 
-  protected:
-    const char *getDefaultName();
-    bool initProperties();
-    void SetupParms();
-    bool updateProperties();
-    bool UpdateCCDFrame(int x, int y, int w, int h);
-    bool UpdateCCDBin(int hor, int ver);
-    bool Connect();
-    bool Disconnect();
-    int SetTemperature(double temperature);
-    bool StartExposure(float n);
-    bool AbortExposure();
-    bool StartGuideExposure(float n);
-    bool AbortGuideExposure();
-    void TimerHit();
-    void ExposureTimerHit();
-    void GuideExposureTimerHit();
-    void WEGuiderTimerHit();
-    void NSGuiderTimerHit();
-    IPState GuideWest(uint32_t ms);
-    IPState GuideEast(uint32_t ms);
-    IPState GuideNorth(uint32_t ms);
-    IPState GuideSouth(uint32_t ms);
+    protected:
+        const char *getDefaultName();
+        bool initProperties();
+        void SetupParms();
+        bool updateProperties();
+        bool UpdateCCDFrame(int x, int y, int w, int h);
+        bool UpdateCCDBin(int hor, int ver);
+        bool Connect();
+        bool Disconnect();
+        int SetTemperature(double temperature);
+        bool StartExposure(float n);
+        bool AbortExposure();
+        bool StartGuideExposure(float n);
+        bool AbortGuideExposure();
+        void TimerHit();
+        void ExposureTimerHit();
+        void GuideExposureTimerHit();
+        void WEGuiderTimerHit();
+        void NSGuiderTimerHit();
+        //bool saveConfigItems(FILE *fp);
+        IPState GuideWest(uint32_t ms);
+        IPState GuideEast(uint32_t ms);
+        IPState GuideNorth(uint32_t ms);
+        IPState GuideSouth(uint32_t ms);
 
-  public:
-    bool HasCooler;
-    bool HasShutter;
-    bool HasST4Port;
-    bool HasGuideHead;
-    SXCCD(DEVICE device, const char *name);
-    virtual ~SXCCD();
-    void debugTriggered(bool enable);
-    void simulationTriggered(bool enable);
-    void ISGetProperties(const char *dev);
-    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
+    public:
+        bool HasCooler;
+        bool HasShutter;
+        bool HasST4Port;
+        bool HasGuideHead;
+        bool HasColor;
+        SXCCD(DEVICE device, const char *name);
+        virtual ~SXCCD();
+        void debugTriggered(bool enable);
+        void simulationTriggered(bool enable);
+        void ISGetProperties(const char *dev);
+        bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
 
-    friend void ::ExposureTimerCallback(void *p);
-    friend void ::GuideExposureTimerCallback(void *p);
-    friend void ::WEGuiderTimerCallback(void *p);
-    friend void ::NSGuiderTimerCallback(void *p);
-    friend void ::ISGetProperties(const char *dev);
-    friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-    friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-    friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-    friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                            char *formats[], char *names[], int n);
-    friend void ::ISSnoopDevice(XMLEle *root);
+        friend void ::ExposureTimerCallback(void *p);
+        friend void ::GuideExposureTimerCallback(void *p);
+        friend void ::WEGuiderTimerCallback(void *p);
+        friend void ::NSGuiderTimerCallback(void *p);
+        friend void ::ISGetProperties(const char *dev);
+        friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
+        friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
+        friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
+        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
+                                char *formats[], char *names[], int n);
+        friend void ::ISSnoopDevice(XMLEle *root);
 };

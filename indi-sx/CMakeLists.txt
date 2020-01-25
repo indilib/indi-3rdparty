@@ -8,11 +8,11 @@ set(RULES_INSTALL_DIR "/lib/udev/rules.d/")
 
 SET(CMAKE_CXX_STANDARD 11)
 set (VERSION_MAJOR 1)
-set (VERSION_MINOR 13)
+set (VERSION_MINOR 15)
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/sxconfig.h.in"
-  "${CMAKE_CURRENT_SOURCE_DIR}/sxconfig.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/sxconfig.h"
   )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_sx.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_sx.xml )
 

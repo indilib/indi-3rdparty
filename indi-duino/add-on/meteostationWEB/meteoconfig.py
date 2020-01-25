@@ -61,7 +61,7 @@ INDIPORT="7624"
 
 ##### INDI SETTINGS AND DEBUG #####
 #1). Basic indi
-INDIDEVICE="MeteoStation"
+INDIDEVICE="Arduino MeteoStation"
 INDIDEVICEPORT="/dev/ttyUSB0"
 
 #2). Debug
@@ -105,6 +105,9 @@ REMOTEKILLEXEC="ssh -f $SSHTUNNEL '$KILLEXEC' $EXECNOOUTPUT"
 #6). Remote tunnel only
 INDIREMOTEEXEC="$SSH -fN -o ExitOnForwardFailure=yes $SSHTUNNEL"
 
+##### UPDATE METHOD #####
+# Select "cron" if a cron job updates the data regularly
+UPDATE="cron"
 
 ##### SITE RELATED ####
 OWNERNAME="Magnus W. Eriksen"
@@ -117,6 +120,7 @@ SOUNDINGSTATION="ENZV"
 ##### RRD RELATED #####
 #PATH TO GRAPHs
 CHARTPATH="./html/CHART/"
+RRDFILE="./meteo.rrd"
 #EUMETSAT lastimagen. Choose one from:
 #http://oiswww.eumetsat.org/IPPS/html/latestImages.html
 #This is nice but only work at daylight time:
@@ -125,3 +129,25 @@ CHARTPATH="./html/CHART/"
 EUMETSAT_LAST="http://oiswww.eumetsat.org/IPPS/html/latestImages/EUMETSAT_MSG_MPE_WesternEurope.png"
 #and this cloud cover at IR 39. Work at night
 #EUMETSAT_LAST="http://oiswww.eumetsat.org/IPPS/html/latestImages/EUMETSAT_MSG_IR039_WesternEurope.jpg"
+
+######### INDI Weather vector and element names
+SENSOR_HUMIDITY="Humidity"
+SENSOR_HUMIDITY_HUM="HR"
+SENSOR_HUMIDITY_TEMP="T"
+SENSOR_PRESSURE="Pressure"
+SENSOR_PRESSURE_PRES="P"
+SENSOR_PRESSURE_TEMP="T"
+SENSOR_IR="IR"
+SENSOR_IR_IR="IR"
+SENSOR_IR_TEMP="T"
+WEATHER="WEATHER_PARAMETERS"
+WEATHER_DEWPOINT="WEATHER_DEWPOINT"
+WEATHER_CLOUDS="WEATHER_CLOUD_COVER"
+WEATHER_TEMP="WEATHER_TEMPERATURE"
+WEATHER_SKY_TEMP="WEATHER_SKY_TEMPERATURE"
+WEATHER_SQM="Sky Quality"
+WEATHER_SQM_SQM="SQM"
+WEATHER_STATUS="WEATHER_STATUS"
+WEATHER_STATUS_CLOUDS="clouds"
+WEATHER_STATUS_DEW="dew"
+WEATHER_STATUS_TEMP="frezzing"
