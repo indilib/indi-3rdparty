@@ -2128,12 +2128,26 @@ void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
-    INumber *gainNP = IUFindNumber(&ControlNP, "Gain");
-
-    if (gainNP)
+    // e-/ADU
+    INumber *np = IUFindNumber(&ControlNP, "Gain");
+    if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
+        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+    }
+
+    np = IUFindNumber(&ControlNP, "Offset");
+    if (np)
+    {
+        int status = 0;
+        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+    }
+
+    np = IUFindNumber(&ControlNP, "Gamma");
+    if (np)
+    {
+        int status = 0;
+        fits_update_key_s(fptr, TDOUBLE, "GAMMA", &(np->value), "Gamma", &status);
     }
 }
 
