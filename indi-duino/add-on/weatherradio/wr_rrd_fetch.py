@@ -26,10 +26,10 @@ for values in lines:
     for pos in range(0, len(categories)-1):
         y = values[pos]
         if isinstance(y, float):
-            series[categories[pos]]["data"].append({"x": time, "y": round(y, 2)})
+            series[categories[pos]]["data"].append([time*1000, round(y, 2)])
     time += step
 
-print json.dumps(series, indent=2, sort_keys=True)
+print json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True)
 
 
 
