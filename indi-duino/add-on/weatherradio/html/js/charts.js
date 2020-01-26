@@ -2,7 +2,7 @@ function weatherChart(category, align, series) {
 
     var offsetX = (align == 'left') ? 30 : 0;
     var chart = {
-	height: 300,
+	height: 250,
 	width: "95%",
 	type: "area",
 	toolbar: {show: false},
@@ -48,28 +48,28 @@ var hchart, cchart, tchart, pchart;
 function init() {
 
     // create the charts
-    hchart = new ApexCharts(document.querySelector("#humidity"),
-			    weatherChart("Humidity", "left", []));
-    cchart = new ApexCharts(document.querySelector("#clouds"),
-			    weatherChart("Cloud Coverage", "right", []));
     tchart = new ApexCharts(document.querySelector("#temperature"),
 			    weatherChart("Temperature", "left", []));
+    cchart = new ApexCharts(document.querySelector("#clouds"),
+			    weatherChart("Cloud Coverage", "right", []));
     pchart = new ApexCharts(document.querySelector("#pressure"),
-			    weatherChart("Pressure", "right", []));
+			    weatherChart("Pressure", "left", []));
+    hchart = new ApexCharts(document.querySelector("#humidity"),
+			    weatherChart("Humidity", "right", []));
 
     // update the current value
     $.get("CHART/RTdata.json", function(data) {
 	hchart.render();
-	hchart.updateOptions({title: {text: data.HR + "%"}});
+	hchart.updateOptions({title: {text: (data.HR).toFixed(0) + "%"}});
 
 	cchart.render();
-	cchart.updateOptions({title: {text: data.clouds + "%"}});
+	cchart.updateOptions({title: {text: (data.clouds).toFixed(0) + "%"}});
 
 	tchart.render();
-	tchart.updateOptions({title: {text: data.T + "°C"}});
+	tchart.updateOptions({title: {text: (data.T).toFixed(1) + "°C"}});
 
 	pchart.render();
-	pchart.updateOptions({title: {text: data.P + " hPa"}});
+	pchart.updateOptions({title: {text: (data.P).toFixed(0) + " hPa"}});
     });
 
     updateSeries();

@@ -20,23 +20,13 @@
     <div class="container-fluid">
       <h1 style="text-align: center; padding-top: 20px">Weather Radio</h1>
       <div class="row">
-	<div class="col card weatherbox">
-	  <div class="card-body"><h1 id="Temperature"></h1>°C</div> 
-	  <div class="card-footer">Temperature</div>
-	</div>
-	<div class="col card weatherbox">
-	  <div class="card-body"><h1 id="Pressure"></h1>hPa</div> 
-	  <div class="card-footer">Pressure</div>
-	</div>
-	<div class="col card weatherbox">
-	  <div class="card-body"><h1 id="Humidity"></h1>%</div>
-	  <div class="card-footer">Humidity</div>
-	</div>
-	<div class="col card weatherbox">
-	  <div class="card-body"><h1 id="CloudCoverage"></h1>%</div>
-	  <div class="card-footer">Cloud coverage</div>
-	</div>
-      </div>
+	<div class="col" id="temperature"></div>
+	<div class="col" id="clouds"></div>
+      </div> <!-- first row end -->
+      <div class="row">
+	<div class="col" id="pressure"></div>
+	<div class="col" id="humidity"></div>
+      </div> <!-- second row end -->
     </div>
   </body>
   <script>
