@@ -1,3 +1,9 @@
+indi-mi (1.6) buster; urgency=medium
+
+  * Separating from MI libraries
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 25 Jan 2020 10:57:45 +0100
+
 indi-mi (1.5) bionic; urgency=low
 
   * Fix launchpad ARM issue.

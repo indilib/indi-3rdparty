@@ -160,6 +160,11 @@ if (WITH_FLI)
 add_subdirectory(libfli)
 endif(WITH_FLI)
 
+#libmicam
+if (WITH_MI)
+add_subdirectory(libmicam)
+endif(WITH_MI)
+
 #libinovasdk
 if (WITH_INOVAPLX)
 add_subdirectory(libinovasdk)
@@ -356,7 +361,13 @@ endif (WITH_FFMV)
 
 ## Moravian
 if (WITH_MI)
+find_package(MICAM)
+if (MICAM_FOUND)
 add_subdirectory(indi-mi)
+else (MICAM_FOUND)
+add_subdirectory(libmicam)
+SET(LIBRARIES_FOUND FALSE)
+endif (MICAM_FOUND)
 endif (WITH_MI)
 
 ## Arduino

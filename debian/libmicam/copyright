@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: indi-mi
+Upstream-Name: libmicam
 Upstream-Contact: Jasem Mutlaq <mutlaqja@ikarustech.com>
-Source: https://github.com/indilib/indi-3rdparty/indi-mi
+Source: https://github.com/indilib/indi-3rdparty/libmicam
 
 Files: CMakeLists.txt
 Copyright: 2019, Radek Kaczorek <rkaczorek@gmail.com>
@@ -23,14 +23,9 @@ License: GPL-3
  On Debian systems, the complete text of the GNU General
  Public License can be found in `/usr/share/common-licenses/GPL-3'.
 
-Files: debian/*
-Copyright: 2016, Jasem Mutlaq <mutlaqja@ikarustech.com>
-License: LGPL
-
-Files: *.cpp *.h
+Files: *.bin, *.h
 Copyright:
- * Copyright (C) 2014 Jasem Mutlaq (mutlaqja@ikarustech.com)
- * Copyright (C) 2014 Zhirong Li (lzr@qhyccd.com)
- * Copyright (C) 2015 Peter Polakovic (peter.polakovic@cloudmakers.eu)
- * Copyright (C) 2016 Jakub Smutny (linux@gxccd.com)
-License: LGPL
+  * Copyright 2016, Moravian Instruments <http://www.gxccd.com, linux@gxccd.com>
+  * Copyright (C) 2010-2015 Petr Kubanek <petr@kubanek.net>
+  * Copyright (C) 2010-2015 Moravske pristroje, s.r.o. <http://www.mii.cz>
+License: All rights reserved
