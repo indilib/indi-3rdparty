@@ -1,4 +1,4 @@
-function weatherChart(category, align, series) {
+function createWeatherChart(category, align) {
 
     var offsetX = (align == 'left') ? 30 : 0;
     var chart = {
@@ -37,7 +37,7 @@ function weatherChart(category, align, series) {
 	    subtitle: subtitle,
 	    xaxis: xaxis,
 	    yaxis: yaxis,
-	    series: series,
+	    series: [],
 	    stroke: {curve: 'smooth'},
 	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
 	    dataLabels: {enabled: false}};
@@ -49,13 +49,13 @@ function init() {
 
     // create the charts
     tchart = new ApexCharts(document.querySelector("#temperature"),
-			    weatherChart("Temperature", "left", []));
+			    createWeatherChart("Temperature", "left"));
     cchart = new ApexCharts(document.querySelector("#clouds"),
-			    weatherChart("Cloud Coverage", "right", []));
+			    createWeatherChart("Cloud Coverage", "right"));
     pchart = new ApexCharts(document.querySelector("#pressure"),
-			    weatherChart("Pressure", "left", []));
+			    createWeatherChart("Pressure", "left"));
     hchart = new ApexCharts(document.querySelector("#humidity"),
-			    weatherChart("Humidity", "right", []));
+			    createWeatherChart("Humidity", "right"));
 
     // update the current value
     $.get("CHART/RTdata.json", function(data) {
