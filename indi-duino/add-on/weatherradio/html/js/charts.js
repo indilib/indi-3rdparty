@@ -39,7 +39,8 @@ function weatherChart(category, align, series) {
 	    yaxis: yaxis,
 	    series: series,
 	    stroke: {curve: 'smooth'},
-	   dataLabels: {enabled: false}};
+	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
+	    dataLabels: {enabled: false}};
 }
 
 var hchart, cchart, tchart, pchart;

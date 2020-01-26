@@ -28,8 +28,10 @@ body {
     color: orange;
 }
 
-.chart {
-#    width: 400px;
-#    margin: 35px auto;
+.apexcharts-tooltip {
+    background: #f3f3f3;
+    color: black;
 }
+
+
 
