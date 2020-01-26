@@ -1,5 +1,5 @@
 /*
-    indi_rtlsdr_detector - a software defined radio driver for INDI
+    indi_limesdr_spectrograph - a software defined radio driver for INDI
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -19,52 +19,58 @@
 
 #pragma once
 
-#include <rtl-sdr.h>
+#include <lime/LimeSuite.h>
 #include "indispectrograph.h"
 
 enum Settings
 {
-    FREQUENCY_N = 0,
-    SAMPLERATE_N,
-    BANDWIDTH_N,
-    NUM_SETTINGS
+	FREQUENCY_N=0,
+	SAMPLERATE_N,
+	BANDWIDTH_N,
+	NUM_SETTINGS
 };
-class RTLSDR : public INDI::Spectrograph
+class LIMESDR : public INDI::Spectrograph
 {
   public:
-    RTLSDR(uint32_t index);
+    LIMESDR(uint32_t index);
 
-    void grabData();
-    rtlsdr_dev_t *rtl_dev = { nullptr };
-    int to_read;
-    // Are we integrating?
-    bool InIntegration;
-    uint8_t *buffer;
-    int b_read, n_read;
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
 
   protected:
-    // General device functions
-    bool Connect();
-    bool Disconnect();
-    const char *getDefaultName();
-    bool initProperties();
-    bool updateProperties();
+	// General device functions
+	bool Connect();
+	bool Disconnect();
+	const char *getDefaultName();
+	bool initProperties();
+	bool updateProperties();
 
-    // Detector specific functions
+    // Spectrograph specific functions
     bool StartIntegration(float duration);
     bool paramsUpdated(float sr, float freq, float bps, float bw, float gain);
     bool AbortIntegration();
     void TimerHit();
 
+    void grabData();
+
   private:
-    // Utility functions
-    float CalcTimeLeft();
-    void setupParams();
-
-    // Struct to keep timing
-    struct timeval IntStart;
+    lms_device_t *lime_dev = { nullptr };
+	// Utility functions
+	float CalcTimeLeft();
+    void setupParams(float sr, float freq, float bw, float gain);
+    lms_stream_t lime_stream;
+	// Are we exposing?
+    bool InIntegration;
+	// Struct to keep timing
+	struct timeval CapStart;
+    int to_read;
+    int b_read;
+    int n_read;
     float IntegrationRequest;
-    uint8_t *continuum;
+	uint8_t* continuum;
+    uint8_t *spectrum;
 
-    uint32_t detectorIndex = { 0 };
+    uint32_t spectrographIndex = { 0 };
+
+    IBLOB TFitsB[5];
+    IBLOBVectorProperty TFitsBP;
 };
