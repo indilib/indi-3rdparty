@@ -4,6 +4,9 @@ import sys
 import json
 import rrdtool
 
+# time zone
+timezone = 1
+
 rrdextract = rrdtool.fetch ("meteo.rrd", "AVERAGE", "-s", "-3h", "-r", "5min")
 
 # first line: timeline
@@ -26,7 +29,7 @@ for values in lines:
     for pos in range(0, len(categories)-1):
         y = values[pos]
         if isinstance(y, float):
-            series[categories[pos]]["data"].append([time*1000, round(y, 2)])
+            series[categories[pos]]["data"].append([(time + timezone*3600)*1000, round(y, 2)])
     time += step
 
 print json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True)
