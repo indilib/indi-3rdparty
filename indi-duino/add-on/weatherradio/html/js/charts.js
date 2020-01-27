@@ -57,22 +57,14 @@ function init() {
     hchart = new ApexCharts(document.querySelector("#humidity"),
 			    createWeatherChart("Humidity", "right"));
 
-    // update the current value
-    $.get("CHART/RTdata.json", function(data) {
-	hchart.render();
-	hchart.updateOptions({title: {text: (data.HR).toFixed(0) + "%"}});
-
-	cchart.render();
-	cchart.updateOptions({title: {text: (data.clouds).toFixed(0) + "%"}});
-
-	tchart.render();
-	tchart.updateOptions({title: {text: (data.T).toFixed(1) + "°C"}});
-
-	pchart.render();
-	pchart.updateOptions({title: {text: (data.P).toFixed(0) + " hPa"}});
-    });
+    hchart.render();
+    cchart.render();
+    tchart.render();
+    pchart.render();
 
     updateSeries();
+
+    setInterval( function(){ updateSeries();}, 10000);
 };
 
 function updateSeries() {
@@ -81,5 +73,12 @@ function updateSeries() {
 	cchart.updateSeries([data.clouds]);
 	tchart.updateSeries([data.T]);
 	pchart.updateSeries([data.P]);
+
+	// update last value
+	tchart.updateOptions({title: {text: (data.T.data[data.T.data.length-1][1]).toFixed(0) + "°C"}});
+	cchart.updateOptions({title: {text: (data.clouds.data[data.clouds.data.length-1][1]).toFixed(0) + "%"}});
+	pchart.updateOptions({title: {text: (data.P.data[data.P.data.length-1][1]).toFixed(0) + " hPa"}});
+	hchart.updateOptions({title: {text: (data.HR.data[data.HR.data.length-1][1]).toFixed(0) + "%"}});
+
     });
 };
