@@ -81,4 +81,7 @@ function updateSeries() {
 	hchart.updateOptions({title: {text: (data.HR.data[data.HR.data.length-1][1]).toFixed(0) + "%"}});
 
     });
+
+    // update time stamp at the bottom line
+    document.querySelector("#lastupdate").textContent = (new Date()).toLocaleString()
 };
