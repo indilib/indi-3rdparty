@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.0)
-PROJECT(libpentax CXX C)
+PROJECT(libricohcamerasdk CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
+include(CMakeCommon)
 
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+#be sure to install in separate folder from lib, to avoid conflicts with standard versions of libmtp
+set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/indipentax")
 
 set(LIBPENTAX_VERSION "1.1.0")
 set(LIBPENTAX_SOVERSION "1")
@@ -44,6 +46,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 endif()
 
-install( FILES include/ricoh_camera_sdk.hpp DESTINATION include/libpentax)
-install( DIRECTORY include/ricoh_camera_sdk DESTINATION include/libpentax)
+install( FILES include/ricoh_camera_sdk.hpp DESTINATION include/libricohcamerasdk)
+install( DIRECTORY include/ricoh_camera_sdk DESTINATION include/libricohcamerasdk)
 

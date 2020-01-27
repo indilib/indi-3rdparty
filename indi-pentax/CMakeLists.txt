@@ -39,9 +39,12 @@ set(indipentax_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/../indi-gphoto/gphoto_readimage.cpp
 )
 
+#need to use rpath to find libraries, since they need to be in a subfolder to avoid conflicts with the standard version of libmtp
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 add_executable(indi_pentax ${indipentax_SRCS})
 
-target_link_libraries(indi_pentax mtp pthread ${PENTAX_LIBRARIES} ${INDI_LIBRARIES} ${JPEG_LIBRARIES} ${LibRaw_LIBRARIES} ${CFITSIO_LIBRARIES} ${ZLIB_LIBRARY})
+target_link_libraries(indi_pentax pthread ${PENTAX_LIBRARIES} ${INDI_LIBRARIES} ${JPEG_LIBRARIES} ${LibRaw_LIBRARIES} ${CFITSIO_LIBRARIES} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_pentax RUNTIME DESTINATION bin)
 
