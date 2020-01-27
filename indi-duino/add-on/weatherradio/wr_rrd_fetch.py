@@ -7,7 +7,13 @@ import rrdtool
 # time zone
 timezone = 1
 
-rrdextract = rrdtool.fetch ("meteo.rrd", "AVERAGE", "-s", "-3h", "-r", "5min")
+duration = "1d"
+steps = "5min"
+if len(sys.argv) > 2:
+    duration = sys.argv[1]
+    steps    = sys.argv[2]
+    
+rrdextract = rrdtool.fetch ("meteo.rrd", "AVERAGE", "-s", "-" + duration, "-r", steps)
 
 # first line: timeline
 [start, end, step] = rrdextract[0]
