@@ -8,6 +8,8 @@ This driver supports various Pentax cameras in PTP and/or MSC mode.
 
 The driver requires two libraries: libRicohCameraSDKCpp and libPkTriggerCord.  These are included with indi-pentax in the indi-3rdparty repository.
 
+*TODO: Add instructions for installing packages.*
+
 To build/install everything manually, first clone the indi-3rdparty repository:
 
 ```
@@ -113,13 +115,21 @@ The driver *should* support multiple cameras at once, and the author is happy to
 
 *However, if your exposures are 30 seconds or less, other modes (e.g. Manual) are close to twice as fast at starting the exposure and returning the image.*
 
-3. Start the Indi server on the host with "Pentax DSLR (Native)" selected as the driver.  Click "Connect" if the driver does not auto-connect.
-4. Once connected, you may change most settings in the Image Settings tab of the Indi Control Panel, though FITs/Native settings are in the Options tab.  
-5. To capture an image using the Indi Control Panel, go to the Main Control tab and select an exposure duration.  Then click "Set" to start the exposure.  
+3. Start indiserver on the host with "Pentax DSLR (Native)" selected as a driver.  
+
+If you are starting indiserver from the command line, you can use:
+
+```
+indiserver indi_pentax
+```
+
+4. Launch your Indi client, if you are not already in the client, and click "Connect" if you are not already connected.
+5. Once connected, you should see a device pane for your Pentax camera.  The device pane will have a number of tabs.  You may change most settings in the Image Settings tab of the Indi Control Panel, though FITs/Native settings are in the Options tab.  
+6. To capture an image using the Indi Control Panel, go to the Main Control tab and select an exposure duration.  Then click "Set" to start the exposure.  
 
 *Note that unless you are in bulb mode, the exposure time you choose will not be the exact exposure time, but will be matched to the closest predefined exposure time of your current capture mode.*  
 
-6. For Live View, be sure you are in PTP mode, and select the Streaming tab.
+7. For Live View, be sure you are in PTP mode, and select the Streaming tab.
 
 Images and Live View are also supported through Ekos, as explained in the Ekos documentation.
 
@@ -127,7 +137,7 @@ Images and Live View are also supported through Ekos, as explained in the Ekos d
 
 You may switch capture modes (e.g. switch from Auto to Manual or Manual to Bulb) at any time.  
 
-To switch between PTP and MSC, you will need to unplug the camera from the host and change to the desired USB mode using the on-camera menu.  You may need to manually disconnect from the driver in the Indi client (e.g. using the "Disconnect" button) if you are in MSC mode.  Then, plug the camera back into the host and click on "Connect" again.  A separate device tab will be created for your new USB mode, if it does not already exist.  Select the new device and cick "Connect" to continue in the new USB mode.
+To switch between PTP and MSC, you will need to unplug the camera from the host and change to the desired USB mode using the on-camera menu.  You may need to manually disconnect from the driver in the Indi client (e.g. using the "Disconnect" button) if you are in MSC mode.  Then, plug the camera back into the host and click on "Connect" again.  A separate device pane will be created for your new USB mode, if it does not already exist.  Switch to the new device pane and cick "Connect" to continue in the new USB mode.
 
 ## Known Issues
 
