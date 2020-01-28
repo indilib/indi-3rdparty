@@ -47,7 +47,7 @@ sudo make install
 
 In general, a greater number of cameras are supported in MSC mode.  However, for more recent cameras, PTP mode will probably be more reliable.
 
-Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please let me know if you verify support for these or any other cameras:
+Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please update this list if you verify support for any camera:
 
 - Pentax K-01 (MSC - known bugs)
 - PENTAX K-1 (PTP, MSC?)
@@ -85,39 +85,33 @@ Cameras likely *not* to work include:
 
 ## Features
 
-The exact set of features available will depend on the current USB mode and capture mode of the camera.  Not al features will be available on all cameras.
+The exact set of features available will depend on the current USB mode and capture mode of the camera.  Not all features will be available on all cameras.  The following is a rough list of what to expect:
 
-### PTP Mode
-
-- Live View
-- Still image capture in JPEG, PEF, or DNG (saved as a .raw file)
+- Still image capture 
+- Live View (PTP mode only)
 - Capture as FITS (processor intensive), Native, or both
-- Set shutter speed to any supported by the capture mode to which the camera is currently set (No Bulb)
-- Change ISO, Exposure, White Balance
-- Change image quality and resolution
-- Toggle save to SD Card
-- Monitor battery level
-
-### MSC Mode
-
-- Still image capture in JPEG, PEF, or DNG (saved as a .raw file)
-- Capture as FITS (processor intensive), Native, or both
-- Change image quality
-- Change ISO (not working on K-70)
-- Change Exposure (not working on K-70)
-- Change White Balance
+- Change image format (JPEG, PEF, or DNG) (DNG is saved as a .raw file)
+- Predefined capture mode support (e.g. Auto, Manual, etc.)
+- Bulb mode support (MSC mode only)
 - Set shutter speed to any supported by the capture mode to which the camera is currently set
-- Bulb mode support
+- Change ISO (For certain cameras, such as K70, works in PTP mode only)
+- Change Exposure (For certain cameras, such as K70, works in PTP mode only)
+- Change White Balance
+- Change JPEG image quality 
+- Change JPEG image resolution (PTP mode only)
+- Toggle save to SD Card (PTP mode only)
 - Monitor battery level
 
 The driver *should* support multiple cameras at once, and the author is happy to verify that if anyone wants to donate another camera.  
+
+*If there's a feature that PkTriggerCord supports for your camera, but the driver currently does not, it should be possible to add support.  Contact the author with requests.*
 
 ## Operation
 
 1. First, be sure the camera is in the desired USB mode (PTP or MSC).  Then connect the camera via a USB cable to the Indi host and power the camera on.
 2. Set the camera to the appropriate capture mode.  For PTP mode, Manual (M) is suggested for maximum flexibility.  For MSC mode, Bulb (B) provides maximum flexibility.  
 
-*However, if your exposures are less than 30 seconds, other modes (e.g. Manual) are close to twice as fast at starting the exposure and returning the image.*
+*However, if your exposures are 30 seconds or less, other modes (e.g. Manual) are close to twice as fast at starting the exposure and returning the image.*
 
 3. Start the Indi server on the host with "Pentax DSLR (Native)" selected as the driver.  Click "Connect" if the driver does not auto-connect.
 4. Once connected, you may change most settings in the Image Settings tab of the Indi Control Panel, though FITs/Native settings are in the Options tab.  
