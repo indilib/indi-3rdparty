@@ -150,7 +150,7 @@ To switch between PTP and MSC, you will need to unplug the camera from the host 
 - The Ricoh Camera SDK uses a custom version of libmtp with a version number of 9.3.0.  Not surprisingly, this can cause problems if the
 standard version of libmtp is installed.  To avoid these problems, the requisite libraries are configured to be installed in the "indipentax" subdirectory of CMAKE_INSTALL_LIBDIR.  That subdirectory is then listed in the RPATH of the indi_pentax binary (not the RUNPATH, since libmtp is an indirect dependency).  I'm sure this negatively affects the modularity of indi-pentax.  I'm happy to take suggestions if there's a better way to deal with this issue.
 
-## AUTHOR / CONTRIBUTORS / SOURCE
+## Author / Acknowledgments
 
 This driver was developed by Karl Rees, copyright 2020.  
 
