@@ -8,6 +8,7 @@ include(GNUInstallDirs)
 set (INDI_PENTAX_VERSION_MAJOR 1)
 set (INDI_PENTAX_VERSION_MINOR 0)
 
+#libmtp needs the runpath, but is an indirect dependency and therefore will only get runpath if we set the following flags
 set (CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
 
 find_package(CFITSIO REQUIRED)
