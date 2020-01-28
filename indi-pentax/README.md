@@ -47,7 +47,7 @@ sudo make install
 
 In general, a greater number of cameras are supported in MSC mode.  However, for more recent cameras, PTP mode will probably be more reliable.
 
-Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please let me know if you verify support for these or any other camera:
+Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please let me know if you verify support for these or any other cameras:
 
 - Pentax K-01 (MSC - known bugs)
 - PENTAX K-1 (PTP, MSC?)
