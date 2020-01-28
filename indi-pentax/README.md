@@ -8,7 +8,7 @@ This driver supports various Pentax cameras in PTP and/or MSC mode.
 
 The driver requires two libraries: libRicohCameraSDKCpp and libPkTriggerCord.  These are included with indi-pentax in the indi-3rdparty repository.
 
-*TODO: Add instructions for installing packages.*
+*TODO (once packages are generated): Add instructions for installing packages.*
 
 To build/install everything manually, first clone the indi-3rdparty repository:
 
@@ -17,6 +17,8 @@ mkdir -p ~/Projects
 cd ~/Projects
 git clone https://github.com/karlrees/indi-3rdparty.git
 ```
+
+*TODO (once pulled): update clone location to the main repository.*
 
 Next install libRicohCameraSDK:
 
