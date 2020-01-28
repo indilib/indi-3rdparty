@@ -3,7 +3,6 @@ function createWeatherChart(category, align) {
     var offsetX = (align == 'left') ? 30 : 0;
     var chart = {
 	height: 250,
-	width: "95%",
 	type: "area",
 	toolbar: {show: false},
 	animations: {
@@ -68,7 +67,7 @@ function init() {
 };
 
 function updateSeries() {
-    $.get("CHART/RTfulldata.json", function(data) {
+    $.get("CHART/RTdata_6h.json", function(data) {
 	hchart.updateSeries([data.HR]);
 	cchart.updateSeries([data.clouds]);
 	tchart.updateSeries([data.T]);
