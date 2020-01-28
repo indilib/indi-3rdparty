@@ -4,16 +4,6 @@
 
 This driver supports various Pentax cameras in PTP and/or MSC mode.  
 
-### PTP Mode
-
-PTP mode support is provided via the Ricoh Camera SDK (see https://api.ricoh/products/camera-sdk/).  The number of cameras supported are 
-relatively few compared to MSC mode, but a greater number of settings are supported, as is Live View.  A significant drawback is that Bulb
-mode is not supported, meaning exposures are limited to 30 seconds.
-
-### MSC Mode
-
-MSC mode support is provided via PkTriggerCord (see http://pktriggercord.melda.info/), which has been wrapped in a shared library.  A larger number of cameras is supported, but the supported features vary between cameras.  Bulb mode is supported.
-
 ## Installation
 
 The driver requires two libraries: libRicohCameraSDKCpp and libPkTriggerCord.  These are included with indi-pentax in the indi-3rdparty repository.
@@ -55,41 +45,36 @@ sudo make install
 
 ## Compatibility
 
-### PTP Mode
+In general, a greater number of cameras are supported in MSC mode.  However, for more recent cameras, PTP mode will probably be more reliable.
 
-Cameras listed as officially supported by the SDK (but not yet confirmed): 
-- PENTAX K-1 Mark II
-- PENTAX KP
-- PENTAX K-1
-- PENTAX 645Z
+Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please let me know if you verify support for these or any other camera:
 
-Additional cameras confirmed to work: 
-- PENTAX K-70
+- Pentax K-01 (MSC - known bugs)
+- PENTAX K-1 (PTP, MSC?)
+- PENTAX K-1 Mark II (PTP, MSC?)
+- Pentax K-3 / K-3 II (MSC)
+- Pentax K-5 (MSC)
+- Pentax K-5 II / K-5 IIs (MSC)
+- Pentax K-7 (MSC)
+- Pentax K10D / Samsung GX-10 (MSC - fw 1.20 or later)
+- Pentax K20D / Samsung GX-20 (MSC)
+- Pentax K-30 (MSC)
+- Pentax K-50 (MSC - known bugs)
+- PENTAX K-70 (PTP, MSC - with bugs) *
+- Pentax K200D (MSC)
+- Pentax K-500 (MSC)
+- PENTAX 645Z (PTP, MSC?)
+- Pentax K-r (MSC)
+- Pentax K-m / K2000 (MSC)
+- PENTAX KP (PTP, MSC?)
 
-Cameras confirmed *not* to work: 
-- None so far, but it is expected that only more recent cameras will work.
+Cameras suspected to have limited MSC support include:
 
-### MSC Mode
+- Pentax istDS2
+- Pentax istDL
+- Pentax K100D Super
 
-The driver should work with any camera listed as supported by PkTriggerCord (see https://pktriggercord.melda.info), though only the K-70 is currently confirmed.  This includes:
-
-- Pentax K-x
-- Pentax K10D (Samsung GX-10) (fw 1.20 or later)
-- Pentax K20D (Samsung GX-20)
-- Pentax K200D
-- Pentax K-7
-- Pentax K-r
-- Pentax K-5
-- Pentax K-m / K2000
-- Pentax K-30
-- Pentax K-01 (known bugs)
-- Pentax K-5 II / K-5 IIs
-- Pentax K-50 (known bugs)
-- Pentax K-3 / K-3 II
-- Pentax K-500
-- Pentax K-70 (known bugs)
-
-Cameras listed as *not* working with PkTriggerCord include:
+Cameras likely *not* to work include:
 
 - Pentax istDS
 - Pentax istD
@@ -100,7 +85,7 @@ Cameras listed as *not* working with PkTriggerCord include:
 
 ## Features
 
-The driver supports multiple cameras at once.  The exact set of features available will depend on the current USB mode and capture mode of the camera.
+The exact set of features available will depend on the current USB mode and capture mode of the camera.  Not al features will be available on all cameras.
 
 ### PTP Mode
 
@@ -125,6 +110,8 @@ The driver supports multiple cameras at once.  The exact set of features availab
 - Bulb mode support
 - Monitor battery level
 
+The driver *should* support multiple cameras at once, and the author is happy to verify that if anyone wants to donate another camera.  
+
 ## Operation
 
 1. First, be sure the camera is in the desired USB mode (PTP or MSC).  Then connect the camera via a USB cable to the Indi host and power the camera on.
@@ -146,21 +133,21 @@ Images and Live View are also supported through Ekos, as explained in the Ekos d
 
 You may switch capture modes (e.g. switch from Auto to Manual or Manual to Bulb) at any time.  
 
-To switch between PTP and MSC, you will need to unplug the camera from the host and change to the desired USB mode using the on-camera menu.  You may need to manually disconnect the driver (e.g. using the "Disconnect" button) if you are in MSC mode.  Then, plug the camera back into the host and click on "Connect" again.  A separate device tab will be created for your new USB mode, 
-if it does not already exist.  Select the new device and cick "Connect" to continue in the new USB mode.
+To switch between PTP and MSC, you will need to unplug the camera from the host and change to the desired USB mode using the on-camera menu.  You may need to manually disconnect from the driver in the Indi client (e.g. using the "Disconnect" button) if you are in MSC mode.  Then, plug the camera back into the host and click on "Connect" again.  A separate device tab will be created for your new USB mode, if it does not already exist.  Select the new device and cick "Connect" to continue in the new USB mode.
 
 ## Known Issues
 
 - Bulb mode does not work in PTP mode.
 - Changing ISO and exposure do not work on the K-70 in MSC mode (probably other cameras as well).
-- When DNG format is selected, images are currently saved with a "raw" extension.  This is because Indi seems to have a bug with .DNG files where it grab the JPEG.
-preview out of DNGs and discards the rest of the DNG file.  The raw files may be safely renamed to ".DNG."
+- When DNG format is selected, images are currently saved with a "raw" extension.  This is because Indi seems to have a bug with .DNG files where it grabs the JPEG preview out of DNGs and discards the rest of the DNG file.  The raw files may be safely renamed to ".DNG."
 - When compiled on Ubuntu Mate 18.0.4 (Raspberry Pi 3B), PTP mode does not work.  This appears to be because the indi_pentax binary generated by the compiler is for armv7, whereas the library files provided by Ricoh are for armv6.  Yet, I currently cannot figure out how to get indi-pentax to compile if I force the compiler to armv6.  A workaraound is to use a binary generated on Rasbian.
 - The Ricoh Camera SDK uses a custom version of libmtp with a version number of 9.3.0.  Not surprisingly, this can cause problems if the
-standard version of libmtp is installed.  To avoid these problems, I install the customized libmtp along with the other library files in the "indipentax" subdirectory of CMAKE_INSTALL_LIBDIR, and then list that subdirectory in the RPATH of the indi_pentax binary (not the RUNPATH, since libmtp is an indirect dependency). I'm sure this negatively affects the modularity of indi-pentax.  I'm happy to take suggestions if there's a better way to deal with this issue.
+standard version of libmtp is installed.  To avoid these problems, the requisite libraries are configured to be installed in the "indipentax" subdirectory of CMAKE_INSTALL_LIBDIR.  That subdirectory is then listed in the RPATH of the indi_pentax binary (not the RUNPATH, since libmtp is an indirect dependency).  I'm sure this negatively affects the modularity of indi-pentax.  I'm happy to take suggestions if there's a better way to deal with this issue.
 
-## AUTHOR / CONTRIBUTORS
+## AUTHOR / CONTRIBUTORS / SOURCE
 
 This driver was developed by Karl Rees, copyright 2020.  
 
-Thanks to Andras Salamon for producing PkTrigercord, and to Ricoh Company, Ltd. for providing the Ricoh Camera SDK.
+Thanks to Andras Salamon for PkTrigercord, which is used for MSC mode.  Specifically, this driver wraps PkTriggerCord into a shared library called libPkTriggerCord.  More information about PkTriggerCord and source code available from: https://api.ricoh/products/camera-sdk/.
+
+Thanks also to Ricoh Company, Ltd. for providing the Ricoh Camera SDK (libRicohCameraSDKCpp), which is used for PTP mode.  The SDK is available from: https://api.ricoh/products/camera-sdk/.
