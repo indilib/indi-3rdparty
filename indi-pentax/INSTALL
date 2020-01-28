@@ -1,9 +1,14 @@
-GENERIC INSTALL
+INSTALL
 ============
 
-You must have CMake >= 2.4.7 in order to build this package.
+Prerequisites:
+
+libpktriggercord (install from indi-3rdparty repo)
+libricohcamerasdk (install from indi-3rdparty repo)
+
+Instructions:
 
 1) $ cmake -DCMAKE_INSTALL_PREFIX=/usr .
 2) $ make
-3) $ su -c 'make install' or sudo make install
+3) $ sudo make install
 

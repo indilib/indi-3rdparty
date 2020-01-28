@@ -29,13 +29,15 @@
 PkTriggerCordCCD::PkTriggerCordCCD(const char * name)
 {
     snprintf(this->name, 32, "%s", name);
-    setDeviceName(this->name);
+    char displayname[32];
+    snprintf(displayname, 32, "%s (MSC)", name);
+    setDeviceName(displayname);
 
     InExposure = false;
     InDownload = false;
 
     setVersion(INDI_PENTAX_VERSION_MAJOR, INDI_PENTAX_VERSION_MINOR);
-
+    LOG_INFO("The Pentax camera driver for MSC mode uses PkTriggerCord, courtesy of Andras Salamon.  See https://pktriggercord.melda.info");
 }
 
 PkTriggerCordCCD::~PkTriggerCordCCD()
@@ -209,11 +211,14 @@ void PkTriggerCordCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control,
 
 bool PkTriggerCordCCD::Connect()
 {
-    LOG_INFO("Attempting to connect to the Pentax CCD...");
     char *d = nullptr;
     device = pslr_init(name,d);
+    if (! device) {
+        LOG_ERROR("Cannot connect to Pentax camera.");
+        return false;
+    }
     int r;
-    if ((r=pslr_connect(device)) ) {
+    if (r=pslr_connect(device)) {
         if ( r != -1 ) {
             LOG_ERROR("Cannot connect to Pentax camera.");
         } else {
@@ -223,6 +228,7 @@ bool PkTriggerCordCCD::Connect()
     }
     InExposure = false;
     InDownload = false;
+    LOG_INFO("Connected to Pentax camera in MSC mode.");
     return true;
 }
 
@@ -236,30 +242,8 @@ bool PkTriggerCordCCD::Disconnect()
 
 bool PkTriggerCordCCD::setupParams()
 {
-    pslr_get_status(device, &status);
+    if (!getCaptureSettingsState()) return false;
     uff = get_user_file_format(&status);
-
-    //I don't think any of this is needed for the way I'm doing things, but leaving it in until I verify
-    float x_pixel_size, y_pixel_size;
-    int bit_depth = 16;
-    int x_1, y_1, x_2, y_2;
-
-    x_pixel_size = 3.89;
-    y_pixel_size = 3.89;
-
-    x_1 = y_1 = 0;
-    x_2       = 6000;
-    y_2       = 4000;
-
-    bit_depth = 16;
-    SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
-
-    // Let's calculate required buffer
-    int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
-    nbuf += 512;                                                                  //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(nbuf);
-
     return true;
 }
 
@@ -276,10 +260,11 @@ bool PkTriggerCordCCD::StartExposure(float duration)
             LOG_INFO("Shutter speed must be greater than 0.");
             return false;
         }
-        InExposure = true;
 
-        //just need to check if we changed exposure modes before proceeding here
-        pslr_get_status(device, &status);
+        //just need to check if we changed exposure modes and are still connected before proceeding here
+        if (!getCaptureSettingsState()) return false;
+
+        InExposure = true;
 
         //update shutter speed
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
@@ -329,7 +314,6 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         user_file_format_t ufft = *get_file_format_t(uff);
         char * output_file = TMPFILEBASE;
         fd = open_file(output_file, 1, ufft);
-        //pslr_get_status(device, &status);
 
         return true;
     }
@@ -680,7 +664,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
     else {
         return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
     }
-    pslr_get_status(device, &status);
+    if (!getCaptureSettingsState()) return false;
     return true;
 }
 
@@ -717,29 +701,20 @@ void PkTriggerCordCCD::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetCh
         }
     }
 }
-/*
-void PkTriggerCordCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control, CaptureSetting *setting, const char *label, const char *name) {
-    std::vector<string> optionList;
-    int set_idx=0, i=0;
-    for (const auto s : setting->getAvailableSettings()) {
-        optionList.push_back(s->getValue().toString());
-        if (s->getValue().toString() == setting->getValue().toString()) set_idx=i;
-        i++;
-    }
 
-    if (optionList.size() > 0)
-    {
-        IUFillSwitchVector(control, create_switch(setting->getName().c_str(), optionList, set_idx),
-                           optionList.size(), getDeviceName(),
-                           name ? name : setting->getName().c_str(),
-                           label ? label : setting->getName().c_str(),
-                           IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        defineSwitch(control);
+// returns true if still connected
+bool PkTriggerCordCCD::getCaptureSettingsState() {
+    pslr_get_status(device, &status);
+    //assume that if we don't see battery info in status, the camera is disconnected
+    if (!status.battery_1 && !status.battery_2 && !status.battery_3 && !status.battery_4) {
+        if (Disconnect()) {
+            setConnected(false, IPS_IDLE);
+            updateProperties();
+        }
+        LOG_ERROR("Error: the camera appears to no longer be connected.");
+        return false;
     }
-}
-*/
-void PkTriggerCordCCD::getCaptureSettingsState() {
-
+    else return true;
 }
 
 string PkTriggerCordCCD::getUploadFilePrefix() {

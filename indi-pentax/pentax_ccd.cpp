@@ -24,12 +24,13 @@
 PentaxCCD::PentaxCCD(std::shared_ptr<CameraDevice> camera)
 {
     this->device = camera;
-    snprintf(this->name, 32, "%s", camera->getModel().c_str());
+    snprintf(this->name, 32, "%s (PTP)", camera->getModel().c_str());
     setDeviceName(this->name);
     InExposure = false;
     InDownload = false;
 
     setVersion(INDI_PENTAX_VERSION_MAJOR, INDI_PENTAX_VERSION_MINOR);
+    LOG_INFO("The Pentax camera driver for PTP mode uses Ricoh Camera SDK, courtesy of Ricoh Company, Ltd.  See https://api.ricoh/products/camera-sdk.");
 }
 
 PentaxCCD::~PentaxCCD()
@@ -157,13 +158,10 @@ void PentaxCCD::refreshBatteryStatus() {
 
 bool PentaxCCD::Connect()
 {
-    LOG_INFO("Attempting to connect to the Pentax CCD...");
-
     if (device->getEventListeners().size() == 0) {
         listener = std::make_shared<PentaxEventHandler>(this);
         device->addEventListener(listener);
     }
-
     Response response = device->connect(DeviceInterface::USB);
     if (response.getResult() == Result::Ok) {
         LOG_INFO("Camera connected.");
@@ -174,7 +172,7 @@ bool PentaxCCD::Connect()
         }
         return false;
     }
-
+    LOG_INFO("Connected to Pentax camera in PTP mode.");
     return true;
 }
 
@@ -199,28 +197,6 @@ bool PentaxCCD::Disconnect()
 bool PentaxCCD::setupParams()
 {
     getCaptureSettingsState();
-
-    //I don't think any of this is needed for the way I'm doing things, but leaving it in comments until I verify
-    /*float x_pixel_size, y_pixel_size;
-    int bit_depth = 16;
-    int x_1, y_1, x_2, y_2;
-
-    x_pixel_size = 3.89;
-    y_pixel_size = 3.89;
-
-    x_1 = y_1 = 0;
-    x_2       = 6000;
-    y_2       = 4000;
-
-    bit_depth = 16;
-    SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
-
-    // Let's calculate required buffer
-    int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
-    nbuf += 512;                                                                  //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(nbuf);*/
-
     return true;
 }
 

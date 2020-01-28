@@ -8,6 +8,8 @@ include(GNUInstallDirs)
 set (INDI_PENTAX_VERSION_MAJOR 1)
 set (INDI_PENTAX_VERSION_MINOR 0)
 
+set (CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)

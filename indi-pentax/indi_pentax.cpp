@@ -29,41 +29,62 @@ static void cleanup()
 
 static bool isInit = false;
 
+//idea here is to allow users to switch between PTP and MSC mode automatically when driver is disconnected
+//which requires looking for new cameras.  This is a little problemmatic if more than one camera is connected, but I don't think that'd be a common use case
+bool cameraIsConnected() {
+    for (int j=0; j<cameraCount; j++) {
+        if (cameras[j]->isConnected()) return true;
+    }
+    return false;
+}
+
 void ISInit()
 {
-
     if (!isInit)
     {
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
-        cameraCount = detectedCameraDevices.size();
+        int detectedCameraCount = detectedCameraDevices.size();
+        int registeredSDKCameraCount = registeredSDKCams.size();
 
-        // look for SDK supported cameras first
-        if (cameraCount > 0) {
-            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Pentax Camera driver using Ricoh Camera SDK");
-            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Please be sure the camera is on, connected, and in PTP mode!!!");
-            DEBUGFDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "%d Pentax camera(s) have been detected.",cameraCount);
-            for (int i = 0; (i < cameraCount) && (i < MAX_DEVICES); i++) {
-                std::shared_ptr<CameraDevice> camera = detectedCameraDevices[i];
-                cameras[i] = new PentaxCCD(camera);
-            }
-        } else {
-            char *model = NULL;
-            char *device = NULL;
-
-            // now look for pktriggercord supported cameras
-            pslr_handle_t camhandle = pslr_init(model,device);
-            if (camhandle) {
-                if (!pslr_connect(camhandle)) {
-                    pslr_status status;
-                    cameras[cameraCount] = new PkTriggerCordCCD(pslr_camera_name(camhandle));
-                    cameraCount++;
-                    pslr_disconnect(camhandle);
-                    pslr_shutdown(camhandle);
+        // look for SDK supported cameras (PTP mode) first
+        if (detectedCameraCount > 0) {
+            //DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Pentax Camera PTP mode driver, based on Ricoh Camera SDK");
+            //DEBUGFDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "%d Pentax camera(s) in PTP mode have been detected.",detectedCameraCount);
+            for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
+                bool camalreadyregistered = false;
+                for (int j=0; j<registeredSDKCams.size(); j++) {
+                    if (detectedCameraDevices[i] == registeredSDKCams[j]) camalreadyregistered = true;
+                }
+                if (!camalreadyregistered) {
+                    cameras[cameraCount++] = new PentaxCCD(detectedCameraDevices[i]);
+                    registeredSDKCams.push_back(detectedCameraDevices[i]);
                 }
             }
-            if (cameraCount <= 0)
-                DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
         }
+
+        // now look for pktriggercord supported cameras (MSC mode)
+        char *model = NULL;
+        char *device = NULL;
+
+        pslr_handle_t camhandle = pslr_init(model,device);
+        if (camhandle) {
+            if (!pslr_connect(camhandle)) {
+                pslr_status status;
+                const char *camname = pslr_camera_name(camhandle);
+                bool camalreadyregistered = false;
+                for (int j=0; j<cameraCount; j++) {
+                    if (typeid(*cameras[j])==typeid(PkTriggerCordCCD) && !strncmp(camname,cameras[j]->getDeviceName(),strlen(camname))) camalreadyregistered = true;
+                }
+                if (!camalreadyregistered) {
+                    cameras[cameraCount++] = new PkTriggerCordCCD(camname);
+                }
+                pslr_disconnect(camhandle);
+                pslr_shutdown(camhandle);
+            }
+        }
+        if (cameraCount <= 0)
+            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
+
 
         atexit(cleanup);
         isInit = true;
@@ -72,7 +93,7 @@ void ISInit()
 
 void ISGetProperties(const char *dev)
 {
-    if (cameraCount == 0) isInit = false;
+    if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
@@ -88,7 +109,17 @@ void ISGetProperties(const char *dev)
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-    ISInit();
+    //check for new cameras and add them
+    if (!strcmp(name, "CONNECTION")) {
+        int oldCameraCount = cameraCount;
+        if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
+        ISInit();
+        for (int i=oldCameraCount; i<cameraCount; i++) {
+            cameras[i]->ISGetProperties(cameras[i]->getDeviceName());
+        }
+    }
+
+    //and then proceed as normal
     for (int i = 0; i < cameraCount; i++)
     {
         INDI::CCD *camera = cameras[i];

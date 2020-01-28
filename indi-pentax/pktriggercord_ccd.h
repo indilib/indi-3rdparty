@@ -83,7 +83,7 @@ protected:
     float CalcTimeLeft();
     bool setupParams();
 
-    void getCaptureSettingsState();
+    bool getCaptureSettingsState();
 
     ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mFormatSP;
 

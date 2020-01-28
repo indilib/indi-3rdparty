@@ -27,9 +27,9 @@
 
 #define MAX_DEVICES    20   /* Max device cameraCount */
 
-static int cameraCount;
+static int cameraCount = 0;
 static INDI::CCD *cameras[MAX_DEVICES];
 static char logdevicename[14]= "Pentax Driver";
-
+std::vector<std::shared_ptr<CameraDevice>> registeredSDKCams;
 
 #endif // INDI_PENTAX_H
