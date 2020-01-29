@@ -111,10 +111,10 @@ function createBarChart(name, unit, min, max) {
 }
 
 
-var hchart, cchart, tchart, pchart;
-var temperature, humidity, pressure, cloudCoverage;
+var hchart, cchart, tchart, pchart, schart;
+var temperature, humidity, pressure, cloudCoverage, sqm;
 
-var settings = {t_min: -40, t_max: 50, p_min: 940, p_max: 990};
+var settings = {t_min: -40, t_max: 50, p_min: 940, p_max: 990, sqm_min: 0, sqm_max: 25};
 
 function init() {
 
@@ -127,12 +127,16 @@ function init() {
     pressure = new ApexCharts(document.querySelector("#pressure"),
 			      createRadialBarChart('Pressure', ' hPa',
 						   settings.p_min, settings.p_max));
+    sqm = new ApexCharts(document.querySelector("#sqm"),
+			 createRadialBarChart('SQM', '',
+						   settings.sqm_min, settings.sqm_max));
     cloudCoverage = new ApexCharts(document.querySelector("#clouds"),
 				   createBarChart('Cloud Coverage', '%', 0, 100));
     temperature.render();
     humidity.render();
     pressure.render();
     cloudCoverage.render();
+    sqm.render();
     
     // create the time series charts
     
@@ -144,11 +148,14 @@ function init() {
 			    createWeatherChart("Pressure", "center", undefined));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
 			    createWeatherChart("Cloud Coverage", "center", 100));
+    schart = new ApexCharts(document.querySelector("#sqm_series"),
+			    createWeatherChart("Sky Quality", "center", undefined));
 
     hchart.render();
     cchart.render();
     tchart.render();
     pchart.render();
+    schart.render();
 
     updateSeries();
 
@@ -162,16 +169,19 @@ function updateSeries() {
 	cchart.updateSeries([data.clouds]);
 	tchart.updateSeries([data.T]);
 	pchart.updateSeries([data.P]);
+	schart.updateSeries([data.Light]);
 
 	// update current value
 	var currentTemperature   = Math.round(data.T.data[data.T.data.length-1][1]);
 	var currentCloudCoverage = Math.round(data.clouds.data[data.clouds.data.length-1][1]);
 	var currentHumidity      = Math.round(data.HR.data[data.HR.data.length-1][1]);
 	var currentPressure      = Math.round(data.P.data[data.P.data.length-1][1])
+	var currentSQM           = Math.round(data.Light.data[data.Light.data.length-1][1])
 
 	// calculate filling percentage from current temperature and pressure (slightly ugly code)
 	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
 	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
+	sqm.updateSeries([100 * (currentSQM - settings.sqm_min) / (settings.sqm_max - settings.sqm_min)]);
 	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
 	cloudCoverage.updateSeries([{name: "Cloud Coverage", data: [currentCloudCoverage]}]);
     });
