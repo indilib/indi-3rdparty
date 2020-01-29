@@ -63,7 +63,7 @@ function init() {
 
     updateSeries();
 
-    setInterval( function(){ updateSeries();}, 10000);
+    setInterval( function(){ updateSeries();}, 60000);
 };
 
 function updateSeries() {
