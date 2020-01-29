@@ -1,4 +1,4 @@
-function createWeatherChart(category, align) {
+function createWeatherChart(category, align, max) {
 
     var chart = {
 	height: 250,
@@ -20,7 +20,9 @@ function createWeatherChart(category, align) {
 	labels: {style: {colors: '#ccc'}}
     };
     var yaxis = {
-	labels: {style: {color: '#ccc'}}
+	labels: {style: {color: '#ccc'}},
+	decimalsInFloat: 0,
+	max: max
     };
 
     return {chart: chart,
@@ -106,9 +108,8 @@ function createBarChart(name, unit, min, max) {
 	yaxis: {labels: {show: false}, min: min, max: max},
 	tooltip: {enabled: false}
     });
-
-    
 }
+
 
 var hchart, cchart, tchart, pchart;
 var temperature, humidity, pressure, cloudCoverage;
@@ -136,13 +137,13 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createWeatherChart("Temperature", "center"));
+			    createWeatherChart("Temperature", "center", undefined));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createWeatherChart("Humidity", "center"));
+			    createWeatherChart("Humidity", "center", 100));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createWeatherChart("Pressure", "center"));
+			    createWeatherChart("Pressure", "center", undefined));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createWeatherChart("Cloud Coverage", "center"));
+			    createWeatherChart("Cloud Coverage", "center", 100));
 
     hchart.render();
     cchart.render();
@@ -156,6 +157,7 @@ function init() {
 
 function updateSeries() {
     $.get("CHART/RTdata_6h.json", function(data) {
+
 	hchart.updateSeries([data.HR]);
 	cchart.updateSeries([data.clouds]);
 	tchart.updateSeries([data.T]);
@@ -167,12 +169,11 @@ function updateSeries() {
 	var currentHumidity      = Math.round(data.HR.data[data.HR.data.length-1][1]);
 	var currentPressure      = Math.round(data.P.data[data.P.data.length-1][1])
 
-	// calculate filling percentage from current temperature 
+	// calculate filling percentage from current temperature and pressure (slightly ugly code)
 	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
-	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
 	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
+	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
 	cloudCoverage.updateSeries([{name: "Cloud Coverage", data: [currentCloudCoverage]}]);
-
     });
 
     // update time stamp at the bottom line
