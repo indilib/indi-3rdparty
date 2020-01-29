@@ -89,7 +89,7 @@ function createBarChart(name, unit, min, max) {
 	    enabled: true,
 	    style: {colors: ["#ccc"], fontSize: "14px"},
 	    formatter: function(val) {
-		return parseInt(val) + '%';
+		return parseInt(val) + unit;
 	    },
 	},
 	title: {
@@ -101,7 +101,7 @@ function createBarChart(name, unit, min, max) {
 	},
         xaxis: {
 	    show: false,
-	    categories: ['Humidity'],
+	    categories: [name],
 	    labels: {show: false},
 	    axisTicks: {show: false},
 	},
@@ -127,16 +127,12 @@ function init() {
     pressure = new ApexCharts(document.querySelector("#pressure"),
 			      createRadialBarChart('Pressure', ' hPa',
 						   settings.p_min, settings.p_max));
-    sqm = new ApexCharts(document.querySelector("#sqm"),
-			 createRadialBarChart('SQM', '',
-						   settings.sqm_min, settings.sqm_max));
     cloudCoverage = new ApexCharts(document.querySelector("#clouds"),
-				   createBarChart('Cloud Coverage', '%', 0, 100));
+				   createRadialBarChart('Cloud Coverage', '%', 0, 100));
     temperature.render();
     humidity.render();
     pressure.render();
     cloudCoverage.render();
-    sqm.render();
     
     // create the time series charts
     
@@ -181,9 +177,10 @@ function updateSeries() {
 	// calculate filling percentage from current temperature and pressure (slightly ugly code)
 	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
 	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
-	sqm.updateSeries([100 * (currentSQM - settings.sqm_min) / (settings.sqm_max - settings.sqm_min)]);
+	cloudCoverage.updateSeries([currentCloudCoverage]);
 	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-	cloudCoverage.updateSeries([{name: "Cloud Coverage", data: [currentCloudCoverage]}]);
+
+	document.querySelector("#sqm").textContent = currentSQM;
     });
 
     // update time stamp at the bottom line
