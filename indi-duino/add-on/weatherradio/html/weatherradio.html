@@ -21,14 +21,23 @@
     <div class="container-fluid">
       <h1 style="text-align: center; padding-top: 20px">Weather Radio</h1>
       <div class="row">
-	<div class="col-sm" id="temperature"></div>
-	<div class="col-sm" id="clouds"></div>
+	<div class="col-sm-6" align="center">
+	  <div id="temperature"></div>
+	  <div id="humidity"></div>
+	</div>
+	<div class="col-sm-6" align="center">
+	  <div id="pressure"></div>
+	  <div id="clouds"></div>
+	</div>
       </div> <!-- first row end -->
       <div class="row">
-	<div class="col-sm" id="pressure"></div>
-	<div class="col-sm" id="humidity"></div>
+	<div class="col-sm" id="temperature_series"></div>
+	<div class="col-sm" id="clouds_series"></div>
       </div> <!-- second row end -->
       <div class="row">
+	<div class="col-sm" id="humidity_series"></div>
+	<div class="col-sm" id="pressure_series"></div>
+      </div> <!-- third row end -->
 	<div class="col" style="font-size: x-small; padding: 10px 40px;">
           Last update: <span id="lastupdate">--</span>
 	</div>
