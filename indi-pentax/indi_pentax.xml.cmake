@@ -3,7 +3,7 @@
 <devGroup group="CCDs">
         <device label="Pentax DSLR (Native)" mdpd="true">
                 <driver name="Pentax DSLR (Native)">indi_pentax</driver>
-                <version>@GENERIC_VERSION_MAJOR@.@GENERIC_VERSION_MINOR@</version>
+                <version>@INDI_PENTAX_VERSION_MAJOR@.@INDI_PENTAX_VERSION_MINOR@</version>
 	</device>
 </devGroup>
 </driversList>

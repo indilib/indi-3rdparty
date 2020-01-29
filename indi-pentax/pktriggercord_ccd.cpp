@@ -30,7 +30,7 @@ PkTriggerCordCCD::PkTriggerCordCCD(const char * name)
 {
     snprintf(this->name, 32, "%s", name);
     char displayname[32];
-    snprintf(displayname, 32, "%s (MSC)", name);
+    snprintf(displayname, 32, "PENTAX %s (MSC)", name);
     setDeviceName(displayname);
 
     InExposure = false;

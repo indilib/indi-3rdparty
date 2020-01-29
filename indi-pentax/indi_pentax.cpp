@@ -48,8 +48,6 @@ void ISInit()
 
         // look for SDK supported cameras (PTP mode) first
         if (detectedCameraCount > 0) {
-            //DEBUGDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "Pentax Camera PTP mode driver, based on Ricoh Camera SDK");
-            //DEBUGFDEVICE(logdevicename,INDI::Logger::DBG_SESSION, "%d Pentax camera(s) in PTP mode have been detected.",detectedCameraCount);
             for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
                 bool camalreadyregistered = false;
                 for (int j=0; j<registeredSDKCams.size(); j++) {
@@ -93,7 +91,6 @@ void ISInit()
 
 void ISGetProperties(const char *dev)
 {
-    if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
     ISInit();
     for (int i = 0; i < cameraCount; i++)
     {
