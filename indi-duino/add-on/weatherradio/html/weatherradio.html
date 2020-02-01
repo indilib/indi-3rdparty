@@ -51,20 +51,4 @@
     </div>
     <script src="js/charts.js"></script>
   </body>
-  <script>
-
-    function init()
-    {
-
-    $.get("CHART/RTdata.json", function(data) {
-    document.getElementById("Temperature").innerHTML = (data.T).toFixed(1);
-    document.getElementById("Pressure").innerHTML = (data.P).toFixed(1);
-    document.getElementById("Humidity").innerHTML = (data.HR).toFixed(1);
-    document.getElementById("CloudCoverage").innerHTML = (data.clouds).toFixed(1);
-    })
-
-
-    }    
-
-  </script>
 </html>
