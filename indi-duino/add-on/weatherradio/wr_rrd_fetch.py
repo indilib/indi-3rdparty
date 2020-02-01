@@ -13,7 +13,7 @@ if len(sys.argv) > 2:
     duration = sys.argv[1]
     steps    = sys.argv[2]
     
-rrdextract = rrdtool.fetch ("meteo.rrd", "AVERAGE", "-s", "-" + duration, "-r", steps)
+rrdextract = rrdtool.fetch ("weather.rrd", "AVERAGE", "-s", "-" + duration, "-r", steps)
 
 # first line: timeline
 [start, end, step] = rrdextract[0]
@@ -32,7 +32,7 @@ lines = rrdextract[2]
 time = start
 
 for values in lines:
-    for pos in range(0, len(categories)-1):
+    for pos in range(0, len(categories)):
         y = values[pos]
         if isinstance(y, float):
             series[categories[pos]]["data"].append([(time + timezone*3600)*1000, round(y, 2)])

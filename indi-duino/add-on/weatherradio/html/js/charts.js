@@ -161,18 +161,18 @@ function init() {
 function updateSeries() {
     $.get("CHART/RTdata_6h.json", function(data) {
 
-	hchart.updateSeries([data.HR]);
-	cchart.updateSeries([data.clouds]);
-	tchart.updateSeries([data.T]);
-	pchart.updateSeries([data.P]);
-	schart.updateSeries([data.Light]);
+	hchart.updateSeries([data.Humidity]);
+	cchart.updateSeries([data.CloudCover]);
+	tchart.updateSeries([data.Temperature]);
+	pchart.updateSeries([data.Pressure]);
+	schart.updateSeries([data.SQM]);
 
 	// update current value
-	var currentTemperature   = Math.round(data.T.data[data.T.data.length-1][1]);
-	var currentCloudCoverage = Math.round(data.clouds.data[data.clouds.data.length-1][1]);
-	var currentHumidity      = Math.round(data.HR.data[data.HR.data.length-1][1]);
-	var currentPressure      = Math.round(data.P.data[data.P.data.length-1][1])
-	var currentSQM           = Math.round(data.Light.data[data.Light.data.length-1][1])
+	var currentTemperature   = Math.round(data.Temperature.data[data.Temperature.data.length-1][1]);
+	var currentCloudCoverage = Math.round(data.CloudCover.data[data.CloudCover.data.length-1][1]);
+	var currentHumidity      = Math.round(data.Humidity.data[data.Humidity.data.length-1][1]);
+	var currentPressure      = Math.round(data.Pressure.data[data.Pressure.data.length-1][1])
+	var currentSQM           = Math.round(data.SQM.data[data.SQM.data.length-1][1])
 
 	// calculate filling percentage from current temperature and pressure (slightly ugly code)
 	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
