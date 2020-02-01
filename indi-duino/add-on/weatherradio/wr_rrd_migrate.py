@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 #-----------------------------------------------------------------------
-# Script for creating the RRD file used to store the weather radio
-# time series.
+# Script for migrating the RRD file from meteoweb to the structure used
+# in weather radio.
 #
-# Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+# Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
 #
 # This application is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -16,12 +16,20 @@
 
 
 import sys
+import argparse
 import rrdtool
-#from meteoconfig import *
+
+parser = argparse.ArgumentParser(description="Migrate the RRD file from meteoweb to the structure used in weather radio")
+parser.add_argument("infile", default="meteo.rrd",
+                    help="meteoweb RRD file")
+parser.add_argument("outfile", default="weather.rrd",
+                    help="target RRD file")
+
+args=parser.parse_args()
 
 # 1min raw values for 24 hours, 5 min for 7*24 hours, 1hour for 1 year,
 # 1day dor 10 years.
-ret = rrdtool.create("weather.rrd", "-r", "meteo.rrd", "--step", "60",
+ret = rrdtool.create(args.outfile, "-r", args.infile, "--step", "60",
 		     "DS:Temperature=T[1]:GAUGE:600:U:U",
 		     "DS:Pressure=P[1]:GAUGE:600:U:U",
 		     "DS:Humidity=HR[1]:GAUGE:600:U:U",

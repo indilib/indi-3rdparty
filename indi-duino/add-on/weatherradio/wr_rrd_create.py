@@ -4,7 +4,7 @@
 # Script for creating the RRD file used to store the weather radio
 # time series.
 #
-# Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+# Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
 #
 # This application is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -16,12 +16,20 @@
 
 
 import sys
+import argparse
 import rrdtool
+
+parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio time series")
+parser.add_argument("rrdfile", default="weather.rrd",
+                    help="RRD file holding all time series")
+
+args=parser.parse_args()
+
 #from meteoconfig import *
 
 # 1min raw values for 24 hours, 5 min for 7*24 hours, 1hour for 1 year,
 # 1day dor 10 years.
-ret = rrdtool.create("weather.rrd", "--step", "60", "--start", '0',
+ret = rrdtool.create(args.rrdfile, "--step", "60", "--start", '0',
 		     "DS:Temperature:GAUGE:600:U:U",
 		     "DS:Pressure:GAUGE:600:U:U",
 		     "DS:Humidity:GAUGE:600:U:U",
