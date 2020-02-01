@@ -24,7 +24,7 @@ parser.add_argument("-s", "--start", default="1d",
                     help="interval starting time relative to now()")
 parser.add_argument("-r", "--steps", default="5min",
                     help="distance between to data steps")
-parser.add_argument("-t", "--timezone", default=1,
+parser.add_argument("-t", "--timezone", default=1, type=int,
                     help="Timezone for which the data series has been collected")
 parser.add_argument("rrdfile",
                     help="RRD file holding all time series")

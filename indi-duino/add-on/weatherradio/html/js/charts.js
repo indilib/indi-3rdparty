@@ -114,7 +114,7 @@ function createBarChart(name, unit, min, max) {
 var hchart, cchart, tchart, pchart, schart;
 var temperature, humidity, pressure, cloudCoverage, sqm;
 
-var settings = {t_min: -40, t_max: 50, p_min: 940, p_max: 990, sqm_min: 0, sqm_max: 25};
+var settings = {t_min: -40, t_max: 50, p_min: 973, p_max: 1053, sqm_min: 0, sqm_max: 25};
 
 function init() {
 
