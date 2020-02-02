@@ -37,7 +37,6 @@ def readWeather(indi):
     skyTemp     = weather.get_element(WEATHER_SKY_TEMPERATURE).get_float()
   
     return (("Temperature", temperature), ("Pressure", pressure),
-            ("Humidity", humidity), ("Dewpoint", dewpoint),
-            ("CloudCover", cloudCover), ("SkyTemperature", skyTemp),
-            ("SQM", sqm));
+            ("Humidity", humidity), ("CloudCover", cloudCover),
+            ("SkyTemperature", skyTemp), ("Dewpoint", dewpoint), ("SQM", sqm));
 
