@@ -40,7 +40,7 @@ except:
 
 updateString="N"
 for d in data:
-	print d[0],d[1]
+	# print d[0],d[1]
 	updateString=updateString+":"+str(d[1])
 	json_dict[d[0]]=int(d[1]*100)/100.
 
