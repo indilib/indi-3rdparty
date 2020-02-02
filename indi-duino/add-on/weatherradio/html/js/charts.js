@@ -13,6 +13,8 @@ function createWeatherChart(category, align, max) {
     var title = {
 	text: category,
 	align: align,
+	offsetX: 6,
+	offsetY: 15,
 	style: {fontSize: '14px', color: '#ccc'}
     };
     var xaxis = {
@@ -26,7 +28,7 @@ function createWeatherChart(category, align, max) {
     };
 
     return {chart: chart,
-	    title: title,
+	    subtitle: title,
 	    xaxis: xaxis,
 	    yaxis: yaxis,
 	    series: [],
@@ -137,15 +139,15 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createWeatherChart("Temperature", "center", undefined));
+			    createWeatherChart("Temperature", "left", undefined));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createWeatherChart("Humidity", "center", 100));
+			    createWeatherChart("Humidity", "left", 100));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createWeatherChart("Pressure", "center", undefined));
+			    createWeatherChart("Pressure", "left", undefined));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createWeatherChart("Cloud Coverage", "center", 100));
+			    createWeatherChart("Cloud Coverage", "left", 100));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-			    createWeatherChart("Sky Quality", "center", undefined));
+			    createWeatherChart("Sky Quality", "left", undefined));
 
     hchart.render();
     cchart.render();
