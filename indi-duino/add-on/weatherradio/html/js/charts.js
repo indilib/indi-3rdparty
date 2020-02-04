@@ -49,9 +49,10 @@ function createRadialBarChart(name, unit, min, max) {
 		startAngle: -135,
 		endAngle: 135,
 		dataLabels: {
-		    name: {show: true},
+		    name: {show: true, offsetY: -15},
 		    value: {
 			show: true,
+			offsetY: 0,
 			fontSize: "30px",
 			color: "#ccc",
 			formatter: function(val) {

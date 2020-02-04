@@ -28,7 +28,7 @@ body {
 }
 
 .parameter-title {
-    font-weight: bold;
+    color: rgba(0, 143, 252, 1);
 }
 .parameter-value {
     padding-top: 10px;
