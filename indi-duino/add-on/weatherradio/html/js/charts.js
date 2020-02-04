@@ -28,6 +28,7 @@ function createWeatherChart(category, align, max) {
 	    yaxis: yaxis,
 	    series: [],
 	    stroke: {curve: 'smooth', width: 1},
+	    legend: {labels: {colors: ['#ccc']}},
 	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
 	    dataLabels: {enabled: false}};
 }
@@ -125,6 +126,10 @@ function init() {
     humidity.render();
     pressure.render();
     cloudCoverage.render();
+
+    // special case for temperature
+    temperature.updateOptions({
+    }, true, false, false);
     
     // create the time series charts
     
@@ -155,7 +160,16 @@ function updateSeries() {
 
 	hchart.updateSeries([data.Humidity]);
 	cchart.updateSeries([data.CloudCover]);
-	tchart.updateSeries([data.Temperature]);
+	tchart.updateSeries([{data: data.Temperature.data,
+			      name: data.Temperature.name,
+			      type: "area",
+			      colors: ["#008fec"],
+			      stroke: {curve: 'smooth', width: 2}},
+			     {data: data.DewPoint.data,
+			      name: "Dew Point",
+			      colors: ["#f00"],
+			      stroke: {curve: 'smooth', width: 2},
+			      type: "line"}]);
 	pchart.updateSeries([data.Pressure]);
 	schart.updateSeries([data.SQM]);
 
