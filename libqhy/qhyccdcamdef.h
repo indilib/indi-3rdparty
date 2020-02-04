@@ -346,7 +346,8 @@
 
 #define DEVICETYPE_QHY268C      4067
 #define DEVICETYPE_QHY410C      4068
-
+#define DEVICETYPE_QHY432        4069
+#define DEVICETYPE_QHY342        4070
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   4999
@@ -1003,7 +1004,11 @@
 #define QHY410C_MAX_WIDTH        6112
 #define QHY410C_MAX_HEIGHT       4094
 
+#define QHY432_MAX_WIDTH        1624
+#define QHY432_MAX_HEIGHT       1136
 
+#define QHY342_MAX_WIDTH        6512
+#define QHY342_MAX_HEIGHT       4870
 /**
  * Type define for QHY16 */
 #define QHY16_MAX_WIDTH        	4144
@@ -1305,5 +1310,8 @@
 #define	PCIE_NIOS_WRITE_C		(0x00007771)
 
 #define	PCIE_CAPTURE_WRITE_C	(0x66666665)
+
+
+#define	PCIE_DWORD				(4)
 
 #endif

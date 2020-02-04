@@ -20,6 +20,7 @@
 typedef void qhyccd_handle;
 
 
+EXPORTFUNC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
