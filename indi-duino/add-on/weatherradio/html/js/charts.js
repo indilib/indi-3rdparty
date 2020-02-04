@@ -4,11 +4,6 @@ function createWeatherChart(category, align, max) {
 	height: 250,
 	type: "area",
 	toolbar: {show: false},
-	animations: {
-	    initialAnimation: {
-		enabled: false
-	    }
-	}
     };
     var title = {
 	text: category,
@@ -80,27 +75,21 @@ function createBarChart(name, unit, min, max) {
 	    }],
         chart: {
 	    type: 'bar',
-	    height: 80,
-	    width: "50%",
+	    height: 8,
+	    width: "67%",
 	    toolbar: {show: false},
+	    sparkline: {enabled: true}
 	},
-	offsetX: 0,
-	offsetY: 0,
-        plotOptions: {bar: {horizontal: true}},
-        dataLabels: {
-	    enabled: true,
-	    style: {colors: ["#ccc"], fontSize: "14px"},
-	    formatter: function(val) {
-		return parseInt(val) + unit;
-	    },
+        plotOptions: {
+	    bar: {
+		horizontal: true,
+		colors: {
+		    backgroundBarColors: ["#eee"],
+		    backgroundBarOpacity: 0.1
+		}
+	    }
 	},
-	title: {
-	    text: name,
-	    align: "center",
-	    offsetY: 0,
-	    floating: true,
-	    style: {color: '#ccc', fontSize: "14px"}
-	},
+        dataLabels: {enabled: false},
         xaxis: {
 	    show: false,
 	    categories: [name],
@@ -181,6 +170,7 @@ function updateSeries() {
 	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
 	cloudCoverage.updateSeries([currentCloudCoverage]);
 	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
+	document.querySelector("#humidityValue").textContent = currentHumidity + "%";
 
 	document.querySelector("#sqm").textContent = currentSQM;
     });

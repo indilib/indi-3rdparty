@@ -26,17 +26,12 @@ body {
     border-radius: 10px;
     background-color: #080808;
 }
-.card {
-    padding: 10px 25px;
-    margin: 15px 10px;
-}
 
-.weatherbox .card-footer {
-    padding: 3px 0px;
-    vertical-align: text-bottom;
-    border-width: 1px;
-    border-color: orange;
-    color: orange;
+.parameter-title {
+    font-weight: bold;
+}
+.parameter-value {
+    padding-top: 10px;
 }
 
 .apexcharts-tooltip {
