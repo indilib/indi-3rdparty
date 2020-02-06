@@ -188,8 +188,11 @@ function updateSeries() {
 	document.querySelector("#humidityValue").textContent = currentHumidity + "%";
 
 	document.querySelector("#sqm").textContent = currentSQM;
+
+	// update time stamp at the bottom line
+	var lastUpdate = data.Temperature.data[data.Temperature.data.length-1][0];
+	document.querySelector("#lastupdate").textContent = new Date(lastUpdate).toLocaleString();
+
     });
 
-    // update time stamp at the bottom line
-    document.querySelector("#lastupdate").textContent = (new Date()).toLocaleString()
 };
