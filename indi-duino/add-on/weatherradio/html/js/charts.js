@@ -27,7 +27,7 @@ function createWeatherChart(category, align, max) {
 	    xaxis: xaxis,
 	    yaxis: yaxis,
 	    series: [],
-	    stroke: {curve: 'smooth', width: 1},
+	    stroke: {curve: 'smooth', width: 2},
 	    legend: {labels: {colors: ['#ccc']}},
 	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
 	    dataLabels: {enabled: false}};
@@ -150,6 +150,10 @@ function init() {
     pchart.render();
     schart.render();
 
+    tchart.updateOptions({colors: ["#008fec", "#0077b3"],
+			  fill: {type: ['gradient', 'pattern'],
+				 pattern: {style: 'verticalLines'}}});
+
     updateSeries();
 
     setInterval( function(){ updateSeries();}, 60000);
@@ -162,14 +166,10 @@ function updateSeries() {
 	cchart.updateSeries([data.CloudCover]);
 	tchart.updateSeries([{data: data.Temperature.data,
 			      name: data.Temperature.name,
-			      type: "area",
-			      colors: ["#008fec"],
-			      stroke: {curve: 'smooth', width: 2}},
+			      type: "area"},
 			     {data: data.DewPoint.data,
 			      name: "Dew Point",
-			      colors: ["#f00"],
-			      stroke: {curve: 'smooth', width: 2},
-			      type: "line"}]);
+			      type: "area"}]);
 	pchart.updateSeries([data.Pressure]);
 	schart.updateSeries([data.SQM]);
 
