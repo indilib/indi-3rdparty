@@ -40,7 +40,7 @@
 #define MAX_Y_BIN      16   /* Max Vertical binning */
 #define TEMP_THRESHOLD .25  /* Differential temperature threshold (C)*/
 
-std::unique_ptr<FLICCD> fliCCD(new FLICCD());
+static std::unique_ptr<FLICCD> fliCCD(new FLICCD());
 
 const flidomain_t Domains[] = { FLIDOMAIN_USB, FLIDOMAIN_SERIAL, FLIDOMAIN_PARALLEL_PORT, FLIDOMAIN_INET };
 
