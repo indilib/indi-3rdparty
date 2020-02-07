@@ -1,3 +1,9 @@
+indi-mi (1.7) bionic; urgency=medium
+
+  * Reverting split since it fails to work on actual hardware.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 07 Feb 2020 10:30:00 +0300
+
 indi-mi (1.6) buster; urgency=medium
 
   * Separating from MI libraries
