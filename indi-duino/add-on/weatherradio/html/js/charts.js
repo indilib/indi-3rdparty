@@ -33,6 +33,27 @@ function createWeatherChart(category, align, max, precision) {
 	    dataLabels: {enabled: false}};
 }
 
+function createSparklineWeatherChart(category) {
+
+    return {
+	chart: {
+	    height: 120,
+	    type: "area",
+	    sparkline: {enabled: true},
+	},
+	title: {
+	    text: category,
+	    align: 'center',
+	    offsetX: -10,
+	    offsetY: 10,
+	    style: {fontSize: '12px', color: '#ccc'}
+	},
+	series: [],
+	xaxis: {type: "datetime"},
+	stroke: {curve: 'smooth', width: 2},
+	tooltip: {x: {format: "dd MMM yy, HH:mm"}}};
+}
+
 function createRadialBarChart(name, unit, min, max, precision) {
     return ({
 	chart: {
@@ -136,15 +157,15 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createWeatherChart("Temperature", "left", undefined, 1));
+			    createSparklineWeatherChart("Temperature"));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createWeatherChart("Humidity", "left", 100, 0));
+			    createSparklineWeatherChart("Humidity"));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createWeatherChart("Pressure", "left", undefined, 0));
+			    createSparklineWeatherChart("Pressure"));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createWeatherChart("Cloud Coverage", "left", 100, 0));
+			    createSparklineWeatherChart("Cloud Coverage"));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-			    createWeatherChart("Sky Quality", "left", undefined, 1));
+			    createSparklineWeatherChart("Sky Quality"));
 
     hchart.render();
     cchart.render();
