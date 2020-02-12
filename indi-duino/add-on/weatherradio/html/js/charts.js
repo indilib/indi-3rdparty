@@ -124,6 +124,8 @@ function createBarChart(name, unit, min, max) {
     });
 }
 
+var currentTimeline = "6h";
+
 function selectTimeline(timeline) {
     var els = document.querySelectorAll("button");
     Array.prototype.forEach.call(els, function (el) {
@@ -132,6 +134,7 @@ function selectTimeline(timeline) {
 
     document.activeElement.classList.add('active');
     updateSeries(timeline);
+    currentTimeline = timeline;
 }
 
 
@@ -187,9 +190,10 @@ function init() {
 			  fill: {type: ['gradient', 'pattern'],
 				 pattern: {style: 'verticalLines'}}});
 
-    updateSeries("6h");
+    updateSeries(currentTimeline);
 
-    setInterval( function(){ updateSeries();}, 60000);
+    // update timelines every 5 min
+    setInterval( function(){ updateSeries(currentTimeline);}, 5*60000);
 };
 
 function updateSeries(timeline) {
