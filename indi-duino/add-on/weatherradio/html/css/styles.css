@@ -18,15 +18,6 @@ body {
     font-size: x-small;
 }
 
-.weatherbox {
-    text-align: center;
-    text-shadow: 0 1px 1px 1px #666666;
-    box-shadow: 0px 1px 15px 1px rgba(69, 65, 78, 0.08);
-    position: relative;
-    border-radius: 10px;
-    background-color: #080808;
-}
-
 .parameter-title {
     color: rgba(0, 143, 252, 1);
 }
@@ -37,6 +28,30 @@ body {
 .apexcharts-tooltip {
     background: #f3f3f3;
     color: black;
+}
+
+button {
+    font-size: small;
+    color: rgba(239, 239, 239, 0.85);
+    // color: rgba(0, 143, 251, 0.5);
+    background: rgba(239, 239, 239, 0.3);
+    align: center;
+    width: 70px;
+    border: 0px;
+    border-bottom: 2px solid rgba(0, 143, 251, 0.85);
+    border-radius: 2px;
+    padding: 0px 17px;
+}
+
+button.active {
+    color: #fff;
+    font-weight: bold;
+    background: #008FFB;
+    border-bottom: 2px solid blue;
+}
+
+button:focus {
+    outline: 0;
 }
 
 

@@ -18,7 +18,17 @@
   </head>
   <body onload=init()>
     <div class="container-fluid">
-      <h1 style="text-align: center; padding-top: 20px">Weather Radio</h1>
+      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px">Weather Radio</h1>
+      <div class="row">
+	<div class="col-sm-12" align="center">
+          <div class="toolbar">
+            <button id="timeline_6h" onclick="selectTimeline('6h')" class="active">6h</button>
+            <button id="timeline_1d" onclick="selectTimeline('1d')">1d</button>
+            <button id="timeline_7d" onclick="selectTimeline('7d')">7d</button>
+            <button id="timeline_30d" onclick="selectTimeline('30d')">30d</button>
+          </div>
+	</div>
+      </div> <!-- first row end -->
       <div class="row">
 	<div class="col-sm-4" align="center">
 	  <div id="temperature"></div>

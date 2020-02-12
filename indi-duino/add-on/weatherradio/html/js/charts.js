@@ -124,6 +124,16 @@ function createBarChart(name, unit, min, max) {
     });
 }
 
+function selectTimeline(timeline) {
+    var els = document.querySelectorAll("button");
+    Array.prototype.forEach.call(els, function (el) {
+        el.classList.remove('active');
+    });
+
+    document.activeElement.classList.add('active');
+    updateSeries(timeline);
+}
+
 
 var hchart, cchart, tchart, pchart, schart;
 var temperature, humidity, pressure, cloudCoverage, sqm;
@@ -177,13 +187,13 @@ function init() {
 			  fill: {type: ['gradient', 'pattern'],
 				 pattern: {style: 'verticalLines'}}});
 
-    updateSeries();
+    updateSeries("6h");
 
     setInterval( function(){ updateSeries();}, 60000);
 };
 
-function updateSeries() {
-    $.get("CHART/RTdata_6h.json", function(data) {
+function updateSeries(timeline) {
+    $.get("CHART/RTdata_" + timeline + ".json", function(data) {
 
 	hchart.updateSeries([data.Humidity]);
 	cchart.updateSeries([data.CloudCover]);
