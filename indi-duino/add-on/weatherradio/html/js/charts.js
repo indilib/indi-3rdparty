@@ -157,15 +157,15 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createSparklineWeatherChart("Temperature"));
+			    createWeatherChart("Temperature", "left", undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createSparklineWeatherChart("Humidity"));
+			    createWeatherChart("Humidity", "left", 100, 0));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createSparklineWeatherChart("Pressure"));
+			    createWeatherChart("Pressure", "left", undefined, 0));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createSparklineWeatherChart("Cloud Coverage"));
+			    createWeatherChart("Cloud Coverage", "left", 100, 0));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-			    createSparklineWeatherChart("Sky Quality"));
+			    createWeatherChart("Sky Quality", "left", undefined, 1));
 
     hchart.render();
     cchart.render();

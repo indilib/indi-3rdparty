@@ -17,7 +17,6 @@
     <script src="js/apexcharts.min.js"></script>
   </head>
   <body onload=init()>
-    <div id="app" class="col-xs-5">
     <div class="container-fluid">
       <h1 style="text-align: center; padding-top: 20px">Weather Radio</h1>
       <div class="row">
@@ -36,17 +35,18 @@
 	</div>
       </div> <!-- first row end -->
       <div class="row">
-	<div class="col-sm" id="temperature_series"></div>
-	<div class="col-sm" id="humidity_series"></div>
-	<div class="col-sm" id="pressure_series"></div>
-	<div class="col-sm" id="clouds_series"></div>
-	<div class="col-sm" id="sqm_series"></div>
+	<div class="col-sm-4" id="temperature_series"></div>
+	<div class="col-sm-4" id="pressure_series"></div>
+	<div class="col-sm-4" id="clouds_series"></div>
       </div> <!-- second row end -->
-	<div class="col" style="font-size: x-small; padding: 10px 0px;">
-          Last update: <span id="lastupdate">--</span>
-	</div>
+      <div class="row">
+	<div class="col-sm-4" id="humidity_series"></div>
+	<div class="col-sm-4"></div>
+	<div class="col-sm-4" id="sqm_series"></div>
+      </div> <!-- third row end -->
+      <div class="col" style="font-size: x-small; padding: 10px 0px;">
+        Last update: <span id="lastupdate">--</span>
       </div>
-    </div>
     </div>
     <script src="js/charts.js"></script>
   </body>
