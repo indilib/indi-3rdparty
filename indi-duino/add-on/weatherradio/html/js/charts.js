@@ -214,6 +214,29 @@ function init() {
 };
 
 function updateSeries(timeline) {
+    // update last values
+    $.get("CHART/RTdata_lastupdate.json", function(data) {
+
+	var currentTemperature   = data.Temperature;
+	var currentCloudCoverage = data.CloudCover;
+	var currentHumidity      = data.Humidity;
+	var currentPressure      = data.Pressure;
+	var currentSQM           = data.SQM;
+
+	// calculate filling percentage from current temperature and pressure (slightly ugly code)
+	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
+	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
+	cloudCoverage.updateSeries([currentCloudCoverage]);
+	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
+	document.querySelector("#humidityValue").textContent = currentHumidity + "%";
+	document.querySelector("#sqm").textContent = currentSQM.toFixed(1);
+
+	// update time stamp at the bottom line
+	var lastUpdate = data.timestamp;
+	document.querySelector("#lastupdate").textContent = new Date(lastUpdate).toLocaleString();
+    });
+
+
     $.get("CHART/RTdata_" + timeline + ".json", function(data) {
 
 	hchart.updateSeries([data.Humidity]);
@@ -226,27 +249,6 @@ function updateSeries(timeline) {
 			      type: "area"}]);
 	pchart.updateSeries([data.Pressure]);
 	schart.updateSeries([data.SQM]);
-
-	// update current value
-	var currentTemperature   = data.Temperature.data[data.Temperature.data.length-1][1];
-	var currentCloudCoverage = (data.CloudCover.data[data.CloudCover.data.length-1][1]).toFixed(0);
-	var currentHumidity      = (data.Humidity.data[data.Humidity.data.length-1][1]).toFixed(0);
-	var currentPressure      = (data.Pressure.data[data.Pressure.data.length-1][1]).toFixed(0);
-	var currentSQM           = (data.SQM.data[data.SQM.data.length-1][1]).toFixed(settings.sqm_prec);
-
-	// calculate filling percentage from current temperature and pressure (slightly ugly code)
-	temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
-	pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
-	cloudCoverage.updateSeries([currentCloudCoverage]);
-	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-	document.querySelector("#humidityValue").textContent = currentHumidity + "%";
-
-	document.querySelector("#sqm").textContent = currentSQM;
-
-	// update time stamp at the bottom line
-	var lastUpdate = data.Temperature.data[data.Temperature.data.length-1][0];
-	document.querySelector("#lastupdate").textContent = new Date(lastUpdate).toLocaleString();
-
     });
 
 };
