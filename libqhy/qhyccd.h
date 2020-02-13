@@ -24,7 +24,7 @@ EXPORTFUNC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
-#if ( defined(__linux__ ) || defined(__APPLE__) ) && !defined (__ANDROID__)
+#if defined(__linux__ )&&!defined (__ANDROID__)
 
 EXPORTC void STDCALL SetQHYCCDLogFunction(std::function<void(const std::string &message)> logFunction);
 EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
@@ -746,10 +746,8 @@ EXPORTC uint32_t STDCALL ReleaseQHYCCDBurstIDLE(qhyccd_handle *h);
 
 EXPORTC void STDCALL QHYCCDQuit();
 
-#if CALLBACK_MODE_SUPPORT
 EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
-#endif
 
 #if PCIE_MODE_SUPPORT
 
