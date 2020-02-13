@@ -35,7 +35,7 @@ result = rrdtool.lastupdate (args.rrdfile)
 
 data = result['ds']
 last = result['date']
-data['timestamp'] = int(time.mktime(last.timetuple()))
+data['timestamp'] = int(time.mktime(last.timetuple())*1000)
 
 print json.dumps(data, indent=2, separators=(',', ':'), sort_keys=True)
 
