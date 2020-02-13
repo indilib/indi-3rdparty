@@ -126,15 +126,21 @@ function createBarChart(name, unit, min, max) {
 
 var currentTimeline = "6h";
 
-function selectTimeline(timeline) {
+function selectTimeline(activeElement) {
     var els = document.querySelectorAll("button");
     Array.prototype.forEach.call(els, function (el) {
         el.classList.remove('active');
     });
 
-    document.activeElement.classList.add('active');
-    updateSeries(timeline);
-    currentTimeline = timeline;
+    activeElement.target.classList.add('active');
+
+    // extract timeline from button ID
+    var id = activeElement.target.id;
+    if (id.indexOf("timeline_") >= 0) {
+	timeline = id.substring(9, id.length);
+	updateSeries(timeline);
+	currentTimeline = timeline;
+    }
 }
 
 
@@ -146,6 +152,17 @@ var settings = {t_min: -40, t_max: 50, t_prec: 1,
 		sqm_min: 0, sqm_max: 25, sqm_prec: 1};
 
 function init() {
+
+    // add event listeners to buttons
+    document.querySelector("#timeline_6h").
+	addEventListener('click', function (e) {selectTimeline(e);});
+    document.querySelector("#timeline_1d").
+	addEventListener('click', function (e) {selectTimeline(e);});
+    document.querySelector("#timeline_7d").
+	addEventListener('click', function (e) {selectTimeline(e);});
+    document.querySelector("#timeline_30d").
+	addEventListener('click', function (e) {selectTimeline(e);});
+
 
     // create charts for current values
     temperature = new ApexCharts(document.querySelector("#temperature"),
