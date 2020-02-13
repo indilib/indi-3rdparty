@@ -175,10 +175,13 @@ function init() {
 						   settings.p_min, settings.p_max, settings.p_prec));
     cloudCoverage = new ApexCharts(document.querySelector("#clouds"),
 				   createRadialBarChart('Cloud Coverage', '%', 0, 100, 0));
+    sqm = new ApexCharts(document.querySelector("#sqm"),
+			      createBarChart('SQM', '%', settings.sqm_min, settings.sqm_max));
     temperature.render();
     humidity.render();
     pressure.render();
     cloudCoverage.render();
+    sqm.render();
 
     // special case for temperature
     temperature.updateOptions({
@@ -229,7 +232,8 @@ function updateSeries(timeline) {
 	cloudCoverage.updateSeries([currentCloudCoverage]);
 	humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
 	document.querySelector("#humidityValue").textContent = currentHumidity + "%";
-	document.querySelector("#sqm").textContent = currentSQM.toFixed(1);
+	sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
+	document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
 
 	// update time stamp at the bottom line
 	var lastUpdate = data.timestamp;

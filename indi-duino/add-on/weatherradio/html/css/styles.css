@@ -20,8 +20,11 @@ body {
 
 .parameter-title {
     color: rgba(0, 143, 252, 1);
+    font-weight: bold;
 }
 .parameter-value {
+    color: #ccc;
+    font-weight: regular;
     padding-top: 10px;
 }
 
