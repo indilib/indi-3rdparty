@@ -1,2 +1,1 @@
-
-#define METEORADIO_VERSION "0.4";
+#define METEORADIO_VERSION "0.5";
