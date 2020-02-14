@@ -223,6 +223,9 @@ function init() {
 					   style: {color: '#ccc'}}}
 				 ]});
 
+    humidity.updateOptions({colors: ['#9933ff']});
+    sqm.updateOptions({colors: ['#9933ff']});
+
     updateSeries(currentTimeline);
 
     // update timelines every 5 min
