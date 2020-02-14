@@ -1,34 +1,19 @@
-function createWeatherChart(category, align, max, precision) {
+function createWeatherChart() {
 
     var chart = {
 	height: 250,
 	type: "area",
 	toolbar: {show: false},
     };
-    var title = {
-	text: category,
-	align: align,
-	offsetX: 6,
-	offsetY: 15,
-	style: {fontSize: '14px', color: '#ccc'}
-    };
     var xaxis = {
 	type: "datetime",
 	labels: {style: {colors: '#ccc'}}
     };
-    var yaxis = {
-	labels: {style: {color: '#ccc'}},
-	decimalsInFloat: precision,
-	max: max
-    };
-
     return {chart: chart,
-	    subtitle: title,
 	    xaxis: xaxis,
-	    yaxis: yaxis,
 	    series: [],
 	    stroke: {curve: 'smooth', width: 2},
-	    legend: {labels: {colors: ['#ccc']}},
+	    legend: {labels: {colors: ['#ccc']}, showForSingleSeries: true},
 	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
 	    dataLabels: {enabled: false}};
 }
@@ -144,7 +129,7 @@ function selectTimeline(activeElement) {
 }
 
 
-var hchart, cchart, tchart, pchart, schart;
+var tChart, cchart, pchart;
 var temperature, humidity, pressure, cloudCoverage, sqm;
 
 var settings = {t_min: -40, t_max: 50, t_prec: 1,
@@ -189,26 +174,54 @@ function init() {
     
     // create the time series charts
     
-    tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createWeatherChart("Temperature", "left", undefined, 1));
-    hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createWeatherChart("Humidity", "left", 100, 0));
+    tChart = new ApexCharts(document.querySelector("#temperature_series"),
+			      createWeatherChart());
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createWeatherChart("Pressure", "left", undefined, 0));
+			    createWeatherChart());
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createWeatherChart("Cloud Coverage", "left", 100, 0));
-    schart = new ApexCharts(document.querySelector("#sqm_series"),
-			    createWeatherChart("Sky Quality", "left", undefined, 1));
+			      createWeatherChart());
 
-    hchart.render();
-    cchart.render();
-    tchart.render();
+    tChart.render();
     pchart.render();
-    schart.render();
+    cchart.render();
 
-    tchart.updateOptions({colors: ["#008fec", "#0077b3"],
-			  fill: {type: ['gradient', 'pattern'],
-				 pattern: {style: 'verticalLines'}}});
+    tChart.updateOptions({colors: ["#008fec", "#0077b3", '#9933ff'],
+			    fill: {type: ['gradient', 'pattern', 'gradient'],
+				   pattern: {style: 'verticalLines'}},
+			    yaxis: [{seriesName: 'Temperature',
+				     labels: {style: {color: '#ccc'}},
+				     decimalsInFloat: 1,
+				     title: {text: '°C',
+					     style: {color: '#ccc'}}},
+				    {seriesName: 'Temperature', show: false},
+				    {seriesName: 'Percent',
+				     opposite: true,
+				     labels: {style: {color: '#ccc'}},
+				     decimalsInFloat: 0,
+				     max: 100,
+				     title: {text: '%',
+					     style: {color: '#ccc'}}}
+				   ]});
+
+    pchart.updateOptions({yaxis: {labels: {style: {color: '#ccc'}},
+				  decimalsInFloat: 0,
+				  title: {text: 'hPa',
+					  style: {color: '#ccc'}}}});
+    cchart.updateOptions({colors: ["#008fec", "#9933ff"],
+			  fill: {type: ['gradient', 'gradient']},
+			  yaxis: [{seriesName: 'Percent',
+				   labels: {style: {color: '#ccc'}},
+				   decimalsInFloat: 0,
+				   max: 100,
+				   title: {text: '%',
+					   style: {color: '#ccc'}}},
+				  {seriesName: 'SQM',
+				   opposite: true,
+				   labels: {style: {color: '#ccc'}},
+				   decimalsInFloat: 1,
+				   title: {text: 'mag/arcsec²',
+					   style: {color: '#ccc'}}}
+				 ]});
 
     updateSeries(currentTimeline);
 
@@ -243,16 +256,22 @@ function updateSeries(timeline) {
 
     $.get("CHART/RTdata_" + timeline + ".json", function(data) {
 
-	hchart.updateSeries([data.Humidity]);
-	cchart.updateSeries([data.CloudCover]);
-	tchart.updateSeries([{data: data.Temperature.data,
+	tChart.updateSeries([{data: data.Temperature.data,
 			      name: data.Temperature.name,
 			      type: "area"},
 			     {data: data.DewPoint.data,
 			      name: "Dew Point",
+			      type: "area"},
+			     {data: data.Humidity.data,
+			      name: "Humidity",
 			      type: "area"}]);
 	pchart.updateSeries([data.Pressure]);
-	schart.updateSeries([data.SQM]);
+	cchart.updateSeries([{data: data.CloudCover.data,
+			      name: "Cloud Cover",
+			      type: "area"},
+			     {data: data.SQM.data,
+			      name: "Sky Quality",
+			      type: "area"}]);
     });
 
 };
