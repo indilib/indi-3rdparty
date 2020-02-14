@@ -17,8 +17,13 @@
     <script src="js/apexcharts.min.js"></script>
   </head>
   <body onload=init()>
+      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Weather Radio</h1>
     <div class="container-fluid">
-      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px">Weather Radio</h1>
+      <div class="row">
+	<div class="col-sm-12" align="center" style="font-size: x-small; padding: 0px;">
+          Last update: <span id="lastupdate">--</span>
+	</div>
+      </div> <!-- Last update row end -->
       <div class="row">
 	<div class="col-sm-12" align="center">
           <div class="toolbar">
@@ -28,7 +33,7 @@
             <button id="timeline_30d">30d</button>
           </div>
 	</div>
-      </div> <!-- first row end -->
+      </div> <!-- button row end -->
       <div class="row">
 	<div class="col-sm-4" align="center">
 	  <div id="temperature"></div>
@@ -45,20 +50,17 @@
 	  <div id="sqm" style="padding-top: 0px; margin-top: 0px"></div>
 	  <div id="sqmValue" class="parameter-value"></div>
 	</div>
-      </div> <!-- first row end -->
+      </div> <!-- row with current weather data end -->
       <div class="row">
 	<div class="col-sm-4" id="temperature_series"></div>
 	<div class="col-sm-4" id="pressure_series"></div>
 	<div class="col-sm-4" id="clouds_series"></div>
-      </div> <!-- second row end -->
+      </div> <!-- first time series row end -->
       <div class="row">
 	<div class="col-sm-4" id="humidity_series"></div>
 	<div class="col-sm-4"></div>
 	<div class="col-sm-4" id="sqm_series"></div>
-      </div> <!-- third row end -->
-      <div class="col" style="font-size: x-small; padding: 10px 0px;">
-        Last update: <span id="lastupdate">--</span>
-      </div>
+      </div> <!-- second time series row end -->
     </div>
     <script src="js/charts.js"></script>
   </body>
