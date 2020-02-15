@@ -18,6 +18,7 @@ import sys
 import argparse
 import json
 import rrdtool
+from wr_config import *
 
 # default step sizes
 default = {}
@@ -34,7 +35,7 @@ parser.add_argument("-r", "--steps",
                     help="distance between to data steps")
 parser.add_argument("-t", "--timezone", default=1, type=int,
                     help="Timezone for which the data series has been collected")
-parser.add_argument("rrdfile",
+parser.add_argument("rrdfile", nargs='*', default=RRDFILE,
                     help="RRD file holding all time series")
 
 args=parser.parse_args()
