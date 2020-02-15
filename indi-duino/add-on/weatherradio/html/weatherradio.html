@@ -37,7 +37,7 @@
       <div class="row">
 	<div class="col-sm-4" align="center">
 	  <div id="temperature"></div>
-	  <div class="parameter-title" style="color: #9933ff">Humidity</div>
+	  <div class="parameter-title">Humidity</div>
 	  <div id="humidity" style="padding-top: 0px; margin-top: 0px"></div>
 	  <div id="humidityValue" class="parameter-value"></div>
 	</div>
@@ -46,7 +46,7 @@
 	</div>
 	<div class="col-sm-4" align="center">
 	  <div id="clouds"></div>
-	  <div class="parameter-title" style="color: #9933ff">SQM</div>
+	  <div class="parameter-title">SQM</div>
 	  <div id="sqm" style="padding-top: 0px; margin-top: 0px"></div>
 	  <div id="sqmValue" class="parameter-value"></div>
 	</div>
@@ -55,7 +55,12 @@
 	<div class="col-sm-4" id="temperature_series"></div>
 	<div class="col-sm-4" id="pressure_series"></div>
 	<div class="col-sm-4" id="clouds_series"></div>
-      </div> <!-- time series row end -->
+      </div> <!-- first time series row end -->
+      <div class="row">
+	<div class="col-sm-4" id="humidity_series"></div>
+	<div class="col-sm-4"></div>
+	<div class="col-sm-4" id="sqm_series"></div>
+      </div> <!-- second time series row end -->
     </div>
     <script src="js/charts.js"></script>
   </body>
