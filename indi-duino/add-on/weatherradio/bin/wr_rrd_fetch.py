@@ -19,10 +19,18 @@ import argparse
 import json
 import rrdtool
 
+# default step sizes
+default = {}
+default['steps'] = {}
+default['steps']['6h'] = '5min'
+default['steps']['1d'] = '15min'
+default['steps']['7d'] = '1h'
+default['steps']['30d'] = '1d'
+
 parser = argparse.ArgumentParser(description="Fetch time series from the RRD file as JSON document")
-parser.add_argument("-s", "--start", default="1d",
+parser.add_argument("-s", "--start",
                     help="interval starting time relative to now()")
-parser.add_argument("-r", "--steps", default="5min",
+parser.add_argument("-r", "--steps",
                     help="distance between to data steps")
 parser.add_argument("-t", "--timezone", default=1, type=int,
                     help="Timezone for which the data series has been collected")
@@ -30,7 +38,14 @@ parser.add_argument("rrdfile",
                     help="RRD file holding all time series")
 
 args=parser.parse_args()
-    
+
+# use default step sizes
+if not args.steps:
+    if args.start in default['steps']:
+        args.steps = default['steps'][args.start]
+    else:
+        args.steps = '5min'
+
 rrdextract = rrdtool.fetch (args.rrdfile, "AVERAGE", "-s", "-" + args.start,
                             "-r", args.steps)
 
