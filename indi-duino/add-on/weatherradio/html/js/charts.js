@@ -208,7 +208,8 @@ function init() {
 
     tchart.updateOptions({colors: ["#008fec", "#0077b3"],
 			  fill: {type: ['gradient', 'pattern'],
-				 pattern: {style: 'verticalLines'}}});
+				 pattern: {style: 'verticalLines'}},
+			  legend: {show: false}});
 
     updateSeries(currentTimeline);
 
