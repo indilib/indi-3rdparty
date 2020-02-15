@@ -27,7 +27,7 @@ INDIDEVICEPORT="/dev/ttyUSB0"
 RRDFILE="./weather.rrd"
 
 # path to the JSON files holding the data
-DATAPATH="./html/data/"
+DATAPATH="./html/data"
 
 ######### INDI Weather vector and element names
 WEATHER="WEATHER_PARAMETERS"

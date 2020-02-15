@@ -35,6 +35,8 @@ parser.add_argument("-r", "--steps",
                     help="distance between to data steps")
 parser.add_argument("-t", "--timezone", default=1, type=int,
                     help="Timezone for which the data series has been collected")
+parser.add_argument("-o", "--output",
+                    help="JSON file to be written")
 parser.add_argument("rrdfile", nargs='*', default=RRDFILE,
                     help="RRD file holding all time series")
 
@@ -46,6 +48,10 @@ if not args.steps:
         args.steps = default['steps'][args.start]
     else:
         args.steps = '5min'
+
+# if not set, use default output file
+if not args.output:
+    args.output = DATAPATH + "/RTdata_" + args.start + ".json"
 
 rrdextract = rrdtool.fetch (args.rrdfile, "AVERAGE", "-s", "-" + args.start,
                             "-r", args.steps)
@@ -73,7 +79,9 @@ for values in lines:
             series[categories[pos]]["data"].append([(time + args.timezone*3600)*1000, round(y, 2)])
     time += step
 
-print json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True)
+output = open(args.output, 'w')
+output.write(json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True))
+output.close()
 
 
 
