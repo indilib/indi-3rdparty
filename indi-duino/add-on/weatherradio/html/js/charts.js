@@ -219,7 +219,7 @@ function init() {
 
 function updateSeries(timeline) {
     // update last values
-    $.get("CHART/RTdata_lastupdate.json", function(data) {
+    $.get("data/RTdata_lastupdate.json", function(data) {
 
 	var currentTemperature   = data.Temperature;
 	var currentCloudCoverage = data.CloudCover;
@@ -242,7 +242,7 @@ function updateSeries(timeline) {
     });
 
 
-    $.get("CHART/RTdata_" + timeline + ".json", function(data) {
+    $.get("data/RTdata_" + timeline + ".json", function(data) {
 
 	hchart.updateSeries([data.Humidity]);
 	cchart.updateSeries([data.CloudCover]);
