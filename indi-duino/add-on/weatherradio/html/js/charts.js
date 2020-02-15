@@ -1,4 +1,4 @@
-function createWeatherChart(category, align, max, precision) {
+function createWeatherChart(category, unit, align, max, precision) {
 
     var chart = {
 	height: 250,
@@ -6,7 +6,7 @@ function createWeatherChart(category, align, max, precision) {
 	toolbar: {show: false},
     };
     var title = {
-	text: category,
+	text: category + " [" + unit + "]",
 	align: align,
 	offsetX: 6,
 	offsetY: 15,
@@ -29,7 +29,11 @@ function createWeatherChart(category, align, max, precision) {
 	    series: [],
 	    stroke: {curve: 'smooth', width: 2},
 	    legend: {labels: {colors: ['#ccc']}},
-	    tooltip: {x: {format: "dd MMM yy, HH:mm"}},
+	    tooltip: {x: {format: "dd MMM yy, HH:mm"},
+		      y: {formatter: function(value,
+					      {series, seriesIndex,
+					       dataPointIndex, w }) {
+			  return value.toFixed(precision) + unit;}}},
 	    dataLabels: {enabled: false}};
 }
 
@@ -190,15 +194,15 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-			    createWeatherChart("Temperature", "left", undefined, 1));
+			    createWeatherChart("Temperature", "°C", "left", undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-			    createWeatherChart("Humidity", "left", 100, 0));
+			    createWeatherChart("Humidity", "%", "left", 100, 0));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-			    createWeatherChart("Pressure", "left", undefined, 0));
+			    createWeatherChart("Pressure", "hPa", "left", undefined, 0));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-			    createWeatherChart("Cloud Coverage", "left", 100, 0));
+			    createWeatherChart("Cloud Coverage", "%", "left", 100, 0));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-			    createWeatherChart("Sky Quality", "left", undefined, 1));
+			    createWeatherChart("Sky Quality", "mag/arcsec²", "left", undefined, 1));
 
     hchart.render();
     cchart.render();
