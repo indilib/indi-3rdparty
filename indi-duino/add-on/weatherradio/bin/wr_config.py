@@ -16,23 +16,18 @@
 
 
 # INDI server delivering weather data
-INDISERVER="rasp-indi"
+INDISERVER="localhost"
 INDIPORT="7624"
 
 # INDI device
 INDIDEVICE="Weather Radio"
 INDIDEVICEPORT="/dev/ttyUSB0"
 
-# weather station
-OWNERNAME="Sterne-Jäger"
-SITENAME="Hessental LG10"
-ALTITUDE=375
-
 # RRD storage holding time series data
 RRDFILE="./weather.rrd"
 
 # path to the JSON files holding the data
-DATAPATH="./html/CHART/"
+DATAPATH="./html/data/"
 
 ######### INDI Weather vector and element names
 WEATHER="WEATHER_PARAMETERS"
