@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------------
 # Python library for weather radio.
 #
-# Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+# Copyright (C) 2019-20 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
 #
 # This application is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -40,3 +40,22 @@ def readWeather(indi):
             ("Humidity", humidity), ("CloudCover", cloudCover),
             ("SkyTemperature", skyTemp), ("Dewpoint", dewpoint), ("SQM", sqm));
 
+def readSensors(indi):
+    result = {}
+    bme280 = indi.get_vector(INDIDEVICE, "BME280")
+    result['BME280_Temp'] = bme280.get_element('Temp').get_float();
+    result['BME280_Pres'] = bme280.get_element('Pres').get_float();
+    result['BME280_Hum'] = bme280.get_element('Hum').get_float();
+
+    dht = indi.get_vector(INDIDEVICE, "DHT")
+    result['DHT_Temp'] = dht.get_element('Temp').get_float();
+    result['DHT_Hum'] = dht.get_element('Hum').get_float();
+
+    mlx90614 = indi.get_vector(INDIDEVICE, "MLX90614")
+    result['MLX90614_Tamb'] = mlx90614.get_element('T amb').get_float();
+    result['MLX90614_Tobj'] = mlx90614.get_element('T obj').get_float();
+
+    tsl2591 = indi.get_vector(INDIDEVICE, "TSL2591")
+    result['TSL2591_Lux'] = tsl2591.get_element('Lux').get_float();
+
+    return result;

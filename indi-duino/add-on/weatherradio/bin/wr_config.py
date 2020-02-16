@@ -26,6 +26,9 @@ INDIDEVICEPORT="/dev/ttyUSB0"
 # RRD storage holding time series data
 RRDFILE="./weather.rrd"
 
+# RRD storage holding time series for raw sensor data
+RRDSENSORSFILE="./sensors.rrd"
+
 # path to the JSON files holding the data
 DATAPATH="./html/data"
 
