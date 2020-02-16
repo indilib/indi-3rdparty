@@ -3,8 +3,11 @@
 
 #include "NexStarAUXScope.h"
 
-#include <inditelescope.h>
+//#include <indicom.h>
+//#include <inditelescope.h>
 #include <alignment/AlignmentSubsystemForDrivers.h>
+//#include "connectionplugins/connectionserial.h"
+//#include "connectionplugins/connectiontcp.h"
 
 class NexStarEvo : public INDI::Telescope, public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
@@ -110,6 +113,9 @@ class NexStarEvo : public INDI::Telescope, public INDI::AlignmentSubsystem::Alig
     // Tracing in timer tick
     int TraceThisTickCount;
     bool TraceThisTick;
+
+    // connection
+    uint8_t nseConnection { CONNECTION_SERIAL | CONNECTION_TCP };
 
     unsigned int DBG_NSEVO;
     unsigned int DBG_MOUNT;

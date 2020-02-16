@@ -3,8 +3,6 @@
 
 #include "config.h"
 
-#include <indicom.h>
-#include <connectionplugins/connectionserial.h>
 
 using namespace INDI::AlignmentSubsystem;
 
@@ -73,6 +71,13 @@ NexStarEvo::NexStarEvo()
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
                                TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION,
                            4);
+
+    //FP
+    LOG_INFO("NexStarEvo instancing\n");
+
+    //FP Both communication available, Serial and network (tcp/ip)
+    setTelescopeConnection(CONNECTION_SERIAL | CONNECTION_TCP);
+
     // Approach from no further then degs away
     Approach = 1.0;
 
@@ -148,6 +153,7 @@ bool NexStarEvo::Connect()
 bool NexStarEvo::Handshake()
 {
     //scope.initScope(tcpConnection->host(), tcpConnection->port());
+    
     return scope.Connect(PortFD);
 }
 
@@ -358,15 +364,18 @@ bool NexStarEvo::initProperties()
     IUFillSwitchVector(&SlewRateSP, SlewRateS, 4, getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB,
                        IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
     TrackState = SCOPE_IDLE;
-
-    // We don't want serial port for now
-    unRegisterConnection(serialConnection);
-
+ 
     /* Add debug controls so we may debug driver if necessary */
     addDebugControl();
 
-    // Add alignment properties
+    /* Add alignment properties */
     InitAlignmentProperties(this);
+
+    //FP default connection options
+    serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
+
+    tcpConnection->setDefaultHost("192.168.1.1");
+    tcpConnection->setDefaultPort(2000);
 
     return true;
 }

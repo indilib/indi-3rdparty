@@ -1,14 +1,16 @@
 
 #include "NexStarAUXScope.h"
 
-#include <inditelescope.h>
-
 #include <algorithm>
 #include <math.h>
 #include <queue>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+
+#define READ_TIMEOUT 1 		// s
+#define CTS_TIMEOUT 100		// ms
+#define RTS_DELAY 50		// ms
 
 #define BUFFER_SIZE 10240
 int MAX_CMD_LEN = 32;
@@ -212,14 +214,29 @@ NexStarAUXScope::~NexStarAUXScope()
     closeConnection();
 }
 
+const char *NexStarAUXScope::getDefaultName()
+{
+    return (char *)"NexStar Aux Scope";
+}  
+
+const char *NexStarAUXScope::getDeviceName()
+{
+    return (char *)"NexStar Aux Scope";
+}  
+
+bool NexStarAUXScope::ReadScopeStatus()
+{
+    return true;
+}
+
 void NexStarAUXScope::initScope(char const *ip, int port)
 {
     fprintf(stderr, "Preset scope IP %s:%d\n", ip, port);
-    detectScope();
-    bzero(&addr, sizeof(addr));
-    addr.sin_family      = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(ip);
-    addr.sin_port        = htons(port);
+    //detectScope();
+    //bzero(&addr, sizeof(addr));
+    //addr.sin_family      = AF_INET;
+    //addr.sin_addr.s_addr = inet_addr(ip);
+    //addr.sin_port        = htons(port);
     initScope();
 };
 
@@ -233,11 +250,15 @@ void NexStarAUXScope::initScope()
     // Park position at the south horizon.
     Alt = targetAlt = Az = targetAz = 0;
     Lat = Lon = Elv = 0;
-    sock            = 0;
+    //sock            = 0;
+    DEBUG = true;
 };
 
 bool NexStarAUXScope::detectScope()
 {
+    //FP
+    //return true;
+
     struct sockaddr_in myaddr;           /* our address */
     struct sockaddr_in remaddr;          /* remote address */
     socklen_t addrlen = sizeof(remaddr); /* length of addresses */
@@ -296,14 +317,17 @@ bool NexStarAUXScope::detectScope()
     return false;
 }
 
-bool NexStarAUXScope::Connect(int PortFD)
+bool NexStarAUXScope::Connect(int portFD)
 {
+    PortFD = portFD;
+
     if (PortFD > 0)
     {
         // We are connected. Just start processing!
-        fprintf(stderr, "Connection ready. Starting Processing.\n");
-        sock=PortFD;
-        msleep(500);
+        //fprintf(stderr, "Connection ready. Starting Processing.\n");
+	//DEBUG(DBG_NSEVO,"Connection ready. Starting Processing.\n");
+        //FPsock=PortFD;
+        //msleep(500);
         readMsgs();
         return true;
     }
@@ -312,7 +336,9 @@ bool NexStarAUXScope::Connect(int PortFD)
     // This is just to print where is the scope if there is no connection
     if (!detectScope())
     {
-        fprintf(stderr, "Cannot detect the scope!\n");
+        //fprintf(stderr, "Cannot detect the scope!\n");
+	//FP
+        LOG_INFO("Connect: cannot detect the scope!\n");
     }
     return false;
 
@@ -333,12 +359,16 @@ bool NexStarAUXScope::UpdateLocation(double lat, double lon, double elev)
     return true;
 }
 
+// FP modified
 void NexStarAUXScope::closeConnection()
 {
-    if (sock > 0)
+    //if (sock > 0)
+    if (PortFD > 0)
     {
-        close(sock);
-        sock = 0;
+        //close(sock);
+        //sock = 0;
+        close(PortFD);
+        PortFD = 0;
     }
 }
 
@@ -414,6 +444,7 @@ bool NexStarAUXScope::GoToFast(long alt, long az, bool track)
     az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendCmd(altcmd);
+    readMsgs();
     sendCmd(azmcmd);
     readMsgs();
     //DEBUG=false;
@@ -442,6 +473,7 @@ bool NexStarAUXScope::GoToSlow(long alt, long az, bool track)
     az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendCmd(altcmd);
+    readMsgs();
     sendCmd(azmcmd);
     readMsgs();
     //DEBUG=false;
@@ -466,6 +498,7 @@ bool NexStarAUXScope::Track(long altRate, long azRate)
     azmcmd.setPosition(long(std::abs(AzRate)));
 
     sendCmd(altcmd);
+    readMsgs();
     sendCmd(azmcmd);
     readMsgs();
     return true;
@@ -478,16 +511,19 @@ void NexStarAUXScope::querryStatus()
     {
         AUXCommand cmd(MC_GET_POSITION, APP, trg[i]);
         sendCmd(cmd);
+        readMsgs();
     }
     if (slewingAlt)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, ALT);
         sendCmd(cmd);
+        readMsgs();
     }
     if (slewingAz)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, AZM);
         sendCmd(cmd);
+        readMsgs();
     }
 }
 
@@ -631,6 +667,7 @@ void NexStarAUXScope::processCmd(AUXCommand &m)
         }
 }
 
+//FP MODIFIED 
 void NexStarAUXScope::readMsgs()
 {
     int n, i;
@@ -638,72 +675,101 @@ void NexStarAUXScope::readMsgs()
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    if (sock <= 0)
+    //if (sock <= 0)
+    if (PortFD <= 0)
         return;
 
-    timeval tv;
-    tv.tv_sec  = 0;
-    tv.tv_usec = 50000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-    while ((n = recv(sock, buf, sizeof(buf), MSG_DONTWAIT | MSG_PEEK)) > 0)
+    //FPtimeval tv;
+    //tv.tv_sec  = 0;
+    //tv.tv_usec = 50000;
+    //setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+    //while ((n = recv(sock, buf, sizeof(buf), MSG_DONTWAIT | MSG_PEEK)) > 0)
+   
+    // search for response packet preamble (0x3b)
+    do 
     {
-        if (DEBUG)
+        if (nevo_tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
+            return;
+    }
+    while (buf[0] != 0x3b);
+
+    // packet preamble is found, now read packet length.
+    if (nevo_tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
+        return;
+
+    // now packet length is known, read the rest of the packet.
+    if (nevo_tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n)
+        != TTY_OK || n != buf[1] + 1)
+        return;
+
+    n += 2;
+
+    if (DEBUG)
+    {
+        fprintf(stderr, "Got %d bytes: ", n);
+        for (i = 0; i < n; i++)
+            fprintf(stderr, "%02x ", buf[i]);
+        fprintf(stderr, "\n");
+    }
+    for (i = 0; i < n;)
+    {
+        //if (DEBUG) fprintf(stderr,"%d ",i);
+        if (buf[i] == 0x3b)
         {
-            fprintf(stderr, "Got %d bytes: ", n);
-            for (i = 0; i < n; i++)
-                fprintf(stderr, "%02x ", buf[i]);
-            fprintf(stderr, "\n");
-        }
-        for (i = 0; i < n;)
-        {
-            //if (DEBUG) fprintf(stderr,"%d ",i);
-            if (buf[i] == 0x3b)
+            int shft;
+            shft = i + buf[i + 1] + 3;
+            if (shft <= n)
             {
-                int shft;
-                shft = i + buf[i + 1] + 3;
-                if (shft <= n)
-                {
-                    //if (DEBUG) prnBytes(buf+i,shft-i);
-                    buffer b(buf + i, buf + shft);
-                    //if (DEBUG) dumpMsg(b);
-                    cmd.parseBuf(b);
-                    processCmd(cmd);
-                }
-                else
-                {
-                    fprintf(stderr, "Partial message recv. dropping (i=%d %d/%d)\n", i, shft, n);
-                    prnBytes(buf + i, n - i);
-                    recv(sock, buf, n, MSG_DONTWAIT);
-                    break;
-                }
-                i = shft;
+                //if (DEBUG) prnBytes(buf+i,shft-i);
+                buffer b(buf + i, buf + shft);
+                //if (DEBUG) dumpMsg(b);
+                cmd.parseBuf(b);
+                processCmd(cmd);
             }
             else
             {
-                i++;
+                fprintf(stderr, "Partial message recv. dropping (i=%d %d/%d)\n", i, shft, n);
+                prnBytes(buf + i, n - i);
+                //FPrecv(sock, buf, n, MSG_DONTWAIT);
+                if ((nevo_tty_read(PortFD, (char*)buf, n, 0, &n)) != TTY_OK)
+                    return;
+
+                break;
             }
+            i = shft;
         }
-        // Actually consume data we parsed. Leave the rest for later.
-        if (i > 0)
+        else
         {
-            n = recv(sock, buf, i, MSG_DONTWAIT);
-            if (DEBUG)
-                fprintf(stderr, "Consumed %d/%d bytes \n", n, i);
+            i++;
         }
     }
-    //fprintf(stderr,"Nothing more to read\n");
+    // Actually consume data we parsed. Leave the rest for later.
+    if (i > 0)
+    {
+        //n = recv(sock, buf, i, MSG_DONTWAIT);
+
+        if (DEBUG)
+            fprintf(stderr, "Consumed %d/%d bytes \n", n, i);
+     }
 }
 
-int sendBuffer(int sock, buffer buf, long tout_msec)
+//FP MODIFIED
+//int sendBuffer(int sock, buffer buf, long tout_msec)
+int NexStarAUXScope::sendBuffer(int PortFD, buffer buf)
 {
-    if (sock > 0)
+    //if (sock > 0)
+    if (PortFD > 0)
     {
-        timeval tv;
+        //timeval tv;
         int n;
-        tv.tv_usec = (tout_msec % 1000) * 1000;
-        tv.tv_sec  = tout_msec / 1000;
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
-        n = send(sock, buf.data(), buf.size(), 0);
+        //tv.tv_usec = (tout_msec % 1000) * 1000;
+        //tv.tv_sec  = tout_msec / 1000;
+        //setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
+        //n = send(sock, buf.data(), buf.size(), 0);
+
+	if (nevo_tty_write(PortFD,(char*)buf.data(),buf.size(),CTS_TIMEOUT,&n) != TTY_OK)
+            return 0;
+
         msleep(50);
         if (n == -1) {
             perror("NSEVO::sendBuffer");
@@ -727,7 +793,8 @@ bool NexStarAUXScope::sendCmd(AUXCommand &c)
         c.dumpCmd();
     }
     c.fillBuf(buf);
-    return sendBuffer(sock, buf, 500) == (int)buf.size();
+    //return sendBuffer(sock, buf, 500) == (int)buf.size();
+    return sendBuffer(PortFD, buf) == (int)buf.size();
 }
 
 int debug_timeout = 30;
@@ -740,7 +807,7 @@ bool NexStarAUXScope::TimerTick(double dt)
 
     querryStatus();
     //writeMsgs();
-    readMsgs();
+    //readMsgs();
     //processMsgs();
     if (DEBUG)
     {
@@ -780,3 +847,115 @@ bool NexStarAUXScope::TimerTick(double dt)
     }
     return true;
 };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Wrap functions around the standard driver communication functions tty_read
+// and tty_write.
+// When the communication is serial, these wrap functions implement the
+// Celestron hardware handshake used by telescope serial ports AUX and PC. 
+// When the communication is by network, these wrap functions are trasparent.
+// Read and write calls are passed, as is, to the standard functions tty_read
+// and tty_write.
+// 16-Feb-2020 Fabrizio Pollastri <mxgbot@gmail.com>
+////////////////////////////////////////////////////////////////////////////////
+
+
+void NexStarAUXScope::setRTS(bool rts)
+{
+    if (ioctl(PortFD, TIOCMGET, &modem_ctrl) == -1)
+        LOGF_ERROR("Error getting handshake lines %s(%d).\n",strerror(errno), errno);
+    if (rts)
+        modem_ctrl |= TIOCM_RTS;
+    else
+        modem_ctrl &= ~TIOCM_RTS;
+    if (ioctl(PortFD, TIOCMSET, &modem_ctrl) == -1)
+        LOGF_ERROR("Error setting handshake lines %s(%d).\n",strerror(errno), errno);
+}
+
+
+bool NexStarAUXScope::waitCTS(float timeout)
+{
+    float step = timeout / 20.;
+    for (; timeout >= 0; timeout -= step)
+    {
+	msleep(step);
+        if (ioctl(PortFD, TIOCMGET, &modem_ctrl) == -1)
+            LOGF_ERROR("Error getting handshake lines %s(%d).\n",strerror(errno), errno);
+	if (modem_ctrl & TIOCM_CTS)
+	    return 1;
+    }
+    LOGF_ERROR("Error waiting for CTS timeout. modem_ctrl = %x hex.\n",modem_ctrl);
+    return 0;
+}
+
+
+int NexStarAUXScope::nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n)
+{
+    int errcode;
+    char errmsg[MAXRBUF];
+
+    // if serial, set RTS to off to receive: PC port bahaves as half duplex.
+    if (getActiveConnection() == serialConnection)
+        setRTS(0);
+
+    if((errcode = tty_read(PortFD,buf,bufsiz,timeout,n)) != TTY_OK)
+    {
+        tty_error_msg(errcode, errmsg, MAXRBUF);
+        IDLog("%s\n", errmsg);
+    }
+
+    return errcode;
+}
+
+
+int NexStarAUXScope::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,int *n)
+{
+    int errcode ,ne;
+    char errmsg[MAXRBUF];
+
+    // if serial, set RTS to on then wait for CTS on to write: PC port
+    // bahaves as half duplex. RTS may be already on.
+    if (getActiveConnection() == serialConnection)
+    {
+        setRTS(1);
+        if (!waitCTS(timeout))
+	    return TTY_TIME_OUT;
+    }
+
+    errcode = tty_write(PortFD,buf,bufsiz,n);
+
+    // Wait for tx complete, set RTS to off, to receive (half duplex).
+    if (getActiveConnection() == serialConnection)
+    {
+        msleep(RTS_DELAY);
+        setRTS(0);
+    }
+
+    if (errcode != TTY_OK)
+    {
+        tty_error_msg(errcode, errmsg, MAXRBUF);
+        LOGF_ERROR("%s", errmsg);
+        return errcode;
+    }
+
+    // if serial, written characters are echoed, verify them.
+    if (getActiveConnection() == serialConnection)
+    {
+        if ((errcode = tty_read(PortFD,errmsg,*n,READ_TIMEOUT,&ne)) != TTY_OK)
+        {
+            tty_error_msg(errcode, errmsg, MAXRBUF);
+            LOGF_ERROR("%s", errmsg);
+            return errcode;
+        }
+
+        if (*n != ne)
+	    return TTY_WRITE_ERROR;
+
+        for (int i=0; i < ne; i++)
+	    if (buf[i] != errmsg[i])
+	 	return TTY_WRITE_ERROR;
+    }
+
+    return TTY_OK;
+}

@@ -1,8 +1,14 @@
 
 #pragma once
 
+#include <indicom.h>
+#include <inditelescope.h>
+#include <connectionplugins/connectionserial.h>
+#include <connectionplugins/connectiontcp.h>
+
 #include <vector>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 
 typedef std::vector<unsigned char> buffer;
 
@@ -72,7 +78,7 @@ class AUXCommand
     bool valid;
 };
 
-class NexStarAUXScope
+class NexStarAUXScope : public INDI::Telescope
 {
   public:
     NexStarAUXScope(char const *ip, int port);
@@ -95,6 +101,13 @@ class NexStarAUXScope
     bool Park();
     bool Connect(int PortFD);
     bool Disconnect();
+
+  protected:
+    virtual const char *getDefaultName() override;
+    virtual const char *getDeviceName();
+    virtual bool ReadScopeStatus() override;
+    int sendBuffer(int PortFD, buffer buf);
+
 
   private:
     static const long STEPS_PER_REVOLUTION = 16777216;
@@ -120,4 +133,10 @@ class NexStarAUXScope
     int sock;
     struct sockaddr_in addr;
     bool simulator = false;
+    // FP
+    int modem_ctrl;
+    void setRTS(bool rts);
+    bool waitCTS(float timeout);
+    int nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n);
+    int nevo_tty_write (int PortFD,char *buf,int bufsiz,float timeout,int *n);
 };
