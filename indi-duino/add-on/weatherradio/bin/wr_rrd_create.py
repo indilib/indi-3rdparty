@@ -29,7 +29,7 @@ args=parser.parse_args()
 
 # 5min raw values for 24 hours, 15 min for 7*24 hours, 1hour for 1 year,
 # 1day dor 10 years.
-ret = rrdtool.create(args.rrdfile, "--step", "60", "--start", '0',
+ret = rrdtool.create(args.rrdfile, "--step", "300", "--start", '0',
 		     "DS:Temperature:GAUGE:600:U:U",
 		     "DS:Pressure:GAUGE:600:U:U",
 		     "DS:Humidity:GAUGE:600:U:U",
