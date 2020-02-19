@@ -128,8 +128,6 @@ function createBarChart(name, unit, min, max) {
     });
 }
 
-var currentTimeline = "6h";
-
 function selectTimeline(activeElement, update) {
     var els = document.querySelectorAll("button");
     Array.prototype.forEach.call(els, function (el) {
@@ -142,6 +140,9 @@ function selectTimeline(activeElement, update) {
     var id = activeElement.target.id;
     if (id.indexOf("timeline_") >= 0) {
         timeline = id.substring(9, id.length);
+
+        localStorage.setItem("timeline", timeline);
+
         update(timeline);
         currentTimeline = timeline;
     }
@@ -215,13 +216,16 @@ function init() {
                                  pattern: {style: 'verticalLines'}},
                           legend: {show: false}});
 
-    updateSeries(currentTimeline);
+    // select timeline
+    document.querySelector("#timeline_" + getCurrentTimeline()).classList.add('active');
+
+    updateSeries();
 
     // update timelines every 5 min
     setInterval( function(){ updateSeries(currentTimeline);}, 5*60000);
 };
 
-function updateSeries(timeline) {
+function updateSeries() {
     // update last values
     $.get("data/RTdata_lastupdate.json", function(data) {
 
@@ -245,6 +249,7 @@ function updateSeries(timeline) {
         document.querySelector("#lastupdate").textContent = new Date(lastUpdate).toLocaleString();
     });
 
+    timeline = getCurrentTimeline();
 
     $.get("data/RTdata_" + timeline + ".json", function(data) {
 
@@ -283,10 +288,15 @@ function initSensors() {
                             createWeatherChart("Humidity", "%", "left", 100, 0));
     tchart.render();
     hchart.render();
-    updateSensorSeries(currentTimeline);
+    // select timeline
+    document.querySelector("#timeline_" + getCurrentTimeline()).classList.add('active');
+    updateSensorSeries();
 };
     
 function updateSensorSeries(timeline) {
+
+    timeline = getCurrentTimeline();
+
     $.get("data/RTsensors_" + timeline + ".json", function(data) {
 
         tchart.updateSeries([{data: data.BME280_Temp.data,
@@ -308,4 +318,12 @@ function updateSensorSeries(timeline) {
                               name: "Hum. (DHT)",
                               type: "area"}]);
     });
+};
+
+
+function getCurrentTimeline() {
+    if (localStorage.getItem("timeline") == null)
+        localStorage.setItem("timeline", "6h");
+    
+    return localStorage.getItem("timeline");
 };
