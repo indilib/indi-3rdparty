@@ -130,7 +130,7 @@ function createBarChart(name, unit, min, max) {
 
 var currentTimeline = "6h";
 
-function selectTimeline(activeElement) {
+function selectTimeline(activeElement, update) {
     var els = document.querySelectorAll("button");
     Array.prototype.forEach.call(els, function (el) {
         el.classList.remove('active');
@@ -142,7 +142,7 @@ function selectTimeline(activeElement) {
     var id = activeElement.target.id;
     if (id.indexOf("timeline_") >= 0) {
         timeline = id.substring(9, id.length);
-        updateSeries(timeline);
+        update(timeline);
         currentTimeline = timeline;
     }
 }
@@ -159,13 +159,13 @@ function init() {
 
     // add event listeners to buttons
     document.querySelector("#timeline_6h").
-        addEventListener('click', function (e) {selectTimeline(e);});
+        addEventListener('click', function (e) {selectTimeline(e, updateSeries);});
     document.querySelector("#timeline_1d").
-        addEventListener('click', function (e) {selectTimeline(e);});
+        addEventListener('click', function (e) {selectTimeline(e, updateSeries);});
     document.querySelector("#timeline_7d").
-        addEventListener('click', function (e) {selectTimeline(e);});
+        addEventListener('click', function (e) {selectTimeline(e, updateSeries);});
     document.querySelector("#timeline_30d").
-        addEventListener('click', function (e) {selectTimeline(e);});
+        addEventListener('click', function (e) {selectTimeline(e, updateSeries);});
 
 
     // create charts for current values
@@ -260,4 +260,52 @@ function updateSeries(timeline) {
         schart.updateSeries([data.SQM]);
     });
 
+};
+
+function initSensors() {
+
+    // add event listeners to buttons
+    document.querySelector("#timeline_6h").
+        addEventListener('click', function (e) {selectTimeline(e, updateSensorSeries);});
+    document.querySelector("#timeline_1d").
+        addEventListener('click', function (e) {selectTimeline(e, updateSensorSeries);});
+    document.querySelector("#timeline_7d").
+        addEventListener('click', function (e) {selectTimeline(e, updateSensorSeries);});
+    document.querySelector("#timeline_30d").
+        addEventListener('click', function (e) {selectTimeline(e, updateSensorSeries);});
+
+
+    // create the time series charts
+    
+    tchart = new ApexCharts(document.querySelector("#temperature_series"),
+                            createWeatherChart("Temperature", "°C", "left", undefined, 1));
+    hchart = new ApexCharts(document.querySelector("#humidity_series"),
+                            createWeatherChart("Humidity", "%", "left", 100, 0));
+    tchart.render();
+    hchart.render();
+    updateSensorSeries(currentTimeline);
+};
+    
+function updateSensorSeries(timeline) {
+    $.get("data/RTsensors_" + timeline + ".json", function(data) {
+
+        tchart.updateSeries([{data: data.BME280_Temp.data,
+                              name: "Temp. (BME280)",
+                              type: "area"},
+                             {data: data.DHT_Temp.data,
+                              name: "Temp. (DHT)",
+                              type: "area"},
+                             {data: data.MLX90614_Tamb.data,
+                              name: "amb. Temp. (MLX90614)",
+                              type: "area"},
+                             {data: data.MLX90614_Tobj.data,
+                              name: "obj. Temp. (MLX90614)",
+                              type: "area"}]);
+        hchart.updateSeries([{data: data.BME280_Hum.data,
+                              name: "Hum. (BME280)",
+                              type: "area"},
+                             {data: data.DHT_Hum.data,
+                              name: "Hum. (DHT)",
+                              type: "area"}]);
+    });
 };

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Weather Radio</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv=“Pragma” content=”no-cache”>
+    <meta http-equiv=“Expires” content=”-1″>
+    <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/styles.css" /> 
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/popper.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/apexcharts.min.js"></script>
+  </head>
+  <body onload=initSensors()>
+      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Sensor data</h1>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-sm-12" align="center">
+          <div class="toolbar">
+            <button id="timeline_6h" class="active">6h</button>
+            <button id="timeline_1d">1d</button>
+            <button id="timeline_7d">7d</button>
+            <button id="timeline_30d">30d</button>
+          </div>
+        </div>
+      </div> <!-- button row end -->
+      <div class="row">
+        <div class="col-sm-6" id="temperature_series"></div>
+        <div class="col-sm-6" id="humidity_series"></div>
+      </div> <!-- time series row end -->
+    </div>
+    <script src="js/charts.js"></script>
+  </body>
+</html>
