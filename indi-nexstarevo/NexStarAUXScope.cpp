@@ -380,7 +380,9 @@ bool NexStarAUXScope::Abort()
     AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
     AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
     sendCmd(stopAlt);
+    readMsgs();
     sendCmd(stopAz);
+    readMsgs();
     return true;
 };
 
@@ -544,6 +546,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             dat[1] = 0x00;
             AUXCommand cmd(GET_VER, GPS, m.src, dat);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         case GPS_GET_LAT:
@@ -556,6 +559,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             else
                 cmd.setPosition(Lon);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         case GPS_GET_TIME:
@@ -572,6 +576,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             dat[2] = unsigned(ptm->tm_sec);
             AUXCommand cmd(GPS_GET_TIME, GPS, m.src, dat);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         case GPS_GET_DATE:
@@ -587,6 +592,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             dat[1] = unsigned(ptm->tm_mday);
             AUXCommand cmd(GPS_GET_DATE, GPS, m.src, dat);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         case GPS_GET_YEAR:
@@ -603,6 +609,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             // fprintf(stderr," Sending: %d [%d,%d]\n",ptm->tm_year,dat[0],dat[1]);
             AUXCommand cmd(GPS_GET_YEAR, GPS, m.src, dat);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         case GPS_LINKED:
@@ -613,6 +620,7 @@ void NexStarAUXScope::emulateGPS(AUXCommand &m)
             dat[0] = unsigned(1);
             AUXCommand cmd(GPS_LINKED, GPS, m.src, dat);
             sendCmd(cmd);
+	    readMsgs();
             break;
         }
         default:
