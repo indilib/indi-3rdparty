@@ -2011,6 +2011,8 @@ bool ToupBase::saveConfigItems(FILE *fp)
     if (m_MonoCamera == false)
         IUSaveConfigSwitch(fp, &WBAutoSP);
 
+    IUSaveConfigSwitch(fp, &VideoFormatSP);
+
     return true;
 }
 
