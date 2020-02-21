@@ -1,0 +1,61 @@
+body {
+    color: #eeeeee;
+    background: #343E59;
+}
+
+
+.shadow {
+  box-shadow: 0px 1px 15px 1px rgba(69, 65, 78, 0.08);
+}
+
+
+.bottom-navbar{
+    position: fixed;
+    bottom: 0;
+    text-align: center;
+    width: 100%;
+    padding: 10px 10px;
+    font-size: x-small;
+}
+
+.parameter-title {
+    color: rgba(0, 143, 252, 1);
+    font-weight: bold;
+}
+.parameter-value {
+    color: #ccc;
+    font-weight: regular;
+    padding-top: 10px;
+}
+
+.apexcharts-tooltip {
+    background: #f3f3f3;
+    color: black;
+}
+
+button {
+    font-size: small;
+    color: rgba(239, 239, 239, 0.85);
+    // color: rgba(0, 143, 251, 0.5);
+    background: rgba(239, 239, 239, 0.3);
+    align: center;
+    width: 70px;
+    border: 0px;
+    border-bottom: 2px solid rgba(0, 143, 251, 0.85);
+    border-radius: 2px;
+    padding: 0px 17px;
+}
+
+button.active {
+    color: #fff;
+    font-weight: bold;
+    background: #008FFB;
+    border-bottom: 2px solid blue;
+}
+
+button:focus {
+    outline: 0;
+}
+
+
+

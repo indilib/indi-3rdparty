@@ -37,7 +37,7 @@
 <defLightVector device="Arduino INPUTS" name="WEATHER_STATUS" label="STATUS" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
 
     <defLight name="clouds" label="Cloudy">
-        <indiduino pin="3"/>
+        <indiduino pin="2"/>
         Idle
     </defLight>
     <defLight name="dew" label="Dewing">
