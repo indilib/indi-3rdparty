@@ -1,13 +1,14 @@
-/* This file is part of the Skywatcher Protocol INDI driver.
+/*
+    Copyright(c) 2020 Jasem Mutlaq. All rights reserved.
 
-    Copyright 2012 Geehalel (geehalel AT gmail DOT com)
+    AZ-GTi based on azgti
 
-    The Skywatcher Protocol INDI driver is free software: you can redistribute it and/or modify
+    INDI driver is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    The Skywatcher Protocol INDI driver is distributed in the hope that it will be useful,
+    INDI driver is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
@@ -17,35 +18,36 @@
 
 */
 
-#include "eqmodbase.h"
+#include "azgtibase.h"
+#include <memory>
 
-static std::unique_ptr<EQMod> eqmod(new EQMod());
+static std::unique_ptr<AZGTIBase> azgti(new AZGTIBase());
 
 void ISGetProperties(const char *dev)
 {
-    eqmod->ISGetProperties(dev);
+    azgti->ISGetProperties(dev);
 }
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-    eqmod->ISNewSwitch(dev, name, states, names, num);
+    azgti->ISNewSwitch(dev, name, states, names, num);
 }
 
 void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
 {
-    eqmod->ISNewText(dev, name, texts, names, num);
+    azgti->ISNewText(dev, name, texts, names, num);
 }
 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
-    eqmod->ISNewNumber(dev, name, values, names, num);
+    azgti->ISNewNumber(dev, name, values, names, num);
 }
 
 void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
                char *names[], int n)
 {
 #ifdef WITH_ALIGN
-    eqmod->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    azgti->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 #else
     INDI_UNUSED(dev);
     INDI_UNUSED(name);
@@ -57,7 +59,8 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
     INDI_UNUSED(n);
 #endif
 }
+
 void ISSnoopDevice(XMLEle *root)
 {
-    eqmod->ISSnoopDevice(root);
+    azgti->ISSnoopDevice(root);
 }

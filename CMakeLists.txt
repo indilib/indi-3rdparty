@@ -77,7 +77,6 @@ option(WITH_INOVAPLX "Install i.Nova PLx Driver" On)
 option(WITH_APOGEE "Install Apogee Driver" On)
 option(WITH_FFMV "Install Point Grey FireFly MV Driver" On)
 option(WITH_QHY "Install QHY Driver" On)
-option(WITH_SSAG "Install Star Shoot Driver" On)
 option(WITH_GPHOTO "Install GPhoto Driver" On)
 option(WITH_QSI "Install QSI Driver" On)
 option(WITH_DUINO "Install Ariduino Driver" On)
@@ -412,11 +411,6 @@ add_subdirectory(libqhy)
 SET(LIBRARIES_FOUND FALSE)
 endif (QHY_FOUND)
 endif (WITH_QHY)
-
-## Star Shoot Auto Guider
-if (WITH_SSAG)
-add_subdirectory(indi-ssag)
-endif (WITH_SSAG)
 
 ## GPSD
 if (WITH_GPSD)

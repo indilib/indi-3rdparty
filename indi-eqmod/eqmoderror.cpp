@@ -17,7 +17,7 @@
 
 #include "eqmoderror.h"
 
-#include "eqmod.h"
+#include "eqmodbase.h"
 
 EQModError::EQModError(Severity sev, const char *msg, ...)
 {

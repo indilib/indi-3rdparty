@@ -6,7 +6,7 @@
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
         <device label="AZ-GTi" manufacturer="SkyWatcher">
-                <driver name="EQMod Mount">indi_eqmod_telescope</driver>
+                <driver name="AZ-GTi">indi_azgti_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
 </devGroup>

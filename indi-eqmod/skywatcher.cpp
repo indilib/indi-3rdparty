@@ -17,7 +17,7 @@
 
 #include "skywatcher.h"
 
-#include "eqmod.h"
+#include "eqmodbase.h"
 
 #include <indicom.h>
 
