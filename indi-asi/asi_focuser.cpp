@@ -595,13 +595,16 @@ void ASIEAF::TimerHit()
         }
     }
 
-    rc = readTemperature();
-    if (rc)
+    if (TemperatureNP.s != IPS_IDLE)
     {
-        if (fabs(lastTemperature - TemperatureN[0].value) >= 0.1)
+        rc = readTemperature();
+        if (rc)
         {
-            IDSetNumber(&TemperatureNP, nullptr);
-            lastTemperature = TemperatureN[0].value;
+            if (fabs(lastTemperature - TemperatureN[0].value) >= 0.1)
+            {
+                IDSetNumber(&TemperatureNP, nullptr);
+                lastTemperature = TemperatureN[0].value;
+            }
         }
     }
 
