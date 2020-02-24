@@ -10,11 +10,12 @@
     Based upon ideas from indiduinoMETEO (http://indiduino.wordpress.com).
 */
 
-#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR. Comment if not.
-#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR. Comment if not.
+#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
+#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
-#define USE_MLX_SENSOR            //USE MELEXIS IR SENSOR. Comment if not.
-#define USE_TSL_SENSOR            //USE TSL2591 SENSOR. Comment if not.
+#define USE_MLX_SENSOR            // USE MELEXIS IR SENSOR.
+#define USE_TSL_SENSOR            // USE TSL2591 SENSOR.
+#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 
 #ifdef USE_TSL_SENSOR
 #include "tsl2591.h"
@@ -31,3 +32,7 @@
 #ifdef USE_MLX_SENSOR
 #include "mlx90614.h"
 #endif //USE_MLX_SENSOR
+
+#ifdef USE_DAVIS_SENSOR
+#include "davis_anemometer.h"
+#endif //USE_DAVIS_SENSOR
