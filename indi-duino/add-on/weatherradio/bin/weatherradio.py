@@ -27,18 +27,19 @@ def connect(indi):
         time.sleep(5)
 
 def readWeather(indi):
-    weather     = indi.get_vector(INDIDEVICE,WEATHER)
-    temperature = weather.get_element(WEATHER_TEMPERATURE).get_float()
-    pressure    = weather.get_element(WEATHER_PRESSURE).get_float()
-    humidity    = weather.get_element(WEATHER_HUMIDITY).get_float()
-    cloudCover  = weather.get_element(WEATHER_CLOUD_COVER).get_float()
-    sqm         = weather.get_element(WEATHER_SQM).get_float()
-    dewpoint    = weather.get_element(WEATHER_DEWPOINT).get_float()
-    skyTemp     = weather.get_element(WEATHER_SKY_TEMPERATURE).get_float()
+    result  = {}
+    weather = indi.get_vector(INDIDEVICE,WEATHER)
+    result['Temperature']    = weather.get_element(WEATHER_TEMPERATURE).get_float()
+    result['Pressure']       = weather.get_element(WEATHER_PRESSURE).get_float()
+    result['Humidity']       = weather.get_element(WEATHER_HUMIDITY).get_float()
+    result['CloudCover']     = weather.get_element(WEATHER_CLOUD_COVER).get_float()
+    result['SQM']            = weather.get_element(WEATHER_SQM).get_float()
+    result['DewPoint']       = weather.get_element(WEATHER_DEWPOINT).get_float()
+    result['SkyTemperature'] = weather.get_element(WEATHER_SKY_TEMPERATURE).get_float()
+    result['WindSpeed']      = weather.get_element(WEATHER_WIND_SPEED).get_float()
+    result['WindDirection']  = weather.get_element(WEATHER_WIND_DIRECTION).get_float()
   
-    return (("Temperature", temperature), ("Pressure", pressure),
-            ("Humidity", humidity), ("CloudCover", cloudCover),
-            ("SkyTemperature", skyTemp), ("Dewpoint", dewpoint), ("SQM", sqm));
+    return result;
 
 def readSensors(indi):
     result = {}
