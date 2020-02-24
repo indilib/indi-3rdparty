@@ -5,6 +5,9 @@
     Developed on basis of the hookup guide from
     http://cactus.io/hookups/weather/anemometer
 
+    The wind speed is measured in m/s, the direction is measured in deg, i.e.
+    N = 0 deg, E = 90 deg etc.
+
     Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
 
     This application is free software; you can redistribute it and/or
@@ -14,24 +17,22 @@
 */
 #include <math.h>
 
-#define WINDSPEEDPIN (2) // The pin location of the wind speed sensor
+#define WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
+#define WINDDIRECTIONPIN A2 // The analog pin for the wind direction
+#define WINDOFFSET 0;       // anemometer arm direction (0=N, 90=E, ...)
 
 #define SLICEDURATION 5000 // interval for a single speed mesure
 
 struct {
   bool status;
-  float direction;
+  int direction;
   unsigned int rotations;
   float avgSpeed;
   float minSpeed;
   float maxSpeed;
 } anemometerData;
 
-struct speedRawData {
-  unsigned int rotations;   // Cup rotation counter used in interrupt routine
-  unsigned long startTime;  // Start time of the measurement
-} singleInterval;
-
+// intermediate values to translate #rotations into wind speed
 volatile unsigned long startTime;     // overall start time for calculating the wind speed
 volatile unsigned long startSlice;    // start time of the current time slice to measure wind speed
 volatile unsigned long lastInterrupt; // Last time a rotation has been detected
@@ -50,6 +51,21 @@ float windspeed(unsigned long time, unsigned long startTime, unsigned int rotati
 
   return (rotations * 1135.24 / (time - startTime));
 }
+
+// calculate the wind direction in degree (N = 0, E = 90, ...)
+int winddirection() {
+  // the wind direction is measured with a potentiometer
+  volatile int direction = map(analogRead(WINDDIRECTIONPIN), 0, 1023, 0, 360) + WINDOFFSET;
+
+  // ensure 0 <= direction <360
+  if (direction >= 360)
+    direction -= 360;
+  else if (direction < 0)
+    direction += 360;
+
+  return direction;
+}
+
 
 
 // This is the function that the interrupt calls to increment the rotation count
@@ -91,6 +107,7 @@ void reset(unsigned long time) {
 
 void initAnemometer() {
   pinMode(WINDSPEEDPIN, INPUT);
+  // attach to react upon interrupts when the reed element closes the circuit
   attachInterrupt(digitalPinToInterrupt(WINDSPEEDPIN), isr_rotation, FALLING);
   anemometerData.status = true;
   // reset measuring data
@@ -106,19 +123,23 @@ void updateAnemometer() {
     anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;;
     anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
     anemometerData.rotations = rotations;
+
+    anemometerData.direction = winddirection();
+
     reset(millis());
     // start recording
     attachInterrupt(digitalPinToInterrupt(WINDSPEEDPIN), isr_rotation, FALLING);
   } else
     initAnemometer();
 }
+
 void serializeAnemometer(JsonDocument &doc) {
 
   JsonObject data = doc.createNestedObject("Davis Anemometer");
   data["init"] = anemometerData.status;
 
   if (anemometerData.status) {
-    // data["direction"] = anemometerData.direction;
+    data["direction"] = anemometerData.direction;
     data["avg speed"] = anemometerData.avgSpeed;
     data["min speed"] = anemometerData.minSpeed;
     data["max speed"] = anemometerData.maxSpeed;
