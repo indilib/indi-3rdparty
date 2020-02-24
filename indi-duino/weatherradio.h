@@ -135,6 +135,8 @@ protected:
         sensor_name luminosity;
         sensor_name temp_ambient;
         sensor_name temp_object;
+        sensor_name wind_speed;
+        sensor_name wind_direction;
     } currentSensors;
 
     struct

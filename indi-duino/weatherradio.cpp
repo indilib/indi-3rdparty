@@ -130,7 +130,7 @@ bool WeatherRadio::initProperties()
     addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
     addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
     addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
-    addParameter(WEATHER_WIND_SPEED, "Wind speed (m/s)", 0, 10, 100);
+    addParameter(WEATHER_WIND_SPEED, "Wind speed (m/s)", 0, 10, 50);
     addParameter(WEATHER_WIND_DIRECTION, "Wind direction (deg)", 0, 360, 10);
 
     setCriticalParameter(WEATHER_TEMPERATURE);
@@ -376,6 +376,28 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             return (objectTemperatureSensorSP.s == IPS_OK);
         }
+        else if (strcmp(name, windSpeedSensorSP.name) == 0)
+        {
+            // wind speed sensor selected
+            IUUpdateSwitch(&windSpeedSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windSpeedSensorSP, selected);
+            currentSensors.wind_speed = sensor;
+
+            return (windSpeedSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, windDirectionSensorSP.name) == 0)
+        {
+            // wind speed sensor selected
+            IUUpdateSwitch(&windDirectionSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windDirectionSensorSP, selected);
+            currentSensors.wind_direction = sensor;
+
+            return (windDirectionSensorSP.s == IPS_OK);
+        }
     }
     return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
 }
@@ -581,6 +603,10 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     }
     else if (currentSensors.luminosity == sensor)
         setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
+    else if (currentSensors.wind_speed == sensor)
+        setParameterValue(WEATHER_WIND_SPEED, value);
+    else if (currentSensors.wind_direction == sensor)
+        setParameterValue(WEATHER_WIND_DIRECTION, value);
 }
 
 
@@ -631,6 +657,8 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &luminositySensorSP);
     IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
+    IUSaveConfigSwitch(fp, &windSpeedSensorSP);
+    IUSaveConfigSwitch(fp, &windDirectionSensorSP);
     IUSaveConfigNumber(fp, ParametersRangeNP);
 
     return INDI::Weather::saveConfigItems(fp);
