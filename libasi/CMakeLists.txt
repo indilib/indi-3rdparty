@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libasi CXX C)
 
-# Using ASI Camera SDK Version 1.14.1108 updated on 2019-11-19
-# Using ASI EFW SDK Version 0.3.1205 updated on 2017-12-05
+# Using ASI Camera SDK Version 1.14.1119 updated on 2019-12-16
+# Using ASI EFW SDK Version 0.4.1022 updated on 2020-01-12
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
 # Using ASI EAF SDK Version 0.1.0524 updated on 2019-06-20
 
-set(ASICAM_VERSION "1.14.1108")
+set(ASICAM_VERSION "1.14.1119")
 set(ASICAM_SOVERSION "1")
 
-set(ASIEFW_VERSION "0.3.1205")
+set(ASIEFW_VERSION "0.4.1022")
 set(ASIEFW_SOVERSION "0")
 
 set(ASIST4_VERSION "1.0")

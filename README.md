@@ -46,7 +46,7 @@ Before building INDI 3rd party drivers. [INDI Core Library](https://github.com/i
 On Debian/Ubuntu:
 
 ```
-sudo apt-get install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev
+sudo apt-get -y install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libavcodec-dev libavdevice-dev
 ```
 
 ## Create Project Directory
@@ -133,6 +133,22 @@ sudo make install
 + [Developers Forum](http://indilib.org/forum/development.html)
 + [Developers Chat](https://riot.im/app/#/room/#kstars:matrix.org)
 + Sample drivers are available under examples and drivers/skeleton directories. They can be used as a starting point for your driver development.
+
+### Code Style
+
+INDI uses [Artistic Style](http://astyle.sourceforge.net) to format all the C++ source files. Please make sure to apply the following astyle rules to any code that is submitted to INDI. On Linux, you can create ***~/.astylerc*** file containing the following rules:
+```
+--style=allman
+--align-reference=name
+--indent-switches
+--indent-modifiers
+--indent-classes
+--pad-oper
+--indent-col1-comments
+--lineend=linux
+```
+
+Some IDEs (e.g. QtCreator) support automatic formatting for the code everytime you save the file to disk.
 
 ### How to create Github pull request (PR)
 

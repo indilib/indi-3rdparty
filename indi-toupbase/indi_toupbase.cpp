@@ -793,7 +793,7 @@ void ToupBase::setupParams()
 
     // JM 2019-11-16: Reduce speed on ARM for high resolution
 #if defined(__arm__) || defined (__aarch64__)
-    if (w[currentResolutionIndex] > 3000)
+    if (w[currentResolutionIndex] > 1000)
     {
         ControlN[TC_SPEED].value = nDef - 1;
         FP(put_Speed(m_CameraHandle, nDef - 1));
@@ -2010,6 +2010,8 @@ bool ToupBase::saveConfigItems(FILE *fp)
 
     if (m_MonoCamera == false)
         IUSaveConfigSwitch(fp, &WBAutoSP);
+
+    IUSaveConfigSwitch(fp, &VideoFormatSP);
 
     return true;
 }

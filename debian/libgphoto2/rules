@@ -29,7 +29,7 @@ override_dh_auto_install:
 	# Remove the COPYING file, debian/copyright is there already:
 	find debian/tmp -name COPYING -delete
 	# Remove the recursive symlink:
-	rm debian/tmp/usr/include/gphoto2/gphoto2
+	#rm debian/tmp/usr/include/gphoto2/gphoto2
 	# new path for obsolete gphoto2-* scripts
 	mkdir -p debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/libgphoto2-dev/bin
 	cp -a debian/tmp/usr/bin/gphoto2-* debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/libgphoto2-dev/bin

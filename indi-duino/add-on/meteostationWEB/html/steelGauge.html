@@ -54,12 +54,12 @@
 </tr>
 <tr>
 <td align="center">
-<canvas id=iradiance></canvas>
+<canvas id=sqm></canvas>
 </td>
 <td align="center">
 <table>
 <tr>
-<td colspan="2" align="center"><b>Sky Temp</b>
+<td colspan="2" align="center"><b>Sky Temperature</b>
 </td>
 <tr>
 <td align="right"><b>Actual</b>
@@ -232,14 +232,15 @@
                             frameDesign:steelseries.FrameDesign.ANTHRACITE 
                             });
                             
-       iradiance = new steelseries.LinearBargraph('iradiance', {
+       sqm = new steelseries.LinearBargraph('sqm', {
                             width: 300,
                             height: 120,
                             minValue:0,
-                            maxValue:1024,
+                            maxValue:30,
                             ledVisible:false,
-                            titleString: 'Iradiance',
-                            unitString: '%',
+                            titleString: 'Sky Quality (SQM)',
+                            unitString: 'SQM',
+                            valuesNumeric: true,
                             lcdVisible: true,
                             frameDesign:steelseries.FrameDesign.ANTHRACITE 
                             });
@@ -325,14 +326,14 @@
 								<!-- skyTcorrected.setValue(data.IR-skyCorr(data.Tir)); -->
 								skyTcorrected.setValue(data.skyT);
 					         dew.setValue(data.Dew);
-								iradiance.setValueAnimated(data.Light);
+								sqm.setValueAnimated(data.SQM);
 								<!-- Clouds.setValueAnimated(cloudIndex(data.Tir,data.IR)); -->
 								Clouds.setValueAnimated(data.clouds);
 								cloudLed.setLedOnOff(false);
 								dewLed.setLedOnOff(false);
 								frezzingLed.setLedOnOff(false);
 								var warningText='';
-                        if (data.cloudFlag==1) {
+							        if (data.cloudFlag==1) {
 								   warningText=warningText+"  ****** CLOUDY ******  ";
 								   cloudLed.setLedOnOff(true);
 								}

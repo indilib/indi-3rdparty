@@ -1,6 +1,6 @@
 <INDIDriver>
 
-<defNumberVector device="Arduino MeteoStation" name="WEATHER_PARAMETERS" label="Parameters" group="METEO" state="Idle" perm="ro" timeout="60">
+<defNumberVector device="Arduino MeteoStation" name="WEATHER_PARAMETERS" label="Parameters" group="Main Control" state="Idle" perm="ro" timeout="60">
     <defNumber name="WEATHER_TEMPERATURE" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
     <indiduino pin="24" type="input" mul="0.05" add="-273"/>
 0
@@ -34,10 +34,10 @@
     </defNumber>
 
 </defNumberVector>
-<defLightVector device="Arduino INPUTS" name="WEATHER_STATUS" label="STATUS" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+<defLightVector device="Arduino INPUTS" name="WEATHER_STATUS" label="STATUS" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
 
     <defLight name="clouds" label="Cloudy">
-        <indiduino pin="3"/>
+        <indiduino pin="2"/>
         Idle
     </defLight>
     <defLight name="dew" label="Dewing">
@@ -63,46 +63,46 @@ On
     </defSwitch>
 </defSwitchVector>
 
-<defNumberVector device="Arduino MeteoStation" name="IR" label="IR" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
-    <defNumber name="IR_IR" label="IR" format="%4.2f" min="-100" max="100" step="1">
+<defNumberVector device="Arduino MeteoStation" name="IR" label="IR Sensor" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+    <defNumber name="IR" label="IR" format="%4.2f" min="-100" max="100" step="1">
     <indiduino pin="14" type="input" mul="0.05" add="-273"/>
 0
     </defNumber>
-    <defNumber name="IR_Temperature" label="Temperature (C)" format="%4.2f" min="-100" max="-100" step="1">
+    <defNumber name="T" label="Temperature (C)" format="%4.2f" min="-100" max="-100" step="1">
     <indiduino pin="15" type="input" mul="0.05" add="-273"/>
 0
     </defNumber>
 </defNumberVector>
 <defNumberVector device="Arduino MeteoStation" name="Pressure" label="Pressure" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
 
-    <defNumber name="P_Pressure" label="Pressure (hPa)" format="%4.2f" min="0" max="10240" step="1">
+    <defNumber name="P" label="Pressure (hPa)" format="%4.2f" min="0" max="10240" step="1">
     <indiduino pin="16" type="input" mul="0.1" add="0"/>
 0
     </defNumber>
-    <defNumber name="P_Temperature" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
+    <defNumber name="T" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
     <indiduino pin="17" type="input" mul="0.05" add="-273"/>
 0
     </defNumber>
 </defNumberVector>
 <defNumberVector device="Arduino MeteoStation" name="Humidity" label="Humidity" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
-    <defNumber name="HR_Humidity" label="Humidity (%)" format="%4.2f" min="0" max="10240" step="1">
+    <defNumber name="HR" label="Humidity (%)" format="%4.2f" min="0" max="10240" step="1">
     <indiduino pin="18" type="input" mul="0.01" add="0"/>
 0
     </defNumber>
-    <defNumber name="HR_Temperature" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
+    <defNumber name="T" label="Temperature (C)" format="%4.2f" min="-100" max="100" step="1">
     <indiduino pin="19" type="input" mul="0.05" add="-273"/>
 0
     </defNumber>
 </defNumberVector>
-<defNumberVector device="Arduino MeteoStation" name="LIGHT" label="Sky Quality" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
-    <defNumber name="SQM" label="SQM (mag/arcsec2)" format="%4.2f" min="0" max="10240" step="1">
+<defNumberVector device="Arduino MeteoStation" name="Sky Quality" label="SQM" group="Raw Sensors" state="Idle" perm="ro" timeout="60">
+    <defNumber name="SQM" label="SQM (mag/arcsec2)" format="%4.2f" min="0" max="100" step="0.01">
     <indiduino pin="21" type="input" mul="0.01" add="0"/>
 0
     </defNumber>
 </defNumberVector>
 
 
-<defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor Failure" group="METEO" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
+<defLightVector device="Arduino INPUTS" name="FAIL" label="Sensor Failure" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="60">
     <defLight name="MLX_FAIL" label="MLX Failure">
         <indiduino pin="7"/>
         Idle

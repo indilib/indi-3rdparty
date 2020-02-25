@@ -17,7 +17,7 @@
 
 #include "align.h"
 
-#include "../eqmod.h"
+#include "../eqmodbase.h"
 
 #include <cstring>
 #include <cmath>
@@ -45,7 +45,7 @@ void inverse_matrix_3x3(double in[3][3], double out[3][3])
     i   = in[2][2];
     det = (a * e * i) + (b * f * g) + (c * d * h) - (c * e * g) - (f * h * a) - (i * b * d);
     /* if (abs(det) < 0.000001) {
-    IDLog("Align: Matrix determinant is lower than 0.000001 (%g)\n", det); 
+    IDLog("Align: Matrix determinant is lower than 0.000001 (%g)\n", det);
     det=0.000001;
     }*/
     out[0][0] = (e * i - f * h) / det;
@@ -116,9 +116,9 @@ void Align::Init()
                       IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text, loadres);
             return;
         }
-	IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-	IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-	IDSetNumber(AlignCountNP, nullptr);
+        IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
+        IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
+        IDSetNumber(AlignCountNP, nullptr);
     }
 }
 
@@ -231,19 +231,19 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             celestialMatrix[2][i] = sin(point->aligndata.targetDEC * M_PI / 180.0);
 
             /*
-      telescopeMatrix[0][i]=cos(point->aligndata.telescopeDEC * M_PI / 180.0) * 
-	cos(((pointset->range24(point->aligndata.telescopeRA - point->aligndata.lst) * 360) / 24.0) * M_PI / 180.0);
-      telescopeMatrix[1][i]=cos(point->aligndata.telescopeDEC * M_PI / 180.0) * 
-	sin(((pointset->range24(point->aligndata.telescopeRA - point->aligndata.lst) * 360) / 24.0) * M_PI / 180.0);
-      telescopeMatrix[2][i]=sin(point->aligndata.telescopeDEC * M_PI / 180.0); 
-      */
+            telescopeMatrix[0][i]=cos(point->aligndata.telescopeDEC * M_PI / 180.0) *
+            cos(((pointset->range24(point->aligndata.telescopeRA - point->aligndata.lst) * 360) / 24.0) * M_PI / 180.0);
+                 telescopeMatrix[1][i]=cos(point->aligndata.telescopeDEC * M_PI / 180.0) *
+            sin(((pointset->range24(point->aligndata.telescopeRA - point->aligndata.lst) * 360) / 24.0) * M_PI / 180.0);
+                 telescopeMatrix[2][i]=sin(point->aligndata.telescopeDEC * M_PI / 180.0);
+                 */
             /*
-      celestialMatrix[0][i]=cos(point->celestialALT * M_PI / 180.0) * 
-	cos(point->celestialAZ * M_PI / 180.0); 
-      celestialMatrix[1][i]=cos(point->celestialALT * M_PI / 180.0) * 
-	sin(point->celestialAZ * M_PI / 180.0); 
-      celestialMatrix[2][i]=sin(point->celestialALT * M_PI / 180.0);
-      */
+            celestialMatrix[0][i]=cos(point->celestialALT * M_PI / 180.0) *
+            cos(point->celestialAZ * M_PI / 180.0);
+                 celestialMatrix[1][i]=cos(point->celestialALT * M_PI / 180.0) *
+            sin(point->celestialAZ * M_PI / 180.0);
+                 celestialMatrix[2][i]=sin(point->celestialALT * M_PI / 180.0);
+                 */
             telescopeMatrix[0][i] = cos(point->telescopeALT * M_PI / 180.0) *
                                     cos(pointset->range360(-180.0 - point->telescopeAZ) * M_PI / 180.0);
             telescopeMatrix[1][i] = cos(point->telescopeALT * M_PI / 180.0) *
@@ -300,10 +300,10 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             lst += (position->lng / 15.0);
             lst = pointset->range24(lst);
             /*
-      l = cos(currentDEC * M_PI / 180.0) * cos(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
-      m = cos(currentDEC * M_PI / 180.0) * sin(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
-      n = sin(currentDEC * M_PI / 180.0);
-      */
+            l = cos(currentDEC * M_PI / 180.0) * cos(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
+            m = cos(currentDEC * M_PI / 180.0) * sin(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
+            n = sin(currentDEC * M_PI / 180.0);
+            */
             l = cos(pointalt * M_PI / 180.0) * cos(pointset->range360(-180.0 - pointaz) * M_PI / 180.0);
             m = cos(pointalt * M_PI / 180.0) * sin(pointset->range360(-180.0 - pointaz) * M_PI / 180.0);
             n = sin(pointalt * M_PI / 180.0);
@@ -324,15 +324,15 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             *alignedDEC = asin(N) * 180.0 / M_PI;
 
             /*
-      alignedaz = atan(M/L) * 180.0 / M_PI;
-      //if (L < 0) alignedaz += 180.0;
-      //if (alignedaz < 0) alignedaz = 360.0 + alignedaz;
-      alignedaz = pointset->range360(-180.0 - alignedaz);
-      
-      alignedalt = asin(N) * 180.0 / M_PI;
+            alignedaz = atan(M/L) * 180.0 / M_PI;
+            //if (L < 0) alignedaz += 180.0;
+            //if (alignedaz < 0) alignedaz = 360.0 + alignedaz;
+            alignedaz = pointset->range360(-180.0 - alignedaz);
 
-      pointset->RaDecFromAltAz(alignedalt, alignedaz, jd, alignedRA, alignedDEC, position);
-      */
+            alignedalt = asin(N) * 180.0 / M_PI;
+
+            pointset->RaDecFromAltAz(alignedalt, alignedaz, jd, alignedRA, alignedDEC, position);
+            */
         }
         else
         {
@@ -362,12 +362,12 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             m = T[1][0] * L + T[1][1] * M + T[1][2] * N;
             n = T[2][0] * L + T[2][1] * M + T[2][2] * N;
             /*
-      *alignedRA = atan(m/l) * 12.0 / M_PI;
-      if (l < 0) *alignedRA += 12.0;
-      if (*alignedRA < 0) *alignedRA = 24.0 + *alignedRA;
-      
-      *alignedDEC = asin(n) * 180.0 / M_PI;	
-      */
+            *alignedRA = atan(m/l) * 12.0 / M_PI;
+            if (l < 0) *alignedRA += 12.0;
+            if (*alignedRA < 0) *alignedRA = 24.0 + *alignedRA;
+
+            *alignedDEC = asin(n) * 180.0 / M_PI;
+            */
             alignedaz = atan(m / l) * 180.0 / M_PI;
             if (l < 0)
                 alignedaz += 180.0;
@@ -385,7 +385,7 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             currentdeltaRA  = *alignedRA - currentRA;
             currentdeltaDEC = *alignedDEC - currentDEC;
             LOGF_INFO("GOTO ALign NStar: delta RA = %f, delta DEC  = %f alt=%f az=%f",
-                   currentdeltaRA, currentdeltaDEC, alignedalt, alignedaz);
+                      currentdeltaRA, currentdeltaDEC, alignedalt, alignedaz);
         }
         //IDLog("ALign NStar: delta RA = %f, delta DEC = %f\n", (*alignedRA - currentRA), (*alignedDEC - currentDEC));
     }
@@ -426,7 +426,7 @@ void Align::AlignNearest(double jd, struct ln_lnlat_posn *position, double curre
             currentdeltaRA  = *alignedRA - currentRA;
             currentdeltaDEC = *alignedDEC - currentDEC;
             LOGF_INFO("GOTO ALign Nearest: delta RA = %f, delta DEC  = %f", currentdeltaRA,
-                   currentdeltaDEC);
+                      currentdeltaDEC);
         }
         //IDLog("ALign Nearest: align point %s telescope alt = %f, az =%f\n", point->htmname, point->telescopeALT, point->telescopeAZ);
         //IDLog("ALign Nearest: delta RA = %c %f, delta DEC = %c %f\n", (ingoto?'-':'+'), (point->aligndata.targetRA - point->aligndata.telescopeRA),
@@ -447,7 +447,7 @@ void Align::AlignGoto(SyncData globalsync, double jd, struct ln_lnlat_posn *posi
             *gotoRA -= (syncdata.targetRA - syncdata.telescopeRA) + globalsync.deltaRA;
             *gotoDEC -= (syncdata.targetDEC - syncdata.telescopeDEC) + globalsync.deltaDEC;
             LOGF_INFO("GOTO ALign: delta RA = %f, delta DEC  = %f", currentdeltaRA,
-                   currentdeltaDEC);
+                      currentdeltaDEC);
             break;
         case NEAREST:
             AlignNearest(jd, position, *gotoRA - globalsync.deltaRA, *gotoDEC - globalsync.deltaDEC, gotoRA, gotoDEC,
@@ -472,15 +472,17 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
 {
     INDI_UNUSED(globalsync);
     double values[6]     = { thissync.lst,       thissync.jd,          thissync.targetRA,
-                         thissync.targetDEC, thissync.telescopeRA, thissync.telescopeDEC };
+                             thissync.targetDEC, thissync.telescopeRA, thissync.telescopeDEC
+                           };
     const char *names[6] = { "ALIGNPOINT_SYNCTIME",     "ALIGNPOINT_JD",           "ALIGNPOINT_CELESTIAL_RA",
-                             "ALIGNPOINT_CELESTIAL_DE", "ALIGNPOINT_TELESCOPE_RA", "ALIGNPOINT_TELESCOPE_DE" };
+                             "ALIGNPOINT_CELESTIAL_DE", "ALIGNPOINT_TELESCOPE_RA", "ALIGNPOINT_TELESCOPE_DE"
+                           };
 
     /*syncdata.lst = lst; syncdata.jd = jd;
-  syncdata.targetRA = targetRA;  syncdata.targetDEC = targetDEC;  
-  syncdata.telescopeRA = telescopeRA;  syncdata.telescopeDEC = telescopeDEC;  
-  IDLog("AlignSync \n");
-  */
+    syncdata.targetRA = targetRA;  syncdata.targetDEC = targetDEC;
+    syncdata.telescopeRA = telescopeRA;  syncdata.telescopeDEC = telescopeDEC;
+    IDLog("AlignSync \n");
+    */
     // add point on sync
     //alignsyncsw=IUFindSwitch(AlignOptionsSP,"ADDONSYNC");
     //if (alignsyncsw->s == ISS_ON) {
@@ -610,7 +612,7 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     for(int x=0; x<n; x++) {
         IDLog("Align: Switch %s %d\n",names[x],states[x]);
     }
-  */
+    */
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
         if (AlignModeSP && strcmp(name, AlignModeSP->name) == 0)
@@ -698,17 +700,17 @@ bool Align::ISNewText(const char *dev, const char *name, char *texts[], char *na
         if (AlignDataFileTP && (strcmp(name, AlignDataFileTP->name) == 0))
         {
             /*	  char *loadres=nullptr;
-	  pointset->Reset();
-	  IUUpdateText(AlignDataFileTP,texts,names,n);
-	  loadres=pointset->LoadDataFile(IUFindText(AlignDataFileTP,"ALIGNDATAFILENAME")->text);
-	  if (loadres) {
-	    IDMessage(telescope->getDeviceName(), "Can not load Align Data File %s: %s", 
-		      IUFindText(AlignDataFileTP,"ALIGNDATAFILENAME")->text, loadres);
-	    AlignDataFileTP->s=IPS_ALERT;
-	  } else 
-	    AlignDataFileTP->s=IPS_OK;
-	  IDSetText(AlignDataFileTP,nullptr);
-	  */
+            pointset->Reset();
+            IUUpdateText(AlignDataFileTP,texts,names,n);
+            loadres=pointset->LoadDataFile(IUFindText(AlignDataFileTP,"ALIGNDATAFILENAME")->text);
+            if (loadres) {
+            IDMessage(telescope->getDeviceName(), "Can not load Align Data File %s: %s",
+              IUFindText(AlignDataFileTP,"ALIGNDATAFILENAME")->text, loadres);
+            AlignDataFileTP->s=IPS_ALERT;
+            } else
+            AlignDataFileTP->s=IPS_OK;
+            IDSetText(AlignDataFileTP,nullptr);
+            */
             IUUpdateText(AlignDataFileTP, texts, names, n);
             IDSetText(AlignDataFileTP, nullptr);
             return true;

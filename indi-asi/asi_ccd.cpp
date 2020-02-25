@@ -229,6 +229,9 @@ ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
 
 ASICCD::~ASICCD()
 {
+    // Save all configs before shutting down.
+    saveConfig(true);
+
     if (isConnected())
         Disconnect();
 }
@@ -328,9 +331,9 @@ bool ASICCD::updateProperties()
         if (HasCooler())
         {
             defineNumber(&CoolerNP);
-            loadConfig(true, "CCD_COOLER_POWER");
+            loadConfig(true, CoolerNP.name);
             defineSwitch(&CoolerSP);
-            loadConfig(true, "CCD_COOLER");
+            loadConfig(true, CoolerSP.name);
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
@@ -342,13 +345,13 @@ bool ASICCD::updateProperties()
         if (ControlNP.nnp > 0)
         {
             defineNumber(&ControlNP);
-            loadConfig(true, "CCD_CONTROLS");
+            loadConfig(true, ControlNP.name);
         }
 
         if (ControlSP.nsp > 0)
         {
             defineSwitch(&ControlSP);
-            loadConfig(true, "CCD_CONTROLS_MODE");
+            loadConfig(true, ControlSP.name);
         }
 
         if (VideoFormatSP.nsp > 0)
@@ -358,7 +361,7 @@ bool ASICCD::updateProperties()
             // Try to set 16bit RAW by default.
             // It can get be overwritten by config value.
             // If config fails, we try to set 16 if exists.
-            if (loadConfig(true, "CCD_VIDEO_FORMAT") == false)
+            if (loadConfig(true, VideoFormatSP.name) == false)
             {
                 for (int i = 0; i < VideoFormatSP.nsp; i++)
                 {
@@ -2027,6 +2030,15 @@ void ASICCD::getExposure()
                     if (threadRequest == StateExposure)
                     {
                         LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
+
+                        // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
+                        // images.
+                        if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
+                        {
+                            LOG_INFO("Switching to 8-bit video.");
+                            setVideoFormat(ASI_IMG_RAW8);
+                            saveConfig(true, VideoFormatSP.name);
+                        }
                     }
                     InExposure = false;
                     ASIStopExposure(m_camInfo->CameraID);
@@ -2125,12 +2137,26 @@ void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
-    INumber *gainNP = IUFindNumber(&ControlNP, "Gain");
-
-    if (gainNP)
+    // e-/ADU
+    INumber *np = IUFindNumber(&ControlNP, "Gain");
+    if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
+        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+    }
+
+    np = IUFindNumber(&ControlNP, "Offset");
+    if (np)
+    {
+        int status = 0;
+        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+    }
+
+    np = IUFindNumber(&ControlNP, "Gamma");
+    if (np)
+    {
+        int status = 0;
+        fits_update_key_s(fptr, TDOUBLE, "GAMMA", &(np->value), "Gamma", &status);
     }
 }
 

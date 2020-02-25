@@ -344,7 +344,10 @@
 
 #define DEVICETYPE_QHY367PROC  4066
 
-
+#define DEVICETYPE_QHY268C      4067
+#define DEVICETYPE_QHY410C      4068
+#define DEVICETYPE_QHY432        4069
+#define DEVICETYPE_QHY342        4070
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   4999
@@ -500,6 +503,16 @@
 
 #define DEVICETYPE_QHY50GX      9013
 
+
+/**
+ * Type define for QHYPCIEBEGIN*/
+#define DEVICETYPE_QHYPCIEBEGIN   		12001
+
+#define DEVICETYPE_QHY600MPCIE      	12002
+#define DEVICETYPE_QHY600CPCIE      	12003
+
+
+#define DEVICETYPE_QHYPCIEEND	   		13000
 
 
 /* IMG series */
@@ -915,8 +928,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH        		20000
-#define QHY5IIICOMMON_MAX_HEIGHT        	15000
+#define QHY5IIICOMMON_MAX_WIDTH        		8000
+#define QHY5IIICOMMON_MAX_HEIGHT        	6000
 
 /**
  * Type define for QHY247*/
@@ -985,9 +998,17 @@
 #define QHY600_MAX_WIDTH        	9600
 #define QHY600_MAX_HEIGHT        	6422
 
+#define QHY268C_MAX_WIDTH        6280
+#define QHY268C_MAX_HEIGHT       4210
 
+#define QHY410C_MAX_WIDTH        6112
+#define QHY410C_MAX_HEIGHT       4094
 
+#define QHY432_MAX_WIDTH        1624
+#define QHY432_MAX_HEIGHT       1136
 
+#define QHY342_MAX_WIDTH        6512
+#define QHY342_MAX_HEIGHT       4870
 /**
  * Type define for QHY16 */
 #define QHY16_MAX_WIDTH        	4144
@@ -1064,10 +1085,7 @@
 #define QHY21_MAX_WIDTH        	2048
 #define QHY21_MAX_HEIGHT        1500
 
-/**
- * Type define for QHY22 */
-#define QHY22_MAX_WIDTH        	3072
-#define QHY22_MAX_HEIGHT        2240
+
 
 /**
  * Type define for QHY23 */
@@ -1273,5 +1291,27 @@
 
 #define RESET_USB_PIPE		1
 #define ABORT_USB_PIPE		2
+
+
+
+#define MAX_PCIE_CHANNEL		4
+
+#define	FPGA_CAMARA_LENGTH		256
+
+#define	CAM_SCAN_INTERVAL 		1000
+
+#define CRC32_POLY  			(0x04C11DB7)
+
+
+#define	PCIE_COMMAND_HEAD		(0xAAEE3322)
+
+#define	PCIE_FPGA_WRITE_C		(0x00008881)
+#define	PCIE_NIOS_READ_C		(0x00007770)
+#define	PCIE_NIOS_WRITE_C		(0x00007771)
+
+#define	PCIE_CAPTURE_WRITE_C	(0x66666665)
+
+
+#define	PCIE_DWORD				(4)
 
 #endif

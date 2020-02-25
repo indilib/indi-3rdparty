@@ -29,10 +29,10 @@ def graphs(time):
           preamble,
 	 "--title","Temperature",
 	 "--vertical-label=Celsius ºC",
-	 "DEF:T=meteo.rrd:T:AVERAGE",
-	 "DEF:Tmax=meteo.rrd:T:MAX",
-	 "DEF:Tmin=meteo.rrd:T:MIN",
-	 "DEF:Dew=meteo.rrd:Dew:AVERAGE",
+	 "DEF:T="+RRDFILE+":T:AVERAGE",
+	 "DEF:Tmax="+RRDFILE+":T:MAX",
+	 "DEF:Tmin="+RRDFILE+":T:MIN",
+	 "DEF:Dew="+RRDFILE+":Dew:AVERAGE",
 	 "LINE1:T#"+red+":Ambient Temperature",
 	 "HRULE:0#00FFFFAA:ZERO",
 	 "AREA:Dew#"+red+"40:Dew Point\\r",
@@ -43,11 +43,11 @@ def graphs(time):
           preamble,
 	 "--title","Temperaturas",
 	 "--vertical-label=Celsius ºC",
-	 "DEF:IR=meteo.rrd:IR:AVERAGE",
-	 "DEF:Thr=meteo.rrd:Thr:AVERAGE",
-	 "DEF:Tp=meteo.rrd:Tp:AVERAGE",
-	 "DEF:Tir=meteo.rrd:Tir:AVERAGE",
-	 "DEF:Dew=meteo.rrd:Dew:AVERAGE",
+	 "DEF:IR="+RRDFILE+":IR:AVERAGE",
+	 "DEF:Thr="+RRDFILE+":Thr:AVERAGE",
+	 "DEF:Tp="+RRDFILE+":Tp:AVERAGE",
+	 "DEF:Tir="+RRDFILE+":Tir:AVERAGE",
+	 "DEF:Dew="+RRDFILE+":Dew:AVERAGE",
 	 "LINE1:IR#00F0F0:IR",
 	 "LINE1:Thr#00FF00:Thr",
 	 "LINE1:Tp#FF0000:Tp",
@@ -63,7 +63,7 @@ def graphs(time):
 	 "-u",str(Pmax),
 	 "-l",str(Pmin),
 	 "-r",
-	 "DEF:P=meteo.rrd:P:AVERAGE",
+	 "DEF:P="+RRDFILE+":P:AVERAGE",
 	 "HRULE:"+str(P0)+"#"+red+"AA:standard",
 	 "LINE1:P#"+blue+":P\\r",
 	 "COMMENT:\\n",
@@ -76,7 +76,7 @@ def graphs(time):
 	 "-r",
 	 "--title","Humidity",
 	 "--vertical-label=%",
-	 "DEF:HR=meteo.rrd:HR:AVERAGE",
+	 "DEF:HR="+RRDFILE+":HR:AVERAGE",
 	 "HRULE:100#FF00FFAA:100%",
 	 "HRULE:0#00FFFFAA:0%",
 	 "LINE1:HR#"+blue+":HR\\r",
@@ -87,7 +87,7 @@ def graphs(time):
           preamble,
 	 "--title","Iradiance",
 	 "--vertical-label=rel",
-	 "DEF:Light=meteo.rrd:Light:AVERAGE",
+	 "DEF:Light="+RRDFILE+":Light:AVERAGE",
 	 "LINE1:Light#"+blue+":Irradiance\\r",
 	 "COMMENT:\\n",
 	 "GPRINT:Light:AVERAGE:Avg Light\: %6.2lf %S\\r")
@@ -99,8 +99,8 @@ def graphs(time):
 	 "-u","102",
 	 "-l","-2",
 	 "-r",
-	 "DEF:clouds=meteo.rrd:clouds:AVERAGE",
-	 "DEF:cloudFlag=meteo.rrd:cloudFlag:AVERAGE",
+	 "DEF:clouds="+RRDFILE+":clouds:AVERAGE",
+	 "DEF:cloudFlag="+RRDFILE+":cloudFlag:AVERAGE",
 	 "CDEF:cloudy=clouds,cloudFlag,*",
 	 "LINE1:clouds#"+orange+":clouds",
 	 "AREA:cloudy#FFFFFF40:CloudyFlag\\r",
@@ -112,9 +112,9 @@ def graphs(time):
           preamble,
 	 "--title","Sky Temperatures",
 	 "--vertical-label=Celsius ºC",
-	 "DEF:skyT=meteo.rrd:skyT:AVERAGE",
-	 "DEF:IR=meteo.rrd:IR:AVERAGE",
-	 "DEF:Thr=meteo.rrd:Thr:AVERAGE",
+	 "DEF:skyT="+RRDFILE+":skyT:AVERAGE",
+	 "DEF:IR="+RRDFILE+":IR:AVERAGE",
+	 "DEF:Thr="+RRDFILE+":Thr:AVERAGE",
 	 "CDEF:Tc=IR,skyT,-",
 	 "LINE1:skyT#"+blue+":Corrected Sky T",
 	 "LINE1:IR#"+orange+":Actual Sky T",
@@ -131,6 +131,7 @@ Pmax=P0+Pdelta
 i=0
 print "Starting GRAPHER"
 while (True):
+  try:
 	graphs(3)
 	print "Generating 3 hours graph"
 	if (i % 4 == 0):
@@ -144,3 +145,6 @@ while (True):
 		graphs(1176)
         i=i+1
 	time.sleep(60)
+  except:
+	print "Updating graphs failed"
+	time.sleep(10)

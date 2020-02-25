@@ -2,8 +2,12 @@
 <driversList>
 <devGroup group="Telescopes">
         <device label="EQMod Mount" manufacturer="SkyWatcher">
-		<driver name="EQMod Mount">indi_eqmod_telescope</driver>
+                <driver name="EQMod Mount">indi_eqmod_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
-	</device>
+        </device>
+        <device label="AZ-GTi" manufacturer="SkyWatcher">
+                <driver name="AZ-GTi">indi_azgti_telescope</driver>
+                <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>

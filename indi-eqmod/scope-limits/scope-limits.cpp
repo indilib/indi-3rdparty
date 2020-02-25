@@ -17,7 +17,7 @@
 
 #include "scope-limits.h"
 
-#include "../eqmod.h"
+#include "../eqmodbase.h"
 
 #include <indicom.h>
 

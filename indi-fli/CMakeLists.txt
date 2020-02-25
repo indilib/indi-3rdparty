@@ -13,7 +13,7 @@ find_package(FLI REQUIRED)
 find_package(ZLIB REQUIRED)
 
 set (FLI_CCD_VERSION_MAJOR 1)
-set (FLI_CCD_VERSION_MINOR 3)
+set (FLI_CCD_VERSION_MINOR 5)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_fli.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_fli.xml )
@@ -49,7 +49,7 @@ target_link_libraries(indi_fli_wheel ${INDI_LIBRARIES} ${FLI_LIBRARIES} ${M_LIB}
 install(TARGETS indi_fli_wheel RUNTIME DESTINATION bin )
 ############# FLI CCD ###############
 set(fliccd_SRCS
-	${CMAKE_CURRENT_SOURCE_DIR}/fli_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/fli_ccd.cpp
 )
 
 add_executable(indi_fli_ccd ${fliccd_SRCS})

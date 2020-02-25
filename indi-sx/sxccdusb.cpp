@@ -139,45 +139,46 @@ static struct
     const char *name;
     int seq;
 } SX_PIDS[] = { { 0x105, "SXVF-M5", 0 },
-                { 0x305, "SXVF-M5C", 0 },
-                { 0x107, "SXVF-M7", 0 },
-                { 0x307, "SXVF-M7C", 0 },
-                { 0x308, "SXVF-M8C", 0 },
-                { 0x109, "SXVF-M9", 0 },
-                { 0x325, "SXVR-M25C", 0 },
-                { 0x326, "SXVR-M26C", 0 },
-                { 0x115, "SXVR-H5", 0 },
-                { 0x119, "SXVR-H9", 0 },
-                { 0x319, "SXVR-H9C", 0 },
-                { 0x100, "SXVR-H9", 0 },
-                { 0x300, "SXVR-H9C", 0 },
-                { 0x126, "SXVR-H16", 0 },
-                { 0x128, "SXVR-H18", 0 },
-                { 0x135, "SXVR-H35", 0 },
-                { 0x136, "SXVR-H36", 0 },
-                { 0x137, "SXVR-H360", 0 },
-                { 0x139, "SXVR-H390", 0 },
-                { 0x194, "SXVR-H694", 0 },
-                { 0x394, "SXVR-H694C", 0 },
-                { 0x174, "SXVR-H674", 0 },
-                { 0x374, "SXVR-H674C", 0 },
-                { 0x198, "SX-814", 0 },
-                { 0x398, "SX-814C", 0 },
-                { 0x189, "SX-825", 0 },
-                { 0x389, "SX-825C", 0 },
-                { 0x184, "SX-834", 0 },
-                { 0x384, "SX-834C", 0 },
-                { 0x507, "LodeStar", 0 },
-                { 0x517, "CoStar", 0 },
-                { 0x509, "SuperStar", 0 },
-                { 0x525, "UltraStar", 0 },
-                { 0x601, "SX-56", 0 },
-                { 0x604, "SX-46", 0 },
-                { 0x605, "SX-46C", 0 },
-                { 0x606, "SX-50", 0 },
-                { 0x607, "SX-50C", 0 },
-                { 0x200, "MX Camera", 0 },
-                { 0, nullptr, 0 } };
+    { 0x305, "SXVF-M5C", 0 },
+    { 0x107, "SXVF-M7", 0 },
+    { 0x307, "SXVF-M7C", 0 },
+    { 0x308, "SXVF-M8C", 0 },
+    { 0x109, "SXVF-M9", 0 },
+    { 0x325, "SXVR-M25C", 0 },
+    { 0x326, "SXVR-M26C", 0 },
+    { 0x115, "SXVR-H5", 0 },
+    { 0x119, "SXVR-H9", 0 },
+    { 0x319, "SXVR-H9C", 0 },
+    { 0x100, "SXVR-H9", 0 },
+    { 0x300, "SXVR-H9C", 0 },
+    { 0x126, "SXVR-H16", 0 },
+    { 0x128, "SXVR-H18", 0 },
+    { 0x135, "SXVR-H35", 0 },
+    { 0x136, "SXVR-H36", 0 },
+    { 0x137, "SXVR-H360", 0 },
+    { 0x139, "SXVR-H390", 0 },
+    { 0x194, "SXVR-H694", 0 },
+    { 0x394, "SXVR-H694C", 0 },
+    { 0x174, "SXVR-H674", 0 },
+    { 0x374, "SXVR-H674C", 0 },
+    { 0x198, "SX-814", 0 },
+    { 0x398, "SX-814C", 0 },
+    { 0x189, "SX-825", 0 },
+    { 0x389, "SX-825C", 0 },
+    { 0x184, "SX-834", 0 },
+    { 0x384, "SX-834C", 0 },
+    { 0x507, "LodeStar", 0 },
+    { 0x517, "CoStar", 0 },
+    { 0x509, "SuperStar", 0 },
+    { 0x525, "UltraStar", 0 },
+    { 0x601, "SX-56", 0 },
+    { 0x604, "SX-46", 0 },
+    { 0x605, "SX-46C", 0 },
+    { 0x606, "SX-50", 0 },
+    { 0x607, "SX-50C", 0 },
+    { 0x200, "MX Camera", 0 },
+    { 0, nullptr, 0 }
+};
 
 libusb_context *ctx = nullptr;
 
@@ -233,7 +234,12 @@ bool sxIsInterlaced(short model)
 
 bool sxIsColor(short model)
 {
-    return model & 0x80;
+    // JM 2019-12-24: This cannot be used to detect color camera as it fails
+    // to detect some cameras like M25C
+    //return model & 0x80;
+
+    // From checking SX sources, appears anything above 0x50 is color
+    return (model > 0x50);
 }
 
 bool sxIsICX453(short model)
