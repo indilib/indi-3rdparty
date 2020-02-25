@@ -44,6 +44,11 @@ void sendSensorData() {
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
 
+#ifdef USE_DAVIS_SENSOR
+  updateAnemometer();
+  serializeAnemometer(weatherDoc);
+#endif //USE_DAVIS_SENSOR
+
 #ifdef USE_BME_SENSOR
   updateBME();
   serializeBME(weatherDoc);
@@ -63,11 +68,6 @@ void sendSensorData() {
   updateTSL();
   serializeTSL(weatherDoc);
 #endif //USE_TSL_SENSOR
-
-#ifdef USE_DAVIS_SENSOR
-  updateAnemometer();
-  serializeAnemometer(weatherDoc);
-#endif //USE_DAVIS_SENSOR
 
   serializeJson(weatherDoc, Serial);
   Serial.println();

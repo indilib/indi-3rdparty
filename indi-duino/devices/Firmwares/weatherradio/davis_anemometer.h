@@ -41,6 +41,10 @@ volatile unsigned int sliceRotations; // rotation occured in the current time sl
 volatile float minSpeed;              // minimal wind speed since startTime
 volatile float maxSpeed;              // maximal wind speed since startTime
 
+// intermediate values to calculate an average wind direction
+volatile float initial_direction; // remember the first direction measured
+volatile float direction_diffs;   // and collect the diffs to build the average
+
 
 // calculate the windspeed
 float windspeed(unsigned long time, unsigned long startTime, unsigned int rotations) {
@@ -90,6 +94,14 @@ void isr_rotation () {
       startSlice = now;
       sliceRotations = 0;
     }
+
+    // calculate the difference in the wind direction
+    volatile int current_direction = winddirection();
+    volatile int diff = initial_direction - current_direction;
+    // ensure that the diff is in the range -180 < diff <= 180
+    if (diff > 180) diff -= 360;
+    if (diff <= -180) diff += 360;
+    direction_diffs += diff;
   }
 }
 
@@ -102,6 +114,8 @@ void reset(unsigned long time) {
   sliceRotations = 0;
   maxSpeed       = 0.0;
   minSpeed       = 9999.0;
+  initial_direction = winddirection();
+  direction_diffs = 0;
 }
 
 
@@ -124,7 +138,10 @@ void updateAnemometer() {
     anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
     anemometerData.rotations = rotations;
 
-    anemometerData.direction = winddirection();
+    if (rotations > 0)
+      anemometerData.direction = round(initial_direction - (direction_diffs / rotations));
+    else
+      anemometerData.direction = initial_direction;
 
     reset(millis());
     // start recording
