@@ -52,6 +52,7 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define WEATHER_SQM             "WEATHER_SQM"
 #define WEATHER_DEWPOINT        "WEATHER_DEWPOINT"
 #define WEATHER_SKY_TEMPERATURE "WEATHER_SKY_TEMPERATURE"
+#define WEATHER_WIND_GUST       "WEATHER_WIND_GUST"
 #define WEATHER_WIND_SPEED      "WEATHER_WIND_SPEED"
 #define WEATHER_WIND_DIRECTION  "WEATHER_WIND_DIRECTION"
 
@@ -131,6 +132,7 @@ bool WeatherRadio::initProperties()
     addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
     addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
     addParameter(WEATHER_WIND_SPEED, "Wind speed (m/s)", 0, 10, 50);
+    addParameter(WEATHER_WIND_GUST, "Wind gust (m/s)", 0, 15, 50);
     addParameter(WEATHER_WIND_DIRECTION, "Wind direction (deg)", 0, 360, 10);
 
     setCriticalParameter(WEATHER_TEMPERATURE);
@@ -138,6 +140,7 @@ bool WeatherRadio::initProperties()
     setCriticalParameter(WEATHER_HUMIDITY);
     setCriticalParameter(WEATHER_CLOUD_COVER);
     setCriticalParameter(WEATHER_SQM);
+    setCriticalParameter(WEATHER_WIND_GUST);
     setCriticalParameter(WEATHER_WIND_SPEED);
 
     addDebugControl();
@@ -158,8 +161,9 @@ bool WeatherRadio::initProperties()
     deviceConfig["TSL2591"]["Timing"]  = {"Timing", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
     deviceConfig["Davis Anemometer"]["avg speed"] = {"Wind speed (avg, m/s)", WIND_SPEED_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["Davis Anemometer"]["min speed"] = {"Wind speed (min, m/s)", INTERNAL_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["Davis Anemometer"]["max speed"] = {"Wind speed (max, m/s)", INTERNAL_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.1f", 0., 360.0, 1.0};
+    deviceConfig["Davis Anemometer"]["max speed"] = {"Wind speed (max, m/s)", WIND_GUST_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.0f", 0., 360.0, 1.0};
+    deviceConfig["Davis Anemometer"]["rotations"] = {"Wind wheel rotations", INTERNAL_SENSOR, "%.0f", 0., 360.0, 1.0};
 
     return true;
 }
@@ -183,6 +187,7 @@ bool WeatherRadio::updateProperties()
         addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
         addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
         addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+        addSensorSelection(&windGustSensorSP, sensorRegistry.wind_gust, "WIND_GUST_SENSOR", "Wind Gust Sensor");
         addSensorSelection(&windSpeedSensorSP, sensorRegistry.wind_speed, "WIND_SPEED_SENSOR", "Wind Speed Sensor");
         addSensorSelection(&windDirectionSensorSP, sensorRegistry.wind_direction, "WIND_DIRECTION_SENSOR", "Wind Direction Sensor");
 
@@ -199,6 +204,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(luminositySensorSP.name);
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
+        deleteProperty(windGustSensorSP.name);
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(FirmwareInfoTP.name);
@@ -376,6 +382,17 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             return (objectTemperatureSensorSP.s == IPS_OK);
         }
+        else if (strcmp(name, windGustSensorSP.name) == 0)
+        {
+            // wind gust sensor selected
+            IUUpdateSwitch(&windGustSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windGustSensorSP, selected);
+            currentSensors.wind_gust = sensor;
+
+            return (windGustSensorSP.s == IPS_OK);
+        }
         else if (strcmp(name, windSpeedSensorSP.name) == 0)
         {
             // wind speed sensor selected
@@ -389,7 +406,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
         }
         else if (strcmp(name, windDirectionSensorSP.name) == 0)
         {
-            // wind speed sensor selected
+            // wind direction sensor selected
             IUUpdateSwitch(&windDirectionSensorSP, states, names, n);
 
             const char *selected = IUFindOnSwitchName(states, names, n);
@@ -603,6 +620,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     }
     else if (currentSensors.luminosity == sensor)
         setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
+    else if (currentSensors.wind_gust == sensor)
+        setParameterValue(WEATHER_WIND_GUST, value);
     else if (currentSensors.wind_speed == sensor)
         setParameterValue(WEATHER_WIND_SPEED, value);
     else if (currentSensors.wind_direction == sensor)
@@ -631,6 +650,9 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
     case OBJECT_TEMPERATURE_SENSOR:
         sensorRegistry.temp_object.push_back(sensor);
         break;
+    case WIND_GUST_SENSOR:
+        sensorRegistry.wind_gust.push_back(sensor);
+        break;
     case WIND_SPEED_SENSOR:
         sensorRegistry.wind_speed.push_back(sensor);
         break;
@@ -657,6 +679,7 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &luminositySensorSP);
     IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
+    IUSaveConfigSwitch(fp, &windGustSensorSP);
     IUSaveConfigSwitch(fp, &windSpeedSensorSP);
     IUSaveConfigSwitch(fp, &windDirectionSensorSP);
     IUSaveConfigNumber(fp, ParametersRangeNP);
