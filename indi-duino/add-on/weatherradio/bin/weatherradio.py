@@ -37,6 +37,7 @@ def readWeather(indi):
     result['DewPoint']       = weather.get_element(WEATHER_DEWPOINT).get_float()
     result['SkyTemperature'] = weather.get_element(WEATHER_SKY_TEMPERATURE).get_float()
     result['WindSpeed']      = weather.get_element(WEATHER_WIND_SPEED).get_float()
+    result['WindGust']      = weather.get_element(WEATHER_WIND_GUST).get_float()
     result['WindDirection']  = weather.get_element(WEATHER_WIND_DIRECTION).get_float()
   
     return result;
