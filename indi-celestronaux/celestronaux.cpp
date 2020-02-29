@@ -249,7 +249,7 @@ bool CelestronAUX::Disconnect()
 
 const char *CelestronAUX::getDefaultName()
 {
-    return (char *)"NexStar Evolution";
+    return (char *)"Celestron AUX";
 }
 
 bool CelestronAUX::Park()
