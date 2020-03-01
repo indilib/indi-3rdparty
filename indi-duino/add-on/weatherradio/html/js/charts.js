@@ -252,7 +252,7 @@ function updateSeries() {
         pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
         cloudCoverage.updateSeries([currentCloudCoverage]);
         humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-        document.querySelector("#humidityValue").textContent = currentHumidity + "%";
+        document.querySelector("#humidityValue").textContent = currentHumidity.toFixed(0) + "%";
         sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
         document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
         windSpeed.updateSeries([{name: "Wind Speed", data: [currentWindSpeed]}]);
