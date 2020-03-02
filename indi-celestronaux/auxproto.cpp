@@ -100,7 +100,8 @@ const char * AUXCommand::cmd_name(AUXCommands c)
             case GPS_GET_TIME: return "GPS_GET_TIME";
             case GPS_TIME_VALID: return "GPS_TIME_VALID";
             case GPS_LINKED: return "GPS_LINKED";
-            default : return "CMD_UNKNOWN";
+            case GET_VER: return "GET_VER";
+            default : return nullptr;
         }
     else 
         switch (c)
@@ -117,7 +118,7 @@ const char * AUXCommand::cmd_name(AUXCommands c)
             case MC_MOVE_POS: return "MC_MOVE_POS";
             case MC_MOVE_NEG: return "MC_MOVE_NEG";
             case GET_VER: return "GET_VER";
-            default : return "CMD_UNKNOWN";
+            default : return nullptr;
         }
 }
 
@@ -128,7 +129,7 @@ const char * AUXCommand::node_name(AUXtargets n)
         case ANY : return "ANY";
         case MB : return "MB";
         case HC : return "HC";
-        case HCP : return "HCP";
+        case HCP : return "HC+";
         case AZM : return "AZM";
         case ALT : return "ALT";
         case APP : return "APP";
@@ -137,21 +138,34 @@ const char * AUXCommand::node_name(AUXtargets n)
         case BAT : return "BAT";
         case CHG : return "CHG";
         case LIGHT : return "LIGHT";
-        default : return "UNK";
+        default : return nullptr;
     }
 }
 
 void AUXCommand::pprint()
 {
-    fprintf(stderr, "(%12s) %5s -> %5s [", 
-                cmd_name(cmd),
-                node_name(src),
-                node_name(dst)
-            );
+    const char * c = cmd_name(cmd);
+    const char * s = node_name(src);
+    const char * d = node_name(dst);
+
+    if (c != nullptr)
+        fprintf(stderr, "(%12s) ", c);
+    else 
+        fprintf(stderr, "(CMD_[%02x]) ", cmd);
+
+    if (s != nullptr)
+        fprintf(stderr, "%5s ->", s);
+    else
+        fprintf(stderr, "%02x ->", src);
+
+    if (s != nullptr)
+        fprintf(stderr, "%5s [", d);
+    else
+        fprintf(stderr, "%02x [", dst);
+    
     for (unsigned int i = 0; i < data.size(); i++)
-    {
         fprintf(stderr, "%02x ", data[i]);
-    }
+
     fprintf(stderr, "]\n");    
 }
 

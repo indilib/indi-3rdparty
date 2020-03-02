@@ -21,7 +21,7 @@ bool GPS_DEBUG = false;
 bool RD_DEBUG  = false;
 bool WR_DEBUG  = false;
 bool SEND_DEBUG  = false;
-bool PROC_DEBUG  = true;
+bool PROC_DEBUG  = false;
 
 using namespace INDI::AlignmentSubsystem;
 
@@ -906,9 +906,9 @@ void CelestronAUX::TimerHit()
 bool CelestronAUX::updateLocation(double latitude, double longitude, double elevation)
 {
     UpdateLocation(latitude, longitude, elevation);
-    //Lat = latitude;
-    //Lon = longitude;
-    //Elv = elevation;
+    Lat = latitude;
+    Lon = longitude;
+    Elv = elevation;
     return true;
 }
 
@@ -1112,31 +1112,34 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
     {
         case GET_VER:
         {
-            // fprintf(stderr,"GPS: GET_VER from 0x%02x\n", m.src);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: GET_VER from 0x%02x\n", m.src);
             buffer dat(2);
             dat[0] = 0x01;
             dat[1] = 0x00;
             AUXCommand cmd(GET_VER, GPS, m.src, dat);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         case GPS_GET_LAT:
         case GPS_GET_LONG:
         {
-            // fprintf(stderr,"GPS: Sending LAT/LONG Lat:%f Lon:%f\n", Lat, Lon);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: Sending LAT/LONG Lat:%f Lon:%f\n", Lat, Lon);
             AUXCommand cmd(m.cmd, GPS, m.src);
             if (m.cmd == GPS_GET_LAT)
                 cmd.setPosition(Lat);
             else
                 cmd.setPosition(Lon);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         case GPS_GET_TIME:
         {
-            // fprintf(stderr,"GPS: GET_TIME from 0x%02x\n", m.src);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: GET_TIME from 0x%02x\n", m.src);
             time_t gmt;
             struct tm *ptm;
             buffer dat(3);
@@ -1148,12 +1151,13 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[2] = unsigned(ptm->tm_sec);
             AUXCommand cmd(GPS_GET_TIME, GPS, m.src, dat);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         case GPS_GET_DATE:
         {
-            // fprintf(stderr,"GPS: GET_DATE from 0x%02x\n", m->src);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: GET_DATE from 0x%02x\n", m.src);
             time_t gmt;
             struct tm *ptm;
             buffer dat(2);
@@ -1164,12 +1168,13 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[1] = unsigned(ptm->tm_mday);
             AUXCommand cmd(GPS_GET_DATE, GPS, m.src, dat);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         case GPS_GET_YEAR:
         {
-            // fprintf(stderr,"GPS: GET_YEAR from 0x%02x", m->src);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: GET_YEAR from 0x%02x", m.src);
             time_t gmt;
             struct tm *ptm;
             buffer dat(2);
@@ -1178,21 +1183,23 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             ptm    = gmtime(&gmt);
             dat[0] = unsigned(ptm->tm_year + 1900) >> 8;
             dat[1] = unsigned(ptm->tm_year + 1900) & 0xFF;
-            // fprintf(stderr," Sending: %d [%d,%d]\n",ptm->tm_year,dat[0],dat[1]);
+            if (GPS_DEBUG)
+                fprintf(stderr," Sending: %d [%d,%d]\n",ptm->tm_year,dat[0],dat[1]);
             AUXCommand cmd(GPS_GET_YEAR, GPS, m.src, dat);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         case GPS_LINKED:
         {
-            // fprintf(stderr,"GPS: LINKED from 0x%02x\n", m->src);
+            if (GPS_DEBUG)
+                fprintf(stderr,"GPS: LINKED from 0x%02x\n", m.src);
             buffer dat(1);
 
             dat[0] = unsigned(1);
             AUXCommand cmd(GPS_LINKED, GPS, m.src, dat);
             sendCmd(cmd);
-	        readMsgs();
+	        //readMsgs();
             break;
         }
         default:
