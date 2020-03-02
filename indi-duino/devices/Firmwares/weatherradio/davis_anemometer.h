@@ -73,7 +73,11 @@ int winddirection() {
 
 
 // This is the function that the interrupt calls to increment the rotation count
+#ifdef ESP8266
+void ICACHE_RAM_ATTR isr_rotation () {
+#else
 void isr_rotation () {
+#endif
 
   volatile unsigned long now = millis();
   if ((now - lastInterrupt) > 15 ) { // debounce the switch contact.

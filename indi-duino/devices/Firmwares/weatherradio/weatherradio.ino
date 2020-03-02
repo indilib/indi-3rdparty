@@ -82,11 +82,36 @@ void sendCurrentVersion() {
   Serial.println();
 }
 
+// translate the sensor configurations to a JSON document
+void sendCurrentConfig() {
+  const int docSize = JSON_OBJECT_SIZE(2) + // max 2 configurations
+                      JSON_OBJECT_SIZE(2) + // DHT sensors
+                      JSON_OBJECT_SIZE(3);  // Davis Anemometer
+  StaticJsonDocument <docSize> doc;
+#ifdef USE_DHT_SENSOR
+  JsonObject dhtdata = doc.createNestedObject("DHT");
+  dhtdata["pin"] = DHTPIN;
+  dhtdata["type"] = DHTTYPE;
+#endif
+
+#ifdef USE_DAVIS_SENSOR
+  JsonObject davisdata = doc.createNestedObject("Davis Anemometer");
+  davisdata["wind speed pin"] = WINDSPEEDPIN;
+  davisdata["wind direction pin"] = WINDDIRECTIONPIN;
+  davisdata["wind direction offset"] = WINDOFFSET;
+#endif
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+}
+
 /**
    Command loop handling incoming requests and returns a JSON document.
 
    'v' - send current version
    'w' - send current weather sensor values
+   'c' - send sensor configuration settings
 */
 void loop() {
 
@@ -99,6 +124,8 @@ void loop() {
       case 'w':
         sendSensorData();
         break;
+      case 'c':
+        sendCurrentConfig();
     }
   }
 
