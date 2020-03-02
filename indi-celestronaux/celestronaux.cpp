@@ -19,8 +19,9 @@
 bool TOUT_DEBUG = false;
 bool GPS_DEBUG = false;
 bool RD_DEBUG  = false;
+bool WR_DEBUG  = false;
 bool SEND_DEBUG  = false;
-bool PROC_DEBUG  = false;
+bool PROC_DEBUG  = true;
 
 using namespace INDI::AlignmentSubsystem;
 
@@ -1208,12 +1209,11 @@ void CelestronAUX::processCmd(AUXCommand &m)
 {
     if (PROC_DEBUG)
     {
-        fprintf(stderr, "Recv: ");
-        m.dumpCmd();
+        m.pprint();
     }
     if (m.dst == GPS)
         emulateGPS(m);
-    else
+    else 
         switch (m.cmd)
         {
             case MC_GET_POSITION:
@@ -1221,12 +1221,14 @@ void CelestronAUX::processCmd(AUXCommand &m)
                 {
                     case ALT:
                         Alt = m.getPosition();
+                        // if (PROC_DEBUG) fprintf(stderr, "ALT: %ld", Alt);
                         break;
                     case AZM:
                         Az = m.getPosition();
                         // Celestron uses N as zero Azimuth!
                         Az += STEPS_PER_REVOLUTION / 2;
                         Az %= STEPS_PER_REVOLUTION;
+                        // if (PROC_DEBUG) fprintf(stderr, "AZM: %ld", Az);
                         break;
                     default:
                         break;
@@ -1237,9 +1239,11 @@ void CelestronAUX::processCmd(AUXCommand &m)
                 {
                     case ALT:
                         slewingAlt = m.data[0] != 0xff;
+                        // if (PROC_DEBUG) fprintf(stderr, "ALT %d ", slewingAlt);
                         break;
                     case AZM:
                         slewingAz = m.data[0] != 0xff;
+                        // if (PROC_DEBUG) fprintf(stderr, "AZM %d ", slewingAz);
                         break;
                     default:
                         break;
@@ -1248,29 +1252,21 @@ void CelestronAUX::processCmd(AUXCommand &m)
             default:
                 break;
         }
+    // if (PROC_DEBUG) fprintf(stderr, "\n");
 }
 
 
-//FP MODIFIED 
 void CelestronAUX::readMsgs()
 {
-    int n, i;
+    int n;
     unsigned char buf[BUFFER_SIZE];
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    //if (sock <= 0)
     if (PortFD <= 0)
         return;
 
-    //FPtimeval tv;
-    //tv.tv_sec  = 0;
-    //tv.tv_usec = 50000;
-    //setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-    //while ((n = recv(sock, buf, sizeof(buf), MSG_DONTWAIT | MSG_PEEK)) > 0)
-   
-    // search for response packet preamble (0x3b)
-    DEBUG(DBG_CAUX,"Searching for 0x3b header.\n");
+    // search for packet preamble (0x3b)
     do 
     {
         if (nevo_tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
@@ -1279,93 +1275,45 @@ void CelestronAUX::readMsgs()
     while (buf[0] != 0x3b);
 
     // packet preamble is found, now read packet length.
-    DEBUG(DBG_CAUX,"Got 0x3b header. Reading the length\n");
     if (nevo_tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
         return;
 
     // now packet length is known, read the rest of the packet.
-    DEBUG(DBG_CAUX,"Got length. Reading payload.\n");
-    if (nevo_tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n)
-        != TTY_OK || n != buf[1] + 1)
+    if (nevo_tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n) != TTY_OK 
+            || n != buf[1] + 1){
+        DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
         return;
-
-    DEBUG(DBG_CAUX,"We should not be here. EVER!\n");
-
-    n += 2;
-
-    if (RD_DEBUG)
-    {
-        fprintf(stderr, "Got %d bytes: ", n);
-        for (i = 0; i < n; i++)
-            fprintf(stderr, "%02x ", buf[i]);
-        fprintf(stderr, "\n");
     }
-    for (i = 0; i < n;)
-    {
-        //if (RD_DEBUG) fprintf(stderr,"%d ",i);
-        if (buf[i] == 0x3b)
-        {
-            int shft;
-            shft = i + buf[i + 1] + 3;
-            if (shft <= n)
-            {
-                //if (RD_DEBUG) prnBytes(buf+i,shft-i);
-                buffer b(buf + i, buf + shft);
-                //if (RD_DEBUG) dumpMsg(b);
-                cmd.parseBuf(b);
-                processCmd(cmd);
-            }
-            else
-            {
-                fprintf(stderr, "Partial message recv. dropping (i=%d %d/%d)\n", i, shft, n);
-                prnBytes(buf + i, n - i);
-                //FPrecv(sock, buf, n, MSG_DONTWAIT);
-                if ((nevo_tty_read(PortFD, (char*)buf, n, 0, &n)) != TTY_OK)
-                    return;
 
-                break;
-            }
-            i = shft;
-        }
-        else
-        {
-            i++;
-        }
+    // Got the packet, process it
+    // n:length field >=3
+    // The buffer of n+2>=5 bytes contains:
+    // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
+    buffer b(buf, buf + (n+2)); 
+    cmd.parseBuf(b);
+    if (RD_DEBUG) 
+    {
+        fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
+        prnBytes(buf, n+2);
     }
-    // Actually consume data we parsed. Leave the rest for later.
-    if (i > 0)
-    {
-        //n = recv(sock, buf, i, MSG_DONTWAIT);
-
-        if (RD_DEBUG)
-            fprintf(stderr, "Consumed %d/%d bytes \n", n, i);
-     }
+    processCmd(cmd);
 }
 
-//FP MODIFIED
-//int sendBuffer(int sock, buffer buf, long tout_msec)
+
 int CelestronAUX::sendBuffer(int PortFD, buffer buf)
 {
-    //if (sock > 0)
     if (PortFD > 0)
     {
-        //timeval tv;
         int n;
-        //tv.tv_usec = (tout_msec % 1000) * 1000;
-        //tv.tv_sec  = tout_msec / 1000;
-        //setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
-        //n = send(sock, buf.data(), buf.size(), 0);
 
-	if (nevo_tty_write(PortFD,(char*)buf.data(),buf.size(),CTS_TIMEOUT,&n) != TTY_OK)
-            return 0;
+        if (nevo_tty_write(PortFD,(char*)buf.data(),buf.size(),CTS_TIMEOUT,&n) != TTY_OK)
+                return 0;
 
         msleep(50);
-        if (n == -1) {
-            perror("NSEVO::sendBuffer");
-        }
-        if ((unsigned)n!=buf.size()) {
+        if (n == -1) 
+            perror("CAUX::sendBuffer");
+        if ((unsigned)n!=buf.size()) 
             fprintf(stderr, "sendBuffer: incomplete send n=%d size=%d\n", n, (int)buf.size());
-        }
         return n;
     }
     else
@@ -1382,9 +1330,10 @@ bool CelestronAUX::sendCmd(AUXCommand &c)
         c.dumpCmd();
     }
     c.fillBuf(buf);
-    //return sendBuffer(sock, buf, 500) == (int)buf.size();
     return sendBuffer(PortFD, buf) == (int)buf.size();
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Wrap functions around the standard driver communication functions tty_read
@@ -1431,7 +1380,10 @@ int CelestronAUX::nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int 
 {
     int errcode;
     char errmsg[MAXRBUF];
-    fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+    
+    if (RD_DEBUG)
+        fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+    
     // if serial, set RTS to off to receive: PC port bahaves as half duplex.
     if (getActiveConnection() == serialConnection)
         setRTS(0);
@@ -1451,7 +1403,9 @@ int CelestronAUX::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,i
     int errcode ,ne;
     char errmsg[MAXRBUF];
 
-    fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+    if (WR_DEBUG) 
+        fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+    
     // if serial, set RTS to on then wait for CTS on to write: PC port
     // bahaves as half duplex. RTS may be already on.
     if (getActiveConnection() == serialConnection)
@@ -1488,11 +1442,11 @@ int CelestronAUX::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,i
         }
 
         if (*n != ne)
-	    return TTY_WRITE_ERROR;
+	        return TTY_WRITE_ERROR;
 
         for (int i=0; i < ne; i++)
-	    if (buf[i] != errmsg[i])
-	 	return TTY_WRITE_ERROR;
+	        if (buf[i] != errmsg[i])
+                return TTY_WRITE_ERROR;
     }
 
     return TTY_OK;

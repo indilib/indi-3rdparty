@@ -16,7 +16,7 @@
 
 #define BUFFER_SIZE 10240
 int MAX_CMD_LEN = 32;
-bool DEBUG      = false;
+bool DEBUG      = true;
 
 //////////////////////////////////////////////////
 /////// Utility functions
@@ -86,6 +86,73 @@ void AUXCommand::dumpCmd()
         }
         fprintf(stderr, "\n");
     }
+}
+
+const char * AUXCommand::cmd_name(AUXCommands c)
+{
+    if (src == GPS || dst == GPS)
+        switch (c)
+        {
+            case GPS_GET_LAT: return "GPS_GET_LAT";
+            case GPS_GET_LONG: return "GPS_GET_LONG";
+            case GPS_GET_DATE: return "GPS_GET_DATE";
+            case GPS_GET_YEAR: return "GPS_GET_YEAR";
+            case GPS_GET_TIME: return "GPS_GET_TIME";
+            case GPS_TIME_VALID: return "GPS_TIME_VALID";
+            case GPS_LINKED: return "GPS_LINKED";
+            default : return "CMD_UNKNOWN";
+        }
+    else 
+        switch (c)
+        {
+            case MC_GET_POSITION: return "MC_GET_POSITION";
+            case MC_GOTO_FAST: return "MC_GOTO_FAST";
+            case MC_SET_POSITION: return "MC_SET_POSITION";
+            case MC_SET_POS_GUIDERATE: return "MC_SET_POS_GUIDERATE";
+            case MC_SET_NEG_GUIDERATE: return "MC_SET_NEG_GUIDERATE";
+            case MC_LEVEL_START: return "MC_LEVEL_START";
+            case MC_SLEW_DONE: return "MC_SLEW_DONE";
+            case MC_GOTO_SLOW: return "MC_GOTO_SLOW";
+            case MC_SEEK_INDEX: return "MC_SEEK_INDEX";
+            case MC_MOVE_POS: return "MC_MOVE_POS";
+            case MC_MOVE_NEG: return "MC_MOVE_NEG";
+            case GET_VER: return "GET_VER";
+            default : return "CMD_UNKNOWN";
+        }
+}
+
+const char * AUXCommand::node_name(AUXtargets n)
+{
+    switch (n)
+    {
+        case ANY : return "ANY";
+        case MB : return "MB";
+        case HC : return "HC";
+        case HCP : return "HCP";
+        case AZM : return "AZM";
+        case ALT : return "ALT";
+        case APP : return "APP";
+        case GPS : return "GPS";
+        case WiFi: return "WiFi";
+        case BAT : return "BAT";
+        case CHG : return "CHG";
+        case LIGHT : return "LIGHT";
+        default : return "UNK";
+    }
+}
+
+void AUXCommand::pprint()
+{
+    fprintf(stderr, "(%12s) %5s -> %5s [", 
+                cmd_name(cmd),
+                node_name(src),
+                node_name(dst)
+            );
+    for (unsigned int i = 0; i < data.size(); i++)
+    {
+        fprintf(stderr, "%02x ", data[i]);
+    }
+    fprintf(stderr, "]\n");    
 }
 
 void AUXCommand::fillBuf(buffer &buf)

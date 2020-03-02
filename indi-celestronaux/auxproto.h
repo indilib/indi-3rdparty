@@ -65,6 +65,9 @@ class AUXCommand
     void setRate(unsigned char r);
     unsigned char checksum(buffer buf);
     void dumpCmd();
+    const char * cmd_name(AUXCommands c);
+    const char * node_name(AUXtargets n);
+    void pprint();
 
     AUXCommands cmd;
     AUXtargets src, dst;
