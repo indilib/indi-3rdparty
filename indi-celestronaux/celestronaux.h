@@ -137,6 +137,9 @@ class CelestronAUX :
     bool detectScope();
     void closeConnection();
     void emulateGPS(AUXCommand &m);
+    void serial_readMsgs();
+    bool tcp_readMsgs_tty();
+    bool tcp_readMsgs_net();
     void readMsgs();
     void processCmd(AUXCommand &cmd);
     void querryStatus();

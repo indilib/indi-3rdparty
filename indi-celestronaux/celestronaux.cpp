@@ -39,6 +39,18 @@ void msleep(unsigned ms)
     usleep(ms * 1000);
 }
 
+double anglediff(double a, double b)
+{
+    // Signed angle difference
+    double d;
+    a = fmod(a, 360.0);
+    b = fmod(b, 360.0);
+    d = fmod(a - b + 360.0, 360.0);
+    if (d > 180)
+        d = 360.0 - d;
+    return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
+}
+
 
 void ISGetProperties(const char *dev)
 {
@@ -154,9 +166,7 @@ bool CelestronAUX::Abort()
 
 bool CelestronAUX::detectScope()
 {
-    //FP
-    //return true;
-    fprintf(stderr, "NSEAUX: Detect scope\n");
+    fprintf(stderr, "CAUX: Detect scope\n");
 
     struct sockaddr_in myaddr;           /* our address */
     struct sockaddr_in remaddr;          /* remote address */
@@ -224,7 +234,7 @@ bool CelestronAUX::Handshake()
     {
         // We are connected. Just start processing!
 	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.\n");
-        //readMsgs();
+        readMsgs();
         return true;
     }
 
@@ -335,17 +345,6 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
     return AltAz;
 }
 
-double anglediff(double a, double b)
-{
-    // Signed angle difference
-    double d;
-    a = fmod(a, 360.0);
-    b = fmod(b, 360.0);
-    d = fmod(a - b + 360.0, 360.0);
-    if (d > 180)
-        d = 360.0 - d;
-    return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
-}
 
 // TODO: Make adjustment for the approx time it takes to slew to the given pos.
 bool CelestronAUX::Goto(double ra, double dec)
@@ -1039,9 +1038,6 @@ bool CelestronAUX::TimerTick(double dt)
     int dir;
 
     querryStatus();
-    //writeMsgs();
-    //readMsgs();
-    //processMsgs();
     if (TOUT_DEBUG)
     {
         if (debug_timeout < 0)
@@ -1122,7 +1118,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[1] = 0x00;
             AUXCommand cmd(GET_VER, GPS, m.src, dat);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         case GPS_GET_LAT:
@@ -1135,7 +1131,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             else
                 cmd.setPosition(Lon);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         case GPS_GET_TIME:
@@ -1152,7 +1148,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[2] = unsigned(ptm->tm_sec);
             AUXCommand cmd(GPS_GET_TIME, GPS, m.src, dat);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         case GPS_GET_DATE:
@@ -1168,7 +1164,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[1] = unsigned(ptm->tm_mday);
             AUXCommand cmd(GPS_GET_DATE, GPS, m.src, dat);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         case GPS_GET_YEAR:
@@ -1185,7 +1181,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             // fprintf(stderr," Sending: %d [%d,%d]\n",ptm->tm_year,dat[0],dat[1]);
             AUXCommand cmd(GPS_GET_YEAR, GPS, m.src, dat);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         case GPS_LINKED:
@@ -1196,7 +1192,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[0] = unsigned(1);
             AUXCommand cmd(GPS_LINKED, GPS, m.src, dat);
             sendCmd(cmd);
-	    readMsgs();
+	        readMsgs();
             break;
         }
         default:
@@ -1255,8 +1251,7 @@ void CelestronAUX::processCmd(AUXCommand &m)
     // if (PROC_DEBUG) fprintf(stderr, "\n");
 }
 
-
-void CelestronAUX::readMsgs()
+void CelestronAUX::serial_readMsgs()
 {
     int n;
     unsigned char buf[BUFFER_SIZE];
@@ -1297,6 +1292,128 @@ void CelestronAUX::readMsgs()
         prnBytes(buf, n+2);
     }
     processCmd(cmd);
+}
+
+bool CelestronAUX::tcp_readMsgs_net()
+{
+
+    int n, i;
+    unsigned char buf[BUFFER_SIZE];
+    AUXCommand cmd;
+
+    // We are not connected. Nothing to do.
+    if (PortFD <= 0)
+        return false;
+
+    timeval tv;
+    tv.tv_sec  = 0;
+    tv.tv_usec = 50000;
+    setsockopt(PortFD, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+
+    // Drain the channel
+    while ((n = recv(PortFD, buf, sizeof(buf), MSG_DONTWAIT | MSG_PEEK)) > 0)
+    {
+        if (RD_DEBUG)
+        {
+            fprintf(stderr, "Got %d bytes: ", n);
+            for (i = 0; i < n; i++)
+                fprintf(stderr, "%02x ", buf[i]);
+            fprintf(stderr, "\n");
+        }
+        for (i = 0; i < n;)
+        {
+            //if (RD_DEBUG) fprintf(stderr,"%d ",i);
+            if (buf[i] == 0x3b)
+            {
+                int shft;
+                shft = i + buf[i + 1] + 3;
+                if (shft <= n)
+                {
+                    //if (RD_DEBUG) prnBytes(buf+i,shft-i);
+                    buffer b(buf + i, buf + shft);
+                    //if (RD_DEBUG) dumpMsg(b);
+                    cmd.parseBuf(b);
+                    processCmd(cmd);
+                }
+                else
+                {
+                    fprintf(stderr, "Partial message recv. dropping (i=%d %d/%d)\n", i, shft, n);
+                    prnBytes(buf + i, n - i);
+                    recv(PortFD, buf, n, MSG_DONTWAIT);
+                    break;
+                }
+                i = shft;
+            }
+            else
+            {
+                i++;
+            }
+        }
+        // Actually consume data we parsed. Leave the rest for later.
+        if (i > 0)
+        {
+            n = recv(PortFD, buf, i, MSG_DONTWAIT);
+            if (RD_DEBUG)
+                fprintf(stderr, "Consumed %d/%d bytes \n", n, i);
+        }
+    }
+    //fprintf(stderr,"Nothing more to read\n");
+    return false;
+}
+
+bool CelestronAUX::tcp_readMsgs_tty()
+{
+    int n;
+    unsigned char buf[BUFFER_SIZE];
+    AUXCommand cmd;
+
+    // We are not connected. Nothing to do.
+    if (PortFD <= 0)
+        return false;
+
+    // search for packet preamble (0x3b)
+    do 
+    {
+        if (tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
+            return false;
+    }
+    while (buf[0] != 0x3b);
+
+    // packet preamble is found, now read packet length.
+    if (tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
+        return false;
+
+    // now packet length is known, read the rest of the packet.
+    if (tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n) != TTY_OK 
+            || n != buf[1] + 1){
+        DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
+        return false;
+    }
+
+    // Got the packet, process it
+    // n:length field >=3
+    // The buffer of n+2>=5 bytes contains:
+    // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
+    buffer b(buf, buf + (n+2)); 
+    cmd.parseBuf(b);
+    if (RD_DEBUG) 
+    {
+        fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
+        prnBytes(buf, n+2);
+    }
+    processCmd(cmd);
+
+    return true;
+}
+
+
+void CelestronAUX::readMsgs()
+{
+    if (getActiveConnection() == serialConnection)   
+        serial_readMsgs();
+    else 
+        //do {} while (tcp_readMsgs_tty());
+        tcp_readMsgs_net();
 }
 
 
