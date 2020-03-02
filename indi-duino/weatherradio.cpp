@@ -43,7 +43,6 @@
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 512
-#define MAX_WAIT 2
 
 #define WEATHER_TEMPERATURE     "WEATHER_TEMPERATURE"
 #define WEATHER_PRESSURE        "WEATHER_PRESSURE"
@@ -120,6 +119,10 @@ bool WeatherRadio::initProperties()
     INDI::Weather::initProperties();
 
     addConfigurationControl();
+
+    IUFillNumber(&ttyTimeoutN[0], "TIMEOUT", "Timeout (s)", "%.f", 0, 60, 1, getTTYTimeout());
+    IUFillNumberVector(&ttyTimeoutNP, ttyTimeoutN, 1, getDeviceName(), "TTY_TIMEOUT", "TTY timeout", CONNECTION_TAB, IP_RW, 0, IPS_OK);
+    registerProperty(&ttyTimeoutNP, INDI_NUMBER);
 
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
@@ -305,6 +308,17 @@ bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], c
 ***************************************************************************************/
 bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (strcmp(name, ttyTimeoutNP.name) == 0)
+        {
+            IUUpdateNumber(&ttyTimeoutNP, values, names, n);
+            ttyTimeout = int(values[0]);
+            ttyTimeoutNP.s = IPS_OK;
+            IDSetNumber(&ttyTimeoutNP, nullptr);
+            return ttyTimeoutNP.s;
+        }
+    }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -683,6 +697,8 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &windSpeedSensorSP);
     IUSaveConfigSwitch(fp, &windDirectionSensorSP);
     IUSaveConfigNumber(fp, ParametersRangeNP);
+    IUSaveConfigNumber(fp, &ttyTimeoutNP);
+
 
     return INDI::Weather::saveConfigItems(fp);
 }
@@ -784,7 +800,7 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         LOGF_ERROR("Command <%s> failed.", cmd);
         return false;
     }
-    return receive(response, length, '\n', MAX_WAIT);
+    return receive(response, length, '\n', getTTYTimeout());
 }
 
 /**************************************************************************************

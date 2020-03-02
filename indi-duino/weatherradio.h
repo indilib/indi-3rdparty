@@ -117,6 +117,14 @@ protected:
     INumber *getWeatherParameter(std::string name);
 
     /**
+     * @brief TTY interface timeout
+     */
+    int getTTYTimeout() { return ttyTimeout; }
+    int ttyTimeout = 2;
+    INumber ttyTimeoutN[1] = {};
+    INumberVectorProperty ttyTimeoutNP;
+
+    /**
      * @brief Create a canonical name as <device> (<sensor>)
      * @param sensor weather sensor
      */
