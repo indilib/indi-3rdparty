@@ -2266,7 +2266,11 @@ void ToupBase::eventPullCallBack(unsigned event)
         case CP(EVENT_DISCONNECTED: )
                 LOG_DEBUG("Camera disconnected.");
             break;
+#if defined(BUILD_ALTAIRCAM) || defined(BUILD_NNCAM)
         case CP(EVENT_TIMEOUT: )
+#else
+        case CP(EVENT_NOFRAMETIMEOUT: )
+#endif
                 LOG_DEBUG("Camera timed out.");
             PrimaryCCD.setExposureFailed();
             break;
