@@ -3674,6 +3674,10 @@ bool EQMod::saveConfigItems(FILE *fp)
     if (align)
         align->saveConfigItems(fp);
 #endif
+#ifdef WITH_SCOPE_LIMITS
+    if (horizon)
+        horizon->saveConfigItems(fp);
+#endif
     return true;
 }
 
