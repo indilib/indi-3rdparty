@@ -685,6 +685,9 @@ void Skywatcher::ReadMotorStatus(SkywatcherAxis axis)
                 DEStatus.speedmode = HIGHSPEED;
             else
                 DEStatus.speedmode = LOWSPEED;
+            break;
+        default:
+            break;
     }
     gettimeofday(&lastreadmotorstatus[axis], nullptr);
 }
