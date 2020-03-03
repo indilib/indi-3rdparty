@@ -39,11 +39,14 @@ except:
 
 
 updateString="N"
-for d in data:
-	# print d[0],d[1]
-	updateString=updateString+":"+str(d[1])
-	json_dict[d[0]]=int(d[1]*100)/100.
+templateString=""
 
-ret = rrdtool.update(RRDFILE,updateString);
+for key in data.keys():
+    updateString=updateString+":"+str(data[key])
+    if templateString:
+        templateString += ":"
+    templateString += key
+
+ret = rrdtool.update(RRDFILE, "--template", templateString ,updateString);
 if ret:    
 	print rrdtool.error() 

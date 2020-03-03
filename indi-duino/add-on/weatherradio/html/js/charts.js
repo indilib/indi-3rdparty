@@ -149,12 +149,13 @@ function selectTimeline(activeElement, update) {
 }
 
 
-var hchart, cchart, tchart, pchart, schart;
-var temperature, humidity, pressure, cloudCoverage, sqm;
+var hchart, cchart, tchart, pchart, schart, wchart;
+var temperature, humidity, pressure, cloudCoverage, sqm, windSpeed;
 
 var settings = {t_min: -40, t_max: 50, t_prec: 1,
                 p_min: 973, p_max: 1053, p_prec: 0,
-                sqm_min: 0, sqm_max: 25, sqm_prec: 1};
+                sqm_min: 0, sqm_max: 25, sqm_prec: 1,
+                windSpeed_min: 0, windSpeed_max: 35, windSpeed_prec: 1};
 
 function init() {
 
@@ -182,11 +183,14 @@ function init() {
                                    createRadialBarChart('Cloud Coverage', '%', 0, 100, 0));
     sqm = new ApexCharts(document.querySelector("#sqm"),
                               createBarChart('SQM', '%', settings.sqm_min, settings.sqm_max));
+    windSpeed = new ApexCharts(document.querySelector("#windSpeed"),
+                              createBarChart('Wind Speed', '%', settings.windSpeed_min, settings.windSpeed_max));
     temperature.render();
     humidity.render();
     pressure.render();
     cloudCoverage.render();
     sqm.render();
+    windSpeed.render();
 
     // special case for temperature
     temperature.updateOptions({
@@ -204,16 +208,22 @@ function init() {
                             createWeatherChart("Cloud Coverage", "%", "left", 100, 0));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
                             createWeatherChart("Sky Quality", "mag/arcsec²", "left", undefined, 1));
+    wchart = new ApexCharts(document.querySelector("#windSpeed_series"),
+                            createWeatherChart("Wind Speed", "m/s", "left", undefined, 1));
 
     hchart.render();
     cchart.render();
     tchart.render();
     pchart.render();
     schart.render();
+    wchart.render();
 
-    tchart.updateOptions({colors: ["#008fec", "#0077b3"],
+    tchart.updateOptions({colors: ["#0077b3"],
                           fill: {type: ['gradient', 'pattern'],
                                  pattern: {style: 'verticalLines'}},
+                          legend: {show: false}});
+
+    wchart.updateOptions({colors: ["#ff0000", "#0077b3"],
                           legend: {show: false}});
 
     // select timeline
@@ -234,15 +244,19 @@ function updateSeries() {
         var currentHumidity      = data.Humidity;
         var currentPressure      = data.Pressure;
         var currentSQM           = data.SQM;
+        var currentWindSpeed     = data.WindSpeed;
+        var currentWindGust      = data.WindGust;
 
         // calculate filling percentage from current temperature and pressure (slightly ugly code)
         temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
         pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
         cloudCoverage.updateSeries([currentCloudCoverage]);
         humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-        document.querySelector("#humidityValue").textContent = currentHumidity + "%";
+        document.querySelector("#humidityValue").textContent = currentHumidity.toFixed(0) + "%";
         sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
         document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
+        windSpeed.updateSeries([{name: "Wind Speed", data: [currentWindSpeed]}]);
+        document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s (max: " + currentWindGust.toFixed(1) + " m/s)";
 
         // update time stamp at the bottom line
         var lastUpdate = data.timestamp;
@@ -263,6 +277,12 @@ function updateSeries() {
                               type: "area"}]);
         pchart.updateSeries([data.Pressure]);
         schart.updateSeries([data.SQM]);
+        wchart.updateSeries([{data: data.WindGust.data,
+                              name: "Wind Gust",
+                              type: "line"},
+                             {data: data.WindSpeed.data,
+                              name: data.WindSpeed.name,
+                              type: "area"}]);
     });
 
 };

@@ -26,18 +26,28 @@ void setup() {
   // wait for serial port to connect. Needed for native USB
   while (!Serial) continue;
 
+#ifdef USE_DAVIS_SENSOR
+  initAnemometer();
+#endif //USE_DAVIS_SENSOR
+
 }
 
 /**
    Send current sensor data as JSON document
 */
 void sendSensorData() {
-  const int docSize = JSON_OBJECT_SIZE(4) + // max 4 sensors
+  const int docSize = JSON_OBJECT_SIZE(5) + // max 5 sensors
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
-                      JSON_OBJECT_SIZE(6);  // TSL2591 sensor
+                      JSON_OBJECT_SIZE(7) + // TSL2591 sensor
+                      JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
+
+#ifdef USE_DAVIS_SENSOR
+  updateAnemometer();
+  serializeAnemometer(weatherDoc);
+#endif //USE_DAVIS_SENSOR
 
 #ifdef USE_BME_SENSOR
   updateBME();
@@ -72,11 +82,36 @@ void sendCurrentVersion() {
   Serial.println();
 }
 
+// translate the sensor configurations to a JSON document
+void sendCurrentConfig() {
+  const int docSize = JSON_OBJECT_SIZE(2) + // max 2 configurations
+                      JSON_OBJECT_SIZE(2) + // DHT sensors
+                      JSON_OBJECT_SIZE(3);  // Davis Anemometer
+  StaticJsonDocument <docSize> doc;
+#ifdef USE_DHT_SENSOR
+  JsonObject dhtdata = doc.createNestedObject("DHT");
+  dhtdata["pin"] = DHTPIN;
+  dhtdata["type"] = DHTTYPE;
+#endif
+
+#ifdef USE_DAVIS_SENSOR
+  JsonObject davisdata = doc.createNestedObject("Davis Anemometer");
+  davisdata["wind speed pin"] = WINDSPEEDPIN;
+  davisdata["wind direction pin"] = WINDDIRECTIONPIN;
+  davisdata["wind direction offset"] = WINDOFFSET;
+#endif
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+}
+
 /**
    Command loop handling incoming requests and returns a JSON document.
 
    'v' - send current version
    'w' - send current weather sensor values
+   'c' - send sensor configuration settings
 */
 void loop() {
 
@@ -89,6 +124,8 @@ void loop() {
       case 'w':
         sendSensorData();
         break;
+      case 'c':
+        sendCurrentConfig();
     }
   }
 

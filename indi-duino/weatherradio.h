@@ -50,7 +50,8 @@ protected:
     // Initial function to get data after connection is successful
     void getBasicData();
 
-    ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP, humiditySensorSP, luminositySensorSP;
+    ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
+        humiditySensorSP, luminositySensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
 
     /**
      * @brief get the interface version from the Arduino device.
@@ -69,7 +70,7 @@ protected:
     /**
       * Device specific configurations
       */
-    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, INTERNAL_SENSOR};
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, INTERNAL_SENSOR};
 
     struct sensor_config
     {
@@ -134,6 +135,9 @@ protected:
         sensor_name luminosity;
         sensor_name temp_ambient;
         sensor_name temp_object;
+        sensor_name wind_speed;
+        sensor_name wind_gust;
+        sensor_name wind_direction;
     } currentSensors;
 
     struct
@@ -143,6 +147,9 @@ protected:
         std::vector<sensor_name> humidity;
         std::vector<sensor_name> luminosity;
         std::vector<sensor_name> temp_object;
+        std::vector<sensor_name> wind_speed;
+        std::vector<sensor_name> wind_gust;
+        std::vector<sensor_name> wind_direction;
     } sensorRegistry;
 
     /**
