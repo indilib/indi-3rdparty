@@ -1,3 +1,6 @@
+Vesion 1.0 - 2020-03-03
+  * added query of mount when connecting, so correct state is reflected
+
 indi-aok (0.9) bionic; urgency=low
   * implemented park position management
   * corrected readout of firmwareserial

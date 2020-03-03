@@ -1,4 +1,4 @@
-/*
+﻿/*
     AOK Skywalker driver
 
     Copyright (C) 2019 T. Schriber
@@ -520,7 +520,29 @@ void LX200Skywalker::getBasicData()
             IDSetSwitch(&TrackModeSP, nullptr);
         }
         if (InitPark())
+        {
             LOG_INFO("Parkdata loaded");
+            if (!INDI::Telescope::isParked()) // Mount is unparked and working on connection of the driver!
+            {
+                    if ((MountLocked()) && (MountTracking())) // cf. Unpark()
+                     {
+                        MountStateS[0].s = ISS_ON;
+                        MountStateS[1].s = ISS_OFF;
+                        MountStateSP.s = IPS_OK;
+                        TrackStateS[TRACK_ON].s = ISS_ON;
+                        TrackStateS[TRACK_OFF].s = ISS_OFF;
+                        TrackStateSP.s = IPS_OK;
+                        INDI::Telescope::TrackState = SCOPE_TRACKING;
+                        ParkSP.s = IPS_OK;
+                        IDSetSwitch(&MountStateSP, nullptr);
+                        IDSetSwitch(&TrackStateSP, nullptr);
+                        IDSetSwitch(&ParkSP, nullptr);
+                        //LOG_INFO("Mount is working");
+                     }
+                     else
+                        LOG_WARN("Mount is unparked but not locked and/or tracking!");
+            }
+        }
         else
             LOG_INFO("Parkdata load failed");
     }
