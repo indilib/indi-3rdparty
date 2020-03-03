@@ -80,10 +80,6 @@ double defaultspeed              = 64.0;
 #define GUIDE_WEST  0
 #define GUIDE_EAST  1
 
-int DBG_SCOPE_STATUS;
-int DBG_COMM;
-int DBG_MOUNT;
-
 #if 0
 int timeval_subtract(struct timeval *result, struct timeval *x, struct timeval *y)
 {

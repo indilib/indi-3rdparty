@@ -25,10 +25,6 @@
 #include <cmath>
 #include <cstring>
 
-extern int DBG_SCOPE_STATUS;
-extern int DBG_COMM;
-extern int DBG_MOUNT;
-
 Skywatcher::Skywatcher(EQMod *t)
 {
     debug         = false;
@@ -106,11 +102,11 @@ bool Skywatcher::Disconnect()
     StopMotor(Axis2);
     // Deactivate motor (for geehalel mount only)
     /*
-  if (MountCode == 0xF0) {
+    if (MountCode == 0xF0) {
     dispatch_command(Deactivate, Axis1, nullptr);
     //read_eqmod();
-  }
-  */
+    }
+    */
     return true;
 }
 
@@ -123,7 +119,7 @@ uint32_t Skywatcher::GetRAEncoder()
     gettimeofday(&lastreadmotorposition[Axis1], nullptr);
     if (RAStep != lastRAStep)
     {
-        DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(RAStep));
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(RAStep));
         lastRAStep = RAStep;
     }
     return RAStep;
@@ -139,7 +135,7 @@ uint32_t Skywatcher::GetDEEncoder()
     gettimeofday(&lastreadmotorposition[Axis2], nullptr);
     if (DEStep != lastDEStep)
     {
-        DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(DEStep));
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(DEStep));
         lastDEStep = DEStep;
     }
     return DEStep;
@@ -185,7 +181,7 @@ uint32_t Skywatcher::GetRAPeriod()
 {
     if (RAPeriod != lastRAPeriod)
     {
-        DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(RAPeriod));
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(RAPeriod));
         lastRAPeriod = RAPeriod;
     }
     return RAPeriod;
@@ -195,7 +191,7 @@ uint32_t Skywatcher::GetDEPeriod()
 {
     if (DEPeriod != lastDEPeriod)
     {
-        DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(DEPeriod));
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(DEPeriod));
         lastDEPeriod = DEPeriod;
     }
     return DEPeriod;
@@ -205,7 +201,7 @@ uint32_t Skywatcher::GetlastreadRAIndexer()
 {
     if (MountCode != 0x04 && MountCode != 0x05)
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
-    DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis1]));
+    DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis1]));
     return lastreadIndexer[Axis1];
 }
 
@@ -213,7 +209,7 @@ uint32_t Skywatcher::GetlastreadDEIndexer()
 {
     if (MountCode != 0x04 && MountCode != 0x05)
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
-    DEBUGF(DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis2]));
+    DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis2]));
     return lastreadIndexer[Axis2];
 }
 
@@ -275,7 +271,7 @@ void Skywatcher::Init()
         //read_eqmod();
         DEStepInit = Revu24str2long(response + 1);
         LOGF_DEBUG("%s() : Motors not initialized -- read Init steps RAInit=%ld DEInit = %ld",
-               __FUNCTION__, static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
+                   __FUNCTION__, static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
         // Energize motors
         LOGF_DEBUG("%s() : Powering motors", __FUNCTION__);
         dispatch_command(Initialize, Axis1, nullptr);
@@ -286,7 +282,8 @@ void Skywatcher::Init()
         DEStepHome = DEStepInit + (DESteps360 / 4);
     }
     else
-    { // Mount already initialized by another driver / driver instance
+    {
+        // Mount already initialized by another driver / driver instance
         // use default configuration && leave unchanged encoder values
         wasinitialized = true;
         RAStepInit     = 0x800000;
@@ -295,10 +292,10 @@ void Skywatcher::Init()
         DEStepHome     = DEStepInit + (DESteps360 / 4);
         LOGF_WARN("%s() : Motors already initialized", __FUNCTION__);
         LOGF_WARN("%s() : Setting default Init steps --  RAInit=%ld DEInit = %ld", __FUNCTION__,
-               static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
+                  static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
     }
     LOGF_DEBUG("%s() : Setting Home steps RAHome=%ld DEHome = %ld", __FUNCTION__,
-           static_cast<long>(RAStepHome), static_cast<long>(DEStepHome));
+               static_cast<long>(RAStepHome), static_cast<long>(DEStepHome));
 
     if (not(reconnect))
     {
@@ -347,7 +344,7 @@ void Skywatcher::Init()
         //} else {
         char cmdarg[7];
         LOGF_DEBUG("%s() : Mount in Park position -- setting encoders RA=%ld DE = %ld",
-               __FUNCTION__, static_cast<long>(telescope->GetAxis1Park()), static_cast<long>(telescope->GetAxis2Park()));
+                   __FUNCTION__, static_cast<long>(telescope->GetAxis1Park()), static_cast<long>(telescope->GetAxis2Park()));
         cmdarg[6] = '\0';
         long2Revu24str(telescope->GetAxis1Park(), cmdarg);
         dispatch_command(SetAxisPositionCmd, Axis1, cmdarg);
@@ -370,7 +367,7 @@ void Skywatcher::Init()
             //mount is supposed to be in the home position (pointing Celestial Pole)
             char cmdarg[7];
             LOGF_DEBUG("%s() : Mount in Home position -- setting encoders RA=%ld DE = %ld",
-                   __FUNCTION__, static_cast<long>(RAStepHome), static_cast<long>(DEStepHome));
+                       __FUNCTION__, static_cast<long>(RAStepHome), static_cast<long>(DEStepHome));
             cmdarg[6] = '\0';
             long2Revu24str(DEStepHome, cmdarg);
             dispatch_command(SetAxisPositionCmd, Axis2, cmdarg);
@@ -388,14 +385,14 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER" };
 
     /*
-  uint32_t tmpMCVersion = 0;
+    uint32_t tmpMCVersion = 0;
 
-  dispatch_command(InquireMotorBoardVersion, Axis1, nullptr);
-  //read_eqmod();
-  tmpMCVersion=Revu24str2long(response+1);
-  MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
-  MountCode=MCVersion & 0xFF;
-  */
+    dispatch_command(InquireMotorBoardVersion, Axis1, nullptr);
+    //read_eqmod();
+    tmpMCVersion=Revu24str2long(response+1);
+    MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
+    MountCode=MCVersion & 0xFF;
+    */
     minperiods[Axis1] = 6;
     minperiods[Axis2] = 6;
     nprop             = 2;
@@ -453,14 +450,14 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     IUUpdateText(boardTP, boardinfo, (char **)boardinfopropnames, nprop);
     IDSetText(boardTP, nullptr);
     LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
-           __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
+               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
     /* Check supported mounts here */
     /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
 
     throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
-		     boardinfo[0], MountCode);
-  }
-  */
+             boardinfo[0], MountCode);
+    }
+    */
     free(boardinfo[0]);
     free(boardinfo[1]);
 }
@@ -478,14 +475,14 @@ void Skywatcher::InquireFeatures()
     catch (EQModError e)
     {
         LOGF_DEBUG("%s(): Mount does not support query features  (%c command)", __FUNCTION__,
-               GetFeatureCmd);
+                   GetFeatureCmd);
         rafeatures = 0;
         defeatures = 0;
     }
     if ((rafeatures & 0x000000F0) != (defeatures & 0x000000F0))
     {
         LOGF_WARN("%s(): Found different features for RA (%d) and DEC (%d)", __FUNCTION__,
-               rafeatures, defeatures);
+                  rafeatures, defeatures);
     }
     if (rafeatures & 0x00000010)
     {
@@ -551,13 +548,13 @@ void Skywatcher::InquireRAEncoderInfo(INumberVectorProperty *encoderNP)
     if ((MCVersion & 0x0000FF) == 0x80)
     {
         LOGF_WARN("%s: forcing RAStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-               0x162B97, RAStepsWorm);
+                  0x162B97, RAStepsWorm);
         RAStepsWorm = 0x162B97; // for 80GT mount
     }
     if ((MCVersion & 0x0000FF) == 0x82)
     {
         LOGF_WARN("%s: forcing RAStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-               0x205318, RAStepsWorm);
+                  0x205318, RAStepsWorm);
         RAStepsWorm = 0x205318; // for 114GT mount
     }
     // Correct drift of 4.1 arcsec per minute with HEQ5 firmware 106
@@ -565,11 +562,11 @@ void Skywatcher::InquireRAEncoderInfo(INumberVectorProperty *encoderNP)
     if (MCVersion == 0x10601)
     {
         LOGF_WARN("%s: forcing RAStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-               0xFC80, RAStepsWorm);
+                  0xFC80, RAStepsWorm);
         RAStepsWorm = 0xFC80;
     }
 
-    steppersvalues[1] = (double)RAStepsWorm;
+    steppersvalues[1] = static_cast<double>(RAStepsWorm);
 
     // Highspeed Ratio
     dispatch_command(InquireHighSpeedRatio, Axis1, nullptr);
@@ -577,13 +574,12 @@ void Skywatcher::InquireRAEncoderInfo(INumberVectorProperty *encoderNP)
     //RAHighspeedRatio=Revu24str2long(response+1);
     RAHighspeedRatio = Highstr2long(response + 1);
 
-    steppersvalues[2] = (double)RAHighspeedRatio;
+    steppersvalues[2] = static_cast<double>(RAHighspeedRatio);
     // should test this is ok
     IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
     IDSetNumber(encoderNP, nullptr);
 
-    backlashperiod[Axis1] =
-        (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / SKYWATCHER_BACKLASH_SPEED_RA);
+    backlashperiod[Axis1] = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * RAStepsWorm) / static_cast<double>(RASteps360)) / SKYWATCHER_BACKLASH_SPEED_RA);
 }
 
 void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
@@ -605,13 +601,13 @@ void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
     if ((MCVersion & 0x0000FF) == 0x80)
     {
         LOGF_WARN("%s: forcing DEStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-               0x162B97, DEStepsWorm);
+                  0x162B97, DEStepsWorm);
         DEStepsWorm = 0x162B97; // for 80GT mount
     }
     if ((MCVersion & 0x0000FF) == 0x82)
     {
         LOGF_WARN("%s: forcing DEStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-               0x205318, DEStepsWorm);
+                  0x205318, DEStepsWorm);
         DEStepsWorm = 0x205318; // for 114GT mount
     }
     // HEQ5 with firmware 106, use same rate as RA
@@ -619,18 +615,18 @@ void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
     if (MCVersion == 0x10601)
     {
         LOGF_WARN("%s: forcing DEStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-               0xFC80, DEStepsWorm);
+                  0xFC80, DEStepsWorm);
         DEStepsWorm = 0xFC80;
     }
 
-    steppersvalues[1] = (double)DEStepsWorm;
+    steppersvalues[1] = static_cast<double>(DEStepsWorm);
 
     // Highspeed Ratio
     dispatch_command(InquireHighSpeedRatio, Axis2, nullptr);
     //read_eqmod();
     //DEHighspeedRatio=Revu24str2long(response+1);
     DEHighspeedRatio  = Highstr2long(response + 1);
-    steppersvalues[2] = (double)DEHighspeedRatio;
+    steppersvalues[2] = static_cast<double>(DEHighspeedRatio);
     // should test this is ok
     IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
     IDSetNumber(encoderNP, nullptr);
@@ -689,7 +685,6 @@ void Skywatcher::ReadMotorStatus(SkywatcherAxis axis)
                 DEStatus.speedmode = HIGHSPEED;
             else
                 DEStatus.speedmode = LOWSPEED;
-        default:;
     }
     gettimeofday(&lastreadmotorstatus[axis], nullptr);
 }
@@ -720,7 +715,7 @@ void Skywatcher::SlewRA(double rate)
         useHighspeed = true;
     }
     //}
-    period = (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / absrate);
+    period = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * RAStepsWorm) / static_cast<double>(RASteps360)) / absrate);
     if (rate >= 0.0)
         newstatus.direction = FORWARD;
     else
@@ -765,7 +760,7 @@ void Skywatcher::SlewDE(double rate)
     period = (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / absrate);
 
     LOGF_DEBUG("Slewing DE at %.2f %.2f %x %f\n", rate, absrate, period,
-           (((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / absrate));
+               (((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / absrate));
 
     if (rate >= 0.0)
         newstatus.direction = FORWARD;
@@ -862,7 +857,7 @@ void Skywatcher::AbsSlewTo(uint32_t raencoder, uint32_t deencoder, bool raup, bo
     /* highperiod = RA 450X DE (+5) 200x, low period 32x */
 
     LOGF_DEBUG("%s() : absRA = %ld raup = %c absDE = %ld deup = %c", __FUNCTION__, static_cast<long>(raencoder),
-           (raup ? '1' : '0'), static_cast<long>(deencoder), (deup ? '1' : '0'));
+               (raup ? '1' : '0'), static_cast<long>(deencoder), (deup ? '1' : '0'));
 
     deltaraencoder = static_cast<int32_t>(raencoder - RAStep);
     deltadeencoder = static_cast<int32_t>(deencoder - DEStep);
@@ -952,7 +947,7 @@ void Skywatcher::SetRARate(double rate)
         useHighspeed = true;
     }
     //}
-    period              = (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / absrate);
+    period              = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * RAStepsWorm) / static_cast<double>(RASteps360)) / absrate);
     newstatus.direction = ((rate >= 0.0) ? FORWARD : BACKWARD);
     //newstatus.slewmode=RAStatus.slewmode;
     newstatus.slewmode = SLEW;
@@ -994,7 +989,7 @@ void Skywatcher::SetDERate(double rate)
         useHighspeed = true;
     }
     //}
-    period              = (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / absrate);
+    period              = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * DEStepsWorm) / static_cast<double>(DESteps360)) / absrate);
     newstatus.direction = ((rate >= 0.0) ? FORWARD : BACKWARD);
     //newstatus.slewmode=DEStatus.slewmode;
     newstatus.slewmode = SLEW;
@@ -1023,7 +1018,7 @@ void Skywatcher::StartRATracking(double trackspeed)
     else
         rate = 0.0;
     LOGF_DEBUG("%s() : trackspeed = %g arcsecs/s, computed rate = %g", __FUNCTION__, trackspeed,
-           rate);
+               rate);
     if (rate != 0.0)
     {
         SetRARate(rate);
@@ -1042,7 +1037,7 @@ void Skywatcher::StartDETracking(double trackspeed)
     else
         rate = 0.0;
     LOGF_DEBUG("%s() : trackspeed = %g arcsecs/s, computed rate = %g", __FUNCTION__, trackspeed,
-           rate);
+               rate);
     if (rate != 0.0)
     {
         SetDERate(rate);
@@ -1058,7 +1053,7 @@ void Skywatcher::SetSpeed(SkywatcherAxis axis, uint32_t period)
     char cmd[7];
     SkywatcherAxisStatus *currentstatus;
 
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- period=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(period));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- period=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(period));
 
     ReadMotorStatus(axis);
     if (axis == Axis1)
@@ -1068,7 +1063,7 @@ void Skywatcher::SetSpeed(SkywatcherAxis axis, uint32_t period)
     if ((currentstatus->speedmode == HIGHSPEED) && (period < minperiods[axis]))
     {
         LOGF_WARN("Setting axis %c period to minimum. Requested is %d, minimum is %d\n", AxisCmd[axis],
-               period, minperiods[axis]);
+                  period, minperiods[axis]);
         period = minperiods[axis];
     }
     long2Revu24str(period, cmd);
@@ -1091,7 +1086,7 @@ void Skywatcher::SetSpeed(SkywatcherAxis axis, uint32_t period)
 void Skywatcher::SetTarget(SkywatcherAxis axis, uint32_t increment)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- increment=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(increment));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- increment=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(increment));
     long2Revu24str(increment, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetGotoTargetIncrement, axis, cmd);
@@ -1102,7 +1097,7 @@ void Skywatcher::SetTarget(SkywatcherAxis axis, uint32_t increment)
 void Skywatcher::SetTargetBreaks(SkywatcherAxis axis, uint32_t increment)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- increment=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(increment));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- increment=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(increment));
     long2Revu24str(increment, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetBreakPointIncrement, axis, cmd);
@@ -1113,7 +1108,7 @@ void Skywatcher::SetTargetBreaks(SkywatcherAxis axis, uint32_t increment)
 void Skywatcher::SetAbsTarget(SkywatcherAxis axis, uint32_t target)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- target=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(target));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- target=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(target));
     long2Revu24str(target, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetGotoTarget, axis, cmd);
@@ -1124,7 +1119,7 @@ void Skywatcher::SetAbsTarget(SkywatcherAxis axis, uint32_t target)
 void Skywatcher::SetAbsTargetBreaks(SkywatcherAxis axis, uint32_t breakstep)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- breakstep=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(breakstep));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- breakstep=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(breakstep));
     long2Revu24str(breakstep, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetBreakStep, axis, cmd);
@@ -1135,7 +1130,7 @@ void Skywatcher::SetAbsTargetBreaks(SkywatcherAxis axis, uint32_t breakstep)
 void Skywatcher::SetFeature(SkywatcherAxis axis, uint32_t command)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- command=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(command));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- command=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(command));
     long2Revu24str(command, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetFeatureCmd, axis, cmd);
@@ -1145,7 +1140,7 @@ void Skywatcher::SetFeature(SkywatcherAxis axis, uint32_t command)
 void Skywatcher::GetFeature(SkywatcherAxis axis, uint32_t command)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- command=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(command));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- command=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(command));
     long2Revu24str(command, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(GetFeatureCmd, axis, cmd);
@@ -1233,7 +1228,7 @@ void Skywatcher::SetST4DEGuideRate(unsigned char r)
 void Skywatcher::SetST4GuideRate(SkywatcherAxis axis, unsigned char r)
 {
     char cmd[2];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- rate=%c", __FUNCTION__, AxisCmd[axis], r);
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- rate=%c", __FUNCTION__, AxisCmd[axis], r);
     cmd[0] = r;
     cmd[1] = '\0';
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
@@ -1300,7 +1295,7 @@ void Skywatcher::GetDEPPECStatus(bool *intraining, bool *inppec)
 void Skywatcher::SetAxisPosition(SkywatcherAxis axis, uint32_t step)
 {
     char cmd[7];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- step=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(step));
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- step=%ld", __FUNCTION__, AxisCmd[axis], static_cast<long>(step));
     long2Revu24str(step, cmd);
     //IDLog("Setting target for axis %c  to %d\n", AxisCmd[axis], increment);
     dispatch_command(SetAxisPositionCmd, axis, cmd);
@@ -1321,7 +1316,7 @@ void Skywatcher::StartMotor(SkywatcherAxis axis)
 {
     bool usebacklash       = UseBacklash[axis];
     uint32_t backlash = Backlash[axis];
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
 
     if (usebacklash)
     {
@@ -1335,7 +1330,7 @@ void Skywatcher::StartMotor(SkywatcherAxis axis)
             bool *motorrunning;
             struct timespec wait;
             LOGF_INFO("Performing backlash compensation for axis %c, microsteps = %d", AxisCmd[axis],
-                   backlash);
+                      backlash);
             // Axis Position
             dispatch_command(GetAxisPosition, axis, nullptr);
             //read_eqmod();
@@ -1431,7 +1426,7 @@ void Skywatcher::SetMotion(SkywatcherAxis axis, SkywatcherAxisStatus newstatus)
     char motioncmd[3];
     SkywatcherAxisStatus *currentstatus;
 
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c -- dir=%s mode=%s speedmode=%s", __FUNCTION__, AxisCmd[axis],
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c -- dir=%s mode=%s speedmode=%s", __FUNCTION__, AxisCmd[axis],
            ((newstatus.direction == FORWARD) ? "forward" : "backward"),
            ((newstatus.slewmode == SLEW) ? "slew" : "goto"),
            ((newstatus.speedmode == LOWSPEED) ? "lowspeed" : "highspeed"));
@@ -1465,14 +1460,14 @@ void Skywatcher::SetMotion(SkywatcherAxis axis, SkywatcherAxisStatus newstatus)
     else
         motioncmd[1] = '1';
     /*
-#ifdef STOP_WHEN_MOTION_CHANGED
-  StopWaitMotor(axis);
-  dispatch_command(SetMotionMode, axis, motioncmd);
-  //read_eqmod();
-#else
-  */
+    #ifdef STOP_WHEN_MOTION_CHANGED
+    StopWaitMotor(axis);
+    dispatch_command(SetMotionMode, axis, motioncmd);
+    //read_eqmod();
+    #else
+    */
     if ((newstatus.direction != currentstatus->direction) || (newstatus.speedmode != currentstatus->speedmode) ||
-        (newstatus.slewmode != currentstatus->slewmode))
+            (newstatus.slewmode != currentstatus->slewmode))
     {
         StopWaitMotor(axis);
         dispatch_command(SetMotionMode, axis, motioncmd);
@@ -1487,7 +1482,7 @@ void Skywatcher::ResetMotions()
     char motioncmd[3];
     SkywatcherAxisStatus newstatus;
 
-    DEBUGF(DBG_MOUNT, "%s() ", __FUNCTION__);
+    DEBUGF(telescope->DBG_MOUNT, "%s() ", __FUNCTION__);
 
     motioncmd[2] = '\0';
     //set to SLEW/LOWSPEED
@@ -1523,7 +1518,7 @@ void Skywatcher::StopMotor(SkywatcherAxis axis)
         LastRunningStatus[Axis1] = RAStatus;
     if (axis == Axis2 && DERunning)
         LastRunningStatus[Axis2] = DEStatus;
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
     dispatch_command(NotInstantAxisStop, axis, nullptr);
     //read_eqmod();
 }
@@ -1535,7 +1530,7 @@ void Skywatcher::InstantStopMotor(SkywatcherAxis axis)
         LastRunningStatus[Axis1] = RAStatus;
     if (axis == Axis2 && DERunning)
         LastRunningStatus[Axis2] = DEStatus;
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
     dispatch_command(InstantAxisStop, axis, nullptr);
     //read_eqmod();
 }
@@ -1549,7 +1544,7 @@ void Skywatcher::StopWaitMotor(SkywatcherAxis axis)
         LastRunningStatus[Axis1] = RAStatus;
     if (axis == Axis2 && DERunning)
         LastRunningStatus[Axis2] = DEStatus;
-    DEBUGF(DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
+    DEBUGF(telescope->DBG_MOUNT, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
     dispatch_command(NotInstantAxisStop, axis, nullptr);
     //read_eqmod();
     if (axis == Axis1)
@@ -1571,10 +1566,10 @@ void Skywatcher::StopWaitMotor(SkywatcherAxis axis)
 void Skywatcher::CheckMotorStatus(SkywatcherAxis axis)
 {
     struct timeval now;
-    DEBUGF(DBG_SCOPE_STATUS, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
+    DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() : Axis = %c", __FUNCTION__, AxisCmd[axis]);
     gettimeofday(&now, nullptr);
     if (((now.tv_sec - lastreadmotorstatus[axis].tv_sec) + ((now.tv_usec - lastreadmotorstatus[axis].tv_usec) / 1e6)) >
-        SKYWATCHER_MAXREFRESH)
+            SKYWATCHER_MAXREFRESH)
         ReadMotorStatus(axis);
 }
 
@@ -1590,10 +1585,8 @@ double Skywatcher::get_max_rate()
 
 bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *command_arg)
 {
-    for (uint8_t i=0; i < EQMOD_MAX_RETRY; i++)
+    for (uint8_t i = 0; i < EQMOD_MAX_RETRY; i++)
     {
-        int err_code = 0, nbytes_written = 0;
-
         // Clear string
         command[0] = '\0';
 
@@ -1602,11 +1595,14 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
         else
             snprintf(command, SKYWATCHER_MAX_CMD, "%c%c%c%s%c", SkywatcherLeadingChar, cmd, AxisCmd[axis], command_arg,
                      SkywatcherTrailingChar);
+
+        int nbytes_written = 0;
         if (!isSimulation())
         {
+            int err_code = 0, nbytes_written = 0;
             tcflush(PortFD, TCIOFLUSH);
 
-            if ((err_code = tty_write_string(PortFD, command, &nbytes_written) != TTY_OK))
+            if ((err_code = tty_write_string(PortFD, command, &nbytes_written)) != TTY_OK)
             {
                 char ttyerrormsg[ERROR_MSG_LENGTH];
                 tty_error_msg(err_code, ttyerrormsg, ERROR_MSG_LENGTH);
@@ -1621,7 +1617,7 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
 
         //if (INDI::Logger::debugSerial(cmd)) {
         command[nbytes_written - 1] = '\0'; //hmmm, remove \r, the  SkywatcherTrailingChar
-        DEBUGF(DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
+        DEBUGF(telescope->DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
         debugnextread = true;
 
         try
@@ -1633,11 +1629,11 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
         {
             // By this time, we just rethrow the error
             // JM 2018-05-07 immediately rethrow if GET_FEATURES_CMD
-            if (i == EQMOD_MAX_RETRY-1 || cmd == GetFeatureCmd)
+            if (i == EQMOD_MAX_RETRY - 1 || cmd == GetFeatureCmd)
                 throw;
         }
 
-        DEBUG(DBG_COMM, "read error, will retry again...");
+        DEBUG(telescope->DBG_COMM, "read error, will retry again...");
     }
 
     return true;
@@ -1671,7 +1667,7 @@ bool Skywatcher::read_eqmod()
 
     if (debugnextread)
     {
-        DEBUGF(DBG_COMM, "read_eqmod: \"%s\", %d bytes read", response, nbytes_read);
+        DEBUGF(telescope->DBG_COMM, "read_eqmod: \"%s\", %d bytes read", response, nbytes_read);
         debugnextread = false;
     }
     switch (response[0])
@@ -1680,10 +1676,8 @@ bool Skywatcher::read_eqmod()
             break;
         case '!':
             throw EQModError(EQModError::ErrCmdFailed, "Failed command %s - Reply %s", command, response);
-            return false;
         default:
             throw EQModError(EQModError::ErrInvalidCmd, "Invalid response to command %s - Reply %s", command, response);
-            return false;
     }
 
     return true;
