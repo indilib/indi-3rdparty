@@ -143,6 +143,8 @@ install(TARGETS indi_azgti_telescope RUNTIME DESTINATION bin )
 #########################################  Tests  #################################################
 ###################################################################################################
 
+set(INDI_BUILD_UNITTESTS TRUE)
+
 find_package (GTest)
 find_package (GMock)
 IF (GTEST_FOUND)

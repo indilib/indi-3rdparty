@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "eqmod.h"
+
+#include "config.h"
+#include "eqmodbase.h"
 
 
 using ::testing::_;
@@ -145,7 +147,6 @@ public:
         return true;
     }
 
-
 };
 
 
@@ -184,6 +185,87 @@ TEST(EqmodTest, encoder_target_south)
     eqmod.TestEncoderTarget();
 }
 
+#ifdef WITH_SCOPE_LIMITS
+TEST(EqmodTest, scope_limits_properties)
+{
+    TestEQMod eqmod;
+
+    {
+        ITextVectorProperty * const p = eqmod.getText("HORIZONLIMITSDATAFILE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindText(p, "HORIZONLIMITSFILENAME"), nullptr);
+        }
+    }
+    {
+        INumberVectorProperty * const p = eqmod.getNumber("HORIZONLIMITSPOINT");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_AZ"), nullptr);
+            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_ALT"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSTRAVERSE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTFIRST"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTPREV"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTNEXT"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTLAST"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSMANAGE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTADDCURRENT"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTDELETE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTCLEAR"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSFILEOPERATION");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSWRITEFILE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLOADFILE"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITTRACK"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITSLEW"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITGOTO"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSLIMITGOTO");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTODISABLE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTOENABLE"), nullptr);
+        }
+    }
+    {
+        IBLOBVectorProperty * const p = eqmod.getBLOB("HORIZONLIMITSDATAFITS");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindBLOB(p, "HORIZONPOINTS"), nullptr);
+        }
+    }
+}
+#endif
 
 int main(int argc, char **argv)
 {
