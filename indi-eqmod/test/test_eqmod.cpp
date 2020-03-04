@@ -265,6 +265,88 @@ TEST(EqmodTest, scope_limits_properties)
         }
     }
 }
+
+TEST(EqmodTest, scope_limits_empty)
+{
+    TestEQMod eqmod;
+    eqmod.updateLocation(50.0, 15.0, 0);
+
+    ISwitchVectorProperty * const onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+    ASSERT_NE(onlimit, nullptr);
+    ISwitch * const limittrack = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITTRACK");
+    ASSERT_NE(limittrack, nullptr);
+    ISwitch * const limitslew = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITSLEW");
+    ASSERT_NE(limitslew, nullptr);
+    ISwitch * const limitgoto = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITGOTO");
+    ASSERT_NE(limitgoto, nullptr);
+
+    HorizonLimits * const hl = eqmod.horizon;
+    ASSERT_NE(hl, nullptr);
+
+    // Because there are no horizon limits set, any altitude under the horizon will trigger the limit check
+    // So use that to test switches appropriately
+    for (int ftrack = ISS_OFF; ftrack <= ISS_ON; ftrack++)
+    {
+        limittrack->s = (ISState) ftrack;
+        for (int fslew = ISS_OFF; fslew <= ISS_ON; fslew++)
+        {
+            limitslew->s = (ISState) fslew;
+            for (int fgoto = ISS_OFF; fgoto <= ISS_ON; fgoto++)
+            {
+                limitgoto->s = (ISState) fgoto;
+
+                IDSetSwitch(onlimit, nullptr);
+
+                // Over the horizon (0 <= alt), so always outside limits
+                for (double alt = 0; alt < +90; alt += 0.7)
+                {
+                    for (double az = -365; az < 365; az += 0.7)
+                    {
+                        // Inside limits, no aborts
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, true), false);
+
+                        // Remaining tests are improbable, and won't abort anything
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, true), false);
+                    }
+                }
+
+                // On or under horizon (alt < 0 strictly), so always outside limits
+                // Those tests output warnings thus are slower, so use larger verification strides
+                for (double alt = -0.001; -90 < alt; alt -= 10.1)
+                {
+                    for (double az = -365; az < 365; az += 10.1)
+                    {
+                        // When idle, limits are not tested
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, false), false);
+
+                        // When slewing, limits may abort move without goto, and gotos
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, false), fslew == ISS_ON);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, true), fgoto == ISS_ON);
+
+                        // When tracking, limits may abort move, also in the edge case of tracking during goto
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, false), ftrack == ISS_ON);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, true), ftrack == ISS_ON);
+
+                        // Remaining tests are improbable, and won't abort anything
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, true), false);
+                    }
+                }
+            }
+        }
+    }
+}
 #endif
 
 int main(int argc, char **argv)

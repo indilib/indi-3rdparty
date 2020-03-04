@@ -568,22 +568,22 @@ bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::Telescop
         if ((status == INDI::Telescope::SCOPE_TRACKING) && (swaborttrack->s == ISS_ON))
         {
             abortscope = true;
-            LOG_WARN("Horizon Limits: Scope outside limits. Abort Tracking.");
+            LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Tracking.", az, alt);
         }
         if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortslew->s == ISS_ON) && !ingoto)
         {
             abortscope = true;
-            LOG_WARN("Horizon Limits: Scope outside limits. Abort Slewing.");
+            LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Slewing.", az, alt);
         }
         if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortgoto->s == ISS_ON) && ingoto)
         {
             abortscope = true;
-            LOG_WARN("Horizon Limits: Scope outside limits. Abort Goto.");
+            LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Goto.", az, alt);
         }
         else if (!warningMessageDispatched)
         {
             warningMessageDispatched = true;
-            LOG_WARN("Horizon Limits: Scope outside limits. Nothing to abort.");
+            LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Nothing to abort.", az, alt);
         }
     }
     else
