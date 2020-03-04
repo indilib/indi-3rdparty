@@ -590,3 +590,12 @@ bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::Telescop
         warningMessageDispatched = false;
     return (abortscope);
 }
+
+bool HorizonLimits::saveConfigItems(FILE *fp)
+{
+    if (HorizonLimitsOnLimitSP)
+        IUSaveConfigSwitch(fp, HorizonLimitsOnLimitSP);
+    if (HorizonLimitsLimitGotoSP)
+        IUSaveConfigSwitch(fp, HorizonLimitsLimitGotoSP);
+    return true;
+}
