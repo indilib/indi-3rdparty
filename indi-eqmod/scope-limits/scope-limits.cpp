@@ -528,34 +528,45 @@ char *HorizonLimits::LoadDataFile(const char *filename)
     return nullptr;
 }
 
-bool HorizonLimits::inLimits(double az, double alt)
+bool HorizonLimits::inLimits(double raw_az, double raw_alt)
 {
-    horizonpoint scope;
-    double a, b, h;
-    if ((!horizon) || (horizon->size() == 0))
-        return alt >= 0.0;
-    scope.az  = az;
-    scope.alt = alt;
-    std::vector<horizonpoint>::iterator low;
-    std::vector<horizonpoint>::iterator prev;
-    low = std::lower_bound(horizon->begin(), horizon->end(), scope, cmphorizonpoint);
-    if (low->az == az)
-        return (alt >= low->alt);
-    if (low != horizon->begin())
-        prev = low - 1;
-    else
-        prev = horizon->end();
-    if (low != prev)
-    {
-        a = (low->alt - prev->alt) / (low->az - prev->az);
-        b = prev->alt - (a * prev->az);
-        h = (a * az) + b;
-        return ((alt - h) >= 0.0);
-    }
-    else
-    {
-        return ((alt - low->alt) >= 0.0);
-    }
+    horizonpoint const scope(raw_az, raw_alt);
+
+    // Minimal altitude is zero if there is no horizon - arguable
+    if (horizon == nullptr || horizon->size() == 0)
+        return scope.alt >= 0.0;
+
+    // If there is a single horizon point, test altitude directly
+    if (horizon->size() == 1)
+        return scope.alt >= horizon->begin()->alt;
+
+    // Search for the horizon point just after which the tested point may be inserted - see std::lower_bound documentation
+    std::vector<horizonpoint>::iterator next = std::lower_bound(horizon->begin(), horizon->end(), scope, horizonpoint::cmp);
+
+    // If the tested point would be inserted at the end of the horizon list, loop next point back to first
+    if (next == horizon->end())
+        next = horizon->begin();
+
+    // If the tested azimuth is identical to the next point, test altitude directly
+    if (next->az == scope.az)
+        return (scope.alt >= next->alt);
+
+    // Grab the previous horizon point - the one after which inserting the tested point does not alter horizon ordering
+    std::vector<horizonpoint>::iterator const prev = ((next == horizon->begin()) ? horizon->end() : next) - 1;
+
+    // If the altitude is identical between the two horizon siblings, test altitude directly
+    if (prev->alt == next->alt)
+        return (scope.alt >= next->alt);
+
+    // Compute azimuth distances for horizon point and scope point from reference point
+    double const delta_horizon_az = (next->az - prev->az) + ((next->az >= prev->az) ? 0.0 : 360.0);
+    double const delta_scope_az = (scope.az - prev->az) + ((scope.az >= prev->az) ? 0.0 : 360.0);
+
+    // Compute a linear interpolation coefficient between the two horizontal points and test against interpolated altitude
+    double const delta_horizon_alt = next->alt - prev->alt;
+    double const h = prev->alt + delta_horizon_alt * delta_scope_az / delta_horizon_az;
+
+    return (scope.alt >= h);
 }
 
 bool HorizonLimits::inGotoLimits(double az, double alt)
@@ -578,12 +589,12 @@ bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::Telescop
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Tracking.", az, alt);
         }
-        if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortslew->s == ISS_ON) && !ingoto)
+        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortslew->s == ISS_ON) && !ingoto)
         {
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Slewing.", az, alt);
         }
-        if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortgoto->s == ISS_ON) && ingoto)
+        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortgoto->s == ISS_ON) && ingoto)
         {
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Goto.", az, alt);
