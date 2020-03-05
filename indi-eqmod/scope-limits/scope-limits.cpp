@@ -26,9 +26,21 @@
 #include <algorithm> // std::sort
 #include <wordexp.h>
 
-bool cmphorizonpoint(horizonpoint h1, horizonpoint h2)
+// Modulate azimuth inside [0,360[ and clamp altitude to [-90,90]
+horizonpoint::horizonpoint(double _az, double _alt):
+    az(std::fmod(std::fmod(_az, 360.0) + 360.0,360.0)),
+    alt((90.0 < std::abs(_alt)) ? std::copysign(90.0, _alt) : _alt)
+{}
+
+// Predicate ordering horizon points per increasing azimuth
+bool horizonpoint::cmp(horizonpoint const &h1, horizonpoint const &h2)
 {
     return (h1.az < h2.az);
+}
+
+horizonpoint horizonpoint::operator =(horizonpoint const &hp)
+{
+    return horizonpoint(hp.az, hp.alt);
 }
 
 HorizonLimits::HorizonLimits(INDI::Telescope *t)
@@ -146,7 +158,6 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
     {
         if (HorizonLimitsPointNP && strcmp(name, HorizonLimitsPointNP->name) == 0)
         {
-            horizonpoint hp;
             std::vector<horizonpoint>::iterator low;
             HorizonLimitsPointNP->s = IPS_OK;
             if (IUUpdateNumber(HorizonLimitsPointNP, values, names, n) != 0)
@@ -155,9 +166,8 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
                 IDSetNumber(HorizonLimitsPointNP, nullptr);
                 return false;
             }
-            hp.az  = values[0];
-            hp.alt = values[1];
-            if (binary_search(horizon->begin(), horizon->end(), hp, cmphorizonpoint))
+            horizonpoint hp(values[0], values[1]);
+            if (binary_search(horizon->begin(), horizon->end(), hp, horizonpoint::cmp))
             {
                 DEBUGF(INDI::Logger::DBG_WARNING,
                        "Horizon Limits: point with Az = %f already present. Delete it first.", hp.az);
@@ -166,11 +176,11 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
                 return false;
             }
             horizon->push_back(hp);
-            std::sort(horizon->begin(), horizon->end(), cmphorizonpoint);
-            low          = std::lower_bound(horizon->begin(), horizon->end(), hp, cmphorizonpoint);
+            std::sort(horizon->begin(), horizon->end(), horizonpoint::cmp);
+            low          = std::lower_bound(horizon->begin(), horizon->end(), hp, horizonpoint::cmp);
             horizonindex = std::distance(horizon->begin(), low);
             DEBUGF(INDI::Logger::DBG_SESSION,
-                   "Horizon Limits: Added point Az = %f, Alt  = %f, Rank=%d (Total %d points)", hp.az, hp.alt,
+                   "Horizon Limits: Added point Az = %lf, Alt  = %lf, Rank=%d (Total %d points)", hp.az, hp.alt,
                    horizonindex, horizon->size());
             IDSetNumber(HorizonLimitsPointNP, nullptr);
             return true;
@@ -235,7 +245,6 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
             INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
             if (!strcmp(sw->name, "HORIZONLIMITSLISTADDCURRENT"))
             {
-                horizonpoint hp;
                 std::vector<horizonpoint>::iterator low;
                 double values[2];
                 const char *names[]                     = { "HORIZONLIMITS_POINT_AZ", "HORIZONLIMITS_POINT_ALT" };
@@ -257,9 +266,8 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                     IDSetSwitch(HorizonLimitsManageSP, nullptr);
                     return false;
                 }
-                hp.az  = values[0];
-                hp.alt = values[1];
-                if (binary_search(horizon->begin(), horizon->end(), hp, cmphorizonpoint))
+                horizonpoint hp(values[0], values[1]);
+                if (binary_search(horizon->begin(), horizon->end(), hp, horizonpoint::cmp))
                 {
                     DEBUGF(INDI::Logger::DBG_WARNING,
                            "Horizon Limits: point with Az = %f already present. Delete it first.", hp.az);
@@ -268,8 +276,8 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                     return false;
                 }
                 horizon->push_back(hp);
-                std::sort(horizon->begin(), horizon->end(), cmphorizonpoint);
-                low          = std::lower_bound(horizon->begin(), horizon->end(), hp, cmphorizonpoint);
+                std::sort(horizon->begin(), horizon->end(), horizonpoint::cmp);
+                low          = std::lower_bound(horizon->begin(), horizon->end(), hp, horizonpoint::cmp);
                 horizonindex = std::distance(horizon->begin(), low);
                 DEBUGF(INDI::Logger::DBG_SESSION,
                        "Horizon Limits: Added point Az = %f, Alt  = %f, Rank=%d (Total %d points)", hp.az, hp.alt,
@@ -457,7 +465,6 @@ char *HorizonLimits::LoadDataFile(const char *filename)
     char *line = nullptr;
     size_t len = 0;
     ssize_t read;
-    horizonpoint hp;
     int nline = 0, pos = 0;
     INumber *az  = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_AZ");
     INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
@@ -484,7 +491,8 @@ char *HorizonLimits::LoadDataFile(const char *filename)
             s++;
         if (*s == '#')
             continue;
-        if (sscanf(s, "%lg%n", &hp.az, &pos) != 1)
+        double az, alt;
+        if (sscanf(s, "%lg%n", &az, &pos) != 1)
         {
             fclose(fp);
             snprintf((char *)sline, 4, "%d", nline);
@@ -494,14 +502,14 @@ char *HorizonLimits::LoadDataFile(const char *filename)
         s += pos;
         while ((*s == ' ') || (*s == '\t'))
             s++;
-        if (sscanf(s, "%lg%n", &hp.alt, &pos) != 1)
+        if (sscanf(s, "%lg%n", &alt, &pos) != 1)
         {
             fclose(fp);
             snprintf((char *)sline, 4, "%d", nline);
             setlocale(LC_NUMERIC, "");
             return (char *)errorline;
         }
-        horizon->push_back(hp);
+        horizon->push_back(horizonpoint(az, alt));
         nline++;
         pos = 0;
     }
