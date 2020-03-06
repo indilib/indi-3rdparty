@@ -277,6 +277,10 @@ bool QHYCCD::initProperties()
     FilterSlotN[0].min = 1;
     FilterSlotN[0].max = 9;
 
+    // QHY SDK Version
+    IUFillText(&SDKVersionT[0], "VERSION", "Version", "NA");
+    IUFillTextVector(&SDKVersionTP, SDKVersionT, 1, getDeviceName(), "SDK_VERSION", "SDK", "General Info", IP_RO, 60, IPS_OK);
+
     // CCD Cooler Switch
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "On", ISS_OFF);
     IUFillSwitch(&CoolerS[1], "COOLER_OFF", "Off", ISS_ON);
@@ -372,6 +376,8 @@ void QHYCCD::ISGetProperties(const char *dev)
             defineNumber(&USBTrafficNP);
 
         defineNumber(&USBBufferNP);
+
+        defineText(&SDKVersionTP);
     }
 }
 
@@ -563,6 +569,8 @@ bool QHYCCD::updateProperties()
 
         defineNumber(&USBBufferNP);
 
+        defineText(&SDKVersionTP);
+
         // Let's get parameters now from CCD
         setupParams();
     }
@@ -609,6 +617,8 @@ bool QHYCCD::updateProperties()
             deleteProperty(USBTrafficNP.name);
 
         deleteProperty(USBBufferNP.name);
+
+        deleteProperty(SDKVersionTP.name);
     }
 
     return true;
@@ -668,6 +678,16 @@ bool QHYCCD::Connect()
             LOGF_ERROR("Init Camera failed (%d)", ret);
             return false;
         }
+
+        ////////////////////////////////////////////////////////////////////
+        /// SDK Version
+        ////////////////////////////////////////////////////////////////////
+        uint32_t year, month, day, subday;
+        GetQHYCCDSDKVersion(&year, &month, &day, &subday);
+        std::ostringstream versionInfo;
+        versionInfo << year << "." << month << "." << day;
+        LOGF_INFO("Using QHY SDK version %s", versionInfo.str().c_str());
+        IUSaveText(&SDKVersionT[0], versionInfo.str().c_str());
 
         ////////////////////////////////////////////////////////////////////
         /// Read Modes
@@ -1779,9 +1799,9 @@ void QHYCCD::updateTemperature()
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, m_PWMRequest);
         }
         // Temperature Readout does not work, if we do not set "something", so lets set the current value...
- 	else if (TemperatureNP.s == IPS_OK) 
+        else if (TemperatureNP.s == IPS_OK)
         {
-            SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 /100 );
+            SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 / 100 );
         }
 
         ccdtemp   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);

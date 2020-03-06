@@ -41,7 +41,7 @@ preamble=["--width","600",
 def graphs(time):
 	ret = rrdtool.graph( CHARTPATH+"temp"+str(time)+".png","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Temperature",
+	 "--title","Temperature and Dew Point",
 	 "--vertical-label=Celsius ºC",
 	 "DEF:T="+RRDFILE+":T:AVERAGE",
 	 "DEF:Tmax="+RRDFILE+":T:MAX",
@@ -55,7 +55,7 @@ def graphs(time):
 
 	ret = rrdtool.graph( CHARTPATH+"alltemp"+str(time)+".png","-A","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Temperaturas",
+	 "--title","Temperature",
 	 "--vertical-label=Celsius ºC",
 	 "DEF:IR="+RRDFILE+":IR:AVERAGE",
 	 "DEF:Thr="+RRDFILE+":Thr:AVERAGE",
@@ -99,10 +99,10 @@ def graphs(time):
 
 	ret = rrdtool.graph( CHARTPATH+"light"+str(time)+".png","--start","-"+str(time)+"h","-E",
           preamble,
-	 "--title","Iradiance",
-	 "--vertical-label=rel",
+	 "--title","Sky Quality (SQM)",
+	 "--vertical-label=mag/arcs^2",
 	 "DEF:Light="+RRDFILE+":Light:AVERAGE",
-	 "LINE1:Light#"+blue+":Irradiance\\r",
+	 "LINE1:Light#"+blue+":SQM\\r",
 	 "COMMENT:\\n",
 	 "GPRINT:Light:AVERAGE:Avg Light\: %6.2lf %S\\r")
 
@@ -139,54 +139,33 @@ def graphs(time):
 	 "GPRINT:skyT:AVERAGE:Avg Sky Temp\: %6.2lf %S\\r")
 
 
-def recv_indi_old(indi):
-	tim=time.localtime()
-        HR=indi.get_float(INDIDEVICE,"HR","HR")
-        Thr=indi.get_float(INDIDEVICE,"HR","T")
-        P=indi.get_float(INDIDEVICE,"Presure","P")
-        Tp=indi.get_float(INDIDEVICE,"Presure","T")
-        IR=indi.get_float(INDIDEVICE,"IR","IR")
-        Tir=indi.get_float(INDIDEVICE,"IR","T")
-        dew=indi.get_float(INDIDEVICE,"Meteo","DEW")
-        light=indi.get_float(INDIDEVICE,"SQM","SQM")
-        T=indi.get_float(INDIDEVICE,"Meteo","T")
-        clouds=indi.get_float(INDIDEVICE,"Meteo","clouds") 
-        skyT=indi.get_float(INDIDEVICE,"Meteo","SkyT") 
-        statusVector=indi.get_vector(INDIDEVICE,"STATUS")
-	cloudFlag=int(statusVector.get_element("clouds").is_ok())
-	dewFlag=int(statusVector.get_element("dew").is_ok())
-	frezzingFlag=int(statusVector.get_element("frezzing").is_ok())
-	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp),("Dew",dew),("Light",light),
-           ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),
-           ("frezzingFlag",frezzingFlag))
-
 def recv_indi(indi):
 	tim=time.localtime()
-        vectorHR=indi.get_vector(INDIDEVICE,"Humidity")
-	HR=vectorHR.get_element("HR").get_float()
-	Thr=vectorHR.get_element("T").get_float()
+        vectorHR=indi.get_vector(INDIDEVICE,SENSOR_HUMIDITY)
+	HR=vectorHR.get_element(SENSOR_HUMIDITY_HUM).get_float()
+	Thr=vectorHR.get_element(SENSOR_HUMIDITY_TEMP).get_float()
 
-        vectorPressure=indi.get_vector(INDIDEVICE,"Pressure")
-	P=vectorPressure.get_element("P").get_float()
-	Tp=vectorPressure.get_element("T").get_float()
+        vectorPressure=indi.get_vector(INDIDEVICE, SENSOR_PRESSURE)
+	P=vectorPressure.get_element(SENSOR_PRESSURE_PRES).get_float()
+	Tp=vectorPressure.get_element(SENSOR_PRESSURE_TEMP).get_float()
 
-        vectorIR=indi.get_vector(INDIDEVICE,"IR")
-	IR=vectorIR.get_element("IR").get_float()
-	Tir=vectorIR.get_element("T").get_float()
+        vectorIR=indi.get_vector(INDIDEVICE, SENSOR_IR)
+	IR=vectorIR.get_element(SENSOR_IR_IR).get_float()
+	Tir=vectorIR.get_element(SENSOR_IR_TEMP).get_float()
 
-        vectorMeteo=indi.get_vector(INDIDEVICE,"WEATHER_PARAMETERS")
-	dew=vectorMeteo.get_element("WEATHER_DEWPOINT").get_float()
-	clouds=vectorMeteo.get_element("WEATHER_CLOUD_COVER").get_float()
-	T=vectorMeteo.get_element("WEATHER_TEMPERATURE").get_float()
-        skyT=vectorMeteo.get_element("WEATHER_SKY_TEMPERATURE").get_float()
+        vectorMeteo=indi.get_vector(INDIDEVICE, WEATHER)
+	dew=vectorMeteo.get_element(WEATHER_DEWPOINT).get_float()
+	clouds=vectorMeteo.get_element(WEATHER_CLOUDS).get_float()
+	T=vectorMeteo.get_element(WEATHER_TEMP).get_float()
+        skyT=vectorMeteo.get_element(WEATHER_SKY_TEMP).get_float()
 
-        vectorSQM=indi.get_vector(INDIDEVICE,"Sky Quality")
-	sqm=vectorSQM.get_element("SQM").get_float()
+        vectorSQM=indi.get_vector(INDIDEVICE, WEATHER_SQM)
+	sqm=vectorSQM.get_element(WEATHER_SQM_SQM).get_float()
    
-        statusVector=indi.get_vector(INDIDEVICE,"WEATHER_STATUS")
-	cloudFlag=int(statusVector.get_element("clouds").is_ok())
-	dewFlag=int(statusVector.get_element("dew").is_ok())
-	frezzingFlag=int(statusVector.get_element("frezzing").is_ok())
+        statusVector=indi.get_vector(INDIDEVICE, WEATHER_STATUS)
+	cloudFlag=int(statusVector.get_element(WEATHER_STATUS_CLOUDS).is_alert())
+	dewFlag=int(statusVector.get_element(WEATHER_STATUS_DEW).is_alert())
+	frezzingFlag=int(statusVector.get_element(WEATHER_STATUS_TEMP).is_alert())
   
 	return (("HR",HR),("Thr",Thr),("IR",IR),("Tir",Tir),("P",P),("Tp",Tp),("Dew",dew),("SQM",sqm),
            ("T",T),("clouds",clouds),("skyT",skyT),("cloudFlag",cloudFlag),("dewFlag",dewFlag),

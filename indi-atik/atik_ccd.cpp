@@ -1262,7 +1262,10 @@ bool ATIKCCD::saveConfigItems(FILE *fp)
         IUSaveConfigNumber(fp, &ControlNP);
 
     if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
-        INDI::FilterInterface::saveConfigItems(fp);
+        IUSaveConfigText(fp, FilterNameTP);
+    // JM 2020-01-15: Seems like setting filter slot results in spinning
+    // of filter wheel. So we just save the filter names.
+    //INDI::FilterInterface::saveConfigItems(fp);
 
     return true;
 }

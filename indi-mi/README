@@ -10,6 +10,9 @@ Requirements
 
 	You need to install both indi and indi-devel to build this package.
 
++ libmicam
+	libmicam is required.
+
 + libusb-1
 
 	libusb-1 is required.

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 PROJECT(libatik C CXX)
 
-# Built April 3rd, 2019.
+# Built Jan 19th, 2020
 set(ATIK_VERSION "2.2.6")
 set(ATIK_SOVERSION "2")
 

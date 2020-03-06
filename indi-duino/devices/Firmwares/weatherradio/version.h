@@ -1,0 +1,1 @@
+#define METEORADIO_VERSION "0.6";

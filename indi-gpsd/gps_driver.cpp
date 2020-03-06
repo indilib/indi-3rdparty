@@ -315,13 +315,20 @@ IPState GPSD::updateGPS()
     if (IUFindOnSwitchIndex(&TimeSourceSP) == TS_GPS)
     {
         char ts[32] = {0};
+#if GPSD_API_MAJOR_VERSION < 9
         raw_time = gpsData->fix.time;
-
+#else
+        raw_time = gpsData->fix.time.tv_sec;
+#endif
 #ifdef __linux__
         stime(&raw_time);
 #endif
 
+#if GPSD_API_MAJOR_VERSION < 9
         unix_to_iso8601(gpsData->fix.time, ts, 32);
+#else
+        timespec_to_iso8601(gpsData->fix.time, ts, 32);
+#endif
         IUSaveText(&TimeT[0], ts);
 
         struct tm *local = localtime(&raw_time);

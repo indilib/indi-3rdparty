@@ -17,7 +17,7 @@
 
 #include "scope-limits.h"
 
-#include "../eqmod.h"
+#include "../eqmodbase.h"
 
 #include <indicom.h>
 
@@ -589,4 +589,13 @@ bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::Telescop
     else
         warningMessageDispatched = false;
     return (abortscope);
+}
+
+bool HorizonLimits::saveConfigItems(FILE *fp)
+{
+    if (HorizonLimitsOnLimitSP)
+        IUSaveConfigSwitch(fp, HorizonLimitsOnLimitSP);
+    if (HorizonLimitsLimitGotoSP)
+        IUSaveConfigSwitch(fp, HorizonLimitsLimitGotoSP);
+    return true;
 }

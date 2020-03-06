@@ -77,7 +77,6 @@ option(WITH_INOVAPLX "Install i.Nova PLx Driver" On)
 option(WITH_APOGEE "Install Apogee Driver" On)
 option(WITH_FFMV "Install Point Grey FireFly MV Driver" On)
 option(WITH_QHY "Install QHY Driver" On)
-option(WITH_SSAG "Install Star Shoot Driver" On)
 option(WITH_GPHOTO "Install GPhoto Driver" On)
 option(WITH_QSI "Install QSI Driver" On)
 option(WITH_DUINO "Install Ariduino Driver" On)
@@ -107,13 +106,17 @@ option(WITH_PENTAX "Install Pentax Driver" On)
 
 find_package(FFmpeg)
 
-if (FFMPEG_FOUND)
-    message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
-    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
-ELSE(FFMPEG_FOUND)
-    message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
-    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
-ENDIF(FFMPEG_FOUND)
+option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
+
+# JM 2020-01-14: FFMpeg not enough by itself, other libraries like libavdevice-dev is required
+
+# if (FFMPEG_FOUND)
+#     message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
+#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
+# ELSE(FFMPEG_FOUND)
+#     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
+#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
+# ENDIF(FFMPEG_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -156,6 +159,11 @@ endif(WITH_FISHCAMP)
 if (WITH_FLI)
 add_subdirectory(libfli)
 endif(WITH_FLI)
+
+#libmicam
+if (WITH_MI)
+add_subdirectory(libmicam)
+endif(WITH_MI)
 
 #libinovasdk
 if (WITH_INOVAPLX)
@@ -359,7 +367,13 @@ endif (WITH_FFMV)
 
 ## Moravian
 if (WITH_MI)
+find_package(MICAM)
+if (MICAM_FOUND)
 add_subdirectory(indi-mi)
+else (MICAM_FOUND)
+add_subdirectory(libmicam)
+SET(LIBRARIES_FOUND FALSE)
+endif (MICAM_FOUND)
 endif (WITH_MI)
 
 ## Arduino
@@ -404,11 +418,6 @@ add_subdirectory(libqhy)
 SET(LIBRARIES_FOUND FALSE)
 endif (QHY_FOUND)
 endif (WITH_QHY)
-
-## Star Shoot Auto Guider
-if (WITH_SSAG)
-add_subdirectory(indi-ssag)
-endif (WITH_SSAG)
 
 ## GPSD
 if (WITH_GPSD)

@@ -8,8 +8,8 @@ include(GNUInstallDirs)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-# Using Starshoot G SDK Version: 38.14715.2019.0523
-set(LIBSTARSHOOTG_VERSION "1.38.1")
+# Using Starshoot G SDK Version: 46.16627.2020.0224
+set(LIBSTARSHOOTG_VERSION "1.46.1")
 set(LIBSTARSHOOTG_SOVERSION "1")
 
 IF(APPLE)

@@ -2030,6 +2030,15 @@ void ASICCD::getExposure()
                     if (threadRequest == StateExposure)
                     {
                         LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
+
+                        // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
+                        // images.
+                        if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
+                        {
+                            LOG_INFO("Switching to 8-bit video.");
+                            setVideoFormat(ASI_IMG_RAW8);
+                            saveConfig(true, VideoFormatSP.name);
+                        }
                     }
                     InExposure = false;
                     ASIStopExposure(m_camInfo->CameraID);
@@ -2128,12 +2137,19 @@ void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
-    INumber *gainNP = IUFindNumber(&ControlNP, "Gain");
-
-    if (gainNP)
+    // e-/ADU
+    INumber *np = IUFindNumber(&ControlNP, "Gain");
+    if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
+        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+    }
+
+    np = IUFindNumber(&ControlNP, "Offset");
+    if (np)
+    {
+        int status = 0;
+        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
     }
 }
 

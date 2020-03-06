@@ -1,21 +1,25 @@
 #if 0
-    FLI Filter Wheels
-    INDI Interface for Finger Lakes Instrument Filter Wheels
-    Copyright (C) 2003-2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
+FLI Filter Wheels
+INDI Interface for Finger Lakes Instrument Filter Wheels
+Copyright (C) 2003 - 2020 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+    This library is free software;
+you can redistribute it and / or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation;
+either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY;
+without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library;
+if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #endif
 
@@ -27,9 +31,10 @@
 #include "indidevapi.h"
 #include "eventloop.h"
 
+#include "config.h"
 #include "fli_cfw.h"
 
-std::unique_ptr<FLICFW> fliCFW(new FLICFW());
+static std::unique_ptr<FLICFW> fliCFW(new FLICFW());
 
 const flidomain_t Domains[] = { FLIDOMAIN_USB, FLIDOMAIN_SERIAL, FLIDOMAIN_PARALLEL_PORT, FLIDOMAIN_INET };
 
@@ -72,21 +77,16 @@ void ISSnoopDevice(XMLEle *root)
 
 FLICFW::FLICFW()
 {
-    sim = false;
-}
-
-FLICFW::~FLICFW()
-{
+    setVersion(FLI_CCD_VERSION_MAJOR, FLI_CCD_VERSION_MINOR);
 }
 
 const char *FLICFW::getDefaultName()
 {
-    return (char *)"FLI CFW";
+    return "FLI CFW";
 }
 
 bool FLICFW::initProperties()
 {
-    // Init parent properties first
     INDI::FilterWheel::initProperties();
 
     IUFillSwitch(&PortS[0], "USB", "USB", ISS_ON);
@@ -99,11 +99,11 @@ bool FLICFW::initProperties()
     IUFillText(&FilterInfoT[0], "Model", "", "");
     IUFillText(&FilterInfoT[1], "HW Rev", "", "");
     IUFillText(&FilterInfoT[2], "FW Rev", "", "");
-    IUFillTextVector(&FilterInfoTP, FilterInfoT, 3, getDeviceName(), "Model", "", "Filter Info", IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&FilterInfoTP, FilterInfoT, 3, getDeviceName(), "Model", "Model", "Filter Info", IP_RO, 60, IPS_IDLE);
 
-    IUFillSwitch(&FilterS[0], "FILTER_CW", "+", ISS_OFF);
-    IUFillSwitch(&FilterS[1], "FILTER_CCW", "-", ISS_OFF);
-    IUFillSwitchVector(&FilterSP, FilterS, 2, getDeviceName(), "FILTER_WHEEL_MOTION", "Turn Wheel", FILTER_TAB, IP_RW,
+    IUFillSwitch(&TurnWheelS[0], "FILTER_CW", "+", ISS_OFF);
+    IUFillSwitch(&TurnWheelS[1], "FILTER_CCW", "-", ISS_OFF);
+    IUFillSwitchVector(&TurnWheelSP, TurnWheelS, 2, getDeviceName(), "FILTER_WHEEL_MOTION", "Turn Wheel", FILTER_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
     return true;
 }
@@ -123,16 +123,13 @@ bool FLICFW::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&FilterSP);
+        defineSwitch(&TurnWheelSP);
         defineText(&FilterInfoTP);
-
-        timerID = SetTimer(POLLMS);
     }
     else
     {
-        deleteProperty(FilterSP.name);
+        deleteProperty(TurnWheelSP.name);
         deleteProperty(FilterInfoTP.name);
-        rmTimer(timerID);
     }
 
     return true;
@@ -142,7 +139,7 @@ bool FLICFW::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-        /* Ports */
+        // Ports
         if (!strcmp(name, PortSP.name))
         {
             if (IUUpdateSwitch(&PortSP, states, names, n) < 0)
@@ -153,66 +150,40 @@ bool FLICFW::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             return true;
         }
 
-        /* Filter Wheel */
-        if (!strcmp(name, FilterSP.name))
+        // Turn Wheel
+        if (!strcmp(name, TurnWheelSP.name))
         {
-            if (IUUpdateSwitch(&FilterSP, states, names, n) < 0)
+            if (IUUpdateSwitch(&TurnWheelSP, states, names, n) < 0)
                 return false;
             turnWheel();
             return true;
         }
     }
 
-    //  Nobody has claimed this, so, ignore it
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool FLICFW::Connect()
 {
-    int err = 0;
-
-    IDMessage(getDeviceName(), "Attempting to find the FLI CFW...");
-
-    sim = isSimulation();
-
-    if (sim)
-    {
-        setupParams();
-        return true;
-    }
-
-    if (isDebug())
-    {
-        IDLog("Connecting CFW\n");
-        IDLog("Attempting to find the filter wheel\n");
-    }
+    LOG_INFO("Connecting to FLI CFW...");
 
     int portSwitchIndex = IUFindOnSwitchIndex(&PortSP);
 
     if (findFLICFW(Domains[portSwitchIndex]) == false)
     {
-        IDMessage(getDeviceName(), "Error: no filter wheels were detected.");
-
-        if (isDebug())
-            IDLog("Error: no filter wheels were detected.\n");
-
+        LOG_ERROR("Error: no filter wheels were detected.");
         return false;
     }
 
-    if ((err = FLIOpen(&fli_dev, FLIFilter.name, FLIDEVICE_FILTERWHEEL | FLIFilter.domain)))
+    int errorCode = 0;
+
+    if ((errorCode = FLIOpen(&fli_dev, FLIFilter.name, FLIDEVICE_FILTERWHEEL | FLIFilter.domain)))
     {
-        IDMessage(getDeviceName(), "Error: FLIOpen() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("Error: FLIOpen() failed. %s.\n", strerror((int)-err));
-
+        LOGF_ERROR("Error: FLIOpen() failed: %s.", strerror(-errorCode));
         return false;
     }
 
-    /* Success! */
-    IDMessage(getDeviceName(), "Filter wheel is online. Retrieving basic data.");
-    if (isDebug())
-        IDLog("Filter wheel is online. Retrieving basic data.\n");
+    LOG_INFO("Filter wheel is online. Retrieving basic data.");
 
     setupParams();
 
@@ -221,63 +192,40 @@ bool FLICFW::Connect()
 
 bool FLICFW::Disconnect()
 {
-    int err;
+    int errorCode = 0;
 
-    if (sim)
-        return true;
-
-    if ((err = FLIClose(fli_dev)))
+    if ((errorCode = FLIClose(fli_dev)))
     {
-        IDMessage(getDeviceName(), "Error: FLIClose() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("Error: FLIClose() failed. %s.\n", strerror((int)-err));
-
+        LOGF_ERROR("Error: FLIClose() failed: %s.", strerror(-errorCode));
         return false;
     }
 
-    IDMessage(getDeviceName(), "Filter wheel is offline.");
     return true;
 }
 
 bool FLICFW::setupParams()
 {
-    int err = 0;
+    int errorCode = 0;
 
-    if (isDebug())
-        IDLog("In setupParams\n");
-
-    char hw_rev[16], fw_rev[16];
+    char hw_rev[16] = {0}, fw_rev[16] = {0};
 
     ////////////////////////////
     // 1. Get Filter wheels Model
     ////////////////////////////
-    if (!sim && (err = FLIGetModel(fli_dev, FLIFilter.model, 32)))
+    if ((errorCode = FLIGetModel(fli_dev, FLIFilter.model, MAXINDINAME)))
     {
-        IDMessage(getDeviceName(), "FLIGetModel() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetModel() failed. %s.\n", strerror((int)-err));
+        LOGF_ERROR("FLIGetModel() failed: %s.", strerror(-errorCode));
         return false;
     }
 
-    if (sim)
-        IUSaveText(&FilterInfoT[0], getDeviceName());
-    else
-        IUSaveText(&FilterInfoT[0], FLIFilter.model);
+    IUSaveText(&FilterInfoT[0], FLIFilter.model);
 
     ///////////////////////////
     // 2. Get Hardware revision
     ///////////////////////////
-    if (sim)
-        FLIFilter.HWRevision = 1;
-    else if ((err = FLIGetHWRevision(fli_dev, &FLIFilter.HWRevision)))
+    if ((errorCode = FLIGetHWRevision(fli_dev, &FLIFilter.HWRevision)))
     {
-        IDMessage(getDeviceName(), "FLIGetHWRevision() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetHWRevision() failed. %s.\n", strerror((int)-err));
-
+        LOGF_ERROR("FLIGetHWRevision() failed: %s.", strerror(errorCode));
         return false;
     }
 
@@ -287,15 +235,9 @@ bool FLICFW::setupParams()
     ///////////////////////////
     // 3. Get Firmware revision
     ///////////////////////////
-    if (sim)
-        FLIFilter.FWRevision = 1;
-    else if ((err = FLIGetFWRevision(fli_dev, &FLIFilter.FWRevision)))
+    if ((errorCode = FLIGetFWRevision(fli_dev, &FLIFilter.FWRevision)))
     {
-        IDMessage(getDeviceName(), "FLIGetFWRevision() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetFWRevision() failed. %s.\n", strerror((int)-err));
-
+        IDMessage(getDeviceName(), "FLIGetFWRevision() failed. %s.", strerror(-errorCode));
         return false;
     }
 
@@ -303,72 +245,51 @@ bool FLICFW::setupParams()
     IUSaveText(&FilterInfoT[2], fw_rev);
 
     IDSetText(&FilterInfoTP, nullptr);
+
     ///////////////////////////
     // 4. Filter position
     ///////////////////////////
 
-    if (sim)
-        FLIFilter.current_pos = 0;
-    else
+    // on first contact fliter wheel reports position -1
+    // to avoid wrong number presented in client dialog:
+    //SelectFilter(FilterSlotN[0].min);
+
+    if ((errorCode = FLIGetFilterPos(fli_dev, &FLIFilter.raw_pos)))
     {
-        // on first contact fliter wheel reports position -1
-        // to avoid wrong number presented in client dialog:
-        SelectFilter(FilterSlotN[0].min);
-
-        if ((err = FLIGetFilterPos(fli_dev, &FLIFilter.current_pos)))
-        {
-            IDMessage(getDeviceName(), "FLIGetFilterPos() failed. %s.", strerror((int)-err));
-
-            if (isDebug())
-                IDLog("FLIGetFilterPos() failed. %s.\n", strerror((int)-err));
-            return false;
-        }
+        LOGF_DEBUG("FLIGetFilterPos() failed. %s.", strerror(-errorCode));
+        return false;
     }
 
     ///////////////////////////
     // 5. filter max limit
     ///////////////////////////
-    if (sim)
-        FLIFilter.count = 5; // 5 slot wheel
-    else if ((err = FLIGetFilterCount(fli_dev, &FLIFilter.count)))
+    if ((errorCode = FLIGetFilterCount(fli_dev, &FLIFilter.count)))
     {
-        IDMessage(getDeviceName(), "FLIGetFilterCount() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetFilterCount() failed. %s.\n", strerror((int)-err));
+        LOGF_ERROR("FLIGetFilterCount() failed: %s.", strerror(-errorCode));
         return false;
     }
 
     FilterSlotN[0].min   = 1;
     FilterSlotN[0].max   = FLIFilter.count;
-    FilterSlotN[0].value = FLIFilter.current_pos + 1;
-    IUUpdateMinMax(&FilterSlotNP);
+    FilterSlotN[0].value = FLIFilter.raw_pos + 1;
 
     return true;
 }
 
 bool FLICFW::SelectFilter(int targetFilter)
 {
-    int err     = 0;
+    int errorCode = 0;
     long filter = targetFilter - 1;
 
-    if (isDebug())
-        IDLog("Requested filter position is %ld\n", filter);
+    LOGF_DEBUG("Requested position is %ld", targetFilter);
 
-    if (sim)
+    if ((errorCode = FLISetFilterPos(fli_dev, filter)))
     {
-        FLIFilter.current_pos = filter;
-    }
-    else if ((err = FLISetFilterPos(fli_dev, filter)))
-    {
-        IDMessage(getDeviceName(), "FLIGetFilterCount() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetFilterCount() failed. %s.\n", strerror((int)-err));
+        LOGF_ERROR("FLIGetFilterCount() failed: %s.", strerror(-errorCode));
         return false;
     }
 
-    FLIFilter.current_pos = filter;
+    FLIFilter.raw_pos = filter;
 
     SelectFilterDone(targetFilter);
 
@@ -377,79 +298,61 @@ bool FLICFW::SelectFilter(int targetFilter)
 
 int FLICFW::QueryFilter()
 {
-    int err = 0;
-    long newFilter;
+    int errorCode = 0;
 
-    if (sim)
-        newFilter = FLIFilter.current_pos;
-    else if ((err = FLIGetFilterPos(fli_dev, &newFilter)))
+    if ((errorCode = FLIGetFilterPos(fli_dev, &FLIFilter.raw_pos)))
     {
-        IDMessage(getDeviceName(), "FLIGetFilterPos() failed. %s.", strerror((int)-err));
-
-        if (isDebug())
-            IDLog("FLIGetFilterPos() failed. %s.\n", strerror((int)-err));
+        LOGF_ERROR("FLIGetFilterPos() failed: %s.", strerror(-errorCode));
         return false;
     }
 
-    if (isDebug())
-        IDLog("Current filter position is %ld\n", newFilter + 1);
+    LOGF_DEBUG("Current position: %ld", FLIFilter.raw_pos + 1);
 
-    return newFilter + 1;
+    return FLIFilter.raw_pos + 1;
 }
 
 void FLICFW::turnWheel()
 {
-    long current_filter = FLIFilter.current_pos + 1;
-
+    long current_filter = FLIFilter.raw_pos + 1;
     if (current_filter > FLIFilter.count)
         current_filter = FLIFilter.count;
 
-    if (isDebug())
-        IDLog("Current Filter Pos: %ld\n", current_filter);
+    long target_filter = current_filter;
 
-    switch (FilterS[0].s)
+    switch (TurnWheelS[0].s)
     {
         case ISS_ON:
             if (current_filter < FilterSlotN[0].max)
-                current_filter++;
+                target_filter = current_filter + 1;
             else
-                current_filter = FilterSlotN[0].min;
+                target_filter = FilterSlotN[0].min;
             break;
 
         case ISS_OFF:
             if (current_filter > FilterSlotN[0].min)
-                current_filter--;
+                target_filter = current_filter - 1;
             else
-                current_filter = FilterSlotN[0].max;
+                target_filter = FilterSlotN[0].max;
             break;
     }
 
-    if (isDebug())
-        IDLog("Target Filter Pos: %ld\n", current_filter);
+    LOGF_DEBUG("Turning CFW %s from %ld to %ld", (TurnWheelS[0].s == ISS_ON) ? "CW" : "CCW", current_filter, target_filter);
 
-    SelectFilter(current_filter);
+    SelectFilter(target_filter);
 
-    IUResetSwitch(&FilterSP);
-    FilterSP.s = IPS_OK;
-    IDSetSwitch(&FilterSP, nullptr);
-}
-
-void FLICFW::TimerHit()
-{
+    IUResetSwitch(&TurnWheelSP);
+    TurnWheelSP.s = IPS_OK;
+    IDSetSwitch(&TurnWheelSP, nullptr);
 }
 
 bool FLICFW::findFLICFW(flidomain_t domain)
 {
     char **names;
-    long err;
+    int errorCode = 0;
 
-    if (isDebug())
-        IDLog("In find Filter wheel, the domain is %ld\n", domain);
-
-    if ((err = FLIList(domain | FLIDEVICE_FILTERWHEEL, &names)))
+    if ((errorCode = FLIList(domain | FLIDEVICE_FILTERWHEEL, &names)))
     {
-        if (isDebug())
-            IDLog("FLIList() failed. %s\n", strerror((int)-err));
+        LOGF_ERROR("FLIList() failed: %s", strerror(-errorCode));
         return false;
     }
 
@@ -491,28 +394,28 @@ bool FLICFW::findFLICFW(flidomain_t domain)
 
         FLIFilter.name = strdup(names[0]);
 
-        if ((err = FLIFreeList(names)))
+        if ((errorCode = FLIFreeList(names)))
         {
-            if (isDebug())
-                IDLog("FLIFreeList() failed. %s.\n", strerror((int)-err));
+            LOGF_ERROR("FLIFreeList() failed: %s.", strerror(-errorCode));
             return false;
         }
 
-    } /* end if */
+    }
     else
     {
-        if ((err = FLIFreeList(names)))
+        if ((errorCode = FLIFreeList(names)))
         {
-            if (isDebug())
-                IDLog("FLIFreeList() failed. %s.\n", strerror((int)-err));
+            LOGF_ERROR("FLIFreeList() failed: %s.", strerror(-errorCode));
             return false;
         }
 
         return false;
     }
 
-    if (isDebug())
-        IDLog("FindFLICFW() finished successfully.\n");
-
     return true;
+}
+
+void FLICFW::debugTriggered(bool enable)
+{
+    FLISetDebugLevel(nullptr, enable ? FLIDEBUG_INFO : FLIDEBUG_WARN);
 }
