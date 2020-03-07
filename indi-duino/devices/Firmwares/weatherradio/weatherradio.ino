@@ -35,7 +35,7 @@ void setup() {
 /**
    Send current sensor data as JSON document
 */
-void sendSensorData() {
+String getSensorData() {
   const int docSize = JSON_OBJECT_SIZE(5) + // max 5 sensors
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
@@ -69,21 +69,24 @@ void sendSensorData() {
   serializeTSL(weatherDoc);
 #endif //USE_TSL_SENSOR
 
-  serializeJson(weatherDoc, Serial);
-  Serial.println();
+  String result = "";
+  serializeJson(weatherDoc, result);
 
+  return result;
 }
 
-void sendCurrentVersion() {
+String getCurrentVersion() {
   StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
   doc["version"] = METEORADIO_VERSION;
 
-  serializeJson(doc, Serial);
-  Serial.println();
+  String result = "";
+  serializeJson(doc, result);
+
+  return result;
 }
 
 // translate the sensor configurations to a JSON document
-void sendCurrentConfig() {
+String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(2) + // max 2 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3);  // Davis Anemometer
@@ -101,9 +104,14 @@ void sendCurrentConfig() {
   davisdata["wind direction offset"] = WINDOFFSET;
 #endif
 
-  serializeJson(doc, Serial);
-  Serial.println();
+  if (doc.isNull())
+    return "{}";
+  else {
+    String result = "";
+    serializeJson(doc, result);
 
+    return result;
+  };
 }
 
 /**
@@ -119,13 +127,13 @@ void loop() {
   while (Serial.available() > 0) {
     switch (Serial.read()) {
       case 'v':
-        sendCurrentVersion();
+        Serial.println(getCurrentVersion());
         break;
       case 'w':
-        sendSensorData();
+        Serial.println(getSensorData());
         break;
       case 'c':
-        sendCurrentConfig();
+        Serial.println(getCurrentConfig());
     }
   }
 
