@@ -21,16 +21,9 @@
 #include "config.h"
 #include "version.h"
 
-void setup() {
-  Serial.begin(9600);
-  // wait for serial port to connect. Needed for native USB
-  while (!Serial) continue;
-
-#ifdef USE_DAVIS_SENSOR
-  initAnemometer();
-#endif //USE_DAVIS_SENSOR
-
-}
+#ifdef ESP8266
+#include "esp8266.h"
+#endif
 
 /**
    Send current sensor data as JSON document
@@ -104,6 +97,14 @@ String getCurrentConfig() {
   davisdata["wind direction offset"] = WINDOFFSET;
 #endif
 
+#ifdef ESP8266
+  JsonObject wifidata = doc.createNestedObject("WiFi");
+  wifidata["SSID"] = STASSID;
+  wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
+  if (WiFi.status() == WL_CONNECTED)
+    wifidata["IP"] = WiFi.localIP().toString();
+#endif
+
   if (doc.isNull())
     return "{}";
   else {
@@ -112,6 +113,49 @@ String getCurrentConfig() {
 
     return result;
   };
+}
+
+#ifdef ESP8266
+void handleSensorData() {
+  server.send(200, "application/json; charset=utf-8", getSensorData());
+
+}
+#endif
+
+void setup() {
+  Serial.begin(9600);
+  // wait for serial port to connect. Needed for native USB
+  while (!Serial) continue;
+
+#ifdef USE_DAVIS_SENSOR
+  initAnemometer();
+#endif //USE_DAVIS_SENSOR
+
+#ifdef ESP8266
+  initWiFi();
+
+  server.on("/", []() {
+    server.send(200, "application/json; charset=utf-8", getSensorData());
+  });
+
+  server.on("/w", []() {
+    server.send(200, "application/json; charset=utf-8", getSensorData());
+  });
+
+  server.on("/c", []() {
+    server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+  });
+
+  server.on("/v", []() {
+    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+  });
+
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "Ressource not found: " + server.uri());
+  });
+
+  server.begin();
+#endif
 }
 
 /**
@@ -123,6 +167,9 @@ String getCurrentConfig() {
 */
 void loop() {
 
+#ifdef ESP8266
+  server.handleClient();
+#endif
 
   while (Serial.available() > 0) {
     switch (Serial.read()) {
