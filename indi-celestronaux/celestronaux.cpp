@@ -155,7 +155,15 @@ bool CelestronAUX::Abort()
 
     AxisStatusAZ = AxisStatusALT = STOPPED;
     ScopeStatus                  = IDLE;
-    //scope.Abort();
+    
+    Track(0, 0);
+    buffer b(1);
+    b[0] = 0;
+    AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
+    AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
+    sendCmd(stopAlt);
+    sendCmd(stopAz);
+
     AbortSP.s = IPS_OK;
     IUResetSwitch(&AbortSP);
     IDSetSwitch(&AbortSP, nullptr);
@@ -254,7 +262,7 @@ bool CelestronAUX::Handshake()
 
 bool CelestronAUX::Disconnect()
 {
-    //scope.Disconnect();
+    Abort();
     return INDI::Telescope::Disconnect();
 }
 
@@ -1265,7 +1273,7 @@ void CelestronAUX::serial_readMsgs()
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    if (PortFD <= 0)
+    if ( ! isConnected() )
         return;
 
     // search for packet preamble (0x3b)
@@ -1309,7 +1317,7 @@ bool CelestronAUX::tcp_readMsgs_net()
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    if (PortFD <= 0)
+    if ( ! isConnected() )
         return false;
 
     timeval tv;
@@ -1375,10 +1383,13 @@ bool CelestronAUX::tcp_readMsgs_tty()
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    if (PortFD <= 0)
+    if ( ! isConnected() )
         return false;
 
     // search for packet preamble (0x3b)
+    if (RD_DEBUG)
+        fprintf(stderr, "tcp_readMsgs_tty (%d): ", PortFD);
+
     do 
     {
         if (tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
@@ -1386,9 +1397,15 @@ bool CelestronAUX::tcp_readMsgs_tty()
     }
     while (buf[0] != 0x3b);
 
+    if (RD_DEBUG)
+        fprintf(stderr, " 0x3b ");
+
     // packet preamble is found, now read packet length.
     if (tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
         return false;
+
+    if (RD_DEBUG)
+        fprintf(stderr, " len = %02x ", buf[1]);
 
     // now packet length is known, read the rest of the packet.
     if (tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n) != TTY_OK 
@@ -1402,12 +1419,12 @@ bool CelestronAUX::tcp_readMsgs_tty()
     // The buffer of n+2>=5 bytes contains:
     // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
     buffer b(buf, buf + (n+2)); 
-    cmd.parseBuf(b);
     if (RD_DEBUG) 
     {
         fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
         prnBytes(buf, n+2);
     }
+    cmd.parseBuf(b);
     processCmd(cmd);
 
     return true;
@@ -1426,7 +1443,8 @@ void CelestronAUX::readMsgs()
 
 int CelestronAUX::sendBuffer(int PortFD, buffer buf)
 {
-    if (PortFD > 0)
+
+    if (isConnected())
     {
         int n;
 
@@ -1528,7 +1546,7 @@ int CelestronAUX::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,i
     char errmsg[MAXRBUF];
 
     if (WR_DEBUG) 
-        fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+        fprintf(stderr, "nevo_tty_write: %d\n", PortFD);
     
     // if serial, set RTS to on then wait for CTS on to write: PC port
     // bahaves as half duplex. RTS may be already on.
