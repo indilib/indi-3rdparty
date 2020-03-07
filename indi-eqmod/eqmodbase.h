@@ -46,9 +46,7 @@ typedef struct SyncData
 
 #include <alignment/AlignmentSubsystemForDrivers.h>
 
-class EQMod : public INDI::Telescope,
-    public INDI::GuiderInterface,
-    INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
+class EQMod : public INDI::Telescope, public INDI::GuiderInterface, INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 #else
 class EQMod : public INDI::Telescope, public INDI::GuiderInterface
 #endif
@@ -287,4 +285,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
             AUTO_HOME_WAIT_PHASE6
         };
         AutoHomeStatus AutohomeState;
+
+        int DBG_SCOPE_STATUS {0};
+        int DBG_COMM {0};
+        int DBG_MOUNT {0};
 };
