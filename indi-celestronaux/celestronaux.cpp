@@ -232,9 +232,30 @@ bool CelestronAUX::Handshake()
     fprintf(stderr, "CAUX: connect %d\n", PortFD);
     if (PortFD > 0)
     {
+	// if serial connection, check if hardware control flow is required.
+	// yes for AUX and PC ports, no for HC port.    
+        if ((isRTSCTS = ((getActiveConnection() == serialConnection)
+	    && detectRTSCTS())))
+            LOG_INFO("Detected AUX or PC port connection.\n");
+	else
+	{
+	    if (detectRTSCTS())
+                LOG_INFO("detectRTSCTS = true.\n");
+	    else
+                LOG_INFO("detectRTSCTS = false.\n");
+
+	    // read firmware version, if read ok, detected HC serial
+	    AUXCommand firmver(GET_VER,APP,AZM);
+	    if (!sendCmd(firmver))
+	        return false;
+	    if (!readMsgs(firmver))
+		return false;
+            LOG_INFO("Detected Hand Controller serial connection.\n");
+	}
+
         // We are connected. Just start processing!
 	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.\n");
-        readMsgs();
+        //readMsgs();
         return true;
     }
 
@@ -941,7 +962,7 @@ bool CelestronAUX::Slew(AUXtargets trg, int rate)
     AUXCommand cmd((rate < 0) ? MC_MOVE_NEG : MC_MOVE_POS, APP, trg);
     cmd.setRate((unsigned char)(std::abs(rate) & 0xFF));
     sendCmd(cmd);
-    readMsgs();
+    readMsgs(cmd);
     return true;
 }
 
@@ -973,9 +994,9 @@ bool CelestronAUX::GoToFast(long alt, long az, bool track)
     az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendCmd(altcmd);
-    readMsgs();
+    readMsgs(altcmd);
     sendCmd(azmcmd);
-    readMsgs();
+    readMsgs(azmcmd);
     //DEBUG=false;
     return true;
 };
@@ -997,9 +1018,9 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
     az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendCmd(altcmd);
-    readMsgs();
+    readMsgs(altcmd);
     sendCmd(azmcmd);
-    readMsgs();
+    readMsgs(azmcmd);
     //DEBUG=false;
     return true;
 };
@@ -1022,9 +1043,9 @@ bool CelestronAUX::Track(long altRate, long azRate)
     azmcmd.setPosition(long(std::abs(AzRate)));
 
     sendCmd(altcmd);
-    readMsgs();
+    readMsgs(altcmd);
     sendCmd(azmcmd);
-    readMsgs();
+    readMsgs(azmcmd);
     return true;
 };
 
@@ -1085,19 +1106,19 @@ void CelestronAUX::querryStatus()
     {
         AUXCommand cmd(MC_GET_POSITION, APP, trg[i]);
         sendCmd(cmd);
-        readMsgs();
+        readMsgs(cmd);
     }
     if (slewingAlt)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, ALT);
         sendCmd(cmd);
-        readMsgs();
+        readMsgs(cmd);
     }
     if (slewingAz)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, AZM);
         sendCmd(cmd);
-        readMsgs();
+        readMsgs(cmd);
     }
 }
 
@@ -1258,7 +1279,7 @@ void CelestronAUX::processCmd(AUXCommand &m)
     // if (PROC_DEBUG) fprintf(stderr, "\n");
 }
 
-void CelestronAUX::serial_readMsgs()
+bool CelestronAUX::serial_readMsgs(AUXCommand c)
 {
     int n;
     unsigned char buf[BUFFER_SIZE];
@@ -1266,25 +1287,47 @@ void CelestronAUX::serial_readMsgs()
 
     // We are not connected. Nothing to do.
     if (PortFD <= 0)
-        return;
+        return false;
 
-    // search for packet preamble (0x3b)
-    do 
+    // if connected to AUX or PC ports, receive AUX command response.
+    if (isRTSCTS)
     {
-        if (nevo_tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
-            return;
+        // search for packet preamble (0x3b)
+        do 
+        {
+            if (aux_tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
+                return false;
+        }
+        while (buf[0] != 0x3b);
+
+        // packet preamble is found, now read packet length.
+        if (aux_tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
+            return false;
+
+        // now packet length is known, read the rest of the packet.
+        if (aux_tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n)
+	    != TTY_OK || n != buf[1] + 1)
+	{
+            DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
+            return false;
+        }
     }
-    while (buf[0] != 0x3b);
-
-    // packet preamble is found, now read packet length.
-    if (nevo_tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
-        return;
-
-    // now packet length is known, read the rest of the packet.
-    if (nevo_tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n) != TTY_OK 
-            || n != buf[1] + 1){
-        DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
-        return;
+    // if connected to HC serial, build up the AUX command response from
+    // given AUX command and passthrough response without checksum.
+    else
+    {
+        // read passthrough response
+	if ((tty_read(PortFD,(char *)buf+5,response_data_size + 1,READ_TIMEOUT,&n) != 
+	    TTY_OK) || (n != response_data_size + 1))
+	    return false;
+	// if last char is not '#', there was an error.
+	if (buf[n - 1] != '#')
+	    return false;
+	buf[0] = 0x50;
+	buf[1] = 3 + response_data_size;
+	buf[2] = c.src;
+	buf[3] = c.dst;
+	buf[4] = c.cmd;
     }
 
     // Got the packet, process it
@@ -1292,13 +1335,14 @@ void CelestronAUX::serial_readMsgs()
     // The buffer of n+2>=5 bytes contains:
     // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
     buffer b(buf, buf + (n+2)); 
-    cmd.parseBuf(b);
+    cmd.parseBuf(b,false);
     if (RD_DEBUG) 
     {
         fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
         prnBytes(buf, n+2);
     }
     processCmd(cmd);
+    return true;
 }
 
 bool CelestronAUX::tcp_readMsgs_net()
@@ -1414,13 +1458,13 @@ bool CelestronAUX::tcp_readMsgs_tty()
 }
 
 
-void CelestronAUX::readMsgs()
+bool CelestronAUX::readMsgs(AUXCommand c)
 {
     if (getActiveConnection() == serialConnection)   
-        serial_readMsgs();
+        return serial_readMsgs(c);
     else 
         //do {} while (tcp_readMsgs_tty());
-        tcp_readMsgs_net();
+        return tcp_readMsgs_net();
 }
 
 
@@ -1430,7 +1474,7 @@ int CelestronAUX::sendBuffer(int PortFD, buffer buf)
     {
         int n;
 
-        if (nevo_tty_write(PortFD,(char*)buf.data(),buf.size(),CTS_TIMEOUT,&n) != TTY_OK)
+        if (aux_tty_write(PortFD,(char*)buf.data(),buf.size(),CTS_TIMEOUT,&n) != TTY_OK)
                 return 0;
 
         msleep(50);
@@ -1444,6 +1488,7 @@ int CelestronAUX::sendBuffer(int PortFD, buffer buf)
         return 0;
 }
 
+
 bool CelestronAUX::sendCmd(AUXCommand &c)
 {
     buffer buf;
@@ -1453,10 +1498,26 @@ bool CelestronAUX::sendCmd(AUXCommand &c)
         fprintf(stderr, "Send: ");
         c.dumpCmd();
     }
-    c.fillBuf(buf);
+
+    if (isRTSCTS)
+        c.fillBuf(buf);
+    else
+    // connection is through HC serial, convert AUX command to a
+    // passthrough command
+    {
+	buf.resize(8);                 // fixed len = 8
+        buf[0] = 0x50;                 // prefix
+	buf[1] = 3 + c.data.size();    // length
+	buf[2] = c.dst;                // destination
+        buf[3] = c.cmd;                // command id
+	for (unsigned int i = 0; i < c.data.size(); i++) // payload
+	{
+	    buf[i + 4] = c.data[i];
+	}
+        buf[7] = response_data_size = c.response_data_size();
+    }
     return sendBuffer(PortFD, buf) == (int)buf.size();
 }
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1495,21 +1556,31 @@ bool CelestronAUX::waitCTS(float timeout)
 	if (modem_ctrl & TIOCM_CTS)
 	    return 1;
     }
-    LOGF_ERROR("Error waiting for CTS timeout. modem_ctrl = %x hex.\n",modem_ctrl);
     return 0;
 }
 
 
-int CelestronAUX::nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n)
+bool CelestronAUX::detectRTSCTS()
+{
+    bool retval;
+    setRTS(1);
+    retval = waitCTS(200.);
+    setRTS(0);
+    return retval;
+}
+
+
+int CelestronAUX::aux_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n)
 {
     int errcode;
     char errmsg[MAXRBUF];
     
     if (RD_DEBUG)
-        fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+        fprintf(stderr, "aux_tty_read: %d\n", PortFD);
     
-    // if serial, set RTS to off to receive: PC port bahaves as half duplex.
-    if (getActiveConnection() == serialConnection)
+    // if hardware flow control is required, set RTS to off to receive: PC port
+    // bahaves as half duplex.
+    if (isRTSCTS)
         setRTS(0);
 
     if((errcode = tty_read(PortFD,buf,bufsiz,timeout,n)) != TTY_OK)
@@ -1522,27 +1593,31 @@ int CelestronAUX::nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int 
 }
 
 
-int CelestronAUX::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,int *n)
+int CelestronAUX::aux_tty_write(int PortFD,char *buf,int bufsiz,float timeout,int *n)
 {
     int errcode ,ne;
     char errmsg[MAXRBUF];
 
     if (WR_DEBUG) 
-        fprintf(stderr, "nevo_tty_read: %d\n", PortFD);
+        fprintf(stderr, "aux_tty_read: %d\n", PortFD);
     
-    // if serial, set RTS to on then wait for CTS on to write: PC port
-    // bahaves as half duplex. RTS may be already on.
-    if (getActiveConnection() == serialConnection)
+    // if hardware flow control is required, set RTS to on then wait for CTS
+    // on to write: PC port bahaves as half duplex. RTS may be already on.
+    if (isRTSCTS)
     {
         setRTS(1);
         if (!waitCTS(timeout))
+	{
+            LOGF_ERROR("Error getting handshake lines %s(%d).\n",strerror(errno), errno);
 	    return TTY_TIME_OUT;
+	}
     }
 
     errcode = tty_write(PortFD,buf,bufsiz,n);
 
-    // Wait for tx complete, set RTS to off, to receive (half duplex).
-    if (getActiveConnection() == serialConnection)
+    // if hardware flow control is required, Wait for tx complete, set RTS to
+    // off, to receive (half duplex).
+    if (isRTSCTS)
     {
         msleep(RTS_DELAY);
         setRTS(0);
@@ -1555,8 +1630,9 @@ int CelestronAUX::nevo_tty_write(int PortFD,char *buf,int bufsiz,float timeout,i
         return errcode;
     }
 
-    // if serial, written characters are echoed, verify them.
-    if (getActiveConnection() == serialConnection)
+    // ports requiring hardware flow control echo all sent characters,
+    // verify them.
+    if (isRTSCTS)
     {
         if ((errcode = tty_read(PortFD,errmsg,*n,READ_TIMEOUT,&ne)) != TTY_OK)
         {

@@ -122,6 +122,41 @@ const char * AUXCommand::cmd_name(AUXCommands c)
         }
 }
 
+int AUXCommand::response_data_size()
+{
+    if (src == GPS || dst == GPS)
+        switch (cmd)
+        {
+            case GPS_GET_LAT:
+            case GPS_GET_LONG:
+            case GPS_GET_TIME: return 3;
+            case GPS_GET_DATE: 
+            case GPS_GET_YEAR:
+            case GET_VER: return 2;
+            case GPS_TIME_VALID:
+            case GPS_LINKED: return 1;
+            default : return -1;
+        }
+    else 
+        switch (cmd)
+        {
+            case MC_GET_POSITION: return 3;
+            case GET_VER: return 2;
+            case MC_SLEW_DONE: return 1;
+            case MC_GOTO_FAST:
+            case MC_SET_POSITION:
+            case MC_SET_POS_GUIDERATE:
+            case MC_SET_NEG_GUIDERATE:
+            case MC_LEVEL_START:
+            case MC_GOTO_SLOW:
+            case MC_MOVE_POS:
+            case MC_MOVE_NEG: return 0;
+            case MC_SEEK_INDEX: return -1;
+            default : return -1;
+        }
+}
+
+
 const char * AUXCommand::node_name(AUXtargets n)
 {
     switch (n)
@@ -199,6 +234,18 @@ void AUXCommand::parseBuf(buffer buf)
         dumpMsg(buf);
     };
 }
+
+void AUXCommand::parseBuf(buffer buf, bool do_checksum)
+{
+    (void)do_checksum;
+
+    len   = buf[1];
+    src   = (AUXtargets)buf[2];
+    dst   = (AUXtargets)buf[3];
+    cmd   = (AUXCommands)buf[4];
+    data  = buffer(buf.begin() + 5, buf.end() - 1);
+}
+
 
 unsigned char AUXCommand::checksum(buffer buf)
 {

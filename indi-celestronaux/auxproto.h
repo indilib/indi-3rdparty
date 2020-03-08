@@ -59,6 +59,7 @@ class AUXCommand
 
     void fillBuf(buffer &buf);
     void parseBuf(buffer buf);
+    void parseBuf(buffer buf, bool do_checksum);
     long getPosition();
     void setPosition(long p);
     void setPosition(double p);
@@ -66,6 +67,7 @@ class AUXCommand
     unsigned char checksum(buffer buf);
     void dumpCmd();
     const char * cmd_name(AUXCommands c);
+    int response_data_size();
     const char * node_name(AUXtargets n);
     void pprint();
 
