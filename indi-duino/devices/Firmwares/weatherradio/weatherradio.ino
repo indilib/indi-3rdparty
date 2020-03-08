@@ -21,7 +21,7 @@
 #include "config.h"
 #include "version.h"
 
-#ifdef ESP8266
+#ifdef USE_WIFI
 #include "esp8266.h"
 #endif
 
@@ -103,7 +103,7 @@ String getCurrentConfig() {
   davisdata["wind direction offset"] = WINDOFFSET;
 #endif
 
-#ifdef ESP8266
+#ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
   wifidata["SSID"] = STASSID;
   wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
@@ -121,7 +121,7 @@ String getCurrentConfig() {
   };
 }
 
-#ifdef ESP8266
+#ifdef USE_WIFI
 void handleSensorData() {
   server.send(200, "application/json; charset=utf-8", getSensorData());
 
@@ -142,7 +142,7 @@ void setup() {
 #endif //USE_TSL237_SENSOR
 
 
-#ifdef ESP8266
+#ifdef USE_WIFI
   initWiFi();
 
   server.on("/", []() {
@@ -178,7 +178,7 @@ void setup() {
 */
 void loop() {
 
-#ifdef ESP8266
+#ifdef USE_WIFI
   server.handleClient();
 #endif
 
