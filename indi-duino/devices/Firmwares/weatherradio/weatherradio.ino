@@ -29,10 +29,11 @@
    Send current sensor data as JSON document
 */
 String getSensorData() {
-  const int docSize = JSON_OBJECT_SIZE(5) + // max 5 sensors
+  const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
+                      JSON_OBJECT_SIZE(3) + // TSL237 sensor
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
@@ -57,10 +58,15 @@ String getSensorData() {
   serializeMLX(weatherDoc);
 #endif //USE_MLX_SENSOR
 
-#ifdef USE_TSL_SENSOR
-  updateTSL();
-  serializeTSL(weatherDoc);
-#endif //USE_TSL_SENSOR
+#ifdef USE_TSL237_SENSOR
+  updateTSL237();
+  serializeTSL237(weatherDoc);
+#endif //USE_TSL237_SENSOR
+
+#ifdef USE_TSL2591_SENSOR
+  updateTSL2591();
+  serializeTSL2591(weatherDoc);
+#endif //USE_TSL2591_SENSOR
 
   String result = "";
   serializeJson(weatherDoc, result);
@@ -130,6 +136,11 @@ void setup() {
 #ifdef USE_DAVIS_SENSOR
   initAnemometer();
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_TSL237_SENSOR
+  initTSL237();
+#endif //USE_TSL237_SENSOR
+
 
 #ifdef ESP8266
   initWiFi();

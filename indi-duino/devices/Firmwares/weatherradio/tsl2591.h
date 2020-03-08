@@ -18,9 +18,9 @@ struct {
   int      gain;
   int      timing;
   float    lux;
-} tslData {false, 0, 0, 0, 0, 0, 0.0};
+} tsl2591Data {false, 0, 0, 0, 0, 0, 0.0};
 
-void configureSensorTSL(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t timeSetting)
+void configureSensorTSL2591(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t timeSetting)
 {
   // You can change the gain on the fly, to adapt to brighter/dimmer light situations
   tsl.setGain(gainSetting);
@@ -31,94 +31,94 @@ void configureSensorTSL(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t time
 }
 
 
-// calibrate TSL gain and integration time
-void calibrateTSL() {
-  if (tslData.visible < 100) { //Increase GAIN (and INTEGRATIONTIME) if light level too low
-    switch (tslData.gain)
+// calibrate TSL2591 gain and integration time
+void calibrateTSL2591() {
+  if (tsl2591Data.visible < 100) { //Increase GAIN (and INTEGRATIONTIME) if light level too low
+    switch (tsl2591Data.gain)
     {
       case TSL2591_GAIN_LOW :
-        configureSensorTSL(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_MED :
-        configureSensorTSL(TSL2591_GAIN_HIGH, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_HIGH, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_HIGH :
-        configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_MAX :
-        if (tslData.visible < 100) {
-          switch (tslData.timing)
+        if (tsl2591Data.visible < 100) {
+          switch (tsl2591Data.timing)
           {
             case TSL2591_INTEGRATIONTIME_200MS :
-              configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_300MS);
+              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_300MS);
               break;
             case TSL2591_INTEGRATIONTIME_300MS :
-              configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_400MS);
+              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_400MS);
               break;
             case TSL2591_INTEGRATIONTIME_400MS :
-              configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_500MS);
+              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_500MS);
               break;
             case TSL2591_INTEGRATIONTIME_500MS :
-              configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
+              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
               break;
             default:
-              configureSensorTSL(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
+              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
               break;
           }
         }
         break;
       default:
-        configureSensorTSL(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
     }
   }
 
-  if (tslData.visible > 30000) { //Decrease GAIN (and INTEGRATIONTIME) if light level too high
-    switch (tslData.gain)
+  if (tsl2591Data.visible > 30000) { //Decrease GAIN (and INTEGRATIONTIME) if light level too high
+    switch (tsl2591Data.gain)
     {
       case TSL2591_GAIN_LOW :
         break;
       case TSL2591_GAIN_MED :
-        configureSensorTSL(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_HIGH :
-        configureSensorTSL(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_MAX :
-        configureSensorTSL(TSL2591_GAIN_HIGH, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_HIGH, TSL2591_INTEGRATIONTIME_200MS);
         break;
       default:
-        configureSensorTSL(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
+        configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
     }
   }
 
 }
 
-void updateTSL() {
-  if (tslData.status || (tslData.status = tsl.begin())) {
+void updateTSL2591() {
+  if (tsl2591Data.status || (tsl2591Data.status = tsl.begin())) {
     // Read 32 bits with top 16 bits IR, bottom 16 bits full spectrum
-    tslData.full    = tsl.getFullLuminosity();
-    tslData.ir      = tslData.full >> 16;
-    tslData.visible = tslData.full & 0xFFFF;
-    tslData.lux     = tsl.calculateLux(tslData.visible, tslData.ir);
-    tslData.gain    = tsl.getGain();
-    tslData.timing  = tsl.getTiming();
+    tsl2591Data.full    = tsl.getFullLuminosity();
+    tsl2591Data.ir      = tsl2591Data.full >> 16;
+    tsl2591Data.visible = tsl2591Data.full & 0xFFFF;
+    tsl2591Data.lux     = tsl.calculateLux(tsl2591Data.visible, tsl2591Data.ir);
+    tsl2591Data.gain    = tsl.getGain();
+    tsl2591Data.timing  = tsl.getTiming();
 
-    calibrateTSL();
+    calibrateTSL2591();
   }
 }
 
-void serializeTSL(JsonDocument &doc) {
+void serializeTSL2591(JsonDocument &doc) {
 
   JsonObject data = doc.createNestedObject("TSL2591");
-  data["init"] = tslData.status;
+  data["init"] = tsl2591Data.status;
 
-  if (tslData.status) {
-    data["Lux"]     = tslData.lux;
-    data["Visible"] = tslData.visible; 
-    data["IR"]      = tslData.ir; 
-    data["Gain"]    = tslData.gain;
-    data["Timing"]  = tslData.timing;
+  if (tsl2591Data.status) {
+    data["Lux"]     = tsl2591Data.lux;
+    data["Visible"] = tsl2591Data.visible; 
+    data["IR"]      = tsl2591Data.ir; 
+    data["Gain"]    = tsl2591Data.gain;
+    data["Timing"]  = tsl2591Data.timing;
   }
 }
