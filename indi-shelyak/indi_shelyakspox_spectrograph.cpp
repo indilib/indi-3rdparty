@@ -35,6 +35,7 @@
 //const char *SPECTROGRAPH_SETTINGS_TAB = "Spectrograph Settings";
 const char *CALIBRATION_UNIT_TAB      = "Calibration Module";
 
+
 std::unique_ptr<ShelyakSpox> shelyakSpox(new ShelyakSpox()); // create std:unique_ptr (smart pointer) to  our spectrograph object
 
 void ISGetProperties(const char *dev)
@@ -106,11 +107,11 @@ bool ShelyakSpox::initProperties()
 
 
   // setup the lamp switches
-  
+  IUFillSwitch(&LampS[3], "SKY", "SKY", ISS_OFF);
   IUFillSwitch(&LampS[2], "CALIBRATION", "CALIBRATION", ISS_OFF);
   IUFillSwitch(&LampS[1], "FLAT", "FLAT", ISS_OFF);
   IUFillSwitch(&LampS[0], "DARK", "DARK", ISS_OFF);
-  IUFillSwitchVector(&LampSP, LampS, 3, getDeviceName(), "CALIBRATION", "Calibration lamps", CALIBRATION_UNIT_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+  IUFillSwitchVector(&LampSP, LampS, 4, getDeviceName(), "CALIBRATION", "Calibration lamps", CALIBRATION_UNIT_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
    
 
   //--------------------------------------------------------------------------------
@@ -143,7 +144,7 @@ bool ShelyakSpox::updateProperties()
   }
   else
   {
-    // delete properties if we aren't connected
+    // delete properties if we arent connected
     deleteProperty(LampSP.name);
   }
   return true;
@@ -269,7 +270,6 @@ bool ShelyakSpox::Disconnect()
 { 
   
   sleep(1); // wait for the calibration unit to actually flip the switch  
-    
   tty_disconnect(PortFD);
   DEBUGF(INDI::Logger::DBG_SESSION, "%s is offline.", getDeviceName());
   return true;
@@ -290,6 +290,10 @@ bool ShelyakSpox::ISNewSwitch(const char *dev, const char *name, ISState *states
         ISwitch *s = IUFindSwitch(&LampSP, names[i]);
 
         if (states[i] != s->s) { // check if state has changed
+          DEBUGF(INDI::Logger::DBG_SESSION, "State change %s.", s);
+          DEBUGF(INDI::Logger::DBG_SESSION, "command %x.", COMMANDS[states[i]]);
+          DEBUGF(INDI::Logger::DBG_SESSION, "parameter %x.", PARAMETERS[names[i]]);
+
           bool rc = calibrationUnitCommand(COMMANDS[states[i]],PARAMETERS[names[i]]);
           if (!rc) LampSP.s = IPS_ALERT;
             
@@ -304,7 +308,6 @@ bool ShelyakSpox::ISNewSwitch(const char *dev, const char *name, ISState *states
 
   return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n); // send it to the parent classes
 }
-
 
 /* Handle a request to change text. */
 bool ShelyakSpox::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
@@ -341,73 +344,81 @@ bool ShelyakSpox::resetLamps()
           DEBUGF(INDI::Logger::DBG_SESSION, "RESET : sent on serial: %s.", c);
 
       }
-      sleep(1); // wait for the calibration unit to actually flip the switch
-      lastLampOn = "None";
-      sleep(0.5);
+
       return true;
 }
-
-
 
 
 /* Construct a command and send it to the spectrograph. It doesn't return
  * anything so we have to sleep until we know it has flipped the switch.
  */
-bool ShelyakSpox::calibrationUnitCommand(char command, char parameter)
-{
-int rc, nbytes_written;
+bool ShelyakSpox::calibrationUnitCommand(char command, char parameter){
     
-if (parameter==0x33){ //special for dark : have to put both lamps on
-    char cmd[6] = {0x31,0x31,0x0a,0x32,0x31,0x0a};//"11\n21\n" 
+    resetLamps(); //clear all states
+    sleep(0.5); // wait for the calibration unit to actually flip the switch    
+    int rc, nbytes_written;
 
-    if(command==0x31){// dark is on
-        DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", "dark is on");
-        lastLampOn = "Dark";
-        
-        char c[3] = {parameter,command,0x0a};
+    switch(parameter){
+        case 0x33 : { //special for dark : have to put both lamps on
+            
+            DEBUGF(INDI::Logger::DBG_SESSION, "DARK LAMP ON :  %s", "OK");
+            if(command==0x31){// dark is on
+                DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", "dark is on");
+                char cmd[6] = {0x31,0x31,0x0a,0x32,0x31,0x0a};//"11\n21\n" 
+                //char c[3] = {parameter,command,0x0a};
+             
 
-        if ((rc = tty_write(PortFD, c, 3, &nbytes_written)) != TTY_OK)
+                if ((rc = tty_write(PortFD, cmd, 6, &nbytes_written)) != TTY_OK)
 
-        {
-            char errmsg[MAXRBUF];
-            tty_error_msg(rc, errmsg, MAXRBUF);
-            DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
-            return false;
-        } else {
-            DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", c);
+                {
+                    char errmsg[MAXRBUF];
+                    tty_error_msg(rc, errmsg, MAXRBUF);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
+                    return false;
+                } else {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", cmd);
 
+                }
+                sleep(1); // wait for the calibration unit to actually flip the switch
+                return true;
+            }     
         }
-        sleep(1); // wait for the calibration unit to actually flip the switch
         
+        case 0x30 : { //SKY button
+            //SKY -> we shut down all
+        
+            DEBUGF(INDI::Logger::DBG_SESSION, "SKY HIT : %s", "No Lamps");
+            resetLamps();
+            return true;
+            }
 
-        if ((rc = tty_write(PortFD, cmd, 6, &nbytes_written)) != TTY_OK)
-
-        {
-            char errmsg[MAXRBUF];
-            tty_error_msg(rc, errmsg, MAXRBUF);
-            DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
-            return false;
-        } else {
-            DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", cmd);
-
+        
+        
+        case 0x31 : { //CALIB LAMP
+            DEBUGF(INDI::Logger::DBG_SESSION, "CALIB LAMP : %s", "OK");
+            char c[3] = {0x31,0x31,0x0a}; //"11\n"
+            
+            if ((rc = tty_write(PortFD, c, 3, &nbytes_written)) != TTY_OK)
+                {
+                    char errmsg[MAXRBUF];
+//                     tty_error_msg(rc, errmsg, MAXRBUF);
+//                     DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
+//                     return false;
+//                 } else {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", c); 
+                    tty_error_msg(rc, errmsg, MAXRBUF);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
+                    return false;
+                } else {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", c);
+                    return true;
+                }
         }
-        sleep(1); // wait for the calibration unit to actually flip the switch
-        return true;
-    } else {
-        DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", "dark is off");
-        resetLamps();
         
-    return true;
-    }
-    
-
-}
-
-//other lamps 
-        char c[3] = {parameter,command,0x0a};
-        
-        if (strcmp(lastLampOn,"Dark")!=0){ //if dark is set before, lamps are not shut off as is still done.
-        
+        case 0x32 : {//FLAT LAMP
+            DEBUGF(INDI::Logger::DBG_SESSION, "FLAT LAMP : %s", "OK");
+            char c[3] = {0x32,0x31,0x0a}; //"21\n"
+            
             if ((rc = tty_write(PortFD, c, 3, &nbytes_written)) != TTY_OK)
 
             {
@@ -416,17 +427,23 @@ if (parameter==0x33){ //special for dark : have to put both lamps on
                 DEBUGF(INDI::Logger::DBG_ERROR, "error: %s.", errmsg);
                 return false;
             } else {
-                DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", c);
-
+                    DEBUGF(INDI::Logger::DBG_SESSION, "sent on serial: %s.", c);
+                    return true;
             }
-            sleep(0.5); // wait for the calibration unit to actually flip the switch
-            
-            
-            if(command!=0x31){//on lamp is on
-
-                DEBUGF(INDI::Logger::DBG_SESSION, "last lamp is: %s.", lastLampOn);
-            }
-            
         }
-        return true;
-}
+            
+            
+               
+            
+        }     
+    return true;
+        
+    }
+
+
+
+//other lamps 
+            
+
+
+
