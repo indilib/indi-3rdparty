@@ -20,6 +20,17 @@ struct {
   float    lux;
 } tsl2591Data {false, 0, 0, 0, 0, 0, 0.0};
 
+/**
+   tsl.begin() always returns true, hence we need to check the I2C adress
+*/
+bool isTSL2591Present() {
+  Wire.beginTransmission(TSL2591_ADDR);
+  byte error = Wire.endTransmission();
+
+  return (error == 0);
+}
+
+
 void configureSensorTSL2591(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t timeSetting)
 {
   // You can change the gain on the fly, to adapt to brighter/dimmer light situations
@@ -96,7 +107,8 @@ void calibrateTSL2591() {
 }
 
 void updateTSL2591() {
-  if (tsl2591Data.status || (tsl2591Data.status = tsl.begin())) {
+  if (tsl2591Data.status || (tsl2591Data.status = isTSL2591Present())) {
+    tsl.begin();
     // Read 32 bits with top 16 bits IR, bottom 16 bits full spectrum
     tsl2591Data.full    = tsl.getFullLuminosity();
     tsl2591Data.ir      = tsl2591Data.full >> 16;
