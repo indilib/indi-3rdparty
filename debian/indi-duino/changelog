@@ -1,3 +1,12 @@
+indi-duino (0.7) buster; urgency=medium
+
+  * Added web server that displays all JSON documents (for ESP8266 boards)
+  * Support for TSL237 added
+  * INDI driver reacts dynamically to connected sensors
+  * bug fixes
+
+ -- Wolfgang Reissenberger <wolfgang@debian9.localdomain>  Mon, 09 Mar 2020 22:42:51 +0100
+
 indi-duino (0.6) buster; urgency=medium
 
   * Support for Davis Anemometer added to weather radio
