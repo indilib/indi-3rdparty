@@ -15,6 +15,7 @@
 #ifndef STASSID
 #define STASSID "your WiFi SSID"
 #define STAPSK  "your WiFi password"
+#define WIFI_TIMEOUT 20              // try 20 secs to connect until giving up
 #endif
 
 const char* ssid = STASSID;
@@ -25,11 +26,11 @@ ESP8266WebServer server(80);
 void initWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.println("Connecting");
 
+  int count = 0;
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && count++ < WIFI_TIMEOUT) {
+    delay(1000);
   }
 }
 

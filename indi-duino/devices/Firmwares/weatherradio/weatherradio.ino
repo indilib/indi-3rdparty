@@ -86,9 +86,10 @@ String getCurrentVersion() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(2) + // max 2 configurations
+  const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
-                      JSON_OBJECT_SIZE(3);  // Davis Anemometer
+                      JSON_OBJECT_SIZE(3) + // Davis Anemometer
+                      JSON_OBJECT_SIZE(3);  // WiFi parameters
   StaticJsonDocument <docSize> doc;
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
@@ -145,27 +146,29 @@ void setup() {
 #ifdef USE_WIFI
   initWiFi();
 
-  server.on("/", []() {
-    server.send(200, "application/json; charset=utf-8", getSensorData());
-  });
+  if (WiFi.status() == WL_CONNECTED) {
+    server.on("/", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData());
+    });
 
-  server.on("/w", []() {
-    server.send(200, "application/json; charset=utf-8", getSensorData());
-  });
+    server.on("/w", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData());
+    });
 
-  server.on("/c", []() {
-    server.send(200, "application/json; charset=utf-8", getCurrentConfig());
-  });
+    server.on("/c", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+    });
 
-  server.on("/v", []() {
-    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
-  });
+    server.on("/v", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+    });
 
-  server.onNotFound([]() {
-    server.send(404, "text/plain", "Ressource not found: " + server.uri());
-  });
+    server.onNotFound([]() {
+      server.send(404, "text/plain", "Ressource not found: " + server.uri());
+    });
 
-  server.begin();
+    server.begin();
+  }
 #endif
 }
 
