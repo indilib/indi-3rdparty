@@ -139,7 +139,7 @@ bool WeatherRadio::initProperties()
     deviceConfig["MLX90614"]["T amb"]   = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["MLX90614"]["T obj"]   = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["TSL237"]["Frequency"] = {"Frequency", INTERNAL_SENSOR, "%.0f", 0.0, 100000.0, 1.0};
-    deviceConfig["TSL237"]["SQM"]       = {"SQM", LUMINOSITY_SENSOR, "%.1f", 0.0, 25.0, 1.0};
+    deviceConfig["TSL237"]["SQM"]       = {"SQM", SQM_SENSOR, "%.1f", 0.0, 25.0, 1.0};
     deviceConfig["TSL2591"]["Lux"]      = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.3f", 0.0, 1000.0, 1.0};
     deviceConfig["TSL2591"]["Visible"]  = {"Lightness (Vis)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
     deviceConfig["TSL2591"]["IR"]       = {"Lightness (IR)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
@@ -182,11 +182,14 @@ bool WeatherRadio::updateProperties()
             setCriticalParameter(WEATHER_HUMIDITY);
             addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
         }
-        if (sensorRegistry.luminosity.size() > 0)
+        if (sensorRegistry.luminosity.size() > 0 || sensorRegistry.sqm.size() > 0)
         {
             addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
             setCriticalParameter(WEATHER_SQM);
-            addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+            if (sensorRegistry.luminosity.size() > 0)
+                addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+            if (sensorRegistry.sqm.size() > 0)
+                addSensorSelection(&sqmSensorSP, sensorRegistry.sqm, "SQM_SENSOR", "SQM Sensor");
         }
         if (sensorRegistry.temp_object.size() > 0)
         {
@@ -228,6 +231,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(pressureSensorSP.name);
         deleteProperty(humiditySensorSP.name);
         deleteProperty(luminositySensorSP.name);
+        deleteProperty(sqmSensorSP.name);
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
         deleteProperty(windGustSensorSP.name);
@@ -396,6 +400,17 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             currentSensors.luminosity = sensor;
 
             return (luminositySensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, sqmSensorSP.name) == 0)
+        {
+            // SQM sensor selected
+            IUUpdateSwitch(&sqmSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&sqmSensorSP, selected);
+            currentSensors.sqm = sensor;
+
+            return (sqmSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, ambientTemperatureSensorSP.name) == 0)
         {
@@ -657,6 +672,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     }
     else if (currentSensors.luminosity == sensor)
         setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
+    else if (currentSensors.sqm == sensor)
+        setParameterValue(WEATHER_SQM, value);
     else if (currentSensors.wind_gust == sensor)
         setParameterValue(WEATHER_WIND_GUST, value);
     else if (currentSensors.wind_speed == sensor)
@@ -683,6 +700,9 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
         break;
     case LUMINOSITY_SENSOR:
         sensorRegistry.luminosity.push_back(sensor);
+        break;
+    case SQM_SENSOR:
+        sensorRegistry.sqm.push_back(sensor);
         break;
     case OBJECT_TEMPERATURE_SENSOR:
         sensorRegistry.temp_object.push_back(sensor);
@@ -714,6 +734,7 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &pressureSensorSP);
     IUSaveConfigSwitch(fp, &humiditySensorSP);
     IUSaveConfigSwitch(fp, &luminositySensorSP);
+    IUSaveConfigSwitch(fp, &sqmSensorSP);
     IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &windGustSensorSP);
