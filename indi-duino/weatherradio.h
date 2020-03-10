@@ -51,7 +51,7 @@ protected:
     void getBasicData();
 
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
-        humiditySensorSP, luminositySensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
+        humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
 
     /**
      * @brief get the interface version from the Arduino device.
@@ -70,7 +70,7 @@ protected:
     /**
       * Device specific configurations
       */
-    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, INTERNAL_SENSOR};
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, INTERNAL_SENSOR};
 
     struct sensor_config
     {
@@ -117,6 +117,14 @@ protected:
     INumber *getWeatherParameter(std::string name);
 
     /**
+     * @brief TTY interface timeout
+     */
+    int getTTYTimeout() { return ttyTimeout; }
+    int ttyTimeout = 2;
+    INumber ttyTimeoutN[1] = {};
+    INumberVectorProperty ttyTimeoutNP;
+
+    /**
      * @brief Create a canonical name as <device> (<sensor>)
      * @param sensor weather sensor
      */
@@ -133,6 +141,7 @@ protected:
         sensor_name pressure;
         sensor_name humidity;
         sensor_name luminosity;
+        sensor_name sqm;
         sensor_name temp_ambient;
         sensor_name temp_object;
         sensor_name wind_speed;
@@ -146,6 +155,7 @@ protected:
         std::vector<sensor_name> pressure;
         std::vector<sensor_name> humidity;
         std::vector<sensor_name> luminosity;
+        std::vector<sensor_name> sqm;
         std::vector<sensor_name> temp_object;
         std::vector<sensor_name> wind_speed;
         std::vector<sensor_name> wind_gust;
