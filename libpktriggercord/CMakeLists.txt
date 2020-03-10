@@ -9,7 +9,7 @@ set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/indipentax"
 
 set (PK_VERSION 0.85.01)
 set (PK_SOVERSION 0)
-set (PK_DATADIR /usr/local/share/pktriggercord)
+set (PK_DATADIR /usr/share/pktriggercord)
 set (PK_DEBUG true)
 set (PK_WARNINGS true)
 

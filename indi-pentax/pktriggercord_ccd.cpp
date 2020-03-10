@@ -486,14 +486,14 @@ bool PkTriggerCordCCD::grabImage()
         int naxis = 2, w = 0, h = 0, bpp = 8;
 
         if (uff==USER_FILE_FORMAT_JPEG)
-        {
-            snprintf(tmpfile, 256, "%s-0001.jpg", TMPFILEBASE);
+        {            
             if (read_jpeg(tmpfile, &memptr, &memsize, &naxis, &w, &h))
             {
                 LOG_ERROR("Exposure failed to parse jpeg.");
                 unlink(tmpfile);
                 return false;
             }
+            
 
             LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis,
                        w, h, bpp);

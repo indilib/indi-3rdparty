@@ -106,17 +106,6 @@ void ISGetProperties(const char *dev)
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-    //check for new cameras and add them
-    if (!strcmp(name, "CONNECTION")) {
-        int oldCameraCount = cameraCount;
-        if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
-        ISInit();
-        for (int i=oldCameraCount; i<cameraCount; i++) {
-            cameras[i]->ISGetProperties(cameras[i]->getDeviceName());
-        }
-    }
-
-    //and then proceed as normal
     for (int i = 0; i < cameraCount; i++)
     {
         INDI::CCD *camera = cameras[i];
@@ -125,6 +114,16 @@ void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names
             camera->ISNewSwitch(dev, name, states, names, num);
             if (dev != nullptr)
                 break;
+        }
+    }
+
+    //also check for new cameras and add them
+    if (!strcmp(name, "CONNECTION")) {
+        int oldCameraCount = cameraCount;
+        if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
+        ISInit();
+        for (int i=oldCameraCount; i<cameraCount; i++) {
+            cameras[i]->ISGetProperties(cameras[i]->getDeviceName());
         }
     }
 }
