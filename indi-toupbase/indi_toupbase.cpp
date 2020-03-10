@@ -1676,7 +1676,7 @@ bool ToupBase::StartExposure(float duration)
     //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
 
     // Trigger an exposure
-    if ( (rc = FP(Trigger(m_CameraHandle, 1) < 0)) )
+    if ( (rc = FP(Trigger(m_CameraHandle, 1))) < 0)
     {
         LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
         return false;
