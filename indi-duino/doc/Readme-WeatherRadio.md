@@ -1,0 +1,107 @@
+# Weather Radio
+Weather Radio is an software suite for building your own weather station with [Arduino](https://www.arduino.cc/) using all types of environment sensors for temperature, pressure, humidity etc. It contains also advanced features like **cloud detection** and measuring the **sky quality**.
+
+It contains:
+* Arduino Firmware (tested on Arduino Nano, Adafruit Metro Mini, Wemos D1 Mini Pro, but should work on most Arduinos) reading out sensor values and publishing them as JSON document.
+* INDI driver for integrating the weather station into your observatory setup.
+* Javascript based web page for displaying current weather data and graphs for historic weather data.
+
+## Hardware
+For building your own weather station, you need
+* An **Arduino**. There are no specific requirements, Weather Radio should run on most of them. I personally prefer the ESP8266 based boards like the [Wemos D1 mini pro](https://wiki.wemos.cc/products:d1:d1_mini_pro), since they are small and have their own WiFi antenna integrated. But having WiFi is not a must, you can communicate with the Ardiono through a serial interface.
+* A set of **environment sensors** - feel free to choose those that deliver weather data you are interested in:
+  * **DBE280** for temperature, humidity and air pressure
+  * **DHT22** or **DHT11** as an alternative to the DBE280 for humidity and temperature
+  * **MLX90614** for cloud detection
+  * **TSL2591** for measuring light and determining the sky quality
+  * [Davis Instruments Anemometer](https://www.davisinstruments.com/product/anemometer-for-vantage-pro2-vantage-pro/) for measuring wind speed and wind direction
+* A housing
+
+## Connecting Sensors to the Arduino
+This part requires some basic knowledge in soldering electronic components. Here one of my recent setups:
+
+![Sample board with sensors](weatherradio/img/sensors_320px.jpg)
+
+This is an example with a Arduino Nano, the sensors DBE280, DHT22, MLX90614 and TSL2591 and a RJ11 (6P4C) jack for connecting the Davis Instruments Anemometer.
+
+Besides supplying power to a sensor (VCC = +3.3 V or +5 Volt and GND = Ground), Arduino boards offer several types of connections to transmit data between sensor and the Arduino:
+* **I2C** - a two wire bus where several components could be connected in parallel. It offers a **SCL** (= serial clock) and a **SDA** (= serial data) connection. This is the connectivity for the DBE280, MLX90614 and TSL2591.
+* **Digital ports** as one-wire connection (on top of VCC and GND), connecting one single sensor. This is the connectivity for DHT and for the Davis Instruments wind speed.
+* **Analog ports** as one-wire connection reading values between 0..1024, where 0 = GND and 1024 = VCC. This is the connectivity for the Davis Instruments wind direction.
+
+In order to find out, which is the correct pin, check the **pinout** for your board of choice. Please be aware, that there are several numbering schemes. There is the **Arduino style**, that is used by the Arduino and Adafruit boards. And there is the **NodeMCU style**, that is used for the ESP8266 boards, which is different.
+
+So before you solder everything together, it is a good idea to install everything on a breadboard and test it. Here a sample breadboard setup with a Wemos D1 mini pro V1, a BPE280 and a MLX90614:
+
+![Breadboard sample](weatherradio/img/breadboard_480px.jpg)
+
+In this example, the SDA port of the two sensors is connected to D2 (black wire), SCL to D1 (white wire), VIN (3.3V, red wire), GND (brown wire).
+
+## Firmware Installation
+For installing the firmware onto a Arduino, you first need the [Arduino IDE](https://www.arduino.cc/en/Main/Software). Download it for our operating system of choice and install it.
+
+The next step is to install the board definitions for your board of choice (see instructions from the board manufacturer) and the [libraries](https://www.arduino.cc/en/Guide/Libraries) for all sensors you want to connect.
+
+In addition, you need to install the **ArduinoJSON** library, since Weather Radio communicates with JSON documents.
+
+### Firmware Configuration
+There are a few configurations necessary before you upload the firmware to your arduino. Please open `weatherradio.ino` from `devices/Firmwares/weatherradio` and switch to the `config.h` tab.
+
+First select the sensors that you have attached to your board:
+
+![Sensor selection](weatherradio/img/sensor_selection.png)
+
+Please comment out all sensors that you do not want to use. By default, the sensors BME280, MLX90614 and TSL2591 are selected. If you have a **ESP8266 board**, you can enable the WiFi connectivity and enable the `USE_WIFI` switch.
+
+The second step is to set **specific parameters** for your sensors and the WiFi connection:
+
+![Sensor Configuration](weatherradio/img/sensor_configuration.png)
+
+If this is done, you are ready to upload the firmware to your Arduino. Select your board from `Tools > Board...`, select the right USB port with `Tools > Port` and upload the firmware using `Sketch > Upload`.
+
+As soon as this succeeds, you are ready for testing your board. With the serial monitor (start `Tools > Serial Monitor`), you can communicate via single character commands with your Arduino:
+
+![Serial Monitor](weatherradio/img/serial_monitor.png)
+
+The following commands are supported:
+* **v** to read out the firmware version
+* **w** to read out the current sensor values
+* **c** to show the firmware configuration
+
+If everything is shown as expected, your hardware is ready!
+
+## INDI driver **Weather Radio**
+Weather Radio comes with its own INDI weather driver and supports observatory control through **weather warnings** and **weather alerts**.
+
+Using the INDI driver is quite straight forward. In KStars, select **Weather Radio** as weather device in your profile. If you want to start the INDI server separately, you need to use the `indi_weatherradio` driver.
+
+Now start your INDI client of choice (if you are using KStars, start EKOS with `Tools > EKOS`):
+* Switch to the **Connection** tab and **select the port** where your weather station is connected to.
+* Switch to the **Main Control** tab and hit the **Connect** button.
+
+The Main Control tab should now display weather parameters that could be determined with the sensors you connected to your board. In my test setup, I have a BME280 and a MLX90614 connected, hence the INDI driver shows temperature, pressure, humidity and cloud coverage values:
+
+![Main Control (connected)](weatherradio/img/indi_main_control_connected_480px.jpg)
+
+### Selecting sensors
+Typically, there are more than one sensor attached, that measure a certain weather parameter. Therefore Weather Radio offers a selection, from which sensor each weather parameter is read.
+
+![Sensor selection](weatherradio/img/indi_options_480px.jpg)
+
+In this example the temperature, pressure and humidity is retreived from BME280, the ambient temperature and object temperature from MLX90614 (ambient and object temperature are used to calculate the cloud coverage).
+
+Select the sensor setup of your choice and **save** the configuration.
+
+### INDI Driver Configuration
+For some weather parameters, additional configurations are needed:
+* The **Pressure** value comes as an absolute value from the sensor and is displayed in the INDI driver on sealevel basis. Therefore it is necessary to set the **elevation** of your location properly to receive correct values.
+* On the **Parameter** tab you can set the OK ranges for each weather parameter.
+
+That's it, now your INDI driver is ready to use!
+
+## Web Interface
+Inspired by the approach of [Induino Meteostation Web Interface](https://indiduino.wordpress.com/2013/02/03/meteostation-web-interface/), Weather Radio comes with its own web interface. It follows the same approach with HTML and Javascript, but is build with modern technologies like [Bootstrap 4](https://getbootstrap.com) and [Apexcharts](https://apexcharts.com) for displaying current weather parameters and time series for these parameters. Below there is the good old work horse [RRD toolset](https://oss.oetiker.ch/rrdtool/) for storing time series data.
+
+![Web Interface](weatherradio/img/web_interface_480px.jpg)
+
+*To be continued...*
