@@ -21,25 +21,19 @@
 #include "config.h"
 #include "version.h"
 
-void setup() {
-  Serial.begin(9600);
-  // wait for serial port to connect. Needed for native USB
-  while (!Serial) continue;
-
-#ifdef USE_DAVIS_SENSOR
-  initAnemometer();
-#endif //USE_DAVIS_SENSOR
-
-}
+#ifdef USE_WIFI
+#include "esp8266.h"
+#endif
 
 /**
    Send current sensor data as JSON document
 */
-void sendSensorData() {
-  const int docSize = JSON_OBJECT_SIZE(5) + // max 5 sensors
+String getSensorData() {
+  const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
+                      JSON_OBJECT_SIZE(3) + // TSL237 sensor
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
@@ -64,29 +58,38 @@ void sendSensorData() {
   serializeMLX(weatherDoc);
 #endif //USE_MLX_SENSOR
 
-#ifdef USE_TSL_SENSOR
-  updateTSL();
-  serializeTSL(weatherDoc);
-#endif //USE_TSL_SENSOR
+#ifdef USE_TSL237_SENSOR
+  updateTSL237();
+  serializeTSL237(weatherDoc);
+#endif //USE_TSL237_SENSOR
 
-  serializeJson(weatherDoc, Serial);
-  Serial.println();
+#ifdef USE_TSL2591_SENSOR
+  updateTSL2591();
+  serializeTSL2591(weatherDoc);
+#endif //USE_TSL2591_SENSOR
 
+  String result = "";
+  serializeJson(weatherDoc, result);
+
+  return result;
 }
 
-void sendCurrentVersion() {
+String getCurrentVersion() {
   StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
   doc["version"] = METEORADIO_VERSION;
 
-  serializeJson(doc, Serial);
-  Serial.println();
+  String result = "";
+  serializeJson(doc, result);
+
+  return result;
 }
 
 // translate the sensor configurations to a JSON document
-void sendCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(2) + // max 2 configurations
+String getCurrentConfig() {
+  const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
-                      JSON_OBJECT_SIZE(3);  // Davis Anemometer
+                      JSON_OBJECT_SIZE(3) + // Davis Anemometer
+                      JSON_OBJECT_SIZE(3);  // WiFi parameters
   StaticJsonDocument <docSize> doc;
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
@@ -101,9 +104,72 @@ void sendCurrentConfig() {
   davisdata["wind direction offset"] = WINDOFFSET;
 #endif
 
-  serializeJson(doc, Serial);
-  Serial.println();
+#ifdef USE_WIFI
+  JsonObject wifidata = doc.createNestedObject("WiFi");
+  wifidata["SSID"] = STASSID;
+  wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
+  if (WiFi.status() == WL_CONNECTED)
+    wifidata["IP"] = WiFi.localIP().toString();
+#endif
 
+  if (doc.isNull())
+    return "{}";
+  else {
+    String result = "";
+    serializeJson(doc, result);
+
+    return result;
+  };
+}
+
+#ifdef USE_WIFI
+void handleSensorData() {
+  server.send(200, "application/json; charset=utf-8", getSensorData());
+
+}
+#endif
+
+void setup() {
+  Serial.begin(9600);
+  // wait for serial port to connect. Needed for native USB
+  while (!Serial) continue;
+
+#ifdef USE_DAVIS_SENSOR
+  initAnemometer();
+#endif //USE_DAVIS_SENSOR
+
+#ifdef USE_TSL237_SENSOR
+  initTSL237();
+#endif //USE_TSL237_SENSOR
+
+
+#ifdef USE_WIFI
+  initWiFi();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    server.on("/", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData());
+    });
+
+    server.on("/w", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData());
+    });
+
+    server.on("/c", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+    });
+
+    server.on("/v", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+    });
+
+    server.onNotFound([]() {
+      server.send(404, "text/plain", "Ressource not found: " + server.uri());
+    });
+
+    server.begin();
+  }
+#endif
 }
 
 /**
@@ -115,17 +181,20 @@ void sendCurrentConfig() {
 */
 void loop() {
 
+#ifdef USE_WIFI
+  server.handleClient();
+#endif
 
   while (Serial.available() > 0) {
     switch (Serial.read()) {
       case 'v':
-        sendCurrentVersion();
+        Serial.println(getCurrentVersion());
         break;
       case 'w':
-        sendSensorData();
+        Serial.println(getSensorData());
         break;
       case 'c':
-        sendCurrentConfig();
+        Serial.println(getCurrentConfig());
     }
   }
 
