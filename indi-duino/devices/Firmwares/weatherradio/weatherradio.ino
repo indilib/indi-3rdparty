@@ -21,10 +21,6 @@
 #include "config.h"
 #include "version.h"
 
-#ifdef USE_WIFI
-#include "esp8266.h"
-#endif
-
 /**
    Send current sensor data as JSON document
 */
@@ -99,14 +95,14 @@ String getCurrentConfig() {
 
 #ifdef USE_DAVIS_SENSOR
   JsonObject davisdata = doc.createNestedObject("Davis Anemometer");
-  davisdata["wind speed pin"] = WINDSPEEDPIN;
-  davisdata["wind direction pin"] = WINDDIRECTIONPIN;
-  davisdata["wind direction offset"] = WINDOFFSET;
+  davisdata["wind speed pin"] = ANEMOMETER_WINDSPEEDPIN;
+  davisdata["wind direction pin"] = ANEMOMETER_WINDDIRECTIONPIN;
+  davisdata["wind direction offset"] = ANEMOMETER_WINDOFFSET;
 #endif
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"] = STASSID;
+  wifidata["SSID"] = WIFI_SSID;
   wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
   if (WiFi.status() == WL_CONNECTED)
     wifidata["IP"] = WiFi.localIP().toString();
@@ -184,6 +180,10 @@ void loop() {
 #ifdef USE_WIFI
   server.handleClient();
 #endif
+
+#ifdef USE_TSL237_SENSOR
+  updateTSL237();
+#endif //USE_TSL237_SENSOR
 
   while (Serial.available() > 0) {
     switch (Serial.read()) {
