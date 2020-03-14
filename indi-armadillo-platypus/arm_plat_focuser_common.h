@@ -91,8 +91,8 @@ class ArmPlat : public INDI::Focuser
 
         // Enable/Disable backlash
         //    ISwitch BacklashCompensationS[2];
-        //    ISwitchVectorProperty FocuserBacklashSP;
-        //    enum { BACKLASH_ENABLED, BACKLASH_DISABLED };
+        //    ISwitchVectorProperty FocusBacklashSP;
+        //    enum { DefaultDevice::INDI_ENABLED, DefaultDevice::INDI_DISABLED };
 
         // Port
 #   ifdef ARMADILLO
