@@ -85,7 +85,7 @@ String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(3);  // WiFi parameters
+                      JSON_OBJECT_SIZE(4);  // WiFi parameters
   StaticJsonDocument <docSize> doc;
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
@@ -102,10 +102,12 @@ String getCurrentConfig() {
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"] = WIFI_SSID;
-  wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
   if (WiFi.status() == WL_CONNECTED)
     wifidata["IP"] = WiFi.localIP().toString();
+  else
+    wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
+
+  wifidata["SSID"] = WIFI_SSID;
 #endif
 
   if (doc.isNull())
