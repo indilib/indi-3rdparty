@@ -113,8 +113,8 @@ The web interface needs to be integrated into a running web server. For simplici
 #### Apache Setup
 Copy the entire `weatherradio` folder from the `add-on` directory to a location where Apache can serve them from.
 ```
-sudo mkdir /usr/local/share/weatherradio
-cp -a add-on/weatherradio/html add-on/weatherradio/bin  /usr/local/share/weatherradio
+sudo mkdir /usr/share/weatherradio
+cp -a add-on/weatherradio/html add-on/weatherradio/bin  /usr/share/weatherradio
 ```
 
 Install and activate the Apache configuration
@@ -130,16 +130,16 @@ That's it for the web server installation, check if [http://yourserver/weatherra
 
 Create a directory that will hold the JSON files:
 ```
-mkdir /usr/local/share/weatherradio/html/data
+mkdir /usr/share/weatherradio/html/data
 ```
 
-Edit the configuration file `/usr/local/share/weatherradio/bin/wr_config.py`. In most cases, you need to change only these two values:
+Edit the configuration file `/usr/share/weatherradio/bin/wr_config.py`. In most cases, you need to change only these two values:
 * INDISERVER is the address of the INDI server where your weather station is connected to.
 * INDIDEVICEPORT is the connection port of your weather station (e.g. "/dev/ttyUSB0")
 
 Create the RRD files that will store time series data from your weather station:
 ```
-cd /usr/local/share/weatherradio
+cd /usr/share/weatherradio
 ./bin/wr_rrd_create.py
 ./bin/wr_rrd_create_sensorfile.py
 ```
@@ -151,7 +151,7 @@ As the next step, try to update the weather data manually to see if everything i
 
 First, read the current weather data and create the JSON files:
 ```
-cd /usr/local/share/weatherradio
+cd /usr/share/weatherradio
 ./bin/wr_rrd_update.py 
 ./bin/wr_rrd_update_sensordata.py 
 ./bin/wr_rrd_
@@ -168,22 +168,22 @@ Finally, it's time to automate by creating crontab entries:
 # cron jobs for arduino weather radio
 #
 #
- 4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_update.py
- 4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_update_sensordata.py
+ 4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_update.py
+ 4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_update_sensordata.py
 
 #---------------------------------------------------
 # Update JSON export files
 #---------------------------------------------------
- */5 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_lastupdate.py 
- */5 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 6h
- */15 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 1d
- 0 * * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 7d
- 0 0 * * *     <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 30d
+ */5 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_lastupdate.py 
+ */5 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 6h
+ */15 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 1d
+ 0 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d
+ 0 0 * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 30d
 
-*/5 * * * * <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 6h -o /usr/local/share/weatherradio/html/data/RTsensors_6h.json /usr/local/share/weatherradio/sensors.rrd
-*/15 * * * * <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 1d -o /usr/local/share/weatherradio/html/data/RTsensors_1d.json /usr/local/share/weatherradio/sensors.rrd
-0 * * * * <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 7d -o /usr/local/share/weatherradio/html/data/RTsensors_7d.json /usr/local/share/weatherradio/sensors.rrd
-0 0 * * * <userid> /usr/local/share/weatherradio/bin/wr_rrd_fetch.py -s 30d -o /usr/local/share/weatherradio/html/data/RTsensors_30d.json /usr/local/share/weatherradio/sensors.rrd
+*/5 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 6h -o /usr/share/weatherradio/html/data/RTsensors_6h.json /usr/share/weatherradio/sensors.rrd
+*/15 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 1d -o /usr/share/weatherradio/html/data/RTsensors_1d.json /usr/share/weatherradio/sensors.rrd
+0 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d -o /usr/share/weatherradio/html/data/RTsensors_7d.json /usr/share/weatherradio/sensors.rrd
+0 0 * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 30d -o /usr/share/weatherradio/html/data/RTsensors_30d.json /usr/share/weatherradio/sensors.rrd
 
 ```
-*Hint*: Replace `<userid>` with your user ID that has **write access** to `/usr/local/share/weatherradio/html/data`.
+*Hint*: Replace `<userid>` with your user ID that has **write access** to `/usr/share/weatherradio/html/data`.
