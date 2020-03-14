@@ -18,9 +18,10 @@
 import sys
 import argparse
 import rrdtool
+from wr_config import *
 
 parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio time series")
-parser.add_argument("rrdfile", default="weather.rrd",
+parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
                     help="RRD file holding all time series")
 
 args=parser.parse_args()

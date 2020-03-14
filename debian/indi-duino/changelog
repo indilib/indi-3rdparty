@@ -1,3 +1,9 @@
+indi-duino (0.8) buster; urgency=medium
+
+  * Weather Radio documentation added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Fri, 13 Mar 2020 22:59:55 +0100
+
 indi-duino (0.7) buster; urgency=medium
 
   * Added web server that displays all JSON documents (for ESP8266 boards)
@@ -5,7 +11,7 @@ indi-duino (0.7) buster; urgency=medium
   * INDI driver reacts dynamically to connected sensors
   * bug fixes
 
- -- Wolfgang Reissenberger <wolfgang@debian9.localdomain>  Mon, 09 Mar 2020 22:42:51 +0100
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Mon, 09 Mar 2020 22:42:51 +0100
 
 indi-duino (0.6) buster; urgency=medium
 
