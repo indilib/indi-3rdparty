@@ -236,7 +236,7 @@ bool LX200StarGoFocuser::setFocuserDirection(ISState* states, char* names[], int
     if (IUUpdateSwitch(&FocusReverseSP, states, names, n) < 0)
         return false;
 
-    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) > 0 ? REVERSED_ENABLED : REVERSED_DISABLED);
+    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) > 0 ? INDI_ENABLED : INDI_DISABLED);
 
     FocusReverseSP.s = IPS_OK;
     IDSetSwitch(&FocusReverseSP, nullptr);
@@ -337,7 +337,7 @@ bool LX200StarGoFocuser::ReadFocuserStatus() {
 
     int absolutePosition = 0;
     if (sendQueryFocuserPosition(&absolutePosition)) {
-        FocusAbsPosN[0].value = (focuserReversed == REVERSED_DISABLED) ? absolutePosition : -absolutePosition;
+        FocusAbsPosN[0].value = (focuserReversed == INDI_DISABLED) ? absolutePosition : -absolutePosition;
         IDSetNumber(&FocusAbsPosNP, nullptr);
     }
     else
@@ -475,7 +475,7 @@ bool LX200StarGoFocuser::sendSyncFocuserToPosition(int position) {
     // Command  - :X0Cpppppp#
     // Response - Nothing
     char command[AVALON_COMMAND_BUFFER_LENGTH] = {0};
-    sprintf(command, ":X0C%06d#", AVALON_FOCUSER_POSITION_OFFSET + ((focuserReversed == REVERSED_DISABLED) ? position : -position));
+    sprintf(command, ":X0C%06d#", AVALON_FOCUSER_POSITION_OFFSET + ((focuserReversed == INDI_DISABLED) ? position : -position));
     if (!baseDevice->transmit(command)) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Failed to send AUX1 sync command.", getDeviceName());
         return false;
@@ -510,7 +510,7 @@ bool LX200StarGoFocuser::sendQueryFocuserPosition(int* position) {
 bool LX200StarGoFocuser::sendMoveFocuserToPosition(int position) {
     // Command  - :X16pppppp#
     // Response - Nothing
-    targetFocuserPosition = (focuserReversed == REVERSED_DISABLED) ? position : -position;
+    targetFocuserPosition = (focuserReversed == INDI_DISABLED) ? position : -position;
     char command[AVALON_COMMAND_BUFFER_LENGTH] = {0};
     sprintf(command, ":X16%06d#", AVALON_FOCUSER_POSITION_OFFSET + targetFocuserPosition);
     if (!baseDevice->transmit(command)) {
@@ -540,7 +540,7 @@ bool LX200StarGoFocuser::isFocuserMoving() {
 }
 
 bool LX200StarGoFocuser::atFocuserTargetPosition() {
-    return FocusAbsPosN[0].value == (focuserReversed == REVERSED_DISABLED) ? targetFocuserPosition : -targetFocuserPosition;
+    return FocusAbsPosN[0].value == (focuserReversed == INDI_DISABLED) ? targetFocuserPosition : -targetFocuserPosition;
 }
 
 

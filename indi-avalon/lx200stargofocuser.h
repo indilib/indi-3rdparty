@@ -28,7 +28,7 @@
 #include "defaultdevice.h"
 
 
-class LX200StarGoFocuser : public INDI::FocuserInterface
+class LX200StarGoFocuser : public INDI::DefaultDevice, public INDI::FocuserInterface
 {
 public:
     LX200StarGoFocuser(LX200StarGo* defaultDevice, const char* name);
@@ -80,7 +80,7 @@ protected:
     bool startMovingFocuserOutward;
     uint32_t moveFocuserDurationRemaining;
     bool focuserActivated;
-    int focuserReversed = REVERSED_DISABLED;
+    int focuserReversed = INDI_DISABLED;
 
 
     // LX200 commands
