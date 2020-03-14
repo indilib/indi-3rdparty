@@ -1,8 +1,11 @@
 indi-avalon (1.9) buster; urgency=medium
 
   * Bug fix, ignoring unsolicitated ge#
+  * Use INDI_ENABLED and INDI_DISABLED
+  * Types corrected to correct compiler warnings
+  * Tracking adjustment added
 
- -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Mon, 02 Dec 2019 17:06:15 +0100
+-- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sat, 13 Mar 2020 15:40:00 +0100
 
 indi-avalon (1.8) buster; urgency=medium
 
