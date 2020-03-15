@@ -177,10 +177,11 @@ bool LX200StarGoFocuser::ISNewNumber(const char *dev, const char *name, double v
  ***************************************************************************/
 
 bool LX200StarGoFocuser::changeFocusTimer(double values[], char* names[], int n) {
-    int time = (int)values[0];
+    int time = static_cast<int>(values[0]);
     if (validateFocusTimer(time)) {
         IUUpdateNumber(&FocusTimerNP, values, names, n);
-        FocusTimerNP.s = MoveFocuser(FocusMotionS[0].s == ISS_ON ? FOCUS_INWARD : FOCUS_OUTWARD, FocusSpeedN[0].value, FocusTimerN[0].value);
+        FocusTimerNP.s = MoveFocuser(FocusMotionS[0].s == ISS_ON ? FOCUS_INWARD : FOCUS_OUTWARD,
+                static_cast<int>(FocusSpeedN[0].value), static_cast<uint16_t>(FocusTimerN[0].value));
         IDSetNumber(&FocusTimerNP, nullptr);
     }
     return true;
@@ -196,7 +197,7 @@ bool LX200StarGoFocuser::changeFocusMotion(ISState* states, char* names[], int n
 
 
 bool LX200StarGoFocuser::changeFocusAbsPos(double values[], char* names[], int n) {
-    int absolutePosition = (int)values[0];
+    uint32_t absolutePosition = static_cast<uint32_t>(values[0]);
     if (validateFocusAbsPos(absolutePosition)) {
         double currentPosition = FocusAbsPosN[0].value;
         IUUpdateNumber(&FocusAbsPosNP, values, names, n);
@@ -211,7 +212,7 @@ bool LX200StarGoFocuser::changeFocusAbsPos(double values[], char* names[], int n
 }
 
 bool LX200StarGoFocuser::changeFocusRelPos(double values[], char* names[], int n) {
-    int relativePosition = (int)values[0];
+    int relativePosition = static_cast<int>(values[0]);
     if (validateFocusRelPos(relativePosition)) {
         IUUpdateNumber(&FocusRelPosNP, values, names, n);
         FocusRelPosNP.s = moveFocuserRelative(relativePosition);
@@ -221,7 +222,7 @@ bool LX200StarGoFocuser::changeFocusRelPos(double values[], char* names[], int n
 }
 
 bool LX200StarGoFocuser::changeFocusSpeed(double values[], char* names[], int n) {
-    int speed = (int)values[0];
+    int speed = static_cast<int>(values[0]);
     if (validateFocusSpeed(speed)) {
         IUUpdateNumber(&FocusSpeedNP, values, names, n);
         FocusSpeedNP.s = SetFocuserSpeed(speed) ? IPS_OK : IPS_ALERT;
@@ -236,7 +237,7 @@ bool LX200StarGoFocuser::setFocuserDirection(ISState* states, char* names[], int
     if (IUUpdateSwitch(&FocusReverseSP, states, names, n) < 0)
         return false;
 
-    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) > 0 ? REVERSED_ENABLED : REVERSED_DISABLED);
+    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) > 0 ? INDI_ENABLED : INDI_DISABLED);
 
     FocusReverseSP.s = IPS_OK;
     IDSetSwitch(&FocusReverseSP, nullptr);
@@ -261,7 +262,7 @@ bool LX200StarGoFocuser::changeFocusAbort(ISState* states, char* names[], int n)
 
 
 bool LX200StarGoFocuser::changeFocusSyncPos(double values[], char* names[], int n) {
-    int absolutePosition = (int)values[0];
+    int absolutePosition = static_cast<int>(values[0]);
     if (validateFocusSyncPos(absolutePosition)) {
         IUUpdateNumber(&FocusSyncPosNP, values, names, n);
         FocusSyncPosNP.s = syncFocuser(absolutePosition);
@@ -271,8 +272,8 @@ bool LX200StarGoFocuser::changeFocusSyncPos(double values[], char* names[], int 
 }
 
 bool LX200StarGoFocuser::validateFocusSpeed(int speed) {
-    int minSpeed = FocusSpeedN[0].min;
-    int maxSpeed = FocusSpeedN[0].max;
+    int minSpeed = static_cast<int>(FocusSpeedN[0].min);
+    int maxSpeed = static_cast<int>(FocusSpeedN[0].max);
     if (speed < minSpeed || speed > maxSpeed) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot set focuser speed to %d, it is outside the valid range of [%d, %d]", getDeviceName(), speed, minSpeed, maxSpeed);
         return false;
@@ -281,8 +282,8 @@ bool LX200StarGoFocuser::validateFocusSpeed(int speed) {
 }
 
 bool LX200StarGoFocuser::validateFocusTimer(int time) {
-    int minTime = FocusTimerN[0].min;
-    int maxTime = FocusTimerN[0].max;
+    int minTime = static_cast<int>(FocusTimerN[0].min);
+    int maxTime = static_cast<int>(FocusTimerN[0].max);
     if (time < minTime || time > maxTime) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot set focuser timer to %d, it is outside the valid range of [%d, %d]", getDeviceName(), time, minTime, maxTime);
         return false;
@@ -290,9 +291,9 @@ bool LX200StarGoFocuser::validateFocusTimer(int time) {
     return true;
 }
 
-bool LX200StarGoFocuser::validateFocusAbsPos(int absolutePosition) {
-    int minPosition = FocusAbsPosN[0].min;
-    int maxPosition = FocusAbsPosN[0].max;
+bool LX200StarGoFocuser::validateFocusAbsPos(uint32_t absolutePosition) {
+    uint32_t minPosition = static_cast<uint32_t>(FocusAbsPosN[0].min);
+    uint32_t maxPosition = static_cast<uint32_t>(FocusAbsPosN[0].max);
     if (absolutePosition < minPosition || absolutePosition > maxPosition) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot set focuser absolute position to %d, it is outside the valid range of [%d, %d]", getDeviceName(), absolutePosition, minPosition, maxPosition);
         return false;
@@ -301,19 +302,19 @@ bool LX200StarGoFocuser::validateFocusAbsPos(int absolutePosition) {
 }
 
 bool LX200StarGoFocuser::validateFocusRelPos(int relativePosition) {
-    int minRelativePosition = FocusRelPosN[0].min;
-    int maxRelativePosition = FocusRelPosN[0].max;
+    int minRelativePosition = static_cast<int>(FocusRelPosN[0].min);
+    int maxRelativePosition = static_cast<int>(FocusRelPosN[0].max);
     if (relativePosition < minRelativePosition || relativePosition > maxRelativePosition) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot set focuser relative position to %d, it is outside the valid range of [%d, %d]", getDeviceName(), relativePosition, minRelativePosition, maxRelativePosition);
         return false;
     }
-    int absolutePosition = getAbsoluteFocuserPositionFromRelative(relativePosition);
+    uint32_t absolutePosition = getAbsoluteFocuserPositionFromRelative(relativePosition);
     return validateFocusAbsPos(absolutePosition);
 }
 
 bool LX200StarGoFocuser::validateFocusSyncPos(int absolutePosition) {
-    int minPosition = FocusSyncPosN[0].min;
-    int maxPosition = FocusSyncPosN[0].max;
+    int minPosition = static_cast<int>(FocusSyncPosN[0].min);
+    int maxPosition = static_cast<int>(FocusSyncPosN[0].max);
     if (absolutePosition < minPosition || absolutePosition > maxPosition) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot sync focuser to position %d, it is outside the valid range of [%d, %d]", getDeviceName(), absolutePosition, minPosition, maxPosition);
         return false;
@@ -321,12 +322,12 @@ bool LX200StarGoFocuser::validateFocusSyncPos(int absolutePosition) {
     return true;
 }
 
-int LX200StarGoFocuser::getAbsoluteFocuserPositionFromRelative(int relativePosition) {
+uint32_t LX200StarGoFocuser::getAbsoluteFocuserPositionFromRelative(int relativePosition) {
     bool inward = FocusMotionS[0].s == ISS_ON;
     if (inward) {
         relativePosition *= -1;
     }
-    return FocusAbsPosN[0].value + relativePosition;
+    return static_cast<uint32_t>(FocusAbsPosN[0].value + relativePosition);
 }
 
 
@@ -337,7 +338,7 @@ bool LX200StarGoFocuser::ReadFocuserStatus() {
 
     int absolutePosition = 0;
     if (sendQueryFocuserPosition(&absolutePosition)) {
-        FocusAbsPosN[0].value = (focuserReversed == REVERSED_DISABLED) ? absolutePosition : -absolutePosition;
+        FocusAbsPosN[0].value = (focuserReversed == INDI_DISABLED) ? absolutePosition : -absolutePosition;
         IDSetNumber(&FocusAbsPosNP, nullptr);
     }
     else
@@ -364,9 +365,9 @@ IPState LX200StarGoFocuser::MoveFocuser(FocusDirection dir, int speed, uint16_t 
     if (duration == 0) {
         return IPS_OK;
     }
-    int position = FocusAbsPosN[0].min;
+    uint32_t position = static_cast<uint32_t>(FocusAbsPosN[0].min);
     if (dir == FOCUS_INWARD) {
-        position = FocusAbsPosN[0].max;
+        position = static_cast<uint32_t>(FocusAbsPosN[0].max);
     }
     moveFocuserDurationRemaining = duration;
     bool result = sendMoveFocuserToPosition(position);
@@ -388,7 +389,7 @@ IPState LX200StarGoFocuser::moveFocuserRelative(int relativePosition) {
     if (relativePosition == 0) {
         return IPS_OK;
     }
-    int absolutePosition = getAbsoluteFocuserPositionFromRelative(relativePosition);
+    uint32_t absolutePosition = getAbsoluteFocuserPositionFromRelative(relativePosition);
     return MoveAbsFocuser(absolutePosition);
 }
 
@@ -475,7 +476,7 @@ bool LX200StarGoFocuser::sendSyncFocuserToPosition(int position) {
     // Command  - :X0Cpppppp#
     // Response - Nothing
     char command[AVALON_COMMAND_BUFFER_LENGTH] = {0};
-    sprintf(command, ":X0C%06d#", AVALON_FOCUSER_POSITION_OFFSET + ((focuserReversed == REVERSED_DISABLED) ? position : -position));
+    sprintf(command, ":X0C%06d#", AVALON_FOCUSER_POSITION_OFFSET + ((focuserReversed == INDI_DISABLED) ? position : -position));
     if (!baseDevice->transmit(command)) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Failed to send AUX1 sync command.", getDeviceName());
         return false;
@@ -507,10 +508,10 @@ bool LX200StarGoFocuser::sendQueryFocuserPosition(int* position) {
     return true;
 }
 
-bool LX200StarGoFocuser::sendMoveFocuserToPosition(int position) {
+bool LX200StarGoFocuser::sendMoveFocuserToPosition(uint32_t position) {
     // Command  - :X16pppppp#
     // Response - Nothing
-    targetFocuserPosition = (focuserReversed == REVERSED_DISABLED) ? position : -position;
+    targetFocuserPosition = (focuserReversed == INDI_DISABLED) ? position : -position;
     char command[AVALON_COMMAND_BUFFER_LENGTH] = {0};
     sprintf(command, ":X16%06d#", AVALON_FOCUSER_POSITION_OFFSET + targetFocuserPosition);
     if (!baseDevice->transmit(command)) {
@@ -540,7 +541,7 @@ bool LX200StarGoFocuser::isFocuserMoving() {
 }
 
 bool LX200StarGoFocuser::atFocuserTargetPosition() {
-    return FocusAbsPosN[0].value == (focuserReversed == REVERSED_DISABLED) ? targetFocuserPosition : -targetFocuserPosition;
+    return static_cast<uint32_t>(FocusAbsPosN[0].value) == (focuserReversed == INDI_DISABLED) ? targetFocuserPosition : -targetFocuserPosition;
 }
 
 

@@ -201,7 +201,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         {
             if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
                 return false;
-            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+            uint8_t trackMode = static_cast<uint8_t>(IUFindOnSwitchIndex(&TrackModeSP));
 
             bool result = SetTrackMode(trackMode);
 
@@ -365,6 +365,20 @@ bool LX200StarGo::ISNewNumber(const char *dev, const char *name, double values[]
             MountRequestDelayNP.s = IPS_OK;
             IDSetNumber(&MountRequestDelayNP, nullptr);
             return true;
+        } else if (!strcmp(name, TrackingAdjustmentNP.name))
+        {
+            // changing tracking adjustment
+            bool success = setTrackingAdjustment(values[0]);
+            if (success)
+            {
+                TrackingAdjustment[0].value = values[0];
+                TrackingAdjustmentNP.s      = IPS_OK;
+            }
+            else
+                TrackingAdjustmentNP.s = IPS_ALERT;
+
+            IDSetNumber(&TrackingAdjustmentNP, nullptr);
+            return success;
         }
     }
 
@@ -420,6 +434,9 @@ bool LX200StarGo::initProperties()
     IUFillSwitch(&SystemSpeedSlewS[3], "SYSTEM_SLEW_SPEED_HIGH", "high", ISS_OFF);
     IUFillSwitchVector(&SystemSpeedSlewSP, SystemSpeedSlewS, 4, getDeviceName(), "SYSTEM_SLEW_SPEED", "Slew Speed", RA_DEC_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Tracking adjustment
+    IUFillNumber(&TrackingAdjustment[0], "ADJUSTMENT_RA", "Adj. (max +/- 5%)", "%.2f", -5.0, 5.0, 0.01, 0.0);
+    IUFillNumberVector(&TrackingAdjustmentNP, TrackingAdjustment, 1, getDeviceName(), "TRACKING_ADJUSTMENT", "Tracking", RA_DEC_TAB, IP_RW, 60.0, IPS_IDLE);
 
     // meridian flip
     IUFillSwitch(&MeridianFlipModeS[0], "MERIDIAN_FLIP_AUTO", "auto", ISS_OFF);
@@ -453,6 +470,7 @@ bool LX200StarGo::updateProperties()
         defineSwitch(&ST4StatusSP);
         defineSwitch(&KeypadStatusSP);
         defineSwitch(&SystemSpeedSlewSP);
+        defineNumber(&TrackingAdjustmentNP);
         defineSwitch(&MeridianFlipModeSP);
         defineNumber(&MountRequestDelayNP);
         defineText(&MountFirmwareInfoTP);
@@ -466,6 +484,7 @@ bool LX200StarGo::updateProperties()
         deleteProperty(GuidingSpeedNP.name);
         deleteProperty(ST4StatusSP.name);
         deleteProperty(KeypadStatusSP.name);
+        deleteProperty(TrackingAdjustmentNP.name);
         deleteProperty(SystemSpeedSlewSP.name);
         deleteProperty(MeridianFlipModeSP.name);
         deleteProperty(MountRequestDelayNP.name);
@@ -507,6 +526,7 @@ bool LX200StarGo::ReadScopeStatus()
         return true;
     }
 
+    LOG_DEBUG("################################ ReadScopeStatus (start) ################################");
     int x, y;
 
     if (! getMotorStatus(&x, &y))
@@ -580,6 +600,8 @@ bool LX200StarGo::ReadScopeStatus()
         LOG_ERROR("Cannot determine scope status, failed to determine pier side.");
         return false;
     }
+
+    LOG_DEBUG("################################ ReadScopeStatus (finish) ###############################");
 
     if (focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
         return focuserAux1.get()->ReadFocuserStatus();
@@ -1081,6 +1103,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
+    IUSaveConfigNumber(fp, &TrackingAdjustmentNP);
 
     focuserAux1->saveConfigItems(fp);
 
@@ -1677,7 +1700,6 @@ bool LX200StarGo::syncSideOfPier()
             setPierSide(INDI::Telescope::PIER_UNKNOWN);
             break;
         case 'W':
-            // seems to be vice versa
             LOG_DEBUG("Detected pier side west.");
             setPierSide(INDI::Telescope::PIER_EAST);
             break;
@@ -1932,6 +1954,57 @@ bool LX200StarGo::setSlewMode(int slewMode)
     }
     return true;
 }
+
+/*
+ * Adjust RA tracking speed.
+ */
+bool LX200StarGo::setTrackingAdjustment(double adjust)
+{
+    LOG_DEBUG(__FUNCTION__);
+    char cmd[AVALON_COMMAND_BUFFER_LENGTH];
+
+    /*
+     * X1Etttt#  where tttt are four decimal digits with a little bit trickly meaning.
+     * The cf  (correction factor) value will be: cf =  [10000 + (tttt - 1000)] / 10000
+     *
+     *       AdjustedSiderealSpeed = DefaultSiderealSpeed*cf
+     *
+     * So e.g.: if tttt = 1000 then cf = 1.0000 (No corr)
+     *          if tttt = 1027 then cf = 1.0027 i.e.  27 on 10000  (0.27%  faster)
+     *          if tttt = 0973 then cf = 0.9973 i.e. -27 on 10000  (0.27% slower)
+     */
+
+    // ensure that -5 <= adjust <= 5
+    if (adjust > 5.0)
+    {
+        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Maximal value is 5.0%%", adjust);
+        return false;
+    }
+    else if (adjust < -5.0)
+    {
+        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Minimal value is -5.0%%", adjust);
+        return false;
+    }
+
+    int parameter = static_cast<int>(adjust * 100) + 1000;
+
+    sprintf(cmd, ":X1E%04u#", parameter);
+
+    // no response expected
+    if(!transmit(cmd))
+    {
+        LOGF_ERROR("Cannot adjust tracking by %d%%", adjust);
+        return false;
+    }
+    if (adjust == 0.0)
+        LOG_INFO("RA tracking adjustment cleared.");
+    else if (adjust > 0.0)
+        LOGF_INFO("RA tracking adjustment to +%0.2f%% succeded.", adjust);
+    else
+        LOGF_INFO("RA tracking adjustment to %0.2f%% succeded.", adjust);
+
+    return true;
+}
 bool LX200StarGo::SetMeridianFlipMode(int index)
 {
     // 0: Auto mode: Enabled and not Forced
@@ -2068,7 +2141,7 @@ IPState LX200StarGo::GuideNorth(uint32_t ms)
     SlewRateS[SLEW_GUIDE].s = ISS_ON;
     IDSetSwitch(&SlewRateSP, nullptr);
     guide_direction_ns = LX200_NORTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    GuideNSTID      = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
 }
 
@@ -2117,7 +2190,7 @@ IPState LX200StarGo::GuideSouth(uint32_t ms)
     SlewRateS[SLEW_GUIDE].s = ISS_ON;
     IDSetSwitch(&SlewRateSP, nullptr);
     guide_direction_ns = LX200_SOUTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    GuideNSTID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
 }
 
@@ -2166,7 +2239,7 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
     SlewRateS[SLEW_GUIDE].s = ISS_ON;
     IDSetSwitch(&SlewRateSP, nullptr);
     guide_direction_we = LX200_EAST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
 }
 
@@ -2215,7 +2288,7 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
     SlewRateS[SLEW_GUIDE].s = ISS_ON;
     IDSetSwitch(&SlewRateSP, nullptr);
     guide_direction_we = LX200_WEST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
 }
 
@@ -2271,11 +2344,10 @@ bool LX200StarGo::SetTrackEnabled(bool enabled)
 bool LX200StarGo::SetTrackRate(double raRate, double deRate)
 {
     LOG_DEBUG(__FUNCTION__);
-    INDI_UNUSED(raRate);
     INDI_UNUSED(deRate);
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
-    int rate = raRate;
+    int rate = static_cast<int>(raRate);
     sprintf(cmd, ":X1E%04d", rate);
     if(!sendQuery(cmd, response, 0))
     {
@@ -2562,7 +2634,7 @@ bool LX200StarGo::setUTCOffset(double offset)
     LOG_DEBUG(__FUNCTION__);
     char cmd[RB_MAX_LEN] = {0};
     char response[RB_MAX_LEN] = {0};
-    int hours = offset * -1.0;
+    int hours = static_cast<int>(offset * -1.0);
 
     snprintf(cmd, sizeof(cmd), ":SG %+03d#", hours);
 
