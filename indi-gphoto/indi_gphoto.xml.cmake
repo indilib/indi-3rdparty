@@ -9,7 +9,7 @@
                 <driver name="Nikon DSLR">indi_nikon_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="Pentax DSLR" mdpd="true">
+        <device label="Pentax DSLR (Gphoto)" mdpd="true">
                 <driver name="Pentax DSLR">indi_pentax_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>

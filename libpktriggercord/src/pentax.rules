@@ -1,0 +1,14 @@
+ACTION!="add", GOTO="pentax_rules_end"
+
+SUBSYSTEM=="scsi_generic", GOTO="pentax_rules_start"
+
+SUBSYSTEM!="scsi_generic", GOTO="pentax_rules_end"
+
+LABEL="pentax_rules_start"
+# WAIT_FOR_SYSFS="device/vendor"
+ATTRS{vendor}=="PENTAX", ATTRS{model}=="DIGITAL_CAMERA", MODE="0666", GROUP="users"
+ATTRS{vendor}=="PENTAX", ATTRS{model}=="DSC*", MODE="0666", GROUP="users"
+ATTRS{vendor}=="RICOHIMG", ATTRS{model}=="DSC*", MODE="0666", GROUP="users"
+ATTRS{vendor}=="PENTAX", ATTRS{model}=="K*", MODE="0666", GROUP="users"
+
+LABEL="pentax_rules_end"
