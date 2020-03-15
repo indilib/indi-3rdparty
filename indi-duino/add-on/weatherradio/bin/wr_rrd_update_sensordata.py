@@ -33,7 +33,7 @@ try:
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect(indi)
+    connect(indi, args.verbose)
     
     data = readSensors(indi)
 

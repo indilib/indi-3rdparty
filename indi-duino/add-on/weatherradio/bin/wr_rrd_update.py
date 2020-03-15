@@ -33,10 +33,8 @@ try:
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect(indi)
+    connect(indi, args.verbose)
     
-    now=time.localtime()
-    json_dict={"TIME":time.strftime("%c",now)}
     data = readWeather(indi)
 
     indi.quit()

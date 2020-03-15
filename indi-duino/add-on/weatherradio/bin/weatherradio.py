@@ -13,7 +13,7 @@
 
 from wr_config import *
 
-def connect(indi):
+def connect(indi, verbose):
     #connect ones to configure the port
     connection = indi.get_vector(INDIDEVICE, "CONNECTION")
     if connection.get_element("CONNECT").get_active() == False:
@@ -23,41 +23,48 @@ def connect(indi):
         # connect driver
         connection.set_by_elementname("CONNECT")
         indi.send_vector(connection)
-        print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
-        time.sleep(5)
+        
+        if (verbose == True):
+            print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
+
+
+def read_indi_value(result, key, vector, element):
+    if (vector.get_element(element) is not None):
+        result[key] = vector.get_element(element).get_float()
+
 
 def readWeather(indi):
     result  = {}
     weather = indi.get_vector(INDIDEVICE,WEATHER)
-    result['Temperature']    = weather.get_element(WEATHER_TEMPERATURE).get_float()
-    result['Pressure']       = weather.get_element(WEATHER_PRESSURE).get_float()
-    result['Humidity']       = weather.get_element(WEATHER_HUMIDITY).get_float()
-    result['CloudCover']     = weather.get_element(WEATHER_CLOUD_COVER).get_float()
-    result['SQM']            = weather.get_element(WEATHER_SQM).get_float()
-    result['DewPoint']       = weather.get_element(WEATHER_DEWPOINT).get_float()
-    result['SkyTemperature'] = weather.get_element(WEATHER_SKY_TEMPERATURE).get_float()
-    result['WindSpeed']      = weather.get_element(WEATHER_WIND_SPEED).get_float()
-    result['WindGust']      = weather.get_element(WEATHER_WIND_GUST).get_float()
-    result['WindDirection']  = weather.get_element(WEATHER_WIND_DIRECTION).get_float()
+    read_indi_value(result, 'Temperature', weather, WEATHER_TEMPERATURE)
+    read_indi_value(result, 'Pressure', weather, WEATHER_PRESSURE)
+    read_indi_value(result, 'Humidity', weather, WEATHER_HUMIDITY)
+    read_indi_value(result, 'CloudCover', weather, WEATHER_CLOUD_COVER)
+    read_indi_value(result, 'SQM', weather, WEATHER_SQM)
+    read_indi_value(result, 'DewPoint', weather, WEATHER_DEWPOINT)
+    read_indi_value(result, 'SkyTemperature', weather, WEATHER_SKY_TEMPERATURE)
+    read_indi_value(result, 'WindSpeed', weather, WEATHER_WIND_SPEED)
+    read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
+    read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
   
     return result;
 
 def readSensors(indi):
     result = {}
     bme280 = indi.get_vector(INDIDEVICE, "BME280")
-    result['BME280_Temp'] = bme280.get_element('Temp').get_float();
-    result['BME280_Pres'] = bme280.get_element('Pres').get_float();
-    result['BME280_Hum'] = bme280.get_element('Hum').get_float();
+    read_indi_value(result, 'BME280_Temp', bme280, 'Temp')
+    read_indi_value(result, 'BME280_Pres', bme280, 'Pres')
+    read_indi_value(result, 'BME280_Hum', bme280, 'Hum')
 
     dht = indi.get_vector(INDIDEVICE, "DHT")
-    result['DHT_Temp'] = dht.get_element('Temp').get_float();
-    result['DHT_Hum'] = dht.get_element('Hum').get_float();
+    read_indi_value(result, 'DHT_Temp', dht, 'Temp')
+    read_indi_value(result, 'DHT_Hum', dht, 'Hum')
 
     mlx90614 = indi.get_vector(INDIDEVICE, "MLX90614")
-    result['MLX90614_Tamb'] = mlx90614.get_element('T amb').get_float();
-    result['MLX90614_Tobj'] = mlx90614.get_element('T obj').get_float();
+    read_indi_value(result, 'MLX90614_Tamb', mlx90614, 'T amb')
+    read_indi_value(result, 'MLX90614_Tobj', mlx90614, 'T obj')
 
     tsl2591 = indi.get_vector(INDIDEVICE, "TSL2591")
-    result['TSL2591_Lux'] = tsl2591.get_element('Lux').get_float();
+    read_indi_value(result, 'TSL2591_Lux', tsl2591, 'Lux')
 
     return result;
