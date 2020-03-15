@@ -1103,6 +1103,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
+    IUSaveConfigNumber(fp, &TrackingAdjustmentNP);
 
     focuserAux1->saveConfigItems(fp);
 
@@ -1699,7 +1700,6 @@ bool LX200StarGo::syncSideOfPier()
             setPierSide(INDI::Telescope::PIER_UNKNOWN);
             break;
         case 'W':
-            // seems to be vice versa
             LOG_DEBUG("Detected pier side west.");
             setPierSide(INDI::Telescope::PIER_EAST);
             break;
