@@ -17,10 +17,6 @@
 */
 #include <math.h>
 
-#define WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
-#define WINDDIRECTIONPIN A2 // The analog pin for the wind direction
-#define WINDOFFSET 0;       // anemometer arm direction (0=N, 90=E, ...)
-
 #define SLICEDURATION 5000 // interval for a single speed mesure
 
 struct {
@@ -59,7 +55,7 @@ float windspeed(unsigned long time, unsigned long startTime, unsigned int rotati
 // calculate the wind direction in degree (N = 0, E = 90, ...)
 int winddirection() {
   // the wind direction is measured with a potentiometer
-  volatile int direction = map(analogRead(WINDDIRECTIONPIN), 0, 1023, 0, 360) + WINDOFFSET;
+  volatile int direction = map(analogRead(ANEMOMETER_WINDDIRECTIONPIN), 0, 1023, 0, 360) + ANEMOMETER_WINDOFFSET;
 
   // ensure 0 <= direction <360
   if (direction >= 360)
@@ -124,9 +120,9 @@ void reset(unsigned long time) {
 
 
 void initAnemometer() {
-  pinMode(WINDSPEEDPIN, INPUT);
+  pinMode(ANEMOMETER_WINDSPEEDPIN, INPUT);
   // attach to react upon interrupts when the reed element closes the circuit
-  attachInterrupt(digitalPinToInterrupt(WINDSPEEDPIN), isr_rotation, FALLING);
+  attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
   anemometerData.status = true;
   // reset measuring data
   reset(millis());
@@ -136,7 +132,7 @@ void updateAnemometer() {
 
   if (anemometerData.status) {
     // stop recording
-    detachInterrupt(digitalPinToInterrupt(WINDSPEEDPIN));
+    detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
     anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
     anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;;
     anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
@@ -149,7 +145,7 @@ void updateAnemometer() {
 
     reset(millis());
     // start recording
-    attachInterrupt(digitalPinToInterrupt(WINDSPEEDPIN), isr_rotation, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
   } else
     initAnemometer();
 }

@@ -16,10 +16,18 @@
 import sys
 from indiclient import *
 from weatherradio import *
+import argparse
 import rrdtool
 
+parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
+parser.add_argument("-v", "--verbose", action='store_true',
+                    help="Display progress information")
+
+args = parser.parse_args()
+
 try:
-    print "Updating raw sensor data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+    if (args.verbose):
+        print "Updating raw sensor data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
 
     # open connection to the INDI server
     indi=indiclient(INDISERVER,int(INDIPORT))

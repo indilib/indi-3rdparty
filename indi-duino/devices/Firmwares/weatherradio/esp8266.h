@@ -8,18 +8,15 @@
     version 2 of the License, or (at your option) any later version.
 */
 
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 
-#ifndef STASSID
-#define STASSID "your WiFi SSID"
-#define STAPSK  "your WiFi password"
 #define WIFI_TIMEOUT 20              // try 20 secs to connect until giving up
-#endif
 
-const char* ssid = STASSID;
-const char* password = STAPSK;
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PWD;
 
 ESP8266WebServer server(80);
 
@@ -37,3 +34,4 @@ void initWiFi() {
 void loop8266() {
   server.handleClient();
 }
+#endif

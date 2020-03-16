@@ -50,7 +50,7 @@
 #define FP(x) Nncam_##x
 #define CP(x) NNCAM_##x
 #define XP(x) Nncam##x
-#define THAND HNnCam
+#define THAND HNncam
 #define DNAME "Levenhuk"
 #endif
 

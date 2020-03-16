@@ -372,8 +372,8 @@ bool ASIEAF::readReverse()
         return false;
     }
 
-    FocusReverseS[REVERSED_ENABLED].s  = reversed ? ISS_ON : ISS_OFF;
-    FocusReverseS[REVERSED_DISABLED].s = reversed ? ISS_OFF : ISS_ON;
+    FocusReverseS[INDI_ENABLED].s  = reversed ? ISS_ON : ISS_OFF;
+    FocusReverseS[INDI_DISABLED].s = reversed ? ISS_OFF : ISS_ON;
     FocusReverseSP.s = IPS_OK;
     return true;
 }
@@ -414,8 +414,8 @@ bool ASIEAF::readBeep()
         return false;
     }
 
-    BeepS[REVERSED_ENABLED].s  = beep ? ISS_ON : ISS_OFF;
-    BeepS[REVERSED_DISABLED].s = beep ? ISS_OFF : ISS_ON;
+    BeepS[INDI_ENABLED].s  = beep ? ISS_ON : ISS_OFF;
+    BeepS[INDI_DISABLED].s = beep ? ISS_OFF : ISS_ON;
     BeepSP.s = IPS_OK;
 
     return true;
