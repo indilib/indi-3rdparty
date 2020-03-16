@@ -113,6 +113,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         ISwitchVectorProperty *TargetPierSideSP    = nullptr;
         INumberVectorProperty *BacklashNP          = nullptr;
         ISwitchVectorProperty *UseBacklashSP       = nullptr;
+        INumberVectorProperty *LEDBrightnessNP     = nullptr;
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         ISwitch AlignMethodS[2];
         ISwitchVectorProperty AlignMethodSP;

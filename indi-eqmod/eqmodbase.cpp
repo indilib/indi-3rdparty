@@ -334,6 +334,7 @@ void EQMod::ISGetProperties(const char *dev)
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
+        defineNumber(LEDBrightnessNP);
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -417,6 +418,7 @@ bool EQMod::loadProperties()
     RAPPECSP            = getSwitch("RA_PPEC");
     DEPPECTrainingSP    = getSwitch("DE_PPEC_TRAINING");
     DEPPECSP            = getSwitch("DE_PPEC");
+    LEDBrightnessNP     = getNumber("LED_BRIGHTNESS");
 #ifdef WITH_ALIGN_GEEHALEL
     align->initProperties();
 #endif
@@ -481,6 +483,7 @@ bool EQMod::updateProperties()
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
+        defineNumber(LEDBrightnessNP);
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -630,6 +633,7 @@ bool EQMod::updateProperties()
         deleteProperty(UseBacklashSP->name);
         deleteProperty(ST4GuideRateNSSP->name);
         deleteProperty(ST4GuideRateWESP->name);
+        deleteProperty(LEDBrightnessNP->name);
         //if (!strcmp(MountInformationTP->tp[0].text, "EQ8") || !strcmp(MountInformationTP->tp[0].text, "AZEQ6"))
         if (mount->HasHomeIndexers())
             deleteProperty(AutoHomeSP->name);
@@ -2566,6 +2570,16 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             return true;
         }
 
+        if (strcmp(name, "LED_BRIGHTNESS") == 0)
+        {
+            IUUpdateNumber(LEDBrightnessNP, values, names, n);
+            LEDBrightnessNP->s = IPS_OK;
+            IDSetNumber(LEDBrightnessNP, nullptr);
+            mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
+            LOGF_INFO("Setting LED brightness to %.f", values[0]);
+            return true;
+        }
+
         if (strcmp(name, "STANDARDSYNCPOINT") == 0)
         {
             syncdata2 = syncdata;
@@ -3665,6 +3679,8 @@ bool EQMod::saveConfigItems(FILE *fp)
         IUSaveConfigNumber(fp, SlewSpeedsNP);
     if (ReverseDECSP)
         IUSaveConfigSwitch(fp, ReverseDECSP);
+    if (LEDBrightnessNP)
+        IUSaveConfigNumber(fp, LEDBrightnessNP);
 
 #ifdef WITH_ALIGN_GEEHALEL
     if (align)

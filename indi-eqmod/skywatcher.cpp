@@ -1249,6 +1249,15 @@ void Skywatcher::TurnPPECTraining(SkywatcherAxis axis, bool on)
     SetFeature(axis, command);
 }
 
+void Skywatcher::SetLEDBrightness(uint8_t value)
+{
+    char cmd[3] = {0};
+    char hexa[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+    cmd[0] = hexa[(value & 0xF0) >> 4];
+    cmd[1] = hexa[(value & 0x0F)];
+    dispatch_command(SetPolarScopeLED, Axis1, cmd);
+}
+
 void Skywatcher::TurnRAPPECTraining(bool on)
 {
     TurnPPECTraining(Axis1, on);
