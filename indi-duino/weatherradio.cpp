@@ -159,6 +159,8 @@ bool WeatherRadio::initProperties()
 ***************************************************************************************/
 bool WeatherRadio::updateProperties()
 {
+    bool result = true;
+
     // dynamically add weather parameters
     if (isConnected())
     {
@@ -220,10 +222,14 @@ bool WeatherRadio::updateProperties()
 
         getBasicData();
 
-        return (INDI::Weather::updateProperties());
+        result = INDI::Weather::updateProperties();
+        // Load the configuration if everything was fine
+        if (result == true)
+            loadConfig();
     }
     else
     {
+
         for (size_t i = 0; i < rawDevices.size(); i++)
             deleteProperty(rawDevices[i].name);
 
@@ -238,12 +244,30 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(FirmwareInfoTP.name);
+
+        result = INDI::Weather::updateProperties();
+
+        // clean up weather interface parameters to avoid doubling when reconnecting
+        for (int i = 0; i < WeatherInterface::ParametersNP.nnp; i++)
+        {
+            free(WeatherInterface::ParametersN[i].aux0);
+            free(WeatherInterface::ParametersN[i].aux1);
+            free(WeatherInterface::ParametersRangeNP[i].np);
+        }
+
+        free(WeatherInterface::ParametersN);
+        WeatherInterface::ParametersN = nullptr;
+        WeatherInterface::ParametersNP.nnp = 0;
+        WeatherInterface::ParametersRangeNP->nnp = 0;
+        WeatherInterface::nRanges = 0;
+
+        free(WeatherInterface::critialParametersL);
+        WeatherInterface::critialParametersL = nullptr;
+        WeatherInterface::critialParametersLP.nlp = 0;
+
     }
 
-    // Load the configuration.
-    loadConfig();
-
-    return true;
+    return result;
 }
 
 /**************************************************************************************
