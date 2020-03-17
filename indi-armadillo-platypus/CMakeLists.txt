@@ -29,6 +29,16 @@ set(seletekrotator_SRCS
 
 add_executable(indi_seletek_rotator ${seletekrotator_SRCS})
 target_link_libraries(indi_seletek_rotator ${INDI_LIBRARIES} )
+install(TARGETS indi_seletek_rotator RUNTIME DESTINATION bin )
+
+########### Lunatico DragonFly Dome ###########
+set(dragonfly_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/dragonfly_dome.cpp
+   )
+
+add_executable(indi_dragonfly_dome ${dragonfly_SRCS})
+target_link_libraries(indi_dragonfly_dome ${INDI_LIBRARIES} )
+install(TARGETS indi_dragonfly_dome RUNTIME DESTINATION bin )
 
 ########### Lunatico Seletek Armadillo & Platypus ###########
 set(indiarmadillofocuser_SRCS

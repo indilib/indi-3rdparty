@@ -16,4 +16,10 @@
             <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
         </device>
     </devGroup>
+    <devGroup group="Domes">
+        <device label="DragonFly Dome">
+            <driver name="DragonFly Dome">indi_dragonfly_dome</driver>
+            <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
+        </device>
+    </devGroup>
 </driversList>
