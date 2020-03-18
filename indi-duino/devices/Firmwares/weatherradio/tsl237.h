@@ -17,8 +17,8 @@
 #include <Wire.h>
 
 const float A = 20.53;
-#define SAMPLING_INTERVAL 400 // sampling distance between two frequency measurements
-#define AVERAGE_COUNT     5   // amount of measurements where the average is calculated
+int SAMPLING_INTERVAL = 2000; // sampling distance between two frequency measurements
+int AVERAGE_COUNT = 5;        // amount of measurements where the average is calculated
 
 struct {
   bool          status;
@@ -38,15 +38,19 @@ void initTSL237() {
 void updateTSL237() {
   if (tsl237Data.status || (tsl237Data.status = FreqMeasure.available())) {
     volatile unsigned long now = millis();
-    if (now - tsl237Data.lastMeasure > SAMPLING_INTERVAL) {
+    if ( ((now - tsl237Data.lastMeasure) > SAMPLING_INTERVAL)) {
       tsl237Data.sum += FreqMeasure.read();
       tsl237Data.count++;
       tsl237Data.lastMeasure = now;
 
       if (tsl237Data.count >= AVERAGE_COUNT) {
-        //float frequency = F_CPU / (sum / count);
         tsl237Data.frequency = FreqMeasure.countToFrequency(tsl237Data.sum / tsl237Data.count);
         tsl237Data.sqm = A - 2.5 * log10(tsl237Data.frequency); //Egen Kod
+        if(tsl237Data.sqm >= 20){
+            SAMPLING_INTERVAL = 6000;
+        } else {
+          SAMPLING_INTERVAL = 2000;
+        }
 
         // reset the counters
         tsl237Data.sum = 0;
