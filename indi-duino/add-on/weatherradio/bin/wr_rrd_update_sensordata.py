@@ -33,7 +33,7 @@ try:
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect(indi, args.verbose)
+    connect(indi)
     
     data = readSensors(indi)
 
@@ -41,6 +41,7 @@ try:
 
 except:
     print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
+    indi.quit()
     sys.exit()
 
 

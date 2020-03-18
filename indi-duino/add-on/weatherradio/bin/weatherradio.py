@@ -36,6 +36,12 @@ def read_indi_value(result, key, vector, element):
     if (vector.get_element(element) is not None):
         result[key] = vector.get_element(element).get_float()
 
+def vector_exists(indi, name):
+    for vector in indi.indivectors.list:
+        if vector.name == name:
+            return True;
+    return False;
+
 
 def readWeather(indi):
     result  = {}
@@ -62,20 +68,24 @@ def readWeather(indi):
 
 def readSensors(indi):
     result = {}
-    bme280 = indi.get_vector(INDIDEVICE, "BME280")
-    read_indi_value(result, 'BME280_Temp', bme280, 'Temp')
-    read_indi_value(result, 'BME280_Pres', bme280, 'Pres')
-    read_indi_value(result, 'BME280_Hum', bme280, 'Hum')
+    if vector_exists(indi, "BME280"):
+        bme280 = indi.get_vector(INDIDEVICE, "BME280")
+        read_indi_value(result, 'BME280_Temp', bme280, 'Temp')
+        read_indi_value(result, 'BME280_Pres', bme280, 'Pres')
+        read_indi_value(result, 'BME280_Hum', bme280, 'Hum')
 
-    dht = indi.get_vector(INDIDEVICE, "DHT")
-    read_indi_value(result, 'DHT_Temp', dht, 'Temp')
-    read_indi_value(result, 'DHT_Hum', dht, 'Hum')
+    if vector_exists(indi, "DHT"):
+        dht = indi.get_vector(INDIDEVICE, "DHT")
+        read_indi_value(result, 'DHT_Temp', dht, 'Temp')
+        read_indi_value(result, 'DHT_Hum', dht, 'Hum')
 
-    mlx90614 = indi.get_vector(INDIDEVICE, "MLX90614")
-    read_indi_value(result, 'MLX90614_Tamb', mlx90614, 'T amb')
-    read_indi_value(result, 'MLX90614_Tobj', mlx90614, 'T obj')
+    if vector_exists(indi, "MLX90614"):
+        mlx90614 = indi.get_vector(INDIDEVICE, "MLX90614")
+        read_indi_value(result, 'MLX90614_Tamb', mlx90614, 'T amb')
+        read_indi_value(result, 'MLX90614_Tobj', mlx90614, 'T obj')
 
-    tsl2591 = indi.get_vector(INDIDEVICE, "TSL2591")
-    read_indi_value(result, 'TSL2591_Lux', tsl2591, 'Lux')
-
+    if vector_exists(indi, "TSL2591"):
+        tsl2591 = indi.get_vector(INDIDEVICE, "TSL2591")
+        read_indi_value(result, 'TSL2591_Lux', tsl2591, 'Lux')
+        
     return result;
