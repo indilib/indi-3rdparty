@@ -11,9 +11,10 @@
 # Based upon ideas from indiduinoMETEO (http://indiduino.wordpress.com).
 #-----------------------------------------------------------------------
 
+import time
 from wr_config import *
 
-def connect(indi, verbose):
+def connect(indi):
     #connect ones to configure the port
     connection = indi.get_vector(INDIDEVICE, "CONNECTION")
     if connection.get_element("CONNECT").get_active() == False:
@@ -21,12 +22,15 @@ def connect(indi, verbose):
         indi.set_and_send_text(INDIDEVICE,"DEVICE_PORT","PORT",INDIDEVICEPORT)
 
         # connect driver
-        connection.set_by_elementname("CONNECT")
-        indi.send_vector(connection)
-        
-        if (verbose == True):
-            print "CONNECT INDI Server host:%s port:%s device:%s" % (INDISERVER,INDIPORT,INDIDEVICE)
+        connection = indi.set_and_send_switchvector_by_elementlabel(INDIDEVICE,"CONNECTION","Connect")
+        # wait for the connection
+        time.sleep(5)
+        # ensure that all information is up to date
+        indi.process_events()
+        # check if the connection has been established
+        connection = indi.get_vector(INDIDEVICE, "CONNECTION")
 
+    return connection._light.is_ok()
 
 def read_indi_value(result, key, vector, element):
     if (vector.get_element(element) is not None):
@@ -35,19 +39,26 @@ def read_indi_value(result, key, vector, element):
 
 def readWeather(indi):
     result  = {}
+    # ensure that all information is up to date
+    indi.process_events()
+    # ensure that parameters are available
     weather = indi.get_vector(INDIDEVICE,WEATHER)
-    read_indi_value(result, 'Temperature', weather, WEATHER_TEMPERATURE)
-    read_indi_value(result, 'Pressure', weather, WEATHER_PRESSURE)
-    read_indi_value(result, 'Humidity', weather, WEATHER_HUMIDITY)
-    read_indi_value(result, 'CloudCover', weather, WEATHER_CLOUD_COVER)
-    read_indi_value(result, 'SQM', weather, WEATHER_SQM)
-    read_indi_value(result, 'DewPoint', weather, WEATHER_DEWPOINT)
-    read_indi_value(result, 'SkyTemperature', weather, WEATHER_SKY_TEMPERATURE)
-    read_indi_value(result, 'WindSpeed', weather, WEATHER_WIND_SPEED)
-    read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
-    read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
-  
-    return result;
+    if weather._light.is_ok():
+        read_indi_value(result, 'Temperature', weather, WEATHER_TEMPERATURE)
+        read_indi_value(result, 'Pressure', weather, WEATHER_PRESSURE)
+        read_indi_value(result, 'Humidity', weather, WEATHER_HUMIDITY)
+        read_indi_value(result, 'CloudCover', weather, WEATHER_CLOUD_COVER)
+        read_indi_value(result, 'SQM', weather, WEATHER_SQM)
+        read_indi_value(result, 'DewPoint', weather, WEATHER_DEWPOINT)
+        read_indi_value(result, 'SkyTemperature', weather, WEATHER_SKY_TEMPERATURE)
+        read_indi_value(result, 'WindSpeed', weather, WEATHER_WIND_SPEED)
+        read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
+        read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
+
+        return result;
+    else:
+        return None;
+
 
 def readSensors(indi):
     result = {}
