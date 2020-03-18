@@ -68,6 +68,7 @@ def readWeather(indi):
 
 def readSensors(indi):
     result = {}
+    indi.process_events()
     if vector_exists(indi, "BME280"):
         bme280 = indi.get_vector(INDIDEVICE, "BME280")
         read_indi_value(result, 'BME280_Temp', bme280, 'Temp')

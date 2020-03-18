@@ -35,9 +35,12 @@ try:
     # ensure that the INDI driver is connected to the device
     connect(indi)
     
+    time.sleep(5)
     data = readSensors(indi)
 
     indi.quit()
+    if (args.verbose):
+        print "Updating raw sensor data from \"%s\"@%s:%s succeded." % (INDIDEVICE,INDISERVER,INDIPORT)
 
 except:
     print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
