@@ -2,6 +2,7 @@
 #include <math.h>
 #include <queue>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
@@ -22,6 +23,7 @@ bool RD_DEBUG  = false;
 bool WR_DEBUG  = false;
 bool SEND_DEBUG  = false;
 bool PROC_DEBUG  = false;
+bool SERIAL_DEBUG  = false;
 
 using namespace INDI::AlignmentSubsystem;
 
@@ -232,24 +234,34 @@ bool CelestronAUX::Handshake()
     fprintf(stderr, "CAUX: connect %d\n", PortFD);
     if (PortFD > 0)
     {
+	if (SERIAL_DEBUG)
+            fprintf(stderr,"detectRTSCTS = %s.\n",
+	        detectRTSCTS()?"true":"false");
+
 	// if serial connection, check if hardware control flow is required.
 	// yes for AUX and PC ports, no for HC port.    
         if ((isRTSCTS = ((getActiveConnection() == serialConnection)
 	    && detectRTSCTS())))
+	{
+            serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
             LOG_INFO("Detected AUX or PC port connection.\n");
+            if (!tty_set_speed(PortFD, B19200))
+	        return false;	    
+            LOG_INFO("Setting serial speed to 19200 baud.\n");
+	}
 	else
 	{
-	    if (detectRTSCTS())
-                LOG_INFO("detectRTSCTS = true.\n");
-	    else
-                LOG_INFO("detectRTSCTS = false.\n");
+            serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
+            if (!tty_set_speed(PortFD, B9600))
+	        return false;	    
 
 	    // read firmware version, if read ok, detected HC serial
-	    AUXCommand firmver(GET_VER,APP,AZM);
+	    AUXCommand firmver(GET_VER,APP,ALT);
 	    if (!sendCmd(firmver))
 	        return false;
 	    if (!readMsgs(firmver))
 		return false;
+            LOG_INFO("Setting serial speed to 9600 baud.\n");
             LOG_INFO("Detected Hand Controller serial connection.\n");
 	}
 
@@ -264,7 +276,7 @@ bool CelestronAUX::Handshake()
     if (!detectScope())
     {
         //fprintf(stderr, "Cannot detect the scope!\n");
-	    //FP
+	//FP
         LOG_INFO("Connect: cannot detect the scope!\n");
     }
     return false;
@@ -961,6 +973,7 @@ bool CelestronAUX::Slew(AUXtargets trg, int rate)
 {
     AUXCommand cmd((rate < 0) ? MC_MOVE_NEG : MC_MOVE_POS, APP, trg);
     cmd.setRate((unsigned char)(std::abs(rate) & 0xFF));
+
     sendCmd(cmd);
     readMsgs(cmd);
     return true;
@@ -1282,7 +1295,8 @@ void CelestronAUX::processCmd(AUXCommand &m)
 bool CelestronAUX::serial_readMsgs(AUXCommand c)
 {
     int n;
-    unsigned char buf[BUFFER_SIZE];
+    unsigned char buf[32];
+    char hexbuf[24];
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
@@ -1311,6 +1325,16 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
             DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
             return false;
         }
+
+        buffer b(buf, buf + (n+2)); 
+
+        if (SERIAL_DEBUG)
+        {
+	   hex_dump(hexbuf,b,b.size());
+	   fprintf(stderr,"Receive packet: <%s>\n",hexbuf);
+       	}
+
+        cmd.parseBuf(b);
     }
     // if connected to HC serial, build up the AUX command response from
     // given AUX command and passthrough response without checksum.
@@ -1320,22 +1344,37 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
 	if ((tty_read(PortFD,(char *)buf+5,response_data_size + 1,READ_TIMEOUT,&n) != 
 	    TTY_OK) || (n != response_data_size + 1))
 	    return false;
+
 	// if last char is not '#', there was an error.
-	if (buf[n - 1] != '#')
+	if (buf[response_data_size + 5] != '#')
+	{
+	    LOGF_ERROR("Resp. char %d is %2.2x ascii %c",n,buf[n+5],(char)buf[n+5]);
 	    return false;
-	buf[0] = 0x50;
-	buf[1] = 3 + response_data_size;
-	buf[2] = c.src;
-	buf[3] = c.dst;
+	}
+
+	buf[0] = 0x3b;
+	buf[1] = response_data_size + 1;
+	buf[2] = c.dst;
+	buf[3] = c.src;
 	buf[4] = c.cmd;
+
+        buffer b(buf, buf + (response_data_size + 5));
+
+        if (SERIAL_DEBUG)
+        {
+	   hex_dump(hexbuf,b,b.size());
+	   fprintf(stderr,"b.size = %d\n.",b.size());
+	   fprintf(stderr,"Receive packet: <%s>\n",hexbuf);
+       	}
+
+        cmd.parseBuf(b,false);
     }
 
     // Got the packet, process it
     // n:length field >=3
     // The buffer of n+2>=5 bytes contains:
     // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
-    buffer b(buf, buf + (n+2)); 
-    cmd.parseBuf(b,false);
+
     if (RD_DEBUG) 
     {
         fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
@@ -1492,6 +1531,7 @@ int CelestronAUX::sendBuffer(int PortFD, buffer buf)
 bool CelestronAUX::sendCmd(AUXCommand &c)
 {
     buffer buf;
+    char hexbuf[32*3];
 
     if (SEND_DEBUG)
     {
@@ -1507,7 +1547,7 @@ bool CelestronAUX::sendCmd(AUXCommand &c)
     {
 	buf.resize(8);                 // fixed len = 8
         buf[0] = 0x50;                 // prefix
-	buf[1] = 3 + c.data.size();    // length
+	buf[1] = 1 + c.data.size();    // length
 	buf[2] = c.dst;                // destination
         buf[3] = c.cmd;                // command id
 	for (unsigned int i = 0; i < c.data.size(); i++) // payload
@@ -1516,6 +1556,14 @@ bool CelestronAUX::sendCmd(AUXCommand &c)
 	}
         buf[7] = response_data_size = c.response_data_size();
     }
+
+    if (SERIAL_DEBUG)
+    {
+	hex_dump(hexbuf,buf,buf.size());
+	fprintf(stderr,"Send packet: <%s>\n",hexbuf);
+    }
+    
+    tcflush(PortFD,TCIOFLUSH);
     return sendBuffer(PortFD, buf) == (int)buf.size();
 }
 
@@ -1564,7 +1612,7 @@ bool CelestronAUX::detectRTSCTS()
 {
     bool retval;
     setRTS(1);
-    retval = waitCTS(200.);
+    retval = waitCTS(300.);
     setRTS(0);
     return retval;
 }
@@ -1651,3 +1699,41 @@ int CelestronAUX::aux_tty_write(int PortFD,char *buf,int bufsiz,float timeout,in
 
     return TTY_OK;
 }
+
+
+bool CelestronAUX::tty_set_speed(int PortFD, speed_t speed)
+{
+    struct termios tty_setting;
+
+    if (tcgetattr(PortFD, &tty_setting))
+    {
+        LOGF_ERROR("Error getting tty attributes %s(%d).\n",strerror(errno), errno);
+	return false;
+    }
+         
+    if (cfsetspeed(&tty_setting, speed))
+    {
+        LOGF_ERROR("Error setting serial speed %s(%d).\n",strerror(errno), errno);
+	return false;
+    }
+
+    if (tcsetattr(PortFD, TCSANOW, &tty_setting))
+    {
+        LOGF_ERROR("Error setting tty attributes %s(%d).\n",strerror(errno), errno);
+	return false;
+    }
+         
+ 
+    return true;
+}
+
+
+void CelestronAUX::hex_dump(char *buf, buffer data, size_t size)
+{
+    for (size_t i = 0; i < size; i++)
+        sprintf(buf + 3 * i, "%02X ", data[i]);
+
+    if (size > 0)
+        buf[3 * size - 1] = '\0';
+}
+

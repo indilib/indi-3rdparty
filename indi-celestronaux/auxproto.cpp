@@ -243,7 +243,8 @@ void AUXCommand::parseBuf(buffer buf, bool do_checksum)
     src   = (AUXtargets)buf[2];
     dst   = (AUXtargets)buf[3];
     cmd   = (AUXCommands)buf[4];
-    data  = buffer(buf.begin() + 5, buf.end() - 1);
+    if (buf.size() > 5)
+        data  = buffer(buf.begin() + 5, buf.end());
 }
 
 

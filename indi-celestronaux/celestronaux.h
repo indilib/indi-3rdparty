@@ -165,5 +165,7 @@ class CelestronAUX :
     int response_data_size;
     int aux_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n);
     int aux_tty_write (int PortFD,char *buf,int bufsiz,float timeout,int *n);
+    bool tty_set_speed(int PortFD, speed_t speed);
+    void hex_dump(char *buf, buffer data, size_t size);
 
 };
