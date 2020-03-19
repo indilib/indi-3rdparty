@@ -1,3 +1,10 @@
+indi-duino (0.9) UNRELEASED; urgency=medium
+
+  * TSL237 sampling interval changed to 2sec
+  * Bug fixes to improve script robustness
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Wed, 18 Mar 2020 21:59:04 +0100
+
 indi-duino (0.8) buster; urgency=medium
 
   * Weather Radio documentation added

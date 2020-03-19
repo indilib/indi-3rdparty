@@ -24,6 +24,7 @@ parser.add_argument("-v", "--verbose", action='store_true',
                     help="Display progress information")
 
 args = parser.parse_args()
+data = None
 
 try:
     if (args.verbose):
@@ -33,28 +34,38 @@ try:
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect(indi)
-    
-    now=time.localtime()
-    json_dict={"TIME":time.strftime("%c",now)}
-    data = readWeather(indi)
+    connect = connect(indi)
+
+    if (connect):
+        if (args.verbose):
+            print "Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+
+        data = readWeather(indi)
+
+        if (args.verbose):
+            print "Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+    else:
+        print "Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+
 
     indi.quit()
 
 except:
     print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
+    indi.quit()
     sys.exit()
 
 
 updateString="N"
 templateString=""
 
-for key in data.keys():
-    updateString=updateString+":"+str(data[key])
-    if templateString:
-        templateString += ":"
-    templateString += key
+if data is not None:
+    for key in data.keys():
+        updateString=updateString+":"+str(data[key])
+        if templateString:
+            templateString += ":"
+        templateString += key
 
-ret = rrdtool.update(RRDFILE, "--template", templateString ,updateString);
-if ret:    
+    ret = rrdtool.update(RRDFILE, "--template", templateString ,updateString);
+    if ret:
 	print rrdtool.error() 
