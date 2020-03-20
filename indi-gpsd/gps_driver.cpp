@@ -203,7 +203,17 @@ IPState GPSD::updateGPS()
         time(&raw_time);
 
 #ifdef __linux__
+    #if defined(__GNU_LIBRARY__)
+        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+            timespec tss = {};
+            tss.tv_sec = raw_time;
+            clock_settime(CLOCK_REALTIME, &tss);
+        #else
+            stime(&raw_time);
+        #endif
+    #else
         stime(&raw_time);
+    #endif
 #endif
 
         struct tm *utc = gmtime(&raw_time);
@@ -321,7 +331,17 @@ IPState GPSD::updateGPS()
         raw_time = gpsData->fix.time.tv_sec;
 #endif
 #ifdef __linux__
+    #if defined(__GNU_LIBRARY__)
+        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+            timespec tss = {};
+            tss.tv_sec = raw_time;
+            clock_settime(CLOCK_REALTIME, &tss);
+        #else
+            stime(&raw_time);
+        #endif
+    #else
         stime(&raw_time);
+    #endif
 #endif
 
 #if GPSD_API_MAJOR_VERSION < 9

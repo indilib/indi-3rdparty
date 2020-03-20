@@ -255,7 +255,17 @@ void GPSNMEA::parseNEMA()
                         IUSaveText(&TimeT[0], ts);
 
 #ifdef __linux__
-                        stime(&raw_time);
+    #if defined(__GNU_LIBRARY__)
+        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+            timespec tss = {};
+            tss.tv_sec = raw_time;
+            clock_settime(CLOCK_REALTIME, &tss);
+        #else
+            stime(&raw_time);
+        #endif
+    #else
+        stime(&raw_time);
+    #endif
 #endif
 
                         local = localtime(&raw_time);
@@ -309,7 +319,17 @@ void GPSNMEA::parseNEMA()
                         IUSaveText(&TimeT[0], ts);
 
 #ifdef __linux__
-                        stime(&raw_time);
+    #if defined(__GNU_LIBRARY__)
+        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+            timespec tss = {};
+            tss.tv_sec = raw_time;
+            clock_settime(CLOCK_REALTIME, &tss);
+        #else
+            stime(&raw_time);
+        #endif
+    #else
+        stime(&raw_time);
+    #endif
 #endif
 
                         local = localtime(&raw_time);
@@ -386,7 +406,17 @@ void GPSNMEA::parseNEMA()
                     IUSaveText(&TimeT[0], ts);
 
 #ifdef __linux__
-                    stime(&raw_time);
+    #if defined(__GNU_LIBRARY__)
+        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+            timespec tss = {};
+            tss.tv_sec = raw_time;
+            clock_settime(CLOCK_REALTIME, &tss);
+        #else
+            stime(&raw_time);
+        #endif
+    #else
+        stime(&raw_time);
+    #endif
 #endif
 
                     local = localtime(&raw_time);
