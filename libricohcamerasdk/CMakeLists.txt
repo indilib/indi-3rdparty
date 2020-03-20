@@ -16,14 +16,14 @@ set(LIBMTP_SOVERSION "9")
 
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
-if("${CMAKE_LIBRARY_ARCHITECTURE}" MATCHES "^(x86_64|amd64)")
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)")
   set(architecture_path "x64")
-elseif("${CMAKE_LIBRARY_ARCHITECTURE}" MATCHES "^i[3-6]86")
+elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^i[3-6]86")
   set(architecture_path "x86")
-elseif("${CMAKE_LIBRARY_ARCHITECTURE}" MATCHES "^arm-linux-gnueabihf")
+elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^arm-linux-gnueabihf")
   set(architecture_path "armv7l")
 else()
-  message(FATAL_ERROR "Unsupported architecture: ${CMAKE_LIBRARY_ARCHITECTURE}")
+  message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${architecture_path}/libRicohCameraSDKCpp.so ${CMAKE_BINARY_DIR}/libRicohCameraSDKCpp.so.${LIBPENTAX_VERSION})
