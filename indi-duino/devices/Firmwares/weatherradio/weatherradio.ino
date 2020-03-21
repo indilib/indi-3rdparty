@@ -24,7 +24,7 @@
 /**
    Send current sensor data as JSON document
 */
-String getSensorData() {
+String getSensorData(bool pretty) {
   const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
@@ -65,7 +65,10 @@ String getSensorData() {
 #endif //USE_TSL2591_SENSOR
 
   String result = "";
-  serializeJson(weatherDoc, result);
+  if (pretty)
+    serializeJsonPretty(weatherDoc, result);
+  else
+    serializeJson(weatherDoc, result);
 
   return result;
 }
@@ -120,13 +123,6 @@ String getCurrentConfig() {
   };
 }
 
-#ifdef USE_WIFI
-void handleSensorData() {
-  server.send(200, "application/json; charset=utf-8", getSensorData());
-
-}
-#endif
-
 void setup() {
   Serial.begin(9600);
   // wait for serial port to connect. Needed for native USB
@@ -146,11 +142,15 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     server.on("/", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData());
+      server.send(200, "application/json; charset=utf-8", getSensorData(false));
     });
 
     server.on("/w", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData());
+      server.send(200, "application/json; charset=utf-8", getSensorData(false));
+    });
+
+    server.on("/p", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData(true));
     });
 
     server.on("/c", []() {
@@ -193,10 +193,14 @@ void loop() {
         Serial.println(getCurrentVersion());
         break;
       case 'w':
-        Serial.println(getSensorData());
+        Serial.println(getSensorData(false));
         break;
       case 'c':
         Serial.println(getCurrentConfig());
+        break;
+      case 'p':
+        Serial.println(getSensorData(true));
+        break;
     }
   }
 
