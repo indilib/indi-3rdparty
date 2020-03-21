@@ -16,8 +16,7 @@
 
 
 # INDI server delivering weather data
-#INDISERVER="rasp-star"
-INDISERVER="rasp-indi"
+INDISERVER="localhost"
 INDIPORT="7624"
 
 # INDI device
@@ -25,13 +24,13 @@ INDIDEVICE="Weather Radio"
 INDIDEVICEPORT="/dev/ttyUSB0"
 
 # RRD storage holding time series data
-RRDFILE="/usr/local/share/weatherradio/weather.rrd"
+RRDFILE="/usr/share/weatherradio/weather.rrd"
 
 # RRD storage holding time series for raw sensor data
-RRDSENSORSFILE="/usr/local/share/weatherradio/sensors.rrd"
+RRDSENSORSFILE="/usr/share/weatherradio/sensors.rrd"
 
 # path to the JSON files holding the data
-DATAPATH="/usr/local/share/weatherradio/html/data"
+DATAPATH="/usr/share/weatherradio/html/data"
 
 ######### INDI Weather vector and element names
 WEATHER="WEATHER_PARAMETERS"

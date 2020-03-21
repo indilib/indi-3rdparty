@@ -17,7 +17,7 @@
 import sys
 import datetime, time
 import argparse
-import json
+import simplejson as json
 import rrdtool
 from wr_config import *
 
@@ -46,7 +46,7 @@ last = result['date']
 data['timestamp'] = int(time.mktime(last.timetuple())*1000)
 
 output = open(args.output, 'w')
-output.write(json.dumps(data, indent=2, separators=(',', ':'), sort_keys=True))
+output.write(json.dumps(data, indent=2, separators=(',', ':'), sort_keys=True, ignore_nan=True))
 output.close()
 
 
