@@ -171,6 +171,24 @@ bool GPSNMEA::isNMEA()
     return (minmea_sentence_id(line, false) != MINMEA_INVALID);
 }
 
+bool GPSNMEA::setSystemTime(time_t& raw_time)
+{
+    #ifdef __linux__
+        #if defined(__GNU_LIBRARY__)
+            #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+                timespec sTime = {};
+                sTime.tv_sec = raw_time;
+                clock_settime(CLOCK_REALTIME, &sTime);
+            #else
+                stime(&raw_time);
+            #endif
+        #else
+            stime(&raw_time);
+        #endif
+    #endif
+    return true;
+}
+
 void* GPSNMEA::parseNMEAHelper(void *obj)
 {
     static_cast<GPSNMEA*>(obj)->parseNEMA();
@@ -254,19 +272,7 @@ void GPSNMEA::parseNEMA()
                         strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
                         IUSaveText(&TimeT[0], ts);
 
-#ifdef __linux__
-    #if defined(__GNU_LIBRARY__)
-        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-            timespec tss = {};
-            tss.tv_sec = raw_time;
-            clock_settime(CLOCK_REALTIME, &tss);
-        #else
-            stime(&raw_time);
-        #endif
-    #else
-        stime(&raw_time);
-    #endif
-#endif
+                        setSystemTime(raw_time);
 
                         local = localtime(&raw_time);
                         snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
@@ -317,20 +323,7 @@ void GPSNMEA::parseNEMA()
                         utc = gmtime(&raw_time);
                         strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
                         IUSaveText(&TimeT[0], ts);
-
-#ifdef __linux__
-    #if defined(__GNU_LIBRARY__)
-        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-            timespec tss = {};
-            tss.tv_sec = raw_time;
-            clock_settime(CLOCK_REALTIME, &tss);
-        #else
-            stime(&raw_time);
-        #endif
-    #else
-        stime(&raw_time);
-    #endif
-#endif
+                        setSystemTime(raw_time);
 
                         local = localtime(&raw_time);
                         snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
@@ -404,20 +397,7 @@ void GPSNMEA::parseNEMA()
                     utc = gmtime(&raw_time);
                     strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
                     IUSaveText(&TimeT[0], ts);
-
-#ifdef __linux__
-    #if defined(__GNU_LIBRARY__)
-        #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-            timespec tss = {};
-            tss.tv_sec = raw_time;
-            clock_settime(CLOCK_REALTIME, &tss);
-        #else
-            stime(&raw_time);
-        #endif
-    #else
-        stime(&raw_time);
-    #endif
-#endif
+                    setSystemTime(raw_time);
 
                     local = localtime(&raw_time);
                     snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
