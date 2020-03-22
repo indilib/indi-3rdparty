@@ -16,7 +16,7 @@
 
 import sys
 import argparse
-import json
+import simplejson as json
 import rrdtool
 from wr_config import *
 
@@ -37,7 +37,7 @@ parser.add_argument("-t", "--timezone", default=1, type=int,
                     help="Timezone for which the data series has been collected")
 parser.add_argument("-o", "--output",
                     help="JSON file to be written")
-parser.add_argument("rrdfile", nargs='*', default=RRDFILE,
+parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
                     help="RRD file holding all time series")
 
 args=parser.parse_args()
@@ -80,7 +80,7 @@ for values in lines:
     time += step
 
 output = open(args.output, 'w')
-output.write(json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True))
+output.write(json.dumps(series, indent=2, separators=(',', ':'), sort_keys=True, ignore_nan=True))
 output.close()
 
 

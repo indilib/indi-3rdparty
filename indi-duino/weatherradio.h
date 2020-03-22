@@ -24,14 +24,18 @@
 
 #include <map>
 #include <math.h>
+#include <memory>
 
 #include "indiweather.h"
+#include "weathercalculator.h"
+
+extern const char *CALIBRATION_TAB;
 
 class WeatherRadio : public INDI::Weather
 {
   public:
     WeatherRadio();
-    ~WeatherRadio() = default;
+    ~WeatherRadio() override = default;
 
     virtual void ISGetProperties(const char *dev) override;
     virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
@@ -44,6 +48,8 @@ class WeatherRadio : public INDI::Weather
     virtual bool Handshake() override;
 
 protected:
+    WeatherCalculator *weatherCalculator;
+
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
 
@@ -124,6 +130,26 @@ protected:
     INumber ttyTimeoutN[1] = {};
     INumberVectorProperty ttyTimeoutNP;
 
+    // calibration parameters to calculate the corrected sky temperature
+    INumberVectorProperty skyTemperatureCalibrationNP;
+    INumber skyTemperatureCalibrationN[5];
+
+    // calibration parameters for the humidity
+    INumberVectorProperty humidityCalibrationNP;
+    INumber humidityCalibrationN[2];
+
+    // calibration parameters for the temperature
+    INumberVectorProperty temperatureCalibrationNP;
+    INumber temperatureCalibrationN[2];
+
+    // calibration for wind direction
+    INumberVectorProperty windDirectionCalibrationNP;
+    INumber windDirectionCalibrationN[1];
+
+    // calibration for SQM measurement
+    INumberVectorProperty sqmCalibrationNP;
+    INumber sqmCalibrationN[2];
+
     /**
      * @brief Create a canonical name as <device> (<sensor>)
      * @param sensor weather sensor
@@ -203,3 +229,5 @@ protected:
     virtual bool saveConfigItems(FILE *fp) override;
 
 };
+
+extern std::unique_ptr<WeatherRadio> station_ptr;

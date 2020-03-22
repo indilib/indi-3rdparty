@@ -27,7 +27,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <memory>
 #include <map>
 
 #include <sys/stat.h>
@@ -38,6 +37,8 @@
 #include "gason/gason.h"
 
 #include "config.h"
+
+const char *CALIBRATION_TAB = "Calibration";
 
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
@@ -109,6 +110,7 @@ void ISSnoopDevice(XMLEle *root)
 WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
+    weatherCalculator = new WeatherCalculator();
 }
 
 /**************************************************************************************
@@ -122,10 +124,33 @@ bool WeatherRadio::initProperties()
 
     IUFillNumber(&ttyTimeoutN[0], "TIMEOUT", "Timeout (s)", "%.f", 0, 60, 1, getTTYTimeout());
     IUFillNumberVector(&ttyTimeoutNP, ttyTimeoutN, 1, getDeviceName(), "TTY_TIMEOUT", "TTY timeout", CONNECTION_TAB, IP_RW, 0, IPS_OK);
-    registerProperty(&ttyTimeoutNP, INDI_NUMBER);
 
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
+
+    // calibration parameters
+    IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.3f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
+    IUFillNumber(&skyTemperatureCalibrationN[1], "K2", "K2", "%.3f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k2);
+    IUFillNumber(&skyTemperatureCalibrationN[2], "K3", "K3", "%.3f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k3);
+    IUFillNumber(&skyTemperatureCalibrationN[3], "K4", "K4", "%.3f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k4);
+    IUFillNumber(&skyTemperatureCalibrationN[4], "K5", "K5", "%.3f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k5);
+    IUFillNumberVector(&skyTemperatureCalibrationNP, skyTemperatureCalibrationN, 5, getDeviceName(), "SKY_TEMP_CALIBRATION", "Sky Temp calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    // calibration parameters
+    IUFillNumber(&humidityCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&humidityCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&humidityCalibrationNP, humidityCalibrationN, 2, getDeviceName(), "HUMIDITY_CALIBRATION", "Humidity calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&temperatureCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&temperatureCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&temperatureCalibrationNP, temperatureCalibrationN, 2, getDeviceName(), "TEMPERATURE_CALIBRATION", "Temperature calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&sqmCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&sqmCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&sqmCalibrationNP, sqmCalibrationN, 2, getDeviceName(), "SQM_CALIBRATION", "SQM calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&windDirectionCalibrationN[0], "OFFSET", "Offset", "%.3f", 0, 360, 1, 0.0);
+    IUFillNumberVector(&windDirectionCalibrationNP, windDirectionCalibrationN, 1, getDeviceName(), "WIND_DIRECTION_CALIBRATION", "Wind direction", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
 
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
@@ -170,6 +195,9 @@ bool WeatherRadio::updateProperties()
             setCriticalParameter(WEATHER_TEMPERATURE);
             addSensorSelection(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
             addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
+
+            defineNumber(&temperatureCalibrationNP);
+            defineNumber(&skyTemperatureCalibrationNP);
         }
         if (sensorRegistry.pressure.size() > 0)
         {
@@ -183,6 +211,8 @@ bool WeatherRadio::updateProperties()
             addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
             setCriticalParameter(WEATHER_HUMIDITY);
             addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
+
+            defineNumber(&humidityCalibrationNP);
         }
         if (sensorRegistry.luminosity.size() > 0 || sensorRegistry.sqm.size() > 0)
         {
@@ -192,6 +222,8 @@ bool WeatherRadio::updateProperties()
                 addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
             if (sensorRegistry.sqm.size() > 0)
                 addSensorSelection(&sqmSensorSP, sensorRegistry.sqm, "SQM_SENSOR", "SQM Sensor");
+
+            defineNumber(&sqmCalibrationNP);
         }
         if (sensorRegistry.temp_object.size() > 0)
         {
@@ -216,6 +248,8 @@ bool WeatherRadio::updateProperties()
         {
             addParameter(WEATHER_WIND_DIRECTION, "Wind direction (deg)", 0, 360, 10);
             addSensorSelection(&windDirectionSensorSP, sensorRegistry.wind_direction, "WIND_DIRECTION_SENSOR", "Wind Direction Sensor");
+
+            defineNumber(&windDirectionCalibrationNP);
         }
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineNumber(&rawDevices[i]);
@@ -233,6 +267,11 @@ bool WeatherRadio::updateProperties()
         for (size_t i = 0; i < rawDevices.size(); i++)
             deleteProperty(rawDevices[i].name);
 
+        deleteProperty(windDirectionCalibrationNP.name);
+        deleteProperty(sqmCalibrationNP.name);
+        deleteProperty(temperatureCalibrationNP.name);
+        deleteProperty(humidityCalibrationNP.name);
+        deleteProperty(skyTemperatureCalibrationNP.name);
         deleteProperty(temperatureSensorSP.name);
         deleteProperty(pressureSensorSP.name);
         deleteProperty(humiditySensorSP.name);
@@ -368,6 +407,53 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             ttyTimeoutNP.s = IPS_OK;
             IDSetNumber(&ttyTimeoutNP, nullptr);
             return ttyTimeoutNP.s;
+        }
+        else if (strcmp(name, skyTemperatureCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&skyTemperatureCalibrationNP, values, names, n);
+            weatherCalculator->skyTemperatureCoefficients.k1 = values[0];
+            weatherCalculator->skyTemperatureCoefficients.k2 = values[1];
+            weatherCalculator->skyTemperatureCoefficients.k3 = values[2];
+            weatherCalculator->skyTemperatureCoefficients.k4 = values[3];
+            weatherCalculator->skyTemperatureCoefficients.k5 = values[4];
+            skyTemperatureCalibrationNP.s = IPS_OK;
+            IDSetNumber(&skyTemperatureCalibrationNP, nullptr);
+            return skyTemperatureCalibrationNP.s;
+        }
+        else if (strcmp(name, humidityCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&humidityCalibrationNP, values, names, n);
+            weatherCalculator->humidityCalibration.factor = values[0];
+            weatherCalculator->humidityCalibration.shift  = values[1];
+            humidityCalibrationNP.s = IPS_OK;
+            IDSetNumber(&humidityCalibrationNP, nullptr);
+            return humidityCalibrationNP.s;
+        }
+        else if (strcmp(name, temperatureCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&temperatureCalibrationNP, values, names, n);
+            weatherCalculator->temperatureCalibration.factor = values[0];
+            weatherCalculator->temperatureCalibration.shift  = values[1];
+            temperatureCalibrationNP.s = IPS_OK;
+            IDSetNumber(&temperatureCalibrationNP, nullptr);
+            return temperatureCalibrationNP.s;
+        }
+        else if (strcmp(name, sqmCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&sqmCalibrationNP, values, names, n);
+            weatherCalculator->sqmCalibration.factor = values[0];
+            weatherCalculator->sqmCalibration.shift  = values[1];
+            sqmCalibrationNP.s = IPS_OK;
+            IDSetNumber(&sqmCalibrationNP, nullptr);
+            return sqmCalibrationNP.s;
+        }
+        else if (strcmp(name, windDirectionCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&windDirectionCalibrationNP, values, names, n);
+            weatherCalculator->windDirectionOffset = values[0];
+            windDirectionCalibrationNP.s = IPS_OK;
+            IDSetNumber(&windDirectionCalibrationNP, nullptr);
+            return windDirectionCalibrationNP.s;
         }
     }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
@@ -644,31 +730,28 @@ WeatherRadio::sensor_name WeatherRadio::updateSensorSelection(ISwitchVectorPrope
 void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
 {
     if (currentSensors.temperature == sensor)
-        setParameterValue(WEATHER_TEMPERATURE, value);
+        setParameterValue(WEATHER_TEMPERATURE, weatherCalculator->calibrate(weatherCalculator->temperatureCalibration, value));
     else if (currentSensors.pressure == sensor)
     {
         double elevation = LocationN[LOCATION_ELEVATION].value;
 
-        const double temp_gradient = 0.0065;
-        double temp = 15.0;
+        double temp = 15.0; // default value
         INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
         if (temperatureParameter != nullptr)
             temp = temperatureParameter->value;
-        else
-            temp = 15.0; // default value
 
-        // barometric height formula
-        double pressure_normalized = value / pow(1-temp_gradient*elevation/(temp+elevation*temp_gradient+273.15), 0.03416/temp_gradient);
-
+        double pressure_normalized = weatherCalculator->sealevelPressure(value, elevation, temp);
         setParameterValue(WEATHER_PRESSURE, pressure_normalized);
     }
     else if (currentSensors.humidity == sensor)
     {
-        setParameterValue(WEATHER_HUMIDITY, value);
+        double humidity = weatherCalculator->calibrate(weatherCalculator->humidityCalibration, value);
+
+        setParameterValue(WEATHER_HUMIDITY, humidity);
         INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
         if (temperatureParameter != nullptr)
         {
-            double dp =  WeatherCalculator::dewPoint(value, temperatureParameter->value);
+            double dp =  weatherCalculator->dewPoint(humidity, temperatureParameter->value);
             setParameterValue(WEATHER_DEWPOINT, dp);
         }
      }
@@ -679,8 +762,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (objProp != nullptr)
         {
             double objectTemperature = objProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(value, objectTemperature));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(value, objectTemperature));
+            setParameterValue(WEATHER_CLOUD_COVER, weatherCalculator->cloudCoverage(value, objectTemperature));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, weatherCalculator->skyTemperatureCorr(value, objectTemperature));
         }
     }
     else if (currentSensors.temp_object == sensor)
@@ -690,20 +773,23 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (ambientProp != nullptr)
         {
             double ambientTemperature = ambientProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(ambientTemperature, value));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(ambientTemperature, value));
+            setParameterValue(WEATHER_CLOUD_COVER, weatherCalculator->cloudCoverage(ambientTemperature, value));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, weatherCalculator->skyTemperatureCorr(ambientTemperature, value));
         }
     }
     else if (currentSensors.luminosity == sensor)
-        setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
+    {
+        setParameterValue(WEATHER_SQM, weatherCalculator->calibrate(weatherCalculator->sqmCalibration,
+                                                                    weatherCalculator->sqmValue(value)));
+    }
     else if (currentSensors.sqm == sensor)
-        setParameterValue(WEATHER_SQM, value);
+        setParameterValue(WEATHER_SQM, weatherCalculator->calibrate(weatherCalculator->sqmCalibration, value));
     else if (currentSensors.wind_gust == sensor)
         setParameterValue(WEATHER_WIND_GUST, value);
     else if (currentSensors.wind_speed == sensor)
         setParameterValue(WEATHER_WIND_SPEED, value);
     else if (currentSensors.wind_direction == sensor)
-        setParameterValue(WEATHER_WIND_DIRECTION, value);
+        setParameterValue(WEATHER_WIND_DIRECTION, weatherCalculator->calibratedWindDirection(value));
 }
 
 
@@ -754,6 +840,11 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
 bool WeatherRadio::saveConfigItems(FILE *fp)
 {
     LOG_DEBUG(__FUNCTION__);
+    IUSaveConfigNumber(fp, &skyTemperatureCalibrationNP);
+    IUSaveConfigNumber(fp, &temperatureCalibrationNP);
+    IUSaveConfigNumber(fp, &humidityCalibrationNP);
+    IUSaveConfigNumber(fp, &sqmCalibrationNP);
+    IUSaveConfigNumber(fp, &windDirectionCalibrationNP);
     IUSaveConfigSwitch(fp, &temperatureSensorSP);
     IUSaveConfigSwitch(fp, &pressureSensorSP);
     IUSaveConfigSwitch(fp, &humiditySensorSP);

@@ -20,9 +20,9 @@ For building your own weather station, you need
 ## Connecting Sensors to the Arduino
 This part requires some basic knowledge in soldering electronic components. Here one of my recent setups:
 
-![Sample board with sensors](weatherradio/img/sensors_320px.jpg)
+![Sample board with sensors](weatherradio/img/sensors_with_housing_480px.jpg)
 
-This is an example with a Arduino Nano, the sensors DBE280, DHT22, MLX90614 and TSL2591 and a RJ11 (6P4C) jack for connecting the Davis Instruments Anemometer.
+This is an example with a Wemos D1 mini pro V1, the sensors DBE280, DHT22, MLX90614 and TSL2591 and a RJ11 (6P4C) jack for connecting the Davis Instruments Anemometer.
 
 Besides supplying power to a sensor (VCC = +3.3 V or +5 Volt and GND = Ground), Arduino boards offer several types of connections to transmit data between sensor and the Arduino:
 * **I2C** - a two wire bus where several components could be connected in parallel. It offers a **SCL** (= serial clock) and a **SDA** (= serial data) connection. This is the connectivity for the DBE280, MLX90614 and TSL2591.
@@ -64,8 +64,9 @@ As soon as this succeeds, you are ready for testing your board. With the serial 
 ![Serial Monitor](weatherradio/img/serial_monitor.png)
 
 The following commands are supported:
-* **v** to read out the firmware version
-* **w** to read out the current sensor values
+* **v** to show the firmware version
+* **w** to show the current sensor values (one line version)
+* **p** to show the current sensor values (pretty printing version)
 * **c** to show the firmware configuration
 
 If everything is shown as expected, your hardware is ready!
@@ -96,6 +97,11 @@ Select the sensor setup of your choice and **save** the configuration.
 For some weather parameters, additional configurations are needed:
 * The **Pressure** value comes as an absolute value from the sensor and is displayed in the INDI driver on sealevel basis. Therefore it is necessary to set the **elevation** of your location properly to receive correct values.
 * On the **Parameter** tab you can set the OK ranges for each weather parameter.
+
+### Calibrating weather parameters
+Depending on the local settings and sensor manufacturing variations it is necessary to calibrate the calculated weather parameters:
+
+![Weather parameter calibration](weatherradio/img/indi_calibration_480px.jpg)
 
 That's it, now your INDI driver is ready to use!
 
