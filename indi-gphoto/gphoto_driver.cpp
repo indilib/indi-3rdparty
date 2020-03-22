@@ -1085,11 +1085,11 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     // ###########################################################################################
     // We take this route if any of the following conditions are met:
     // 1. Predefined Exposure List does not exist for the camera.
-    // 2. An external shutter port or DSUSB is active.
+    // 2. An external shutter port or DSUSB is active (for > 1 second exposures or there is no optimal exposure)
     //// 3. Exposure Time > 1 second or there is no optimal exposure and we have a bulb widget to trigger the custom time
     // 3. There is no optimal exposure and we have a bulb widget to trigger the custom time
     if (gphoto->exposureList == nullptr ||
-            (gphoto->bulb_port[0] || gphoto->dsusb) ||
+            ( (gphoto->bulb_port[0] || gphoto->dsusb) &&  (exptime_usec > 1e6 || optimalExposureIndex == -1)) ||
             //(gphoto->bulb_widget != nullptr && (exptime_usec > 1e6 || optimalExposureIndex == -1)))
             (gphoto->bulb_widget != nullptr && optimalExposureIndex == -1))
     {
