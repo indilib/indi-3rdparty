@@ -237,7 +237,6 @@ bool PkTriggerCordCCD::Disconnect()
     pslr_disconnect(device);
     pslr_shutdown(device);
     return true;
-
 }
 
 bool PkTriggerCordCCD::setupParams()
@@ -245,6 +244,30 @@ bool PkTriggerCordCCD::setupParams()
     if (!getCaptureSettingsState()) return false;
     uff = get_user_file_format(&status);
     return true;
+}
+
+bool PkTriggerCordCCD::shutterPress(pslr_rational_t shutter_speed)
+{
+    if ( status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) {
+        if (pslr_get_model_old_bulb_mode(device)) {
+            struct timeval prev_time;
+            gettimeofday(&prev_time, NULL);
+            bulb_old(device, shutter_speed, prev_time);
+        } else {
+            need_bulb_new_cleanup = true;
+            bulb_new(device, shutter_speed);
+        }
+    } else {
+        LOG_DEBUG("not bulb\n");
+        if (1) {
+            pslr_shutter(device);
+        } else {
+            // TODO: fix waiting time
+            sleep_sec(1);
+            return false;
+        }
+    }
+    return !save_buffer(device, 0, fd, &status, uff, quality );
 }
 
 
@@ -292,24 +315,8 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         gettimeofday(&ExpStart, nullptr);
         LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
 
-        if ( status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) {
-            if (pslr_get_model_old_bulb_mode(device)) {
-                struct timeval prev_time;
-                gettimeofday(&prev_time, NULL);
-                bulb_old(device, shutter_speed, prev_time);
-            } else {
-                need_bulb_new_cleanup = true;
-                bulb_new(device, shutter_speed);
-            }
-        } else {
-            DPRINT("not bulb\n");
-            if (1) {
-                pslr_shutter(device);
-            } else {
-                // TODO: fix waiting time
-                sleep_sec(1);
-            }
-        }
+        shutter_result = std::future<bool>();
+        shutter_result = std::async(std::launch::async, &PkTriggerCordCCD::shutterPress,this,shutter_speed);
 
         user_file_format_t ufft = *get_file_format_t(uff);
         char * output_file = TMPFILEBASE;
@@ -404,23 +411,6 @@ void PkTriggerCordCCD::TimerHit()
 
     if (InExposure)
     {
-        if ( !save_buffer(device, 0, fd, &status, uff, quality )) {
-
-            InDownload = false;
-            InExposure = false;
-            pslr_delete_buffer(device, 0);
-            if (fd != 1) {
-                close(fd);
-            }
-            if (need_bulb_new_cleanup) {
-                bulb_new_cleanup(device);
-            }
-            grabImage();
-            ExposureComplete(&PrimaryCCD);
-        } else if (!InDownload && isDebug()) {
-            IDLog("Still waiting for download...");
-        }
-
         timeleft = CalcTimeLeft();
 
         if (!InDownload) {
@@ -457,6 +447,24 @@ void PkTriggerCordCCD::TimerHit()
                 }
                 PrimaryCCD.setExposureLeft(timeleft);
             }
+        }
+
+        std::chrono::milliseconds span (100);
+        if ( shutter_result.wait_for(span)!=std::future_status::timeout) {
+            bool result = shutter_result.get();
+            InDownload = false;
+            InExposure = false;
+            pslr_delete_buffer(device, 0);
+            if (fd != 1) {
+                close(fd);
+            }
+            if (need_bulb_new_cleanup) {
+                bulb_new_cleanup(device);
+            }
+            grabImage();
+            ExposureComplete(&PrimaryCCD);
+        } else if (InDownload && isDebug()) {
+            IDLog("Still waiting for download...");
         }
     }
 

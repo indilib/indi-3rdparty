@@ -25,6 +25,7 @@
 #include <stream/streammanager.h>
 #include <unistd.h>
 #include <regex>
+#include <future>
 
 #include "config.h"
 #include "eventloop.h"
@@ -121,6 +122,9 @@ protected:
     void buildCaptureSwitches();
     void deleteCaptureSwitches();
     void buildCaptureSettingSwitch(ISwitchVectorProperty *control, string optionList[], size_t numOptions, const char *label, const char *name, string currentsetting = "");
+
+    bool shutterPress(pslr_rational_t shutter_speed);
+    std::future<bool> shutter_result;
 };
 
 #endif // PKTRIGGERCORD_CCD_H
