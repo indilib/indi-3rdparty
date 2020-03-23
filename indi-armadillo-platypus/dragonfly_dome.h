@@ -105,6 +105,35 @@ class DragonFlyDome : public INDI::Dome
         ISwitch MotorTypeS[4];
         enum { MOTOR_UNIPOLAR, MOTOR_BIPOLAR, MOTOR_DC, MOTOR_STEPDIR };
 
+        // Relays
+        ISwitchVectorProperty RelaySP;
+        ISwitch RelayS[8];
+
+        // Sensors
+        INumberVectorProperty SensorNP;
+        INumber SensorN[8];
+
+        // Dome Relays
+        INumberVectorProperty DomeRelayNP;
+        INumber DomeRelayN[2];
+        enum
+        {
+            RELAY_OPEN,
+            RELAY_CLOSE,
+        };
+
+        // Dome Sensors
+        INumberVectorProperty DomeSensorNP;
+        INumber DomeSensorN[4];
+        enum
+        {
+            SENSOR_OPENED,
+            SENSOR_CLOSED,
+            SENSOR_UNPARKED,
+            SENSOR_PARKED,
+        };
+
+
         // Settings
         INumberVectorProperty SettingNP;
         INumber SettingN[5];
