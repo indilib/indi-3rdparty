@@ -310,12 +310,9 @@ bool PkTriggerCordCCD::StartExposure(float duration)
 
         if (autoFocusS[0].s == ISS_ON) pslr_focus(device);
 
-
         //start capture
         gettimeofday(&ExpStart, nullptr);
         LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
-
-        shutter_result = std::future<bool>();
         shutter_result = std::async(std::launch::async, &PkTriggerCordCCD::shutterPress,this,shutter_speed);
 
         user_file_format_t ufft = *get_file_format_t(uff);
