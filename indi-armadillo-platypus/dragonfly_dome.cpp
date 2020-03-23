@@ -73,10 +73,55 @@ void ISSnoopDevice(XMLEle *root)
     dome->ISSnoopDevice(root);
 }
 
+Relay::Relay(uint8_t id, const std::string &device, const std::string &group)
+{
+    m_ID = id;
+    char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
+
+    snprintf(name, MAXINDINAME, "RELAY_%d", id);
+    m_Name = name;
+    snprintf(label, MAXINDILABEL, "Relay #%d", id);
+
+    IUFillSwitch(&RelayS[DD::INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
+    IUFillSwitch(&RelayS[DD::INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
+    IUFillSwitchVector(&RelaySP, RelayS, 2, device.c_str(), name, label, group.c_str(), IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+}
+
+void Relay::define(DD *parent)
+{
+    parent->defineSwitch(&RelaySP);
+}
+
+void Relay::remove(DD *parent)
+{
+    parent->deleteProperty(RelaySP.name);
+}
+
+bool Relay::update(ISState *states, char *names[], int n)
+{
+    return IUUpdateSwitch(&RelaySP, states, names, n) == 0;
+}
+
+bool Relay::isEnabled() const
+{
+    return IUFindOnSwitchIndex(&RelaySP) == DD::INDI_ENABLED;
+}
+
+void Relay::sync(IPState state)
+{
+    RelaySP.s = state;
+    IDSetSwitch(&RelaySP, nullptr);
+}
+
+const std::string &Relay::name() const
+{
+    return m_Name;
+}
+
 DragonFlyDome::DragonFlyDome()
 {
     setVersion(LUNATICO_VERSION_MAJOR, LUNATICO_VERSION_MINOR);
-    SetDomeCapability(DOME_CAN_ABS_MOVE | DOME_CAN_REL_MOVE | DOME_CAN_ABORT |  DOME_CAN_PARK);
+    SetDomeCapability(DOME_CAN_REL_MOVE | DOME_CAN_ABORT |  DOME_CAN_PARK);
 }
 
 bool DragonFlyDome::initProperties()
@@ -121,10 +166,17 @@ bool DragonFlyDome::initProperties()
     IUFillSwitch(&MotorTypeS[MOTOR_STEPDIR], "MOTOR_STEPDIR", "Step-Dir", ISS_OFF);
     IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "ROTATOR_MOTOR_TYPE", "Motor Type", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-
     // Firmware Version
     IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
     IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    // Relays
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        std::unique_ptr<Relay> oneRelay;
+        oneRelay.reset(new Relay(i + i, getDeviceName(), RELAYS_TAB));
+        Relays.push_back(std::move(oneRelay));
+    }
 
     addDebugControl();
 
@@ -152,6 +204,8 @@ bool DragonFlyDome::updateProperties()
         defineSwitch(&MotorTypeSP);
         defineSwitch(&HalfStepSP);
         defineSwitch(&WiringSP);
+        for (auto &oneRelay : Relays)
+            oneRelay->define(this);
     }
     else
     {
@@ -160,6 +214,8 @@ bool DragonFlyDome::updateProperties()
         deleteProperty(MotorTypeSP.name);
         deleteProperty(HalfStepSP.name);
         deleteProperty(WiringSP.name);
+        for (auto &oneRelay : Relays)
+            oneRelay->remove(this);
     }
 
     return true;
@@ -285,6 +341,27 @@ bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *stat
             IDSetSwitch(&MotorTypeSP, nullptr);
             return true;
         }
+        /////////////////////////////////////////////
+        // Motor Type
+        /////////////////////////////////////////////
+        for (uint8_t i = 0; i < 8; i++)
+        {
+            if (!strcmp(name, Relays[i]->name().c_str()))
+            {
+                bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), "INDI_ENABLED");
+                if (setRelayEnabled(i, enabled))
+                {
+                    Relays[i]->update(states, names, n);
+                    Relays[i]->sync(IPS_OK);
+                }
+                else
+                {
+                    Relays[i]->sync(IPS_ALERT);
+                }
+
+                return true;
+            }
+        }
     }
 
     return INDI::Dome::ISNewSwitch(dev, name, states, names, n);
@@ -320,64 +397,6 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
     return INDI::Dome::ISNewNumber(dev, name, values, names, n);
 }
 
-IPState DragonFlyDome::MoveAbs(double az)
-{
-    // Find closest distance
-    double a = az;
-    double b = DomeAbsPosN[0].value;
-    double d = fabs(a - b);
-    double r = (d > 180) ? 360 - d : d;
-    int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
-
-    r *= sign;
-
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value;
-
-    // Clamp to range
-    newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
-
-    return gotoTarget(newTarget) ? IPS_BUSY : IPS_ALERT;
-}
-
-///////////////////////////////////////////////////////////////////////////
-/// Goto target
-///////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::Sync(double az)
-{
-    // Find closest distance
-    double a = az;
-    double b = DomeAbsPosN[0].value;
-    double d = fabs(a - b);
-    double r = (d > 180) ? 360 - d : d;
-    int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
-
-    r *= sign;
-
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value;
-
-    // Clamp to range
-    newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
-
-    return setParam("setpos", newTarget);
-}
-
-///////////////////////////////////////////////////////////////////////////
-/// Goto target
-///////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::gotoTarget(uint32_t position)
-{
-    char cmd[DRIVER_LEN] = {0};
-    int32_t res = 0;
-    uint32_t backlash = (IUFindOnSwitchIndex(&DomeBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>(DomeBacklashN[0].value) : 0;
-    snprintf(cmd, DRIVER_LEN, "!step goto %d %ud %ud", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
-    if (sendCommand(cmd, res))
-        m_IsMoving = (res == 0);
-    else
-        m_IsMoving = false;
-
-    return m_IsMoving;
-}
-
 ///////////////////////////////////////////////////////////////////////////
 ///
 ///////////////////////////////////////////////////////////////////////////
@@ -405,6 +424,20 @@ bool DragonFlyDome::getParam(const std::string &param, uint32_t &value)
         value = res;
         return true;
     }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////
+///
+///////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::setRelayEnabled(uint8_t id, bool enabled)
+{
+    char cmd[DRIVER_LEN] = {0};
+    int32_t res = 0;
+    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d", id, enabled ? 1 : 0);
+    if (sendCommand(cmd, res))
+        return res == 0;
 
     return false;
 }
@@ -549,34 +582,6 @@ IPState DragonFlyDome::UnPark()
 {
     SetParked(false);
     return IPS_OK;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-///
-//////////////////////////////////////////////////////////////////////////////
-IPState DragonFlyDome::ControlShutter(ShutterOperation operation)
-{
-    INDI_UNUSED(operation);
-    return IPS_ALERT;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-///
-//////////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::SetCurrentPark()
-{
-    SetAxis1Park(DomeAbsPosN[0].value);
-    return true;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-///
-//////////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::SetDefaultPark()
-{
-    // default park position is pointed south
-    SetAxis1Park(0);
-    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
