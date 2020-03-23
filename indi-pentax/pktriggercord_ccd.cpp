@@ -387,6 +387,7 @@ float PkTriggerCordCCD::CalcTimeLeft()
 {
     double timesince;
     double timeleft;
+
     struct timeval now;
     gettimeofday(&now, nullptr);
 
@@ -395,6 +396,11 @@ float PkTriggerCordCCD::CalcTimeLeft()
     timesince = timesince / 1000;
 
     timeleft = ExposureRequest - timesince;
+
+    //compensate for delay when starting bulb timer
+    if (status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) {
+        timeleft = (timeleft + 5 < ExposureRequest) ? timeleft + 5 : ExposureRequest;
+    }
     return timeleft;
 }
 
