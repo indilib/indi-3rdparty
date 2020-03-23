@@ -146,7 +146,7 @@ To switch between PTP and MSC, you will need to unplug the camera from the host 
 ### All modes
 - When DNG format is selected, images are currently saved with a "raw" extension.  This is because Indi seems to have a bug with .DNG files where it grabs the JPEG preview out of DNGs and discards the rest of the DNG file.  The raw files may be safely renamed to ".DNG."
 - Download time estimates computed by Ekos are wrong, especially if you're using a slower system like a Raspberry Pi 3.
-- On low-power systems (e.g. Raspberry Pi 3), to avoid crashing the driver due to memory limitations, the Native output format is recommended for the driver instead of FITS.  In such environments, if you need FITs, I would recommend running KStars remotely, and configuring Ekos to auto-convert to FITS.
+- On low-power systems (e.g. Raspberry Pi 3), for performance reasons, the Native output format is recommended for the driver instead of FITS.  In such environments, if you need FITs, I would recommend running KStars remotely, and configuring Ekos to auto-convert to FITS.
 
 ### PTP mode only
 - Bulb capture does not work in PTP mode.
