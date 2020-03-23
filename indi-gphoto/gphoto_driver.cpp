@@ -40,6 +40,9 @@
 #define EOS_CUSTOMFUNCEX                "customfuncex"
 #define EOS_MIRROR_LOCKUP_ENABLE        "20,1,3,14,1,60f,1,1"
 #define EOS_MIRROR_LOCKUP_DISABLE       "20,1,3,14,1,60f,1,0"
+// Anything below this threshold is camera control
+// Above this, it is shutter release control
+#define RELEASE_SHUTTER_THRESHOLD       30000000
 
 static GPPortInfoList *portinfolist   = nullptr;
 static CameraAbilitiesList *abilities = nullptr;
@@ -1063,7 +1066,10 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     int optimalExposureIndex = -1;
 
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
-    if (gphoto->force_bulb == false)
+    // JM 2020-03-23: If we are using external shutter release, for exposures less than shutter threshold
+    // try to find optimal exposure time.
+    if (gphoto->force_bulb == false ||
+            ((gphoto->bulb_port[0] || gphoto->dsusb) && exptime_usec <= RELEASE_SHUTTER_THRESHOLD))
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
 
     // Set Capture Target
@@ -1089,7 +1095,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     //// 3. Exposure Time > 1 second or there is no optimal exposure and we have a bulb widget to trigger the custom time
     // 3. There is no optimal exposure and we have a bulb widget to trigger the custom time
     if (gphoto->exposureList == nullptr ||
-            ( (gphoto->bulb_port[0] || gphoto->dsusb) &&  (exptime_usec > 1e6 || optimalExposureIndex == -1)) ||
+            ( (gphoto->bulb_port[0] || gphoto->dsusb) &&  optimalExposureIndex == -1) ||
             //(gphoto->bulb_widget != nullptr && (exptime_usec > 1e6 || optimalExposureIndex == -1)))
             (gphoto->bulb_widget != nullptr && optimalExposureIndex == -1))
     {
