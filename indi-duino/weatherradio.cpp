@@ -330,7 +330,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("v", data, &n_bytes);
+    bool result = sendQuery("v\n", data, &n_bytes);
 
     if (result == true)
     {
@@ -608,7 +608,7 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("w", data, &n_bytes);
+    bool result = sendQuery("w\n", data, &n_bytes);
 
     if (result == true)
     {
