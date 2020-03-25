@@ -250,7 +250,8 @@ class LX200StarGo : public LX200Telescope
         bool setSlewMode(int slewMode);
 
         // tracking adjustment
-        bool setTrackingAdjustment(double adjust);
+        bool setTrackingAdjustment(double adjustRA);
+        bool getTrackingAdjustment(double *valueRA);
 
 };
 inline bool LX200StarGo::sendQuery(const char* cmd, char* response, int wait)

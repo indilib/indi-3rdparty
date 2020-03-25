@@ -752,6 +752,17 @@ void LX200StarGo::getBasicData()
         }
         IDSetSwitch(&ST4StatusSP, nullptr);
 
+        double raCorrection;
+        if (getTrackingAdjustment(&raCorrection))
+        {
+            TrackingAdjustment[0].value = raCorrection;
+            TrackingAdjustmentNP.s      = IPS_OK;
+        }
+        else
+            TrackingAdjustmentNP.s = IPS_ALERT;
+
+        IDSetNumber(&TrackingAdjustmentNP, nullptr);
+
         if (getKeypadStatus(&isEnabled))
         {
             KeypadStatusS[0].s = isEnabled ? ISS_OFF : ISS_ON;
@@ -804,6 +815,8 @@ void LX200StarGo::getBasicData()
         }
         IDSetNumber(&GuidingSpeedNP, nullptr);
     }
+
+
     LOGF_DEBUG("sendLocation %s && %s", sendLocationOnStartup ? "T" : "F",
                (GetTelescopeCapability() & TELESCOPE_HAS_LOCATION) ? "T" : "F");
     if (sendLocationOnStartup && (GetTelescopeCapability() & TELESCOPE_HAS_LOCATION))
@@ -1103,7 +1116,6 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
-    IUSaveConfigNumber(fp, &TrackingAdjustmentNP);
 
     focuserAux1->saveConfigItems(fp);
 
@@ -1958,53 +1970,71 @@ bool LX200StarGo::setSlewMode(int slewMode)
 /*
  * Adjust RA tracking speed.
  */
-bool LX200StarGo::setTrackingAdjustment(double adjust)
+bool LX200StarGo::setTrackingAdjustment(double adjustRA)
 {
     LOG_DEBUG(__FUNCTION__);
     char cmd[AVALON_COMMAND_BUFFER_LENGTH];
 
     /*
-     * X1Etttt#  where tttt are four decimal digits with a little bit trickly meaning.
-     * The cf  (correction factor) value will be: cf =  [10000 + (tttt - 1000)] / 10000
-     *
-     *       AdjustedSiderealSpeed = DefaultSiderealSpeed*cf
-     *
-     * So e.g.: if tttt = 1000 then cf = 1.0000 (No corr)
-     *          if tttt = 1027 then cf = 1.0027 i.e.  27 on 10000  (0.27%  faster)
-     *          if tttt = 0973 then cf = 0.9973 i.e. -27 on 10000  (0.27% slower)
+     * :X41sRRR# to adjust the RA tracking speed where s is the sign + or -  and RRR are three digits whose meaning is parts per 10000 of  RA correction .
+     * :X43sDDD# to fix the cf DEC offset
      */
 
     // ensure that -5 <= adjust <= 5
-    if (adjust > 5.0)
+    if (adjustRA > 5.0)
     {
-        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Maximal value is 5.0%%", adjust);
+        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Maximal value is 5.0%%", adjustRA);
         return false;
     }
-    else if (adjust < -5.0)
+    else if (adjustRA < -5.0)
     {
-        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Minimal value is -5.0%%", adjust);
+        LOGF_ERROR("Adjusting tracking by %0.2f%% not allowed. Minimal value is -5.0%%", adjustRA);
         return false;
     }
 
-    int parameter = static_cast<int>(adjust * 100) + 1000;
+    int parameter = static_cast<int>(adjustRA * 100);
+    sprintf(cmd, ":X41%+03i#", parameter);
 
-    sprintf(cmd, ":X1E%04u#", parameter);
-
-    // no response expected
     if(!transmit(cmd))
     {
-        LOGF_ERROR("Cannot adjust tracking by %d%%", adjust);
+        LOGF_ERROR("Cannot adjust tracking by %d%%", adjustRA);
         return false;
     }
-    if (adjust == 0.0)
+    if (adjustRA == 0.0)
         LOG_INFO("RA tracking adjustment cleared.");
-    else if (adjust > 0.0)
-        LOGF_INFO("RA tracking adjustment to +%0.2f%% succeded.", adjust);
     else
-        LOGF_INFO("RA tracking adjustment to %0.2f%% succeded.", adjust);
+        LOGF_INFO("RA tracking adjustment to %+0.2f%% succeded.", adjustRA);
 
     return true;
 }
+
+
+bool LX200StarGo::getTrackingAdjustment(double *valueRA)
+{
+    /*
+     * :X42# to read the tracking adjustment value as orsRRR#
+     * :X44# to read the tracking adjustment value as odsDDD#
+
+     */
+    LOG_DEBUG(__FUNCTION__);
+    int raValue;
+    char response[RB_MAX_LEN] = {0};
+
+    if (!sendQuery(":X42#", response))
+        return false;
+
+    if (sscanf(response, "or%04i#", &raValue) < 1)
+    {
+        LOG_ERROR("Unable to parse response");
+        return false;
+    }
+
+    *valueRA = static_cast<double>(raValue / 100.0);
+    return true;
+}
+
+
+
 bool LX200StarGo::SetMeridianFlipMode(int index)
 {
     // 0: Auto mode: Enabled and not Forced
