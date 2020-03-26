@@ -38,6 +38,7 @@ class Relay
         bool update(ISState *states, char *names[], int n);
         const std::string &name() const;
         bool isEnabled() const;
+        void setEnabled(bool enabled);
 
     private:
 
@@ -97,6 +98,15 @@ class DragonFlyDome : public INDI::Dome
         /// Relays
         ///////////////////////////////////////////////////////////////////////////////
         bool setRelayEnabled(uint8_t id, bool enabled);
+        bool openRoof();
+        bool closeRoof();
+        bool updateRelays();
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Sensors
+        ///////////////////////////////////////////////////////////////////////////////
+        bool isSensorOn(uint8_t id);
+        bool updateSensors();
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Communication Functions
@@ -127,14 +137,7 @@ class DragonFlyDome : public INDI::Dome
         ISwitch MotorTypeS[4];
         enum { MOTOR_UNIPOLAR, MOTOR_BIPOLAR, MOTOR_DC, MOTOR_STEPDIR };
 
-        // Relays
-        std::vector<std::unique_ptr<Relay>> Relays;
-
-        // Sensors
-        INumberVectorProperty SensorNP;
-        INumber SensorN[8];
-
-        // Dome Relays
+        // Roof Control Relays
         INumberVectorProperty DomeRelayNP;
         INumber DomeRelayN[2];
         enum
@@ -143,7 +146,10 @@ class DragonFlyDome : public INDI::Dome
             RELAY_CLOSE,
         };
 
-        // Dome Sensors
+        // All Relays
+        std::vector<std::unique_ptr<Relay>> Relays;
+
+        // Roof Control Sensors
         INumberVectorProperty DomeSensorNP;
         INumber DomeSensorN[4];
         enum
@@ -153,6 +159,10 @@ class DragonFlyDome : public INDI::Dome
             SENSOR_UNPARKED,
             SENSOR_PARKED,
         };
+
+        // All Sensors
+        INumberVectorProperty SensorNP;
+        INumber SensorN[8];
 
         // Motor Settings
         INumberVectorProperty SettingNP;
@@ -166,13 +176,13 @@ class DragonFlyDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////
         /// Private Variables
         ///////////////////////////////////////////////////////////////////////
-        bool m_IsMoving {false};
-        uint32_t m_LastSteps {0};
+        uint32_t m_UpdateRelayCounter {0};
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
         /////////////////////////////////////////////////////////////////////////////
         static constexpr const char * SETTINGS_TAB = "Settings";
+        static constexpr const char * MOTOR_TAB = "Motor";
         static constexpr const char * RELAYS_TAB = "Relays";
         static constexpr const char * SENSORS_TAB = "Sensors";
         // '#' is the stop char
@@ -185,5 +195,7 @@ class DragonFlyDome : public INDI::Dome
         static constexpr const uint8_t DRIVER_OPERATIVES {2};
         // Models
         static constexpr const uint8_t DRIVER_MODELS {4};
+        // Sensor ON threshold
+        static constexpr const uint8_t SENSOR_THRESHOLD {50};
 
 };

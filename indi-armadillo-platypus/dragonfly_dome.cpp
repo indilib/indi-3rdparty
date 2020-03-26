@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <cassert>
 #include <memory>
 #include <regex>
 
@@ -107,6 +108,12 @@ bool Relay::isEnabled() const
     return IUFindOnSwitchIndex(&RelaySP) == DD::INDI_ENABLED;
 }
 
+void Relay::setEnabled(bool enabled)
+{
+    RelayS[DD::INDI_ENABLED].s  = enabled ? ISS_ON : ISS_OFF;
+    RelayS[DD::INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
+}
+
 void Relay::sync(IPState state)
 {
     RelaySP.s = state;
@@ -128,23 +135,21 @@ bool DragonFlyDome::initProperties()
 {
     INDI::Dome::initProperties();
 
-    // Peripheral Port
-    IUFillSwitch(&PerPortS[PORT_MAIN], "PORT_MAIN", "Main", ISS_ON );
-    IUFillSwitch(&PerPortS[PORT_EXP], "PORT_EXP", "Exp", ISS_OFF );
-    IUFillSwitch(&PerPortS[PORT_THIRD], "PORT_THIRD", "Third", ISS_OFF );
-    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "SELETEK_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // #1 Motor Controls
+    ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // HalfStep
     IUFillSwitch(&HalfStepS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
     IUFillSwitch(&HalfStepS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_OFF);
-    IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "ROTATOR_HALF_STEP", "Half Step", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "DOME_HALF_STEP", "Half Step", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Wiring
     IUFillSwitch(&WiringS[WIRING_LUNATICO_NORMAL], "WIRING_LUNATICO_NORMAL", "Lunatico Normal", ISS_ON);
     IUFillSwitch(&WiringS[WIRING_LUNATICO_REVERSED], "WIRING_LUNATICO_REVERSED", "Lunatico Reverse", ISS_OFF);
     IUFillSwitch(&WiringS[WIRING_RFMOONLITE_NORMAL], "WIRING_RFMOONLITE_NORMAL", "RF/Moonlite Normal", ISS_OFF);
     IUFillSwitch(&WiringS[WIRING_RFMOONLITE_REVERSED], "WIRING_RFMOONLITE_REVERSED", "RF/Moonlite Reverse", ISS_OFF);
-    IUFillSwitchVector(&WiringSP, WiringS, 4, getDeviceName(), "ROTATOR_WIRING", "Wiring", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&WiringSP, WiringS, 4, getDeviceName(), "DOME_WIRING", "Wiring", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Max Speed
     // our internal speed is in usec/step, with a reasonable range from 500.000.usec for dc motors simulating steps to
@@ -157,20 +162,24 @@ bool DragonFlyDome::initProperties()
     IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
     IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
     IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.f", 100., 100000., 100., 1000.);
-    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0, IPS_OK);
+    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "DOME_SETTINGS", "Parameters", MOTOR_TAB, IP_RW, 0, IPS_OK);
 
     // Motor Types
     IUFillSwitch(&MotorTypeS[MOTOR_UNIPOLAR], "MOTOR_UNIPOLAR", "Unipolar", ISS_ON);
     IUFillSwitch(&MotorTypeS[MOTOR_BIPOLAR], "MOTOR_BIPOLAR", "Bipolar", ISS_OFF);
     IUFillSwitch(&MotorTypeS[MOTOR_DC], "MOTOR_DC", "DC", ISS_OFF);
     IUFillSwitch(&MotorTypeS[MOTOR_STEPDIR], "MOTOR_STEPDIR", "Step-Dir", ISS_OFF);
-    IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "ROTATOR_MOTOR_TYPE", "Motor Type", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "DOME_MOTOR_TYPE", "Motor Type", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    // Firmware Version
-    IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // #2 Relays
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Dome Relays
+    IUFillNumber(&DomeRelayN[RELAY_OPEN], "RELAY_OPEN", "Open Relay", "%.f", 1., 8., 1., 1.);
+    IUFillNumber(&DomeRelayN[RELAY_CLOSE], "RELAY_CLOSE", "Close Relay", "%.f", 1., 8., 1., 1.);
+    IUFillNumberVector(&DomeRelayNP, DomeRelayN, 2, getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control", RELAYS_TAB, IP_RW, 0, IPS_OK);
 
-    // Relays
+    // All Relays
     for (uint8_t i = 0; i < 8; i++)
     {
         std::unique_ptr<Relay> oneRelay;
@@ -178,8 +187,42 @@ bool DragonFlyDome::initProperties()
         Relays.push_back(std::move(oneRelay));
     }
 
-    addDebugControl();
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // #3 Sensors
+    ///////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Dome Control Sensors
+    IUFillNumber(&DomeSensorN[SENSOR_OPENED], "SENSOR_OPENED", "Opened", "%.f", 1., 8., 1., 1.);
+    IUFillNumber(&DomeSensorN[SENSOR_CLOSED], "SENSOR_CLOSED", "Closed", "%.f", 1., 8., 1., 1.);
+    IUFillNumber(&DomeSensorN[SENSOR_UNPARKED], "SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
+    IUFillNumber(&DomeSensorN[SENSOR_PARKED], "SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
+    IUFillNumberVector(&DomeSensorNP, DomeSensorN, 4, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors", SENSORS_TAB, IP_RW, 0, IPS_OK);
+
+    // ALL Sensors
+    char sensorName[MAXINDINAME] = {0}, sensorLabel[MAXINDILABEL] = {0};
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        snprintf(sensorName, MAXINDINAME, "SENSOR_%d", i + 1);
+        snprintf(sensorLabel, MAXINDILABEL, "Sensor #%d", i + 1);
+        IUFillNumber(&SensorN[i], sensorName, sensorLabel, "%.f", 0, 1024, 1, 0);
+    }
+    IUFillNumberVector(&SensorNP, SensorN, 8, getDeviceName(), "DOME_SENSORS", "Sensors", SENSORS_TAB, IP_RO, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // #4 Misc
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Peripheral Port
+    IUFillSwitch(&PerPortS[PORT_MAIN], "PORT_MAIN", "Main", ISS_ON );
+    IUFillSwitch(&PerPortS[PORT_EXP], "PORT_EXP", "Exp", ISS_OFF );
+    IUFillSwitch(&PerPortS[PORT_THIRD], "PORT_THIRD", "Third", ISS_OFF );
+    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "SELETEK_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    // Firmware Version
+    IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    addDebugControl();
     serialConnection->setDefaultBaudRate(Connection::Serial::B_115200);
 
     return true;
@@ -342,7 +385,7 @@ bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *stat
             return true;
         }
         /////////////////////////////////////////////
-        // Motor Type
+        // Relays
         /////////////////////////////////////////////
         for (uint8_t i = 0; i < 8; i++)
         {
@@ -496,29 +539,46 @@ bool DragonFlyDome::SetBacklashEnabled(bool enabled)
 ///////////////////////////////////////////////////////////////////////////
 void DragonFlyDome::TimerHit()
 {
-    //uint32_t res {0};
+    // Update all sensors
+    if (updateSensors())
+        IDSetNumber(&SensorNP, nullptr);
 
-    //    if (getParam("getpos", res))
-    //    {
-    //        if (res != m_LastSteps)
-    //        {
-    //            m_LastSteps = res;
-    //            double newPosition = range360(res / SettingN[PARAM_STEPS_DEGREE].value);
-    //            GotoRotatorN[0].value = newPosition;
-    //            IDSetNumber(&GotoRotatorNP, nullptr);
-    //        }
-    //        else
-    //            m_IsMoving = false;
+    // Update all relays every 3rd timer hit
+    m_UpdateRelayCounter++;
+    if (m_UpdateRelayCounter >= 3)
+    {
+        m_UpdateRelayCounter = 0;
+        if (updateRelays())
+        {
+            for (const auto &oneRelay : Relays)
+                oneRelay->sync(oneRelay->isEnabled() ? IPS_OK : IPS_IDLE);
+        }
+    }
 
-    //        if (GotoRotatorNP.s == IPS_BUSY)
-    //        {
-    //            if (m_IsMoving == false)
-    //            {
-    //                GotoRotatorNP.s = IPS_OK;
-    //                IDSetNumber(&GotoRotatorNP, nullptr);
-    //            }
-    //        }
-    //    }
+    // If we are in motion
+    if (DomeMotionSP.s == IPS_BUSY)
+    {
+        // Roll off is opening
+        if (DomeMotionS[DOME_CW].s == ISS_ON)
+        {
+            if (isSensorOn(DomeSensorN[SENSOR_UNPARKED].value))
+            {
+                LOG_INFO("Roof is unparked.");
+                SetParked(false);
+                return;
+            }
+        }
+        // Roll Off is closing
+        else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+        {
+            if (isSensorOn(DomeSensorN[SENSOR_PARKED].value))
+            {
+                LOG_INFO("Roof is parked.");
+                SetParked(true);
+                return;
+            }
+        }
+    }
 
     SetTimer(POLLMS);
 }
@@ -528,13 +588,29 @@ void DragonFlyDome::TimerHit()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::Abort()
 {
-    char cmd[DRIVER_LEN] = {0};
-    int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!step stop %d", IUFindOnSwitchIndex(&PerPortSP));
-    if (sendCommand(cmd, res))
-        return res == 0;
+    if (getDomeState() == DOME_MOVING)
+    {
+        return setRelayEnabled(DomeRelayN[RELAY_OPEN].value, false) &&
+               setRelayEnabled(DomeRelayN[RELAY_CLOSE].value, false);
+    }
 
-    return false;
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::openRoof()
+{
+    return setRelayEnabled(DomeRelayN[RELAY_OPEN].value, true);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::closeRoof()
+{
+    return setRelayEnabled(DomeRelayN[RELAY_CLOSE].value, true);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -544,14 +620,37 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
 {
     if (operation == MOTION_START)
     {
-        double nextTarget = range360(DomeAbsPosN[0].value + (dir == DOME_CW ? 10 : -10));
-        LOGF_INFO("Moving %s by 10 degrees...", (dir == DOME_CW ? "CW" : "CCW"));
-        return MoveAbs(nextTarget);
+        // DOME_CW --> OPEN. If can we are ask to "open" while we are fully opened as the limit switch indicates, then we simply return false.
+        if (dir == DOME_CW && isSensorOn(DomeSensorN[SENSOR_OPENED].value))
+        {
+            LOG_WARN("Roof is already fully opened.");
+            return IPS_ALERT;
+        }
+        else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
+        {
+            LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
+            return IPS_ALERT;
+        }
+        else if (dir == DOME_CCW && isSensorOn(DomeSensorN[SENSOR_CLOSED].value))
+        {
+            LOG_WARN("Roof is already fully closed.");
+            return IPS_ALERT;
+        }
+        else if (dir == DOME_CCW && INDI::Dome::isLocked())
+        {
+            DEBUG(INDI::Logger::DBG_WARNING, "Cannot close roof when mount is locking. See: Telescope parking policy in options tab.");
+            return IPS_ALERT;
+        }
+
+        if (dir == DOME_CW)
+            openRoof();
+        else
+            closeRoof();
+
+        return IPS_BUSY;
     }
-    else
-    {
-        return (Abort() ? IPS_OK : IPS_ALERT);
-    }
+
+    return (Dome::Abort() ? IPS_OK : IPS_ALERT);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -559,20 +658,14 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
 //////////////////////////////////////////////////////////////////////////////
 IPState DragonFlyDome::Park()
 {
-    MoveAbs(GetAxis1Park());
-
-    LOGF_INFO("Parking to %.2f azimuth...", GetAxis1Park());
-
-    //    if (HasShutter() && IUFindOnSwitchIndex(&CloseShutterOnParkSP) == ND::ENABLED)
-    //    {
-    //        LOG_INFO("Closing shutter on parking...");
-    //        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
-    //        DomeShutterS[SHUTTER_OPEN].s = ISS_OFF;
-    //        DomeShutterS[SHUTTER_CLOSE].s = ISS_ON;
-    //        setShutterState(SHUTTER_MOVING);
-    //    }
-
-    return IPS_BUSY;
+    IPState rc = INDI::Dome::Move(DOME_CCW, MOTION_START);
+    if (rc == IPS_BUSY)
+    {
+        LOG_INFO("Roll off is parking...");
+        return IPS_BUSY;
+    }
+    else
+        return IPS_ALERT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -580,8 +673,14 @@ IPState DragonFlyDome::Park()
 //////////////////////////////////////////////////////////////////////////////
 IPState DragonFlyDome::UnPark()
 {
-    SetParked(false);
-    return IPS_OK;
+    IPState rc = INDI::Dome::Move(DOME_CW, MOTION_START);
+    if (rc == IPS_BUSY)
+    {
+        LOG_INFO("Roll off is unparking...");
+        return IPS_BUSY;
+    }
+    else
+        return IPS_ALERT;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -594,8 +693,57 @@ bool DragonFlyDome::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &PerPortSP);
     IUSaveConfigSwitch(fp, &MotorTypeSP);
     IUSaveConfigNumber(fp, &SettingNP);
+    IUSaveConfigNumber(fp, &DomeRelayNP);
+    IUSaveConfigNumber(fp, &DomeSensorNP);
 
     return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Sensor ON?
+/////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::isSensorOn(uint8_t id)
+{
+    assert(id > 0 && id <= SensorNP.nnp);
+    return SensorN[id - 1].value > SENSOR_THRESHOLD;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// Update All Sensors
+/////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::updateSensors()
+{
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        int32_t res = 0;
+        snprintf(cmd, DRIVER_LEN, "relio snanre 0 %d", i);
+        if (!sendCommand(cmd, res))
+            return false;
+        SensorN[i].value = res;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Update All Relays
+/////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::updateRelays()
+{
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        int32_t res = 0;
+        snprintf(cmd, DRIVER_LEN, "relio rldgrd 0 %d", i);
+        if (!sendCommand(cmd, res))
+            return false;
+        Relays[i]->setEnabled(res == 0);
+    }
+
+    return true;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
