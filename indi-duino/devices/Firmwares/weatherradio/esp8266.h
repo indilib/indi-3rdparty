@@ -18,6 +18,11 @@
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PWD;
 
+struct {
+  bool status;
+  unsigned long lastRetry; // Last time the frequency had been measured
+} esp8266Data {false, 0};
+
 ESP8266WebServer server(80);
 
 void initWiFi() {
@@ -27,11 +32,25 @@ void initWiFi() {
   int count = 0;
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED && count++ < WIFI_TIMEOUT) {
+    esp8266Data.lastRetry = millis();
     delay(1000);
+    if (WiFi.status() == WL_CONNECTED) esp8266Data.status = true;
   }
 }
 
-void loop8266() {
+void wifiServerLoop() {
+  // retry a connect
+  if (esp8266Data.status == false && WiFi.status() != WL_CONNECTED) {
+    volatile unsigned long now = millis();
+    if (now - esp8266Data.lastRetry > 1000)
+    {
+      WiFi.begin();
+      esp8266Data.lastRetry = now;
+      if (WiFi.status() == WL_CONNECTED) esp8266Data.status = true;
+    }
+  }
+
+  // handle requests to the WiFi server
   server.handleClient();
 }
 #endif

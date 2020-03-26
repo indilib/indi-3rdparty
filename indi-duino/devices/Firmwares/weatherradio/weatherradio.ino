@@ -217,7 +217,7 @@ void loop() {
   int val;
 
 #ifdef USE_WIFI
-  server.handleClient();
+  wifiServerLoop();
 #endif
 
 #ifdef USE_TSL237_SENSOR
