@@ -53,12 +53,13 @@ except:
 updateString="N"
 templateString=""
 
-for key in data.keys():
-    updateString=updateString+":"+str(data[key])
-    if templateString:
-        templateString += ":"
-    templateString += key
+if data is not None:
+    for key in data.keys():
+        updateString=updateString+":"+str(data[key])
+        if templateString:
+            templateString += ":"
+            templateString += key
     
-ret = rrdtool.update(RRDSENSORSFILE, "--template", templateString ,updateString);
+    ret = rrdtool.update(RRDSENSORSFILE, "--template", templateString ,updateString);
 if ret:    
     print rrdtool.error() 
