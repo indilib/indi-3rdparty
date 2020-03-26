@@ -88,10 +88,6 @@ class DragonFlyDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         /// Set & Query Functions
         ///////////////////////////////////////////////////////////////////////////////
-        bool setParam(const std::string &param, uint32_t value);
-        bool getParam(const std::string &param, uint32_t &value);
-        bool setSpeedRange(uint32_t min, uint32_t max);
-        bool syncSettings();
         bool echo();
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -123,23 +119,9 @@ class DragonFlyDome : public INDI::Dome
         ISwitch PerPortS[3];
         enum { PORT_MAIN, PORT_EXP, PORT_THIRD };
 
-        // Motor wiring
-        ISwitchVectorProperty WiringSP;
-        ISwitch WiringS[4];
-        enum { WIRING_LUNATICO_NORMAL, WIRING_LUNATICO_REVERSED, WIRING_RFMOONLITE_NORMAL, WIRING_RFMOONLITE_REVERSED };
-
-        // Halfstep
-        ISwitchVectorProperty HalfStepSP;
-        ISwitch HalfStepS[2];
-
-        // Motor Mode
-        ISwitchVectorProperty MotorTypeSP;
-        ISwitch MotorTypeS[4];
-        enum { MOTOR_UNIPOLAR, MOTOR_BIPOLAR, MOTOR_DC, MOTOR_STEPDIR };
-
         // Roof Control Relays
-        INumberVectorProperty DomeRelayNP;
-        INumber DomeRelayN[2];
+        INumberVectorProperty DomeControlRelayNP;
+        INumber DomeControlRelayN[2];
         enum
         {
             RELAY_OPEN,
@@ -150,8 +132,8 @@ class DragonFlyDome : public INDI::Dome
         std::vector<std::unique_ptr<Relay>> Relays;
 
         // Roof Control Sensors
-        INumberVectorProperty DomeSensorNP;
-        INumber DomeSensorN[4];
+        INumberVectorProperty DomeControlSensorNP;
+        INumber DomeControlSensorN[4];
         enum
         {
             SENSOR_OPENED,
@@ -163,11 +145,6 @@ class DragonFlyDome : public INDI::Dome
         // All Sensors
         INumberVectorProperty SensorNP;
         INumber SensorN[8];
-
-        // Motor Settings
-        INumberVectorProperty SettingNP;
-        INumber SettingN[5];
-        enum { PARAM_MIN_SPEED, PARAM_MAX_SPEED, PARAM_MIN_LIMIT, PARAM_MAX_LIMIT, PARAM_STEPS_DEGREE };
 
         // Firmware Version
         IText FirmwareVersionT[1] {};
@@ -181,8 +158,6 @@ class DragonFlyDome : public INDI::Dome
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
         /////////////////////////////////////////////////////////////////////////////
-        static constexpr const char * SETTINGS_TAB = "Settings";
-        static constexpr const char * MOTOR_TAB = "Motor";
         static constexpr const char * RELAYS_TAB = "Relays";
         static constexpr const char * SENSORS_TAB = "Sensors";
         // '#' is the stop char
