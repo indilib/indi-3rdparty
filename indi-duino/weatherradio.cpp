@@ -39,6 +39,7 @@
 #include "config.h"
 
 const char *CALIBRATION_TAB = "Calibration";
+const char *TOKEN           = "token";
 
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
@@ -111,6 +112,7 @@ WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
     weatherCalculator = new WeatherCalculator();
+    currentRequestID = 0;
 }
 
 /**************************************************************************************
@@ -608,30 +610,62 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("w\n", data, &n_bytes);
+    int id = createRequestID();
+    char cmd[20] = {0};
+    sprintf(cmd, "w#%d\n", id);
+    bool result = sendQuery(cmd, data, &n_bytes);
 
-    if (result == true)
+    if (result == false)
+        return IPS_ALERT;
+    while (result == true)
     {
-        char *srcBuffer{new char[n_bytes+1] {0}};
+        char *src{new char[n_bytes+1] {0}};
         // duplicate the buffer since the parser will modify it
-        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
-        char *source = srcBuffer;
-        char *endptr;
-        JsonValue value;
-        JsonAllocator allocator;
-        int status = jsonParse(source, &endptr, &value, allocator);
-        if (status != JSON_OK)
-        {
-            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return IPS_ALERT;
+        strncpy(src, data, static_cast<size_t>(n_bytes));
+        int resultID;
+        result = parseWeatherData(src, &resultID);
+        // we got the answer maching our request
+        if (resultID == id)
+            return IPS_OK;
+
+        // read the next line
+        LOGF_WARN("Received no answer for request #%d. Retrying...", id);
+        result = receive(data, &n_bytes, '\n', getTTYTimeout());
+    }
+    // we reached the end of the response message
+    LOGF_WARN("Received no answer for request #%d.", id);
+   return IPS_OK;
+}
+
+/**************************************************************************************
+** Parse JSON weather document.
+***************************************************************************************/
+bool WeatherRadio::parseWeatherData(char *data, int *resultID)
+{
+    char *source = data;
+    char *endptr;
+    JsonValue value;
+    JsonAllocator allocator;
+    int status = jsonParse(source, &endptr, &value, allocator);
+    if (status != JSON_OK)
+    {
+        LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        return false;
+    }
+
+    JsonIterator deviceIter;
+    for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+    {
+        char *name {new char[strlen(deviceIter->key)+1] {0}};
+        strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+        if (strcmp(name, TOKEN) == 0) {
+            // request token
+            char* value = deviceIter->value.toString();
+            if (!sscanf(value, "%d", resultID))
+                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
         }
-
-        JsonIterator deviceIter;
-        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
-        {
-            char *name {new char[strlen(deviceIter->key)+1] {0}};
-            strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
-
+        else {
             JsonIterator sensorIter;
             INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
 
@@ -699,12 +733,11 @@ IPState WeatherRadio::updateWeather()
                 // update device values
                 IDSetNumber(deviceProp, nullptr);
             }
-
         }
-        return IPS_OK;
+
     }
-    else
-        return IPS_ALERT;
+    return true;
+
 }
 
 /**************************************************************************************
@@ -960,6 +993,11 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         return false;
     }
     return receive(response, length, '\n', getTTYTimeout());
+}
+
+int WeatherRadio::createRequestID()
+{
+    return currentRequestID++;
 }
 
 /**************************************************************************************
