@@ -194,7 +194,11 @@ bool DragonFlyDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #5 Misc.
     ///////////////////////////////////////////////////////////////////////////////////////////////
+    tcpConnection->setDefaultHost("192.168.1.1");
+    tcpConnection->setDefaultPort(10000);
     tcpConnection->setConnectionType(Connection::TCP::TYPE_UDP);
+    tty_set_skywatcher_udp_format(1);
+    tty_set_debug(1);
     addDebugControl();
     return true;
 }
@@ -242,8 +246,7 @@ bool DragonFlyDome::updateProperties()
 
 bool DragonFlyDome::Handshake()
 {
-    LOG_INFO("Error communicating with the DragonFly Dome. Please ensure it is powered and the port is correct.");
-    return false;
+    return echo();
 }
 
 const char *DragonFlyDome::getDefaultName()
@@ -612,10 +615,7 @@ bool DragonFlyDome::sendCommand(const char * cmd, int32_t &res)
 
     LOGF_DEBUG("CMD <%s>", cmd);
 
-    char formatted_command[DRIVER_LEN] = {0};
-    snprintf(formatted_command, DRIVER_LEN, "%s\r", cmd);
-    int rc = tty_write_string(PortFD, formatted_command, &nbytes_written);
-
+    int rc = tty_write_string(PortFD, cmd, &nbytes_written);
 
     if (rc != TTY_OK)
     {
