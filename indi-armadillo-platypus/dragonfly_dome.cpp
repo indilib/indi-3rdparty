@@ -137,48 +137,13 @@ bool DragonFlyDome::initProperties()
     INDI::Dome::initProperties();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // #1 Motor Controls
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-
-    // HalfStep
-    IUFillSwitch(&HalfStepS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
-    IUFillSwitch(&HalfStepS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_OFF);
-    IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "DOME_HALF_STEP", "Half Step", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    // Wiring
-    IUFillSwitch(&WiringS[WIRING_LUNATICO_NORMAL], "WIRING_LUNATICO_NORMAL", "Lunatico Normal", ISS_ON);
-    IUFillSwitch(&WiringS[WIRING_LUNATICO_REVERSED], "WIRING_LUNATICO_REVERSED", "Lunatico Reverse", ISS_OFF);
-    IUFillSwitch(&WiringS[WIRING_RFMOONLITE_NORMAL], "WIRING_RFMOONLITE_NORMAL", "RF/Moonlite Normal", ISS_OFF);
-    IUFillSwitch(&WiringS[WIRING_RFMOONLITE_REVERSED], "WIRING_RFMOONLITE_REVERSED", "RF/Moonlite Reverse", ISS_OFF);
-    IUFillSwitchVector(&WiringSP, WiringS, 4, getDeviceName(), "DOME_WIRING", "Wiring", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    // Max Speed
-    // our internal speed is in usec/step, with a reasonable range from 500.000.usec for dc motors simulating steps to
-    // 50 usec optimistic speed for very small steppers
-    // So our range is 10.000.-
-    // and the conversion is usec/step = 500000 - ((INDISpeed - 1) * 50)
-    // with our default and standard 10.000usec being 9800 (9801 actually)
-    IUFillNumber(&SettingN[PARAM_MIN_SPEED], "PARAM_MIN_SPEED", "Min Speed", "%.f", 1., 10000., 100., 9800.);
-    IUFillNumber(&SettingN[PARAM_MAX_SPEED], "PARAM_MAX_SPEED", "Max Speed", "%.f", 1., 10000., 100., 9800.);
-    IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
-    IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
-    IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.f", 100., 100000., 100., 1000.);
-    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "DOME_SETTINGS", "Parameters", MOTOR_TAB, IP_RW, 0, IPS_OK);
-
-    // Motor Types
-    IUFillSwitch(&MotorTypeS[MOTOR_UNIPOLAR], "MOTOR_UNIPOLAR", "Unipolar", ISS_ON);
-    IUFillSwitch(&MotorTypeS[MOTOR_BIPOLAR], "MOTOR_BIPOLAR", "Bipolar", ISS_OFF);
-    IUFillSwitch(&MotorTypeS[MOTOR_DC], "MOTOR_DC", "DC", ISS_OFF);
-    IUFillSwitch(&MotorTypeS[MOTOR_STEPDIR], "MOTOR_STEPDIR", "Step-Dir", ISS_OFF);
-    IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "DOME_MOTOR_TYPE", "Motor Type", MOTOR_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // #2 Relays
+    // #1 Relays
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Dome Relays
     IUFillNumber(&DomeControlRelayN[RELAY_OPEN], "RELAY_OPEN", "Open Relay", "%.f", 1., 8., 1., 1.);
     IUFillNumber(&DomeControlRelayN[RELAY_CLOSE], "RELAY_CLOSE", "Close Relay", "%.f", 1., 8., 1., 1.);
-    IUFillNumberVector(&DomeControlRelayNP, DomeControlRelayN, 2, getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control", RELAYS_TAB, IP_RW, 0, IPS_OK);
+    IUFillNumberVector(&DomeControlRelayNP, DomeControlRelayN, 2, getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control",
+                       RELAYS_TAB, IP_RW, 0, IPS_OK);
 
     // All Relays
     for (uint8_t i = 0; i < 8; i++)
@@ -189,7 +154,7 @@ bool DragonFlyDome::initProperties()
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // #3 Sensors
+    // #2 Sensors
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Dome Control Sensors
@@ -197,7 +162,8 @@ bool DragonFlyDome::initProperties()
     IUFillNumber(&DomeControlSensorN[SENSOR_CLOSED], "SENSOR_CLOSED", "Closed", "%.f", 1., 8., 1., 1.);
     IUFillNumber(&DomeControlSensorN[SENSOR_UNPARKED], "SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
     IUFillNumber(&DomeControlSensorN[SENSOR_PARKED], "SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
-    IUFillNumberVector(&DomeControlSensorNP, DomeControlSensorN, 4, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors", SENSORS_TAB, IP_RW, 0, IPS_OK);
+    IUFillNumberVector(&DomeControlSensorNP, DomeControlSensorN, 4, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
+                       SENSORS_TAB, IP_RW, 0, IPS_OK);
 
     // ALL Sensors
     char sensorName[MAXINDINAME] = {0}, sensorLabel[MAXINDILABEL] = {0};
@@ -210,18 +176,20 @@ bool DragonFlyDome::initProperties()
     IUFillNumberVector(&SensorNP, SensorN, 8, getDeviceName(), "DOME_SENSORS", "Sensors", SENSORS_TAB, IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // #4 Communication & Firmware
+    // #3 Communication & Firmware
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Peripheral Port
     IUFillSwitch(&PerPortS[PORT_MAIN], "PORT_MAIN", "Main", ISS_ON );
     IUFillSwitch(&PerPortS[PORT_EXP], "PORT_EXP", "Exp", ISS_OFF );
     IUFillSwitch(&PerPortS[PORT_THIRD], "PORT_THIRD", "Third", ISS_OFF );
-    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "DRAGONFLY_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "DRAGONFLY_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
+                       0, IPS_IDLE);
 
     // Firmware Version
     IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
+                     IP_RO, 0, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #5 Misc.
