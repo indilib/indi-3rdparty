@@ -96,23 +96,23 @@ String getCurrentConfig() {
   StaticJsonDocument <docSize> doc;
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
-  dhtdata["pin"] = DHTPIN;
+  dhtdata["pin"]  = DHTPIN;
   dhtdata["type"] = DHTTYPE;
 #endif
 
 #ifdef USE_DAVIS_SENSOR
-  JsonObject davisdata = doc.createNestedObject("Davis Anemometer");
-  davisdata["wind speed pin"] = ANEMOMETER_WINDSPEEDPIN;
-  davisdata["wind direction pin"] = ANEMOMETER_WINDDIRECTIONPIN;
+  JsonObject davisdata               = doc.createNestedObject("Davis Anemometer");
+  davisdata["wind speed pin"]        = ANEMOMETER_WINDSPEEDPIN;
+  davisdata["wind direction pin"]    = ANEMOMETER_WINDDIRECTIONPIN;
   davisdata["wind direction offset"] = ANEMOMETER_WINDOFFSET;
 #endif
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
   if (WiFi.status() == WL_CONNECTED)
-    wifidata["IP"] = WiFi.localIP().toString();
+    wifidata["IP"]        = WiFi.localIP().toString();
   else
-    wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
+    wifidata["connected"] = WiFi.status() == WL_CONNECTED;
 
   wifidata["SSID"] = WIFI_SSID;
 #endif

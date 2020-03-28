@@ -285,6 +285,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(FirmwareInfoTP.name);
+        deleteProperty(FirmwareConfigTP.name);
 
         result = INDI::Weather::updateProperties();
 
@@ -323,6 +324,23 @@ void WeatherRadio::getBasicData()
 
     defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
+
+    configuration config;
+    readFirmwareConfig(&config);
+
+    IText *configSettings = new IText[config.size()];
+    std::map<std::string, std::string>::iterator it;
+    size_t pos = 0;
+
+    for (it = config.begin(); it != config.end(); ++it)
+    {
+        configSettings[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
+        IUFillText(&configSettings[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+    }
+
+    IUFillTextVector(&FirmwareConfigTP, configSettings, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
+    defineText(&FirmwareConfigTP);
+
 }
 
 /**************************************************************************************
@@ -360,6 +378,79 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
     }
     return IPS_ALERT;
 }
+
+/**************************************************************************************
+** Read the configuration parameters from the firmware
+***************************************************************************************/
+IPState WeatherRadio::readFirmwareConfig(configuration *config)
+{
+    char data[MAX_WEATHERBUFFER] = {0};
+    int n_bytes = 0;
+    bool result = sendQuery("c\n", data, &n_bytes);
+
+    if (result)
+    {
+        char *source = data;
+        char *endptr;
+        JsonValue value;
+        JsonAllocator allocator;
+        int status = jsonParse(source, &endptr, &value, allocator);
+        if (status != JSON_OK)
+        {
+            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+            return IPS_ALERT;
+        }
+
+        JsonIterator deviceIter;
+        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+        {
+            char *device {new char[strlen(deviceIter->key)+1] {0}};
+            strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+            JsonIterator configIter;
+
+            // read settings for the single device
+            for (configIter = begin(deviceIter->value); configIter != end(deviceIter->value); ++configIter)
+            {
+                char *name {new char[strlen(configIter->key)+1] {0}};
+
+                // copy single setting
+                strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+                std::string value;
+                double number;
+
+                switch (configIter->value.getTag()) {
+                case JSON_NUMBER:
+                    number = configIter->value.toNumber();
+                    if (trunc(number) == number)
+                        value = std::to_string(int(number));
+                    else
+                        value = std::to_string(number);
+                    break;
+                case JSON_TRUE:
+                    value = "true";
+                    break;
+                case JSON_FALSE:
+                    value = "false";
+                    break;
+                default:
+                    value = configIter->value.toString();
+                    break;
+                }
+                // add it to the configuration
+                (*config)[std::string(device) + ": " + std::string(name)] = std::string(value);
+            }
+
+        }
+        return IPS_OK;
+    }
+    else
+    {
+        LOG_WARN("Retrieving firmware config failed.");
+        return IPS_ALERT;
+    }
+}
+
 
 /**************************************************************************************
 ** Create a selection of sensors for a certain weather property.
@@ -824,7 +915,6 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     else if (currentSensors.wind_direction == sensor)
         setParameterValue(WEATHER_WIND_DIRECTION, weatherCalculator->calibratedWindDirection(value));
 }
-
 
 /**************************************************************************************
 **

@@ -38,7 +38,7 @@
 // Davis Anemometer
 #define ANEMOMETER_WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
 #define ANEMOMETER_WINDDIRECTIONPIN A0 // The analog pin for the wind direction
-#define ANEMOMETER_WINDOFFSET 0;       // anemometer arm direction (0=N, 90=E, ...)
+#define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
 // ============== device configurations (end) ==============
 
