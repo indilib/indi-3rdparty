@@ -16,16 +16,20 @@
 import sys
 from indiclient import *
 from weatherradio import *
+from os import path
 import argparse
-import rrdtool
 
 parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
 parser.add_argument("-v", "--verbose", action='store_true',
                     help="Display progress information")
+parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+                    help="RRD file holding all time series")
+parser.add_argument("rrdsensorsfile", nargs='?', default=RRDSENSORSFILE,
+                    help="RRD file holding all sensor data time series")
 
 args = parser.parse_args()
-data = None
 indi = None
+
 
 try:
     if (args.verbose):
@@ -41,7 +45,15 @@ try:
         if (args.verbose):
             print "Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
 
-        data = readWeather(indi)
+        data = None
+        if path.exists(args.rrdfile):
+            data = readWeather(indi)
+            updateRRD(args.rrdfile, data)
+
+        data = None
+        if path.exists(args.rrdsensorsfile):
+            data = readSensors(indi)
+            updateRRD(args.rrdsensorsfile, data)
 
         if (args.verbose):
             print "Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
@@ -56,18 +68,3 @@ except:
     if indi != None:
         indi.quit()
     sys.exit()
-
-
-updateString="N"
-templateString=""
-
-if data is not None:
-    for key in data.keys():
-        updateString=updateString+":"+str(data[key])
-        if templateString:
-            templateString += ":"
-        templateString += key
-
-    ret = rrdtool.update(RRDFILE, "--template", templateString ,updateString);
-    if ret:
-	print rrdtool.error() 
