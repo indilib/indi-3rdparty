@@ -360,6 +360,15 @@ void EQMod::ISGetProperties(const char *dev)
             defineSwitch(DEPPECSP);
         }
 
+        if (mount->HasSnapPort1())
+        {
+            defineSwitch(SNAPPORT1SP);
+        }
+        if (mount->HasSnapPort2())
+        {
+            defineSwitch(SNAPPORT2SP);
+        }
+
 #ifdef WITH_ALIGN_GEEHALEL
         if (align)
         {
@@ -420,6 +429,8 @@ bool EQMod::loadProperties()
     DEPPECTrainingSP    = getSwitch("DE_PPEC_TRAINING");
     DEPPECSP            = getSwitch("DE_PPEC");
     LEDBrightnessNP     = getNumber("LED_BRIGHTNESS");
+    SNAPPORT1SP         = getSwitch("SNAPPORT1");
+    SNAPPORT2SP         = getSwitch("SNAPPORT2");
 #ifdef WITH_ALIGN_GEEHALEL
     align->initProperties();
 #endif
@@ -573,6 +584,15 @@ bool EQMod::updateProperties()
             mount->SetBacklashRA((uint32_t)(IUFindNumber(BacklashNP, "BACKLASHRA")->value));
             mount->SetBacklashDE((uint32_t)(IUFindNumber(BacklashNP, "BACKLASHDE")->value));
 
+            if (mount->HasSnapPort1())
+            {
+                defineSwitch(SNAPPORT1SP);
+            }
+            if (mount->HasSnapPort2())
+            {
+                defineSwitch(SNAPPORT2SP);
+            }
+
             mount->Init();
 
             zeroRAEncoder  = mount->GetRAEncoderZero();
@@ -649,6 +669,14 @@ bool EQMod::updateProperties()
             deleteProperty(RAPPECSP->name);
             deleteProperty(DEPPECTrainingSP->name);
             deleteProperty(DEPPECSP->name);
+        }
+        if (mount->HasSnapPort1())
+        {
+            deleteProperty(SNAPPORT1SP->name);
+        }
+        if (mount->HasSnapPort2())
+        {
+            deleteProperty(SNAPPORT2SP->name);
         }
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         deleteProperty(AlignMethodSP.name);
@@ -3062,6 +3090,52 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 return true;
             }
         }
+
+        if (mount->HasSnapPort1())
+        {
+            if (SNAPPORT1SP && strcmp(name, SNAPPORT1SP->name) == 0)
+            {
+                IUUpdateSwitch(SNAPPORT1SP, states, names, n);
+                if (SNAPPORT1SP->sp[1].s == ISS_ON)
+                {
+                    SNAPPORT1SP->s = IPS_OK;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 1 on.");
+                    mount->TurnSnapPort1(true);
+                }
+                else
+                {
+                    SNAPPORT1SP->s = IPS_IDLE;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 1 off.");
+                    mount->TurnSnapPort1(false);
+                }
+                IDSetSwitch(SNAPPORT1SP, nullptr);
+                return true;
+            }
+        }
+
+        if (mount->HasSnapPort2())
+        {
+            if (SNAPPORT2SP && strcmp(name, SNAPPORT2SP->name) == 0)
+            {
+                IUUpdateSwitch(SNAPPORT2SP, states, names, n);
+                if (SNAPPORT2SP->sp[1].s == ISS_ON)
+                {
+                    SNAPPORT2SP->s = IPS_OK;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 2 on.");
+                    mount->TurnSnapPort2(true);
+                }
+                else
+                {
+                    SNAPPORT2SP->s = IPS_IDLE;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 2 off.");
+                    mount->TurnSnapPort2(false);
+                }
+                IDSetSwitch(SNAPPORT2SP, nullptr);
+                return true;
+            }
+        }
+
+
 
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
         if (AlignSyncModeSP && strcmp(name, AlignSyncModeSP->name) == 0)
