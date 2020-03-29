@@ -84,8 +84,7 @@ void ISInit()
             }
         }
         if (cameraCount <= 0)
-            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
-
+            IDMessage(nullptr, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
 
         atexit(cleanup);
         isInit = true;
