@@ -29,10 +29,6 @@
 class WeatherCalculator
 {
 public:
-    //Clear sky corrected temperature (temp below means 0% clouds)
-    #define CLOUD_TEMP_CLEAR  -8
-    //Totally cover sky corrected temperature (temp above means 100% clouds)
-    #define CLOUD_TEMP_OVERCAST  0
 
     WeatherCalculator() = default;
     ~WeatherCalculator() = default;
@@ -48,10 +44,10 @@ public:
     {
         double correctedTemperature = skyTemperatureCorr(ambientTemperature, skyTemperature);
 
-        if (correctedTemperature < CLOUD_TEMP_CLEAR) correctedTemperature = CLOUD_TEMP_CLEAR;
-        if (correctedTemperature > CLOUD_TEMP_OVERCAST) correctedTemperature = CLOUD_TEMP_OVERCAST;
+        if (correctedTemperature < skyTemperatureCoefficients.t_clear) correctedTemperature = skyTemperatureCoefficients.t_clear;
+        if (correctedTemperature > skyTemperatureCoefficients.t_overcast) correctedTemperature = skyTemperatureCoefficients.t_overcast;
 
-        return (correctedTemperature - CLOUD_TEMP_CLEAR) * 100 / (CLOUD_TEMP_OVERCAST - CLOUD_TEMP_CLEAR);
+        return (correctedTemperature - skyTemperatureCoefficients.t_clear) * 100 / (skyTemperatureCoefficients.t_overcast - skyTemperatureCoefficients.t_clear);
     }
 
 
@@ -103,6 +99,9 @@ public:
     // Calibration coefficients for cloud coverage calculation
     struct {
         double k1 = 33.0, k2 = 0.0,  k3 = 4.0, k4 = 100.0, k5 = 100.0;
+        //Clear sky corrected temperature (temp below means 0% clouds)
+        //Totally cover sky corrected temperature (temp above means 100% clouds)
+        double t_clear = 0, t_overcast = -8;
     } skyTemperatureCoefficients;
 
 

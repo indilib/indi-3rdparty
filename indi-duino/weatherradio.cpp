@@ -131,12 +131,14 @@ bool WeatherRadio::initProperties()
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
     // calibration parameters
-    IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.3f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
-    IUFillNumber(&skyTemperatureCalibrationN[1], "K2", "K2", "%.3f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k2);
-    IUFillNumber(&skyTemperatureCalibrationN[2], "K3", "K3", "%.3f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k3);
-    IUFillNumber(&skyTemperatureCalibrationN[3], "K4", "K4", "%.3f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k4);
-    IUFillNumber(&skyTemperatureCalibrationN[4], "K5", "K5", "%.3f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k5);
-    IUFillNumberVector(&skyTemperatureCalibrationNP, skyTemperatureCalibrationN, 5, getDeviceName(), "SKY_TEMP_CALIBRATION", "Sky Temp calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+    IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
+    IUFillNumber(&skyTemperatureCalibrationN[1], "K2", "K2", "%.2f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k2);
+    IUFillNumber(&skyTemperatureCalibrationN[2], "K3", "K3", "%.2f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k3);
+    IUFillNumber(&skyTemperatureCalibrationN[3], "K4", "K4", "%.2f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k4);
+    IUFillNumber(&skyTemperatureCalibrationN[4], "K5", "K5", "%.2f", -100, 200, 1, weatherCalculator->skyTemperatureCoefficients.k5);
+    IUFillNumber(&skyTemperatureCalibrationN[5], "T_CLEAR", "clear sky (°C)", "%.2f", -20, 20, 1, weatherCalculator->skyTemperatureCoefficients.t_clear);
+    IUFillNumber(&skyTemperatureCalibrationN[6], "T_OVERCAST", "overcast sky (°C)", "%.2f", -20, 20, 1, weatherCalculator->skyTemperatureCoefficients.t_overcast);
+    IUFillNumberVector(&skyTemperatureCalibrationNP, skyTemperatureCalibrationN, 7, getDeviceName(), "SKY_TEMP_CALIBRATION", "Sky Temp calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
 
     // calibration parameters
     IUFillNumber(&humidityCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
@@ -504,11 +506,13 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
         else if (strcmp(name, skyTemperatureCalibrationNP.name) == 0)
         {
             IUUpdateNumber(&skyTemperatureCalibrationNP, values, names, n);
-            weatherCalculator->skyTemperatureCoefficients.k1 = values[0];
-            weatherCalculator->skyTemperatureCoefficients.k2 = values[1];
-            weatherCalculator->skyTemperatureCoefficients.k3 = values[2];
-            weatherCalculator->skyTemperatureCoefficients.k4 = values[3];
-            weatherCalculator->skyTemperatureCoefficients.k5 = values[4];
+            if (n > 0) weatherCalculator->skyTemperatureCoefficients.k1 = values[0];
+            if (n > 1) weatherCalculator->skyTemperatureCoefficients.k2 = values[1];
+            if (n > 2) weatherCalculator->skyTemperatureCoefficients.k3 = values[2];
+            if (n > 3) weatherCalculator->skyTemperatureCoefficients.k4 = values[3];
+            if (n > 4) weatherCalculator->skyTemperatureCoefficients.k5 = values[4];
+            if (n > 5) weatherCalculator->skyTemperatureCoefficients.t_clear = values[5];
+            if (n > 6) weatherCalculator->skyTemperatureCoefficients.t_overcast = values[6];
             skyTemperatureCalibrationNP.s = IPS_OK;
             IDSetNumber(&skyTemperatureCalibrationNP, nullptr);
             return skyTemperatureCalibrationNP.s;

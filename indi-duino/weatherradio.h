@@ -139,7 +139,7 @@ protected:
 
     // calibration parameters to calculate the corrected sky temperature
     INumberVectorProperty skyTemperatureCalibrationNP;
-    INumber skyTemperatureCalibrationN[5];
+    INumber skyTemperatureCalibrationN[7];
 
     // calibration parameters for the humidity
     INumberVectorProperty humidityCalibrationNP;
