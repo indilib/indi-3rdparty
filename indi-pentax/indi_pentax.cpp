@@ -42,6 +42,8 @@ void ISInit()
 {
     if (!isInit)
     {
+
+#ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
         int detectedCameraCount = detectedCameraDevices.size();
         int registeredSDKCameraCount = registeredSDKCams.size();
@@ -59,6 +61,7 @@ void ISInit()
                 }
             }
         }
+#endif
 
         // now look for pktriggercord supported cameras (MSC mode)
         char *model = NULL;
