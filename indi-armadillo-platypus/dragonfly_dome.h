@@ -154,6 +154,7 @@ class DragonFlyDome : public INDI::Dome
         /// Private Variables
         ///////////////////////////////////////////////////////////////////////
         uint32_t m_UpdateRelayCounter {0};
+        uint32_t m_UpdateSensorCounter {0};
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
@@ -172,5 +173,9 @@ class DragonFlyDome : public INDI::Dome
         static constexpr const uint8_t DRIVER_MODELS {4};
         // Sensor ON threshold
         static constexpr const uint8_t SENSOR_THRESHOLD {50};
+        // Sensor Update Threshold
+        static constexpr const uint8_t SENSOR_UPDATE_THRESHOLD {2};
+        // Relay Update Threshold
+        static constexpr const uint8_t RELAY_UPDATE_THRESHOLD {5};
 
 };

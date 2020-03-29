@@ -79,9 +79,9 @@ Relay::Relay(uint8_t id, const std::string &device, const std::string &group)
     m_ID = id;
     char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
 
-    snprintf(name, MAXINDINAME, "RELAY_%d", id);
+    snprintf(name, MAXINDINAME, "RELAY_%d", id + 1);
     m_Name = name;
-    snprintf(label, MAXINDILABEL, "Relay #%d", id);
+    snprintf(label, MAXINDILABEL, "Relay #%d", id + 1);
 
     IUFillSwitch(&RelayS[DD::INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
     IUFillSwitch(&RelayS[DD::INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
@@ -149,7 +149,7 @@ bool DragonFlyDome::initProperties()
     for (uint8_t i = 0; i < 8; i++)
     {
         std::unique_ptr<Relay> oneRelay;
-        oneRelay.reset(new Relay(i + i, getDeviceName(), RELAYS_TAB));
+        oneRelay.reset(new Relay(i, getDeviceName(), RELAYS_TAB));
         Relays.push_back(std::move(oneRelay));
     }
 
@@ -197,8 +197,7 @@ bool DragonFlyDome::initProperties()
     tcpConnection->setDefaultHost("192.168.1.1");
     tcpConnection->setDefaultPort(10000);
     tcpConnection->setConnectionType(Connection::TCP::TYPE_UDP);
-    tty_set_skywatcher_udp_format(1);
-    tty_set_debug(1);
+    tty_set_generic_udp_format(1);
     addDebugControl();
     return true;
 }
@@ -217,6 +216,9 @@ bool DragonFlyDome::updateProperties()
 
     if (isConnected())
     {
+        updateRelays();
+        updateSensors();
+
         defineText(&FirmwareVersionTP);
 
         // Relays
@@ -275,7 +277,7 @@ bool DragonFlyDome::echo()
         fwmin = ( res % 100 );
         if ( oper >= DRIVER_OPERATIVES )
             oper = DRIVER_OPERATIVES;
-        if ( model >= DRIVER_MODELS )
+        if ( model > DRIVER_MODELS )
             model = 0;
         sprintf( txt, "%s %s fwv %d.%d", operative[ oper ], models[ model ], fwmaj, fwmin );
         if ( strcmp( models[ model ], "Dragonfly" ) )
@@ -367,9 +369,9 @@ bool DragonFlyDome::setRelayEnabled(uint8_t id, bool enabled)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d", id, enabled ? 1 : 0);
+    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d#", id, enabled ? 0 : 1);
     if (sendCommand(cmd, res))
-        return res == 0;
+        return res == (enabled ? 0 : 1);
 
     return false;
 }
@@ -399,12 +401,17 @@ bool DragonFlyDome::SetBacklashEnabled(bool enabled)
 void DragonFlyDome::TimerHit()
 {
     // Update all sensors
-    if (updateSensors())
-        IDSetNumber(&SensorNP, nullptr);
+    m_UpdateSensorCounter++;
+    if (m_UpdateSensorCounter >= SENSOR_UPDATE_THRESHOLD)
+    {
+        m_UpdateSensorCounter = 0;
+        if (updateSensors())
+            IDSetNumber(&SensorNP, nullptr);
+    }
 
-    // Update all relays every 3rd timer hit
+    // Update all relays every RELAY_UPDATE_THRESHOLD timer hit
     m_UpdateRelayCounter++;
-    if (m_UpdateRelayCounter >= 3)
+    if (m_UpdateRelayCounter >= RELAY_UPDATE_THRESHOLD)
     {
         m_UpdateRelayCounter = 0;
         if (updateRelays())
@@ -575,7 +582,7 @@ bool DragonFlyDome::updateSensors()
     {
         char cmd[DRIVER_LEN] = {0};
         int32_t res = 0;
-        snprintf(cmd, DRIVER_LEN, "relio snanre 0 %d", i);
+        snprintf(cmd, DRIVER_LEN, "!relio snanrd 0 %d#", i);
         if (!sendCommand(cmd, res))
             return false;
         SensorN[i].value = res;
@@ -593,7 +600,7 @@ bool DragonFlyDome::updateRelays()
     {
         char cmd[DRIVER_LEN] = {0};
         int32_t res = 0;
-        snprintf(cmd, DRIVER_LEN, "relio rldgrd 0 %d", i);
+        snprintf(cmd, DRIVER_LEN, "!relio rldgrd 0 %d#", i);
         if (!sendCommand(cmd, res))
             return false;
         Relays[i]->setEnabled(res == 0);
@@ -608,48 +615,53 @@ bool DragonFlyDome::updateRelays()
 /////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::sendCommand(const char * cmd, int32_t &res)
 {
-    int nbytes_written = 0, nbytes_read = 0;
-    char response[DRIVER_LEN] = {0};
-
-    tcflush(PortFD, TCIOFLUSH);
-
-    LOGF_DEBUG("CMD <%s>", cmd);
-
-    int rc = tty_write_string(PortFD, cmd, &nbytes_written);
-
-    if (rc != TTY_OK)
+    int rc = TTY_OK;
+    for (int i = 0; i < 3; i++)
     {
-        char errstr[MAXRBUF] = {0};
-        tty_error_msg(rc, errstr, MAXRBUF);
-        LOGF_ERROR("Serial write error: %s.", errstr);
-        return false;
-    }
+        int nbytes_written = 0, nbytes_read = 0;
+        char response[DRIVER_LEN] = {0};
 
-    rc = tty_nread_section(PortFD, response, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+        LOGF_DEBUG("CMD <%s>", cmd);
+
+        rc = tty_write_string(PortFD, cmd, &nbytes_written);
+
+        if (rc != TTY_OK)
+        {
+            char errstr[MAXRBUF] = {0};
+            tty_error_msg(rc, errstr, MAXRBUF);
+            LOGF_ERROR("Serial write error: %s.", errstr);
+            return false;
+        }
+
+        rc = tty_nread_section(PortFD, response, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+
+        if (rc != TTY_OK)
+        {
+            usleep(100000);
+            continue;
+        }
+
+        // Remove extra #
+        response[nbytes_read - 1] = 0;
+        LOGF_DEBUG("RES <%s>", response);
+
+
+        std::regex rgx(R"(.*:(\d+))");
+        std::smatch match;
+        std::string input(response);
+
+        if (std::regex_search(input, match, rgx))
+        {
+            res = std::stoi(match.str(1));
+            return true;
+        }
+    }
 
     if (rc != TTY_OK)
     {
         char errstr[MAXRBUF] = {0};
         tty_error_msg(rc, errstr, MAXRBUF);
         LOGF_ERROR("Serial read error: %s.", errstr);
-        return false;
-    }
-
-    // Remove extra #
-    response[nbytes_read - 1] = 0;
-    LOGF_DEBUG("RES <%s>", response);
-
-
-    tcflush(PortFD, TCIOFLUSH);
-
-    std::regex rgx(R"(.*:(\d+))");
-    std::smatch match;
-    std::string input(response);
-
-    if (std::regex_search(input, match, rgx))
-    {
-        res = std::stoi(match.str(1));
-        return true;
     }
 
     return false;
