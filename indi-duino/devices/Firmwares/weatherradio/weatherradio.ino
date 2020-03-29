@@ -114,7 +114,7 @@ String getCurrentConfig() {
   else
     wifidata["connected"] = WiFi.status() == WL_CONNECTED;
 
-  wifidata["SSID"] = WIFI_SSID;
+  wifidata["SSID"] = esp8266Data.ssid;
 #endif
 
   if (doc.isNull())
@@ -139,7 +139,6 @@ void setup() {
 #ifdef USE_TSL237_SENSOR
   initTSL237();
 #endif //USE_TSL237_SENSOR
-
 
 #ifdef USE_WIFI
   initWiFi();
@@ -170,6 +169,7 @@ void setup() {
     });
 
     server.begin();
+
   }
 #endif
 }
@@ -197,6 +197,14 @@ String parseInput() {
       break;
     case 'p':
       Serial.println(getSensorData(true, ""));
+      break;
+    case 's':
+      if (input.length() > 2 && input.charAt(1) == '?')
+      {
+        parseCredentials(input.substring(2));
+        initWiFi();
+      }
+      Serial.println(getCurrentConfig());
       break;
   }
 
