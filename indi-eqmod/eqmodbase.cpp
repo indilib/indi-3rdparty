@@ -335,7 +335,7 @@ void EQMod::ISGetProperties(const char *dev)
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
-        defineNumber(LEDBrightnessNP);
+
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -359,7 +359,6 @@ void EQMod::ISGetProperties(const char *dev)
             defineSwitch(DEPPECTrainingSP);
             defineSwitch(DEPPECSP);
         }
-
         if (mount->HasSnapPort1())
         {
             defineSwitch(SNAPPORT1SP);
@@ -367,6 +366,10 @@ void EQMod::ISGetProperties(const char *dev)
         if (mount->HasSnapPort2())
         {
             defineSwitch(SNAPPORT2SP);
+        }
+        if (mount->HasPolarLed())
+        {
+            defineNumber(LEDBrightnessNP);
         }
 
 #ifdef WITH_ALIGN_GEEHALEL
@@ -495,7 +498,7 @@ bool EQMod::updateProperties()
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
-        defineNumber(LEDBrightnessNP);
+
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -576,6 +579,11 @@ bool EQMod::updateProperties()
                     DEPPECSP->s       = IPS_BUSY;
                     IDSetSwitch(DEPPECSP, nullptr);
                 }
+            }
+
+            if (mount->HasPolarLed())
+            {
+                defineNumber(LEDBrightnessNP);
             }
 
             LOG_DEBUG("Init backlash.");
@@ -677,6 +685,10 @@ bool EQMod::updateProperties()
         if (mount->HasSnapPort2())
         {
             deleteProperty(SNAPPORT2SP->name);
+        }
+        if (mount->HasPolarLed())
+        {
+            deleteProperty(LEDBrightnessNP->name);
         }
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         deleteProperty(AlignMethodSP.name);
@@ -2604,14 +2616,17 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             return true;
         }
 
-        if (strcmp(name, "LED_BRIGHTNESS") == 0)
+        if (mount->HasPolarLed())
         {
-            IUUpdateNumber(LEDBrightnessNP, values, names, n);
-            LEDBrightnessNP->s = IPS_OK;
-            IDSetNumber(LEDBrightnessNP, nullptr);
-            mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
-            LOGF_INFO("Setting LED brightness to %.f", values[0]);
-            return true;
+            if (strcmp(name, "LED_BRIGHTNESS") == 0)
+            {
+                IUUpdateNumber(LEDBrightnessNP, values, names, n);
+                LEDBrightnessNP->s = IPS_OK;
+                IDSetNumber(LEDBrightnessNP, nullptr);
+                mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
+                LOGF_INFO("Setting LED brightness to %.f", values[0]);
+                return true;
+            }
         }
 
         if (strcmp(name, "STANDARDSYNCPOINT") == 0)

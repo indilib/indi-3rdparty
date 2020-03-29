@@ -63,6 +63,7 @@ class Skywatcher
         bool HasPPEC();
         bool HasSnapPort1();
         bool HasSnapPort2();
+        bool HasPolarLed();
 
         uint32_t GetRAEncoder();
         uint32_t GetDEEncoder();
