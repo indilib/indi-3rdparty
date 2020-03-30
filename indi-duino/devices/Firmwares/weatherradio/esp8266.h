@@ -28,11 +28,6 @@ ESP8266WebServer server(80);
 
 void initWiFi() {
   WiFi.mode(WIFI_STA);
-  if (WiFi.status() == WL_CONNECTED) {
-    WiFi.disconnect();
-    esp8266Data.status = false;
-  }
-
   WiFi.begin(esp8266Data.ssid.c_str(), esp8266Data.password.c_str());
 
   int count = 0;
@@ -41,6 +36,21 @@ void initWiFi() {
     esp8266Data.lastRetry = millis();
     delay(1000);
     if (WiFi.status() == WL_CONNECTED) esp8266Data.status = true;
+  }
+}
+
+void disconnectWiFi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFi.disconnect();
+    esp8266Data.status = (WiFi.status() == WL_CONNECTED);
+
+    int count = 0;
+    // Wait for connection
+    while (WiFi.status() != WL_CONNECTED && count++ < WIFI_TIMEOUT) {
+      esp8266Data.lastRetry = millis();
+      delay(1000);
+      esp8266Data.status = (WiFi.status() == WL_CONNECTED);
+    }
   }
 }
 

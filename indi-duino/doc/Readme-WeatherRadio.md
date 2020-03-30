@@ -64,10 +64,12 @@ As soon as this succeeds, you are ready for testing your board. With the serial 
 ![Serial Monitor](weatherradio/img/serial_monitor.png)
 
 The following commands are supported:
-* **v** to show the firmware version
-* **w** to show the current sensor values (one line version)
-* **p** to show the current sensor values (pretty printing version)
-* **c** to show the firmware configuration
+* **v** show the firmware version
+* **w** show the current sensor values (one line version)
+* **p** show the current sensor values (pretty printing version)
+* **c** show the firmware configuration
+* **s** (re)connect WiFi. If issued as `s?ssid=<your WiFi SSID>&password=<your WiFi password>`, it connects with the given parameters.
+* **d** disconnect from WiFi
 
 If everything is shown as expected, your hardware is ready!
 

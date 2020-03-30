@@ -198,14 +198,19 @@ String parseInput() {
     case 'p':
       Serial.println(getSensorData(true, ""));
       break;
+#ifdef USE_WIFI
     case 's':
       if (input.length() > 2 && input.charAt(1) == '?')
-      {
         parseCredentials(input.substring(2));
-        initWiFi();
-      }
+      disconnectWiFi();
+      initWiFi();
       Serial.println(getCurrentConfig());
       break;
+    case 'd':
+      disconnectWiFi();
+      Serial.println(getCurrentConfig());
+      break;
+#endif
   }
 
 }
