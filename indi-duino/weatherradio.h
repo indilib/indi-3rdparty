@@ -57,6 +57,8 @@ protected:
     // Initial function to get data after connection is successful
     void getBasicData();
 
+    void updateConfigData();
+
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
         humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
 
@@ -68,6 +70,7 @@ protected:
     ITextVectorProperty FirmwareInfoTP;
     IText FirmwareInfoT[1] = {};
     // firmware configuration (dynamically created)
+    IText *FirmwareConfigT;
     ITextVectorProperty FirmwareConfigTP;
 
     /**
@@ -136,6 +139,9 @@ protected:
     int ttyTimeout = 2;
     INumber ttyTimeoutN[1] = {};
     INumberVectorProperty ttyTimeoutNP;
+
+    ISwitch refreshConfigS[1] = {};
+    ISwitchVectorProperty refreshConfigSP;
 
     // calibration parameters to calculate the corrected sky temperature
     INumberVectorProperty skyTemperatureCalibrationNP;

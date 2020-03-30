@@ -130,6 +130,9 @@ bool WeatherRadio::initProperties()
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
+    IUFillSwitch(&refreshConfigS[0], "REFRESH", "Refresh", ISS_OFF);
+    IUFillSwitchVector(&refreshConfigSP, refreshConfigS, 1, getDeviceName(), "REFRESH_CONFIG", "Refresh", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
     // calibration parameters
     IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
     IUFillNumber(&skyTemperatureCalibrationN[1], "K2", "K2", "%.2f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k2);
@@ -286,6 +289,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windGustSensorSP.name);
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
+        deleteProperty(refreshConfigSP.name);
         deleteProperty(FirmwareInfoTP.name);
         deleteProperty(FirmwareConfigTP.name);
 
@@ -330,19 +334,46 @@ void WeatherRadio::getBasicData()
     configuration config;
     readFirmwareConfig(&config);
 
-    IText *configSettings = new IText[config.size()];
+    FirmwareConfigT = new IText[config.size()];
     std::map<std::string, std::string>::iterator it;
     size_t pos = 0;
 
     for (it = config.begin(); it != config.end(); ++it)
     {
-        configSettings[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
-        IUFillText(&configSettings[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+        FirmwareConfigT[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
+        IUFillText(&FirmwareConfigT[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
     }
 
-    IUFillTextVector(&FirmwareConfigTP, configSettings, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
+    IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
     defineText(&FirmwareConfigTP);
 
+    // refresh button
+    defineSwitch(&refreshConfigSP);
+}
+
+/**************************************************************************************
+** Update firmware configuration data
+***************************************************************************************/
+void WeatherRadio::updateConfigData()
+{
+    FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
+    if (FirmwareInfoTP.s != IPS_OK)
+        LOG_ERROR("Failed to get firmware from device.");
+
+    configuration config;
+    readFirmwareConfig(&config);
+    std::map<std::string, std::string>::iterator it;
+
+    for (it = config.begin(); it != config.end(); ++it)
+    {
+        // find the matching text property
+        for (int i = 0; i < FirmwareConfigTP.ntp; i++)
+            if (strcmp(FirmwareConfigT[i].name, it->first.c_str()) == 0)
+                IUSaveText(&FirmwareConfigT[i], it->second.c_str());
+    }
+    FirmwareConfigTP.s = IPS_OK;
+    IDSetText(&FirmwareInfoTP, nullptr);
+    IDSetText(&FirmwareConfigTP, nullptr);
 }
 
 /**************************************************************************************
@@ -564,6 +595,17 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
 
+        if (strcmp(name, refreshConfigSP.name) == 0)
+        {
+            // refresh config button pressed
+            IUUpdateSwitch(&refreshConfigSP, states, names, n);
+            updateConfigData();
+
+            refreshConfigSP.s = IPS_OK;
+            IDSetSwitch(&refreshConfigSP, nullptr);
+
+            return (refreshConfigSP.s == IPS_OK);
+        }
         if (strcmp(name, temperatureSensorSP.name) == 0)
         {
             // temperature sensor selected
