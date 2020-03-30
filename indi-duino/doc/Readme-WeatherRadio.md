@@ -151,7 +151,7 @@ cd /usr/share/weatherradio
 ```
 
 As the next step, try to update the weather data manually to see if everything is configured correctly. There are three types of scripts for these actions:
-* `wr_rrd_update.py` and `wr_rrd_update_sensordata.py` read weather data from your weather station's INDI server and store it in the RRD files
+* `wr_rrd_update.py` reads weather data from your weather station's INDI server and stores it in the RRD files for weather and sensor data
 * `wr_rrd_lastupdate.py` creating a JSON document with the latest weather parameters
 * `wr_rrd_fetch.py` which fetches a time series for a given interval
 
@@ -159,7 +159,6 @@ First, read the current weather data and create the JSON files:
 ```
 cd /usr/share/weatherradio
 ./bin/wr_rrd_update.py 
-./bin/wr_rrd_update_sensordata.py 
 ./bin/wr_rrd_
 ./bin/wr_rrd_fetch.py -s 6h
 ./bin/wr_rrd_fetch.py -s 1d
@@ -175,7 +174,6 @@ Finally, it's time to automate by creating crontab entries:
 #
 #
  4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_update.py
- 4,9,14,19,24,29,34,39,44,49,54,59 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_update_sensordata.py
 
 #---------------------------------------------------
 # Update JSON export files

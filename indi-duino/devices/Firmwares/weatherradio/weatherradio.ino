@@ -24,8 +24,9 @@
 /**
    Send current sensor data as JSON document
 */
-String getSensorData(bool pretty) {
+String getSensorData(bool pretty, String token) {
   const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
+                      JSON_OBJECT_SIZE(1) + // token data
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
@@ -33,6 +34,9 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
+
+  if (token.length() > 0)
+    weatherDoc["token"] = token;
 
 #ifdef USE_DAVIS_SENSOR
   updateAnemometer();
@@ -92,23 +96,23 @@ String getCurrentConfig() {
   StaticJsonDocument <docSize> doc;
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
-  dhtdata["pin"] = DHTPIN;
+  dhtdata["pin"]  = DHTPIN;
   dhtdata["type"] = DHTTYPE;
 #endif
 
 #ifdef USE_DAVIS_SENSOR
-  JsonObject davisdata = doc.createNestedObject("Davis Anemometer");
-  davisdata["wind speed pin"] = ANEMOMETER_WINDSPEEDPIN;
-  davisdata["wind direction pin"] = ANEMOMETER_WINDDIRECTIONPIN;
+  JsonObject davisdata               = doc.createNestedObject("Davis Anemometer");
+  davisdata["wind speed pin"]        = ANEMOMETER_WINDSPEEDPIN;
+  davisdata["wind direction pin"]    = ANEMOMETER_WINDDIRECTIONPIN;
   davisdata["wind direction offset"] = ANEMOMETER_WINDOFFSET;
 #endif
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
   if (WiFi.status() == WL_CONNECTED)
-    wifidata["IP"] = WiFi.localIP().toString();
+    wifidata["IP"]        = WiFi.localIP().toString();
   else
-    wifidata["connected"] = (WiFi.status() == WL_CONNECTED);
+    wifidata["connected"] = WiFi.status() == WL_CONNECTED;
 
   wifidata["SSID"] = WIFI_SSID;
 #endif
@@ -124,7 +128,7 @@ String getCurrentConfig() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(BAUD_RATE);
   // wait for serial port to connect. Needed for native USB
   while (!Serial) continue;
 
@@ -142,15 +146,15 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     server.on("/", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false));
+      server.send(200, "application/json; charset=utf-8", getSensorData(false, ""));
     });
 
     server.on("/w", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false));
+      server.send(200, "application/json; charset=utf-8", getSensorData(false, ""));
     });
 
     server.on("/p", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(true));
+      server.send(200, "application/json; charset=utf-8", getSensorData(true, ""));
     });
 
     server.on("/c", []() {
@@ -170,38 +174,65 @@ void setup() {
 #endif
 }
 
+String input = "";
+
+String parseInput() {
+  // ignore empty input
+  if (input.length() == 0)
+    return input;
+
+  switch (input.charAt(0)) {
+    case 'v':
+      Serial.println(getCurrentVersion());
+      break;
+    case 'w':
+      if (input.length() > 2 && input.charAt(1) == '#')
+        Serial.println(getSensorData(false, input.substring(2)));
+      else
+        Serial.println(getSensorData(false, ""));
+
+      break;
+    case 'c':
+      Serial.println(getCurrentConfig());
+      break;
+    case 'p':
+      Serial.println(getSensorData(true, ""));
+      break;
+  }
+
+}
+
 /**
    Command loop handling incoming requests and returns a JSON document.
 
    'v' - send current version
    'w' - send current weather sensor values
+   'p' - send current weather sensor values (pretty printed)
    'c' - send sensor configuration settings
 */
 void loop() {
 
+  byte ch;
+  String valStr;
+  int val;
+
 #ifdef USE_WIFI
-  server.handleClient();
+  wifiServerLoop();
 #endif
 
 #ifdef USE_TSL237_SENSOR
   updateTSL237();
 #endif //USE_TSL237_SENSOR
 
-  while (Serial.available() > 0) {
-    switch (Serial.read()) {
-      case 'v':
-        Serial.println(getCurrentVersion());
-        break;
-      case 'w':
-        Serial.println(getSensorData(false));
-        break;
-      case 'c':
-        Serial.println(getCurrentConfig());
-        break;
-      case 'p':
-        Serial.println(getSensorData(true));
-        break;
+  if (Serial.available() > 0) {
+    ch = Serial.read();
+
+    if (ch == '\r' || ch == '\n') { // Command received and ready.
+      parseInput();
+      input = "";
     }
+    else
+      input += (char)ch;
   }
 
   delay(50);

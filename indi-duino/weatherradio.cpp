@@ -39,6 +39,7 @@
 #include "config.h"
 
 const char *CALIBRATION_TAB = "Calibration";
+const char *TOKEN           = "token";
 
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
@@ -111,6 +112,7 @@ WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
     weatherCalculator = new WeatherCalculator();
+    currentRequestID = 0;
 }
 
 /**************************************************************************************
@@ -283,6 +285,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(FirmwareInfoTP.name);
+        deleteProperty(FirmwareConfigTP.name);
 
         result = INDI::Weather::updateProperties();
 
@@ -321,6 +324,23 @@ void WeatherRadio::getBasicData()
 
     defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
+
+    configuration config;
+    readFirmwareConfig(&config);
+
+    IText *configSettings = new IText[config.size()];
+    std::map<std::string, std::string>::iterator it;
+    size_t pos = 0;
+
+    for (it = config.begin(); it != config.end(); ++it)
+    {
+        configSettings[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
+        IUFillText(&configSettings[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+    }
+
+    IUFillTextVector(&FirmwareConfigTP, configSettings, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
+    defineText(&FirmwareConfigTP);
+
 }
 
 /**************************************************************************************
@@ -330,7 +350,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("v", data, &n_bytes);
+    bool result = sendQuery("v\n", data, &n_bytes);
 
     if (result == true)
     {
@@ -358,6 +378,79 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
     }
     return IPS_ALERT;
 }
+
+/**************************************************************************************
+** Read the configuration parameters from the firmware
+***************************************************************************************/
+IPState WeatherRadio::readFirmwareConfig(configuration *config)
+{
+    char data[MAX_WEATHERBUFFER] = {0};
+    int n_bytes = 0;
+    bool result = sendQuery("c\n", data, &n_bytes);
+
+    if (result)
+    {
+        char *source = data;
+        char *endptr;
+        JsonValue value;
+        JsonAllocator allocator;
+        int status = jsonParse(source, &endptr, &value, allocator);
+        if (status != JSON_OK)
+        {
+            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+            return IPS_ALERT;
+        }
+
+        JsonIterator deviceIter;
+        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+        {
+            char *device {new char[strlen(deviceIter->key)+1] {0}};
+            strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+            JsonIterator configIter;
+
+            // read settings for the single device
+            for (configIter = begin(deviceIter->value); configIter != end(deviceIter->value); ++configIter)
+            {
+                char *name {new char[strlen(configIter->key)+1] {0}};
+
+                // copy single setting
+                strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+                std::string value;
+                double number;
+
+                switch (configIter->value.getTag()) {
+                case JSON_NUMBER:
+                    number = configIter->value.toNumber();
+                    if (trunc(number) == number)
+                        value = std::to_string(int(number));
+                    else
+                        value = std::to_string(number);
+                    break;
+                case JSON_TRUE:
+                    value = "true";
+                    break;
+                case JSON_FALSE:
+                    value = "false";
+                    break;
+                default:
+                    value = configIter->value.toString();
+                    break;
+                }
+                // add it to the configuration
+                (*config)[std::string(device) + ": " + std::string(name)] = std::string(value);
+            }
+
+        }
+        return IPS_OK;
+    }
+    else
+    {
+        LOG_WARN("Retrieving firmware config failed.");
+        return IPS_ALERT;
+    }
+}
+
 
 /**************************************************************************************
 ** Create a selection of sensors for a certain weather property.
@@ -608,30 +701,62 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("w", data, &n_bytes);
+    int id = createRequestID();
+    char cmd[20] = {0};
+    sprintf(cmd, "w#%d\n", id);
+    bool result = sendQuery(cmd, data, &n_bytes);
 
-    if (result == true)
+    if (result == false)
+        return IPS_ALERT;
+    while (result == true)
     {
-        char *srcBuffer{new char[n_bytes+1] {0}};
+        char *src{new char[n_bytes+1] {0}};
         // duplicate the buffer since the parser will modify it
-        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
-        char *source = srcBuffer;
-        char *endptr;
-        JsonValue value;
-        JsonAllocator allocator;
-        int status = jsonParse(source, &endptr, &value, allocator);
-        if (status != JSON_OK)
-        {
-            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return IPS_ALERT;
+        strncpy(src, data, static_cast<size_t>(n_bytes));
+        int resultID;
+        result = parseWeatherData(src, &resultID);
+        // we got the answer maching our request
+        if (resultID == id)
+            return IPS_OK;
+
+        // read the next line
+        LOGF_WARN("Received no answer for request #%d. Retrying...", id);
+        result = receive(data, &n_bytes, '\n', getTTYTimeout());
+    }
+    // we reached the end of the response message
+    LOGF_WARN("Received no answer for request #%d.", id);
+   return IPS_OK;
+}
+
+/**************************************************************************************
+** Parse JSON weather document.
+***************************************************************************************/
+bool WeatherRadio::parseWeatherData(char *data, int *resultID)
+{
+    char *source = data;
+    char *endptr;
+    JsonValue value;
+    JsonAllocator allocator;
+    int status = jsonParse(source, &endptr, &value, allocator);
+    if (status != JSON_OK)
+    {
+        LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        return false;
+    }
+
+    JsonIterator deviceIter;
+    for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+    {
+        char *name {new char[strlen(deviceIter->key)+1] {0}};
+        strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+        if (strcmp(name, TOKEN) == 0) {
+            // request token
+            char* value = deviceIter->value.toString();
+            if (!sscanf(value, "%d", resultID))
+                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
         }
-
-        JsonIterator deviceIter;
-        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
-        {
-            char *name {new char[strlen(deviceIter->key)+1] {0}};
-            strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
-
+        else {
             JsonIterator sensorIter;
             INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
 
@@ -699,12 +824,11 @@ IPState WeatherRadio::updateWeather()
                 // update device values
                 IDSetNumber(deviceProp, nullptr);
             }
-
         }
-        return IPS_OK;
+
     }
-    else
-        return IPS_ALERT;
+    return true;
+
 }
 
 /**************************************************************************************
@@ -791,7 +915,6 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
     else if (currentSensors.wind_direction == sensor)
         setParameterValue(WEATHER_WIND_DIRECTION, weatherCalculator->calibratedWindDirection(value));
 }
-
 
 /**************************************************************************************
 **
@@ -960,6 +1083,11 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         return false;
     }
     return receive(response, length, '\n', getTTYTimeout());
+}
+
+int WeatherRadio::createRequestID()
+{
+    return currentRequestID++;
 }
 
 /**************************************************************************************

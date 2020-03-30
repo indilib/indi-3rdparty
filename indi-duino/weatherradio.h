@@ -30,6 +30,7 @@
 #include "weathercalculator.h"
 
 extern const char *CALIBRATION_TAB;
+extern const char *TOKEN;
 
 class WeatherRadio : public INDI::Weather
 {
@@ -66,12 +67,16 @@ protected:
     // firmware info
     ITextVectorProperty FirmwareInfoTP;
     IText FirmwareInfoT[1] = {};
+    // firmware configuration (dynamically created)
+    ITextVectorProperty FirmwareConfigTP;
 
     /**
      * @brief Read the weather data from the JSON document
      * @return parse success
      */
     IPState updateWeather() override;
+
+    bool parseWeatherData(char *data, int *resultID);
 
     /**
       * Device specific configurations
@@ -87,6 +92,8 @@ protected:
         double max;
         double steps;
     };
+
+    typedef std::map<std::string, std::string> configuration;
 
     typedef std::map<std::string, sensor_config> sensorsConfigType;
     typedef std::map<std::string, sensorsConfigType> deviceConfigType;
@@ -215,12 +222,20 @@ protected:
     void updateWeatherParameter(sensor_name sensor, double value);
 
     /**
-     * @brief Send a string to the serial device
+     * @brief Read the firmware configuration
+     * @param config configuration to be updated
      */
+    IPState readFirmwareConfig(configuration *config);
+
+
     // helper functions
     bool receive(char* buffer, int* bytes, char end, int wait);
     bool transmit(const char* buffer);
     bool sendQuery(const char* cmd, char* response, int *length);
+
+    /* unique ID as identifier for serial communication */
+    int currentRequestID;
+    int createRequestID();
 
     // override default INDI methods
     const char *getDefaultName() override;

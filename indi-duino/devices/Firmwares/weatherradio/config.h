@@ -10,6 +10,10 @@
     Based upon ideas from indiduinoMETEO (http://indiduino.wordpress.com).
 */
 
+// BAUD rate for the serial interface
+#define BAUD_RATE 9600   // standard rate that should always work
+// #define BAUD_RATE 115200 // ESP8266
+
 #define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
@@ -34,7 +38,7 @@
 // Davis Anemometer
 #define ANEMOMETER_WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
 #define ANEMOMETER_WINDDIRECTIONPIN A0 // The analog pin for the wind direction
-#define ANEMOMETER_WINDOFFSET 0;       // anemometer arm direction (0=N, 90=E, ...)
+#define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
 // ============== device configurations (end) ==============
 

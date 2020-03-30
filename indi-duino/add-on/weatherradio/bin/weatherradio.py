@@ -12,6 +12,7 @@
 #-----------------------------------------------------------------------
 
 import time
+import rrdtool
 from wr_config import *
 
 def connect(indi):
@@ -90,3 +91,19 @@ def readSensors(indi):
         read_indi_value(result, 'TSL2591_Lux', tsl2591, 'Lux')
         
     return result;
+
+
+def updateRRD(rrdfile, data):
+    updateString="N"
+    templateString=""
+
+    if data is not None:
+        for key in data.keys():
+            updateString=updateString+":"+str(data[key])
+            if templateString:
+                templateString += ":"
+            templateString += key
+
+        ret = rrdtool.update(rrdfile, "--template", templateString ,updateString);
+        if ret:
+            print rrdtool.error()
