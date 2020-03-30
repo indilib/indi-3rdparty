@@ -488,16 +488,20 @@ bool DragonFlyDome::Abort()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::openRoof()
 {
-    if (setRelayEnabled(DomeControlRelayN[RELAY_OPEN].value, true))
+    int id = DomeControlRelayN[RELAY_OPEN].value - 1;
+    if (id < 0)
+        return false;
+
+    if (setRelayEnabled(id, true))
     {
-        Relays[DomeControlRelayN[RELAY_OPEN].value]->setEnabled(true);
-        Relays[DomeControlRelayN[RELAY_OPEN].value]->sync(IPS_OK);
+        Relays[id]->setEnabled(true);
+        Relays[id]->sync(IPS_OK);
         return true;
     }
     else
     {
-        Relays[DomeControlRelayN[RELAY_OPEN].value]->setEnabled(false);
-        Relays[DomeControlRelayN[RELAY_OPEN].value]->sync(IPS_ALERT);
+        Relays[id]->setEnabled(false);
+        Relays[id]->sync(IPS_ALERT);
         return false;
     }
 }
@@ -507,16 +511,20 @@ bool DragonFlyDome::openRoof()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::closeRoof()
 {
-    if (setRelayEnabled(DomeControlRelayN[RELAY_CLOSE].value, true))
+    int id = DomeControlRelayN[RELAY_CLOSE].value - 1;
+    if (id < 0)
+        return false;
+
+    if (setRelayEnabled(id, true))
     {
-        Relays[DomeControlRelayN[RELAY_CLOSE].value]->setEnabled(true);
-        Relays[DomeControlRelayN[RELAY_CLOSE].value]->sync(IPS_OK);
+        Relays[id]->setEnabled(true);
+        Relays[id]->sync(IPS_OK);
         return true;
     }
     else
     {
-        Relays[DomeControlRelayN[RELAY_CLOSE].value]->setEnabled(false);
-        Relays[DomeControlRelayN[RELAY_CLOSE].value]->sync(IPS_ALERT);
+        Relays[id]->setEnabled(false);
+        Relays[id]->sync(IPS_ALERT);
         return false;
     }
 }
