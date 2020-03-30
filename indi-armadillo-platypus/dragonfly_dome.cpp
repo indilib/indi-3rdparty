@@ -221,13 +221,19 @@ bool DragonFlyDome::updateProperties()
         updateRelays();
         updateSensors();
 
-        if (!isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value) && !isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
+        double parkedSensor = -1, unparkedSensor = -1;
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.name, DomeControlSensorN[SENSOR_UNPARKED].name, &unparkedSensor);
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.name, DomeControlSensorN[SENSOR_PARKED].name, &parkedSensor);
+        if (parkedSensor > 0 && unparkedSensor > 0)
         {
-            setDomeState(DOME_UNKNOWN);
-            LOG_WARN("Parking status is not known.");
+            if (isSensorOn(unparkedSensor) == isSensorOn(parkedSensor))
+            {
+                setDomeState(DOME_UNKNOWN);
+                LOG_WARN("Parking status is not known.");
+            }
+            else
+                SetParked(isSensorOn(parkedSensor));
         }
-        else
-            SetParked(isSensorOn(DomeControlSensorN[SENSOR_PARKED].value));
 
         defineText(&FirmwareVersionTP);
 
@@ -365,6 +371,7 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
             IUUpdateNumber(&DomeControlSensorNP, values, names, n);
             DomeControlSensorNP.s = IPS_OK;
             IDSetNumber(&DomeControlSensorNP, nullptr);
+            saveConfig(true, DomeControlSensorNP.name);
             return true;
         }
     }
