@@ -21,7 +21,33 @@
 
 #pragma once
 
+#include <memory>
 #include <indidome.h>
+
+using DD = INDI::DefaultDevice;
+
+class Relay
+{
+    public:
+        explicit Relay(uint8_t id, const std::string &device, const std::string &group);
+        ~Relay() = default;
+
+        void define(DD *parent);
+        void remove(DD *parent);
+        void sync(IPState state);
+        bool update(ISState *states, char *names[], int n);
+        const std::string &name() const;
+        bool isEnabled() const;
+        void setEnabled(bool enabled);
+
+    private:
+
+        uint8_t m_ID;
+        std::string m_Name;
+
+        ISwitchVectorProperty RelaySP;
+        ISwitch RelayS[2];
+};
 
 class DragonFlyDome : public INDI::Dome
 {
@@ -41,12 +67,7 @@ class DragonFlyDome : public INDI::Dome
         void TimerHit() override;
 
         // Motion
-        virtual IPState MoveAbs(double az) override;
         virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
-        virtual bool Sync(double az) override;
-
-        // Shutter
-        virtual IPState ControlShutter(ShutterOperation operation) override;
 
         // Backlash
         virtual bool SetBacklash(int32_t steps) override;
@@ -61,20 +82,27 @@ class DragonFlyDome : public INDI::Dome
         // Parking
         virtual IPState Park() override;
         virtual IPState UnPark() override;
-        virtual bool SetCurrentPark() override;
-        virtual bool SetDefaultPark() override;
 
     private:
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Set & Query Functions
         ///////////////////////////////////////////////////////////////////////////////
-        bool setParam(const std::string &param, uint32_t value);
-        bool getParam(const std::string &param, uint32_t &value);
-        bool gotoTarget(uint32_t position);
-        bool setSpeedRange(uint32_t min, uint32_t max);
-        bool syncSettings();
         bool echo();
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Relays
+        ///////////////////////////////////////////////////////////////////////////////
+        bool setRelayEnabled(uint8_t id, bool enabled);
+        bool openRoof();
+        bool closeRoof();
+        bool updateRelays();
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Sensors
+        ///////////////////////////////////////////////////////////////////////////////
+        bool isSensorOn(uint8_t id);
+        bool updateSensors();
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Communication Functions
@@ -91,30 +119,32 @@ class DragonFlyDome : public INDI::Dome
         ISwitch PerPortS[3];
         enum { PORT_MAIN, PORT_EXP, PORT_THIRD };
 
-        // Motor wiring
-        ISwitchVectorProperty WiringSP;
-        ISwitch WiringS[4];
-        enum { WIRING_LUNATICO_NORMAL, WIRING_LUNATICO_REVERSED, WIRING_RFMOONLITE_NORMAL, WIRING_RFMOONLITE_REVERSED };
+        // Roof Control Relays
+        INumberVectorProperty DomeControlRelayNP;
+        INumber DomeControlRelayN[2];
+        enum
+        {
+            RELAY_OPEN,
+            RELAY_CLOSE,
+        };
 
-        // Halfstep
-        ISwitchVectorProperty HalfStepSP;
-        ISwitch HalfStepS[2];
+        // All Relays
+        std::vector<std::unique_ptr<Relay>> Relays;
 
-        // Motor Mode
-        ISwitchVectorProperty MotorTypeSP;
-        ISwitch MotorTypeS[4];
-        enum { MOTOR_UNIPOLAR, MOTOR_BIPOLAR, MOTOR_DC, MOTOR_STEPDIR };
+        // Roof Control Sensors
+        INumberVectorProperty DomeControlSensorNP;
+        INumber DomeControlSensorN[4];
+        enum
+        {
+            SENSOR_OPENED,
+            SENSOR_CLOSED,
+            SENSOR_UNPARKED,
+            SENSOR_PARKED,
+        };
 
-        // Settings
-        INumberVectorProperty SettingNP;
-        INumber SettingN[5];
-        enum { PARAM_MIN_SPEED, PARAM_MAX_SPEED, PARAM_MIN_LIMIT, PARAM_MAX_LIMIT, PARAM_STEPS_DEGREE };
-
-        //        ISwitchVectorProperty GoHomeSP;
-        //        ISwitch GoHomeS[1];
-
-        //        INumberVectorProperty HomePositionNP;
-        //        INumber HomePositionN[1];
+        // All Sensors
+        INumberVectorProperty SensorNP;
+        INumber SensorN[8];
 
         // Firmware Version
         IText FirmwareVersionT[1] {};
@@ -123,13 +153,14 @@ class DragonFlyDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////
         /// Private Variables
         ///////////////////////////////////////////////////////////////////////
-        bool m_IsMoving {false};
-        uint32_t m_LastSteps {0};
+        uint32_t m_UpdateRelayCounter {0};
+        uint32_t m_UpdateSensorCounter {0};
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
         /////////////////////////////////////////////////////////////////////////////
-        static constexpr const char * SETTINGS_TAB = "Settings";
+        static constexpr const char * RELAYS_TAB = "Relays";
+        static constexpr const char * SENSORS_TAB = "Sensors";
         // '#' is the stop char
         static const char DRIVER_STOP_CHAR { 0x23 };
         // Wait up to a maximum of 3 seconds for serial input
@@ -140,5 +171,11 @@ class DragonFlyDome : public INDI::Dome
         static constexpr const uint8_t DRIVER_OPERATIVES {2};
         // Models
         static constexpr const uint8_t DRIVER_MODELS {4};
+        // Sensor ON threshold
+        static constexpr const uint8_t SENSOR_THRESHOLD {50};
+        // Sensor Update Threshold
+        static constexpr const uint8_t SENSOR_UPDATE_THRESHOLD {2};
+        // Relay Update Threshold
+        static constexpr const uint8_t RELAY_UPDATE_THRESHOLD {5};
 
 };

@@ -126,7 +126,8 @@ EQMod::EQMod()
 
     mount = new Skywatcher(this);
 
-    SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
+    SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
+                           TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
                            | TELESCOPE_HAS_PIER_SIDE | TELESCOPE_HAS_TRACK_RATE | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK,
                            SLEWMODES);
 
@@ -683,9 +684,10 @@ bool EQMod::Handshake()
 {
     try
     {
-        if (!getActiveConnection()->name().compare("CONNECTION_TCP") && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
+        if (!getActiveConnection()->name().compare("CONNECTION_TCP")
+                && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
-            tty_set_skywatcher_udp_format(1);
+            tty_set_generic_udp_format(1);
         }
 
         mount->setPortFD(PortFD);
@@ -827,7 +829,8 @@ bool EQMod::ReadScopeStatus()
         TelescopePierSide pierSide;
         currentRAEncoder = mount->GetRAEncoder();
         currentDEEncoder = mount->GetDEEncoder();
-        DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder), static_cast<long>(currentDEEncoder));
+        DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
+               static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
         setPierSide(pierSide);
 
@@ -1421,7 +1424,8 @@ bool EQMod::ReadScopeStatus()
     return true;
 }
 
-void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha, TelescopePierSide *pierSide)
+void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha,
+                            TelescopePierSide *pierSide)
 {
     double RACurrent = 0.0, DECurrent = 0.0, HACurrent = 0.0;
     TelescopePierSide p;
@@ -1923,7 +1927,8 @@ bool EQMod::Goto(double r, double d)
 
     if (gotoparams.outsidelimits)
     {
-        LOGF_INFO("Target is unreachable, aborting (target encoders %u %u)", gotoparams.ratargetencoder, gotoparams.detargetencoder);
+        LOGF_INFO("Target is unreachable, aborting (target encoders %u %u)", gotoparams.ratargetencoder,
+                  gotoparams.detargetencoder);
         Abort();
         return false;
     }
@@ -1990,7 +1995,8 @@ bool EQMod::Park()
             // Start slewing
             LOGF_INFO("Parking mount: RA increment = %d, DE increment = %d",
                       static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
-            mount->SlewTo(static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
+            mount->SlewTo(static_cast<int32_t>(parkRAEncoder - currentRAEncoder),
+                          static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
         }
         catch (EQModError e)
         {

@@ -24,6 +24,7 @@ parser.add_argument("-v", "--verbose", action='store_true',
                     help="Display progress information")
 
 args = parser.parse_args()
+indi = None
 
 try:
     if (args.verbose):
@@ -44,7 +45,8 @@ try:
 
 except:
     print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
-    indi.quit()
+    if indi != None:
+        indi.quit()
     sys.exit()
 
 

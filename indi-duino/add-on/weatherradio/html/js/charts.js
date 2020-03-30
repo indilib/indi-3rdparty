@@ -232,7 +232,7 @@ function init() {
     updateSeries();
 
     // update timelines every 5 min
-    setInterval( function(){ updateSeries(currentTimeline);}, 5*60000);
+    setInterval( function(){ updateSeries(getCurrentTimeline());}, 5*60000);
 };
 
 function updateSeries() {
@@ -248,15 +248,27 @@ function updateSeries() {
         var currentWindGust      = data.WindGust;
 
         // calculate filling percentage from current temperature and pressure (slightly ugly code)
-        temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
-        pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
-        cloudCoverage.updateSeries([currentCloudCoverage]);
-        humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-        document.querySelector("#humidityValue").textContent = currentHumidity.toFixed(0) + "%";
-        sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
-        document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
-        windSpeed.updateSeries([{name: "Wind Speed", data: [currentWindSpeed]}]);
-        document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s (max: " + currentWindGust.toFixed(1) + " m/s)";
+	if (currentTemperature != null)
+            temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
+	if (currentPressure != null)
+            pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
+	if (currentCloudCoverage != null)
+            cloudCoverage.updateSeries([currentCloudCoverage]);
+	if (currentHumidity != null) {
+            humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
+            document.querySelector("#humidityValue").textContent = currentHumidity.toFixed(0) + "%";
+	}
+	if (currentSQM != null) {
+            sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
+            document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
+	}
+	if (currentWindSpeed != null) {
+            windSpeed.updateSeries([{name: "Wind Speed", data: [currentWindSpeed]}]);
+	    if (currentWindGust != null)
+		document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s (max: " + currentWindGust.toFixed(1) + " m/s)";
+	    else
+		document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s";
+	}
 
         // update time stamp at the bottom line
         var lastUpdate = data.timestamp;

@@ -1,4 +1,11 @@
-indi-duino (0.9) UNRELEASED; urgency=medium
+indi-duino (1.0) buster; urgency=medium
+
+  * Calibration of weather parameters added
+  * Robustness of RRD scripts added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sat, 21 Mar 2020 22:01:10 +0100
+
+indi-duino (0.9) buster; urgency=medium
 
   * TSL237 sampling interval changed to 2sec
   * Bug fixes to improve script robustness
