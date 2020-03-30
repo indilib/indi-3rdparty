@@ -432,6 +432,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
         case 0x06:
             strcpy(boardinfo[0], "AZEQ5");
             break;
+        case 0x23:
+            strcpy(boardinfo[0], "EQ6-R Pro");
+            break;
         case 0x80:
             strcpy(boardinfo[0], "GT");
             break;
@@ -542,7 +545,7 @@ bool Skywatcher::HasPPEC()
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06;
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x23;
 }
 
 bool Skywatcher::HasSnapPort2()
