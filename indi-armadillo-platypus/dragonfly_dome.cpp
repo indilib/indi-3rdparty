@@ -379,9 +379,9 @@ bool DragonFlyDome::setRelayEnabled(uint8_t id, bool enabled)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d#", id, enabled ? 0 : 1);
+    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d#", id, enabled ? 1 : 0);
     if (sendCommand(cmd, res))
-        return res == (enabled ? 0 : 1);
+        return res == (enabled ? 1 : 0);
 
     return false;
 }
@@ -616,7 +616,7 @@ bool DragonFlyDome::updateRelays()
         snprintf(cmd, DRIVER_LEN, "!relio rldgrd 0 %d#", i);
         if (!sendCommand(cmd, res))
             return false;
-        Relays[i]->setEnabled(res == 0);
+        Relays[i]->setEnabled(res == 1);
     }
 
     return true;
