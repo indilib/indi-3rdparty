@@ -128,13 +128,15 @@ const std::string &Relay::name() const
 DragonFlyDome::DragonFlyDome()
 {
     setVersion(LUNATICO_VERSION_MAJOR, LUNATICO_VERSION_MINOR);
-    SetDomeCapability(DOME_CAN_REL_MOVE | DOME_CAN_ABORT |  DOME_CAN_PARK);
+    SetDomeCapability(DOME_CAN_ABORT |  DOME_CAN_PARK);
     setDomeConnection(CONNECTION_TCP);
 }
 
 bool DragonFlyDome::initProperties()
 {
     INDI::Dome::initProperties();
+
+    SetParkDataType(PARK_NONE);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #1 Relays
@@ -158,11 +160,9 @@ bool DragonFlyDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Dome Control Sensors
-    IUFillNumber(&DomeControlSensorN[SENSOR_OPENED], "SENSOR_OPENED", "Opened", "%.f", 1., 8., 1., 1.);
-    IUFillNumber(&DomeControlSensorN[SENSOR_CLOSED], "SENSOR_CLOSED", "Closed", "%.f", 1., 8., 1., 1.);
     IUFillNumber(&DomeControlSensorN[SENSOR_UNPARKED], "SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
     IUFillNumber(&DomeControlSensorN[SENSOR_PARKED], "SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
-    IUFillNumberVector(&DomeControlSensorNP, DomeControlSensorN, 4, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
+    IUFillNumberVector(&DomeControlSensorNP, DomeControlSensorN, 2, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
                        SENSORS_TAB, IP_RW, 0, IPS_OK);
 
     // ALL Sensors
@@ -216,8 +216,18 @@ bool DragonFlyDome::updateProperties()
 
     if (isConnected())
     {
+        InitPark();
+
         updateRelays();
         updateSensors();
+
+        if (!isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value) && !isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
+        {
+            setDomeState(DOME_UNKNOWN);
+            LOG_WARN("Parking status is not known.");
+        }
+        else
+            SetParked(isSensorOn(DomeControlSensorN[SENSOR_PARKED].value));
 
         defineText(&FirmwareVersionTP);
 
@@ -400,6 +410,9 @@ bool DragonFlyDome::SetBacklashEnabled(bool enabled)
 ///////////////////////////////////////////////////////////////////////////
 void DragonFlyDome::TimerHit()
 {
+    if (!isConnected())
+        return;
+
     // Update all sensors
     m_UpdateSensorCounter++;
     if (m_UpdateSensorCounter >= SENSOR_UPDATE_THRESHOLD)
@@ -422,7 +435,7 @@ void DragonFlyDome::TimerHit()
     }
 
     // If we are in motion
-    if (DomeMotionSP.s == IPS_BUSY)
+    if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || getDomeState() == DOME_UNPARKING)
     {
         // Roll off is opening
         if (DomeMotionS[DOME_CW].s == ISS_ON)
@@ -487,7 +500,7 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
     if (operation == MOTION_START)
     {
         // DOME_CW --> OPEN. If can we are ask to "open" while we are fully opened as the limit switch indicates, then we simply return false.
-        if (dir == DOME_CW && isSensorOn(DomeControlSensorN[SENSOR_OPENED].value))
+        if (dir == DOME_CW && isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value))
         {
             LOG_WARN("Roof is already fully opened.");
             return IPS_ALERT;
@@ -497,7 +510,7 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
             LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
             return IPS_ALERT;
         }
-        else if (dir == DOME_CCW && isSensorOn(DomeControlSensorN[SENSOR_CLOSED].value))
+        else if (dir == DOME_CCW && isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
         {
             LOG_WARN("Roof is already fully closed.");
             return IPS_ALERT;

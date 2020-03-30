@@ -133,11 +133,9 @@ class DragonFlyDome : public INDI::Dome
 
         // Roof Control Sensors
         INumberVectorProperty DomeControlSensorNP;
-        INumber DomeControlSensorN[4];
+        INumber DomeControlSensorN[2];
         enum
         {
-            SENSOR_OPENED,
-            SENSOR_CLOSED,
             SENSOR_UNPARKED,
             SENSOR_PARKED,
         };
