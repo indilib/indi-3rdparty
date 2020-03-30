@@ -42,6 +42,8 @@ void ISInit()
 {
     if (!isInit)
     {
+
+#ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
         int detectedCameraCount = detectedCameraDevices.size();
         int registeredSDKCameraCount = registeredSDKCams.size();
@@ -59,6 +61,7 @@ void ISInit()
                 }
             }
         }
+#endif
 
         // now look for pktriggercord supported cameras (MSC mode)
         char *model = NULL;
@@ -81,8 +84,7 @@ void ISInit()
             }
         }
         if (cameraCount <= 0)
-            DEBUGDEVICE(logdevicename,INDI::Logger::DBG_ERROR, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
-
+            IDMessage(nullptr, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
 
         atexit(cleanup);
         isInit = true;

@@ -32,15 +32,22 @@ include_directories( ${PKTRIGGERCORD_INCLUDE_DIR})
 include_directories( ${GPHOTO2_INCLUDE_DIR})
 
 include(CMakeCommon)
-
 ############# PENTAX CCD ###############
-set(indipentax_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/indi_pentax.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/pentax_ccd.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/pentax_event_handler.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/pktriggercord_ccd.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/../indi-gphoto/gphoto_readimage.cpp
+set(indibase_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/indi_pentax.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/pktriggercord_ccd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../indi-gphoto/gphoto_readimage.cpp
 )
+set(indiricoh_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/pentax_ccd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/pentax_event_handler.cpp
+)
+#ricoh sdk does not have armv8 binary, so don't include it for aarch64 platforms
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^aarch64")
+    set(indipentax_SRCS ${indibase_SRCS})
+else()
+    set(indipentax_SRCS ${indibase_SRCS} ${indiricoh_SRCS})
+endif()
 
 #need to use rpath to find libraries, since they need to be in a subfolder to avoid conflicts with the standard version of libmtp
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
