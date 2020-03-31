@@ -450,6 +450,7 @@ void DragonFlyDome::TimerHit()
             if (isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value))
             {
                 LOG_INFO("Roof is unparked.");
+                setRoofOpen(false);
                 SetParked(false);
                 return;
             }
@@ -460,6 +461,7 @@ void DragonFlyDome::TimerHit()
             if (isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
             {
                 LOG_INFO("Roof is parked.");
+                setRoofClose(false);
                 SetParked(true);
                 return;
             }
@@ -476,8 +478,7 @@ bool DragonFlyDome::Abort()
 {
     if (getDomeState() == DOME_MOVING)
     {
-        return setRelayEnabled(DomeControlRelayN[RELAY_OPEN].value, false) &&
-               setRelayEnabled(DomeControlRelayN[RELAY_CLOSE].value, false);
+        return (setRoofOpen(false) && setRoofClose(false));
     }
 
     return true;
@@ -486,21 +487,21 @@ bool DragonFlyDome::Abort()
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::openRoof()
+bool DragonFlyDome::setRoofOpen(bool enabled)
 {
     int id = DomeControlRelayN[RELAY_OPEN].value - 1;
     if (id < 0)
         return false;
 
-    if (setRelayEnabled(id, true))
+    if (setRelayEnabled(id, enabled))
     {
-        Relays[id]->setEnabled(true);
+        Relays[id]->setEnabled(enabled);
         Relays[id]->sync(IPS_OK);
         return true;
     }
     else
     {
-        Relays[id]->setEnabled(false);
+        Relays[id]->setEnabled(!enabled);
         Relays[id]->sync(IPS_ALERT);
         return false;
     }
@@ -509,21 +510,21 @@ bool DragonFlyDome::openRoof()
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::closeRoof()
+bool DragonFlyDome::setRoofClose(bool enabled)
 {
     int id = DomeControlRelayN[RELAY_CLOSE].value - 1;
     if (id < 0)
         return false;
 
-    if (setRelayEnabled(id, true))
+    if (setRelayEnabled(id, enabled))
     {
-        Relays[id]->setEnabled(true);
+        Relays[id]->setEnabled(enabled);
         Relays[id]->sync(IPS_OK);
         return true;
     }
     else
     {
-        Relays[id]->setEnabled(false);
+        Relays[id]->setEnabled(!enabled);
         Relays[id]->sync(IPS_ALERT);
         return false;
     }
@@ -559,9 +560,9 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
         }
 
         if (dir == DOME_CW)
-            openRoof();
+            setRoofOpen(true);
         else
-            closeRoof();
+            setRoofClose(true);
 
         return IPS_BUSY;
     }

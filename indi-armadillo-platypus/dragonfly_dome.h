@@ -94,8 +94,8 @@ class DragonFlyDome : public INDI::Dome
         /// Relays
         ///////////////////////////////////////////////////////////////////////////////
         bool setRelayEnabled(uint8_t id, bool enabled);
-        bool openRoof();
-        bool closeRoof();
+        bool setRoofOpen(bool enabled);
+        bool setRoofClose(bool enabled);
         bool updateRelays();
 
         ///////////////////////////////////////////////////////////////////////////////
