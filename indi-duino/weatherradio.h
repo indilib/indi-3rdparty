@@ -57,6 +57,7 @@ protected:
     // Initial function to get data after connection is successful
     void getBasicData();
 
+    // Read the firmware configuration
     void updateConfigData();
 
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
@@ -142,6 +143,10 @@ protected:
 
     ISwitch refreshConfigS[1] = {};
     ISwitchVectorProperty refreshConfigSP;
+
+    ISwitch reconnectWiFiS[1] = {};
+    ISwitchVectorProperty reconnectWiFiSP;
+    bool hasWiFi = false;
 
     // calibration parameters to calculate the corrected sky temperature
     INumberVectorProperty skyTemperatureCalibrationNP;
@@ -233,6 +238,7 @@ protected:
      */
     IPState readFirmwareConfig(configuration *config);
 
+    bool reconnectWiFi();
 
     // helper functions
     bool receive(char* buffer, int* bytes, char end, int wait);

@@ -46,6 +46,8 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 512
 
+#define WIFI_DEVICE "WiFi"
+
 #define WEATHER_TEMPERATURE     "WEATHER_TEMPERATURE"
 #define WEATHER_PRESSURE        "WEATHER_PRESSURE"
 #define WEATHER_HUMIDITY        "WEATHER_HUMIDITY"
@@ -127,11 +129,17 @@ bool WeatherRadio::initProperties()
     IUFillNumber(&ttyTimeoutN[0], "TIMEOUT", "Timeout (s)", "%.f", 0, 60, 1, getTTYTimeout());
     IUFillNumberVector(&ttyTimeoutNP, ttyTimeoutN, 1, getDeviceName(), "TTY_TIMEOUT", "TTY timeout", CONNECTION_TAB, IP_RW, 0, IPS_OK);
 
+    // Firmware version
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
+    // refresh firmware configuration
     IUFillSwitch(&refreshConfigS[0], "REFRESH", "Refresh", ISS_OFF);
     IUFillSwitchVector(&refreshConfigSP, refreshConfigS, 1, getDeviceName(), "REFRESH_CONFIG", "Refresh", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    // reconnect WiFi
+    IUFillSwitch(&reconnectWiFiS[0], "RECONNECT", "Reconnect", ISS_OFF);
+    IUFillSwitchVector(&reconnectWiFiSP, reconnectWiFiS, 1, getDeviceName(), "WIFI", "WiFi", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     // calibration parameters
     IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
@@ -290,6 +298,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(refreshConfigSP.name);
+        deleteProperty(reconnectWiFiSP.name);
         deleteProperty(FirmwareInfoTP.name);
         deleteProperty(FirmwareConfigTP.name);
 
@@ -349,6 +358,9 @@ void WeatherRadio::getBasicData()
 
     // refresh button
     defineSwitch(&refreshConfigSP);
+
+    if (hasWiFi)
+        defineSwitch(&reconnectWiFiSP);
 }
 
 /**************************************************************************************
@@ -440,6 +452,9 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
             char *device {new char[strlen(deviceIter->key)+1] {0}};
             strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
 
+            if (strcmp(device, WIFI_DEVICE) == 0)
+                hasWiFi = true;
+
             JsonIterator configIter;
 
             // read settings for the single device
@@ -467,11 +482,11 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
                     value = "false";
                     break;
                 default:
-                    value = configIter->value.toString();
+                    value = strdup(configIter->value.toString());
                     break;
                 }
                 // add it to the configuration
-                (*config)[std::string(device) + ": " + std::string(name)] = std::string(value);
+                (*config)[std::string(device) + ": " + std::string(name)] = value;
             }
 
         }
@@ -482,6 +497,13 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
         LOG_WARN("Retrieving firmware config failed.");
         return IPS_ALERT;
     }
+}
+
+bool WeatherRadio::reconnectWiFi()
+{
+    bool result = transmit("s\n");
+
+    return result;
 }
 
 
@@ -602,11 +624,23 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             updateConfigData();
 
             refreshConfigSP.s = IPS_OK;
+            refreshConfigS[0].s = ISS_OFF;
             IDSetSwitch(&refreshConfigSP, nullptr);
 
             return (refreshConfigSP.s == IPS_OK);
         }
-        if (strcmp(name, temperatureSensorSP.name) == 0)
+        else if (strcmp(name, reconnectWiFiSP.name) == 0)
+        {
+            // reconnect config button pressed
+            IUUpdateSwitch(&reconnectWiFiSP, states, names, n);
+
+            reconnectWiFiSP.s = reconnectWiFi() ? IPS_OK : IPS_ALERT;
+            reconnectWiFiS[0].s = ISS_OFF;
+            IDSetSwitch(&reconnectWiFiSP, nullptr);
+
+            return (reconnectWiFiSP.s == IPS_OK);
+        }
+        else if (strcmp(name, temperatureSensorSP.name) == 0)
         {
             // temperature sensor selected
             IUUpdateSwitch(&temperatureSensorSP, states, names, n);

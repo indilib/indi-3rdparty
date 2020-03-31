@@ -109,12 +109,12 @@ String getCurrentConfig() {
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
+  wifidata["SSID"] = esp8266Data.ssid;
+  wifidata["connected"] = WiFi.status() == WL_CONNECTED;
   if (WiFi.status() == WL_CONNECTED)
     wifidata["IP"]        = WiFi.localIP().toString();
   else
-    wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-
-  wifidata["SSID"] = esp8266Data.ssid;
+    wifidata["IP"]        = "";
 #endif
 
   if (doc.isNull())
@@ -204,11 +204,9 @@ String parseInput() {
         parseCredentials(input.substring(2));
       disconnectWiFi();
       initWiFi();
-      Serial.println(getCurrentConfig());
       break;
     case 'd':
       disconnectWiFi();
-      Serial.println(getCurrentConfig());
       break;
 #endif
   }
