@@ -435,6 +435,7 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
 
     if (result)
     {
+        // LOGF_DEBUG("Firmware configuration response: %s", data);
         char *source = data;
         char *endptr;
         JsonValue value;
@@ -502,7 +503,6 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
 bool WeatherRadio::reconnectWiFi()
 {
     bool result = transmit("s\n");
-
     return result;
 }
 
@@ -568,6 +568,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             if (n > 6) weatherCalculator->skyTemperatureCoefficients.t_overcast = values[6];
             skyTemperatureCalibrationNP.s = IPS_OK;
             IDSetNumber(&skyTemperatureCalibrationNP, nullptr);
+            LOG_DEBUG("Cloud coverage value calibration updated.");
             return skyTemperatureCalibrationNP.s;
         }
         else if (strcmp(name, humidityCalibrationNP.name) == 0)
@@ -577,6 +578,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             weatherCalculator->humidityCalibration.shift  = values[1];
             humidityCalibrationNP.s = IPS_OK;
             IDSetNumber(&humidityCalibrationNP, nullptr);
+            LOG_DEBUG("Humidity value calibration updated.");
             return humidityCalibrationNP.s;
         }
         else if (strcmp(name, temperatureCalibrationNP.name) == 0)
@@ -586,6 +588,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             weatherCalculator->temperatureCalibration.shift  = values[1];
             temperatureCalibrationNP.s = IPS_OK;
             IDSetNumber(&temperatureCalibrationNP, nullptr);
+            LOG_DEBUG("Temperature value calibration updated.");
             return temperatureCalibrationNP.s;
         }
         else if (strcmp(name, sqmCalibrationNP.name) == 0)
@@ -596,6 +599,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             sqmCalibrationNP.s = IPS_OK;
             IDSetNumber(&sqmCalibrationNP, nullptr);
             return sqmCalibrationNP.s;
+            LOG_DEBUG("SQM value calibration updated.");
         }
         else if (strcmp(name, windDirectionCalibrationNP.name) == 0)
         {
@@ -604,6 +608,7 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             windDirectionCalibrationNP.s = IPS_OK;
             IDSetNumber(&windDirectionCalibrationNP, nullptr);
             return windDirectionCalibrationNP.s;
+            LOG_DEBUG("Wind direction value calibration updated.");
         }
     }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
@@ -627,6 +632,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             refreshConfigS[0].s = ISS_OFF;
             IDSetSwitch(&refreshConfigSP, nullptr);
 
+            LOG_INFO("Firmware configuration data updated.");
             return (refreshConfigSP.s == IPS_OK);
         }
         else if (strcmp(name, reconnectWiFiSP.name) == 0)
@@ -638,6 +644,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             reconnectWiFiS[0].s = ISS_OFF;
             IDSetSwitch(&reconnectWiFiSP, nullptr);
 
+            LOG_INFO("Reconnecting WiFi. Press \"Refresh\" to update the status.");
             return (reconnectWiFiSP.s == IPS_OK);
         }
         else if (strcmp(name, temperatureSensorSP.name) == 0)
@@ -649,6 +656,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&temperatureSensorSP, selected);
             currentSensors.temperature = sensor;
 
+            LOGF_DEBUG("Temperature sensor selected: %s", selected);
             return (temperatureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, pressureSensorSP.name) == 0)
@@ -660,6 +668,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&pressureSensorSP, selected);
             currentSensors.pressure = sensor;
 
+            LOGF_DEBUG("Pressure sensor selected: %s", selected);
             return (pressureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, humiditySensorSP.name) == 0)
@@ -671,6 +680,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&humiditySensorSP, selected);
             currentSensors.humidity = sensor;
 
+            LOGF_DEBUG("Humidity sensor selected: %s", selected);
             return (humiditySensorSP.s == IPS_OK);
         }
         else if (strcmp(name, luminositySensorSP.name) == 0)
@@ -682,6 +692,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&luminositySensorSP, selected);
             currentSensors.luminosity = sensor;
 
+            LOGF_DEBUG("Luminosity sensor selected: %s", selected);
             return (luminositySensorSP.s == IPS_OK);
         }
         else if (strcmp(name, sqmSensorSP.name) == 0)
@@ -693,6 +704,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&sqmSensorSP, selected);
             currentSensors.sqm = sensor;
 
+            LOGF_DEBUG("SQM sensor selected: %s", selected);
             return (sqmSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, ambientTemperatureSensorSP.name) == 0)
@@ -704,6 +716,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&ambientTemperatureSensorSP, selected);
             currentSensors.temp_ambient = sensor;
 
+            LOGF_DEBUG("Ambient temperature sensor selected: %s", selected);
             return (ambientTemperatureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, objectTemperatureSensorSP.name) == 0)
@@ -715,6 +728,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&objectTemperatureSensorSP, selected);
             currentSensors.temp_object = sensor;
 
+            LOGF_DEBUG("Object temperature sensor selected: %s", selected);
             return (objectTemperatureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, windGustSensorSP.name) == 0)
@@ -726,6 +740,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&windGustSensorSP, selected);
             currentSensors.wind_gust = sensor;
 
+            LOGF_DEBUG("Wind gust sensor selected: %s", selected);
             return (windGustSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, windSpeedSensorSP.name) == 0)
@@ -737,6 +752,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&windSpeedSensorSP, selected);
             currentSensors.wind_speed = sensor;
 
+            LOGF_DEBUG("Wind speed sensor selected: %s", selected);
             return (windSpeedSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, windDirectionSensorSP.name) == 0)
@@ -748,6 +764,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&windDirectionSensorSP, selected);
             currentSensors.wind_direction = sensor;
 
+            LOGF_DEBUG("Wind direction sensor selected: %s", selected);
             return (windDirectionSensorSP.s == IPS_OK);
         }
     }
@@ -785,6 +802,7 @@ IPState WeatherRadio::updateWeather()
     char cmd[20] = {0};
     sprintf(cmd, "w#%d\n", id);
     bool result = sendQuery(cmd, data, &n_bytes);
+    // LOGF_DEBUG("Weather data received: %s", data);
 
     if (result == false)
         return IPS_ALERT;
