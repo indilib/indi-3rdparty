@@ -1,30 +1,30 @@
 #if 0
-  This file is part of the AAG Cloud Watcher INDI Driver.
-  A driver for the AAG Cloud Watcher (AAGware - http://www.aagware.eu/)
+This file is part of the AAG Cloud Watcher INDI Driver.
+A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
-  Copyright (C) 2012-2015 Sergio Alonso (zerjioi@ugr.es)
-  Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+                                    Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
+                                    Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
 
 
 
-  AAG Cloud Watcher INDI Driver is free software: you can redistribute it
-  and/or modify it under the terms of the GNU General Public License as
-  published by the Free Software Foundation, either version 3 of the License,
-  or (at your option) any later version.
+                                    AAG Cloud Watcher INDI Driver is free software : you can redistribute it
+                                    and / or modify it under the terms of the GNU General Public License as
+                                    published by the Free Software Foundation, either version 3 of the License,
+                                    or (at your option) any later version.
 
-  AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+                                    AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
+                                    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+                                    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+                                    GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with AAG Cloud Watcher INDI Driver.  If not, see
-  <http://www.gnu.org/licenses/>.
-  
-  Anemometer code contributed by Joao Bento.
+                                        You should have received a copy of the GNU General Public License
+                                        along with AAG Cloud Watcher INDI Driver.  If not, see
+                                        < http : //www.gnu.org/licenses/>.
+
+                                        Anemometer code contributed by Joao Bento.
 #endif
 
-/* Our driver header */
+                                        /* Our driver header */
 #include "indi_aagcloudwatcher_ng.h"
 
 #include "config.h"
@@ -35,29 +35,28 @@
 
 #define ABS_ZERO 273.15
 
-/* auto pointer */
-std::unique_ptr<AAGCloudWatcher> cloudWatcher(new AAGCloudWatcher());
+                                        static std::unique_ptr<AAGCloudWatcher> cloudWatcher(new AAGCloudWatcher());
 
-AAGCloudWatcher::AAGCloudWatcher()
+                                        AAGCloudWatcher::AAGCloudWatcher()
 {
     setVersion(AAG_VERSION_MAJOR, AAG_VERSION_MINOR);
 
-    LOG_DEBUG("Initializing from AAG Cloud Watcher device...");
+        LOG_DEBUG("Initializing from AAG Cloud Watcher device...");
 
-    cwc = new CloudWatcherController(true);
+        cwc = new CloudWatcherController(true);
 
-    lastReadPeriod = 3.0;
+        lastReadPeriod = 3.0;
 
-    heatingStatus = normal;
+        heatingStatus = normal;
 
-    pulseStartTime = -1;
-    wetStartTime   = -1;
+        pulseStartTime = -1;
+        wetStartTime   = -1;
 
-    desiredSensorTemperature = 0;
-    globalRainSensorHeater   = -1;
+        desiredSensorTemperature = 0;
+        globalRainSensorHeater   = -1;
 
-    addDebugControl();
-}
+        addDebugControl();
+    }
 
 
 bool AAGCloudWatcher::Handshake()
@@ -67,7 +66,7 @@ bool AAGCloudWatcher::Handshake()
 
     if (check)
     {
-        LOG_INFO("Connected to AAG Cloud Watcher\n");
+        LOG_INFO("Connected to AAG Cloud Watcher");
 
         sendConstants();
 
@@ -75,7 +74,7 @@ bool AAGCloudWatcher::Handshake()
     }
     else
     {
-        LOG_ERROR("Could not connect to AAG Cloud Watcher. Handshake failed. Check port and / or cable.\n");
+        LOG_ERROR("Could not connect to AAG Cloud Watcher. Handshake failed. Check port or cable.");
 
         return false;
     }
@@ -88,7 +87,6 @@ bool AAGCloudWatcher::Handshake()
 bool AAGCloudWatcher::initProperties()
 {
     INDI::Weather::initProperties();
-    serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
     buildSkeleton("indi_aagcloudwatcher_ng_sk.xml");
 
     addParameter("WEATHER_BRIGHTNESS", "Ambient light brightness (K)", 2100, 1000000, 10);
@@ -269,8 +267,7 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
 
 bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    // ignore if not ours //
-
+    // ignore if not ours
     if (strcmp(dev, getDefaultName()))
     {
         return false;
@@ -395,6 +392,8 @@ float AAGCloudWatcher::getLastReadPeriod()
 bool AAGCloudWatcher::isWetRain()
 {
     ISwitchVectorProperty *svpRC = getSwitch("rainConditions");
+    if (svpRC == nullptr)
+        return false;
 
     for (int i = 0; i < svpRC->nsp; i++)
     {
@@ -444,23 +443,28 @@ bool AAGCloudWatcher::heatingAlgorithm()
     }
 
     if (globalRainSensorHeater == -1)
-    { // If not already setted
+    {
+        // If not already setted
         globalRainSensorHeater = getNumberValueFromVector(sensors, "rainSensorHeater");
     }
 
     time_t currentTime = time(nullptr);
 
     if ((isWetRain()) && (heatingStatus == normal))
-    { // We check if sensor is wet.
+    {
+        // We check if sensor is wet.
         if (wetStartTime == -1)
-        { // First moment wet
+        {
+            // First moment wet
             wetStartTime = time(nullptr);
         }
         else
-        { // We have been wet for a while
+        {
+            // We have been wet for a while
 
             if (currentTime - wetStartTime >= heatImpulseCycle)
-            { // We have been a cycle wet. Apply pulse
+            {
+                // We have been a cycle wet. Apply pulse
                 wetStartTime   = -1;
                 heatingStatus  = increasingToPulse;
                 pulseStartTime = -1;
@@ -468,14 +472,16 @@ bool AAGCloudWatcher::heatingAlgorithm()
         }
     }
     else
-    { // is not wet
+    {
+        // is not wet
         wetStartTime = -1;
     }
 
     if (heatingStatus == pulse)
     {
         if (currentTime - pulseStartTime > heatImpulseDuration)
-        { // Pulse ends
+        {
+            // Pulse ends
             heatingStatus  = normal;
             wetStartTime   = -1;
             pulseStartTime = -1;
@@ -495,7 +501,8 @@ bool AAGCloudWatcher::heatingAlgorithm()
             desiredSensorTemperature = ambient + deltaHigh;
         }
         else
-        { // Between tempLow and tempHigh
+        {
+            // Between tempLow and tempHigh
             float delt = ((((ambient - tempLow) / (tempHigh - tempLow)) * (deltaHigh - deltaLow)) + deltaLow);
 
             desiredSensorTemperature = ambient + delt;
@@ -526,7 +533,8 @@ bool AAGCloudWatcher::heatingAlgorithm()
     }
 
     if ((heatingStatus == normal) || (heatingStatus == pulse))
-    { // Check desired temperature and act accordingly
+    {
+        // Check desired temperature and act accordingly
         // Obtain the difference in temperature and modifier
         float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
         float refreshModifier = sqrt(refresh / 10.0);
@@ -562,12 +570,14 @@ bool AAGCloudWatcher::heatingAlgorithm()
         }
 
         if (rainSensorTemperature > desiredSensorTemperature)
-        {   // Lower heating
+        {
+            // Lower heating
             //   IDLog("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
             globalRainSensorHeater /= modifier;
         }
         else
-        {   // increase heating
+        {
+            // increase heating
             //   IDLog("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
             globalRainSensorHeater *= modifier;
         }
@@ -627,7 +637,7 @@ bool AAGCloudWatcher::sendData()
         return false;
     }
 
-    int N_DATA = 11;
+    const int N_DATA = 11;
     double values[N_DATA];
     char *names[N_DATA];
 
@@ -670,7 +680,7 @@ bool AAGCloudWatcher::sendData()
     nvp->s = IPS_OK;
     IDSetNumber(nvp, nullptr);
 
-    int N_ERRORS = 5;
+    const int N_ERRORS = 5;
     double valuesE[N_ERRORS];
     char *namesE[N_ERRORS];
 
@@ -694,7 +704,7 @@ bool AAGCloudWatcher::sendData()
     nvpE->s = IPS_OK;
     IDSetNumber(nvpE, nullptr);
 
-    int N_SENS = 9;
+    const int N_SENS = 9;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -857,7 +867,7 @@ bool AAGCloudWatcher::resetData()
         return false;
     }
 
-    int N_DATA = 11;
+    const int N_DATA = 11;
     double values[N_DATA];
     char *names[N_DATA];
 
@@ -899,7 +909,7 @@ bool AAGCloudWatcher::resetData()
     nvp->s = IPS_IDLE;
     IDSetNumber(nvp, nullptr);
 
-    int N_ERRORS = 5;
+    const int N_ERRORS = 5;
     double valuesE[N_ERRORS];
     char *namesE[N_ERRORS];
 
@@ -923,7 +933,7 @@ bool AAGCloudWatcher::resetData()
     nvpE->s = IPS_IDLE;
     IDSetNumber(nvpE, nullptr);
 
-    int N_SENS = 9;
+    const int N_SENS = 9;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -988,7 +998,7 @@ bool AAGCloudWatcher::sendConstants()
         return false;
     }
 
-    int N_CONSTANTS = 11;
+    const int N_CONSTANTS = 11;
     double values[N_CONSTANTS];
     char *names[N_CONSTANTS];
 
@@ -1056,7 +1066,7 @@ bool AAGCloudWatcher::resetConstants()
         return false;
     }
 
-    int N_CONSTANTS = 11;
+    const int N_CONSTANTS = 11;
     double values[N_CONSTANTS];
     char *names[N_CONSTANTS];
 
@@ -1111,7 +1121,7 @@ bool AAGCloudWatcher::resetConstants()
 
 const char *AAGCloudWatcher::getDefaultName()
 {
-    return AAG_DRIVER_NAME;
+    return "AAG Cloud Watcher NG";
 }
 
 void ISGetProperties(const char *dev)
