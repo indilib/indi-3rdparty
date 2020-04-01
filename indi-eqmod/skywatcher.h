@@ -61,6 +61,8 @@ class Skywatcher
         bool HasHomeIndexers();
         bool HasAuxEncoders();
         bool HasPPEC();
+        bool HasSnapPort1();
+        bool HasSnapPort2();
 
         uint32_t GetRAEncoder();
         uint32_t GetDEEncoder();
@@ -124,6 +126,10 @@ class Skywatcher
         void SetST4RAGuideRate(unsigned char r);
         void SetST4DEGuideRate(unsigned char r);
         void SetLEDBrightness(uint8_t value);
+        void TurnSnapPort1(bool on);
+        void TurnSnapPort2(bool on);
+        bool GetSnapPort1Status();
+        bool GetSnapPort2Status();
 
         void setPortFD(int value);
 
@@ -151,7 +157,7 @@ class Skywatcher
             SetAxisPositionCmd        = 'E',
             GetAxisPosition           = 'j',
             GetAxisStatus             = 'f',
-            SetSwitch                 = 'O',
+            SetSnapPort               = 'O', // EQ8/AZEQ6/AZEQ5/EQ6-R only
             SetMotionMode             = 'G',
             SetGotoTargetIncrement    = 'H',
             SetBreakPointIncrement    = 'M',
@@ -266,6 +272,7 @@ class Skywatcher
         void TurnPPECTraining(SkywatcherAxis axis, bool on);
         void TurnPPEC(SkywatcherAxis axis, bool on);
         void GetPPECStatus(SkywatcherAxis axis, bool *intraining, bool *inppec);
+        void TurnSnapPort(SkywatcherAxis axis, bool on);
 
         bool read_eqmod();
         bool dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *arg);
@@ -331,6 +338,8 @@ class Skywatcher
         uint32_t backlashperiod[NUMBER_OF_SKYWATCHERAXIS];
 
         uint32_t lastreadIndexer[NUMBER_OF_SKYWATCHERAXIS];
+
+        bool snapportstatus[NUMBER_OF_SKYWATCHERAXIS];
 
         const uint8_t EQMOD_TIMEOUT = 5;
         const uint8_t EQMOD_MAX_RETRY = 3;

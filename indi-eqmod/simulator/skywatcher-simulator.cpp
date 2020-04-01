@@ -588,7 +588,10 @@ void SkywatcherSimulator::process_command(const char *cmd, int *received)
         case 'P': // Set ST4 guide Rate
             send_byte('=');
             break;
-        case 'V':
+        case 'V': // Set Led Brightness
+            send_byte('=');
+            break;
+        case 'O': // Snap ports
             send_byte('=');
             break;
         default:
