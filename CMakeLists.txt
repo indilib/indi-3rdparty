@@ -103,6 +103,7 @@ option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
+option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 
 find_package(FFmpeg)
 
@@ -208,6 +209,11 @@ ELSE(BUILD_LIBS)
 if (WITH_EQMOD)
 add_subdirectory(indi-eqmod)
 endif(WITH_EQMOD)
+
+## AstroLink4
+if (WITH_ASTROLINK4)
+add_subdirectory(indi-astrolink4)
+endif(WITH_ASTROLINK4)
 
 ## SkyWalker
 if (WITH_SKYWALKER)
