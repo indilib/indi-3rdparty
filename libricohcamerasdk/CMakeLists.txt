@@ -26,10 +26,11 @@ else()
   message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${architecture_path}/libRicohCameraSDKCpp.so ${CMAKE_BINARY_DIR}/libRicohCameraSDKCpp.so.${LIBPENTAX_VERSION})
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${architecture_path}/libRicohCameraSDKCpp.bin ${CMAKE_BINARY_DIR}/libRicohCameraSDKCpp.so.${LIBPENTAX_VERSION})
+exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/lib/${architecture_path}/libmtp.bin ${CMAKE_BINARY_DIR}/libmtp.so.${LIBMTP_VERSION})
 
 install( FILES ${CMAKE_BINARY_DIR}/libRicohCameraSDKCpp.so.${LIBPENTAX_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ${CMAKE_CURRENT_SOURCE_DIR}/lib/${architecture_path}/libmtp.so.${LIBMTP_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+install( FILES ${CMAKE_BINARY_DIR}/libmtp.so.${LIBMTP_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
 
 # Make sure symbolic links are installed
 install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libRicohCameraSDKCpp.so.${LIBPENTAX_VERSION}\" \"libRicohCameraSDKCpp.so.${LIBPENTAX_SOVERSION}\" WORKING_DIRECTORY
