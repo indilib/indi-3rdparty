@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 6), cdbs, cmake
 Standards-Version: 3.9.2
 
 Package: libricohcamerasdk
-Architecture: any
+Architecture: amd64 armhf
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Library for using Pentax cameras in PTP mode with INDI.
  Uses Ricoh Camera SDK - see https://api.ricoh/.
