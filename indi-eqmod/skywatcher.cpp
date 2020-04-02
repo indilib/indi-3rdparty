@@ -553,6 +553,11 @@ bool Skywatcher::HasSnapPort2()
     return MountCode == 0x06;
 }
 
+bool Skywatcher::HasPolarLed()
+{
+    return (AxisFeatures[Axis1].hasPolarLed) && (AxisFeatures[Axis2].hasPolarLed);
+}
+
 void Skywatcher::InquireRAEncoderInfo(INumberVectorProperty *encoderNP)
 {
     double steppersvalues[3];
@@ -1279,7 +1284,12 @@ void Skywatcher::SetLEDBrightness(uint8_t value)
     char hexa[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
     cmd[0] = hexa[(value & 0xF0) >> 4];
     cmd[1] = hexa[(value & 0x0F)];
-    dispatch_command(SetPolarScopeLED, Axis1, cmd);
+    try {
+        dispatch_command(SetPolarScopeLED, Axis1, cmd);
+    } catch (EQModError e) {
+        DEBUGF(telescope->DBG_MOUNT, "%s(): Mount does not support led brightness  (%c command)", __FUNCTION__,
+                   SetPolarScopeLED);
+    }
 }
 
 void Skywatcher::TurnRAPPECTraining(bool on)
