@@ -8,9 +8,6 @@ include(GNUInstallDirs)
 set (INDI_PENTAX_VERSION_MAJOR 1)
 set (INDI_PENTAX_VERSION_MINOR 0)
 
-#libmtp needs the runpath, but is an indirect dependency and therefore will only get runpath if we set the following flags
-set (CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
-
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -48,9 +45,6 @@ if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^aarch64")
 else()
     set(indipentax_SRCS ${indibase_SRCS} ${indiricoh_SRCS})
 endif()
-
-#need to use rpath to find libraries, since they need to be in a subfolder to avoid conflicts with the standard version of libmtp
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_executable(indi_pentax ${indipentax_SRCS})
 
