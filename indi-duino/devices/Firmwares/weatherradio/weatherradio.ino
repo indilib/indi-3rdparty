@@ -87,14 +87,23 @@ String getCurrentVersion() {
   return result;
 }
 
+
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
+                      JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
+
+#ifdef USE_WIFI
+  // currently, we have memory info only available for ESP8266
+  JsonObject arduinodata = doc.createNestedObject("Arduino");
+  arduinodata["free memory"] = freeMemory();
+#endif
+
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
   dhtdata["pin"]  = DHTPIN;
