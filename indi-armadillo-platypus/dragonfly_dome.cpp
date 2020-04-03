@@ -231,7 +231,7 @@ bool DragonFlyDome::updateProperties()
                 setDomeState(DOME_UNKNOWN);
                 LOG_WARN("Parking status is not known.");
             }
-            else
+            else if (isSensorOn(parkedSensor) != isParked())
                 SetParked(isSensorOn(parkedSensor));
         }
 
@@ -449,7 +449,6 @@ void DragonFlyDome::TimerHit()
         {
             if (isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value))
             {
-                LOG_INFO("Roof is unparked.");
                 setRoofOpen(false);
                 SetParked(false);
                 return;
@@ -460,7 +459,6 @@ void DragonFlyDome::TimerHit()
         {
             if (isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
             {
-                LOG_INFO("Roof is parked.");
                 setRoofClose(false);
                 SetParked(true);
                 return;
@@ -493,6 +491,18 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
     if (id < 0)
         return false;
 
+    int closeRoofRelay = DomeControlRelayN[RELAY_CLOSE].value - 1;
+    if (closeRoofRelay < 0)
+        return false;
+    // Only proceed is RELAY_CLOSE is OFF
+    if (enabled && Relays[closeRoofRelay]->isEnabled())
+    {
+        LOG_DEBUG("Turning off Close Roof Relay in order to turn on Open Roof relay...");
+        setRelayEnabled(closeRoofRelay, false);
+        Relays[closeRoofRelay]->setEnabled(false);
+        Relays[closeRoofRelay]->sync(IPS_IDLE);
+    }
+
     if (setRelayEnabled(id, enabled))
     {
         Relays[id]->setEnabled(enabled);
@@ -515,6 +525,18 @@ bool DragonFlyDome::setRoofClose(bool enabled)
     int id = DomeControlRelayN[RELAY_CLOSE].value - 1;
     if (id < 0)
         return false;
+
+    int openRoofRelay = DomeControlRelayN[RELAY_OPEN].value - 1;
+    if (openRoofRelay < 0)
+        return false;
+    // Only proceed is RELAY_OPEN is OFF
+    if (enabled && Relays[openRoofRelay]->isEnabled())
+    {
+        LOG_DEBUG("Turning off Open Roof relay in order to turn on Close Roof relay...");
+        setRelayEnabled(openRoofRelay, false);
+        Relays[openRoofRelay]->setEnabled(false);
+        Relays[openRoofRelay]->sync(IPS_IDLE);
+    }
 
     if (setRelayEnabled(id, enabled))
     {
