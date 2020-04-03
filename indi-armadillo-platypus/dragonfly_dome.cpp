@@ -506,7 +506,7 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
     if (setRelayEnabled(id, enabled))
     {
         Relays[id]->setEnabled(enabled);
-        Relays[id]->sync(IPS_OK);
+        Relays[id]->sync(enabled ? IPS_OK : IPS_IDLE);
         return true;
     }
     else
@@ -541,7 +541,7 @@ bool DragonFlyDome::setRoofClose(bool enabled)
     if (setRelayEnabled(id, enabled))
     {
         Relays[id]->setEnabled(enabled);
-        Relays[id]->sync(IPS_OK);
+        Relays[id]->sync(enabled ? IPS_OK : IPS_IDLE);
         return true;
     }
     else
