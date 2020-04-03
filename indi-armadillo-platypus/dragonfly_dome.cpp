@@ -451,7 +451,6 @@ void DragonFlyDome::TimerHit()
             {
                 setRoofOpen(false);
                 SetParked(false);
-                return;
             }
         }
         // Roll Off is closing
@@ -461,7 +460,6 @@ void DragonFlyDome::TimerHit()
             {
                 setRoofClose(false);
                 SetParked(true);
-                return;
             }
         }
     }
