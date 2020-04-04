@@ -114,7 +114,7 @@ bool SeletekRotator::initProperties()
     IUFillNumber(&SettingN[PARAM_MAX_SPEED], "PARAM_MAX_SPEED", "Max Speed", "%.f", 1., 10000., 100., 9800.);
     IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
     IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
-    IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.f", 100., 100000., 100., 1000.);
+    IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.f", 1., 100000., 100., 1000.);
     IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
                        IPS_OK);
 
@@ -318,6 +318,12 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
                     SettingN[PARAM_MAX_SPEED].value != prevValue[PARAM_MAX_SPEED])
             {
                 rc = setSpeedRange(SettingN[PARAM_MIN_SPEED].value, SettingN[PARAM_MAX_SPEED].value);
+            }
+
+            if (!rc)
+            {
+                for (uint8_t i = 0; i < SettingNP.nnp; i++)
+                    SettingN[i].value = prevValue[i];
             }
 
             SettingNP.s = rc ? IPS_OK : IPS_ALERT;
