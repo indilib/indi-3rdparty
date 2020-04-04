@@ -87,19 +87,22 @@ bool SeletekRotator::initProperties()
     IUFillSwitch(&PerPortS[PORT_MAIN], "PORT_MAIN", "Main", ISS_ON );
     IUFillSwitch(&PerPortS[PORT_EXP], "PORT_EXP", "Exp", ISS_OFF );
     IUFillSwitch(&PerPortS[PORT_THIRD], "PORT_THIRD", "Third", ISS_OFF );
-    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "SELETEK_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "SELETEK_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
+                       0, IPS_IDLE);
 
     // HalfStep
     IUFillSwitch(&HalfStepS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
     IUFillSwitch(&HalfStepS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_OFF);
-    IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "ROTATOR_HALF_STEP", "Half Step", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "ROTATOR_HALF_STEP", "Half Step", SETTINGS_TAB, IP_RW,
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Wiring
     IUFillSwitch(&WiringS[WIRING_LUNATICO_NORMAL], "WIRING_LUNATICO_NORMAL", "Lunatico Normal", ISS_ON);
     IUFillSwitch(&WiringS[WIRING_LUNATICO_REVERSED], "WIRING_LUNATICO_REVERSED", "Lunatico Reverse", ISS_OFF);
     IUFillSwitch(&WiringS[WIRING_RFMOONLITE_NORMAL], "WIRING_RFMOONLITE_NORMAL", "RF/Moonlite Normal", ISS_OFF);
     IUFillSwitch(&WiringS[WIRING_RFMOONLITE_REVERSED], "WIRING_RFMOONLITE_REVERSED", "RF/Moonlite Reverse", ISS_OFF);
-    IUFillSwitchVector(&WiringSP, WiringS, 4, getDeviceName(), "ROTATOR_WIRING", "Wiring", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&WiringSP, WiringS, 4, getDeviceName(), "ROTATOR_WIRING", "Wiring", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0,
+                       IPS_IDLE);
 
     // Max Speed
     // our internal speed is in usec/step, with a reasonable range from 500.000.usec for dc motors simulating steps to
@@ -112,22 +115,21 @@ bool SeletekRotator::initProperties()
     IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
     IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
     IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.f", 100., 100000., 100., 1000.);
-    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0, IPS_OK);
+    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
+                       IPS_OK);
 
     // Motor Types
     IUFillSwitch(&MotorTypeS[MOTOR_UNIPOLAR], "MOTOR_UNIPOLAR", "Unipolar", ISS_ON);
     IUFillSwitch(&MotorTypeS[MOTOR_BIPOLAR], "MOTOR_BIPOLAR", "Bipolar", ISS_OFF);
     IUFillSwitch(&MotorTypeS[MOTOR_DC], "MOTOR_DC", "DC", ISS_OFF);
     IUFillSwitch(&MotorTypeS[MOTOR_STEPDIR], "MOTOR_STEPDIR", "Step-Dir", ISS_OFF);
-    IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "ROTATOR_MOTOR_TYPE", "Motor Type", SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    // Rotator Ticks
-    IUFillNumber(&RotatorAbsPosN[0], "ROTATOR_ABSOLUTE_POSITION", "Steps", "%.f", 0., 100000., 1000., 0.);
-    IUFillNumberVector(&RotatorAbsPosNP, RotatorAbsPosN, 1, getDeviceName(), "ABS_ROTATOR_POSITION", "Goto", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE );
+    IUFillSwitchVector(&MotorTypeSP, MotorTypeS, 4, getDeviceName(), "ROTATOR_MOTOR_TYPE", "Motor Type", SETTINGS_TAB, IP_RW,
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Firmware Version
     IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
+                     IP_RO, 0, IPS_IDLE);
 
     addDebugControl();
 
@@ -170,8 +172,7 @@ bool SeletekRotator::updateProperties()
 
 bool SeletekRotator::Handshake()
 {
-    LOG_INFO("Error communicating with the Seletek Rotator. Please ensure it is powered and the port is correct.");
-    return false;
+    return echo();
 }
 
 const char *SeletekRotator::getDefaultName()
@@ -200,7 +201,7 @@ bool SeletekRotator::echo()
         fwmin = ( res % 100 );
         if ( oper >= DRIVER_OPERATIVES )
             oper = DRIVER_OPERATIVES;
-        if ( model >= DRIVER_MODELS )
+        if ( model > DRIVER_MODELS )
             model = 0;
         sprintf( txt, "%s %s fwv %d.%d", operative[ oper ], models[ model ], fwmaj, fwmin );
         if ( strcmp( models[ model ], "Seletek" ) )
@@ -371,7 +372,8 @@ bool SeletekRotator::gotoTarget(uint32_t position)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    uint32_t backlash = (IUFindOnSwitchIndex(&RotatorBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>(RotatorBacklashN[0].value) : 0;
+    uint32_t backlash = (IUFindOnSwitchIndex(&RotatorBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>
+                        (RotatorBacklashN[0].value) : 0;
     snprintf(cmd, DRIVER_LEN, "!step goto %d %ud %ud", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
     if (sendCommand(cmd, res))
         m_IsMoving = (res == 0);
@@ -520,51 +522,53 @@ bool SeletekRotator::saveConfigItems(FILE *fp)
 /////////////////////////////////////////////////////////////////////////////
 bool SeletekRotator::sendCommand(const char * cmd, int32_t &res)
 {
-    int nbytes_written = 0, nbytes_read = 0;
-    char response[DRIVER_LEN] = {0};
-
-    tcflush(PortFD, TCIOFLUSH);
-
-    LOGF_DEBUG("CMD <%s>", cmd);
-
-    char formatted_command[DRIVER_LEN] = {0};
-    snprintf(formatted_command, DRIVER_LEN, "%s\r", cmd);
-    int rc = tty_write_string(PortFD, formatted_command, &nbytes_written);
-
-
-    if (rc != TTY_OK)
+    int rc = TTY_OK;
+    for (int i = 0; i < 3; i++)
     {
-        char errstr[MAXRBUF] = {0};
-        tty_error_msg(rc, errstr, MAXRBUF);
-        LOGF_ERROR("Serial write error: %s.", errstr);
-        return false;
-    }
+        int nbytes_written = 0, nbytes_read = 0;
+        char response[DRIVER_LEN] = {0};
 
-    rc = tty_nread_section(PortFD, response, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+        LOGF_DEBUG("CMD <%s>", cmd);
+
+        rc = tty_write_string(PortFD, cmd, &nbytes_written);
+
+        if (rc != TTY_OK)
+        {
+            char errstr[MAXRBUF] = {0};
+            tty_error_msg(rc, errstr, MAXRBUF);
+            LOGF_ERROR("Serial write error: %s.", errstr);
+            return false;
+        }
+
+        rc = tty_nread_section(PortFD, response, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+
+        if (rc != TTY_OK)
+        {
+            usleep(100000);
+            continue;
+        }
+
+        // Remove extra #
+        response[nbytes_read - 1] = 0;
+        LOGF_DEBUG("RES <%s>", response);
+
+
+        std::regex rgx(R"(.*:(\d+))");
+        std::smatch match;
+        std::string input(response);
+
+        if (std::regex_search(input, match, rgx))
+        {
+            res = std::stoi(match.str(1));
+            return true;
+        }
+    }
 
     if (rc != TTY_OK)
     {
         char errstr[MAXRBUF] = {0};
         tty_error_msg(rc, errstr, MAXRBUF);
         LOGF_ERROR("Serial read error: %s.", errstr);
-        return false;
-    }
-
-    // Remove extra #
-    response[nbytes_read - 1] = 0;
-    LOGF_DEBUG("RES <%s>", response);
-
-
-    tcflush(PortFD, TCIOFLUSH);
-
-    std::regex rgx(R"(.*:(\d+))");
-    std::smatch match;
-    std::string input(response);
-
-    if (std::regex_search(input, match, rgx))
-    {
-        res = std::stoi(match.str(1));
-        return true;
     }
 
     return false;
