@@ -92,7 +92,7 @@ bool SeletekRotator::initProperties()
 
     // HalfStep
     IUFillSwitch(&HalfStepS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
-    IUFillSwitch(&HalfStepS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_OFF);
+    IUFillSwitch(&HalfStepS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
     IUFillSwitchVector(&HalfStepSP, HalfStepS, 2, getDeviceName(), "ROTATOR_HALF_STEP", "Half Step", SETTINGS_TAB, IP_RW,
                        ISR_1OFMANY, 0, IPS_IDLE);
 
@@ -131,6 +131,11 @@ bool SeletekRotator::initProperties()
     IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "ROTATOR_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
                      IP_RO, 0, IPS_IDLE);
 
+    // Rotator Ticks
+    IUFillNumber(&RotatorAbsPosN[0], "ROTATOR_ABSOLUTE_POSITION", "Value", "%.f", 0., 1000000., 0., 0.);
+    IUFillNumberVector(&RotatorAbsPosNP, RotatorAbsPosN, 1, getDeviceName(), "ABS_ROTATOR_POSITION", "Steps", MAIN_CONTROL_TAB,
+                       IP_RO, 0, IPS_IDLE );
+
     addDebugControl();
 
     serialConnection->setDefaultBaudRate(Connection::Serial::B_115200);
@@ -153,6 +158,7 @@ bool SeletekRotator::updateProperties()
     if (isConnected())
     {
         defineText(&FirmwareVersionTP);
+        defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
         defineSwitch(&MotorTypeSP);
         defineSwitch(&HalfStepSP);
@@ -161,6 +167,7 @@ bool SeletekRotator::updateProperties()
     else
     {
         deleteProperty(FirmwareVersionTP.name);
+        deleteProperty(RotatorAbsPosNP.name);
         deleteProperty(SettingNP.name);
         deleteProperty(MotorTypeSP.name);
         deleteProperty(HalfStepSP.name);
@@ -301,9 +308,9 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
         /////////////////////////////////////////////
         if (strcmp(name, SettingNP.name) == 0)
         {
-            bool rc = false;
+            bool rc = true;
             std::vector<double> prevValue(SettingNP.nnp);
-            for (int i = 0; i < SettingNP.nnp; i++)
+            for (uint8_t i = 0; i < SettingNP.nnp; i++)
                 prevValue[i] = SettingN[i].value;
             IUUpdateNumber(&SettingNP, values, names, n);
 
@@ -476,6 +483,8 @@ void SeletekRotator::TimerHit()
         if (res != m_LastSteps)
         {
             m_LastSteps = res;
+            RotatorAbsPosN[0].value = res;
+            IDSetNumber(&RotatorAbsPosNP, nullptr);
             double newPosition = range360(res / SettingN[PARAM_STEPS_DEGREE].value);
             GotoRotatorN[0].value = newPosition;
             IDSetNumber(&GotoRotatorNP, nullptr);

@@ -94,6 +94,10 @@ class SeletekRotator : public INDI::Rotator
         INumber SettingN[5];
         enum { PARAM_MIN_SPEED, PARAM_MAX_SPEED, PARAM_MIN_LIMIT, PARAM_MAX_LIMIT, PARAM_STEPS_DEGREE };
 
+        // Rotator Steps
+        INumber RotatorAbsPosN[1];
+        INumberVectorProperty RotatorAbsPosNP;
+
         // Firmware Version
         IText FirmwareVersionT[1] {};
         ITextVectorProperty FirmwareVersionTP;
