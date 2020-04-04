@@ -204,9 +204,6 @@ bool SeletekRotator::echo()
         if ( model > DRIVER_MODELS )
             model = 0;
         sprintf( txt, "%s %s fwv %d.%d", operative[ oper ], models[ model ], fwmaj, fwmin );
-        if ( strcmp( models[ model ], "Seletek" ) )
-            LOGF_WARN("Detected model is %s while Seletek model is expected. This may lead to limited operability", models[model] );
-
         IUSaveText( &FirmwareVersionT[0], txt );
         LOGF_INFO("Setting version to [%s]", txt );
 
@@ -374,7 +371,7 @@ bool SeletekRotator::gotoTarget(uint32_t position)
     int32_t res = 0;
     uint32_t backlash = (IUFindOnSwitchIndex(&RotatorBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>
                         (RotatorBacklashN[0].value) : 0;
-    snprintf(cmd, DRIVER_LEN, "!step goto %d %ud %ud", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
+    snprintf(cmd, DRIVER_LEN, "!step goto %d %d %d", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
     if (sendCommand(cmd, res))
         m_IsMoving = (res == 0);
     else
@@ -390,7 +387,7 @@ bool SeletekRotator::setParam(const std::string &param, uint32_t value)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!step %s %d %ud", param.c_str(), IUFindOnSwitchIndex(&PerPortSP), value);
+    snprintf(cmd, DRIVER_LEN, "!step %s %d %d", param.c_str(), IUFindOnSwitchIndex(&PerPortSP), value);
     if (sendCommand(cmd, res))
         return res == 0;
 
@@ -468,6 +465,9 @@ bool SeletekRotator::SetRotatorBacklashEnabled(bool enabled)
 ///////////////////////////////////////////////////////////////////////////
 void SeletekRotator::TimerHit()
 {
+    if (!isConnected())
+        return;
+
     uint32_t res {0};
 
     if (getParam("getpos", res))
