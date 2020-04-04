@@ -7,6 +7,6 @@ Standards-Version: 3.9.2
 
 Package: libricohcamerasdk
 Architecture: amd64 armhf
-Depends: ${shlibs:Depends}, ${misc:Depends}, libusb-1.0-0, libmtp9 (>= 1.1.17)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libusb-1.0-0
 Description: Library for using Pentax cameras in PTP mode with INDI.
  Uses Ricoh Camera SDK - see https://api.ricoh/.

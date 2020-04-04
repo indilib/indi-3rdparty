@@ -40,13 +40,11 @@ else (PENTAX_INCLUDE_DIR AND PENTAX_LIBRARIES)
         PATHS
         ${_obLinkDir}
         ${GNUWIN32_DIR}/lib
-        PATH_SUFFIXES indipentax
       )
-      find_library(RICOHMTP_LIBRARIES NAMES libmtp.so.9.3.0 
+      find_library(RICOHMTP_LIBRARIES NAMES libmtpricoh.so.9.3.0 
         PATHS
         ${_obLinkDir}
         ${GNUWIN32_DIR}/lib
-        PATH_SUFFIXES indipentax
       )
 
       if (RICOH_INCLUDE_DIR AND PKTRIGGERCORD_INCLUDE_DIR)
