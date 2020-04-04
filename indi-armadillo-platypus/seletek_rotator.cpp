@@ -222,7 +222,8 @@ bool SeletekRotator::ISNewSwitch(const char *dev, const char *name, ISState *sta
         if (!strcmp(name, PerPortSP.name))
         {
             IUUpdateSwitch(&PerPortSP, states, names, n);
-            syncSettings();
+            if (isConnected())
+                syncSettings();
             PerPortSP.s = IPS_OK;
             IDSetSwitch(&PerPortSP, nullptr);
             saveConfig(true, PerPortSP.name);
