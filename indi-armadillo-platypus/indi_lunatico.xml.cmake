@@ -10,7 +10,7 @@
             <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
         </device>
     </devGroup>
-    <devGroup group="Rotators">
+    <devGroup group="Auxiliary">
         <device label="Seletek Rotator">
             <driver name="Seletek Rotator">indi_seletek_rotator</driver>
             <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
