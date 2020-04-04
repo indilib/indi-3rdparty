@@ -371,7 +371,7 @@ bool SeletekRotator::gotoTarget(uint32_t position)
     int32_t res = 0;
     uint32_t backlash = (IUFindOnSwitchIndex(&RotatorBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>
                         (RotatorBacklashN[0].value) : 0;
-    snprintf(cmd, DRIVER_LEN, "!step goto %d %d %d", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
+    snprintf(cmd, DRIVER_LEN, "!step goto %d %u %u#", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
     if (sendCommand(cmd, res))
         m_IsMoving = (res == 0);
     else
@@ -387,7 +387,7 @@ bool SeletekRotator::setParam(const std::string &param, uint32_t value)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!step %s %d %d", param.c_str(), IUFindOnSwitchIndex(&PerPortSP), value);
+    snprintf(cmd, DRIVER_LEN, "!step %s %d %u#", param.c_str(), IUFindOnSwitchIndex(&PerPortSP), value);
     if (sendCommand(cmd, res))
         return res == 0;
 
@@ -401,7 +401,7 @@ bool SeletekRotator::getParam(const std::string &param, uint32_t &value)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!step %s %d", param.c_str(), IUFindOnSwitchIndex(&PerPortSP));
+    snprintf(cmd, DRIVER_LEN, "!step %s %d#", param.c_str(), IUFindOnSwitchIndex(&PerPortSP));
     if (sendCommand(cmd, res))
     {
         value = res;
@@ -421,7 +421,7 @@ bool SeletekRotator::setSpeedRange(uint32_t min, uint32_t max)
 
     int min_usec = min > 0 ? (50000 - (min - 1) * 50) : 0;
     int max_usec = max > 0 ? (50000 - (max - 1) * 50) : 0;
-    snprintf(cmd, DRIVER_LEN, "!step speedrangeus %d %d %d", IUFindOnSwitchIndex(&PerPortSP), min_usec, max_usec);
+    snprintf(cmd, DRIVER_LEN, "!step speedrangeus %d %d %d#", IUFindOnSwitchIndex(&PerPortSP), min_usec, max_usec);
     if (sendCommand(cmd, res))
         return (res == 0);
 
@@ -499,7 +499,7 @@ bool SeletekRotator::AbortRotator()
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!step stop %d", IUFindOnSwitchIndex(&PerPortSP));
+    snprintf(cmd, DRIVER_LEN, "!step stop %d#", IUFindOnSwitchIndex(&PerPortSP));
     if (sendCommand(cmd, res))
         return res == 0;
 
