@@ -218,6 +218,9 @@ String parseInput() {
     case 'd':
       disconnectWiFi();
       break;
+    case 'r':
+      reset();
+      break;
 #endif
   }
 

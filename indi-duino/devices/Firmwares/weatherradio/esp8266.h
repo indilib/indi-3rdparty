@@ -25,6 +25,9 @@ struct {
 
 ESP8266WebServer server(80);
 
+void reset() {
+  ESP.restart();
+}
 
 void initWiFi() {
   WiFi.mode(WIFI_STA);
