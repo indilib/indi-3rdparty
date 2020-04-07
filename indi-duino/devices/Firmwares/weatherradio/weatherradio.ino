@@ -90,7 +90,7 @@ String getCurrentVersion() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
+  const int docSize = JSON_OBJECT_SIZE(4) + // max 4 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
