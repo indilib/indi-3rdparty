@@ -148,6 +148,9 @@ protected:
     ISwitchVectorProperty wifiConnectionSP;
     bool hasWiFi = false;
 
+    ISwitch resetArduinoS[1] = {};
+    ISwitchVectorProperty resetArduinoSP;
+
     // calibration parameters to calculate the corrected sky temperature
     INumberVectorProperty skyTemperatureCalibrationNP;
     INumber skyTemperatureCalibrationN[7];
@@ -249,6 +252,12 @@ protected:
      * @param connected true iff WiFi is connected
      */
     void updateWiFiStatus(bool connected);
+
+    /**
+     * @brief Send the Arduino a reset command
+     * @return true iff successful
+     */
+    bool resetArduino();
 
     // helper functions
     bool receive(char* buffer, int* bytes, char end, int wait);

@@ -133,6 +133,10 @@ bool WeatherRadio::initProperties()
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
+    // Reset Arduino
+    IUFillSwitch(&resetArduinoS[0], "RESET", "Reset", ISS_OFF);
+    IUFillSwitchVector(&resetArduinoSP, resetArduinoS, 1, getDeviceName(), "RESET_ARDUINO", "Arduino", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
     // refresh firmware configuration
     IUFillSwitch(&refreshConfigS[0], "REFRESH", "Refresh", ISS_OFF);
     IUFillSwitchVector(&refreshConfigSP, refreshConfigS, 1, getDeviceName(), "REFRESH_CONFIG", "Refresh", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
@@ -276,6 +280,8 @@ bool WeatherRadio::updateProperties()
         // Load the configuration if everything was fine
         if (result == true)
             loadConfig();
+
+        defineSwitch(&resetArduinoSP);
     }
     else
     {
@@ -283,6 +289,7 @@ bool WeatherRadio::updateProperties()
         for (size_t i = 0; i < rawDevices.size(); i++)
             deleteProperty(rawDevices[i].name);
 
+        deleteProperty(resetArduinoSP.name);
         deleteProperty(windDirectionCalibrationNP.name);
         deleteProperty(sqmCalibrationNP.name);
         deleteProperty(temperatureCalibrationNP.name);
@@ -534,6 +541,15 @@ void WeatherRadio::updateWiFiStatus(bool connected)
     LOGF_INFO("WiFi %s.", connected ? "connected" : "disconnected");
 }
 
+/**************************************************************************************
+** Reset the Arduino.
+***************************************************************************************/
+bool WeatherRadio::resetArduino()
+{
+    bool result = transmit("r\n");
+    return result;
+}
+
 
 /**************************************************************************************
 ** Create a selection of sensors for a certain weather property.
@@ -674,6 +690,21 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             LOGF_INFO("%s WiFi. Press \"Refresh\" to update the status.", pressed == 1? "Connecting" :"Disconnecting");
             return (wifiConnectionSP.s == IPS_OK);
+        }
+        else if (strcmp(name, resetArduinoSP.name) == 0)
+        {
+            // reset Arduino button pressed
+            IUUpdateSwitch(&resetArduinoSP, states, names, n);
+
+            if (resetArduino())
+                resetArduinoSP.s = IPS_OK;
+            else
+                resetArduinoSP.s = IPS_ALERT;
+            resetArduinoS->s = ISS_OFF;
+            IDSetSwitch(&resetArduinoSP, nullptr);
+
+            LOG_INFO("Resetting Arduino.  Press \"Refresh\" to update the status");
+            return (resetArduinoSP.s == IPS_OK);
         }
         else if (strcmp(name, temperatureSensorSP.name) == 0)
         {
