@@ -137,9 +137,10 @@ bool WeatherRadio::initProperties()
     IUFillSwitch(&refreshConfigS[0], "REFRESH", "Refresh", ISS_OFF);
     IUFillSwitchVector(&refreshConfigSP, refreshConfigS, 1, getDeviceName(), "REFRESH_CONFIG", "Refresh", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    // reconnect WiFi
-    IUFillSwitch(&reconnectWiFiS[0], "RECONNECT", "Reconnect", ISS_OFF);
-    IUFillSwitchVector(&reconnectWiFiSP, reconnectWiFiS, 1, getDeviceName(), "WIFI", "WiFi", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    // connect/disconnect WiFi
+    IUFillSwitch(&wifiConnectionS[0], "DISCONNECT", "Disconnect", ISS_OFF);
+    IUFillSwitch(&wifiConnectionS[1], "CONNECT", "Connect", ISS_OFF);
+    IUFillSwitchVector(&wifiConnectionSP, wifiConnectionS, 2, getDeviceName(), "WIFI", "WiFi", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     // calibration parameters
     IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
@@ -298,7 +299,7 @@ bool WeatherRadio::updateProperties()
         deleteProperty(windSpeedSensorSP.name);
         deleteProperty(windDirectionSensorSP.name);
         deleteProperty(refreshConfigSP.name);
-        deleteProperty(reconnectWiFiSP.name);
+        deleteProperty(wifiConnectionSP.name);
         deleteProperty(FirmwareInfoTP.name);
         deleteProperty(FirmwareConfigTP.name);
 
@@ -340,7 +341,7 @@ void WeatherRadio::getBasicData()
     defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
 
-    configuration config;
+    FirmwareConfig config;
     readFirmwareConfig(&config);
 
     FirmwareConfigT = new IText[config.size()];
@@ -360,7 +361,7 @@ void WeatherRadio::getBasicData()
     defineSwitch(&refreshConfigSP);
 
     if (hasWiFi)
-        defineSwitch(&reconnectWiFiSP);
+        defineSwitch(&wifiConnectionSP);
 }
 
 /**************************************************************************************
@@ -372,7 +373,7 @@ void WeatherRadio::updateConfigData()
     if (FirmwareInfoTP.s != IPS_OK)
         LOG_ERROR("Failed to get firmware from device.");
 
-    configuration config;
+    FirmwareConfig config;
     readFirmwareConfig(&config);
     std::map<std::string, std::string>::iterator it;
 
@@ -427,7 +428,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 /**************************************************************************************
 ** Read the configuration parameters from the firmware
 ***************************************************************************************/
-IPState WeatherRadio::readFirmwareConfig(configuration *config)
+IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
@@ -487,11 +488,21 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
                     break;
                 }
                 // add it to the configuration
-                (*config)[std::string(device) + ": " + std::string(name)] = value;
+                (*config)[std::string(device) + "::" + std::string(name)] = value;
             }
 
         }
+        // update WiFi status
+        if (hasWiFi)
+        {
+            FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
+            bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
+
+            updateWiFiStatus(connected);
+        }
+
         return IPS_OK;
+
     }
     else
     {
@@ -500,10 +511,27 @@ IPState WeatherRadio::readFirmwareConfig(configuration *config)
     }
 }
 
-bool WeatherRadio::reconnectWiFi()
+/**************************************************************************************
+** Connect / disconnect the Arduino to WiFi.
+***************************************************************************************/
+bool WeatherRadio::connectWiFi(bool connect)
 {
-    bool result = transmit("s\n");
+    bool result;
+    if (connect)
+        result = transmit("s\n");
+    else
+        result = transmit("d\n");
     return result;
+}
+
+void WeatherRadio::updateWiFiStatus(bool connected)
+{
+    wifiConnectionS[0].s = connected ? ISS_OFF : ISS_ON;
+    wifiConnectionS[1].s = connected ? ISS_ON : ISS_OFF;
+    wifiConnectionSP.s = IPS_OK;
+
+    IDSetSwitch(&wifiConnectionSP, nullptr);
+    LOGF_INFO("WiFi %s.", connected ? "connected" : "disconnected");
 }
 
 
@@ -635,17 +663,17 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             LOG_INFO("Firmware configuration data updated.");
             return (refreshConfigSP.s == IPS_OK);
         }
-        else if (strcmp(name, reconnectWiFiSP.name) == 0)
+        else if (strcmp(name, wifiConnectionSP.name) == 0)
         {
             // reconnect config button pressed
-            IUUpdateSwitch(&reconnectWiFiSP, states, names, n);
+            IUUpdateSwitch(&wifiConnectionSP, states, names, n);
+            int pressed = IUFindOnSwitchIndex(&wifiConnectionSP);
 
-            reconnectWiFiSP.s = reconnectWiFi() ? IPS_OK : IPS_ALERT;
-            reconnectWiFiS[0].s = ISS_OFF;
-            IDSetSwitch(&reconnectWiFiSP, nullptr);
+            wifiConnectionSP.s = connectWiFi(pressed == 1) ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&wifiConnectionSP, nullptr);
 
-            LOG_INFO("Reconnecting WiFi. Press \"Refresh\" to update the status.");
-            return (reconnectWiFiSP.s == IPS_OK);
+            LOGF_INFO("%s WiFi. Press \"Refresh\" to update the status.", pressed == 1? "Connecting" :"Disconnecting");
+            return (wifiConnectionSP.s == IPS_OK);
         }
         else if (strcmp(name, temperatureSensorSP.name) == 0)
         {

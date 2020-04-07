@@ -97,7 +97,7 @@ protected:
         double steps;
     };
 
-    typedef std::map<std::string, std::string> configuration;
+    typedef std::map<std::string, std::string> FirmwareConfig;
 
     typedef std::map<std::string, sensor_config> sensorsConfigType;
     typedef std::map<std::string, sensorsConfigType> deviceConfigType;
@@ -144,8 +144,8 @@ protected:
     ISwitch refreshConfigS[1] = {};
     ISwitchVectorProperty refreshConfigSP;
 
-    ISwitch reconnectWiFiS[1] = {};
-    ISwitchVectorProperty reconnectWiFiSP;
+    ISwitch wifiConnectionS[2] = {};
+    ISwitchVectorProperty wifiConnectionSP;
     bool hasWiFi = false;
 
     // calibration parameters to calculate the corrected sky temperature
@@ -236,9 +236,19 @@ protected:
      * @brief Read the firmware configuration
      * @param config configuration to be updated
      */
-    IPState readFirmwareConfig(configuration *config);
+    IPState readFirmwareConfig(FirmwareConfig *config);
 
-    bool reconnectWiFi();
+    /**
+     * @brief Connect to WiFi
+     * @param connect true iff connect, false iff disconnect
+     */
+    bool connectWiFi(bool connect);
+
+    /**
+     * @brief updateWiFiStatus
+     * @param connected true iff WiFi is connected
+     */
+    void updateWiFiStatus(bool connected);
 
     // helper functions
     bool receive(char* buffer, int* bytes, char end, int wait);
