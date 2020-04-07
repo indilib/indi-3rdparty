@@ -49,6 +49,7 @@ void ISInit()
         int registeredSDKCameraCount = registeredSDKCams.size();
 
         // look for SDK supported cameras (PTP mode) first
+		IDLog("Looking for Pentax camera in  PTP mode.\n");
         if (detectedCameraCount > 0) {
             for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
                 bool camalreadyregistered = false;
@@ -67,6 +68,7 @@ void ISInit()
         char *model = NULL;
         char *device = NULL;
 
+		IDLog("Looking for Pentax camera in MSC mode.\n");
         pslr_handle_t camhandle = pslr_init(model,device);
         if (camhandle) {
             if (!pslr_connect(camhandle)) {
@@ -84,7 +86,7 @@ void ISInit()
             }
         }
         if (cameraCount <= 0)
-            IDMessage(nullptr, "No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?");
+            IDLog("No supported Pentax cameras were found.  Perhaps the camera is not supported, not powered up, or needs to be in MSC mode?\n");
 
         atexit(cleanup);
         isInit = true;
