@@ -101,7 +101,7 @@ public:
         double k1 = 33.0, k2 = 0.0,  k3 = 4.0, k4 = 100.0, k5 = 100.0;
         //Clear sky corrected temperature (temp below means 0% clouds)
         //Totally cover sky corrected temperature (temp above means 100% clouds)
-        double t_clear = 0, t_overcast = -8;
+        double t_clear = -8, t_overcast = 0;
     } skyTemperatureCoefficients;
 
 
