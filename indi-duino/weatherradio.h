@@ -57,6 +57,9 @@ protected:
     // Initial function to get data after connection is successful
     void getBasicData();
 
+    // Read the firmware configuration
+    void updateConfigData();
+
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
         humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
 
@@ -68,6 +71,7 @@ protected:
     ITextVectorProperty FirmwareInfoTP;
     IText FirmwareInfoT[1] = {};
     // firmware configuration (dynamically created)
+    IText *FirmwareConfigT;
     ITextVectorProperty FirmwareConfigTP;
 
     /**
@@ -93,7 +97,7 @@ protected:
         double steps;
     };
 
-    typedef std::map<std::string, std::string> configuration;
+    typedef std::map<std::string, std::string> FirmwareConfig;
 
     typedef std::map<std::string, sensor_config> sensorsConfigType;
     typedef std::map<std::string, sensorsConfigType> deviceConfigType;
@@ -137,9 +141,19 @@ protected:
     INumber ttyTimeoutN[1] = {};
     INumberVectorProperty ttyTimeoutNP;
 
+    ISwitch refreshConfigS[1] = {};
+    ISwitchVectorProperty refreshConfigSP;
+
+    ISwitch wifiConnectionS[2] = {};
+    ISwitchVectorProperty wifiConnectionSP;
+    bool hasWiFi = false;
+
+    ISwitch resetArduinoS[1] = {};
+    ISwitchVectorProperty resetArduinoSP;
+
     // calibration parameters to calculate the corrected sky temperature
     INumberVectorProperty skyTemperatureCalibrationNP;
-    INumber skyTemperatureCalibrationN[5];
+    INumber skyTemperatureCalibrationN[7];
 
     // calibration parameters for the humidity
     INumberVectorProperty humidityCalibrationNP;
@@ -225,8 +239,25 @@ protected:
      * @brief Read the firmware configuration
      * @param config configuration to be updated
      */
-    IPState readFirmwareConfig(configuration *config);
+    IPState readFirmwareConfig(FirmwareConfig *config);
 
+    /**
+     * @brief Connect to WiFi
+     * @param connect true iff connect, false iff disconnect
+     */
+    bool connectWiFi(bool connect);
+
+    /**
+     * @brief updateWiFiStatus
+     * @param connected true iff WiFi is connected
+     */
+    void updateWiFiStatus(bool connected);
+
+    /**
+     * @brief Send the Arduino a reset command
+     * @return true iff successful
+     */
+    bool resetArduino();
 
     // helper functions
     bool receive(char* buffer, int* bytes, char end, int wait);

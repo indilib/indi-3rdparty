@@ -87,13 +87,23 @@ String getCurrentVersion() {
   return result;
 }
 
+
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(3) + // max 3 configurations
+  const int docSize = JSON_OBJECT_SIZE(4) + // max 4 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(4);  // WiFi parameters
+                      JSON_OBJECT_SIZE(3) + // WiFi parameters
+                      JSON_OBJECT_SIZE(1) + // Arduino
+                      JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
+
+#ifdef USE_WIFI
+  // currently, we have memory info only available for ESP8266
+  JsonObject arduinodata = doc.createNestedObject("Arduino");
+  arduinodata["free memory"] = freeMemory();
+#endif
+
 #ifdef USE_DHT_SENSOR
   JsonObject dhtdata = doc.createNestedObject("DHT");
   dhtdata["pin"]  = DHTPIN;
@@ -109,12 +119,12 @@ String getCurrentConfig() {
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
+  wifidata["SSID"] = esp8266Data.ssid;
+  wifidata["connected"] = WiFi.status() == WL_CONNECTED;
   if (WiFi.status() == WL_CONNECTED)
     wifidata["IP"]        = WiFi.localIP().toString();
   else
-    wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-
-  wifidata["SSID"] = WIFI_SSID;
+    wifidata["IP"]        = "";
 #endif
 
   if (doc.isNull())
@@ -139,7 +149,6 @@ void setup() {
 #ifdef USE_TSL237_SENSOR
   initTSL237();
 #endif //USE_TSL237_SENSOR
-
 
 #ifdef USE_WIFI
   initWiFi();
@@ -170,6 +179,7 @@ void setup() {
     });
 
     server.begin();
+
   }
 #endif
 }
@@ -198,6 +208,20 @@ String parseInput() {
     case 'p':
       Serial.println(getSensorData(true, ""));
       break;
+#ifdef USE_WIFI
+    case 's':
+      if (input.length() > 2 && input.charAt(1) == '?')
+        parseCredentials(input.substring(2));
+      disconnectWiFi();
+      initWiFi();
+      break;
+    case 'd':
+      disconnectWiFi();
+      break;
+    case 'r':
+      reset();
+      break;
+#endif
   }
 
 }

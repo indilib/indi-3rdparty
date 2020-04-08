@@ -1,3 +1,13 @@
+indi-duino (1.2) buster; urgency=medium
+
+  * Changing WiFi credentials added
+  * Refreshing firmware info
+  * Memory information added to configuration info
+  * Connect / disconnect to WiFi
+  * Reset function added for ESP8266
+
+ -- Wolfgang Reissenberger <wolfgang@debian10.localdomain>  Tue, 07 Apr 2020 21:59:35 +0200
+
 indi-duino (1.1) buster; urgency=medium
 
   * Protocol with firmware changed for full line commands
