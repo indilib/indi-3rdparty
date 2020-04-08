@@ -26,7 +26,8 @@ set(indi_astrolink4_SRCS
    )
 
 add_executable(indi_astrolink4 ${indi_astrolink4_SRCS})
-target_link_libraries(indi_astrolink4 indidriver)
+target_link_libraries(indi_astrolink4 ${INDI_LIBRARIES})
+
 install(TARGETS indi_astrolink4 RUNTIME DESTINATION bin )
-install(FILES indi_astrolink4.xml DESTINATION ${INDI_DATA_DIR})
+install( FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_astrolink4.xml DESTINATION ${INDI_DATA_DIR})
 
