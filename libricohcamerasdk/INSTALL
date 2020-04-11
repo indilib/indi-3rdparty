@@ -1,0 +1,8 @@
+INSTALL
+============
+
+
+1) $ cmake -DCMAKE_INSTALL_PREFIX=/usr .
+2) $ make
+3) $ sudo make install
+

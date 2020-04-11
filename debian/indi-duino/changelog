@@ -1,3 +1,51 @@
+indi-duino (1.2) buster; urgency=medium
+
+  * Changing WiFi credentials added
+  * Refreshing firmware info
+  * Memory information added to configuration info
+  * Connect / disconnect to WiFi
+  * Reset function added for ESP8266
+
+ -- Wolfgang Reissenberger <wolfgang@debian10.localdomain>  Tue, 07 Apr 2020 21:59:35 +0200
+
+indi-duino (1.1) buster; urgency=medium
+
+  * Protocol with firmware changed for full line commands
+  * Display of firmware configuration added to INDI client
+  * Script for data retrieval simplyfied reading weather and sensor data
+    in same INDI session
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sun, 29 Mar 2020 14:28:56 +0200
+
+indi-duino (1.0) buster; urgency=medium
+
+  * Calibration of weather parameters added
+  * Robustness of RRD scripts added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Sat, 21 Mar 2020 22:01:10 +0100
+
+indi-duino (0.9) buster; urgency=medium
+
+  * TSL237 sampling interval changed to 2sec
+  * Bug fixes to improve script robustness
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Wed, 18 Mar 2020 21:59:04 +0100
+
+indi-duino (0.8) buster; urgency=medium
+
+  * Weather Radio documentation added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Fri, 13 Mar 2020 22:59:55 +0100
+
+indi-duino (0.7) buster; urgency=medium
+
+  * Added web server that displays all JSON documents (for ESP8266 boards)
+  * Support for TSL237 added
+  * INDI driver reacts dynamically to connected sensors
+  * bug fixes
+
+ -- Wolfgang Reissenberger <sterne-jaeger@t-online.de>  Mon, 09 Mar 2020 22:42:51 +0100
+
 indi-duino (0.6) buster; urgency=medium
 
   * Support for Davis Anemometer added to weather radio

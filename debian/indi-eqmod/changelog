@@ -1,3 +1,9 @@
+indi-eqmod (1.0) bionic; urgency=medium
+
+  * Add LED Brightness control.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 16 Mar 2020 09:00:00 +0300
+
 indi-eqmod (0.9) bionic; urgency=medium
 
   * New release

@@ -125,7 +125,7 @@ void SkywatcherSimulator::setupDE(unsigned int nb_teeth, unsigned int gear_ratio
     de_breaks         = 400;
 
     de_status = 0X0010; // lowspeed, forward, slew mode, stopped
-                        //IDLog("Simulator setupDE %d %d\n", de_steps_360, de_steps_worm);
+    //IDLog("Simulator setupDE %d %d\n", de_steps_360, de_steps_worm);
 }
 
 void SkywatcherSimulator::compute_timer_ra(unsigned int wormperiod)
@@ -155,9 +155,10 @@ void SkywatcherSimulator::compute_ra_position()
         unsigned int deltastep;
         deltastep = ((((resTime.tv_sec * MICROSECONDS) + resTime.tv_usec) * stepmul) / ra_period);
         if (!(GETMOTORPROPERTY(ra_status, SLEWMODE)))
-        { // GOTO
+        {
+            // GOTO
             if ((GETMOTORPROPERTY(ra_status, HIGHSPEED)) &&
-                (ra_target_current + deltastep >= ra_target - ra_target_slow))
+                    (ra_target_current + deltastep >= ra_target - ra_target_slow))
             {
                 struct timeval hstime, lstime;
                 //hstime: time moving @ highspeed
@@ -199,9 +200,10 @@ void SkywatcherSimulator::compute_de_position()
         unsigned int deltastep;
         deltastep = ((((resTime.tv_sec * MICROSECONDS) + resTime.tv_usec) * stepmul) / de_period);
         if (!(GETMOTORPROPERTY(de_status, SLEWMODE)))
-        { // GOTO
+        {
+            // GOTO
             if ((GETMOTORPROPERTY(de_status, HIGHSPEED)) &&
-                (de_target_current + deltastep >= de_target - de_target_slow))
+                    (de_target_current + deltastep >= de_target - de_target_slow))
             {
                 struct timeval hstime, lstime;
                 //hstime: time moving @ highspeed
@@ -584,6 +586,12 @@ void SkywatcherSimulator::process_command(const char *cmd, int *received)
                 goto cant_do;
             break;
         case 'P': // Set ST4 guide Rate
+            send_byte('=');
+            break;
+        case 'V': // Set Led Brightness
+            send_byte('=');
+            break;
+        case 'O': // Snap ports
             send_byte('=');
             break;
         default:

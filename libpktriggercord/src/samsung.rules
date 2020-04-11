@@ -1,0 +1,13 @@
+ACTION!="add", GOTO="samsung_rules_end"
+
+SUBSYSTEM=="scsi_generic", GOTO="samsung_rules_start"
+
+SUBSYSTEM!="scsi_generic", GOTO="samsung_rules_end"
+
+LABEL="samsung_rules_start"
+# WAIT_FOR_SYSFS="device/vendor"
+ATTRS{vendor}=="SAMSUNG", ATTRS{model}=="DIGITAL_CAMERA", MODE="0666", GROUP="users"
+ATTRS{vendor}=="SAMSUNG", ATTRS{model}=="DSC*", MODE="0666", GROUP="users"
+ATTRS{vendor}=="SAMSUNG", ATTRS{model}=="K*", MODE="0666", GROUP="users"
+
+LABEL="samsung_rules_end"

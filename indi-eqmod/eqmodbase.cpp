@@ -126,7 +126,8 @@ EQMod::EQMod()
 
     mount = new Skywatcher(this);
 
-    SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
+    SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
+                           TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
                            | TELESCOPE_HAS_PIER_SIDE | TELESCOPE_HAS_TRACK_RATE | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK,
                            SLEWMODES);
 
@@ -334,6 +335,7 @@ void EQMod::ISGetProperties(const char *dev)
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
+
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -356,6 +358,18 @@ void EQMod::ISGetProperties(const char *dev)
             defineSwitch(RAPPECSP);
             defineSwitch(DEPPECTrainingSP);
             defineSwitch(DEPPECSP);
+        }
+        if (mount->HasSnapPort1())
+        {
+            defineSwitch(SNAPPORT1SP);
+        }
+        if (mount->HasSnapPort2())
+        {
+            defineSwitch(SNAPPORT2SP);
+        }
+        if (mount->HasPolarLed())
+        {
+            defineNumber(LEDBrightnessNP);
         }
 
 #ifdef WITH_ALIGN_GEEHALEL
@@ -417,6 +431,9 @@ bool EQMod::loadProperties()
     RAPPECSP            = getSwitch("RA_PPEC");
     DEPPECTrainingSP    = getSwitch("DE_PPEC_TRAINING");
     DEPPECSP            = getSwitch("DE_PPEC");
+    LEDBrightnessNP     = getNumber("LED_BRIGHTNESS");
+    SNAPPORT1SP         = getSwitch("SNAPPORT1");
+    SNAPPORT2SP         = getSwitch("SNAPPORT2");
 #ifdef WITH_ALIGN_GEEHALEL
     align->initProperties();
 #endif
@@ -481,6 +498,7 @@ bool EQMod::updateProperties()
         defineSwitch(TrackDefaultSP);
         defineSwitch(ST4GuideRateNSSP);
         defineSwitch(ST4GuideRateWESP);
+
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         defineSwitch(&AlignMethodSP);
 #endif
@@ -563,11 +581,25 @@ bool EQMod::updateProperties()
                 }
             }
 
+            if (mount->HasPolarLed())
+            {
+                defineNumber(LEDBrightnessNP);
+            }
+
             LOG_DEBUG("Init backlash.");
             mount->SetBacklashUseRA((IUFindSwitch(UseBacklashSP, "USEBACKLASHRA")->s == ISS_ON ? true : false));
             mount->SetBacklashUseDE((IUFindSwitch(UseBacklashSP, "USEBACKLASHDE")->s == ISS_ON ? true : false));
             mount->SetBacklashRA((uint32_t)(IUFindNumber(BacklashNP, "BACKLASHRA")->value));
             mount->SetBacklashDE((uint32_t)(IUFindNumber(BacklashNP, "BACKLASHDE")->value));
+
+            if (mount->HasSnapPort1())
+            {
+                defineSwitch(SNAPPORT1SP);
+            }
+            if (mount->HasSnapPort2())
+            {
+                defineSwitch(SNAPPORT2SP);
+            }
 
             mount->Init();
 
@@ -630,6 +662,7 @@ bool EQMod::updateProperties()
         deleteProperty(UseBacklashSP->name);
         deleteProperty(ST4GuideRateNSSP->name);
         deleteProperty(ST4GuideRateWESP->name);
+        deleteProperty(LEDBrightnessNP->name);
         //if (!strcmp(MountInformationTP->tp[0].text, "EQ8") || !strcmp(MountInformationTP->tp[0].text, "AZEQ6"))
         if (mount->HasHomeIndexers())
             deleteProperty(AutoHomeSP->name);
@@ -644,6 +677,18 @@ bool EQMod::updateProperties()
             deleteProperty(RAPPECSP->name);
             deleteProperty(DEPPECTrainingSP->name);
             deleteProperty(DEPPECSP->name);
+        }
+        if (mount->HasSnapPort1())
+        {
+            deleteProperty(SNAPPORT1SP->name);
+        }
+        if (mount->HasSnapPort2())
+        {
+            deleteProperty(SNAPPORT2SP->name);
+        }
+        if (mount->HasPolarLed())
+        {
+            deleteProperty(LEDBrightnessNP->name);
         }
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         deleteProperty(AlignMethodSP.name);
@@ -679,9 +724,10 @@ bool EQMod::Handshake()
 {
     try
     {
-        if (!getActiveConnection()->name().compare("CONNECTION_TCP") && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
+        if (!getActiveConnection()->name().compare("CONNECTION_TCP")
+                && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
-            tty_set_skywatcher_udp_format(1);
+            tty_set_generic_udp_format(1);
         }
 
         mount->setPortFD(PortFD);
@@ -823,7 +869,8 @@ bool EQMod::ReadScopeStatus()
         TelescopePierSide pierSide;
         currentRAEncoder = mount->GetRAEncoder();
         currentDEEncoder = mount->GetDEEncoder();
-        DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder), static_cast<long>(currentDEEncoder));
+        DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
+               static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
         setPierSide(pierSide);
 
@@ -1417,7 +1464,8 @@ bool EQMod::ReadScopeStatus()
     return true;
 }
 
-void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha, TelescopePierSide *pierSide)
+void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha,
+                            TelescopePierSide *pierSide)
 {
     double RACurrent = 0.0, DECurrent = 0.0, HACurrent = 0.0;
     TelescopePierSide p;
@@ -1919,7 +1967,8 @@ bool EQMod::Goto(double r, double d)
 
     if (gotoparams.outsidelimits)
     {
-        LOGF_INFO("Target is unreachable, aborting (target encoders %u %u)", gotoparams.ratargetencoder, gotoparams.detargetencoder);
+        LOGF_INFO("Target is unreachable, aborting (target encoders %u %u)", gotoparams.ratargetencoder,
+                  gotoparams.detargetencoder);
         Abort();
         return false;
     }
@@ -1986,7 +2035,8 @@ bool EQMod::Park()
             // Start slewing
             LOGF_INFO("Parking mount: RA increment = %d, DE increment = %d",
                       static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
-            mount->SlewTo(static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
+            mount->SlewTo(static_cast<int32_t>(parkRAEncoder - currentRAEncoder),
+                          static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
         }
         catch (EQModError e)
         {
@@ -2566,6 +2616,19 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             return true;
         }
 
+        if (mount->HasPolarLed())
+        {
+            if (strcmp(name, "LED_BRIGHTNESS") == 0)
+            {
+                IUUpdateNumber(LEDBrightnessNP, values, names, n);
+                LEDBrightnessNP->s = IPS_OK;
+                IDSetNumber(LEDBrightnessNP, nullptr);
+                mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
+                LOGF_INFO("Setting LED brightness to %.f", values[0]);
+                return true;
+            }
+        }
+
         if (strcmp(name, "STANDARDSYNCPOINT") == 0)
         {
             syncdata2 = syncdata;
@@ -3042,6 +3105,52 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 return true;
             }
         }
+
+        if (mount->HasSnapPort1())
+        {
+            if (SNAPPORT1SP && strcmp(name, SNAPPORT1SP->name) == 0)
+            {
+                IUUpdateSwitch(SNAPPORT1SP, states, names, n);
+                if (SNAPPORT1SP->sp[1].s == ISS_ON)
+                {
+                    SNAPPORT1SP->s = IPS_OK;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 1 on.");
+                    mount->TurnSnapPort1(true);
+                }
+                else
+                {
+                    SNAPPORT1SP->s = IPS_IDLE;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 1 off.");
+                    mount->TurnSnapPort1(false);
+                }
+                IDSetSwitch(SNAPPORT1SP, nullptr);
+                return true;
+            }
+        }
+
+        if (mount->HasSnapPort2())
+        {
+            if (SNAPPORT2SP && strcmp(name, SNAPPORT2SP->name) == 0)
+            {
+                IUUpdateSwitch(SNAPPORT2SP, states, names, n);
+                if (SNAPPORT2SP->sp[1].s == ISS_ON)
+                {
+                    SNAPPORT2SP->s = IPS_OK;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 2 on.");
+                    mount->TurnSnapPort2(true);
+                }
+                else
+                {
+                    SNAPPORT2SP->s = IPS_IDLE;
+                    DEBUG(INDI::Logger::DBG_DEBUG, "Turning snap port 2 off.");
+                    mount->TurnSnapPort2(false);
+                }
+                IDSetSwitch(SNAPPORT2SP, nullptr);
+                return true;
+            }
+        }
+
+
 
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
         if (AlignSyncModeSP && strcmp(name, AlignSyncModeSP->name) == 0)
@@ -3665,6 +3774,8 @@ bool EQMod::saveConfigItems(FILE *fp)
         IUSaveConfigNumber(fp, SlewSpeedsNP);
     if (ReverseDECSP)
         IUSaveConfigSwitch(fp, ReverseDECSP);
+    if (LEDBrightnessNP)
+        IUSaveConfigNumber(fp, LEDBrightnessNP);
 
 #ifdef WITH_ALIGN_GEEHALEL
     if (align)

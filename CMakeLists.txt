@@ -102,6 +102,8 @@ option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
+option(WITH_PENTAX "Install Pentax Driver" On)
+option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 
 find_package(FFmpeg)
 
@@ -184,6 +186,14 @@ if (WITH_SBIG)
 add_subdirectory(libsbig)
 endif (WITH_SBIG)
 
+#libpentax
+if (WITH_PENTAX)
+if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^aarch64")
+add_subdirectory(libricohcamerasdk)
+endif()
+add_subdirectory(libpktriggercord)
+endif (WITH_PENTAX)
+
 #toupbase dependencies
 if (WITH_TOUPBASE)
 add_subdirectory(libtoupcam)
@@ -199,6 +209,11 @@ ELSE(BUILD_LIBS)
 if (WITH_EQMOD)
 add_subdirectory(indi-eqmod)
 endif(WITH_EQMOD)
+
+## AstroLink4
+if (WITH_ASTROLINK4)
+add_subdirectory(indi-astrolink4)
+endif(WITH_ASTROLINK4)
 
 ## SkyWalker
 if (WITH_SKYWALKER)
@@ -482,6 +497,21 @@ if (WITH_AVALON)
 add_subdirectory(indi-avalon)
 endif(WITH_AVALON)
 
+# Pentax
+if (WITH_PENTAX)
+find_package(PENTAX)
+if (PENTAX_FOUND)
+add_subdirectory(indi-pentax)
+else (PENTAX_FOUND)
+if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^aarch64")
+add_subdirectory(libricohcamerasdk)
+endif()
+add_subdirectory(libpktriggercord)
+SET(LIBRARIES_FOUND FALSE)
+endif (PENTAX_FOUND)
+endif(WITH_PENTAX)
+
+
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
@@ -547,6 +577,10 @@ endif (WITH_LIMESDR AND NOT LIMESDR_FOUND)
 if (WITH_RTLSDR AND NOT RTLSDR)
 message(STATUS "librtlsdr was not found. Please install librtlsdr first before running cmake again to install indi-rtlsdr.")
 endif (WITH_RTLSDR AND NOT RTLSDR)
+
+if (WITH_PENTAX AND NOT PENTAX_FOUND)
+message(STATUS "libpktriggercord and/or libricohcamerasdk were not found and will now be built. Please install these libraries first before running cmake again to install indi-pentax.")
+endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)
