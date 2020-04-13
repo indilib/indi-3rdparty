@@ -392,30 +392,7 @@ float AAGCloudWatcher::getLastReadPeriod()
 
 bool AAGCloudWatcher::isWetRain()
 {
-    ISwitchVectorProperty *svpRC = getSwitch("rainConditions");
-    if (svpRC == nullptr)
-        return false;
-
-    for (int i = 0; i < svpRC->nsp; i++)
-    {
-        if (strcmp("wet", svpRC->sp[i].name) == 0)
-        {
-            if (svpRC->sp[i].s == ISS_ON)
-            {
-                return true;
-            }
-        }
-
-        if (strcmp("rain", svpRC->sp[i].name) == 0)
-        {
-            if (svpRC->sp[i].s == ISS_ON)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return (checkParameterState("WEATHER_RAIN") != IPS_OK);
 }
 
 bool AAGCloudWatcher::heatingAlgorithm()
