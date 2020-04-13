@@ -1,6 +1,7 @@
 /*
-    indi_rtlsdr_correlator - a software defined radio driver for INDI
-    Copyright (C) 2017  Ilia Platone
+    indi_interferometer - a telescope array driver for INDI
+    Support for AHP cross-correlators
+    Copyright (C) 2020  Ilia Platone
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public

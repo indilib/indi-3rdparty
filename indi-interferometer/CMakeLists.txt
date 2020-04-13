@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.7)
 PROJECT(indi_interferometer CXX C)
 
-set (INTERFEROMETERS_VERSION_MAJOR 1)
-set (INTERFEROMETERS_VERSION_MINOR 0)
+set (INTERFEROMETER_VERSION_MAJOR 1)
+set (INTERFEROMETER_VERSION_MINOR 0)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -23,7 +23,7 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-############# INTERFEROMETERS CCD ###############
+############# INTERFEROMETER CCD ###############
 if (CFITSIO_FOUND)
 
 set(INTERFEROMETER_SRCS

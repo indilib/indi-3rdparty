@@ -3,7 +3,7 @@
 <devGroup group="CCDs">
         <device label="Telescope array" mdpd="true">
                 <driver name="Telescope array">indi_interferometer</driver>
-                <version>@INTERFEROMETERS_VERSION_MAJOR@.@INTERFEROMETERS_VERSION_MINOR@</version>
+                <version>@INTERFEROMETER_VERSION_MAJOR@.@INTERFEROMETER_VERSION_MINOR@</version>
 	</device>
 </devGroup>
 </driversList>
