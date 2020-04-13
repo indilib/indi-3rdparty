@@ -2111,7 +2111,7 @@ void ASICCD::getExposure()
         }
         else
         {
-            uSecs = 10000;
+            uSecs = 100000;
         }
         if (timeLeft >= 0.0049)
         {
