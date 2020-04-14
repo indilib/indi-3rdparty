@@ -132,6 +132,9 @@ bool Interferometer::initProperties()
     // Must init parent properties first!
     INDI::CCD::initProperties();
 
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->initProperties();
+
     char name[MAXINDINAME];
     char label[MAXINDILABEL];
     for (int i = 0; i < NUM_NODES; i++) {
@@ -226,6 +229,8 @@ bool Interferometer::updateProperties()
             deleteProperty(locationNP[x].name);
     }
 
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->updateProperties();
     return true;
 }
 
@@ -337,15 +342,49 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         IUUpdateNumber(&settingsNP, values, names, n);
     }
 
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewNumber(dev, name, values, names, n);
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+}
+
+/**************************************************************************************
+** Client is asking us to set a new switch
+***************************************************************************************/
+bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewSwitch(dev, name, states, names, n);
+    return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+
+/**************************************************************************************
+** Client is asking us to set a new text
+***************************************************************************************/
+bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewText(dev, name, texts, names, n);
+    return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
 /**************************************************************************************
 ** Client is asking us to set a new BLOB
 ***************************************************************************************/
-bool Interferometer::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
     return INDI::CCD::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+}
+
+/**************************************************************************************
+** Client is asking us to set a new snoop device
+***************************************************************************************/
+bool Interferometer::ISSnoopDevice(XMLEle *root)
+{
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISSnoopDevice(root);
+    return INDI::CCD::ISSnoopDevice(root);
 }
 
 /**************************************************************************************

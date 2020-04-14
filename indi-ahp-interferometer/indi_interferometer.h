@@ -46,9 +46,12 @@ class Interferometer : public INDI::CCD
 public:
     Interferometer();
 
-    bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
-    bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     void ISGetProperties(const char *dev);
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
+    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
+    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
+    bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+    bool ISSnoopDevice(XMLEle *root);
 
     inline double getWavelength() { return wavelength; }
     inline void setWavelength(double wl) { wavelength=wl; for(int x = 0; x < NUM_BASELINES; x++) baselines[x]->setWavelength(wl); }
