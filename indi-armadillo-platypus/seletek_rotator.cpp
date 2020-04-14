@@ -76,7 +76,10 @@ void ISSnoopDevice(XMLEle *root)
 SeletekRotator::SeletekRotator()
 {
     setVersion(LUNATICO_VERSION_MAJOR, LUNATICO_VERSION_MINOR);
-    RI::SetCapability(ROTATOR_CAN_ABORT | ROTATOR_CAN_SYNC | ROTATOR_HAS_BACKLASH);
+    RI::SetCapability(ROTATOR_CAN_ABORT |
+                      ROTATOR_CAN_SYNC  |
+                      ROTATOR_CAN_REVERSE |
+                      ROTATOR_HAS_BACKLASH);
 }
 
 bool SeletekRotator::initProperties()
@@ -114,6 +117,7 @@ bool SeletekRotator::initProperties()
     IUFillNumber(&SettingN[PARAM_MAX_SPEED], "PARAM_MAX_SPEED", "Max Speed", "%.f", 1., 10000., 100., 9800.);
     IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
     IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
+    IUFillNumber(&SettingN[PARAM_HOME], "PARAM_HOME", "Home Position", "%.f", 0., 100000., 1000., 50000.);
     IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.2f", 1., 100000., 100., 1000.);
     IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
                        IPS_OK);
@@ -157,8 +161,6 @@ bool SeletekRotator::updateProperties()
 
     if (isConnected())
     {
-        getParam("getpos", m_StartupSteps);
-
         defineText(&FirmwareVersionTP);
         defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
@@ -376,7 +378,7 @@ IPState SeletekRotator::MoveRotator(double angle)
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
 
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + m_StartupSteps;
+    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -399,7 +401,7 @@ bool SeletekRotator::SyncRotator(double angle)
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
 
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + m_StartupSteps;
+    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -575,7 +577,7 @@ bool SeletekRotator::AbortRotator()
 
 double SeletekRotator::calculateAngle(uint32_t steps)
 {
-    int diff = (static_cast<int32_t>(steps) - static_cast<int32_t>(m_StartupSteps)) *
+    int diff = (static_cast<int32_t>(steps) - SettingN[PARAM_HOME].value) *
                (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? 1 : -1);
     return range360(diff / SettingN[PARAM_STEPS_DEGREE].value);
 }
