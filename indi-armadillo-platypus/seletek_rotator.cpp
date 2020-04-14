@@ -153,17 +153,12 @@ void SeletekRotator::ISGetProperties(const char *dev)
 
 bool SeletekRotator::updateProperties()
 {
-    if (isConnected())
-    {
-        getParam("getpos", m_StartupSteps);
-        // Always assume zero
-        GotoRotatorN[0].value = 0;
-    }
-
     INDI::Rotator::updateProperties();
 
     if (isConnected())
     {
+        getParam("getpos", m_StartupSteps);
+
         defineText(&FirmwareVersionTP);
         defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
