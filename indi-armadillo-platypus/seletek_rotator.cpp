@@ -134,7 +134,7 @@ bool SeletekRotator::initProperties()
     // Rotator Ticks
     IUFillNumber(&RotatorAbsPosN[0], "ROTATOR_ABSOLUTE_POSITION", "Value", "%.f", 0., 1000000., 0., 0.);
     IUFillNumberVector(&RotatorAbsPosNP, RotatorAbsPosN, 1, getDeviceName(), "ABS_ROTATOR_POSITION", "Steps", MAIN_CONTROL_TAB,
-                       IP_RO, 0, IPS_IDLE );
+                       IP_RW, 0, IPS_IDLE );
 
     addDebugControl();
 
@@ -157,6 +157,8 @@ bool SeletekRotator::updateProperties()
 
     if (isConnected())
     {
+        getParam("getpos", m_StartupSteps);
+
         defineText(&FirmwareVersionTP);
         defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
@@ -306,7 +308,7 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
         /////////////////////////////////////////////
         // Settings
         /////////////////////////////////////////////
-        if (strcmp(name, SettingNP.name) == 0)
+        if (!strcmp(name, SettingNP.name))
         {
             bool rc = true;
             std::vector<double> prevValue(SettingNP.nnp);
@@ -322,7 +324,8 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
 
             if (SettingN[PARAM_STEPS_DEGREE].value != prevValue[PARAM_STEPS_DEGREE])
             {
-                double newPosition = range360(RotatorAbsPosN[0].value / SettingN[PARAM_STEPS_DEGREE].value);
+                double newPosition = range360( (RotatorAbsPosN[0].value - static_cast<int32_t>(m_StartupSteps)) /
+                                               SettingN[PARAM_STEPS_DEGREE].value);
                 GotoRotatorN[0].value = newPosition;
                 IDSetNumber(&GotoRotatorNP, nullptr);
             }
@@ -337,6 +340,27 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
             IDSetNumber(&SettingNP, nullptr);
             return true;
         }
+    }
+    /////////////////////////////////////////////
+    // Steps
+    /////////////////////////////////////////////
+    else if (!strcmp(name, RotatorAbsPosNP.name))
+    {
+        int target = values[0];
+        if (gotoTarget(target))
+        {
+            RotatorAbsPosNP.s = IPS_BUSY;
+            GotoRotatorNP.s = IPS_BUSY;
+            LOGF_INFO("Moving to %d steps.", target);
+            IDSetNumber(&GotoRotatorNP, nullptr);
+        }
+        else
+        {
+            RotatorAbsPosNP.s = IPS_ALERT;
+        }
+
+        IDSetNumber(&RotatorAbsPosNP, nullptr);
+        return true;
     }
 
     return INDI::Rotator::ISNewNumber(dev, name, values, names, n);
@@ -353,7 +377,7 @@ IPState SeletekRotator::MoveRotator(double angle)
 
     r *= sign;
 
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value;
+    double newTarget = (r + b + m_StartupSteps) * SettingN[PARAM_STEPS_DEGREE].value;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -375,7 +399,7 @@ bool SeletekRotator::SyncRotator(double angle)
 
     r *= sign;
 
-    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value;
+    double newTarget = (r + b + m_StartupSteps) * SettingN[PARAM_STEPS_DEGREE].value;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -498,7 +522,8 @@ void SeletekRotator::TimerHit()
             m_LastSteps = res;
             RotatorAbsPosN[0].value = res;
             IDSetNumber(&RotatorAbsPosNP, nullptr);
-            double newPosition = range360(res / SettingN[PARAM_STEPS_DEGREE].value);
+            double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
+                                           SettingN[PARAM_STEPS_DEGREE].value);
             GotoRotatorN[0].value = newPosition;
             IDSetNumber(&GotoRotatorNP, nullptr);
         }

@@ -106,7 +106,7 @@ class SeletekRotator : public INDI::Rotator
         /// Private Variables
         ///////////////////////////////////////////////////////////////////////
         bool m_IsMoving {false};
-        uint32_t m_LastSteps {0};
+        uint32_t m_LastSteps {0}, m_StartupSteps {0};
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
