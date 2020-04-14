@@ -64,13 +64,14 @@ void Interferometer::Callback()
     unsigned long counts[NUM_NODES];
     unsigned long correlations[NUM_BASELINES];
     char *buf = static_cast<char *>(malloc(FRAME_SIZE+1));
-    unsigned int* framebuffer = static_cast<unsigned int*>(static_cast<void*>(PrimaryCCD.getFrameBuffer()));
+    unsigned short* framebuffer = static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer()));
     char str[3];
     while (InExposure)
     {
-        tty_read_section(PortFD, buf, 13, 1000, &olen);
+        tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if(olen != FRAME_SIZE)
             continue;
+        timeleft -= FRAME_TIME_NS;
         int idx = 0;
         int w = PrimaryCCD.getSubW();
         int h = PrimaryCCD.getSubH();
@@ -89,8 +90,17 @@ void Interferometer::Callback()
         for(int x = 0; x < NUM_NODES; x++) {
             for(int y = x+1; y < NUM_NODES; y++) {
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                framebuffer[static_cast<int>(center+w*uv.u+h*w*uv.v)] += correlations[idx++]*8192/counts[x]+counts[y];
+                int z = static_cast<int>(center+w*uv.u+h*w*uv.v);
+                if(z > 0 && z < w*h)
+                    framebuffer[z] = fmin(65535, framebuffer[z]+correlations[idx++]*4095/counts[x]+counts[y]);
             }
+        }
+        if(timeleft <= 0.0) {
+            // We're no longer exposing...
+            AbortExposure();
+            /* We're done exposing */
+            LOG_INFO("Exposure done, downloading image...");
+            grabImage();
         }
     }
 }
@@ -101,7 +111,7 @@ Interferometer::Interferometer()
         baselines[x] = new baseline();
 
     // Set camera capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME;
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_HAS_DSP;
     SetCCDCapability(cap);
     setInterferometerConnection(CONNECTION_TCP|CONNECTION_SERIAL);
 
@@ -239,11 +249,11 @@ bool Interferometer::updateProperties()
 ***************************************************************************************/
 void Interferometer::setupParams()
 {
-    SetCCDParams(2048, 2048, 32, AIRY*RAD_AS*getWavelength(), AIRY*RAD_AS*getWavelength());
+    SetCCDParams(2048, 2048, 16, AIRY*RAD_AS*getWavelength(), AIRY*RAD_AS*getWavelength());
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * abs(PrimaryCCD.getBPP()) / 8;
+    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     nbuf += 512;  //  leave a little extra at the end
     PrimaryCCD.setFrameBufferSize(nbuf);
     memset(PrimaryCCD.getFrameBuffer(), 0, PrimaryCCD.getFrameBufferSize());
@@ -259,6 +269,8 @@ bool Interferometer::StartExposure(float duration)
     std::thread(&Interferometer::Callback, this).detach();
     gettimeofday(&ExpStart, nullptr);
     InExposure = true;
+    timeleft = ExposureRequest;
+
     int olen;
     int len = 2;
     char buf[2] = { 0x3c, 0x0d };
@@ -275,25 +287,14 @@ bool Interferometer::StartExposure(float duration)
 ***************************************************************************************/
 bool Interferometer::AbortExposure()
 {
+    int olen = 0;
+    int len = 2;
+    char buf[2] = { 0x0c, 0x0d };
+    int ntries = 10;
+    while (olen != len && ntries-- > 0)
+        tty_write(PortFD, buf, len, &olen);
     InExposure = false;
     return true;
-}
-
-/**************************************************************************************
-** How much longer until exposure is done?
-***************************************************************************************/
-float Interferometer::CalcTimeLeft()
-{
-    float timesince;
-    float timeleft;
-    struct timeval now;
-    gettimeofday(&now, nullptr);
-
-    timesince = (now.tv_sec * 1000.0f + now.tv_usec / 1000.0f) - (ExpStart.tv_sec * 1000.0f + ExpStart.tv_usec / 1000.0f);
-    timesince = timesince / 1000.0f;
-
-    timeleft = ExposureRequest - timesince;
-    return timeleft;
 }
 
 /**************************************************************************************
@@ -406,38 +407,13 @@ void Interferometer::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 ***************************************************************************************/
 void Interferometer::TimerHit()
 {
-    float timeleft;
-
     if(isConnected() == false)
         return;  //  No need to reset timer if we are not connected anymore
 
     if (InExposure)
     {
-        timeleft = CalcTimeLeft();
-
-        // Less than a 0.1 second away from exposure completion
-        // This is an over simplified timing method, check CCDSimulator for better timing checks
-        if(timeleft >= 0.0f)
-        {
-            // Just update time left in client
-            PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
-        }
-        else
-        {
-            /* We're done exposing */
-            LOG_INFO("Exposure done, downloading image...");
-            // We're no longer exposing...
-            InExposure = false;
-
-            int olen = 0;
-            int len = 2;
-            char buf[2] = { 0x0c, 0x0d };
-            int ntries = 10;
-            while (olen != len && ntries-- > 0)
-                tty_write(PortFD, buf, len, &olen);
-
-            grabImage();
-        }
+        // Just update time left in client
+        PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
     }
 
     SetTimer(POLLMS);
@@ -463,19 +439,25 @@ bool Interferometer::Handshake()
     int ret = false;
     if(PortFD != -1) {
         int olen;
-        char buf[2] = { 0x3c, 0x0d };
+        char buf[FRAME_SIZE];
+
+        char cmd[2] = { 0x3c, 0x0d };
         int ntries = 10;
         while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, buf, 2, &olen);
+            tty_write(PortFD, cmd, 2, &olen);
 
-        tty_read_section(PortFD, buf, 13, 1000, &olen);
+        ntries = 10;
+        while (olen != FRAME_SIZE && ntries-- > 0)
+            tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if(olen == FRAME_SIZE)
             ret = true;
 
-        buf[0] = 0x0c;
+        DEBUGF(INDI::Logger::DBG_ERROR, "len=%d", olen);
+
+        cmd[0] = 0x0c;
         ntries = 10;
         while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, buf, 2, &olen);
+            tty_write(PortFD, cmd, 2, &olen);
 
     }
     return ret;

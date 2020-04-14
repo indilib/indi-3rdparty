@@ -23,10 +23,12 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
+#define BAUD_RATE 2.0E+6
 #define NUM_NODES 14
 #define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
 #define SAMPLE_SIZE 3
 #define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
+#define FRAME_TIME_NS 10.0*FRAME_SIZE/BAUD_RATE
 #define INTERFEROMETER_PROPERTIES_TAB "Interferometer properties"
 
 class baseline : public INDI::Correlator
@@ -96,7 +98,7 @@ private:
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
-
+    double timeleft;
     double wavelength;
     baseline* baselines[NUM_BASELINES];
     void Callback();
