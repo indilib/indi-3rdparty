@@ -153,12 +153,17 @@ void SeletekRotator::ISGetProperties(const char *dev)
 
 bool SeletekRotator::updateProperties()
 {
+    if (isConnected())
+    {
+        getParam("getpos", m_StartupSteps);
+        // Always assume zero
+        GotoRotatorN[0].value = 0;
+    }
+
     INDI::Rotator::updateProperties();
 
     if (isConnected())
     {
-        getParam("getpos", m_StartupSteps);
-
         defineText(&FirmwareVersionTP);
         defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
@@ -340,27 +345,27 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
             IDSetNumber(&SettingNP, nullptr);
             return true;
         }
-    }
-    /////////////////////////////////////////////
-    // Steps
-    /////////////////////////////////////////////
-    else if (!strcmp(name, RotatorAbsPosNP.name))
-    {
-        int target = values[0];
-        if (gotoTarget(target))
+        /////////////////////////////////////////////
+        // Steps
+        /////////////////////////////////////////////
+        else if (!strcmp(name, RotatorAbsPosNP.name))
         {
-            RotatorAbsPosNP.s = IPS_BUSY;
-            GotoRotatorNP.s = IPS_BUSY;
-            LOGF_INFO("Moving to %d steps.", target);
-            IDSetNumber(&GotoRotatorNP, nullptr);
-        }
-        else
-        {
-            RotatorAbsPosNP.s = IPS_ALERT;
-        }
+            int target = values[0];
+            if (gotoTarget(target))
+            {
+                RotatorAbsPosNP.s = IPS_BUSY;
+                GotoRotatorNP.s = IPS_BUSY;
+                LOGF_INFO("Moving to %d steps.", target);
+                IDSetNumber(&GotoRotatorNP, nullptr);
+            }
+            else
+            {
+                RotatorAbsPosNP.s = IPS_ALERT;
+            }
 
-        IDSetNumber(&RotatorAbsPosNP, nullptr);
-        return true;
+            IDSetNumber(&RotatorAbsPosNP, nullptr);
+            return true;
+        }
     }
 
     return INDI::Rotator::ISNewNumber(dev, name, values, names, n);
