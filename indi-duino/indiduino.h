@@ -89,6 +89,10 @@ class indiduino : public INDI::DefaultDevice
 
   protected:
     virtual const char *getDefaultName() override;
+    // test switch
+    ISwitch TestStateS[2];
+    ISwitchVectorProperty TestStateSP;
+
 
   private:
     bool Handshake();
