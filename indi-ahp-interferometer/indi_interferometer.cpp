@@ -90,7 +90,7 @@ void Interferometer::Callback()
         for(int x = 0; x < NUM_NODES; x++) {
             for(int y = x+1; y < NUM_NODES; y++) {
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                framebuffer[static_cast<int>(center+w*uv.u+h*w*uv.v)] += static_cast<unsigned int>(correlations[idx++]*8192/static_cast<unsigned int>(counts[x]+counts[y]));
+                framebuffer[static_cast<int>(center+w*uv.u+h*w*uv.v)] += correlations[idx++]*8192/counts[x]+counts[y];
             }
         }
     }
