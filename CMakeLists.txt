@@ -104,6 +104,7 @@ option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
+option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
 
 find_package(FFmpeg)
 
@@ -511,7 +512,9 @@ SET(LIBRARIES_FOUND FALSE)
 endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
-
+if (WITH_AHP_INTERFEROMETER)
+add_subdirectory(indi-ahp-interferometer)
+endif(WITH_AHP_INTERFEROMETER)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
