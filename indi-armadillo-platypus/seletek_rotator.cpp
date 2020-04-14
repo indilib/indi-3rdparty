@@ -561,12 +561,19 @@ void SeletekRotator::TimerHit()
 bool SeletekRotator::AbortRotator()
 {
     char cmd[DRIVER_LEN] = {0};
+    bool rc = false;
     int32_t res = 0;
     snprintf(cmd, DRIVER_LEN, "!step stop %d#", IUFindOnSwitchIndex(&PerPortSP));
     if (sendCommand(cmd, res))
-        return res == 0;
+        rc = (res == 0);
 
-    return false;
+    if (rc && RotatorAbsPosNP.s == IPS_BUSY)
+    {
+        RotatorAbsPosNP.s = IPS_IDLE;
+        IDSetNumber(&RotatorAbsPosNP, nullptr);
+    }
+
+    return rc;
 }
 
 bool SeletekRotator::saveConfigItems(FILE *fp)
