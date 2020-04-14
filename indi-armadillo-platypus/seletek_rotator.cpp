@@ -119,7 +119,7 @@ bool SeletekRotator::initProperties()
     IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
     IUFillNumber(&SettingN[PARAM_HOME], "PARAM_HOME", "Home Position", "%.f", 0., 100000., 1000., 50000.);
     IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.2f", 1., 100000., 100., 1000.);
-    IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
+    IUFillNumberVector(&SettingNP, SettingN, 6, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
                        IPS_OK);
 
     // Motor Types
@@ -376,7 +376,7 @@ IPState SeletekRotator::MoveRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
-    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
+    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
     double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
 
@@ -399,7 +399,7 @@ bool SeletekRotator::SyncRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
-    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
+    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
     double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
 
@@ -578,7 +578,7 @@ bool SeletekRotator::AbortRotator()
 double SeletekRotator::calculateAngle(uint32_t steps)
 {
     int diff = (static_cast<int32_t>(steps) - SettingN[PARAM_HOME].value) *
-               (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? 1 : -1);
+               (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1);
     return range360(diff / SettingN[PARAM_STEPS_DEGREE].value);
 }
 
