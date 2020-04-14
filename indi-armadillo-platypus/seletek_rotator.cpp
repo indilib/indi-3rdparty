@@ -527,6 +527,8 @@ void SeletekRotator::TimerHit()
             RotatorAbsPosN[0].value = res;
             IDSetNumber(&RotatorAbsPosNP, nullptr);
         }
+        else
+            m_IsMoving = false;
 
         double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
                                        SettingN[PARAM_STEPS_DEGREE].value);
@@ -537,8 +539,7 @@ void SeletekRotator::TimerHit()
             IDSetNumber(&GotoRotatorNP, nullptr);
         }
     }
-    else
-        m_IsMoving = false;
+
 
     if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
     {
