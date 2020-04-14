@@ -156,7 +156,6 @@ bool SeletekRotator::updateProperties()
     if (isConnected())
     {
         getParam("getpos", m_StartupSteps);
-        m_LastSteps = m_StartupSteps;
         // Always assume zero
         GotoRotatorN[0].value = 0;
     }
@@ -523,33 +522,36 @@ void SeletekRotator::TimerHit()
 
     if (getParam("getpos", res))
     {
-        if (res != m_LastSteps)
+        if (fabs(res - RotatorAbsPosN[0].value) > 0)
         {
-            m_LastSteps = res;
             RotatorAbsPosN[0].value = res;
             IDSetNumber(&RotatorAbsPosNP, nullptr);
+        }
 
-            double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
-                                           SettingN[PARAM_STEPS_DEGREE].value);
+        double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
+                                       SettingN[PARAM_STEPS_DEGREE].value);
+
+        if (fabs(GotoRotatorN[0].value - newPosition) > 0)
+        {
             GotoRotatorN[0].value = newPosition;
             IDSetNumber(&GotoRotatorNP, nullptr);
         }
-        else
-            m_IsMoving = false;
+    }
+    else
+        m_IsMoving = false;
 
-        if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
+    if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
+    {
+        if (GotoRotatorNP.s == IPS_BUSY)
         {
-            if (GotoRotatorNP.s == IPS_BUSY)
-            {
-                GotoRotatorNP.s = IPS_OK;
-                IDSetNumber(&GotoRotatorNP, nullptr);
-            }
+            GotoRotatorNP.s = IPS_OK;
+            IDSetNumber(&GotoRotatorNP, nullptr);
+        }
 
-            if (RotatorAbsPosNP.s == IPS_BUSY)
-            {
-                RotatorAbsPosNP.s = IPS_OK;
-                IDSetNumber(&RotatorAbsPosNP, nullptr);
-            }
+        if (RotatorAbsPosNP.s == IPS_BUSY)
+        {
+            RotatorAbsPosNP.s = IPS_OK;
+            IDSetNumber(&RotatorAbsPosNP, nullptr);
         }
     }
 
