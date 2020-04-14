@@ -430,18 +430,10 @@ bool LX200Skywalker::isSlewComplete()
         {
             if (TrackState == SCOPE_SLEWING)
             {
-                TrackStateS[TRACK_ON].s = ISS_ON;
-                TrackStateS[TRACK_OFF].s = ISS_OFF;
-                TrackState = SCOPE_TRACKING;
-                TrackStateSP.s = IPS_OK;
-                IDSetSwitch(&TrackStateSP, nullptr);
-                if ((setPierSide()) && (MountLocked())) // Normally lock is set by TCS if slew ends
+                notifyTrackState(SCOPE_TRACKING);
+                if ((notifyPierSide()) && (MountLocked())) // Normally lock is set by TCS if slew ends
                 {
-                    MountStateS[0].s = ISS_ON;
-                    MountStateS[1].s = ISS_OFF;
-                    MountStateSP.s = IPS_OK;
-                    CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
-                    IDSetSwitch(&MountStateSP, nullptr);
+                    notifyMountLock(true);
                     result = true;
                 }
                 else
@@ -449,18 +441,10 @@ bool LX200Skywalker::isSlewComplete()
             }
             else if (TrackState == SCOPE_PARKING)
             {
-                TrackStateS[TRACK_ON].s = ISS_OFF;
-                TrackStateS[TRACK_OFF].s = ISS_ON;
-                TrackState = SCOPE_PARKED;
-                TrackStateSP.s = IPS_OK;
-                IDSetSwitch(&TrackStateSP, nullptr);
+                notifyTrackState(SCOPE_PARKED);
                 if (SetMountLock(false))
                 {
-                    MountStateS[0].s = ISS_OFF;
-                    MountStateS[1].s = ISS_ON;
-                    MountStateSP.s = IPS_OK;
-                    CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
-                    IDSetSwitch(&MountStateSP, nullptr);
+                    notifyMountLock(false);
                     result = true;
                 }
                 else
@@ -524,23 +508,21 @@ void LX200Skywalker::getBasicData()
             LOG_INFO("Parkdata loaded");
             if (!INDI::Telescope::isParked()) // Mount is unparked and working on connection of the driver!
             {
-                    if ((MountLocked()) && (MountTracking())) // cf. Unpark()
+                    if ((MountLocked()) && (MountTracking())) // default state of working mount
                      {
-                        MountStateS[0].s = ISS_ON;
-                        MountStateS[1].s = ISS_OFF;
-                        MountStateSP.s = IPS_OK;
-                        TrackStateS[TRACK_ON].s = ISS_ON;
-                        TrackStateS[TRACK_OFF].s = ISS_OFF;
-                        TrackStateSP.s = IPS_OK;
-                        INDI::Telescope::TrackState = SCOPE_TRACKING;
+                        notifyMountLock(true);
+                        notifyTrackState(SCOPE_TRACKING);
                         ParkSP.s = IPS_OK;
-                        IDSetSwitch(&MountStateSP, nullptr);
-                        IDSetSwitch(&TrackStateSP, nullptr);
                         IDSetSwitch(&ParkSP, nullptr);
                         //LOG_INFO("Mount is working");
                      }
                      else
-                        LOG_WARN("Mount is unparked but not locked and/or tracking!");
+                        LOG_WARN("Mount is unparked but not locked and/or not tracking!");
+            }
+            else // Mount is parked
+            {
+                notifyMountLock(MountLocked());
+                notifyTrackState(SCOPE_PARKED);
             }
         }
         else
@@ -588,7 +570,7 @@ bool LX200Skywalker::updateLocation(double latitude, double longitude, double el
     fs_sexa(l, latitude, 3, 3600);
     fs_sexa(L, longitude, 4, 3600);
 
-    LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L);
+    // LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L); Info provided by "inditelescope"
 
    return true;
 }
@@ -620,22 +602,12 @@ bool LX200Skywalker::UnPark()
         INDI::Telescope::SetParked(false);
         if ((MountLocked()) && (MountTracking())) // TCS sets Mountlock & Tracking
         {
-            MountStateS[0].s = ISS_ON;
-            MountStateS[1].s = ISS_OFF;
-            MountStateSP.s = IPS_OK;
-            CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+            notifyMountLock(true);
             // INDI::Telescope::SetParked(false) sets TrackState = SCOPE_IDLE but TCS is tracking
-            TrackStateS[TRACK_ON].s = ISS_ON;
-            TrackStateS[TRACK_OFF].s = ISS_OFF;
-            TrackStateSP.s = IPS_OK;
-            INDI::Telescope::TrackState = SCOPE_TRACKING;
+            notifyTrackState(SCOPE_TRACKING);
             // INDI::Telescope::SetParked(false) sets ParkSP.S = IPS_IDLE but mount IS unparked!
             ParkSP.s = IPS_OK;
-            IDSetSwitch(&MountStateSP, nullptr);
-            IDSetSwitch(&TrackStateSP, nullptr);
             IDSetSwitch(&ParkSP, nullptr);
-            // return true;
-            // Should we do a sync here to show pierside?
             return SyncDefaultPark();
         }
         else
@@ -655,6 +627,72 @@ bool LX200Skywalker::SavePark()
         LOG_ERROR("Controller did not accept 'SetPark'.");
         return false;
     }
+}
+
+/********************************************************************************
+ * Notifier-Section
+ ********************************************************************************/
+// Changed from original "set_" to "notify_" because of the logic behind: From
+// the controller view we change the viewer (and a copy of the model), not the
+// the model itself!
+bool LX200Skywalker::notifyPierSide()
+{
+    char lstat[20] = {0};
+    if (getJSONData_Y(5, lstat)) // this is the model!
+    {
+        int li = std::stoi(lstat);
+        li = li & (1 << 7);
+        if (li > 0)
+            Telescope::setPierSide(INDI::Telescope::PIER_WEST);
+        else
+            Telescope::setPierSide(INDI::Telescope::PIER_EAST);
+        LOGF_INFO("Telescope pointing %s", (li > 0) ? "east" : "west");
+        return true;
+    }
+    else
+    {
+        Telescope::setPierSide(INDI::Telescope::PIER_UNKNOWN);
+        LOG_ERROR("Telescope pointing unknown!");
+        return false;
+    }
+}
+
+void LX200Skywalker::notifyMountLock(bool locked)
+{
+    if (locked)
+    {
+        MountStateS[0].s = ISS_ON;
+        MountStateS[1].s = ISS_OFF;
+        MountStateSP.s = IPS_OK;
+        CurrentMountState = MOUNT_LOCKED; // ALWAYS set status!
+    }
+    else
+    {
+        MountStateS[0].s = ISS_OFF;
+        MountStateS[1].s = ISS_ON;
+        MountStateSP.s = IPS_OK;
+        CurrentMountState = MOUNT_UNLOCKED; // ALWAYS set status!
+    }
+    IDSetSwitch(&MountStateSP, nullptr);
+}
+
+void LX200Skywalker::notifyTrackState(INDI::Telescope::TelescopeStatus state)
+{
+    if (state == SCOPE_TRACKING)
+    {
+        TrackStateS[TRACK_ON].s = ISS_ON;
+        TrackStateS[TRACK_OFF].s = ISS_OFF;
+        TrackStateSP.s = IPS_OK;
+        INDI::Telescope::TrackState = state;
+    }
+    else
+    {
+        TrackStateS[TRACK_ON].s = ISS_OFF;
+        TrackStateS[TRACK_OFF].s = ISS_ON;
+        TrackStateSP.s = IPS_OK;
+        INDI::Telescope::TrackState = state;
+    }
+    IDSetSwitch(&TrackStateSP, nullptr);
 }
 
 /*********************************************************************************
@@ -805,28 +843,6 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardco
     }
     strcpy(jstr, data[jindex]);
     return true;
-}
-
-bool LX200Skywalker::setPierSide()
-{
-    char lstat[20] = {0};
-    if (getJSONData_Y(5, lstat))
-    {
-        int li = std::stoi(lstat);
-        li = li & (1 << 7);
-        if (li > 0)
-            Telescope::setPierSide(INDI::Telescope::PIER_WEST);
-        else
-            Telescope::setPierSide(INDI::Telescope::PIER_EAST);
-        LOGF_INFO("Telescope pointing %s", (li > 0) ? "east" : "west");
-        return true;
-    }
-    else
-    {
-        Telescope::setPierSide(INDI::Telescope::PIER_UNKNOWN);
-        LOG_ERROR("Telescope pointing unknown!");
-        return false;
-    }
 }
 
 bool LX200Skywalker::MountLocked()
@@ -1655,7 +1671,7 @@ bool LX200Skywalker::Sync(double ra, double dec)
 
     NewRaDec(currentRA, currentDEC);
 
-    if (!setPierSide())
+    if (!notifyPierSide())
         return false;
     // show lock
     if (MountLocked()) // Normally lock is set by TCS on syncing
