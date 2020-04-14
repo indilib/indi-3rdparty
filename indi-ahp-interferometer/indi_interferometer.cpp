@@ -65,7 +65,7 @@ void Interferometer::Callback()
     unsigned long counts[NUM_NODES];
     unsigned long correlations[NUM_BASELINES];
     char *buf = static_cast<char *>(malloc(len));
-    double* framebuffer = static_cast<double*>(static_cast<void*>(PrimaryCCD.getFrameBuffer()));
+    unsigned int* framebuffer = static_cast<unsigned int*>(static_cast<void*>(PrimaryCCD.getFrameBuffer()));
     char str[3];
     while (InExposure)
     {
@@ -90,7 +90,7 @@ void Interferometer::Callback()
         for(int x = 0; x < NUM_NODES; x++) {
             for(int y = x+1; y < NUM_NODES; y++) {
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                framebuffer[static_cast<int>(center+w*uv.u+h*w*uv.v)] += static_cast<double>(correlations[idx++]*2.0/static_cast<double>(counts[x]+counts[y]));
+                framebuffer[static_cast<int>(center+w*uv.u+h*w*uv.v)] += static_cast<unsigned int>(correlations[idx++]*8192/static_cast<unsigned int>(counts[x]+counts[y]));
             }
         }
     }
@@ -98,6 +98,14 @@ void Interferometer::Callback()
 
 Interferometer::Interferometer()
 {
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x] = new baseline();
+
+    // Set camera capabilities
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME;
+    SetCCDCapability(cap);
+    setInterferometerConnection(CONNECTION_TCP|CONNECTION_SERIAL);
+
     ExposureRequest = 0.0;
     InExposure = false;
 }
@@ -135,8 +143,8 @@ bool Interferometer::initProperties()
         IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Z", "%4.1f", 0.75, 9999.0, 0.75, 10.0);
         IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, INTERFEROMETER_PROPERTIES_TAB, IP_RW, 60, IPS_IDLE);
     }
-    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "6.9f", 0.0000003, 1000000.0, 0.000000001, 0.0000004);
-    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "9.0f", 20, 1000000.0, 20.0, 100.0);
+    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%6.9f", 0.0000003, 1000000.0, 0.000000001, 0.0000004);
+    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 20.0, 100.0);
     IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", INTERFEROMETER_PROPERTIES_TAB, IP_RW, 60, IPS_IDLE);
 
     int idx = 0;
@@ -156,24 +164,20 @@ bool Interferometer::initProperties()
 
     setDefaultPollingPeriod(500);
 
-    if (ccdConnection & CONNECTION_SERIAL)
+    if (interferometerConnection & CONNECTION_SERIAL)
     {
         serialConnection = new Connection::Serial(this);
         serialConnection->registerHandshake([&]() { return callHandshake(); });
         registerConnection(serialConnection);
     }
 
-    if (ccdConnection & CONNECTION_TCP)
+    if (interferometerConnection & CONNECTION_TCP)
     {
         tcpConnection = new Connection::TCP(this);
         tcpConnection->registerHandshake([&]() { return callHandshake(); });
 
         registerConnection(tcpConnection);
     }
-
-    // Set camera capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_HAS_DSP;
-    SetCCDCapability(cap);
     return true;
 
 }
@@ -187,7 +191,8 @@ void Interferometer::ISGetProperties(const char *dev)
 
     if (isConnected())
     {
-        defineNumber(locationNP);
+        for (int x=0; x<NUM_NODES; x++)
+            defineNumber(&locationNP[x]);
         defineNumber(&settingsNP);
         // Define our properties
     }
@@ -208,7 +213,8 @@ bool Interferometer::updateProperties()
         // Let's get parameters now from CCD
         setupParams();
 
-        defineNumber(locationNP);
+        for (int x=0; x<NUM_NODES; x++)
+            defineNumber(&locationNP[x]);
         defineNumber(&settingsNP);
         // Start the timer
         SetTimer(POLLMS);
@@ -229,13 +235,14 @@ bool Interferometer::updateProperties()
 ***************************************************************************************/
 void Interferometer::setupParams()
 {
-    SetCCDParams(PrimaryCCD.getSubW(), PrimaryCCD.getSubH(), -64, getWavelength(), getWavelength());
+    SetCCDParams(2048, 2048, 32, getWavelength(), getWavelength());
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * abs(PrimaryCCD.getBPP()) / 8;
     nbuf += 512;  //  leave a little extra at the end
     PrimaryCCD.setFrameBufferSize(nbuf);
+    memset(PrimaryCCD.getFrameBuffer(), 0, PrimaryCCD.getFrameBufferSize());
 }
 
 /**************************************************************************************
@@ -251,7 +258,9 @@ bool Interferometer::StartExposure(float duration)
     int olen;
     int len = 2;
     char buf[2] = { 0x3c, 0x0d };
-    tty_write(PortFD, buf, 2, &olen);
+    int ntries = 10;
+    while (olen != len && ntries-- > 0)
+        tty_write(PortFD, buf, len, &olen);
 
     // We're done
     return olen == len;
@@ -323,7 +332,9 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
             value>>=4;
         }
         buf[16] = '\r';
-        tty_write(PortFD, buf, len, &olen);
+        int ntries = 10;
+        while (olen != len && ntries-- > 0)
+            tty_write(PortFD, buf, len, &olen);
         IUUpdateNumber(&settingsNP, values, names, n);
     }
 
@@ -380,10 +391,12 @@ void Interferometer::TimerHit()
             // We're no longer exposing...
             InExposure = false;
 
-            int olen;
+            int olen = 0;
             int len = 2;
             char buf[2] = { 0x0c, 0x0d };
-            tty_write(PortFD, buf, 2, &olen);
+            int ntries = 10;
+            while (olen != len && ntries-- > 0)
+                tty_write(PortFD, buf, len, &olen);
 
             grabImage();
         }
@@ -409,12 +422,12 @@ void Interferometer::grabImage()
 
 bool Interferometer::Handshake()
 {
-    return false;
+    return PortFD != -1;
 }
 
 bool Interferometer::callHandshake()
 {
-    if (ccdConnection > 0)
+    if (interferometerConnection > 0)
     {
         if (getActiveConnection() == serialConnection)
             PortFD = serialConnection->getPortFD();
@@ -423,4 +436,22 @@ bool Interferometer::callHandshake()
     }
 
     return Handshake();
+}
+
+uint8_t Interferometer::getInterferometerConnection() const
+{
+    return interferometerConnection;
+}
+
+void Interferometer::setInterferometerConnection(const uint8_t &value)
+{
+    uint8_t mask = CONNECTION_SERIAL | CONNECTION_TCP | CONNECTION_NONE;
+
+    if (value == 0 || (mask & value) == 0)
+    {
+        DEBUGF(INDI::Logger::DBG_ERROR, "Invalid connection mode %d", value);
+        return;
+    }
+
+    interferometerConnection = value;
 }
