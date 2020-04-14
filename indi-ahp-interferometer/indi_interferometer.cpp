@@ -60,17 +60,16 @@ void ISSnoopDevice (XMLEle *root)
 
 void Interferometer::Callback()
 {
-    int len            = FRAME_SIZE;
     int olen           = 0;
     unsigned long counts[NUM_NODES];
     unsigned long correlations[NUM_BASELINES];
-    char *buf = static_cast<char *>(malloc(len));
+    char *buf = static_cast<char *>(malloc(FRAME_SIZE+1));
     unsigned int* framebuffer = static_cast<unsigned int*>(static_cast<void*>(PrimaryCCD.getFrameBuffer()));
     char str[3];
     while (InExposure)
     {
         tty_read_section(PortFD, buf, 13, 1000, &olen);
-        if(olen != len)
+        if(olen != FRAME_SIZE)
             continue;
         int idx = 0;
         int w = PrimaryCCD.getSubW();
@@ -235,7 +234,7 @@ bool Interferometer::updateProperties()
 ***************************************************************************************/
 void Interferometer::setupParams()
 {
-    SetCCDParams(2048, 2048, 32, getWavelength(), getWavelength());
+    SetCCDParams(2048, 2048, 32, AIRY*RAD_AS*getWavelength(), AIRY*RAD_AS*getWavelength());
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
@@ -422,7 +421,25 @@ void Interferometer::grabImage()
 
 bool Interferometer::Handshake()
 {
-    return PortFD != -1;
+    int ret = false;
+    if(PortFD != -1) {
+        int olen;
+        char buf[2] = { 0x3c, 0x0d };
+        int ntries = 10;
+        while (olen != 2 && ntries-- > 0)
+            tty_write(PortFD, buf, 2, &olen);
+
+        tty_read_section(PortFD, buf, 13, 1000, &olen);
+        if(olen == FRAME_SIZE)
+            ret = true;
+
+        buf[0] = 0x0c;
+        ntries = 10;
+        while (olen != 2 && ntries-- > 0)
+            tty_write(PortFD, buf, 2, &olen);
+
+    }
+    return ret;
 }
 
 bool Interferometer::callHandshake()

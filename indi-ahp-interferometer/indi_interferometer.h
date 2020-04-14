@@ -26,15 +26,8 @@
 #define NUM_NODES 14
 #define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
 #define SAMPLE_SIZE 3
-#define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE+2;
+#define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
 #define INTERFEROMETER_PROPERTIES_TAB "Interferometer properties"
-
-enum Settings
-{
-    FREQUENCY_N = 0,
-    SAMPLERATE_N,
-    NUM_SETTINGS
-};
 
 class baseline : public INDI::Correlator
 {
