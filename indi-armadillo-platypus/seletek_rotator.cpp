@@ -156,6 +156,7 @@ bool SeletekRotator::updateProperties()
     if (isConnected())
     {
         getParam("getpos", m_StartupSteps);
+        m_LastSteps = m_StartupSteps;
         // Always assume zero
         GotoRotatorN[0].value = 0;
     }
@@ -527,6 +528,7 @@ void SeletekRotator::TimerHit()
             m_LastSteps = res;
             RotatorAbsPosN[0].value = res;
             IDSetNumber(&RotatorAbsPosNP, nullptr);
+
             double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
                                            SettingN[PARAM_STEPS_DEGREE].value);
             GotoRotatorN[0].value = newPosition;
@@ -535,12 +537,18 @@ void SeletekRotator::TimerHit()
         else
             m_IsMoving = false;
 
-        if (GotoRotatorNP.s == IPS_BUSY)
+        if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
         {
-            if (m_IsMoving == false)
+            if (GotoRotatorNP.s == IPS_BUSY)
             {
                 GotoRotatorNP.s = IPS_OK;
                 IDSetNumber(&GotoRotatorNP, nullptr);
+            }
+
+            if (RotatorAbsPosNP.s == IPS_BUSY)
+            {
+                RotatorAbsPosNP.s = IPS_OK;
+                IDSetNumber(&RotatorAbsPosNP, nullptr);
             }
         }
     }
@@ -565,6 +573,7 @@ bool SeletekRotator::saveConfigItems(FILE *fp)
 
     IUSaveConfigSwitch(fp, &PerPortSP);
     IUSaveConfigSwitch(fp, &MotorTypeSP);
+    IUSaveConfigSwitch(fp, &WiringSP);
     IUSaveConfigNumber(fp, &SettingNP);
 
     return true;
