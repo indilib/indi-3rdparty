@@ -116,7 +116,7 @@ bool Interferometer::Disconnect()
 
 const char * Interferometer::getDefaultName()
 {
-    return "Interferometer array";
+    return "Telescope array";
 }
 
 const char * Interferometer::getDeviceName()
