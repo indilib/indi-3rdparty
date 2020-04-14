@@ -469,8 +469,8 @@ bool SeletekRotator::setSpeedRange(uint32_t min, uint32_t max)
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
 
-    int min_usec = min > 0 ? (50000 - (min - 1) * 50) : 0;
-    int max_usec = max > 0 ? (50000 - (max - 1) * 50) : 0;
+    int min_usec = min > 0 ? (500000 - (min - 1) * 50) : 0;
+    int max_usec = max > 0 ? (500000 - (max - 1) * 50) : 0;
     snprintf(cmd, DRIVER_LEN, "!step speedrangeus %d %d %d#", IUFindOnSwitchIndex(&PerPortSP), min_usec, max_usec);
     if (sendCommand(cmd, res))
         return (res == 0);
