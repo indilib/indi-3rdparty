@@ -91,7 +91,7 @@ private:
     INumber locationN[3*NUM_NODES];
     INumberVectorProperty locationNP[NUM_NODES];
 
-    INumber settingsN[NUM_SETTINGS];
+    INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
     double wavelength;
