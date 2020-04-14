@@ -43,6 +43,7 @@ class SeletekRotator : public INDI::Rotator
         virtual bool SyncRotator(double angle) override;
         virtual bool SetRotatorBacklash(int32_t steps) override;
         virtual bool SetRotatorBacklashEnabled(bool enabled) override;
+        virtual bool ReverseRotator(bool enabled) override;
 
         virtual bool saveConfigItems(FILE *fp) override;
 
@@ -59,6 +60,7 @@ class SeletekRotator : public INDI::Rotator
         bool setSpeedRange(uint32_t min, uint32_t max);
         bool syncSettings();
         bool echo();
+        double calculateAngle(uint32_t steps);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Communication Functions

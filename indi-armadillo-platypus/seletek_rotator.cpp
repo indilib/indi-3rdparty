@@ -329,9 +329,7 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
 
             if (SettingN[PARAM_STEPS_DEGREE].value != prevValue[PARAM_STEPS_DEGREE])
             {
-                double newPosition = range360( (RotatorAbsPosN[0].value - static_cast<int32_t>(m_StartupSteps)) /
-                                               SettingN[PARAM_STEPS_DEGREE].value);
-                GotoRotatorN[0].value = newPosition;
+                GotoRotatorN[0].value = calculateAngle(RotatorAbsPosN[0].value);
                 IDSetNumber(&GotoRotatorNP, nullptr);
             }
 
@@ -381,8 +379,9 @@ IPState SeletekRotator::MoveRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
+    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
 
-    double newTarget = (r + b + m_StartupSteps) * SettingN[PARAM_STEPS_DEGREE].value;
+    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + m_StartupSteps;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -403,8 +402,9 @@ bool SeletekRotator::SyncRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
+    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 0;
 
-    double newTarget = (r + b + m_StartupSteps) * SettingN[PARAM_STEPS_DEGREE].value;
+    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + m_StartupSteps;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -530,8 +530,7 @@ void SeletekRotator::TimerHit()
         else
             m_IsMoving = false;
 
-        double newPosition = range360( (static_cast<int32_t>(res) - static_cast<int32_t>(m_StartupSteps)) /
-                                       SettingN[PARAM_STEPS_DEGREE].value);
+        double newPosition = calculateAngle(res);
 
         if (fabs(GotoRotatorN[0].value - newPosition) > 0)
         {
@@ -539,7 +538,6 @@ void SeletekRotator::TimerHit()
             IDSetNumber(&GotoRotatorNP, nullptr);
         }
     }
-
 
     if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
     {
@@ -559,6 +557,9 @@ void SeletekRotator::TimerHit()
     SetTimer(POLLMS);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Stop motion
+/////////////////////////////////////////////////////////////////////////////
 bool SeletekRotator::AbortRotator()
 {
     char cmd[DRIVER_LEN] = {0};
@@ -577,6 +578,16 @@ bool SeletekRotator::AbortRotator()
     return rc;
 }
 
+double SeletekRotator::calculateAngle(uint32_t steps)
+{
+    int diff = (static_cast<int32_t>(steps) - static_cast<int32_t>(m_StartupSteps)) *
+               (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? 1 : -1);
+    return range360(diff / SettingN[PARAM_STEPS_DEGREE].value);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Save in configuration file
+/////////////////////////////////////////////////////////////////////////////
 bool SeletekRotator::saveConfigItems(FILE *fp)
 {
     INDI::Rotator::saveConfigItems(fp);
@@ -586,6 +597,15 @@ bool SeletekRotator::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &WiringSP);
     IUSaveConfigNumber(fp, &SettingNP);
 
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Reverse
+/////////////////////////////////////////////////////////////////////////////
+bool SeletekRotator::ReverseRotator(bool enabled)
+{
+    INDI_UNUSED(enabled);
     return true;
 }
 
