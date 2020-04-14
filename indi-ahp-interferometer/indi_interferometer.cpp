@@ -92,7 +92,7 @@ void Interferometer::Callback()
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
                 int z = static_cast<int>(center+w*uv.u+h*w*uv.v);
                 if(z > 0 && z < w*h)
-                    framebuffer[z] = fmin(65535, framebuffer[z]+correlations[idx++]*4095/counts[x]+counts[y]);
+                    framebuffer[z] = fmin(65535, framebuffer[z]+correlations[idx++]*65535/(counts[x]+counts[y]));
             }
         }
         if(timeleft <= 0.0) {
