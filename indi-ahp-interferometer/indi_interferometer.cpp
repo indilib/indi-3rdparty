@@ -61,11 +61,13 @@ void ISSnoopDevice (XMLEle *root)
 void Interferometer::Callback()
 {
     int olen           = 0;
-    unsigned long counts[NUM_NODES];
-    unsigned long correlations[NUM_BASELINES];
+    unsigned int counts[NUM_NODES];
+    unsigned int correlations[NUM_BASELINES];
     char buf[FRAME_SIZE+1];
-    unsigned short* framebuffer = static_cast<unsigned short*>(malloc(PrimaryCCD.getFrameBufferSize()));
-    memset(framebuffer, 0, PrimaryCCD.getFrameBufferSize());
+    int w = PrimaryCCD.getXRes();
+    int h = PrimaryCCD.getYRes();
+    double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
+    memset(framebuffer, 0, w*h*sizeof(double));
     char str[SAMPLE_SIZE];
     while (InExposure)
     {
@@ -74,8 +76,6 @@ void Interferometer::Callback()
             continue;
         timeleft -= FRAME_TIME_NS;
         int idx = 0;
-        int w = PrimaryCCD.getXRes();
-        int h = PrimaryCCD.getYRes();
         int center = w*h/2;
         for(int x = 0; x < NUM_NODES; x++) {
             strncpy(str, buf+idx, SAMPLE_SIZE);
@@ -95,10 +95,8 @@ void Interferometer::Callback()
                 int yy = static_cast<int>(h*uv.v/2.0);
                 int z = center+xx+yy*w;
                 if(z >= 0 && z < w*h) {
-                    int v = framebuffer[z]+correlations[idx]*65535/(counts[x]+counts[y]);
-                    v = v > 65535 ? 65535 : v;
-                    framebuffer[z] = v;
-                    framebuffer[w*h-1-z] = v;
+                    framebuffer[z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
+                    framebuffer[w*h-1-z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
                 }
                 idx++;
             }
@@ -108,8 +106,8 @@ void Interferometer::Callback()
             AbortExposure();
             /* We're done exposing */
             LOG_INFO("Exposure done, downloading image...");
-            memcpy(PrimaryCCD.getFrameBuffer(), framebuffer, PrimaryCCD.getFrameBufferSize());
-
+            dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
+            dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
             // Let INDI::CCD know we're done filling the image buffer
             LOG_INFO("Download complete.");
             ExposureComplete(&PrimaryCCD);
@@ -123,9 +121,6 @@ Interferometer::Interferometer()
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x] = new baseline();
 
-    // Set camera capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_HAS_DSP;
-    SetCCDCapability(cap);
     setInterferometerConnection(CONNECTION_TCP|CONNECTION_SERIAL);
 
     ExposureRequest = 0.0;
@@ -173,15 +168,15 @@ bool Interferometer::initProperties()
     char label[MAXINDILABEL];
     for (int i = 0; i < NUM_NODES; i++) {
         sprintf(name, "LOCATION_NODE%02d", i);
-        sprintf(label, "Node %d location", i);
-        IUFillNumber(&locationN[i*3+0], "LOCATION_X", "X", "%4.1f", 0.75, 9999.0, 0.75, 10.0);
-        IUFillNumber(&locationN[i*3+1], "LOCATION_Y", "Y", "%4.1f", 0.75, 9999.0, 0.75, 10.0);
-        IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Z", "%4.1f", 0.75, 9999.0, 0.75, 10.0);
-        IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, INTERFEROMETER_PROPERTIES_TAB, IP_RW, 60, IPS_IDLE);
+        sprintf(label, "Node %d", i);
+        IUFillNumber(&locationN[i*3+0], "LOCATION_X", "Latitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&locationN[i*3+1], "LOCATION_Y", "Longitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Elevation offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, SITE_TAB, IP_RW, 60, IPS_IDLE);
     }
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 0.000000001, 0.21112145);
-    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 20.0, 100.0);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", INTERFEROMETER_PROPERTIES_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 1, 100.0);
+    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     int idx = 0;
     for(int x = 0; x < NUM_NODES; x++) {
@@ -195,8 +190,16 @@ bool Interferometer::initProperties()
         }
     }
 
+    uint32_t cap = 0;
+
+    cap |= CCD_CAN_ABORT;
+    cap |= CCD_CAN_SUBFRAME;
+    cap |= CCD_HAS_DSP;
+
+    SetCCDCapability(cap);
+
     // Set minimum exposure speed to 0.001 seconds
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 30000000.0, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, 3600.0, 1, false);
 
     setDefaultPollingPeriod(500);
 
@@ -211,7 +214,6 @@ bool Interferometer::initProperties()
     {
         tcpConnection = new Connection::TCP(this);
         tcpConnection->registerHandshake([&]() { return callHandshake(); });
-
         registerConnection(tcpConnection);
     }
     return true;
@@ -265,6 +267,7 @@ bool Interferometer::updateProperties()
 
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->updateProperties();
+
     return true;
 }
 
@@ -329,12 +332,34 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
     if (strcmp (dev, getDeviceName()))
         return false;
 
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewNumber(dev, name, values, names, n);
+
+    if(!strcmp(settingsNP.name, name)) {
+        for(int x = 0; x < NUM_BASELINES; x++)
+            baselines[x]->setWavelength(settingsN[0].value);
+        int len = 16;
+        int olen;
+        char buf[17];
+        unsigned long value = settingsN[1].value;
+        for(int i = 0; i < 16; i++) {
+            buf[i] = (value&0xf)<<4 | 0x01;
+            value>>=4;
+        }
+        buf[16] = '\r';
+        int ntries = 10;
+        while (olen != len && ntries-- > 0)
+            tty_write(PortFD, buf, len, &olen);
+        IDSetNumber(&settingsNP, nullptr);
+        return true;
+    }
+
     for (int i = 0; i < NUM_NODES; i++) {
         if(!strcmp(locationNP[i].name, name)) {
             locationN[i*3+0].value = values[0];
             locationN[i*3+1].value = values[1];
             locationN[i*3+2].value = values[2];
-            IUUpdateNumber(&locationNP[i], values, names, n);
+            IDSetNumber(&locationNP[i], nullptr);
             int idx = 0;
             for(int x = 0; x < NUM_NODES; x++) {
                 for(int y = x+1; y < NUM_NODES; y++) {
@@ -348,28 +373,10 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
                     idx++;
                 }
             }
+            return true;
         }
-    }
-    if(!strcmp(settingsNP.name, name)) {
-        IUUpdateNumber(&settingsNP, values, names, n);
-        for(int x = 0; x < NUM_BASELINES; x++)
-            baselines[x]->setWavelength(values[0]);
-        int len = 16;
-        int olen;
-        char buf[17];
-        unsigned long value = static_cast<unsigned long>(values[1]);
-        for(int i = 0; i < 16; i++) {
-            buf[i] = (value&0xf)<<4 | 0x01;
-            value>>=4;
-        }
-        buf[16] = '\r';
-        int ntries = 10;
-        while (olen != len && ntries-- > 0)
-            tty_write(PortFD, buf, len, &olen);
     }
 
-    for(int x = 0; x < NUM_BASELINES; x++)
-        baselines[x]->ISNewNumber(dev, name, values, names, n);
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 

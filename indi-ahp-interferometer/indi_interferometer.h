@@ -29,7 +29,6 @@
 #define SAMPLE_SIZE 4
 #define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
 #define FRAME_TIME_NS 10.0*FRAME_SIZE/BAUD_RATE
-#define INTERFEROMETER_PROPERTIES_TAB "Interferometer properties"
 
 class baseline : public INDI::Correlator
 {
@@ -47,7 +46,10 @@ class Interferometer : public INDI::CCD
 {
 public:
     Interferometer();
-    ~Interferometer() { }
+    ~Interferometer() {
+        for(int x = 0; x < NUM_BASELINES; x++)
+            baselines[x]->~baseline();
+    }
 
     void ISGetProperties(const char *dev);
     bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
