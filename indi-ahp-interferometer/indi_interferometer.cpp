@@ -19,6 +19,7 @@
 */
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/file.h>
 #include <memory>
 #include "indicom.h"
@@ -299,14 +300,14 @@ bool Interferometer::StartExposure(float duration)
     timeleft = ExposureRequest;
 
     int olen;
-    int len = 2;
-    char buf[2] = { 0x3c, 0x0d };
-    int ntries = 10;
-    while (olen != len && ntries-- > 0)
-        tty_write(PortFD, buf, len, &olen);
+    char cmd[2] = { 0x3c, 0x0d };
+    usleep(10000);
+    tty_write(PortFD, &cmd[0], 1, &olen);
+    usleep(10000);
+    tty_write(PortFD, &cmd[1], 1, &olen);
 
     // We're done
-    return olen == len;
+    return olen == 1;
 }
 
 /**************************************************************************************
@@ -315,11 +316,12 @@ bool Interferometer::StartExposure(float duration)
 bool Interferometer::AbortExposure()
 {
     int olen = 0;
-    int len = 2;
-    char buf[2] = { 0x0c, 0x0d };
-    int ntries = 10;
-    while (olen != len && ntries-- > 0)
-        tty_write(PortFD, buf, len, &olen);
+    char cmd[2] = { 0x0c, 0x0d };
+    usleep(10000);
+    tty_write(PortFD, &cmd[0], 1, &olen);
+    usleep(10000);
+    tty_write(PortFD, &cmd[1], 1, &olen);
+
     InExposure = false;
     return true;
 }
@@ -348,8 +350,12 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         }
         buf[16] = '\r';
         int ntries = 10;
-        while (olen != len && ntries-- > 0)
+        while (olen != len && ntries-- > 0) {
+            usleep(10000);
             tty_write(PortFD, buf, len, &olen);
+        }
+        usleep(10000);
+        tty_write(PortFD, &buf[16], 1, &olen);
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
@@ -461,8 +467,10 @@ bool Interferometer::Handshake()
 
         char cmd[2] = { 0x3c, 0x0d };
         int ntries = 10;
-        while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, cmd, 2, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[0], 1, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[1], 1, &olen);
 
         ntries = 10;
         while (olen != FRAME_SIZE && ntries-- > 0)
@@ -472,8 +480,10 @@ bool Interferometer::Handshake()
 
         cmd[0] = 0x0c;
         ntries = 10;
-        while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, cmd, 2, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[0], 1, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[1], 1, &olen);
 
     }
     return ret;
