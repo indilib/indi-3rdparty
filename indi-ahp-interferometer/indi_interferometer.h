@@ -47,6 +47,7 @@ class Interferometer : public INDI::CCD
 {
 public:
     Interferometer();
+    ~Interferometer() { }
 
     void ISGetProperties(const char *dev);
     bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
@@ -55,15 +56,13 @@ public:
     bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     bool ISSnoopDevice(XMLEle *root);
 
-    inline double getWavelength() { return wavelength; }
-    inline void setWavelength(double wl) { wavelength=wl; for(int x = 0; x < NUM_BASELINES; x++) baselines[x]->setWavelength(wl); }
-
     void CaptureThread();
 protected:
 
     // General device functions
     bool Disconnect();
     const char *getDeviceName();
+    bool saveConfigItems(FILE *fp);
     const char *getDefaultName();
     bool initProperties();
     bool updateProperties();
@@ -109,7 +108,6 @@ private:
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
-    void  grabImage();
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
