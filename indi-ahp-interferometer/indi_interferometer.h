@@ -23,11 +23,12 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
+#define BAUD_RATE 2.0E+6
 #define NUM_NODES 14
 #define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
-#define SAMPLE_SIZE 3
+#define SAMPLE_SIZE 4
 #define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
-#define INTERFEROMETER_PROPERTIES_TAB "Interferometer properties"
+#define FRAME_TIME_NS 10.0*FRAME_SIZE/BAUD_RATE
 
 class baseline : public INDI::Correlator
 {
@@ -45,6 +46,10 @@ class Interferometer : public INDI::CCD
 {
 public:
     Interferometer();
+    ~Interferometer() {
+        for(int x = 0; x < NUM_BASELINES; x++)
+            baselines[x]->~baseline();
+    }
 
     void ISGetProperties(const char *dev);
     bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
@@ -53,15 +58,13 @@ public:
     bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     bool ISSnoopDevice(XMLEle *root);
 
-    inline double getWavelength() { return wavelength; }
-    inline void setWavelength(double wl) { wavelength=wl; for(int x = 0; x < NUM_BASELINES; x++) baselines[x]->setWavelength(wl); }
-
     void CaptureThread();
 protected:
 
     // General device functions
     bool Disconnect();
     const char *getDeviceName();
+    bool saveConfigItems(FILE *fp);
     const char *getDefaultName();
     bool initProperties();
     bool updateProperties();
@@ -96,7 +99,7 @@ private:
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
-
+    double timeleft;
     double wavelength;
     baseline* baselines[NUM_BASELINES];
     void Callback();
@@ -107,7 +110,6 @@ private:
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
-    void  grabImage();
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
