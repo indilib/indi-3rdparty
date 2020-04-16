@@ -19,6 +19,7 @@
 */
 
 #include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
 #include <sys/file.h>
 #include <memory>
@@ -70,14 +71,16 @@ void Interferometer::Callback()
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
     char str[SAMPLE_SIZE];
+    tcflush(PortFD, TCIOFLUSH);
     while (InExposure)
     {
         tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if(olen != FRAME_SIZE)
             continue;
-        timeleft -= FRAME_TIME_NS;
+        timeleft -= FRAME_TIME;
         int idx = 0;
         int center = w*h/2;
+        center += w/2;
         for(int x = 0; x < NUM_NODES; x++) {
             strncpy(str, buf+idx, SAMPLE_SIZE);
             counts[x] = strtoul(str, NULL, 16);
@@ -95,9 +98,9 @@ void Interferometer::Callback()
                 int xx = static_cast<int>(w*uv.u/2.0);
                 int yy = static_cast<int>(h*uv.v/2.0);
                 int z = center+xx+yy*w;
-                if(z >= 0 && z < w*h) {
-                    framebuffer[z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
-                    framebuffer[w*h-1-z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
+                if(xx >= 0 && xx < w && yy >= 0 && yy < h) {
+                    framebuffer[z] += 1.0;//correlations[idx]*65535.0/(counts[x]+counts[y]);
+                    framebuffer[w*h-1-z] += 1.0;//correlations[idx]*65535.0/(counts[x]+counts[y]);
                 }
                 idx++;
             }
@@ -170,12 +173,12 @@ bool Interferometer::initProperties()
     for (int i = 0; i < NUM_NODES; i++) {
         sprintf(name, "LOCATION_NODE%02d", i);
         sprintf(label, "Node %d", i);
-        IUFillNumber(&locationN[i*3+0], "LOCATION_X", "Latitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&locationN[i*3+1], "LOCATION_Y", "Longitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Elevation offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&locationN[i*3+0], "LOCATION_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&locationN[i*3+1], "LOCATION_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
         IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, SITE_TAB, IP_RW, 60, IPS_IDLE);
     }
-    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 0.000000001, 0.21112145);
+    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 0.000000001, 21.112145);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 1, 100.0);
     IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
@@ -301,6 +304,7 @@ bool Interferometer::StartExposure(float duration)
 
     int olen;
     char cmd[2] = { 0x3c, 0x0d };
+    tcflush(PortFD, TCIOFLUSH);
     usleep(10000);
     tty_write(PortFD, &cmd[0], 1, &olen);
     usleep(10000);
@@ -317,6 +321,7 @@ bool Interferometer::AbortExposure()
 {
     int olen = 0;
     char cmd[2] = { 0x0c, 0x0d };
+    tcflush(PortFD, TCIOFLUSH);
     usleep(10000);
     tty_write(PortFD, &cmd[0], 1, &olen);
     usleep(10000);
@@ -338,6 +343,7 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
     if(!strcmp(settingsNP.name, name)) {
+        IDSetNumber(&settingsNP, nullptr);
         for(int x = 0; x < NUM_BASELINES; x++)
             baselines[x]->setWavelength(settingsN[0].value);
         int len = 16;
@@ -350,13 +356,13 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         }
         buf[16] = '\r';
         int ntries = 10;
+        tcflush(PortFD, TCIOFLUSH);
         while (olen != len && ntries-- > 0) {
             usleep(10000);
             tty_write(PortFD, buf, len, &olen);
         }
         usleep(10000);
         tty_write(PortFD, &buf[16], 1, &olen);
-        IDSetNumber(&settingsNP, nullptr);
         return true;
     }
 
@@ -467,6 +473,7 @@ bool Interferometer::Handshake()
 
         char cmd[2] = { 0x3c, 0x0d };
         int ntries = 10;
+        tcflush(PortFD, TCIOFLUSH);
         usleep(10000);
         tty_write(PortFD, &cmd[0], 1, &olen);
         usleep(10000);
@@ -480,6 +487,7 @@ bool Interferometer::Handshake()
 
         cmd[0] = 0x0c;
         ntries = 10;
+        tcflush(PortFD, TCIOFLUSH);
         usleep(10000);
         tty_write(PortFD, &cmd[0], 1, &olen);
         usleep(10000);
