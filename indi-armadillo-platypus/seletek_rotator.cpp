@@ -160,6 +160,8 @@ bool SeletekRotator::updateProperties()
 
     if (isConnected())
     {
+        getParam("getpos", m_ZeroPosition);
+
         defineText(&FirmwareVersionTP);
         defineNumber(&RotatorAbsPosNP);
         defineNumber(&SettingNP);
@@ -400,7 +402,7 @@ bool SeletekRotator::SyncRotator(double angle)
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
-    double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + RotatorAbsPosN[0].value;
+    double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -576,7 +578,7 @@ bool SeletekRotator::AbortRotator()
 
 double SeletekRotator::calculateAngle(uint32_t steps)
 {
-    int diff = (static_cast<int32_t>(steps) - RotatorAbsPosN[0].value) *
+    int diff = (static_cast<int32_t>(steps) - m_ZeroPosition) *
                (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1);
     return range360(diff / SettingN[PARAM_STEPS_DEGREE].value);
 }
