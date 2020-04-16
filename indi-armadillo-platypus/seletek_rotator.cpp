@@ -402,6 +402,7 @@ bool SeletekRotator::SyncRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
+    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
     double newTarget = SettingN[PARAM_HOME].value + (r * SettingN[PARAM_STEPS_DEGREE].value);
 
