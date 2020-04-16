@@ -509,7 +509,6 @@ bool Interferometer::Handshake()
         tty_write(PortFD, &cmd[0], 1, &olen);
         usleep(10000);
         tty_write(PortFD, &cmd[1], 1, &olen);
-
     }
     return ret;
 }

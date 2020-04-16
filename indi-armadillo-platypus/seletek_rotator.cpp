@@ -380,6 +380,9 @@ IPState SeletekRotator::MoveRotator(double angle)
 
     double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
 
+    LOGF_INFO("a: %.2f b: %.2f d: %.2f r: %.2f sign: %.f final r: %.2f", a, b, d, r, sign, r);
+    LOGF_INFO("GOTO to new target %.f", newTarget);
+
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
 
@@ -401,7 +404,10 @@ bool SeletekRotator::SyncRotator(double angle)
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
-    double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + SettingN[PARAM_HOME].value;
+    double newTarget = SettingN[PARAM_HOME].value + (r * SettingN[PARAM_STEPS_DEGREE].value);
+
+    LOGF_INFO("a: %.2f b: %.2f d: %.2f r: %.2f sign: %.f final r: %.2f", a, b, d, r, sign, r);
+    LOGF_INFO("Sync to new target %.f", newTarget);
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
