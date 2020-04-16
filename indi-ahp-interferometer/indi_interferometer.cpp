@@ -99,8 +99,8 @@ void Interferometer::Callback()
                 int yy = static_cast<int>(h*uv.v/2.0);
                 int z = center+xx+yy*w;
                 if(xx >= 0 && xx < w && yy >= 0 && yy < h) {
-                    framebuffer[z] += 1.0;//correlations[idx]*65535.0/(counts[x]+counts[y]);
-                    framebuffer[w*h-1-z] += 1.0;//correlations[idx]*65535.0/(counts[x]+counts[y]);
+                    framebuffer[z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
+                    framebuffer[w*h-1-z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
                 }
                 idx++;
             }
