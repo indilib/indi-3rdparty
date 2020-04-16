@@ -98,7 +98,7 @@ void Interferometer::Callback()
                 int xx = static_cast<int>(w*uv.u/2.0);
                 int yy = static_cast<int>(h*uv.v/2.0);
                 int z = center+xx+yy*w;
-                if(xx >= 0 && xx < w && yy >= 0 && yy < h) {
+                if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
                     framebuffer[z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
                     framebuffer[w*h-1-z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
                 }
@@ -376,10 +376,27 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
             for(int x = 0; x < NUM_NODES; x++) {
                 for(int y = x+1; y < NUM_NODES; y++) {
                     if(x==i||y==i) {
+                        double x1,x2,y1,y2,z1,z2;
+                        x1 = locationN[x*3+0].value;
+                        x2 = locationN[y*3+0].value;
+                        y1 = locationN[x*3+1].value;
+                        y2 = locationN[y*3+1].value;
+                        z1 = locationN[x*3+2].value;
+                        z2 = locationN[y*3+2].value;
+
+                        double Lat;
+
+                        INumberVectorProperty *nv = this->getNumber("GEOGRAPHIC_COORDS");
+                        if(nv != nullptr)
+                        {
+                            Lat = nv->np[0].value;
+                        }
+                        Lat *= M_PI/180.0;
+
                         INDI::Correlator::Baseline b;
-                        b.x = locationN[x*3+0].value-locationN[y*3+0].value;
-                        b.y = locationN[x*3+1].value-locationN[y*3+1].value;
-                        b.z = locationN[x*3+2].value-locationN[y*3+2].value;
+                        b.x = (locationN[x*3+0].value-locationN[y*3+0].value);
+                        b.y = (locationN[x*3+1].value-locationN[y*3+1].value)*sin(Lat);
+                        b.z = (locationN[x*3+2].value-locationN[y*3+2].value)*cos(Lat);
                         baselines[idx]->setBaseline(b);
                     }
                     idx++;
