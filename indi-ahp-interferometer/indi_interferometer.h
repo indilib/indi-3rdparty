@@ -24,7 +24,7 @@
 #include "indicorrelator.h"
 
 #define BAUD_RATE 230400
-#define NUM_NODES 14
+#define NUM_NODES 12
 #define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
 #define SAMPLE_SIZE 4
 #define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE

@@ -63,14 +63,15 @@ void ISSnoopDevice (XMLEle *root)
 void Interferometer::Callback()
 {
     int olen           = 0;
-    unsigned int counts[NUM_NODES];
-    unsigned int correlations[NUM_BASELINES];
+    double counts[NUM_NODES];
+    double correlations[NUM_BASELINES];
     char buf[FRAME_SIZE+1];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
-    char str[SAMPLE_SIZE];
+    char str[SAMPLE_SIZE+1];
+    str[SAMPLE_SIZE] = 0;
     tcflush(PortFD, TCIOFLUSH);
     while (InExposure)
     {
@@ -81,14 +82,14 @@ void Interferometer::Callback()
         int idx = 0;
         int center = w*h/2;
         center += w/2;
-        for(int x = 0; x < NUM_NODES; x++) {
+        for(int x = NUM_NODES-1; x >= 0; x--) {
             strncpy(str, buf+idx, SAMPLE_SIZE);
-            counts[x] = strtoul(str, NULL, 16);
+            f_scansexa(str, &counts[x]);
             idx += SAMPLE_SIZE;
         }
-        for(int x = 0; x < NUM_BASELINES; x++) {
+        for(int x = NUM_BASELINES-1; x >= 0; x--) {
             strncpy(str, buf+idx, SAMPLE_SIZE);
-            correlations[x] = strtoul(str, NULL, 16);
+            f_scansexa(str, &correlations[x]);
             idx += SAMPLE_SIZE;
         }
         idx = 0;
