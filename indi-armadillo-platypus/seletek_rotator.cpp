@@ -379,7 +379,7 @@ IPState SeletekRotator::MoveRotator(double angle)
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
-    double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + RotatorAbsPosN[0].value;
+    double newTarget = (r + b) * SettingN[PARAM_STEPS_DEGREE].value + RotatorAbsPosN[0].value;
 
     // Clamp to range
     newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
@@ -400,14 +400,11 @@ bool SeletekRotator::SyncRotator(double angle)
     int sign = (a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1;
 
     r *= sign;
-    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
-    double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
+    // We just reset the zero position
+    m_ZeroPosition = RotatorAbsPosN[0].value - r * SettingN[PARAM_STEPS_DEGREE].value;
 
-    // Clamp to range
-    newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
-
-    return setParam("setpos", newTarget);
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
