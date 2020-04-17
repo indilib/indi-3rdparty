@@ -115,9 +115,9 @@ bool SeletekRotator::initProperties()
     // with our default and standard 10.000usec being 9800 (9801 actually)
     IUFillNumber(&SettingN[PARAM_MIN_SPEED], "PARAM_MIN_SPEED", "Min Speed", "%.f", 1., 10000., 100., 9800.);
     IUFillNumber(&SettingN[PARAM_MAX_SPEED], "PARAM_MAX_SPEED", "Max Speed", "%.f", 1., 10000., 100., 9800.);
-    IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.2f", -90., -180., 10., -179.5);
-    IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.2f", +90, 180., 10., 179.5);
-    IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.2f", 1., 100000., 100., 1000.);
+    IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.2f", -180., -90., 10., -179.5);
+    IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.2f", 90, 180., 10., 179.5);
+    IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.2f", 1., 10000., 500., 1000.);
     IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
                        IPS_OK);
 
