@@ -180,8 +180,7 @@ bool Interferometer::initProperties()
         IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, SITE_TAB, IP_RW, 60, IPS_IDLE);
     }
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 0.000000001, 21.112145);
-    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 1, 100.0);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     int idx = 0;
     for(int x = 0; x < NUM_NODES; x++) {
@@ -344,35 +343,19 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
     if(!strcmp(settingsNP.name, name)) {
-        IDSetNumber(&settingsNP, nullptr);
+        IUUpdateNumber(&settingsNP, values, names, n);
         for(int x = 0; x < NUM_BASELINES; x++)
             baselines[x]->setWavelength(settingsN[0].value);
-        int len = 16;
-        int olen;
-        char buf[17];
-        unsigned long value = settingsN[1].value;
-        for(int i = 0; i < 16; i++) {
-            buf[i] = (value&0xf)<<4 | 0x01;
-            value>>=4;
-        }
-        buf[16] = '\r';
-        int ntries = 10;
-        tcflush(PortFD, TCIOFLUSH);
-        while (olen != len && ntries-- > 0) {
-            usleep(10000);
-            tty_write(PortFD, buf, len, &olen);
-        }
-        usleep(10000);
-        tty_write(PortFD, &buf[16], 1, &olen);
+        IDSetNumber(&settingsNP, nullptr);
         return true;
     }
 
     for (int i = 0; i < NUM_NODES; i++) {
         if(!strcmp(locationNP[i].name, name)) {
+            IUUpdateNumber(&locationNP[i], values, names, n);
             locationN[i*3+0].value = values[0];
             locationN[i*3+1].value = values[1];
             locationN[i*3+2].value = values[2];
-            IDSetNumber(&locationNP[i], nullptr);
             int idx = 0;
             for(int x = 0; x < NUM_NODES; x++) {
                 for(int y = x+1; y < NUM_NODES; y++) {
@@ -403,6 +386,7 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
                     idx++;
                 }
             }
+            IDSetNumber(&locationNP[i], nullptr);
             return true;
         }
     }
