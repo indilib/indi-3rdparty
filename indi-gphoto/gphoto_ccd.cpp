@@ -32,6 +32,8 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #define FOCUS_TAB    "Focus"
 #define MAX_DEVICES  5 /* Max device cameraCount */
