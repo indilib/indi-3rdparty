@@ -369,8 +369,11 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
 
 IPState SeletekRotator::MoveRotator(double angle)
 {
-    // Clamp to range
-    angle = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, angle));
+    //    // Clamp to range
+    //    double min = range360(SettingN[PARAM_MIN_LIMIT].value);
+    //    double max = range360(SettingN[PARAM_MAX_LIMIT].value);
+    //    // Clamp to range
+    //    angle = std::max(min, std::min(max, angle));
 
     // Find closest distance
     double r = (angle > 180) ? 360 - angle : angle;
@@ -389,8 +392,10 @@ IPState SeletekRotator::MoveRotator(double angle)
 ///////////////////////////////////////////////////////////////////////////
 bool SeletekRotator::SyncRotator(double angle)
 {
-    // Clamp to range
-    angle = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, angle));
+    //    double min = range360(SettingN[PARAM_MIN_LIMIT].value);
+    //    double max = range360(SettingN[PARAM_MAX_LIMIT].value);
+    //    // Clamp to range
+    //    angle = std::max(min, std::min(max, angle));
 
     // Find closest distance
     double r = (angle > 180) ? 360 - angle : angle;
