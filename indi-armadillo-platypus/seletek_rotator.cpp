@@ -115,8 +115,8 @@ bool SeletekRotator::initProperties()
     // with our default and standard 10.000usec being 9800 (9801 actually)
     IUFillNumber(&SettingN[PARAM_MIN_SPEED], "PARAM_MIN_SPEED", "Min Speed", "%.f", 1., 10000., 100., 9800.);
     IUFillNumber(&SettingN[PARAM_MAX_SPEED], "PARAM_MAX_SPEED", "Max Speed", "%.f", 1., 10000., 100., 9800.);
-    IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.f", 0., 100000., 100., 0.);
-    IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.f", 100., 100000., 100., 100000.);
+    IUFillNumber(&SettingN[PARAM_MIN_LIMIT], "PARAM_MIN_LIMIT", "Min Limit", "%.2f", -90., -180., 10., -179.5);
+    IUFillNumber(&SettingN[PARAM_MAX_LIMIT], "PARAM_MAX_LIMIT", "Max Limit", "%.2f", +90, 180., 10., 179.5);
     IUFillNumber(&SettingN[PARAM_STEPS_DEGREE], "PARAM_STEPS_DEGREE", "Steps/Degree", "%.2f", 1., 100000., 100., 1000.);
     IUFillNumberVector(&SettingNP, SettingN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Parameters", SETTINGS_TAB, IP_RW, 0,
                        IPS_OK);
@@ -369,6 +369,9 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
 
 IPState SeletekRotator::MoveRotator(double angle)
 {
+    // Clamp to range
+    angle = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, angle));
+
     // Find closest distance
     double r = (angle > 180) ? 360 - angle : angle;
     int sign = (angle >= 0 && angle <= 180) ? 1 : -1;
@@ -377,9 +380,6 @@ IPState SeletekRotator::MoveRotator(double angle)
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
 
     double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
-
-    // Clamp to range
-    newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
 
     return gotoTarget(newTarget) ? IPS_BUSY : IPS_ALERT;
 }
@@ -389,17 +389,16 @@ IPState SeletekRotator::MoveRotator(double angle)
 ///////////////////////////////////////////////////////////////////////////
 bool SeletekRotator::SyncRotator(double angle)
 {
+    // Clamp to range
+    angle = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, angle));
+
     // Find closest distance
     double r = (angle > 180) ? 360 - angle : angle;
     int sign = (angle >= 0 && angle <= 180) ? 1 : -1;
 
     r *= sign;
     r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
-
     double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
-
-    // Clamp to range
-    newTarget = std::max(SettingN[PARAM_MIN_LIMIT].value, std::min(SettingN[PARAM_MAX_LIMIT].value, newTarget));
 
     return setParam("setpos", newTarget);
 }
