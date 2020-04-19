@@ -23,9 +23,12 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
+#define MAX_RESOLUTION 2048
+#define PIXEL_SIZE AIRY / settingsN[0].value / MAX_RESOLUTION
 #define BAUD_RATE 230400
 #define NUM_NODES 12
-#define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
+#define NUM_STATS 1//((NUM_NODES-1)*2+1)
+#define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
 #define SAMPLE_SIZE 4
 #define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
 #define FRAME_TIME 10.0*FRAME_SIZE/BAUD_RATE
@@ -94,11 +97,21 @@ protected:
     int PortFD = -1;
 
 private:
-    INumber locationN[3*NUM_NODES];
-    INumberVectorProperty locationNP[NUM_NODES];
+    INumber countsN[NUM_NODES*NUM_STATS];
+    INumberVectorProperty countsNP[NUM_NODES];
+
+    ISwitch nodeEnableS[NUM_NODES*2];
+    ISwitchVectorProperty nodeEnableSP[NUM_NODES];
+
+    INumber nodeLocationN[3*NUM_NODES];
+    INumberVectorProperty nodeLocationNP[NUM_NODES];
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
+
+    double totalcounts[NUM_NODES];
+    double totalcorrelations[NUM_BASELINES];
+    double Lat;
     double timeleft;
     double wavelength;
     baseline* baselines[NUM_BASELINES];
