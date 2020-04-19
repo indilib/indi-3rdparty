@@ -2,7 +2,7 @@
 <driversList>
 <devGroup group="Spectrographs">
         <device label="RTL-SDR Spectrograph" mdpd="true">
-                <driver name="RTL-SDR Spectrograph">indi_rtlsdr_detector</driver>
+                <driver name="RTL-SDR Spectrograph">indi_rtlsdr_spectrograph</driver>
                 <version>@RTLSDR_VERSION_MAJOR@.@RTLSDR_VERSION_MINOR@</version>
 	</device>
 </devGroup>

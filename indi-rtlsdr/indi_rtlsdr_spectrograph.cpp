@@ -242,7 +242,7 @@ const char *RTLSDR::getDefaultName()
 bool RTLSDR::initProperties()
 {
     // We set the Spectrograph capabilities
-    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING | SENSOR_HAS_DSP;
+    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_DSP;
     SetSpectrographCapability(cap);
 
     // Must init parent properties first!
