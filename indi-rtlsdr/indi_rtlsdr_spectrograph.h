@@ -53,7 +53,7 @@ class RTLSDR : public INDI::Spectrograph
 
     // Spectrograph specific functions
     bool StartIntegration(double duration);
-    void setupParams(float sr, float freq, float bw, float gain);
+    void setupParams(float sr, float freq, float gain);
     bool AbortIntegration();
     void TimerHit();
 
