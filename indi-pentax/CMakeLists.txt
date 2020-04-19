@@ -34,7 +34,7 @@ include(CMakeCommon)
 set(indibase_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/indi_pentax.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pktriggercord_ccd.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../indi-gphoto/gphoto_readimage.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gphoto_readimage.cpp
 )
 set(indiricoh_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/pentax_ccd.cpp
