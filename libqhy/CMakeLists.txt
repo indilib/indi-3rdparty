@@ -23,7 +23,8 @@ exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libqhyccd.dylib ${CMAKE_BINARY_
 exec_program(cp ARGS ${CMAKE_BINARY_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib)
 
 # This is a temporary work-around until a better linking solution is found for MacOS
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.6.dylib)
+execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/libqhyccd.dylib | sed 's/^.*rpath\\///' | tail -n 1" OUTPUT_VARIABLE DYLIB_ID)
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/${DYLIB_ID})
 exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_SOVERSION}.dylib)
 exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.dylib)
 
