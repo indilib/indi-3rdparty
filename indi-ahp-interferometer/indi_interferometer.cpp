@@ -19,6 +19,8 @@
 */
 
 #include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
 #include <sys/file.h>
 #include <memory>
 #include "indicom.h"
@@ -61,42 +63,62 @@ void ISSnoopDevice (XMLEle *root)
 void Interferometer::Callback()
 {
     int olen           = 0;
-    unsigned int counts[NUM_NODES];
-    unsigned int correlations[NUM_BASELINES];
+    double counts[NUM_NODES];
+    double correlations[NUM_BASELINES];
     char buf[FRAME_SIZE+1];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
-    char str[SAMPLE_SIZE];
+    char str[SAMPLE_SIZE+1];
+    str[SAMPLE_SIZE] = 0;
+
+    char cmd[2] = { 0x3c, 0x0d };
+    tcflush(PortFD, TCOFLUSH);
+    usleep(10000);
+    tty_write(PortFD, &cmd[0], 1, &olen);
+    usleep(10000);
+    tty_write(PortFD, &cmd[1], 1, &olen);
+
+    gettimeofday(&ExpStart, nullptr);
+
     while (InExposure)
     {
+        tcflush(PortFD, TCIFLUSH);
         tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
-        if(olen != FRAME_SIZE)
+        if (olen != FRAME_SIZE)
             continue;
-        timeleft -= FRAME_TIME_NS;
+        timeleft -= FRAME_TIME;
         int idx = 0;
         int center = w*h/2;
-        for(int x = 0; x < NUM_NODES; x++) {
+        center += w/2;
+        unsigned short tmp;
+        for(int x = NUM_NODES-1; x >= 0; x--) {
+            memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
-            counts[x] = strtoul(str, NULL, 16);
+            sscanf(str, "%04X", &tmp);
+            counts[x] = tmp;
+            totalcounts[x] += counts[x];
             idx += SAMPLE_SIZE;
         }
-        for(int x = 0; x < NUM_BASELINES; x++) {
+        for(int x = NUM_BASELINES-1; x >= 0; x--) {
+            memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
-            correlations[x] = strtoul(str, NULL, 16);
+            sscanf(str, "%04X", &tmp);
+            correlations[x] = tmp;
+            totalcorrelations[x] += correlations[x];
             idx += SAMPLE_SIZE;
         }
         idx = 0;
         for(int x = 0; x < NUM_NODES; x++) {
             for(int y = x+1; y < NUM_NODES; y++) {
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                int xx = static_cast<int>(w*uv.u/2.0);
-                int yy = static_cast<int>(h*uv.v/2.0);
+                int xx = static_cast<int>(MAX_RESOLUTION*uv.u/2.0);
+                int yy = static_cast<int>(MAX_RESOLUTION*uv.v/2.0);
                 int z = center+xx+yy*w;
-                if(z >= 0 && z < w*h) {
-                    framebuffer[z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
-                    framebuffer[w*h-1-z] += correlations[idx]*65535.0/(counts[x]+counts[y]);
+                if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
+                    framebuffer[z] += correlations[idx]*2.0/(counts[x]+counts[y]);
+                    framebuffer[w*h-1-z] += correlations[idx]*2.0/(counts[x]+counts[y]);
                 }
                 idx++;
             }
@@ -146,8 +168,10 @@ bool Interferometer::saveConfigItems(FILE *fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    for(int x = 0; x < NUM_NODES; x++)
-        IUSaveConfigNumber(fp, &locationNP[x]);
+    for(int x = 0; x < NUM_NODES; x++) {
+        IUSaveConfigNumber(fp, &nodeLocationNP[x]);
+        IUSaveConfigSwitch(fp, &nodeEnableSP[x]);
+    }
     IUSaveConfigNumber(fp, &settingsNP);
 
     return true;
@@ -164,31 +188,34 @@ bool Interferometer::initProperties()
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->initProperties();
 
+    int idx = 0;
+    char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDILABEL];
-    for (int i = 0; i < NUM_NODES; i++) {
-        sprintf(name, "LOCATION_NODE%02d", i);
-        sprintf(label, "Node %d", i);
-        IUFillNumber(&locationN[i*3+0], "LOCATION_X", "Latitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&locationN[i*3+1], "LOCATION_Y", "Longitude offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&locationN[i*3+2], "LOCATION_Z", "Elevation offset (m)", "%4.1f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumberVector(&locationNP[i], &locationN[i*3], 3, getDeviceName(), name, label, SITE_TAB, IP_RW, 60, IPS_IDLE);
-    }
-    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 0.000000001, 0.21112145);
-    IUFillNumber(&settingsN[1], "INTERFEROMETER_SAMPLERATE_VALUE", "Filter sample time (ns)", "%9.0f", 20, 1000000.0, 1, 100.0);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    for (int x = 0; x < NUM_NODES; x++) {
+        IUFillNumber(&nodeLocationN[x*3+0], "NODE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&nodeLocationN[x*3+1], "NODE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+        IUFillNumber(&nodeLocationN[x*3+2], "NODE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
 
-    int idx = 0;
-    for(int x = 0; x < NUM_NODES; x++) {
-        for(int y = x+1; y < NUM_NODES; y++) {
-            INDI::Correlator::Baseline b;
-            b.x = locationN[x*3+0].value-locationN[y*3+0].value;
-            b.y = locationN[x*3+1].value-locationN[y*3+1].value;
-            b.z = locationN[x*3+2].value-locationN[y*3+2].value;
-            baselines[idx]->setBaseline(b);
-            idx++;
-        }
+        IUFillSwitch(&nodeEnableS[x*2+0], "NODE_ENABLE", "Enable", ISS_OFF);
+        IUFillSwitch(&nodeEnableS[x*2+1], "NODE_DISABLE", "Disable", ISS_ON);
+
+        IUFillNumber(&countsN[x*NUM_STATS], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
+        int z = 0;
+
+        sprintf(tab, "Node %02d", x+1);
+        sprintf(label, "Enable Node");
+        sprintf(name, "NODE_ENABLE_%02d", x+1);
+
+        IUFillSwitchVector(&nodeEnableSP[x], &nodeEnableS[x*2], 2, getDeviceName(), name, label, tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        sprintf(name, "NODE_LOCATION_%02d", x+1);
+        IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
+        sprintf(name, "NODE_COUNTS_%02d", x+1);
+        IUFillNumberVector(&countsNP[x], &countsN[x*NUM_STATS], NUM_STATS, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
     }
+
+    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 1.0E-9, 0.211121449);
+    IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     uint32_t cap = 0;
 
@@ -199,7 +226,7 @@ bool Interferometer::initProperties()
     SetCCDCapability(cap);
 
     // Set minimum exposure speed to 0.001 seconds
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, 3600.0, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
 
     setDefaultPollingPeriod(500);
 
@@ -229,11 +256,20 @@ void Interferometer::ISGetProperties(const char *dev)
 
     if (isConnected())
     {
-        for (int x=0; x<NUM_NODES; x++)
-            defineNumber(&locationNP[x]);
+        for (int x=0; x<NUM_NODES; x++) {
+            defineSwitch(&nodeEnableSP[x]);
+            loadConfig(true, nodeEnableSP[x].name);
+            defineNumber(&nodeLocationNP[x]);
+            loadConfig(true, nodeLocationNP[x].name);
+        }
         defineNumber(&settingsNP);
+        loadConfig(true, settingsNP.name);
+
         // Define our properties
     }
+
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISGetProperties(dev);
 }
 
 /********************************************************************************************
@@ -251,18 +287,27 @@ bool Interferometer::updateProperties()
         // Let's get parameters now from CCD
         setupParams();
 
-        for (int x=0; x<NUM_NODES; x++)
-            defineNumber(&locationNP[x]);
+        for (int x=0; x<NUM_NODES; x++) {
+            defineSwitch(&nodeEnableSP[x]);
+            if(nodeEnableSP[x].sp[0].s == ISS_ON) {
+                defineNumber(&nodeLocationNP[x]);
+                defineNumber(&countsNP[x]);
+            } else {
+                deleteProperty(nodeLocationNP[x].name);
+                deleteProperty(countsNP[x].name);
+            }
+        }
         defineNumber(&settingsNP);
-        // Start the timer
-        SetTimer(POLLMS);
     }
     else
         // We're disconnected
     {
         deleteProperty(settingsNP.name);
-        for (int x=0; x<NUM_NODES; x++)
-            deleteProperty(locationNP[x].name);
+        for (int x=0; x<NUM_NODES; x++) {
+            deleteProperty(nodeEnableSP[x].name);
+            deleteProperty(nodeLocationNP[x].name);
+            deleteProperty(countsNP[x].name);
+        }
     }
 
     for(int x = 0; x < NUM_BASELINES; x++)
@@ -276,7 +321,7 @@ bool Interferometer::updateProperties()
 ***************************************************************************************/
 void Interferometer::setupParams()
 {
-    SetCCDParams(2048, 2048, 16, 1, 1);
+    SetCCDParams(MAX_RESOLUTION, MAX_RESOLUTION, 16,  PIXEL_SIZE, PIXEL_SIZE);
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
@@ -291,22 +336,18 @@ void Interferometer::setupParams()
 ***************************************************************************************/
 bool Interferometer::StartExposure(float duration)
 {
+    if(InExposure)
+        return false;
+    InExposure = true;
     ExposureRequest = duration;
+    timeleft = ExposureRequest;
     PrimaryCCD.setExposureDuration(static_cast<double>(ExposureRequest));
     std::thread(&Interferometer::Callback, this).detach();
-    gettimeofday(&ExpStart, nullptr);
-    InExposure = true;
-    timeleft = ExposureRequest;
-
-    int olen;
-    int len = 2;
-    char buf[2] = { 0x3c, 0x0d };
-    int ntries = 10;
-    while (olen != len && ntries-- > 0)
-        tty_write(PortFD, buf, len, &olen);
+    // Start the timer
+    SetTimer(POLLMS);
 
     // We're done
-    return olen == len;
+    return true;
 }
 
 /**************************************************************************************
@@ -315,11 +356,13 @@ bool Interferometer::StartExposure(float duration)
 bool Interferometer::AbortExposure()
 {
     int olen = 0;
-    int len = 2;
-    char buf[2] = { 0x0c, 0x0d };
-    int ntries = 10;
-    while (olen != len && ntries-- > 0)
-        tty_write(PortFD, buf, len, &olen);
+    char cmd[2] = { 0x0c, 0x0d };
+    tcflush(PortFD, TCOFLUSH);
+    usleep(10000);
+    tty_write(PortFD, &cmd[0], 1, &olen);
+    usleep(10000);
+    tty_write(PortFD, &cmd[1], 1, &olen);
+
     InExposure = false;
     return true;
 }
@@ -336,47 +379,47 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
     if(!strcmp(settingsNP.name, name)) {
-        for(int x = 0; x < NUM_BASELINES; x++)
+        IUUpdateNumber(&settingsNP, values, names, n);
+        for(int x = 0; x < NUM_BASELINES; x++) {
             baselines[x]->setWavelength(settingsN[0].value);
-        int len = 16;
-        int olen;
-        char buf[17];
-        unsigned long value = settingsN[1].value;
-        for(int i = 0; i < 16; i++) {
-            buf[i] = (value&0xf)<<4 | 0x01;
-            value>>=4;
         }
-        buf[16] = '\r';
-        int ntries = 10;
-        while (olen != len && ntries-- > 0)
-            tty_write(PortFD, buf, len, &olen);
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
 
     for (int i = 0; i < NUM_NODES; i++) {
-        if(!strcmp(locationNP[i].name, name)) {
-            locationN[i*3+0].value = values[0];
-            locationN[i*3+1].value = values[1];
-            locationN[i*3+2].value = values[2];
-            IDSetNumber(&locationNP[i], nullptr);
+        if(!strcmp(nodeLocationNP[i].name, name)) {
+            IUUpdateNumber(&nodeLocationNP[i], values, names, n);
+            nodeLocationN[i*3+0].value = values[0];
+            nodeLocationN[i*3+1].value = values[1];
+            nodeLocationN[i*3+2].value = values[2];
             int idx = 0;
             for(int x = 0; x < NUM_NODES; x++) {
                 for(int y = x+1; y < NUM_NODES; y++) {
                     if(x==i||y==i) {
+
+                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
+                        if(nv != nullptr)
+                        {
+                            Lat = nv->np[0].value;
+                        }
+                        Lat *= M_PI/180.0;
+
                         INDI::Correlator::Baseline b;
-                        b.x = locationN[x*3+0].value-locationN[y*3+0].value;
-                        b.y = locationN[x*3+1].value-locationN[y*3+1].value;
-                        b.z = locationN[x*3+2].value-locationN[y*3+2].value;
+                        b.x = (nodeLocationN[x*3+0].value-nodeLocationN[y*3+0].value);
+                        b.y = (nodeLocationN[x*3+1].value-nodeLocationN[y*3+1].value)*sin(Lat);
+                        b.z = (nodeLocationN[x*3+2].value-nodeLocationN[y*3+2].value)*cos(Lat);
+                        b.y += (nodeLocationN[x*3+2].value-nodeLocationN[y*3+2].value)*cos(Lat);
+                        b.z += (nodeLocationN[x*3+1].value-nodeLocationN[y*3+1].value)*sin(Lat);
                         baselines[idx]->setBaseline(b);
                     }
                     idx++;
                 }
             }
+            IDSetNumber(&nodeLocationNP[i], nullptr);
             return true;
         }
     }
-
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -385,8 +428,19 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
 ***************************************************************************************/
 bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    if (strcmp (dev, getDeviceName()))
+        return false;
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
+
+    for(int x = 0; x < NUM_NODES; x++) {
+        if(!strcmp(name, nodeEnableSP[x].name)){
+            IUUpdateSwitch(&nodeEnableSP[x], states, names, n);
+            updateProperties();
+            IDSetSwitch(&nodeEnableSP[x], nullptr);
+        }
+    }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
@@ -395,8 +449,12 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
 ***************************************************************************************/
 bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    if (strcmp (dev, getDeviceName()))
+        return false;
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
+
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
@@ -405,8 +463,12 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 ***************************************************************************************/
 bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
+    if (strcmp (dev, getDeviceName()))
+        return false;
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+
     return INDI::CCD::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
@@ -442,13 +504,22 @@ void Interferometer::TimerHit()
     if(isConnected() == false)
         return;  //  No need to reset timer if we are not connected anymore
 
-    if (InExposure)
-    {
+    if(InExposure) {
+        for (int x = 0; x < NUM_NODES; x++) {
+            IDSetNumber(&countsNP[x], nullptr);
+            countsN[x].value = totalcounts[x];
+            totalcounts[x] = 0;
+        }
+
+        for(int x = 0; x < NUM_BASELINES; x++) {
+            totalcorrelations[x] = 0;
+        }
+
         // Just update time left in client
         PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
-    }
 
-    SetTimer(POLLMS);
+        SetTimer(POLLMS);
+    }
     return;
 }
 
@@ -461,8 +532,11 @@ bool Interferometer::Handshake()
 
         char cmd[2] = { 0x3c, 0x0d };
         int ntries = 10;
-        while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, cmd, 2, &olen);
+        tcflush(PortFD, TCOFLUSH);
+        usleep(10000);
+        tty_write(PortFD, &cmd[0], 1, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[1], 1, &olen);
 
         ntries = 10;
         while (olen != FRAME_SIZE && ntries-- > 0)
@@ -472,9 +546,11 @@ bool Interferometer::Handshake()
 
         cmd[0] = 0x0c;
         ntries = 10;
-        while (olen != 2 && ntries-- > 0)
-            tty_write(PortFD, cmd, 2, &olen);
-
+        tcflush(PortFD, TCOFLUSH);
+        usleep(10000);
+        tty_write(PortFD, &cmd[0], 1, &olen);
+        usleep(10000);
+        tty_write(PortFD, &cmd[1], 1, &olen);
     }
     return ret;
 }
