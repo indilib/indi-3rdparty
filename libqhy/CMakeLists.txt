@@ -20,10 +20,10 @@ set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE 
 exec_program(rm ARGS ${LIB_INSTALL_DIR}/libqhyccd*)
 
 exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libqhyccd.dylib ${CMAKE_BINARY_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib)
-
-install(FILES ${CMAKE_BINARY_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR})
+exec_program(cp ARGS ${CMAKE_BINARY_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib)
 
 # This is a temporary work-around until a better linking solution is found for MacOS
+exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.6.dylib)
 exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_VERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_SOVERSION}.dylib)
 exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libqhyccd.${LIBQHY_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libqhyccd.dylib)
 
