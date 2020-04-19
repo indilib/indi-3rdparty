@@ -110,21 +110,21 @@ find_package(FFmpeg)
 
 option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 
-# JM 2020-01-14: FFMpeg not enough by itself, other libraries like libavdevice-dev is required
-
-# if (FFMPEG_FOUND)
-#     message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
-#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
-# ELSE(FFMPEG_FOUND)
-#     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
-#     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
-# ENDIF(FFMPEG_FOUND)
+if (FFMPEG_FOUND)
+    message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
+    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
+ELSE(FFMPEG_FOUND)
+    message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
+    option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
+ENDIF(FFMPEG_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_INOVAPLX Off)
     set(WITH_GIGE Off)
     set(WITH_FXLOAD Off)
+    set(WITH_PENTAX Off)
+    set(WITH_GPSD Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
