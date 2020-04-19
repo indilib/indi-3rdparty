@@ -25,7 +25,7 @@
 #include <stream/streammanager.h>
 #include <regex>
 
-#include "../indi-gphoto/gphoto_readimage.h"
+#include "gphoto_readimage.h"
 
 #include "pentax_ccd.h"
 
