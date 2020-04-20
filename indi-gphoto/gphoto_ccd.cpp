@@ -997,14 +997,12 @@ bool GPhotoCCD::Connect()
         mFormatS = nullptr;
     }
 
-    if (isSimulation())
-    {
-        const char * fmts[] = { "Custom" };
-        setidx             = 0;
-        max_opts           = 1;
-        options            = const_cast<char **>(fmts);
-    }
-    else
+    const char * fmts[] = { "Custom" };
+    setidx             = 0;
+    max_opts           = 1;
+    options            = const_cast<char **>(fmts);
+
+    if (!isSimulation())
     {
         setidx  = gphoto_get_format_current(gphotodrv);
         options = gphoto_get_formats(gphotodrv, &max_opts);
@@ -1047,14 +1045,12 @@ bool GPhotoCCD::Connect()
     if (mIsoS)
         free(mIsoS);
 
-    if (isSimulation())
-    {
-        const char * isos[] = { "100", "200", "400", "800" };
-        setidx   = 0;
-        max_opts = 4;
-        options  = const_cast<char **>(isos);
-    }
-    else
+    const char * isos[] = { "100", "200", "400", "800" };
+    setidx   = 0;
+    max_opts = 4;
+    options  = const_cast<char **>(isos);
+
+    if (!isSimulation())
     {
         setidx  = gphoto_get_iso_current(gphotodrv);
         options = gphoto_get_iso(gphotodrv, &max_opts);
@@ -1070,30 +1066,27 @@ bool GPhotoCCD::Connect()
         mExposurePresetS = nullptr;
     }
 
-    if (isSimulation())
+    const char * exposureList[] =
     {
-        const char * exposureList[] =
-        {
-            "1/2000",
-            "1/1000",
-            "1/500",
-            "1/200",
-            "1/100",
-            "1/50",
-            "1/8",
-            "1/4",
-            "1/2",
-            "1",
-            "2",
-            "5",
-            "bulb"
-        };
+        "1/2000",
+        "1/1000",
+        "1/500",
+        "1/200",
+        "1/100",
+        "1/50",
+        "1/8",
+        "1/4",
+        "1/2",
+        "1",
+        "2",
+        "5",
+        "bulb"
+    };
+    setidx   = 0;
+    max_opts = NARRAY(exposureList);
+    options  = const_cast<char **>(exposureList);
 
-        setidx   = 0;
-        max_opts = NARRAY(exposureList);
-        options  = const_cast<char **>(exposureList);
-    }
-    else
+    if (!isSimulation())
     {
         setidx   = 0;
         max_opts = 0;
