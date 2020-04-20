@@ -68,7 +68,7 @@ void Interferometer::Callback()
     char buf[FRAME_SIZE+1];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
-    double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
+    double *framebuffer = static_cast<double*>(malloc((w*h)*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
     char str[SAMPLE_SIZE+1];
     str[SAMPLE_SIZE] = 0;
@@ -92,7 +92,7 @@ void Interferometer::Callback()
         int idx = 0;
         int center = w*h/2;
         center += w/2;
-        unsigned short tmp;
+        unsigned int tmp;
         for(int x = NUM_NODES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
@@ -188,7 +188,6 @@ bool Interferometer::initProperties()
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->initProperties();
 
-    int idx = 0;
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDILABEL];
@@ -201,7 +200,6 @@ bool Interferometer::initProperties()
         IUFillSwitch(&nodeEnableS[x*2+1], "NODE_DISABLE", "Disable", ISS_ON);
 
         IUFillNumber(&countsN[x*NUM_STATS], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
-        int z = 0;
 
         sprintf(tab, "Node %02d", x+1);
         sprintf(label, "Enable Node");
@@ -575,7 +573,7 @@ uint8_t Interferometer::getInterferometerConnection() const
 
 void Interferometer::setInterferometerConnection(const uint8_t &value)
 {
-    uint8_t mask = CONNECTION_SERIAL | CONNECTION_TCP | CONNECTION_NONE;
+    uint8_t mask = CONNECTION_SERIAL | CONNECTION_TCP;
 
     if (value == 0 || (mask & value) == 0)
     {
