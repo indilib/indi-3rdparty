@@ -33,14 +33,13 @@
         _a < _b ? _a : _b;      \
     })
 #define MAX_TRIES      20
-#define MAX_DEVICES    4
 #define SUBFRAME_SIZE  (16384)
 #define MIN_FRAME_SIZE (512)
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
 #define SPECTRUM_SIZE  (256)
 
 static int iNumofConnectedSpectrographs;
-static RTLSDR *receivers[MAX_DEVICES];
+static RTLSDR **receivers;
 
 static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -86,18 +85,18 @@ void ISInit()
         iNumofConnectedSpectrographs = 0;
 
         iNumofConnectedSpectrographs = rtlsdr_get_device_count();
-        if (iNumofConnectedSpectrographs > MAX_DEVICES)
-            iNumofConnectedSpectrographs = MAX_DEVICES;
         if (iNumofConnectedSpectrographs <= 0)
         {
             iNumofConnectedSpectrographs = -1;
             //Try sending IDMessage as well?
             IDLog("No USB RTLSDR receivers detected. Trying with TCP..\n");
             IDMessage(nullptr, "No USB RTLSDR receivers detected. Trying with TCP..");
+            receivers = static_cast<RTLSDR**>(malloc(sizeof(RTLSDR*)));
             receivers[0] = new RTLSDR(-1);
         }
         else
         {
+            receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
             for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
             {
                 receivers[i] = new RTLSDR(i);
