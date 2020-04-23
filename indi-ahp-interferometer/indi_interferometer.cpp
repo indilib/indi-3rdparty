@@ -140,17 +140,38 @@ void Interferometer::Callback()
 
 Interferometer::Interferometer()
 {
-    for(int x = 0; x < NUM_BASELINES; x++)
-        baselines[x] = new baseline();
+    power_status = 0;
 
-    setInterferometerConnection(CONNECTION_TCP|CONNECTION_SERIAL);
+    setInterferometerConnection(CONNECTION_TCP);
 
     ExposureRequest = 0.0;
     InExposure = false;
+
+    SAMPLE_SIZE = 0;
+    NUM_NODES = 0;
+    DELAY_LINES = 0;
+
+    countsN = static_cast<INumber*>(malloc(1));
+    countsNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeEnableS = static_cast<ISwitch*>(malloc(1));
+    nodeEnableSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+
+    nodePowerS = static_cast<ISwitch*>(malloc(1));
+    nodePowerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+
+    nodeLocationN = static_cast<INumber*>(malloc(1));
+    nodeLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    totalcounts = static_cast<double*>(malloc(1));
+    totalcorrelations = static_cast<double*>(malloc(1));
+    baselines = static_cast<baseline**>(malloc(1));
 }
 
 bool Interferometer::Disconnect()
 {
+    for(int x = 0; x < NUM_NODES*2+1; x++)
+        ActiveLine(x, false);
     return true;
 }
 
@@ -171,6 +192,7 @@ bool Interferometer::saveConfigItems(FILE *fp)
     for(int x = 0; x < NUM_NODES; x++) {
         IUSaveConfigNumber(fp, &nodeLocationNP[x]);
         IUSaveConfigSwitch(fp, &nodeEnableSP[x]);
+        IUSaveConfigSwitch(fp, &nodePowerSP[x]);
     }
     IUSaveConfigNumber(fp, &settingsNP);
 
@@ -184,35 +206,6 @@ bool Interferometer::initProperties()
 {
     // Must init parent properties first!
     INDI::CCD::initProperties();
-
-    for(int x = 0; x < NUM_BASELINES; x++)
-        baselines[x]->initProperties();
-
-    int idx = 0;
-    char tab[MAXINDINAME];
-    char name[MAXINDINAME];
-    char label[MAXINDILABEL];
-    for (int x = 0; x < NUM_NODES; x++) {
-        IUFillNumber(&nodeLocationN[x*3+0], "NODE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&nodeLocationN[x*3+1], "NODE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
-        IUFillNumber(&nodeLocationN[x*3+2], "NODE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
-
-        IUFillSwitch(&nodeEnableS[x*2+0], "NODE_ENABLE", "Enable", ISS_OFF);
-        IUFillSwitch(&nodeEnableS[x*2+1], "NODE_DISABLE", "Disable", ISS_ON);
-
-        IUFillNumber(&countsN[x*NUM_STATS], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
-        int z = 0;
-
-        sprintf(tab, "Node %02d", x+1);
-        sprintf(label, "Enable Node");
-        sprintf(name, "NODE_ENABLE_%02d", x+1);
-
-        IUFillSwitchVector(&nodeEnableSP[x], &nodeEnableS[x*2], 2, getDeviceName(), name, label, tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        sprintf(name, "NODE_LOCATION_%02d", x+1);
-        IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
-        sprintf(name, "NODE_COUNTS_%02d", x+1);
-        IUFillNumberVector(&countsNP[x], &countsN[x*NUM_STATS], NUM_STATS, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
-    }
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 1.0E-9, 0.211121449);
     IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
@@ -261,6 +254,8 @@ void Interferometer::ISGetProperties(const char *dev)
             loadConfig(true, nodeEnableSP[x].name);
             defineNumber(&nodeLocationNP[x]);
             loadConfig(true, nodeLocationNP[x].name);
+            defineSwitch(&nodePowerSP[x]);
+            loadConfig(true, nodePowerSP[x].name);
         }
         defineNumber(&settingsNP);
         loadConfig(true, settingsNP.name);
@@ -290,6 +285,7 @@ bool Interferometer::updateProperties()
         for (int x=0; x<NUM_NODES; x++) {
             defineSwitch(&nodeEnableSP[x]);
             if(nodeEnableSP[x].sp[0].s == ISS_ON) {
+                defineSwitch(&nodePowerSP[x]);
                 defineNumber(&nodeLocationNP[x]);
                 defineNumber(&countsNP[x]);
             } else {
@@ -305,6 +301,7 @@ bool Interferometer::updateProperties()
         deleteProperty(settingsNP.name);
         for (int x=0; x<NUM_NODES; x++) {
             deleteProperty(nodeEnableSP[x].name);
+            deleteProperty(nodePowerSP[x].name);
             deleteProperty(nodeLocationNP[x].name);
             deleteProperty(countsNP[x].name);
         }
@@ -438,10 +435,65 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         if(!strcmp(name, nodeEnableSP[x].name)){
             IUUpdateSwitch(&nodeEnableSP[x], states, names, n);
             updateProperties();
+            ActiveLine(x+NUM_NODES, nodeEnableSP[x].sp[0].s == ISS_ON);
             IDSetSwitch(&nodeEnableSP[x], nullptr);
+        }
+        if(!strcmp(name, nodePowerSP[x].name)){
+            IUUpdateSwitch(&nodePowerSP[x], states, names, n);
+            updateProperties();
+            ActiveLine(x, nodePowerSP[x].sp[0].s == ISS_ON);
+            IDSetSwitch(&nodePowerSP[x], nullptr);
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+
+void Interferometer::ActiveLine(int line, bool on)
+{
+
+    unsigned int value = on << line;
+    power_status &= ~(1 << line);
+    power_status |= value;
+
+    int olen = 0;
+    char cmd[9];
+
+    cmd[0] = 0x20;
+    cmd[1] = 0xd;
+    usleep(10000);
+    tcflush(PortFD, TCOFLUSH);
+    tty_write(PortFD, cmd, 2, &olen);
+    tcdrain(PortFD);
+
+    cmd[0] = 0x02;
+    cmd[0] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[1] = 0x02;
+    cmd[1] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[2] = 0x02;
+    cmd[2] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[3] = 0x02;
+    cmd[3] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[4] = 0x02;
+    cmd[4] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[5] = 0x02;
+    cmd[5] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[6] = 0x02;
+    cmd[6] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[7] = 0x02;
+    cmd[7] |= (power_status&0xf)<< 4;
+    power_status >>= 4;
+    cmd[8] = 0xd;
+    usleep(10000);
+    tcflush(PortFD, TCOFLUSH);
+    tty_write(PortFD, cmd, 9, &olen);
+    tcdrain(PortFD);
 }
 
 /**************************************************************************************
@@ -525,7 +577,6 @@ void Interferometer::TimerHit()
 
 bool Interferometer::Handshake()
 {
-    int ret = false;
     if(PortFD != -1) {
         int olen;
         char buf[FRAME_SIZE];
@@ -538,11 +589,79 @@ bool Interferometer::Handshake()
         usleep(10000);
         tty_write(PortFD, &cmd[1], 1, &olen);
 
+        while (buf[0] != 13) {
+            ntries = 10;
+            while (olen != FRAME_SIZE && ntries-- > 0)
+                tty_nread_section(PortFD, buf, 1, 13, 1, &olen);
+            if(ntries == 0)
+                return false;
+        }
         ntries = 10;
-        while (olen != FRAME_SIZE && ntries-- > 0)
-            tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
-        if(olen == FRAME_SIZE)
-            ret = true;
+        while (olen != 8 && ntries-- > 0)
+            tty_nread_section(PortFD, buf, 8, 13, 1, &olen);
+
+        for(int x = 0; x < NUM_BASELINES; x++)
+            baselines[x]->~baseline();
+
+        int tmp;
+        int n = sscanf(buf, "%02X%02X%02X%02X", &SAMPLE_SIZE, &NUM_NODES, &DELAY_LINES, &tmp);
+
+        if(n != 4) {
+            SAMPLE_SIZE = 0;
+            NUM_NODES = 0;
+            DELAY_LINES = 0;
+            return false;
+        }
+
+        countsN = static_cast<INumber*>(realloc(countsN, NUM_NODES*NUM_STATS*sizeof(INumber)));
+        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, NUM_NODES*sizeof(INumberVectorProperty)));
+
+        nodeEnableS = static_cast<ISwitch*>(realloc(nodeEnableS, NUM_NODES*2*sizeof(ISwitch)));
+        nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, NUM_NODES*sizeof(ISwitchVectorProperty)));
+
+        nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, NUM_NODES*2*sizeof(ISwitch)));
+        nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, NUM_NODES*sizeof(ISwitchVectorProperty)));
+
+        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*NUM_NODES*sizeof(INumber)));
+        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, NUM_NODES*sizeof(INumberVectorProperty)));
+
+        totalcounts = static_cast<double*>(realloc(totalcounts, NUM_NODES*sizeof(double)));
+        totalcorrelations = static_cast<double*>(realloc(totalcorrelations, NUM_BASELINES*sizeof(double)));
+        baselines = static_cast<baseline**>(realloc(baselines, NUM_BASELINES*sizeof(baseline*)));
+
+
+        for(int x = 0; x < NUM_BASELINES; x++) {
+            baselines[x] = new baseline();
+            baselines[x]->initProperties();
+        }
+
+        char tab[MAXINDINAME];
+        char name[MAXINDINAME];
+        for (int x = 0; x < NUM_NODES; x++) {
+            IUFillNumber(&nodeLocationN[x*3+0], "NODE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+            IUFillNumber(&nodeLocationN[x*3+1], "NODE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+            IUFillNumber(&nodeLocationN[x*3+2], "NODE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
+
+            IUFillSwitch(&nodeEnableS[x*2+0], "NODE_ENABLE", "Enable", ISS_OFF);
+            IUFillSwitch(&nodeEnableS[x*2+1], "NODE_DISABLE", "Disable", ISS_ON);
+
+            IUFillSwitch(&nodePowerS[x*2+0], "NODE_POWER_ON", "On", ISS_OFF);
+            IUFillSwitch(&nodePowerS[x*2+1], "NODE_POWER_OFF", "Off", ISS_ON);
+
+            IUFillNumber(&countsN[x*NUM_STATS], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
+
+            sprintf(tab, "Node %02d", x+1);
+            sprintf(name, "NODE_ENABLE_%02d", x+1);
+
+            IUFillSwitchVector(&nodeEnableSP[x], &nodeEnableS[x*2], 2, getDeviceName(), name, "Enable Node", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+            sprintf(name, "NODE_POWER_%02d", x+1);
+            IUFillSwitchVector(&nodePowerSP[x], &nodePowerS[x*2], 2, getDeviceName(), name, "Power", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+            sprintf(name, "NODE_LOCATION_%02d", x+1);
+            IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
+            sprintf(name, "NODE_COUNTS_%02d", x+1);
+            IUFillNumberVector(&countsNP[x], &countsN[x*NUM_STATS], NUM_STATS, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
+        }
 
         cmd[0] = 0x0c;
         ntries = 10;
@@ -551,8 +670,10 @@ bool Interferometer::Handshake()
         tty_write(PortFD, &cmd[0], 1, &olen);
         usleep(10000);
         tty_write(PortFD, &cmd[1], 1, &olen);
+
+        ActiveLine(NUM_NODES*2, true);
     }
-    return ret;
+    return false;
 }
 
 bool Interferometer::callHandshake()
