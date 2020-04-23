@@ -85,6 +85,7 @@ void Interferometer::Callback()
     while (InExposure)
     {
         tcflush(PortFD, TCIFLUSH);
+        tty_nread_section(PortFD, buf, HEADER_SIZE, 13, 1, &olen);
         tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if (olen != FRAME_SIZE)
             continue;
@@ -96,15 +97,15 @@ void Interferometer::Callback()
         for(int x = NUM_NODES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
-            sscanf(str, "%04X", &tmp);
+            sscanf(str, "%X", &tmp);
             counts[x] = tmp;
             totalcounts[x] += counts[x];
             idx += SAMPLE_SIZE;
         }
         for(int x = NUM_BASELINES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
-            strncpy(str, buf+idx, SAMPLE_SIZE);
-            sscanf(str, "%04X", &tmp);
+            strncpy(str, buf+idx+DELAY_LINES*SAMPLE_SIZE/2, SAMPLE_SIZE);
+            sscanf(str, "%X", &tmp);
             correlations[x] = tmp;
             totalcorrelations[x] += correlations[x];
             idx += SAMPLE_SIZE;
@@ -612,6 +613,8 @@ bool Interferometer::Handshake()
             DELAY_LINES = 0;
             return false;
         }
+
+        SAMPLE_SIZE /= 4;
 
         countsN = static_cast<INumber*>(realloc(countsN, NUM_NODES*NUM_STATS*sizeof(INumber)));
         countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, NUM_NODES*sizeof(INumberVectorProperty)));
