@@ -42,27 +42,27 @@ class RTLSDR : public INDI::Spectrograph
     bool InIntegration;
     uint8_t *buffer;
     int b_read, n_read;
-    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
   protected:
     // General device functions
-    bool Disconnect();
-    const char *getDefaultName();
-    bool initProperties();
-    bool updateProperties();
+    bool Disconnect() override;
+    const char *getDefaultName() override;
+    bool initProperties() override;
+    bool updateProperties() override;
 
     // Spectrograph specific functions
-    bool StartIntegration(double duration);
+    bool StartIntegration(double duration) override;
     void setupParams(float sr, float freq, float gain);
-    bool AbortIntegration();
-    void TimerHit();
+    bool AbortIntegration() override;
+    void TimerHit() override;
 
     bool StartStreaming() override;
     bool StopStreaming() override;
     void streamCaptureHelper();
     void * streamCapture();
 
-    bool Handshake();
+    bool Handshake() override;
 
   private:
     void Callback();

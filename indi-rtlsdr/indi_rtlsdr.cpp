@@ -84,7 +84,7 @@ void ISInit()
     {
         iNumofConnectedSpectrographs = 0;
 
-        iNumofConnectedSpectrographs = rtlsdr_get_device_count();
+        iNumofConnectedSpectrographs = static_cast<int>(rtlsdr_get_device_count());
         if (iNumofConnectedSpectrographs <= 0)
         {
             iNumofConnectedSpectrographs = -1;
@@ -208,7 +208,7 @@ RTLSDR::RTLSDR(int32_t index)
     if(index<0) {
         setSensorConnection(CONNECTION_TCP);
     } else {
-        setSensorConnection(CONNECTION_NONE);
+        setSensorConnection(0x8000);
     }
 
     spectrographIndex = index;
@@ -305,10 +305,10 @@ void RTLSDR::setupParams(float sr, float freq, float gain)
     if((getSensorConnection() & CONNECTION_TCP) == 0) {
         r |= rtlsdr_set_agc_mode(rtl_dev, 0);
         r |= rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
-        r |= rtlsdr_set_tuner_gain(rtl_dev, (int)(gain * 10));
-        r |= rtlsdr_set_center_freq(rtl_dev, (uint32_t)freq);
-        r |= rtlsdr_set_sample_rate(rtl_dev, (uint32_t)sr);
-        r |= rtlsdr_set_tuner_bandwidth(rtl_dev, (uint32_t)sr);
+        r |= rtlsdr_set_tuner_gain(rtl_dev, static_cast<int>(gain * 10));
+        r |= rtlsdr_set_center_freq(rtl_dev, static_cast<uint32_t>(freq));
+        r |= rtlsdr_set_sample_rate(rtl_dev, static_cast<uint32_t>(sr));
+        r |= rtlsdr_set_tuner_bandwidth(rtl_dev, static_cast<uint32_t>(sr));
         if (r != 0)
         {
             LOG_INFO("Issue(s) setting parameters.");
@@ -320,10 +320,10 @@ void RTLSDR::setupParams(float sr, float freq, float gain)
         setSampleRate(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
         setBandwidth(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
     } else {
-        sendTcpCommand(CMD_SET_FREQ, freq);
-        sendTcpCommand(CMD_SET_SAMPLE_RATE, sr);
+        sendTcpCommand(CMD_SET_FREQ, static_cast<int>(freq));
+        sendTcpCommand(CMD_SET_SAMPLE_RATE, static_cast<int>(sr));
         sendTcpCommand(CMD_SET_TUNER_GAIN_MODE, 0);
-        sendTcpCommand(CMD_SET_GAIN, (int)(gain * 10));
+        sendTcpCommand(CMD_SET_GAIN, static_cast<int>(gain * 10));
         sendTcpCommand(CMD_SET_FREQ_COR, 0);
         sendTcpCommand(CMD_SET_AGC_MODE, 0);
         sendTcpCommand(CMD_SET_TUNER_GAIN_INDEX, 0);
@@ -339,7 +339,7 @@ void RTLSDR::setupParams(float sr, float freq, float gain)
 bool RTLSDR::sendTcpCommand(int cmd, int value)
 {
     unsigned char tosend[5];
-    tosend[0] = cmd;
+    tosend[0] = static_cast<unsigned char>(cmd);
     tosend[1] = value&0xff;
     value >>= 8;
     tosend[2] = value&0xff;
@@ -349,7 +349,12 @@ bool RTLSDR::sendTcpCommand(int cmd, int value)
     tosend[4] = value&0xff;
     value >>= 8;
     tcflush(PortFD, TCOFLUSH);
-    write(PortFD, tosend, 5);
+    int count = 0;
+    while(count < 5) {
+        count = write(PortFD, tosend, 5);
+        if (count < 0) return false;
+    }
+    return true;
 }
 
 bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -382,7 +387,7 @@ bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], cha
 ***************************************************************************************/
 bool RTLSDR::StartIntegration(double duration)
 {
-    IntegrationRequest = duration;
+    IntegrationRequest = static_cast<float>(duration);
     AbortIntegration();
 
     // Since we have only have one Spectrograph with one chip, we set the exposure duration of the primary Spectrograph
@@ -423,8 +428,8 @@ bool RTLSDR::AbortIntegration()
 ***************************************************************************************/
 float RTLSDR::CalcTimeLeft()
 {
-    double timesince;
-    double timeleft;
+    float timesince;
+    float timeleft;
     struct timeval now;
     gettimeofday(&now, nullptr);
 
@@ -448,7 +453,7 @@ void RTLSDR::TimerHit()
 
     if (InIntegration)
     {
-        timeleft = CalcTimeLeft();
+        timeleft = static_cast<long>(CalcTimeLeft());
         if (timeleft < 0.1)
         {
             /* We're done capturing */
@@ -560,7 +565,7 @@ void RTLSDR::streamCaptureHelper()
 bool RTLSDR::Handshake()
 {
     if((getSensorConnection() & CONNECTION_TCP) == 0) {
-        int r = rtlsdr_open(&rtl_dev, spectrographIndex);
+        int r = rtlsdr_open(&rtl_dev, static_cast<uint32_t>(spectrographIndex));
         if (r < 0)
         {
             LOGF_ERROR("Failed to open rtlsdr device index %d.", spectrographIndex);
