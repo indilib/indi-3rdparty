@@ -18,9 +18,10 @@
 import sys
 import argparse
 import rrdtool
+from wr_config import *
 
 parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio time series")
-parser.add_argument("rrdfile", default="weather.rrd",
+parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
                     help="RRD file holding all time series")
 
 args=parser.parse_args()
@@ -37,6 +38,9 @@ ret = rrdtool.create(args.rrdfile, "--step", "300", "--start", '0',
 		     "DS:CloudCover:GAUGE:600:U:U",
 		     "DS:SkyTemperature:GAUGE:600:U:U",
 		     "DS:SQM:GAUGE:600:U:U",
+		     "DS:WindSpeed:GAUGE:600:U:U",
+		     "DS:WindGust:GAUGE:600:U:U",
+		     "DS:WindDirection:GAUGE:600:U:U",
 		     "RRA:AVERAGE:0.5:1:288",
 		     "RRA:AVERAGE:0.5:3:672",
 		     "RRA:AVERAGE:0.5:12:8760",

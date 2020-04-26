@@ -1870,7 +1870,7 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
 
-    IUSaveConfigNumber(fp, &USBTrafficNP);
+    IUSaveConfigNumber(fp, &USBBufferNP);
 
     return true;
 }

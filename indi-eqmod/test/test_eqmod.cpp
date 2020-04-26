@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "eqmod.h"
+
+#include "config.h"
+#include "eqmodbase.h"
 
 
 using ::testing::_;
@@ -145,7 +147,6 @@ public:
         return true;
     }
 
-
 };
 
 
@@ -184,6 +185,273 @@ TEST(EqmodTest, encoder_target_south)
     eqmod.TestEncoderTarget();
 }
 
+#ifdef WITH_SCOPE_LIMITS
+TEST(EqmodTest, scope_limits_properties)
+{
+    TestEQMod eqmod;
+
+    {
+        ITextVectorProperty * const p = eqmod.getText("HORIZONLIMITSDATAFILE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindText(p, "HORIZONLIMITSFILENAME"), nullptr);
+        }
+    }
+    {
+        INumberVectorProperty * const p = eqmod.getNumber("HORIZONLIMITSPOINT");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_AZ"), nullptr);
+            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_ALT"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSTRAVERSE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTFIRST"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTPREV"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTNEXT"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTLAST"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSMANAGE");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTADDCURRENT"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTDELETE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTCLEAR"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSFILEOPERATION");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSWRITEFILE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLOADFILE"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITTRACK"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITSLEW"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITGOTO"), nullptr);
+        }
+    }
+    {
+        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSLIMITGOTO");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTODISABLE"), nullptr);
+            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTOENABLE"), nullptr);
+        }
+    }
+    {
+        IBLOBVectorProperty * const p = eqmod.getBLOB("HORIZONLIMITSDATAFITS");
+        EXPECT_NE(p, nullptr);
+        if (p != nullptr)
+        {
+            EXPECT_NE(IUFindBLOB(p, "HORIZONPOINTS"), nullptr);
+        }
+    }
+}
+
+TEST(EqmodTest, scope_limits_empty)
+{
+    TestEQMod eqmod;
+    eqmod.updateLocation(50.0, 15.0, 0);
+
+    ISwitchVectorProperty * const onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+    ASSERT_NE(onlimit, nullptr);
+    ISwitch * const limittrack = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITTRACK");
+    ASSERT_NE(limittrack, nullptr);
+    ISwitch * const limitslew = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITSLEW");
+    ASSERT_NE(limitslew, nullptr);
+    ISwitch * const limitgoto = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITGOTO");
+    ASSERT_NE(limitgoto, nullptr);
+
+    HorizonLimits * const hl = eqmod.horizon;
+    ASSERT_NE(hl, nullptr);
+
+    // Because there are no horizon limits set, any altitude under the horizon will trigger the limit check
+    // So use that to test switches appropriately
+    for (int ftrack = ISS_OFF; ftrack <= ISS_ON; ftrack++)
+    {
+        limittrack->s = (ISState) ftrack;
+        for (int fslew = ISS_OFF; fslew <= ISS_ON; fslew++)
+        {
+            limitslew->s = (ISState) fslew;
+            for (int fgoto = ISS_OFF; fgoto <= ISS_ON; fgoto++)
+            {
+                limitgoto->s = (ISState) fgoto;
+
+                IDSetSwitch(onlimit, nullptr);
+
+                // Over the horizon (0 <= alt), so always outside limits
+                for (double alt = 0; alt < +90; alt += 0.7)
+                {
+                    for (double az = -365; az < 365; az += 0.7)
+                    {
+                        // Inside limits, no aborts
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, true), false);
+
+                        // Remaining tests are improbable, and won't abort anything
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, true), false);
+                    }
+                }
+
+                // On or under horizon (alt < 0 strictly), so always outside limits
+                // Those tests output warnings thus are slower, so use larger verification strides
+                for (double alt = -0.001; -90 < alt; alt -= 10.1)
+                {
+                    for (double az = -365; az < 365; az += 10.1)
+                    {
+                        // When idle, limits are not tested
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, false), false);
+
+                        // When slewing, limits may abort move without goto, and gotos
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, false), fslew == ISS_ON);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_SLEWING, true), fgoto == ISS_ON);
+
+                        // When tracking, limits may abort move, also in the edge case of tracking during goto
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, false), ftrack == ISS_ON);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_TRACKING, true), ftrack == ISS_ON);
+
+                        // Remaining tests are improbable, and won't abort anything
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_IDLE, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKING, true), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, false), false);
+                        ASSERT_EQ(hl->checkLimits(az, alt, INDI::Telescope::SCOPE_PARKED, true), false);
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST(EqmodTest, scope_limits_altaz)
+{
+    TestEQMod eqmod;
+    eqmod.updateLocation(50.0, 15.0, 0);
+
+    ISwitchVectorProperty * const onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+    ASSERT_NE(onlimit, nullptr);
+    ISwitch * const limittrack = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITTRACK");
+    ASSERT_NE(limittrack, nullptr);
+    ISwitch * const limitslew = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITSLEW");
+    ASSERT_NE(limitslew, nullptr);
+    ISwitch * const limitgoto = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITGOTO");
+    ASSERT_NE(limitgoto, nullptr);
+
+    HorizonLimits * const hl = eqmod.horizon;
+    ASSERT_NE(hl, nullptr);
+
+    // Use a configuration that aborts tracking out of limits
+    limittrack->s = ISS_ON;
+    limitslew->s = ISS_OFF;
+    limitgoto->s = ISS_OFF;
+    IDSetSwitch(onlimit, nullptr);
+
+    // Retrieve points properties
+    INumberVectorProperty * const ppoint = eqmod.getNumber("HORIZONTAL_COORD");
+    ASSERT_NE(ppoint, nullptr);
+    INumber * const paz = IUFindNumber(ppoint, "AZ");
+    ASSERT_NE(paz, nullptr);
+    INumber * const palt = IUFindNumber(ppoint, "ALT");
+    ASSERT_NE(palt, nullptr);
+
+    // Retrieve points management properties
+    ISwitchVectorProperty * const pmanage = eqmod.getSwitch("HORIZONLIMITSMANAGE");
+    ASSERT_NE(pmanage, nullptr);
+    ISwitch * const padd = IUFindSwitch(pmanage, "HORIZONLIMITSLISTADDCURRENT");
+    ASSERT_NE(padd, nullptr);
+    ISwitch * const pclear = IUFindSwitch(pmanage, "HORIZONLIMITSLISTCLEAR");
+    ASSERT_NE(pclear, nullptr);
+
+    ISState iss_on[] = { ISS_ON };
+    const char * manage_add[] = { "HORIZONLIMITSLISTADDCURRENT" };
+    const char * manage_clear[] = { "HORIZONLIMITSLISTCLEAR" };
+
+    // Add a single alt-az horizon point and test edge case points, then clear horizon points
+    paz->value = 30;
+    palt->value = 45;
+    IDSetNumber(ppoint, nullptr);
+    ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
+    ASSERT_EQ(hl->checkLimits(30, 50, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(30, 40, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(20, 50, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(20, 40, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(40, 50, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(40, 40, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_clear, 1));
+
+    // Try out some altitudes in horizontal circles, limit must trig as soon as we go lower than horizon altitude - no interpolation here
+    for (palt->value = 0; palt->value <= 90; palt->value += 10)
+    {
+        for (paz->value = 0; paz->value < 360; paz->value += 60)
+        {
+            IDSetNumber(ppoint, nullptr);
+            ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
+        }
+
+        for (double test_alt = 0; test_alt < 90; test_alt += 8.4)
+            for (double test_az = -365; test_az < +365; test_az += 26.7)
+                ASSERT_EQ(hl->checkLimits(test_az, test_alt, INDI::Telescope::SCOPE_TRACKING, false), test_alt < palt->value);
+
+        ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_clear, 1));
+    }
+
+    // Try out increasing altitude to test interpolation
+    paz->value = 0;
+    palt->value = 10;
+    IDSetNumber(ppoint, nullptr);
+    ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
+
+    paz->value = 180;
+    palt->value = 20;
+    IDSetNumber(ppoint, nullptr);
+    ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
+
+    // Test at horizon points
+    ASSERT_EQ(hl->checkLimits(0, 9, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(0, 10, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(180, 19, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(180, 20, INDI::Telescope::SCOPE_TRACKING, false), false);
+
+    // Test in middles of horizon segments
+    ASSERT_EQ(hl->checkLimits(90, 14, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(90, 15, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(270, 14, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(270, 15, INDI::Telescope::SCOPE_TRACKING, false), false);
+
+    // Test in quarters of horizon segments
+    ASSERT_EQ(hl->checkLimits(45, 15, INDI::Telescope::SCOPE_TRACKING, false), false);
+    ASSERT_EQ(hl->checkLimits(135, 15, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(225, 15, INDI::Telescope::SCOPE_TRACKING, false), true);
+    ASSERT_EQ(hl->checkLimits(315, 15, INDI::Telescope::SCOPE_TRACKING, false), false);
+
+    ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_clear, 1));
+}
+#endif
 
 int main(int argc, char **argv)
 {

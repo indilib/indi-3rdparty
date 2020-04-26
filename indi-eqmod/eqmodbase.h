@@ -46,9 +46,7 @@ typedef struct SyncData
 
 #include <alignment/AlignmentSubsystemForDrivers.h>
 
-class EQMod : public INDI::Telescope,
-    public INDI::GuiderInterface,
-    INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
+class EQMod : public INDI::Telescope, public INDI::GuiderInterface, INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 #else
 class EQMod : public INDI::Telescope, public INDI::GuiderInterface
 #endif
@@ -115,6 +113,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         ISwitchVectorProperty *TargetPierSideSP    = nullptr;
         INumberVectorProperty *BacklashNP          = nullptr;
         ISwitchVectorProperty *UseBacklashSP       = nullptr;
+        INumberVectorProperty *LEDBrightnessNP     = nullptr;
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         ISwitch AlignMethodS[2];
         ISwitchVectorProperty AlignMethodSP;
@@ -133,6 +132,9 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         ISwitchVectorProperty *DEPPECTrainingSP = nullptr;
         ISwitchVectorProperty *RAPPECSP         = nullptr;
         ISwitchVectorProperty *DEPPECSP         = nullptr;
+
+        ISwitchVectorProperty *SNAPPORT1SP      = nullptr;
+        ISwitchVectorProperty *SNAPPORT2SP      = nullptr;
 
         INumber *MinPulseN                   = nullptr;
         INumber *MinPulseTimerN              = nullptr;
@@ -287,4 +289,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
             AUTO_HOME_WAIT_PHASE6
         };
         AutoHomeStatus AutohomeState;
+
+        int DBG_SCOPE_STATUS {0};
+        int DBG_COMM {0};
+        int DBG_MOUNT {0};
 };

@@ -24,8 +24,8 @@
 </defNumber>
 </defNumberVector>
 <defTextVector device="EQMod Mount" name="MOUNTINFORMATION" label="Mount Information" group="Firmware" state="Idle" perm="ro" message="Mount Info message">
-<defText name="MOUNT_TYPE" label="Mount Type"></defText> 
-<defText name="MOTOR_CONTROLLER" label="Firmware Version"></defText> 
+<defText name="MOUNT_TYPE" label="Mount Type"></defText>
+<defText name="MOTOR_CONTROLLER" label="Firmware Version"></defText>
 </defTextVector>
 <defNumberVector device="EQMod Mount" name="STEPPERS" label="Stepper/Gear" group="Firmware" state="Idle" perm="ro">
 <defNumber name="RASteps360" label="RA Steps (Total)" format="%.0f" min="0.0" max="16777215.0" step="1.0">
@@ -300,6 +300,27 @@ Off
 On
 </defSwitch>
 <defSwitch name="DE_PPEC_ON" label="On">
+Off
+</defSwitch>
+</defSwitchVector>
+<defNumberVector device="EQMod Mount" name="LED_BRIGHTNESS" label="LED Brightness" group="Options" state="Idle" perm="rw">
+<defNumber name="LED_BRIGHTNESS_VALUE" label="Level" format="%.f" min="0.0" max="255.0" step="10">
+255
+</defNumber>
+</defNumberVector>
+<defSwitchVector device="EQMod Mount" name="SNAPPORT1" label="Snap Port 1" group="Options" state="Idle" perm="rw" rule="OneOfMany">
+<defSwitch name="SNAPPORT1_OFF" label="Off">
+On
+</defSwitch>
+<defSwitch name="SNAPPORT1_ON" label="On">
+Off
+</defSwitch>
+</defSwitchVector>
+<defSwitchVector device="EQMod Mount" name="SNAPPORT2" label="Snap Port 2" group="Options" state="Idle" perm="rw" rule="OneOfMany">
+<defSwitch name="SNAPPORT2_OFF" label="Off">
+On
+</defSwitch>
+<defSwitch name="SNAPPORT2_ON" label="On">
 Off
 </defSwitch>
 </defSwitchVector>

@@ -44,6 +44,9 @@
         </div>
         <div class="col-sm-4" align="center">
           <div id="pressure"></div>
+          <div class="parameter-title">Wind Speed</div>
+          <div id="windSpeed" style="padding-top: 0px; margin-top: 0px"></div>
+          <div id="windSpeedValue" class="parameter-value"></div>
         </div>
         <div class="col-sm-4" align="center">
           <div id="clouds"></div>
@@ -58,8 +61,9 @@
         <div class="col-sm-4" id="clouds_series"></div>
       </div> <!-- first time series row end -->
       <div class="row">
-        <div class="col-sm-6" id="humidity_series"></div>
-        <div class="col-sm-6" id="sqm_series"></div>
+        <div class="col-sm-4" id="humidity_series"></div>
+        <div class="col-sm-4" id="windSpeed_series"></div>
+        <div class="col-sm-4" id="sqm_series"></div>
       </div> <!-- second time series row end -->
     </div>
     <script src="js/charts.js"></script>

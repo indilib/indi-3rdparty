@@ -39,7 +39,7 @@ class GPSD : public INDI::GPS
         virtual bool updateProperties() override;
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-
+        virtual bool setSystemTime(time_t& raw_time);
     protected:
         virtual bool Connect() override;
         virtual bool Disconnect() override;

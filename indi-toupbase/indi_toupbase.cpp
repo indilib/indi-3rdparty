@@ -1676,7 +1676,7 @@ bool ToupBase::StartExposure(float duration)
     //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
 
     // Trigger an exposure
-    if ( (rc = FP(Trigger(m_CameraHandle, 1) < 0)) )
+    if ( (rc = FP(Trigger(m_CameraHandle, 1))) < 0)
     {
         LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
         return false;
@@ -2266,7 +2266,11 @@ void ToupBase::eventPullCallBack(unsigned event)
         case CP(EVENT_DISCONNECTED: )
                 LOG_DEBUG("Camera disconnected.");
             break;
+#if defined(BUILD_ALTAIRCAM)
         case CP(EVENT_TIMEOUT: )
+#else
+        case CP(EVENT_NOFRAMETIMEOUT: )
+#endif
                 LOG_DEBUG("Camera timed out.");
             PrimaryCCD.setExposureFailed();
             break;

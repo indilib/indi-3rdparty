@@ -43,14 +43,14 @@
 #define FP(x) Starshootg_##x
 #define CP(x) STARSHOOTG_##x
 #define XP(x) Starshootg##x
-#define THAND HStarshootG
+#define THAND HStarshootg
 #define DNAME "StarshootG"
 #elif BUILD_NNCAM
 #include <nncam.h>
 #define FP(x) Nncam_##x
 #define CP(x) NNCAM_##x
 #define XP(x) Nncam##x
-#define THAND HNnCam
+#define THAND HNncam
 #define DNAME "Levenhuk"
 #endif
 
@@ -173,7 +173,6 @@ class ToupBase : public INDI::CCD
         {
             EVENT_EXPOSURE             = 0x0001, /* exposure time changed */
             EVENT_TEMPTINT             = 0x0002, /* white balance changed, Temp/Tint mode */
-            EVENT_CHROME               = 0x0003, /* reversed, do not use it */
             EVENT_IMAGE                = 0x0004, /* live image arrived, use Toupcam_PullImage to get this image */
             EVENT_STILLIMAGE           = 0x0005, /* snap (still) frame arrived, use Toupcam_PullStillImage to get this frame */
             EVENT_WBGAIN               = 0x0006, /* white balance changed, RGB Gain mode */
@@ -183,7 +182,10 @@ class ToupBase : public INDI::CCD
             EVENT_DFC                  = 0x000a, /* dark field correction status changed */
             EVENT_ERROR                = 0x0080, /* generic error */
             EVENT_DISCONNECTED         = 0x0081, /* camera disconnected */
-            EVENT_TIMEOUT              = 0x0082, /* timeout error */
+            EVENT_NOFRAMETIMEOUT       = 0x0082, /* no frame timeout error */
+            EVENT_AFFEEDBACK           = 0x0083, /* auto focus feedback information */
+            EVENT_AFPOSITION           = 0x0084, /* auto focus sensor board positon */
+            EVENT_NOPACKETTIMEOUT      = 0x0085, /* no packet timeout */
             EVENT_FACTORY              = 0x8001  /* restore factory settings */
         };
 

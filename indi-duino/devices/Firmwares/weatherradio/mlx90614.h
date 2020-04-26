@@ -19,7 +19,7 @@ struct {
 /**
    mlx.begin() always returns true, hence we need to check the I2C adress
 */
-bool isSensorPresent() {
+bool isMLX90614Present() {
   Wire.beginTransmission(MLX90614_I2CADDR);
   byte error = Wire.endTransmission();
 
@@ -27,7 +27,7 @@ bool isSensorPresent() {
 }
 
 void updateMLX() {
-  if (mlxData.status || (mlxData.status = isSensorPresent())) {
+  if (mlxData.status || (mlxData.status = isMLX90614Present())) {
     mlx.begin();
     mlxData.ambient_t = mlx.readAmbientTempC();
     mlxData.object_t  = mlx.readObjectTempC();

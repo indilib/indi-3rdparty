@@ -2111,7 +2111,7 @@ void ASICCD::getExposure()
         }
         else
         {
-            uSecs = 10000;
+            uSecs = 100000;
         }
         if (timeLeft >= 0.0049)
         {
@@ -2150,13 +2150,6 @@ void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     {
         int status = 0;
         fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
-    }
-
-    np = IUFindNumber(&ControlNP, "Gamma");
-    if (np)
-    {
-        int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "GAMMA", &(np->value), "Gamma", &status);
     }
 }
 

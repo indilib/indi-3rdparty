@@ -21,6 +21,7 @@
 
 #include <rtl-sdr.h>
 #include "indispectrograph.h"
+#include "stream/streammanager.h"
 
 enum Settings
 {
@@ -53,9 +54,14 @@ class RTLSDR : public INDI::Spectrograph
 
     // Spectrograph specific functions
     bool StartIntegration(double duration);
-    void setupParams(float sr, float freq, float bw, float gain);
+    void setupParams(float sr, float freq, float gain);
     bool AbortIntegration();
     void TimerHit();
+
+    bool StartStreaming() override;
+    bool StopStreaming() override;
+    void streamCaptureHelper();
+    void * streamCapture();
 
   private:
     void Callback();
@@ -69,4 +75,8 @@ class RTLSDR : public INDI::Spectrograph
     uint8_t *continuum;
 
     uint32_t spectrographIndex = { 0 };
+
+    int streamPredicate;
+    pthread_t primary_thread;
+    bool terminateThread;
 };

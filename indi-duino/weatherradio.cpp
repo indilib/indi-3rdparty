@@ -27,7 +27,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <memory>
 #include <map>
 
 #include <sys/stat.h>
@@ -39,11 +38,15 @@
 
 #include "config.h"
 
+const char *CALIBRATION_TAB = "Calibration";
+const char *TOKEN           = "token";
+
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 512
-#define MAX_WAIT 2
+
+#define WIFI_DEVICE "WiFi"
 
 #define WEATHER_TEMPERATURE     "WEATHER_TEMPERATURE"
 #define WEATHER_PRESSURE        "WEATHER_PRESSURE"
@@ -52,7 +55,9 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define WEATHER_SQM             "WEATHER_SQM"
 #define WEATHER_DEWPOINT        "WEATHER_DEWPOINT"
 #define WEATHER_SKY_TEMPERATURE "WEATHER_SKY_TEMPERATURE"
-
+#define WEATHER_WIND_GUST       "WEATHER_WIND_GUST"
+#define WEATHER_WIND_SPEED      "WEATHER_WIND_SPEED"
+#define WEATHER_WIND_DIRECTION  "WEATHER_WIND_DIRECTION"
 
 /**************************************************************************************
 **
@@ -108,6 +113,8 @@ void ISSnoopDevice(XMLEle *root)
 WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
+    weatherCalculator = new WeatherCalculator();
+    currentRequestID = 0;
 }
 
 /**************************************************************************************
@@ -119,39 +126,75 @@ bool WeatherRadio::initProperties()
 
     addConfigurationControl();
 
+    IUFillNumber(&ttyTimeoutN[0], "TIMEOUT", "Timeout (s)", "%.f", 0, 60, 1, getTTYTimeout());
+    IUFillNumberVector(&ttyTimeoutNP, ttyTimeoutN, 1, getDeviceName(), "TTY_TIMEOUT", "TTY timeout", CONNECTION_TAB, IP_RW, 0, IPS_OK);
+
+    // Firmware version
     IUFillText(&FirmwareInfoT[0], "FIRMWARE_INFO", "Firmware Version", "<unknown version>");
     IUFillTextVector(&FirmwareInfoTP, FirmwareInfoT, 1, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 60, IPS_OK);
 
-    addParameter(WEATHER_TEMPERATURE, "Temperature (°C)", -10, 30, 15);
-    addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
-    addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
-    addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 50);
-    addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
-    addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
-    addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
+    // Reset Arduino
+    IUFillSwitch(&resetArduinoS[0], "RESET", "Reset", ISS_OFF);
+    IUFillSwitchVector(&resetArduinoSP, resetArduinoS, 1, getDeviceName(), "RESET_ARDUINO", "Arduino", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    setCriticalParameter(WEATHER_TEMPERATURE);
-    setCriticalParameter(WEATHER_PRESSURE);
-    setCriticalParameter(WEATHER_HUMIDITY);
-    setCriticalParameter(WEATHER_CLOUD_COVER);
-    setCriticalParameter(WEATHER_SQM);
+    // refresh firmware configuration
+    IUFillSwitch(&refreshConfigS[0], "REFRESH", "Refresh", ISS_OFF);
+    IUFillSwitchVector(&refreshConfigSP, refreshConfigS, 1, getDeviceName(), "REFRESH_CONFIG", "Refresh", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    // connect/disconnect WiFi
+    IUFillSwitch(&wifiConnectionS[0], "DISCONNECT", "Disconnect", ISS_OFF);
+    IUFillSwitch(&wifiConnectionS[1], "CONNECT", "Connect", ISS_OFF);
+    IUFillSwitchVector(&wifiConnectionSP, wifiConnectionS, 2, getDeviceName(), "WIFI", "WiFi", INFO_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    // calibration parameters
+    IUFillNumber(&skyTemperatureCalibrationN[0], "K1", "K1", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k1);
+    IUFillNumber(&skyTemperatureCalibrationN[1], "K2", "K2", "%.2f", -50, 50, 1, weatherCalculator->skyTemperatureCoefficients.k2);
+    IUFillNumber(&skyTemperatureCalibrationN[2], "K3", "K3", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k3);
+    IUFillNumber(&skyTemperatureCalibrationN[3], "K4", "K4", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k4);
+    IUFillNumber(&skyTemperatureCalibrationN[4], "K5", "K5", "%.2f", 0, 100, 1, weatherCalculator->skyTemperatureCoefficients.k5);
+    IUFillNumber(&skyTemperatureCalibrationN[5], "T_CLEAR", "clear sky (°C)", "%.2f", -20, 20, 1, weatherCalculator->skyTemperatureCoefficients.t_clear);
+    IUFillNumber(&skyTemperatureCalibrationN[6], "T_OVERCAST", "overcast sky (°C)", "%.2f", -20, 20, 1, weatherCalculator->skyTemperatureCoefficients.t_overcast);
+    IUFillNumberVector(&skyTemperatureCalibrationNP, skyTemperatureCalibrationN, 7, getDeviceName(), "SKY_TEMP_CALIBRATION", "Sky Temp calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    // calibration parameters
+    IUFillNumber(&humidityCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&humidityCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&humidityCalibrationNP, humidityCalibrationN, 2, getDeviceName(), "HUMIDITY_CALIBRATION", "Humidity calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&temperatureCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&temperatureCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&temperatureCalibrationNP, temperatureCalibrationN, 2, getDeviceName(), "TEMPERATURE_CALIBRATION", "Temperature calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&sqmCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&sqmCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&sqmCalibrationNP, sqmCalibrationN, 2, getDeviceName(), "SQM_CALIBRATION", "SQM calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
+    IUFillNumber(&windDirectionCalibrationN[0], "OFFSET", "Offset", "%.3f", 0, 360, 1, 0.0);
+    IUFillNumberVector(&windDirectionCalibrationNP, windDirectionCalibrationN, 1, getDeviceName(), "WIND_DIRECTION_CALIBRATION", "Wind direction", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
 
     addDebugControl();
     setWeatherConnection(CONNECTION_SERIAL);
 
     // define INDI config values for known sensors
-    deviceConfig["BME280"]["Temp"]     = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
-    deviceConfig["BME280"]["Pres"]     = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
-    deviceConfig["BME280"]["Hum"]      = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["DHT"]["Temp"]        = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
-    deviceConfig["DHT"]["Hum"]         = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
-    deviceConfig["MLX90614"]["T amb"]  = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
-    deviceConfig["MLX90614"]["T obj"]  = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
-    deviceConfig["TSL2591"]["Lux"]     = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.3f", 0.0, 1000.0, 1.0};
-    deviceConfig["TSL2591"]["Visible"] = {"Lightness (Vis)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
-    deviceConfig["TSL2591"]["IR"]      = {"Lightness (IR)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
-    deviceConfig["TSL2591"]["Gain"]    = {"Gain", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
-    deviceConfig["TSL2591"]["Timing"]  = {"Timing", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
+    deviceConfig["BME280"]["Temp"]      = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["BME280"]["Pres"]      = {"Pressure (hPa)", PRESSURE_SENSOR, "%.1f", 500., 1100.0, 1.0};
+    deviceConfig["BME280"]["Hum"]       = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["DHT"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["DHT"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["MLX90614"]["T amb"]   = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["MLX90614"]["T obj"]   = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["TSL237"]["Frequency"] = {"Frequency", INTERNAL_SENSOR, "%.0f", 0.0, 100000.0, 1.0};
+    deviceConfig["TSL237"]["SQM"]       = {"SQM", SQM_SENSOR, "%.1f", 0.0, 25.0, 1.0};
+    deviceConfig["TSL2591"]["Lux"]      = {"Luminance (Lux)", LUMINOSITY_SENSOR, "%.3f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Visible"]  = {"Lightness (Vis)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["IR"]       = {"Lightness (IR)", INTERNAL_SENSOR, "%.1f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Gain"]     = {"Gain", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
+    deviceConfig["TSL2591"]["Timing"]   = {"Timing", INTERNAL_SENSOR, "%.0f", 0.0, 1000.0, 1.0};
+    deviceConfig["Davis Anemometer"]["avg speed"] = {"Wind speed (avg, m/s)", WIND_SPEED_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["Davis Anemometer"]["min speed"] = {"Wind speed (min, m/s)", INTERNAL_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["Davis Anemometer"]["max speed"] = {"Wind speed (max, m/s)", WIND_GUST_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.0f", 0., 360.0, 1.0};
+    deviceConfig["Davis Anemometer"]["rotations"] = {"Wind wheel rotations", INTERNAL_SENSOR, "%.0f", 0., 360.0, 1.0};
 
     return true;
 }
@@ -161,40 +204,135 @@ bool WeatherRadio::initProperties()
 ***************************************************************************************/
 bool WeatherRadio::updateProperties()
 {
-    if (! INDI::Weather::updateProperties()) return false;
+    bool result = true;
+
+    // dynamically add weather parameters
     if (isConnected())
     {
+        if (sensorRegistry.temperature.size() > 0)
+        {
+            addParameter(WEATHER_TEMPERATURE, "Temperature (°C)", -10, 30, 15);
+            setCriticalParameter(WEATHER_TEMPERATURE);
+            addSensorSelection(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
+            addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
 
+            defineNumber(&temperatureCalibrationNP);
+            defineNumber(&skyTemperatureCalibrationNP);
+        }
+        if (sensorRegistry.pressure.size() > 0)
+        {
+            addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
+            setCriticalParameter(WEATHER_PRESSURE);
+            addSensorSelection(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
+        }
+        if (sensorRegistry.humidity.size() > 0)
+        {
+            addParameter(WEATHER_HUMIDITY, "Humidity (%)", 0, 100, 15);
+            addParameter(WEATHER_DEWPOINT, "Dewpoint (°C)", -10, 30, 15);
+            setCriticalParameter(WEATHER_HUMIDITY);
+            addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
+
+            defineNumber(&humidityCalibrationNP);
+        }
+        if (sensorRegistry.luminosity.size() > 0 || sensorRegistry.sqm.size() > 0)
+        {
+            addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
+            setCriticalParameter(WEATHER_SQM);
+            if (sensorRegistry.luminosity.size() > 0)
+                addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+            if (sensorRegistry.sqm.size() > 0)
+                addSensorSelection(&sqmSensorSP, sensorRegistry.sqm, "SQM_SENSOR", "SQM Sensor");
+
+            defineNumber(&sqmCalibrationNP);
+        }
+        if (sensorRegistry.temp_object.size() > 0)
+        {
+            addParameter(WEATHER_CLOUD_COVER, "Clouds (%)", 0, 100, 50);
+            addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
+            setCriticalParameter(WEATHER_CLOUD_COVER);
+            addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+        }
+        if (sensorRegistry.wind_gust.size() > 0)
+        {
+            addParameter(WEATHER_WIND_GUST, "Wind gust (m/s)", 0, 15, 50);
+            setCriticalParameter(WEATHER_WIND_GUST);
+            addSensorSelection(&windGustSensorSP, sensorRegistry.wind_gust, "WIND_GUST_SENSOR", "Wind Gust Sensor");
+        }
+        if (sensorRegistry.wind_speed.size() > 0)
+        {
+            addParameter(WEATHER_WIND_SPEED, "Wind speed (m/s)", 0, 10, 50);
+            setCriticalParameter(WEATHER_WIND_SPEED);
+            addSensorSelection(&windSpeedSensorSP, sensorRegistry.wind_speed, "WIND_SPEED_SENSOR", "Wind Speed Sensor");
+        }
+        if (sensorRegistry.wind_direction.size() > 0)
+        {
+            addParameter(WEATHER_WIND_DIRECTION, "Wind direction (deg)", 0, 360, 10);
+            addSensorSelection(&windDirectionSensorSP, sensorRegistry.wind_direction, "WIND_DIRECTION_SENSOR", "Wind Direction Sensor");
+
+            defineNumber(&windDirectionCalibrationNP);
+        }
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineNumber(&rawDevices[i]);
 
-        addSensorSelection(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
-        addSensorSelection(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
-        addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
-        addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
-        addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
-        addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
-
         getBasicData();
+
+        result = INDI::Weather::updateProperties();
+        // Load the configuration if everything was fine
+        if (result == true)
+            loadConfig();
+
+        defineSwitch(&resetArduinoSP);
     }
     else
     {
+
         for (size_t i = 0; i < rawDevices.size(); i++)
             deleteProperty(rawDevices[i].name);
 
+        deleteProperty(resetArduinoSP.name);
+        deleteProperty(windDirectionCalibrationNP.name);
+        deleteProperty(sqmCalibrationNP.name);
+        deleteProperty(temperatureCalibrationNP.name);
+        deleteProperty(humidityCalibrationNP.name);
+        deleteProperty(skyTemperatureCalibrationNP.name);
         deleteProperty(temperatureSensorSP.name);
         deleteProperty(pressureSensorSP.name);
         deleteProperty(humiditySensorSP.name);
         deleteProperty(luminositySensorSP.name);
+        deleteProperty(sqmSensorSP.name);
         deleteProperty(ambientTemperatureSensorSP.name);
         deleteProperty(objectTemperatureSensorSP.name);
+        deleteProperty(windGustSensorSP.name);
+        deleteProperty(windSpeedSensorSP.name);
+        deleteProperty(windDirectionSensorSP.name);
+        deleteProperty(refreshConfigSP.name);
+        deleteProperty(wifiConnectionSP.name);
         deleteProperty(FirmwareInfoTP.name);
+        deleteProperty(FirmwareConfigTP.name);
+
+        result = INDI::Weather::updateProperties();
+
+        // clean up weather interface parameters to avoid doubling when reconnecting
+        for (int i = 0; i < WeatherInterface::ParametersNP.nnp; i++)
+        {
+            free(WeatherInterface::ParametersN[i].aux0);
+            free(WeatherInterface::ParametersN[i].aux1);
+            free(WeatherInterface::ParametersRangeNP[i].np);
+        }
+
+        free(WeatherInterface::ParametersN);
+        WeatherInterface::ParametersN = nullptr;
+        WeatherInterface::ParametersNP.nnp = 0;
+        WeatherInterface::ParametersRangeNP->nnp = 0;
+        WeatherInterface::nRanges = 0;
+
+        free(WeatherInterface::critialParametersL);
+        WeatherInterface::critialParametersL = nullptr;
+        WeatherInterface::critialParametersLP.nlp = 0;
+
     }
 
-    // Load the configuration.
-    loadConfig();
-
-    return true;
+    return result;
 }
 
 /**************************************************************************************
@@ -209,6 +347,53 @@ void WeatherRadio::getBasicData()
 
     defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
+
+    FirmwareConfig config;
+    readFirmwareConfig(&config);
+
+    FirmwareConfigT = new IText[config.size()];
+    std::map<std::string, std::string>::iterator it;
+    size_t pos = 0;
+
+    for (it = config.begin(); it != config.end(); ++it)
+    {
+        FirmwareConfigT[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
+        IUFillText(&FirmwareConfigT[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+    }
+
+    IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
+    defineText(&FirmwareConfigTP);
+
+    // refresh button
+    defineSwitch(&refreshConfigSP);
+
+    if (hasWiFi)
+        defineSwitch(&wifiConnectionSP);
+}
+
+/**************************************************************************************
+** Update firmware configuration data
+***************************************************************************************/
+void WeatherRadio::updateConfigData()
+{
+    FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
+    if (FirmwareInfoTP.s != IPS_OK)
+        LOG_ERROR("Failed to get firmware from device.");
+
+    FirmwareConfig config;
+    readFirmwareConfig(&config);
+    std::map<std::string, std::string>::iterator it;
+
+    for (it = config.begin(); it != config.end(); ++it)
+    {
+        // find the matching text property
+        for (int i = 0; i < FirmwareConfigTP.ntp; i++)
+            if (strcmp(FirmwareConfigT[i].name, it->first.c_str()) == 0)
+                IUSaveText(&FirmwareConfigT[i], it->second.c_str());
+    }
+    FirmwareConfigTP.s = IPS_OK;
+    IDSetText(&FirmwareInfoTP, nullptr);
+    IDSetText(&FirmwareConfigTP, nullptr);
 }
 
 /**************************************************************************************
@@ -218,7 +403,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("v", data, &n_bytes);
+    bool result = sendQuery("v\n", data, &n_bytes);
 
     if (result == true)
     {
@@ -246,6 +431,125 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
     }
     return IPS_ALERT;
 }
+
+/**************************************************************************************
+** Read the configuration parameters from the firmware
+***************************************************************************************/
+IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
+{
+    char data[MAX_WEATHERBUFFER] = {0};
+    int n_bytes = 0;
+    bool result = sendQuery("c\n", data, &n_bytes);
+
+    if (result)
+    {
+        // LOGF_DEBUG("Firmware configuration response: %s", data);
+        char *source = data;
+        char *endptr;
+        JsonValue value;
+        JsonAllocator allocator;
+        int status = jsonParse(source, &endptr, &value, allocator);
+        if (status != JSON_OK)
+        {
+            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+            return IPS_ALERT;
+        }
+
+        JsonIterator deviceIter;
+        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+        {
+            char *device {new char[strlen(deviceIter->key)+1] {0}};
+            strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+            if (strcmp(device, WIFI_DEVICE) == 0)
+                hasWiFi = true;
+
+            JsonIterator configIter;
+
+            // read settings for the single device
+            for (configIter = begin(deviceIter->value); configIter != end(deviceIter->value); ++configIter)
+            {
+                char *name {new char[strlen(configIter->key)+1] {0}};
+
+                // copy single setting
+                strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+                std::string value;
+                double number;
+
+                switch (configIter->value.getTag()) {
+                case JSON_NUMBER:
+                    number = configIter->value.toNumber();
+                    if (trunc(number) == number)
+                        value = std::to_string(int(number));
+                    else
+                        value = std::to_string(number);
+                    break;
+                case JSON_TRUE:
+                    value = "true";
+                    break;
+                case JSON_FALSE:
+                    value = "false";
+                    break;
+                default:
+                    value = strdup(configIter->value.toString());
+                    break;
+                }
+                // add it to the configuration
+                (*config)[std::string(device) + "::" + std::string(name)] = value;
+            }
+
+        }
+        // update WiFi status
+        if (hasWiFi)
+        {
+            FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
+            bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
+
+            updateWiFiStatus(connected);
+        }
+
+        return IPS_OK;
+
+    }
+    else
+    {
+        LOG_WARN("Retrieving firmware config failed.");
+        return IPS_ALERT;
+    }
+}
+
+/**************************************************************************************
+** Connect / disconnect the Arduino to WiFi.
+***************************************************************************************/
+bool WeatherRadio::connectWiFi(bool connect)
+{
+    bool result;
+    if (connect)
+        result = transmit("s\n");
+    else
+        result = transmit("d\n");
+    return result;
+}
+
+void WeatherRadio::updateWiFiStatus(bool connected)
+{
+    wifiConnectionS[0].s = connected ? ISS_OFF : ISS_ON;
+    wifiConnectionS[1].s = connected ? ISS_ON : ISS_OFF;
+    wifiConnectionSP.s = IPS_OK;
+
+    IDSetSwitch(&wifiConnectionSP, nullptr);
+    LOGF_INFO("WiFi %s.", connected ? "connected" : "disconnected");
+}
+
+/**************************************************************************************
+** Reset the Arduino.
+***************************************************************************************/
+bool WeatherRadio::resetArduino()
+{
+    bool result = transmit("r\n");
+    return result;
+}
+
 
 /**************************************************************************************
 ** Create a selection of sensors for a certain weather property.
@@ -286,6 +590,71 @@ bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], c
 ***************************************************************************************/
 bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (strcmp(name, ttyTimeoutNP.name) == 0)
+        {
+            IUUpdateNumber(&ttyTimeoutNP, values, names, n);
+            ttyTimeout = int(values[0]);
+            ttyTimeoutNP.s = IPS_OK;
+            IDSetNumber(&ttyTimeoutNP, nullptr);
+            return ttyTimeoutNP.s;
+        }
+        else if (strcmp(name, skyTemperatureCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&skyTemperatureCalibrationNP, values, names, n);
+            if (n > 0) weatherCalculator->skyTemperatureCoefficients.k1 = values[0];
+            if (n > 1) weatherCalculator->skyTemperatureCoefficients.k2 = values[1];
+            if (n > 2) weatherCalculator->skyTemperatureCoefficients.k3 = values[2];
+            if (n > 3) weatherCalculator->skyTemperatureCoefficients.k4 = values[3];
+            if (n > 4) weatherCalculator->skyTemperatureCoefficients.k5 = values[4];
+            if (n > 5) weatherCalculator->skyTemperatureCoefficients.t_clear = values[5];
+            if (n > 6) weatherCalculator->skyTemperatureCoefficients.t_overcast = values[6];
+            skyTemperatureCalibrationNP.s = IPS_OK;
+            IDSetNumber(&skyTemperatureCalibrationNP, nullptr);
+            LOG_DEBUG("Cloud coverage value calibration updated.");
+            return skyTemperatureCalibrationNP.s;
+        }
+        else if (strcmp(name, humidityCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&humidityCalibrationNP, values, names, n);
+            weatherCalculator->humidityCalibration.factor = values[0];
+            weatherCalculator->humidityCalibration.shift  = values[1];
+            humidityCalibrationNP.s = IPS_OK;
+            IDSetNumber(&humidityCalibrationNP, nullptr);
+            LOG_DEBUG("Humidity value calibration updated.");
+            return humidityCalibrationNP.s;
+        }
+        else if (strcmp(name, temperatureCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&temperatureCalibrationNP, values, names, n);
+            weatherCalculator->temperatureCalibration.factor = values[0];
+            weatherCalculator->temperatureCalibration.shift  = values[1];
+            temperatureCalibrationNP.s = IPS_OK;
+            IDSetNumber(&temperatureCalibrationNP, nullptr);
+            LOG_DEBUG("Temperature value calibration updated.");
+            return temperatureCalibrationNP.s;
+        }
+        else if (strcmp(name, sqmCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&sqmCalibrationNP, values, names, n);
+            weatherCalculator->sqmCalibration.factor = values[0];
+            weatherCalculator->sqmCalibration.shift  = values[1];
+            sqmCalibrationNP.s = IPS_OK;
+            IDSetNumber(&sqmCalibrationNP, nullptr);
+            return sqmCalibrationNP.s;
+            LOG_DEBUG("SQM value calibration updated.");
+        }
+        else if (strcmp(name, windDirectionCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&windDirectionCalibrationNP, values, names, n);
+            weatherCalculator->windDirectionOffset = values[0];
+            windDirectionCalibrationNP.s = IPS_OK;
+            IDSetNumber(&windDirectionCalibrationNP, nullptr);
+            return windDirectionCalibrationNP.s;
+            LOG_DEBUG("Wind direction value calibration updated.");
+        }
+    }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -297,7 +666,47 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
 
-        if (strcmp(name, temperatureSensorSP.name) == 0)
+        if (strcmp(name, refreshConfigSP.name) == 0)
+        {
+            // refresh config button pressed
+            IUUpdateSwitch(&refreshConfigSP, states, names, n);
+            updateConfigData();
+
+            refreshConfigSP.s = IPS_OK;
+            refreshConfigS[0].s = ISS_OFF;
+            IDSetSwitch(&refreshConfigSP, nullptr);
+
+            LOG_INFO("Firmware configuration data updated.");
+            return (refreshConfigSP.s == IPS_OK);
+        }
+        else if (strcmp(name, wifiConnectionSP.name) == 0)
+        {
+            // reconnect config button pressed
+            IUUpdateSwitch(&wifiConnectionSP, states, names, n);
+            int pressed = IUFindOnSwitchIndex(&wifiConnectionSP);
+
+            wifiConnectionSP.s = connectWiFi(pressed == 1) ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&wifiConnectionSP, nullptr);
+
+            LOGF_INFO("%s WiFi. Press \"Refresh\" to update the status.", pressed == 1? "Connecting" :"Disconnecting");
+            return (wifiConnectionSP.s == IPS_OK);
+        }
+        else if (strcmp(name, resetArduinoSP.name) == 0)
+        {
+            // reset Arduino button pressed
+            IUUpdateSwitch(&resetArduinoSP, states, names, n);
+
+            if (resetArduino())
+                resetArduinoSP.s = IPS_OK;
+            else
+                resetArduinoSP.s = IPS_ALERT;
+            resetArduinoS->s = ISS_OFF;
+            IDSetSwitch(&resetArduinoSP, nullptr);
+
+            LOG_INFO("Resetting Arduino.  Press \"Refresh\" to update the status");
+            return (resetArduinoSP.s == IPS_OK);
+        }
+        else if (strcmp(name, temperatureSensorSP.name) == 0)
         {
             // temperature sensor selected
             IUUpdateSwitch(&temperatureSensorSP, states, names, n);
@@ -306,6 +715,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&temperatureSensorSP, selected);
             currentSensors.temperature = sensor;
 
+            LOGF_DEBUG("Temperature sensor selected: %s", selected);
             return (temperatureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, pressureSensorSP.name) == 0)
@@ -317,6 +727,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&pressureSensorSP, selected);
             currentSensors.pressure = sensor;
 
+            LOGF_DEBUG("Pressure sensor selected: %s", selected);
             return (pressureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, humiditySensorSP.name) == 0)
@@ -328,6 +739,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&humiditySensorSP, selected);
             currentSensors.humidity = sensor;
 
+            LOGF_DEBUG("Humidity sensor selected: %s", selected);
             return (humiditySensorSP.s == IPS_OK);
         }
         else if (strcmp(name, luminositySensorSP.name) == 0)
@@ -339,7 +751,20 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&luminositySensorSP, selected);
             currentSensors.luminosity = sensor;
 
+            LOGF_DEBUG("Luminosity sensor selected: %s", selected);
             return (luminositySensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, sqmSensorSP.name) == 0)
+        {
+            // SQM sensor selected
+            IUUpdateSwitch(&sqmSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&sqmSensorSP, selected);
+            currentSensors.sqm = sensor;
+
+            LOGF_DEBUG("SQM sensor selected: %s", selected);
+            return (sqmSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, ambientTemperatureSensorSP.name) == 0)
         {
@@ -350,6 +775,7 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&ambientTemperatureSensorSP, selected);
             currentSensors.temp_ambient = sensor;
 
+            LOGF_DEBUG("Ambient temperature sensor selected: %s", selected);
             return (ambientTemperatureSensorSP.s == IPS_OK);
         }
         else if (strcmp(name, objectTemperatureSensorSP.name) == 0)
@@ -361,7 +787,44 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
             sensor_name sensor = updateSensorSelection(&objectTemperatureSensorSP, selected);
             currentSensors.temp_object = sensor;
 
+            LOGF_DEBUG("Object temperature sensor selected: %s", selected);
             return (objectTemperatureSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, windGustSensorSP.name) == 0)
+        {
+            // wind gust sensor selected
+            IUUpdateSwitch(&windGustSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windGustSensorSP, selected);
+            currentSensors.wind_gust = sensor;
+
+            LOGF_DEBUG("Wind gust sensor selected: %s", selected);
+            return (windGustSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, windSpeedSensorSP.name) == 0)
+        {
+            // wind speed sensor selected
+            IUUpdateSwitch(&windSpeedSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windSpeedSensorSP, selected);
+            currentSensors.wind_speed = sensor;
+
+            LOGF_DEBUG("Wind speed sensor selected: %s", selected);
+            return (windSpeedSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, windDirectionSensorSP.name) == 0)
+        {
+            // wind direction sensor selected
+            IUUpdateSwitch(&windDirectionSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&windDirectionSensorSP, selected);
+            currentSensors.wind_direction = sensor;
+
+            LOGF_DEBUG("Wind direction sensor selected: %s", selected);
+            return (windDirectionSensorSP.s == IPS_OK);
         }
     }
     return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
@@ -394,30 +857,63 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("w", data, &n_bytes);
+    int id = createRequestID();
+    char cmd[20] = {0};
+    sprintf(cmd, "w#%d\n", id);
+    bool result = sendQuery(cmd, data, &n_bytes);
+    // LOGF_DEBUG("Weather data received: %s", data);
 
-    if (result == true)
+    if (result == false)
+        return IPS_ALERT;
+    while (result == true)
     {
-        char *srcBuffer{new char[n_bytes+1] {0}};
+        char *src{new char[n_bytes+1] {0}};
         // duplicate the buffer since the parser will modify it
-        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
-        char *source = srcBuffer;
-        char *endptr;
-        JsonValue value;
-        JsonAllocator allocator;
-        int status = jsonParse(source, &endptr, &value, allocator);
-        if (status != JSON_OK)
-        {
-            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return IPS_ALERT;
+        strncpy(src, data, static_cast<size_t>(n_bytes));
+        int resultID;
+        result = parseWeatherData(src, &resultID);
+        // we got the answer maching our request
+        if (resultID == id)
+            return IPS_OK;
+
+        // read the next line
+        LOGF_WARN("Received no answer for request #%d. Retrying...", id);
+        result = receive(data, &n_bytes, '\n', getTTYTimeout());
+    }
+    // we reached the end of the response message
+    LOGF_WARN("Received no answer for request #%d.", id);
+   return IPS_OK;
+}
+
+/**************************************************************************************
+** Parse JSON weather document.
+***************************************************************************************/
+bool WeatherRadio::parseWeatherData(char *data, int *resultID)
+{
+    char *source = data;
+    char *endptr;
+    JsonValue value;
+    JsonAllocator allocator;
+    int status = jsonParse(source, &endptr, &value, allocator);
+    if (status != JSON_OK)
+    {
+        LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        return false;
+    }
+
+    JsonIterator deviceIter;
+    for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
+    {
+        char *name {new char[strlen(deviceIter->key)+1] {0}};
+        strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+        if (strcmp(name, TOKEN) == 0) {
+            // request token
+            char* value = deviceIter->value.toString();
+            if (!sscanf(value, "%d", resultID))
+                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
         }
-
-        JsonIterator deviceIter;
-        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
-        {
-            char *name {new char[strlen(deviceIter->key)+1] {0}};
-            strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
-
+        else {
             JsonIterator sensorIter;
             INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
 
@@ -485,12 +981,11 @@ IPState WeatherRadio::updateWeather()
                 // update device values
                 IDSetNumber(deviceProp, nullptr);
             }
-
         }
-        return IPS_OK;
+
     }
-    else
-        return IPS_ALERT;
+    return true;
+
 }
 
 /**************************************************************************************
@@ -516,31 +1011,28 @@ WeatherRadio::sensor_name WeatherRadio::updateSensorSelection(ISwitchVectorPrope
 void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, double value)
 {
     if (currentSensors.temperature == sensor)
-        setParameterValue(WEATHER_TEMPERATURE, value);
+        setParameterValue(WEATHER_TEMPERATURE, weatherCalculator->calibrate(weatherCalculator->temperatureCalibration, value));
     else if (currentSensors.pressure == sensor)
     {
         double elevation = LocationN[LOCATION_ELEVATION].value;
 
-        const double temp_gradient = 0.0065;
-        double temp = 15.0;
+        double temp = 15.0; // default value
         INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
         if (temperatureParameter != nullptr)
             temp = temperatureParameter->value;
-        else
-            temp = 15.0; // default value
 
-        // barometric height formula
-        double pressure_normalized = value / pow(1-temp_gradient*elevation/(temp+elevation*temp_gradient+273.15), 0.03416/temp_gradient);
-
+        double pressure_normalized = weatherCalculator->sealevelPressure(value, elevation, temp);
         setParameterValue(WEATHER_PRESSURE, pressure_normalized);
     }
     else if (currentSensors.humidity == sensor)
     {
-        setParameterValue(WEATHER_HUMIDITY, value);
+        double humidity = weatherCalculator->calibrate(weatherCalculator->humidityCalibration, value);
+
+        setParameterValue(WEATHER_HUMIDITY, humidity);
         INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
         if (temperatureParameter != nullptr)
         {
-            double dp =  WeatherCalculator::dewPoint(value, temperatureParameter->value);
+            double dp =  weatherCalculator->dewPoint(humidity, temperatureParameter->value);
             setParameterValue(WEATHER_DEWPOINT, dp);
         }
      }
@@ -551,8 +1043,8 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (objProp != nullptr)
         {
             double objectTemperature = objProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(value, objectTemperature));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(value, objectTemperature));
+            setParameterValue(WEATHER_CLOUD_COVER, weatherCalculator->cloudCoverage(value, objectTemperature));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, weatherCalculator->skyTemperatureCorr(value, objectTemperature));
         }
     }
     else if (currentSensors.temp_object == sensor)
@@ -562,14 +1054,24 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         if (ambientProp != nullptr)
         {
             double ambientTemperature = ambientProp->value;
-            setParameterValue(WEATHER_CLOUD_COVER, WeatherCalculator::cloudCoverage(ambientTemperature, value));
-            setParameterValue(WEATHER_SKY_TEMPERATURE, WeatherCalculator::skyTemperatureCorr(ambientTemperature, value));
+            setParameterValue(WEATHER_CLOUD_COVER, weatherCalculator->cloudCoverage(ambientTemperature, value));
+            setParameterValue(WEATHER_SKY_TEMPERATURE, weatherCalculator->skyTemperatureCorr(ambientTemperature, value));
         }
     }
     else if (currentSensors.luminosity == sensor)
-        setParameterValue(WEATHER_SQM, WeatherCalculator::sqmValue(value));
+    {
+        setParameterValue(WEATHER_SQM, weatherCalculator->calibrate(weatherCalculator->sqmCalibration,
+                                                                    weatherCalculator->sqmValue(value)));
+    }
+    else if (currentSensors.sqm == sensor)
+        setParameterValue(WEATHER_SQM, weatherCalculator->calibrate(weatherCalculator->sqmCalibration, value));
+    else if (currentSensors.wind_gust == sensor)
+        setParameterValue(WEATHER_WIND_GUST, value);
+    else if (currentSensors.wind_speed == sensor)
+        setParameterValue(WEATHER_WIND_SPEED, value);
+    else if (currentSensors.wind_direction == sensor)
+        setParameterValue(WEATHER_WIND_DIRECTION, weatherCalculator->calibratedWindDirection(value));
 }
-
 
 /**************************************************************************************
 **
@@ -589,8 +1091,20 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
     case LUMINOSITY_SENSOR:
         sensorRegistry.luminosity.push_back(sensor);
         break;
+    case SQM_SENSOR:
+        sensorRegistry.sqm.push_back(sensor);
+        break;
     case OBJECT_TEMPERATURE_SENSOR:
         sensorRegistry.temp_object.push_back(sensor);
+        break;
+    case WIND_GUST_SENSOR:
+        sensorRegistry.wind_gust.push_back(sensor);
+        break;
+    case WIND_SPEED_SENSOR:
+        sensorRegistry.wind_speed.push_back(sensor);
+        break;
+    case WIND_DIRECTION_SENSOR:
+        sensorRegistry.wind_direction.push_back(sensor);
         break;
     case INTERNAL_SENSOR:
         // do nothing
@@ -606,13 +1120,24 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
 bool WeatherRadio::saveConfigItems(FILE *fp)
 {
     LOG_DEBUG(__FUNCTION__);
+    IUSaveConfigNumber(fp, &skyTemperatureCalibrationNP);
+    IUSaveConfigNumber(fp, &temperatureCalibrationNP);
+    IUSaveConfigNumber(fp, &humidityCalibrationNP);
+    IUSaveConfigNumber(fp, &sqmCalibrationNP);
+    IUSaveConfigNumber(fp, &windDirectionCalibrationNP);
     IUSaveConfigSwitch(fp, &temperatureSensorSP);
     IUSaveConfigSwitch(fp, &pressureSensorSP);
     IUSaveConfigSwitch(fp, &humiditySensorSP);
     IUSaveConfigSwitch(fp, &luminositySensorSP);
+    IUSaveConfigSwitch(fp, &sqmSensorSP);
     IUSaveConfigSwitch(fp, &ambientTemperatureSensorSP);
     IUSaveConfigSwitch(fp, &objectTemperatureSensorSP);
+    IUSaveConfigSwitch(fp, &windGustSensorSP);
+    IUSaveConfigSwitch(fp, &windSpeedSensorSP);
+    IUSaveConfigSwitch(fp, &windDirectionSensorSP);
     IUSaveConfigNumber(fp, ParametersRangeNP);
+    IUSaveConfigNumber(fp, &ttyTimeoutNP);
+
 
     return INDI::Weather::saveConfigItems(fp);
 }
@@ -714,7 +1239,12 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         LOGF_ERROR("Command <%s> failed.", cmd);
         return false;
     }
-    return receive(response, length, '\n', MAX_WAIT);
+    return receive(response, length, '\n', getTTYTimeout());
+}
+
+int WeatherRadio::createRequestID()
+{
+    return currentRequestID++;
 }
 
 /**************************************************************************************
