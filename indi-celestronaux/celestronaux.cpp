@@ -1308,13 +1308,8 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-<<<<<<< HEAD
     if ( ! isConnected() )
         return;
-=======
-    if (PortFD <= 0)
-        return false;
->>>>>>> fabrizio/celestronAUX
 
     // if connected to AUX or PC ports, receive AUX command response.
     if (isRTSCTS)
@@ -1670,11 +1665,7 @@ int CelestronAUX::aux_tty_write(int PortFD,char *buf,int bufsiz,float timeout,in
     char errmsg[MAXRBUF];
 
     if (WR_DEBUG) 
-<<<<<<< HEAD
-        fprintf(stderr, "nevo_tty_write: %d\n", PortFD);
-=======
         fprintf(stderr, "aux_tty_read: %d\n", PortFD);
->>>>>>> fabrizio/celestronAUX
     
     // if hardware flow control is required, set RTS to on then wait for CTS
     // on to write: PC port bahaves as half duplex. RTS may be already on.
