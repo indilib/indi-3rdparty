@@ -95,9 +95,9 @@ void ISInit()
             iNumofConnectedSpectrographs = -1;
             //Try sending IDMessage as well?
             IDLog("No USB RTLSDR receivers detected. Trying with TCP..\n");
-            IDMessage(nullptr, "No USB RTLSDR receivers detected. Trying with TCP..");
-            receivers = static_cast<RTLSDR**>(malloc(sizeof(RTLSDR*)));
-            receivers[0] = new RTLSDR(-1);
+            IDMessage(nullptr, "No USB RTLSDR receivers detected.");// Trying with TCP..");
+            //receivers = static_cast<RTLSDR**>(malloc(sizeof(RTLSDR*)));
+            //receivers[0] = new RTLSDR(-1);
         }
         else
         {
