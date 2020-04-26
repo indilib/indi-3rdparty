@@ -25,12 +25,12 @@
 
 #define HEADER_SIZE 8
 #define MAX_RESOLUTION 2048
-#define PIXEL_SIZE AIRY / settingsN[0].value / MAX_RESOLUTION
-#define BAUD_RATE 2000000
+#define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
+#define BAUD_RATE 230400
 #define NUM_STATS 1//((NUM_NODES-1)*2+1)
 #define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
-#define FRAME_SIZE ((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE
-#define FRAME_TIME 10.0*FRAME_SIZE/BAUD_RATE
+#define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
 
 class baseline : public INDI::Correlator
 {
@@ -105,13 +105,15 @@ protected:
     } CorrelatorConnection;
 
 
-    Connection::Serial *serialConnection;
     Connection::TCP *tcpConnection;
 
     /// For Serial & TCP connections
     int PortFD = -1;
 
 private:
+    INumber *correlationsN;
+    INumberVectorProperty correlationsNP;
+
     INumber *countsN;
     INumberVectorProperty *countsNP;
 

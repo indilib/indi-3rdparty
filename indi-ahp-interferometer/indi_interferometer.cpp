@@ -70,8 +70,9 @@ void Interferometer::Callback()
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
-    char str[SAMPLE_SIZE+1];
+    char str[MAXINDINAME];
     str[SAMPLE_SIZE] = 0;
+    str[HEADER_SIZE] = 0;
 
     char cmd[2] = { 0x3c, 0x0d };
     tcflush(PortFD, TCOFLUSH);
@@ -85,15 +86,16 @@ void Interferometer::Callback()
     while (InExposure)
     {
         tcflush(PortFD, TCIFLUSH);
-        tty_nread_section(PortFD, buf, HEADER_SIZE, 13, 1, &olen);
         tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if (olen != FRAME_SIZE)
             continue;
         timeleft -= FRAME_TIME;
-        int idx = 0;
+        int idx = HEADER_SIZE;
         int center = w*h/2;
         center += w/2;
         unsigned short tmp;
+        memset(str, 0, HEADER_SIZE+1);
+        sscanf(str, "%08X", &power_status);
         for(int x = NUM_NODES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
@@ -104,7 +106,7 @@ void Interferometer::Callback()
         }
         for(int x = NUM_BASELINES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
-            strncpy(str, buf+idx+DELAY_LINES*SAMPLE_SIZE/2, SAMPLE_SIZE);
+            strncpy(str, buf+idx, SAMPLE_SIZE);
             sscanf(str, "%X", &tmp);
             correlations[x] = tmp;
             totalcorrelations[x] += correlations[x];
@@ -143,8 +145,6 @@ Interferometer::Interferometer()
 {
     power_status = 0;
 
-    setInterferometerConnection(CONNECTION_TCP);
-
     ExposureRequest = 0.0;
     InExposure = false;
 
@@ -163,6 +163,8 @@ Interferometer::Interferometer()
 
     nodeLocationN = static_cast<INumber*>(malloc(1));
     nodeLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    correlationsN = static_cast<INumber*>(malloc(1));
 
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<double*>(malloc(1));
@@ -224,19 +226,10 @@ bool Interferometer::initProperties()
 
     setDefaultPollingPeriod(500);
 
-    if (interferometerConnection & CONNECTION_SERIAL)
-    {
-        serialConnection = new Connection::Serial(this);
-        serialConnection->registerHandshake([&]() { return callHandshake(); });
-        registerConnection(serialConnection);
-    }
+    tcpConnection = new Connection::TCP(this);
+    tcpConnection->registerHandshake([&]() { return Handshake(); });
+    registerConnection(tcpConnection);
 
-    if (interferometerConnection & CONNECTION_TCP)
-    {
-        tcpConnection = new Connection::TCP(this);
-        tcpConnection->registerHandshake([&]() { return callHandshake(); });
-        registerConnection(tcpConnection);
-    }
     return true;
 
 }
@@ -252,14 +245,9 @@ void Interferometer::ISGetProperties(const char *dev)
     {
         for (int x=0; x<NUM_NODES; x++) {
             defineSwitch(&nodeEnableSP[x]);
-            loadConfig(true, nodeEnableSP[x].name);
-            defineNumber(&nodeLocationNP[x]);
-            loadConfig(true, nodeLocationNP[x].name);
-            defineSwitch(&nodePowerSP[x]);
-            loadConfig(true, nodePowerSP[x].name);
         }
+        defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
-        loadConfig(true, settingsNP.name);
 
         // Define our properties
     }
@@ -290,15 +278,18 @@ bool Interferometer::updateProperties()
                 defineNumber(&nodeLocationNP[x]);
                 defineNumber(&countsNP[x]);
             } else {
+                deleteProperty(nodePowerSP[x].name);
                 deleteProperty(nodeLocationNP[x].name);
                 deleteProperty(countsNP[x].name);
             }
         }
+        defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
     }
     else
         // We're disconnected
     {
+        deleteProperty(correlationsNP.name);
         deleteProperty(settingsNP.name);
         for (int x=0; x<NUM_NODES; x++) {
             deleteProperty(nodeEnableSP[x].name);
@@ -558,15 +549,20 @@ void Interferometer::TimerHit()
         return;  //  No need to reset timer if we are not connected anymore
 
     if(InExposure) {
+        IDSetNumber(&correlationsNP, nullptr);
+        int idx = 0;
         for (int x = 0; x < NUM_NODES; x++) {
             IDSetNumber(&countsNP[x], nullptr);
-            countsN[x].value = totalcounts[x];
-            totalcounts[x] = 0;
+            countsNP[x].np[0].value = totalcounts[x];
+            for(int y = x+1; y < NUM_NODES; y++) {
+                correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
+                correlationsNP.np[idx*2+1].value = totalcorrelations[idx]/(totalcounts[x]+totalcounts[y]);
+                idx++;
+            }
         }
 
-        for(int x = 0; x < NUM_BASELINES; x++) {
-            totalcorrelations[x] = 0;
-        }
+        memset(totalcounts, 0, NUM_NODES*sizeof(double));
+        memset(totalcorrelations, 0, NUM_BASELINES*sizeof(double));
 
         // Just update time left in client
         PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
@@ -578,6 +574,7 @@ void Interferometer::TimerHit()
 
 bool Interferometer::Handshake()
 {
+    PortFD = tcpConnection->getPortFD();
     if(PortFD != -1) {
         int olen;
         char buf[FRAME_SIZE];
@@ -590,57 +587,54 @@ bool Interferometer::Handshake()
         usleep(10000);
         tty_write(PortFD, &cmd[1], 1, &olen);
 
-        while (buf[0] != 13) {
-            ntries = 10;
-            while (olen != FRAME_SIZE && ntries-- > 0)
-                tty_nread_section(PortFD, buf, 1, 13, 1, &olen);
-            if(ntries == 0)
-                return false;
-        }
         ntries = 10;
-        while (olen != 8 && ntries-- > 0)
-            tty_nread_section(PortFD, buf, 8, 13, 1, &olen);
-
-        for(int x = 0; x < NUM_BASELINES; x++)
-            baselines[x]->~baseline();
-
-        int tmp;
-        int n = sscanf(buf, "%02X%02X%02X%02X", &SAMPLE_SIZE, &NUM_NODES, &DELAY_LINES, &tmp);
-
-        if(n != 4) {
+        while (olen != FRAME_SIZE && ntries-- > 0)
+            tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
+        if(ntries == 0 || olen != FRAME_SIZE) {
             SAMPLE_SIZE = 0;
             NUM_NODES = 0;
             DELAY_LINES = 0;
             return false;
         }
 
-        SAMPLE_SIZE /= 4;
+        int sample_size = 16;
+        int num_nodes = 12;
+        int delay_lines = 1;
 
-        countsN = static_cast<INumber*>(realloc(countsN, NUM_NODES*NUM_STATS*sizeof(INumber)));
-        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, NUM_NODES*sizeof(INumberVectorProperty)));
+        for(int x = 0; x < NUM_NODES; x++) {
+            if(baselines[x] != nullptr) {
+                baselines[x]->~baseline();
+            }
+        }
 
-        nodeEnableS = static_cast<ISwitch*>(realloc(nodeEnableS, NUM_NODES*2*sizeof(ISwitch)));
-        nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, NUM_NODES*sizeof(ISwitchVectorProperty)));
+        countsN = static_cast<INumber*>(realloc(countsN, num_nodes*NUM_STATS*sizeof(INumber)));
+        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, num_nodes*sizeof(INumberVectorProperty)));
 
-        nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, NUM_NODES*2*sizeof(ISwitch)));
-        nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, NUM_NODES*sizeof(ISwitchVectorProperty)));
+        nodeEnableS = static_cast<ISwitch*>(realloc(nodeEnableS, num_nodes*2*sizeof(ISwitch)));
+        nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, num_nodes*sizeof(ISwitchVectorProperty)));
 
-        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*NUM_NODES*sizeof(INumber)));
-        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, NUM_NODES*sizeof(INumberVectorProperty)));
+        nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, num_nodes*2*sizeof(ISwitch)));
+        nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, num_nodes*sizeof(ISwitchVectorProperty)));
 
-        totalcounts = static_cast<double*>(realloc(totalcounts, NUM_NODES*sizeof(double)));
-        totalcorrelations = static_cast<double*>(realloc(totalcorrelations, NUM_BASELINES*sizeof(double)));
-        baselines = static_cast<baseline**>(realloc(baselines, NUM_BASELINES*sizeof(baseline*)));
+        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*num_nodes*sizeof(INumber)));
+        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, num_nodes*sizeof(INumberVectorProperty)));
 
+        correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*(num_nodes*(num_nodes-1)/2)*sizeof(INumber)));
 
-        for(int x = 0; x < NUM_BASELINES; x++) {
+        totalcounts = static_cast<double*>(realloc(totalcounts, num_nodes*sizeof(double)));
+        totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (num_nodes*(num_nodes-1)/2)*sizeof(double)));
+        baselines = static_cast<baseline**>(realloc(baselines, (num_nodes*(num_nodes-1)/2)*sizeof(baseline*)));
+
+        for(int x = 0; x < (num_nodes*(num_nodes-1)/2); x++) {
             baselines[x] = new baseline();
             baselines[x]->initProperties();
         }
 
+        int idx = 0;
         char tab[MAXINDINAME];
         char name[MAXINDINAME];
-        for (int x = 0; x < NUM_NODES; x++) {
+        char label[MAXINDINAME];
+        for (int x = 0; x < num_nodes; x++) {
             IUFillNumber(&nodeLocationN[x*3+0], "NODE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
             IUFillNumber(&nodeLocationN[x*3+1], "NODE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
             IUFillNumber(&nodeLocationN[x*3+2], "NODE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 10.0);
@@ -664,7 +658,18 @@ bool Interferometer::Handshake()
             IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
             sprintf(name, "NODE_COUNTS_%02d", x+1);
             IUFillNumberVector(&countsNP[x], &countsN[x*NUM_STATS], NUM_STATS, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
+            for (int y = x+1; y < num_nodes; y++) {
+                sprintf(name, "CORRELATIONS_%d_%d", x+1, y+1);
+                sprintf(label, "Correlations %d*%d", x+1, y+1);
+                IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
+                sprintf(name, "COHERENCE_%d_%d", x+1, y+1);
+                sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
+                IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
+            }
         }
+        IUFillNumberVector(&correlationsNP, correlationsN, (num_nodes*(num_nodes-1)/2)*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+
+        ActiveLine(num_nodes*2, true);
 
         cmd[0] = 0x0c;
         ntries = 10;
@@ -674,38 +679,11 @@ bool Interferometer::Handshake()
         usleep(10000);
         tty_write(PortFD, &cmd[1], 1, &olen);
 
-        ActiveLine(NUM_NODES*2, true);
+        SAMPLE_SIZE = sample_size/4;
+        NUM_NODES = num_nodes;
+        DELAY_LINES = delay_lines;
+
+        return true;
     }
     return false;
-}
-
-bool Interferometer::callHandshake()
-{
-    if (interferometerConnection > 0)
-    {
-        if (getActiveConnection() == serialConnection)
-            PortFD = serialConnection->getPortFD();
-        else if (getActiveConnection() == tcpConnection)
-            PortFD = tcpConnection->getPortFD();
-    }
-
-    return Handshake();
-}
-
-uint8_t Interferometer::getInterferometerConnection() const
-{
-    return interferometerConnection;
-}
-
-void Interferometer::setInterferometerConnection(const uint8_t &value)
-{
-    uint8_t mask = CONNECTION_SERIAL | CONNECTION_TCP | CONNECTION_NONE;
-
-    if (value == 0 || (mask & value) == 0)
-    {
-        DEBUGF(INDI::Logger::DBG_ERROR, "Invalid connection mode %d", value);
-        return;
-    }
-
-    interferometerConnection = value;
 }
