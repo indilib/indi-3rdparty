@@ -54,6 +54,10 @@ static void cleanup()
 
 void RTLSDR::Callback()
 {
+    b_read  = 0;
+    to_read = getSampleRate() * IntegrationRequest * getBPS() / 8;
+    setBufferSize(to_read);
+
     int len            = min(MAX_FRAME_SIZE, to_read);
     int olen           = 0;
     unsigned char *buf = (unsigned char *)malloc(len);
@@ -61,6 +65,7 @@ void RTLSDR::Callback()
         rtlsdr_reset_buffer(rtl_dev);
     else
         tcflush(PortFD, TCOFLUSH);
+    setIntegrationTime(IntegrationRequest);
     while (InIntegration)
     {
         if((getSensorConnection() & CONNECTION_TCP) == 0)
@@ -207,8 +212,6 @@ RTLSDR::RTLSDR(int32_t index)
     InIntegration = false;
     if(index<0) {
         setSensorConnection(CONNECTION_TCP);
-    } else {
-        setSensorConnection(0x8000);
     }
 
     spectrographIndex = index;
@@ -222,6 +225,18 @@ RTLSDR::RTLSDR(int32_t index)
 
 }
 
+bool RTLSDR::Connect()
+{
+    if((getSensorConnection() & CONNECTION_TCP) == 0) {
+        int r = rtlsdr_open(&rtl_dev, static_cast<uint32_t>(spectrographIndex));
+        if (r < 0)
+        {
+            LOGF_ERROR("Failed to open rtlsdr device index %d.", spectrographIndex);
+            return false;
+        }
+    }
+    return true;
+}
 /**************************************************************************************
 ** Client is asking us to terminate connection to the device
 ***************************************************************************************/
@@ -390,22 +405,12 @@ bool RTLSDR::StartIntegration(double duration)
     IntegrationRequest = static_cast<float>(duration);
     AbortIntegration();
 
-    // Since we have only have one Spectrograph with one chip, we set the exposure duration of the primary Spectrograph
-    setIntegrationTime(duration);
-    b_read  = 0;
-    to_read = getSampleRate() * getIntegrationTime() * sizeof(unsigned short);
-
-    setBufferSize(to_read);
-
-    if (to_read > 0)
-    {
-        LOG_INFO("Integration started...");
-        // Run threads
-        std::thread(&RTLSDR::Callback, this).detach();
-        gettimeofday(&IntStart, nullptr);
-        InIntegration = true;
-        return true;
-    }
+    LOG_INFO("Integration started...");
+    // Run threads
+    std::thread(&RTLSDR::Callback, this).detach();
+    gettimeofday(&IntStart, nullptr);
+    InIntegration = true;
+    return true;
 
     // We're done
     return false;
@@ -564,16 +569,11 @@ void RTLSDR::streamCaptureHelper()
 
 bool RTLSDR::Handshake()
 {
-    if((getSensorConnection() & CONNECTION_TCP) == 0) {
-        int r = rtlsdr_open(&rtl_dev, static_cast<uint32_t>(spectrographIndex));
-        if (r < 0)
-        {
-            LOGF_ERROR("Failed to open rtlsdr device index %d.", spectrographIndex);
+    if(getSensorConnection() & CONNECTION_TCP) {
+        if(PortFD == -1) {
+            LOG_ERROR("Failed to connect to rtl_tcp server.");
             return false;
         }
-    } else if (PortFD == -1) {
-        LOG_ERROR("Failed to connect to rtl_tcp server.");
-        return false;
     }
 
     streamPredicate = 0;

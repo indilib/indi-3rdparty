@@ -46,6 +46,7 @@ class RTLSDR : public INDI::Spectrograph
 
   protected:
     // General device functions
+    bool Connect() override;
     bool Disconnect() override;
     const char *getDefaultName() override;
     bool initProperties() override;
