@@ -127,7 +127,7 @@ class CelestronAUX :
     bool simulator = false;
 
     // connection
-    // uint8_t cauxConnection { CONNECTION_SERIAL | CONNECTION_TCP };
+    bool isRTSCTS;
 
     unsigned int DBG_CAUX;
     unsigned int DBG_AUXMOUNT;
@@ -137,10 +137,10 @@ class CelestronAUX :
     bool detectScope();
     void closeConnection();
     void emulateGPS(AUXCommand &m);
-    void serial_readMsgs();
+    bool serial_readMsgs(AUXCommand c);
     bool tcp_readMsgs_tty();
     bool tcp_readMsgs_net();
-    void readMsgs();
+    bool readMsgs(AUXCommand c);
     void processCmd(AUXCommand &cmd);
     void querryStatus();
     int sendBuffer(int PortFD, buffer buf);
@@ -161,7 +161,11 @@ class CelestronAUX :
     int modem_ctrl;
     void setRTS(bool rts);
     bool waitCTS(float timeout);
-    int nevo_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n);
-    int nevo_tty_write (int PortFD,char *buf,int bufsiz,float timeout,int *n);
+    bool detectRTSCTS();
+    int response_data_size;
+    int aux_tty_read(int PortFD,char *buf,int bufsiz,int timeout,int *n);
+    int aux_tty_write (int PortFD,char *buf,int bufsiz,float timeout,int *n);
+    bool tty_set_speed(int PortFD, speed_t speed);
+    void hex_dump(char *buf, buffer data, size_t size);
 
 };
