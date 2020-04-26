@@ -25,7 +25,6 @@
 #include <memory>
 #include "indicom.h"
 #include "indi_interferometer.h"
-#include "connectionplugins/connectionserial.h"
 #include "connectionplugins/connectiontcp.h"
 
 static std::unique_ptr<Interferometer> array(new Interferometer());
@@ -588,6 +587,16 @@ bool Interferometer::Handshake()
         tty_write(PortFD, &cmd[1], 1, &olen);
 
         ntries = 10;
+        while(buf[0] != 0x0d) {
+            while (olen != FRAME_SIZE && ntries-- > 0) {
+                tty_read(PortFD, buf, 1, 1, &olen);
+            }
+            if(ntries == 0 || olen != 1) {
+                return false;
+            }
+        }
+
+        ntries = 10;
         while (olen != FRAME_SIZE && ntries-- > 0)
             tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if(ntries == 0 || olen != FRAME_SIZE) {
@@ -597,9 +606,9 @@ bool Interferometer::Handshake()
             return false;
         }
 
-        int sample_size = 16;
-        int num_nodes = 12;
-        int delay_lines = 1;
+        int sample_size = buf[1];
+        int num_nodes = buf[2];
+        int delay_lines = buf[3];
 
         for(int x = 0; x < NUM_NODES; x++) {
             if(baselines[x] != nullptr) {

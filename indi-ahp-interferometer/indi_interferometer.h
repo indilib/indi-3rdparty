@@ -23,10 +23,10 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
-#define HEADER_SIZE 8
+#define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define BAUD_RATE 230400
+#define BAUD_RATE 1250000
 #define NUM_STATS 1//((NUM_NODES-1)*2+1)
 #define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
 #define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
