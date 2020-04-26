@@ -1309,7 +1309,7 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
 
     // We are not connected. Nothing to do.
     if ( ! isConnected() )
-        return;
+        return false;
 
     // if connected to AUX or PC ports, receive AUX command response.
     if (isRTSCTS)
