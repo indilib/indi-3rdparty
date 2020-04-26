@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <indilogger.h>
 #include <memory>
+#include <indicom.h>
 
 #define min(a, b)               \
     ({                          \
@@ -39,6 +40,9 @@
 
 static int iNumofConnectedSpectrographs;
 static RTLSDR *receivers[MAX_DEVICES];
+
+static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void cleanup()
 {
@@ -194,6 +198,10 @@ RTLSDR::RTLSDR(uint32_t index)
     char name[MAXINDIDEVICE];
     snprintf(name, MAXINDIDEVICE, "%s %d", getDefaultName(), index);
     setDeviceName(name);
+    // We set the Spectrograph capabilities
+    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING | SENSOR_HAS_DSP;
+    SetSpectrographCapability(cap);
+
 }
 
 /**************************************************************************************
@@ -208,6 +216,8 @@ bool RTLSDR::Connect()
         return false;
     }
 
+    streamPredicate = 0;
+    terminateThread = false;
     LOG_INFO("RTL-SDR Spectrograph connected successfully!");
     // Let's set a timer that checks teleSpectrographs status every POLLMS milliseconds.
     // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
@@ -224,6 +234,11 @@ bool RTLSDR::Disconnect()
     InIntegration = false;
     rtlsdr_close(rtl_dev);
     setBufferSize(1);
+    pthread_mutex_lock(&condMutex);
+    streamPredicate = 1;
+    terminateThread = true;
+    pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&condMutex);
     LOG_INFO("RTL-SDR Spectrograph disconnected successfully!");
     return true;
 }
@@ -241,18 +256,14 @@ const char *RTLSDR::getDefaultName()
 ***************************************************************************************/
 bool RTLSDR::initProperties()
 {
-    // We set the Spectrograph capabilities
-    uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING | SENSOR_HAS_DSP;
-    SetSpectrographCapability(cap);
-
     // Must init parent properties first!
     INDI::Spectrograph::initProperties();
 
-    setMinMaxStep("SPECTROGRAPH_INTEGRATION", "SPECTROGRAPH_INTEGRATION_VALUE", 0.001, 86164.092, 0.001, false);
+    setMinMaxStep("SPECTROGRAPH_INTEGRATION", "SPECTROGRAPH_INTEGRATION_VALUE", 0.001, STELLAR_DAY, 0.001, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_SAMPLERATE", 1.0e+6, 2.0e+6, 1, false);
+    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_SAMPLERATE", 2.5e+5, 2.0e+6, 2.5e+5, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_GAIN", 0.0, 25.0, 0.1, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BANDWIDTH", 0, 0, 0, false);
+    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BANDWIDTH", 2.5e+5, 2.0e+6, 2.5e+5, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BITSPERSAMPLE", 16, 16, 0, false);
     setIntegrationFileExtension("fits");
 
@@ -276,7 +287,7 @@ bool RTLSDR::updateProperties()
     if (isConnected())
     {
         // Inital values
-        setupParams(1000000, 1420000000, 10000, 10);
+        setupParams(1000000, 1420000000, 10);
 
         // Start the timer
         SetTimer(POLLMS);
@@ -288,26 +299,27 @@ bool RTLSDR::updateProperties()
 /**************************************************************************************
 ** Setting up Spectrograph parameters
 ***************************************************************************************/
-void RTLSDR::setupParams(float sr, float freq, float bw, float gain)
+void RTLSDR::setupParams(float sr, float freq, float gain)
 {
-    setBandwidth(bw);
-    setFrequency(freq);
-    setGain(gain);
-    setSampleRate(sr);
-    setBPS(16);
     int r = 0;
 
     r |= rtlsdr_set_agc_mode(rtl_dev, 0);
     r |= rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
     r |= rtlsdr_set_tuner_gain(rtl_dev, (int)(gain * 10));
-    r |= rtlsdr_set_tuner_bandwidth(rtl_dev, (uint32_t)bw);
     r |= rtlsdr_set_center_freq(rtl_dev, (uint32_t)freq);
     r |= rtlsdr_set_sample_rate(rtl_dev, (uint32_t)sr);
+    r |= rtlsdr_set_tuner_bandwidth(rtl_dev, (uint32_t)sr);
 
     if (r != 0)
     {
-        LOG_INFO("Error(s) setting parameters.");
+        LOG_INFO("Issue(s) setting parameters.");
     }
+
+    setBPS(16);
+    setGain(static_cast<double>(rtlsdr_get_tuner_gain(rtl_dev))/10.0);
+    setFrequency(static_cast<double>(rtlsdr_get_center_freq(rtl_dev)));
+    setSampleRate(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
+    setBandwidth(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
 }
 
 bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -316,15 +328,20 @@ bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], cha
     if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, SpectrographSettingsNP.name)) {
         for(int i = 0; i < n; i++) {
             if (!strcmp(names[i], "SPECTROGRAPH_GAIN")) {
-                setupParams(getSampleRate(), getFrequency(), getBandwidth(), values[i]);
-            } else if (!strcmp(names[i], "SPECTROGRAPH_BANDWIDTH")) {
-                setupParams(getSampleRate(), getFrequency(), values[i], getGain());
+                setupParams(getSampleRate(), getFrequency(), values[i]);
             } else if (!strcmp(names[i], "SPECTROGRAPH_FREQUENCY")) {
-                setupParams(getSampleRate(), values[i], getBandwidth(), getGain());
+                setupParams(getSampleRate(), values[i], getGain());
             } else if (!strcmp(names[i], "SPECTROGRAPH_SAMPLERATE")) {
-                setupParams(values[i], getFrequency(), getBandwidth(), getGain());
+                setupParams(values[i], getFrequency(), getGain());
+                setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BANDWIDTH", getSampleRate(), getSampleRate(), getSampleRate(), false);
             }
         }
+        values[SPECTROGRAPH_GAIN] = getGain();
+        values[SPECTROGRAPH_BANDWIDTH] = getBandwidth();
+        values[SPECTROGRAPH_FREQUENCY] = getFrequency();
+        values[SPECTROGRAPH_SAMPLERATE] = getSampleRate();
+        values[SPECTROGRAPH_BITSPERSAMPLE] = 16;
+        IUUpdateNumber(&SpectrographSettingsNP, values, names, n);
         IDSetNumber(&SpectrographSettingsNP, nullptr);
     }
     return processNumber(dev, name, values, names, n) & !r;
@@ -441,3 +458,72 @@ void RTLSDR::grabData()
         }
     }
 }
+
+//Streamer API functions
+
+bool RTLSDR::StartStreaming()
+{
+    pthread_mutex_lock(&condMutex);
+    streamPredicate = 1;
+    pthread_mutex_unlock(&condMutex);
+    pthread_cond_signal(&cv);
+
+    return true;
+}
+
+bool RTLSDR::StopStreaming()
+{
+    pthread_mutex_lock(&condMutex);
+    streamPredicate = 0;
+    pthread_mutex_unlock(&condMutex);
+    pthread_cond_signal(&cv);
+
+    return true;
+}
+
+void RTLSDR::streamCaptureHelper()
+{
+    struct itimerval tframe1, tframe2;
+    double deltas;
+    getitimer(ITIMER_REAL, &tframe1);
+    auto s1 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
+    auto s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
+
+    while (true)
+    {
+        pthread_mutex_lock(&condMutex);
+
+        while (streamPredicate == 0)
+        {
+            pthread_cond_wait(&cv, &condMutex);
+        }
+        StartIntegration(1.0 / Streamer->getTargetFPS());
+
+        if (terminateThread)
+            break;
+
+        // release condMutex
+        pthread_mutex_unlock(&condMutex);
+
+        // Simulate exposure time
+        //usleep(ExposureRequest*1e5);
+        grabData();
+        getitimer(ITIMER_REAL, &tframe1);
+
+        s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
+        deltas = fabs(s2 - s1);
+
+        if (deltas < IntegrationTime)
+            usleep(fabs(IntegrationTime - deltas) * 1e6);
+
+        int32_t size = getBufferSize();
+        Streamer->newFrame(getBuffer(), size);
+
+        s1 = ((double)tframe1.it_value.tv_sec) + ((double)tframe1.it_value.tv_usec / 1e6);
+
+        getitimer(ITIMER_REAL, &tframe2);
+    }
+
+    pthread_mutex_unlock(&condMutex);
+}
+
