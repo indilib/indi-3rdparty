@@ -41,6 +41,8 @@
 static int iNumofConnectedSpectrographs;
 static RTLSDR **receivers;
 
+static bool isInit = false;
+
 static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -84,25 +86,24 @@ void RTLSDR::Callback()
 
 void ISInit()
 {
-    static bool isInit = false;
     if (!isInit)
     {
         iNumofConnectedSpectrographs = 0;
 
         iNumofConnectedSpectrographs = static_cast<int>(rtlsdr_get_device_count());
-        if (iNumofConnectedSpectrographs <= 0)
+        if (iNumofConnectedSpectrographs == 0)
         {
-            iNumofConnectedSpectrographs = -1;
             //Try sending IDMessage as well?
-            IDLog("No USB RTLSDR receivers detected. Trying with TCP..\n");
-            IDMessage(nullptr, "No USB RTLSDR receivers detected.");// Trying with TCP..");
-            //receivers = static_cast<RTLSDR**>(malloc(sizeof(RTLSDR*)));
+            IDLog("No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
+            IDMessage(nullptr, "No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
+            //iNumofConnectedSpectrographs = -1;
+            //receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
             //receivers[0] = new RTLSDR(-1);
         }
         else
         {
             receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
-            for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
+            for (int i = 0; i < iNumofConnectedSpectrographs; i++)
             {
                 receivers[i] = new RTLSDR(i);
             }
@@ -116,7 +117,6 @@ void ISInit()
 void ISGetProperties(const char *dev)
 {
     ISInit();
-
     if (iNumofConnectedSpectrographs == 0)
     {
         IDMessage(nullptr, "No RTLSDR receivers detected. Power on?");
@@ -199,7 +199,6 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
 void ISSnoopDevice(XMLEle *root)
 {
     ISInit();
-
     for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
