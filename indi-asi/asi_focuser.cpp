@@ -436,7 +436,8 @@ bool ASIEAF::ReverseFocuser(bool enabled)
 bool ASIEAF::isMoving()
 {
     bool moving = false;
-    EAF_ERROR_CODE rc = EAFIsMoving(m_ID, &moving);
+    bool handcontroller = false;
+    EAF_ERROR_CODE rc = EAFIsMoving(m_ID, &moving, &handcontroller);
     if (rc != EAF_SUCCESS)
     {
         LOGF_ERROR("Failed to read motion status. Error: %d", rc);
