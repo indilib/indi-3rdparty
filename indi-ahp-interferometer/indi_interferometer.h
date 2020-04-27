@@ -26,8 +26,7 @@
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define BAUD_RATE 1250000
-#define NUM_STATS 1//((NUM_NODES-1)*2+1)
+#define BAUD_RATE 230400
 #define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
 #define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
@@ -97,17 +96,9 @@ protected:
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
-    enum
-    {
-        CONNECTION_NONE   = 1 << 0, /** Do not use any connection plugin */
-        CONNECTION_SERIAL = 1 << 1, /** For regular serial and bluetooth connections */
-        CONNECTION_TCP    = 1 << 2  /** For Wired and WiFI connections */
-    } CorrelatorConnection;
-
-
     Connection::TCP *tcpConnection;
 
-    /// For Serial & TCP connections
+    /// For TCP connection
     int PortFD = -1;
 
 private:
@@ -140,9 +131,6 @@ private:
     double wavelength;
     void Callback();
     bool callHandshake();
-    uint8_t getInterferometerConnection() const;
-    void setInterferometerConnection(const uint8_t &value);
-    uint8_t interferometerConnection = CONNECTION_NONE;
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();

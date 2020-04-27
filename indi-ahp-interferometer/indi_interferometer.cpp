@@ -73,18 +73,14 @@ void Interferometer::Callback()
     str[SAMPLE_SIZE] = 0;
     str[HEADER_SIZE] = 0;
 
-    char cmd[2] = { 0x3c, 0x0d };
-    tcflush(PortFD, TCOFLUSH);
-    usleep(10000);
-    tty_write(PortFD, &cmd[0], 1, &olen);
-    usleep(10000);
-    tty_write(PortFD, &cmd[1], 1, &olen);
+    unsigned short cmd = 0x0d3c;
+    tcflush(PortFD, TCIOFLUSH);
+    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
 
     gettimeofday(&ExpStart, nullptr);
 
     while (InExposure)
     {
-        tcflush(PortFD, TCIFLUSH);
         tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
         if (olen != FRAME_SIZE)
             continue;
@@ -92,9 +88,17 @@ void Interferometer::Callback()
         int idx = HEADER_SIZE;
         int center = w*h/2;
         center += w/2;
-        unsigned short tmp;
+        unsigned int tmp;
         memset(str, 0, HEADER_SIZE+1);
-        sscanf(str, "%08X", &power_status);
+        sscanf(str, "%08X%08X", &tmp, &power_status);
+        for(int x = 0; x < NUM_NODES; x++) {
+            IDSetSwitch(&nodeEnableSP[x], nullptr);
+            nodeEnableSP[x].sp[0].s = (power_status & (1 << (x + NUM_NODES))) ? ISS_ON : ISS_OFF;
+            nodeEnableSP[x].sp[1].s = (power_status & (1 << (x + NUM_NODES))) ? ISS_OFF : ISS_ON;
+            IDSetSwitch(&nodePowerSP[x], nullptr);
+            nodePowerSP[x].sp[0].s = (power_status & (1 << x)) ? ISS_ON : ISS_OFF;
+            nodePowerSP[x].sp[1].s = (power_status & (1 << x)) ? ISS_OFF : ISS_ON;
+        }
         for(int x = NUM_NODES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
@@ -344,12 +348,9 @@ bool Interferometer::StartExposure(float duration)
 bool Interferometer::AbortExposure()
 {
     int olen = 0;
-    char cmd[2] = { 0x0c, 0x0d };
-    tcflush(PortFD, TCOFLUSH);
-    usleep(10000);
-    tty_write(PortFD, &cmd[0], 1, &olen);
-    usleep(10000);
-    tty_write(PortFD, &cmd[1], 1, &olen);
+    unsigned short cmd = 0x0d0c;
+    tcflush(PortFD, TCIOFLUSH);
+    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
 
     InExposure = false;
     return true;
@@ -441,49 +442,39 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
 
 void Interferometer::ActiveLine(int line, bool on)
 {
-
-    unsigned int value = on << line;
-    power_status &= ~(1 << line);
-    power_status |= value;
-
     int olen = 0;
-    char cmd[9];
+    unsigned short cmd;
+    power_status &= ~(1 << line);
+    power_status |= (on << line);
+    unsigned long tmp_status = power_status;
 
-    cmd[0] = 0x20;
-    cmd[1] = 0xd;
-    usleep(10000);
-    tcflush(PortFD, TCOFLUSH);
-    tty_write(PortFD, cmd, 2, &olen);
+    cmd = 0x0d20;
+    tcflush(PortFD, TCIOFLUSH);
+    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
     tcdrain(PortFD);
 
-    cmd[0] = 0x02;
-    cmd[0] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[1] = 0x02;
-    cmd[1] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[2] = 0x02;
-    cmd[2] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[3] = 0x02;
-    cmd[3] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[4] = 0x02;
-    cmd[4] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[5] = 0x02;
-    cmd[5] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[6] = 0x02;
-    cmd[6] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[7] = 0x02;
-    cmd[7] |= (power_status&0xf)<< 4;
-    power_status >>= 4;
-    cmd[8] = 0xd;
-    usleep(10000);
-    tcflush(PortFD, TCOFLUSH);
-    tty_write(PortFD, cmd, 9, &olen);
+    unsigned long value = 0x0202020202020202;
+    value |= (tmp_status&0xf)<< 4;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 12;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 20;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 28;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 36;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 44;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 52;
+    tmp_status >>= 4;
+    value |= (tmp_status&0xf)<< 60;
+    tmp_status >>= 4;
+    tcflush(PortFD, TCIOFLUSH);
+    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&value)), 8, &olen);
+    cmd = 0xd;
+    tcflush(PortFD, TCIOFLUSH);
+    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 1, &olen);
     tcdrain(PortFD);
 }
 
@@ -575,40 +566,41 @@ bool Interferometer::Handshake()
 {
     PortFD = tcpConnection->getPortFD();
     if(PortFD != -1) {
+        int tmp = 0;
+        int sample_size = 0;
+        int num_nodes = 0;
+        int delay_lines = 0;
+
         int olen;
-        char buf[FRAME_SIZE];
+        char buf[HEADER_SIZE];
 
-        char cmd[2] = { 0x3c, 0x0d };
-        int ntries = 10;
-        tcflush(PortFD, TCOFLUSH);
-        usleep(10000);
-        tty_write(PortFD, &cmd[0], 1, &olen);
-        usleep(10000);
-        tty_write(PortFD, &cmd[1], 1, &olen);
+        unsigned short cmd;
 
-        ntries = 10;
-        while(buf[0] != 0x0d) {
-            while (olen != FRAME_SIZE && ntries-- > 0) {
+        cmd = 0x0d3c;
+        tcflush(PortFD, TCIOFLUSH);
+        tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
+
+        while (buf[0] != 0xd) {
+            int ntries = 10;
+            while (ntries-- > 0)
                 tty_read(PortFD, buf, 1, 1, &olen);
-            }
             if(ntries == 0 || olen != 1) {
+                SAMPLE_SIZE = 0;
+                NUM_NODES = 0;
+                DELAY_LINES = 0;
                 return false;
             }
         }
 
-        ntries = 10;
-        while (olen != FRAME_SIZE && ntries-- > 0)
-            tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
-        if(ntries == 0 || olen != FRAME_SIZE) {
+        tty_read(PortFD, buf, HEADER_SIZE, 1, &olen);
+        if(olen != HEADER_SIZE) {
             SAMPLE_SIZE = 0;
             NUM_NODES = 0;
             DELAY_LINES = 0;
             return false;
         }
 
-        int sample_size = buf[1];
-        int num_nodes = buf[2];
-        int delay_lines = buf[3];
+        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_nodes, &delay_lines, &power_status);
 
         for(int x = 0; x < NUM_NODES; x++) {
             if(baselines[x] != nullptr) {
@@ -616,23 +608,23 @@ bool Interferometer::Handshake()
             }
         }
 
-        countsN = static_cast<INumber*>(realloc(countsN, num_nodes*NUM_STATS*sizeof(INumber)));
-        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, num_nodes*sizeof(INumberVectorProperty)));
+        countsN = static_cast<INumber*>(realloc(countsN, num_nodes*sizeof(INumber)+1));
+        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         nodeEnableS = static_cast<ISwitch*>(realloc(nodeEnableS, num_nodes*2*sizeof(ISwitch)));
-        nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, num_nodes*sizeof(ISwitchVectorProperty)));
+        nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, num_nodes*sizeof(ISwitchVectorProperty)+1));
 
-        nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, num_nodes*2*sizeof(ISwitch)));
-        nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, num_nodes*sizeof(ISwitchVectorProperty)));
+        nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, num_nodes*2*sizeof(ISwitch)+1));
+        nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, num_nodes*sizeof(ISwitchVectorProperty)+1));
 
-        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*num_nodes*sizeof(INumber)));
-        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, num_nodes*sizeof(INumberVectorProperty)));
+        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*num_nodes*sizeof(INumber)+1));
+        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
-        correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*(num_nodes*(num_nodes-1)/2)*sizeof(INumber)));
+        correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*(num_nodes*(num_nodes-1)/2)*sizeof(INumber)+1));
 
-        totalcounts = static_cast<double*>(realloc(totalcounts, num_nodes*sizeof(double)));
-        totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (num_nodes*(num_nodes-1)/2)*sizeof(double)));
-        baselines = static_cast<baseline**>(realloc(baselines, (num_nodes*(num_nodes-1)/2)*sizeof(baseline*)));
+        totalcounts = static_cast<double*>(realloc(totalcounts, num_nodes*sizeof(double)+1));
+        totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (num_nodes*(num_nodes-1)/2)*sizeof(double)+1));
+        baselines = static_cast<baseline**>(realloc(baselines, (num_nodes*(num_nodes-1)/2)*sizeof(baseline*)+1));
 
         for(int x = 0; x < (num_nodes*(num_nodes-1)/2); x++) {
             baselines[x] = new baseline();
@@ -654,7 +646,7 @@ bool Interferometer::Handshake()
             IUFillSwitch(&nodePowerS[x*2+0], "NODE_POWER_ON", "On", ISS_OFF);
             IUFillSwitch(&nodePowerS[x*2+1], "NODE_POWER_OFF", "Off", ISS_ON);
 
-            IUFillNumber(&countsN[x*NUM_STATS], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
+            IUFillNumber(&countsN[x], "NODE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
 
             sprintf(tab, "Node %02d", x+1);
             sprintf(name, "NODE_ENABLE_%02d", x+1);
@@ -666,12 +658,12 @@ bool Interferometer::Handshake()
             sprintf(name, "NODE_LOCATION_%02d", x+1);
             IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
             sprintf(name, "NODE_COUNTS_%02d", x+1);
-            IUFillNumberVector(&countsNP[x], &countsN[x*NUM_STATS], NUM_STATS, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
+            IUFillNumberVector(&countsNP[x], &countsN[x], 1, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
             for (int y = x+1; y < num_nodes; y++) {
-                sprintf(name, "CORRELATIONS_%d_%d", x+1, y+1);
+                sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
                 sprintf(label, "Correlations %d*%d", x+1, y+1);
                 IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
-                sprintf(name, "COHERENCE_%d_%d", x+1, y+1);
+                sprintf(name, "COHERENCE_%0d_%0d", x+1, y+1);
                 sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
                 IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
             }
@@ -680,13 +672,9 @@ bool Interferometer::Handshake()
 
         ActiveLine(num_nodes*2, true);
 
-        cmd[0] = 0x0c;
-        ntries = 10;
-        tcflush(PortFD, TCOFLUSH);
-        usleep(10000);
-        tty_write(PortFD, &cmd[0], 1, &olen);
-        usleep(10000);
-        tty_write(PortFD, &cmd[1], 1, &olen);
+        cmd = 0x0d0c;
+        tcflush(PortFD, TCIOFLUSH);
+        tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
 
         SAMPLE_SIZE = sample_size/4;
         NUM_NODES = num_nodes;
