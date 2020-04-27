@@ -23,15 +23,13 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
+#define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
-#define PIXEL_SIZE AIRY / settingsN[0].value / MAX_RESOLUTION
+#define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
 #define BAUD_RATE 230400
-#define NUM_NODES 12
-#define NUM_STATS 1//((NUM_NODES-1)*2+1)
 #define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
-#define SAMPLE_SIZE 4
-#define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
-#define FRAME_TIME 10.0*FRAME_SIZE/BAUD_RATE
+#define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
 
 class baseline : public INDI::Correlator
 {
@@ -52,6 +50,22 @@ public:
     ~Interferometer() {
         for(int x = 0; x < NUM_BASELINES; x++)
             baselines[x]->~baseline();
+
+        free(countsN);
+        free(countsNP);
+
+        free(nodeEnableS);
+        free(nodeEnableSP);
+
+        free(nodePowerS);
+        free(nodePowerSP);
+
+        free(nodeLocationN);
+        free(nodeLocationNP);
+
+        free(totalcounts);
+        free(totalcorrelations);
+        free(baselines);
     }
 
     void ISGetProperties(const char *dev);
@@ -82,48 +96,50 @@ protected:
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
-    enum
-    {
-        CONNECTION_NONE   = 1 << 0, /** Do not use any connection plugin */
-        CONNECTION_SERIAL = 1 << 1, /** For regular serial and bluetooth connections */
-        CONNECTION_TCP    = 1 << 2  /** For Wired and WiFI connections */
-    } CorrelatorConnection;
-
-
-    Connection::Serial *serialConnection;
     Connection::TCP *tcpConnection;
 
-    /// For Serial & TCP connections
+    /// For TCP connection
     int PortFD = -1;
 
 private:
-    INumber countsN[NUM_NODES*NUM_STATS];
-    INumberVectorProperty countsNP[NUM_NODES];
+    INumber *correlationsN;
+    INumberVectorProperty correlationsNP;
 
-    ISwitch nodeEnableS[NUM_NODES*2];
-    ISwitchVectorProperty nodeEnableSP[NUM_NODES];
+    INumber *countsN;
+    INumberVectorProperty *countsNP;
 
-    INumber nodeLocationN[3*NUM_NODES];
-    INumberVectorProperty nodeLocationNP[NUM_NODES];
+    ISwitch *nodeEnableS;
+    ISwitchVectorProperty *nodeEnableSP;
+
+    ISwitch *nodePowerS;
+    ISwitchVectorProperty *nodePowerSP;
+
+    INumber *nodeLocationN;
+    INumberVectorProperty *nodeLocationNP;
+
+    double *totalcounts;
+    double *totalcorrelations;
+    baseline** baselines;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
-    double totalcounts[NUM_NODES];
-    double totalcorrelations[NUM_BASELINES];
+    unsigned int power_status;
+
     double Lat;
     double timeleft;
     double wavelength;
-    baseline* baselines[NUM_BASELINES];
     void Callback();
     bool callHandshake();
-    uint8_t getInterferometerConnection() const;
-    void setInterferometerConnection(const uint8_t &value);
-    uint8_t interferometerConnection = CONNECTION_NONE;
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
+    void ActiveLine(int line, bool on);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
+
+    int NUM_NODES;
+    int DELAY_LINES;
+    int SAMPLE_SIZE;
 };
