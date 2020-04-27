@@ -1,3 +1,11 @@
+libasi (1.5) buster; urgency=medium
+
+  * ZWO EAF SDK 0.2.0218 release:
+    V0, 2, 0218  2020.2.18
+    fix some bugs
+
+-- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 27 Apr 2020 01:09:38 +0300
+
 libasi (1.4) buster; urgency=medium
 
   * ASICAM 1.14.1227 release:

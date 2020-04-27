@@ -168,7 +168,7 @@ EAF_ERROR_ERROR_STATE: focuser is in error state
 EAF_ERROR_REMOVED: focuser is removed
 
 ***************************************************************************/
-EAF_API	EAF_ERROR_CODE EAFIsMoving(int ID, bool *pbVal, bool* pbHandControl = 0); 
+EAF_API	EAF_ERROR_CODE EAFIsMoving(int ID, bool *pbVal, bool* pbHandControl); 
 
 
 /***************************************************************************
