@@ -67,7 +67,7 @@ void Interferometer::Callback()
     char buf[FRAME_SIZE+1];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
-    double *framebuffer = static_cast<double*>(malloc((w*h)*sizeof(double)));
+    double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
     char str[MAXINDINAME];
     str[SAMPLE_SIZE] = 0;
