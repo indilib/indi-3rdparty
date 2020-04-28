@@ -134,12 +134,12 @@ class CelestronAUX :
 
     void initScope(char const *ip, int port);
     void initScope();
-    bool detectScope();
+    bool detectNetScope(bool set_ip);
+    bool detectNetScope();
     void closeConnection();
     void emulateGPS(AUXCommand &m);
     bool serial_readMsgs(AUXCommand c);
-    bool tcp_readMsgs_tty();
-    bool tcp_readMsgs_net();
+    bool tcp_readMsgs();
     bool readMsgs(AUXCommand c);
     void processCmd(AUXCommand &cmd);
     void querryStatus();

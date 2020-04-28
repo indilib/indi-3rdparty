@@ -19,11 +19,11 @@
 
 bool TOUT_DEBUG = false;
 bool GPS_DEBUG = false;
-bool RD_DEBUG  = true;
-bool WR_DEBUG  = true;
-bool SEND_DEBUG  = true;
+bool RD_DEBUG  = false;
+bool WR_DEBUG  = false;
+bool SEND_DEBUG  = false;
 bool PROC_DEBUG  = false;
-bool SERIAL_DEBUG  = true;
+bool SERIAL_DEBUG  = false;
 
 using namespace INDI::AlignmentSubsystem;
 
@@ -33,7 +33,7 @@ using namespace INDI::AlignmentSubsystem;
 #define GUIDE_SLEW_RATE     2
 
 // We declare an auto pointer to CelestronAUX.
-std::unique_ptr<CelestronAUX> telescope_nse(new CelestronAUX());
+std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
 
 
 void msleep(unsigned ms)
@@ -56,33 +56,33 @@ double anglediff(double a, double b)
 
 void ISGetProperties(const char *dev)
 {
-    telescope_nse->ISGetProperties(dev);
+    telescope_caux->ISGetProperties(dev);
 }
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-    telescope_nse->ISNewSwitch(dev, name, states, names, num);
+    telescope_caux->ISNewSwitch(dev, name, states, names, num);
 }
 
 void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
 {
-    telescope_nse->ISNewText(dev, name, texts, names, num);
+    telescope_caux->ISNewText(dev, name, texts, names, num);
 }
 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
-    telescope_nse->ISNewNumber(dev, name, values, names, num);
+    telescope_caux->ISNewNumber(dev, name, values, names, num);
 }
 
 void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
                char *names[], int n)
 {
-    telescope_nse->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    telescope_caux->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 void ISSnoopDevice(XMLEle *root)
 {
-    telescope_nse->ISSnoopDevice(root);
+    telescope_caux->ISSnoopDevice(root);
 }
 
 // One definition rule (ODR) constants
@@ -112,7 +112,7 @@ CelestronAUX::CelestronAUX()
                                TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION,
                            4);
 
-    LOG_INFO("Celestron AUX instancing\n");
+    LOG_INFO("Celestron AUX instancing");
 
     //Both communication available, Serial and network (tcp/ip).
     setTelescopeConnection(CONNECTION_TCP|CONNECTION_SERIAL);
@@ -174,10 +174,8 @@ bool CelestronAUX::Abort()
     return true;
 }
 
-bool CelestronAUX::detectScope()
+bool CelestronAUX::detectNetScope(bool set_ip)
 {
-    fprintf(stderr, "CAUX: Detect scope\n");
-
     struct sockaddr_in myaddr;           /* our address */
     struct sockaddr_in remaddr;          /* remote address */
     socklen_t addrlen = sizeof(remaddr); /* length of addresses */
@@ -188,7 +186,7 @@ bool CelestronAUX::detectScope()
     unsigned char buf[BUFSIZE]; /* receive buffer */
 
     /* create a UDP socket */
-    fprintf(stderr, "Detecting scope IP ... ");
+    fprintf(stderr, "CAUX: Detecting scope IP ... ");
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         perror("cannot create socket\n");
@@ -227,6 +225,11 @@ bool CelestronAUX::detectScope()
             fprintf(stderr, "%s:%d (%d)\n", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
             //addr.sin_addr.s_addr = remaddr.sin_addr.s_addr;
             //addr.sin_port        = remaddr.sin_port;
+            if (set_ip)
+            {
+                tcpConnection->setDefaultHost(inet_ntoa(remaddr.sin_addr));
+                tcpConnection->setDefaultPort(ntohs(remaddr.sin_port));
+            }
             close(fd);
             return true;
         }
@@ -236,6 +239,11 @@ bool CelestronAUX::detectScope()
     return false;
 }
 
+
+bool CelestronAUX::detectNetScope()
+{
+    return detectNetScope(false);
+}
 
 bool CelestronAUX::Handshake()
 {
@@ -260,42 +268,39 @@ bool CelestronAUX::Handshake()
             }
             else
             {
-                LOG_INFO("Detected Hand Controller serial connection.\n");
+                LOG_INFO("Detected Hand Controller serial connection.");
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
                 if (!tty_set_speed(PortFD, B9600))
                 {
-                    LOG_ERROR("Cannot set serial speed to 9600 baud.\n");
+                    LOG_ERROR("Cannot set serial speed to 9600 baud.");
                     return false;
                 }
 
-                LOG_INFO("Setting serial speed to 9600 baud.\n");
+                LOG_INFO("Setting serial speed to 9600 baud.");
             }
 
+            // read firmware version, if read ok, detected scope
+            AUXCommand firmver(GET_VER,APP,ALT);
+            if (!sendCmd(firmver))
+                return false;
+            if (!readMsgs(firmver))
+                return false;
+            DEBUG(DBG_CAUX,"Telescope detected.");
         }
-        // read firmware version, if read ok, detected HC serial
-        AUXCommand firmver(GET_VER,APP,ALT);
-        if (!sendCmd(firmver))
-            return false;
-        if (!readMsgs(firmver))
-            return false;
+        else
+        {
+            DEBUG(DBG_CAUX,"Network telescope handshake routine not imlemented yet - flying blind.");
+        }
+        
 
-        // We are connected. Just start processing!
-	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.\n");
-        //readMsgs();
+	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.");
         return true;
     }
-
-    // Detect the scope by UDP broadcasts from port 2000 to port 55555
-    // This is just to print where is the scope if there is no connection
-    
-    if (!detectScope())
+    else
     {
-        LOG_INFO("Connect: cannot detect the scope!\n");
+        return false ;
     }
-    return false;
-    //scope.initScope(tcpConnection->host(), tcpConnection->port());
     
-    return true ;
 }
 
 bool CelestronAUX::Disconnect()
@@ -505,8 +510,11 @@ bool CelestronAUX::initProperties()
     //FP default connection options
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
 
-    tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
-    tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
+    if (!detectNetScope(true))
+    {
+        tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
+        tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
+    }
 
     return true;
 }
@@ -1318,7 +1326,7 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
     
     if (isRTSCTS)
     {
-        // if connected to AUX/NET or PC ports, receive AUX command response.
+        // if connected to AUX or PC ports, receive AUX command response.
         // search for packet preamble (0x3b)
         do 
         {
@@ -1396,7 +1404,7 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
     return true;
 }
 
-bool CelestronAUX::tcp_readMsgs_net()
+bool CelestronAUX::tcp_readMsgs()
 {
 
     int n, i;
@@ -1463,59 +1471,6 @@ bool CelestronAUX::tcp_readMsgs_net()
     return false;
 }
 
-bool CelestronAUX::tcp_readMsgs_tty()
-{
-    int n;
-    unsigned char buf[BUFFER_SIZE];
-    AUXCommand cmd;
-
-    // We are not connected. Nothing to do.
-    if ( ! isConnected() )
-        return false;
-
-    // search for packet preamble (0x3b)
-    if (RD_DEBUG)
-        fprintf(stderr, "tcp_readMsgs_tty (%d): ", PortFD);
-
-    do 
-    {
-        if (tty_read(PortFD,(char*)buf,1,READ_TIMEOUT,&n) != TTY_OK)
-            return false;
-    }
-    while (buf[0] != 0x3b);
-
-    if (RD_DEBUG)
-        fprintf(stderr, " 0x3b ");
-
-    // packet preamble is found, now read packet length.
-    if (tty_read(PortFD,(char*)(buf+1),1,READ_TIMEOUT,&n) != TTY_OK)
-        return false;
-
-    if (RD_DEBUG)
-        fprintf(stderr, " len = %02x ", buf[1]);
-
-    // now packet length is known, read the rest of the packet.
-    if (tty_read(PortFD,(char*)(buf+2),buf[1]+1,READ_TIMEOUT,&n) != TTY_OK 
-            || n != buf[1] + 1){
-        DEBUG(DBG_CAUX,"Did not got whole packet. Dropping out.");
-        return false;
-    }
-
-    // Got the packet, process it
-    // n:length field >=3
-    // The buffer of n+2>=5 bytes contains:
-    // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
-    buffer b(buf, buf + (n+2)); 
-    if (RD_DEBUG) 
-    {
-        fprintf(stderr, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
-        prnBytes(buf, n+2);
-    }
-    cmd.parseBuf(b);
-    processCmd(cmd);
-
-    return true;
-}
 
 
 bool CelestronAUX::readMsgs(AUXCommand c)
@@ -1523,8 +1478,7 @@ bool CelestronAUX::readMsgs(AUXCommand c)
     if (getActiveConnection() == serialConnection)   
         return serial_readMsgs(c);
     else 
-        //do {} while (tcp_readMsgs_tty());
-        return tcp_readMsgs_net();
+        return tcp_readMsgs();
 }
 
 
@@ -1738,19 +1692,19 @@ bool CelestronAUX::tty_set_speed(int PortFD, speed_t speed)
     if (tcgetattr(PortFD, &tty_setting))
     {
         LOGF_ERROR("Error getting tty attributes %s(%d).\n",strerror(errno), errno);
-	return false;
+	    return false;
     }
          
     if (cfsetspeed(&tty_setting, speed))
     {
         LOGF_ERROR("Error setting serial speed %s(%d).\n",strerror(errno), errno);
-	return false;
+	    return false;
     }
 
     if (tcsetattr(PortFD, TCSANOW, &tty_setting))
     {
         LOGF_ERROR("Error setting tty attributes %s(%d).\n",strerror(errno), errno);
-	return false;
+	    return false;
     }
          
  
