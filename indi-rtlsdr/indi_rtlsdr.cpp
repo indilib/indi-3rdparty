@@ -1,5 +1,5 @@
 /*
-    indi_rtlsdr_spectrograph - a software defined radio driver for INDI
+    indi_rtlsdr - a software defined radio driver for INDI
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -17,10 +17,11 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "indi_rtlsdr_spectrograph.h"
+#include "indi_rtlsdr.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <termios.h>
 #include <indilogger.h>
 #include <memory>
 #include <indicom.h>
@@ -32,21 +33,22 @@
         _a < _b ? _a : _b;      \
     })
 #define MAX_TRIES      20
-#define MAX_DEVICES    4
 #define SUBFRAME_SIZE  (16384)
 #define MIN_FRAME_SIZE (512)
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
 #define SPECTRUM_SIZE  (256)
 
 static int iNumofConnectedSpectrographs;
-static RTLSDR *receivers[MAX_DEVICES];
+static RTLSDR **receivers;
+
+static bool isInit = false;
 
 static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void cleanup()
 {
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         delete receivers[i];
     }
@@ -54,37 +56,53 @@ static void cleanup()
 
 void RTLSDR::Callback()
 {
+    b_read  = 0;
+    to_read = getSampleRate() * IntegrationRequest * getBPS() / 8;
+    setBufferSize(to_read);
+
     int len            = min(MAX_FRAME_SIZE, to_read);
     int olen           = 0;
     unsigned char *buf = (unsigned char *)malloc(len);
-    rtlsdr_reset_buffer(rtl_dev);
+    if((getSensorConnection() & CONNECTION_TCP) == 0)
+        rtlsdr_reset_buffer(rtl_dev);
+    else
+        tcflush(PortFD, TCOFLUSH);
+    setIntegrationTime(IntegrationRequest);
     while (InIntegration)
     {
-        rtlsdr_read_sync(rtl_dev, buf, len, &olen);
-        buffer = buf;
-        n_read = olen;
-        grabData();
+        if((getSensorConnection() & CONNECTION_TCP) == 0)
+            rtlsdr_read_sync(rtl_dev, buf, len, &olen);
+        else
+            olen = read(PortFD, buf, len);
+        if(olen < 0 )
+            AbortIntegration();
+        else {
+            buffer = buf;
+            n_read = olen;
+            grabData();
+        }
     }
 }
 
 void ISInit()
 {
-    static bool isInit = false;
     if (!isInit)
     {
         iNumofConnectedSpectrographs = 0;
 
-        iNumofConnectedSpectrographs = rtlsdr_get_device_count();
-        if (iNumofConnectedSpectrographs > MAX_DEVICES)
-            iNumofConnectedSpectrographs = MAX_DEVICES;
-        if (iNumofConnectedSpectrographs <= 0)
+        iNumofConnectedSpectrographs = static_cast<int>(rtlsdr_get_device_count());
+        if (iNumofConnectedSpectrographs == 0)
         {
             //Try sending IDMessage as well?
-            IDLog("No RTLSDR receivers detected. Power on?");
-            IDMessage(nullptr, "No RTLSDR receivers detected. Power on?");
+            IDLog("No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
+            IDMessage(nullptr, "No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
+            //iNumofConnectedSpectrographs = -1;
+            //receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
+            //receivers[0] = new RTLSDR(-1);
         }
         else
         {
+            receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
             for (int i = 0; i < iNumofConnectedSpectrographs; i++)
             {
                 receivers[i] = new RTLSDR(i);
@@ -99,14 +117,13 @@ void ISInit()
 void ISGetProperties(const char *dev)
 {
     ISInit();
-
     if (iNumofConnectedSpectrographs == 0)
     {
         IDMessage(nullptr, "No RTLSDR receivers detected. Power on?");
         return;
     }
 
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
@@ -121,7 +138,7 @@ void ISGetProperties(const char *dev)
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
     ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
@@ -136,7 +153,7 @@ void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names
 void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
 {
     ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
@@ -151,7 +168,7 @@ void ISNewText(const char *dev, const char *name, char *texts[], char *names[], 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
     ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
@@ -167,7 +184,7 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
                char *names[], int num)
 {
     ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
@@ -182,21 +199,24 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
 void ISSnoopDevice(XMLEle *root)
 {
     ISInit();
-
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
     {
         RTLSDR *receiver = receivers[i];
         receiver->ISSnoopDevice(root);
     }
 }
 
-RTLSDR::RTLSDR(uint32_t index)
+RTLSDR::RTLSDR(int32_t index)
 {
     InIntegration = false;
+    if(index<0) {
+        setSensorConnection(CONNECTION_TCP);
+    }
+
     spectrographIndex = index;
 
     char name[MAXINDIDEVICE];
-    snprintf(name, MAXINDIDEVICE, "%s %d", getDefaultName(), index);
+    snprintf(name, MAXINDIDEVICE, "%s %s%c", getDefaultName(), index < 0 ? "TCP" : "USB", index < 0 ? '\0' : index + '1');
     setDeviceName(name);
     // We set the Spectrograph capabilities
     uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING | SENSOR_HAS_DSP;
@@ -204,35 +224,29 @@ RTLSDR::RTLSDR(uint32_t index)
 
 }
 
-/**************************************************************************************
-** Client is asking us to establish connection to the device
-***************************************************************************************/
 bool RTLSDR::Connect()
 {
-    int r = rtlsdr_open(&rtl_dev, spectrographIndex);
-    if (r < 0)
-    {
-        LOGF_ERROR("Failed to open rtlsdr device index %d.", spectrographIndex);
-        return false;
+    if((getSensorConnection() & CONNECTION_TCP) == 0) {
+        int r = rtlsdr_open(&rtl_dev, static_cast<uint32_t>(spectrographIndex));
+        if (r < 0)
+        {
+            LOGF_ERROR("Failed to open rtlsdr device index %d.", spectrographIndex);
+            return false;
+        }
     }
-
-    streamPredicate = 0;
-    terminateThread = false;
-    LOG_INFO("RTL-SDR Spectrograph connected successfully!");
-    // Let's set a timer that checks teleSpectrographs status every POLLMS milliseconds.
-    // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
-    //SetTimer(POLLMS);
-
     return true;
 }
-
 /**************************************************************************************
 ** Client is asking us to terminate connection to the device
 ***************************************************************************************/
 bool RTLSDR::Disconnect()
 {
     InIntegration = false;
-    rtlsdr_close(rtl_dev);
+    if((getSensorConnection() & CONNECTION_TCP) == 0) {
+        rtlsdr_close(rtl_dev);
+    }
+    PortFD = -1;
+
     setBufferSize(1);
     pthread_mutex_lock(&condMutex);
     streamPredicate = 1;
@@ -271,7 +285,6 @@ bool RTLSDR::initProperties()
     addAuxControls();
 
     setDefaultPollingPeriod(500);
-
     return true;
 }
 
@@ -303,23 +316,59 @@ void RTLSDR::setupParams(float sr, float freq, float gain)
 {
     int r = 0;
 
-    r |= rtlsdr_set_agc_mode(rtl_dev, 0);
-    r |= rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
-    r |= rtlsdr_set_tuner_gain(rtl_dev, (int)(gain * 10));
-    r |= rtlsdr_set_center_freq(rtl_dev, (uint32_t)freq);
-    r |= rtlsdr_set_sample_rate(rtl_dev, (uint32_t)sr);
-    r |= rtlsdr_set_tuner_bandwidth(rtl_dev, (uint32_t)sr);
+    if((getSensorConnection() & CONNECTION_TCP) == 0) {
+        r |= rtlsdr_set_agc_mode(rtl_dev, 0);
+        r |= rtlsdr_set_tuner_gain_mode(rtl_dev, 1);
+        r |= rtlsdr_set_tuner_gain(rtl_dev, static_cast<int>(gain * 10));
+        r |= rtlsdr_set_center_freq(rtl_dev, static_cast<uint32_t>(freq));
+        r |= rtlsdr_set_sample_rate(rtl_dev, static_cast<uint32_t>(sr));
+        r |= rtlsdr_set_tuner_bandwidth(rtl_dev, static_cast<uint32_t>(sr));
+        if (r != 0)
+        {
+            LOG_INFO("Issue(s) setting parameters.");
+        }
 
-    if (r != 0)
-    {
-        LOG_INFO("Issue(s) setting parameters.");
+        setBPS(16);
+        setGain(static_cast<double>(rtlsdr_get_tuner_gain(rtl_dev))/10.0);
+        setFrequency(static_cast<double>(rtlsdr_get_center_freq(rtl_dev)));
+        setSampleRate(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
+        setBandwidth(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
+    } else {
+        sendTcpCommand(CMD_SET_FREQ, static_cast<int>(freq));
+        sendTcpCommand(CMD_SET_SAMPLE_RATE, static_cast<int>(sr));
+        sendTcpCommand(CMD_SET_TUNER_GAIN_MODE, 0);
+        sendTcpCommand(CMD_SET_GAIN, static_cast<int>(gain * 10));
+        sendTcpCommand(CMD_SET_FREQ_COR, 0);
+        sendTcpCommand(CMD_SET_AGC_MODE, 0);
+        sendTcpCommand(CMD_SET_TUNER_GAIN_INDEX, 0);
+
+        setBPS(16);
+        setGain(gain);
+        setFrequency(freq);
+        setSampleRate(sr);
+        setBandwidth(sr);
     }
+}
 
-    setBPS(16);
-    setGain(static_cast<double>(rtlsdr_get_tuner_gain(rtl_dev))/10.0);
-    setFrequency(static_cast<double>(rtlsdr_get_center_freq(rtl_dev)));
-    setSampleRate(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
-    setBandwidth(static_cast<double>(rtlsdr_get_sample_rate(rtl_dev)));
+bool RTLSDR::sendTcpCommand(int cmd, int value)
+{
+    unsigned char tosend[5];
+    tosend[0] = static_cast<unsigned char>(cmd);
+    tosend[1] = value&0xff;
+    value >>= 8;
+    tosend[2] = value&0xff;
+    value >>= 8;
+    tosend[3] = value&0xff;
+    value >>= 8;
+    tosend[4] = value&0xff;
+    value >>= 8;
+    tcflush(PortFD, TCOFLUSH);
+    int count = 0;
+    while(count < 5) {
+        count = write(PortFD, tosend, 5);
+        if (count < 0) return false;
+    }
+    return true;
 }
 
 bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -352,25 +401,15 @@ bool RTLSDR::ISNewNumber(const char *dev, const char *name, double values[], cha
 ***************************************************************************************/
 bool RTLSDR::StartIntegration(double duration)
 {
-    IntegrationRequest = duration;
+    IntegrationRequest = static_cast<float>(duration);
     AbortIntegration();
 
-    // Since we have only have one Spectrograph with one chip, we set the exposure duration of the primary Spectrograph
-    setIntegrationTime(duration);
-    b_read  = 0;
-    to_read = getSampleRate() * getIntegrationTime() * sizeof(unsigned short);
-
-    setBufferSize(to_read);
-
-    if (to_read > 0)
-    {
-        LOG_INFO("Integration started...");
-        // Run threads
-        std::thread(&RTLSDR::Callback, this).detach();
-        gettimeofday(&IntStart, nullptr);
-        InIntegration = true;
-        return true;
-    }
+    LOG_INFO("Integration started...");
+    // Run threads
+    std::thread(&RTLSDR::Callback, this).detach();
+    gettimeofday(&IntStart, nullptr);
+    InIntegration = true;
+    return true;
 
     // We're done
     return false;
@@ -393,8 +432,8 @@ bool RTLSDR::AbortIntegration()
 ***************************************************************************************/
 float RTLSDR::CalcTimeLeft()
 {
-    double timesince;
-    double timeleft;
+    float timesince;
+    float timeleft;
     struct timeval now;
     gettimeofday(&now, nullptr);
 
@@ -418,7 +457,7 @@ void RTLSDR::TimerHit()
 
     if (InIntegration)
     {
-        timeleft = CalcTimeLeft();
+        timeleft = static_cast<long>(CalcTimeLeft());
         if (timeleft < 0.1)
         {
             /* We're done capturing */
@@ -525,5 +564,24 @@ void RTLSDR::streamCaptureHelper()
     }
 
     pthread_mutex_unlock(&condMutex);
+}
+
+bool RTLSDR::Handshake()
+{
+    if(getSensorConnection() & CONNECTION_TCP) {
+        if(PortFD == -1) {
+            LOG_ERROR("Failed to connect to rtl_tcp server.");
+            return false;
+        }
+    }
+
+    streamPredicate = 0;
+    terminateThread = false;
+    LOG_INFO("RTL-SDR Spectrograph connected successfully!");
+    // Let's set a timer that checks teleSpectrographs status every POLLMS milliseconds.
+    // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
+    //SetTimer(POLLMS);
+
+    return true;
 }
 
