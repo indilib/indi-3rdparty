@@ -32,6 +32,8 @@ using namespace INDI::AlignmentSubsystem;
 #define CENTERING_SLEW_RATE 3
 #define GUIDE_SLEW_RATE     2
 
+#define MOUNTINFO_TAB "Mount info"
+
 // We declare an auto pointer to CelestronAUX.
 std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
 
@@ -520,7 +522,7 @@ bool CelestronAUX::initProperties()
 
     IUFillSwitch(&CordWrapS[CORDWRAP_OFF], "CORDWRAP_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&CordWrapS[CORDWRAP_ON], "CORDWRAP_ON", "ON", ISS_ON);
-    IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cordwrap", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cordwrap", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     return true;
 }
