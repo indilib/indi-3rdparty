@@ -1,3 +1,10 @@
+indi-celestronaux (0.6) UNRELEASED; urgency=medium
+
+  * Implemented serial interface over AUX/PC and HC ports
+  * First steps to specific mount functions (non-functional yet)
+
+ -- Pawel T. Jochym <jochym@wolf.ifj.edu.pl>  Wed, 29 Apr 2020 03:49:10 +0200
+
 indi-celestronaux (0.5) unstable; urgency=medium
 
   * New release based on the indi-nexstarevo drive
