@@ -25,6 +25,7 @@ class CelestronAUX :
 
   protected:
     virtual bool initProperties() override;
+    virtual bool updateProperties() override;
     virtual bool saveConfigItems(FILE *fp) override;
     //virtual bool Connect() override;
     virtual bool Handshake() override;
@@ -58,6 +59,10 @@ class CelestronAUX :
     bool SlewAZ(int rate);
     bool GoToFast(long alt, long az, bool track);
     bool GoToSlow(long alt, long az, bool track);
+    bool setCordwrap(bool enable);
+    bool getCordwrap();
+    bool setCordwrapPos(long pos);
+    long getCordwrapPos();
     bool Track(long altRate, long azRate);
     bool TimerTick(double dt);
 
@@ -156,6 +161,8 @@ class CelestronAUX :
     long slewRate;
     bool tracking;
     bool slewingAlt, slewingAz;
+    bool cordwrap;
+    long cordwrapPos;
 
     // FP
     int modem_ctrl;
@@ -168,4 +175,10 @@ class CelestronAUX :
     bool tty_set_speed(int PortFD, speed_t speed);
     void hex_dump(char *buf, buffer data, size_t size);
 
+
+    // Additional interface elements specific to Celestron Scopes
+    private:
+    ISwitch CordWrapS[2];
+    ISwitchVectorProperty CordWrapSP;
+    enum { CORDWRAP_OFF, CORDWRAP_ON };
 };

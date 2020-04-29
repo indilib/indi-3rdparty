@@ -122,6 +122,7 @@ CelestronAUX::CelestronAUX()
 
     // Max ticks before we reissue the goto to update position
     maxSlewTicks = 15;
+    cordwrap = false;
 }
 
 CelestronAUX::~CelestronAUX()
@@ -516,6 +517,31 @@ bool CelestronAUX::initProperties()
         tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
     }
 
+    IUFillSwitch(&CordWrapS[CORDWRAP_OFF], "CORDWRAP_OFF", "OFF", ISS_OFF);
+    IUFillSwitch(&CordWrapS[CORDWRAP_ON], "CORDWRAP_ON", "ON", ISS_ON);
+    IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cordwrap", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    return true;
+}
+
+bool CelestronAUX::updateProperties()
+{
+    // We must ALWAYS call the parent class updateProperties() first
+    INDI::Telescope::updateProperties();
+
+    // If we are connected, we define the property to the client.
+    if (isConnected())
+    {
+        defineSwitch(&CordWrapSP);
+        //getCordwrap();
+        IUResetSwitch(&CordWrapSP);
+        CordWrapS[cordwrap].s=ISS_ON;
+        IDSetSwitch(&CordWrapSP, NULL);
+    }
+    // Otherwise, we delete the property from the client
+    else
+        deleteProperty(CordWrapSP.name);
+
     return true;
 }
 
@@ -578,6 +604,34 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             SlewRateSP.s = IPS_OK;
             IDSetSwitch(&SlewRateSP, nullptr);
             return true;
+        }
+        
+        // Cordwrap
+        if (!strcmp(name, CordWrapSP.name))
+        {
+          // Find out which state is requested by the client
+          const char *actionName = IUFindOnSwitchName(states, names, n);
+          // If switch is the same state as actionName, then we do nothing. 
+          // i.e. if actionName is CORWRAP_OFF and cordwrap is already off, we return
+          int currentCWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+          if (!strcmp(actionName, CordWrapS[currentCWIndex].name))
+          {
+             DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap is already %s", CordWrapS[currentCWIndex].label);
+             CordWrapSP.s = IPS_IDLE;
+             IDSetSwitch(&CordWrapSP, NULL);
+             return true;
+          }
+           
+          // Otherwise, let us update the switch state
+          IUUpdateSwitch(&CordWrapSP, states, names, n);
+          currentCWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+          DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap is now %s (%d)", CordWrapS[currentCWIndex].label, currentCWIndex);
+          CordWrapSP.s = IPS_OK;
+          IDSetSwitch(&CordWrapSP, NULL);
+          DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap setting/getting is not implemented yet (%s)", "ISNewSwitch");
+          //setCordwrap(currentCWIndex);
+          return true;
+
         }
 
         // Process alignment properties
@@ -1059,6 +1113,44 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
     return true;
 };
 
+
+bool CelestronAUX::setCordwrap(bool enable)
+{
+    DEBUGF(INDI::Logger::DBG_SESSION, "setCordWrap before %d", cordwrap);
+    AUXCommand cwcmd((enable) ? MC_ENABLE_CORDWRAP : MC_DISABLE_CORDWRAP, APP, AZM);
+    sendCmd(cwcmd);
+    readMsgs(cwcmd);
+    DEBUGF(INDI::Logger::DBG_SESSION, "setCordWrap after %d", cordwrap);
+    return true;
+};
+
+bool CelestronAUX::getCordwrap()
+{
+    AUXCommand cwcmd(MC_POLL_CORDWRAP, APP, AZM);
+    sendCmd(cwcmd);
+    readMsgs(cwcmd);
+    DEBUGF(INDI::Logger::DBG_SESSION, "getCordWrap is %d", cordwrap);
+    return cordwrap;
+};
+
+bool CelestronAUX::setCordwrapPos(long pos)
+{
+    AUXCommand cwcmd(MC_SET_CORDWRAP_POS, APP, AZM);
+    cwcmd.setPosition(pos);
+    sendCmd(cwcmd);
+    readMsgs(cwcmd);
+    return true;
+};
+
+long CelestronAUX::getCordwrapPos()
+{
+    AUXCommand cwcmd(MC_GET_CORDWRAP_POS, APP, AZM);
+    sendCmd(cwcmd);
+    readMsgs(cwcmd);
+    return cordwrapPos;
+};
+
+
 bool CelestronAUX::Track(long altRate, long azRate)
 {
     // The scope rates are per minute?
@@ -1306,6 +1398,14 @@ void CelestronAUX::processCmd(AUXCommand &m)
                     default:
                         break;
                 }
+                break;
+            case MC_POLL_CORDWRAP:
+                if (m.src == AZM)
+                    cordwrap = m.data[0] == 0xff;
+                break;
+            case MC_GET_CORDWRAP_POS:
+                if (m.src == AZM)
+                    cordwrapPos = m.getPosition();
                 break;
             default:
                 break;
