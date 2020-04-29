@@ -405,7 +405,8 @@ int gphoto_set_widget_num(gphoto_driver *gphoto, gphoto_widget *widget, float va
     if (ret == GP_OK)
         ret = gphoto_set_config(gphoto->camera, gphoto->config, gphoto->context);
     else
-        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "Failed to set widget %s configuration (%s)", widget->name, gp_result_as_string(ret));
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "Failed to set widget %s configuration (%s)", widget->name,
+                     gp_result_as_string(ret));
 
     return ret;
 }
@@ -447,7 +448,8 @@ static double *parse_shutterspeed(gphoto_driver *gphoto, gphoto_widget *widget)
 
     if (widget->choice_cnt <= 0)
     {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING, "Shutter speed widget does not have any valid data (count=%d). Using fallback speeds...",
+        DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING,
+                     "Shutter speed widget does not have any valid data (count=%d). Using fallback speeds...",
                      widget->choice_cnt);
 
         widget->choices = const_cast<char **>(fallbackShutterSpeeds);
@@ -593,7 +595,8 @@ static void *stop_bulb(void *arg)
         // All camera opertions take place with the mutex held, so we are thread-safe
         pthread_cond_timedwait(&gphoto->signal, &gphoto->mutex, &timeout);
         //DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,"timeout expired");
-        if (!(gphoto->command & DSLR_CMD_DONE) && ( (gphoto->command & DSLR_CMD_BULB_CAPTURE) || (gphoto->command & DSLR_CMD_ABORT)))
+        if (!(gphoto->command & DSLR_CMD_DONE) && ( (gphoto->command & DSLR_CMD_BULB_CAPTURE)
+                || (gphoto->command & DSLR_CMD_ABORT)))
         {
             gphoto->is_aborted = (gphoto->command & DSLR_CMD_ABORT);
             if (gphoto->command & DSLR_CMD_BULB_CAPTURE)
@@ -743,7 +746,8 @@ int find_exposure_setting(gphoto_driver *gphoto, gphoto_widget *widget, uint32_t
     }
 
     if (best_idx >= 0)
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Closest match: %g seconds Index: %d", gphoto->exposureList[best_idx], best_idx);
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Closest match: %g seconds Index: %d", gphoto->exposureList[best_idx],
+                     best_idx);
     else
         DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "No optimal predefined exposure found.");
 
@@ -764,7 +768,8 @@ struct membuf : std::streambuf
         this->setg(begin, begin, end);
     }
 
-    virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode /*which = std::ios_base::in*/) override
+    virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                             std::ios_base::openmode /*which = std::ios_base::in*/) override
     {
         if(dir == std::ios_base::cur)
             gbump(off);
@@ -796,7 +801,8 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     else
     {
         DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
-                     "Downloading image... Name: (%s) Folder: (%s) Delete from SD card? (%s)", fn->name, fn->folder, gphoto->delete_sdcard_image ? "true" : "false");
+                     "Downloading image... Name: (%s) Folder: (%s) Delete from SD card? (%s)", fn->name, fn->folder,
+                     gphoto->delete_sdcard_image ? "true" : "false");
     }
 
     strncpy(gphoto->filename, fn->name, sizeof(gphoto->filename));
@@ -1068,8 +1074,12 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
     // JM 2020-03-23: If we are using external shutter release, for exposures less than shutter threshold
     // try to find optimal exposure time.
-    if (gphoto->force_bulb == false ||
-            ((gphoto->bulb_port[0] || gphoto->dsusb) && exptime_usec <= RELEASE_SHUTTER_THRESHOLD))
+    // JM 2020-04-30: According to issue #104 on Github (https://github.com/indilib/indi-3rdparty/issues/104)
+    // force_bulb must be used a required (false) for optimal exposure index to be searched. This affects
+    // Canon 400D.
+    if (gphoto->force_bulb == false &&
+            ((gphoto->bulb_port[0] || gphoto->dsusb)
+             && exptime_usec <= RELEASE_SHUTTER_THRESHOLD))
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
 
     // Set Capture Target
@@ -1231,12 +1241,14 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     else if (gphoto->exposure_widget && gphoto->exposure_widget->type == GP_WIDGET_TEXT)
     {
         gphoto_set_widget_text(gphoto, gphoto->exposure_widget, fallbackShutterSpeeds[optimalExposureIndex]);
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Using predefined exposure time: %s seconds", fallbackShutterSpeeds[optimalExposureIndex]);
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Using predefined exposure time: %s seconds",
+                     fallbackShutterSpeeds[optimalExposureIndex]);
     }
     else if (gphoto->exposure_widget)
     {
         gphoto_set_widget_num(gphoto, gphoto->exposure_widget, optimalExposureIndex);
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Using predefined exposure time: %g seconds", gphoto->exposureList[optimalExposureIndex]);
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Using predefined exposure time: %g seconds",
+                     gphoto->exposureList[optimalExposureIndex]);
     }
 
     // Lock the mirror if required.
