@@ -511,7 +511,8 @@ bool CelestronAUX::initProperties()
     //FP default connection options
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
 
-    if (!detectNetScope(true))
+    // Removed for now to avoid hanging on startup
+    //if (!detectNetScope(true))
     {
         tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
         tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
