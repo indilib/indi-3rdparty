@@ -159,6 +159,7 @@ struct _gphoto_driver
 
     bool supports_temperature;
     float last_sensor_temp;
+    bool bulb_mode {false};
 
     DSUSBDriver *dsusb;
 
@@ -1055,8 +1056,8 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         return -1;
     }
 
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Starting exposure (exptime: %g secs, mirror lock: %d)",
-                 exptime_usec / 1e6, mirror_lock);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Starting exposure (exptime: %g secs, mirror lock: %d, force bulb: %s, exposure index: %d)",
+                 exptime_usec / 1e6, mirror_lock, gphoto->force_bulb ? "true": "false", gphoto->exposure_widget ? gphoto->exposure_widget->value.num : -1);
     pthread_mutex_lock(&gphoto->mutex);
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Mutex locked");
 
@@ -1123,15 +1124,19 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         }
 
         // We set bulb setting for exposure widget if it is defined by the camera
-        if (gphoto->exposureList && gphoto->exposure_widget->type != GP_WIDGET_TEXT && gphoto->bulb_exposure_index != -1)
+        //if (gphoto->exposureList && gphoto->exposure_widget->type != GP_WIDGET_TEXT && gphoto->bulb_exposure_index != -1)
+        if (!gphoto->bulb_mode && gphoto->bulb_exposure_index != -1)
         {
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Setting exposure widget bulb index: %d", gphoto->bulb_exposure_index);
+            if (gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index) == GP_OK)
+                gphoto->bulb_mode = true;
             // If it's not already set to the bulb exposure index
-            if (gphoto->bulb_exposure_index != static_cast<uint8_t>(gphoto->exposure_widget->value.index))
-            {
-                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Setting exposure widget bulb index: %d",
-                             gphoto->bulb_exposure_index);
-                gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index);
-            }
+//            if (gphoto->bulb_exposure_index != static_cast<uint8_t>(gphoto->exposure_widget->value.index))
+//            {
+//                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Setting exposure widget bulb index: %d",
+//                             gphoto->bulb_exposure_index);
+//                gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index);
+//            }
         }
 
         // If we have mirror lock enabled, let's lock mirror. Return on failure
@@ -1257,6 +1262,8 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         pthread_mutex_unlock(&gphoto->mutex);
         return -1;
     }
+
+    gphoto->bulb_mode = false;
 
     //    // If bulb port is specified, a serial shutter control is required to start the exposure. Treat this as a bulb exposure.
     //    if (gphoto->bulb_port[0] && !gphoto->dsusb)
