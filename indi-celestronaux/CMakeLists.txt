@@ -1,4 +1,4 @@
-########### NexStar Evolution INDI driver ##############
+########### Celestron AUX INDI driver ##############
 PROJECT(indi-celestronaux C CXX)
 cmake_minimum_required(VERSION 2.8)
 
@@ -26,8 +26,8 @@ include_directories( ${EV_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-add_executable(indi_celestronaux_telescope auxproto.cpp celestronaux.cpp)
-target_link_libraries(indi_celestronaux_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${GSL_LIBRARIES})
-install(TARGETS indi_celestronaux_telescope RUNTIME DESTINATION bin)
+add_executable(indi_celestron_aux auxproto.cpp celestronaux.cpp)
+target_link_libraries(indi_celestron_aux ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${GSL_LIBRARIES})
+install(TARGETS indi_celestron_aux RUNTIME DESTINATION bin)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_celestronaux.xml DESTINATION ${INDI_DATA_DIR})
