@@ -117,6 +117,11 @@ const char * AUXCommand::cmd_name(AUXCommands c)
             case MC_SEEK_INDEX: return "MC_SEEK_INDEX";
             case MC_MOVE_POS: return "MC_MOVE_POS";
             case MC_MOVE_NEG: return "MC_MOVE_NEG";
+            case MC_ENABLE_CORDWRAP: return "MC_ENABLE_CORDWRAP";
+            case MC_DISABLE_CORDWRAP: return "MC_DISABLE_CORDWRAP";
+            case MC_SET_CORDWRAP_POS: return "MC_SET_CORDWRAP_POS";
+            case MC_POLL_CORDWRAP: return "MC_POLL_CORDWRAP";
+            case MC_GET_CORDWRAP_POS: return "MC_GET_CORDWRAP_POS";
             case GET_VER: return "GET_VER";
             default : return nullptr;
         }
@@ -140,9 +145,11 @@ int AUXCommand::response_data_size()
     else 
         switch (cmd)
         {
-            case MC_GET_POSITION: return 3;
+            case MC_GET_POSITION:
+            case MC_GET_CORDWRAP_POS: return 3;
             case GET_VER: return 2;
-            case MC_SLEW_DONE: return 1;
+            case MC_SLEW_DONE:
+            case MC_POLL_CORDWRAP: return 1;
             case MC_GOTO_FAST:
             case MC_SET_POSITION:
             case MC_SET_POS_GUIDERATE:
@@ -150,7 +157,10 @@ int AUXCommand::response_data_size()
             case MC_LEVEL_START:
             case MC_GOTO_SLOW:
             case MC_MOVE_POS:
-            case MC_MOVE_NEG: return 0;
+            case MC_MOVE_NEG:
+            case MC_ENABLE_CORDWRAP:
+            case MC_DISABLE_CORDWRAP:
+            case MC_SET_CORDWRAP_POS: return 0;
             case MC_SEEK_INDEX: return -1;
             default : return -1;
         }
