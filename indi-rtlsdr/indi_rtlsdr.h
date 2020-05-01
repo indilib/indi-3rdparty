@@ -33,7 +33,7 @@ enum Settings
 class RTLSDR : public INDI::Spectrograph
 {
   public:
-    RTLSDR(uint32_t index);
+    RTLSDR(int32_t index);
 
     void grabData();
     rtlsdr_dev_t *rtl_dev = { nullptr };
@@ -42,26 +42,28 @@ class RTLSDR : public INDI::Spectrograph
     bool InIntegration;
     uint8_t *buffer;
     int b_read, n_read;
-    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
   protected:
     // General device functions
-    bool Connect();
-    bool Disconnect();
-    const char *getDefaultName();
-    bool initProperties();
-    bool updateProperties();
+    bool Connect() override;
+    bool Disconnect() override;
+    const char *getDefaultName() override;
+    bool initProperties() override;
+    bool updateProperties() override;
 
     // Spectrograph specific functions
-    bool StartIntegration(double duration);
+    bool StartIntegration(double duration) override;
     void setupParams(float sr, float freq, float gain);
-    bool AbortIntegration();
-    void TimerHit();
+    bool AbortIntegration() override;
+    void TimerHit() override;
 
     bool StartStreaming() override;
     bool StopStreaming() override;
     void streamCaptureHelper();
     void * streamCapture();
+
+    bool Handshake() override;
 
   private:
     void Callback();
@@ -74,9 +76,20 @@ class RTLSDR : public INDI::Spectrograph
     float IntegrationRequest;
     uint8_t *continuum;
 
-    uint32_t spectrographIndex = { 0 };
+    int32_t spectrographIndex = { 0 };
 
     int streamPredicate;
     pthread_t primary_thread;
     bool terminateThread;
+
+    bool sendTcpCommand(int cmd, int value);
+    enum TcpCommands {
+        CMD_SET_FREQ = 0x1,
+        CMD_SET_SAMPLE_RATE = 0x2,
+        CMD_SET_TUNER_GAIN_MODE = 0x3,
+        CMD_SET_GAIN = 0x4,
+        CMD_SET_FREQ_COR = 0x5,
+        CMD_SET_AGC_MODE = 0x8,
+        CMD_SET_TUNER_GAIN_INDEX = 0xd
+    };
 };

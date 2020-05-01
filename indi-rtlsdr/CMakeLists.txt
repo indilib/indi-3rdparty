@@ -28,14 +28,14 @@ include(CMakeCommon)
 if (CFITSIO_FOUND)
 
 set(rtlsdr_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/indi_rtlsdr_spectrograph.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_rtlsdr.cpp
 )
 
-add_executable(indi_rtlsdr_spectrograph ${rtlsdr_SRCS})
+add_executable(indi_rtlsdr ${rtlsdr_SRCS})
 
-target_link_libraries(indi_rtlsdr_spectrograph ${INDI_LIBRARIES} ${RTLSDR_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_rtlsdr ${INDI_LIBRARIES} ${RTLSDR_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS indi_rtlsdr_spectrograph RUNTIME DESTINATION bin)
+install(TARGETS indi_rtlsdr RUNTIME DESTINATION bin)
 
 endif (CFITSIO_FOUND)
 
