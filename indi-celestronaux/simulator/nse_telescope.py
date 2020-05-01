@@ -124,8 +124,16 @@ def decode_command(cmd):
 def split_cmds(data):
     # split the data to commands
     # the initial byte b'\03b' is removed from commands
-    return [cmd for cmd in data.split(b';') if len(cmd)]
-
+    cmds = []
+    b = 0
+    while True :
+        try :
+            p = data.index(b';', b)
+            cmds.append(data[p+1:p+abs(int(data[p+1]))+3])
+            b += abs(int(data[p+1]))+3
+        except ValueError:
+            return cmds    
+        
 def make_checksum(data):
     return ((~sum([c for c in bytes(data)]) + 1) ) & 0xFF
 
@@ -215,6 +223,8 @@ class NexStarScope:
         self.lt_tray=128
         self.lt_wifi=255
         self.charge=False
+        self.cordwrap = False
+        self.cordwrap_pos = 0
         self._other_handlers = {
             0x10: NexStarScope.cmd_0x10,
             0x18: NexStarScope.cmd_0x18,
@@ -240,9 +250,11 @@ class NexStarScope:
           0x23 : NexStarScope.maxrate_enabled,
           0x24 : NexStarScope.move_pos,
           0x25 : NexStarScope.move_neg,
-          0x38 : NexStarScope.send_ack,
-          0x39 : NexStarScope.send_ack,
+          0x38 : NexStarScope.enable_cordwrap,
+          0x39 : NexStarScope.disable_cordwrap,
           0x3a : NexStarScope.set_cordwrap_pos,
+          0x3b : NexStarScope.get_cordwrap,
+          0x3c : NexStarScope.get_cordwrap_pos,
           0x40 : NexStarScope.get_pos_backlash,
           0x41 : NexStarScope.get_neg_backlash,
           0x47 : NexStarScope.get_autoguide_rate,
@@ -450,9 +462,23 @@ class NexStarScope:
             self.azm_rate = -r
         return b''
 
+    def enable_cordwrap(self, data, snd, rcv):
+        self.cordwrap = True
+        return b''
+
+    def disable_cordwrap(self, data, snd, rcv):
+        self.cordwrap = False
+        return b''
+
     def set_cordwrap_pos(self, data, snd, rcv):
         self.cordwrap_pos=struct.unpack('!i',b'\x00'+data[:3])[0]
         return b''
+
+    def get_cordwrap(self, data, snd, rcv):
+        return b'\xFF' if self.cordwrap else b'\x00'
+
+    def get_cordwrap_pos(self, data, snd, rcv):
+        return pack_int3(self.cordwrap_pos)
 
     def get_pos_backlash(self, data, snd, rcv):
         return b'\x00'
@@ -554,6 +580,8 @@ class NexStarScope:
             if self.use_maxrate : 
                 self.other_w.addstr(5,1,'*')
             self.other_w.addstr(5,3,'Max rate ALT:%.2f  AZM:%.2f' % (self.alt_maxrate/1e3, self.azm_maxrate/1e3))
+            self.other_w.addstr(6,3,'Cordwrap: %3s' % ('On' if self.cordwrap else 'Off'))
+            self.other_w.addstr(6,20,'Pos: ' + repr_angle(self.cordwrap_pos))
             self.other_w.refresh()
             self.cmd_log_w.clear()
             self.cmd_log_w.border()
