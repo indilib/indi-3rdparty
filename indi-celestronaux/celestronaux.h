@@ -161,6 +161,7 @@ class CelestronAUX :
     long slewRate;
     bool tracking;
     bool slewingAlt, slewingAz;
+    bool gpsemu;
     bool cordwrap;
     long cordwrapPos;
 
@@ -178,7 +179,15 @@ class CelestronAUX :
 
     // Additional interface elements specific to Celestron Scopes
     private:
+    // Networked Mount autodetect
+    ISwitch NetDetectS[1];
+    ISwitchVectorProperty NetDetectSP;
+    // Mount Cordwrap 
     ISwitch CordWrapS[2];
     ISwitchVectorProperty CordWrapSP;
     enum { CORDWRAP_OFF, CORDWRAP_ON };
+    // GPS emulator
+    ISwitch GPSEmuS[2];
+    ISwitchVectorProperty GPSEmuSP;
+    enum { GPSEMU_OFF, GPSEMU_ON };
 };

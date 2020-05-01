@@ -125,6 +125,7 @@ CelestronAUX::CelestronAUX()
     // Max ticks before we reissue the goto to update position
     maxSlewTicks = 15;
     cordwrap = false;
+    gpsemu = false;
 }
 
 CelestronAUX::~CelestronAUX()
@@ -172,7 +173,7 @@ bool CelestronAUX::Abort()
     AbortSP.s = IPS_OK;
     IUResetSwitch(&AbortSP);
     IDSetSwitch(&AbortSP, nullptr);
-    LOG_INFO("Telescope aborted.");
+    LOG_INFO("Telescope movement aborted.");
 
     return true;
 }
@@ -232,6 +233,9 @@ bool CelestronAUX::detectNetScope(bool set_ip)
             {
                 tcpConnection->setDefaultHost(inet_ntoa(remaddr.sin_addr));
                 tcpConnection->setDefaultPort(ntohs(remaddr.sin_port));
+                if ( getActiveConnection() == tcpConnection )
+                    // Refresh connection params
+                    tcpConnection->Activated();
             }
             close(fd);
             return true;
@@ -510,41 +514,46 @@ bool CelestronAUX::initProperties()
     /* Add alignment properties */
     InitAlignmentProperties(this);
 
-    //FP default connection options
+    // Default connection options
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
-
-    // Removed for now to avoid hanging on startup
-    //if (!detectNetScope(true))
-    {
-        tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
-        tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
-    }
+    tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
+    tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
 
     IUFillSwitch(&CordWrapS[CORDWRAP_OFF], "CORDWRAP_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&CordWrapS[CORDWRAP_ON], "CORDWRAP_ON", "ON", ISS_ON);
     IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cordwrap", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    IUFillSwitch(&GPSEmuS[GPSEMU_OFF], "GPSEMU_OFF", "OFF", ISS_OFF);
+    IUFillSwitch(&GPSEmuS[GPSEMU_ON], "GPSEMU_ON", "ON", ISS_ON);
+    IUFillSwitchVector(&GPSEmuSP, GPSEmuS, 2, getDeviceName(), "GPSEMU", "GPS Emu", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    IUFillSwitch(&NetDetectS[ISS_OFF], "ISS_OFF", "Detect", ISS_OFF);
+    IUFillSwitchVector(&NetDetectSP, NetDetectS, 1, getDeviceName(), "NETDETECT", "Network scope", CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
     return true;
 }
 
 bool CelestronAUX::updateProperties()
 {
-    // We must ALWAYS call the parent class updateProperties() first
     INDI::Telescope::updateProperties();
 
-    // If we are connected, we define the property to the client.
     if (isConnected())
     {
         defineSwitch(&CordWrapSP);
-        //getCordwrap();
+        getCordwrap();
         IUResetSwitch(&CordWrapSP);
         CordWrapS[cordwrap].s=ISS_ON;
         IDSetSwitch(&CordWrapSP, NULL);
-    }
-    // Otherwise, we delete the property from the client
-    else
-        deleteProperty(CordWrapSP.name);
 
+        defineSwitch(&GPSEmuSP);
+        IUResetSwitch(&GPSEmuSP);
+        GPSEmuS[gpsemu].s=ISS_ON;
+        IDSetSwitch(&GPSEmuSP, NULL);
+    }
+    else
+    {
+        deleteProperty(CordWrapSP.name);
+        deleteProperty(GPSEmuSP.name);
+    }
     return true;
 }
 
@@ -552,6 +561,9 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
 {
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
+
+    IUSaveConfigSwitch(fp, &CordWrapSP);
+    IUSaveConfigSwitch(fp, &GPSEmuSP);
     return true;
 }
 
@@ -559,10 +571,14 @@ void CelestronAUX::ISGetProperties(const char *dev)
 {
     /* First we let our parent populate */
     INDI::Telescope::ISGetProperties(dev);
-
+    
     if (isConnected())
-    {
+    {   
     }
+
+    defineSwitch(&NetDetectSP);
+    IUResetSwitch(&NetDetectSP);
+    IDSetSwitch(&NetDetectSP, NULL);
 
     return;
 }
@@ -612,31 +628,46 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         // Cordwrap
         if (!strcmp(name, CordWrapSP.name))
         {
-          // Find out which state is requested by the client
-          const char *actionName = IUFindOnSwitchName(states, names, n);
-          // If switch is the same state as actionName, then we do nothing. 
-          // i.e. if actionName is CORWRAP_OFF and cordwrap is already off, we return
-          int currentCWIndex = IUFindOnSwitchIndex(&CordWrapSP);
-          if (!strcmp(actionName, CordWrapS[currentCWIndex].name))
-          {
-             DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap is already %s", CordWrapS[currentCWIndex].label);
-             CordWrapSP.s = IPS_IDLE;
-             IDSetSwitch(&CordWrapSP, NULL);
-             return true;
-          }
-           
-          // Otherwise, let us update the switch state
-          IUUpdateSwitch(&CordWrapSP, states, names, n);
-          currentCWIndex = IUFindOnSwitchIndex(&CordWrapSP);
-          DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap is now %s (%d)", CordWrapS[currentCWIndex].label, currentCWIndex);
-          CordWrapSP.s = IPS_OK;
-          IDSetSwitch(&CordWrapSP, NULL);
-          DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap setting/getting is not implemented yet (%s)", "ISNewSwitch");
-          //setCordwrap(currentCWIndex);
-          return true;
-
+            // Even if the switch is in the requested state
+            // perform the action on the mount.
+            int CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+            IUUpdateSwitch(&CordWrapSP, states, names, n);
+            CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+            DEBUGF(INDI::Logger::DBG_SESSION, "CordWrap is now %s (%d)", CordWrapS[CWIndex].label, CWIndex);
+            CordWrapSP.s = IPS_OK;
+            IDSetSwitch(&CordWrapSP, NULL);
+            setCordwrap(CWIndex);
+            getCordwrap();
+            return true;
         }
 
+        // GPS Emulation
+        if (!strcmp(name, GPSEmuSP.name))
+        {
+          int Index = IUFindOnSwitchIndex(&GPSEmuSP);
+
+          IUUpdateSwitch(&GPSEmuSP, states, names, n);
+          Index = IUFindOnSwitchIndex(&GPSEmuSP);
+          DEBUGF(INDI::Logger::DBG_SESSION, "GPSEmu is now %s (%d)", GPSEmuS[Index].label, Index);
+          GPSEmuSP.s = IPS_OK;
+          IDSetSwitch(&GPSEmuSP, NULL);
+          gpsemu = Index;
+          return true;
+        }
+        if (!strcmp(name, NetDetectSP.name))
+        {
+            DEBUG(INDI::Logger::DBG_SESSION, "Detecting networked scope...");
+            IUUpdateSwitch(&NetDetectSP, states, names, n);
+            NetDetectSP.s = IPS_BUSY;
+            IDSetSwitch(&NetDetectSP, NULL);
+            if ( detectNetScope(true) )
+                DEBUG(INDI::Logger::DBG_SESSION, "Scope detected.");
+            else
+                DEBUG(INDI::Logger::DBG_SESSION, "Detection failed.");
+            NetDetectSP.s = IPS_OK;
+            IUResetSwitch(&NetDetectSP);
+            IDSetSwitch(&NetDetectSP, NULL);
+        }
         // Process alignment properties
         ProcessAlignmentSwitchProperties(this, name, states, names, n);
     }
@@ -1119,8 +1150,9 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
 
 bool CelestronAUX::setCordwrap(bool enable)
 {
-    DEBUGF(INDI::Logger::DBG_SESSION, "setCordWrap before %d", cordwrap);
+
     AUXCommand cwcmd((enable) ? MC_ENABLE_CORDWRAP : MC_DISABLE_CORDWRAP, APP, AZM);
+    DEBUGF(INDI::Logger::DBG_SESSION, "setCordWrap before %d", cordwrap);
     sendCmd(cwcmd);
     readMsgs(cwcmd);
     DEBUGF(INDI::Logger::DBG_SESSION, "setCordWrap after %d", cordwrap);
@@ -1130,9 +1162,10 @@ bool CelestronAUX::setCordwrap(bool enable)
 bool CelestronAUX::getCordwrap()
 {
     AUXCommand cwcmd(MC_POLL_CORDWRAP, APP, AZM);
+    DEBUGF(INDI::Logger::DBG_SESSION, "getCordWrap before %d", cordwrap);
     sendCmd(cwcmd);
     readMsgs(cwcmd);
-    DEBUGF(INDI::Logger::DBG_SESSION, "getCordWrap is %d", cordwrap);
+    DEBUGF(INDI::Logger::DBG_SESSION, "getCordWrap after %d", cordwrap);
     return cordwrap;
 };
 
@@ -1257,6 +1290,8 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
         return;
     if (GPS_DEBUG)
         fprintf(stderr, "Got 0x%02x for GPS\n", m.cmd);
+    if (gpsemu == false)
+        return;
 
     switch (m.cmd)
     {
