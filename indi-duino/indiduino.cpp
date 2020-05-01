@@ -254,7 +254,6 @@ void indiduino::TimerHit()
                         }
                     }
                 }
-
                 IDSetSwitch(svp, nullptr);
             }
         }
@@ -326,7 +325,7 @@ void indiduino::TimerHit()
             }
         }
     }
-
+    /* Switched off for debugging
     time_t sec_since_reply = sf->secondsSinceVersionReply();
     time_t max_delay = static_cast<time_t>(5*POLLMS < 30000 ? 30 : 5*POLLMS/1000);
     if (sec_since_reply > max_delay)
@@ -341,7 +340,7 @@ void indiduino::TimerHit()
         LOG_DEBUG("Sending keepalive message");
         sf->askFirmwareVersion();
     }
-
+    */
     SetTimer(POLLMS);
 }
 
@@ -378,6 +377,11 @@ bool indiduino::initProperties()
     // Optional: Add aux controls for configuration, debug & simulation that get added in the Options tab
     //           of the driver.
     //addAuxControls();
+
+    // Test switches
+    IUFillSwitch(&TestStateS[0], "On", "", ISS_OFF);
+    IUFillSwitch(&TestStateS[1], "Off", "", ISS_OFF);
+    IUFillSwitchVector(&TestStateSP, TestStateS, 2, getDeviceName(), "TEST", "Test", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     controller->initProperties();
 
@@ -447,6 +451,7 @@ bool indiduino::updateProperties()
                 }
             }
         }
+        defineSwitch(&TestStateSP);
     }
     controller->updateProperties();
     return true;
@@ -561,13 +566,13 @@ bool indiduino::ISNewNumber(const char *dev, const char *name, double values[], 
 ***************************************************************************************/
 bool indiduino::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    for (int i = 0; i < n; i++)
+    /*for (int i = 0; i < n; i++)
     {
         if (states[i] == ISS_ON)
             LOGF_DEBUG("State %d is on", i);
         else if (states[i] == ISS_OFF)
             LOGF_DEBUG("State %d is off", i);
-    }
+    }*/
     // ignore if not ours //
     if (strcmp(dev, getDeviceName()))
         return false;
@@ -597,18 +602,28 @@ bool indiduino::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         {
             int pin = pin_config->pin;
             IUUpdateSwitch(svp, states, names, n);
+            svp->s = IPS_ALERT;
             if (sqp->s == ISS_ON)
             {
                 LOGF_DEBUG("Switching ON %s.%s on pin %u", svp->name, sqp->name, pin);
-                sf->writeDigitalPin(pin, ARDUINO_HIGH);
-                IDSetSwitch(svp, "%s.%s ON", svp->name, sqp->name);
+                if (sf->writeDigitalPin(pin, ARDUINO_HIGH) == 0)
+                {
+                    //IDSetSwitch(svp, "%s.%s ON", svp->name, sqp->name); Seems not to work anymore!
+                    sf->pin_info[pin].value = 1; // Set Standard Firmata record, so time loop can set correct switch state!
+                    svp->s = IPS_OK;
+                }
             }
             else
             {
                 LOGF_DEBUG("Switching OFF %s.%s on pin %u", svp->name, sqp->name, pin);
-                sf->writeDigitalPin(pin, ARDUINO_LOW);
-                IDSetSwitch(svp, "%s.%s OFF", svp->name, sqp->name);
+                if (sf->writeDigitalPin(pin, ARDUINO_LOW) ==0)
+                {
+                    //IDSetSwitch(svp, "%s.%s OFF", svp->name, sqp->name); Seems not to work anymore!
+                    sf->pin_info[pin].value = 0; // Set Standard Firmata record, so time loop can set correct switch state!
+                    svp->s = IPS_OK;
+                }
             }
+            IDSetSwitch(svp, nullptr);
         }
         else if (pin_config->IOType == SERVO)
         {
@@ -627,6 +642,20 @@ bool indiduino::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 IDSetSwitch(svp, "%s.%s OFF", svp->name, sqp->name);
             }
         }
+    }
+    if (!strcmp(name, TestStateSP.name))
+    {
+        if (IUUpdateSwitch(&TestStateSP, states, names, n) < 0)
+        {
+            TestStateSP.s = IPS_ALERT;
+            return false;
+        }
+        // IUFindOnSwitchIndex(&TestStateSP);
+        else
+            TestStateSP.s = IPS_OK;
+
+        IDSetSwitch(&TestStateSP, nullptr);
+        return true;
     }
     controller->ISNewSwitch(dev, name, states, names, n);
 
