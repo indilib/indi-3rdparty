@@ -27,8 +27,8 @@
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
 #define BAUD_RATE 230400
-#define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
-#define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
+#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
 
 class baseline : public INDI::Correlator
@@ -96,12 +96,19 @@ protected:
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
-    Connection::TCP *tcpConnection;
+    Connection::Serial *serialConnection;
 
-    /// For TCP connection
+    /// For Serial connection
     int PortFD = -1;
 
 private:
+
+    enum it_cmd {
+        SET_ACTIVE_LINE = 0x01,
+        SET_LEDS = 0x02,
+        ENABLE_CAPTURE = 0x0d,
+    };
+
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
 
@@ -134,12 +141,15 @@ private:
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
-    void ActiveLine(int line, bool on);
+    bool SendChar(char);
+    bool SendCommand(it_cmd cmd, unsigned char value = 0);
+    void SetExposure(double);
+    void ActiveLine(int, bool, bool);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
 
-    int NUM_NODES;
+    int NUM_LINES;
     int DELAY_LINES;
     int SAMPLE_SIZE;
 };
