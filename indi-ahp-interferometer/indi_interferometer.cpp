@@ -25,7 +25,7 @@
 #include <memory>
 #include "indicom.h"
 #include "indi_interferometer.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connectionplugins/connectionserial.h"
 
 static std::unique_ptr<Interferometer> array(new Interferometer());
 
@@ -73,10 +73,8 @@ void Interferometer::Callback()
     str[SAMPLE_SIZE] = 0;
     str[HEADER_SIZE] = 0;
 
-    unsigned short cmd = 0x0d3c;
-    tcflush(PortFD, TCIOFLUSH);
-    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
-
+    tcflush(PortFD, TCOFLUSH);
+    SendCommand(ENABLE_CAPTURE, 1);
     gettimeofday(&ExpStart, nullptr);
 
     while (InExposure)
@@ -89,16 +87,6 @@ void Interferometer::Callback()
         int center = w*h/2;
         center += w/2;
         unsigned int tmp;
-        memset(str, 0, HEADER_SIZE+1);
-        sscanf(str, "%08X%08X", &tmp, &power_status);
-        for(int x = 0; x < NUM_NODES; x++) {
-            IDSetSwitch(&nodeEnableSP[x], nullptr);
-            nodeEnableSP[x].sp[0].s = (power_status & (1 << (x + NUM_NODES))) ? ISS_ON : ISS_OFF;
-            nodeEnableSP[x].sp[1].s = (power_status & (1 << (x + NUM_NODES))) ? ISS_OFF : ISS_ON;
-            IDSetSwitch(&nodePowerSP[x], nullptr);
-            nodePowerSP[x].sp[0].s = (power_status & (1 << x)) ? ISS_ON : ISS_OFF;
-            nodePowerSP[x].sp[1].s = (power_status & (1 << x)) ? ISS_OFF : ISS_ON;
-        }
         for(int x = NUM_NODES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
@@ -176,14 +164,14 @@ Interferometer::Interferometer()
 
 bool Interferometer::Disconnect()
 {
-    for(int x = 0; x < NUM_NODES*2+1; x++)
-        ActiveLine(x, false);
+    for(int x = 0; x < NUM_NODES; x++)
+        ActiveLine(x, false, false);
     return true;
 }
 
 const char * Interferometer::getDefaultName()
 {
-    return "Telescope array";
+    return "AHP Telescope array correlator";
 }
 
 const char * Interferometer::getDeviceName()
@@ -229,9 +217,9 @@ bool Interferometer::initProperties()
 
     setDefaultPollingPeriod(500);
 
-    tcpConnection = new Connection::TCP(this);
-    tcpConnection->registerHandshake([&]() { return Handshake(); });
-    registerConnection(tcpConnection);
+    serialConnection = new Connection::Serial(this);
+    serialConnection->registerHandshake([&]() { return Handshake(); });
+    registerConnection(serialConnection);
 
     return true;
 
@@ -276,15 +264,6 @@ bool Interferometer::updateProperties()
 
         for (int x=0; x<NUM_NODES; x++) {
             defineSwitch(&nodeEnableSP[x]);
-            if(nodeEnableSP[x].sp[0].s == ISS_ON) {
-                defineSwitch(&nodePowerSP[x]);
-                defineNumber(&nodeLocationNP[x]);
-                defineNumber(&countsNP[x]);
-            } else {
-                deleteProperty(nodePowerSP[x].name);
-                deleteProperty(nodeLocationNP[x].name);
-                deleteProperty(countsNP[x].name);
-            }
         }
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
@@ -347,10 +326,8 @@ bool Interferometer::StartExposure(float duration)
 ***************************************************************************************/
 bool Interferometer::AbortExposure()
 {
-    int olen = 0;
-    unsigned short cmd = 0x0d0c;
-    tcflush(PortFD, TCIOFLUSH);
-    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
+    tcflush(PortFD, TCOFLUSH);
+    SendCommand(ENABLE_CAPTURE, 0);
 
     InExposure = false;
     return true;
@@ -426,56 +403,46 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
     for(int x = 0; x < NUM_NODES; x++) {
         if(!strcmp(name, nodeEnableSP[x].name)){
             IUUpdateSwitch(&nodeEnableSP[x], states, names, n);
-            updateProperties();
-            ActiveLine(x+NUM_NODES, nodeEnableSP[x].sp[0].s == ISS_ON);
             IDSetSwitch(&nodeEnableSP[x], nullptr);
+            if(nodeEnableSP[x].sp[0].s == ISS_ON) {
+                defineSwitch(&nodePowerSP[x]);
+                defineNumber(&nodeLocationNP[x]);
+                defineNumber(&countsNP[x]);
+                ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
+            } else {
+                deleteProperty(nodePowerSP[x].name);
+                deleteProperty(nodeLocationNP[x].name);
+                deleteProperty(countsNP[x].name);
+                ActiveLine(x, false, false);
+            }
         }
         if(!strcmp(name, nodePowerSP[x].name)){
             IUUpdateSwitch(&nodePowerSP[x], states, names, n);
-            updateProperties();
-            ActiveLine(x, nodePowerSP[x].sp[0].s == ISS_ON);
             IDSetSwitch(&nodePowerSP[x], nullptr);
+            ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
-void Interferometer::ActiveLine(int line, bool on)
+bool Interferometer::SendCommand(it_cmd c, unsigned char value)
+{
+    usleep(50000);
+    return SendChar(c|(value<<4));
+}
+
+bool Interferometer::SendChar(char c)
 {
     int olen = 0;
-    unsigned short cmd;
-    power_status &= ~(1 << line);
-    power_status |= (on << line);
-    unsigned long tmp_status = power_status;
+    olen = write(PortFD, &c, 1);
+    return olen == 1;
+}
 
-    cmd = 0x0d20;
-    tcflush(PortFD, TCIOFLUSH);
-    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
-    tcdrain(PortFD);
-
-    unsigned long value = 0x0202020202020202;
-    value |= (tmp_status&0xf)<< 4;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 12;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 20;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 28;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 36;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 44;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 52;
-    tmp_status >>= 4;
-    value |= (tmp_status&0xf)<< 60;
-    tmp_status >>= 4;
-    tcflush(PortFD, TCIOFLUSH);
-    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&value)), 8, &olen);
-    cmd = 0xd;
-    tcflush(PortFD, TCIOFLUSH);
-    tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 1, &olen);
-    tcdrain(PortFD);
+void Interferometer::ActiveLine(int line, bool on, bool power)
+{
+    tcflush(PortFD, TCOFLUSH);
+    SendCommand(SET_ACTIVE_LINE, line);
+    SendCommand(SET_LEDS, on | (power << 1));
 }
 
 /**************************************************************************************
@@ -564,7 +531,7 @@ void Interferometer::TimerHit()
 
 bool Interferometer::Handshake()
 {
-    PortFD = tcpConnection->getPortFD();
+    PortFD = serialConnection->getPortFD();
     if(PortFD != -1) {
         int tmp = 0;
         int sample_size = 0;
@@ -574,11 +541,8 @@ bool Interferometer::Handshake()
         int olen;
         char buf[HEADER_SIZE];
 
-        unsigned short cmd;
-
-        cmd = 0x0d3c;
-        tcflush(PortFD, TCIOFLUSH);
-        tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
+        tcflush(PortFD, TCOFLUSH);
+        SendCommand(ENABLE_CAPTURE, 1);
 
         while (buf[0] != 0xd) {
             int ntries = 10;
@@ -670,11 +634,8 @@ bool Interferometer::Handshake()
         }
         IUFillNumberVector(&correlationsNP, correlationsN, (num_nodes*(num_nodes-1)/2)*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
-        ActiveLine(num_nodes*2, true);
-
-        cmd = 0x0d0c;
-        tcflush(PortFD, TCIOFLUSH);
-        tty_write(PortFD, static_cast<char*>(static_cast<void*>(&cmd)), 2, &olen);
+        tcflush(PortFD, TCOFLUSH);
+        SendCommand(ENABLE_CAPTURE, 0);
 
         SAMPLE_SIZE = sample_size/4;
         NUM_NODES = num_nodes;
