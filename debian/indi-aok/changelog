@@ -1,6 +1,10 @@
 indi-aok (1.0) bionic; urgency=low
   * cleared up the handling of notification of mountlock & trackstate
   * added query of mount when connecting, so mountlock and trackstate is reflected correctly
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 2 May 2019 07:45:00 +0300
+
+indi-aok (0.9) bionic; urgency=low
   * implemented park position management
   * corrected readout of firmwareserial
   * renamed driver to product line (AOK Skywalker)
