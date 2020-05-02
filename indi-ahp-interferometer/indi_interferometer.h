@@ -27,8 +27,8 @@
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
 #define BAUD_RATE 230400
-#define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
-#define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
+#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
 
 class baseline : public INDI::Correlator
@@ -149,7 +149,7 @@ private:
     struct timeval ExpStart;
     float ExposureRequest;
 
-    int NUM_NODES;
+    int NUM_LINES;
     int DELAY_LINES;
     int SAMPLE_SIZE;
 };
