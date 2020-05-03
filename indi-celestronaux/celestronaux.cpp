@@ -1557,6 +1557,8 @@ void CelestronAUX::processCmd(AUXCommand &m)
                 }
                 break;
             case GET_VER:
+                if (m.src != APP)
+                    LOGF_INFO(DBG_CAUX, "Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1], 256*m.data[2]+m.data[3]);
                 switch (m.src)
                 {
                     case MB:
@@ -1574,8 +1576,7 @@ void CelestronAUX::processCmd(AUXCommand &m)
                     case APP:
                         DEBUGF(DBG_CAUX, "Got echo of GET_VERSION from %s", m.node_name(m.dst));
                         break;
-                    default:
-                        DEBUGF(DBG_CAUX, "Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1], 256*m.data[2]+m.data[3]);
+                    default: 
                         break;
                 }
                 break;
