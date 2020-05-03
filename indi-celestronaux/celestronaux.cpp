@@ -125,7 +125,11 @@ CelestronAUX::CelestronAUX()
     // Max ticks before we reissue the goto to update position
     maxSlewTicks = 15;
     cordwrap = false;
+    cordwrapPos = 0;
     gpsemu = false;
+    mb_ver_maj = mb_ver_min = 0;
+    alt_ver_maj = alt_ver_min = 0;
+    azm_ver_maj = azm_ver_min = 0;
 }
 
 CelestronAUX::~CelestronAUX()
@@ -285,20 +289,23 @@ bool CelestronAUX::Handshake()
 
                 LOG_INFO("Setting serial speed to 9600 baud.");
             }
-
-            // read firmware version, if read ok, detected scope
-            AUXCommand firmver(GET_VER,APP,ALT);
-            if (!sendCmd(firmver))
-                return false;
-            if (!readMsgs(firmver))
-                return false;
-            DEBUG(DBG_CAUX,"Telescope detected.");
         }
         else
         {
-            DEBUG(DBG_CAUX,"Network telescope handshake routine not imlemented yet - flying blind.");
+            DEBUG(DBG_CAUX,"Wait for mount connection to settle.");
+            msleep(1000);
+            return true;
         }
-        
+
+        // read firmware version, if read ok, detected scope
+        DEBUG(DBG_CAUX,"Trying to contact telescope.");
+        if (getVersion(ANY) || getVersion(AZM))
+        {
+            DEBUG(DBG_CAUX,"Got response from target ANY or AZM. Probing all targets.");
+            getVersions();
+        }
+        else 
+            return false;
 
 	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.");
         return true;
@@ -519,13 +526,32 @@ bool CelestronAUX::initProperties()
     tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
     tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
 
+    // Firmware
+    IUFillText(&FirmwareT[FW_HC], "HC version", "", nullptr);
+    IUFillText(&FirmwareT[FW_HCp], "HC+ version", "", nullptr);
+    IUFillText(&FirmwareT[FW_AZM], "Ra/AZM version", "", nullptr);
+    IUFillText(&FirmwareT[FW_ALT], "Dec/ALT version", "", nullptr);
+    IUFillText(&FirmwareT[FW_WiFi], "WiFi version", "", nullptr);
+    IUFillText(&FirmwareT[FW_BAT], "Battery version", "", nullptr);
+    IUFillText(&FirmwareT[FW_CHG], "Charger version", "", nullptr);
+    IUFillText(&FirmwareT[FW_LIGHT], "Ligts version", "", nullptr);
+    IUFillText(&FirmwareT[FW_GPS], "GPS version", "", nullptr);
+    IUFillTextVector(&FirmwareTP, FirmwareT, 9, getDeviceName(), "Firmware Info", "", MOUNTINFO_TAB, IP_RO, 0,
+                     IPS_IDLE);
+
     IUFillSwitch(&CordWrapS[CORDWRAP_OFF], "CORDWRAP_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&CordWrapS[CORDWRAP_ON], "CORDWRAP_ON", "ON", ISS_ON);
-    IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cordwrap", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&CordWrapSP, CordWrapS, 2, getDeviceName(), "CORDWRAP", "Cord Wrap", MOTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    IUFillSwitch(&CWPosS[CORDWRAP_N], "CORDWRAP_N", "North", ISS_ON);
+    IUFillSwitch(&CWPosS[CORDWRAP_E], "CORDWRAP_E", "East",  ISS_OFF);
+    IUFillSwitch(&CWPosS[CORDWRAP_S], "CORDWRAP_S", "South", ISS_OFF);
+    IUFillSwitch(&CWPosS[CORDWRAP_W], "CORDWRAP_W", "West",  ISS_OFF);
+    IUFillSwitchVector(&CWPosSP, CWPosS, 4, getDeviceName(), "CORDWRAP_POS", "CW Position", MOTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     IUFillSwitch(&GPSEmuS[GPSEMU_OFF], "GPSEMU_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&GPSEmuS[GPSEMU_ON], "GPSEMU_ON", "ON", ISS_ON);
-    IUFillSwitchVector(&GPSEmuSP, GPSEmuS, 2, getDeviceName(), "GPSEMU", "GPS Emu", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&GPSEmuSP, GPSEmuS, 2, getDeviceName(), "GPSEMU", "GPS Emu", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     IUFillSwitch(&NetDetectS[ISS_OFF], "ISS_OFF", "Detect", ISS_OFF);
     IUFillSwitchVector(&NetDetectSP, NetDetectS, 1, getDeviceName(), "NETDETECT", "Network scope", CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
@@ -544,15 +570,34 @@ bool CelestronAUX::updateProperties()
         CordWrapS[cordwrap].s=ISS_ON;
         IDSetSwitch(&CordWrapSP, NULL);
 
+        defineSwitch(&CWPosSP);
+        getCordwrapPos();
+        IUResetSwitch(&CWPosSP);
+        CordWrapS[int(cordwrapPos % 90)].s=ISS_ON;
+        IDSetSwitch(&CWPosSP, NULL);
+
         defineSwitch(&GPSEmuSP);
         IUResetSwitch(&GPSEmuSP);
         GPSEmuS[gpsemu].s=ISS_ON;
         IDSetSwitch(&GPSEmuSP, NULL);
+
+        IUSaveText(&FirmwareT[FW_HC], "HC version");
+        IUSaveText(&FirmwareT[FW_HCp], "HC+ version");
+        IUSaveText(&FirmwareT[FW_AZM], "Ra/AZM version");
+        IUSaveText(&FirmwareT[FW_ALT], "Dec/ALT version");
+        IUSaveText(&FirmwareT[FW_WiFi], "WiFi version");
+        IUSaveText(&FirmwareT[FW_BAT], "Battery version");
+        IUSaveText(&FirmwareT[FW_CHG], "Charger version");
+        IUSaveText(&FirmwareT[FW_LIGHT], "Ligts version");
+        IUSaveText(&FirmwareT[FW_GPS], "GPS version");
+        defineText(&FirmwareTP);
     }
     else
     {
         deleteProperty(CordWrapSP.name);
+        deleteProperty(CWPosSP.name);
         deleteProperty(GPSEmuSP.name);
+        deleteProperty(FirmwareTP.name);
     }
     return true;
 }
@@ -563,6 +608,7 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     SaveAlignmentConfigProperties(fp);
 
     IUSaveConfigSwitch(fp, &CordWrapSP);
+    IUSaveConfigSwitch(fp, &CWPosSP);
     IUSaveConfigSwitch(fp, &GPSEmuSP);
     return true;
 }
@@ -640,6 +686,42 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             getCordwrap();
             return true;
         }
+
+        // Cordwrap Pos
+        if (!strcmp(name, CWPosSP.name))
+        {
+            // Even if the switch is in the requested state
+            // perform the action on the mount.
+            int CWIndex;
+            IUUpdateSwitch(&CWPosSP, states, names, n);
+            CWIndex = IUFindOnSwitchIndex(&CWPosSP);
+            DEBUGF(DBG_CAUX, "CordWrap Position is now %s (%d)", CWPosS[CWIndex].label, CWIndex);
+            CWPosSP.s = IPS_OK;
+            IDSetSwitch(&CWPosSP, NULL);
+            long cwpos = 0;
+            switch (CWIndex)
+            {
+                case CORDWRAP_N:
+                    cwpos = 0;
+                    break;
+                case CORDWRAP_E:
+                    cwpos = 90*STEPS_PER_DEGREE;
+                    break;
+                case CORDWRAP_S:
+                    cwpos = 180*STEPS_PER_DEGREE;
+                    break;
+                case CORDWRAP_W:
+                    cwpos = 270*STEPS_PER_DEGREE;
+                    break;
+                default:
+                    cwpos = 0;
+                    break;
+            }
+            setCordwrapPos(cwpos);
+            getCordwrapPos();
+            return true;
+        }
+
 
         // GPS Emulation
         if (!strcmp(name, GPSEmuSP.name))
@@ -1007,6 +1089,7 @@ void CelestronAUX::TimerHit()
             {
                 long altRate, azRate;
 
+
                 // This is in steps per minute
                 altRate = long(AltAz.alt * STEPS_PER_DEGREE - GetALT());
                 azRate  = long(AltAz.az * STEPS_PER_DEGREE - GetAZ());
@@ -1033,7 +1116,7 @@ void CelestronAUX::TimerHit()
 
                 if (TraceThisTick)
                     DEBUGF(DBG_CAUX, "TimerHit - Tracking AltRate %d AzRate %d ; Pos diff (deg): Alt: %f Az: %f",
-                           altRate, azRate, AltAz.alt - AAzero.alt, AltAz.az - AAzero.az);
+                           altRate, azRate, AltAz.alt - AAzero.alt, anglediff(AltAz.az,AAzero.az));
             }
             break;
         }
@@ -1145,6 +1228,31 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
     readMsgs(azmcmd);
     //DEBUG=false;
     return true;
+};
+
+bool CelestronAUX::getVersion(AUXtargets trg)
+{
+    AUXCommand firmver(GET_VER,APP,trg);
+    if (! sendCmd(firmver))
+        return false;
+    if (! readMsgs(firmver))
+        return false;
+    return true;
+};
+
+void CelestronAUX::getVersions()
+{
+    getVersion(ANY);
+    getVersion(MB);
+    getVersion(HC);
+    getVersion(HCP);
+    getVersion(AZM);
+    getVersion(ALT);
+    getVersion(GPS);
+    getVersion(WiFi);
+    getVersion(BAT);
+    getVersion(CHG);
+    getVersion(LIGHT);
 };
 
 
@@ -1443,7 +1551,33 @@ void CelestronAUX::processCmd(AUXCommand &m)
                 break;
             case MC_GET_CORDWRAP_POS:
                 if (m.src == AZM)
+                {
                     cordwrapPos = m.getPosition();
+                    DEBUGF(DBG_CAUX, "Got cordwrap position %.1f", float(cordwrapPos)/STEPS_PER_DEGREE);
+                }
+                break;
+            case GET_VER:
+                switch (m.src)
+                {
+                    case MB:
+                        mb_ver_maj=m.data[0];
+                        mb_ver_min=m.data[1];
+                        break;
+                    case ALT:
+                        alt_ver_maj=m.data[0];
+                        alt_ver_min=m.data[1];
+                        break;
+                    case AZM:
+                        azm_ver_maj=m.data[0];
+                        azm_ver_min=m.data[1];
+                        break;
+                    case APP:
+                        DEBUGF(DBG_CAUX, "Got echo of GET_VERSION from %s", m.node_name(m.dst));
+                        break;
+                    default:
+                        DEBUGF(DBG_CAUX, "Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1], 256*m.data[2]+m.data[3]);
+                        break;
+                }
                 break;
             default:
                 break;
@@ -1507,7 +1641,10 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
         // if last char is not '#', there was an error.
         if (buf[response_data_size + 5] != '#')
         {
-            LOGF_ERROR("Resp. char %d is %2.2x ascii %c",n,buf[n+5],(char)buf[n+5]);
+            LOGF_ERROR("Resp. char %d is %2.2x ascii %c", n, buf[n+5], (char)buf[n+5]);
+            buffer b(buf, buf + (response_data_size + 5));
+            hex_dump(hexbuf,b,b.size());
+            LOGF_ERROR("Receive packet: %s", hexbuf);
             return false;
         }
 
@@ -1550,7 +1687,7 @@ bool CelestronAUX::tcp_readMsgs()
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
-    if ( ! isConnected() )
+    if ( PortFD <= 0 )
         return false;
 
     timeval tv;
@@ -1606,7 +1743,7 @@ bool CelestronAUX::tcp_readMsgs()
         }
     }
     //fprintf(stderr,"Nothing more to read\n");
-    return false;
+    return true;
 }
 
 

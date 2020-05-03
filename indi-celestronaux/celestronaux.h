@@ -63,6 +63,8 @@ class CelestronAUX :
     bool getCordwrap();
     bool setCordwrapPos(long pos);
     long getCordwrapPos();
+    bool getVersion(AUXtargets trg);
+    void getVersions();
     bool Track(long altRate, long azRate);
     bool TimerTick(double dt);
 
@@ -164,6 +166,9 @@ class CelestronAUX :
     bool gpsemu;
     bool cordwrap;
     long cordwrapPos;
+    unsigned mb_ver_maj, mb_ver_min;
+    unsigned alt_ver_maj, alt_ver_min;
+    unsigned azm_ver_maj, azm_ver_min;
 
     // FP
     int modem_ctrl;
@@ -179,6 +184,10 @@ class CelestronAUX :
 
     // Additional interface elements specific to Celestron Scopes
     private:
+    // Firmware 
+    IText FirmwareT[9];
+    ITextVectorProperty FirmwareTP;
+    enum {FW_HC, FW_HCp, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
     // Networked Mount autodetect
     ISwitch NetDetectS[1];
     ISwitchVectorProperty NetDetectSP;
@@ -186,6 +195,9 @@ class CelestronAUX :
     ISwitch CordWrapS[2];
     ISwitchVectorProperty CordWrapSP;
     enum { CORDWRAP_OFF, CORDWRAP_ON };
+    ISwitch CWPosS[4];
+    ISwitchVectorProperty CWPosSP;
+    enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W};
     // GPS emulator
     ISwitch GPSEmuS[2];
     ISwitchVectorProperty GPSEmuSP;

@@ -147,7 +147,7 @@ int AUXCommand::response_data_size()
         {
             case MC_GET_POSITION:
             case MC_GET_CORDWRAP_POS: return 3;
-            case GET_VER: return 2;
+            case GET_VER: return 4;
             case MC_SLEW_DONE:
             case MC_POLL_CORDWRAP: return 1;
             case MC_GOTO_FAST:
