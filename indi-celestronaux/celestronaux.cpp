@@ -271,11 +271,11 @@ bool CelestronAUX::Handshake()
             // yes for AUX and PC ports, no for HC port.
             if ((isRTSCTS = detectRTSCTS()))
             {
-                LOG_INFO("Detected AUX or PC port connection.\n");
+                LOG_INFO("Detected AUX or PC port connection.");
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
                 if (!tty_set_speed(PortFD, B19200))
                     return false;	    
-                LOG_INFO("Setting serial speed to 19200 baud.\n");
+                LOG_INFO("Setting serial speed to 19200 baud.");
             }
             else
             {
@@ -292,22 +292,26 @@ bool CelestronAUX::Handshake()
         }
         else
         {
-            DEBUG(DBG_CAUX,"Wait for mount connection to settle.");
+            LOG_INFO("Wait for mount connection to settle.");
             msleep(1000);
             return true;
         }
 
         // read firmware version, if read ok, detected scope
-        DEBUG(DBG_CAUX,"Trying to contact telescope.");
-        if (getVersion(ANY) || getVersion(AZM))
+        LOG_INFO("Trying to contact telescope motor controllers.");
+        if (getVersion(AZM) && getVersion(ALT))
         {
-            DEBUG(DBG_CAUX,"Got response from target ANY or AZM. Probing all targets.");
+            LOG_INFO("Got response from target ALT or AZM. Probing all targets.");
             getVersions();
         }
-        else 
+        else
+        {
+            LOG_ERROR("Got no response from target ALT or AZM.");
+            LOG_ERROR("Cannot continue without connection to motor controllers.");
             return false;
+        }
 
-	    DEBUG(DBG_CAUX,"Connection ready. Starting Processing.");
+	    LOG_INFO("Connection ready. Starting Processing.");
         return true;
     }
     else
@@ -336,7 +340,7 @@ bool CelestronAUX::Park()
     TrackState = SCOPE_PARKING;
     ParkSP.s   = IPS_BUSY;
     IDSetSwitch(&ParkSP, nullptr);
-    DEBUG(DBG_CAUX, "Telescope park in progress...");
+    LOG_INFO("Telescope park in progress...");
     GoToFast(long(0), STEPS_PER_REVOLUTION / 2, false);
     return true;
 }
@@ -414,7 +418,7 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
 // TODO: Make adjustment for the approx time it takes to slew to the given pos.
 bool CelestronAUX::Goto(double ra, double dec)
 {
-    DEBUGF(DBG_CAUX, "Goto - Celestial reference frame target RA:%lf(%lf h) Dec:%lf", ra * 360.0 / 24.0, ra, dec);
+    LOGF_INFO("Goto - Celestial reference frame target RA:%lf(%lf h) Dec:%lf", ra * 360.0 / 24.0, ra, dec);
     if (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s)
     {
         char RAStr[32], DecStr[32];
@@ -423,7 +427,7 @@ bool CelestronAUX::Goto(double ra, double dec)
         CurrentTrackingTarget.ra  = ra;
         CurrentTrackingTarget.dec = dec;
         NewTrackingTarget         = CurrentTrackingTarget;
-        DEBUG(DBG_CAUX, "Goto - tracking requested");
+        LOG_INFO("Goto - tracking requested");
     }
 
     GoToTarget.ra  = ra;
@@ -453,11 +457,11 @@ bool CelestronAUX::Goto(double ra, double dec)
         double d;
 
         d = anglediff(AltAz.az, trgAltAz.az);
-        DEBUGF(DBG_CAUX, "Azimuth approach:  %lf (%lf)", d, Approach);
+        LOGF_INFO("Azimuth approach:  %lf (%lf)", d, Approach);
         AltAz.az = trgAltAz.az + ((d > 0) ? Approach : -Approach);
 
         d = anglediff(AltAz.alt, trgAltAz.alt);
-        DEBUGF(DBG_CAUX, "Altitude approach:  %lf (%lf)", d, Approach);
+        LOGF_INFO("Altitude approach:  %lf (%lf)", d, Approach);
         AltAz.alt = trgAltAz.alt + ((d > 0) ? Approach : -Approach);
     }
 
@@ -474,7 +478,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     if (AltAz.alt < -90.0)
         AltAz.alt = -90.0;
 
-    DEBUGF(DBG_CAUX, "Goto: Scope reference frame target altitude %lf azimuth %lf", AltAz.alt, AltAz.az);
+    LOGF_INFO("Goto: Scope reference frame target altitude %lf azimuth %lf", AltAz.alt, AltAz.az);
 
     TrackState = SCOPE_SLEWING;
     if (ScopeStatus == APPROACH)
@@ -1558,7 +1562,7 @@ void CelestronAUX::processCmd(AUXCommand &m)
                 break;
             case GET_VER:
                 if (m.src != APP)
-                    LOGF_INFO(DBG_CAUX, "Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1], 256*m.data[2]+m.data[3]);
+                    LOGF_INFO("Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1], 256*m.data[2]+m.data[3]);
                 switch (m.src)
                 {
                     case MB:
