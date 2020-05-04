@@ -51,6 +51,8 @@ public:
         for(int x = 0; x < NUM_BASELINES; x++)
             baselines[x]->~baseline();
 
+        free(correlationsN);
+
         free(countsN);
         free(countsNP);
 
@@ -98,7 +100,7 @@ protected:
 
     Connection::Serial *serialConnection;
 
-    /// For Serial connection
+    // For Serial connection
     int PortFD = -1;
 
 private:
