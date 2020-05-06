@@ -426,7 +426,7 @@ void Talon6::ProcessDomeMessage(char *buf)
       std::string lastActionString;
 
       //Parse Roof Status
-      l = buf[2] & 0xFF & 0x7F;
+      l = buf[2] & 0x7F;
       lStatus = l >> 4;
       lLastAction = l  & 0x0F;
 
@@ -533,9 +533,9 @@ void Talon6::ProcessDomeMessage(char *buf)
         std::string xxxString, xxxpString;
 
         // Roof position is encoded using a custom 3 hex bytes encoding (see Talon6 documentation).
-        x1 = (buf[3] & 0xFF & 0x7F) << 14;
-        x2 = (buf[4] & 0xFF & 0x7F) << 7;
-        x3 = buf[5] & 0xFF & 0x7F;
+        x1 = (buf[3] & 0x7F) << 14;
+        x2 = (buf[4] & 0x7F) << 7;
+        x3 = buf[5]  & 0x7F;
 
         // Hex values are converted to decimals for further elaboration
         streamx1 << x1;
@@ -575,8 +575,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         std::stringstream stream2;
 
         // Voltage is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
-        b1 = (buf[6] & 0xFF & 0x7) << 7 ;
-        b2 = buf[7] & 0xFF & 0x7F;
+        b1 = (buf[6] & 0x07) << 7 ;
+        b2 = buf[7]  & 0x7F;
 
         stream1 << b1;
         stream1 >> std::dec >> bb1;
@@ -600,9 +600,9 @@ void Talon6::ProcessDomeMessage(char *buf)
         std::string tttString;
 
         // Closing timer is encoded using a custom 3 hex bytes encoding (see Talon6 documentation).
-        t1 = (buf[8] & 0xFF & 0x7F) << 14;
-        t2 = (buf[9] & 0xFF & 0x7F) << 7;
-        t3 = buf[10] & 0xFF & 0x7F;
+        t1 = (buf[8] & 0x7F) << 14;
+        t2 = (buf[9] & 0x7F) << 7;
+        t3 = buf[10] & 0x7F;
 
         // Hex values are converted to decimals for further elaboration
         streamt1 << t1;
@@ -628,8 +628,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         std::stringstream streamp2;
 
         // Power lost timer is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
-        p1 = (buf[11] & 0xFF & 0x7) << 7 ;
-        p2 = buf[12] & 0xFF & 0x7F;
+        p1 = (buf[11] & 0x07) << 7 ;
+        p2 = buf[12] & 0x7F;
 
          streamp1 << p1;
          streamp1 >> std::dec >> pp1;
@@ -652,8 +652,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         std::stringstream streamc2;
 
         // Weather Condition timer is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
-        c1 = (buf[13] & 0xFF & 0x7) << 7 ;
-        c2 = buf[14] & 0xFF & 0x7F;
+        c1 = (buf[13] & 0x07) << 7 ;
+        c2 = buf[14] & 0x7F;
 
          streamc1 << c1;
          streamc1 >> std::dec >> cc1;
@@ -672,8 +672,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         int m1, m2;
 
         //Sensors status  is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
-        m1 = (buf[15] & 0xFF & 0x7) << 7 ; //Switches
-        m2 = buf[16] & 0xFF & 0x7F; //Sensors
+        m1 = (buf[15] & 0x07) << 7 ; //Switches
+        m2 = buf[16] & 0x7F; //Sensors
 
        // fprintf(stderr,"Readstring returns buf 15 %x\n",m1);
        // fprintf(stderr,"Readstring returns buf 16 %x\n",m2);
