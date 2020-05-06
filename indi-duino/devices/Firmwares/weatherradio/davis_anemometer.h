@@ -126,6 +126,10 @@ void initAnemometer() {
   anemometerData.status = true;
   // reset measuring data
   reset(millis());
+  anemometerData.avgSpeed = 0;
+  anemometerData.minSpeed = 0;
+  anemometerData.maxSpeed = 0;
+  anemometerData.rotations = 0;
 }
 
 void updateAnemometer() {
@@ -134,7 +138,7 @@ void updateAnemometer() {
     // stop recording
     detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
     anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
-    anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;;
+    anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;
     anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
     anemometerData.rotations = rotations;
 
