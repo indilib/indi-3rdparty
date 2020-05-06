@@ -459,9 +459,8 @@ void Talon6::ProcessDomeMessage(char *buf)
 
           break;
       }
-      char statusChar[statusString.size()+1];
-      strcpy(statusChar, statusString.c_str());
-      IUSaveText(&StatusValueT[0], statusChar);
+
+      IUSaveText(&StatusValueT[0], statusString.c_str());
 
       //Parse roof Last Action
       switch (lLastAction) {
@@ -519,9 +518,7 @@ void Talon6::ProcessDomeMessage(char *buf)
           break;
       }
 
-        char lastActionChar[lastActionString.size()+1];
-        strcpy(lastActionChar, lastActionString.c_str());
-        IUSaveText(&StatusValueT[1], lastActionChar);
+        IUSaveText(&StatusValueT[1], lastActionString.c_str());
 
         //Parse roof position
         int x1, x2, x3;
@@ -547,14 +544,10 @@ void Talon6::ProcessDomeMessage(char *buf)
         }
         xxxString = std::to_string(xxx);
         xxxpString = std::to_string(xxxp);
-        char xxxChar[xxxString.size()+1];
-        strcpy(xxxChar, xxxString.c_str());
-        char xxxpChar[xxxpString.size()+1];
-        strcpy(xxxpChar, xxxpString.c_str());
 
-        IUSaveText(&StatusValueT[2], xxxChar);
+        IUSaveText(&StatusValueT[2], xxxString.c_str());
 
-        IUSaveText(&StatusValueT[3], xxxpChar);
+        IUSaveText(&StatusValueT[3], xxxpString.c_str());
 
         //Parse power supply voltage
         int b1,b2;
@@ -568,10 +561,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         // Values are then added. To get tension in V the result is *15/1024 (see Talon6 documentation)
         bb = (b1+b2)*15/1024;
         bbString = std::to_string(bb);
-        char bbChar[bbString.size()+1];
-        strcpy(bbChar, bbString.c_str());
 
-        IUSaveText(&StatusValueT[4], bbChar);
+        IUSaveText(&StatusValueT[4], bbString.c_str());
 
         //Parse closing timer
         int t1, t2, t3;
@@ -586,10 +577,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         // The 3 bytes are packed together
         ttt = t1 + t2 +  t3;
         tttString = std::to_string(ttt);
-        char tttChar[tttString.size()+1];
-        strcpy(tttChar, tttString.c_str());
 
-        IUSaveText(&StatusValueT[5], tttChar);
+        IUSaveText(&StatusValueT[5], tttString.c_str());
 
         //Parse power lost timer
         int p1, p2;
@@ -604,10 +593,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         // Values are then added (see Talon6 documentation)
         pp = (p1+p2);
         ppString = std::to_string(pp);
-        char ppChar[ppString.size()+1];
-        strcpy(ppChar, ppString.c_str());
 
-        IUSaveText(&StatusValueT[6], ppChar);
+        IUSaveText(&StatusValueT[6], ppString.c_str());
 
         // Weather Condition timer
         int c1, c2;
@@ -621,10 +608,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         // Values are then added (see Talon6 documentation)
         cc = (c1+c2);
         ccString = std::to_string(cc);
-        char ccChar[ccString.size()+1];
-        strcpy(ccChar, ccString.c_str());
 
-        IUSaveText(&StatusValueT[7], ccChar);
+        IUSaveText(&StatusValueT[7], ccString.c_str());
 
         // Sensor & Switches Status
         int m1, m2;
