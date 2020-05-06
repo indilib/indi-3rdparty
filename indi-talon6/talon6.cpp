@@ -524,12 +524,9 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[1], lastActionChar);
 
         //Parse roof position
-        int x1, x2, x3, xx1,xx2,xx3;
+        int x1, x2, x3;
         int xxx;
         int xxxp;
-        std::stringstream streamx1;
-        std::stringstream streamx2;
-        std::stringstream streamx3;
         std::string xxxString, xxxpString;
 
         // Roof position is encoded using a custom 3 hex bytes encoding (see Talon6 documentation).
@@ -537,16 +534,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         x2 = (buf[4] & 0x7F) << 7;
         x3 = buf[5]  & 0x7F;
 
-        // Hex values are converted to decimals for further elaboration
-        streamx1 << x1;
-        streamx1 >> std::dec >> xx1;
-        streamx2 << x2;
-        streamx2 >> std::dec >> xx2;
-        streamx3 << x3;
-        streamx3 >> std::dec >> xx3;
-
         // The 3 bytes are packed together to store the absolute position of the roof
-        xxx = xx1 +xx2 + xx3;
+        xxx = x1 +x2 + x3;
         xxxp =(int)100*( xxx / EncoderTicksN[0].value);
         if (xxxp == 100){
             // If %=100 then the roof is set to fully open
@@ -568,23 +557,16 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[3], xxxpChar);
 
         //Parse power supply voltage
-        int b1,b2,bb1, bb2;
+        int b1,b2;
         int  bb;
         std::string bbString;
-        std::stringstream stream1;
-        std::stringstream stream2;
 
         // Voltage is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
         b1 = (buf[6] & 0x07) << 7 ;
         b2 = buf[7]  & 0x7F;
 
-        stream1 << b1;
-        stream1 >> std::dec >> bb1;
-        stream2 << b2;
-        stream2 >> std::dec >> bb2;
-
         // Values are then added. To get tension in V the result is *15/1024 (see Talon6 documentation)
-        bb = (bb1+bb2)*15/1024;
+        bb = (b1+b2)*15/1024;
         bbString = std::to_string(bb);
         char bbChar[bbString.size()+1];
         strcpy(bbChar, bbString.c_str());
@@ -592,11 +574,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[4], bbChar);
 
         //Parse closing timer
-        int t1, t2, t3, tt1,tt2,tt3;
+        int t1, t2, t3;
         int ttt;
-        std::stringstream streamt1;
-        std::stringstream streamt2;
-        std::stringstream streamt3;
         std::string tttString;
 
         // Closing timer is encoded using a custom 3 hex bytes encoding (see Talon6 documentation).
@@ -604,16 +583,8 @@ void Talon6::ProcessDomeMessage(char *buf)
         t2 = (buf[9] & 0x7F) << 7;
         t3 = buf[10] & 0x7F;
 
-        // Hex values are converted to decimals for further elaboration
-        streamt1 << t1;
-        streamt1 >> std::dec >> tt1;
-        streamt2 << t2;
-        streamt2 >> std::dec >> tt2;
-        streamt3 << t3;
-        streamt3 >> std::dec >> tt3;
-
         // The 3 bytes are packed together
-        ttt = tt1 + tt2 +  tt3;
+        ttt = t1 + t2 +  t3;
         tttString = std::to_string(ttt);
         char tttChar[tttString.size()+1];
         strcpy(tttChar, tttString.c_str());
@@ -621,23 +592,17 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[5], tttChar);
 
         //Parse power lost timer
-        int p1, p2, pp1, pp2;
+        int p1, p2;
         int pp;
         std::string ppString;
-        std::stringstream streamp1;
-        std::stringstream streamp2;
 
         // Power lost timer is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
         p1 = (buf[11] & 0x07) << 7 ;
         p2 = buf[12] & 0x7F;
 
-         streamp1 << p1;
-         streamp1 >> std::dec >> pp1;
-         streamp2 << p2;
-         streamp2 >> std::dec >> pp2;
 
         // Values are then added (see Talon6 documentation)
-        pp = (pp1+pp2);
+        pp = (p1+p2);
         ppString = std::to_string(pp);
         char ppChar[ppString.size()+1];
         strcpy(ppChar, ppString.c_str());
@@ -645,23 +610,16 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[6], ppChar);
 
         // Weather Condition timer
-        int c1, c2, cc1, cc2;
+        int c1, c2;
         int cc;
         std::string ccString;
-        std::stringstream streamc1;
-        std::stringstream streamc2;
 
         // Weather Condition timer is encoded using a custom 2 hex bytes encoding (see Talon6 documentation).
         c1 = (buf[13] & 0x07) << 7 ;
         c2 = buf[14] & 0x7F;
 
-         streamc1 << c1;
-         streamc1 >> std::dec >> cc1;
-         streamc2 << c2;
-         streamc2 >> std::dec >> cc2;
-
         // Values are then added (see Talon6 documentation)
-        cc = (cc1+cc2);
+        cc = (c1+c2);
         ccString = std::to_string(cc);
         char ccChar[ccString.size()+1];
         strcpy(ccChar, ccString.c_str());
