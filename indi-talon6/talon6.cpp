@@ -67,9 +67,6 @@ Talon6::Talon6()
 {
     //Talon6 is a Roll Off Roof. We implement only basic Dome functions to open / close the roof
     SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_PARK);
-
-    // Talon6 works with serial connection only
-    setDomeConnection(CONNECTION_SERIAL);
 }
 
 /************************************************************************************
@@ -147,8 +144,6 @@ bool Talon6::Handshake()
         LOGF_INFO("Connected successfully to simulated %s.", getDeviceName());
         return true;
     }
-
-    PortFD = serialConnection->getPortFD();
 
     return true;
 }
