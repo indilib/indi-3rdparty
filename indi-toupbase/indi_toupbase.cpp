@@ -262,7 +262,8 @@ bool ToupBase::initProperties()
     IUFillNumber(&BlackBalanceN[TC_BLACK_R], "TC_BLACK_R", "Red", "%.f", 0, 255, 10, 0);
     IUFillNumber(&BlackBalanceN[TC_BLACK_G], "TC_BLACK_G", "Green", "%.f", 0, 255, 10, 0);
     IUFillNumber(&BlackBalanceN[TC_BLACK_B], "TC_BLACK_B", "Blue", "%.f", 0, 255, 10, 0);
-    IUFillNumberVector(&BlackBalanceNP, BlackBalanceN, 3, getDeviceName(), "CCD_BLACK_LEVEL", "Black Level", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&BlackBalanceNP, BlackBalanceN, 3, getDeviceName(), "CCD_BLACK_LEVEL", "Black Level", LEVEL_TAB, IP_RW,
+                       60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y levels
@@ -275,7 +276,8 @@ bool ToupBase::initProperties()
     IUFillNumber(&LevelRangeN[TC_HI_B], "TC_HI_B", "High Blue", "%.f", 0, 255, 10, 0);
     IUFillNumber(&LevelRangeN[TC_LO_Y], "TC_LO_Y", "Low Gray", "%.f", 0, 255, 10, 0);
     IUFillNumber(&LevelRangeN[TC_HI_Y], "TC_HI_Y", "High Gray", "%.f", 0, 255, 10, 0);
-    IUFillNumberVector(&LevelRangeNP, LevelRangeN, 8, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&LevelRangeNP, LevelRangeN, 8, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", LEVEL_TAB, IP_RW, 60,
+                       IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Controls
@@ -316,19 +318,22 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_TT], "TC_AUTO_WB_TT", "Temp/Tint", ISS_ON);
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_RGB], "TC_AUTO_WB_RGB", "RGB", ISS_OFF);
-    IUFillSwitchVector(&WBAutoSP, WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&WBAutoSP, WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Fan Control
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&FanControlS[TC_FAN_ON], "TC_FAN_ON", "On", ISS_ON);
     IUFillSwitch(&FanControlS[TC_FAN_OFF], "TC_FAN_OFF", "Off", ISS_OFF);
-    IUFillSwitchVector(&FanControlSP, FanControlS, 2, getDeviceName(), "TC_FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&FanControlSP, FanControlS, 2, getDeviceName(), "TC_FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Fan Speed
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitchVector(&FanSpeedSP, FanSpeedS, 0, getDeviceName(), "TC_FAN_Speed", "Fan Speed", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&FanSpeedSP, FanSpeedS, 0, getDeviceName(), "TC_FAN_Speed", "Fan Speed", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Video Format
@@ -620,7 +625,8 @@ void ToupBase::setupParams()
         m_CameraPixelFormat = INDI_MONO;
         m_Channels = 1;
 
-        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel, VideoFormatS[TC_VIDEO_MONO_8].s == ISS_ON ? "Mono 8-bit" : "Mono 16-bit");
+        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel,
+                   VideoFormatS[TC_VIDEO_MONO_8].s == ISS_ON ? "Mono 8-bit" : "Mono 16-bit");
     }
     // Color Camera
     else
@@ -676,7 +682,8 @@ void ToupBase::setupParams()
                 SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
         }
 
-        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel, VideoFormatS[TC_VIDEO_COLOR_RGB].s == ISS_ON ? "RGB" : "RAW");
+        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel,
+                   VideoFormatS[TC_VIDEO_COLOR_RGB].s == ISS_ON ? "RGB" : "RAW");
     }
 
     PrimaryCCD.setNAxis(m_Channels == 1 ? 2 : 3);
@@ -728,7 +735,8 @@ void ToupBase::setupParams()
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
     ResolutionS[currentResolutionIndex].s = ISS_ON;
 
-    SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
+    SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
+                 m_Instance->model->ypixsz);
 
     m_CanSnap = m_Instance->model->still > 0;
     LOGF_DEBUG("Camera snap support: %s", m_CanSnap ? "True" : "False");
@@ -2179,7 +2187,7 @@ void ToupBase::eventPullCallBack(unsigned event)
                 }
                 else if (InExposure)
                 {
-                    InExposure  = false;
+                    InExposure = false;
                     PrimaryCCD.setExposureLeft(0);
                     uint8_t *buffer = PrimaryCCD.getFrameBuffer();
 
@@ -2222,8 +2230,20 @@ void ToupBase::eventPullCallBack(unsigned event)
                             free(buffer);
                         }
 
-                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
+                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                                   info.timestamp);
                         ExposureComplete(&PrimaryCCD);
+                    }
+                }
+                else
+                {
+                    // Fix proposed by Seven Watt
+                    // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    HRESULT rc = FP(Flush(m_CameraHandle));
+                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                    if (rc < 0)
+                    {
+                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
                     }
                 }
             }
@@ -2245,7 +2265,8 @@ void ToupBase::eventPullCallBack(unsigned event)
                     PrimaryCCD.setExposureLeft(0);
                     InExposure  = false;
                     ExposureComplete(&PrimaryCCD);
-                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
+                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                               info.timestamp);
                 }
             }
             break;
