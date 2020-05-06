@@ -799,12 +799,12 @@ void ToupBase::setupParams()
     rc = FP(get_Speed(m_CameraHandle, &nDef));
     LOGF_DEBUG("Speed Control: %d", nDef);
 
-    // JM 2019-11-16: Reduce speed on ARM for high resolution
+    // JM 2020-05-06: Reduce speed on ARM for high resolution
 #if defined(__arm__) || defined (__aarch64__)
-    if (w[currentResolutionIndex] > 1000)
+    if (w[currentResolutionIndex] > 640)
     {
-        ControlN[TC_SPEED].value = nDef - 1;
-        FP(put_Speed(m_CameraHandle, nDef - 1));
+        ControlN[TC_SPEED].value = 0;
+        FP(put_Speed(m_CameraHandle, 0));
     }
     else
         ControlN[TC_SPEED].value = nDef;
