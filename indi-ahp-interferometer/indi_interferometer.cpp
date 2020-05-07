@@ -24,8 +24,8 @@
 #include <sys/file.h>
 #include <memory>
 #include <indicom.h>
-#include "indi_interferometer.h"
 #include <connectionplugins/connectionserial.h>
+#include "indi_interferometer.h"
 
 static std::unique_ptr<Interferometer> array(new Interferometer());
 
