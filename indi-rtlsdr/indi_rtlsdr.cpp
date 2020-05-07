@@ -1,6 +1,10 @@
 /*
     indi_rtlsdr - a software defined radio driver for INDI
-    Copyright (C) 2017  Ilia Platone
+    Copyright (C) 2017  Ilia Platone - Jasem Mutlaq
+    Collaborators:
+        - Ilia Platone <info@iliaplatone.com>
+        - Jasem Mutlaq - INDI library - <http://indilib.org>
+        - Monroe Pattillo - Fox Observatory - South Florida Amateur Astronomers Association <http://www.sfaaa.com/>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
