@@ -87,8 +87,7 @@ class Talon6 : public INDI::Dome
 
     private:
 
-        bool Handshake();
-        int PortFD{-1};
+        virtual bool Handshake() override;
         double MotionRequest { 0 };
         void getDeviceStatus();
         void getFirmwareVersion();
