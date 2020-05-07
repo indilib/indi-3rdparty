@@ -277,7 +277,7 @@ bool RTLSDR::initProperties()
     // Must init parent properties first!
     INDI::Spectrograph::initProperties();
 
-    setMinMaxStep("SPECTROGRAPH_INTEGRATION", "SPECTROGRAPH_INTEGRATION_VALUE", 0.001, STELLAR_DAY, 0.001, false);
+    setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 0.001, 600, 0.001, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_SAMPLERATE", 2.5e+5, 2.0e+6, 2.5e+5, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_GAIN", 0.0, 25.0, 0.1, false);
