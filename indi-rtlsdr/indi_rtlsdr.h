@@ -60,7 +60,6 @@ class RTLSDR : public INDI::Spectrograph
 
     bool StartStreaming() override;
     bool StopStreaming() override;
-    void streamCaptureHelper();
     void * streamCapture();
 
     bool Handshake() override;

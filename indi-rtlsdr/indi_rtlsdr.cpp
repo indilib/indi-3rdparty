@@ -496,8 +496,14 @@ void RTLSDR::grabData()
         if (to_read <= 0)
         {
             InIntegration = false;
-            LOG_INFO("Download complete.");
-            IntegrationComplete();
+            if(!streamPredicate) {
+                LOG_INFO("Download complete.");
+                IntegrationComplete();
+            } else {
+                StartIntegration(1.0 / Streamer->getTargetFPS());
+                int32_t size = getBufferSize();
+                Streamer->newFrame(getBuffer(), size);
+            }
         }
     }
 }
@@ -508,6 +514,7 @@ bool RTLSDR::StartStreaming()
 {
     pthread_mutex_lock(&condMutex);
     streamPredicate = 1;
+    StartIntegration(1.0 / Streamer->getTargetFPS());
     pthread_mutex_unlock(&condMutex);
     pthread_cond_signal(&cv);
 
@@ -522,52 +529,6 @@ bool RTLSDR::StopStreaming()
     pthread_cond_signal(&cv);
 
     return true;
-}
-
-void RTLSDR::streamCaptureHelper()
-{
-    struct itimerval tframe1, tframe2;
-    double deltas;
-    getitimer(ITIMER_REAL, &tframe1);
-    auto s1 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-    auto s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-
-    while (true)
-    {
-        pthread_mutex_lock(&condMutex);
-
-        while (streamPredicate == 0)
-        {
-            pthread_cond_wait(&cv, &condMutex);
-        }
-        StartIntegration(1.0 / Streamer->getTargetFPS());
-
-        if (terminateThread)
-            break;
-
-        // release condMutex
-        pthread_mutex_unlock(&condMutex);
-
-        // Simulate exposure time
-        //usleep(ExposureRequest*1e5);
-        grabData();
-        getitimer(ITIMER_REAL, &tframe1);
-
-        s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-        deltas = fabs(s2 - s1);
-
-        if (deltas < IntegrationTime)
-            usleep(fabs(IntegrationTime - deltas) * 1e6);
-
-        int32_t size = getBufferSize();
-        Streamer->newFrame(getBuffer(), size);
-
-        s1 = ((double)tframe1.it_value.tv_sec) + ((double)tframe1.it_value.tv_usec / 1e6);
-
-        getitimer(ITIMER_REAL, &tframe2);
-    }
-
-    pthread_mutex_unlock(&condMutex);
 }
 
 bool RTLSDR::Handshake()
