@@ -1,6 +1,12 @@
+Version 1.0 - 2020-03-06
+	+ cleared up the handling of notification of mountlock & trackstate
+	+ added query of mount when connecting, so mountlock and trackstate
+          is reflected correctly
+
 Version 0.9 - 2019-11-23 (minor changes after pull)
 	+ corrected readout of firmwareserial
 	+ implemented improved park position management
+
 Version 0.8 - 2019-10-08
 	+ renamed driver to product line (AOK Skywalker)
 	- removed real 'unpark()' at start, TCS unparks automatically

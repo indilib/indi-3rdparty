@@ -395,7 +395,6 @@ void SXCCD::SetupParms()
     model             = sxGetCameraModel(handle);
     bool isInterlaced = sxIsInterlaced(model);
     bool isICX453     = sxIsICX453(model);
-    PrimaryCCD.setInterlaced(isInterlaced);
     sxGetCameraParams(handle, 0, &params);
     if (isInterlaced)
     {
@@ -433,7 +432,6 @@ void SXCCD::SetupParms()
 
     if (HasGuideHead)
     {
-        GuideCCD.setInterlaced(false);
         sxGetCameraParams(handle, 1, &params);
         nbuf = params.width * params.height;
         nbuf += 512;
@@ -500,7 +498,7 @@ bool SXCCD::StartExposure(float n)
 {
     InExposure = true;
     PrimaryCCD.setExposureDuration(n);
-    if (PrimaryCCD.isInterlaced() && PrimaryCCD.getBinY() == 1)
+    if (sxIsInterlaced(model) && PrimaryCCD.getBinY() == 1)
     {
         sxClearPixels(handle, CCD_EXP_FLAGS_FIELD_EVEN | CCD_EXP_FLAGS_NOWIPE_FRAME, 0);
         usleep(wipeDelay);
@@ -557,7 +555,7 @@ void SXCCD::ExposureTimerHit()
         {
             int rc;
             ExposureTimerID   = 0;
-            bool isInterlaced = PrimaryCCD.isInterlaced();
+            bool isInterlaced = sxIsInterlaced(model);
             int subX          = PrimaryCCD.getSubX();
             int subY          = PrimaryCCD.getSubY();
             int subW          = PrimaryCCD.getSubW();

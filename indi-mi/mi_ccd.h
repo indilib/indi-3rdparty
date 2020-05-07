@@ -65,13 +65,16 @@ class MICCD : public INDI::CCD, public INDI::FilterInterface
 
     // Filter Wheel CFW
     virtual int QueryFilter() override;
-    virtual bool SelectFilter(int position) override;    
+    virtual bool SelectFilter(int position) override;
 
     INumber FanN[1];
     INumberVectorProperty FanNP;
 
     INumber WindowHeatingN[1];
     INumberVectorProperty WindowHeatingNP;
+
+    ISwitch CoolerS[2];
+    ISwitchVectorProperty CoolerSP;
 
     INumber CoolerN[1];
     INumberVectorProperty CoolerNP;
@@ -82,7 +85,7 @@ class MICCD : public INDI::CCD, public INDI::FilterInterface
     INumber GainN[1];
     INumberVectorProperty GainNP;
 
-    ISwitch ReadModeS[3];
+    ISwitch ReadModeS[4];
     ISwitchVectorProperty ReadModeSP;
 
     INumber PreflashN[2];
@@ -105,6 +108,7 @@ class MICCD : public INDI::CCD, public INDI::FilterInterface
     int maxHeatingValue;
     int maxBinX;
     int maxBinY;
+    int maxGainValue;
 
     int temperatureID;
     int timerID;
