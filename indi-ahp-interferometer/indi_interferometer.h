@@ -26,10 +26,13 @@
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define BAUD_RATE 230400
+#define STOP_BITS 1
+#define WORD_SIZE 8
+#define BAUD_SIZE (STOP_BITS+WORD_SIZE+1)
+#define BAUD_RATE (serialConnection->baud())
 #define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
 #define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
-#define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
+#define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
 
 class baseline : public INDI::Correlator
 {
@@ -145,8 +148,8 @@ private:
     void  setupParams();
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
-    void SetExposure(double);
     void ActiveLine(int, bool, bool);
+    void EnableCapture(bool start);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;

@@ -65,15 +65,15 @@ void Interferometer::Callback()
     double counts[NUM_LINES];
     double correlations[NUM_BASELINES];
     char buf[FRAME_SIZE+1];
-    int w = MAX_RESOLUTION;
-    int h = MAX_RESOLUTION;
+    int w = PrimaryCCD.getXRes();
+    int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
     memset(framebuffer, 0, w*h*sizeof(double));
     char str[MAXINDINAME];
     str[SAMPLE_SIZE] = 0;
 
     tcflush(PortFD, TCIOFLUSH);
-    SendCommand(ENABLE_CAPTURE, 1);
+    EnableCapture(true);
     gettimeofday(&ExpStart, nullptr);
 
     while (InExposure)
@@ -114,8 +114,8 @@ void Interferometer::Callback()
         for(int x = 0; x < NUM_LINES; x++) {
             for(int y = x+1; y < NUM_LINES; y++) {
                 INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                int xx = static_cast<int>(MAX_RESOLUTION*uv.u/2.0);
-                int yy = static_cast<int>(MAX_RESOLUTION*uv.v/2.0);
+                int xx = static_cast<int>(w*uv.u/2.0);
+                int yy = static_cast<int>(h*uv.v/2.0);
                 int z = center+xx+yy*w;
                 if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
                     framebuffer[z] += correlations[idx]*2.0/(counts[x]+counts[y]);
@@ -142,14 +142,6 @@ void Interferometer::Callback()
 
 Interferometer::Interferometer()
 {
-    uint32_t cap = 0;
-
-    cap |= CCD_CAN_ABORT;
-    cap |= CCD_CAN_SUBFRAME;
-    cap |= CCD_HAS_DSP;
-
-    SetCCDCapability(cap);
-
     power_status = 0;
 
     ExposureRequest = 0.0;
@@ -218,6 +210,8 @@ bool Interferometer::initProperties()
     // Must init parent properties first!
     INDI::CCD::initProperties();
 
+    SetCCDCapability(CCD_CAN_ABORT|CCD_CAN_SUBFRAME|CCD_HAS_DSP);
+
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 1.0E-9, 0.211121449);
     IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
@@ -227,11 +221,13 @@ bool Interferometer::initProperties()
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
+    serialConnection->setWordSize(WORD_SIZE);
+    serialConnection->setStopBits(STOP_BITS);
+    serialConnection->setDefaultBaudRate(Connection::Serial::B_230400);
     serialConnection->registerHandshake([&]() { return Handshake(); });
     registerConnection(serialConnection);
 
     return true;
-
 }
 
 /**************************************************************************************
@@ -337,7 +333,7 @@ bool Interferometer::StartExposure(float duration)
 ***************************************************************************************/
 bool Interferometer::AbortExposure()
 {
-    SendCommand(ENABLE_CAPTURE, 0);
+    EnableCapture(false);
 
     InExposure = false;
     return true;
@@ -427,38 +423,12 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
             IDSetSwitch(&nodeEnableSP[x], nullptr);
         }
         if(!strcmp(name, nodePowerSP[x].name)){
-            if(!InExposure) {
-                IUUpdateSwitch(&nodePowerSP[x], states, names, n);
-                ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
-                IDSetSwitch(&nodePowerSP[x], nullptr);
-            }
+            IUUpdateSwitch(&nodePowerSP[x], states, names, n);
+            ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
+            IDSetSwitch(&nodePowerSP[x], nullptr);
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
-}
-
-bool Interferometer::SendCommand(it_cmd c, unsigned char value)
-{
-    int ntries = 5;
-    while (!SendChar(c|(value<<4)) && ntries-->0);
-    return (ntries > 0);
-}
-
-bool Interferometer::SendChar(char c)
-{
-    int ntries = 20;
-    int olen = ntries;
-    tcflush(PortFD, TCOFLUSH);
-    while (olen > 0 && ntries-- > 0) {
-        olen -= write(PortFD, &c, 1);
-    }
-    return olen == 0;
-}
-
-void Interferometer::ActiveLine(int line, bool on, bool power)
-{
-    SendCommand(SET_ACTIVE_LINE, line);
-    SendCommand(SET_LEDS, on | (power << 1));
 }
 
 /**************************************************************************************
@@ -557,7 +527,7 @@ bool Interferometer::Handshake()
         int olen;
         char buf[HEADER_SIZE];
 
-        SendCommand(ENABLE_CAPTURE, 1);
+        EnableCapture(true);
 
         while (buf[0] != 0xd) {
             int ntries = 10;
@@ -649,7 +619,7 @@ bool Interferometer::Handshake()
         }
         IUFillNumberVector(&correlationsNP, correlationsN, (num_nodes*(num_nodes-1)/2)*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
-        SendCommand(ENABLE_CAPTURE, 0);
+        EnableCapture(false);
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_nodes;
@@ -658,4 +628,29 @@ bool Interferometer::Handshake()
         return true;
     }
     return false;
+}
+
+bool Interferometer::SendCommand(it_cmd c, unsigned char value)
+{
+    return SendChar(c|(value<<4));
+}
+
+bool Interferometer::SendChar(char c)
+{
+    int olen;
+    usleep(1000);
+    tty_write(PortFD, &c, 1, &olen);
+    tcdrain(PortFD);
+    return olen == 1;
+}
+
+void Interferometer::ActiveLine(int line, bool on, bool power)
+{
+    SendCommand(SET_ACTIVE_LINE, line);
+    SendCommand(SET_LEDS, on | (power << 1));
+}
+
+void Interferometer::EnableCapture(bool start)
+{
+    SendCommand(ENABLE_CAPTURE, start);
 }
