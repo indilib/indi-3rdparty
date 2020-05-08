@@ -2,6 +2,7 @@
  ATIK CCD & Filter Wheel Driver
 
  Copyright (C) 2018 Jasem Mutlaq (mutlaqja@ikarustech.com)
+ Copyright (C) 2020 Eric Dejouhanet (eric.dejouhanet@gmail.com)
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -29,6 +30,7 @@
 #include <math.h>
 #include <unistd.h>
 
+#define MAX_CONNECTION_RETRIES  5
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
@@ -56,34 +58,47 @@ void ATIK_CCD_ISInit()
         iAvailableCamerasCount = 0;
         std::vector<std::string> cameraNames;
 
-        iAvailableCamerasCount = ArtemisDeviceCount();
-        if (iAvailableCamerasCount > MAX_DEVICES)
-            iAvailableCamerasCount = MAX_DEVICES;
-        if (iAvailableCamerasCount <= 0)
-            IDLog("No Atik Cameras detected. Power on?");
-        else
+        IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
+
+        for (int loop = 0; loop < MAX_CONNECTION_RETRIES; loop++)
         {
-            for (int i = 0; i < iAvailableCamerasCount; i++)
-            {
-                // We only do cameras in this driver.
-                if (ArtemisDeviceIsPresent(i) == false || ArtemisDeviceIsCamera(i) == false)
-                    continue;
+            iAvailableCamerasCount = ArtemisDeviceCount();
 
-                char pName[MAXINDILABEL] = {0};
-                std::string cameraName;
+            if (0 < iAvailableCamerasCount)
+                break;
 
-                if (ArtemisDeviceName(i, pName) == false)
-                    continue;
+            IDLog("No Atik Cameras detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
+        }
 
-                if (std::find(cameraNames.begin(), cameraNames.end(), pName) == cameraNames.end())
-                    cameraName = std::string(pName);
-                else
-                    cameraName = std::string(pName) + " " +
-                                 std::to_string(static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), pName)) + 1);
+        if (iAvailableCamerasCount <= 0)
+        {
+            IDLog("No Atik Cameras were enumerated.");
+            iAvailableCamerasCount = 0;
+            return;
+        }
+        else if (iAvailableCamerasCount > MAX_DEVICES)
+            iAvailableCamerasCount = MAX_DEVICES;
 
-                cameras[i] = new ATIKCCD(cameraName, i);
-                cameraNames.push_back(pName);
-            }
+        for (int i = 0; i < iAvailableCamerasCount; i++)
+        {
+            // We only do cameras in this driver.
+            if (ArtemisDeviceIsPresent(i) == false || ArtemisDeviceIsCamera(i) == false)
+                continue;
+
+            char pName[MAXINDILABEL] = {0};
+            std::string cameraName;
+
+            if (ArtemisDeviceName(i, pName) == false)
+                continue;
+
+            if (std::find(cameraNames.begin(), cameraNames.end(), pName) == cameraNames.end())
+                cameraName = std::string(pName);
+            else
+                cameraName = std::string(pName) + " " +
+                        std::to_string(static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), pName)) + 1);
+
+            cameras[i] = new ATIKCCD(cameraName, i);
+            cameraNames.push_back(pName);
         }
 
         if (cameraNames.empty())
@@ -103,7 +118,7 @@ void ISGetProperties(const char *dev)
 
     if (iAvailableCamerasCount == 0)
     {
-        IDMessage(nullptr, "No Atik cameras detected. Power on?");
+        IDMessage(nullptr, "No Atik Cameras detected, please connect and/or power on.");
         return;
     }
 
@@ -222,8 +237,9 @@ bool ATIKCCD::initProperties()
 
     // Version information
     IUFillText(&VersionInfoS[VERSION_API], "VERSION_API", "API", std::to_string(ArtemisAPIVersion()).c_str());
+    IUFillText(&VersionInfoS[VERSION_DLL], "VERSION_DLL", "DLL", std::to_string(ArtemisDLLVersion()).c_str());
     IUFillText(&VersionInfoS[VERSION_FIRMWARE], "VERSION_FIRMWARE", "Firmware", "Unknown");
-    IUFillTextVector(&VersionInfoSP, VersionInfoS, 2, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&VersionInfoSP, VersionInfoS, 3, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // Gain/Offset Presets
     IUFillSwitch(&ControlPresetsS[PRESET_CUSTOM], "PRESET_CUSTOM", "Custom", ISS_ON);
