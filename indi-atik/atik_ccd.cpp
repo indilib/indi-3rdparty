@@ -67,17 +67,24 @@ void ATIK_CCD_ISInit()
             if (0 < iAvailableCamerasCount)
                 break;
 
-            IDLog("No Atik Cameras detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
+            if (loop+1 < MAX_CONNECTION_RETRIES)
+            {
+                IDMessage(nullptr, "No Atik devices detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
+                usleep(1000000);
+            }
         }
 
         if (iAvailableCamerasCount <= 0)
         {
-            IDLog("No Atik Cameras were enumerated.");
+            IDLog("No Atik devices were enumerated.");
             iAvailableCamerasCount = 0;
             return;
         }
         else if (iAvailableCamerasCount > MAX_DEVICES)
+        {
+            IDLog("This driver only supports %d Atik devices.", MAX_DEVICES);
             iAvailableCamerasCount = MAX_DEVICES;
+        }
 
         for (int i = 0; i < iAvailableCamerasCount; i++)
         {
