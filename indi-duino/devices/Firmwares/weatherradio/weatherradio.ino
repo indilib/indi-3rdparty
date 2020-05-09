@@ -158,20 +158,40 @@ void setup() {
       server.send(200, "application/json; charset=utf-8", getSensorData(false, ""));
     });
 
-    server.on("/w", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false, ""));
-    });
+    server.on(UriRegex("^\\/([A-z0-9]+)$"), []() {
+      String command = server.pathArg(0);
+      // search the id argument
+      String id = "";
+      for (int i = 0; i < server.args(); i++)
+        if (server.argName(i) == "token") {
+          id = server.arg(i);
+          break;
+        }
 
-    server.on("/p", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(true, ""));
-    });
+      switch (tolower(command[0])) {
+        // weather data
+        case 'w':
+          server.send(200, "application/json; charset=utf-8", getSensorData(false, id));
+          break;
 
-    server.on("/c", []() {
-      server.send(200, "application/json; charset=utf-8", getCurrentConfig());
-    });
+        // weather data, pretty print
+        case 'p':
+          server.send(200, "application/json; charset=utf-8", getSensorData(true, id));
+          break;
 
-    server.on("/v", []() {
-      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+        // configuration
+        case 'c':
+          server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+          break;
+
+        // version info
+        case 'v':
+          server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+          break;
+
+        default:
+          server.send(404, "text/plain", "Ressource not found: " + server.uri());
+      }
     });
 
     server.onNotFound([]() {
