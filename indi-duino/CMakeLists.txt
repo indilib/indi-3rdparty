@@ -10,9 +10,10 @@ set (DUINO_VERSION_MAJOR 0)
 set (DUINO_VERSION_MINOR 6)
  
 set (WEATHERRADIO_VERSION_MAJOR 1)
-set (WEATHERRADIO_VERSION_MINOR 2)
+set (WEATHERRADIO_VERSION_MINOR 3)
 
 find_package(INDI REQUIRED)
+find_package(CURL REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_duino.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_duino.xml )
@@ -67,7 +68,7 @@ set(weatherradio_SRCS
    )
 
 add_executable(indi_weatherradio ${weatherradio_SRCS})
-target_link_libraries(indi_weatherradio ${INDI_LIBRARIES})
+target_link_libraries(indi_weatherradio ${INDI_LIBRARIES} ${CURL_LIBRARIES})
 
 install(TARGETS indi_weatherradio RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml DESTINATION ${INDI_DATA_DIR})
