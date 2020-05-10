@@ -175,12 +175,11 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
 
 
         // API & Firmware Version
-        IText VersionInfoS[3] = {};
+        IText VersionInfoS[2] = {};
         ITextVectorProperty VersionInfoSP;
         enum
         {
             VERSION_API,
-            VERSION_DLL,
             VERSION_FIRMWARE,
         };
 

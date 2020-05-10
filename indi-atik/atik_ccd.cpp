@@ -262,9 +262,8 @@ bool ATIKCCD::initProperties()
 
     // Version information
     IUFillText(&VersionInfoS[VERSION_API], "VERSION_API", "API", std::to_string(ArtemisAPIVersion()).c_str());
-    IUFillText(&VersionInfoS[VERSION_DLL], "VERSION_DLL", "DLL", std::to_string(ArtemisDLLVersion()).c_str());
     IUFillText(&VersionInfoS[VERSION_FIRMWARE], "VERSION_FIRMWARE", "Firmware", "Unknown");
-    IUFillTextVector(&VersionInfoSP, VersionInfoS, 3, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&VersionInfoSP, VersionInfoS, 2, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // Gain/Offset Presets
     IUFillSwitch(&ControlPresetsS[PRESET_CUSTOM], "PRESET_CUSTOM", "Custom", ISS_ON);
