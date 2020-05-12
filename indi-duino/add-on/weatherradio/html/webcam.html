@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Weather Radio | Webcam</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv=“Pragma” content=”no-cache”>
+    <meta http-equiv=“Expires” content=”-1″>
+    <meta http-equiv=“CACHE-CONTROL” content=”NO-CACHE”>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/styles.css" /> 
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/popper.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+
+    <script language="javascript"> 
+      function updateImage() { 
+	  obj = document.querySelector("#webcam");
+	  obj.src = obj.src + "?" + Math.random(); 
+	  //Following statement sets the delay before the function will 
+	  //call itself again (in milliseconds) 
+	  setTimeout("updateImage()",15000); 
+      } 
+    </script> 
+
+  </head>
+  <body onload="updateImage();">
+    <div class="navigation">
+        <a href="./weatherradio.html">Home</a> | <a href="./sensordata.html">Sensor Data</a> | Webcam
+    </div>
+    <div class="container-fluid">
+      <div class="row" align="center" style="padding-top: 50px">
+        <div class="col-sm-12">
+	  <img id="webcam" width="480px" src="http://weathercam/cam/cam_pic.php">
+        </div>
+      </div> <!-- Web cam images -->
+    </div>
+  </body>
+</html>
