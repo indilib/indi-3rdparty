@@ -163,6 +163,18 @@ Interferometer::Interferometer()
     nodeLocationN = static_cast<INumber*>(malloc(1));
     nodeLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
 
+    nodeTargetN = static_cast<INumber*>(malloc(1));
+    nodeTargetNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    snoopLocationN = static_cast<INumber*>(malloc(1));
+    snoopLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeTargetN = static_cast<INumber*>(malloc(1));
+    nodeTargetNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeLocatorT = static_cast<IText*>(malloc(1));
+    nodeLocatorTP = static_cast<ITextVectorProperty*>(malloc(1));
+
     correlationsN = static_cast<INumber*>(malloc(1));
 
     totalcounts = static_cast<double*>(malloc(1));
@@ -217,13 +229,12 @@ bool Interferometer::initProperties()
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
-
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
     serialConnection->setWordSize(WORD_SIZE);
     serialConnection->setStopBits(STOP_BITS);
-    serialConnection->setDefaultBaudRate(Connection::Serial::B_230400);
+    serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
     serialConnection->registerHandshake([&]() { return Handshake(); });
     registerConnection(serialConnection);
 
@@ -369,7 +380,6 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
             for(int x = 0; x < NUM_LINES; x++) {
                 for(int y = x+1; y < NUM_LINES; y++) {
                     if(x==i||y==i) {
-
                         INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
                         if(nv != nullptr)
                         {
@@ -391,6 +401,14 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
             IDSetNumber(&nodeLocationNP[i], nullptr);
             return true;
         }
+        if(!strcmp(nodeTargetNP[i].name, name)) {
+            IUUpdateNumber(&nodeTargetNP[i], values, names, n);
+            nodeTargetN[i*3+0].value = values[0];
+            nodeTargetN[i*3+1].value = values[1];
+            nodeTargetN[i*3+2].value = values[2];
+            IDSetNumber(&nodeTargetNP[i], nullptr);
+            return true;
+        }
     }
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
@@ -403,6 +421,14 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
     if (strcmp (dev, getDeviceName()))
         return false;
 
+    if(!strcmp(name, "DEVICE_BAUD_RATE")) {
+        if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
+            states[0] = states[1] = states[2] = ISS_OFF;
+            states[3] = ISS_ON;
+        }
+        SetBaudRate();
+    }
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
 
@@ -413,11 +439,13 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
                 ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
                 defineSwitch(&nodePowerSP[x]);
                 defineNumber(&nodeLocationNP[x]);
+                defineNumber(&nodeTargetNP[x]);
                 defineNumber(&countsNP[x]);
             } else {
                 ActiveLine(x, false, false);
                 deleteProperty(nodePowerSP[x].name);
                 deleteProperty(nodeLocationNP[x].name);
+                deleteProperty(nodeTargetNP[x].name);
                 deleteProperty(countsNP[x].name);
             }
             IDSetSwitch(&nodeEnableSP[x], nullptr);
@@ -429,20 +457,6 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
-}
-
-/**************************************************************************************
-** Client is asking us to set a new text
-***************************************************************************************/
-bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    if (strcmp (dev, getDeviceName()))
-        return false;
-
-    for(int x = 0; x < NUM_BASELINES; x++)
-        baselines[x]->ISNewText(dev, name, texts, names, n);
-
-    return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
 /**************************************************************************************
@@ -460,12 +474,62 @@ bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], i
 }
 
 /**************************************************************************************
+** Client is asking us to set a new text
+***************************************************************************************/
+bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if (strcmp (dev, getDeviceName()))
+        return false;
+
+    //  This is for our device
+    //  Now lets see if it's something we process here
+    for(int x = 0; x < NUM_LINES; x++) {
+        if (!strcmp(name, nodeLocatorTP[x].name))
+        {
+            nodeLocatorTP[x].s = IPS_OK;
+            IUUpdateText(&nodeLocatorTP[x], texts, names, n);
+            IDSetText(&nodeLocatorTP[x], nullptr);
+
+            // Update the property name!
+            strncpy(snoopLocationNP[x].device, nodeLocatorT[x*2+0].text, MAXINDIDEVICE);
+            strncpy(snoopTargetNP[x].device, nodeLocatorT[x*2+1].text, MAXINDIDEVICE);
+
+            IDSnoopDevice(nodeLocatorT[x*2+0].text, "EQUATORIAL_EOD_COORD");
+            IDSnoopDevice(nodeLocatorT[x*2+1].text, "GEOGRAPHIC_COORD");
+
+            //  We processed this one, so, tell the world we did it
+            return true;
+        }
+    }
+
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewText(dev, name, texts, names, n);
+
+    return INDI::CCD::ISNewText(dev, name, texts, names, n);
+}
+
+/**************************************************************************************
 ** Client is asking us to set a new snoop device
 ***************************************************************************************/
 bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
+    for(int x = 0; x < NUM_LINES; x++) {
+        if(!IUSnoopNumber(root, &snoopTargetNP[x])) {
+            nodeTargetNP[x].np[0].value = snoopTargetNP[x].np[0].value;
+            nodeTargetNP[x].np[1].value = snoopTargetNP[x].np[1].value;
+            IDSetNumber(&nodeTargetNP[x], nullptr);
+        }
+        if(!IUSnoopNumber(root, &snoopLocationNP[x])) {
+            nodeLocationNP[x].np[0].value = snoopLocationNP[x].np[0].value;
+            nodeLocationNP[x].np[1].value = snoopLocationNP[x].np[1].value;
+            nodeLocationNP[x].np[2].value = snoopLocationNP[x].np[2].value;
+            IDSetNumber(&nodeLocationNP[x], nullptr);
+        }
+    }
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISSnoopDevice(root);
+
     return INDI::CCD::ISSnoopDevice(root);
 }
 
@@ -566,8 +630,20 @@ bool Interferometer::Handshake()
         nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, num_nodes*2*sizeof(ISwitch)+1));
         nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, num_nodes*sizeof(ISwitchVectorProperty)+1));
 
+        nodeLocatorT = static_cast<IText*>(realloc(nodeLocationN, 2*num_nodes*sizeof(INumber)+1));
+        nodeLocatorTP = static_cast<ITextVectorProperty*>(realloc(nodeLocatorTP, num_nodes*sizeof(INumberVectorProperty)+1));
+
         nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*num_nodes*sizeof(INumber)+1));
         nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        nodeTargetN = static_cast<INumber*>(realloc(nodeLocationN, 2*num_nodes*sizeof(INumber)+1));
+        nodeTargetNP = static_cast<INumberVectorProperty*>(realloc(nodeTargetNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        snoopLocationN = static_cast<INumber*>(realloc(snoopLocationN, 3*num_nodes*sizeof(INumber)+1));
+        snoopLocationNP = static_cast<INumberVectorProperty*>(realloc(snoopLocationNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        snoopTargetN = static_cast<INumber*>(realloc(snoopTargetN, 3*num_nodes*sizeof(INumber)+1));
+        snoopTargetNP = static_cast<INumberVectorProperty*>(realloc(snoopTargetNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*(num_nodes*(num_nodes-1)/2)*sizeof(INumber)+1));
 
@@ -585,6 +661,10 @@ bool Interferometer::Handshake()
         char name[MAXINDINAME];
         char label[MAXINDINAME];
         for (int x = 0; x < num_nodes; x++) {
+
+            IUFillNumber(&nodeTargetN[x*2+0], "RA", "Right Ascension", "%4.6f", 0.75, 9999.0, .01, 0.0);
+            IUFillNumber(&nodeTargetN[x*2+1], "DEC", "Declination", "%4.6f", 0.75, 9999.0, .01, 0.0);
+
             IUFillNumber(&nodeLocationN[x*3+0], "LINE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
             IUFillNumber(&nodeLocationN[x*3+1], "LINE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
             IUFillNumber(&nodeLocationN[x*3+2], "LINE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
@@ -598,14 +678,23 @@ bool Interferometer::Handshake()
             IUFillNumber(&countsN[x], "LINE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
 
             sprintf(tab, "Line %02d", x+1);
-            sprintf(name, "LINE_ENABLE_%02d", x+1);
 
+            // Snooped Devices
+            sprintf(name, "LINE_LOCATOR_%02d", x+1);
+            IUFillText(&nodeLocatorT[x*2+0], "ACTIVE_TELESCOPE", "Telescope", "Telescope Simulator");
+            IUFillText(&nodeLocatorT[x*2+1], "ACTIVE_GPS", "GPS", "GPS Simulator");
+            IUFillTextVector(&nodeLocatorTP[x], nodeLocatorT, 2, getDeviceName(), name, "Locator devices", tab,
+                             IP_RW, 60, IPS_IDLE);
+
+            sprintf(name, "LINE_ENABLE_%02d", x+1);
             IUFillSwitchVector(&nodeEnableSP[x], &nodeEnableS[x*2], 2, getDeviceName(), name, "Enable Line", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
             sprintf(name, "LINE_POWER_%02d", x+1);
             IUFillSwitchVector(&nodePowerSP[x], &nodePowerS[x*2], 2, getDeviceName(), name, "Power", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
             sprintf(name, "LINE_LOCATION_%02d", x+1);
-            IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
+            IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RO, 60, IPS_IDLE);
+            sprintf(name, "LINE_TARGET_%02d", x+1);
+            IUFillNumberVector(&nodeTargetNP[x], &nodeTargetN[x*2], 2, getDeviceName(), name, "Target coordinates", tab, IP_RO, 60, IPS_IDLE);
             sprintf(name, "LINE_COUNTS_%02d", x+1);
             IUFillNumberVector(&countsNP[x], &countsN[x], 1, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
             for (int y = x+1; y < num_nodes; y++) {
@@ -624,7 +713,6 @@ bool Interferometer::Handshake()
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_nodes;
         DELAY_LINES = delay_lines;
-
         return true;
     }
     return false;
@@ -653,4 +741,18 @@ void Interferometer::ActiveLine(int line, bool on, bool power)
 void Interferometer::EnableCapture(bool start)
 {
     SendCommand(ENABLE_CAPTURE, start);
+}
+void Interferometer::SetBaudRate()
+{
+    IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+    if (states[3] == ISS_ON) {
+        SendCommand(SET_BAUDRATE, 0);
+    }
+    if (states[4] == ISS_ON) {
+        SendCommand(SET_BAUDRATE, 1);
+    }
+    if (states[5] == ISS_ON) {
+        SendCommand(SET_BAUDRATE, 2);
+    }
+    IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
 }

@@ -111,6 +111,7 @@ private:
     enum it_cmd {
         SET_ACTIVE_LINE = 0x01,
         SET_LEDS = 0x02,
+        SET_BAUDRATE = 0x03,
         ENABLE_CAPTURE = 0x0d,
     };
 
@@ -128,6 +129,18 @@ private:
 
     INumber *nodeLocationN;
     INumberVectorProperty *nodeLocationNP;
+
+    INumber *nodeTargetN;
+    INumberVectorProperty *nodeTargetNP;
+
+    INumber *snoopLocationN;
+    INumberVectorProperty *snoopLocationNP;
+
+    INumber *snoopTargetN;
+    INumberVectorProperty *snoopTargetNP;
+
+    IText *nodeLocatorT;
+    ITextVectorProperty *nodeLocatorTP;
 
     double *totalcounts;
     double *totalcorrelations;
@@ -150,6 +163,7 @@ private:
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
     void ActiveLine(int, bool, bool);
     void EnableCapture(bool start);
+    void SetBaudRate();
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
