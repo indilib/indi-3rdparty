@@ -163,7 +163,6 @@ private:
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
     void ActiveLine(int, bool, bool);
     void EnableCapture(bool start);
-    void SetBaudRate();
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;

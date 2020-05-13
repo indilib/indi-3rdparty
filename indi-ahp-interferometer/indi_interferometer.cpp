@@ -426,7 +426,17 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
             states[0] = states[1] = states[2] = ISS_OFF;
             states[3] = ISS_ON;
         }
-        SetBaudRate();
+        IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+        if (states[3] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 0);
+        }
+        if (states[4] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 1);
+        }
+        if (states[5] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 2);
+        }
+        IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
 
     for(int x = 0; x < NUM_BASELINES; x++)
@@ -741,18 +751,4 @@ void Interferometer::ActiveLine(int line, bool on, bool power)
 void Interferometer::EnableCapture(bool start)
 {
     SendCommand(ENABLE_CAPTURE, start);
-}
-void Interferometer::SetBaudRate()
-{
-    IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
-    if (states[3] == ISS_ON) {
-        SendCommand(SET_BAUDRATE, 0);
-    }
-    if (states[4] == ISS_ON) {
-        SendCommand(SET_BAUDRATE, 1);
-    }
-    if (states[5] == ISS_ON) {
-        SendCommand(SET_BAUDRATE, 2);
-    }
-    IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
 }
