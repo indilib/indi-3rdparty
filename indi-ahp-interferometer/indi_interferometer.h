@@ -65,8 +65,8 @@ public:
         free(nodePowerS);
         free(nodePowerSP);
 
-        free(nodeLocationN);
-        free(nodeLocationNP);
+        free(nodeGPSN);
+        free(nodeGPSNP);
 
         free(totalcounts);
         free(totalcorrelations);
@@ -127,20 +127,20 @@ private:
     ISwitch *nodePowerS;
     ISwitchVectorProperty *nodePowerSP;
 
-    INumber *nodeLocationN;
-    INumberVectorProperty *nodeLocationNP;
+    INumber *nodeGPSN;
+    INumberVectorProperty *nodeGPSNP;
 
-    INumber *nodeTargetN;
-    INumberVectorProperty *nodeTargetNP;
+    INumber *nodeTelescopeN;
+    INumberVectorProperty *nodeTelescopeNP;
 
-    INumber *snoopLocationN;
-    INumberVectorProperty *snoopLocationNP;
+    INumber *snoopGPSN;
+    INumberVectorProperty *snoopGPSNP;
 
-    INumber *snoopTargetN;
-    INumberVectorProperty *snoopTargetNP;
+    INumber *snoopTelescopeN;
+    INumberVectorProperty *snoopTelescopeNP;
 
-    IText *nodeLocatorT;
-    ITextVectorProperty *nodeLocatorTP;
+    IText *snoopedNodeDevicesT;
+    ITextVectorProperty *snoopedNodeDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
