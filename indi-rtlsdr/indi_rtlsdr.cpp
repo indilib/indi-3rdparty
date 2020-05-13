@@ -1,6 +1,10 @@
 /*
     indi_rtlsdr - a software defined radio driver for INDI
-    Copyright (C) 2017  Ilia Platone
+    Copyright (C) 2017  Ilia Platone - Jasem Mutlaq
+    Collaborators:
+        - Ilia Platone <info@iliaplatone.com>
+        - Jasem Mutlaq - INDI library - <http://indilib.org>
+        - Monroe Pattillo - Fox Observatory - South Florida Amateur Astronomers Association <http://www.sfaaa.com/>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -273,7 +277,7 @@ bool RTLSDR::initProperties()
     // Must init parent properties first!
     INDI::Spectrograph::initProperties();
 
-    setMinMaxStep("SPECTROGRAPH_INTEGRATION", "SPECTROGRAPH_INTEGRATION_VALUE", 0.001, STELLAR_DAY, 0.001, false);
+    setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 0.001, 600, 0.001, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_SAMPLERATE", 2.5e+5, 2.0e+6, 2.5e+5, false);
     setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_GAIN", 0.0, 25.0, 0.1, false);
@@ -492,8 +496,14 @@ void RTLSDR::grabData()
         if (to_read <= 0)
         {
             InIntegration = false;
-            LOG_INFO("Download complete.");
-            IntegrationComplete();
+            if(!streamPredicate) {
+                LOG_INFO("Download complete.");
+                IntegrationComplete();
+            } else {
+                StartIntegration(1.0 / Streamer->getTargetFPS());
+                int32_t size = getBufferSize();
+                Streamer->newFrame(getBuffer(), size);
+            }
         }
     }
 }
@@ -504,6 +514,7 @@ bool RTLSDR::StartStreaming()
 {
     pthread_mutex_lock(&condMutex);
     streamPredicate = 1;
+    StartIntegration(1.0 / Streamer->getTargetFPS());
     pthread_mutex_unlock(&condMutex);
     pthread_cond_signal(&cv);
 
@@ -518,52 +529,6 @@ bool RTLSDR::StopStreaming()
     pthread_cond_signal(&cv);
 
     return true;
-}
-
-void RTLSDR::streamCaptureHelper()
-{
-    struct itimerval tframe1, tframe2;
-    double deltas;
-    getitimer(ITIMER_REAL, &tframe1);
-    auto s1 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-    auto s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-
-    while (true)
-    {
-        pthread_mutex_lock(&condMutex);
-
-        while (streamPredicate == 0)
-        {
-            pthread_cond_wait(&cv, &condMutex);
-        }
-        StartIntegration(1.0 / Streamer->getTargetFPS());
-
-        if (terminateThread)
-            break;
-
-        // release condMutex
-        pthread_mutex_unlock(&condMutex);
-
-        // Simulate exposure time
-        //usleep(ExposureRequest*1e5);
-        grabData();
-        getitimer(ITIMER_REAL, &tframe1);
-
-        s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-        deltas = fabs(s2 - s1);
-
-        if (deltas < IntegrationTime)
-            usleep(fabs(IntegrationTime - deltas) * 1e6);
-
-        int32_t size = getBufferSize();
-        Streamer->newFrame(getBuffer(), size);
-
-        s1 = ((double)tframe1.it_value.tv_sec) + ((double)tframe1.it_value.tv_usec / 1e6);
-
-        getitimer(ITIMER_REAL, &tframe2);
-    }
-
-    pthread_mutex_unlock(&condMutex);
 }
 
 bool RTLSDR::Handshake()

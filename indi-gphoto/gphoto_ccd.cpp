@@ -464,8 +464,9 @@ void GPhotoCCD::ISGetProperties(const char * dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
-    defineText(&PortTP);
-    loadConfig(true, "DEVICE_PORT");
+    char configPort[MAXINDINAME] = {0};
+    if (IUGetConfigText(getDeviceName(), PortTP.name, mPortT[0].name, configPort, MAXINDINAME) == 0)
+        IUSaveText(&mPortT[0], configPort);
 
     if (isConnected())
         return;
@@ -590,9 +591,17 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
     {
         if (strcmp(name, PortTP.name) == 0)
         {
+            const char *previousPort = mPortT[0].text;
             PortTP.s = IPS_OK;
             IUUpdateText(&PortTP, texts, names, n);
             IDSetText(&PortTP, nullptr);
+
+            // Port changes requires a driver restart.
+            if (strcmp(previousPort, PortTP.tp[0].text))
+            {
+                saveConfig(true, PortTP.name);
+                LOG_INFO("Please restart the driver for this change to have effect.");
+            }
             return true;
         }
         else if (strcmp(name, UploadFileTP.name) == 0)
