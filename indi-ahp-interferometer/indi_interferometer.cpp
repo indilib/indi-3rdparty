@@ -421,7 +421,7 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
 {
     if (strcmp (dev, getDeviceName()))
         return false;
-/*
+
     if(!strcmp(name, "DEVICE_BAUD_RATE")) {
         if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
             states[0] = states[1] = states[2] = ISS_OFF;
@@ -439,7 +439,7 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         }
         IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
-*/
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
 
