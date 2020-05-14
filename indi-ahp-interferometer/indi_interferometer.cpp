@@ -371,46 +371,6 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
-
-    for (int i = 0; i < NUM_LINES; i++) {
-        if(!strcmp(nodeGPSNP[i].name, name)) {
-            IUUpdateNumber(&nodeGPSNP[i], values, names, n);
-            nodeGPSN[i*3+0].value = values[0];
-            nodeGPSN[i*3+1].value = values[1];
-            nodeGPSN[i*3+2].value = values[2];
-            int idx = 0;
-            for(int x = 0; x < NUM_LINES; x++) {
-                for(int y = x+1; y < NUM_LINES; y++) {
-                    if(x==i||y==i) {
-                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
-                        if(nv != nullptr)
-                        {
-                            Lat = nv->np[0].value;
-                        }
-                        Lat *= M_PI/180.0;
-
-                        INDI::Correlator::Baseline b;
-                        b.x = (nodeGPSN[x*3+0].value-nodeGPSN[y*3+0].value);
-                        b.y = (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
-                        b.z = (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
-                        b.y += (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
-                        b.z += (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
-                        baselines[idx]->setBaseline(b);
-                    }
-                    idx++;
-                }
-            }
-            IDSetNumber(&nodeGPSNP[i], nullptr);
-            return true;
-        }
-        if(!strcmp(nodeTelescopeNP[i].name, name)) {
-            IUUpdateNumber(&nodeTelescopeNP[i], values, names, n);
-            nodeTelescopeN[i*3+0].value = values[0];
-            nodeTelescopeN[i*3+1].value = values[1];
-            IDSetNumber(&nodeTelescopeNP[i], nullptr);
-            return true;
-        }
-    }
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -526,17 +486,40 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 ***************************************************************************************/
 bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
-    for(int x = 0; x < NUM_LINES; x++) {
-        if(!IUSnoopNumber(root, &snoopTelescopeNP[x])) {
-            nodeTelescopeNP[x].np[0].value = snoopTelescopeNP[x].np[0].value;
-            nodeTelescopeNP[x].np[1].value = snoopTelescopeNP[x].np[1].value;
-            IDSetNumber(&nodeTelescopeNP[x], nullptr);
+    for(int i = 0; i < NUM_LINES; i++) {
+        if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
+            double values[] = { snoopTelescopeNP[i].np[0].value, snoopTelescopeNP[i].np[1].value };
+            char *names[] = { "RA", "DEC" };
+            IUUpdateNumber(&nodeTelescopeNP[i], values, names, 2);
+            IDSetNumber(&nodeTelescopeNP[i], nullptr);
         }
-        if(!IUSnoopNumber(root, &snoopGPSNP[x])) {
-            nodeGPSNP[x].np[0].value = snoopGPSNP[x].np[0].value;
-            nodeGPSNP[x].np[1].value = snoopGPSNP[x].np[1].value;
-            nodeGPSNP[x].np[2].value = snoopGPSNP[x].np[2].value;
-            IDSetNumber(&nodeGPSNP[x], nullptr);
+        if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
+            double values[] = { snoopGPSNP[i].np[0].value, snoopGPSNP[i].np[1].value, snoopGPSNP[i].np[2].value };
+            char *names[] = { "LAT", "LONG", "ELEV" };
+            IUUpdateNumber(&nodeGPSNP[i], values, names, 3);
+            int idx = 0;
+            for(int x = 0; x < NUM_LINES; x++) {
+                for(int y = x+1; y < NUM_LINES; y++) {
+                    if(x==i||y==i) {
+                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
+                        if(nv != nullptr)
+                        {
+                            Lat = nv->np[0].value;
+                        }
+                        Lat *= M_PI/180.0;
+
+                        INDI::Correlator::Baseline b;
+                        b.x = (nodeGPSN[x*3+0].value-nodeGPSN[y*3+0].value);
+                        b.y = (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
+                        b.z = (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
+                        b.y += (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
+                        b.z += (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
+                        baselines[idx]->setBaseline(b);
+                    }
+                    idx++;
+                }
+            }
+            IDSetNumber(&nodeGPSNP[i], nullptr);
         }
     }
 
