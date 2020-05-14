@@ -227,10 +227,6 @@ bool Interferometer::initProperties()
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 1.0E-9, 0.211121449);
     IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
-    IUFillNumber(&EqN[0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
-    IUFillNumber(&EqN[1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
-    IUFillNumberVector(&EqNP, EqN, 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_BUSY);
-
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
     setDefaultPollingPeriod(500);
@@ -259,7 +255,6 @@ void Interferometer::ISGetProperties(const char *dev)
         }
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
-        defineNumber(&EqNP);
 
         // Define our properties
     }
@@ -288,14 +283,12 @@ bool Interferometer::updateProperties()
         }
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
-        defineNumber(&EqNP);
     }
     else
         // We're disconnected
     {
         deleteProperty(correlationsNP.name);
         deleteProperty(settingsNP.name);
-        deleteProperty(EqNP.name);
         for (int x=0; x<NUM_LINES; x++) {
             deleteProperty(nodeEnableSP[x].name);
             deleteProperty(nodePowerSP[x].name);
@@ -369,16 +362,6 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
 
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
-
-    if(!strcmp(EqNP.name, name)) {
-        IUUpdateNumber(&EqNP, values, names, n);
-        for(int x = 0; x < NUM_LINES; x++) {
-            IUUpdateNumber(&snoopTelescopeNP[x], values, names, n);
-            IDSetNumber(&snoopTelescopeNP[x], nullptr);
-        }
-        IDSetNumber(&EqNP, nullptr);
-        return true;
-    }
 
     if(!strcmp(settingsNP.name, name)) {
         IUUpdateNumber(&settingsNP, values, names, n);

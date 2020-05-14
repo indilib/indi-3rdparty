@@ -149,9 +149,6 @@ private:
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
-    INumber EqN[2];
-    INumberVectorProperty EqNP;
-
     unsigned int power_status;
 
     double Lat;
