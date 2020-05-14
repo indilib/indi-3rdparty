@@ -160,8 +160,20 @@ Interferometer::Interferometer()
     nodePowerS = static_cast<ISwitch*>(malloc(1));
     nodePowerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
 
-    nodeLocationN = static_cast<INumber*>(malloc(1));
-    nodeLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
+    snoopedNodeDevicesT = static_cast<IText*>(malloc(1));
+    snoopedNodeDevicesTP = static_cast<ITextVectorProperty*>(malloc(1));
+
+    snoopGPSN = static_cast<INumber*>(malloc(1));
+    snoopGPSNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    snoopTelescopeN = static_cast<INumber*>(malloc(1));
+    snoopTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeGPSN = static_cast<INumber*>(malloc(1));
+    nodeGPSNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeTelescopeN = static_cast<INumber*>(malloc(1));
+    nodeTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     correlationsN = static_cast<INumber*>(malloc(1));
 
@@ -192,7 +204,7 @@ bool Interferometer::saveConfigItems(FILE *fp)
     INDI::CCD::saveConfigItems(fp);
 
     for(int x = 0; x < NUM_LINES; x++) {
-        IUSaveConfigNumber(fp, &nodeLocationNP[x]);
+        IUSaveConfigText(fp, &snoopedNodeDevicesTP[x]);
         IUSaveConfigSwitch(fp, &nodeEnableSP[x]);
         IUSaveConfigSwitch(fp, &nodePowerSP[x]);
     }
@@ -217,13 +229,12 @@ bool Interferometer::initProperties()
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
-
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
     serialConnection->setWordSize(WORD_SIZE);
     serialConnection->setStopBits(STOP_BITS);
-    serialConnection->setDefaultBaudRate(Connection::Serial::B_230400);
+    serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
     serialConnection->registerHandshake([&]() { return Handshake(); });
     registerConnection(serialConnection);
 
@@ -281,8 +292,10 @@ bool Interferometer::updateProperties()
         for (int x=0; x<NUM_LINES; x++) {
             deleteProperty(nodeEnableSP[x].name);
             deleteProperty(nodePowerSP[x].name);
-            deleteProperty(nodeLocationNP[x].name);
+            deleteProperty(nodeGPSNP[x].name);
+            deleteProperty(nodeTelescopeNP[x].name);
             deleteProperty(countsNP[x].name);
+            deleteProperty(snoopedNodeDevicesTP[x].name);
         }
     }
 
@@ -358,40 +371,6 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
-
-    for (int i = 0; i < NUM_LINES; i++) {
-        if(!strcmp(nodeLocationNP[i].name, name)) {
-            IUUpdateNumber(&nodeLocationNP[i], values, names, n);
-            nodeLocationN[i*3+0].value = values[0];
-            nodeLocationN[i*3+1].value = values[1];
-            nodeLocationN[i*3+2].value = values[2];
-            int idx = 0;
-            for(int x = 0; x < NUM_LINES; x++) {
-                for(int y = x+1; y < NUM_LINES; y++) {
-                    if(x==i||y==i) {
-
-                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
-                        if(nv != nullptr)
-                        {
-                            Lat = nv->np[0].value;
-                        }
-                        Lat *= M_PI/180.0;
-
-                        INDI::Correlator::Baseline b;
-                        b.x = (nodeLocationN[x*3+0].value-nodeLocationN[y*3+0].value);
-                        b.y = (nodeLocationN[x*3+1].value-nodeLocationN[y*3+1].value)*sin(Lat);
-                        b.z = (nodeLocationN[x*3+2].value-nodeLocationN[y*3+2].value)*cos(Lat);
-                        b.y += (nodeLocationN[x*3+2].value-nodeLocationN[y*3+2].value)*cos(Lat);
-                        b.z += (nodeLocationN[x*3+1].value-nodeLocationN[y*3+1].value)*sin(Lat);
-                        baselines[idx]->setBaseline(b);
-                    }
-                    idx++;
-                }
-            }
-            IDSetNumber(&nodeLocationNP[i], nullptr);
-            return true;
-        }
-    }
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -403,6 +382,24 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
     if (strcmp (dev, getDeviceName()))
         return false;
 
+    if(!strcmp(name, "DEVICE_BAUD_RATE")) {
+        if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
+            states[0] = states[1] = states[2] = ISS_OFF;
+            states[3] = ISS_ON;
+        }
+        IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+        if (states[3] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 0);
+        }
+        if (states[4] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 1);
+        }
+        if (states[5] == ISS_ON) {
+            SendCommand(SET_BAUDRATE, 2);
+        }
+        IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
+    }
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
 
@@ -412,13 +409,17 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
             if(nodeEnableSP[x].sp[0].s == ISS_ON) {
                 ActiveLine(x, true, nodePowerSP[x].sp[0].s == ISS_ON);
                 defineSwitch(&nodePowerSP[x]);
-                defineNumber(&nodeLocationNP[x]);
+                defineNumber(&nodeGPSNP[x]);
+                defineNumber(&nodeTelescopeNP[x]);
                 defineNumber(&countsNP[x]);
+                defineText(&snoopedNodeDevicesTP[x]);
             } else {
                 ActiveLine(x, false, false);
                 deleteProperty(nodePowerSP[x].name);
-                deleteProperty(nodeLocationNP[x].name);
+                deleteProperty(nodeGPSNP[x].name);
+                deleteProperty(nodeTelescopeNP[x].name);
                 deleteProperty(countsNP[x].name);
+                deleteProperty(snoopedNodeDevicesTP[x].name);
             }
             IDSetSwitch(&nodeEnableSP[x], nullptr);
         }
@@ -429,20 +430,6 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
-}
-
-/**************************************************************************************
-** Client is asking us to set a new text
-***************************************************************************************/
-bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    if (strcmp (dev, getDeviceName()))
-        return false;
-
-    for(int x = 0; x < NUM_BASELINES; x++)
-        baselines[x]->ISNewText(dev, name, texts, names, n);
-
-    return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
 /**************************************************************************************
@@ -460,12 +447,85 @@ bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], i
 }
 
 /**************************************************************************************
+** Client is asking us to set a new text
+***************************************************************************************/
+bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if (strcmp (dev, getDeviceName()))
+        return false;
+
+    //  This is for our device
+    //  Now lets see if it's something we process here
+    for(int x = 0; x < NUM_LINES; x++) {
+        if (!strcmp(name, snoopedNodeDevicesTP[x].name))
+        {
+            snoopedNodeDevicesTP[x].s = IPS_OK;
+            IUUpdateText(&snoopedNodeDevicesTP[x], texts, names, n);
+            IDSetText(&snoopedNodeDevicesTP[x], nullptr);
+
+            // Update the property name!
+            strncpy(snoopTelescopeNP[x].device, snoopedNodeDevicesT[x*3+0].text, MAXINDIDEVICE);
+            strncpy(snoopGPSNP[x].device, snoopedNodeDevicesT[x*3+1].text, MAXINDIDEVICE);
+
+            IDSnoopDevice(snoopTelescopeNP[x].device, "EQUATORIAL_EOD_COORD");
+            IDSnoopDevice(snoopGPSNP[x].device, "GEOGRAPHIC_COORD");
+
+            //  We processed this one, so, tell the world we did it
+            return true;
+        }
+    }
+
+    for(int x = 0; x < NUM_BASELINES; x++)
+        baselines[x]->ISNewText(dev, name, texts, names, n);
+
+    return INDI::CCD::ISNewText(dev, name, texts, names, n);
+}
+
+/**************************************************************************************
 ** Client is asking us to set a new snoop device
 ***************************************************************************************/
 bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
+    for(int i = 0; i < NUM_LINES; i++) {
+        if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
+            double values[] = { snoopTelescopeNP[i].np[0].value, snoopTelescopeNP[i].np[1].value };
+            char *names[] = { "RA", "DEC" };
+            IUUpdateNumber(&nodeTelescopeNP[i], values, names, 2);
+            IDSetNumber(&nodeTelescopeNP[i], nullptr);
+        }
+        if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
+            double values[] = { snoopGPSNP[i].np[0].value, snoopGPSNP[i].np[1].value, snoopGPSNP[i].np[2].value };
+            char *names[] = { "LAT", "LONG", "ELEV" };
+            IUUpdateNumber(&nodeGPSNP[i], values, names, 3);
+            int idx = 0;
+            for(int x = 0; x < NUM_LINES; x++) {
+                for(int y = x+1; y < NUM_LINES; y++) {
+                    if(x==i||y==i) {
+                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
+                        if(nv != nullptr)
+                        {
+                            Lat = nv->np[0].value;
+                        }
+                        Lat *= M_PI/180.0;
+
+                        INDI::Correlator::Baseline b;
+                        b.x = (nodeGPSN[x*3+0].value-nodeGPSN[y*3+0].value);
+                        b.y = (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
+                        b.z = (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
+                        b.y += (nodeGPSN[x*3+2].value-nodeGPSN[y*3+2].value)*cos(Lat);
+                        b.z += (nodeGPSN[x*3+1].value-nodeGPSN[y*3+1].value)*sin(Lat);
+                        baselines[idx]->setBaseline(b);
+                    }
+                    idx++;
+                }
+            }
+            IDSetNumber(&nodeGPSNP[i], nullptr);
+        }
+    }
+
     for(int x = 0; x < NUM_BASELINES; x++)
         baselines[x]->ISSnoopDevice(root);
+
     return INDI::CCD::ISSnoopDevice(root);
 }
 
@@ -566,10 +626,22 @@ bool Interferometer::Handshake()
         nodePowerS = static_cast<ISwitch*>(realloc(nodePowerS, num_nodes*2*sizeof(ISwitch)+1));
         nodePowerSP = static_cast<ISwitchVectorProperty*>(realloc(nodePowerSP, num_nodes*sizeof(ISwitchVectorProperty)+1));
 
-        nodeLocationN = static_cast<INumber*>(realloc(nodeLocationN, 3*num_nodes*sizeof(INumber)+1));
-        nodeLocationNP = static_cast<INumberVectorProperty*>(realloc(nodeLocationNP, num_nodes*sizeof(INumberVectorProperty)+1));
+        snoopedNodeDevicesT = static_cast<IText*>(realloc(snoopedNodeDevicesT, 3*num_nodes*sizeof(IText)+1));
+        snoopedNodeDevicesTP = static_cast<ITextVectorProperty*>(realloc(snoopedNodeDevicesTP, num_nodes*sizeof(ITextVectorProperty)+1));
 
-        correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*(num_nodes*(num_nodes-1)/2)*sizeof(INumber)+1));
+        nodeGPSN = static_cast<INumber*>(realloc(nodeGPSN, 3*num_nodes*sizeof(INumber)+1));
+        nodeGPSNP = static_cast<INumberVectorProperty*>(realloc(nodeGPSNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        nodeTelescopeN = static_cast<INumber*>(realloc(nodeTelescopeN, 2*num_nodes*sizeof(INumber)+1));
+        nodeTelescopeNP = static_cast<INumberVectorProperty*>(realloc(nodeTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        snoopGPSN = static_cast<INumber*>(realloc(snoopGPSN, 3*num_nodes*sizeof(INumber)+1));
+        snoopGPSNP = static_cast<INumberVectorProperty*>(realloc(snoopGPSNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, 2*num_nodes*sizeof(INumber)+1));
+        snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*num_nodes*(num_nodes-1)/2*sizeof(INumber)+1));
 
         totalcounts = static_cast<double*>(realloc(totalcounts, num_nodes*sizeof(double)+1));
         totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (num_nodes*(num_nodes-1)/2)*sizeof(double)+1));
@@ -585,9 +657,31 @@ bool Interferometer::Handshake()
         char name[MAXINDINAME];
         char label[MAXINDINAME];
         for (int x = 0; x < num_nodes; x++) {
-            IUFillNumber(&nodeLocationN[x*3+0], "LINE_Y", "Latitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
-            IUFillNumber(&nodeLocationN[x*3+1], "LINE_X", "Longitude offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
-            IUFillNumber(&nodeLocationN[x*3+2], "LINE_Z", "Elevation offset (m)", "%4.6f", 0.75, 9999.0, .01, 0.0);
+            //snoop properties
+            IUFillNumber(&snoopTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
+            IUFillNumber(&snoopTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+
+            IUFillNumber(&snoopGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
+            IUFillNumber(&snoopGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
+            IUFillNumber(&snoopGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
+
+            IUFillNumberVector(&snoopGPSNP[x], &snoopGPSN[x*3], 3, getDeviceName(), "GEOGRAPHIC_COORD", "Location", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+            IUFillNumberVector(&snoopTelescopeNP[x], &snoopTelescopeN[x*2], 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+
+            snoopedNodeDevicesT[x*3+0].text = static_cast<char*>(malloc(1));
+            IUFillText(&snoopedNodeDevicesT[x*3+0], "ACTIVE_TELESCOPE", "Telescope", "Telescope Simulator");
+            snoopedNodeDevicesT[x*3+1].text = static_cast<char*>(malloc(1));
+            IUFillText(&snoopedNodeDevicesT[x*3+1], "ACTIVE_GPS", "GPS", "GPS Simulator");
+            snoopedNodeDevicesT[x*3+2].text = static_cast<char*>(malloc(1));
+            IUFillText(&snoopedNodeDevicesT[x*3+2], "ACTIVE_DOME", "DOME", "Dome Simulator");
+
+            //interferometer properties
+            IUFillNumber(&nodeTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
+            IUFillNumber(&nodeTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+
+            IUFillNumber(&nodeGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
+            IUFillNumber(&nodeGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
+            IUFillNumber(&nodeGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
 
             IUFillSwitch(&nodeEnableS[x*2+0], "LINE_ENABLE", "Enable", ISS_OFF);
             IUFillSwitch(&nodeEnableS[x*2+1], "LINE_DISABLE", "Disable", ISS_ON);
@@ -595,17 +689,20 @@ bool Interferometer::Handshake()
             IUFillSwitch(&nodePowerS[x*2+0], "LINE_POWER_ON", "On", ISS_OFF);
             IUFillSwitch(&nodePowerS[x*2+1], "LINE_POWER_OFF", "Off", ISS_ON);
 
+            //report pulse counts
             IUFillNumber(&countsN[x], "LINE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
 
             sprintf(tab, "Line %02d", x+1);
             sprintf(name, "LINE_ENABLE_%02d", x+1);
-
             IUFillSwitchVector(&nodeEnableSP[x], &nodeEnableS[x*2], 2, getDeviceName(), name, "Enable Line", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-
             sprintf(name, "LINE_POWER_%02d", x+1);
             IUFillSwitchVector(&nodePowerSP[x], &nodePowerS[x*2], 2, getDeviceName(), name, "Power", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-            sprintf(name, "LINE_LOCATION_%02d", x+1);
-            IUFillNumberVector(&nodeLocationNP[x], &nodeLocationN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RW, 60, IPS_IDLE);
+            sprintf(name, "LINE_SNOOP_DEVICES_%02d", x+1);
+            IUFillTextVector(&snoopedNodeDevicesTP[x], &snoopedNodeDevicesT[x*3], 3, getDeviceName(), name, "Locator devices", tab, IP_RW, 60, IPS_IDLE);
+            sprintf(name, "LINE_GEOGRAPHIC_COORD_%02d", x+1);
+            IUFillNumberVector(&nodeGPSNP[x], &nodeGPSN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RO, 60, IPS_IDLE);
+            sprintf(name, "EQUATORIAL_EOD_COORD_COORD_%02d", x+1);
+            IUFillNumberVector(&nodeTelescopeNP[x], &nodeTelescopeN[x*2], 2, getDeviceName(), name, "Target coordinates", tab, IP_RO, 60, IPS_IDLE);
             sprintf(name, "LINE_COUNTS_%02d", x+1);
             IUFillNumberVector(&countsNP[x], &countsN[x], 1, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
             for (int y = x+1; y < num_nodes; y++) {
@@ -617,14 +714,13 @@ bool Interferometer::Handshake()
                 IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
             }
         }
-        IUFillNumberVector(&correlationsNP, correlationsN, (num_nodes*(num_nodes-1)/2)*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+        IUFillNumberVector(&correlationsNP, correlationsN, ((num_nodes*(num_nodes-1)/2)*2), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
         EnableCapture(false);
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_nodes;
         DELAY_LINES = delay_lines;
-
         return true;
     }
     return false;

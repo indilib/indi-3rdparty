@@ -65,8 +65,8 @@ public:
         free(nodePowerS);
         free(nodePowerSP);
 
-        free(nodeLocationN);
-        free(nodeLocationNP);
+        free(nodeGPSN);
+        free(nodeGPSNP);
 
         free(totalcounts);
         free(totalcorrelations);
@@ -111,6 +111,7 @@ private:
     enum it_cmd {
         SET_ACTIVE_LINE = 0x01,
         SET_LEDS = 0x02,
+        SET_BAUDRATE = 0x03,
         ENABLE_CAPTURE = 0x0d,
     };
 
@@ -126,8 +127,20 @@ private:
     ISwitch *nodePowerS;
     ISwitchVectorProperty *nodePowerSP;
 
-    INumber *nodeLocationN;
-    INumberVectorProperty *nodeLocationNP;
+    INumber *nodeGPSN;
+    INumberVectorProperty *nodeGPSNP;
+
+    INumber *nodeTelescopeN;
+    INumberVectorProperty *nodeTelescopeNP;
+
+    INumber *snoopGPSN;
+    INumberVectorProperty *snoopGPSNP;
+
+    INumber *snoopTelescopeN;
+    INumberVectorProperty *snoopTelescopeNP;
+
+    IText *snoopedNodeDevicesT;
+    ITextVectorProperty *snoopedNodeDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
