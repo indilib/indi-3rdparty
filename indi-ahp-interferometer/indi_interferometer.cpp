@@ -105,7 +105,7 @@ void Interferometer::Callback()
             memset(str, 0, SAMPLE_SIZE+1);
             strncpy(str, buf+idx, SAMPLE_SIZE);
             sscanf(str, "%X", &tmp);
-            counts[x] = tmp;
+            counts[x] = static_cast<double>(tmp);
             totalcounts[x] += counts[x];
             idx += SAMPLE_SIZE;
         }
@@ -548,29 +548,26 @@ void Interferometer::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
-    SetTimer(POLLMS);
-
     if(InExposure) {
         // Just update time left in client
         PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
     }
 
-    correlationsNP.s = IPS_BUSY;
+    IDSetNumber(&correlationsNP, nullptr);
     int idx = 0;
     for (int x = 0; x < NUM_LINES; x++) {
-        countsNP[x].s = IPS_BUSY;
+        IDSetNumber(&countsNP[x], nullptr);
         countsNP[x].np[0].value = totalcounts[x];
         for(int y = x+1; y < NUM_LINES; y++) {
             correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
             correlationsNP.np[idx*2+1].value = totalcorrelations[idx]/(totalcounts[x]+totalcounts[y]);
+            totalcorrelations[idx] = 0;
             idx++;
         }
-        IDSetNumber(&countsNP[x], nullptr);
+        totalcounts[x] = 0;
     }
-    IDSetNumber(&correlationsNP, nullptr);
 
-    memset(totalcounts, 0, NUM_LINES*sizeof(double));
-    memset(totalcorrelations, 0, NUM_BASELINES*sizeof(double));
+    SetTimer(POLLMS);
 
     return;
 }
