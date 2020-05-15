@@ -1478,8 +1478,7 @@ bool GPhotoCCD::grabImage()
         // If subframing is requested
         // If either axis is less than the image resolution
         // then we subframe, given the OTHER axis is within range as well.
-        if ( (subW < w && subH <= h) ||
-                (subH < h && subW <= w))
+        if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
         {
             uint16_t subX = PrimaryCCD.getSubX();
             uint16_t subY = PrimaryCCD.getSubY();
