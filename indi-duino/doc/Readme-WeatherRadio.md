@@ -116,7 +116,10 @@ Inspired by the approach of [Induino Meteostation Web Interface](https://indidui
 The web interface needs to be integrated into a running web server. For simplicity reasons we assume that you are running [Apache web server](https://httpd.apache.org) on a Linux machine.
 
 #### Install dependencies
-```sudo apt-get install python python-rrdtool python-simplejson python-utidylib python-pathlib```
+```
+sudo apt-get install python python-rrdtool
+pip install rrdtool simplejson utidylib pathlib ffmpeg-python
+```
 
 #### Apache Setup
 Copy the entire `weatherradio` folder from the `add-on` directory to a location where Apache can serve them from.
