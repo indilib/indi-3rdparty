@@ -28,7 +28,7 @@
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
 #define STOP_BITS 1
 #define WORD_SIZE 8
-#define BAUD_SIZE (STOP_BITS+WORD_SIZE+1)
+#define BAUD_SIZE (STOP_BITS+WORD_SIZE+1.0)
 #define BAUD_RATE (serialConnection->baud())
 #define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
 #define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
@@ -139,8 +139,8 @@ private:
     INumber *snoopTelescopeN;
     INumberVectorProperty *snoopTelescopeNP;
 
-    IText *snoopedNodeDevicesT;
-    ITextVectorProperty *snoopedNodeDevicesTP;
+    IText *nodeDevicesT;
+    ITextVectorProperty *nodeDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
@@ -166,6 +166,7 @@ private:
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
+    bool threadsRunning;
 
     int NUM_LINES;
     int DELAY_LINES;
