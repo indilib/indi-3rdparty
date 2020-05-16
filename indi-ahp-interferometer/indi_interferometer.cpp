@@ -704,7 +704,7 @@ bool Interferometer::Handshake()
             IUFillNumber(&snoopGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
             IUFillNumber(&snoopGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
 
-            IUFillNumber(&nodeDelayN[x*3+2], "DELAY", "Delay (m)", "%7.9f", 0, EARTHRADIUSMEAN, LIGHTSPEED/SAMPLE_RATE, 0);
+            IUFillNumber(&nodeDelayN[x], "DELAY", "Delay (m)", "%7.9f", 0, EARTHRADIUSMEAN, LIGHTSPEED/SAMPLE_RATE, 0);
 
             IUFillNumberVector(&snoopGPSNP[x], &snoopGPSN[x*3], 3, getDeviceName(), "GEOGRAPHIC_COORD", "Location", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
             IUFillNumberVector(&snoopTelescopeNP[x], &snoopTelescopeN[x*2], 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
