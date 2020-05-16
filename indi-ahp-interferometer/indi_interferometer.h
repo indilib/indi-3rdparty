@@ -127,6 +127,9 @@ private:
     ISwitch *nodePowerS;
     ISwitchVectorProperty *nodePowerSP;
 
+    INumber *nodeDelayN;
+    INumberVectorProperty *nodeDelayNP;
+
     INumber *nodeGPSN;
     INumberVectorProperty *nodeGPSNP;
 
@@ -145,6 +148,9 @@ private:
     double *totalcounts;
     double *totalcorrelations;
     baseline** baselines;
+    double  *alt;
+    double *az;
+    double *delay;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
