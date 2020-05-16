@@ -33,7 +33,7 @@
 #define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
 #define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
-
+#define SAMPLE_RATE (pow(2, sample_size)*serialConnection->baud())
 class baseline : public INDI::Correlator
 {
 public:
