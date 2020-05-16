@@ -435,9 +435,9 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
                 defineSwitch(&nodePowerSP[x]);
                 defineNumber(&nodeGPSNP[x]);
                 defineNumber(&nodeTelescopeNP[x]);
+                defineNumber(&nodeDelayNP[x]);
                 defineNumber(&countsNP[x]);
                 defineText(&nodeDevicesTP[x]);
-                defineText(&nodeDelayNP[x]);
             } else {
                 ActiveLine(x, false, false);
                 deleteProperty(nodePowerSP[x].name);
