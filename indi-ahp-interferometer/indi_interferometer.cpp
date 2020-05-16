@@ -148,10 +148,13 @@ void Interferometer::Callback()
             diff[0] = nodeGPSNP[closest].np[0].value - nodeGPSNP[closest].np[0].value;
             diff[1] = nodeGPSNP[closest].np[1].value - nodeGPSNP[closest].np[1].value;
             diff[2] = nodeGPSNP[closest].np[2].value - nodeGPSNP[closest].np[2].value;
-            double a = (alt[closest]-alt[x])*M_PI/180.0;
-            double z = (az[closest]-az[x])*M_PI/180.0;
-            delay[x] = sqrt(pow(diff[0], 2)+pow(diff[1], 2)+pow(diff[2], 2));
-            delay[x] *= cos(a*M_PI/180.0) * sin(z*M_PI/180.0);
+            double a = alt[closest]*M_PI/180.0-alt[x]*M_PI/180.0;
+            double z = az[closest]*M_PI/180.0-az[x]*M_PI/180.0;
+            double delta = sqrt(pow(diff[0], 2)+pow(diff[1], 2));
+            delta *= cos(a*M_PI/180.0) * sin(z*M_PI/180.0);
+            double elev = delta*sin(a*M_PI/180.0)-diff[2];
+            double basis = delta*cos(a*M_PI/180.0);
+            delay[x] = sqrt(pow(elev, 2)+pow(basis, 2));
             nodeDelayNP[x].np[0].value = delay[x];
         }
     }
