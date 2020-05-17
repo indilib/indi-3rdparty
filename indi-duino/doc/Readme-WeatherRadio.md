@@ -118,7 +118,7 @@ The web interface needs to be integrated into a running web server. For simplici
 #### Install dependencies
 ```
 sudo apt-get install python python-rrdtool
-pip install rrdtool simplejson utidylib pathlib ffmpeg-python
+pip install simplejson utidylib pathlib ffmpeg-python
 ```
 
 #### Apache Setup
