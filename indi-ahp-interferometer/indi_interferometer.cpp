@@ -524,11 +524,13 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
     for(int i = 0; i < NUM_LINES; i++) {
         if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
+            nodeTelescopeNP[i].s = IPS_BUSY;
             nodeTelescopeNP[i].np[0].value = snoopTelescopeNP[i].np[0].value;
             nodeTelescopeNP[i].np[1].value = snoopTelescopeNP[i].np[1].value;
             IDSetNumber(&nodeTelescopeNP[i], nullptr);
         }
         if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
+            nodeGPSNP[i].s = IPS_BUSY;
             nodeGPSNP[i].np[0].value = snoopGPSNP[i].np[0].value;
             nodeGPSNP[i].np[1].value = snoopGPSNP[i].np[1].value;
             nodeGPSNP[i].np[2].value = snoopGPSNP[i].np[2].value;
