@@ -43,8 +43,11 @@
 	  <img id="webcam" width="480px" src="http://weathercam/cam/cam_pic.php">
         </div>
       </div> --> <!-- Web cam images -->
-      <div class="row" align="center" style="padding-top: 50px">
-        <div class="col-sm-12">
+      <div class="row" align="center" style="padding: 50px 12px 12px 12px; ">
+	<div class="col-sm-6">
+	  <video src="./media/timelapse_current.mp4" width="640" height="480" autobuffer autoplay controls />
+        </div>
+        <div class="col-sm-6">
 	  <div id="timelapse" class="carousel slide" data-ride="carousel" style="width: 50%">
 	    <!-- Indicators -->
 	    
@@ -61,8 +64,8 @@
 	    <a class="carousel-control-next" href="#timelapse" data-slide="next">
 	      <span class="carousel-control-next-icon"></span>
 	    </a>
-	  </div>
-        </div>
+	  </div> <!-- carousel end -->
+        </div> <!-- carousel cell end -->
       </div> <!-- Time lapse images -->
     </div>
     <script src="js/images.js"></script>

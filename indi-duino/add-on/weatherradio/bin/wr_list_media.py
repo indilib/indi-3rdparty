@@ -33,11 +33,12 @@ args = parser.parse_args()
 files = []
 
 for file in sorted(Path(args.mediadir).iterdir(), key=lambda d: d.stat().st_mtime):
-    entry = {}
-    entry["name"]  = Path(file).name
-    entry["type"]  = "img"
-    entry["ctime"] = file.stat().st_mtime
-    files.append(entry)
+    if Path(file).suffix in [".jpg", ".png"]:
+        entry = {}
+        entry["name"]  = Path(file).name
+        entry["type"]  = "img"
+        entry["ctime"] = file.stat().st_mtime
+        files.append(entry)
 
 output = open(args.output, 'w')
 output.write(json.dumps(files, indent=2, separators=(',', ':'), sort_keys=True, ignore_nan=True))
