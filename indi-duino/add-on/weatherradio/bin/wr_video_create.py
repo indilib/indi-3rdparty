@@ -22,7 +22,7 @@ from datetime import datetime
 import argparse
 import ffmpeg
 
-def create_video(input, starttime, targetdir):
+def create_video(input, starttime, targetdir, mode):
     # create a temporary directory
     tmpdir = tempfile.mkdtemp()
     name = datetime.fromtimestamp(starttime).strftime(targetdir.as_posix()+"/timelapse_%Y-%m-%d_%Hh.mp4")
@@ -40,8 +40,8 @@ def create_video(input, starttime, targetdir):
         linkname = os.path.join(tmpdir, filename)
         os.symlink(file.as_posix(), linkname)
 
-    stream = ffmpeg.input(tmpdir + "/tl-%04d.jpg", f="image2", loglevel="level+warning")
-    stream = ffmpeg.output(stream, name)
+    stream = ffmpeg.input(tmpdir + "/tl-%04d.jpg", f="image2", loglevel="level+error")
+    stream = ffmpeg.output(stream, name, s=mode)
     ffmpeg.run(stream)
     # clean up
     shutil.rmtree(tmpdir, ignore_errors=True)
@@ -54,6 +54,8 @@ parser.add_argument("-d", "--mediadir", default=MEDIADIR,
                     help="Directory holding the media files")
 parser.add_argument("-l", "--length", default=1, type=int,
                     help="Duration of the video sequences [hours]")
+parser.add_argument("-m", "--mode", default="640x480",
+                    help="video resolution")
 
 args = parser.parse_args()
 
@@ -68,11 +70,11 @@ input     = []
 
 for file in files:
     if file.stat().st_mtime - starttime > args.length * 3600:
-        create_video(input, starttime, file.parent.parent)
+        create_video(input, starttime, file.parent.parent, args.mode)
         input = []
         starttime = file.stat().st_mtime
     else:
         input.append(file)
 
 if len(input) > 0:
-    create_video(input, starttime, file.parent.parent)
+    create_video(input, starttime, file.parent.parent, args.mode)
