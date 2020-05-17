@@ -136,11 +136,17 @@ private:
     INumber *nodeTelescopeN;
     INumberVectorProperty *nodeTelescopeNP;
 
+    INumber *nodeDomeN;
+    INumberVectorProperty *nodeDomeNP;
+
     INumber *snoopGPSN;
     INumberVectorProperty *snoopGPSNP;
 
     INumber *snoopTelescopeN;
     INumberVectorProperty *snoopTelescopeNP;
+
+    INumber *snoopDomeN;
+    INumberVectorProperty *snoopDomeNP;
 
     IText *nodeDevicesT;
     ITextVectorProperty *nodeDevicesTP;

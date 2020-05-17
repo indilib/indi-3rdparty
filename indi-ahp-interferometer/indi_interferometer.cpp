@@ -155,7 +155,6 @@ void Interferometer::Callback()
             double elev = delta*sin(a*M_PI/180.0)-diff[2];
             double basis = delta*cos(a*M_PI/180.0);
             delay[x] = sqrt(pow(elev, 2)+pow(basis, 2));
-            nodeDelayNP[x].np[0].value = delay[x];
         }
     }
     EnableCapture(false);
@@ -191,6 +190,9 @@ Interferometer::Interferometer()
     snoopTelescopeN = static_cast<INumber*>(malloc(1));
     snoopTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
 
+    snoopDomeN = static_cast<INumber*>(malloc(1));
+    snoopDomeNP = static_cast<INumberVectorProperty*>(malloc(1));
+
     nodeDelayN = static_cast<INumber*>(malloc(1));
     nodeDelayNP = static_cast<INumberVectorProperty*>(malloc(1));
 
@@ -199,6 +201,9 @@ Interferometer::Interferometer()
 
     nodeTelescopeN = static_cast<INumber*>(malloc(1));
     nodeTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    nodeDomeN = static_cast<INumber*>(malloc(1));
+    nodeDomeNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     correlationsN = static_cast<INumber*>(malloc(1));
 
@@ -493,11 +498,13 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
             IDSetText(&nodeDevicesTP[x], nullptr);
 
             // Update the property name!
-            strncpy(snoopTelescopeNP[x].device, nodeDevicesT[x*3+0].text, MAXINDIDEVICE);
-            strncpy(snoopGPSNP[x].device, nodeDevicesT[x*3+1].text, MAXINDIDEVICE);
+            strncpy(snoopTelescopeNP[x].device, nodeDevicesTP[x].tp[0].text, MAXINDIDEVICE);
+            strncpy(snoopGPSNP[x].device, nodeDevicesTP[x].tp[1].text, MAXINDIDEVICE);
+            strncpy(snoopDomeNP[x].device, nodeDevicesTP[x].tp[2].text, MAXINDIDEVICE);
 
             IDSnoopDevice(snoopTelescopeNP[x].device, "EQUATORIAL_EOD_COORD");
             IDSnoopDevice(snoopGPSNP[x].device, "GEOGRAPHIC_COORD");
+            IDSnoopDevice(snoopDomeNP[x].device, "GEOGRAPHIC_COORD");
 
             //  We processed this one, so, tell the world we did it
             return true;
@@ -517,13 +524,11 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
     for(int i = 0; i < NUM_LINES; i++) {
         if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
-            nodeTelescopeNP[i].s = IPS_BUSY;
             nodeTelescopeNP[i].np[0].value = snoopTelescopeNP[i].np[0].value;
             nodeTelescopeNP[i].np[1].value = snoopTelescopeNP[i].np[1].value;
             IDSetNumber(&nodeTelescopeNP[i], nullptr);
         }
         if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
-            nodeGPSNP[i].s = IPS_BUSY;
             nodeGPSNP[i].np[0].value = snoopGPSNP[i].np[0].value;
             nodeGPSNP[i].np[1].value = snoopGPSNP[i].np[1].value;
             nodeGPSNP[i].np[2].value = snoopGPSNP[i].np[2].value;
@@ -590,6 +595,7 @@ void Interferometer::TimerHit()
     int idx = 0;
     for (int x = 0; x < NUM_LINES; x++) {
         IDSetNumber(&nodeDelayNP[x], nullptr);
+        nodeDelayNP[x].np[0].value = delay[x];
         IDSetNumber(&countsNP[x], nullptr);
         countsNP[x].np[0].value = totalcounts[x];
         for(int y = x+1; y < NUM_LINES; y++) {
@@ -666,23 +672,29 @@ bool Interferometer::Handshake()
         nodeTelescopeN = static_cast<INumber*>(realloc(nodeTelescopeN, 2*num_nodes*sizeof(INumber)+1));
         nodeTelescopeNP = static_cast<INumberVectorProperty*>(realloc(nodeTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
+        nodeDomeN = static_cast<INumber*>(realloc(nodeDomeN, 2*num_nodes*sizeof(INumber)+1));
+        nodeDomeNP = static_cast<INumberVectorProperty*>(realloc(nodeDomeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
         snoopGPSN = static_cast<INumber*>(realloc(snoopGPSN, 3*num_nodes*sizeof(INumber)+1));
         snoopGPSNP = static_cast<INumberVectorProperty*>(realloc(snoopGPSNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, 2*num_nodes*sizeof(INumber)+1));
         snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
-        nodeDelayN = static_cast<INumber*>(realloc(correlationsN, num_nodes*sizeof(INumber)+1));
-        nodeDelayNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+        snoopDomeN = static_cast<INumber*>(realloc(snoopDomeN, 2*num_nodes*sizeof(INumber)+1));
+        snoopDomeNP = static_cast<INumberVectorProperty*>(realloc(snoopDomeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        nodeDelayN = static_cast<INumber*>(realloc(nodeDelayN, num_nodes*sizeof(INumber)+1));
+        nodeDelayNP = static_cast<INumberVectorProperty*>(realloc(nodeDelayNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*num_nodes*(num_nodes-1)/2*sizeof(INumber)+1));
 
         totalcounts = static_cast<double*>(realloc(totalcounts, num_nodes*sizeof(double)+1));
         totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (num_nodes*(num_nodes-1)/2)*sizeof(double)+1));
-        baselines = static_cast<baseline**>(realloc(baselines, (num_nodes*(num_nodes-1)/2)*sizeof(baseline*)+1));
         alt = static_cast<double*>(realloc(alt, num_nodes*sizeof(double)+1));
         az = static_cast<double*>(realloc(az, num_nodes*sizeof(double)+1));
         delay = static_cast<double*>(realloc(delay, num_nodes*sizeof(double)+1));
+        baselines = static_cast<baseline**>(realloc(baselines, (num_nodes*(num_nodes-1)/2)*sizeof(baseline*)+1));
 
         memset (totalcounts, 0, num_nodes*sizeof(double)+1);
         memset (totalcorrelations, 0, (num_nodes*(num_nodes-1)/2)*sizeof(double)+1);
