@@ -24,7 +24,7 @@
 /**
    Send current sensor data as JSON document
 */
-String getSensorData(bool pretty, String token) {
+String getSensorData(bool pretty) {
   const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
                       JSON_OBJECT_SIZE(1) + // token data
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
@@ -34,9 +34,6 @@ String getSensorData(bool pretty, String token) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
-
-  if (token.length() > 0)
-    weatherDoc["token"] = token;
 
 #ifdef USE_DAVIS_SENSOR
   updateAnemometer();
@@ -155,43 +152,28 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     server.on("/", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false, ""));
+      server.send(200, "application/json; charset=utf-8", getSensorData(false));
     });
 
-    server.on(UriRegex("^\\/([A-z0-9]+)$"), []() {
-      String command = server.pathArg(0);
-      // search the id argument
-      String id = "";
-      for (int i = 0; i < server.args(); i++)
-        if (server.argName(i) == "token") {
-          id = server.arg(i);
-          break;
-        }
+    server.on("/w", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData(false));
+    });
 
-      switch (tolower(command[0])) {
-        // weather data
-        case 'w':
-          server.send(200, "application/json; charset=utf-8", getSensorData(false, id));
-          break;
+    server.on("/p", []() {
+      server.send(200, "application/json; charset=utf-8", getSensorData(true));
+    });
 
-        // weather data, pretty print
-        case 'p':
-          server.send(200, "application/json; charset=utf-8", getSensorData(true, id));
-          break;
+    server.on("/c", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+    });
 
-        // configuration
-        case 'c':
-          server.send(200, "application/json; charset=utf-8", getCurrentConfig());
-          break;
+    server.on("/v", []() {
+      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+    });
 
-        // version info
-        case 'v':
-          server.send(200, "application/json; charset=utf-8", getCurrentVersion());
-          break;
-
-        default:
-          server.send(404, "text/plain", "Ressource not found: " + server.uri());
-      }
+    server.on("/r", []() {
+      reset();
+      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
     });
 
     server.onNotFound([]() {
@@ -211,22 +193,20 @@ String parseInput() {
   if (input.length() == 0)
     return input;
 
+// 
   switch (input.charAt(0)) {
     case 'v':
       Serial.println(getCurrentVersion());
       break;
     case 'w':
-      if (input.length() > 2 && input.charAt(1) == '#')
-        Serial.println(getSensorData(false, input.substring(2)));
-      else
-        Serial.println(getSensorData(false, ""));
+        Serial.println(getSensorData(false));
 
       break;
     case 'c':
       Serial.println(getCurrentConfig());
       break;
     case 'p':
-      Serial.println(getSensorData(true, ""));
+      Serial.println(getSensorData(true));
       break;
 #ifdef USE_WIFI
     case 's':
