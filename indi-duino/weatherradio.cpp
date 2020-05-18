@@ -41,7 +41,6 @@
 #include "config.h"
 
 const char *CALIBRATION_TAB = "Calibration";
-const char *TOKEN           = "token";
 
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
@@ -125,7 +124,6 @@ WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
     weatherCalculator = new WeatherCalculator();
-    currentRequestID = 0;
 }
 
 /**************************************************************************************
@@ -338,6 +336,7 @@ bool WeatherRadio::updateProperties()
         {
             WeatherInterface::ParametersRangeNP->nnp = 0;
             free(WeatherInterface::ParametersRangeNP);
+            WeatherInterface::ParametersRangeNP = nullptr;
         }
         WeatherInterface::nRanges = 0;
 
@@ -418,7 +417,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("v", -1, data, &n_bytes);
+    bool result = sendQuery("v", data, &n_bytes);
 
     if (result == true)
     {
@@ -454,7 +453,7 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("c", -1, data, &n_bytes);
+    bool result = sendQuery("c", data, &n_bytes);
 
     if (result)
     {
@@ -887,8 +886,7 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    int id = createRequestID();
-    bool result = sendQuery("w", id, data, &n_bytes);
+    bool result = sendQuery("w", data, &n_bytes);
     // LOGF_DEBUG("Weather data received: %s", data);
 
     if (result == false)
@@ -897,20 +895,16 @@ IPState WeatherRadio::updateWeather()
     char *src{new char[n_bytes+1] {0}};
     // duplicate the buffer since the parser will modify it
     strncpy(src, data, static_cast<size_t>(n_bytes));
-    int resultID;
-    result = parseWeatherData(src, &resultID);
-    // we got the answer maching our request
-    if (resultID != id)
-        LOGF_WARN("Received wrong response for request #%d.", id);
+    result = parseWeatherData(src);
 
     // result recieved
-    return IPS_OK;
+    return result == true ? IPS_OK : IPS_ALERT;
 }
 
 /**************************************************************************************
 ** Parse JSON weather document.
 ***************************************************************************************/
-bool WeatherRadio::parseWeatherData(char *data, int *resultID)
+bool WeatherRadio::parseWeatherData(char *data)
 {
     char *source = data;
     char *endptr;
@@ -929,80 +923,72 @@ bool WeatherRadio::parseWeatherData(char *data, int *resultID)
         char *name {new char[strlen(deviceIter->key)+1] {0}};
         strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
 
-        if (strcmp(name, TOKEN) == 0) {
-            // request token
-            char* value = deviceIter->value.toString();
-            if (!sscanf(value, "%d", resultID))
-                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        JsonIterator sensorIter;
+        INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
+
+        if (deviceProp == nullptr)
+        {
+            // new device found
+            std::vector<std::pair<char*, double>> sensorData;
+            // read all sensor data
+            bool initialized = false;
+            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+            {
+                std::pair<char*, double> entry;
+                entry.first = sensorIter->key;
+
+                // special case: get the information whether the device has been initialized
+                if (strcmp(entry.first, "init") == 0)
+                    initialized = (sensorIter->value.getTag() == JSON_TRUE);
+
+                if (sensorIter->value.isDouble())
+                {
+                    entry.second = sensorIter->value.toNumber();
+                    sensorData.push_back(entry);
+                }
+            }
+            if (initialized)
+            {
+                // fill the sensor data if the sensor has been initialized
+                INumber *sensors {new INumber[sensorData.size()]};
+                for (size_t i = 0; i < sensorData.size(); i++)
+                {
+                    sensorsConfigType devConfig = deviceConfig[name];
+                    if (devConfig.count(sensorData[i].first) > 0)
+                    {
+                        sensor_name sensor = {name, sensorData[i].first};
+                        sensor_config config = devConfig[sensorData[i].first];
+                        IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                        registerSensor(sensor, config.type);
+                    }
+                    else
+                        IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
+                }
+                // create a new number vector for the device
+                deviceProp = new INumberVectorProperty;
+                IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
+                // make it visible
+                if (isConnected())
+                    defineNumber(deviceProp);
+                rawDevices.push_back(*deviceProp);
+            }
         }
         else {
-            JsonIterator sensorIter;
-            INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
-
-            if (deviceProp == nullptr)
+            // read all sensor data
+            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
             {
-                // new device found
-                std::vector<std::pair<char*, double>> sensorData;
-                // read all sensor data
-                bool initialized = false;
-                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+                if (strcmp(sensorIter->key, "init") == 0 || sensorIter->value.getTag() != JSON_NUMBER)
+                    continue;
+                INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
+                if (sensor != nullptr && sensorIter->value.isDouble())
                 {
-                    std::pair<char*, double> entry;
-                    entry.first = sensorIter->key;
-
-                    // special case: get the information whether the device has been initialized
-                    if (strcmp(entry.first, "init") == 0)
-                        initialized = (sensorIter->value.getTag() == JSON_TRUE);
-
-                    if (sensorIter->value.isDouble())
-                    {
-                        entry.second = sensorIter->value.toNumber();
-                        sensorData.push_back(entry);
-                    }
-                }
-                if (initialized)
-                {
-                    // fill the sensor data if the sensor has been initialized
-                    INumber *sensors {new INumber[sensorData.size()]};
-                    for (size_t i = 0; i < sensorData.size(); i++)
-                    {
-                        sensorsConfigType devConfig = deviceConfig[name];
-                        if (devConfig.count(sensorData[i].first) > 0)
-                        {
-                            sensor_name sensor = {name, sensorData[i].first};
-                            sensor_config config = devConfig[sensorData[i].first];
-                            IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
-                            registerSensor(sensor, config.type);
-                        }
-                        else
-                            IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
-                    }
-                    // create a new number vector for the device
-                    deviceProp = new INumberVectorProperty;
-                    IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
-                    // make it visible
-                    if (isConnected())
-                        defineNumber(deviceProp);
-                    rawDevices.push_back(*deviceProp);
+                    sensor->value = sensorIter->value.toNumber();
+                    // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
+                    updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
                 }
             }
-            else {
-                // read all sensor data
-                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
-                {
-                    if (strcmp(sensorIter->key, "init") == 0 || sensorIter->value.getTag() != JSON_NUMBER)
-                        continue;
-                    INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
-                    if (sensor != nullptr && sensorIter->value.isDouble())
-                    {
-                        sensor->value = sensorIter->value.toNumber();
-                        // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
-                        updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
-                    }
-                }
-                // update device values
-                IDSetNumber(deviceProp, nullptr);
-            }
+            // update device values
+            IDSetNumber(deviceProp, nullptr);
         }
 
     }
@@ -1224,16 +1210,13 @@ bool WeatherRadio::parseCanonicalName(sensor_name *sensor, std::string name)
 /**************************************************************************************
 ** Communicate with serial device or HTTP server
 ***************************************************************************************/
-bool WeatherRadio::sendQuery(const char* cmd, int id, char* response, int *length)
+bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
 {
     // communication through a serial (USB) interface
     if (getActiveConnection()->type() == Connection::Interface::CONNECTION_SERIAL)
     {
         char cmdstring[20] = {0};
-        if (id != -1)
-            sprintf(cmdstring, "%s#%d\n", cmd, id);
-        else
-            sprintf(cmdstring, "%s\n", cmd);
+        sprintf(cmdstring, "%s\n", cmd);
 
         if(!transmitSerial(cmdstring))
         {
@@ -1249,10 +1232,7 @@ bool WeatherRadio::sendQuery(const char* cmd, int id, char* response, int *lengt
         CURLcode res;
         char requestURL[MAXRBUF];
 
-        if (id != -1)
-            snprintf(requestURL, MAXRBUF, "http://%s:%s/%s?token=%d", hostname, port, cmd, id);
-        else
-            snprintf(requestURL, MAXRBUF, "http://%s:%s/%s", hostname, port, cmd);
+        snprintf(requestURL, MAXRBUF, "http://%s:%s/%s", hostname, port, cmd);
 
         curl = curl_easy_init();
         if (curl)
@@ -1316,12 +1296,6 @@ bool WeatherRadio::transmitSerial(const char* buffer)
         return false;
     }
     return true;
-}
-
-
-int WeatherRadio::createRequestID()
-{
-    return currentRequestID++;
 }
 
 /**************************************************************************************

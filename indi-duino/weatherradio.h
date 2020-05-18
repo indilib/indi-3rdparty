@@ -84,7 +84,7 @@ protected:
      */
     IPState updateWeather() override;
 
-    bool parseWeatherData(char *data, int *resultID);
+    bool parseWeatherData(char *data);
 
     /**
       * Device specific configurations
@@ -266,11 +266,7 @@ protected:
     // Serial communication
     bool receiveSerial(char* buffer, int* bytes, char end, int wait);
     bool transmitSerial(const char* buffer);
-    bool sendQuery(const char* cmd, int id, char* response, int *length);
-
-    /* unique ID as identifier for serial communication */
-    int currentRequestID;
-    int createRequestID();
+    bool sendQuery(const char* cmd, char* response, int *length);
 
     // override default INDI methods
     const char *getDefaultName() override;
