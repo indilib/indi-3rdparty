@@ -33,7 +33,7 @@
 #define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
 #define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
-
+#define SAMPLE_RATE (pow(2, sample_size)*serialConnection->baud())
 class baseline : public INDI::Correlator
 {
 public:
@@ -127,11 +127,17 @@ private:
     ISwitch *nodePowerS;
     ISwitchVectorProperty *nodePowerSP;
 
+    INumber *nodeDelayN;
+    INumberVectorProperty *nodeDelayNP;
+
     INumber *nodeGPSN;
     INumberVectorProperty *nodeGPSNP;
 
     INumber *nodeTelescopeN;
     INumberVectorProperty *nodeTelescopeNP;
+
+    INumber *nodeDomeN;
+    INumberVectorProperty *nodeDomeNP;
 
     INumber *snoopGPSN;
     INumberVectorProperty *snoopGPSNP;
@@ -139,12 +145,18 @@ private:
     INumber *snoopTelescopeN;
     INumberVectorProperty *snoopTelescopeNP;
 
+    INumber *snoopDomeN;
+    INumberVectorProperty *snoopDomeNP;
+
     IText *nodeDevicesT;
     ITextVectorProperty *nodeDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
     baseline** baselines;
+    double  *alt;
+    double *az;
+    double *delay;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
