@@ -172,8 +172,8 @@ Interferometer::Interferometer()
     NUM_LINES = 0;
     DELAY_LINES = 0;
 
-    countsN = static_cast<INumber*>(malloc(1));
-    countsNP = static_cast<INumberVectorProperty*>(malloc(1));
+    nodeStatsN = static_cast<INumber*>(malloc(1));
+    nodeStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     nodeEnableS = static_cast<ISwitch*>(malloc(1));
     nodeEnableSP = static_cast<ISwitchVectorProperty*>(malloc(1));
@@ -189,6 +189,9 @@ Interferometer::Interferometer()
 
     snoopTelescopeN = static_cast<INumber*>(malloc(1));
     snoopTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
+
+    snoopTelescopeInfoN = static_cast<INumber*>(malloc(1));
+    snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     snoopDomeN = static_cast<INumber*>(malloc(1));
     snoopDomeNP = static_cast<INumberVectorProperty*>(malloc(1));
@@ -209,10 +212,10 @@ Interferometer::Interferometer()
 
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<double*>(malloc(1));
-    baselines = static_cast<baseline**>(malloc(1));
     alt = static_cast<double*>(malloc(1));
     az = static_cast<double*>(malloc(1));
     delay = static_cast<double*>(malloc(1));
+    baselines = static_cast<baseline**>(malloc(1));
 }
 
 bool Interferometer::Disconnect()
@@ -221,6 +224,7 @@ bool Interferometer::Disconnect()
         ActiveLine(x, false, false);
 
     threadsRunning = false;
+    usleep(1000000);
 
     return INDI::CCD::Disconnect();
 }
@@ -261,8 +265,9 @@ bool Interferometer::initProperties()
 
     SetCCDCapability(CCD_CAN_ABORT|CCD_CAN_SUBFRAME|CCD_HAS_DSP);
 
-    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%3.9f", 0.0000003, 999.0, 1.0E-9, 0.211121449);
-    IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
+    IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
+    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
@@ -331,7 +336,7 @@ bool Interferometer::updateProperties()
             deleteProperty(nodePowerSP[x].name);
             deleteProperty(nodeGPSNP[x].name);
             deleteProperty(nodeTelescopeNP[x].name);
-            deleteProperty(countsNP[x].name);
+            deleteProperty(nodeStatsNP[x].name);
             deleteProperty(nodeDevicesTP[x].name);
             deleteProperty(nodeDelayNP[x].name);
         }
@@ -444,14 +449,14 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
                 defineNumber(&nodeGPSNP[x]);
                 defineNumber(&nodeTelescopeNP[x]);
                 defineNumber(&nodeDelayNP[x]);
-                defineNumber(&countsNP[x]);
+                defineNumber(&nodeStatsNP[x]);
                 defineText(&nodeDevicesTP[x]);
             } else {
                 ActiveLine(x, false, false);
                 deleteProperty(nodePowerSP[x].name);
                 deleteProperty(nodeGPSNP[x].name);
                 deleteProperty(nodeTelescopeNP[x].name);
-                deleteProperty(countsNP[x].name);
+                deleteProperty(nodeStatsNP[x].name);
                 deleteProperty(nodeDevicesTP[x].name);
                 deleteProperty(nodeDelayNP[x].name);
             }
@@ -499,10 +504,12 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 
             // Update the property name!
             strncpy(snoopTelescopeNP[x].device, nodeDevicesTP[x].tp[0].text, MAXINDIDEVICE);
+            strncpy(snoopTelescopeInfoNP[x].device, nodeDevicesTP[x].tp[0].text, MAXINDIDEVICE);
             strncpy(snoopGPSNP[x].device, nodeDevicesTP[x].tp[1].text, MAXINDIDEVICE);
             strncpy(snoopDomeNP[x].device, nodeDevicesTP[x].tp[2].text, MAXINDIDEVICE);
 
-            IDSnoopDevice(snoopTelescopeNP[x].device, "EQUATORIAL_EOD_COORD");
+            IDSnoopDevice(nodeDevicesTP[x].tp[0].text, "EQUATORIAL_EOD_COORD");
+            IDSnoopDevice(nodeDevicesTP[x].tp[0].text, "TELESCOPE_INFO");
             IDSnoopDevice(snoopGPSNP[x].device, "GEOGRAPHIC_COORD");
             IDSnoopDevice(snoopDomeNP[x].device, "GEOGRAPHIC_COORD");
 
@@ -527,6 +534,12 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
             nodeTelescopeNP[i].s = IPS_BUSY;
             nodeTelescopeNP[i].np[0].value = snoopTelescopeNP[i].np[0].value;
             nodeTelescopeNP[i].np[1].value = snoopTelescopeNP[i].np[1].value;
+            IDSetNumber(&nodeTelescopeNP[i], nullptr);
+        }
+        if(!IUSnoopNumber(root, &snoopTelescopeInfoNP[i])) {
+            nodeTelescopeNP[i].s = IPS_BUSY;
+            nodeTelescopeNP[i].np[2].value = snoopTelescopeInfoNP[i].np[0].value;
+            nodeTelescopeNP[i].np[3].value = snoopTelescopeInfoNP[i].np[1].value;
             IDSetNumber(&nodeTelescopeNP[i], nullptr);
         }
         if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
@@ -597,9 +610,13 @@ void Interferometer::TimerHit()
     int idx = 0;
     for (int x = 0; x < NUM_LINES; x++) {
         IDSetNumber(&nodeDelayNP[x], nullptr);
+        IDSetNumber(&nodeStatsNP[x], nullptr);
         nodeDelayNP[x].np[0].value = delay[x];
-        IDSetNumber(&countsNP[x], nullptr);
-        countsNP[x].np[0].value = totalcounts[x];
+        nodeStatsNP[x].np[0].value = totalcounts[x];
+        double steradian = pow(asin((nodeTelescopeNP[x].np[2].value/2.0)/nodeTelescopeNP[x].np[3].value), 2)*M_PI;
+        nodeStatsNP[x].np[1].value = (totalcounts[x]*1000/POLLMS)/LUMEN(settingsNP.np[0].value);
+        nodeStatsNP[x].np[2].value = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
+        nodeStatsNP[x].np[3].value = calc_rel_magnitude(nodeStatsNP[x].np[1].value, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         for(int y = x+1; y < NUM_LINES; y++) {
             correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
             correlationsNP.np[idx*2+1].value = totalcorrelations[idx]/(totalcounts[x]+totalcounts[y]);
@@ -656,8 +673,8 @@ bool Interferometer::Handshake()
             }
         }
 
-        countsN = static_cast<INumber*>(realloc(countsN, num_nodes*sizeof(INumber)+1));
-        countsNP = static_cast<INumberVectorProperty*>(realloc(countsNP, num_nodes*sizeof(INumberVectorProperty)+1));
+        nodeStatsN = static_cast<INumber*>(realloc(nodeStatsN, 4*num_nodes*sizeof(INumber)+1));
+        nodeStatsNP = static_cast<INumberVectorProperty*>(realloc(nodeStatsNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         nodeEnableS = static_cast<ISwitch*>(realloc(nodeEnableS, num_nodes*2*sizeof(ISwitch)));
         nodeEnableSP = static_cast<ISwitchVectorProperty*>(realloc(nodeEnableSP, num_nodes*sizeof(ISwitchVectorProperty)+1));
@@ -671,7 +688,7 @@ bool Interferometer::Handshake()
         nodeGPSN = static_cast<INumber*>(realloc(nodeGPSN, 3*num_nodes*sizeof(INumber)+1));
         nodeGPSNP = static_cast<INumberVectorProperty*>(realloc(nodeGPSNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
-        nodeTelescopeN = static_cast<INumber*>(realloc(nodeTelescopeN, 2*num_nodes*sizeof(INumber)+1));
+        nodeTelescopeN = static_cast<INumber*>(realloc(nodeTelescopeN, 4*num_nodes*sizeof(INumber)+1));
         nodeTelescopeNP = static_cast<INumberVectorProperty*>(realloc(nodeTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         nodeDomeN = static_cast<INumber*>(realloc(nodeDomeN, 2*num_nodes*sizeof(INumber)+1));
@@ -682,6 +699,9 @@ bool Interferometer::Handshake()
 
         snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, 2*num_nodes*sizeof(INumber)+1));
         snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, num_nodes*sizeof(INumberVectorProperty)+1));
+
+        snoopTelescopeInfoN = static_cast<INumber*>(realloc(snoopTelescopeInfoN, 4*num_nodes*sizeof(INumber)+1));
+        snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeInfoNP, num_nodes*sizeof(INumberVectorProperty)+1));
 
         snoopDomeN = static_cast<INumber*>(realloc(snoopDomeN, 2*num_nodes*sizeof(INumber)+1));
         snoopDomeNP = static_cast<INumberVectorProperty*>(realloc(snoopDomeNP, num_nodes*sizeof(INumberVectorProperty)+1));
@@ -717,6 +737,11 @@ bool Interferometer::Handshake()
             IUFillNumber(&snoopTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
             IUFillNumber(&snoopTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
 
+            IUFillNumber(&snoopTelescopeInfoN[x*4+0], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
+            IUFillNumber(&snoopTelescopeInfoN[x*4+1], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
+            IUFillNumber(&snoopTelescopeInfoN[x*4+2], "GUIDER_APERTURE", "Guider Aperture (mm)", "%g", 10, 5000, 0, 0.0);
+            IUFillNumber(&snoopTelescopeInfoN[x*4+3], "GUIDER_FOCAL_LENGTH", "Guider Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
+
             IUFillNumber(&snoopGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
             IUFillNumber(&snoopGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
             IUFillNumber(&snoopGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
@@ -725,6 +750,7 @@ bool Interferometer::Handshake()
 
             IUFillNumberVector(&snoopGPSNP[x], &snoopGPSN[x*3], 3, getDeviceName(), "GEOGRAPHIC_COORD", "Location", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
             IUFillNumberVector(&snoopTelescopeNP[x], &snoopTelescopeN[x*2], 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+            IUFillNumberVector(&snoopTelescopeInfoNP[x], &snoopTelescopeInfoN[x*4], 4, getDeviceName(), "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
 
             nodeDevicesT[x*3+0].text = static_cast<char*>(malloc(1));
             IUFillText(&nodeDevicesT[x*3+0], "ACTIVE_TELESCOPE", "Telescope", "Telescope Simulator");
@@ -734,8 +760,10 @@ bool Interferometer::Handshake()
             IUFillText(&nodeDevicesT[x*3+2], "ACTIVE_DOME", "DOME", "Dome Simulator");
 
             //interferometer properties
-            IUFillNumber(&nodeTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
-            IUFillNumber(&nodeTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+            IUFillNumber(&nodeTelescopeN[x*4+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
+            IUFillNumber(&nodeTelescopeN[x*4+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+            IUFillNumber(&nodeTelescopeN[x*4+2], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
+            IUFillNumber(&nodeTelescopeN[x*4+3], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
 
             IUFillNumber(&nodeGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
             IUFillNumber(&nodeGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
@@ -748,7 +776,10 @@ bool Interferometer::Handshake()
             IUFillSwitch(&nodePowerS[x*2+1], "LINE_POWER_OFF", "Off", ISS_ON);
 
             //report pulse counts
-            IUFillNumber(&countsN[x], "LINE_COUNTS", "Counts", "%8.0f", 0, 400000000, 1, 0);
+            IUFillNumber(&nodeStatsN[x*4+0], "LINE_COUNTS", "Counts", "%g", 0, 400000000, 1, 0);
+            IUFillNumber(&nodeStatsN[x*4+1], "LINE_FLUX", "Photon Flux (Lm)", "%g", 0.0, 1.0, 1.0E-5, 0);
+            IUFillNumber(&nodeStatsN[x*4+2], "LINE_FLUX0", "Flux at mag0 (Lm)", "%g", 0.0, 1.0, 1.0E-5, 0);
+            IUFillNumber(&nodeStatsN[x*4+3], "LINE_MAGNITUDE", "Estimated magnitude", "%g", -22.0, 22.0, 1.0E-5, 0);
 
             sprintf(tab, "Line %02d", x+1);
             sprintf(name, "LINE_ENABLE_%02d", x+1);
@@ -759,12 +790,12 @@ bool Interferometer::Handshake()
             IUFillTextVector(&nodeDevicesTP[x], &nodeDevicesT[x*3], 3, getDeviceName(), name, "Locator devices", tab, IP_RW, 60, IPS_IDLE);
             sprintf(name, "LINE_GEOGRAPHIC_COORD_%02d", x+1);
             IUFillNumberVector(&nodeGPSNP[x], &nodeGPSN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RO, 60, IPS_IDLE);
-            sprintf(name, "EQUATORIAL_EOD_COORD_COORD_%02d", x+1);
-            IUFillNumberVector(&nodeTelescopeNP[x], &nodeTelescopeN[x*2], 2, getDeviceName(), name, "Target coordinates", tab, IP_RO, 60, IPS_IDLE);
+            sprintf(name, "TELESCOPE_INFO_%02d", x+1);
+            IUFillNumberVector(&nodeTelescopeNP[x], &nodeTelescopeN[x*4], 4, getDeviceName(), name, "Target coordinates", tab, IP_RO, 60, IPS_IDLE);
             sprintf(name, "LINE_DELAY_%02d", x+1);
             IUFillNumberVector(&nodeDelayNP[x], &nodeDelayN[x], 1, getDeviceName(), name, "Delay line", tab, IP_RO, 60, IPS_IDLE);
-            sprintf(name, "LINE_COUNTS_%02d", x+1);
-            IUFillNumberVector(&countsNP[x], &countsN[x], 1, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
+            sprintf(name, "LINE_STATS_%02d", x+1);
+            IUFillNumberVector(&nodeStatsNP[x], &nodeStatsN[x*4], 4, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
             for (int y = x+1; y < num_nodes; y++) {
                 sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
                 sprintf(label, "Correlations %d*%d", x+1, y+1);

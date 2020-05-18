@@ -56,8 +56,44 @@ public:
 
         free(correlationsN);
 
-        free(countsN);
-        free(countsNP);
+        free(nodeStatsN);
+        free(nodeStatsNP);
+
+        free(nodeEnableS);
+        free(nodeEnableSP);
+
+        free(nodePowerS);
+        free(nodePowerSP);
+
+        free(nodeDelayN);
+        free(nodeDelayNP);
+
+        free(nodeGPSN);
+        free(nodeGPSNP);
+
+        free(nodeTelescopeN);
+        free(nodeTelescopeNP);
+
+        free(nodeDomeN);
+        free(nodeDomeNP);
+
+        free(snoopGPSN);
+        free(snoopGPSNP);
+
+        free(snoopTelescopeN);
+        free(snoopTelescopeNP);
+
+        free(snoopTelescopeInfoN);
+        free(snoopTelescopeInfoNP);
+
+        free(snoopDomeN);
+        free(snoopDomeNP);
+
+        free(nodeDevicesT);
+        free(nodeDevicesTP);
+
+        free(nodeStatsN);
+        free(nodeStatsNP);
 
         free(nodeEnableS);
         free(nodeEnableSP);
@@ -70,6 +106,9 @@ public:
 
         free(totalcounts);
         free(totalcorrelations);
+        free(alt);
+        free(az);
+        free(delay);
         free(baselines);
     }
 
@@ -118,8 +157,8 @@ private:
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
 
-    INumber *countsN;
-    INumberVectorProperty *countsNP;
+    INumber *nodeStatsN;
+    INumberVectorProperty *nodeStatsNP;
 
     ISwitch *nodeEnableS;
     ISwitchVectorProperty *nodeEnableSP;
@@ -145,6 +184,9 @@ private:
     INumber *snoopTelescopeN;
     INumberVectorProperty *snoopTelescopeNP;
 
+    INumber *snoopTelescopeInfoN;
+    INumberVectorProperty *snoopTelescopeInfoNP;
+
     INumber *snoopDomeN;
     INumberVectorProperty *snoopDomeNP;
 
@@ -153,10 +195,10 @@ private:
 
     double *totalcounts;
     double *totalcorrelations;
-    baseline** baselines;
     double  *alt;
     double *az;
     double *delay;
+    baseline** baselines;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
