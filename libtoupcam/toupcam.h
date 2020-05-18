@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 46.16627.2020.0224 */
+/* Version: 46.17118.2020.0518 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -168,10 +168,11 @@ typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_FLAG_GLOBALSHUTTER       0x0000001000000000  /* global shutter */
 #define TOUPCAM_FLAG_FOCUSMOTOR          0x0000002000000000  /* support focus motor */
 #define TOUPCAM_FLAG_PRECISE_FRAMERATE   0x0000004000000000  /* support precise framerate & bandwidth, see TOUPCAM_OPTION_PRECISE_FRAMERATE & TOUPCAM_OPTION_BANDWIDTH */
+#define TOUPCAM_FLAG_HEAT                0x0000008000000000  /* heat to prevent fogging up */
 
-#define TOUPCAM_TEMP_DEF                 6503    /* temp */
-#define TOUPCAM_TEMP_MIN                 2000    /* temp */
-#define TOUPCAM_TEMP_MAX                 15000   /* temp */
+#define TOUPCAM_TEMP_DEF                 6503    /* temp, default */
+#define TOUPCAM_TEMP_MIN                 2000    /* temp, minimum */
+#define TOUPCAM_TEMP_MAX                 15000   /* temp, maximum */
 #define TOUPCAM_TINT_DEF                 1000    /* tint */
 #define TOUPCAM_TINT_MIN                 200     /* tint */
 #define TOUPCAM_TINT_MAX                 2500    /* tint */
@@ -214,7 +215,7 @@ typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define TOUPCAM_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define TOUPCAM_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
-#define TOUPCAM_BANDWIDTH_DEF            85      /* bandwidth */
+#define TOUPCAM_BANDWIDTH_DEF            90      /* bandwidth */
 #define TOUPCAM_BANDWIDTH_MIN            1       /* bandwidth */
 #define TOUPCAM_BANDWIDTH_MAX            100     /* bandwidth */
 #define TOUPCAM_DENOISE_DEF              0       /* denoise */
@@ -258,7 +259,7 @@ typedef struct {
 }ToupcamDeviceV2, ToupcamInstV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 46.16627.2020.0224
+    get the version of this dll/so/dylib, which is: 46.17118.2020.0518
 */
 #ifdef _WIN32
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -775,6 +776,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
                                                         */
 #define TOUPCAM_OPTION_SEQUENCER_EXPOGAIN    0x02000000 /* sequencer trigger: exposure gain, iOption = TOUPCAM_OPTION_SEQUENCER_EXPOGAIN | index, iValue = gain */
 #define TOUPCAM_OPTION_DENOISE               0x35       /* denoise, strength range: [0, 100], 0 means disable */
+#define TOUPCAM_OPTION_HEAT_MAX              0x36       /* maximum level: heat to prevent fogging up */
+#define TOUPCAM_OPTION_HEAT                  0x37       /* heat to prevent fogging up */
 
 /* pixel format */
 #define TOUPCAM_PIXELFORMAT_RAW8             0x00
@@ -1065,6 +1068,15 @@ TOUPCAM_API(HRESULT)  Toupcam_get_VignetMidPointInt(HToupcam h, int* nMidPoint);
 #define TOUPCAM_FLAG_BITDEPTH12    TOUPCAM_FLAG_RAW12  /* pixel format, RAW 12bits */
 #define TOUPCAM_FLAG_BITDEPTH14    TOUPCAM_FLAG_RAW14  /* pixel format, RAW 14bits */
 #define TOUPCAM_FLAG_BITDEPTH16    TOUPCAM_FLAG_RAW16  /* pixel format, RAW 16bits */
+
+#ifdef _WIN32
+TOUPCAM_API(HRESULT)  Toupcam_put_Name(const wchar_t* id, const char* name);
+TOUPCAM_API(HRESULT)  Toupcam_get_Name(const wchar_t* id, char name[64]);
+#else
+TOUPCAM_API(HRESULT)  Toupcam_put_Name(const char* id, const char* name);
+TOUPCAM_API(HRESULT)  Toupcam_get_Name(const char* id, char name[64]);
+#endif
+TOUPCAM_API(unsigned) Toupcam_EnumWithName(ToupcamDeviceV2 pti[TOUPCAM_MAX]);
 
 #ifdef _WIN32
 #pragma pack(pop)
