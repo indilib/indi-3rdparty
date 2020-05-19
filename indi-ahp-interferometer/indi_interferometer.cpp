@@ -609,12 +609,12 @@ void Interferometer::TimerHit()
         IDSetNumber(&nodeDelayNP[x], nullptr);
         IDSetNumber(&nodeStatsNP[x], nullptr);
         nodeDelayNP[x].np[0].value = delay[x];
-        double steradian = pow(asin((nodeTelescopeNP[x].np[2].value/2.0)/nodeTelescopeNP[x].np[3].value), 2)*M_PI*nodeTelescopeNP[x].np[3].value/500.0;
-        double photon_flux = (totalcounts[x]*1000.0/POLLMS)/LUMEN(settingsNP.np[0].value);
-        double photon_flux0 = calc_photon_flux(0, settingsNP.np[0].value, settingsNP.np[1].value, steradian);
+        double steradian = pow(asin((nodeTelescopeNP[x].np[2].value/2.0)/nodeTelescopeNP[x].np[3].value), 2)*M_PI;
+        double photon_flux = (totalcounts[x]*1000.0/POLLMS)/LUMEN(settingsNP.np[0].value, 1);
+        double photon_flux0 = calc_photon_flux(22, settingsNP.np[0].value, settingsNP.np[1].value, steradian)/LUMEN(settingsNP.np[0].value, 1);
         nodeStatsNP[x].np[0].value = totalcounts[x];
         nodeStatsNP[x].np[1].value = photon_flux;
-        nodeStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
+        nodeStatsNP[x].np[2].value = photon_flux0;
         nodeStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[0].value, settingsNP.np[1].value, steradian);
         for(int y = x+1; y < NUM_LINES; y++) {
             correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
