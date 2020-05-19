@@ -1,14 +1,21 @@
 # Weather Radio
-Weather Radio is an software suite for building your own weather station with [Arduino](https://www.arduino.cc/) using all types of environment sensors for temperature, pressure, humidity etc. It contains also advanced features like **cloud detection** and measuring the **sky quality**.
+Weather Radio is an software suite for building your own weather station with [Arduino](https://www.arduino.cc/) using all types of environment sensors for temperature, pressure, humidity etc. It contains also advanced features like **cloud detection**, measuring the **sky quality** and sky observation through a camera device like a **Raspberry Camera**
 
-It contains:
+Here is an example how a weather station could look like - inspired by the construction of bird nesting boxes:
+
+![Wolfgang's weather station](weatherradio/img/weather_station_480px.jpg)
+![inside Wolfgang's weather station](weatherradio/img/weather_station_inside_480px.jpg)
+
+A wooden housing, attached to my backyard shed gives a Raspberry Zero a weather proof shelter. On the front side there is a acrylic glass dome where a Raspberry Camera continuously observes the sky. On the left side of the housing there is a small grey box hosting all weather sensors. All weather data is open available through my website [weather.openfuture.de](http://weather.openfuture.de/).
+
+This software suiteIt contains:
 * Arduino Firmware (tested on Arduino Nano, Adafruit Metro Mini, Wemos D1 Mini Pro, but should work on most Arduinos) reading out sensor values and publishing them as JSON document.
 * INDI driver for integrating the weather station into your observatory setup.
-* Javascript based web page for displaying current weather data and graphs for historic weather data.
+* Javascript based web page for displaying current weather data and graphs for historic weather data and weather images.
 
 ## Hardware
 For building your own weather station, you need
-* An **Arduino**. There are no specific requirements, Weather Radio should run on most of them. I personally prefer the ESP8266 based boards like the [Wemos D1 mini pro](https://wiki.wemos.cc/products:d1:d1_mini_pro), since they are small and have their own WiFi antenna integrated. But having WiFi is not a must, you can communicate with the Ardiono through a serial interface.
+* An **Arduino**. There are no specific requirements, Weather Radio should run on most of them. I personally prefer the ESP8266 based boards like the [Wemos D1 mini pro](https://wiki.wemos.cc/products:d1:d1_mini_pro), since they are small and have their own WiFi antenna integrated. But having WiFi is not a must, you can communicate with the Arduino through a serial interface.
 * A set of **environment sensors** - feel free to choose those that deliver weather data you are interested in:
   * **DBE280** for temperature, humidity and air pressure
   * **DHT22** or **DHT11** as an alternative to the DBE280 for humidity and temperature
@@ -70,6 +77,7 @@ The following commands are supported:
 * **c** show the firmware configuration
 * **s** (re)connect WiFi. If issued as `s?ssid=<your WiFi SSID>&password=<your WiFi password>`, it connects with the given parameters.
 * **d** disconnect from WiFi
+* **r** issue a reset to the Arduino
 
 If everything is shown as expected, your hardware is ready!
 
@@ -80,7 +88,18 @@ Using the INDI driver is quite straight forward. In KStars, select **Weather Rad
 
 Now start your INDI client of choice (if you are using KStars, start EKOS with `Tools > EKOS`):
 * Switch to the **Connection** tab and **select the port** where your weather station is connected to.
-* Switch to the **Main Control** tab and hit the **Connect** button.
+
+The INDI driver supports both a serial USB connection as well as an ethernet connection to the Arduino.
+
+The standard way is using the **Serial** connection via USB. Select the USB device where the Arduino is connected to the INDI server host and its baud rate:
+
+![Serial Connection](weatherradio/img/indi_connection_serial_480px.jpg)
+
+If you are using an Arduino model like the ESP2866 that has a build in WiFi connection, you may also use the **Ethernet** connection mode. Enter the IP adress and the port where the Arduino is listening on:
+
+![Ethernet Connection](weatherradio/img/indi_connection_ethernet_480px.jpg)
+
+Now Switch to the **Main Control** tab and hit the **Connect** button.
 
 The Main Control tab should now display weather parameters that could be determined with the sensors you connected to your board. In my test setup, I have a BME280 and a MLX90614 connected, hence the INDI driver shows temperature, pressure, humidity and cloud coverage values:
 
@@ -196,3 +215,29 @@ Finally, it's time to automate by creating crontab entries:
 
 ```
 *Hint*: Replace `<userid>` with your user ID that has **write access** to `/usr/share/weatherradio/html/data`.
+
+## Camera integration
+
+Raspberry Cameras offer a simple and cheap way to continuously monitor the sky. If you are using the NoIR camera (the version having increased sensitivity, since the IR filter is removed), you can shoot simple timelapse videos of the night sky.
+
+The simplest hardware setup is
+* a Raspberry Zero
+* a Raspberry Camera
+* a transparent weather shield like a acrylic dome to shield the camera from the weather
+
+Optionally, you could atach a [pan/tilt device](https://learn.sparkfun.com/tutorials/setting-up-the-pi-zero-wireless-pan-tilt-camera/all) so that you could move the camera around. Here an impression of my own setup:
+
+![Weather Camera](weatherradio/img/weather_station_camera_480px.jpg)
+
+As a first step you need to learn how to shoot images with your camera. If you are using a Raspberry Camera, the Raspberry plattform brings `raspistill` as command line tool to shoot images -- see the [Camera Module Documentation](https://www.raspberrypi.org/documentation/hardware/camera/README.md) on the Raspberry pages.
+
+Weather Radio does not provide scripts for shooting images. If you want to automate the image acquisition, simply create a cron job that regularly shoots images.
+
+The web interface contains a page to display a timelapse and recent images in a image slider:
+
+![Weather camera page](weatherradio/img/weathercam_page_480px.jpg)
+
+There are some helper scripts provided:
+* `wr_list_media.py` creates a JSON document that provides the image slider informations to the web page. It takes all image files from the media directory (option `-d`) and places them sorted in the image slider.
+* `wr_video_create.py` creates timelapse sequences from the captured images. Create a link called `html/media/timelapse_current.mp4` to display the video on the web page.
+
