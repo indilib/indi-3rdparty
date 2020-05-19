@@ -1799,7 +1799,7 @@ void GPhotoCCD::HideExtendedOptions(void)
     while (CamOptions.begin() != CamOptions.end())
     {
         cam_opt * opt = (*CamOptions.begin()).second;
-        IDDelete(getDeviceName(), (*CamOptions.begin()).first.c_str(), nullptr);
+        deleteProperty((*CamOptions.begin()).first.c_str());
 
         switch (opt->widget->type)
         {
