@@ -31,15 +31,16 @@
 
 #include <sys/stat.h>
 
+#include "indistandardproperty.h"
 #include "connectionplugins/connectionserial.h"
 #include "indicom.h"
 
 #include "gason/gason.h"
+#include "curl/curl.h"
 
 #include "config.h"
 
 const char *CALIBRATION_TAB = "Calibration";
-const char *TOKEN           = "token";
 
 /* Our weather station auto pointer */
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
@@ -108,13 +109,21 @@ void ISSnoopDevice(XMLEle *root)
 }
 
 /**************************************************************************************
+**
+***************************************************************************************/
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    strcpy(static_cast<char *>(userp), static_cast<char *>(contents));
+    return size * nmemb;
+}
+
+/**************************************************************************************
 ** Constructor
 ***************************************************************************************/
 WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
     weatherCalculator = new WeatherCalculator();
-    currentRequestID = 0;
 }
 
 /**************************************************************************************
@@ -323,7 +332,12 @@ bool WeatherRadio::updateProperties()
         free(WeatherInterface::ParametersN);
         WeatherInterface::ParametersN = nullptr;
         WeatherInterface::ParametersNP.nnp = 0;
-        WeatherInterface::ParametersRangeNP->nnp = 0;
+        if (WeatherInterface::ParametersRangeNP != nullptr)
+        {
+            WeatherInterface::ParametersRangeNP->nnp = 0;
+            free(WeatherInterface::ParametersRangeNP);
+            WeatherInterface::ParametersRangeNP = nullptr;
+        }
         WeatherInterface::nRanges = 0;
 
         free(WeatherInterface::critialParametersL);
@@ -403,7 +417,7 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("v\n", data, &n_bytes);
+    bool result = sendQuery("v", data, &n_bytes);
 
     if (result == true)
     {
@@ -439,7 +453,7 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    bool result = sendQuery("c\n", data, &n_bytes);
+    bool result = sendQuery("c", data, &n_bytes);
 
     if (result)
     {
@@ -525,9 +539,9 @@ bool WeatherRadio::connectWiFi(bool connect)
 {
     bool result;
     if (connect)
-        result = transmit("s\n");
+        result = transmitSerial("s\n");
     else
-        result = transmit("d\n");
+        result = transmitSerial("d\n");
     return result;
 }
 
@@ -546,7 +560,7 @@ void WeatherRadio::updateWiFiStatus(bool connected)
 ***************************************************************************************/
 bool WeatherRadio::resetArduino()
 {
-    bool result = transmit("r\n");
+    bool result = transmitSerial("r\n");
     return result;
 }
 
@@ -582,6 +596,21 @@ void WeatherRadio::ISGetProperties(const char *dev)
 ***************************************************************************************/
 bool WeatherRadio::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        // grab host name and port for HTTP connection
+        if (strcmp(name, INDI::SP::DEVICE_ADDRESS) == 0)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                if (strcmp(names[i], "ADDRESS") == 0)
+                    strcpy(hostname, texts[i]);
+                else if (strcmp(names[i], "PORT") == 0)
+                    strcpy(port, texts[i]);
+            }
+            // fall through to pass the text vector to the base class
+        }
+    }
     return INDI::Weather::ISNewText(dev, name, texts, names, n);
 }
 
@@ -857,38 +886,25 @@ IPState WeatherRadio::updateWeather()
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
-    int id = createRequestID();
-    char cmd[20] = {0};
-    sprintf(cmd, "w#%d\n", id);
-    bool result = sendQuery(cmd, data, &n_bytes);
+    bool result = sendQuery("w", data, &n_bytes);
     // LOGF_DEBUG("Weather data received: %s", data);
 
     if (result == false)
         return IPS_ALERT;
-    while (result == true)
-    {
-        char *src{new char[n_bytes+1] {0}};
-        // duplicate the buffer since the parser will modify it
-        strncpy(src, data, static_cast<size_t>(n_bytes));
-        int resultID;
-        result = parseWeatherData(src, &resultID);
-        // we got the answer maching our request
-        if (resultID == id)
-            return IPS_OK;
 
-        // read the next line
-        LOGF_WARN("Received no answer for request #%d. Retrying...", id);
-        result = receive(data, &n_bytes, '\n', getTTYTimeout());
-    }
-    // we reached the end of the response message
-    LOGF_WARN("Received no answer for request #%d.", id);
-   return IPS_OK;
+    char *src{new char[n_bytes+1] {0}};
+    // duplicate the buffer since the parser will modify it
+    strncpy(src, data, static_cast<size_t>(n_bytes));
+    result = parseWeatherData(src);
+
+    // result recieved
+    return result == true ? IPS_OK : IPS_ALERT;
 }
 
 /**************************************************************************************
 ** Parse JSON weather document.
 ***************************************************************************************/
-bool WeatherRadio::parseWeatherData(char *data, int *resultID)
+bool WeatherRadio::parseWeatherData(char *data)
 {
     char *source = data;
     char *endptr;
@@ -907,80 +923,72 @@ bool WeatherRadio::parseWeatherData(char *data, int *resultID)
         char *name {new char[strlen(deviceIter->key)+1] {0}};
         strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
 
-        if (strcmp(name, TOKEN) == 0) {
-            // request token
-            char* value = deviceIter->value.toString();
-            if (!sscanf(value, "%d", resultID))
-                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        JsonIterator sensorIter;
+        INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
+
+        if (deviceProp == nullptr)
+        {
+            // new device found
+            std::vector<std::pair<char*, double>> sensorData;
+            // read all sensor data
+            bool initialized = false;
+            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+            {
+                std::pair<char*, double> entry;
+                entry.first = sensorIter->key;
+
+                // special case: get the information whether the device has been initialized
+                if (strcmp(entry.first, "init") == 0)
+                    initialized = (sensorIter->value.getTag() == JSON_TRUE);
+
+                if (sensorIter->value.isDouble())
+                {
+                    entry.second = sensorIter->value.toNumber();
+                    sensorData.push_back(entry);
+                }
+            }
+            if (initialized)
+            {
+                // fill the sensor data if the sensor has been initialized
+                INumber *sensors {new INumber[sensorData.size()]};
+                for (size_t i = 0; i < sensorData.size(); i++)
+                {
+                    sensorsConfigType devConfig = deviceConfig[name];
+                    if (devConfig.count(sensorData[i].first) > 0)
+                    {
+                        sensor_name sensor = {name, sensorData[i].first};
+                        sensor_config config = devConfig[sensorData[i].first];
+                        IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
+                        registerSensor(sensor, config.type);
+                    }
+                    else
+                        IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
+                }
+                // create a new number vector for the device
+                deviceProp = new INumberVectorProperty;
+                IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
+                // make it visible
+                if (isConnected())
+                    defineNumber(deviceProp);
+                rawDevices.push_back(*deviceProp);
+            }
         }
         else {
-            JsonIterator sensorIter;
-            INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
-
-            if (deviceProp == nullptr)
+            // read all sensor data
+            for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
             {
-                // new device found
-                std::vector<std::pair<char*, double>> sensorData;
-                // read all sensor data
-                bool initialized = false;
-                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
+                if (strcmp(sensorIter->key, "init") == 0 || sensorIter->value.getTag() != JSON_NUMBER)
+                    continue;
+                INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
+                if (sensor != nullptr && sensorIter->value.isDouble())
                 {
-                    std::pair<char*, double> entry;
-                    entry.first = sensorIter->key;
-
-                    // special case: get the information whether the device has been initialized
-                    if (strcmp(entry.first, "init") == 0)
-                        initialized = (sensorIter->value.getTag() == JSON_TRUE);
-
-                    if (sensorIter->value.isDouble())
-                    {
-                        entry.second = sensorIter->value.toNumber();
-                        sensorData.push_back(entry);
-                    }
-                }
-                if (initialized)
-                {
-                    // fill the sensor data if the sensor has been initialized
-                    INumber *sensors {new INumber[sensorData.size()]};
-                    for (size_t i = 0; i < sensorData.size(); i++)
-                    {
-                        sensorsConfigType devConfig = deviceConfig[name];
-                        if (devConfig.count(sensorData[i].first) > 0)
-                        {
-                            sensor_name sensor = {name, sensorData[i].first};
-                            sensor_config config = devConfig[sensorData[i].first];
-                            IUFillNumber(&sensors[i], sensor.sensor.c_str(), config.label.c_str(), config.format.c_str(), config.min, config.max, config.steps, sensorData[i].second);
-                            registerSensor(sensor, config.type);
-                        }
-                        else
-                            IUFillNumber(&sensors[i], sensorData[i].first, sensorData[i].first, "%.2f", -2000.0, 2000.0, 1., sensorData[i].second);
-                    }
-                    // create a new number vector for the device
-                    deviceProp = new INumberVectorProperty;
-                    IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
-                    // make it visible
-                    if (isConnected())
-                        defineNumber(deviceProp);
-                    rawDevices.push_back(*deviceProp);
+                    sensor->value = sensorIter->value.toNumber();
+                    // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
+                    updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
                 }
             }
-            else {
-                // read all sensor data
-                for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
-                {
-                    if (strcmp(sensorIter->key, "init") == 0 || sensorIter->value.getTag() != JSON_NUMBER)
-                        continue;
-                    INumber *sensor = IUFindNumber(deviceProp, sensorIter->key);
-                    if (sensor != nullptr && sensorIter->value.isDouble())
-                    {
-                        sensor->value = sensorIter->value.toNumber();
-                        // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
-                        updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
-                    }
-                }
-                // update device values
-                IDSetNumber(deviceProp, nullptr);
-            }
+            // update device values
+            IDSetNumber(deviceProp, nullptr);
         }
 
     }
@@ -1135,7 +1143,8 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &windGustSensorSP);
     IUSaveConfigSwitch(fp, &windSpeedSensorSP);
     IUSaveConfigSwitch(fp, &windDirectionSensorSP);
-    IUSaveConfigNumber(fp, ParametersRangeNP);
+    if (ParametersRangeNP != nullptr)
+        IUSaveConfigNumber(fp, ParametersRangeNP);
     IUSaveConfigNumber(fp, &ttyTimeoutNP);
 
 
@@ -1197,10 +1206,67 @@ bool WeatherRadio::parseCanonicalName(sensor_name *sensor, std::string name)
     return true;
 }
 
+
+/**************************************************************************************
+** Communicate with serial device or HTTP server
+***************************************************************************************/
+bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
+{
+    // communication through a serial (USB) interface
+    if (getActiveConnection()->type() == Connection::Interface::CONNECTION_SERIAL)
+    {
+        char cmdstring[20] = {0};
+        sprintf(cmdstring, "%s\n", cmd);
+
+        if(!transmitSerial(cmdstring))
+        {
+            LOGF_ERROR("Command <%s> failed.", cmdstring);
+            return false;
+        }
+        return receiveSerial(response, length, '\n', getTTYTimeout());
+    }
+    // communication through HTTP, e.g. with a ESP8266 Arduino chip
+    else if (getActiveConnection()->type() == Connection::Interface::CONNECTION_TCP)
+    {
+        CURL *curl;
+        CURLcode res;
+        char requestURL[MAXRBUF];
+
+        snprintf(requestURL, MAXRBUF, "http://%s:%s/%s", hostname, port, cmd);
+
+        curl = curl_easy_init();
+        if (curl)
+        {
+            curl_easy_setopt(curl, CURLOPT_URL, requestURL);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+            res = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
+            if (res == CURLcode::CURLE_OK)
+            {
+                *length = strlen(response);
+                return true;
+            }
+            else
+            {
+                LOGF_ERROR("HTTP request to %s failed.", hostname);
+                return false;
+            }
+        }
+        else {
+            LOGF_ERROR("Cannot initialize CURL, connection to HTTP server %s failed.", hostname);
+            return false;
+        }
+    }
+    // this should not happen
+    LOGF_ERROR("Unsupported active connection type: %d", getActiveConnection()->type());
+    return false;
+}
+
 /**************************************************************************************
 ** Helper functions for serial communication
 ***************************************************************************************/
-bool WeatherRadio::receive(char* buffer, int* bytes, char end, int wait)
+bool WeatherRadio::receiveSerial(char* buffer, int* bytes, char end, int wait)
 {
     int timeout = wait;
     int returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
@@ -1217,7 +1283,7 @@ bool WeatherRadio::receive(char* buffer, int* bytes, char end, int wait)
 }
 
 
-bool WeatherRadio::transmit(const char* buffer)
+bool WeatherRadio::transmitSerial(const char* buffer)
 {
     int bytesWritten = 0;
     int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
@@ -1230,21 +1296,6 @@ bool WeatherRadio::transmit(const char* buffer)
         return false;
     }
     return true;
-}
-
-bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
-{
-    if(!transmit(cmd))
-    {
-        LOGF_ERROR("Command <%s> failed.", cmd);
-        return false;
-    }
-    return receive(response, length, '\n', getTTYTimeout());
-}
-
-int WeatherRadio::createRequestID()
-{
-    return currentRequestID++;
 }
 
 /**************************************************************************************

@@ -32,6 +32,9 @@ RRDSENSORSFILE="/usr/share/weatherradio/sensors.rrd"
 # path to the JSON files holding the data
 DATAPATH="/usr/share/weatherradio/html/data"
 
+# path to the directory holding web cam images and videos
+MEDIADIR="/usr/share/weatherradio/html/media"
+
 ######### INDI Weather vector and element names
 WEATHER="WEATHER_PARAMETERS"
 WEATHER_TEMPERATURE="WEATHER_TEMPERATURE"
