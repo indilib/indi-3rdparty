@@ -57,25 +57,23 @@ void calibrateTSL2591() {
         configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_200MS);
         break;
       case TSL2591_GAIN_MAX :
-        if (tsl2591Data.visible < 100) {
-          switch (tsl2591Data.timing)
-          {
-            case TSL2591_INTEGRATIONTIME_200MS :
-              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_300MS);
-              break;
-            case TSL2591_INTEGRATIONTIME_300MS :
-              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_400MS);
-              break;
-            case TSL2591_INTEGRATIONTIME_400MS :
-              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_500MS);
-              break;
-            case TSL2591_INTEGRATIONTIME_500MS :
-              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
-              break;
-            default:
-              configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
-              break;
-          }
+        switch (tsl2591Data.timing)
+        {
+          case TSL2591_INTEGRATIONTIME_200MS :
+            configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_300MS);
+            break;
+          case TSL2591_INTEGRATIONTIME_300MS :
+            configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_400MS);
+            break;
+          case TSL2591_INTEGRATIONTIME_400MS :
+            configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_500MS);
+            break;
+          case TSL2591_INTEGRATIONTIME_500MS :
+            configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
+            break;
+          default:
+            configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
+            break;
         }
         break;
       default:
@@ -88,6 +86,21 @@ void calibrateTSL2591() {
     switch (tsl2591Data.gain)
     {
       case TSL2591_GAIN_LOW :
+        switch (tsl2591Data.timing)
+        {
+          case TSL2591_INTEGRATIONTIME_500MS :
+            configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_400MS);
+            break;
+          case TSL2591_INTEGRATIONTIME_400MS :
+            configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_300MS);
+            break;
+          case TSL2591_INTEGRATIONTIME_300MS :
+            configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
+            break;
+          default:
+            configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
+            break;
+        }
         break;
       case TSL2591_GAIN_MED :
         configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
@@ -128,8 +141,8 @@ void serializeTSL2591(JsonDocument &doc) {
 
   if (tsl2591Data.status) {
     data["Lux"]     = tsl2591Data.lux;
-    data["Visible"] = tsl2591Data.visible; 
-    data["IR"]      = tsl2591Data.ir; 
+    data["Visible"] = tsl2591Data.visible;
+    data["IR"]      = tsl2591Data.ir;
     data["Gain"]    = tsl2591Data.gain;
     data["Timing"]  = tsl2591Data.timing;
   }

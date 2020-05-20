@@ -18,7 +18,12 @@ import sys
 import argparse
 import simplejson as json
 import rrdtool
+import time
 from wr_config import *
+
+# calculate UTC offset considering DST
+is_dst = time.daylight and time.localtime().tm_isdst > 0
+utc_offset = - (time.altzone if is_dst else time.timezone) / 3600
 
 # default step sizes
 default = {}
@@ -33,7 +38,7 @@ parser.add_argument("-s", "--start",
                     help="interval starting time relative to now()")
 parser.add_argument("-r", "--steps",
                     help="distance between to data steps")
-parser.add_argument("-t", "--timezone", default=1, type=int,
+parser.add_argument("-t", "--timezone", default=utc_offset, type=int,
                     help="Timezone for which the data series has been collected")
 parser.add_argument("-o", "--output",
                     help="JSON file to be written")
