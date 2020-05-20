@@ -774,9 +774,6 @@ bool Interferometer::Handshake()
             IUFillSwitch(&linePowerS[x*2+0], "LINE_POWER_ON", "On", ISS_OFF);
             IUFillSwitch(&linePowerS[x*2+1], "LINE_POWER_OFF", "Off", ISS_ON);
 
-            //line calibration data
-            IUFillNumber(&lineCalibN[x*1+0], "LINE_MAGNITUDE", "Reference magnitude", "%g", 0, 30, 1, 0);
-
             //report pulse counts
             IUFillNumber(&lineStatsN[x*4+0], "LINE_COUNTS", "Counts", "%g", 0, 400000000, 1, 0);
             IUFillNumber(&lineStatsN[x*4+1], "LINE_FLUX", "Photon Flux (Lm)", "%g", 0.0, 1.0, 1.0E-5, 0);
