@@ -609,8 +609,8 @@ void Interferometer::TimerHit()
         IDSetNumber(&lineDelayNP[x], nullptr);
         IDSetNumber(&lineStatsNP[x], nullptr);
         lineDelayNP[x].np[0].value = delay[x];
-        double steradian = pow(AIRY*settingsNP.np[0].value/lineTelescopeNP[x].np[2].value, 2)*M_PI*4;
-        double photon_flux = (totalcounts[x]*1000.0/POLLMS);
+        double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
+        double photon_flux = totalcounts[x]*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         lineStatsNP[x].np[0].value = totalcounts[x];
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
