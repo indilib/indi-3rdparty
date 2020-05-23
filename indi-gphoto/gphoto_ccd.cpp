@@ -467,6 +467,7 @@ void GPhotoCCD::ISGetProperties(const char * dev)
     char configPort[MAXINDINAME] = {0};
     if (IUGetConfigText(getDeviceName(), PortTP.name, mPortT[0].name, configPort, MAXINDINAME) == 0)
         IUSaveText(&mPortT[0], configPort);
+    defineText(&PortTP);
 
     if (isConnected())
         return;
