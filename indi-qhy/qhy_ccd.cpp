@@ -1028,7 +1028,7 @@ int QHYCCD::SetTemperature(double temperature)
 
     SetQHYCCDParam(m_CameraHandle, CONTROL_COOLER, m_TemperatureRequest);
 
-    setCoolerEnabled(m_TemperatureRequest < TemperatureN[0].value);
+    setCoolerEnabled(m_TemperatureRequest <= TemperatureN[0].value);
     setCoolerMode(COOLER_AUTOMATIC);
     return 0;
 }
@@ -1420,7 +1420,10 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             {
                 if (HasCoolerAutoMode)
                 {
-                    if (SetTemperature(0) == 0)
+                    double targetTemperature = TemperatureN[0].value;
+                    if (targetTemperature > 0)
+                        targetTemperature = 0;
+                    if (SetTemperature(targetTemperature) == 0)
                     {
                         TemperatureNP.s = IPS_BUSY;
                         IDSetNumber(&TemperatureNP, nullptr);

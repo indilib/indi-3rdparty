@@ -17,5 +17,9 @@
                 <driver name="Levenhuk">indi_nncam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Mallincam" mdpd="true">
+                <driver name="Mallincam">indi_mallincam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>
