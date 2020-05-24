@@ -65,6 +65,7 @@ option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 option(WITH_EQMOD "Install EQMod Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
 option(WITH_NSE "Install Nexstar Evo Driver" On)
+option(WITH_CAUX "Install Celestron AUX Driver" On)
 option(WITH_SX "Install StarLight Xpress Driver" On)
 option(WITH_MAXDOME "Install MaxDomeII Driver" On)
 option(WITH_NEXDOME "Install NexDome Driver" On)
@@ -268,6 +269,11 @@ endif (WITH_CLOUDWATCHER)
 if (WITH_NSE)
 add_subdirectory(indi-nexstarevo)
 endif (WITH_NSE)
+
+## Celestron AUX
+if (WITH_CAUX)
+add_subdirectory(indi-celestronaux)
+endif (WITH_CAUX)
 
 ## GPhoto
 if (WITH_GPHOTO)
