@@ -56,26 +56,26 @@ public:
 
         free(correlationsN);
 
-        free(nodeStatsN);
-        free(nodeStatsNP);
+        free(lineStatsN);
+        free(lineStatsNP);
 
-        free(nodeEnableS);
-        free(nodeEnableSP);
+        free(lineEnableS);
+        free(lineEnableSP);
 
-        free(nodePowerS);
-        free(nodePowerSP);
+        free(linePowerS);
+        free(linePowerSP);
 
-        free(nodeDelayN);
-        free(nodeDelayNP);
+        free(lineDelayN);
+        free(lineDelayNP);
 
-        free(nodeGPSN);
-        free(nodeGPSNP);
+        free(lineGPSN);
+        free(lineGPSNP);
 
-        free(nodeTelescopeN);
-        free(nodeTelescopeNP);
+        free(lineTelescopeN);
+        free(lineTelescopeNP);
 
-        free(nodeDomeN);
-        free(nodeDomeNP);
+        free(lineDomeN);
+        free(lineDomeNP);
 
         free(snoopGPSN);
         free(snoopGPSNP);
@@ -89,20 +89,8 @@ public:
         free(snoopDomeN);
         free(snoopDomeNP);
 
-        free(nodeDevicesT);
-        free(nodeDevicesTP);
-
-        free(nodeStatsN);
-        free(nodeStatsNP);
-
-        free(nodeEnableS);
-        free(nodeEnableSP);
-
-        free(nodePowerS);
-        free(nodePowerSP);
-
-        free(nodeGPSN);
-        free(nodeGPSNP);
+        free(lineDevicesT);
+        free(lineDevicesTP);
 
         free(totalcounts);
         free(totalcorrelations);
@@ -157,26 +145,26 @@ private:
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
 
-    INumber *nodeStatsN;
-    INumberVectorProperty *nodeStatsNP;
+    INumber *lineStatsN;
+    INumberVectorProperty *lineStatsNP;
 
-    ISwitch *nodeEnableS;
-    ISwitchVectorProperty *nodeEnableSP;
+    ISwitch *lineEnableS;
+    ISwitchVectorProperty *lineEnableSP;
 
-    ISwitch *nodePowerS;
-    ISwitchVectorProperty *nodePowerSP;
+    ISwitch *linePowerS;
+    ISwitchVectorProperty *linePowerSP;
 
-    INumber *nodeDelayN;
-    INumberVectorProperty *nodeDelayNP;
+    INumber *lineDelayN;
+    INumberVectorProperty *lineDelayNP;
 
-    INumber *nodeGPSN;
-    INumberVectorProperty *nodeGPSNP;
+    INumber *lineGPSN;
+    INumberVectorProperty *lineGPSNP;
 
-    INumber *nodeTelescopeN;
-    INumberVectorProperty *nodeTelescopeNP;
+    INumber *lineTelescopeN;
+    INumberVectorProperty *lineTelescopeNP;
 
-    INumber *nodeDomeN;
-    INumberVectorProperty *nodeDomeNP;
+    INumber *lineDomeN;
+    INumberVectorProperty *lineDomeNP;
 
     INumber *snoopGPSN;
     INumberVectorProperty *snoopGPSNP;
@@ -190,8 +178,8 @@ private:
     INumber *snoopDomeN;
     INumberVectorProperty *snoopDomeNP;
 
-    IText *nodeDevicesT;
-    ITextVectorProperty *nodeDevicesTP;
+    IText *lineDevicesT;
+    ITextVectorProperty *lineDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
