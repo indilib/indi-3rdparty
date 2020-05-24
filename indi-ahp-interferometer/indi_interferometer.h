@@ -136,9 +136,12 @@ protected:
 private:
 
     enum it_cmd {
+        CLEAR = 0,
         SET_ACTIVE_LINE = 0x01,
         SET_LEDS = 0x02,
         SET_BAUDRATE = 0x03,
+        SET_DELAY = 0x04,
+        COMMIT = 0x0c,
         ENABLE_CAPTURE = 0x0d,
     };
 
@@ -191,7 +194,7 @@ private:
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
-    unsigned int power_status;
+    unsigned int clock_frequency;
 
     double Lat;
     double timeleft;

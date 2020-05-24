@@ -155,6 +155,26 @@ void Interferometer::Callback()
             double elev = delta*sin(a*M_PI/180.0)-diff[2];
             double basis = delta*cos(a*M_PI/180.0);
             delay[x] = sqrt(pow(elev, 2)+pow(basis, 2));
+            unsigned int delay_clocks = delay[x] * clock_frequency / LIGHTSPEED;
+            SendCommand(SET_ACTIVE_LINE, x);
+            SendCommand(CLEAR, 0);
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(COMMIT, 0);
         }
     }
     EnableCapture(false);
@@ -163,7 +183,7 @@ void Interferometer::Callback()
 
 Interferometer::Interferometer()
 {
-    power_status = 0;
+    clock_frequency = 0;
 
     ExposureRequest = 0.0;
     InExposure = false;
@@ -664,7 +684,7 @@ bool Interferometer::Handshake()
             return false;
         }
 
-        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_lines, &delay_lines, &power_status);
+        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_lines, &delay_lines, &clock_frequency);
 
         for(int x = 0; x < NUM_LINES; x++) {
             if(baselines[x] != nullptr) {
