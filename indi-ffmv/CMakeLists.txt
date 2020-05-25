@@ -16,7 +16,7 @@ find_package(ZLIB REQUIRED)
 find_package(DC1394 REQUIRED)
 
 set (FFMV_VERSION_MAJOR 0)
-set (FFMV_VERSION_MINOR 2)
+set (FFMV_VERSION_MINOR 3)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_ffmv.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_ffmv.xml )
