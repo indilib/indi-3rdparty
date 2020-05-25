@@ -196,7 +196,6 @@ private:
 
     unsigned int clock_frequency;
 
-    double Lat;
     double timeleft;
     double wavelength;
     void Callback();
