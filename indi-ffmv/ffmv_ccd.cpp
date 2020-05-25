@@ -287,6 +287,8 @@ bool FFMVCCD::Connect()
 
     err = dc1394_capture_setup(dcam, 10, DC1394_CAPTURE_FLAGS_DEFAULT);
 
+    LOGF_INFO("Detected camera model: %s vendor: %s (%#04X:%#04X)", dcam->model, dcam->model, dcam->vendor_id, dcam->model_id);
+
     return true;
 }
 
