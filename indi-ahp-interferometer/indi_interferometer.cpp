@@ -124,37 +124,63 @@ void Interferometer::Callback()
         int closest = 0;
         for(int x = 0; x < NUM_LINES; x++) {
             for(int y = x+1; y < NUM_LINES; y++) {
-                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                int xx = static_cast<int>(w*uv.u/2.0);
-                int yy = static_cast<int>(h*uv.v/2.0);
-                int z = center+xx+yy*w;
-                if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                    framebuffer[z] += correlations[idx]*2.0/(counts[x]+counts[y]);
-                    framebuffer[w*h-1-z] += correlations[idx]*2.0/(counts[x]+counts[y]);
+                if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                    INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                    int xx = static_cast<int>(w*uv.u/2.0);
+                    int yy = static_cast<int>(h*uv.v/2.0);
+                    int z = center+xx+yy*w;
+                    if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
+                        framebuffer[z] += correlations[idx]*2.0/(counts[x]+counts[y]);
+                        framebuffer[w*h-1-z] += correlations[idx]*2.0/(counts[x]+counts[y]);
+                    }
+                    double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
+                    double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
+                    get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
+                    closest = (maxalt > alt[x] ? closest : x);
+                    maxalt = (maxalt > alt[x] ? maxalt : alt[x]);
                 }
                 idx++;
             }
-            double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
-            double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
-            get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
-            closest = (maxalt > alt[x] ? closest : x);
-            maxalt = (maxalt > alt[x] ? maxalt : alt[x]);
         }
         delay[closest] = 0;
+        idx = 0;
         for(int x = 0; x < NUM_LINES; x++) {
-            if(x == closest)
-                continue;
-            double diff[3];
-            diff[0] = lineGPSNP[closest].np[0].value - lineGPSNP[closest].np[0].value;
-            diff[1] = lineGPSNP[closest].np[1].value - lineGPSNP[closest].np[1].value;
-            diff[2] = lineGPSNP[closest].np[2].value - lineGPSNP[closest].np[2].value;
-            double a = alt[closest]*M_PI/180.0-alt[x]*M_PI/180.0;
-            double z = az[closest]*M_PI/180.0-az[x]*M_PI/180.0;
-            double delta = sqrt(pow(diff[0], 2)+pow(diff[1], 2));
-            delta *= cos(a*M_PI/180.0) * sin(z*M_PI/180.0);
-            double elev = delta*sin(a*M_PI/180.0)-diff[2];
-            double basis = delta*cos(a*M_PI/180.0);
-            delay[x] = sqrt(pow(elev, 2)+pow(basis, 2));
+            for(int y = x+1; y < NUM_LINES; y++) {
+                INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
+                double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
+                idx++;
+                double t = maxalt*M_PI/180.0;
+                if(x == closest) {
+                    t -=  alt[y]*M_PI/180.0;
+                    delay[y] = d * cos(t);
+                }
+                if(y == closest) {
+                    t -=  alt[x]*M_PI/180.0;
+                    delay[x] = d * cos(t);
+                }
+            }
+        }
+        for(int x = 0; x < NUM_LINES; x++) {
+            unsigned int delay_clocks = delay[x] * clock_frequency / LIGHTSPEED;
+            SendCommand(SET_ACTIVE_LINE, x);
+            SendCommand(CLEAR, 0);
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(SET_DELAY, delay_clocks&0xf);
+            delay_clocks >>= 4;
+            SendCommand(COMMIT, 0);
         }
     }
     EnableCapture(false);
@@ -163,7 +189,7 @@ void Interferometer::Callback()
 
 Interferometer::Interferometer()
 {
-    power_status = 0;
+    clock_frequency = 0;
 
     ExposureRequest = 0.0;
     InExposure = false;
@@ -541,6 +567,7 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
         }
         if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
             lineGPSNP[i].s = IPS_BUSY;
+            double Lat0, Lon0;
             lineGPSNP[i].np[0].value = snoopGPSNP[i].np[0].value;
             lineGPSNP[i].np[1].value = snoopGPSNP[i].np[1].value;
             lineGPSNP[i].np[2].value = snoopGPSNP[i].np[2].value;
@@ -548,19 +575,21 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
             for(int x = 0; x < NUM_LINES; x++) {
                 for(int y = x+1; y < NUM_LINES; y++) {
                     if(x==i||y==i) {
-                        INumberVectorProperty *nv = baselines[idx]->getNumber("GEOGRAPHIC_COORD");
-                        if(nv != nullptr)
-                        {
-                            Lat = nv->np[0].value;
-                        }
-                        Lat *= M_PI/180.0;
-
+                        double Lat1, Lon1;
+                        Lat0 = snoopGPSNP[x].np[0].value*M_PI/180.0;
+                        Lon0 = snoopGPSNP[x].np[1].value*M_PI/180.0;
+                        Lat1 = snoopGPSNP[y].np[0].value*M_PI/180.0;
+                        Lon1 = snoopGPSNP[y].np[1].value*M_PI/180.0;
+                        double x0 = cos(Lat0)*cos(Lon0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
+                        double y0 = cos(Lat0)*sin(Lon0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
+                        double z0 = sin(Lat0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
+                        double x1 = cos(Lat1)*cos(Lon1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
+                        double y1 = cos(Lat1)*sin(Lon1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
+                        double z1 = sin(Lat1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
                         INDI::Correlator::Baseline b;
-                        b.x = (lineGPSN[x*3+0].value-lineGPSN[y*3+0].value);
-                        b.y = (lineGPSN[x*3+1].value-lineGPSN[y*3+1].value)*sin(Lat);
-                        b.z = (lineGPSN[x*3+2].value-lineGPSN[y*3+2].value)*cos(Lat);
-                        b.y += (lineGPSN[x*3+2].value-lineGPSN[y*3+2].value)*cos(Lat);
-                        b.z += (lineGPSN[x*3+1].value-lineGPSN[y*3+1].value)*sin(Lat);
+                        b.x = (x0-x1);
+                        b.y = (y0-y1);
+                        b.z = (z0-z1);
                         baselines[idx]->setBaseline(b);
                     }
                     idx++;
@@ -606,19 +635,21 @@ void Interferometer::TimerHit()
     IDSetNumber(&correlationsNP, nullptr);
     int idx = 0;
     for (int x = 0; x < NUM_LINES; x++) {
-        IDSetNumber(&lineDelayNP[x], nullptr);
-        IDSetNumber(&lineStatsNP[x], nullptr);
+        lineDelayNP[x].s = IPS_BUSY;
         lineDelayNP[x].np[0].value = delay[x];
+        IDSetNumber(&lineDelayNP[x], nullptr);
+        lineStatsNP[x].s = IPS_BUSY;
+        lineStatsNP[x].np[0].value = totalcounts[x];
+        IDSetNumber(&lineStatsNP[x], nullptr);
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
         double photon_flux = totalcounts[x]*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
-        lineStatsNP[x].np[0].value = totalcounts[x];
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         for(int y = x+1; y < NUM_LINES; y++) {
             correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
-            correlationsNP.np[idx*2+1].value = totalcorrelations[idx]*100.0/(totalcounts[x]+totalcounts[y]);
+            correlationsNP.np[idx*2+1].value = totalcorrelations[idx]*2.0/(totalcounts[x]+totalcounts[y]);
             totalcorrelations[idx] = 0;
             idx++;
         }
@@ -664,7 +695,7 @@ bool Interferometer::Handshake()
             return false;
         }
 
-        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_lines, &delay_lines, &power_status);
+        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_lines, &delay_lines, &clock_frequency);
 
         for(int x = 0; x < NUM_LINES; x++) {
             if(baselines[x] != nullptr) {
@@ -745,7 +776,7 @@ bool Interferometer::Handshake()
             IUFillNumber(&snoopGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
             IUFillNumber(&snoopGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
 
-            IUFillNumber(&lineDelayN[x], "DELAY", "Delay (m)", "%7.9f", 0, EARTHRADIUSMEAN, LIGHTSPEED/SAMPLE_RATE, 0);
+            IUFillNumber(&lineDelayN[x], "DELAY", "Delay (m)", "%g", 0, EARTHRADIUSMEAN, 1.0E-9, 0);
 
             IUFillNumberVector(&snoopGPSNP[x], &snoopGPSN[x*3], 3, getDeviceName(), "GEOGRAPHIC_COORD", "Location", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
             IUFillNumberVector(&snoopTelescopeNP[x], &snoopTelescopeN[x*2], 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
