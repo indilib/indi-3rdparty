@@ -1,7 +1,7 @@
 /*******************************************************************************
-  Copyright(c) 2017 Jasem Mutlaq. All rights reserved.
+  Copyright(c) 2020 Ilia Platone - Jasem Mutlaq. All rights reserved.
 
-  INDI GPS NMEA Driver
+  INDI RTKLIB Driver
 
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the Free
