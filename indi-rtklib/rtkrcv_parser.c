@@ -1,10 +1,27 @@
-/*
- * Copyright © 2014 Kosma Moczek <kosma@cloudyourcar.com>
- * This program is free software. It comes without any warranty, to the extent
- * permitted by applicable law. You can redistribute it and/or modify it under
- * the terms of the Do What The Fuck You Want To Public License, Version 2, as
- * published by Sam Hocevar. See the COPYING file for more details.
- */
+/*******************************************************************************
+  Copyright(c) 2020 Ilia Platone - Jasem Mutlaq. All rights reserved.
+
+  INDI RTKLIB Driver
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the Free
+  Software Foundation; either version 2 of the License, or (at your option)
+  any later version.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU Library General Public License
+  along with this library; see the file COPYING.LIB.  If not, write to
+  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+  Boston, MA 02110-1301, USA.
+
+  The full GNU General Public License is included in this distribution in the
+  file called LICENSE.
+*******************************************************************************/
+
 #include "rtkrcv_parser.h"
 #include <stdlib.h>
 #include <string.h>
