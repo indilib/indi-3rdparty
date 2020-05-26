@@ -1,3 +1,10 @@
+libasi (1.6) buster; urgency=medium
+
+  * ASICAM 1.15.0430 release:
+    V1, 15, 0430 2020.5.20
+
+-- Wouter van Reeven <wouter@van.reeven.nl>  Mon, 25 May 2020 14:40:38 -04:00
+
 libasi (1.5) buster; urgency=medium
 
   * ZWO EAF SDK 0.2.0218 release:
