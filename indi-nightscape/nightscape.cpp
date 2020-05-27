@@ -322,8 +322,8 @@ bool NightscapeCCD::initProperties()
     {
         cap |= CCD_HAS_BAYER;
         IUSaveText(&BayerT[0], "0");
-        IUSaveText(&BayerT[1], "1");
-        IUSaveText(&BayerT[2], "RGGB");
+        IUSaveText(&BayerT[1], "0");
+        IUSaveText(&BayerT[2], "BGGR");
 
     }
     SetCCDCapability(cap);
