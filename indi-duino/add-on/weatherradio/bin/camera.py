@@ -46,6 +46,11 @@ def init_config():
 now = datetime.now()
 config = init_config()
 
+# move camera to the sky position
+fifo = open('/var/www/cam/FIFO_pipan', "w")
+fifo.write('servo 155 78')
+fifo.close()
+
 dir = config.get('Camera', 'BaseDirectory') + '/' +  now.strftime("%Y-%m-%d")
 
 filename   = dir + "/" + now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
