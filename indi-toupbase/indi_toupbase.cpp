@@ -419,7 +419,9 @@ bool ToupBase::updateProperties()
         defineSwitch(&AutoExposureSP);
         defineSwitch(&VideoFormatSP);
         defineSwitch(&ResolutionSP);
-        defineSwitch(&GainConversionSP);
+
+        if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+            defineSwitch(&GainConversionSP);
 
         // Levels
         defineNumber(&LevelRangeNP);
@@ -456,7 +458,9 @@ bool ToupBase::updateProperties()
         deleteProperty(AutoExposureSP.name);
         deleteProperty(VideoFormatSP.name);
         deleteProperty(ResolutionSP.name);
-        deleteProperty(GainConversionSP.name);
+
+        if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+            deleteProperty(GainConversionSP.name);
 
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
@@ -999,7 +1003,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                         // If Gain Conversion is set to HDR, then don't do anything.
                         if (ControlN[TC_HCG_THRESHOLD].value > 0 && GainConversionS[GAIN_HDR].s == ISS_OFF)
                         {
-                            if (value > ControlN[TC_HCG_THRESHOLD].value &&
+                            if (value >= ControlN[TC_HCG_THRESHOLD].value &&
                                     GainConversionS[GAIN_HIGH].s == ISS_OFF)
                             {
                                 FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_HIGH));
@@ -1009,7 +1013,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                                 GainConversionS[GAIN_HIGH].s = ISS_ON;
                                 IDSetSwitch(&GainConversionSP, nullptr);
                             }
-                            else if (value <= ControlN[TC_HCG_THRESHOLD].value &&
+                            else if (value < ControlN[TC_HCG_THRESHOLD].value &&
                                      GainConversionS[GAIN_LOW].s == ISS_OFF)
                             {
                                 FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_LOW));
