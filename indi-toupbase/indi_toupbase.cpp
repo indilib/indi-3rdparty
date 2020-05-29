@@ -252,7 +252,8 @@ bool ToupBase::initProperties()
     IUFillNumber(&ControlN[TC_GAMMA], "Gamma", "Gamma", "%.f", 20, 180, 10, 100);
     IUFillNumber(&ControlN[TC_SPEED], "Speed", "Speed", "%.f", 0, 10, 1, 0);
     IUFillNumber(&ControlN[TC_FRAMERATE_LIMIT], "FPS Limit", "FPS Limit", "%.f", 0, 63, 1, 0);
-    IUFillNumberVector(&ControlNP, ControlN, 8, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
+    IUFillNumber(&ControlN[TC_HCG_THRESHOLD], "HCG Threshold", "HCG Threshold", "%.f", 0, 1000, 100, 0);
+    IUFillNumberVector(&ControlNP, ControlN, 9, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
 
@@ -319,6 +320,16 @@ bool ToupBase::initProperties()
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_TT], "TC_AUTO_WB_TT", "Temp/Tint", ISS_ON);
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_RGB], "TC_AUTO_WB_RGB", "RGB", ISS_OFF);
     IUFillSwitchVector(&WBAutoSP, WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    /// High Gain Conversion
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&GainConversionS[GAIN_LOW], "GAIN_LOW", "Low", ISS_OFF);
+    IUFillSwitch(&GainConversionS[GAIN_HIGH], "GAIN_HIGH", "High", ISS_OFF);
+    IUFillSwitch(&GainConversionS[GAIN_HDR], "GAIN_HDR", "HDR", ISS_OFF);
+    IUFillSwitchVector(&GainConversionSP, GainConversionS, 3, getDeviceName(), "TC_HCG_CONTROL", "Gain Conversion", CONTROL_TAB,
+                       IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -408,6 +419,7 @@ bool ToupBase::updateProperties()
         defineSwitch(&AutoExposureSP);
         defineSwitch(&VideoFormatSP);
         defineSwitch(&ResolutionSP);
+        defineSwitch(&GainConversionSP);
 
         // Levels
         defineNumber(&LevelRangeNP);
@@ -444,6 +456,7 @@ bool ToupBase::updateProperties()
         deleteProperty(AutoExposureSP.name);
         deleteProperty(VideoFormatSP.name);
         deleteProperty(ResolutionSP.name);
+        deleteProperty(GainConversionSP.name);
 
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
@@ -770,6 +783,8 @@ void ToupBase::setupParams()
     ControlN[TC_GAIN].step = (nMax - nMin) / 20.0;
     ControlN[TC_GAIN].value = nDef;
 
+    ControlN[TC_HCG_THRESHOLD].max = nMax;
+
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
     LOGF_DEBUG("Contrast Control. Min: %u Max: %u Default: %u", nMin, nMax, nDef);
@@ -820,6 +835,12 @@ void ToupBase::setupParams()
     FP(put_Option(m_CameraHandle, CP(OPTION_FRAMERATE), frameRateLimit));
 #endif
     ControlN[TC_FRAMERATE_LIMIT].value = frameRateLimit;
+
+    // High Conversion Gain Mode
+    int highConversionGain = 0;
+    rc = FP(get_Option(m_CameraHandle, CP(OPTION_CG), &highConversionGain));
+    LOGF_DEBUG("High Conversion Gain %d rc: %d", highConversionGain, rc);
+    GainConversionS[highConversionGain].s = ISS_ON;
 
     // Set Bin more for better quality over skip
     if (m_Instance->model->flag & CP(FLAG_BINSKIP_SUPPORTED))
@@ -952,7 +973,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, ControlNP.name))
         {
-            double oldValues[8] = {0};
+            double oldValues[9] = {0};
             for (int i = 0; i < ControlNP.nnp; i++)
                 oldValues[i] = ControlN[i].value;
 
@@ -973,6 +994,32 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 {
                     case TC_GAIN:
                         FP(put_ExpoAGain(m_CameraHandle, value));
+                        // If gain exceeds high conversion gain threshold
+                        // then switch on High Gain Conversion mode.
+                        // If Gain Conversion is set to HDR, then don't do anything.
+                        if (ControlN[TC_HCG_THRESHOLD].value > 0 && GainConversionS[GAIN_HDR].s == ISS_OFF)
+                        {
+                            if (value > ControlN[TC_HCG_THRESHOLD].value &&
+                                    GainConversionS[GAIN_HIGH].s == ISS_OFF)
+                            {
+                                FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_HIGH));
+                                LOGF_INFO("Gain %d exceeded HCG threshold. Switching to High Conversion Gain.", value);
+                                IUResetSwitch(&GainConversionSP);
+                                GainConversionSP.s = IPS_OK;
+                                GainConversionS[GAIN_HIGH].s = ISS_ON;
+                                IDSetSwitch(&GainConversionSP, nullptr);
+                            }
+                            else if (value <= ControlN[TC_HCG_THRESHOLD].value &&
+                                     GainConversionS[GAIN_LOW].s == ISS_OFF)
+                            {
+                                FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_LOW));
+                                LOGF_INFO("Gain %d is below HCG threshold. Switching to Low Conversion Gain.", value);
+                                IUResetSwitch(&GainConversionSP);
+                                GainConversionSP.s = IPS_OK;
+                                GainConversionS[GAIN_LOW].s = ISS_ON;
+                                IDSetSwitch(&GainConversionSP, nullptr);
+                            }
+                        }
                         break;
 
                     case TC_CONTRAST:
@@ -1005,6 +1052,18 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                             LOG_INFO("FPS rate limit is set to unlimited.");
                         else
                             LOGF_INFO("Limiting frame rate to %d FPS", value);
+                        break;
+
+                    case TC_HCG_THRESHOLD:
+                        if (value > 0)
+                        {
+                            if (GainConversionS[GAIN_HDR].s == ISS_ON)
+                                LOG_WARN("High gain conversion trigger have no effect in HDR mode. Please switch to Low or High gain.");
+                            else
+                                LOGF_INFO("High gain conversion trigger is enabled. Gain Conversion Gain is set once gain exceeds %d", value);
+                        }
+                        else
+                            LOG_INFO("High gain conversion trigger is disabled.");
                         break;
 
                     default:
@@ -1138,7 +1197,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
-bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
@@ -1375,6 +1434,18 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             AutoExposureSP.s = IPS_OK;
             FP(put_AutoExpoEnable(m_CameraHandle, AutoExposureS[TC_AUTO_EXPOSURE_ON].s == ISS_ON ? 1 : 0));
             IDSetSwitch(&AutoExposureSP, nullptr);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Gain Conversion
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, GainConversionSP.name))
+        {
+            IUUpdateSwitch(&GainConversionSP, states, names, n);
+            GainConversionSP.s = IPS_OK;
+            FP(put_Option(m_CameraHandle, CP(OPTION_CG), IUFindOnSwitchIndex(&GainConversionSP)));
+            IDSetSwitch(&GainConversionSP, nullptr);
             return true;
         }
 
@@ -1990,7 +2061,7 @@ void ToupBase::refreshControls()
     IDSetNumber(&ControlNP, nullptr);
 }
 
-void ToupBase::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void ToupBase::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
@@ -2003,7 +2074,7 @@ void ToupBase::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     }
 }
 
-bool ToupBase::saveConfigItems(FILE *fp)
+bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 

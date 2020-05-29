@@ -434,16 +434,16 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Properties
         //#############################################################################
-        ISwitch CoolerS[2];
         ISwitchVectorProperty CoolerSP;
+        ISwitch CoolerS[2];
         enum
         {
             TC_COOLER_ON,
             TC_COOLER_OFF,
         };
 
-        INumber ControlN[8];
         INumberVectorProperty ControlNP;
+        INumber ControlN[9];
         enum
         {
             TC_GAIN,
@@ -453,7 +453,8 @@ class ToupBase : public INDI::CCD
             TC_BRIGHTNESS,
             TC_GAMMA,
             TC_SPEED,
-            TC_FRAMERATE_LIMIT
+            TC_FRAMERATE_LIMIT,
+            TC_HCG_THRESHOLD,
         };
 
         ISwitch AutoControlS[3];
@@ -554,8 +555,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Firmware Info
-        IText FirmwareT[5] = {};
         ITextVectorProperty FirmwareTP;
+        IText FirmwareT[5] = {};
         enum
         {
             TC_FIRMWARE_SERIAL,
@@ -563,6 +564,16 @@ class ToupBase : public INDI::CCD
             TC_FIRMWARE_HW_VERSION,
             TC_FIRMWARE_DATE,
             TC_FIRMWARE_REV
+        };
+
+        // Gain Conversion
+        ISwitchVectorProperty GainConversionSP;
+        ISwitch GainConversionS[3];
+        enum
+        {
+            GAIN_LOW,
+            GAIN_HIGH,
+            GAIN_HDR
         };
 
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
