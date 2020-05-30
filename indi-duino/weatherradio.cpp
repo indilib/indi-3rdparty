@@ -284,6 +284,8 @@ bool WeatherRadio::updateProperties()
             defineNumber(&rawDevices[i]);
 
         getBasicData();
+        // update the weather parameters to avoid sending dummy weather values
+        updateWeather();
 
         result = INDI::Weather::updateProperties();
         // Load the configuration if everything was fine
