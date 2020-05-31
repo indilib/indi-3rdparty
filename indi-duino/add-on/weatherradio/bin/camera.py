@@ -38,16 +38,13 @@ def init_config():
     config.set('Night', 'Contrast', '100')
     config.set('Night', 'Brightness', '20')
     config.set('Night', 'Saturation', '-80')
+    config.set('Night', 'MaxExposure', '10000000')
+    config.set('Night', 'MaxISO', '800')
     config.read(inifile_name)
     return config
     
 now = datetime.now()
 config = init_config()
-
-# move camera to the sky position
-fifo = open('/var/www/cam/FIFO_pipan', "w")
-fifo.write('servo 155 78')
-fifo.close()
 
 dir = config.get('Camera', 'BaseDirectory') + '/' +  now.strftime("%Y-%m-%d")
 
