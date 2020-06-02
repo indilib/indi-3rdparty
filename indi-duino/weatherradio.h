@@ -57,6 +57,10 @@ protected:
     // Initial function to get data after connection is successful
     void getBasicData();
 
+    // host name and port for HTTP connections
+    char hostname[MAXINDILABEL];
+    char port[MAXINDILABEL];
+
     // Read the firmware configuration
     void updateConfigData();
 
@@ -80,7 +84,7 @@ protected:
      */
     IPState updateWeather() override;
 
-    bool parseWeatherData(char *data, int *resultID);
+    bool parseWeatherData(char *data);
 
     /**
       * Device specific configurations
@@ -259,14 +263,10 @@ protected:
      */
     bool resetArduino();
 
-    // helper functions
-    bool receive(char* buffer, int* bytes, char end, int wait);
-    bool transmit(const char* buffer);
+    // Serial communication
+    bool receiveSerial(char* buffer, int* bytes, char end, int wait);
+    bool transmitSerial(const char* buffer);
     bool sendQuery(const char* cmd, char* response, int *length);
-
-    /* unique ID as identifier for serial communication */
-    int currentRequestID;
-    int createRequestID();
 
     // override default INDI methods
     const char *getDefaultName() override;

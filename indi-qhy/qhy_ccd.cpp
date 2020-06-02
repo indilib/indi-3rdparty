@@ -324,7 +324,8 @@ bool QHYCCD::initProperties()
     // Cooler Mode
     IUFillSwitch(&CoolerModeS[COOLER_AUTOMATIC], "COOLER_AUTOMATIC", "Auto", ISS_ON);
     IUFillSwitch(&CoolerModeS[COOLER_MANUAL], "COOLER_MANUAL", "Manual", ISS_OFF);
-    IUFillSwitchVector(&CoolerModeSP, CoolerModeS, 2, getDeviceName(), "CCD_COOLER_MODE", "Cooler Mode", MAIN_CONTROL_TAB, IP_RO,
+    IUFillSwitchVector(&CoolerModeSP, CoolerModeS, 2, getDeviceName(), "CCD_COOLER_MODE", "Cooler Mode", MAIN_CONTROL_TAB,
+                       IP_RO,
                        ISR_1OFMANY, 0, IPS_IDLE);
 
     addAuxControls();
@@ -1027,7 +1028,7 @@ int QHYCCD::SetTemperature(double temperature)
 
     SetQHYCCDParam(m_CameraHandle, CONTROL_COOLER, m_TemperatureRequest);
 
-    setCoolerEnabled(m_TemperatureRequest < TemperatureN[0].value);
+    setCoolerEnabled(m_TemperatureRequest <= TemperatureN[0].value);
     setCoolerMode(COOLER_AUTOMATIC);
     return 0;
 }
@@ -1419,7 +1420,10 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             {
                 if (HasCoolerAutoMode)
                 {
-                    if (SetTemperature(0) == 0)
+                    double targetTemperature = TemperatureN[0].value;
+                    if (targetTemperature > 0)
+                        targetTemperature = 0;
+                    if (SetTemperature(targetTemperature) == 0)
                     {
                         TemperatureNP.s = IPS_BUSY;
                         IDSetNumber(&TemperatureNP, nullptr);
@@ -1798,8 +1802,9 @@ void QHYCCD::updateTemperature()
         {
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, m_PWMRequest);
         }
+        // JM 2020-05-18: QHY reported the code below break automatic coolers, so it is only avaiable for manual coolers.
         // Temperature Readout does not work, if we do not set "something", so lets set the current value...
-        else if (TemperatureNP.s == IPS_OK)
+        else if (CoolerModeS[COOLER_MANUAL].s == ISS_ON && TemperatureNP.s == IPS_OK)
         {
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 / 100 );
         }
@@ -2184,7 +2189,8 @@ bool QHYCCD::updateFilterProperties()
             snprintf(filterLabel, MAXINDILABEL, "Filter#%d", i + 1);
             IUFillText(&FilterNameT[i], filterName, filterLabel, filterLabel);
         }
-        IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter", FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
+        IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
+                         FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
 
         return true;
     }

@@ -135,7 +135,9 @@ class LX200Skywalker : public LX200Telescope
         bool setSystemSlewSpeed (int xx);
         bool getJSONData_Y(int jindex, char *jstr);
         bool getJSONData_gp(int jindex, char *jstr);
-        bool setPierSide();
+        bool notifyPierSide();
+        void notifyMountLock(bool locked);
+        void notifyTrackState(INDI::Telescope::TelescopeStatus state);
         bool MountLocked();
         bool SetMountLock(bool enable);
 

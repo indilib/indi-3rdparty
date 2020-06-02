@@ -30,7 +30,7 @@
 #include "config.h"
 #include "eventloop.h"
 
-#include "../indi-gphoto/gphoto_readimage.h"
+#include "gphoto_readimage.h"
 
 extern "C" {
 #include "libpktriggercord.h"

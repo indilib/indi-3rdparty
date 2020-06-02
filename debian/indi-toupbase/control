@@ -14,12 +14,13 @@ Build-Depends: debhelper (>= 5),
                libtoupcam,
                libaltaircam,
                libstarshootg,
-               libnncam
+               libnncam,
+               libmallincam
 Standards-Version: 3.9.1
 
 Package: indi-toupbase
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libtoupcam, libaltaircam, libstarshootg, libnncam
+Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libtoupcam, libaltaircam, libstarshootg, libnncam, libmallincam
 conflicts: indi-toupcam, indi-altaircam
 replaces: indi-toupcam, indi-altaircam
 Description: INDI Driver for Touptek based cameras

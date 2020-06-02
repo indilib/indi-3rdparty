@@ -1,8 +1,14 @@
+indi-atik (2.6) bionic; urgency=low
+
+  * Horizon 2 support.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 16 May 2020 16:00:00 +0300
+
 indi-atik (2.5) bionic; urgency=low
 
   * Fixed spinning filter wheel in AtikOne.
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Web, 15 Jan 2020 16:00:00 +0300
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 15 Jan 2020 16:00:00 +0300
 
 indi-atik (2.4) bionic; urgency=low
 

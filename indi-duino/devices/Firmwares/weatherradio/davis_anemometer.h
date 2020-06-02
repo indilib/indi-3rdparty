@@ -49,7 +49,10 @@ float windspeed(unsigned long time, unsigned long startTime, unsigned int rotati
   // equals 1 mp/h wind speed (1 mp/h = 1609/3600 m/s)
   // speed (m/s) = rotations * 1135.24 / delta t
 
-  return (rotations * 1135.24 / (time - startTime));
+  if (time == startTime)
+    return 0.0;
+  else
+    return (rotations * 1135.24 / (time - startTime));
 }
 
 // calculate the wind direction in degree (N = 0, E = 90, ...)
@@ -134,7 +137,7 @@ void updateAnemometer() {
     // stop recording
     detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
     anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
-    anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;;
+    anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;
     anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
     anemometerData.rotations = rotations;
 

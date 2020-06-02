@@ -23,12 +23,17 @@
 #include "indiccd.h"
 #include "indicorrelator.h"
 
-#define NUM_NODES 14
-#define NUM_BASELINES NUM_NODES*(NUM_NODES-1)/2
-#define SAMPLE_SIZE 3
-#define FRAME_SIZE (NUM_NODES+NUM_BASELINES)*SAMPLE_SIZE
-#define INTERFEROMETER_PROPERTIES_TAB "Interferometer properties"
-
+#define HEADER_SIZE 16
+#define MAX_RESOLUTION 2048
+#define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
+#define STOP_BITS 1
+#define WORD_SIZE 8
+#define BAUD_SIZE (STOP_BITS+WORD_SIZE+1.0)
+#define BAUD_RATE (serialConnection->baud())
+#define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
+#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
+#define SAMPLE_RATE (pow(2, sample_size)*serialConnection->baud())
 class baseline : public INDI::Correlator
 {
 public:
@@ -45,6 +50,55 @@ class Interferometer : public INDI::CCD
 {
 public:
     Interferometer();
+    ~Interferometer() {
+        for(int x = 0; x < NUM_BASELINES; x++)
+            baselines[x]->~baseline();
+
+        free(correlationsN);
+
+        free(lineStatsN);
+        free(lineStatsNP);
+
+        free(lineEnableS);
+        free(lineEnableSP);
+
+        free(linePowerS);
+        free(linePowerSP);
+
+        free(lineDelayN);
+        free(lineDelayNP);
+
+        free(lineGPSN);
+        free(lineGPSNP);
+
+        free(lineTelescopeN);
+        free(lineTelescopeNP);
+
+        free(lineDomeN);
+        free(lineDomeNP);
+
+        free(snoopGPSN);
+        free(snoopGPSNP);
+
+        free(snoopTelescopeN);
+        free(snoopTelescopeNP);
+
+        free(snoopTelescopeInfoN);
+        free(snoopTelescopeInfoNP);
+
+        free(snoopDomeN);
+        free(snoopDomeNP);
+
+        free(lineDevicesT);
+        free(lineDevicesTP);
+
+        free(totalcounts);
+        free(totalcorrelations);
+        free(alt);
+        free(az);
+        free(delay);
+        free(baselines);
+    }
 
     void ISGetProperties(const char *dev);
     bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
@@ -53,15 +107,13 @@ public:
     bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     bool ISSnoopDevice(XMLEle *root);
 
-    inline double getWavelength() { return wavelength; }
-    inline void setWavelength(double wl) { wavelength=wl; for(int x = 0; x < NUM_BASELINES; x++) baselines[x]->setWavelength(wl); }
-
     void CaptureThread();
 protected:
 
     // General device functions
     bool Disconnect();
     const char *getDeviceName();
+    bool saveConfigItems(FILE *fp);
     const char *getDefaultName();
     bool initProperties();
     bool updateProperties();
@@ -76,39 +128,91 @@ protected:
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
-    enum
-    {
-        CONNECTION_NONE   = 1 << 0, /** Do not use any connection plugin */
-        CONNECTION_SERIAL = 1 << 1, /** For regular serial and bluetooth connections */
-        CONNECTION_TCP    = 1 << 2  /** For Wired and WiFI connections */
-    } CorrelatorConnection;
-
-
     Connection::Serial *serialConnection;
-    Connection::TCP *tcpConnection;
 
-    /// For Serial & TCP connections
+    // For Serial connection
     int PortFD = -1;
 
 private:
-    INumber locationN[3*NUM_NODES];
-    INumberVectorProperty locationNP[NUM_NODES];
+
+    enum it_cmd {
+        CLEAR = 0,
+        SET_ACTIVE_LINE = 0x01,
+        SET_LEDS = 0x02,
+        SET_BAUDRATE = 0x03,
+        SET_DELAY = 0x04,
+        COMMIT = 0x0c,
+        ENABLE_CAPTURE = 0x0d,
+    };
+
+    INumber *correlationsN;
+    INumberVectorProperty correlationsNP;
+
+    INumber *lineStatsN;
+    INumberVectorProperty *lineStatsNP;
+
+    ISwitch *lineEnableS;
+    ISwitchVectorProperty *lineEnableSP;
+
+    ISwitch *linePowerS;
+    ISwitchVectorProperty *linePowerSP;
+
+    INumber *lineDelayN;
+    INumberVectorProperty *lineDelayNP;
+
+    INumber *lineGPSN;
+    INumberVectorProperty *lineGPSNP;
+
+    INumber *lineTelescopeN;
+    INumberVectorProperty *lineTelescopeNP;
+
+    INumber *lineDomeN;
+    INumberVectorProperty *lineDomeNP;
+
+    INumber *snoopGPSN;
+    INumberVectorProperty *snoopGPSNP;
+
+    INumber *snoopTelescopeN;
+    INumberVectorProperty *snoopTelescopeNP;
+
+    INumber *snoopTelescopeInfoN;
+    INumberVectorProperty *snoopTelescopeInfoNP;
+
+    INumber *snoopDomeN;
+    INumberVectorProperty *snoopDomeNP;
+
+    IText *lineDevicesT;
+    ITextVectorProperty *lineDevicesTP;
+
+    double *totalcounts;
+    double *totalcorrelations;
+    double  *alt;
+    double *az;
+    double *delay;
+    baseline** baselines;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
+    unsigned int clock_frequency;
+
+    double timeleft;
     double wavelength;
-    baseline* baselines[NUM_BASELINES];
     void Callback();
     bool callHandshake();
-    uint8_t getInterferometerConnection() const;
-    void setInterferometerConnection(const uint8_t &value);
-    uint8_t interferometerConnection = CONNECTION_NONE;
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
-    void  grabImage();
+    bool SendChar(char);
+    bool SendCommand(it_cmd cmd, unsigned char value = 0);
+    void ActiveLine(int, bool, bool);
+    void EnableCapture(bool start);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
+    bool threadsRunning;
+
+    int NUM_LINES;
+    int DELAY_LINES;
+    int SAMPLE_SIZE;
 };

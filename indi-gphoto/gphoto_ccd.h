@@ -98,6 +98,9 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip) override;
         void TimerHit() override;
 
+        // Simulation Triggered
+        void simulationTriggered(bool enabled) override;
+
         // Upload Mode
         bool UpdateCCDUploadMode(CCD_UPLOAD_MODE mode) override;
 
@@ -180,8 +183,13 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         ISwitch * mFormatS = nullptr;
         ISwitchVectorProperty mFormatSP;
 
-        ISwitch transferFormatS[2];
-        ISwitchVectorProperty transferFormatSP;
+        ISwitchVectorProperty TransferFormatSP;
+        ISwitch TransferFormatS[2];
+        enum
+        {
+            FORMAT_FITS,
+            FORMAT_NATIVE
+        };
 
         ISwitch captureTargetS[2];
         ISwitchVectorProperty captureTargetSP;
@@ -215,6 +223,10 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
             FORCE_BULB_ON,
             FORCE_BULB_OFF
         };
+
+        // Upload file, used for testing purposes under simulation under native mode
+        ITextVectorProperty UploadFileTP;
+        IText UploadFileT[1];
 
         IBLOBVectorProperty * imageBP = nullptr;
         IBLOB * imageB                = nullptr;
