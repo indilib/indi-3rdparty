@@ -44,7 +44,11 @@ volatile float direction_diffs;   // and collect the diffs to build the average
 
 
 // calculate the windspeed
+#ifdef ESP8266
+float ICACHE_RAM_ATTR windspeed(unsigned long time, unsigned long startTime, unsigned int rotations) {
+#else
 float windspeed(unsigned long time, unsigned long startTime, unsigned int rotations) {
+#endif
 
   // 1600 rotations per hour or 2.25 seconds per rotation
   // equals 1 mp/h wind speed (1 mp/h = 1609/3600 m/s)
@@ -57,7 +61,11 @@ float windspeed(unsigned long time, unsigned long startTime, unsigned int rotati
 }
 
 // calculate the wind direction in degree (N = 0, E = 90, ...)
+#ifdef ESP8266
+int ICACHE_RAM_ATTR winddirection() {
+#else
 int winddirection() {
+#endif
   // the wind direction is measured with a potentiometer
   volatile int direction = map(analogRead(ANEMOMETER_WINDDIRECTIONPIN), 0, 1023, 0, 360) + ANEMOMETER_WINDOFFSET;
 
