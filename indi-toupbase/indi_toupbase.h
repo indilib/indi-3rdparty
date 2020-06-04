@@ -443,7 +443,7 @@ class ToupBase : public INDI::CCD
         };
 
         INumberVectorProperty ControlNP;
-        INumber ControlN[9];
+        INumber ControlN[10];
         enum
         {
             TC_GAIN,
@@ -455,6 +455,7 @@ class ToupBase : public INDI::CCD
             TC_SPEED,
             TC_FRAMERATE_LIMIT,
             TC_HCG_THRESHOLD,
+            TC_HCG_LCG_RATIO,
         };
 
         ISwitch AutoControlS[3];
@@ -481,6 +482,13 @@ class ToupBase : public INDI::CCD
             TC_BLACK_R,
             TC_BLACK_G,
             TC_BLACK_B,
+        };
+
+        INumberVectorProperty BlackLevelNP;
+        INumber BlackLevelN[1];
+        enum
+        {
+            TC_BLACK_LEVEL,
         };
 
         // R/G/B/Gray low/high levels
@@ -590,6 +598,10 @@ class ToupBase : public INDI::CCD
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
         uint8_t m_TimeoutRetries { 0 };
+        
+        uint32_t m_MaxGainNative { 0 };
+        uint32_t m_MaxGainHCG { 0 };
+        uint32_t m_NativeGain { 0 };
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
