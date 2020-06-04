@@ -301,11 +301,22 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         }
         PrimaryCCD.setExposureDuration(duration);
         ExposureRequest = duration;
-        pslr_rational_t shutter_speed = {(int)(duration*100),100};
+        float F = duration;
+        pslr_rational_t shutter_speed;
+		if (F < 5) {
+			F = F * 10;
+			shutter_speed.denom = 10;
+			shutter_speed.nom = F;
+		} else {
+			shutter_speed.denom = 1;
+			shutter_speed.nom = F;
+		}
+        //pslr_rational_t shutter_speed = {(int)(duration*100),100};
         //Doesn't look like we need to actually set the shutter speed in bulb mode
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
-            if (duration != (float)status.current_shutter_speed.nom/status.current_shutter_speed.denom)
+            if (duration != (float)status.current_shutter_speed.nom/status.current_shutter_speed.denom) {
                 pslr_set_shutter(device, shutter_speed);
+            }
         }
 
         if (autoFocusS[0].s == ISS_ON) pslr_focus(device);
