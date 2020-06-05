@@ -801,6 +801,10 @@ void ToupBase::setupParams()
     uint16_t nMin = 0, nMax = 0, nDef = 0;
 
     // Dual Conversion Gain Mode
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+    {
+        m_hasDualGain = true;
+    }
     int highConversionGain = 0;
     rc = FP(get_Option(m_CameraHandle, CP(OPTION_CG), &highConversionGain));
     LOGF_DEBUG("Dual Conversion Gain %d rc: %d", highConversionGain, rc);
@@ -815,7 +819,7 @@ void ToupBase::setupParams()
     {
         m_MaxGainHCG = m_MaxGainNative * GainConversionN[TC_HCG_LCG_RATIO].value;
         ControlN[TC_GAIN].max = m_MaxGainHCG;
-        LOGF_INFO("Maximum gain considering dual gain is %d.", nMax);
+        LOGF_INFO("Maximum gain considering dual gain is %d.", m_MaxGainHCG);
     }
     else
     {
