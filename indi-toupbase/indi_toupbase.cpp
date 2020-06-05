@@ -522,7 +522,7 @@ bool ToupBase::Connect()
     uint32_t cap = 0;
 
     cap |= CCD_CAN_ABORT;
-    
+
     m_MonoCamera = false;
     // If raw format is support then we have bayer
     if (m_Instance->model->flag & (CP(FLAG_MONO)))
@@ -1092,7 +1092,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                         break;
                 }
             }
-            
+
             ControlNP.s = IPS_OK;
             IDSetNumber(&ControlNP, nullptr);
             return true;
@@ -2236,6 +2236,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
         IUSaveConfigSwitch(fp, &CoolerSP);
     IUSaveConfigNumber(fp, &ControlNP);
     
+    IUSaveConfigNumber(fp, &GainConversionNP);
     IUSaveConfigNumber(fp, &BlackLevelNP);
 
     if (m_MonoCamera == false)
