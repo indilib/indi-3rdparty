@@ -1,0 +1,23 @@
+Source: indi-rtklib
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libcfitsio-dev, libindi-dev, zlib1g-dev, libnova-dev
+Standards-Version: 3.9.2
+
+Package: indi-rtklib
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, rtklib, libindi1
+Description: Precise positioning for INDI
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-rtklib-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-rtklib (= ${binary:Version}), ${misc:Depends}
+Description: Precise positioning for INDI
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

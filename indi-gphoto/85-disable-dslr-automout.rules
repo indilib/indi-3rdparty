@@ -1,14 +1,17 @@
 # Disable automount by setting envrionment variable for UDISK2.
 
 # Pentax
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="25fb", ENV{UDISKS_AUTO}="0"
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="0a17", ENV{UDISKS_AUTO}="0"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="25fb", ENV{UDISKS_AUTO}="0", MODE="0666"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0a17", ENV{UDISKS_AUTO}="0", MODE="0666"
 
 # Canon
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="04a9", ENV{UDISKS_AUTO}="0"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="04a9", ENV{UDISKS_AUTO}="0", MODE="0666"
 
 # Nikon
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="04b0", ENV{UDISKS_AUTO}="0"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="04b0", ENV{UDISKS_AUTO}="0", MODE="0666"
 
 # Sony
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="054c", ENV{UDISKS_AUTO}="0"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="054c", ENV{UDISKS_AUTO}="0", MODE="0666"
+
+# Fuji
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="04cb", ENV{UDISKS_AUTO}="0", MODE="0666"

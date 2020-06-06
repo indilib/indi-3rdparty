@@ -1,3 +1,15 @@
+indi-toupbase (0.4) bionic; urgency=low
+
+  * Added support to High Conversion Gain
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 29 May 2020 09:00:00 +0300
+
+indi-toupbase (0.3) bionic; urgency=low
+
+  * Added support to Mallincam
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 21 May 2020 09:00:00 +0300
+
 indi-toupbase (0.2) bionic; urgency=low
 
   * Initial Release.

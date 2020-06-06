@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libmicam CXX C)
 
-set(MICAM_VERSION "0.5.0")
-set(MICAM_VERSION_MAC "0.3.0")
+set(MICAM_VERSION "0.5.5")
+set(MICAM_VERSION_MAC "0.4.5")
 set(MICAM_SOVERSION "0")
 
 include(GNUInstallDirs)
@@ -34,7 +34,7 @@ ENDIF(UNIX AND NOT WIN32)
 
 install( FILES ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
 
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libgxccd.so.${MICAM_VERSION}\" \"libgxccd.so.${MICAM_SOVERSION}\" WORKING_DIRECTORY 
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libgxccd.so.${MICAM_VERSION}\" \"libgxccd.so.${MICAM_SOVERSION}\" WORKING_DIRECTORY
 \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
 install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libgxccd.so.${MICAM_SOVERSION}\" \"libgxccd.so\" WORKING_DIRECTORY
 \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )

@@ -1,0 +1,96 @@
+End User License Agreement
+
+IMPORTANT READ THIS END USER LICENSE AGREEMENT (“LICENSE AGREEMENT”) BEFORE INSTALLING OR USING ANY PART OF THE ABOVE SOFTWARE INCLUDING SOFTWARE AND ALL ACCOMPANYING DOCUMENTATION AND ANY AND ALL UPDATES AND MODIFICATIONS THERETO (“SOFTWARE”). INSTALLING OR USING ANY PART OF THE SOFTWARE INDICATES AND CONSTITUTES YOUR ACCEPTANCE OF THIS LICENSE AGREEMENT. IF YOU DO NOT AGREE TO THE TERMS OF THIS LICENSE AGREEMENT, RICOH COMPANY, LTD. (“RICOH”) ARE UNWILLING TO LICENSE THE SOFTWARE TO YOU AND YOU MUST DISCONTINUE THE USE OR INSTALLATION OF THE SOFTWARE IMMEDIATELY.
+
+1. Definition.
+“Application Software” means any application software running in connection with and for use of Ricoh Product, which is developed by you in accordance with this License Agreement.
+
+“Intellectual Property Rights” means any and all rights under patent, copyright, trade secret, and trademark laws and international/multinational treaties, and any and all proprietary and other rights in connection therewith.
+
+“Open Source Software” means software available without charge for use, modification and distribution which is often licensed under terms that require the user to make the user's modifications to the Open Source software or any software that the user 'combines' with the Open Source software freely available in source code form. 
+
+“Ricoh Products” means any Ricoh digital camera. 
+
+“Marks” means trademark, service mark, company logo and trade name.
+
+2. License.
+
+2.1 Subject to the terms of this License Agreement, Ricoh grants you a limited, royalty-free, non-transferable, revocable and non-exclusive license below.
+(a) You may use the Software solely for the purpose of designing or developing the Application Software.
+(b) You may copy and distribute the software library included in the Software (“Distributable Code”) as part of the Application Software and have any third party to use the Application Software solely for the purpose of using the Ricoh Product.
+(c) You may permit distributors of the Application Software to copy and distribute the Distributable Code as part of the Application Software.
+
+2.2 You acknowledge and agree that Ricoh or third parties own all legal right, title and interest in and to the Software, including any Intellectual Property Rights that subsist in the Software. 
+
+3. Restrictions.
+
+3.1 Except as expressly set forth in Section 2.1 (or the third party license agreement in case of third party software as set forth in Section 9.2), you shall not:
+(a) disassemble, decompile or otherwise reverse engineer the Software, in whole or in part, or permit or authorize a third party to do so;
+(b) distribute the Software, in whole or in part, on a stand-alone basis;
+(b) lend, rent, lease, loan, sublicense, sell, assign, transfer your rights under this License Agreement to any third party; or
+(c) remove, alter, obscure any copyright or other proprietary notice (or any source identifier) included in the Software.
+
+3.2 If you use Open Source Software in conjunction with the Distributable Code, you must ensure that your use does not: (i) create, or purport to create, obligations of us with respect to any part of the Distributable Code; or (ii) grant, or purport to grant, to any third party any rights to or immunities under our intellectual property or proprietary rights in the Distributable Code. For example, you may not develop an Application Software using the Distributable Code and an Open Source program where such use results in a program file(s) that contains code both the Distributable Code and the Open Source Software (including without limitation libraries) if such Open Source Software is licensed under a license that requires any "modifications" be made freely available. You also may not combine the Distributable Code with programs licensed under the GNU General Public License ("GPL") in any manner that could cause, or could be interpreted or asserted to cause, the Distributable Code or any modifications thereto to become subject to the terms of the GPL.
+
+4. Application Software
+Ricoh makes no warranty of any kind, either express or implied, including without limitation, any warranty that the Ricoh Product works properly in connection with the Application Software. You shall, at your sole cost and expense, evaluate whether the Application Software works properly and correct any bugs and errors of the Application Software.
+
+5. Support from Ricoh
+Ricoh may, at its sole discretion, provide any technical information on the Software on its website. Notwithstanding the foregoing, Ricoh has no obligation to provide any support or advice to any third party or person, including without limitation, any support and advice for the development of the Application Software and the application and registration of the Application Software to application distribution website.
+
+6. Maintenance of the Application Software
+
+6.1 You shall, at your sole cost and expense, maintain and update the Application Software to work properly.
+
+6.2 You shall not make any misrepresentation which states, whether expresses or implied, that Ricoh is the developer, right holder or provider of the Application Software and its related services. Also you shall not use the Software for the purposes to violate, tamper with, or circumvent the security of any computer network, software, passwords, encryption codes, technological protection measures, or to otherwise engage in any kind of illegal activity, or to enable others to do so.
+
+6.3 Subject to Section 5, you may, at your sole cost and expense, provide any third party with any support and maintenance service in relation to the Application Software. 
+
+6.4 You agree that if you use the Software to develop the Application Software for general public users, you will protect the privacy and legal rights of those users to comply with any applicable laws and regulations. If the users provide you with user names, passwords, or other login information or personal information, you must make the users aware that the information will be available to your application, and you must provide legally adequate privacy notice and protection for those users. If your application stores personal or sensitive information provided by users, it must do so securely. 
+
+6.5 Ricoh may at any time, immediately terminate this License Agreement and you shall immediately cease using the Software and distributing the Application Software if Ricoh believes, in its sole discretion: (a) the Application Software is invisible to end users; (b) the end users of the Application Software cannot easily delete or uninstall it; (c) the Application Software does function properly with the Product; (d) the Application Software contains any contents which does not comply with this Agreement or Ricoh’s policy; (e) the Application Software or any pictures or contents obtained through the Application Software infringe or is likely to infringe any third party’s Intellectual Property Rights or any third party’s rights of publicity or privacy or any other rights; and (f) the Application Software enables any party or person to use the Products in a way offensive to public order and moral. 
+
+7. Changes to the Software or this License Agreement.
+From time to time, Ricoh may update or otherwise modify the Software, for example, but not limited to, for purposes of error correction, improvement of features, and enhancement of security features. Such updates or modifications may change or delete the nature of features or other aspects of the Software, including features you may rely upon. You hereby agree that such activities may occur at Ricoh’s sole discretion without liability to you. In the event of such updates or modifications, you shall use the latest version of the Software and modify the Application Software in accordance with such latest version of the Software at your sole cost and expense. Ricoh also reserves the right to discontinue offering the Software at any time in its sole discretion.
+
+8. Promotion
+
+8.1 Ricoh and Ricoh affiliates and their dealers may (a) introduce or promote the Application Software in connection with Ricoh Products on their websites, in promotion materials or at exhibitions; and (b) use your Mark on the promotion materials and package of the Ricoh Products and distribute such promotion materials.
+
+8.2 You grant Ricoh and Ricoh affiliates and their dealers a non-exclusive, non-transferrable, royalty-free license to use, distribute your Mark in connection with the promotion and distribution of the Ricoh Products.
+
+8.3 Nothing in this License Agreement gives you a right to use any of Ricoh’s Marks, domain names, or other distinctive brand features.
+
+9. Intellectual Property
+
+9.1 You acknowledge and agree that Ricoh or its licensors obtain all right, title and interest in and to the Software. Ricoh agrees that it obtains no right, title or interest from you (or your licensors) under this License Agreement in and to any Application Software, including any intellectual Property Rights thereof. 
+
+9.2 You acknowledge that the Software may include third party software subject to other terms and conditions governing the use of such software other than this License Agreement, including without limitation, Open Source Software. Terms and conditions applicable to the Open Source Software are provided to you together with this License Agreement, embedded in the Software or on Ricoh’s website. 
+
+10. DISCLAIMER OF WARRANTIES.
+RICOH AND ITS LICENSORS DO NOT PROMISE THAT THE SOFTWARE (INCLUDING ITS FUNCTIONALITY OR FEATURES), OR INFORMATION THAT YOU RECEIVE FROM RICOH WILL BE ACCURATE, ERROR-FREE OR UNINTERRUPTED, OR THAT ANY DEFECTS WILL BE CORRECTED. YOU EXPRESSLY UNDERSTAND AND AGREE THAT YOUR USE OF THE SOFTWARE IS AT YOUR SOLE RISK AND THAT THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND FROM RICOH. RICOH CANNOT ENSURE THAT ANY FILES, INFORMATION OR OTHER DATA YOU ACCESS OR DOWNLOAD FROM THE SOFTWARE WILL BE FREE OF VIRUSES OR CONTAMINATION OR DESTRUCTIVE FEATURES, AND RICOH AND ITS LICENSORS DISCLAIM ANY LIABILITY RELATED THERETO. YOUR USE OF THE SOFTWARE AND ANY MATERIAL DOWNLOADED OR OTHERWISE OBTAINED THROUGH THE USE OF THE SOFTWARE IS AT YOUR OWN DISCRETION AND RISK AND YOU ARE SOLELY RESPONSIBLE FOR ANY DAMAGE TO YOUR COMPUTER SYSTEM OR OTHER DEVICE OR LOSS OF DATA THAT RESULTS FROM SUCH USE. RICOH AND ITS LICENSORS FURTHER EXPRESSLY DISCLAIM ALL WARRANTIES, DUTIES AND CONDITIONS OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES, DUTIES AND CONDITIONS OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, ACCURACY AND NON-INFRINGEMENT. YOUR SOLE REMEDY AGAINST RICOH AND ITS LICENSORS FOR DISSATISFACTION WITH THE SOFTWARE IS TO STOP USING IT. THIS LIMITATION OF RELIEF IS A PART OF THE BARGAIN BETWEEN YOU AND RICOH. NO ORAL OR WRITTEN INFORMATION OR ADVICE GIVEN BY RICOH, ITS SUBSIDIARIES AND AFFILIATES, ITS LICENSORS, OR A RICOH AUTHORIZED REPRESENTATIVE SHALL CREATE A WARRANTY, DUTY OR CONDITION, OR IN ANY WAY CHANGE THIS EXCLUSION OF WARRANTY, DUTY AND CONDITION. You understand that Ricoh is under no obligation to provide updates, enhancements, or corrections, or to notify you of any product or service changes that Ricoh may make, or to publicly announce or introduce the product(s) or service at any time in the future.
+
+11. LIMITATION OF LIABILITY.
+RICOH’S TOTAL LIABILITY TO YOU FROM ALL CAUSES OF ACTION AND UNDER ALL THEORIES OF LIABILITY WILL BE LIMITED TO AND WILL NOT EXCEED FIFTY DOLLARS OR THE TOTAL AMOUNTS ACTUALLY PAID BY YOU FOR ITS USE OF THE SERVICE DURING THE TWELVE (12) MONTH PERIOD IMMEDIATELY PRECEDING THE DAY WHEN THE CAUSE OF ACTION ARISES, WHICHEVER IS GREATER. TO THE EXTENT PERMITTED BY LAW, RICOH WILL NOT BE LIABLE FOR ANY SPECIAL, INCIDENTAL, EXEMPLARY, PUNITIVE OR CONSEQUENTIAL DAMAGES (INCLUDING LOSS OF USE, DATA, BUSINESS OR PROFITS) ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT, WHETHER SUCH LIABILITY ARISES FROM ANY CLAIM BASED UPON CONTRACT, WARRANTY, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, AND WHETHER OR NOT IT HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH LOSS OR DAMAGE.  THESE LIMITATIONS ARE INTENDED TO APPLY EVEN IF A LIMITED REMEDY IS FOUND TO HAVE FAILED ITS ESSENTIAL PURPOSE.
+
+12. Indemnification.
+To the maximum extent permitted by law, you agree to defend, indemnify and hold harmless Ricoh, its subsidiaries, affiliates and their respective directors, officers, employees and agents (“Indemnified Party(s)”) from and against any and all claims, actions, suits or proceedings, as well as any and all losses, liabilities, damages, costs and expenses (including reasonable attorneys’ and experts’ fees and settlement costs) arising out of or accruing from (a) your use or misuse of the Software, (b) any application you design or develop using the Software or any pictures or contents obtained through such application that actually or allegedly infringes or misappropriates any copyright, trademark, trade secret, trade dress, patent or other intellectual property right of any person or defames any person or violates their rights of publicity or privacy or any other rights, and (c) any non-compliance by you with this License Agreement or any law, rule or regulation. You and your counsel will cooperate as fully as reasonably required by the Indemnified Party(s) in defense or settlement of any claim.  Ricoh and/or Indemnified Party(s) reserve the right, at its own expense, to assume the exclusive defense or settlement, and control of any matter otherwise subject to indemnification by you.  You shall not in any event consent to any judgment, settlement, attachment, or lien, or any other act adverse to the interest of any Indemnified Party without the prior written consent of Ricoh and/or Indemnified Party(s).
+
+13. Termination
+In case of any breach of this License Agreement, Ricoh may immediately terminate this License Agreement. Upon termination of this License Agreement, you shall immediately cease using the Software and distributing the Application Software.
+
+14. Miscellaneous
+
+14.1 Ricoh may modify or revise the terms and conditions of this License Agreement upon prior notice to you by sending email to you, notifying on Ricoh’s website or any other reasonable means. If you do not accept such revised terms and conditions, you shall notify Ricoh thereof and cease using the Software before the effective date of such revised terms and conditions. Upon your use of the Software after the effective date of such revised terms and conditions, you are deemed to accept such revised terms and conditions.
+
+14.2 You agree that if Ricoh does not exercise or enforce any legal right or remedy which is contained in this License Agreement (or which Ricoh has the benefit of under any applicable law), this will not be taken to be a formal waiver of Ricoh’s rights and that those rights or remedies will still be available to Ricoh. If any court of law, having the jurisdiction to decide on this matter, rules that any provision of this License Agreement is invalid, then that provision will be removed from this License Agreement without affecting the rest of this License Agreement. The remaining provisions of this License Agreement will continue to be valid and enforceable.
+
+14.3 This Agreement and all matters arising out of or relating to this Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to any conflict of laws provisions. Any action arising from or related to this Agreement shall exclusively be resolved either (i) in any state small claims court having jurisdiction over the matter; or otherwise (ii) through mandatory, binding arbitration conducted by the American Arbitration Association in accordance with its Commercial Arbitration Rules. Developer may bring a claim against RICOH only in its individual capacity, and shall not bring a claim as a plaintiff or class member in any purported class or representative action or arbitration. No claim or litigation may be brought regarding this Agreement or relating to the Services more than two (2) years after the cause of action has arisen. 
+
+14.4 This License Agreement contains the entire legal agreement between Ricoh and you relating to your use of the Software and supersedes all prior written or oral agreements, contracts or promises between Ricoh and you.
+
+14.5 This License Agreement may not be assigned or transferred by you without the prior written approval of Ricoh.
+
+14.6 Ricoh may decide to charge for the Software in the future. In the event Ricoh decides to charge fees for the use of the Software, Ricoh will provide notice of the payment terms as provided in section 14.1, and you may choose to stop using the Software if you do not agree with the payment terms.
+
+14.7 You agree to comply with all applicable export and import laws and regulations applicable to the jurisdiction in which the Software was obtained and in which it is used. Without limiting the foregoing, in connection with use of the Software, you shall not export or re-export the Software (a) into any U.S. embargoed countries (currently including, but necessarily limited to, Crimea – Region of Ukraine, Cuba, Iran, North Korea, Sudan and Syria) or (b) to anyone on the U.S. Treasury Department’s list of Specially Designated Nationals or the U.S. Department of Commerce Denied Person’s List or Entity List.  By using the Software, you represent and warrant that you are not located in any such country or on any such list.  You also agree that you will not use the Software for any purposes prohibited by any applicable laws, including, without limitation, the development, design, manufacture or production of missiles, nuclear, chemical or biological weapons.

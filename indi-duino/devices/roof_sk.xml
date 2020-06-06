@@ -1,0 +1,33 @@
+<INDIDriver>
+
+<defSwitchVector device="Arduino Roof" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+<defSwitchVector device="Arduino Roof" name="ROOF" label="Roof Action" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="1">
+    <defSwitch name="Roof" label="Open">
+Off
+    <indiduino pin="13"/>
+    </defSwitch>
+    <defSwitch name="OFF" label="Close">
+On
+    </defSwitch>
+</defSwitchVector>
+
+<defLightVector device="Arduino Roof" name="ROOF_MONITOR_O" label="Roof State" group="Main Control" state="Idle" perm="ro" rule="OneOfMany" timeout="1">
+    <defLight name="Roof open" label="fully open">
+    <indiduino pin="10"/>
+Idle
+    </defLight>
+    <defLight name="Roof closed" label="fully closed">
+    <indiduino pin="11"/>
+Idle
+    </defLight>
+</defLightVector>
+
+</INDIDriver>

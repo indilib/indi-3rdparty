@@ -16,34 +16,55 @@
 import sys
 from indiclient import *
 from weatherradio import *
-import rrdtool
+from os import path
+import argparse
+
+parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
+parser.add_argument("-v", "--verbose", action='store_true',
+                    help="Display progress information")
+parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+                    help="RRD file holding all time series")
+parser.add_argument("rrdsensorsfile", nargs='?', default=RRDSENSORSFILE,
+                    help="RRD file holding all sensor data time series")
+
+args = parser.parse_args()
+indi = None
+
 
 try:
-    print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+    if (args.verbose):
+        print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
 
     # open connection to the INDI server
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect(indi)
-    
-    now=time.localtime()
-    json_dict={"TIME":time.strftime("%c",now)}
-    data = readWeather(indi)
+    connect = connect(indi)
+
+    if (connect):
+        if (args.verbose):
+            print "Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+
+        data = None
+        if path.exists(args.rrdfile):
+            data = readWeather(indi)
+            updateRRD(args.rrdfile, data)
+
+        data = None
+        if path.exists(args.rrdsensorsfile):
+            data = readSensors(indi)
+            updateRRD(args.rrdsensorsfile, data)
+
+        if (args.verbose):
+            print "Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+    else:
+        print "Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+
 
     indi.quit()
 
 except:
     print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
+    if indi != None:
+        indi.quit()
     sys.exit()
-
-
-updateString="N"
-for d in data:
-	# print d[0],d[1]
-	updateString=updateString+":"+str(d[1])
-	json_dict[d[0]]=int(d[1]*100)/100.
-
-ret = rrdtool.update(RRDFILE,updateString);
-if ret:    
-	print rrdtool.error() 

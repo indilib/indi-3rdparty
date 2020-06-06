@@ -17,11 +17,16 @@
     <script src="js/apexcharts.min.js"></script>
   </head>
   <body onload=init()>
-      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Weather Radio</h1>
+    <div class="navigation">
+        Home | <a href="./sensordata.html">Sensor Data</a> | <a href="./webcam.html">Webcam</a>
+    </div>
     <div class="container-fluid">
       <div class="row">
-        <div class="col-sm-12" align="center" style="font-size: x-small; padding: 0px;">
-          Last update: <span id="lastupdate">--</span>
+        <div class="col-sm-12" align="center">
+	  <div style="font-weight: bold; font-size: xx-large; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">
+	    Weather Radio
+	  </div>
+	  <div style="font-size: x-small; padding: 0px;">Last update: <span id="lastupdate">--</span></div>
         </div>
       </div> <!-- Last update row end -->
       <div class="row">
@@ -31,7 +36,6 @@
             <button id="timeline_1d">1d</button>
             <button id="timeline_7d">7d</button>
             <button id="timeline_30d">30d</button>
-            <a href="./sensordata.html" style="padding: 0px 30px">Sensor Data</a>
           </div>
         </div>
       </div> <!-- button row end -->
@@ -44,6 +48,9 @@
         </div>
         <div class="col-sm-4" align="center">
           <div id="pressure"></div>
+          <div class="parameter-title">Wind Speed</div>
+          <div id="windSpeed" style="padding-top: 0px; margin-top: 0px"></div>
+          <div id="windSpeedValue" class="parameter-value"></div>
         </div>
         <div class="col-sm-4" align="center">
           <div id="clouds"></div>
@@ -58,8 +65,9 @@
         <div class="col-sm-4" id="clouds_series"></div>
       </div> <!-- first time series row end -->
       <div class="row">
-        <div class="col-sm-6" id="humidity_series"></div>
-        <div class="col-sm-6" id="sqm_series"></div>
+        <div class="col-sm-4" id="humidity_series"></div>
+        <div class="col-sm-4" id="windSpeed_series"></div>
+        <div class="col-sm-4" id="sqm_series"></div>
       </div> <!-- second time series row end -->
     </div>
     <script src="js/charts.js"></script>

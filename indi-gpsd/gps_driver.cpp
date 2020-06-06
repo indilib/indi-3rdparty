@@ -152,6 +152,23 @@ bool GPSD::updateProperties()
     }
     return true;
 }
+bool GPSD::setSystemTime(time_t& raw_time)
+{
+    #ifdef __linux__
+        #if defined(__GNU_LIBRARY__)
+            #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+                timespec sTime = {};
+                sTime.tv_sec = raw_time;
+                clock_settime(CLOCK_REALTIME, &sTime);
+            #else
+                stime(&raw_time);
+            #endif
+        #else
+            stime(&raw_time);
+        #endif
+    #endif
+    return true;
+}
 
 IPState GPSD::updateGPS()
 {
@@ -202,9 +219,7 @@ IPState GPSD::updateGPS()
 
         time(&raw_time);
 
-#ifdef __linux__
-        stime(&raw_time);
-#endif
+        setSystemTime(raw_time);
 
         struct tm *utc = gmtime(&raw_time);
         strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%S", utc);
@@ -320,9 +335,8 @@ IPState GPSD::updateGPS()
 #else
         raw_time = gpsData->fix.time.tv_sec;
 #endif
-#ifdef __linux__
-        stime(&raw_time);
-#endif
+    
+        setSystemTime(raw_time);
 
 #if GPSD_API_MAJOR_VERSION < 9
         unix_to_iso8601(gpsData->fix.time, ts, 32);

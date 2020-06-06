@@ -1,0 +1,12 @@
+Source: libricohcamerasdk
+Section: libs
+Priority: extra
+Maintainer:Karl Rees <indidev@karlrees.com>
+Build-Depends: debhelper (>= 6), cdbs, cmake, libusb-1.0-0
+Standards-Version: 3.9.2
+
+Package: libricohcamerasdk
+Architecture: amd64 armhf
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library for using Pentax cameras in PTP mode with INDI.
+ Uses Ricoh Camera SDK - see https://api.ricoh/.

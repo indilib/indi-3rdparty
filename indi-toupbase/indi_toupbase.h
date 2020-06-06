@@ -31,6 +31,13 @@
 #define XP(x) Toupcam##x
 #define THAND HToupCam
 #define DNAME "Toupcam"
+#elif BUILD_MALLINCAM
+#include <mallincam.h>
+#define FP(x) Toupcam_##x
+#define CP(x) TOUPCAM_##x
+#define XP(x) Toupcam##x
+#define THAND HToupCam
+#define DNAME "Mallincam"
 #elif BUILD_ALTAIRCAM
 #include <altaircam.h>
 #define FP(x) Altaircam_##x
@@ -43,14 +50,14 @@
 #define FP(x) Starshootg_##x
 #define CP(x) STARSHOOTG_##x
 #define XP(x) Starshootg##x
-#define THAND HStarshootG
+#define THAND HStarshootg
 #define DNAME "StarshootG"
 #elif BUILD_NNCAM
 #include <nncam.h>
 #define FP(x) Nncam_##x
 #define CP(x) NNCAM_##x
 #define XP(x) Nncam##x
-#define THAND HNnCam
+#define THAND HNncam
 #define DNAME "Levenhuk"
 #endif
 
@@ -173,7 +180,6 @@ class ToupBase : public INDI::CCD
         {
             EVENT_EXPOSURE             = 0x0001, /* exposure time changed */
             EVENT_TEMPTINT             = 0x0002, /* white balance changed, Temp/Tint mode */
-            EVENT_CHROME               = 0x0003, /* reversed, do not use it */
             EVENT_IMAGE                = 0x0004, /* live image arrived, use Toupcam_PullImage to get this image */
             EVENT_STILLIMAGE           = 0x0005, /* snap (still) frame arrived, use Toupcam_PullStillImage to get this frame */
             EVENT_WBGAIN               = 0x0006, /* white balance changed, RGB Gain mode */
@@ -183,7 +189,10 @@ class ToupBase : public INDI::CCD
             EVENT_DFC                  = 0x000a, /* dark field correction status changed */
             EVENT_ERROR                = 0x0080, /* generic error */
             EVENT_DISCONNECTED         = 0x0081, /* camera disconnected */
-            EVENT_TIMEOUT              = 0x0082, /* timeout error */
+            EVENT_NOFRAMETIMEOUT       = 0x0082, /* no frame timeout error */
+            EVENT_AFFEEDBACK           = 0x0083, /* auto focus feedback information */
+            EVENT_AFPOSITION           = 0x0084, /* auto focus sensor board positon */
+            EVENT_NOPACKETTIMEOUT      = 0x0085, /* no packet timeout */
             EVENT_FACTORY              = 0x8001  /* restore factory settings */
         };
 
@@ -382,6 +391,13 @@ class ToupBase : public INDI::CCD
         void refreshControls();
 
         //#############################################################################
+        // Dual conversion Gain
+        //#############################################################################
+        bool dualGainEnabled();
+        double setDualGainMode(double gain);
+        void setDualGainRange();
+
+        //#############################################################################
         // Resolution
         //#############################################################################
         ISwitch ResolutionS[CP(MAX)];
@@ -425,16 +441,16 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Properties
         //#############################################################################
-        ISwitch CoolerS[2];
         ISwitchVectorProperty CoolerSP;
+        ISwitch CoolerS[2];
         enum
         {
             TC_COOLER_ON,
             TC_COOLER_OFF,
         };
 
-        INumber ControlN[8];
         INumberVectorProperty ControlNP;
+        INumber ControlN[8];
         enum
         {
             TC_GAIN,
@@ -444,7 +460,7 @@ class ToupBase : public INDI::CCD
             TC_BRIGHTNESS,
             TC_GAMMA,
             TC_SPEED,
-            TC_FRAMERATE_LIMIT
+            TC_FRAMERATE_LIMIT,
         };
 
         ISwitch AutoControlS[3];
@@ -471,6 +487,13 @@ class ToupBase : public INDI::CCD
             TC_BLACK_R,
             TC_BLACK_G,
             TC_BLACK_B,
+        };
+
+        INumberVectorProperty BlackLevelNP;
+        INumber BlackLevelN[1];
+        enum
+        {
+            TC_BLACK_LEVEL,
         };
 
         // R/G/B/Gray low/high levels
@@ -545,8 +568,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Firmware Info
-        IText FirmwareT[5] = {};
         ITextVectorProperty FirmwareTP;
+        IText FirmwareT[5] = {};
         enum
         {
             TC_FIRMWARE_SERIAL,
@@ -554,6 +577,24 @@ class ToupBase : public INDI::CCD
             TC_FIRMWARE_HW_VERSION,
             TC_FIRMWARE_DATE,
             TC_FIRMWARE_REV
+        };
+
+        // Gain Conversion
+        INumberVectorProperty GainConversionNP;
+        INumber GainConversionN[2];
+        enum
+        {
+            TC_HCG_THRESHOLD,
+            TC_HCG_LCG_RATIO,
+        };
+        
+        ISwitchVectorProperty GainConversionSP;
+        ISwitch GainConversionS[3];
+        enum
+        {
+            GAIN_LOW,
+            GAIN_HIGH,
+            GAIN_HDR
         };
 
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
@@ -564,12 +605,17 @@ class ToupBase : public INDI::CCD
         bool m_RAWFormatSupport { false };
         bool m_RAWHighDepthSupport { false };
         bool m_MonoCamera { false };
+        bool m_hasDualGain { false };
 
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
         uint8_t m_TimeoutRetries { 0 };
+        
+        uint32_t m_MaxGainNative { 0 };
+        uint32_t m_MaxGainHCG { 0 };
+        uint32_t m_NativeGain { 0 };
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);

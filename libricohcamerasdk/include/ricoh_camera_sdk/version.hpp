@@ -1,0 +1,20 @@
+// Copyright (c) 2017 Ricoh Company, Ltd. All Rights Reserved.
+#ifndef RICOH_CAMERA_SDK_VERSION_HPP_
+#define RICOH_CAMERA_SDK_VERSION_HPP_
+
+#define RCSDK_VERSION_MAJOR 1
+#define RCSDK_VERSION_MINOR 1
+#define RCSDK_VERSION_PATCH 0
+
+#define RCSDK_VERSION_SUFFIX ""
+
+#define RCSDK_STR_EXP(x) #x
+#define RCSDK_STR(x) RCSDK_STR_EXP(x)
+
+#define RCSDK_VERSION                  \
+    RCSDK_STR(RCSDK_VERSION_MAJOR)     \
+    "." RCSDK_STR(RCSDK_VERSION_MINOR) \
+    "." RCSDK_STR(RCSDK_VERSION_PATCH) \
+    RCSDK_VERSION_SUFFIX
+
+#endif // RICOH_CAMERA_SDK_VERSION_HPP_

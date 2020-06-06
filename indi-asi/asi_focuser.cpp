@@ -79,7 +79,7 @@ void ASI_EAF_ISInit()
                     continue;
                 }
                 EAFClose(id);
-                focusers[i] = new ASIEAF(id, info.Name, info.MaxStep);
+                focusers[i] = new ASIEAF(id, info.MaxStep);
                 iAvailableFocusersCount_ok++;
             }
             IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
@@ -172,7 +172,7 @@ void ISSnoopDevice(XMLEle * root)
     }
 }
 
-ASIEAF::ASIEAF(int id, const char * name, const int maxSteps) : m_ID(id), m_MaxSteps(maxSteps)
+ASIEAF::ASIEAF(int id, const int maxSteps) : m_ID(id), m_MaxSteps(maxSteps)
 {
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
@@ -185,20 +185,24 @@ ASIEAF::ASIEAF(int id, const char * name, const int maxSteps) : m_ID(id), m_MaxS
     // Just USB
     setSupportedConnections(CONNECTION_NONE);
 
-    if (iAvailableFocusersCount > 1)
-        snprintf(m_Name, MAXINDINAME, "ASI %s %d", name, id);
-    else
-        snprintf(m_Name, MAXINDIDEVICE, "ASI %s", name);
+    strncpy(m_Name, getDefaultName(), MAXINDIDEVICE);
 
     FocusAbsPosN[0].max = maxSteps;
 }
 
 bool ASIEAF::initProperties()
 {
+    if (iAvailableFocusersCount > 1)
+        snprintf(m_Name, MAXINDIDEVICE, "%s %d", getDeviceName(), m_ID + 1);
+    else
+        snprintf(m_Name, MAXINDIDEVICE, "%s", getDeviceName());
+
+    setDeviceName(m_Name);
+
     INDI::Focuser::initProperties();
 
     // Focuser temperature
-    IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%6.2f", -50, 70., 0., 0.);
+    IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%.2f", -50, 70., 0., 0.);
     IUFillNumberVector(&TemperatureNP, TemperatureN, 1, getDeviceName(), "FOCUS_TEMPERATURE", "Temperature",
                        MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
@@ -211,15 +215,6 @@ bool ASIEAF::initProperties()
     IUFillText(&VersionInfoS[0], "VERSION_FIRMWARE", "Firmware", "Unknown");
     IUFillTextVector(&VersionInfoSP, VersionInfoS, 1, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    // Enable/Disable backlash
-    //    IUFillSwitch(&BacklashCompensationS[BACKLASH_ENABLED], "Enable", "", ISS_OFF);
-    //    IUFillSwitch(&BacklashCompensationS[BACKLASH_DISABLED], "Disable", "", ISS_ON);
-    //    IUFillSwitchVector(&FocuserBacklashSP, BacklashCompensationS, 2, getDeviceName(), "Backlash Compensation", "",
-    //                       FOCUS_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    //    // Backlash Value
-    //    IUFillNumber(&BacklashN[0], "Value", "", "%.f", 0, 9999, 100., 0.);
-    //    IUFillNumberVector(&BacklashNP, BacklashN, 1, getDeviceName(), "Backlash", "", FOCUS_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
     FocusBacklashN[0].min = 0;
     FocusBacklashN[0].max = 9999;
     FocusBacklashN[0].step = 100;
@@ -372,8 +367,8 @@ bool ASIEAF::readReverse()
         return false;
     }
 
-    FocusReverseS[REVERSED_ENABLED].s  = reversed ? ISS_ON : ISS_OFF;
-    FocusReverseS[REVERSED_DISABLED].s = reversed ? ISS_OFF : ISS_ON;
+    FocusReverseS[INDI_ENABLED].s  = reversed ? ISS_ON : ISS_OFF;
+    FocusReverseS[INDI_DISABLED].s = reversed ? ISS_OFF : ISS_ON;
     FocusReverseSP.s = IPS_OK;
     return true;
 }
@@ -414,8 +409,8 @@ bool ASIEAF::readBeep()
         return false;
     }
 
-    BeepS[REVERSED_ENABLED].s  = beep ? ISS_ON : ISS_OFF;
-    BeepS[REVERSED_DISABLED].s = beep ? ISS_OFF : ISS_ON;
+    BeepS[INDI_ENABLED].s  = beep ? ISS_ON : ISS_OFF;
+    BeepS[INDI_DISABLED].s = beep ? ISS_OFF : ISS_ON;
     BeepSP.s = IPS_OK;
 
     return true;
@@ -436,7 +431,8 @@ bool ASIEAF::ReverseFocuser(bool enabled)
 bool ASIEAF::isMoving()
 {
     bool moving = false;
-    EAF_ERROR_CODE rc = EAFIsMoving(m_ID, &moving);
+    bool handcontroller = false;
+    EAF_ERROR_CODE rc = EAFIsMoving(m_ID, &moving, &handcontroller);
     if (rc != EAF_SUCCESS)
     {
         LOGF_ERROR("Failed to read motion status. Error: %d", rc);
