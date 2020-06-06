@@ -16,7 +16,7 @@
 
 #define IMG_Y 2504
 #define IMG_MAX_Y 2506
-#define IMG_Y_HALF 1252
+#define IMG_Y_HALF 1253
 
 #define CMD_SIZE 16
 
