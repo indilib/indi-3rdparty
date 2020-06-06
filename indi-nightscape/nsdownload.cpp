@@ -335,7 +335,7 @@ void NsDownload::copydownload(unsigned char *buf, int xstart, int xlen, int xbin
 			//dbufp =  (dbufp +(KAF8300_ACTIVE_X*2*IMG_Y)) - (KAF8300_ACTIVE_X*2);
 		} else {
 			bufp = (retrBuf->buffer + nwrite) - (KAF8300_MAX_X*2);
-			dbufp =  (dbufp +(KAF8300_ACTIVE_X*2*IMG_Y)) - (KAF8300_ACTIVE_X*2);
+			dbufp =  (dbufp +(KAF8300_ACTIVE_X*2*IMG_MAX_Y)) - (KAF8300_ACTIVE_X*2);
 		}
 		writelines = 0;
 	  while (nwriteleft >= (KAF8300_MAX_X*2)) {
