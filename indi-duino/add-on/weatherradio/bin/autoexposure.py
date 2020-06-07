@@ -12,13 +12,14 @@
 #
 #-----------------------------------------------------------------------
 
+import ConfigParser as ConfigParser
 from PIL import Image
 from PIL import ImageStat
 from PIL.ExifTags import TAGS
 
 def dump_exif(exif):
   for (k,v) in exif.iteritems():
-    print "%s: %s" % (TAGS.get(k), v)
+    print("%s: %s" % (TAGS.get(k), v))
 
 def get_fields (exif, fields) :
   result = {}
@@ -36,6 +37,35 @@ def brightness(image):
    im = image.convert('L')
    stat = ImageStat.Stat(im)
    return stat.rms[0]
+
+def init_config():
+    config = ConfigParser.ConfigParser()
+    config.optionxform = str
+    # default values
+    config.add_section('Camera')
+    config.set('Camera', 'ExposureTime', '400') # 1/250 sec
+    config.set('Camera', 'BaseDirectory', ".")
+    config.set('Camera', 'ISOSpeedRatings', '50')
+    config.set('Camera', 'Contrast', '0')
+    config.set('Camera', 'Brightness', '50')
+    config.set('Camera', 'Saturation', '0')
+    config.set('Camera', 'Options', '-md 4 -ex fixedfps')
+    # night default settings
+    config.add_section('Night')
+    config.set('Night', 'Contrast', '100')
+    config.set('Night', 'Brightness', '20')
+    config.set('Night', 'Saturation', '-80')
+    config.set('Night', 'MaxExposure', '10000000')
+    config.set('Night', 'MaxISO', '800')
+    return config
+
+def config_camera(camera, config):
+    camera.shutter_speed =  config.getint('Camera', 'ExposureTime')
+    camera.exposure_mode = 'fixedfps'
+    camera.iso           = config.getint('Camera', 'ISOSpeedRatings')
+    camera.brightness    = config.getint('Camera', 'Brightness')
+    camera.contrast      = config.getint('Camera', 'Contrast')
+    camera.saturation    = config.getint('Camera', 'Saturation')
 
 def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img_brightness):
     factor = img_brightness / 120
@@ -90,10 +120,10 @@ def calibrateExpTime(filename, config):
     # calculate the optimal exposure time
     (newExpTime, newISO, newBrightness, newContrast, newSaturation) = calculateExpTime(config, realExpTime, realISO, realBrightness, realContrast, realSaturation, bright)
     # store for future use
-    config.set('Camera', 'ExposureTime', newExpTime)
-    config.set('Camera', 'ISOSpeedRatings', newISO)
-    config.set('Camera', 'Brightness', newBrightness)
-    config.set('Camera', 'Contrast', newContrast)
-    config.set('Camera', 'Saturation', newSaturation)
+    config.set('Camera', 'ExposureTime', str(newExpTime))
+    config.set('Camera', 'ISOSpeedRatings', str(newISO))
+    config.set('Camera', 'Brightness', str(newBrightness))
+    config.set('Camera', 'Contrast', str(newContrast))
+    config.set('Camera', 'Saturation', str(newSaturation))
     return (realExpTime, bright)
 
