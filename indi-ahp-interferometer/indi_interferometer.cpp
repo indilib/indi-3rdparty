@@ -120,8 +120,8 @@ void Interferometer::Callback()
             totalcorrelations[x] += correlations[x];
         }
         idx = 0;
-        double maxalt = 0;
-        int closest = 0;
+        double minalt = 0;
+        int farest = 0;
         for(int x = 0; x < NUM_LINES; x++) {
             for(int y = x+1; y < NUM_LINES; y++) {
                 if(lineEnableSP[x].sp[0].s == ISS_ON) {
@@ -136,25 +136,25 @@ void Interferometer::Callback()
                     double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
                     double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
                     get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
-                    closest = (maxalt > alt[x] ? closest : x);
-                    maxalt = (maxalt > alt[x] ? maxalt : alt[x]);
+                    farest = (minalt < alt[x] ? farest : x);
+                    minalt = (minalt < alt[x] ? minalt : alt[x]);
                 }
                 idx++;
             }
         }
-        delay[closest] = 0;
+        delay[farest] = 0;
         idx = 0;
         for(int x = 0; x < NUM_LINES; x++) {
             for(int y = x+1; y < NUM_LINES; y++) {
                 INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
                 double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
                 idx++;
-                double t = maxalt*M_PI/180.0;
-                if(x == closest) {
+                double t = minalt*M_PI/180.0;
+                if(x == farest) {
                     t -=  alt[y]*M_PI/180.0;
                     delay[y] = d * cos(t);
                 }
-                if(y == closest) {
+                if(y == farest) {
                     t -=  alt[x]*M_PI/180.0;
                     delay[x] = d * cos(t);
                 }
@@ -580,12 +580,14 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
                         Lon0 = snoopGPSNP[x].np[1].value*M_PI/180.0;
                         Lat1 = snoopGPSNP[y].np[0].value*M_PI/180.0;
                         Lon1 = snoopGPSNP[y].np[1].value*M_PI/180.0;
-                        double x0 = cos(Lat0)*cos(Lon0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
-                        double y0 = cos(Lat0)*sin(Lon0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
-                        double z0 = sin(Lat0)*(EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value);
-                        double x1 = cos(Lat1)*cos(Lon1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
-                        double y1 = cos(Lat1)*sin(Lon1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
-                        double z1 = sin(Lat1)*(EARTHRADIUSMEAN+snoopGPSNP[y].np[2].value);
+                        double radius = (EARTHRADIUSPOLAR+snoopGPSNP[y].np[2].value)+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(Lat0);
+                        double x0 = cos(Lat0)*cos(Lon0)*radius;
+                        double y0 = cos(Lat0)*sin(Lon0)*radius;
+                        double z0 = sin(Lat0)*radius;
+                        radius = (EARTHRADIUSPOLAR+snoopGPSNP[y].np[2].value)+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(Lat1);
+                        double x1 = cos(Lat1)*cos(Lon1)*radius;
+                        double y1 = cos(Lat1)*sin(Lon1)*radius;
+                        double z1 = sin(Lat1)*radius;
                         INDI::Correlator::Baseline b;
                         b.x = (x0-x1);
                         b.y = (y0-y1);
