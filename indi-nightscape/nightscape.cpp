@@ -220,7 +220,7 @@ bool NightscapeCCD::Connect()
     }
     dn->startThread();
     st->startThread();
-    // Let's set a timer that checks teleCCDs status every POLLMS milliseconds.
+    // Let's set a timer that checks nighscape status every POLLMS milliseconds.
     SetTimer(POLLMS);
     return true;
 }
@@ -322,8 +322,8 @@ bool NightscapeCCD::initProperties()
     {
         cap |= CCD_HAS_BAYER;
         IUSaveText(&BayerT[0], "0");
-        IUSaveText(&BayerT[1], "1");
-        IUSaveText(&BayerT[2], "RGGB");
+        IUSaveText(&BayerT[1], "0");
+        IUSaveText(&BayerT[2], "BGGR");
 
     }
     SetCCDCapability(cap);
@@ -396,6 +396,7 @@ void NightscapeCCD::setupParams()
 bool NightscapeCCD::StartExposure(float duration)
 {
     ExposureRequest = duration;
+    AbortFrame = false;
 
     // Since we have only have one CCD with one chip, we set the exposure duration of the primary CCD
     PrimaryCCD.setExposureDuration(duration);
@@ -425,6 +426,7 @@ bool NightscapeCCD::StartExposure(float duration)
 bool NightscapeCCD::AbortExposure()
 {
     InExposure = false;
+    AbortFrame = true;
     m->abort();
     return true;
 }
@@ -446,7 +448,7 @@ int NightscapeCCD::SetTemperature(double temperature)
 /**************************************************************************************
 ** How much longer until exposure is done?
 ***************************************************************************************/
-float NightscapeCCD::CalcTimeLeft()
+float NightscapeCCD::CalcTimeLeft(timeval start, float req)
 {
     double timesince;
     double timeleft;
@@ -456,50 +458,65 @@ float NightscapeCCD::CalcTimeLeft()
     };
     gettimeofday(&now, nullptr);
 
-    timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) -
-                (double)(ExpStart.tv_sec * 1000.0 + ExpStart.tv_usec / 1000);
+    timesince =
+        (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(start.tv_sec * 1000.0 + start.tv_usec / 1000);
     timesince = timesince / 1000;
-
-    timeleft = ExposureRequest - timesince;
+    timeleft  = req - timesince;
     return timeleft;
 }
+
 
 /**************************************************************************************
 ** Main device loop. We check for exposure and temperature progress here
 ***************************************************************************************/
 void NightscapeCCD::TimerHit()
 {
-    long timeleft;
+    uint32_t nextTimer = POLLMS;
 
     if (!isConnected())
         return; //  No need to reset timer if we are not connected anymore
 
     if (InExposure)
     {
-        timeleft = CalcTimeLeft();
-
-        // Less than a 0.1 second away from exposure completion
-        // This is an over simplified timing method, check CCDSimulator and simpleCCD for better timing checks
-        if (timeleft < 0.1)
+        
+        if (AbortFrame)
         {
-            /* We're done exposing */
-            LOG_INFO( "Exposure done, starting readout...");
-
-            // Set exposure left to zero
-            PrimaryCCD.setExposureLeft(0);
-
-            // We're no longer exposing...
-            InExposure = false;
-            InReadout = true;
-            /* grab and save image */
-            st->doStatus();
-
-
+            InExposure        = false;
+            AbortFrame = false;
         }
         else
         {
-            // Just update time left in client
+            float timeleft;
+            timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
+
+            //IDLog("CCD Exposure left: %g - Requset: %g\n", timeleft, ExposureRequest);
+            if (timeleft < 0)
+                timeleft = 0;
+
             PrimaryCCD.setExposureLeft(timeleft);
+
+            if (timeleft < 1.0)
+            {
+                if (timeleft <= 0.001)
+                {
+                  /* We're done exposing */
+                  InExposure = false;
+                  LOG_INFO( "Exposure done, starting readout...");
+
+                  // Set exposure left to zero
+                  PrimaryCCD.setExposureLeft(0);
+
+                  // We're no longer exposing...
+                  InReadout = true;
+                   /* grab and save image */
+                   st->doStatus();
+                }
+                else
+                {
+                    //  set a shorter timer
+                    nextTimer = timeleft * 1000;
+                }
+            }
         }
     }
     if (InReadout)
@@ -575,7 +592,7 @@ void NightscapeCCD::TimerHit()
         //    	 	  oldstat = stat;
         //    	 }
     }
-    SetTimer(POLLMS);
+    SetTimer(nextTimer);
 }
 
 /**************************************************************************************

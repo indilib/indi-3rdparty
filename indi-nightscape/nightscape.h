@@ -84,12 +84,13 @@ class NightscapeCCD : public INDI::CCD
 	   
   private:
     // Utility functions
-    float CalcTimeLeft();
+    float CalcTimeLeft(timeval start, float req);
     void setupParams();
     void grabImage();
 
     // Are we exposing?
     bool InExposure { false };
+    bool AbortFrame { false };
     bool InReadout { false };
     bool InDownload { false };
     int stat {0};

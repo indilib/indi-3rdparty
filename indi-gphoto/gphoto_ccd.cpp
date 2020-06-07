@@ -598,7 +598,7 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
             IDSetText(&PortTP, nullptr);
 
             // Port changes requires a driver restart.
-            if (strcmp(previousPort, PortTP.tp[0].text))
+            if (!previousPort || strcmp(previousPort, PortTP.tp[0].text))
             {
                 saveConfig(true, PortTP.name);
                 LOG_INFO("Please restart the driver for this change to have effect.");
@@ -2162,7 +2162,8 @@ bool GPhotoCCD::startLivePreview()
 bool GPhotoCCD::saveConfigItems(FILE * fp)
 {
     // First save Device Port
-    IUSaveConfigText(fp, &PortTP);
+    if (PortTP.tp[0].text)
+        IUSaveConfigText(fp, &PortTP);
 
     // Second save the CCD Info property
     IUSaveConfigNumber(fp, PrimaryCCD.getCCDInfo());

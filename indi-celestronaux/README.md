@@ -4,13 +4,8 @@ Celestron AUX protocol driver
 Authors: Paweł T. Jochym <jochym@wolf.ifj.edu.pl>
          Fabrizio Pollastri <https://github.com/fabriziop>
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Do not use this driver unattended! This is BETA software!
-Always have your power switch ready!
-It is NOT SUITABLE for autonomous operation yet!
-You use this software ON YOUR OWN RISK!
-THERE ARE NO SLEW LIMITS IMPLEMENTED AT THIS STAGE!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+*Do not use this driver unattended! This is BETA software! Always have your power switch ready! It is NOT SUITABLE for autonomous operation yet!*
+*There are no slew limits implemented at this stage.*
 
 This is eqmod-style driver for the NexStar and other Celestron AUX-protocol 
 mounts. It works over serial link to PC/AUX ports or HC serial port
