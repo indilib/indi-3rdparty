@@ -328,6 +328,10 @@ void loop() {
   updateTSL237();
 #endif //USE_TSL237_SENSOR
 
+#ifdef USE_DAVIS_SENSOR
+  updateAnemometer();
+#endif //USE_DAVIS_SENSOR
+
   if (Serial.available() > 0) {
     ch = Serial.read();
 
@@ -339,9 +343,9 @@ void loop() {
       input += (char)ch;
   }
 
-  // update sensor data every 15 seconds
+  // update sensor data every 60 seconds
   unsigned long now = millis();
-  if (abs(now - lastSensorRead) > 15000) {
+  if (abs(now - lastSensorRead) > 60000) {
     sensorDataCached = readSensorData(false);
     lastSensorRead = now;
   }
