@@ -34,6 +34,7 @@ volatile unsigned long startSlice;    // start time of the current time slice to
 volatile unsigned long lastInterrupt; // Last time a rotation has been detected
 volatile unsigned int rotations;      // total number of wind wheel rotations
 volatile unsigned int sliceRotations; // rotation occured in the current time slice
+volatile unsigned int slices;         // number of slices occured since startTime
 volatile float minSpeed;              // minimal wind speed since startTime
 volatile float maxSpeed;              // maximal wind speed since startTime
 
@@ -43,11 +44,7 @@ volatile float direction_diffs;   // and collect the diffs to build the average
 
 
 // calculate the windspeed
-#ifdef ESP8266
-float ICACHE_RAM_ATTR windspeed(unsigned long time, unsigned long startTime, unsigned int rotations) {
-#else
 float windspeed(unsigned long time, unsigned long startTime, unsigned int rotations) {
-#endif
 
   // 1600 rotations per hour or 2.25 seconds per rotation
   // equals 1 mp/h wind speed (1 mp/h = 1609/3600 m/s)
@@ -60,11 +57,7 @@ float windspeed(unsigned long time, unsigned long startTime, unsigned int rotati
 }
 
 // calculate the wind direction in degree (N = 0, E = 90, ...)
-#ifdef ESP8266
-int ICACHE_RAM_ATTR winddirection() {
-#else
 int winddirection() {
-#endif
   // the wind direction is measured with a potentiometer
   volatile int direction = map(analogRead(ANEMOMETER_WINDDIRECTIONPIN), 0, 1023, 0, 360) + ANEMOMETER_WINDOFFSET;
 
@@ -101,6 +94,7 @@ void reset(unsigned long time) {
   lastInterrupt  = time;
   rotations      = 0;
   sliceRotations = 0;
+  slices         = 0;
   maxSpeed       = 0.0;
   minSpeed       = 9999.0;
   initial_direction = winddirection();
@@ -121,40 +115,34 @@ void initAnemometer() {
    Update anemometer counters
 */
 void updateAnemometer() {
-  if (anemometerData.status && (lastInterrupt - startSlice >= SLICEDURATION)) {
-    // stop recording
-    detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
+  if (anemometerData.status) {
+    if ((lastInterrupt > startSlice) && (lastInterrupt - startSlice >= SLICEDURATION)) {
+      // stop recording
+      detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
 
-    // update wind speed data
-    volatile float speed = windspeed(lastInterrupt, startSlice, sliceRotations);
+      // update wind speed data
+      volatile float speed = windspeed(lastInterrupt, startSlice, sliceRotations);
 
-    // update min and max values
-    anemometerData.minSpeed = speed < anemometerData.avgSpeed ? speed : anemometerData.avgSpeed;
-    anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
+      // update min and max values
+      minSpeed = speed < minSpeed ? speed : minSpeed;
+      maxSpeed = speed > maxSpeed ? speed : maxSpeed;
 
-    // reset the single interval
-    startSlice = millis();
-    sliceRotations = 0;
+      // reset the single interval
+      startSlice = millis();
+      sliceRotations = 0;
+      slices++;
 
-    // update average wind speed and rotations count
-    anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
-    anemometerData.rotations = rotations;
+      // calculate the difference in the wind direction
+      volatile int current_direction = winddirection();
+      volatile int diff = initial_direction - current_direction;
+      // ensure that the diff is in the range -180 < diff <= 180
+      if (diff > 180) diff -= 360;
+      if (diff <= -180) diff += 360;
+      direction_diffs += diff;
 
-    // calculate the difference in the wind direction
-    volatile int current_direction = winddirection();
-    volatile int diff = initial_direction - current_direction;
-    // ensure that the diff is in the range -180 < diff <= 180
-    if (diff > 180) diff -= 360;
-    if (diff <= -180) diff += 360;
-    direction_diffs += diff;
-
-    if (rotations > 0)
-      anemometerData.direction = round(initial_direction - (direction_diffs / rotations));
-    else
-      anemometerData.direction = initial_direction;
-
-    // start recording
-    attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
+      // start recording
+      attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
+    }
   } else
     initAnemometer();
 
@@ -165,6 +153,14 @@ void updateAnemometer() {
 */
 void readAnemometer() {
   updateAnemometer();
+  anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
+  anemometerData.minSpeed = min(minSpeed, maxSpeed);
+  anemometerData.maxSpeed = maxSpeed;
+  anemometerData.rotations = rotations;
+  if (slices > 0)
+    anemometerData.direction = round(initial_direction - (direction_diffs / slices));
+  else
+    anemometerData.direction = initial_direction;
   reset(millis());
 }
 

@@ -46,12 +46,12 @@ String readSensorData(bool pretty) {
   StaticJsonDocument < docSize > weatherDoc;
 
   // reset all timers
-  sensor_read = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  unsigned long start = -1.0;
+  sensor_read = { 0, 0, 0, 0, 0, 0};
+  unsigned long start = 0;
 
 #ifdef USE_DAVIS_SENSOR
   start = millis();
-  updateAnemometer();
+  readAnemometer();
   sensor_read.davis_read = millis() - start;
   serializeAnemometer(weatherDoc);
 #endif //USE_DAVIS_SENSOR
