@@ -2,7 +2,7 @@ indi-nightscape (1.0.6) bionic; urgency=low
 
   * Frame size updates for xxAstroJeffxx issues and new timer routine. (#144)
 
- -- Dirk Niggemann <dirk.niggemann@gmail.com> Sat Jun 6 15:57:06 2020 +0100
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Sat, 6 Jun 2020 15:57:06 +0100
 
 indi-nightscape (1.0.5) bionic; urgency=medium
 
@@ -11,13 +11,13 @@ indi-nightscape (1.0.5) bionic; urgency=medium
   * unsigned long to unsigned int fix
   * Use BGGR by default
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com> Wed May 27 14:23:12 2020 +0300
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 27 May 2020 14:23:12 +0300
 
 indi-nightscape (1.0.4) bionic; urgency=low
 
   * [dspau] fixed spectrum size in rtlsdr and limesdr
 
- -- Ilia Platone <info@iliaplatone.com> Sat Oct 13 17:06:25 2018 +0200
+ -- Ilia Platone <info@iliaplatone.com>  Sat, 13 Oct 2018 17:06:25 +0200
 
 indi-nightscape (1.0.3) bionic; urgency=low
 
@@ -30,13 +30,13 @@ indi-nightscape (1.0.3) bionic; urgency=low
   * Merge pull request #652 from dirkenstein/master
   * Spelling corrections in XML
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com> Mon Jul 16 21:05:49 2018 +0300
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 16 Jul 2018 21:05:49 +0300
 
 indi-nightscape (1.0.2) bionic; urgency=medium
 
   * Few code improvements and better using of logging
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com> Sun Jul 15 17:34:52 2018 +0300
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 15 Jul 2018 17:34:52 +0300
 
 indi-nightscape (1.0.1) bionic; urgency=low
 
@@ -47,10 +47,10 @@ indi-nightscape (1.0.1) bionic; urgency=low
   * Fixed bad includes without D2XX
   * Added some basic docfiles
 
- -- Dirk Niggemann <dirk.niggemann@gmail.com> Sun Jul 15 12:35:29 2018 +0100
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Sun, 15 Jul 2018 12:35:29 +0100
 
 indi-nightscape (1.0) bionic; urgency=low
 
   * Initial Release.
 
- -- Dirk Niggemann <dirk.niggemann@gmail.com> Fri Jul 13 19:31:20 2018 +0100
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Fri, 13 Jul 2018 19:31:20 +0100
