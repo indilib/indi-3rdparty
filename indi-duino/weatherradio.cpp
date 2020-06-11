@@ -922,7 +922,6 @@ IPState WeatherRadio::updateWeather()
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
     bool result = sendQuery("w", data, &n_bytes);
-    // LOGF_DEBUG("Weather data received: %s", data);
 
     if (result == false)
         return IPS_ALERT;
@@ -1307,16 +1306,26 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
 bool WeatherRadio::receiveSerial(char* buffer, int* bytes, char end, int wait)
 {
     int timeout = wait;
-    int returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
-    if (returnCode != TTY_OK)
-    {
-        char errorString[MAXRBUF];
-        tty_error_msg(returnCode, errorString, MAXRBUF);
-        if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
-        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
-        return false;
-    }
+    int returnCode = TTY_PORT_BUSY;
+    int retry = 0;
 
+    while (returnCode != TTY_OK && retry < 3)
+    {
+        returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
+        if (returnCode != TTY_OK)
+        {
+            char errorString[MAXRBUF];
+            tty_error_msg(returnCode, errorString, MAXRBUF);
+            if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
+            if (retry++ < 3)
+                LOGF_INFO("Failed to receive full response: %s. (Return code: %d). Retrying...", errorString, returnCode);
+            else
+            {
+                LOGF_WARN("Failed to receive full response: %s. (Return code: %d). Giving up", errorString, returnCode);
+                return false;
+            }
+        }
+    }
     return true;
 }
 

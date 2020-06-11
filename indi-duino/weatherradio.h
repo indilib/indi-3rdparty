@@ -141,7 +141,9 @@ protected:
      * @brief TTY interface timeout
      */
     int getTTYTimeout() { return ttyTimeout; }
-    int ttyTimeout = 2;
+    // HINT: TSL2591 needs at night more than 1 sec for measuring, hence
+    //       we set the TTY timeout to 5sec
+    int ttyTimeout = 5;
     INumber ttyTimeoutN[1] = {};
     INumberVectorProperty ttyTimeoutNP;
 
