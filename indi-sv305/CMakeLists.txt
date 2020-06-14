@@ -29,7 +29,16 @@ set(sv305ccd_SRCS
 
 add_executable(indi_sv305_ccd ${sv305ccd_SRCS})
 
-target_link_libraries(indi_sv305_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} m ${ZLIB_LIBRARY})
+IF("${CMAKE_SYSTEM}" MATCHES "Linux")
+  IF(CMAKE_SIZEOF_VOID_P MATCHES "8")
+    target_link_libraries(indi_sv305_ccd CKCameraSDK_x64 ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} m ${ZLIB_LIBRARY})
+  ELSE(CMAKE_SIZEOF_VOID_P MATCHES "8")
+    target_link_libraries(indi_sv305_ccd CKCameraSDK_x86 ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} m ${ZLIB_LIBRARY})
+  ENDIF (CMAKE_SIZEOF_VOID_P MATCHES "8")
+ELSE("${CMAKE_SYSTEM}" MATCHES "Linux")
+  message(FATAL_ERROR "Driver only available on Linux x64 or x86")
+ENDIF("${CMAKE_SYSTEM}" MATCHES "Linux")
+
 
 install(TARGETS indi_sv305_ccd RUNTIME DESTINATION bin)
 
