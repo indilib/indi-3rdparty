@@ -14,10 +14,6 @@ Requirements
 
 	cfitsio-devel is required to compile support for FITS.
 	
-+ libusb
-
-	libusb is required.
-	
 
 Installation
 ============
@@ -27,7 +23,7 @@ Installation
 How to Use
 ==========
 
-	You can use the SV305 INDI Driver in any INDI-compatible client such as KStars or Xephem. 
+	You can use the SV305 INDI Driver in any INDI-compatible client such as KStars or Xephem.
 	
 	To run the driver from the command line:
 	

@@ -11,6 +11,7 @@ set (SV305_VERSION_MINOR 0)
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(SV305 REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_sv305_ccd.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_sv305_ccd.xml )

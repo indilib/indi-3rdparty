@@ -12,13 +12,16 @@ set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
+# install binary libraries
 IF("${CMAKE_SYSTEM}" MATCHES "Linux")
+  # 64 bits
   IF(CMAKE_SIZEOF_VOID_P MATCHES "8")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libCKCameraSDK_x64.so ${CMAKE_BINARY_DIR}/libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION})
     install( FILES ${CMAKE_BINARY_DIR}/libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
     # Make sure symbolic links are installed
     install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION}\" \"libCKCameraSDK_x64.so.${CKCAMERASDK_SOVERSION}\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
     install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x64.so.${CKCAMERASDK_SOVERSION}\" \"libCKCameraSDK_x64.so\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+  # 32 bits
   ELSE(CMAKE_SIZEOF_VOID_P MATCHES "8")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libCKCameraSDK_x86.so ${CMAKE_BINARY_DIR}/libCKCameraSDK_x86.so.${CKCAMERASDK_VERSION})
     install( FILES ${CMAKE_BINARY_DIR}/libCKCameraSDK_x86.so.${CKCAMERASDK_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
@@ -30,4 +33,8 @@ ELSE("${CMAKE_SYSTEM}" MATCHES "Linux")
   message(FATAL_ERROR "Library only available on Linux x64 or x86")
 ENDIF("${CMAKE_SYSTEM}" MATCHES "Linux")
 
+# install header files
+install(FILES  CKCameraInterface.h  CKDeviceDef.h DESTINATION include/libsv305)
+
+# install udev rules
 install(FILES 90-ckusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
