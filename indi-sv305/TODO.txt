@@ -1,0 +1,9 @@
+- FIX : Exposure abort : crash (memory buffer ?) at next capture
+- FIX : bayer pattern
+- FEATURE : add resize
+- FEATURE : add ROI
+- FEATURE : add binning
+- FEATURE : add streaming
+- FEATURE : add gain control
+- CLEAN : log levels
+- CLEAN : comments
