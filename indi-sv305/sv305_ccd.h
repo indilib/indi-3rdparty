@@ -27,14 +27,15 @@
 #include <indiccd.h>
 #include <iostream>
 
-using namespace std;
+#include "../libsv305/CKCameraInterface.h"
 
-#define DEVICE struct usb_device *
+
+using namespace std;
 
 class Sv305CCD : public INDI::CCD
 {
   public:
-    Sv305CCD(DEVICE device, const char *name);
+    Sv305CCD(int numCamera);
     virtual ~Sv305CCD();
 
     const char *getDefaultName();
@@ -43,21 +44,26 @@ class Sv305CCD : public INDI::CCD
     void ISGetProperties(const char *dev);
     bool updateProperties();
 
-    bool Connect();
-    bool Disconnect();
+    bool Connect() override;
+    bool Disconnect() override;
 
-    bool StartExposure(float duration);
-    bool AbortExposure();
+    bool StartExposure(float duration) override;
+    bool AbortExposure() override;
 
   protected:
-    void TimerHit();
+    void TimerHit() override;
 
   private:
-    DEVICE device;
+    CameraSdkStatus status;
+    HANDLE hCamera;
+    HANDLE hRawBuf;
+
+    int num;
     char name[32];
+//
 
     double minDuration;
-    unsigned short *imageBuffer;
+    BYTE* imageBuffer;
 
     int timerID;
 
@@ -69,11 +75,14 @@ class Sv305CCD : public INDI::CCD
     int grabImage();
     bool setupParams();
 
+
     friend void ::ISGetProperties(const char *dev);
     friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
     friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
     friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
     friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
+//
+
 };
 
 #endif // SV305_CCD_H

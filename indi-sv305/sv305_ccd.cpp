@@ -34,24 +34,19 @@
 
 #include "sv305_ccd.h"
 
+
 #define MAX_DEVICES    8   /* Max device cameraCount */
 
 static int cameraCount;
 static Sv305CCD *cameras[MAX_DEVICES];
 
-/**********************************************************
- *
- *  IMPORTANT: List supported camera models in initializer of deviceTypes structure
- *
- **********************************************************/
 
-static struct
-{
-    int vid;
-    int pid;
-    const char *name;
-} deviceTypes[] = { { 0x0001, 0x0001, "SV305" }, { 0, 0, nullptr } };
+////////////////////////////////////////////////////////////
+// GLOBAL
+//
 
+
+// clear all cameras
 static void cleanup()
 {
     for (int i = 0; i < cameraCount; i++)
@@ -60,36 +55,28 @@ static void cleanup()
     }
 }
 
+
+// driver init
 void ISInit()
 {
     static bool isInit = false;
     if (!isInit)
     {
-     /**********************************************************
-     *
-     *  IMPORTANT: If available use CCD API function for enumeration available CCD's otherwise use code like this:
-     *
-     **********************************************************
+        CameraSdkStatus status;
+        cameraCount=0;
+        status = CameraEnumerateDevice(&cameraCount);
+        if(status != CAMERA_STATUS_SUCCESS){
+            IDLog("Error, enumerate camera failed\n");
+            return;
+        }
+        IDLog("Camera(s) found\n");
+        if(cameraCount == 0) {
+            return;
+        }
 
-     cameraCount = 0;
-     for (struct usb_bus *bus = usb_get_busses(); bus && cameraCount < MAX_DEVICES; bus = bus->next) {
-       for (struct usb_device *dev = bus->devices; dev && cameraCount < MAX_DEVICES; dev = dev->next) {
-         int vid = dev->descriptor.idVendor;
-         int pid = dev->descriptor.idProduct;
-         for (int i = 0; deviceTypes[i].pid; i++) {
-           if (vid == deviceTypes[i].vid && pid == deviceTypes[i].pid) {
-             cameras[i] = new Sv305CCD(dev, deviceTypes[i].name);
-             break;
-           }
-         }
-       }
-     }
-     */
-
-        /* For demo purposes we are creating two test devices */
-        cameraCount            = 1;
-        struct usb_device *dev = nullptr;
-        cameras[0]             = new Sv305CCD(dev, deviceTypes[0].name);
+        for(int i=0; i<cameraCount; i++) {
+            cameras[i]= new Sv305CCD(i);
+        }
 
         atexit(cleanup);
         isInit = true;
@@ -180,23 +167,32 @@ void ISSnoopDevice(XMLEle *root)
     }
 }
 
-Sv305CCD::Sv305CCD(DEVICE device, const char *name)
+
+//////////////////////////////////////////////////
+// SV305 CLASS
+//
+
+
+Sv305CCD::Sv305CCD(int numCamera)
 {
-    this->device = device;
-    snprintf(this->name, 32, "SVBONY SV305 CCD %s", name);
+    snprintf(this->name, 32, "SVBONY SV305 CCD %d", numCamera);
     setDeviceName(this->name);
+    num=numCamera;
 
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
 }
+
 
 Sv305CCD::~Sv305CCD()
 {
 }
 
+
 const char *Sv305CCD::getDefaultName()
 {
     return "SVBONY SV305 CCD";
 }
+
 
 bool Sv305CCD::initProperties()
 {
@@ -210,10 +206,12 @@ bool Sv305CCD::initProperties()
     return true;
 }
 
+
 void Sv305CCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 }
+
 
 bool Sv305CCD::updateProperties()
 {
@@ -234,47 +232,82 @@ bool Sv305CCD::updateProperties()
     return true;
 }
 
+
 bool Sv305CCD::Connect()
 {
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...");
 
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORTANT: Put here your CCD Connect function
-   *  If you encameraCounter an error, send the client a message
-   *  e.g.
-   *  LOG_INFO( "Error, unable to connect due to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
+    status = CameraInit(&hCamera, num);
+    if(status != CAMERA_STATUS_SUCCESS) {
+        LOG_INFO("Error, open camera failed\n");
+        return false;
+    }
+    LOG_INFO("Camera init\n");
+
+    /* basic settings */
+
+
+    // set slow framerate
+    status = CameraSetFrameSpeed(hCamera, 0);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set frame speed failed\n");
+        return false;
+    }
+    LOG_INFO("Camera frame speed\n");
+
+    // disable autoexposure
+    status = CameraSetAeState(hCamera, FALSE);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set manual mode failed\n");
+        return false;
+    }
+    LOG_INFO("Camera manual mode\n");
+
+    // default to 1s exposure
+    status = CameraSetExposureTime(hCamera, (double)(1000 * 1000));
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set exposure failed\n");
+        return false;
+    }
+    LOG_INFO("Camera set exposure\n");
+
+    // set to 16 bis depth
+    status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set image format failed\n");
+        return false;
+    }
+    LOG_INFO("Camera image format\n");
+
+    // set default resolution
+    status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set resolution failed\n");
+        return false;
+    }
+    LOG_INFO("Camera resolution\n");
 
     /* Success! */
     LOG_INFO("CCD is online. Retrieving basic data.");
-
     return true;
 }
+
 
 bool Sv305CCD::Disconnect()
 {
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORRANT: Put here your CCD disonnect function
-   *  If you encameraCounter an error, send the client a message
-   *  e.g.
-   *  LOG_INFO( "Error, unable to disconnect due to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
+    // pause camera
+    status = CameraPause(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS) {
+        LOG_INFO("Error, pause camera failed\n");
+        return false;
+    }
 
+    // destroy camera
+    status = CameraUnInit(hCamera);
     LOG_INFO("CCD is offline.");
     return true;
 }
+
 
 bool Sv305CCD::setupParams()
 {
@@ -282,28 +315,14 @@ bool Sv305CCD::setupParams()
     int bit_depth = 16;
     int x_1, y_1, x_2, y_2;
 
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORRANT: Get basic CCD parameters here such as
-   *  + Pixel Size X
-   *  + Pixel Size Y
-   *  + Bit Depth?
-   *  + X, Y, W, H of frame
-   *  + Temperature
-   *  + ...etc
-   *
-   *
-   *
-   **********************************************************/
+    minDuration = 0.01;
 
     ///////////////////////////
     // 1. Get Pixel size
     ///////////////////////////
     // Actucal CALL to CCD to get pixel size here
-    x_pixel_size = 5.4;
-    y_pixel_size = 5.4;
+    x_pixel_size = 2.9;
+    y_pixel_size = 2.9;
 
     ///////////////////////////
     // 2. Get Frame
@@ -311,8 +330,8 @@ bool Sv305CCD::setupParams()
 
     // Actucal CALL to CCD to get frame information here
     x_1 = y_1 = 0;
-    x_2       = 1280;
-    y_2       = 1024;
+    x_2       = 1920;
+    y_2       = 1080;
 
     ///////////////////////////
     // 4. Get pixel depth
@@ -320,19 +339,18 @@ bool Sv305CCD::setupParams()
     bit_depth = 16;
     SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
 
-    // Now we usually do the following in the hardware
-    // Set Frame to LIGHT or NORMAL
-    // Set Binning to 1x1
-    /* Default frame type is NORMAL */
-
     // Let's calculate required buffer
     int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
-    nbuf += 512;                                                                  //  leave a little extra at the end
+    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8 * 3; //  this is pixel cameraCount
+    // add some spare space
+    nbuf+=512;
     PrimaryCCD.setFrameBufferSize(nbuf);
+
+    LOGF_INFO("PrimaryCCD buffer size : %d", nbuf);
 
     return true;
 }
+
 
 bool Sv305CCD::StartExposure(float duration)
 {
@@ -344,19 +362,22 @@ bool Sv305CCD::StartExposure(float duration)
         duration = minDuration;
     }
 
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORRANT: Put here your CCD start exposure here
-   *  Please note that duration passed is in seconds.
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to start exposure due to ...");
-   *  return -1;
-   *
-   *
-   **********************************************************/
+    LOG_INFO("Exposure start\n");
+
+    status = CameraSetExposureTime(hCamera, (double)(duration * 1000 * 1000));
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set exposure failed\n");
+        return -1;
+    }
+    LOG_INFO("Exposure time set\n");
+
+
+    status = CameraPlay(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera start failed\n");
+        return -1;
+    }
+    LOG_INFO("Camera start\n");
 
     PrimaryCCD.setExposureDuration(duration);
     ExposureRequest = duration;
@@ -369,20 +390,17 @@ bool Sv305CCD::StartExposure(float duration)
     return true;
 }
 
+
 bool Sv305CCD::AbortExposure()
 {
-    /**********************************************************
-   *
-   *
-   *
-   *  IMPORRANT: Put here your CCD abort exposure here
-   *  If there is an error, report it back to client
-   *  e.g.
-   *  LOG_INFO( "Error, unable to abort exposure due to ...");
-   *  return false;
-   *
-   *
-   **********************************************************/
+
+
+    status = CameraPause(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS) {
+        LOG_INFO("Error, abort camera failed\n");
+        return false;
+    }
+    LOG_INFO("Exposure aborted");
 
     InExposure = false;
     return true;
@@ -404,26 +422,39 @@ float Sv305CCD::CalcTimeLeft()
     return timeleft;
 }
 
+
 /* Downloads the image from the CCD.
  N.B. No processing is done on the image */
 int Sv305CCD::grabImage()
 {
-    uint8_t *image = PrimaryCCD.getFrameBuffer();
-    int width      = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * PrimaryCCD.getBPP() / 8;
-    int height     = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+    stImageInfo imgInfo;
+    BYTE* pRawBuf;
 
-    /**********************************************************
-     *
-     *
-     *  IMPORRANT: Put here your CCD Get Image routine here
-     *  use the image, width, and height variables above
-     *  If there is an error, report it back to client
-     *
-     *
-     **********************************************************/
-    for (int i = 0; i < height; i++)
-        for (int j = 0; j < width; j++)
-            image[i * width + j] = rand() % 255;
+    imageBuffer = PrimaryCCD.getFrameBuffer();
+
+
+    pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
+
+    status = CameraGetOutImageBuffer(hCamera, &imgInfo, pRawBuf, imageBuffer);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera get image failed\n");
+        return -1;
+    }
+    LOG_INFO("Got image");
+
+
+    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera release buffer failed\n");
+        return -1;
+    }
+    LOG_INFO("Buffer released");
+
+    status = CameraPause(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS) {
+        LOG_INFO("Error, pause camera failed\n");
+    }
+    LOG_INFO("Camera stop");
 
     LOG_INFO("Download complete.");
 
@@ -431,6 +462,7 @@ int Sv305CCD::grabImage()
 
     return 0;
 }
+
 
 void Sv305CCD::TimerHit()
 {
@@ -446,40 +478,36 @@ void Sv305CCD::TimerHit()
 
         if (timeleft < 1.0)
         {
+            LOG_INFO("Less than 1s\n");
             if (timeleft > 0.25)
             {
+                LOG_INFO("More than 0.25s\n");
                 //  a quarter of a second or more
                 //  just set a tighter timer
                 timerID = SetTimer(250);
             }
             else
             {
+                LOG_INFO("Less than 0.25s\n");
                 if (timeleft > 0.07)
                 {
+                    LOG_INFO("More than 0.07s\n");
                     //  use an even tighter timer
                     timerID = SetTimer(50);
                 }
                 else
                 {
+                    LOG_INFO("Less than 0.07s\n");
                     //  it's real close now, so spin on it
-                    while (timeleft > 0)
+                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
+                    LOGF_INFO("%d",status);
+                    while (status != CAMERA_STATUS_SUCCESS)
                     {
-                        /**********************************************************
-             		*
-             		*  IMPORRANT: If supported by your CCD API
-             		*  Add a call here to check if the image is ready for download
-             		*  If image is ready, set timeleft to 0. Some CCDs (check FLI)
-             		*  also return timeleft in msec.
-             		*
-             		**********************************************************/
-
-                        // Breaking in simulation, in real driver either loop until time left = 0 or use an API call to know if the image is ready for download
-                        break;
-
-                        //int slv;
-                        //slv = 100000 * timeleft;
-                        //usleep(slv);
+                        LOG_INFO("Wait loop\n");
+                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
+                        LOGF_INFO("%d",status);
                     }
+                    LOG_INFO("Success, camera get buffer\n");
 
                     /* We're done exposing */
                     LOG_INFO("Exposure done, downloading image...");
@@ -493,6 +521,7 @@ void Sv305CCD::TimerHit()
         }
         else
         {
+            LOG_INFO("More than 1s\n");
             if (isDebug())
             {
                 IDLog("With time left %ld\n", timeleft);
