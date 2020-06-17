@@ -60,7 +60,6 @@ class Sv305CCD : public INDI::CCD
 
     int num;
     char name[32];
-//
 
     double minDuration;
     BYTE* imageBuffer;

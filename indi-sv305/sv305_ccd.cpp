@@ -199,7 +199,7 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER);
 
     addConfigurationControl();
     addDebugControl();
@@ -246,7 +246,6 @@ bool Sv305CCD::Connect()
 
     /* basic settings */
 
-
     // set slow framerate
     status = CameraSetFrameSpeed(hCamera, 0);
     if(status != CAMERA_STATUS_SUCCESS){
@@ -263,6 +262,22 @@ bool Sv305CCD::Connect()
     }
     LOG_INFO("Camera manual mode\n");
 
+    // disable flicker
+    status = CameraSetAntiFlick(hCamera, FALSE);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set flicker mode failed\n");
+        return false;
+    }
+    LOG_INFO("Camera flicker off\n");
+
+    // disable white balance
+    status = CameraSetWbMode(hCamera, FALSE);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set white balance mode failed\n");
+        return false;
+    }
+    LOG_INFO("Camera white balance off\n");
+
     // default to 1s exposure
     status = CameraSetExposureTime(hCamera, (double)(1000 * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
@@ -271,13 +286,19 @@ bool Sv305CCD::Connect()
     }
     LOG_INFO("Camera set exposure\n");
 
-    // set to 16 bis depth
+    // set to bayer 16 bis depth
     status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set image format failed\n");
         return false;
     }
+    status = CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set image format failed\n");
+        return false;
+    }
     LOG_INFO("Camera image format\n");
+
 
     // set default resolution
     status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
@@ -320,7 +341,6 @@ bool Sv305CCD::setupParams()
     ///////////////////////////
     // 1. Get Pixel size
     ///////////////////////////
-    // Actucal CALL to CCD to get pixel size here
     x_pixel_size = 2.9;
     y_pixel_size = 2.9;
 
@@ -328,7 +348,6 @@ bool Sv305CCD::setupParams()
     // 2. Get Frame
     ///////////////////////////
 
-    // Actucal CALL to CCD to get frame information here
     x_1 = y_1 = 0;
     x_2       = 1920;
     y_2       = 1080;
@@ -341,7 +360,7 @@ bool Sv305CCD::setupParams()
 
     // Let's calculate required buffer
     int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8 * 3; //  this is pixel cameraCount
+    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
     // add some spare space
     nbuf+=512;
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -435,13 +454,8 @@ int Sv305CCD::grabImage()
 
     pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
 
-    status = CameraGetOutImageBuffer(hCamera, &imgInfo, pRawBuf, imageBuffer);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera get image failed\n");
-        return -1;
-    }
-    LOG_INFO("Got image");
-
+    // we don't use CameraGetOutImageBuffer to get raw datas
+    memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
 
     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
     if(status != CAMERA_STATUS_SUCCESS){
@@ -500,12 +514,10 @@ void Sv305CCD::TimerHit()
                     LOG_INFO("Less than 0.07s\n");
                     //  it's real close now, so spin on it
                     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
-                    LOGF_INFO("%d",status);
                     while (status != CAMERA_STATUS_SUCCESS)
                     {
                         LOG_INFO("Wait loop\n");
                         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
-                        LOGF_INFO("%d",status);
                     }
                     LOG_INFO("Success, camera get buffer\n");
 
