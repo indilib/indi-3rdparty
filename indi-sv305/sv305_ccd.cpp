@@ -201,6 +201,11 @@ bool Sv305CCD::initProperties()
 
     SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER);
 
+    // Bayer settings
+    IUSaveText(&BayerT[0], "0");
+    IUSaveText(&BayerT[1], "0");
+    IUSaveText(&BayerT[2], "GRBG");
+
     addConfigurationControl();
     addDebugControl();
     return true;
@@ -450,7 +455,6 @@ int Sv305CCD::grabImage()
     BYTE* pRawBuf;
 
     imageBuffer = PrimaryCCD.getFrameBuffer();
-
 
     pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
 
