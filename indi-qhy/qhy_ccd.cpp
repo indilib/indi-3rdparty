@@ -357,11 +357,11 @@ bool QHYCCD::initProperties()
                        GPS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // LED Pulse Position for Starting/Stopping Exposure
-    IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 0, 10000, 500, 0);
+    IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10000, 1e6, 10000, 0);
     IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_TAB, IP_RW, 60,
                        IPS_IDLE);
-    IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 0, 10000, 500, 0);
+    IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10000, 1e6, 10000, 0);
     IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_TAB, IP_RW, 60,
                        IPS_IDLE);
