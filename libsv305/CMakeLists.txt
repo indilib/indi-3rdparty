@@ -38,3 +38,6 @@ install(FILES  CKCameraInterface.h  CKDeviceDef.h DESTINATION include/libsv305)
 
 # install udev rules
 install(FILES 90-ckusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+
+# update library path
+install(CODE "execute_process(COMMAND \"ldconfig\")")
