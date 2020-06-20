@@ -38,6 +38,7 @@ class Sv305CCD : public INDI::CCD
     Sv305CCD(int numCamera);
     virtual ~Sv305CCD();
 
+    // INDI BASE
     const char *getDefaultName();
 
     bool initProperties();
@@ -49,38 +50,47 @@ class Sv305CCD : public INDI::CCD
 
     bool StartExposure(float duration) override;
     bool AbortExposure() override;
+    //
 
   protected:
+    // INDI periodic grab query
     void TimerHit() override;
 
   private:
+    // camera API return status
     CameraSdkStatus status;
+    // hCamera mutex protection
     pthread_mutex_t hCamera_mutex;
+    // camera API handler
     HANDLE hCamera;
-
+    // camera #
     int num;
+    // camera name
     char name[32];
-
+    // minimal exposure
     double minDuration;
+    // frame buffer
     BYTE* imageBuffer;
 
+    // exposure timing stuff
     int timerID;
-
     struct timeval ExpStart;
-
     float ExposureRequest;
-
     float CalcTimeLeft();
+
+    // init/release camera
+    bool Init();
+    bool Uninit();
+
+    // setups
     bool setupParams();
 
-
+    // INDI Callbacks
     friend void ::ISGetProperties(const char *dev);
     friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
     friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
     friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
     friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
-//
-
 };
 
 #endif // SV305_CCD_H

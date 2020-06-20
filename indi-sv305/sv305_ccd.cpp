@@ -202,9 +202,7 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    // wanted to abort with a start/stop sequence, but it crashes the camera
-    // disabled for the moment
-    SetCCDCapability(/*CCD_CAN_ABORT|*/CCD_HAS_BAYER);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -243,7 +241,7 @@ bool Sv305CCD::updateProperties()
 }
 
 
-bool Sv305CCD::Connect()
+bool Sv305CCD::Init()
 {
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...");
 
@@ -319,7 +317,6 @@ bool Sv305CCD::Connect()
     }
     LOG_INFO("Camera image format\n");
 
-
     // set default resolution
     status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
     if(status != CAMERA_STATUS_SUCCESS){
@@ -338,6 +335,14 @@ bool Sv305CCD::Connect()
     }
     LOG_INFO("Camera start\n");
 
+    // set camera soft trigger mode
+    status = CameraSetTriggerMode(hCamera,1);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -346,8 +351,7 @@ bool Sv305CCD::Connect()
     return true;
 }
 
-
-bool Sv305CCD::Disconnect()
+bool Sv305CCD::Uninit()
 {
     pthread_mutex_lock(&hCamera_mutex);
 
@@ -365,6 +369,17 @@ bool Sv305CCD::Disconnect()
     return true;
 
     pthread_mutex_unlock(&hCamera_mutex);
+}
+
+
+bool Sv305CCD::Connect()
+{
+    return(Init());
+}
+
+bool Sv305CCD::Disconnect()
+{
+    return(Uninit());
 }
 
 
@@ -423,6 +438,7 @@ bool Sv305CCD::StartExposure(float duration)
 
     pthread_mutex_lock(&hCamera_mutex);
 
+    // set exposure time
     status = CameraSetExposureTime(hCamera, (double)(duration * 1000 * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
@@ -430,6 +446,15 @@ bool Sv305CCD::StartExposure(float duration)
         return -1;
     }
     LOG_INFO("Exposure time set\n");
+
+    // soft trigger
+    status = CameraSoftTrigger(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, soft trigger failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return -1;
+    }
+    LOG_INFO("Soft trigger\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -447,28 +472,29 @@ bool Sv305CCD::StartExposure(float duration)
 
 bool Sv305CCD::AbortExposure()
 {
+    // trick : we switch trigger mode to abort exposure
+    // side effect : we get a junk frame
+    // TODO : fix junk frame
 
     pthread_mutex_lock(&hCamera_mutex);
 
-// Camera dislike pause/play sequence
-// disabled for the moment
-/*
-    status = CameraPause(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS) {
-        LOG_INFO("Error, abort camera failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Exposure aborted");
-
-    status = CameraPlay(hCamera);
+    // set camera continuous trigger mode
+    status = CameraSetTriggerMode(hCamera,0);
     if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera start failed\n");
+        LOG_INFO("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera start\n");
-*/
+    LOG_INFO("Camera soft trigger mode\n");
+
+    // set camera soft trigger mode
+    status = CameraSetTriggerMode(hCamera,1);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -497,8 +523,6 @@ void Sv305CCD::TimerHit()
 {
     int timerID = -1;
     long timeleft;
-
-    LOG_INFO("TimeHit run");
 
     if (isConnected() == false)
         return; //  No need to reset timer if we are not connected anymore
@@ -539,7 +563,6 @@ void Sv305CCD::TimerHit()
                     // TODO : add timeout to exit the loop
                     while (status != CAMERA_STATUS_SUCCESS)
                     {
-                        LOG_INFO("Wait loop\n");
                         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
                     }
                     LOG_INFO("Success, camera get buffer\n");

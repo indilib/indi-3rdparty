@@ -1,23 +1,25 @@
 ------------------ TO DO
 
-- TRY : use camera trigger instead of camera play/pause
-
-- FEATURE 0 : find a way to "abort" exposure
+- FIX 5 : add timeout in TimeHit loop
+- FIX 6 : after trigger mode switch, we got a junk frame
 - FEATURE 2 : add ROI
 - FEATURE 3 : add binning
 - FEATURE 4 : add streaming
 - FEATURE 1 : add gain control
-
 - CLEAN : log levels
 - CLEAN : comments
 
 ------------------ DONE
 
 - FIX 0 : bayer pattern
-
 - FIX 1 : same image sent twice after 2 exposures
 - FIX 2 : Exposure abort : crash at next capture
 - FIX 3 : frame looping also crashs at 2nd frame
-	* FIX 1, FIX 2, FIX 3 : camera dislike pause/play sequences
-        * had to disable "abort" capability
-
+	* FIX 1, 2, 3 : camera dislike pause/play sequences
+        * "abort exposure" capability disabled for the moment
+- FIX 4 : is "auto" analog gain still enabled ?
+	* no, it's OK
+- TRY 0 : use camera trigger instead of continuous mode
+	* triggered framing avoids heat excess
+- FEATURE 0 : find a way to "abort" exposure
+        * we can abort exposure using trigger mode switching
