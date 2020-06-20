@@ -57,7 +57,6 @@ class Sv305CCD : public INDI::CCD
     CameraSdkStatus status;
     pthread_mutex_t hCamera_mutex;
     HANDLE hCamera;
-    HANDLE hRawBuf;
 
     int num;
     char name[32];
@@ -72,7 +71,6 @@ class Sv305CCD : public INDI::CCD
     float ExposureRequest;
 
     float CalcTimeLeft();
-    int grabImage();
     bool setupParams();
 
 

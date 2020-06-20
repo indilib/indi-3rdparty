@@ -202,7 +202,9 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER);
+    // wanted to abort with a start/stop sequence, but it crashes the camera
+    // disabled for the moment
+    SetCCDCapability(/*CCD_CAN_ABORT|*/CCD_HAS_BAYER);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -327,6 +329,16 @@ bool Sv305CCD::Connect()
     }
     LOG_INFO("Camera resolution\n");
 
+    // start camera
+    status = CameraPlay(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera start failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera start\n");
+
+
     pthread_mutex_unlock(&hCamera_mutex);
 
     /* Success! */
@@ -419,15 +431,6 @@ bool Sv305CCD::StartExposure(float duration)
     }
     LOG_INFO("Exposure time set\n");
 
-
-    status = CameraPlay(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera start failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
-    }
-    LOG_INFO("Camera start\n");
-
     pthread_mutex_unlock(&hCamera_mutex);
 
     PrimaryCCD.setExposureDuration(duration);
@@ -447,6 +450,9 @@ bool Sv305CCD::AbortExposure()
 
     pthread_mutex_lock(&hCamera_mutex);
 
+// Camera dislike pause/play sequence
+// disabled for the moment
+/*
     status = CameraPause(hCamera);
     if(status != CAMERA_STATUS_SUCCESS) {
         LOG_INFO("Error, abort camera failed\n");
@@ -454,6 +460,15 @@ bool Sv305CCD::AbortExposure()
         return false;
     }
     LOG_INFO("Exposure aborted");
+
+    status = CameraPlay(hCamera);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera start failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera start\n");
+*/
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -478,48 +493,12 @@ float Sv305CCD::CalcTimeLeft()
 }
 
 
-/* Downloads the image from the CCD.
- N.B. No processing is done on the image */
-int Sv305CCD::grabImage()
-{
-    stImageInfo imgInfo;
-    BYTE* pRawBuf;
-
-    imageBuffer = PrimaryCCD.getFrameBuffer();
-
-    pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
-
-    // we don't use CameraGetOutImageBuffer to get raw datas
-    memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
-
-    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera release buffer failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
-    }
-    LOG_INFO("Buffer released");
-
-    status = CameraPause(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS) {
-        LOG_INFO("Error, pause camera failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
-    }
-    LOG_INFO("Camera stop");
-
-    LOG_INFO("Download complete.");
-
-    ExposureComplete(&PrimaryCCD);
-
-    return 0;
-}
-
-
 void Sv305CCD::TimerHit()
 {
     int timerID = -1;
     long timeleft;
+
+    LOG_INFO("TimeHit run");
 
     if (isConnected() == false)
         return; //  No need to reset timer if we are not connected anymore
@@ -551,27 +530,48 @@ void Sv305CCD::TimerHit()
                 {
                     LOG_INFO("Less than 0.07s\n");
 
+                    HANDLE hRawBuf;
+
                     pthread_mutex_lock(&hCamera_mutex);
 
-                    //  it's real close now, so spin on it
-                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
+                    //  it's realy close now, so spin on it
+                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
                     // TODO : add timeout to exit the loop
                     while (status != CAMERA_STATUS_SUCCESS)
                     {
                         LOG_INFO("Wait loop\n");
-                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
+                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
                     }
                     LOG_INFO("Success, camera get buffer\n");
-
-                    pthread_mutex_unlock(&hCamera_mutex);
 
                     /* We're done exposing */
                     LOG_INFO("Exposure done, downloading image...");
 
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
-                    /* grab and save image */
-                    grabImage();
+
+                    // grab and save image
+                    stImageInfo imgInfo;
+                    BYTE* pRawBuf;
+
+                    imageBuffer = PrimaryCCD.getFrameBuffer();
+
+                    pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
+
+                    // we don't use CameraGetOutImageBuffer to get raw datas
+                    memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
+
+                    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
+                    if(status != CAMERA_STATUS_SUCCESS){
+                        LOG_INFO("Error, camera release buffer failed\n");
+                    }
+                    LOG_INFO("Buffer released");
+
+                    pthread_mutex_unlock(&hCamera_mutex);
+
+                    LOG_INFO("Download complete.");
+
+                    ExposureComplete(&PrimaryCCD);
                 }
             }
         }

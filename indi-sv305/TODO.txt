@@ -1,16 +1,23 @@
 ------------------ TO DO
 
-- FIX : Exposure abort : crash (memory buffer ?) at next capture
-- FIX : same image sent twice after 2 exposures
-- FIX : frame looping also crashs at 2nd frame
-- FEATURE : add resize
-- FEATURE : add ROI
-- FEATURE : add binning
-- FEATURE : add streaming
-- FEATURE : add gain control
+- TRY : use camera trigger instead of camera play/pause
+
+- FEATURE 0 : find a way to "abort" exposure
+- FEATURE 2 : add ROI
+- FEATURE 3 : add binning
+- FEATURE 4 : add streaming
+- FEATURE 1 : add gain control
+
 - CLEAN : log levels
 - CLEAN : comments
 
 ------------------ DONE
 
-- FIX : bayer pattern
+- FIX 0 : bayer pattern
+
+- FIX 1 : same image sent twice after 2 exposures
+- FIX 2 : Exposure abort : crash at next capture
+- FIX 3 : frame looping also crashs at 2nd frame
+	* FIX 1, FIX 2, FIX 3 : camera dislike pause/play sequences
+        * had to disable "abort" capability
+
