@@ -55,6 +55,7 @@ class Sv305CCD : public INDI::CCD
 
   private:
     CameraSdkStatus status;
+    pthread_mutex_t hCamera_mutex;
     HANDLE hCamera;
     HANDLE hRawBuf;
 

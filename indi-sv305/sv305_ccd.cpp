@@ -180,11 +180,14 @@ Sv305CCD::Sv305CCD(int numCamera)
     num=numCamera;
 
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
+
+    pthread_mutex_init(&hCamera_mutex, NULL);
 }
 
 
 Sv305CCD::~Sv305CCD()
 {
+    pthread_mutex_destroy(&hCamera_mutex);
 }
 
 
@@ -242,9 +245,12 @@ bool Sv305CCD::Connect()
 {
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...");
 
+    pthread_mutex_lock(&hCamera_mutex);
+
     status = CameraInit(&hCamera, num);
     if(status != CAMERA_STATUS_SUCCESS) {
         LOG_INFO("Error, open camera failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera init\n");
@@ -255,6 +261,7 @@ bool Sv305CCD::Connect()
     status = CameraSetFrameSpeed(hCamera, 0);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set frame speed failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera frame speed\n");
@@ -263,6 +270,7 @@ bool Sv305CCD::Connect()
     status = CameraSetAeState(hCamera, FALSE);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set manual mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera manual mode\n");
@@ -271,6 +279,7 @@ bool Sv305CCD::Connect()
     status = CameraSetAntiFlick(hCamera, FALSE);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set flicker mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera flicker off\n");
@@ -279,6 +288,7 @@ bool Sv305CCD::Connect()
     status = CameraSetWbMode(hCamera, FALSE);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set white balance mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera white balance off\n");
@@ -287,6 +297,7 @@ bool Sv305CCD::Connect()
     status = CameraSetExposureTime(hCamera, (double)(1000 * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera set exposure\n");
@@ -295,11 +306,13 @@ bool Sv305CCD::Connect()
     status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set image format failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     status = CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set image format failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera image format\n");
@@ -309,9 +322,12 @@ bool Sv305CCD::Connect()
     status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set resolution failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera resolution\n");
+
+    pthread_mutex_unlock(&hCamera_mutex);
 
     /* Success! */
     LOG_INFO("CCD is online. Retrieving basic data.");
@@ -321,10 +337,13 @@ bool Sv305CCD::Connect()
 
 bool Sv305CCD::Disconnect()
 {
+    pthread_mutex_lock(&hCamera_mutex);
+
     // pause camera
     status = CameraPause(hCamera);
     if(status != CAMERA_STATUS_SUCCESS) {
         LOG_INFO("Error, pause camera failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
 
@@ -332,6 +351,8 @@ bool Sv305CCD::Disconnect()
     status = CameraUnInit(hCamera);
     LOG_INFO("CCD is offline.");
     return true;
+
+    pthread_mutex_unlock(&hCamera_mutex);
 }
 
 
@@ -388,9 +409,12 @@ bool Sv305CCD::StartExposure(float duration)
 
     LOG_INFO("Exposure start\n");
 
+    pthread_mutex_lock(&hCamera_mutex);
+
     status = CameraSetExposureTime(hCamera, (double)(duration * 1000 * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
     LOG_INFO("Exposure time set\n");
@@ -399,9 +423,12 @@ bool Sv305CCD::StartExposure(float duration)
     status = CameraPlay(hCamera);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera start failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
     LOG_INFO("Camera start\n");
+
+    pthread_mutex_unlock(&hCamera_mutex);
 
     PrimaryCCD.setExposureDuration(duration);
     ExposureRequest = duration;
@@ -418,13 +445,17 @@ bool Sv305CCD::StartExposure(float duration)
 bool Sv305CCD::AbortExposure()
 {
 
+    pthread_mutex_lock(&hCamera_mutex);
 
     status = CameraPause(hCamera);
     if(status != CAMERA_STATUS_SUCCESS) {
         LOG_INFO("Error, abort camera failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Exposure aborted");
+
+    pthread_mutex_unlock(&hCamera_mutex);
 
     InExposure = false;
     return true;
@@ -464,6 +495,7 @@ int Sv305CCD::grabImage()
     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera release buffer failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
     LOG_INFO("Buffer released");
@@ -471,6 +503,8 @@ int Sv305CCD::grabImage()
     status = CameraPause(hCamera);
     if(status != CAMERA_STATUS_SUCCESS) {
         LOG_INFO("Error, pause camera failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return -1;
     }
     LOG_INFO("Camera stop");
 
@@ -516,14 +550,20 @@ void Sv305CCD::TimerHit()
                 else
                 {
                     LOG_INFO("Less than 0.07s\n");
+
+                    pthread_mutex_lock(&hCamera_mutex);
+
                     //  it's real close now, so spin on it
                     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
+                    // TODO : add timeout to exit the loop
                     while (status != CAMERA_STATUS_SUCCESS)
                     {
                         LOG_INFO("Wait loop\n");
                         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 1000);
                     }
                     LOG_INFO("Success, camera get buffer\n");
+
+                    pthread_mutex_unlock(&hCamera_mutex);
 
                     /* We're done exposing */
                     LOG_INFO("Exposure done, downloading image...");
