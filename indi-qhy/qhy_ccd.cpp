@@ -358,11 +358,11 @@ bool QHYCCD::initProperties()
 
     // LED Pulse Position for Starting/Stopping Exposure
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
-    IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10000, 1e6, 10000, 0);
+    IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
     IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_TAB, IP_RW, 60,
                        IPS_IDLE);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
-    IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10000, 1e6, 10000, 0);
+    IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
     IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_TAB, IP_RW, 60,
                        IPS_IDLE);
 
@@ -2094,6 +2094,13 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
 
+    if (HasGPS)
+    {
+        IUSaveConfigSwitch(fp, &GPSControlSP);
+        IUSaveConfigSwitch(fp, &GPSSlavingSP);
+        IUSaveConfigNumber(fp, &VCOXFreqNP);
+    }
+
     IUSaveConfigNumber(fp, &USBBufferNP);
 
     return true;
@@ -2469,8 +2476,8 @@ void QHYCCD::decodeGPSHeader()
     GPSHeader.max_clock = gpsarray[41] << 16 | gpsarray[42] << 8 | gpsarray[43];
 }
 
-double QHYCCD::JStoJD(uint32_t JS, uint32_t us)
+double QHYCCD::JStoJD(uint32_t JS, uint32_t uus)
 {
     const double secs_in_day = 3600 * 24;
-    return (JS + us / 1000000.0) / secs_in_day + 2450000.5;
+    return (JS + uus / 10000000.0) / secs_in_day + 2450000.5;
 }

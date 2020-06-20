@@ -99,7 +99,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
         // SDK Version
         ITextVectorProperty SDKVersionTP;
-        IText SDKVersionT[1];
+        IText SDKVersionT[1] {};
 
         // Cooler Switch
         ISwitchVectorProperty CoolerSP;
@@ -306,7 +306,8 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         // Decode GPS Header
         void decodeGPSHeader();
         // Convert from Julian Seconds to Julian Date.
-        double JStoJD(uint32_t JS, uint32_t us);
+        // uus is internal clock in 0.1us unit.
+        double JStoJD(uint32_t JS, uint32_t uus);
 
         /////////////////////////////////////////////////////////////////////////////
         /// Camera Capabilities
