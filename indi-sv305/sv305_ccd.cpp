@@ -243,7 +243,7 @@ bool Sv305CCD::updateProperties()
 
 bool Sv305CCD::Init()
 {
-    LOG_INFO("Attempting to find the SVBONY SV305 CCD...");
+    LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
     pthread_mutex_lock(&hCamera_mutex);
 
@@ -347,7 +347,7 @@ bool Sv305CCD::Init()
     pthread_mutex_unlock(&hCamera_mutex);
 
     /* Success! */
-    LOG_INFO("CCD is online. Retrieving basic data.");
+    LOG_INFO("CCD is online. Retrieving basic data.\n");
     return true;
 }
 
@@ -365,7 +365,7 @@ bool Sv305CCD::Uninit()
 
     // destroy camera
     status = CameraUnInit(hCamera);
-    LOG_INFO("CCD is offline.");
+    LOG_INFO("CCD is offline.\n");
     return true;
 
     pthread_mutex_unlock(&hCamera_mutex);
@@ -418,7 +418,7 @@ bool Sv305CCD::setupParams()
     nbuf+=512;
     PrimaryCCD.setFrameBufferSize(nbuf);
 
-    LOGF_INFO("PrimaryCCD buffer size : %d", nbuf);
+    LOGF_INFO("PrimaryCCD buffer size : %d\n", nbuf);
 
     return true;
 }
@@ -429,7 +429,7 @@ bool Sv305CCD::StartExposure(float duration)
     if (duration < minDuration)
     {
         DEBUGF(INDI::Logger::DBG_WARNING,
-               "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.", duration,
+               "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
                minDuration);
         duration = minDuration;
     }
@@ -462,7 +462,7 @@ bool Sv305CCD::StartExposure(float duration)
     ExposureRequest = duration;
 
     gettimeofday(&ExpStart, nullptr);
-    LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
+    LOGF_INFO("Taking a %g seconds frame...\n", ExposureRequest);
 
     InExposure = true;
 
@@ -559,16 +559,34 @@ void Sv305CCD::TimerHit()
                     pthread_mutex_lock(&hCamera_mutex);
 
                     //  it's realy close now, so spin on it
+
                     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
-                    // TODO : add timeout to exit the loop
-                    while (status != CAMERA_STATUS_SUCCESS)
+                    // camera call already waits for 100ms, no more than 10 loop needed
+                    // or we get a timeout
+                    int c=10;
+                    while (status != CAMERA_STATUS_SUCCESS && c>0)
                     {
+                        c--;
                         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
                     }
+
+                    // timeout : we return a buffer full of 0
+                    if(c==0)
+                    {
+                        LOG_INFO("Camera get buffer timed out\n");
+                        pthread_mutex_unlock(&hCamera_mutex);
+                        PrimaryCCD.setExposureLeft(0);
+                        InExposure = false;
+                        imageBuffer = PrimaryCCD.getFrameBuffer();
+                        memset(imageBuffer,0x00,PrimaryCCD.getFrameBufferSize());
+                        ExposureComplete(&PrimaryCCD);
+                        return;
+                    }
+
                     LOG_INFO("Success, camera get buffer\n");
 
                     /* We're done exposing */
-                    LOG_INFO("Exposure done, downloading image...");
+                    LOG_INFO("Exposure done, downloading image...\n");
 
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
@@ -588,11 +606,11 @@ void Sv305CCD::TimerHit()
                     if(status != CAMERA_STATUS_SUCCESS){
                         LOG_INFO("Error, camera release buffer failed\n");
                     }
-                    LOG_INFO("Buffer released");
+                    LOG_INFO("Buffer released\n");
 
                     pthread_mutex_unlock(&hCamera_mutex);
 
-                    LOG_INFO("Download complete.");
+                    LOG_INFO("Download complete.\n");
 
                     ExposureComplete(&PrimaryCCD);
                 }

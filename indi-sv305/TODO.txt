@@ -1,6 +1,5 @@
 ------------------ TO DO
 
-- FIX 5 : add timeout in TimeHit loop
 - FIX 6 : after trigger mode switch, we got a junk frame
 - FEATURE 2 : add ROI
 - FEATURE 3 : add binning
@@ -23,3 +22,4 @@
 	* triggered framing avoids heat excess
 - FEATURE 0 : find a way to "abort" exposure
         * we can abort exposure using trigger mode switching
+- FIX 5 : add timeout in TimeHit loop
