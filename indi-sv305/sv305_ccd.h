@@ -29,6 +29,14 @@
 
 #include "../libsv305/CKCameraInterface.h"
 
+// DEFAULT SETTINGS
+// default exposure (ms)
+#define DEFAULT_EXPOSURE	1000
+// default grab call wait (ms)
+#define DEFAULT_GRAB_TIMEOUT	100
+// default grab loops number if grab call failed
+#define DEFAULT_GRAB_LOOPS	10
+
 
 using namespace std;
 

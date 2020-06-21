@@ -258,7 +258,7 @@ bool Sv305CCD::Init()
     /* basic settings */
 
     // set slow framerate
-    status = CameraSetFrameSpeed(hCamera, 0);
+    status = CameraSetFrameSpeed(hCamera, FRAME_SPEED_LOW);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set frame speed failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -293,8 +293,8 @@ bool Sv305CCD::Init()
     }
     LOG_INFO("Camera white balance off\n");
 
-    // default to 1s exposure
-    status = CameraSetExposureTime(hCamera, (double)(1000 * 1000));
+    // default exposure (ns)
+    status = CameraSetExposureTime(hCamera, (double)(DEFAULT_EXPOSURE * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -326,6 +326,15 @@ bool Sv305CCD::Init()
     }
     LOG_INFO("Camera resolution\n");
 
+    // set camera soft trigger mode
+    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera soft trigger mode\n");
+
     // start camera
     status = CameraPlay(hCamera);
     if(status != CAMERA_STATUS_SUCCESS){
@@ -334,15 +343,6 @@ bool Sv305CCD::Init()
         return false;
     }
     LOG_INFO("Camera start\n");
-
-    // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera,1);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -438,8 +438,8 @@ bool Sv305CCD::StartExposure(float duration)
 
     pthread_mutex_lock(&hCamera_mutex);
 
-    // set exposure time
-    status = CameraSetExposureTime(hCamera, (double)(duration * 1000 * 1000));
+    // set exposure time (seconds -> nano seconds)
+    status = CameraSetExposureTime(hCamera, (double)(duration * 1000000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -479,7 +479,7 @@ bool Sv305CCD::AbortExposure()
     pthread_mutex_lock(&hCamera_mutex);
 
     // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera,0);
+    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_CONTINUOUS);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -488,7 +488,7 @@ bool Sv305CCD::AbortExposure()
     LOG_INFO("Camera soft trigger mode\n");
 
     // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera,1);
+    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -560,14 +560,14 @@ void Sv305CCD::TimerHit()
 
                     //  it's realy close now, so spin on it
 
-                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
-                    // camera call already waits for 100ms, no more than 10 loop needed
+                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+                    // camera call already waited, no more than X loops needed
                     // or we get a timeout
-                    int c=10;
+                    int c=DEFAULT_GRAB_LOOPS;
                     while (status != CAMERA_STATUS_SUCCESS && c>0)
                     {
                         c--;
-                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, 100);
+                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
                     }
 
                     // timeout : we return a buffer full of 0
