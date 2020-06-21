@@ -107,6 +107,7 @@ option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
+option(WITH_RPICAM "Install Raspberry Hi Quality Camera Driver" On)
 
 find_package(FFmpeg)
 
@@ -532,6 +533,10 @@ endif(WITH_PENTAX)
 if (WITH_AHP_INTERFEROMETER)
 add_subdirectory(indi-ahp-interferometer)
 endif(WITH_AHP_INTERFEROMETER)
+
+if (WITH_RPICAM)
+add_subdirectory(indi-rpicam)
+endif(WITH_RPICAM)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
