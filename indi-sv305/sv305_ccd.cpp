@@ -389,7 +389,7 @@ bool Sv305CCD::setupParams()
     int bit_depth = 16;
     int x_1, y_1, x_2, y_2;
 
-    minDuration = 0.01;
+    minDuration = MIN_EXPOSURE;
 
     ///////////////////////////
     // 1. Get Pixel size

@@ -36,6 +36,8 @@
 #define DEFAULT_GRAB_TIMEOUT	100
 // default grab loops number if grab call failed
 #define DEFAULT_GRAB_LOOPS	10
+// min exposure not reported by the camera, hard setting
+#define MIN_EXPOSURE		0.1
 
 
 using namespace std;
