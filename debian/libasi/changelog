@@ -1,3 +1,11 @@
+libasi (1.7) buster; urgency=medium
+
+  * ZWO EFW 1.5.0616 release:
+    V1.5.0615 2020.6.15
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 22 Jun 2020 21:27:41 +0300
+
 libasi (1.6) buster; urgency=medium
 
   * ASICAM 1.15.0430 release:
