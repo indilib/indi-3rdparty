@@ -30,13 +30,11 @@
 #include "../libsv305/CKCameraInterface.h"
 
 // DEFAULT SETTINGS
-// default exposure (ms)
-#define DEFAULT_EXPOSURE	1000
 // default grab call wait (ms)
 #define DEFAULT_GRAB_TIMEOUT	100
 // default grab loops number if grab call failed
 #define DEFAULT_GRAB_LOOPS	10
-// min exposure not reported by the camera, hard setting
+// min exposure not reported by the camera, hard setting (s)
 #define MIN_EXPOSURE		0.1
 
 
@@ -81,16 +79,14 @@ class Sv305CCD : public INDI::CCD
     double minDuration;
     // frame buffer
     BYTE* imageBuffer;
+    // read a junk frame and drop it
+    void GrabJunkFrame();
 
     // exposure timing stuff
     int timerID;
     struct timeval ExpStart;
     float ExposureRequest;
     float CalcTimeLeft();
-
-    // init/release camera
-    bool Init();
-    bool Uninit();
 
     // setups
     bool setupParams();

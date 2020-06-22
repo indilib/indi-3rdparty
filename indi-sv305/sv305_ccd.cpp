@@ -241,7 +241,7 @@ bool Sv305CCD::updateProperties()
 }
 
 
-bool Sv305CCD::Init()
+bool Sv305CCD::Connect()
 {
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
@@ -264,7 +264,7 @@ bool Sv305CCD::Init()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera frame speed\n");
+    LOG_INFO("Camera slow frame speed\n");
 
     // disable autoexposure
     status = CameraSetAeState(hCamera, FALSE);
@@ -293,14 +293,14 @@ bool Sv305CCD::Init()
     }
     LOG_INFO("Camera white balance off\n");
 
-    // default exposure (ns)
-    status = CameraSetExposureTime(hCamera, (double)(DEFAULT_EXPOSURE * 1000));
+    // default exposure (us)
+    status = CameraSetExposureTime(hCamera, (double)(MIN_EXPOSURE * 1000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera set exposure\n");
+    LOG_INFO("Camera set default exposure\n");
 
     // set to bayer 16 bis depth
     status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
@@ -315,7 +315,7 @@ bool Sv305CCD::Init()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera image format\n");
+    LOG_INFO("Camera image format set\n");
 
     // set default resolution
     status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
@@ -324,7 +324,7 @@ bool Sv305CCD::Init()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera resolution\n");
+    LOG_INFO("Camera resolution set\n");
 
     // set camera soft trigger mode
     status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
@@ -346,12 +346,14 @@ bool Sv305CCD::Init()
 
     pthread_mutex_unlock(&hCamera_mutex);
 
+    GrabJunkFrame();
+
     /* Success! */
     LOG_INFO("CCD is online. Retrieving basic data.\n");
     return true;
 }
 
-bool Sv305CCD::Uninit()
+bool Sv305CCD::Disconnect()
 {
     pthread_mutex_lock(&hCamera_mutex);
 
@@ -369,17 +371,6 @@ bool Sv305CCD::Uninit()
     return true;
 
     pthread_mutex_unlock(&hCamera_mutex);
-}
-
-
-bool Sv305CCD::Connect()
-{
-    return(Init());
-}
-
-bool Sv305CCD::Disconnect()
-{
-    return(Uninit());
 }
 
 
@@ -438,7 +429,7 @@ bool Sv305CCD::StartExposure(float duration)
 
     pthread_mutex_lock(&hCamera_mutex);
 
-    // set exposure time (seconds -> nano seconds)
+    // set exposure time (s -> us)
     status = CameraSetExposureTime(hCamera, (double)(duration * 1000000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
@@ -473,8 +464,10 @@ bool Sv305CCD::StartExposure(float duration)
 bool Sv305CCD::AbortExposure()
 {
     // trick : we switch trigger mode to abort exposure
-    // side effect : we get a junk frame
-    // TODO : fix junk frame
+
+    LOG_INFO("Abort exposure\n");
+
+    InExposure = false;
 
     pthread_mutex_lock(&hCamera_mutex);
 
@@ -485,7 +478,7 @@ bool Sv305CCD::AbortExposure()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera soft trigger mode\n");
+    LOG_INFO("Camera continuous trigger mode\n");
 
     // set camera soft trigger mode
     status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
@@ -498,7 +491,10 @@ bool Sv305CCD::AbortExposure()
 
     pthread_mutex_unlock(&hCamera_mutex);
 
-    InExposure = false;
+    // switching triggering mode gives at first a junk frame
+    // we drop it
+    GrabJunkFrame();
+
     return true;
 }
 
@@ -519,6 +515,34 @@ float Sv305CCD::CalcTimeLeft()
 }
 
 
+// after trigger mode switching, first frame is a junk frame
+// we drop it
+void Sv305CCD::GrabJunkFrame()
+{
+    HANDLE hRawBuf;
+
+    LOG_INFO("Trigger junk frame\n");
+
+    pthread_mutex_lock(&hCamera_mutex);
+
+    status = CameraSetExposureTime(hCamera, (double)(MIN_EXPOSURE * 1000000));
+    status = CameraSoftTrigger(hCamera);
+    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+    int c=DEFAULT_GRAB_LOOPS;
+    while (status != CAMERA_STATUS_SUCCESS && c>0)
+    {
+        c--;
+        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+    }
+    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
+
+    pthread_mutex_unlock(&hCamera_mutex);
+
+    LOG_INFO("Junk frame dropped");
+}
+
+
+// grab loop
 void Sv305CCD::TimerHit()
 {
     int timerID = -1;
