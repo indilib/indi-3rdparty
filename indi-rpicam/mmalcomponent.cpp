@@ -1,3 +1,23 @@
+/*
+ Raspberry Pi High Quality Camera CCD Driver for Indi.
+ Copyright (C) 2020 Lars Berntzon (lars.berntzon@cecilia-data.se).
+ All rights reserved.
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
 #define MMAL_COMPONENT_USERDATA_T MMALComponent // Not quite C++ but thats how its supposed to be used I think.
 
 #include <stdio.h>
@@ -28,7 +48,6 @@ MMALComponent::~MMALComponent()
         mmal_component_disable(component);
         mmal_component_destroy(component);
         component = nullptr;
-        fprintf(stderr, "component disabled and destroyed\n");
     }
 }
 

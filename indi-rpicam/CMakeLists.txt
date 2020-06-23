@@ -17,6 +17,7 @@ find_package(MMAL REQUIRED)
 find_package(INDI REQUIRED)
 
 include_directories(${INDI_INCLUDE_DIR})
+include_directories(${MMAL_INCLUDE_DIR})
 
 find_package(Threads REQUIRED)
 
