@@ -3,7 +3,6 @@
 - FEATURE 2 : add ROI
 - FEATURE 3 : add binning
 - FEATURE 4 : add streaming
-- FEATURE 1 : add gain control
 - CLEAN : log levels
 - CLEAN : comments
 
@@ -24,3 +23,4 @@
 - FIX 5 : add timeout in TimeHit loop
 - FIX 6 : after trigger mode switch, we got a junk frame
 	* we read this junk frame after each trigger mode switch, and drop it
+- FEATURE 1 : add gain control
