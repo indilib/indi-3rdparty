@@ -1,17 +1,15 @@
 cmake_minimum_required(VERSION 3.0)
 
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 
 PROJECT(indi_rpicam CXX C)
 
-set(INDI_RPICAM_VERSION_MAJOR 0)
-set(INDI_RPICAM_VERSION_MINOR 4)
-
-message(STATUS "Configuring indi_rpicam")
+set(INDI_RPICAM_VERSION_MAJOR 1)
+set(INDI_RPICAM_VERSION_MINOR 0)
 
 include(GNUInstallDirs)
 include(CMakeCommon)
-include(CheckStructHasMember)
 
 find_package(MMAL REQUIRED)
 find_package(INDI REQUIRED)
