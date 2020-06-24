@@ -1,6 +1,5 @@
 ------------------ TO DO
 
-- FEATURE 2 : add ROI
 - FEATURE 3 : add binning
 - FEATURE 4 : add streaming
 - CLEAN : log levels
@@ -24,3 +23,7 @@
 - FIX 6 : after trigger mode switch, we got a junk frame
 	* we read this junk frame after each trigger mode switch, and drop it
 - FEATURE 1 : add gain control
+- FEATURE 2 : add ROI
+	* now way to get SDK's ROI features working
+        * does'nt accept anything else than the native resolution
+        * we use software subframing

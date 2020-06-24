@@ -84,6 +84,9 @@ class Sv305CCD : public INDI::CCD
     bool StartExposure(float duration) override;
     bool AbortExposure() override;
 
+    // subframe method
+    virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
+
     // handle UI settings
     virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
@@ -103,6 +106,10 @@ class Sv305CCD : public INDI::CCD
     // camera name
     char name[32];
 
+    // image offsets and size
+    int x_1, y_1, x_2, y_2;
+    // do we use subframes
+    bool subFrame;
     // frame buffer
     BYTE* imageBuffer;
 

@@ -213,7 +213,7 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -408,25 +408,19 @@ bool Sv305CCD::setupParams()
 {
     float x_pixel_size, y_pixel_size;
     int bit_depth = 16;
-    int x_1, y_1, x_2, y_2;
 
-    ///////////////////////////
-    // 1. Get Pixel size
-    ///////////////////////////
+    subFrame=false;
+
+    // pixel size
     x_pixel_size = 2.9;
     y_pixel_size = 2.9;
 
-    ///////////////////////////
-    // 2. Get Frame
-    ///////////////////////////
-
+    // frame offsets and size
     x_1 = y_1 = 0;
     x_2       = 1920;
     y_2       = 1080;
 
-    ///////////////////////////
-    // 4. Get pixel depth
-    ///////////////////////////
+    // pixel depth
     bit_depth = 16;
     SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
 
@@ -525,6 +519,31 @@ bool Sv305CCD::AbortExposure()
     GrabJunkFrame();
 
     return true;
+}
+
+
+//
+bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
+{
+    if((x+w)>1920 || (y+h)>1080)
+    {
+        LOG_INFO("Error : Subframe out of range");
+        return false;
+    }
+
+    // full frame or subframe ?
+    if(x==0 && y==0 && w==1920 && h==1080)
+        subFrame=false;
+    else
+        subFrame=true;
+
+    // update frame offsets and size
+    x_1=x;
+    x_2=x_1+w;
+    y_1=y;
+    y_2=y_1+h;
+
+    return INDI::CCD::UpdateCCDFrame(x, y, w, h);;
 }
 
 
@@ -655,7 +674,21 @@ void Sv305CCD::TimerHit()
 
                     // we don't use CameraGetOutImageBuffer to avoid post processing
                     // we get raw datas
-                    memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
+
+                    // copy sub frame
+                    if(subFrame) {
+                        int k=0;
+                        for(int i=y_1; i<y_2; i++) {
+                            for(int j=x_1; j<x_2; j++) {
+                                imageBuffer[2*k]=pRawBuf[(i*1920*2)+j*2];
+                                imageBuffer[2*k+1]=pRawBuf[(i*1920*2)+j*2+1];
+                                k++;
+                            }
+                        }
+                    // copy full frame
+                    } else {
+                        memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
+                    }
 
                     // release camera frame buffer
                     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
