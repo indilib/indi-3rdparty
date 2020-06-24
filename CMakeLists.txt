@@ -109,6 +109,7 @@ option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
 
 find_package(FFmpeg)
+find_package(MMAL)
 
 option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 
@@ -119,6 +120,12 @@ ELSE(FFMPEG_FOUND)
     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 ENDIF(FFMPEG_FOUND)
+
+IF (MMAL_FOUND)
+option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" On)
+ELSE ()
+option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" Off)
+ENDIF(MMAL_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -532,6 +539,10 @@ endif(WITH_PENTAX)
 if (WITH_AHP_INTERFEROMETER)
 add_subdirectory(indi-ahp-interferometer)
 endif(WITH_AHP_INTERFEROMETER)
+
+if (WITH_RPICAM)
+add_subdirectory(indi-rpicam)
+endif(WITH_RPICAM)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
