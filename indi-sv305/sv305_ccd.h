@@ -50,7 +50,7 @@
 // analog gain hard settings (1 to 30)
 #define MIN_GAIN	1
 #define MAX_GAIN	30
-#define STEP_GAIN	5
+#define STEP_GAIN	1
 #define DEFAULT_GAIN	1
 
 // max camera number
