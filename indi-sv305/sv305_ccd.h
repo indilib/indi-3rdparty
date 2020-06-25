@@ -98,6 +98,9 @@ class Sv305CCD : public INDI::CCD
     // subframe method
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
 
+    // binning method
+    virtual bool UpdateCCDBin(int hor, int ver) override;
+
     // handle UI settings
     virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
@@ -121,6 +124,8 @@ class Sv305CCD : public INDI::CCD
     int x_1, y_1, x_2, y_2;
     // do we use subframes
     bool subFrame;
+    // do we bin ?
+    bool binning;
     // frame buffer
     BYTE* imageBuffer;
 

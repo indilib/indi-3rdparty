@@ -1,7 +1,8 @@
 ------------------ TO DO
 
-- FEATURE 3 : add binning
-- FEATURE 4 : add streaming
+- FEATURE 4 : add streaming (live view)
+- FIX 8 : experienced a frame timeout 2 times during my tests
+	* driver stalled after that
 - CLEAN : log levels
 - CLEAN : comments
 
@@ -22,8 +23,14 @@
 - FIX 5 : add timeout in TimeHit loop
 - FIX 6 : after trigger mode switch, we got a junk frame
 	* we read this junk frame after each trigger mode switch, and drop it
+- FIX 7 : junck frames after gain change
+	* cf. FIX 6
 - FEATURE 1 : add gain control
 - FEATURE 2 : add ROI
 	* now way to get SDK's ROI features working
         * does'nt accept anything else than the native resolution
         * we use software subframing
+- FEATURE 3 : add binning
+        * no way to use native camera binning (cf. FEATURE 2)
+        * basic software binning done
+        * remove bayer pattern ?

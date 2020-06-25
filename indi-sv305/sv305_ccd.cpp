@@ -213,7 +213,7 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME|CCD_CAN_BIN);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -410,6 +410,7 @@ bool Sv305CCD::setupParams()
     int bit_depth;
 
     subFrame=false;
+    binning=false;
 
     // pixel size
     x_pixel_size = CAM_X_PIXEL;
@@ -546,6 +547,17 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
     return INDI::CCD::UpdateCCDFrame(x, y, w, h);;
 }
 
+
+//
+bool Sv305CCD::UpdateCCDBin(int hor, int ver)
+{
+    if(hor == 1 && ver == 1)
+        binning=false;
+    else
+        binning=true;
+
+    return INDI::CCD::UpdateCCDBin(hor, ver);
+}
 
 float Sv305CCD::CalcTimeLeft()
 {
@@ -699,6 +711,8 @@ void Sv305CCD::TimerHit()
                     LOG_INFO("Download complete.\n");
 
                     // done
+                    if(binning)
+                        PrimaryCCD.binFrame();
                     ExposureComplete(&PrimaryCCD);
                 }
             }
