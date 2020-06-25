@@ -741,6 +741,8 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
 
         pthread_mutex_unlock(&hCamera_mutex);
 
+        GrabJunkFrame();
+
         GainNP.s = IPS_OK;
         IDSetNumber(&GainNP, nullptr);
         return true;
