@@ -32,11 +32,21 @@
 // DEFAULT SETTINGS
 //
 
-// default grab call wait (ms)
-#define DEFAULT_GRAB_TIMEOUT	100
-// default grab loops number if grab call failed
-#define DEFAULT_GRAB_LOOPS	10
+// picture
+#define CAM_X_RESOLUTION	1920
+#define CAM_Y_RESOLUTION	1080
+#define CAM_DEPTH		16
+#define CAM_IMAGE_FORMAT	IMAGEOUT_MODE_1920X1080
+#define CAM_BAYER_PATTERN	"GRBG"
 
+// sensor pixel size
+#define CAM_X_PIXEL	2.9
+#define CAM_Y_PIXEL	2.9
+
+// default grab call wait (ms)
+#define CAM_DEFAULT_GRAB_TIMEOUT	100
+// default grab loops number if grab call failed
+#define CAM_DEFAULT_GRAB_LOOPS	10
 
 /* I don't trust SDK get capabilities values : */
 /* -> hard settings */
@@ -45,19 +55,20 @@
 // min = 1 us : useless
 // max = 60 s : wrong, can expose much more
 // so, min exposure (s), hard setting :
-#define MIN_EXPOSURE		0.01
+#define CAM_MIN_EXPOSURE		0.01
 
 // analog gain hard settings (1 to 30)
-#define MIN_GAIN	1
-#define MAX_GAIN	30
-#define STEP_GAIN	1
-#define DEFAULT_GAIN	1
+#define CAM_MIN_GAIN	1
+#define CAM_MAX_GAIN	30
+#define CAM_STEP_GAIN	1
+#define CAM_DEFAULT_GAIN	1
 
 // max camera number
-#define MAX_DEVICES    8   /* Max device cameraCount */
+#define CAM_MAX_DEVICES    8   /* Max device cameraCount */
+
+
 
 using namespace std;
-
 
 
 /////////////////////////////////////////////////

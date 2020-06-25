@@ -37,7 +37,7 @@
 
 // cameras storage
 static int cameraCount;
-static Sv305CCD *cameras[MAX_DEVICES];
+static Sv305CCD *cameras[CAM_MAX_DEVICES];
 
 
 ////////////////////////////////////////////////////////////
@@ -218,10 +218,10 @@ bool Sv305CCD::initProperties()
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
     IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], "GRBG");
+    IUSaveText(&BayerT[2], CAM_BAYER_PATTERN);
 
     // Gain
-    IUFillNumber(&GainN[0], "GAIN", "Gain", "%.f", MIN_GAIN, MAX_GAIN, STEP_GAIN, DEFAULT_GAIN);
+    IUFillNumber(&GainN[0], "GAIN", "Gain", "%.f", CAM_MIN_GAIN, CAM_MAX_GAIN, CAM_STEP_GAIN, CAM_DEFAULT_GAIN);
     IUFillNumberVector(&GainNP, GainN, 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     addConfigurationControl();
@@ -313,7 +313,7 @@ bool Sv305CCD::Connect()
     LOG_INFO("Camera white balance off\n");
 
     // default analog gain
-    status = CameraSetAnalogGain(hCamera, DEFAULT_GAIN * 1000);
+    status = CameraSetAnalogGain(hCamera, CAM_DEFAULT_GAIN * 1000);
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set analog gain failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -322,7 +322,7 @@ bool Sv305CCD::Connect()
     LOG_INFO("Camera set default analog gain\n");
 
     // default exposure (us)
-    status = CameraSetExposureTime(hCamera, (double)(MIN_EXPOSURE * 1000000));
+    status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 1000000));
     if(status != CAMERA_STATUS_SUCCESS){
         LOG_INFO("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
@@ -407,21 +407,21 @@ bool Sv305CCD::Disconnect()
 bool Sv305CCD::setupParams()
 {
     float x_pixel_size, y_pixel_size;
-    int bit_depth = 16;
+    int bit_depth;
 
     subFrame=false;
 
     // pixel size
-    x_pixel_size = 2.9;
-    y_pixel_size = 2.9;
+    x_pixel_size = CAM_X_PIXEL;
+    y_pixel_size = CAM_Y_PIXEL;;
 
     // frame offsets and size
     x_1 = y_1 = 0;
-    x_2       = 1920;
-    y_2       = 1080;
+    x_2       = CAM_X_RESOLUTION;
+    y_2       = CAM_Y_RESOLUTION;
 
     // pixel depth
-    bit_depth = 16;
+    bit_depth = CAM_DEPTH;
     SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
 
     // Let's calculate required buffer
@@ -440,12 +440,12 @@ bool Sv305CCD::setupParams()
 bool Sv305CCD::StartExposure(float duration)
 {
     // checks for min time
-    if (duration < MIN_EXPOSURE)
+    if (duration < CAM_MIN_EXPOSURE)
     {
         DEBUGF(INDI::Logger::DBG_WARNING,
                "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
-               MIN_EXPOSURE);
-        duration = MIN_EXPOSURE;
+               CAM_MIN_EXPOSURE);
+        duration = CAM_MIN_EXPOSURE;
     }
 
     LOG_INFO("Exposure start\n");
@@ -525,14 +525,14 @@ bool Sv305CCD::AbortExposure()
 //
 bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if((x+w)>1920 || (y+h)>1080)
+    if((x+w)>CAM_X_RESOLUTION || (y+h)>CAM_Y_RESOLUTION)
     {
         LOG_INFO("Error : Subframe out of range");
         return false;
     }
 
     // full frame or subframe ?
-    if(x==0 && y==0 && w==1920 && h==1080)
+    if(x==0 && y==0 && w==CAM_X_RESOLUTION && h==CAM_Y_RESOLUTION)
         subFrame=false;
     else
         subFrame=true;
@@ -573,14 +573,14 @@ void Sv305CCD::GrabJunkFrame()
 
     pthread_mutex_lock(&hCamera_mutex);
 
-    status = CameraSetExposureTime(hCamera, (double)(MIN_EXPOSURE * 10 * 1000000));
+    status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 20 * 1000000));
     status = CameraSoftTrigger(hCamera);
-    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
-    int c=DEFAULT_GRAB_LOOPS;
+    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
+    int c=CAM_DEFAULT_GRAB_LOOPS;
     while (status != CAMERA_STATUS_SUCCESS && c>0)
     {
         c--;
-        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
     }
     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
 
@@ -632,14 +632,14 @@ void Sv305CCD::TimerHit()
 
                     //  it's realy close now, so spin on it
 
-                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
                     // camera call already waited, no more than X loops needed
                     // or we get a timeout
-                    int c=DEFAULT_GRAB_LOOPS;
+                    int c=CAM_DEFAULT_GRAB_LOOPS;
                     while (status != CAMERA_STATUS_SUCCESS && c>0)
                     {
                         c--;
-                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, DEFAULT_GRAB_TIMEOUT);
+                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
                     }
 
                     // timeout : we return a buffer full of 0
@@ -680,8 +680,8 @@ void Sv305CCD::TimerHit()
                         int k=0;
                         for(int i=y_1; i<y_2; i++) {
                             for(int j=x_1; j<x_2; j++) {
-                                imageBuffer[2*k]=pRawBuf[(i*1920*2)+j*2];
-                                imageBuffer[2*k+1]=pRawBuf[(i*1920*2)+j*2+1];
+                                imageBuffer[2*k]=pRawBuf[(i*CAM_X_RESOLUTION*2)+j*2];
+                                imageBuffer[2*k+1]=pRawBuf[(i*CAM_X_RESOLUTION*2)+j*2+1];
                                 k++;
                             }
                         }
