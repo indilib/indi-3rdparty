@@ -1,7 +1,7 @@
 SVBONY SV305 ccd driver
 ==================
 
-This package provides a CCD driver for the SVBONY camera .
+This package provides a CCD driver for the SVBONY SV305 camera .
 
 Requirements
 ============
