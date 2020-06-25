@@ -679,11 +679,8 @@ void Sv305CCD::TimerHit()
                     if(subFrame) {
                         int k=0;
                         for(int i=y_1; i<y_2; i++) {
-                            for(int j=x_1; j<x_2; j++) {
-                                imageBuffer[2*k]=pRawBuf[(i*CAM_X_RESOLUTION*2)+j*2];
-                                imageBuffer[2*k+1]=pRawBuf[(i*CAM_X_RESOLUTION*2)+j*2+1];
-                                k++;
-                            }
+                            memcpy(imageBuffer+k,pRawBuf+(i*CAM_X_RESOLUTION*2)+(x_1*2), (x_2-x_1)*2);
+                            k+=(x_2-x_1)*2;
                         }
                     // copy full frame
                     } else {
