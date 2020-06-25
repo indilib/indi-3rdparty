@@ -109,7 +109,11 @@ option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
 
 find_package(FFmpeg)
+
+# Required for Raspberry PI camera driver
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 find_package(MMAL)
+endif()
 
 option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 
