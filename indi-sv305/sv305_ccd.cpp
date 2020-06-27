@@ -3,6 +3,8 @@
  SVBONY SV305 Camera driver
  Copyright (C) 2020 Blaise-Florentin Collin (thx8411@yahoo.fr)
 
+ Generic CCD skeleton Copyright (C) 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
+
  Multiple device support Copyright (C) 2013 Peter Polakovic (peter.polakovic@cloudmakers.eu)
 
  This library is free software; you can redistribute it and/or
@@ -44,6 +46,7 @@ static int cameraCount;
 static Sv305CCD *cameras[CAM_MAX_DEVICES];
 
 
+
 ////////////////////////////////////////////////////////////
 // GLOBAL INDI DRIVER API
 //
@@ -66,19 +69,26 @@ void ISInit()
     if (!isInit)
     {
         CameraSdkStatus status;
-        cameraCount=0;
+        cameraCount = 0;
+
+        // enumerate cameras
         status = CameraEnumerateDevice(&cameraCount);
-        if(status != CAMERA_STATUS_SUCCESS){
+        if(status != CAMERA_STATUS_SUCCESS)
+        {
             IDLog("Error, enumerate camera failed\n");
             return;
         }
+
         IDLog("Camera(s) found\n");
-        if(cameraCount == 0) {
+
+        if(cameraCount == 0)
+        {
             return;
         }
 
-        for(int i=0; i<cameraCount; i++) {
-            cameras[i]= new Sv305CCD(i);
+        for(int i = 0; i < cameraCount; i++)
+        {
+            cameras[i] = new Sv305CCD(i);
         }
 
         atexit(cleanup);
@@ -87,7 +97,7 @@ void ISInit()
 }
 
 
-//
+// forwarder
 void ISGetProperties(const char *dev)
 {
     ISInit();
@@ -104,7 +114,7 @@ void ISGetProperties(const char *dev)
 }
 
 
-//
+// forwarder
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
     ISInit();
@@ -121,7 +131,7 @@ void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names
 }
 
 
-//
+// forwarder
 void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
 {
     ISInit();
@@ -138,7 +148,7 @@ void ISNewText(const char *dev, const char *name, char *texts[], char *names[], 
 }
 
 
-//
+// forwarder
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
     ISInit();
@@ -188,38 +198,44 @@ void ISSnoopDevice(XMLEle *root)
 //
 
 
+//
 Sv305CCD::Sv305CCD(int numCamera)
 {
     snprintf(this->name, 32, "SVBONY SV305 CCD %d", numCamera);
     setDeviceName(this->name);
-    num=numCamera;
+    num = numCamera;
 
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
 
+    // mutex init
     pthread_mutex_init(&hCamera_mutex, NULL);
     pthread_mutex_init(&streaming_mutex, NULL);
 }
 
 
+//
 Sv305CCD::~Sv305CCD()
 {
+    // mutex destroy
     pthread_mutex_destroy(&hCamera_mutex);
     pthread_mutex_destroy(&streaming_mutex);
 }
 
 
+//
 const char *Sv305CCD::getDefaultName()
 {
     return "SVBONY SV305 CCD";
 }
 
 
+//
 bool Sv305CCD::initProperties()
 {
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME|CCD_CAN_BIN|CCD_HAS_STREAMING);
+    SetCCDCapability(CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -236,12 +252,14 @@ bool Sv305CCD::initProperties()
 }
 
 
+//
 void Sv305CCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 }
 
 
+//
 bool Sv305CCD::updateProperties()
 {
     INDI::CCD::updateProperties();
@@ -249,6 +267,7 @@ bool Sv305CCD::updateProperties()
     if (isConnected())
     {
 
+        // gain
         defineNumber(&GainNP);
 
         // Let's get parameters now from CCD
@@ -260,6 +279,7 @@ bool Sv305CCD::updateProperties()
     {
         rmTimer(timerID);
 
+        // gain
         deleteProperty(GainNP.name);
     }
 
@@ -267,11 +287,13 @@ bool Sv305CCD::updateProperties()
 }
 
 
+//
 bool Sv305CCD::Connect()
 {
-    subFrame=false;
-    binning=false;
-    streaming=false;
+    // boolean init
+    subFrame = false;
+    binning = false;
+    streaming = false;
 
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
@@ -279,8 +301,9 @@ bool Sv305CCD::Connect()
 
     // init camera
     status = CameraInit(&hCamera, num);
-    if(status != CAMERA_STATUS_SUCCESS) {
-        LOG_INFO("Error, open camera failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, open camera failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -288,8 +311,9 @@ bool Sv305CCD::Connect()
 
     // set slow framerate
     status = CameraSetFrameSpeed(hCamera, FRAME_SPEED_LOW);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set frame speed failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set frame speed failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -297,8 +321,9 @@ bool Sv305CCD::Connect()
 
     // disable autoexposure
     status = CameraSetAeState(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set manual mode failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set manual mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -306,8 +331,9 @@ bool Sv305CCD::Connect()
 
     // disable flicker
     status = CameraSetAntiFlick(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set flicker mode failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set flicker mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -315,8 +341,9 @@ bool Sv305CCD::Connect()
 
     // disable white balance
     status = CameraSetWbMode(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set white balance mode failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set white balance mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -324,8 +351,9 @@ bool Sv305CCD::Connect()
 
     // default analog gain
     status = CameraSetAnalogGain(hCamera, CAM_DEFAULT_GAIN * 1000);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set analog gain failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set analog gain failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -333,8 +361,9 @@ bool Sv305CCD::Connect()
 
     // default exposure (us)
     status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set exposure failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -342,14 +371,16 @@ bool Sv305CCD::Connect()
 
     // set to bayer 16 bis depth
     status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set image format failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set image format failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     status = CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set image format failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set image format failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -357,17 +388,19 @@ bool Sv305CCD::Connect()
 
     // set default resolution
     status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set resolution failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set resolution failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
     LOG_INFO("Camera resolution set\n");
 
     // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
+    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -375,8 +408,9 @@ bool Sv305CCD::Connect()
 
     // start camera
     status = CameraPlay(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera start failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera start failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -397,11 +431,13 @@ bool Sv305CCD::Connect()
     return true;
 }
 
+
+//
 bool Sv305CCD::Disconnect()
 {
     // destroy streaming
     pthread_mutex_lock(&condMutex);
-    streaming=true;
+    streaming = true;
     terminateThread = true;
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
@@ -410,8 +446,9 @@ bool Sv305CCD::Disconnect()
 
     // pause camera
     status = CameraPause(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS) {
-        LOG_INFO("Error, pause camera failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, pause camera failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
@@ -425,14 +462,15 @@ bool Sv305CCD::Disconnect()
 }
 
 
+// set CCD parameters
 bool Sv305CCD::setupParams()
 {
     float x_pixel_size, y_pixel_size;
     int bit_depth;
 
-    subFrame=false;
-    binning=false;
-    streaming=false;
+    subFrame = false;
+    binning = false;
+    streaming = false;
 
     // pixel size
     x_pixel_size = CAM_X_PIXEL;
@@ -451,51 +489,50 @@ bool Sv305CCD::setupParams()
     int nbuf;
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
     // add some spare space
-    nbuf+=512;
+    nbuf += 512;
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     LOGF_INFO("PrimaryCCD buffer size : %d\n", nbuf);
 
     // stream init
     Streamer->setPixelFormat(INDI_BAYER_GRBG, CAM_DEPTH);
-    Streamer->setSize(PrimaryCCD.getXRes()/2, PrimaryCCD.getYRes()/2);
+    Streamer->setSize(PrimaryCCD.getXRes() / 2, PrimaryCCD.getYRes() / 2);
 
     return true;
 }
 
 
+//
 bool Sv305CCD::StartExposure(float duration)
 {
     // checks for min time
     if (duration < CAM_MIN_EXPOSURE)
     {
-        DEBUGF(INDI::Logger::DBG_WARNING,
+        LOGF_WARN(
                "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
                CAM_MIN_EXPOSURE);
         duration = CAM_MIN_EXPOSURE;
     }
 
-    LOG_INFO("Exposure start\n");
-
     pthread_mutex_lock(&hCamera_mutex);
 
     // set exposure time (s -> us)
     status = CameraSetExposureTime(hCamera, (double)(duration * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set exposure failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
-    LOG_INFO("Exposure time set\n");
 
     // soft trigger
     status = CameraSoftTrigger(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, soft trigger failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, soft trigger failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
-    LOG_INFO("Soft trigger\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -511,6 +548,7 @@ bool Sv305CCD::StartExposure(float duration)
 }
 
 
+//
 bool Sv305CCD::AbortExposure()
 {
     // trick : we switch trigger mode to abort exposure
@@ -522,22 +560,22 @@ bool Sv305CCD::AbortExposure()
     pthread_mutex_lock(&hCamera_mutex);
 
     // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_CONTINUOUS);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
+    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera continuous trigger mode\n");
 
     // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
+    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
@@ -558,30 +596,32 @@ bool Sv305CCD::StartStreaming()
     pthread_mutex_lock(&hCamera_mutex);
 
     // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_CONTINUOUS);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
+    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera continuous trigger mode\n");
 
     // set exposure time (s -> us)
     status = CameraSetExposureTime(hCamera, (double)(ExposureRequest * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera set exposure failed\n");
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set exposure failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
-    LOG_INFO("Exposure time set\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
     pthread_mutex_lock(&condMutex);
-    streaming=true;
+    streaming = true;
     pthread_mutex_unlock(&condMutex);
 
     pthread_cond_signal(&cv);
+
+    LOG_INFO("Streaming started\n");
 
     return true;
 }
@@ -592,24 +632,27 @@ bool Sv305CCD::StopStreaming()
 {
     pthread_mutex_lock(&hCamera_mutex);
 
-    // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS){
-        LOG_INFO("Error, camera soft trigger mode failed\n");
+    // set camera soft trigger mode back
+    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
+    if(status != CAMERA_STATUS_SUCCESS)
+    {
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
-    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&hCamera_mutex);
 
+    // grab the junk frame
     GrabJunkFrame();
 
     pthread_mutex_lock(&condMutex);
-    streaming=false;
+    streaming = false;
     pthread_mutex_unlock(&condMutex);
 
     pthread_cond_signal(&cv);
+
+    LOG_INFO("Streaming stopped\n");
 
     return true;
 }
@@ -650,9 +693,12 @@ void* Sv305CCD::streamVideo()
 
         pthread_mutex_lock(&hCamera_mutex);
 
-        status=CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-        if(status == CAMERA_STATUS_SUCCESS){
+        // get the frame
+        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
+        if(status == CAMERA_STATUS_SUCCESS)
+        {
 
+            // get frame informations
             pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
 
             // copy full frame
@@ -660,8 +706,9 @@ void* Sv305CCD::streamVideo()
 
             // release camera frame buffer
             status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-            if(status != CAMERA_STATUS_SUCCESS){
-                LOG_INFO("Error, camera release buffer failed\n");
+            if(status != CAMERA_STATUS_SUCCESS)
+            {
+                LOG_ERROR("Error, camera release buffer failed\n");
             }
 
             pthread_mutex_unlock(&hCamera_mutex);
@@ -674,7 +721,9 @@ void* Sv305CCD::streamVideo()
             uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
             Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
 
-        } else {
+        }
+        else
+        {
             pthread_mutex_unlock(&hCamera_mutex);
         }
 
@@ -689,42 +738,48 @@ void* Sv305CCD::streamVideo()
 }
 
 
-//
+// subframing
 bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if((x+w)>CAM_X_RESOLUTION || (y+h)>CAM_Y_RESOLUTION)
+    if((x + w) > CAM_X_RESOLUTION || (y + h) > CAM_Y_RESOLUTION)
     {
-        LOG_INFO("Error : Subframe out of range");
+        LOG_ERROR("Error : Subframe out of range");
         return false;
     }
 
     // full frame or subframe ?
-    if(x==0 && y==0 && w==CAM_X_RESOLUTION && h==CAM_Y_RESOLUTION)
-        subFrame=false;
+    if(x == 0 && y == 0 && w == CAM_X_RESOLUTION && h == CAM_Y_RESOLUTION)
+        subFrame = false;
     else
-        subFrame=true;
+        subFrame = true;
 
     // update frame offsets and size
-    x_1=x;
-    x_2=x_1+w;
-    y_1=y;
-    y_2=y_1+h;
+    x_1 = x;
+    x_2 = x_1 + w;
+    y_1 = y;
+    y_2 = y_1 + h;
+
+    LOG_INFO("Subframe changed\n");
 
     return INDI::CCD::UpdateCCDFrame(x, y, w, h);;
 }
 
 
-//
+// binning
 bool Sv305CCD::UpdateCCDBin(int hor, int ver)
 {
     if(hor == 1 && ver == 1)
-        binning=false;
+        binning = false;
     else
-        binning=true;
+        binning = true;
+
+    LOG_INFO("Binning changed");
 
     return INDI::CCD::UpdateCCDBin(hor, ver);
 }
 
+
+//
 float Sv305CCD::CalcTimeLeft()
 {
     double timesince;
@@ -747,15 +802,13 @@ void Sv305CCD::GrabJunkFrame()
 {
     HANDLE hRawBuf;
 
-    LOG_INFO("Trigger junk frame\n");
-
     pthread_mutex_lock(&hCamera_mutex);
 
     status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 20 * 1000000));
     status = CameraSoftTrigger(hCamera);
     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-    int c=CAM_DEFAULT_GRAB_LOOPS;
-    while (status != CAMERA_STATUS_SUCCESS && c>0)
+    int c = CAM_DEFAULT_GRAB_LOOPS;
+    while (status != CAMERA_STATUS_SUCCESS && c > 0)
     {
         c--;
         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
@@ -783,65 +836,54 @@ void Sv305CCD::TimerHit()
 
         if (timeleft < 1.0)
         {
-            LOG_INFO("Less than 1s\n");
             if (timeleft > 0.25)
             {
-                LOG_INFO("More than 0.25s\n");
                 //  a quarter of a second or more
                 //  just set a tighter timer
                 timerID = SetTimer(250);
             }
             else
             {
-                LOG_INFO("Less than 0.25s\n");
                 if (timeleft > 0.07)
                 {
-                    LOG_INFO("More than 0.07s\n");
                     //  use an even tighter timer
                     timerID = SetTimer(50);
                 }
                 else
                 {
-                    LOG_INFO("Less than 0.07s\n");
-
                     HANDLE hRawBuf;
 
                     pthread_mutex_lock(&hCamera_mutex);
 
-                    //  it's realy close now, so spin on it
-
+                    // grab frame
                     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
                     // camera call already waited, no more than X loops needed
                     // or we get a timeout
-                    int c=CAM_DEFAULT_GRAB_LOOPS;
-                    while (status != CAMERA_STATUS_SUCCESS && c>0)
+                    int c = CAM_DEFAULT_GRAB_LOOPS;
+                    while (status != CAMERA_STATUS_SUCCESS && c > 0)
                     {
                         c--;
                         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
                     }
 
                     // timeout : we return a buffer full of 0
-                    if(c==0)
+                    if(c == 0)
                     {
-                        LOG_INFO("Camera get buffer timed out\n");
+                        LOG_ERROR("Camera get buffer timed out\n");
                         pthread_mutex_unlock(&hCamera_mutex);
                         PrimaryCCD.setExposureLeft(0);
                         InExposure = false;
                         BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
-                        memset(imageBuffer,0x00,PrimaryCCD.getFrameBufferSize());
+                        memset(imageBuffer, 0x00, PrimaryCCD.getFrameBufferSize());
                         ExposureComplete(&PrimaryCCD);
                         return;
                     }
 
-                    LOG_INFO("Success, camera get buffer\n");
-
                     /* We're done exposing */
-                    LOG_INFO("Exposure done, downloading image...\n");
-
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
 
-                    // grab and save image
+                    // grab and save the buffer
                     stImageInfo imgInfo;
                     BYTE* pRawBuf;
                     BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
@@ -852,39 +894,41 @@ void Sv305CCD::TimerHit()
                     // we don't use CameraGetOutImageBuffer to avoid post processing
                     // we get raw datas
 
-                    if(subFrame) {
+                    if(subFrame)
+                    {
                         // copy sub frame
-                        int k=0;
-                        for(int i=y_1; i<y_2; i++) {
-                            memcpy(imageBuffer+k,pRawBuf+(i*CAM_X_RESOLUTION*2)+(x_1*2), (x_2-x_1)*2);
-                            k+=(x_2-x_1)*2;
+                        int k = 0;
+                        for(int i = y_1; i < y_2; i++)
+                        {
+                            memcpy(imageBuffer + k, pRawBuf + (i * CAM_X_RESOLUTION * 2) + (x_1 * 2), (x_2 - x_1) * 2);
+                            k += (x_2 - x_1) * 2;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         // copy full frame
                         memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
                     }
 
                     // release camera frame buffer
                     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-                    if(status != CAMERA_STATUS_SUCCESS){
-                        LOG_INFO("Error, camera release buffer failed\n");
+                    if(status != CAMERA_STATUS_SUCCESS)
+                    {
+                        LOG_ERROR("Error, camera release buffer failed\n");
                     }
-                    LOG_INFO("Buffer released\n");
 
                     pthread_mutex_unlock(&hCamera_mutex);
 
-                    LOG_INFO("Download complete.\n");
-
-                    // done
                     if(binning)
                         PrimaryCCD.binFrame();
+
+                    // done
                     ExposureComplete(&PrimaryCCD);
                 }
             }
         }
         else
         {
-            LOG_INFO("More than 1s\n");
             if (isDebug())
             {
                 IDLog("With time left %ld\n", timeleft);
@@ -907,19 +951,22 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
     if (strcmp (dev, getDeviceName()))
         return false;
 
+    // look for gain settings
     if (!strcmp(name, GainNP.name))
     {
         IUUpdateNumber(&GainNP, values, names, n);
 
         pthread_mutex_unlock(&hCamera_mutex);
 
+        // update camera get settings
         status = CameraSetAnalogGain(hCamera, GainN[CCD_GAIN_N].value * 1000);
         if(status != CAMERA_STATUS_SUCCESS)
-            LOG_INFO("Error, camera set analog gain failed\n");
+            LOG_ERROR("Error, camera set analog gain failed\n");
         LOGF_INFO("Camera analog gain set to %.f\n", GainN[CCD_GAIN_N].value);
 
         pthread_mutex_unlock(&hCamera_mutex);
 
+        // avoid a mid frame gain change
         GrabJunkFrame();
 
         GainNP.s = IPS_OK;
@@ -949,6 +996,7 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
-    int status = 0;
-    fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &status);
+    // report gain in FITS file
+    int _status = 0;
+    fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &_status);
 }

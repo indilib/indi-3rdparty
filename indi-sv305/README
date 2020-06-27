@@ -13,7 +13,10 @@ Requirements
 + cfitsio
 
 	cfitsio-devel is required to compile support for FITS.
-	
+
++ libsv305
+
+	SVBONY SV305 SDK binaries, also provided by indi-3rdparty
 
 Installation
 ============
@@ -33,3 +36,25 @@ How to Use
 	If you're using KStars, the driver will be automatically listed in KStars' Device Manager,
 	no further configuration is necessary.
 
+Features
+========
+
+	+ Abort Exposure
+	+ Bayer color pattern
+        + Analog gain
+	+ Software subframing
+	+ Software binning
+	+ Streaming
+
+Known issues
+============
+
+	+ Slow streaming start-up
+	+ In EKOS, toggle the bayer button to get live view streaming
+
+Limitations
+===========
+
+	+ Image depth fixed to 16bits
+	+ WB, Anti Flicker, Auto Exposure disabled
+	+ Minimal exposure 0.01s
