@@ -28,6 +28,8 @@ set(sv305ccd_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/sv305_ccd.cpp
 )
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
 add_executable(indi_sv305_ccd ${sv305ccd_SRCS})
 
 IF("${CMAKE_SYSTEM}" MATCHES "Linux")
