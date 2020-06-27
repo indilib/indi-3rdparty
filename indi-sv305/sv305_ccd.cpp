@@ -655,17 +655,8 @@ void* Sv305CCD::streamVideo()
 
             pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
 
-            if(subFrame) {
-                // copy sub frame
-                int k=0;
-                 for(int i=y_1; i<y_2; i++) {
-                     memcpy(imageBuffer+k,pRawBuf+(i*CAM_X_RESOLUTION*2)+(x_1*2), (x_2-x_1)*2);
-                     k+=(x_2-x_1)*2;
-                }
-            } else {
-                // copy full frame
-                memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
-            }
+            // copy full frame
+            memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
 
             // release camera frame buffer
             status = CameraReleaseFrameHandle(hCamera, hRawBuf);
