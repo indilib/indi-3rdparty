@@ -95,6 +95,12 @@ class Sv305CCD : public INDI::CCD
     bool StartExposure(float duration) override;
     bool AbortExposure() override;
 
+    // streaming
+    virtual bool StartStreaming() override;
+    virtual bool StopStreaming() override;
+    static void* streamVideoHelper(void *context);
+    void* streamVideo();
+
     // subframe method
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
 
@@ -126,8 +132,12 @@ class Sv305CCD : public INDI::CCD
     bool subFrame;
     // do we bin ?
     bool binning;
-    // frame buffer
-    BYTE* imageBuffer;
+
+    // streaming
+    bool streaming;
+    pthread_mutex_t streaming_mutex;
+    pthread_t primary_thread;
+    bool terminateThread;
 
     // gain setting
     INumber GainN[1];

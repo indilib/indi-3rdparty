@@ -1,8 +1,9 @@
 ------------------ TO DO
 
-- FEATURE 4 : add streaming (live view)
 - FIX 8 : experienced a frame timeout 2 times during my tests
 	* driver stalled after that
+- FIX 9 : have to toggle ekos "bayer" to see live view
+- FIX 10 : streaming / live view slow start
 - CLEAN : log levels
 - CLEAN : comments
 
@@ -34,3 +35,4 @@
         * no way to use native camera binning (cf. FEATURE 2)
         * basic software binning done
         * remove bayer pattern ?
+- FEATURE 4 : add streaming (live view)

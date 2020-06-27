@@ -29,11 +29,15 @@
 #include "config.h"
 #include "indidevapi.h"
 #include "eventloop.h"
+#include "stream/streammanager.h"
 
 #include "../libsv305/CKCameraInterface.h"
 
 #include "sv305_ccd.h"
 
+// streaming mutex
+static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // cameras storage
 static int cameraCount;
@@ -193,12 +197,14 @@ Sv305CCD::Sv305CCD(int numCamera)
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
 
     pthread_mutex_init(&hCamera_mutex, NULL);
+    pthread_mutex_init(&streaming_mutex, NULL);
 }
 
 
 Sv305CCD::~Sv305CCD()
 {
     pthread_mutex_destroy(&hCamera_mutex);
+    pthread_mutex_destroy(&streaming_mutex);
 }
 
 
@@ -213,7 +219,7 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME|CCD_CAN_BIN);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_BAYER|CCD_CAN_SUBFRAME|CCD_CAN_BIN|CCD_HAS_STREAMING);
 
     // Bayer settings
     IUSaveText(&BayerT[0], "0");
@@ -263,6 +269,10 @@ bool Sv305CCD::updateProperties()
 
 bool Sv305CCD::Connect()
 {
+    subFrame=false;
+    binning=false;
+    streaming=false;
+
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
     pthread_mutex_lock(&hCamera_mutex);
@@ -378,6 +388,10 @@ bool Sv305CCD::Connect()
     // we drop it
     GrabJunkFrame();
 
+    // streaming thread
+    terminateThread = false;
+    pthread_create(&primary_thread, nullptr, &streamVideoHelper, this);
+
     /* Success! */
     LOG_INFO("CCD is online. Retrieving basic data.\n");
     return true;
@@ -385,6 +399,13 @@ bool Sv305CCD::Connect()
 
 bool Sv305CCD::Disconnect()
 {
+    // destroy streaming
+    pthread_mutex_lock(&condMutex);
+    streaming=true;
+    terminateThread = true;
+    pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&condMutex);
+
     pthread_mutex_lock(&hCamera_mutex);
 
     // pause camera
@@ -411,6 +432,7 @@ bool Sv305CCD::setupParams()
 
     subFrame=false;
     binning=false;
+    streaming=false;
 
     // pixel size
     x_pixel_size = CAM_X_PIXEL;
@@ -433,6 +455,10 @@ bool Sv305CCD::setupParams()
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     LOGF_INFO("PrimaryCCD buffer size : %d\n", nbuf);
+
+    // stream init
+    Streamer->setPixelFormat(INDI_BAYER_GRBG, CAM_DEPTH);
+    Streamer->setSize(PrimaryCCD.getXRes()/2, PrimaryCCD.getYRes()/2);
 
     return true;
 }
@@ -520,6 +546,155 @@ bool Sv305CCD::AbortExposure()
     GrabJunkFrame();
 
     return true;
+}
+
+
+//
+bool Sv305CCD::StartStreaming()
+{
+    // streaming exposure time
+    ExposureRequest = Streamer->getTargetExposure();
+
+    pthread_mutex_lock(&hCamera_mutex);
+
+    // set camera continuous trigger mode
+    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_CONTINUOUS);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera continuous trigger mode\n");
+
+    // set exposure time (s -> us)
+    status = CameraSetExposureTime(hCamera, (double)(ExposureRequest * 1000000));
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera set exposure failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return -1;
+    }
+    LOG_INFO("Exposure time set\n");
+
+    pthread_mutex_unlock(&hCamera_mutex);
+
+    pthread_mutex_lock(&condMutex);
+    streaming=true;
+    pthread_mutex_unlock(&condMutex);
+
+    pthread_cond_signal(&cv);
+
+    return true;
+}
+
+
+//
+bool Sv305CCD::StopStreaming()
+{
+    pthread_mutex_lock(&hCamera_mutex);
+
+    // set camera soft trigger mode
+    status = CameraSetTriggerMode(hCamera,TRIGGER_MODE_SOFT);
+    if(status != CAMERA_STATUS_SUCCESS){
+        LOG_INFO("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&hCamera_mutex);
+        return false;
+    }
+    LOG_INFO("Camera soft trigger mode\n");
+
+    pthread_mutex_unlock(&hCamera_mutex);
+
+    GrabJunkFrame();
+
+    pthread_mutex_lock(&condMutex);
+    streaming=false;
+    pthread_mutex_unlock(&condMutex);
+
+    pthread_cond_signal(&cv);
+
+    return true;
+}
+
+
+//
+void* Sv305CCD::streamVideoHelper(void * context)
+{
+    return static_cast<Sv305CCD *>(context)->streamVideo();
+}
+
+
+//
+void* Sv305CCD::streamVideo()
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    auto finish = std::chrono::high_resolution_clock::now();
+
+    while (true)
+    {
+        pthread_mutex_lock(&condMutex);
+
+        while (!streaming)
+        {
+            pthread_cond_wait(&cv, &condMutex);
+            ExposureRequest = Streamer->getTargetExposure();
+        }
+
+        if (terminateThread)
+            break;
+
+        pthread_mutex_unlock(&condMutex);
+
+        stImageInfo imgInfo;
+        HANDLE hRawBuf;
+        BYTE* pRawBuf;
+        BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
+
+        pthread_mutex_lock(&hCamera_mutex);
+
+        status=CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
+        if(status == CAMERA_STATUS_SUCCESS){
+
+            pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
+
+            if(subFrame) {
+                // copy sub frame
+                int k=0;
+                 for(int i=y_1; i<y_2; i++) {
+                     memcpy(imageBuffer+k,pRawBuf+(i*CAM_X_RESOLUTION*2)+(x_1*2), (x_2-x_1)*2);
+                     k+=(x_2-x_1)*2;
+                }
+            } else {
+                // copy full frame
+                memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
+            }
+
+            // release camera frame buffer
+            status = CameraReleaseFrameHandle(hCamera, hRawBuf);
+            if(status != CAMERA_STATUS_SUCCESS){
+                LOG_INFO("Error, camera release buffer failed\n");
+            }
+
+            pthread_mutex_unlock(&hCamera_mutex);
+
+            if(binning)
+                PrimaryCCD.binFrame();
+
+            finish = std::chrono::high_resolution_clock::now();
+
+            uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
+            Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
+
+        } else {
+            pthread_mutex_unlock(&hCamera_mutex);
+        }
+
+        std::chrono::duration<double> elapsed = finish - start;
+        if (elapsed.count() < ExposureRequest)
+            usleep(fabs(ExposureRequest - elapsed.count()) * 1e6);
+
+        start = std::chrono::high_resolution_clock::now();
+    }
+
+    return nullptr;
 }
 
 
@@ -661,7 +836,7 @@ void Sv305CCD::TimerHit()
                         pthread_mutex_unlock(&hCamera_mutex);
                         PrimaryCCD.setExposureLeft(0);
                         InExposure = false;
-                        imageBuffer = PrimaryCCD.getFrameBuffer();
+                        BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
                         memset(imageBuffer,0x00,PrimaryCCD.getFrameBufferSize());
                         ExposureComplete(&PrimaryCCD);
                         return;
@@ -678,8 +853,7 @@ void Sv305CCD::TimerHit()
                     // grab and save image
                     stImageInfo imgInfo;
                     BYTE* pRawBuf;
-
-                    imageBuffer = PrimaryCCD.getFrameBuffer();
+                    BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
 
                     // get frame info
                     pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
@@ -687,15 +861,15 @@ void Sv305CCD::TimerHit()
                     // we don't use CameraGetOutImageBuffer to avoid post processing
                     // we get raw datas
 
-                    // copy sub frame
                     if(subFrame) {
+                        // copy sub frame
                         int k=0;
                         for(int i=y_1; i<y_2; i++) {
                             memcpy(imageBuffer+k,pRawBuf+(i*CAM_X_RESOLUTION*2)+(x_1*2), (x_2-x_1)*2);
                             k+=(x_2-x_1)*2;
                         }
-                    // copy full frame
                     } else {
+                        // copy full frame
                         memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
                     }
 
