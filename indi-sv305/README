@@ -8,11 +8,15 @@ Requirements
 
 + INDI >= v0.9.6 (http://indi.sf.net)
 
-	You need to install both indi and indi-devel to build this package.
+	You need to install both indi and indi-devel to build this package (libindi-dev).
 	
 + cfitsio
 
-	cfitsio-devel is required to compile support for FITS.
+	cfitsio-devel is required to compile support for FITS (libcfitsio-dev).
+
++ zlib
+
+	zlib-devel is required for compression (zlib1g-dev)
 
 + libsv305
 

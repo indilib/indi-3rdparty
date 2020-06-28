@@ -1,11 +1,14 @@
+NOTES :
+
+	Temporary file, until the first release. We will then use github issues
+
 ------------------ TO DO
 
+- TEST 0 : test on x86 (32bits)
 - FIX 8 : experienced a frame timeout 2 times during my tests
 	* driver stalled after that
 - FIX 9 : have to toggle ekos "bayer" to see live view
 - FIX 10 : streaming / live view slow start
-- CLEAN : log levels
-- CLEAN : comments
 
 ------------------ DONE
 
@@ -36,3 +39,6 @@
         * basic software binning done
         * remove bayer pattern ?
 - FEATURE 4 : add streaming (live view)
+- CLEAN : log levels
+- CLEAN : comments
+
