@@ -70,9 +70,6 @@ MMALCamera::MMALCamera(int n) : MMALComponent(MMAL_COMPONENT_DEFAULT_CAMERA), ca
 
     set_capture_port_format();
 
-    status = mmal_component_enable(component);
-    MMALException::throw_if(status, "camera component couldn't be enabled");
-
     // Save cameras default FPG range.
     MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {0, 0}, {0, 0}};
     status = mmal_port_parameter_get(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
@@ -121,29 +118,29 @@ int MMALCamera::capture()
     // Exposure time
     if(shutter_speed > 6000000)
     {
-        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-                                                { 1, 1000 }, {5, 1000}
-                                               };
+        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {5, 1000}, {166, 1000}};
         status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
         MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS very low range");
     }
     else if(shutter_speed > 1000000)
     {
-        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-                                                { 5, 1000 }, {166, 1000}
-                                               };
+         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {167, 1000}, {999, 1000}};
         status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
         MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS low range");
     }
     else
     {
         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},fps_low, fps_high};
+        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
         MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS default range");
     }
 
     // FIXME: Seconds does not work completely ok.
     status = mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, shutter_speed);
     MMALException::throw_if(status, "Failed to set shutter speed");
+
+    status = mmal_component_enable(component);
+    MMALException::throw_if(status, "camera component couldn't be enabled");
 
     // Start capturing.
     status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_CAPTURE, 1);
@@ -157,6 +154,9 @@ void MMALCamera::abort()
     MMAL_STATUS_T status = MMAL_SUCCESS;
     status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_CAPTURE, 0);
     MMALException::throw_if(status, "Failed to abort capture");
+
+    status = mmal_component_disable(component);
+    MMALException::throw_if(status, "camera component couldn't be enabled");
 }
 
 void MMALCamera::set_camera_parameters()

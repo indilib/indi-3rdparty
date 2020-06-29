@@ -65,6 +65,7 @@ void CameraControl::buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
             for(auto l : pixel_listeners) {
                 l->capture_complete();
             }
+            camera->abort();
         }
     }
 }
