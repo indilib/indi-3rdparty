@@ -591,7 +591,9 @@ bool Sv305CCD::AbortExposure()
 bool Sv305CCD::StartStreaming()
 {
     // streaming exposure time
-    ExposureRequest = Streamer->getTargetExposure();
+    // getTargetExposure only available since indi core 1.8
+    //ExposureRequest = Streamer->getTargetExposure();
+    ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
     pthread_mutex_lock(&hCamera_mutex);
 
@@ -678,7 +680,9 @@ void* Sv305CCD::streamVideo()
         while (!streaming)
         {
             pthread_cond_wait(&cv, &condMutex);
-            ExposureRequest = Streamer->getTargetExposure();
+            // getTargetExposure only available since indi core 1.8
+            //ExposureRequest = Streamer->getTargetExposure();
+            ExposureRequest = 1.0 / Streamer->getTargetFPS();
         }
 
         if (terminateThread)
