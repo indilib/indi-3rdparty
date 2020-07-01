@@ -2434,6 +2434,25 @@ void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
         fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &status);
     }
 
+    if (HasGPS)
+    {
+        int status = 0;
+
+
+        // Start
+        fits_update_key_dbl(fptr, "GPS_SFlg", GPSHeader.start_flag, 0, "StartFlag", &status);
+        fits_update_key_dbl(fptr, "GPS_SU", GPSHeader.start_us, 3, "StartShutterMicroSeconds", &status);
+
+        // End
+        fits_update_key_dbl(fptr, "GPS_EFlg", GPSHeader.end_flag, 0, "EndFlag", &status);
+        fits_update_key_dbl(fptr, "GPS_EU", GPSHeader.end_us, 3, "EndShutterMicroSeconds", &status);
+
+        // Now
+        fits_update_key_dbl(fptr, "GPS_NFlg", GPSHeader.now_flag, 0, "NowFlag", &status);
+        fits_update_key_dbl(fptr, "GPS_NU", GPSHeader.now_us, 3, "NowShutterMicroSeconds", &status);
+
+    }
+
 }
 
 INumberVectorProperty QHYCCD::getLEDStartPosNP() const
