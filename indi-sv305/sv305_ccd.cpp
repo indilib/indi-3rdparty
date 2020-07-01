@@ -33,7 +33,7 @@
 #include "eventloop.h"
 #include "stream/streammanager.h"
 
-#include "../libsv305/CKCameraInterface.h"
+#include "libsv305/CKCameraInterface.h"
 
 #include "sv305_ccd.h"
 

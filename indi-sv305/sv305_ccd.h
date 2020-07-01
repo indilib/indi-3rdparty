@@ -28,7 +28,7 @@
 #include <indiccd.h>
 #include <iostream>
 
-#include "../libsv305/CKCameraInterface.h"
+#include "libsv305/CKCameraInterface.h"
 
 ///////////////////////////////////////////////////
 // DEFAULT SETTINGS
