@@ -112,6 +112,11 @@ option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 
 find_package(FFmpeg)
 
+# Required for Raspberry PI camera driver
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+find_package(MMAL)
+endif()
+
 option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 
 if (FFMPEG_FOUND)
@@ -121,6 +126,12 @@ ELSE(FFMPEG_FOUND)
     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 ENDIF(FFMPEG_FOUND)
+
+IF (MMAL_FOUND)
+option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" On)
+ELSE ()
+option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" Off)
+ENDIF(MMAL_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -544,6 +555,11 @@ endif(WITH_AHP_INTERFEROMETER)
 if (WITH_SV305)
 add_subdirectory(indi-sv305)
 endif(WITH_SV305)
+
+# rpi_cam
+if (WITH_RPICAM)
+add_subdirectory(indi-rpicam)
+endif(WITH_RPICAM)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)

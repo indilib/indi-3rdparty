@@ -250,13 +250,7 @@ enum CodecID
   H261_CODEC
 };
 
-typedef struct _QHYCamReadModeInfo
-{
-  const char *name;
-  char *RMName[MAX_READMODE_NUMBER];
-  int32_t number;
-}
-QHYCamReadModeInfo;
+
 
 
 typedef struct _QHYCamMinMaxStepValue

@@ -115,7 +115,7 @@
 #define BULK_OUT 0x0001
 
 #define BULK_COMMAND_TIMEOUT 2000
-#define BULK_DATA_TIMEOUT    20000 //Older SXV-M25C takes 14s unbinned
+#define BULK_DATA_TIMEOUT    40000 //Older SXV-M25C takes 14s unbinned
 
 #ifdef __arm__
 #define CHUNK_SIZE (4 * 1024 * 1024)
