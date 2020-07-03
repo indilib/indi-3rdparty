@@ -69,7 +69,7 @@ protected:
     pslr_handle_t device;
     pslr_status status;
     user_file_format uff;
-    int fd, quality;
+    int quality;
     bool InDownload, need_bulb_new_cleanup;
     bool bufferIsBayered;
 
