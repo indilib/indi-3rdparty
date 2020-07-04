@@ -108,17 +108,16 @@ option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
+
+# Limit SVBONY to x86 architecture now
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
-
-find_package(FFmpeg)
-
-# Required for Raspberry PI camera driver
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-find_package(MMAL)
+else()
+option(WITH_SV305 "Install SVBONY SV305 Camera Driver" Off)
 endif()
 
-option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
-
+# FFMPEG required for INDI Webcam driver
+find_package(FFmpeg)
 if (FFMPEG_FOUND)
     message(STATUS "Since FFMPEG was found, INDI Webcam Driver can be built")
     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" On)
@@ -126,6 +125,12 @@ ELSE(FFMPEG_FOUND)
     message(STATUS "Since an up to date FFMPEG was not found, INDI Webcam Driver will not be built")
     option(WITH_WEBCAM "Install INDI Webcam Driver based on FFMPEG" Off)
 ENDIF(FFMPEG_FOUND)
+
+
+# MMAL Required for Raspberry PI camera driver
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+find_package(MMAL)
+endif()
 
 IF (MMAL_FOUND)
 option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" On)
@@ -553,7 +558,13 @@ endif(WITH_AHP_INTERFEROMETER)
 
 # sv305
 if (WITH_SV305)
+find_package(SV305)
+if(SV305_FOUND)
 add_subdirectory(indi-sv305)
+else(SV305_FOUND)
+add_subdirectory(libsv305)
+SET(LIBRARIES_FOUND FALSE)
+endif(SV305_FOUND)
 endif(WITH_SV305)
 
 # rpi_cam
