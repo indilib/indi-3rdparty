@@ -264,12 +264,11 @@ void setup() {
 
 String input = "";
 
-String parseInput() {
+void parseInput() {
   // ignore empty input
   if (input.length() == 0)
-    return input;
+    return;
 
-  //
   switch (input.charAt(0)) {
     case 'v':
       Serial.println(getCurrentVersion());
