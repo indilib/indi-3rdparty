@@ -205,6 +205,7 @@ bool WeatherRadio::initProperties()
     deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.0f", 0., 360.0, 1.0};
     deviceConfig["Davis Anemometer"]["rotations"] = {"Wind wheel rotations", INTERNAL_SENSOR, "%.0f", 0., 360.0, 1.0};
 
+    LOG_DEBUG("Properties initialization finished successfully.");
     return true;
 }
 
@@ -227,12 +228,14 @@ bool WeatherRadio::updateProperties()
 
             defineNumber(&temperatureCalibrationNP);
             defineNumber(&skyTemperatureCalibrationNP);
+            LOG_INFO("Temperature sensor selections added.");
         }
         if (sensorRegistry.pressure.size() > 0)
         {
             addParameter(WEATHER_PRESSURE, "Pressure (hPa)", 950, 1070, 15);
             setCriticalParameter(WEATHER_PRESSURE);
             addSensorSelection(&pressureSensorSP, sensorRegistry.pressure, "PRESSURE_SENSOR", "Pressure Sensor");
+            LOG_INFO("Pressure sensor selections added.");
         }
         if (sensorRegistry.humidity.size() > 0)
         {
@@ -242,17 +245,23 @@ bool WeatherRadio::updateProperties()
             addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
 
             defineNumber(&humidityCalibrationNP);
+            LOG_INFO("Humidity sensor selections added.");
         }
         if (sensorRegistry.luminosity.size() > 0 || sensorRegistry.sqm.size() > 0)
         {
             addParameter(WEATHER_SQM, "SQM", 10, 30, 15);
             setCriticalParameter(WEATHER_SQM);
             if (sensorRegistry.luminosity.size() > 0)
+            {
                 addSensorSelection(&luminositySensorSP, sensorRegistry.luminosity, "LUMINOSITY_SENSOR", "Luminosity Sensor");
+                LOG_INFO("Luminosity sensor selections added.");
+            }
             if (sensorRegistry.sqm.size() > 0)
+            {
                 addSensorSelection(&sqmSensorSP, sensorRegistry.sqm, "SQM_SENSOR", "SQM Sensor");
-
-            defineNumber(&sqmCalibrationNP);
+                defineNumber(&sqmCalibrationNP);
+                LOG_INFO("SQM sensor selections added.");
+            }
         }
         if (sensorRegistry.temp_object.size() > 0)
         {
@@ -260,18 +269,21 @@ bool WeatherRadio::updateProperties()
             addParameter(WEATHER_SKY_TEMPERATURE, "Sky Temp (corr, °C)", -30, 20, 0);
             setCriticalParameter(WEATHER_CLOUD_COVER);
             addSensorSelection(&objectTemperatureSensorSP, sensorRegistry.temp_object, "OBJECT_TEMP_SENSOR", "Object Temp. Sensor");
+            LOG_INFO("Sky temperature sensor selections added.");
         }
         if (sensorRegistry.wind_gust.size() > 0)
         {
             addParameter(WEATHER_WIND_GUST, "Wind gust (m/s)", 0, 15, 50);
             setCriticalParameter(WEATHER_WIND_GUST);
             addSensorSelection(&windGustSensorSP, sensorRegistry.wind_gust, "WIND_GUST_SENSOR", "Wind Gust Sensor");
+            LOG_INFO("Wind gust sensor selections added.");
         }
         if (sensorRegistry.wind_speed.size() > 0)
         {
             addParameter(WEATHER_WIND_SPEED, "Wind speed (m/s)", 0, 10, 50);
             setCriticalParameter(WEATHER_WIND_SPEED);
             addSensorSelection(&windSpeedSensorSP, sensorRegistry.wind_speed, "WIND_SPEED_SENSOR", "Wind Speed Sensor");
+            LOG_INFO("Wind speed sensor selections added.");
         }
         if (sensorRegistry.wind_direction.size() > 0)
         {
@@ -279,11 +291,15 @@ bool WeatherRadio::updateProperties()
             addSensorSelection(&windDirectionSensorSP, sensorRegistry.wind_direction, "WIND_DIRECTION_SENSOR", "Wind Direction Sensor");
 
             defineNumber(&windDirectionCalibrationNP);
+            LOG_INFO("Wind direction sensor selections added.");
         }
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineNumber(&rawDevices[i]);
+        LOG_INFO("Raw sensors added.");
 
         getBasicData();
+        // update the weather parameters to avoid sending dummy weather values
+        updateWeather();
 
         result = INDI::Weather::updateProperties();
         // Load the configuration if everything was fine
@@ -344,6 +360,8 @@ bool WeatherRadio::updateProperties()
         WeatherInterface::critialParametersL = nullptr;
         WeatherInterface::critialParametersLP.nlp = 0;
 
+        LOG_DEBUG("Weather Radio properties removal completed.");
+
     }
 
     return result;
@@ -358,6 +376,8 @@ void WeatherRadio::getBasicData()
     FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
     if (FirmwareInfoTP.s != IPS_OK)
         LOG_ERROR("Failed to get firmware from device.");
+    else
+        LOGF_INFO("Firmware version: %s", FirmwareInfoT[0].text);
 
     defineText(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
@@ -373,6 +393,7 @@ void WeatherRadio::getBasicData()
     {
         FirmwareConfigT[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
         IUFillText(&FirmwareConfigT[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+        LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
     }
 
     IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
@@ -403,7 +424,10 @@ void WeatherRadio::updateConfigData()
         // find the matching text property
         for (int i = 0; i < FirmwareConfigTP.ntp; i++)
             if (strcmp(FirmwareConfigT[i].name, it->first.c_str()) == 0)
+            {
                 IUSaveText(&FirmwareConfigT[i], it->second.c_str());
+                LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
+            }
     }
     FirmwareConfigTP.s = IPS_OK;
     IDSetText(&FirmwareInfoTP, nullptr);
@@ -442,7 +466,9 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
                 strcpy(versionInfo, docIter->value.toString());
         }
         return IPS_OK;
+        LOG_DEBUG("Firmware retrieved successfully.");
     }
+    LOG_DEBUG("Request for firmware version failed!");
     return IPS_ALERT;
 }
 
@@ -519,9 +545,11 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
             FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
             bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
 
+            LOG_DEBUG("WiFi device detected.");
             updateWiFiStatus(connected);
         }
 
+        LOG_DEBUG("Firmware parsed successfully.");
         return IPS_OK;
 
     }
@@ -539,9 +567,15 @@ bool WeatherRadio::connectWiFi(bool connect)
 {
     bool result;
     if (connect)
+    {
         result = transmitSerial("s\n");
+        LOGF_INFO("Connecting WiFi %", result ? "succeeded." : "failed!");
+    }
     else
+    {
         result = transmitSerial("d\n");
+        LOGF_INFO("Disonnecting WiFi %", result ? "succeeded." : "failed!");
+    }
     return result;
 }
 
@@ -561,6 +595,7 @@ void WeatherRadio::updateWiFiStatus(bool connected)
 bool WeatherRadio::resetArduino()
 {
     bool result = transmitSerial("r\n");
+    LOGF_INFO("Resetting Arduino %", result ? "succeeded." : "failed!");
     return result;
 }
 
@@ -887,7 +922,6 @@ IPState WeatherRadio::updateWeather()
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
     bool result = sendQuery("w", data, &n_bytes);
-    // LOGF_DEBUG("Weather data received: %s", data);
 
     if (result == false)
         return IPS_ALERT;
@@ -898,6 +932,7 @@ IPState WeatherRadio::updateWeather()
     result = parseWeatherData(src);
 
     // result recieved
+    LOGF_DEBUG("Reading weather data from Arduino %s", result ? "succeeded." : "failed!");
     return result == true ? IPS_OK : IPS_ALERT;
 }
 
@@ -992,6 +1027,7 @@ bool WeatherRadio::parseWeatherData(char *data)
         }
 
     }
+    LOG_DEBUG("Parsing weather data succeeded.");
     return true;
 
 }
@@ -1217,6 +1253,7 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
     {
         char cmdstring[20] = {0};
         sprintf(cmdstring, "%s\n", cmd);
+        LOGF_DEBUG("Sending query: %s", cmdstring);
 
         if(!transmitSerial(cmdstring))
         {
@@ -1269,16 +1306,26 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
 bool WeatherRadio::receiveSerial(char* buffer, int* bytes, char end, int wait)
 {
     int timeout = wait;
-    int returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
-    if (returnCode != TTY_OK)
-    {
-        char errorString[MAXRBUF];
-        tty_error_msg(returnCode, errorString, MAXRBUF);
-        if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
-        LOGF_WARN("Failed to receive full response: %s. (Return code: %d)", errorString, returnCode);
-        return false;
-    }
+    int returnCode = TTY_PORT_BUSY;
+    int retry = 0;
 
+    while (returnCode != TTY_OK && retry < 3)
+    {
+        returnCode = tty_read_section(PortFD, buffer, end, timeout, bytes);
+        if (returnCode != TTY_OK)
+        {
+            char errorString[MAXRBUF];
+            tty_error_msg(returnCode, errorString, MAXRBUF);
+            if(returnCode == TTY_TIME_OUT && wait <= 0) return false;
+            if (retry++ < 3)
+                LOGF_INFO("Failed to receive full response: %s. (Return code: %d). Retrying...", errorString, returnCode);
+            else
+            {
+                LOGF_WARN("Failed to receive full response: %s. (Return code: %d). Giving up", errorString, returnCode);
+                return false;
+            }
+        }
+    }
     return true;
 }
 
