@@ -904,6 +904,10 @@ bool QHYCCD::Connect()
                 HasFilters = false;
         }
 
+        if (HasFilters)
+            setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
+        else
+            setDriverInterface(getDriverInterface() & ~FILTER_INTERFACE);
         LOGF_DEBUG("Has Filters: %s", HasFilters ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
