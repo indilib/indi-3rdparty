@@ -20,7 +20,7 @@ Requirements
 
 + libsv305
 
-	SVBONY SV305 SDK binaries, also provided by indi-3rdparty
+	SVBONY SV305 SDK binaries (1.6.1 or higher), also provided by indi-3rdparty
 
 Installation
 ============

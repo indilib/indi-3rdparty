@@ -33,7 +33,7 @@
 #include "eventloop.h"
 #include "stream/streammanager.h"
 
-#include "libsv305/CKCameraInterface.h"
+#include "libsv305/SVBCameraSDK.h"
 
 #include "sv305_ccd.h"
 
@@ -43,7 +43,7 @@ static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // cameras storage
 static int cameraCount;
-static Sv305CCD *cameras[CAM_MAX_DEVICES];
+static Sv305CCD *cameras[SVBCAMERA_ID_MAX];
 
 
 
@@ -68,23 +68,17 @@ void ISInit()
     static bool isInit = false;
     if (!isInit)
     {
-        CameraSdkStatus status;
         cameraCount = 0;
 
         // enumerate cameras
-        status = CameraEnumerateDevice(&cameraCount);
-        if(status != CAMERA_STATUS_SUCCESS)
+        cameraCount=SVBGetNumOfConnectedCameras();
+        if(cameraCount < 1)
         {
-            IDLog("Error, enumerate camera failed\n");
+            IDLog("Error, no camera found\n");
             return;
         }
 
         IDLog("Camera(s) found\n");
-
-        if(cameraCount == 0)
-        {
-            return;
-        }
 
         for(int i = 0; i < cameraCount; i++)
         {
@@ -208,7 +202,7 @@ Sv305CCD::Sv305CCD(int numCamera)
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
 
     // mutex init
-    pthread_mutex_init(&hCamera_mutex, NULL);
+    pthread_mutex_init(&cameraID_mutex, NULL);
     pthread_mutex_init(&streaming_mutex, NULL);
 }
 
@@ -217,7 +211,7 @@ Sv305CCD::Sv305CCD(int numCamera)
 Sv305CCD::~Sv305CCD()
 {
     // mutex destroy
-    pthread_mutex_destroy(&hCamera_mutex);
+    pthread_mutex_destroy(&cameraID_mutex);
     pthread_mutex_destroy(&streaming_mutex);
 }
 
@@ -234,6 +228,11 @@ bool Sv305CCD::initProperties()
 {
     // Init parent properties first
     INDI::CCD::initProperties();
+
+    // Get camera informations
+    status = SVBGetCameraInfo(&cameraInfo, num);
+
+    // TODO
 
     SetCCDCapability(CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING);
 
@@ -297,8 +296,9 @@ bool Sv305CCD::Connect()
 
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // init camera
     status = CameraInit(&hCamera, num);
     if(status != CAMERA_STATUS_SUCCESS)
@@ -415,8 +415,9 @@ bool Sv305CCD::Connect()
         return false;
     }
     LOG_INFO("Camera start\n");
+*/
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     // setting trigger mode gives at first a junk frame
     // we drop it
@@ -442,8 +443,9 @@ bool Sv305CCD::Disconnect()
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // pause camera
     status = CameraPause(hCamera);
     if(status != CAMERA_STATUS_SUCCESS)
@@ -456,9 +458,10 @@ bool Sv305CCD::Disconnect()
     // destroy camera
     status = CameraUnInit(hCamera);
     LOG_INFO("CCD is offline.\n");
+*/
     return true;
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 }
 
 
@@ -514,8 +517,9 @@ bool Sv305CCD::StartExposure(float duration)
         duration = CAM_MIN_EXPOSURE;
     }
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // set exposure time (s -> us)
     status = CameraSetExposureTime(hCamera, (double)(duration * 1000000));
     if(status != CAMERA_STATUS_SUCCESS)
@@ -533,8 +537,9 @@ bool Sv305CCD::StartExposure(float duration)
         pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
+*/
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     PrimaryCCD.setExposureDuration(duration);
     ExposureRequest = duration;
@@ -557,8 +562,9 @@ bool Sv305CCD::AbortExposure()
 
     InExposure = false;
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // set camera continuous trigger mode
     status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
     if(status != CAMERA_STATUS_SUCCESS)
@@ -576,8 +582,9 @@ bool Sv305CCD::AbortExposure()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
+*/
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     // switching trigger mode gives at first a junk frame
     // we drop it
@@ -595,8 +602,9 @@ bool Sv305CCD::StartStreaming()
     //ExposureRequest = Streamer->getTargetExposure();
     ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // set camera continuous trigger mode
     status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
     if(status != CAMERA_STATUS_SUCCESS)
@@ -614,8 +622,9 @@ bool Sv305CCD::StartStreaming()
         pthread_mutex_unlock(&hCamera_mutex);
         return -1;
     }
+*/
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     pthread_mutex_lock(&condMutex);
     streaming = true;
@@ -632,8 +641,9 @@ bool Sv305CCD::StartStreaming()
 //
 bool Sv305CCD::StopStreaming()
 {
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
+/*
     // set camera soft trigger mode back
     status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
     if(status != CAMERA_STATUS_SUCCESS)
@@ -642,8 +652,9 @@ bool Sv305CCD::StopStreaming()
         pthread_mutex_unlock(&hCamera_mutex);
         return false;
     }
+*/
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     // grab the junk frame
     GrabJunkFrame();
@@ -690,18 +701,18 @@ void* Sv305CCD::streamVideo()
 
         pthread_mutex_unlock(&condMutex);
 
+/*
         stImageInfo imgInfo;
         HANDLE hRawBuf;
         BYTE* pRawBuf;
         BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
 
-        pthread_mutex_lock(&hCamera_mutex);
+        pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
         status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
         if(status == CAMERA_STATUS_SUCCESS)
         {
-
             // get frame informations
             pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
 
@@ -715,7 +726,7 @@ void* Sv305CCD::streamVideo()
                 LOG_ERROR("Error, camera release buffer failed\n");
             }
 
-            pthread_mutex_unlock(&hCamera_mutex);
+            pthread_mutex_unlock(&cameraID_mutex);
 
             if(binning)
                 PrimaryCCD.binFrame();
@@ -728,8 +739,10 @@ void* Sv305CCD::streamVideo()
         }
         else
         {
-            pthread_mutex_unlock(&hCamera_mutex);
+            pthread_mutex_unlock(&cameraID_mutex);
         }
+
+*/
 
         std::chrono::duration<double> elapsed = finish - start;
         if (elapsed.count() < ExposureRequest)
@@ -804,9 +817,10 @@ float Sv305CCD::CalcTimeLeft()
 // we drop it
 void Sv305CCD::GrabJunkFrame()
 {
+/*
     HANDLE hRawBuf;
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
     status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 20 * 1000000));
     status = CameraSoftTrigger(hCamera);
@@ -819,7 +833,8 @@ void Sv305CCD::GrabJunkFrame()
     }
     status = CameraReleaseFrameHandle(hCamera, hRawBuf);
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
+*/
 
     LOG_INFO("Junk frame dropped");
 }
@@ -855,9 +870,10 @@ void Sv305CCD::TimerHit()
                 }
                 else
                 {
+/*
                     HANDLE hRawBuf;
 
-                    pthread_mutex_lock(&hCamera_mutex);
+                    pthread_mutex_lock(&cameraID_mutex);
 
                     // grab frame
                     status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
@@ -883,7 +899,7 @@ void Sv305CCD::TimerHit()
                         return;
                     }
 
-                    /* We're done exposing */
+                    // We're done exposing
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
 
@@ -921,7 +937,9 @@ void Sv305CCD::TimerHit()
                         LOG_ERROR("Error, camera release buffer failed\n");
                     }
 
-                    pthread_mutex_unlock(&hCamera_mutex);
+                    pthread_mutex_unlock(&cameraID_mutex);
+
+*/
 
                     if(binning)
                         PrimaryCCD.binFrame();
@@ -960,15 +978,17 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
     {
         IUUpdateNumber(&GainNP, values, names, n);
 
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
 
+/*
         // update camera get settings
         status = CameraSetAnalogGain(hCamera, GainN[CCD_GAIN_N].value * 1000);
         if(status != CAMERA_STATUS_SUCCESS)
             LOG_ERROR("Error, camera set analog gain failed\n");
         LOGF_INFO("Camera analog gain set to %.f\n", GainN[CCD_GAIN_N].value);
+*/
 
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
 
         // avoid a mid frame gain change
         GrabJunkFrame();

@@ -28,7 +28,7 @@
 #include <indiccd.h>
 #include <iostream>
 
-#include "libsv305/CKCameraInterface.h"
+#include "libsv305/SVBCameraSDK.h"
 
 ///////////////////////////////////////////////////
 // DEFAULT SETTINGS
@@ -65,9 +65,6 @@
 #define CAM_MAX_GAIN	30
 #define CAM_STEP_GAIN	1
 #define CAM_DEFAULT_GAIN	1
-
-// max camera number
-#define CAM_MAX_DEVICES    8
 
 
 
@@ -119,11 +116,13 @@ class Sv305CCD : public INDI::CCD
 
     private:
         // camera API return status
-        CameraSdkStatus status;
-        // hCamera mutex protection
-        pthread_mutex_t hCamera_mutex;
+        SVB_ERROR_CODE status;
+        // camera infos
+        SVB_CAMERA_INFO cameraInfo;
         // camera API handler
-        HANDLE hCamera;
+        int cameraID;
+        // hCamera mutex protection
+        pthread_mutex_t cameraID_mutex;
         // camera #
         int num;
         // camera name
