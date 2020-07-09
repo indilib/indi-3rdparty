@@ -35,37 +35,11 @@
 //
 
 // picture
-#define CAM_X_RESOLUTION	1920
-#define CAM_Y_RESOLUTION	1080
-#define CAM_DEPTH		16
-#define CAM_IMAGE_FORMAT	IMAGEOUT_MODE_1920X1080
 #define CAM_BAYER_PATTERN	"GRBG"
 
 // sensor pixel size
 #define CAM_X_PIXEL	2.9
 #define CAM_Y_PIXEL	2.9
-
-// default grab timeout (ms)
-#define CAM_DEFAULT_GRAB_TIMEOUT	100
-// default grab loops # if grab failed
-#define CAM_DEFAULT_GRAB_LOOPS	10
-
-
-/* I don't trust SDK get capabilities values : */
-/* -> hard settings */
-
-// reported exposure time :
-// min = 1 us : useless
-// max = 60 s : wrong, can expose much more
-// so, min exposure (s) hard setting :
-#define CAM_MIN_EXPOSURE		0.01
-
-// analog gain hard settings (1 to 30)
-#define CAM_MIN_GAIN	1
-#define CAM_MAX_GAIN	30
-#define CAM_STEP_GAIN	1
-#define CAM_DEFAULT_GAIN	1
-
 
 
 using namespace std;
@@ -109,31 +83,36 @@ class Sv305CCD : public INDI::CCD
 
         // handle UI settings
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
     protected:
         // INDI periodic grab query
         void TimerHit() override;
 
     private:
+        // camera #
+        int num;
+        // camera name
+        char name[32];
         // camera API return status
         SVB_ERROR_CODE status;
         // camera infos
         SVB_CAMERA_INFO cameraInfo;
         // camera API handler
         int cameraID;
+        // camera property
+        SVB_CAMERA_PROPERTY cameraProperty;
+        // number of camera control
+        int controlsNum;
+        // exposure limits
+        double minExposure;
+        double maxExposure;
+
         // hCamera mutex protection
         pthread_mutex_t cameraID_mutex;
-        // camera #
-        int num;
-        // camera name
-        char name[32];
 
         // image offsets and size
         int x_1, y_1, x_2, y_2;
-        // do we use subframes ?
-        bool subFrame;
-        // do we bin ?
-        bool binning;
 
         // streaming
         bool streaming;
@@ -141,13 +120,32 @@ class Sv305CCD : public INDI::CCD
         pthread_t primary_thread;
         bool terminateThread;
 
-        // gain setting
-        INumber GainN[1];
-        INumberVectorProperty GainNP;
+        // controls settings
         enum
         {
-            CCD_GAIN_N
+            CCD_GAIN_N,
+            CCD_CONTRAST_N,
+            CCD_SHARPNESS_N,
+            CCD_SATURATION_N,
+            CCD_WBR_N,
+            CCD_WBG_N,
+            CCD_WBB_N,
+            CCD_GAMMA_N,
+            CCD_FSPEED_N,
+            CCD_DOFFSET_N
         };
+        INumber ControlsN[10];
+        INumberVectorProperty ControlsNP[10];
+        // control helper
+        bool updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n);
+
+        // output frame format
+        ISwitch FormatS[3];
+        ISwitchVectorProperty FormatSP;
+        enum { FORMAT_RAW8, FORMAT_RAW12, FORMAT_RGB24 };
+        SVB_IMG_TYPE frameFormatMapping[3] = {SVB_IMG_RAW8, SVB_IMG_RAW12, SVB_IMG_RGB24};
+        int frameFormat;
+        const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
 
         // exposure timing
         int timerID;
@@ -157,9 +155,6 @@ class Sv305CCD : public INDI::CCD
 
         // setups
         bool setupParams();
-
-        // reads a junk frame and drops it
-        void GrabJunkFrame();
 
         // save settings
         virtual bool saveConfigItems(FILE *fp) override;
