@@ -85,6 +85,12 @@ class Sv305CCD : public INDI::CCD
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
+        // Guide Port
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
+
     protected:
         // INDI periodic grab query
         void TimerHit() override;

@@ -1180,3 +1180,77 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Frame Speed", ControlsN[CCD_FSPEED_N].value, 3, "Frame Speed", &_status);
     fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_FSPEED_N].value, 3, "Dark Offset", &_status);
 }
+
+
+//
+IPState Sv305CCD::GuideNorth(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, PULSE_GUIDE_NORTH, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide North failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding North\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideSouth(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, PULSE_GUIDE_SOUTH, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide South failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding South\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideEast(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, PULSE_GUIDE_EAST, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide East failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding East\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideWest(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, PULSE_GUIDE_WEST, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide West failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding North\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+    return IPS_OK;
+}
