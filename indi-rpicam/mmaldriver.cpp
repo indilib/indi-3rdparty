@@ -124,7 +124,8 @@ bool MMALDriver::Connect()
 
     float pixel_size_x = 0, pixel_size_y = 0;
 
-    if (!strcmp(camera_control->get_camera() ->get_name(), "imx477")) {
+    if (!strcmp(camera_control->get_camera()->get_name(), "imx477") ||
+        !strcmp(camera_control->get_camera()->get_name(), "testc")) {
         pixel_size_x = pixel_size_y = 1.55F;
     }
     else {
