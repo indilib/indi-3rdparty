@@ -3,7 +3,11 @@
 <devGroup group="CCDs">
         <device label="FireFly MV">
                 <driver name="FireFly MV">indi_ffmv_ccd</driver>
-                <version>0.1</version>
+                <version>@FFMV_VERSION_MAJOR@.@FFMV_VERSION_MINOR@</version>
+        </device>
+        <device label="Atik GP">
+                <driver name="FireFly MV">indi_ffmv_ccd</driver>
+                <version>@FFMV_VERSION_MAJOR@.@FFMV_VERSION_MINOR@</version>
         </device>
 </devGroup>
 </driversList>

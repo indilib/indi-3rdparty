@@ -33,32 +33,38 @@
 class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 {
     public:
-        QHYCCD(const char *name);
+        QHYCCD(const char *m_Name);
         virtual ~QHYCCD() override = default;
 
-        virtual const char *getDefaultName() override;
-
-        virtual bool initProperties() override;
         virtual void ISGetProperties(const char *dev) override;
+        virtual bool ISNewNumber(const char *dev, const char *m_Name, double values[], char *names[], int n) override;
+        virtual bool ISNewText(const char *dev, const char *m_Name, char *texts[], char *names[], int num) override;
+        virtual bool ISNewSwitch(const char *dev, const char *m_Name, ISState *states, char *names[], int n) override;
+
+        const char *name() const
+        {
+            return m_Name;
+        }
+
+        INumberVectorProperty getLEDStartPosNP() const;
+        void setLEDStartPosNP(const INumberVectorProperty &value);
+
+    protected:
+        // Properties
+        virtual bool initProperties() override;
         virtual bool updateProperties() override;
 
+        // Connection
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
+        // Temperature
         virtual int SetTemperature(double temperature) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 
+        // Debug
         virtual void debugTriggered(bool enable) override;
-
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num) override;
-        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-
-    protected:
-        // Misc.
-        virtual void TimerHit() override;
-        virtual bool saveConfigItems(FILE *fp) override;
 
         // CCD
         virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
@@ -78,39 +84,35 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         virtual bool StartStreaming() override;
         virtual bool StopStreaming() override;
 
+        // Misc.
+        virtual void TimerHit() override;
+        virtual bool saveConfigItems(FILE *fp) override;
+        virtual const char *getDefaultName() override;
         void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
 
-        ISwitch CoolerS[2];
+        /////////////////////////////////////////////////////////////////////////////
+        /// Camera Properties
+        /////////////////////////////////////////////////////////////////////////////
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Properties: Camera Cooling Control
+        /////////////////////////////////////////////////////////////////////////////
+        // SDK Version
+        ITextVectorProperty SDKVersionTP;
+        IText SDKVersionT[1] {};
+
+        // Cooler Switch
         ISwitchVectorProperty CoolerSP;
+        ISwitch CoolerS[2];
         enum
         {
             COOLER_ON,
             COOLER_OFF,
         };
 
-        IText SDKVersionT[1];
-        ITextVectorProperty SDKVersionTP;
-
-        INumber CoolerN[1];
+        // Cooler Power
         INumberVectorProperty CoolerNP;
-
-        INumber GainN[1];
-        INumberVectorProperty GainNP;
-
-        INumber OffsetN[1];
-        INumberVectorProperty OffsetNP;
-
-        INumber SpeedN[1];
-        INumberVectorProperty SpeedNP;
-
-        INumber ReadModeN[1];
-        INumberVectorProperty ReadModeNP;
-
-        INumber USBTrafficN[1];
-        INumberVectorProperty USBTrafficNP;
-
-        INumber USBBufferN[1];
-        INumberVectorProperty USBBufferNP;
+        INumber CoolerN[1];
 
         ISwitchVectorProperty CoolerModeSP;
         ISwitch CoolerModeS[2];
@@ -120,7 +122,89 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             COOLER_MANUAL,
         };
 
+        /////////////////////////////////////////////////////////////////////////////
+        /// Properties: Image Adjustment Controls
+        /////////////////////////////////////////////////////////////////////////////
+        // Gain Control
+        INumberVectorProperty GainNP;
+        INumber GainN[1];
+
+        // Offset Control
+        INumberVectorProperty OffsetNP;
+        INumber OffsetN[1];
+
+        // Read mode Control
+        INumber ReadModeN[1];
+        INumberVectorProperty ReadModeNP;
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Properties: USB Controls
+        /////////////////////////////////////////////////////////////////////////////
+        // USB Speed Control
+        INumberVectorProperty SpeedNP;
+        INumber SpeedN[1];
+
+        // USB Traffic Control
+        INumber USBTrafficN[1];
+        INumberVectorProperty USBTrafficNP;
+
+        // USB Buffer Control
+        INumber USBBufferN[1];
+        INumberVectorProperty USBBufferNP;
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Properties: GPS Controls
+        /////////////////////////////////////////////////////////////////////////////
+
+        // Slaving Mode
+        ISwitchVectorProperty GPSSlavingSP;
+        ISwitch GPSSlavingS[2];
+        enum
+        {
+            SLAVING_MASTER,
+            SLAVING_SLAVE,
+        };
+
+        // Slaving Params (for slaves only)
+        INumberVectorProperty GPSSlavingParamNP;
+        INumber GPSSlavingParamN[5];
+        enum
+        {
+            PARAM_TARGET_SEC,
+            PARAM_TARGET_USEC,
+            PARAM_DELTAT_SEC,
+            PARAM_DELTAT_USEC,
+            PARAM_EXP_TIME
+        };
+
+        // VCOX Frequency
+        INumberVectorProperty VCOXFreqNP;
+        INumber VCOXFreqN[1];
+
+        // LED Calibration
+        ISwitchVectorProperty GPSLEDCalibrationSP;
+        ISwitch GPSLEDCalibrationS[2];
+
+        // LED Pulse Position for Starting/Stopping Exposure
+        INumberVectorProperty GPSLEDStartPosNP;
+        INumberVectorProperty GPSLEDEndPosNP;
+        INumber GPSLEDStartPosN[2];
+        INumber GPSLEDEndPosN[2];
+        enum
+        {
+            LED_PULSE_POSITION,
+            LED_PULSE_WIDTH,
+        };
+
+        // GPS header On/Off
+        ISwitchVectorProperty GPSControlSP;
+        ISwitch GPSControlS[2];
+
+
     private:
+        /////////////////////////////////////////////////////////////////////////////
+        /// Camera Structures
+        /////////////////////////////////////////////////////////////////////////////
         typedef enum ImageState
         {
             StateNone = 0,
@@ -133,36 +217,101 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             StateTerminated
         } ImageState;
 
-        /* Imaging functions */
+        struct
+        {
+            uint32_t subX = 0;
+            uint32_t subY = 0;
+            uint32_t subW = 0;
+            uint32_t subH = 0;
+        } effectiveROI, overscanROI;
+
+        struct
+        {
+            // Sequences
+            uint32_t seqNumber = 0;
+            uint32_t seqNumber_old = 0;
+            uint8_t tempNumber = 0;
+
+            // Dimension
+            uint16_t width = 0;
+            uint16_t height = 0;
+
+            // Location
+            uint32_t latitude = 0;
+            uint32_t longitude = 0;
+
+            // Start Time
+            uint8_t start_flag = 0;
+            uint32_t start_sec = 0;
+            uint32_t start_us = 0;
+            double start_jd = 0;
+
+            // End Time
+            uint8_t end_flag = 0;
+            uint32_t end_sec = 0;
+            uint32_t end_us = 0;
+            double end_jd = 0;
+
+            // Now time
+            uint8_t now_flag = 0;
+            uint32_t now_sec = 0;
+            uint32_t now_us = 0;
+            double now_jd = 0;
+
+            // Clock
+            uint32_t max_clock = 0;
+        } GPSHeader;
+
+        struct
+        {
+            double latitude = 0;
+            double longitude = 0;
+            time_t start_time;
+            time_t end_time;
+            time_t frame_time;
+        } GPSData;
+
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Image Capture
+        /////////////////////////////////////////////////////////////////////////////
         static void *imagingHelper(void *context);
         void *imagingThreadEntry();
         void streamVideo();
         void getExposure();
         void exposureSetRequest(ImageState request);
-
-        // Get time until next image is due
-        double calcTimeLeft();
-        // Get image buffer from camera
         int grabImage();
-        // Setup basic CCD parameters on connection
-        bool setupParams();
-        // Enable/disable cooler
-        void setCoolerEnabled(bool enable);
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Cooling
+        /////////////////////////////////////////////////////////////////////////////
         // Set Cooler Mode
         void setCoolerMode(uint8_t mode);
-        // Check if the camera is QHY5PII-C model
-        bool isQHY5PIIC();
-        // Call when max filter count is known
-        bool updateFilterProperties();
-
+        // Enable/disable cooler
+        void setCoolerEnabled(bool enable);
         // Temperature update
         void updateTemperature();
         static void updateTemperatureHelper(void *);
 
-        char name[MAXINDIDEVICE];
-        char camid[MAXINDIDEVICE];
+        /////////////////////////////////////////////////////////////////////////////
+        /// Misc
+        /////////////////////////////////////////////////////////////////////////////
+        double calcTimeLeft();
+        // Setup basic CCD parameters on connection
+        bool setupParams();
+        // Check if the camera is QHY5PII-C model
+        bool isQHY5PIIC();
+        // Call when max filter count is known
+        bool updateFilterProperties();
+        // Decode GPS Header
+        void decodeGPSHeader();
+        // Convert from Julian Seconds to Julian Date.
+        // uus is internal clock in 0.1us unit.
+        double JStoJD(uint32_t JS, uint32_t uus);
 
-        // CCD extra capabilities
+        /////////////////////////////////////////////////////////////////////////////
+        /// Camera Capabilities
+        /////////////////////////////////////////////////////////////////////////////
         bool HasUSBTraffic { false };
         bool HasUSBSpeed { false };
         bool HasGain { false };
@@ -172,10 +321,13 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasCoolerAutoMode { false };
         bool HasCoolerManualMode { false };
         bool HasReadMode { false };
+        bool HasGPS { false };
 
-        qhyccd_handle *m_CameraHandle {nullptr};
-        INDI::CCDChip::CCD_FRAME m_ImageFrameType;
-
+        /////////////////////////////////////////////////////////////////////////////
+        /// Private Variables
+        /////////////////////////////////////////////////////////////////////////////
+        char m_Name[MAXINDIDEVICE];
+        char m_CamID[MAXINDIDEVICE];
         // Requested target temperature
         double m_TemperatureRequest {0};
         // Requested target PWM
@@ -184,44 +336,35 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         int m_MaxFilterCount { -1 };
         // Temperature Timer
         int m_TemperatureTimerID;
-
+        // Camera Handle
+        qhyccd_handle *m_CameraHandle {nullptr};
+        // Camera Image Frame Type
+        INDI::CCDChip::CCD_FRAME m_ImageFrameType;
         // Exposure progress
         double m_ExposureRequest;
         // Last exposure request in microseconds
         uint32_t m_LastExposureRequestuS;
         struct timeval ExpStart;
-
-        struct
-        {
-            uint32_t subX = 0;
-            uint32_t subY = 0;
-            uint32_t subW = 0;
-            uint32_t subH = 0;
-        } effectiveROI, overscanROI;
-
         // Gain
-        double GainRequest = 1e6;
-        double LastGainRequest = 1e6;
-
+        double m_GainRequest = 1e6;
+        double m_LastGainRequest = 1e6;
         // Filter Wheel Timeout
         uint16_t m_FilterCheckCounter = 0;
 
-        // Threading
-        // Imaging thread
-        ImageState threadRequest;
-        ImageState threadState;
-        pthread_t imagingThread;
+        /////////////////////////////////////////////////////////////////////////////
+        /// Threading
+        /////////////////////////////////////////////////////////////////////////////
+        ImageState m_ThreadRequest;
+        ImageState m_ThreadState;
+        pthread_t m_ImagingThread;
         pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
         pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
         void logQHYMessages(const std::string &message);
         std::function<void(const std::string &)> m_QHYLogCallback;
 
-        friend void ::ISGetProperties(const char *dev);
-        friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-        friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-        friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                                char *formats[], char *names[], int n);
-        friend void ::ISSnoopDevice(XMLEle *root);
+        /////////////////////////////////////////////////////////////////////////////
+        /// Static Helper Values
+        /////////////////////////////////////////////////////////////////////////////
+        static constexpr const char * GPS_TAB = "GPS";
 };

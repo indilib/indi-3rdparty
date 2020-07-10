@@ -1,10 +1,25 @@
+libasi (1.7) buster; urgency=medium
+
+  * ZWO EFW 1.5.0616 release:
+    V1.5.0615 2020.6.15
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 22 Jun 2020 21:27:41 +0300
+
+libasi (1.6) buster; urgency=medium
+
+  * ASICAM 1.15.0430 release:
+    V1, 15, 0430 2020.5.20
+
+ -- Wouter van Reeven <wouter@van.reeven.nl>  Mon, 25 May 2020 14:40:38 -0400
+
 libasi (1.5) buster; urgency=medium
 
   * ZWO EAF SDK 0.2.0218 release:
     V0, 2, 0218  2020.2.18
     fix some bugs
 
--- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 27 Apr 2020 01:09:38 +0300
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 27 Apr 2020 01:09:38 +0300
 
 libasi (1.4) buster; urgency=medium
 

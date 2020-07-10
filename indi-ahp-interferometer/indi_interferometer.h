@@ -26,11 +26,14 @@
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define BAUD_RATE 230400
-#define NUM_BASELINES (NUM_NODES*(NUM_NODES-1)/2)
-#define FRAME_SIZE (((NUM_NODES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
-#define FRAME_TIME (10.0*FRAME_SIZE/BAUD_RATE)
-
+#define STOP_BITS 1
+#define WORD_SIZE 8
+#define BAUD_SIZE (STOP_BITS+WORD_SIZE+1.0)
+#define BAUD_RATE (serialConnection->baud())
+#define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
+#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
+#define SAMPLE_RATE (pow(2, sample_size)*serialConnection->baud())
 class baseline : public INDI::Correlator
 {
 public:
@@ -51,20 +54,49 @@ public:
         for(int x = 0; x < NUM_BASELINES; x++)
             baselines[x]->~baseline();
 
-        free(countsN);
-        free(countsNP);
+        free(correlationsN);
 
-        free(nodeEnableS);
-        free(nodeEnableSP);
+        free(lineStatsN);
+        free(lineStatsNP);
 
-        free(nodePowerS);
-        free(nodePowerSP);
+        free(lineEnableS);
+        free(lineEnableSP);
 
-        free(nodeLocationN);
-        free(nodeLocationNP);
+        free(linePowerS);
+        free(linePowerSP);
+
+        free(lineDelayN);
+        free(lineDelayNP);
+
+        free(lineGPSN);
+        free(lineGPSNP);
+
+        free(lineTelescopeN);
+        free(lineTelescopeNP);
+
+        free(lineDomeN);
+        free(lineDomeNP);
+
+        free(snoopGPSN);
+        free(snoopGPSNP);
+
+        free(snoopTelescopeN);
+        free(snoopTelescopeNP);
+
+        free(snoopTelescopeInfoN);
+        free(snoopTelescopeInfoNP);
+
+        free(snoopDomeN);
+        free(snoopDomeNP);
+
+        free(lineDevicesT);
+        free(lineDevicesTP);
 
         free(totalcounts);
         free(totalcorrelations);
+        free(alt);
+        free(az);
+        free(delay);
         free(baselines);
     }
 
@@ -96,37 +128,74 @@ protected:
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
-    Connection::TCP *tcpConnection;
+    Connection::Serial *serialConnection;
 
-    /// For TCP connection
+    // For Serial connection
     int PortFD = -1;
 
 private:
+
+    enum it_cmd {
+        CLEAR = 0,
+        SET_ACTIVE_LINE = 0x01,
+        SET_LEDS = 0x02,
+        SET_BAUDRATE = 0x03,
+        SET_DELAY = 0x04,
+        COMMIT = 0x0c,
+        ENABLE_CAPTURE = 0x0d,
+    };
+
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
 
-    INumber *countsN;
-    INumberVectorProperty *countsNP;
+    INumber *lineStatsN;
+    INumberVectorProperty *lineStatsNP;
 
-    ISwitch *nodeEnableS;
-    ISwitchVectorProperty *nodeEnableSP;
+    ISwitch *lineEnableS;
+    ISwitchVectorProperty *lineEnableSP;
 
-    ISwitch *nodePowerS;
-    ISwitchVectorProperty *nodePowerSP;
+    ISwitch *linePowerS;
+    ISwitchVectorProperty *linePowerSP;
 
-    INumber *nodeLocationN;
-    INumberVectorProperty *nodeLocationNP;
+    INumber *lineDelayN;
+    INumberVectorProperty *lineDelayNP;
+
+    INumber *lineGPSN;
+    INumberVectorProperty *lineGPSNP;
+
+    INumber *lineTelescopeN;
+    INumberVectorProperty *lineTelescopeNP;
+
+    INumber *lineDomeN;
+    INumberVectorProperty *lineDomeNP;
+
+    INumber *snoopGPSN;
+    INumberVectorProperty *snoopGPSNP;
+
+    INumber *snoopTelescopeN;
+    INumberVectorProperty *snoopTelescopeNP;
+
+    INumber *snoopTelescopeInfoN;
+    INumberVectorProperty *snoopTelescopeInfoNP;
+
+    INumber *snoopDomeN;
+    INumberVectorProperty *snoopDomeNP;
+
+    IText *lineDevicesT;
+    ITextVectorProperty *lineDevicesTP;
 
     double *totalcounts;
     double *totalcorrelations;
+    double  *alt;
+    double *az;
+    double *delay;
     baseline** baselines;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
-    unsigned int power_status;
+    unsigned int clock_frequency;
 
-    double Lat;
     double timeleft;
     double wavelength;
     void Callback();
@@ -134,12 +203,16 @@ private:
     // Utility functions
     float CalcTimeLeft();
     void  setupParams();
-    void ActiveLine(int line, bool on);
+    bool SendChar(char);
+    bool SendCommand(it_cmd cmd, unsigned char value = 0);
+    void ActiveLine(int, bool, bool);
+    void EnableCapture(bool start);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
+    bool threadsRunning;
 
-    int NUM_NODES;
+    int NUM_LINES;
     int DELAY_LINES;
     int SAMPLE_SIZE;
 };

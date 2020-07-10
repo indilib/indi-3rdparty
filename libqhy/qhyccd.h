@@ -34,6 +34,9 @@ EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
 
+EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time);
+
+
 EXPORTC const char* STDCALL GetTimeStamp();
 
 /** \fn uint32_t InitQHYCCDResource()
@@ -742,9 +745,9 @@ EXPORTC uint32_t STDCALL GetQHYCCDReadMode(qhyccd_handle *h,uint32_t* modeNumber
 EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenParam(
   QHYCamMinMaxStepValue *p,
   CONTROL_ID controlId);
-
+/*
 EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenReadMode(QHYCamReadModeInfo *p);
-
+*/
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstMode(qhyccd_handle *h,bool i);
 EXPORTC uint32_t STDCALL SetQHYCCDBurstModeStartEnd(qhyccd_handle *h,unsigned short start,unsigned short end);
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstCountFun(qhyccd_handle *h,bool i);
@@ -784,7 +787,7 @@ EXPORTC void STDCALL QHYCCDQuit();
 EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
 
-#if PCIE_MODE_SUPPORT
+#if 0//PCIE_MODE_TEST
 
 #include "riffa.h"
 

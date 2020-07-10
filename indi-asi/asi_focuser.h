@@ -29,13 +29,12 @@
 class ASIEAF : public INDI::Focuser
 {
     public:
-        ASIEAF(int id, const char * name, const int maxSteps);
+        ASIEAF(int id, const int maxSteps);
         virtual ~ASIEAF() override = default;
 
         const char * getDefaultName() override;
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
-        //virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
 
         char m_Name[MAXINDINAME];
@@ -98,9 +97,8 @@ class ASIEAF : public INDI::Focuser
         bool isMoving();
         // Read backlash
         bool readBacklash();
-
+        // Goto absolute position.
         bool gotoAbsolute(uint32_t position);
-        //bool setBacklash(uint32_t ticks);
 
         double targetPos { 0 }, lastPos { 0 }, lastTemperature { 0 };
 
@@ -119,15 +117,6 @@ class ASIEAF : public INDI::Focuser
 
         IText VersionInfoS[1] = {};
         ITextVectorProperty VersionInfoSP;
-
-        // Enable/Disable backlash
-        //        ISwitch BacklashCompensationS[2];
-        //        ISwitchVectorProperty FocuserBacklashSP;
-        //        enum { BACKLASH_ENABLED, BACKLASH_DISABLED };
-
-        //        // Backlash Value
-        //        INumber BacklashN[1];
-        //        INumberVectorProperty BacklashNP;
 
         const uint8_t m_ID;
         const int m_MaxSteps;

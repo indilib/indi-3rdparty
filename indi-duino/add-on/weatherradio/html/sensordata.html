@@ -17,8 +17,17 @@
     <script src="js/apexcharts.min.js"></script>
   </head>
   <body onload=initSensors()>
-      <h1 style="text-align: center; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Sensor data</h1>
+    <div class="navigation">
+        <a href="./weatherradio.html">Home</a>  | Sensor Data | <a href="./webcam.html">Webcam</a>
+    </div>
     <div class="container-fluid">
+      <div class="row">
+        <div class="col-sm-12" align="center">
+	  <div style="font-weight: bold; font-size: xx-large; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">
+	    Sensor data
+	  </div>
+        </div>
+      </div> <!-- Last update row end -->
       <div class="row">
         <div class="col-sm-12" align="center">
           <div class="toolbar">
@@ -26,7 +35,6 @@
             <button id="timeline_1d">1d</button>
             <button id="timeline_7d">7d</button>
             <button id="timeline_30d">30d</button>
-            <a href="./weatherradio.html" style="padding: 0px 30px">Weather Data</a>
           </div>
         </div>
       </div> <!-- button row end -->

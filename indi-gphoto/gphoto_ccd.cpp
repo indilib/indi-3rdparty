@@ -464,8 +464,10 @@ void GPhotoCCD::ISGetProperties(const char * dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
+    char configPort[MAXINDINAME] = {0};
+    if (IUGetConfigText(getDeviceName(), PortTP.name, mPortT[0].name, configPort, MAXINDINAME) == 0 && configPort[0])
+        IUSaveText(&mPortT[0], configPort);
     defineText(&PortTP);
-    loadConfig(true, "DEVICE_PORT");
 
     if (isConnected())
         return;
@@ -590,9 +592,17 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
     {
         if (strcmp(name, PortTP.name) == 0)
         {
+            const char *previousPort = mPortT[0].text;
             PortTP.s = IPS_OK;
             IUUpdateText(&PortTP, texts, names, n);
             IDSetText(&PortTP, nullptr);
+
+            // Port changes requires a driver restart.
+            if (!previousPort || strcmp(previousPort, PortTP.tp[0].text))
+            {
+                saveConfig(true, PortTP.name);
+                LOG_INFO("Please restart the driver for this change to have effect.");
+            }
             return true;
         }
         else if (strcmp(name, UploadFileTP.name) == 0)
@@ -1469,8 +1479,7 @@ bool GPhotoCCD::grabImage()
         // If subframing is requested
         // If either axis is less than the image resolution
         // then we subframe, given the OTHER axis is within range as well.
-        if ( (subW < w && subH <= h) ||
-                (subH < h && subW <= w))
+        if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
         {
             uint16_t subX = PrimaryCCD.getSubX();
             uint16_t subY = PrimaryCCD.getSubY();
@@ -1791,7 +1800,7 @@ void GPhotoCCD::HideExtendedOptions(void)
     while (CamOptions.begin() != CamOptions.end())
     {
         cam_opt * opt = (*CamOptions.begin()).second;
-        IDDelete(getDeviceName(), (*CamOptions.begin()).first.c_str(), nullptr);
+        deleteProperty((*CamOptions.begin()).first.c_str());
 
         switch (opt->widget->type)
         {
@@ -2153,7 +2162,8 @@ bool GPhotoCCD::startLivePreview()
 bool GPhotoCCD::saveConfigItems(FILE * fp)
 {
     // First save Device Port
-    IUSaveConfigText(fp, &PortTP);
+    if (PortTP.tp[0].text)
+        IUSaveConfigText(fp, &PortTP);
 
     // Second save the CCD Info property
     IUSaveConfigNumber(fp, PrimaryCCD.getCCDInfo());

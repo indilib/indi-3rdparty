@@ -255,14 +255,21 @@ bool ToupBase::initProperties()
     IUFillNumberVector(&ControlNP, ControlN, 8, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
-
     ///////////////////////////////////////////////////////////////////////////////////
-    // Black Level
+    // Black Balance RGB
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&BlackBalanceN[TC_BLACK_R], "TC_BLACK_R", "Red", "%.f", 0, 255, 10, 0);
     IUFillNumber(&BlackBalanceN[TC_BLACK_G], "TC_BLACK_G", "Green", "%.f", 0, 255, 10, 0);
     IUFillNumber(&BlackBalanceN[TC_BLACK_B], "TC_BLACK_B", "Blue", "%.f", 0, 255, 10, 0);
-    IUFillNumberVector(&BlackBalanceNP, BlackBalanceN, 3, getDeviceName(), "CCD_BLACK_LEVEL", "Black Level", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&BlackBalanceNP, BlackBalanceN, 3, getDeviceName(), "CCD_BLACK_BALANCE", "Black Balance", LEVEL_TAB, IP_RW,
+                       60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    // Black Level RAW
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&BlackLevelN[TC_BLACK_LEVEL], "TC_BLACK_LEVEL", "Gray", "%.f", 0, 255, 10, 0);
+    IUFillNumberVector(&BlackLevelNP, BlackLevelN, 1, getDeviceName(), "CCD_BLACK_LEVEL", "Black Level", LEVEL_TAB, IP_RW,
+                       60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y levels
@@ -275,7 +282,8 @@ bool ToupBase::initProperties()
     IUFillNumber(&LevelRangeN[TC_HI_B], "TC_HI_B", "High Blue", "%.f", 0, 255, 10, 0);
     IUFillNumber(&LevelRangeN[TC_LO_Y], "TC_LO_Y", "Low Gray", "%.f", 0, 255, 10, 0);
     IUFillNumber(&LevelRangeN[TC_HI_Y], "TC_HI_Y", "High Gray", "%.f", 0, 255, 10, 0);
-    IUFillNumberVector(&LevelRangeNP, LevelRangeN, 8, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&LevelRangeNP, LevelRangeN, 8, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", LEVEL_TAB, IP_RW, 60,
+                       IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Controls
@@ -316,19 +324,39 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_TT], "TC_AUTO_WB_TT", "Temp/Tint", ISS_ON);
     IUFillSwitch(&WBAutoS[TC_AUTO_WB_RGB], "TC_AUTO_WB_RGB", "RGB", ISS_OFF);
-    IUFillSwitchVector(&WBAutoSP, WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&WBAutoSP, WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    /// Gain Conversion settings
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&GainConversionN[TC_HCG_THRESHOLD], "HCG Threshold", "HCG Threshold", "%.f", 0, 1000, 100, 900);
+    IUFillNumber(&GainConversionN[TC_HCG_LCG_RATIO], "HCG/LCG gain ratio", "HCG/LCG gain ratio", "%.1f", 1, 10, 0.5, 4.5);
+    IUFillNumberVector(&GainConversionNP, GainConversionN, 2, getDeviceName(), "TC_HGC_SET", "Dual Gain", CONTROL_TAB, 
+                       IP_RW, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    /// Gain Conversion Mode
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&GainConversionS[GAIN_LOW], "GAIN_LOW", "Low", ISS_OFF);
+    IUFillSwitch(&GainConversionS[GAIN_HIGH], "GAIN_HIGH", "High", ISS_OFF);
+    IUFillSwitch(&GainConversionS[GAIN_HDR], "GAIN_HDR", "HDR", ISS_OFF);
+    IUFillSwitchVector(&GainConversionSP, GainConversionS, 3, getDeviceName(), "TC_HCG_CONTROL", "Dual Gain Mode", CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Fan Control
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&FanControlS[TC_FAN_ON], "TC_FAN_ON", "On", ISS_ON);
     IUFillSwitch(&FanControlS[TC_FAN_OFF], "TC_FAN_OFF", "Off", ISS_OFF);
-    IUFillSwitchVector(&FanControlSP, FanControlS, 2, getDeviceName(), "TC_FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&FanControlSP, FanControlS, 2, getDeviceName(), "TC_FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Fan Speed
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitchVector(&FanSpeedSP, FanSpeedS, 0, getDeviceName(), "TC_FAN_Speed", "Fan Speed", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&FanSpeedSP, FanSpeedS, 0, getDeviceName(), "TC_FAN_Speed", "Fan Speed", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Video Format
@@ -404,9 +432,17 @@ bool ToupBase::updateProperties()
         defineSwitch(&VideoFormatSP);
         defineSwitch(&ResolutionSP);
 
+        if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+        {
+            m_hasDualGain = true;
+            defineNumber(&GainConversionNP);
+            defineSwitch(&GainConversionSP);
+        }
+
         // Levels
         defineNumber(&LevelRangeNP);
         defineNumber(&BlackBalanceNP);
+        defineNumber(&BlackLevelNP);
 
         // Balance
         if (m_MonoCamera == false)
@@ -440,8 +476,15 @@ bool ToupBase::updateProperties()
         deleteProperty(VideoFormatSP.name);
         deleteProperty(ResolutionSP.name);
 
+        if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+        {
+            deleteProperty(GainConversionNP.name);
+            deleteProperty(GainConversionSP.name);
+        }
+
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
+        deleteProperty(BlackLevelNP.name);
 
         if (m_MonoCamera == false)
         {
@@ -620,7 +663,8 @@ void ToupBase::setupParams()
         m_CameraPixelFormat = INDI_MONO;
         m_Channels = 1;
 
-        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel, VideoFormatS[TC_VIDEO_MONO_8].s == ISS_ON ? "Mono 8-bit" : "Mono 16-bit");
+        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel,
+                   VideoFormatS[TC_VIDEO_MONO_8].s == ISS_ON ? "Mono 8-bit" : "Mono 16-bit");
     }
     // Color Camera
     else
@@ -676,7 +720,8 @@ void ToupBase::setupParams()
                 SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
         }
 
-        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel, VideoFormatS[TC_VIDEO_COLOR_RGB].s == ISS_ON ? "RGB" : "RAW");
+        LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel,
+                   VideoFormatS[TC_VIDEO_COLOR_RGB].s == ISS_ON ? "RGB" : "RAW");
     }
 
     PrimaryCCD.setNAxis(m_Channels == 1 ? 2 : 3);
@@ -728,7 +773,8 @@ void ToupBase::setupParams()
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
     ResolutionS[currentResolutionIndex].s = ISS_ON;
 
-    SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
+    SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
+                 m_Instance->model->ypixsz);
 
     m_CanSnap = m_Instance->model->still > 0;
     LOGF_DEBUG("Camera snap support: %s", m_CanSnap ? "True" : "False");
@@ -754,17 +800,44 @@ void ToupBase::setupParams()
     // Get CCD Controls values
     uint16_t nMin = 0, nMax = 0, nDef = 0;
 
+    // Dual Conversion Gain Mode
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+    {
+        m_hasDualGain = true;
+    }
+    int highConversionGain = 0;
+    rc = FP(get_Option(m_CameraHandle, CP(OPTION_CG), &highConversionGain));
+    LOGF_DEBUG("Dual Conversion Gain %d rc: %d", highConversionGain, rc);
+    GainConversionS[highConversionGain].s = ISS_ON;
+
     // Gain
     rc = FP(get_ExpoAGainRange(m_CameraHandle, &nMin, &nMax, &nDef));
     LOGF_DEBUG("Exposure Auto Gain Control. Min: %u Max: %u Default: %u", nMin, nMax, nDef);
     ControlN[TC_GAIN].min = nMin;
-    ControlN[TC_GAIN].max = nMax;
-    ControlN[TC_GAIN].step = (nMax - nMin) / 20.0;
+    m_MaxGainNative = nMax;
+    if (dualGainEnabled())
+    {
+        m_MaxGainHCG = m_MaxGainNative * GainConversionN[TC_HCG_LCG_RATIO].value;
+        ControlN[TC_GAIN].max = m_MaxGainHCG;
+        LOGF_INFO("Maximum gain considering dual gain is %d.", m_MaxGainHCG);
+    }
+    else
+    {
+        m_MaxGainHCG = m_MaxGainNative;
+        ControlN[TC_GAIN].max = m_MaxGainNative;
+    }
+    ControlN[TC_GAIN].step = (ControlN[TC_GAIN].max - nMin) / 20.0;
     ControlN[TC_GAIN].value = nDef;
+    m_NativeGain = nDef;
+
+    // Dual Conversion Gain settings
+    GainConversionN[TC_HCG_THRESHOLD].min = nMin;
+    GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
+    GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
-    LOGF_DEBUG("Contrast Control. Min: %u Max: %u Default: %u", nMin, nMax, nDef);
+    LOGF_DEBUG("Contrast Control: %d", nVal);
     ControlN[TC_CONTRAST].value = nVal;
 
     // Hue
@@ -791,15 +864,10 @@ void ToupBase::setupParams()
     rc = FP(get_Speed(m_CameraHandle, &nDef));
     LOGF_DEBUG("Speed Control: %d", nDef);
 
-    // JM 2019-11-16: Reduce speed on ARM for high resolution
+    // JM 2020-05-06: Reduce speed on ARM for all resolutions
 #if defined(__arm__) || defined (__aarch64__)
-    if (w[currentResolutionIndex] > 1000)
-    {
-        ControlN[TC_SPEED].value = nDef - 1;
-        FP(put_Speed(m_CameraHandle, nDef - 1));
-    }
-    else
-        ControlN[TC_SPEED].value = nDef;
+    ControlN[TC_SPEED].value = 0;
+    FP(put_Speed(m_CameraHandle, 0));
 #else
     ControlN[TC_SPEED].value = nDef;
 #endif
@@ -861,6 +929,15 @@ void ToupBase::setupParams()
         BlackBalanceN[TC_BLACK_G].value = aSub[1];
         BlackBalanceN[TC_BLACK_B].value = aSub[2];
     }
+
+    // Get Black Level
+    // Getting the black level option from camera yields the defaut setting
+    // Therefore, black level is a saved option
+    // Set range of black level based on max bit depth RAW
+    int bLevelStep = 1 << (m_MaxBitDepth - 8);
+    BlackLevelN[TC_BLACK_LEVEL].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    BlackLevelN[TC_BLACK_LEVEL].step = bLevelStep;
+    
 
     // Allocate memory
     allocateFrameBuffer();
@@ -969,6 +1046,13 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 switch (i)
                 {
                     case TC_GAIN:
+                        // If gain exceeds high conversion gain threshold
+                        // then switch on High Gain Conversion mode.
+                        // If Gain Conversion is set to HDR, then don't do anything.
+                        if (dualGainEnabled())
+                        {
+                            value = setDualGainMode(value);
+                        }
                         FP(put_ExpoAGain(m_CameraHandle, value));
                         break;
 
@@ -1013,6 +1097,37 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             IDSetNumber(&ControlNP, nullptr);
             return true;
         }
+        
+        if (!strcmp(name, GainConversionNP.name))
+        {
+            double oldValues[2] = {0};
+            oldValues[TC_HCG_THRESHOLD] = GainConversionN[TC_HCG_THRESHOLD].value;
+            oldValues[TC_HCG_LCG_RATIO] = GainConversionN[TC_HCG_LCG_RATIO].value;
+            IUUpdateNumber(&GainConversionNP, values, names, n);
+            
+            double value = GainConversionN[TC_HCG_THRESHOLD].value;
+            if (fabs(oldValues[TC_HCG_THRESHOLD] - value) > 0.0001)
+            {
+                if (dualGainEnabled())
+                {
+                    int nativeGain = static_cast<int>(setDualGainMode(ControlN[TC_GAIN].value));
+                    FP(put_ExpoAGain(m_CameraHandle, nativeGain));
+                    LOGF_INFO("High Conversion Gain is set once gain exceeds %f", value);
+                }
+                else
+                {
+                    //do nothing
+                    LOG_WARN("Dual gain is disabled in HDR mode or when LCG/HCG = 1.0.");
+                }
+            }
+            value = GainConversionN[TC_HCG_LCG_RATIO].value;
+            if (fabs(oldValues[TC_HCG_LCG_RATIO] - value) > 0.0001)
+                setDualGainRange();
+            
+            GainConversionNP.s = IPS_OK;
+            IDSetNumber(&GainConversionNP, nullptr);
+            return true;
+        }
 
         //////////////////////////////////////////////////////////////////////
         /// Level Ranges
@@ -1052,7 +1167,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// Black Balance
+        /// Black Balance RGB
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, BlackBalanceNP.name))
         {
@@ -1075,6 +1190,35 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 BlackBalanceNP.s = IPS_OK;
 
             IDSetNumber(&BlackBalanceNP, nullptr);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Black Level RAW
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, BlackLevelNP.name))
+        {
+            IUUpdateNumber(&BlackLevelNP, values, names, n);
+            int bLevel =
+            {
+                static_cast<uint16_t>(BlackLevelN[TC_BLACK_LEVEL].value),
+
+            };
+
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), BlackLevelN[TC_BLACK_LEVEL].value));
+            if (rc < 0)
+            {
+                BlackLevelNP.s = IPS_ALERT;
+                LOGF_ERROR("Failed to set Black Level. %s", errorCodes[rc].c_str());
+
+            }
+            else
+            {
+                BlackLevelNP.s = IPS_OK;
+                LOGF_DEBUG("Black level set to %d", bLevel);
+            }
+
+            IDSetNumber(&BlackLevelNP, nullptr);
             return true;
         }
 
@@ -1135,7 +1279,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
-bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
@@ -1376,6 +1520,23 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
 
         //////////////////////////////////////////////////////////////////////
+        /// Dual Conversion Gain
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, GainConversionSP.name))
+        {
+            bool oldDualGainEnabled = dualGainEnabled();
+            IUUpdateSwitch(&GainConversionSP, states, names, n);
+            GainConversionSP.s = IPS_OK;
+            FP(put_Option(m_CameraHandle, CP(OPTION_CG), IUFindOnSwitchIndex(&GainConversionSP)));
+            //Switching to and from HDR mode has impact on range of gain
+            if (dualGainEnabled() != oldDualGainEnabled)
+                setDualGainRange();
+            
+            IDSetSwitch(&GainConversionSP, nullptr);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
         /// Auto Controls
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, AutoControlSP.name))
@@ -1504,6 +1665,73 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool ToupBase::dualGainEnabled()
+{
+    return m_hasDualGain && 
+            (GainConversionN[TC_HCG_LCG_RATIO].value > 1.0001) && 
+            (GainConversionS[GAIN_HDR].s == ISS_OFF);
+}
+
+double ToupBase::setDualGainMode(double gain)
+{
+    if (gain >= GainConversionN[TC_HCG_THRESHOLD].value &&
+            GainConversionS[GAIN_HIGH].s == ISS_OFF)
+    {
+        FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_HIGH));
+        LOGF_INFO("Gain %f exceeded HCG threshold. Switching to High Conversion Gain.", gain);
+        IUResetSwitch(&GainConversionSP);
+        GainConversionSP.s = IPS_OK;
+        GainConversionS[GAIN_HIGH].s = ISS_ON;
+        IDSetSwitch(&GainConversionSP, nullptr);
+    }
+    else if (gain < GainConversionN[TC_HCG_THRESHOLD].value &&
+             GainConversionS[GAIN_LOW].s == ISS_OFF)
+    {
+        FP(put_Option(m_CameraHandle, CP(OPTION_CG), GAIN_LOW));
+        LOGF_INFO("Gain %f is below HCG threshold. Switching to Low Conversion Gain.", gain);
+        IUResetSwitch(&GainConversionSP);
+        GainConversionSP.s = IPS_OK;
+        GainConversionS[GAIN_LOW].s = ISS_ON;
+        IDSetSwitch(&GainConversionSP, nullptr);
+    }
+
+    // If Gain Conversion High correct it for the additional gain factor
+    if (GainConversionS[GAIN_HIGH].s == ISS_ON)
+    {
+        gain = gain / GainConversionN[TC_HCG_LCG_RATIO].value;
+        LOGF_INFO("Native Gain is set to %f in HCG mode.", gain);
+    }
+    m_NativeGain = gain;
+    return gain;
+}
+
+void ToupBase::setDualGainRange()
+{
+    if (dualGainEnabled())
+    {
+        m_MaxGainHCG = m_MaxGainNative * GainConversionN[TC_HCG_LCG_RATIO].value;
+        ControlN[TC_GAIN].max = m_MaxGainHCG;
+        //When in HCG, rescale displayed gain to new ratio
+        if (GainConversionS[GAIN_HIGH].s == ISS_ON)
+        {
+            ControlN[TC_GAIN].value = m_NativeGain * GainConversionN[TC_HCG_LCG_RATIO].value;
+        }
+        LOGF_INFO("Dual Gain maximum  is updated to %d", m_MaxGainHCG);
+     }
+    else
+    {
+        m_MaxGainHCG = m_MaxGainNative;
+        ControlN[TC_GAIN].max = m_MaxGainHCG;
+        ControlN[TC_GAIN].value = m_NativeGain;
+        LOGF_INFO("HDR mode native gain %d", m_NativeGain);
+        LOG_WARN("Dual gain is disabled in HDR mode or when LCG/HCG = 1.0.");
+    }
+    ControlN[TC_GAIN].step = (ControlN[TC_GAIN].max - ControlN[TC_GAIN].min) / 20.0;
+    
+    //Update controls as gain range may have been changed.
+    IUUpdateMinMax(&ControlNP);
 }
 
 bool ToupBase::StartStreaming()
@@ -1987,7 +2215,7 @@ void ToupBase::refreshControls()
     IDSetNumber(&ControlNP, nullptr);
 }
 
-void ToupBase::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void ToupBase::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
@@ -2000,13 +2228,16 @@ void ToupBase::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     }
 }
 
-bool ToupBase::saveConfigItems(FILE *fp)
+bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
     if (HasCooler())
         IUSaveConfigSwitch(fp, &CoolerSP);
     IUSaveConfigNumber(fp, &ControlNP);
+    
+    IUSaveConfigNumber(fp, &GainConversionNP);
+    IUSaveConfigNumber(fp, &BlackLevelNP);
 
     if (m_MonoCamera == false)
         IUSaveConfigSwitch(fp, &WBAutoSP);
@@ -2179,7 +2410,7 @@ void ToupBase::eventPullCallBack(unsigned event)
                 }
                 else if (InExposure)
                 {
-                    InExposure  = false;
+                    InExposure = false;
                     PrimaryCCD.setExposureLeft(0);
                     uint8_t *buffer = PrimaryCCD.getFrameBuffer();
 
@@ -2222,8 +2453,20 @@ void ToupBase::eventPullCallBack(unsigned event)
                             free(buffer);
                         }
 
-                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
+                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                                   info.timestamp);
                         ExposureComplete(&PrimaryCCD);
+                    }
+                }
+                else
+                {
+                    // Fix proposed by Seven Watt
+                    // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    HRESULT rc = FP(Flush(m_CameraHandle));
+                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                    if (rc < 0)
+                    {
+                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
                     }
                 }
             }
@@ -2245,7 +2488,8 @@ void ToupBase::eventPullCallBack(unsigned event)
                     PrimaryCCD.setExposureLeft(0);
                     InExposure  = false;
                     ExposureComplete(&PrimaryCCD);
-                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
+                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                               info.timestamp);
                 }
             }
             break;
