@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 
 #include "indistandardproperty.h"
+#include "indilogger.h"
 #include "connectionplugins/connectionserial.h"
 #include "indicom.h"
 
@@ -46,6 +47,8 @@ const char *CALIBRATION_TAB = "Calibration";
 std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 
 #define MAX_WEATHERBUFFER 512
+
+#define ARDUINO_SETTLING_TIME 5
 
 #define WIFI_DEVICE "WiFi"
 
@@ -367,15 +370,21 @@ bool WeatherRadio::updateProperties()
     return result;
 }
 
+
+
 /**************************************************************************************
 ** Retrieve basic data after a successful connect.
 ***************************************************************************************/
-void WeatherRadio::getBasicData()
+IPState WeatherRadio::getBasicData()
 {
+
     FirmwareInfoT[0].text = new char[64];
     FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
     if (FirmwareInfoTP.s != IPS_OK)
+    {
         LOG_ERROR("Failed to get firmware from device.");
+        return FirmwareInfoTP.s;
+    }
     else
         LOGF_INFO("Firmware version: %s", FirmwareInfoT[0].text);
 
@@ -383,7 +392,12 @@ void WeatherRadio::getBasicData()
     IDSetText(&FirmwareInfoTP, nullptr);
 
     FirmwareConfig config;
-    readFirmwareConfig(&config);
+    IPState result = readFirmwareConfig(&config);
+    if (result != IPS_OK)
+    {
+        LOG_ERROR("Failed to get firmware configuration from device.");
+        return result;
+    }
 
     FirmwareConfigT = new IText[config.size()];
     std::map<std::string, std::string>::iterator it;
@@ -404,6 +418,8 @@ void WeatherRadio::getBasicData()
 
     if (hasWiFi)
         defineSwitch(&wifiConnectionSP);
+
+    return IPS_OK;
 }
 
 /**************************************************************************************
@@ -908,8 +924,15 @@ bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 ***************************************************************************************/
 bool WeatherRadio::Handshake()
 {
-    IPState result = updateWeather();
+    // Sleep for 5 seconds so that the serial connection of the Arduino has settled
+    // This seems to be necessary for some Arduinos, otherwise they run into a timeout
+    struct timespec request_delay = {ARDUINO_SETTLING_TIME, 0L};
+    DEBUGFDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Waiting for %d seconds the communication to Arduino to settle.", ARDUINO_SETTLING_TIME);
 
+    nanosleep(&request_delay, nullptr);
+
+    // read the weather parameters for the first time so that #updateProperties() knows all sensors
+    IPState result = updateWeather();
     return result == IPS_OK;
 }
 
