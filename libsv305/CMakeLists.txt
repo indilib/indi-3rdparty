@@ -67,11 +67,13 @@ install(FILES 90-svbonyusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 #install(CODE "execute_process(COMMAND \"ldconfig\")")
 
 
-# Temporary, for testing
+# temporary, for testing
 SET(CPACK_PACKAGE_NAME "libsv305")
 SET(CPACK_PACKAGE_VERSION_MAJOR "1")
 SET(CPACK_PACKAGE_VERSION_MINOR "6")
-SET(CPACK_PACKAGE_VERSION_PATCH "1")
+# real package is 1.6.1.0-day
+# I use may own numbering
+SET(CPACK_PACKAGE_VERSION_PATCH "2")
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Blaise-Florentin Collin") #required
 INCLUDE(CPack)
