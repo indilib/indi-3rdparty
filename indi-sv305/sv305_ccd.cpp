@@ -80,6 +80,7 @@ void ISInit()
 
         IDLog("Camera(s) found\n");
 
+        // create Sv305CCD object for each camera
         for(int i = 0; i < cameraCount; i++)
         {
             cameras[i] = new Sv305CCD(i);
@@ -274,7 +275,7 @@ bool Sv305CCD::updateProperties()
     if (isConnected())
     {
 
-        // controls
+        // define controls
         defineNumber(&ControlsNP[CCD_GAIN_N]);
         defineNumber(&ControlsNP[CCD_CONTRAST_N]);
         defineNumber(&ControlsNP[CCD_SHARPNESS_N]);
@@ -286,7 +287,7 @@ bool Sv305CCD::updateProperties()
         defineNumber(&ControlsNP[CCD_FSPEED_N]);
         defineNumber(&ControlsNP[CCD_DOFFSET_N]);
 
-        // frame format
+        // define frame format
         defineSwitch(&FormatSP);
 
         // Let's get parameters now from CCD
@@ -298,7 +299,7 @@ bool Sv305CCD::updateProperties()
     {
         rmTimer(timerID);
 
-        // controls
+        // delete controls
         deleteProperty(ControlsNP[CCD_GAIN_N].name);
         deleteProperty(ControlsNP[CCD_CONTRAST_N].name);
         deleteProperty(ControlsNP[CCD_SHARPNESS_N].name);
@@ -310,7 +311,7 @@ bool Sv305CCD::updateProperties()
         deleteProperty(ControlsNP[CCD_FSPEED_N].name);
         deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
 
-        // frame format
+        // delete frame format
         deleteProperty(FormatSP.name);
     }
 
@@ -328,6 +329,7 @@ bool Sv305CCD::Connect()
 
     pthread_mutex_lock(&cameraID_mutex);
 
+    // open camera
     status = SVBOpenCamera(cameraID);
     if (status != SVB_SUCCESS)
     {
@@ -336,6 +338,7 @@ bool Sv305CCD::Connect()
         return false;
     }
 
+    // get camera properties
     status = SVBGetCameraProperty(cameraID, &cameraProperty);
     if (status != SVB_SUCCESS)
     {
@@ -344,6 +347,16 @@ bool Sv305CCD::Connect()
         return false;
     }
 
+    // get camera pixel size
+    status = SVBGetSensorPixelSize(cameraID, &pixelSize);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get camera pixel size failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // get num of controls
     status = SVBGetNumOfControls(cameraID, &controlsNum);
     if (status != SVB_SUCCESS)
     {
@@ -352,8 +365,10 @@ bool Sv305CCD::Connect()
         return false;
     }
 
+    // read controls and feed UI
     for(int i=0; i<controlsNum; i++)
     {
+         // read control
          SVB_CONTROL_CAPS caps;
          status = SVBGetControlCaps(cameraID, i, &caps);
          if(status != SVB_SUCCESS)
@@ -484,7 +499,7 @@ bool Sv305CCD::Connect()
          }
     }
 
-    // frame format
+    // set frame format and feed UI
 
     // **********
     // SDK BUG ?
@@ -528,7 +543,7 @@ bool Sv305CCD::Connect()
 
     pthread_mutex_unlock(&cameraID_mutex);
 
-    // streaming thread
+    // create streaming thread
     terminateThread = false;
     pthread_create(&primary_thread, nullptr, &streamVideoHelper, this);
 
@@ -579,11 +594,10 @@ bool Sv305CCD::setupParams()
     x_2       = cameraProperty.MaxWidth;
     y_2       = cameraProperty.MaxHeight;
 
-
-    // default RAW8
+    // default RAW12
     // pixel depth
     int bit_depth = 16;
-    SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, CAM_X_PIXEL, CAM_Y_PIXEL);
+    SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, pixelSize, pixelSize);
 
     // Let's calculate required buffer
     int nbuf;
@@ -1000,14 +1014,14 @@ void Sv305CCD::TimerHit()
 }
 
 
-//
+// helper : update camera control depending on control type
 bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n)
 {
     IUUpdateNumber(&ControlsNP[ControlType], values, names, n);
 
     pthread_mutex_unlock(&cameraID_mutex);
 
-    // set gain
+    // set control
     status = SVBSetControlValue(cameraID, SVB_Control , ControlsN[ControlType].value, SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
@@ -1021,6 +1035,7 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
     IDSetNumber(&ControlsNP[ControlType], nullptr);
     return true;
 }
+
 
 //
 bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -1145,7 +1160,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 default :
                     bit_depth = 16;
             }
-            SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, CAM_X_PIXEL, CAM_Y_PIXEL);
+            SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, pixelSize, pixelSize);
             int nbuf;
             nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
             PrimaryCCD.setFrameBufferSize(nbuf);
@@ -1211,7 +1226,7 @@ IPState Sv305CCD::GuideNorth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, PULSE_GUIDE_NORTH, ms);
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_NORTH, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide North failed\n");
@@ -1230,7 +1245,7 @@ IPState Sv305CCD::GuideSouth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, PULSE_GUIDE_SOUTH, ms);
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_SOUTH, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide South failed\n");
@@ -1249,7 +1264,7 @@ IPState Sv305CCD::GuideEast(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, PULSE_GUIDE_EAST, ms);
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_EAST, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide East failed\n");
@@ -1267,7 +1282,7 @@ IPState Sv305CCD::GuideWest(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, PULSE_GUIDE_WEST, ms);
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_WEST, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide West failed\n");

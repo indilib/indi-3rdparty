@@ -30,17 +30,6 @@
 
 #include "libsv305/SVBCameraSDK.h"
 
-///////////////////////////////////////////////////
-// DEFAULT SETTINGS
-//
-
-// picture
-#define CAM_BAYER_PATTERN	"GRBG"
-
-// sensor pixel size
-#define CAM_X_PIXEL	2.9
-#define CAM_Y_PIXEL	2.9
-
 
 using namespace std;
 
@@ -113,6 +102,8 @@ class Sv305CCD : public INDI::CCD
         // exposure limits
         double minExposure;
         double maxExposure;
+        // pixel size
+        float pixelSize;
 
         // hCamera mutex protection
         pthread_mutex_t cameraID_mutex;

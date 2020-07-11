@@ -62,3 +62,15 @@ Limitations
 	+ Image depth fixed to 16bits
 	+ WB, Anti Flicker, Auto Exposure disabled
 	+ Minimal exposure 0.01s
+
+
+--------------------------------------------
+
+TODO :
+
+- abort exposure
+- subframing
+- binning
+- stream
+- fix raw8 / raw12 switch bug
+- fix junk/partial frame
