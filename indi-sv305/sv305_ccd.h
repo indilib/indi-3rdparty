@@ -148,8 +148,8 @@ class Sv305CCD : public INDI::CCD
         // output frame format
         ISwitch FormatS[3];
         ISwitchVectorProperty FormatSP;
-        enum { FORMAT_RAW8, FORMAT_RAW12, FORMAT_RGB24 };
-        SVB_IMG_TYPE frameFormatMapping[3] = {SVB_IMG_RAW8, SVB_IMG_RAW12, SVB_IMG_RGB24};
+        enum { FORMAT_RAW12, FORMAT_RAW8};
+        SVB_IMG_TYPE frameFormatMapping[2] = {SVB_IMG_RAW12, SVB_IMG_RAW8};
         int frameFormat;
         const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
 
