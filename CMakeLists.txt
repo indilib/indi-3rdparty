@@ -110,13 +110,6 @@ option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 
-# Limit SVBONY to x86 architecture now
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
-else()
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" Off)
-endif()
-
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
 if (FFMPEG_FOUND)
