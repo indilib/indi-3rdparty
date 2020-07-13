@@ -69,8 +69,7 @@ Limitations
 TODO :
 
 - abort exposure
-- subframing
-- binning
 - stream
-- fix raw8 / raw12 switch bug
-- fix junk/partial frame
+- fix junk 1st frame
+- can't set gain anymore at startup
+- camera hangs sometime

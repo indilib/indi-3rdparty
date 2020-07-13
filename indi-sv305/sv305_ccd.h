@@ -110,6 +110,10 @@ class Sv305CCD : public INDI::CCD
 
         // image offsets and size
         int x_1, y_1, x_2, y_2;
+        // binning ?
+        int binning;
+        // bit per pixel
+        int bitDepth;
 
         // streaming
         bool streaming;
@@ -150,8 +154,11 @@ class Sv305CCD : public INDI::CCD
         float ExposureRequest;
         float CalcTimeLeft();
 
-        // setups
-        bool setupParams();
+        // drop a junk frame
+        void dropJunkFrame();
+
+        // update CCD Params
+        bool updateCCDParams();
 
         // save settings
         virtual bool saveConfigItems(FILE *fp) override;
