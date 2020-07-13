@@ -71,5 +71,4 @@ TODO :
 - abort exposure
 - stream
 - fix junk 1st frame
-- can't set gain anymore at startup
 - camera hangs sometime

@@ -519,11 +519,11 @@ bool Sv305CCD::Connect()
     status = SVBSetROIFormat(cameraID, x_1, y_1, x_2-x_1, y_2-y_1, 1);
     if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set ROI/BINNING mode failed\n");
+        LOG_ERROR("Error, camera set ROI failed\n");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera set ROI/BINNING mode\n");
+    LOG_INFO("Camera set ROI\n");
 
     // set camera soft trigger mode
     status = SVBSetCameraMode(cameraID, SVB_MODE_TRIG_SOFT);
@@ -698,36 +698,35 @@ bool Sv305CCD::AbortExposure()
 //
 bool Sv305CCD::StartStreaming()
 {
+    LOG_INFO("framing\n");
+
     // stream init
-    Streamer->setPixelFormat(INDI_BAYER_GRBG, 8 /*CAM_DEPTH*/);
-    Streamer->setSize(PrimaryCCD.getXRes() / 2, PrimaryCCD.getYRes() / 2);
+    Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
+    Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
 
     // streaming exposure time
     ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
     pthread_mutex_lock(&cameraID_mutex);
 
-    // TODO : streaming start
-
-/*
-    // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set exposure time (s -> us)
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(ExposureRequest * 1000000), SVB_FALSE);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, camera set exposure failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
-    // set exposure time (s -> us)
-    status = CameraSetExposureTime(hCamera, (double)(ExposureRequest * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set camera normal mode
+    status = SVBSetCameraMode(cameraID, SVB_MODE_NORMAL);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set exposure failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
     }
-*/
+    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&cameraID_mutex);
 
@@ -746,20 +745,19 @@ bool Sv305CCD::StartStreaming()
 //
 bool Sv305CCD::StopStreaming()
 {
+    LOG_INFO("stop framing\n");
+
     pthread_mutex_lock(&cameraID_mutex);
 
-    // TODO : streaming stop
-
-/*
-    // set camera soft trigger mode back
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set camera back to trigger mode
+    status = SVBSetCameraMode(cameraID, SVB_MODE_TRIG_SOFT);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-*/
+    LOG_INFO("Camera soft trigger mode\n");
 
     pthread_mutex_unlock(&cameraID_mutex);
 
@@ -804,47 +802,24 @@ void* Sv305CCD::streamVideo()
 
         pthread_mutex_unlock(&condMutex);
 
-        // TODO : stream
-
-/*
-        stImageInfo imgInfo;
-        HANDLE hRawBuf;
-        BYTE* pRawBuf;
-        BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
+        unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
 
         pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
-        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-        if(status == CAMERA_STATUS_SUCCESS)
+        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100000 );
+
+        pthread_mutex_unlock(&cameraID_mutex);
+
+        finish = std::chrono::high_resolution_clock::now();
+
+        if(binning)
         {
-            // get frame informations
-            pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
-
-            // copy full frame
-            memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
-
-            // release camera frame buffer
-            status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-            if(status != CAMERA_STATUS_SUCCESS)
-            {
-                LOG_ERROR("Error, camera release buffer failed\n");
-            }
-
-            pthread_mutex_unlock(&cameraID_mutex);
-
-            finish = std::chrono::high_resolution_clock::now();
-
-            uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
-            Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
-
-        }
-        else
-        {
-            pthread_mutex_unlock(&cameraID_mutex);
+            PrimaryCCD.binFrame();
         }
 
-*/
+        uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
+        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
 
         std::chrono::duration<double> elapsed = finish - start;
         if (elapsed.count() < ExposureRequest)
@@ -885,7 +860,8 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
     y_1 = y;
     y_2 = y_1 + h;
 
-    // update CCD parameters
+    // update streamer
+    //Streamer->setSize(w / PrimaryCCD.getBinX(), h / PrimaryCCD.getBinY());
 
     LOG_INFO("Subframe changed\n");
 
@@ -901,7 +877,11 @@ bool Sv305CCD::UpdateCCDBin(int hor, int ver)
     else
         binning = true;
 
+    //Streamer->setSize(PrimaryCCD.getSubW() / hor, PrimaryCCD.getSubH() / ver);
+
     LOG_INFO("Binning changed");
+
+    // hardware binning not supported. Using software binning
 
     return INDI::CCD::UpdateCCDBin(hor, ver);
 }
@@ -973,6 +953,7 @@ void Sv305CCD::TimerHit()
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
 
+                    // binning if needed
                     if(binning)
                         PrimaryCCD.binFrame();
 
@@ -1153,7 +1134,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
-    return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
+    return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
 
