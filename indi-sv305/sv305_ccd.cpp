@@ -284,11 +284,12 @@ bool Sv305CCD::updateProperties()
         defineNumber(&ControlsNP[CCD_WBG_N]);
         defineNumber(&ControlsNP[CCD_WBB_N]);
         defineNumber(&ControlsNP[CCD_GAMMA_N]);
-        defineNumber(&ControlsNP[CCD_FSPEED_N]);
+        //defineNumber(&ControlsNP[CCD_FSPEED_N]);
         defineNumber(&ControlsNP[CCD_DOFFSET_N]);
 
         // define frame format
         defineSwitch(&FormatSP);
+        defineSwitch(&SpeedSP);
 
         timerID = SetTimer(POLLMS);
     }
@@ -305,11 +306,12 @@ bool Sv305CCD::updateProperties()
         deleteProperty(ControlsNP[CCD_WBG_N].name);
         deleteProperty(ControlsNP[CCD_WBB_N].name);
         deleteProperty(ControlsNP[CCD_GAMMA_N].name);
-        deleteProperty(ControlsNP[CCD_FSPEED_N].name);
+        //deleteProperty(ControlsNP[CCD_FSPEED_N].name);
         deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
 
         // delete frame format
         deleteProperty(FormatSP.name);
+        deleteProperty(SpeedSP.name);
     }
 
     return true;
@@ -470,17 +472,6 @@ bool Sv305CCD::Connect()
                  }
                  break;
 
-             case SVB_FRAME_SPEED_MODE :
-                 // Frame speed
-                 IUFillNumber(&ControlsN[CCD_FSPEED_N], "FSPEED", "Frame Speed", "%.f", caps.MinValue, caps.MaxValue, 1, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_FSPEED_N], &ControlsN[CCD_FSPEED_N], 1, getDeviceName(), "CCD_FSPEED", "Frame Speed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set frame speed failed\n");
-                 }
-                 break;
-
              case SVB_BLACK_LEVEL :
                  // Dark Offset
                  IUFillNumber(&ControlsN[CCD_DOFFSET_N], "DOFFSET", "Dark Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
@@ -494,6 +485,20 @@ bool Sv305CCD::Connect()
              default :
                  break;
          }
+    }
+
+    // set frame speed
+    IUFillSwitch(&SpeedS[SPEED_SLOW], "SPEED_SLOW", "Slow", ISS_OFF);
+    IUFillSwitch(&SpeedS[SPEED_NORMAL], "SPEED_NORMAL", "Normal", ISS_ON);
+    IUFillSwitch(&SpeedS[SPEED_FAST], "SPEED_FAST", "Fast", ISS_OFF);
+    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "FRAME_RATE", "Frame rate", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    frameSpeed=SPEED_NORMAL;
+    status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , SPEED_NORMAL, SVB_FALSE);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set frame speed failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
     }
 
     // set frame format and feed UI
@@ -1072,12 +1077,6 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
         return updateControl(CCD_GAMMA_N, SVB_GAMMA, values, names, n);
     }
 
-    // look for frame speed settings
-    if (!strcmp(name, ControlsNP[CCD_FSPEED_N].name))
-    {
-        return updateControl(CCD_FSPEED_N, SVB_FRAME_SPEED_MODE, values, names, n);
-    }
-
     // look for dark offset settings
     if (!strcmp(name, ControlsNP[CCD_DOFFSET_N].name))
     {
@@ -1094,7 +1093,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     // Make sure the call is for our device
     if(!strcmp(dev,getDeviceName()))
     {
-        // Check if the call for our switch
+        // Check if the call for BPP switch
         if (!strcmp(name, FormatSP.name))
         {
             // Find out which state is requested by the client
@@ -1145,7 +1144,45 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             FormatSP.s = IPS_OK;
             IDSetSwitch(&FormatSP, NULL);
             return true;
-         }
+        }
+
+        // Check if the call for frame rate switch
+        if (!strcmp(name, SpeedSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpSpeed = IUFindOnSwitchIndex(&SpeedSP);
+            if (!strcmp(actionName, SpeedS[tmpSpeed].name))
+            {
+                LOGF_INFO("Frame rate is already %s", SpeedS[tmpSpeed].label);
+                SpeedSP.s = IPS_IDLE;
+                IDSetSwitch(&SpeedSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&SpeedSP, states, names, n);
+            tmpSpeed = IUFindOnSwitchIndex(&SpeedSP);
+
+            pthread_mutex_lock(&cameraID_mutex);
+
+            // set new frame rate
+            status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , tmpSpeed, SVB_FALSE);
+            if(status != SVB_SUCCESS)
+            {
+                LOG_ERROR("Error, camera set frame rate failed\n");
+            }
+            LOGF_INFO("Frame rate is now %s", SpeedS[tmpSpeed].label);
+
+            pthread_mutex_unlock(&cameraID_mutex);
+
+            frameSpeed=tmpSpeed;
+
+            SpeedSP.s = IPS_OK;
+            IDSetSwitch(&SpeedSP, NULL);
+            return true;
+        }
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
@@ -1168,11 +1205,12 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
     IUSaveConfigNumber(fp, &ControlsNP[CCD_WBG_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_WBB_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_GAMMA_N]);
-    IUSaveConfigNumber(fp, &ControlsNP[CCD_FSPEED_N]);
+    //IUSaveConfigNumber(fp, &ControlsNP[CCD_FSPEED_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_DOFFSET_N]);
 
     // Frame format
     IUSaveConfigSwitch(fp, &FormatSP);
+    IUSaveConfigSwitch(fp, &SpeedSP);
 
     return true;
 }
@@ -1193,8 +1231,8 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
     fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
     fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
-    fits_update_key_dbl(fptr, "Frame Speed", ControlsN[CCD_FSPEED_N].value, 3, "Frame Speed", &_status);
-    fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_FSPEED_N].value, 3, "Dark Offset", &_status);
+    fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
+    fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);
 }
 
 

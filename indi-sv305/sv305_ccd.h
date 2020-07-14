@@ -131,16 +131,23 @@ class Sv305CCD : public INDI::CCD
             CCD_WBG_N,
             CCD_WBB_N,
             CCD_GAMMA_N,
-            CCD_FSPEED_N,
             CCD_DOFFSET_N
         };
-        INumber ControlsN[10];
-        INumberVectorProperty ControlsNP[10];
+        INumber ControlsN[9];
+        INumberVectorProperty ControlsNP[9];
         // control helper
         bool updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n);
 
+        // frame speed
+        ISwitch SpeedS[3];
+        ISwitchVectorProperty SpeedSP;
+        enum { SPEED_SLOW, SPEED_NORMAL, SPEED_FAST};
+        int frameSpeed;
+
         // output frame format
-        ISwitch FormatS[3];
+        // the camera is able to output RGB24, but not supported by INDI
+        // -> ignored
+        ISwitch FormatS[2];
         ISwitchVectorProperty FormatSP;
         enum { FORMAT_RAW12, FORMAT_RAW8};
         SVB_IMG_TYPE frameFormatMapping[2] = {SVB_IMG_RAW12, SVB_IMG_RAW8};
