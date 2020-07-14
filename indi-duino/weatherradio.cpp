@@ -300,14 +300,14 @@ bool WeatherRadio::updateProperties()
             defineNumber(&rawDevices[i]);
         LOG_INFO("Raw sensors added.");
 
-        getBasicData();
-        // update the weather parameters to avoid sending dummy weather values
-        updateWeather();
+        result = getBasicData();
 
-        result = INDI::Weather::updateProperties();
         // Load the configuration if everything was fine
         if (result == true)
+        {
             loadConfig();
+            result = INDI::Weather::updateProperties();
+        }
 
         defineSwitch(&resetArduinoSP);
     }
