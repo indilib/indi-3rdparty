@@ -108,15 +108,14 @@ class Sv305CCD : public INDI::CCD
         // hCamera mutex protection
         pthread_mutex_t cameraID_mutex;
 
-        // image offsets and size
-        int x_1, y_1, x_2, y_2;
         // binning ?
         int binning;
         // bit per pixel
         int bitDepth;
 
-        // streaming
+        // streaming ?
         bool streaming;
+        // streaming mutex and thread control
         pthread_mutex_t streaming_mutex;
         pthread_t primary_thread;
         bool terminateThread;

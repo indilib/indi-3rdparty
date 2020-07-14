@@ -384,7 +384,7 @@ bool Sv305CCD::Connect()
 
              case SVB_GAIN :
                  // Gain
-                 IUFillNumber(&ControlsN[CCD_GAIN_N], "GAIN", "Gain", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumber(&ControlsN[CCD_GAIN_N], "GAIN", "Gain", "%.f", caps.MinValue, caps.MaxValue, 10, caps.DefaultValue);
                  IUFillNumberVector(&ControlsNP[CCD_GAIN_N], &ControlsN[CCD_GAIN_N], 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
                  status = SVBSetControlValue(cameraID, SVB_GAIN , caps.DefaultValue, SVB_FALSE);
                  if(status != SVB_SUCCESS)
@@ -509,14 +509,15 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+    IUSaveText(&BayerT[0], "0");
+    IUSaveText(&BayerT[1], "0");
+    IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
     LOG_INFO("Camera set frame format mode\n");
 
     // set camera ROI and BIN
     binning = false;
-    x_1 = y_1 = 0;
-    x_2       = cameraProperty.MaxWidth;
-    y_2       = cameraProperty.MaxHeight;
-    status = SVBSetROIFormat(cameraID, x_1, y_1, x_2-x_1, y_2-y_1, 1);
+    SetCCDParams(cameraProperty.MaxWidth, cameraProperty.MaxHeight, bitDepth, pixelSize, pixelSize);
+    status = SVBSetROIFormat(cameraID, 0, 0, cameraProperty.MaxWidth, cameraProperty.MaxHeight, 1);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set ROI failed\n");
@@ -606,17 +607,13 @@ void Sv305CCD::dropJunkFrame()
 bool Sv305CCD::updateCCDParams()
 {
     // set CCD parameters
-    SetCCDParams(x_2 - x_1, y_2 - y_1, bitDepth, pixelSize, pixelSize);
+    PrimaryCCD.setBPP(bitDepth);
 
     // Let's calculate required buffer
     int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     LOGF_INFO("PrimaryCCD buffer size : %d\n", nbuf);
-
-    IUSaveText(&BayerT[0], "0");
-    IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
 
     return true;
 }
@@ -854,14 +851,21 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 
     pthread_mutex_unlock(&cameraID_mutex);
 
-    // update frame offsets and size
-    x_1 = x;
-    x_2 = x_1 + w;
-    y_1 = y;
-    y_2 = y_1 + h;
-
     // update streamer
-    //Streamer->setSize(w / PrimaryCCD.getBinX(), h / PrimaryCCD.getBinY());
+    long bin_width  = w / PrimaryCCD.getBinX();
+    long bin_height = h / PrimaryCCD.getBinY();
+
+    bin_width  = bin_width - (bin_width % 2);
+    bin_height = bin_height - (bin_height % 2);
+
+    if (Streamer->isBusy())
+    {
+        LOG_WARN("Cannot change binning while streaming/recording.\n");
+    }
+    else
+    {
+        Streamer->setSize(bin_width, bin_height);
+    }
 
     LOG_INFO("Subframe changed\n");
 
@@ -877,7 +881,18 @@ bool Sv305CCD::UpdateCCDBin(int hor, int ver)
     else
         binning = true;
 
-    //Streamer->setSize(PrimaryCCD.getSubW() / hor, PrimaryCCD.getSubH() / ver);
+    // update streamer
+    uint32_t bin_width  = PrimaryCCD.getSubW() / hor;
+    uint32_t bin_height = PrimaryCCD.getSubH() / ver;
+
+    if (Streamer->isBusy())
+    {
+        LOG_WARN("Cannot change binning while streaming/recording.\n");
+    }
+    else
+    {
+        Streamer->setSize(bin_width, bin_height);
+    }
 
     LOG_INFO("Binning changed");
 

@@ -69,6 +69,6 @@ Limitations
 TODO :
 
 - abort exposure
-- stream
+- stream binning/subframe
 - fix junk 1st frame
-- camera hangs sometime
+- frame speed switch control 
