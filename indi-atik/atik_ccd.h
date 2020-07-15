@@ -96,6 +96,12 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             ID_AtikHorizonGOPresetHigh,
             ID_AtikHorizonGOCustomGain,
             ID_AtikHorizonGOCustomOffset,
+            ID_AtikHorizonEvenIllumiation = 12,
+            ID_AtikHorizonPadData,
+            ID_AtikHorizonExposureSpeed,
+            ID_AtikHorizonBitSendMode,
+            ID_AtikHorizonFX3Version = 200,
+            ID_AtikHorizonFPGAVersion,
         };
 
         typedef enum AtikGuideDirection
@@ -173,6 +179,42 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             PRESET_HIGH,
         };
 
+        // Pad data from 12 to 16 bits
+        ISwitch PadDataS[2];
+        ISwitchVectorProperty PadDataSP;
+        enum
+        {
+            PADDATA_ON,
+            PADDATA_OFF
+        };
+
+        // Even illumination
+        ISwitch EvenIlluminationS[2];
+        ISwitchVectorProperty EvenIlluminationSP;
+        enum
+        {
+            EVENILLUMINATION_ON,
+            EVENILLUMINATION_OFF
+        };
+
+        // Gain & Offset Presets
+        ISwitch FastModeS[4];
+        ISwitchVectorProperty FastModeSP;
+        enum
+        {
+            FASTMODE_POWERSAVE,
+            FASTMODE_NORMAL,
+            FASTMODE_FAST,
+        };
+
+        // Bit send
+        ISwitch BitSendS[2];
+        ISwitchVectorProperty BitSendSP;
+        enum
+        {
+            BITSEND_16BITS,
+            BITSEND_12BITS
+        };
 
         // API & Firmware Version
         IText VersionInfoS[2] = {};
