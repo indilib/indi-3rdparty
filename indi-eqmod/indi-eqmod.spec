@@ -76,11 +76,10 @@ make install DESTDIR=%{buildroot}
 #%ldconfig_scriptlets libs
 
 %files
-%license %{package}/COPYING LICENSE
-%doc %{package}/AUTHORS %{package}README
+%license indi-eqmod/COPYING LICENSE
+%doc indi-eqmod/AUTHORS indi-eqmod/README
 %{_bindir}/*
 %{_datadir}/indi
-%{_udevrulesdir}/*.rules
 
 
 %changelog
