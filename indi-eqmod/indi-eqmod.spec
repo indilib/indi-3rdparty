@@ -45,7 +45,6 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-#Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description
 INDI is a distributed control protocol designed to operate
@@ -83,18 +82,6 @@ make install DESTDIR=%{buildroot}
 %{_datadir}/indi
 %{_udevrulesdir}/*.rules
 
-%files libs
-%license COPYING.BSD COPYING.GPL COPYING.LGPL COPYRIGHT LICENSE
-%{_libdir}/*.so.*
-%{_libdir}/indi/MathPlugins
-
-%files devel
-%{_includedir}/*
-%{_libdir}/*.so
-%{_libdir}/pkgconfig/*.pc
-
-%files static
-%{_libdir}/*.a
 
 %changelog
 * Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.6.git-1
