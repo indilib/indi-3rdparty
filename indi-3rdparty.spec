@@ -5,7 +5,7 @@ Version: 1.8.6.git
 Release: 1%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
-License: LGPLv2+
+License: LGPLv2+167
 # See COPYRIGHT file for a description of the licenses and files covered
 
 #Obsoletes: libindi
