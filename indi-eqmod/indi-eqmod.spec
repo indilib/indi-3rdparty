@@ -45,7 +45,7 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+#Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
 %description
 INDI is a distributed control protocol designed to operate
@@ -74,7 +74,7 @@ make VERBOSE=1 %{?_smp_mflags}
 %install
 make install DESTDIR=%{buildroot}
 
-%ldconfig_scriptlets libs
+#%ldconfig_scriptlets libs
 
 %files
 %license COPYING.BSD COPYING.GPL COPYING.LGPL COPYRIGHT LICENSE
