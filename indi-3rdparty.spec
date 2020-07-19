@@ -22,6 +22,18 @@ BuildRequires: gphoto2-devel
 BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
+BuildRequires: libtiff-devel
+BuildRequires: cfitsio-devel
+BuildRequires: zlib-devel
+BuildRequires: gsl-devel
+BuildRequires: libcurl-devel
+BuildRequires: libjpeg-turbo-devel
+BuildRequires: fftw-devel
+BuildRequires: libftdi-devel
+BuildRequires: gpsd-devel
+BuildRequires: libdc1394-devel
+BuildRequires: boost-devel
+BuildRequires: boost-regex
 
 BuildRequires: gmock
 
