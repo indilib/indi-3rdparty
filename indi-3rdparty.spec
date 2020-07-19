@@ -18,8 +18,13 @@ BuildRequires: libfli-devel
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
+BuildRequires: gphoto2-devel
+BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
+BuildRequires: libavdevice
+
+BuildRequires: gmock
 
 BuildRequires: pkgconfig(fftw3)
 BuildRequires: pkgconfig(cfitsio)
