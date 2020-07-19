@@ -14,7 +14,7 @@ License: LGPLv2+167
 %forgemeta -i
 
 URL: http://www.indilib.org
-Source0: %{forgesource} 
+Source0: %{forgesource}
 
 BuildRequires: cmake
 BuildRequires: libfli-devel
