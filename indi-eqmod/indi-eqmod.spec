@@ -1,6 +1,6 @@
 %global forgeurl https://github.com/xsnrg/indi-3rdparty/
 
-Name: indi-3rdparty
+Name: indi-eqmod
 Version: 1.8.6.git
 Release: 1%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
