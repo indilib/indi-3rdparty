@@ -8,9 +8,6 @@ Summary: Instrument Neutral Distributed Interface 3rd party drivers
 License: LGPLv2+167
 # See COPYRIGHT file for a description of the licenses and files covered
 
-#Obsoletes: libindi
-#Provides: libindi = %{version}-%{release}
-
 %forgemeta -i
 
 URL: http://www.indilib.org
@@ -100,6 +97,6 @@ make install DESTDIR=%{buildroot}
 %{_libdir}/*.a
 
 %changelog
-* Thu Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.6.git-1
+* Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.6.git-1
 - update to build from git for copr, credit to Sergio Pascual and Christian Dersch for prior work on spec files
 
