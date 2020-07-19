@@ -76,8 +76,8 @@ make install DESTDIR=%{buildroot}
 #%ldconfig_scriptlets libs
 
 %files
-%license COPYING.BSD COPYING.GPL COPYING.LGPL COPYRIGHT LICENSE
-%doc AUTHORS ChangeLog NEWS README
+%license %{package}/COPYING LICENSE
+%doc %{package}/AUTHORS %{package}README
 %{_bindir}/*
 %{_datadir}/indi
 %{_udevrulesdir}/*.rules
