@@ -54,26 +54,10 @@ and scalable. It supports common DCS functions such as remote control,
 data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
 
-%package devel
-Summary: Libraries, includes, etc. used to develop an application with %{name}
-Requires: %{name}-libs%{?_isa} = %{version}-%{release}
-Requires: %{name}-static%{?_isa} = %{version}-%{release}
-
-%description devel
-These are the header files needed to develop a %{name} application
-
-%package libs
-Summary: INDI shared libraries
-
-%description libs
-These are the shared libraries of INDI.
-
-%package static
-Summary: Static libraries, includes, etc. used to develop an application with %{name}
-Requires: %{name}-libs%{?_isa} = %{version}-%{release}
-
-%description static
-Static library needed to develop a %{name} application
+%package eqmod
+Summary: INDI eqmod driver
+%description eqmod
+INDI eqmod driver
 
 %prep
 %forgesetup
@@ -84,7 +68,7 @@ Static library needed to develop a %{name} application
 # Disable LTO
 %define _lto_cflags %{nil}
 
-%cmake .
+%cmake indi-eqmod/.
 make VERBOSE=1 %{?_smp_mflags}
 
 %install
