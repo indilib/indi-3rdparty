@@ -22,7 +22,6 @@ BuildRequires: gphoto2-devel
 BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
-BuildRequires: libavdevice
 
 BuildRequires: gmock
 
