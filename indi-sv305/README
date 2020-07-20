@@ -43,17 +43,16 @@ How to Use
 Features
 ========
 
-	+ Abort Exposure
 	+ Bayer color pattern
         + Analog gain
-	+ Software subframing
+	+ Subframing
 	+ Software binning
 	+ Streaming
 
 Known issues
 ============
 
-	+ Subframing and binning doesn't work in liveview
+	+ Subframing and binning don't work in liveview
         + First frame wrong exposure time
 	+ Can't abort exposure yet
 
