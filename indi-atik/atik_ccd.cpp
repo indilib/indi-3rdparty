@@ -422,7 +422,6 @@ bool ATIKCCD::setupParams()
         LOGF_ERROR("Failed to inquire camera max binning (%d)", rc);
     }
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, binX, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, binY, 1, false);
 
@@ -596,6 +595,19 @@ bool ATIKCCD::setupParams()
             uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)*2));
             LOGF_DEBUG("Horizon currrent FPGA version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
         }
+
+        // Horizon and Horizon2 cameras have exposure in [18us, unlimited[
+        // FIXME: Not sure how to distinguish cameras programmatically, so we apply the same exposure interval - will fail if unsupported
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 18.0e-6f, 3600*24, 1, false);
+    }
+    else
+    {
+        // ACIS, 4xxEX, One 6/9, 11000, Titan, 4000, 420, 450 and 314L+ have exposures in [0.001s, unlimited[
+        // GP has exposure in [0.001s, 5s]
+        // Infinity has exposure in [0.001s, 120s]
+        // 383L+ and 16200 have exposure in [0.2s, unlimited[
+        // FIXME: Not sure how to distinguish cameras programmatically, so we apply the same exposure interval - will fail if unsupported
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600*24, 1, false);
     }
 
     // Create imaging thread
