@@ -243,7 +243,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 Pro has an ST4 port
     /* TODO : fix with real value */
@@ -284,12 +284,14 @@ bool Sv305CCD::updateProperties()
         defineNumber(&ControlsNP[CCD_WBG_N]);
         defineNumber(&ControlsNP[CCD_WBB_N]);
         defineNumber(&ControlsNP[CCD_GAMMA_N]);
-        //defineNumber(&ControlsNP[CCD_FSPEED_N]);
         defineNumber(&ControlsNP[CCD_DOFFSET_N]);
 
         // define frame format
         defineSwitch(&FormatSP);
         defineSwitch(&SpeedSP);
+
+        // stretch factor
+        defineSwitch(&StretchSP);
 
         timerID = SetTimer(POLLMS);
     }
@@ -306,12 +308,14 @@ bool Sv305CCD::updateProperties()
         deleteProperty(ControlsNP[CCD_WBG_N].name);
         deleteProperty(ControlsNP[CCD_WBB_N].name);
         deleteProperty(ControlsNP[CCD_GAMMA_N].name);
-        //deleteProperty(ControlsNP[CCD_FSPEED_N].name);
         deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
 
         // delete frame format
         deleteProperty(FormatSP.name);
         deleteProperty(SpeedSP.name);
+
+        // stretch factor
+        deleteProperty(StretchSP.name);
     }
 
     return true;
@@ -519,6 +523,15 @@ bool Sv305CCD::Connect()
     IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
     LOG_INFO("Camera set frame format mode\n");
 
+    // set bit stretching and feed UI
+    IUFillSwitch(&StretchS[STRETCH_OFF], "STRETCH_OFF", "Off", ISS_ON);
+    IUFillSwitch(&StretchS[STRETCH_X2], "STRETCH_X2", "x2", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X4], "STRETCH_X4", "x4", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X8], "STRETCH_X8", "x8", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X16], "STRETCH_X16", "x16", ISS_OFF);
+    IUFillSwitchVector(&StretchSP, StretchS, 5, getDeviceName(), "STRETCH_BITS", "12 bits 16 bits stretch", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    bitStretch=0;
+
     // set camera ROI and BIN
     binning = false;
     SetCCDParams(cameraProperty.MaxWidth, cameraProperty.MaxHeight, bitDepth, pixelSize, pixelSize);
@@ -691,6 +704,26 @@ bool Sv305CCD::AbortExposure()
     // TODO
     // *********
 
+    // stop camera
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // start camera
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // *********
+
     pthread_mutex_unlock(&cameraID_mutex);
 
     return true;
@@ -814,6 +847,16 @@ void* Sv305CCD::streamVideo()
         pthread_mutex_unlock(&cameraID_mutex);
 
         finish = std::chrono::high_resolution_clock::now();
+
+        // stretching 12bits depth to 16bits depth
+        if(bitDepth==16 && (bitStretch != 0))
+        {
+            u_int16_t* tmp=(u_int16_t*)imageBuffer;
+            for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
+            {
+                tmp[i]<<=bitStretch;
+            }
+        }
 
         if(binning)
         {
@@ -973,6 +1016,16 @@ void Sv305CCD::TimerHit()
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
 
+                    // stretching 12bits depth to 16bits depth
+                    if(bitDepth==16 && (bitStretch != 0))
+                    {
+                        u_int16_t* tmp=(u_int16_t*)imageBuffer;
+                        for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
+                        {
+                                tmp[i]<<=bitStretch;
+                        }
+                    }
+
                     // binning if needed
                     if(binning)
                         PrimaryCCD.binFrame();
@@ -1124,7 +1177,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             pthread_mutex_unlock(&cameraID_mutex);
 
-            frameFormat=tmpFormat;
+            frameFormat = tmpFormat;
 
             // pixel depth
             switch(frameFormat)
@@ -1177,12 +1230,41 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             pthread_mutex_unlock(&cameraID_mutex);
 
-            frameSpeed=tmpSpeed;
+            frameSpeed = tmpSpeed;
 
             SpeedSP.s = IPS_OK;
             IDSetSwitch(&SpeedSP, NULL);
             return true;
         }
+
+        // Check if the 16 bist stretch factor
+        if (!strcmp(name, StretchSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpStretch = IUFindOnSwitchIndex(&StretchSP);
+            if (!strcmp(actionName, StretchS[tmpStretch].name))
+            {
+                LOGF_INFO("Stretch factor is already %s", StretchS[tmpStretch].label);
+                StretchSP.s = IPS_IDLE;
+                IDSetSwitch(&StretchSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&StretchSP, states, names, n);
+            tmpStretch = IUFindOnSwitchIndex(&StretchSP);
+
+            LOGF_INFO("Stretch factor is now %s", StretchS[tmpStretch].label);
+
+            bitStretch = tmpStretch;
+
+            StretchSP.s = IPS_OK;
+            IDSetSwitch(&StretchSP, NULL);
+            return true;
+        }
+
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
@@ -1205,12 +1287,14 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
     IUSaveConfigNumber(fp, &ControlsNP[CCD_WBG_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_WBB_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_GAMMA_N]);
-    //IUSaveConfigNumber(fp, &ControlsNP[CCD_FSPEED_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_DOFFSET_N]);
 
     // Frame format
     IUSaveConfigSwitch(fp, &FormatSP);
     IUSaveConfigSwitch(fp, &SpeedSP);
+
+    // bit stretching
+    IUSaveConfigSwitch(fp, &StretchSP);
 
     return true;
 }
@@ -1233,6 +1317,7 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
     fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
     fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);
+    fits_update_key_dbl(fptr, "16 bits stretch factor (bit shift)", bitStretch, 3, "Stretch factor", &_status);
 }
 
 

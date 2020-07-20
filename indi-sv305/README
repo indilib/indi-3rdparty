@@ -53,21 +53,18 @@ Features
 Known issues
 ============
 
-	+ Slow streaming start-up
-	+ In EKOS, toggle the bayer button to get live view streaming
+	+ Subframing and binning doesn't work in liveview
+        + First frame wrong exposure time
+	+ Can't abort exposure yet
 
 Limitations
 ===========
 
-	+ Image depth fixed to 16bits
-	+ WB, Anti Flicker, Auto Exposure disabled
-	+ Minimal exposure 0.01s
+	+ None
 
+Changelog
+=========
 
---------------------------------------------
-
-TODO :
-
-- abort exposure
-- stream binning/subframe
-- fix junk 1st frame
+	+ 1.1 : Ability to stretch camera's 12 bits pixel depth to 16 bits
+	+ 1.0 : Refactoring with the new SVBony SDK (1.6.1)
+	+ 0.9 : First version, with the CKCamera SDK

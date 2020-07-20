@@ -109,9 +109,14 @@ class Sv305CCD : public INDI::CCD
         pthread_mutex_t cameraID_mutex;
 
         // binning ?
-        int binning;
+        bool binning;
         // bit per pixel
         int bitDepth;
+        // stretch factor x2, x4, x8, x16 (bit shift)
+        int bitStretch;
+        ISwitch StretchS[5];
+        ISwitchVectorProperty StretchSP;
+        enum { STRETCH_OFF, STRETCH_X2, STRETCH_X4, STRETCH_X8, STRETCH_X16 };
 
         // streaming ?
         bool streaming;
