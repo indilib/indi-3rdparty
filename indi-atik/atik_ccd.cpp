@@ -69,7 +69,8 @@ void ATIK_CCD_ISInit()
 
             if (loop+1 < MAX_CONNECTION_RETRIES)
             {
-                IDMessage(nullptr, "No Atik devices detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
+                if (0 < loop)
+                    IDMessage(nullptr, "No Atik devices detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
                 usleep(1000000);
             }
         }
