@@ -271,8 +271,8 @@ bool ATIKCCD::initProperties()
     IUFillSwitch(&ControlPresetsS[PRESET_LOW], "PRESET_LOW", "Low", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_MEDIUM], "PRESET_MEDIUM", "Medium", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_HIGH], "PRESET_HIGH", "High", ISS_OFF);
-    IUFillSwitchVector(&ControlPresetsSP, ControlPresetsS, 2, getDeviceName(), "CCD_CONTROL_PRESETS", "GO Presets", CONTROLS_TAB, IP_RW,
-                       ISR_1OFMANY, 4, IPS_IDLE);
+    IUFillSwitchVector(&ControlPresetsSP, ControlPresetsS, 4, getDeviceName(), "CCD_CONTROL_PRESETS", "GO Presets", CONTROLS_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     // Gain/Offset Controls
     IUFillNumber(&ControlN[CONTROL_GAIN], "CONTROL_GAIN", "Gain", "%.f", 0, 60, 5, 30);
@@ -337,8 +337,18 @@ bool ATIKCCD::updateProperties()
         if (m_isHorizon)
         {
             defineSwitch(&ControlPresetsSP);
+            loadConfig(true, "");
             defineNumber(&ControlNP);
-        }
+            loadConfig(true, "");
+            defineSwitch(&PadDataSP);
+            loadConfig(true, "");
+            defineSwitch(&EvenIlluminationSP);
+            loadConfig(true, "");
+            defineSwitch(&FastModeSP);
+            //loadConfig(true, "");
+            defineSwitch(&BitSendSP);
+            //loadConfig(true, "");
+}
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
         {
@@ -535,7 +545,7 @@ bool ATIKCCD::setupParams()
             uint16_t const minGain = (reinterpret_cast<uint16_t*>(&data))[0];
             uint16_t const maxGain = (reinterpret_cast<uint16_t*>(&data))[1];
             uint16_t const valGain = (reinterpret_cast<uint16_t*>(&data))[2];
-            LOGF_DEBUG("Horizon current gain: data[0:1] %02u%02u data[2:3] %02u%02u values %u %u %u",
+            LOGF_DEBUG("Horizon current gain: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
                        data[0], data[1], data[2], data[3], data[4], data[5], minGain, maxGain, valGain);
             ControlN[0].min = static_cast <double> (minGain);
             ControlN[0].max = static_cast <double> (maxGain);
@@ -548,7 +558,7 @@ bool ATIKCCD::setupParams()
             uint16_t const minOffset = (reinterpret_cast<uint16_t*>(&data))[0];
             uint16_t const maxOffset = (reinterpret_cast<uint16_t*>(&data))[1];
             uint16_t const valOffset = (reinterpret_cast<uint16_t*>(&data))[2];
-            LOGF_DEBUG("Horizon current offset: data[0:1] %02u%02u data[2:3] %02u%02u values %u %u %u",
+            LOGF_DEBUG("Horizon current offset: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
                        data[0], data[1], data[2], data[3], data[4], data[5], minOffset, maxOffset, valOffset);
             ControlN[1].min = static_cast <double> (minOffset);
             ControlN[1].max = static_cast <double> (maxOffset);
@@ -739,6 +749,11 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
 
             IDSetNumber(&ControlNP, nullptr);
+
+            IUResetSwitch(&ControlPresetsSP);
+            ControlPresetsSP.s = IPS_IDLE;
+            IDSetSwitch(&ControlPresetsSP, nullptr);
+
             return true;
         }
     }
