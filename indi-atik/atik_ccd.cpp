@@ -281,28 +281,28 @@ bool ATIKCCD::initProperties()
                        IP_RW, 60, IPS_IDLE);
 
     // Pad data from 12 to 16 bits
-    IUFillSwitch(&PadDataS[PADDATA_ON], "PADDATA_ON", "ON", ISS_ON);
-    IUFillSwitch(&PadDataS[PADDATA_OFF], "PADDATA_OFF", "OFF", ISS_OFF);
-    IUFillSwitchVector(&PadDataSP, PadDataS, 2, getDeviceName(), "PADDATA", "Pad Data", CONTROLS_TAB, IP_WO,
-                       ISR_1OFMANY, 2, IPS_IDLE);
+    IUFillSwitch(&PadDataS[PADDATA_ON], "CONTROL_PAD_DATA_ON", "ON", ISS_ON);
+    IUFillSwitch(&PadDataS[PADDATA_OFF], "CONTROL_PAD_DATA_OFF", "OFF", ISS_OFF);
+    IUFillSwitchVector(&PadDataSP, PadDataS, 2, getDeviceName(), "CCD_PAD_DATA", "Pad Data", CONTROLS_TAB, IP_WO,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     // Even illumination
-    IUFillSwitch(&EvenIlluminationS[PADDATA_ON], "EVENILLUMINATION_ON", "ON", ISS_OFF);
-    IUFillSwitch(&EvenIlluminationS[PADDATA_OFF], "EVENILLUMINATION_OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&EvenIlluminationSP, EvenIlluminationS, 2, getDeviceName(), "EVENILLUMINATION", "Even Illumination", CONTROLS_TAB,
-                       IP_WO, ISR_1OFMANY, 2, IPS_IDLE);
+    IUFillSwitch(&EvenIlluminationS[PADDATA_ON], "CONTROL_EVEN_ILLUMINATION_ON", "ON", ISS_OFF);
+    IUFillSwitch(&EvenIlluminationS[PADDATA_OFF], "CONTROL_EVEN_ILLUMINATION_OFF", "OFF", ISS_ON);
+    IUFillSwitchVector(&EvenIlluminationSP, EvenIlluminationS, 2, getDeviceName(), "CCD_EVEN_ILLUMINATION", "Even Illumination", CONTROLS_TAB,
+                       IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Exposure Speed
-    IUFillSwitch(&FastModeS[FASTMODE_POWERSAVE], "POWERSAVE", "Powersave / Low noise", ISS_ON);
-    IUFillSwitch(&FastModeS[FASTMODE_NORMAL], "NORMAL", "Normal", ISS_OFF);
-    IUFillSwitch(&FastModeS[FASTMODE_FAST], "FAST", "Fast / Stream", ISS_OFF);
-    IUFillSwitchVector(&FastModeSP, FastModeS, 2, getDeviceName(), "FAST_MODE", "Fast Mode", CONTROLS_TAB, IP_RW,
-                       ISR_1OFMANY, 4, IPS_IDLE);
+    IUFillSwitch(&FastModeS[FASTMODE_POWERSAVE], "CONTROL_POWERSAVE", "Powersave / Low noise", ISS_ON);
+    IUFillSwitch(&FastModeS[FASTMODE_NORMAL], "CONTROL_NORMAL", "Normal", ISS_OFF);
+    IUFillSwitch(&FastModeS[FASTMODE_FAST], "CONTROL_FAST", "Fast / Stream", ISS_OFF);
+    IUFillSwitchVector(&FastModeSP, FastModeS, 3, getDeviceName(), "CCD_FAST_MODE", "Fast Mode", CONTROLS_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     // Bit send format
     IUFillSwitch(&BitSendS[BITSEND_16BITS], "BITSEND_16BITS", "16BITS", ISS_ON);
     IUFillSwitch(&BitSendS[BITSEND_12BITS], "BITSEND_16BITS", "12BITS", ISS_OFF);
-    IUFillSwitchVector(&BitSendSP, BitSendS, 2, getDeviceName(), "BITSEND", "Bit Send", CONTROLS_TAB, IP_WO,
+    IUFillSwitchVector(&BitSendSP, BitSendS, 2, getDeviceName(), "CCD_BIT_SEND", "Bit Send", CONTROLS_TAB, IP_WO,
                        ISR_1OFMANY, 2, IPS_IDLE);
 
     IUSaveText(&BayerT[2], "RGGB");
@@ -337,17 +337,17 @@ bool ATIKCCD::updateProperties()
         if (m_isHorizon)
         {
             defineSwitch(&ControlPresetsSP);
-            loadConfig(true, "");
+            loadConfig(true, "CCD_CONTROL_PRESETS");
             defineNumber(&ControlNP);
-            loadConfig(true, "");
+            loadConfig(true, "CCD_CONTROLS");
             defineSwitch(&PadDataSP);
-            loadConfig(true, "");
+            loadConfig(true, "CCD_PAD_DATA");
             defineSwitch(&EvenIlluminationSP);
-            loadConfig(true, "");
+            loadConfig(true, "CCD_EVEN_ILLUMINATION");
             defineSwitch(&FastModeSP);
-            //loadConfig(true, "");
+            loadConfig(true, "CCD_FAST_MODE");
             defineSwitch(&BitSendSP);
-            //loadConfig(true, "");
+            loadConfig(true, "CCD_BIT_SEND");
 }
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
