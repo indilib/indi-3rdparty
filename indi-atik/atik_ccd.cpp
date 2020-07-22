@@ -267,7 +267,7 @@ bool ATIKCCD::initProperties()
     IUFillTextVector(&VersionInfoSP, VersionInfoS, 2, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // Gain/Offset Presets
-    IUFillSwitch(&ControlPresetsS[PRESET_CUSTOM], "PRESET_CUSTOM", "Custom", ISS_ON);
+    IUFillSwitch(&ControlPresetsS[PRESET_CUSTOM], "PRESET_CUSTOM", "Custom", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_LOW], "PRESET_LOW", "Low", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_MEDIUM], "PRESET_MEDIUM", "Medium", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_HIGH], "PRESET_HIGH", "High", ISS_OFF);
@@ -281,19 +281,19 @@ bool ATIKCCD::initProperties()
                        IP_RW, 60, IPS_IDLE);
 
     // Pad data from 12 to 16 bits
-    IUFillSwitch(&PadDataS[PADDATA_ON], "CONTROL_PAD_DATA_ON", "ON", ISS_ON);
     IUFillSwitch(&PadDataS[PADDATA_OFF], "CONTROL_PAD_DATA_OFF", "OFF", ISS_OFF);
+    IUFillSwitch(&PadDataS[PADDATA_ON], "CONTROL_PAD_DATA_ON", "ON", ISS_OFF);
     IUFillSwitchVector(&PadDataSP, PadDataS, 2, getDeviceName(), "CCD_PAD_DATA", "Pad Data", CONTROLS_TAB, IP_WO,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     // Even illumination
+    IUFillSwitch(&EvenIlluminationS[PADDATA_OFF], "CONTROL_EVEN_ILLUMINATION_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&EvenIlluminationS[PADDATA_ON], "CONTROL_EVEN_ILLUMINATION_ON", "ON", ISS_OFF);
-    IUFillSwitch(&EvenIlluminationS[PADDATA_OFF], "CONTROL_EVEN_ILLUMINATION_OFF", "OFF", ISS_ON);
     IUFillSwitchVector(&EvenIlluminationSP, EvenIlluminationS, 2, getDeviceName(), "CCD_EVEN_ILLUMINATION", "Even Illumination", CONTROLS_TAB,
                        IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Exposure Speed
-    IUFillSwitch(&FastModeS[FASTMODE_POWERSAVE], "CONTROL_POWERSAVE", "Powersave / Low noise", ISS_ON);
+    IUFillSwitch(&FastModeS[FASTMODE_POWERSAVE], "CONTROL_POWERSAVE", "Powersave / Low noise", ISS_OFF);
     IUFillSwitch(&FastModeS[FASTMODE_NORMAL], "CONTROL_NORMAL", "Normal", ISS_OFF);
     IUFillSwitch(&FastModeS[FASTMODE_FAST], "CONTROL_FAST", "Fast / Stream", ISS_OFF);
     // TODO: Implement fast mode 'fast' then increase SwitchVector size to 3
@@ -301,11 +301,13 @@ bool ATIKCCD::initProperties()
     IUFillSwitchVector(&FastModeSP, FastModeS, 2, getDeviceName(), "CCD_FAST_MODE", "Fast Mode", CONTROLS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
+#if 0
     // Bit send format
-    IUFillSwitch(&BitSendS[BITSEND_16BITS], "BITSEND_16BITS", "16BITS", ISS_ON);
-    IUFillSwitch(&BitSendS[BITSEND_12BITS], "BITSEND_16BITS", "12BITS", ISS_OFF);
+    IUFillSwitch(&BitSendS[BITSEND_16BITS], "BITSEND_16BITS", "16BITS", ISS_OFF);
+    IUFillSwitch(&BitSendS[BITSEND_12BITS], "BITSEND_12BITS", "12BITS", ISS_OFF);
     IUFillSwitchVector(&BitSendSP, BitSendS, 2, getDeviceName(), "CCD_BIT_SEND", "Bit Send", CONTROLS_TAB, IP_WO,
-                       ISR_1OFMANY, 2, IPS_IDLE);
+                       ISR_1OFMANY, 60, IPS_IDLE);
+#endif
 
     IUSaveText(&BayerT[2], "RGGB");
 
@@ -540,8 +542,10 @@ bool ATIKCCD::setupParams()
             LOGF_DEBUG("Horizon current GO mode: data[0] %d data[1] %d index %d", data[0], data[1], index);
             IUResetSwitch(&ControlPresetsSP);
             ControlPresetsS[index].s = ISS_ON;
-            IDSetSwitch(&ControlPresetsSP, nullptr);
+            ControlPresetsSP.s = IPS_OK;
         }
+        else ControlPresetsSP.s = IPS_ALERT;
+        IDSetSwitch(&ControlPresetsSP, nullptr);
 
         // Get Gain & Offset values
         updateGainOffset();
@@ -549,44 +553,58 @@ bool ATIKCCD::setupParams()
         // Even illumination, at the expense of read noise
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonEvenIllumination, data, 1, len))
         {
-            bool const enabled = *(reinterpret_cast<bool*>(&data));
+            bool const enabled = data[0] ? true : false;
             LOGF_DEBUG("Horizon currrent even illumination: data[0] %d value %s", data[0], enabled?"true":"false");
             IUResetSwitch(&EvenIlluminationSP);
-            EvenIlluminationS[enabled?0:1].s = ISS_ON;
-            IDSetSwitch(&EvenIlluminationSP, nullptr);
+            EvenIlluminationS[enabled?1:0].s = ISS_ON;
+            EvenIlluminationSP.s = IPS_OK;
         }
+        else EvenIlluminationSP.s = IPS_ALERT;
+        IDSetSwitch(&EvenIlluminationSP, nullptr);
 
         // Pad data, use of upper or lower 12-bits
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonPadData, data, 2, len))
         {
-            bool const enabled = *(reinterpret_cast<bool*>(&data));
-            LOGF_DEBUG("Horizon currrent pad data: data[0] %d value %s", data[0], enabled?"true":"false");
+            bool const enabled = data[0] ? true : false;
+            LOGF_INFO ("Horizon currrent pad data: data[0] %d value %s", data[0], enabled?"true":"false");
             IUResetSwitch(&PadDataSP);
-            PadDataS[enabled?0:1].s = ISS_ON;
-            IDSetSwitch(&PadDataSP, nullptr);
+            PadDataS[enabled?1:0].s = ISS_ON;
+            PadDataSP.s = IPS_OK;
         }
+        else PadDataSP.s = IPS_ALERT;
+        IDSetSwitch(&PadDataSP, nullptr);
 
-        // Fast mode, low noise, normal or streaming
-        if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonExposureSpeed, data, 1, len))
+        // Exposure speed: low noise, normal or streaming
+        if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonExposureSpeed, data, 2, len))
         {
-            int const index = *(reinterpret_cast<uint8_t*>(&data));
+            int const index = *(reinterpret_cast<uint16_t*>(&data));
             LOGF_DEBUG("Horizon current exposure speed: data[0] %d value %s", data[0], index==0?"Power Save":index==1?"Normal":index==2?"Fast":"Unknown");
             IUResetSwitch(&FastModeSP);
-            if (0 < index && index < 3)
+            if (0 <= index && index < (int)(sizeof(FastModeS)/sizeof(FastModeS[0])))
+            {
+                if (index == FASTMODE_FAST)
+                    LOG_WARN("Warning: fast mode exposure speed is not implemented, please choose another mode.");
                 FastModeS[index].s = ISS_ON;
-            else IDLog("Warning: Atik Camera is currently configured with an unknown Fast Mode state.");
-            IDSetSwitch(&FastModeSP, nullptr);
+            }
+            else LOG_WARN("Warning: camera is currently configured with an unknown Fast Mode state.");
+            FastModeSP.s = IPS_OK;
         }
+        else FastModeSP.s = IPS_ALERT;
+        IDSetSwitch(&FastModeSP, nullptr);
 
+#if 0
         // Bit send, sample format
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonBitSendMode, data, 1, len))
         {
             bool const _12bits = *(reinterpret_cast<bool*>(&data));
             LOGF_DEBUG("Horizon currrent bit send: data[0] %d value %s", data[0], _12bits?"16-bit":"12-bit");
             IUResetSwitch(&BitSendSP);
-            PadDataS[_12bits?0:1].s = ISS_ON;
-            IDSetSwitch(&PadDataSP, nullptr);
+            BitSendS[_12bits?0:1].s = ISS_ON;
+            BitSendSP.s = IPS_OK;
         }
+        else BitSendSP.s = IPS_ALERT;
+        IDSetSwitch(&BitSendSP, nullptr);
+#endif
 
         // FX3 version, depending on DLL
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonFX3Version, data, 6, len))
@@ -594,7 +612,8 @@ bool ATIKCCD::setupParams()
             uint16_t const major = *(reinterpret_cast<uint16_t*>(&data));
             uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)));
             uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)*2));
-            LOGF_DEBUG("Horizon currrent FX3 version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
+            LOGF_DEBUG("Horizon FX3 version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
+            LOGF_INFO("Horizon FX3 v%d.%d.%d", major, minor, patch);
         }
 
         // FPGA version, depending on DLL
@@ -604,6 +623,7 @@ bool ATIKCCD::setupParams()
             uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)));
             uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)*2));
             LOGF_DEBUG("Horizon currrent FPGA version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
+            LOGF_INFO("Horizon FPGA v%d.%d.%d", major, minor, patch);
         }
 
         // Horizon and Horizon2 cameras have exposure in [18us, unlimited[
@@ -656,9 +676,14 @@ void ATIKCCD::updateGainOffset()
             ControlN[0].min = static_cast <double> (minGain);
             ControlN[0].max = static_cast <double> (maxGain);
             ControlN[0].value = static_cast <double> (valGain);
-            IDSetNumber(&ControlNP, nullptr);
+            ControlNP.s = IPS_OK;
         }
-        else LOG_ERROR("Failed reading Custom Gain.");
+        else
+        {
+            LOG_ERROR("Failed reading Custom Gain.");
+            ControlNP.s = IPS_ALERT;
+        }
+        IDSetNumber(&ControlNP, nullptr);
 
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomOffset, data, 6, len))
         {
@@ -670,9 +695,14 @@ void ATIKCCD::updateGainOffset()
             ControlN[1].min = static_cast <double> (minOffset);
             ControlN[1].max = static_cast <double> (maxOffset);
             ControlN[1].value = static_cast <double> (valOffset);
-            IDSetNumber(&ControlNP, nullptr);
+            ControlNP.s = IPS_OK;
         }
-        else LOG_ERROR("Failed reading Custom Offset.");
+        else
+        {
+            LOG_ERROR("Failed reading Custom Offset.");
+            ControlNP.s = IPS_ALERT;
+        }
+        IDSetNumber(&ControlNP, nullptr);
     }
     else
     {
@@ -692,21 +722,20 @@ void ATIKCCD::updateGainOffset()
                           preset_index, data[0], data[1], data[2], data[3], data[4], data[5], valGain, valOffset);
                 ControlN[0].value = static_cast <double> (valGain);
                 ControlN[1].value = static_cast <double> (valOffset);
-                IDSetNumber(&ControlNP, nullptr);
             }
             else
             {
                 LOGF_WARN("Failed reading Preset #%d Gain/Offset.", preset_index);
                 ControlNP.s = IPS_ALERT;
-                IDSetNumber(&ControlNP, nullptr);
             }
         }
         else
         {
             LOGF_WARN("Failed reading Preset #%d Gain/Offset, incorrect preset index.", preset_index);
             ControlNP.s = IPS_ALERT;
-            IDSetNumber(&ControlNP, nullptr);
         }
+
+        IDSetNumber(&ControlNP, nullptr);
     }
 
 }
@@ -808,9 +837,21 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 
             if (changed)
             {
-                IUResetSwitch(&ControlPresetsSP);
-                ControlPresetsS[0].s = ISS_ON; // Set custom
-                ControlPresetsSP.s = IPS_IDLE;
+                uint16_t value = 0;
+                uint8_t *data = reinterpret_cast<uint8_t*>(&value);
+                LOG_INFO("Gain/Offset modified, automatically switching to Custom Preset.");
+                if (ARTEMIS_OK == ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOPresetMode, data, 2))
+                {
+                    IUResetSwitch(&ControlPresetsSP);
+                    ControlPresetsS[0].s = ISS_ON; // Set custom
+                    ControlPresetsSP.s = IPS_OK;
+                }
+                else
+                {
+                    LOG_ERROR("Failed setting gain/offset preset to Custom.");
+                    ControlPresetsSP.s = IPS_ALERT;
+                }
+
                 IDSetSwitch(&ControlPresetsSP, nullptr);
             }
 
@@ -896,7 +937,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             int prevIndex = IUFindOnSwitchIndex(&v);
             IUUpdateSwitch(&v, states, names, n);
             int targetIndex = IUFindOnSwitchIndex(&v);
-            uint16_t value = static_cast<uint16_t>(targetIndex); // As a bool, so enum order is important
+            uint16_t value = static_cast<uint16_t>(targetIndex); // As a bool, so enum/prop order is important
             uint8_t *data = reinterpret_cast<uint8_t*>(&value);
             int rc = ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonEvenIllumination, data, 2);
             if (rc != ARTEMIS_OK)
@@ -918,7 +959,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             int prevIndex = IUFindOnSwitchIndex(&v);
             IUUpdateSwitch(&v, states, names, n);
             int targetIndex = IUFindOnSwitchIndex(&v);
-            uint16_t value = static_cast<uint16_t>(targetIndex); // As a bool, so enum order is important
+            uint16_t value = static_cast<uint16_t>(targetIndex); // As a bool, so enum/prop order is important
             uint8_t *data = reinterpret_cast<uint8_t*>(&value);
             int rc = ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonPadData, data, 2);
             if (rc != ARTEMIS_OK)
@@ -956,6 +997,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             IDSetSwitch(&v, nullptr);
             return true;
         }
+#if 0
         else if (!strcmp(name, BitSendSP.name))
         {
             _ISwitchVectorProperty &v = BitSendSP;
@@ -978,6 +1020,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             IDSetSwitch(&v, nullptr);
             return true;
         }
+#endif
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
