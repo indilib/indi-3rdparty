@@ -447,6 +447,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
         case 0x90:
             strcpy(boardinfo[0], "DOB");
             break;
+        case 0xA5:
+            strcpy(boardinfo[0], "AZ-GTi");
+            break;
         case 0xF0:
             strcpy(boardinfo[0], "GEEHALEL");
             minperiods[Axis1] = 13;
@@ -545,7 +548,7 @@ bool Skywatcher::HasPPEC()
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x23;
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x23 || MountCode == 0xA5;
 }
 
 bool Skywatcher::HasSnapPort2()
