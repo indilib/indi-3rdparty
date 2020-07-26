@@ -34,7 +34,7 @@ EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
 
-EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time);
+EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time);  
 
 
 EXPORTC const char* STDCALL GetTimeStamp();
@@ -779,6 +779,19 @@ EXPORTC uint32_t STDCALL SetQHYCCDWriteCMOS(qhyccd_handle *h,uint8_t number,uint
   @return QHYCCD_SUCCESS or QHYCCD_ERROR. If it is QHYCCD_ERROR, it means (1) this model may have not support this function or (2) the API failur to run.
 */
 
+
+EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+/**
+  @fn uint32_t SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+  @brief For the camera with high gain low gain two channel combine to 16bit function, this API can set the combination parameters
+  @param handle camera control handle
+  @param x:  High gain low gain channel data switch point. (based on the high gain channel data)
+  @param ah: High gain channel ratio   (y=ax+b)
+  @param bh: High gain channel offset  (y=ax+b)
+  @param al: Low gain channel ratio    (y=ax+b)
+  @param bl: Low gain channel offset   (y=ax+b)
+  @return QHYCCD_SUCCESS or QHYCCD_ERROR. If it is QHYCCD_ERROR, it means (1) this model may have not support this function or (2) the API failur to run.
+*/
 
 EXPORTC uint32_t STDCALL EnableQHYCCDImageOSD(qhyccd_handle *h,uint32_t i);
 
