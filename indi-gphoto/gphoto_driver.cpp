@@ -881,6 +881,37 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
             imgData = nullptr;
         }
     }
+#elif defined(LIBRAW_CAMERA_TEMPERATURE2) && defined(LIBRAW_SENSOR_TEMPERATURE2)
+    // Extract temperature(s) from gphoto image via libraw
+    const char *imgData;
+    unsigned long imgSize;
+    int rc;
+    result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
+    if (result == GP_OK)
+    {
+        LibRaw lib_raw;
+        rc = lib_raw.open_buffer((void *)imgData, imgSize);
+        if (rc != LIBRAW_SUCCESS)
+        {
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
+                         "Cannot decode (%s)", libraw_strerror(rc));
+        }
+        else
+        {
+            if (lib_raw.imgdata.makernotes.common.SensorTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.SensorTemperature;
+            else if (lib_raw.imgdata.makernotes.common.CameraTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.CameraTemperature;
+        }
+        lib_raw.recycle();
+        if (fd >= 0)
+        {
+            // The gphoto documentation says I don't need to do this,
+            // but reading the source of gp_file_get_data_and_size says otherwise. :(
+            free((void *)imgData);
+            imgData = nullptr;
+        }
+    }
 #else
     if(strstr(gphoto->manufacturer, "Canon"))
     {
