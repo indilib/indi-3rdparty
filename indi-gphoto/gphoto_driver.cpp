@@ -867,10 +867,10 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
         }
         else
         {
-            if (lib_raw.imgdata.other.SensorTemperature > -273.15f)
-                gphoto->last_sensor_temp = lib_raw.imgdata.other.SensorTemperature;
-            else if (lib_raw.imgdata.other.CameraTemperature > -273.15f)
-                gphoto->last_sensor_temp = lib_raw.imgdata.other.CameraTemperature;
+            if (lib_raw.imgdata.makernotes.common.SensorTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.SensorTemperature;
+            else if (lib_raw.imgdata.makernotes.common.CameraTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.CameraTemperature;
         }
         lib_raw.recycle();
         if (fd >= 0)
