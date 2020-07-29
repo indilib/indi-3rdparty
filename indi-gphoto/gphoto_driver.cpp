@@ -854,12 +854,11 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     // Extract temperature(s) from gphoto image via libraw
     const char *imgData;
     unsigned long imgSize;
-    int rc;
     result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
     if (result == GP_OK)
     {
         LibRaw lib_raw;
-        rc = lib_raw.open_buffer((void *)imgData, imgSize);
+        int rc = lib_raw.open_buffer((void *)imgData, imgSize);
         if (rc != LIBRAW_SUCCESS)
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
@@ -885,12 +884,11 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     // Extract temperature(s) from gphoto image via libraw
     const char *imgData;
     unsigned long imgSize;
-    int rc;
     result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
     if (result == GP_OK)
     {
         LibRaw lib_raw;
-        rc = lib_raw.open_buffer((void *)imgData, imgSize);
+        int rc = lib_raw.open_buffer((void *)imgData, imgSize);
         if (rc != LIBRAW_SUCCESS)
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
