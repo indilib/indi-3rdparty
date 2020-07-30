@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libmicam CXX C)
 
-set(MICAM_VERSION "0.5.5")
-set(MICAM_VERSION_MAC "0.4.5")
+set(MICAM_VERSION "0.5.6")
+set(MICAM_VERSION_MAC "0.4.6")
 set(MICAM_SOVERSION "0")
 
 include(GNUInstallDirs)
