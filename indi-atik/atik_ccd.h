@@ -96,6 +96,12 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             ID_AtikHorizonGOPresetHigh,
             ID_AtikHorizonGOCustomGain,
             ID_AtikHorizonGOCustomOffset,
+            ID_AtikHorizonEvenIllumination = 12,
+            ID_AtikHorizonPadData,
+            ID_AtikHorizonExposureSpeed,
+            ID_AtikHorizonBitSendMode,
+            ID_AtikHorizonFX3Version = 200,
+            ID_AtikHorizonFPGAVersion,
         };
 
         typedef enum AtikGuideDirection
@@ -132,6 +138,11 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
          * @brief setupParams get initial camera parameters
          */
         bool setupParams();
+
+        /**
+         * @brief setupGainOffset read gain and offset parameters
+         */
+        void updateGainOffset();
 
         /**
          * @brief activateCooler Turn on/off cooler
@@ -173,6 +184,42 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             PRESET_HIGH,
         };
 
+        // Pad data from 12 to 16 bits
+        ISwitch PadDataS[2];
+        ISwitchVectorProperty PadDataSP;
+        enum
+        {
+            PADDATA_OFF = 0,
+            PADDATA_ON
+        };
+
+        // Even illumination
+        ISwitch EvenIlluminationS[2];
+        ISwitchVectorProperty EvenIlluminationSP;
+        enum
+        {
+            EVENILLUMINATION_OFF = 0,
+            EVENILLUMINATION_ON
+        };
+
+        // Gain & Offset Presets
+        ISwitch FastModeS[4];
+        ISwitchVectorProperty FastModeSP;
+        enum
+        {
+            FASTMODE_POWERSAVE = 0,
+            FASTMODE_NORMAL,
+            FASTMODE_FAST,
+        };
+
+        // Bit send
+        ISwitch BitSendS[2];
+        ISwitchVectorProperty BitSendSP;
+        enum
+        {
+            BITSEND_16BITS = 0,
+            BITSEND_12BITS
+        };
 
         // API & Firmware Version
         IText VersionInfoS[2] = {};

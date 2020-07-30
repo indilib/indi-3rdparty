@@ -1,0 +1,27 @@
+Source: indi-rpicam
+Section: science
+Priority: extra
+Maintainer: Lars Berntzon <lars.berntzon@cecilia-data.se>
+XSBC-Original-Maintainer: Lars Berntzon <lars.berntzon@cecilia-data.se>
+Build-Depends: debhelper (>= 6), cmake, cdbs, libindi-dev, libnova-dev, zlib1g-dev, libraspberrypi-dev
+Standards-Version: 3.8.0
+
+Package: indi-rpicam
+Architecture: armhf
+Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1
+Description: INDI driver for Raspberry Pi High Quality Camera.
+ .
+ This is an INDI driver for Raspberry Pi High Quality Camera.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+#Package: indi-rpicam-dbg
+#Priority: extra
+#Section: debug
+#Architecture: any
+#Depends: indi-rpicam (= ${binary:Version}), ${misc:Depends}
+#Description: INDI driver for Raspberry Pi High Quality Camera.
+# .
+# This driver is compatible with any INDI client such as KStars or Xephem.
+# This package contains the debug symbols for the this driver, useful to investigate problems in INDI.
+#

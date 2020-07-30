@@ -5,7 +5,7 @@
 #include "stdint.h"
 #include "config.h"
 #include <functional>
-
+#include <string>
 
 
 
@@ -33,6 +33,9 @@ EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 
 EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
+
+EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time);  
+
 
 EXPORTC const char* STDCALL GetTimeStamp();
 
@@ -742,9 +745,9 @@ EXPORTC uint32_t STDCALL GetQHYCCDReadMode(qhyccd_handle *h,uint32_t* modeNumber
 EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenParam(
   QHYCamMinMaxStepValue *p,
   CONTROL_ID controlId);
-
+/*
 EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenReadMode(QHYCamReadModeInfo *p);
-
+*/
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstMode(qhyccd_handle *h,bool i);
 EXPORTC uint32_t STDCALL SetQHYCCDBurstModeStartEnd(qhyccd_handle *h,unsigned short start,unsigned short end);
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstCountFun(qhyccd_handle *h,bool i);
@@ -777,6 +780,19 @@ EXPORTC uint32_t STDCALL SetQHYCCDWriteCMOS(qhyccd_handle *h,uint8_t number,uint
 */
 
 
+EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+/**
+  @fn uint32_t SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+  @brief For the camera with high gain low gain two channel combine to 16bit function, this API can set the combination parameters
+  @param handle camera control handle
+  @param x:  High gain low gain channel data switch point. (based on the high gain channel data)
+  @param ah: High gain channel ratio   (y=ax+b)
+  @param bh: High gain channel offset  (y=ax+b)
+  @param al: Low gain channel ratio    (y=ax+b)
+  @param bl: Low gain channel offset   (y=ax+b)
+  @return QHYCCD_SUCCESS or QHYCCD_ERROR. If it is QHYCCD_ERROR, it means (1) this model may have not support this function or (2) the API failur to run.
+*/
+
 EXPORTC uint32_t STDCALL EnableQHYCCDImageOSD(qhyccd_handle *h,uint32_t i);
 
 EXPORTC void STDCALL QHYCCDQuit();
@@ -784,7 +800,7 @@ EXPORTC void STDCALL QHYCCDQuit();
 EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
 
-#if PCIE_MODE_SUPPORT
+#if 0//PCIE_MODE_TEST
 
 #include "riffa.h"
 

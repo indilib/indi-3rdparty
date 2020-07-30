@@ -854,12 +854,11 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     // Extract temperature(s) from gphoto image via libraw
     const char *imgData;
     unsigned long imgSize;
-    int rc;
     result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
     if (result == GP_OK)
     {
         LibRaw lib_raw;
-        rc = lib_raw.open_buffer((void *)imgData, imgSize);
+        int rc = lib_raw.open_buffer((void *)imgData, imgSize);
         if (rc != LIBRAW_SUCCESS)
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
@@ -871,6 +870,36 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
                 gphoto->last_sensor_temp = lib_raw.imgdata.other.SensorTemperature;
             else if (lib_raw.imgdata.other.CameraTemperature > -273.15f)
                 gphoto->last_sensor_temp = lib_raw.imgdata.other.CameraTemperature;
+        }
+        lib_raw.recycle();
+        if (fd >= 0)
+        {
+            // The gphoto documentation says I don't need to do this,
+            // but reading the source of gp_file_get_data_and_size says otherwise. :(
+            free((void *)imgData);
+            imgData = nullptr;
+        }
+    }
+#elif defined(LIBRAW_CAMERA_TEMPERATURE2) && defined(LIBRAW_SENSOR_TEMPERATURE2)
+    // Extract temperature(s) from gphoto image via libraw
+    const char *imgData;
+    unsigned long imgSize;
+    result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
+    if (result == GP_OK)
+    {
+        LibRaw lib_raw;
+        int rc = lib_raw.open_buffer((void *)imgData, imgSize);
+        if (rc != LIBRAW_SUCCESS)
+        {
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
+                         "Cannot decode (%s)", libraw_strerror(rc));
+        }
+        else
+        {
+            if (lib_raw.imgdata.makernotes.common.SensorTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.SensorTemperature;
+            else if (lib_raw.imgdata.makernotes.common.CameraTemperature > -273.15f)
+                gphoto->last_sensor_temp = lib_raw.imgdata.makernotes.common.CameraTemperature;
         }
         lib_raw.recycle();
         if (fd >= 0)
@@ -1056,8 +1085,10 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         return -1;
     }
 
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Starting exposure (exptime: %g secs, mirror lock: %d, force bulb: %s, exposure index: %d)",
-                 exptime_usec / 1e6, mirror_lock, gphoto->force_bulb ? "true": "false", gphoto->exposure_widget ? gphoto->exposure_widget->value.num : -1);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
+                 "Starting exposure (exptime: %g secs, mirror lock: %d, force bulb: %s, exposure index: %d)",
+                 exptime_usec / 1e6, mirror_lock, gphoto->force_bulb ? "true" : "false",
+                 gphoto->exposure_widget ? gphoto->exposure_widget->value.num : -1);
     pthread_mutex_lock(&gphoto->mutex);
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Mutex locked");
 
@@ -1073,15 +1104,14 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     int optimalExposureIndex = -1;
 
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
-    // JM 2020-03-23: If we are using external shutter release, for exposures less than shutter threshold
-    // try to find optimal exposure time.
-    // JM 2020-04-30: According to issue #104 on Github (https://github.com/indilib/indi-3rdparty/issues/104)
-    // force_bulb must be used a required (false) for optimal exposure index to be searched. This affects
-    // Canon 400D.
     if (gphoto->force_bulb == false &&
-            ((gphoto->bulb_port[0] || gphoto->dsusb)
-             && exptime_usec <= RELEASE_SHUTTER_THRESHOLD))
+            // No external shutter port is specified OR
+            ((!gphoto->bulb_port[0] && !gphoto->dsusb) ||
+             // External shutter port is specified but exposure time < 30 secs
+             ((gphoto->bulb_port[0] || gphoto->dsusb) && exptime_usec <= RELEASE_SHUTTER_THRESHOLD)))
+    {
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
+    }
 
     // Set Capture Target
     // JM: 2017-05-21: Disabled now since user can explicity set capture target via the driver interface
@@ -1131,12 +1161,12 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
             if (gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index) == GP_OK)
                 gphoto->bulb_mode = true;
             // If it's not already set to the bulb exposure index
-//            if (gphoto->bulb_exposure_index != static_cast<uint8_t>(gphoto->exposure_widget->value.index))
-//            {
-//                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Setting exposure widget bulb index: %d",
-//                             gphoto->bulb_exposure_index);
-//                gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index);
-//            }
+            //            if (gphoto->bulb_exposure_index != static_cast<uint8_t>(gphoto->exposure_widget->value.index))
+            //            {
+            //                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Setting exposure widget bulb index: %d",
+            //                             gphoto->bulb_exposure_index);
+            //                gphoto_set_widget_num(gphoto, gphoto->exposure_widget, gphoto->bulb_exposure_index);
+            //            }
         }
 
         // If we have mirror lock enabled, let's lock mirror. Return on failure
@@ -1336,11 +1366,14 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     //Bulb mode
     int timeoutCounter = 0;
     gphoto->command    = 0;
+    uint32_t waitMS = 1000;
+    bool downloadComplete = false;
 
     while (1)
     {
         // Wait for image to be ready to download
-        result = gp_camera_wait_for_event(gphoto->camera, 1000, &event, &data, gphoto->context);
+        result = gp_camera_wait_for_event(gphoto->camera, waitMS, &event, &data, gphoto->context);
+
         if (result != GP_OK)
         {
             DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Could not wait for event.");
@@ -1358,22 +1391,27 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         {
             case GP_EVENT_CAPTURE_COMPLETE:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Capture event completed.");
-                break;
+                pthread_mutex_unlock(&gphoto->mutex);
+                return GP_OK;
+
             case GP_EVENT_FILE_ADDED:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
                 fn     = static_cast<CameraFilePath *>(data);
                 result = download_image(gphoto, fn, fd);
-                //Set exposure back to original value
-
-                // JM 2018-08-06: Why do we really need to reset values here?
-                //reset_settings(gphoto);
-
-                pthread_mutex_unlock(&gphoto->mutex);
-                return result;
+                waitMS = 100;
+                downloadComplete = true;
+                break;
+            //                pthread_mutex_unlock(&gphoto->mutex);
+            //                return result;
             case GP_EVENT_UNKNOWN:
                 //DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Unknown event.");
                 break;
             case GP_EVENT_TIMEOUT:
+                if (downloadComplete)
+                {
+                    pthread_mutex_unlock(&gphoto->mutex);
+                    return GP_OK;
+                }
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out #%d, retrying...", ++timeoutCounter);
                 // So retry for 5 seconds before giving up
                 if (timeoutCounter >= 10)
@@ -2139,8 +2177,10 @@ int gphoto_capture_preview(gphoto_driver *gphoto, CameraFile *previewFile, char 
 
 int gphoto_start_preview(gphoto_driver *gphoto)
 {
-    // Olympus & Sony cameras support streaming but without viewfinder_widget
-    if (strcasestr(gphoto->manufacturer, "OLYMPUS") || strcasestr(gphoto->manufacturer, "Sony Corporation"))
+    // Olympus, Sony, and Fuji cameras support streaming but without viewfinder_widget
+    if (strcasestr(gphoto->manufacturer, "OLYMPUS") ||
+            strcasestr(gphoto->manufacturer, "Sony Corporation") ||
+            strcasestr(gphoto->manufacturer, "Fuji"))
         return GP_OK;
 
     // If viewfinder not found, nothing to do

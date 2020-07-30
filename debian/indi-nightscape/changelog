@@ -1,5 +1,56 @@
+indi-nightscape (1.0.6) bionic; urgency=low
+
+  * Frame size updates for xxAstroJeffxx issues and new timer routine. (#144)
+
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Sat, 6 Jun 2020 15:57:06 +0100
+
+indi-nightscape (1.0.5) bionic; urgency=medium
+
+  * All the CCD drivers now lock the mutex for async upload
+  * Fix cmake_module location in the new repo
+  * unsigned long to unsigned int fix
+  * Use BGGR by default
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 27 May 2020 14:23:12 +0300
+
+indi-nightscape (1.0.4) bionic; urgency=low
+
+  * [dspau] fixed spectrum size in rtlsdr and limesdr
+
+ -- Ilia Platone <info@iliaplatone.com>  Sat, 13 Oct 2018 17:06:25 +0200
+
+indi-nightscape (1.0.3) bionic; urgency=low
+
+  * Corrections to D2xxS size when D2XX enabled
+  * Defualt D2XX off if not present
+  * Add nightscape udev rules file
+  * Fixed LOG_INFO use for D2XX
+  * Some additional changes to cleanup D2XX handling
+  * Merge pull request #650 from dirkenstein/master
+  * Merge pull request #652 from dirkenstein/master
+  * Spelling corrections in XML
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 16 Jul 2018 21:05:49 +0300
+
+indi-nightscape (1.0.2) bionic; urgency=medium
+
+  * Few code improvements and better using of logging
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 15 Jul 2018 17:34:52 +0300
+
+indi-nightscape (1.0.1) bionic; urgency=low
+
+  * Update header files
+  * Autobuild updates to make D2XX optional
+  * Nstest now can build without D2XX
+  * Add additonal D2XX optional IFs
+  * Fixed bad includes without D2XX
+  * Added some basic docfiles
+
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Sun, 15 Jul 2018 12:35:29 +0100
+
 indi-nightscape (1.0) bionic; urgency=low
 
   * Initial Release.
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 16 Jul 2018 21:00:00 +0300
+ -- Dirk Niggemann <dirk.niggemann@gmail.com>  Fri, 13 Jul 2018 19:31:20 +0100

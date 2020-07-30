@@ -1,0 +1,64 @@
+cmake_minimum_required(VERSION 3.0)
+PROJECT(libsv305 C CXX)
+
+set(CKCAMERASDK_VERSION "1.4.0")
+set(CKCAMERASDK_SOVERSION "1")
+
+include(GNUInstallDirs)
+
+set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
+
+# install binary libraries
+IF("${CMAKE_SYSTEM}" MATCHES "Linux")
+  message("Linux target")
+  IF(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL amd64
+        OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i686 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i386)
+    message("Intel architecture")
+  # 64 bits
+    IF(CMAKE_SIZEOF_VOID_P MATCHES "8")
+      message("64 bits target")
+      exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libCKCameraSDK_x64.so ${CMAKE_BINARY_DIR}/libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION})
+      install( FILES ${CMAKE_BINARY_DIR}/libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+      # Make sure symbolic links are installed
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x64.so.${CKCAMERASDK_VERSION}\" \"libCKCameraSDK_x64.so.${CKCAMERASDK_SOVERSION}\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x64.so.${CKCAMERASDK_SOVERSION}\" \"libCKCameraSDK_x64.so\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+    # 32 bits
+    ELSE(CMAKE_SIZEOF_VOID_P MATCHES "8")
+      message("32 bits target")
+      exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libCKCameraSDK_x86.so ${CMAKE_BINARY_DIR}/libCKCameraSDK_x86.so.${CKCAMERASDK_VERSION})
+      install( FILES ${CMAKE_BINARY_DIR}/libCKCameraSDK_x86.so.${CKCAMERASDK_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+      # Make sure symbolic links are installed
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x86.so.${CKCAMERASDK_VERSION}\" \"libCKCameraSDK_x86.so.${CKCAMERASDK_SOVERSION}\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libCKCameraSDK_x86.so.${CKCAMERASDK_SOVERSION}\" \"libCKCameraSDK_x86.so\" WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+    ENDIF (CMAKE_SIZEOF_VOID_P MATCHES "8")
+  ELSE(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL amd64
+        OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i686 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i386)
+    message(FATAL_ERROR "Your architecture isn't suppored")
+  ENDIF(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL amd64
+        OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i686 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i386)
+ELSE("${CMAKE_SYSTEM}" MATCHES "Linux")
+  message(FATAL_ERROR "Library only available on Linux")
+ENDIF("${CMAKE_SYSTEM}" MATCHES "Linux")
+
+# install header files
+install(FILES  CKCameraInterface.h  CKDeviceDef.h DESTINATION include/libsv305)
+
+# install udev rules
+install(FILES 90-ckusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+
+# update library path
+install(CODE "execute_process(COMMAND \"ldconfig\")")
+
+
+# Temporary, for testing
+#SET(CPACK_PACKAGE_NAME "libsv305")
+#SET(CPACK_PACKAGE_VERSION_MAJOR "0")
+#SET(CPACK_PACKAGE_VERSION_MINOR "1")
+#SET(CPACK_PACKAGE_VERSION_PATCH "0")
+#SET(CPACK_GENERATOR "DEB")
+#SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Blaise-Florentin Collin") #required
+#INCLUDE(CPack)

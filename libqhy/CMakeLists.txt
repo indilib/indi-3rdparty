@@ -3,8 +3,8 @@ PROJECT(libqhy C CXX)
 
 include(GNUInstallDirs)
 
-# QHY SDK 20.03.21
-set(LIBQHY_VERSION "20.3.21")
+# QHY SDK 20.07.26
+set(LIBQHY_VERSION "20.7.26")
 set(LIBQHY_SOVERSION "20")
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
@@ -17,7 +17,7 @@ IF (APPLE)
 set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE STRING "QHY firmware installation directory")
 
 # One problem that is often encountered on macs when using rpaths is that the ID the dylib has does not match the links being made to the dylib
-# Since when using RPATHS, programs link to libraries using their IDs, that would cause a problem later when a program being built tries to link to the wrong name for the dylib 
+# Since when using RPATHS, programs link to libraries using their IDs, that would cause a problem later when a program being built tries to link to the wrong name for the dylib
 # This should get the current ID of the dylib and make sure it matches what we expect it to be, and stops the build if it does not.
 execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/libqhyccd.dylib | tail -n 1 | tr -d '\n'" OUTPUT_VARIABLE DYLIB_ID)
 if(${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib")
