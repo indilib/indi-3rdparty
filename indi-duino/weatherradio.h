@@ -55,7 +55,7 @@ protected:
     virtual bool updateProperties() override;
 
     // Initial function to get data after connection is successful
-    void getBasicData();
+    IPState getBasicData();
 
     // host name and port for HTTP connections
     char hostname[MAXINDILABEL];

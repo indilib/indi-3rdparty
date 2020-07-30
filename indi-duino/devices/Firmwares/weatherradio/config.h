@@ -23,6 +23,9 @@
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 
+// refresh cache interval (ms)
+#define MAX_CACHE_AGE 60000
+
 // ============== device configurations (begin) ============
 
 // DHT sensor family

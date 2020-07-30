@@ -35,25 +35,26 @@ void ISPoll(void *p);
 
 void ISGetProperties(const char *dev)
 {
-        talon6->ISGetProperties(dev);
+    talon6->ISGetProperties(dev);
 }
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-        talon6->ISNewSwitch(dev, name, states, names, num);
+    talon6->ISNewSwitch(dev, name, states, names, num);
 }
 
 void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
 {
-        talon6->ISNewText(dev, name, texts, names, num);
+    talon6->ISNewText(dev, name, texts, names, num);
 }
 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
-        talon6->ISNewNumber(dev, name, values, names, num);
+    talon6->ISNewNumber(dev, name, values, names, num);
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
+                char *names[], int n)
 {
     talon6->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
@@ -86,7 +87,7 @@ bool Talon6::initProperties()
                        ISR_ATMOST1, 0, IPS_IDLE);
 
     IUFillNumber(&GoToN[0], "GOTO", "% Open", "%g", 0, 100, 1, 0);
-    IUFillNumberVector(&GoToNP, GoToN, 1, getDeviceName(), "PERC_GOTO", "Go To",MAIN_CONTROL_TAB,
+    IUFillNumberVector(&GoToNP, GoToN, 1, getDeviceName(), "PERC_GOTO", "Go To", MAIN_CONTROL_TAB,
                        IP_RW, 0, IPS_IDLE);
 
     // Firmware version
@@ -109,8 +110,9 @@ bool Talon6::initProperties()
 
     // Encoder Ticks
     IUFillNumber(&EncoderTicksN[0], "ENCODER_TICKS", "Encoder Ticks", "%6.0f", 0, 100000, 1, 0);
-    IUFillNumberVector(&EncoderTicksNP, EncoderTicksN, 1, getDeviceName(), "ENCODER_TICKS", "Max Roof Travel", OPTIONS_TAB, IP_RW,
-                     60, IPS_IDLE);
+    IUFillNumberVector(&EncoderTicksNP, EncoderTicksN, 1, getDeviceName(), "ENCODER_TICKS", "Max Roof Travel", OPTIONS_TAB,
+                       IP_RW,
+                       60, IPS_IDLE);
 
     // Switch enable / disable Safety Condition control
     IUFillSwitch(&SafetyS[0], "Enable", "Enable", ISS_OFF);
@@ -134,7 +136,7 @@ bool Talon6::initProperties()
     IUFillLight(&SwitchesL[4], "MGM_SWITCH", "Management - MGM", IPS_IDLE);
     IUFillLightVector(&SwitchesLP, SwitchesL, 5, getDeviceName(), "SWITCHES", "Switches", "Sensors and Switches",  IPS_IDLE);
 
-     return true;
+    return true;
 }
 
 bool Talon6::Handshake()
@@ -155,15 +157,15 @@ Talon6::~Talon6()
 
 const char * Talon6::getDefaultName()
 {
-        return (char *)"Talon6";
+    return (char *)"Talon6";
 }
 
 bool Talon6::updateProperties()
 {
     INDI::Dome::updateProperties();
 
-     if (isConnected())
-     {
+    if (isConnected())
+    {
         getDeviceStatus();
         getFirmwareVersion();
         defineNumber(&GoToNP);
@@ -174,22 +176,20 @@ bool Talon6::updateProperties()
         defineNumber(&EncoderTicksNP);
         defineLight(&SensorsLP);
         defineLight(&SwitchesLP);
-     }
-     else
-     {
-         deleteProperty(GoToNP.name);
-         deleteProperty(StatusSP.name);
-         deleteProperty(SafetySP.name);
-         deleteProperty(StatusValueTP.name);
-         deleteProperty(FirmwareVersionTP.name);
-         deleteProperty(EncoderTicksNP.name);
-         deleteProperty(SensorsLP.name);
-         deleteProperty(SwitchesLP.name);
-     }
-     // We do not need some of the properties defined in parent class
-     deleteProperty(DomeMotionSP.name);
-     deleteProperty(AutoParkSP.name);
-     deleteProperty(TelescopeClosedLockTP.name);
+    }
+    else
+    {
+        deleteProperty(GoToNP.name);
+        deleteProperty(StatusSP.name);
+        deleteProperty(SafetySP.name);
+        deleteProperty(StatusValueTP.name);
+        deleteProperty(FirmwareVersionTP.name);
+        deleteProperty(EncoderTicksNP.name);
+        deleteProperty(SensorsLP.name);
+        deleteProperty(SwitchesLP.name);
+    }
+    // We do not need some of the properties defined in parent class
+    deleteProperty(DomeMotionSP.name);
 
     return true;
 }
@@ -207,7 +207,7 @@ void Talon6::ISGetProperties(const char *dev)
     loadConfig(true, "SAFETY");
 }
 
-bool Talon6::ISNewSwitch(const char *dev,const char *name,ISState *states,char *names[], int n)
+bool Talon6::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
@@ -230,10 +230,10 @@ bool Talon6::ISNewSwitch(const char *dev,const char *name,ISState *states,char *
 
             if (SafetyS[0].s == ISS_OFF)
                 DEBUGF(INDI::Logger::DBG_SESSION, "Warning: Safety conditions are now disabled. You will"
-                                           "be able  to freely open and close the roof manually from the driver,"
-                                           "even if there is a safety condition active.This may cause damage to your equipment.", NULL);
+                       "be able  to freely open and close the roof manually from the driver,"
+                       "even if there is a safety condition active.This may cause damage to your equipment.", NULL);
             else
-                DEBUGF(INDI::Logger::DBG_SESSION,  "Safety Conditions are enabled",NULL);
+                DEBUGF(INDI::Logger::DBG_SESSION,  "Safety Conditions are enabled", NULL);
 
             IDSetSwitch(&SafetySP, nullptr);
 
@@ -246,25 +246,25 @@ bool Talon6::ISNewSwitch(const char *dev,const char *name,ISState *states,char *
 
 bool Talon6::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
     }
 
     return  INDI::Dome::ISNewText(dev, name, texts, names, n);
 }
 
-bool Talon6::ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n)
+bool Talon6::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
-   {
+    {
         if (!strcmp(GoToNP.name, name))
         {
-           IUUpdateNumber(&GoToNP, values, names, n);
-           int requestedPos = values[0];
-           DomeGoTo(requestedPos);
-           // GoToNP.s = IPS_BUSY;
-            IDSetNumber(&GoToNP,nullptr);
-             return true;
+            IUUpdateNumber(&GoToNP, values, names, n);
+            int requestedPos = values[0];
+            DomeGoTo(requestedPos);
+            // GoToNP.s = IPS_BUSY;
+            IDSetNumber(&GoToNP, nullptr);
+            return true;
         }
         if (!strcmp(EncoderTicksNP.name, name))
         {
@@ -275,7 +275,7 @@ bool Talon6::ISNewNumber(const char *dev,const char *name,double values[],char *
         }
     }
 
-    return INDI::Dome::ISNewNumber(dev,name,values,names,n);
+    return INDI::Dome::ISNewNumber(dev, name, values, names, n);
 }
 
 bool Talon6::saveConfigItems(FILE *fp)
@@ -285,14 +285,14 @@ bool Talon6::saveConfigItems(FILE *fp)
     // Save Sync position
     IUSaveConfigNumber(fp, &EncoderTicksNP);
     // Save Safety condition switch
-    IUSaveConfigSwitch(fp,&SafetySP);
+    IUSaveConfigSwitch(fp, &SafetySP);
 
     return true;
 }
 
 bool Talon6::Disconnect()
 {
-  return INDI::Dome::Disconnect();
+    return INDI::Dome::Disconnect();
 }
 
 // Reads the device status
@@ -312,35 +312,37 @@ void Talon6::getFirmwareVersion()
 
 /* Read string from serial connection tty.
  Every string has a # (HEX23) as a trailing char*/
-int Talon6::ReadString(char *buf,int size)
+int Talon6::ReadString(char *buf, int size)
 {
-  int count;
-  int bytesRead;
-  char a;
-  int rc;
+    int count;
+    int bytesRead;
+    char a;
+    int rc;
 
-  count = 0;
-  buf[count] = 0;
+    count = 0;
+    buf[count] = 0;
 
-  rc = tty_read(PortFD, &a, 1, 2, &bytesRead);
+    rc = tty_read(PortFD, &a, 1, 2, &bytesRead);
 
-  while(rc == TTY_OK) {
+    while(rc == TTY_OK)
+    {
 
-    if((a == '\n')||(a == '\r')) return count;
+        if((a == '\n') || (a == '\r')) return count;
 
-    buf[count] = a;
-    count++;
+        buf[count] = a;
+        count++;
 
-    if(count == size) return count;
-    rc = tty_read(PortFD, &a, 1, 1, &bytesRead);
-    //fprintf(stderr,"read returns %d %x\n",rc,a&0xFF);
+        if(count == size) return count;
+        rc = tty_read(PortFD, &a, 1, 1, &bytesRead);
+        //fprintf(stderr,"read returns %d %x\n",rc,a&0xFF);
 
-  }
-  if(rc != TTY_OK) {
-    //fprintf(stderr,"Readstring returns error %d\n",rc);
-    return -1;
-  }
-  return count;
+    }
+    if(rc != TTY_OK)
+    {
+        //fprintf(stderr,"Readstring returns error %d\n",rc);
+        return -1;
+    }
+    return count;
 }
 
 // This function sends command to the device through serial connection
@@ -350,8 +352,8 @@ int Talon6::WriteString(const char *buf)
     int bytesWritten;
     int rc;
 
-    tty_write(PortFD,buf,strlen(buf),&bytesWritten);
-    rc = ReadString(ReadBuf,40);
+    tty_write(PortFD, buf, strlen(buf), &bytesWritten);
+    rc = ReadString(ReadBuf, 40);
     ProcessDomeMessage(ReadBuf);
 
     return rc;
@@ -362,156 +364,158 @@ void Talon6::TimerHit()
     if (!isConnected())
         return; //  No need to reset timer if we are not connected anymore
 
-     getDeviceStatus();
-     SetTimer(1000);
+    getDeviceStatus();
+    SetTimer(1000);
 
     if (DomeMotionSP.s == IPS_BUSY)
-     {
-         // Abort called
-         if (MotionRequest < 0)
-         {
-             LOG_INFO("Roof motion is stopped.");
-             setDomeState(DOME_IDLE);
-             return;
-         }
-         // Roll off is opening
-         if (DomeMotionS[DOME_CW].s == ISS_ON)
-         {
-             if (fullOpenRoofSwitch == ISS_ON)
-             {
-                 LOG_INFO("Roof is open.");
-                 SetParked(false);
-                 return;
-             }
-         }
-         // Roll Off is closing
-         else if (DomeMotionS[DOME_CCW].s == ISS_ON)
-         {
-             if (fullClosedRoofSwitch == ISS_ON )
-             {
-                 LOG_INFO("Roof is closed.");
-                 SetParked(true);
-                 return;
-             }
-         }
-     }
+    {
+        // Abort called
+        if (MotionRequest < 0)
+        {
+            LOG_INFO("Roof motion is stopped.");
+            setDomeState(DOME_IDLE);
+            return;
+        }
+        // Roll off is opening
+        if (DomeMotionS[DOME_CW].s == ISS_ON)
+        {
+            if (fullOpenRoofSwitch == ISS_ON)
+            {
+                LOG_INFO("Roof is open.");
+                SetParked(false);
+                return;
+            }
+        }
+        // Roll Off is closing
+        else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+        {
+            if (fullClosedRoofSwitch == ISS_ON )
+            {
+                LOG_INFO("Roof is closed.");
+                SetParked(true);
+                return;
+            }
+        }
+    }
 }
 
 void Talon6::ProcessDomeMessage(char *buf)
 {
     // Only process not empty messages
     // and messages that start with &
-  if(buf[0] == 0 || buf[0] != '&')
-  {
-    //  only process not empty messages and
-    //  messages starts with an &
+    if(buf[0] == 0 || buf[0] != '&')
+    {
+        //  only process not empty messages and
+        //  messages starts with an &
 
-    return;
-  }
+        return;
+    }
     //Parse status respnse, second byte contains specs
-  if(buf[1] == 'G')
-  {
+    if(buf[1] == 'G')
+    {
 
-      //Parse first byte that contains Status and Last Action
-      int l;
-      int lStatus;
-      int lLastAction;
+        //Parse first byte that contains Status and Last Action
+        int l;
+        int lStatus;
+        int lLastAction;
 
-      std::string statusString;
-      std::string lastActionString;
+        std::string statusString;
+        std::string lastActionString;
 
-      //Parse Roof Status
-      l = buf[2] & 0x7F;
-      lStatus = l >> 4;
-      lLastAction = l  & 0x0F;
+        //Parse Roof Status
+        l = buf[2] & 0x7F;
+        lStatus = l >> 4;
+        lLastAction = l  & 0x0F;
 
-      switch (lStatus) {
-      case 0:
-          statusString = "OPEN";
-          // If status is OPEN roof is unparked. That doesn t mean it is fully open,
-          // it is fully open when % =100 (see below).
-          INDI::Dome::setDomeState(DOME_UNPARKED);
-          fullClosedRoofSwitch = ISS_OFF;
-          break;
-      case 1:
-          statusString = "CLOSED";
-          //if status is CLOSED roof is parked and it is fully closed.
-          fullClosedRoofSwitch = ISS_ON;
-          fullOpenRoofSwitch = ISS_OFF;
-          INDI::Dome::setDomeState(DOME_PARKED);
-          break;
-      case 2:
-          statusString = "OPENING";
-          break;
-      case 3:
-          statusString = "CLOSING";
-          break;
-      case 4:
-          statusString = "ERROR";
-          break;
-       default:
-          statusString = "UNKOWN";
+        switch (lStatus)
+        {
+            case 0:
+                statusString = "OPEN";
+                // If status is OPEN roof is unparked. That doesn t mean it is fully open,
+                // it is fully open when % =100 (see below).
+                INDI::Dome::setDomeState(DOME_UNPARKED);
+                fullClosedRoofSwitch = ISS_OFF;
+                break;
+            case 1:
+                statusString = "CLOSED";
+                //if status is CLOSED roof is parked and it is fully closed.
+                fullClosedRoofSwitch = ISS_ON;
+                fullOpenRoofSwitch = ISS_OFF;
+                INDI::Dome::setDomeState(DOME_PARKED);
+                break;
+            case 2:
+                statusString = "OPENING";
+                break;
+            case 3:
+                statusString = "CLOSING";
+                break;
+            case 4:
+                statusString = "ERROR";
+                break;
+            default:
+                statusString = "UNKOWN";
 
-          break;
-      }
+                break;
+        }
 
-      IUSaveText(&StatusValueT[0], statusString.c_str());
+        IUSaveText(&StatusValueT[0], statusString.c_str());
 
-      //Parse roof Last Action
-      switch (lLastAction) {
-      case 0:
-          lastActionString = "NONE";
-          break;
-      case 1:
-          lastActionString = "OPEN BY USER";
-          break;
-      case 2:
-          lastActionString = "CLOSE BY USER";
-          break;
-      case 3:
-         //not used;
-          break;
-      case 4:
-          lastActionString = "GO TO BY USER";
-          break;
-      case 5:
-          lastActionString = "CALIBRATE BY USER";
-          break;
-      case 6:
-          lastActionString = "CLOSED DUE TO RAIN - CLOUD";
-          break;
-      case 7:
-          lastActionString = "CLOSE DUE TO POWER DOWN";
-          break;
-      case 8:
-          lastActionString = "CLOSE DUE TO COMMUNICATION LOST";
-          break;
-      case 9:
-          lastActionString = "CLOSE DUE TO INTERNET LOST";
-          break;
-      case 10:
-          lastActionString = "CLOSE DUE TO TIMEOUT EXPIRED";
-          break;
-      case 11:
-          lastActionString = "CLOSE BY MANAGEMENT";
-          break;
-      case 12:
-          lastActionString = "CLOSE BY AUTOMATION";
-          break;
-      case 13:
-          lastActionString = "STOP --MOTOR STALLED";
-          break;
-      case 14:
-          lastActionString = "EMERGENCY STOP";
-          break;
-      case 15:
-          lastActionString = "ORDERED THE MOUNT TO PARK";
-          break;
-        default:
-          lastActionString = "UNKOWN";
+        //Parse roof Last Action
+        switch (lLastAction)
+        {
+            case 0:
+                lastActionString = "NONE";
+                break;
+            case 1:
+                lastActionString = "OPEN BY USER";
+                break;
+            case 2:
+                lastActionString = "CLOSE BY USER";
+                break;
+            case 3:
+                //not used;
+                break;
+            case 4:
+                lastActionString = "GO TO BY USER";
+                break;
+            case 5:
+                lastActionString = "CALIBRATE BY USER";
+                break;
+            case 6:
+                lastActionString = "CLOSED DUE TO RAIN - CLOUD";
+                break;
+            case 7:
+                lastActionString = "CLOSE DUE TO POWER DOWN";
+                break;
+            case 8:
+                lastActionString = "CLOSE DUE TO COMMUNICATION LOST";
+                break;
+            case 9:
+                lastActionString = "CLOSE DUE TO INTERNET LOST";
+                break;
+            case 10:
+                lastActionString = "CLOSE DUE TO TIMEOUT EXPIRED";
+                break;
+            case 11:
+                lastActionString = "CLOSE BY MANAGEMENT";
+                break;
+            case 12:
+                lastActionString = "CLOSE BY AUTOMATION";
+                break;
+            case 13:
+                lastActionString = "STOP --MOTOR STALLED";
+                break;
+            case 14:
+                lastActionString = "EMERGENCY STOP";
+                break;
+            case 15:
+                lastActionString = "ORDERED THE MOUNT TO PARK";
+                break;
+            default:
+                lastActionString = "UNKOWN";
 
-          break;
-      }
+                break;
+        }
 
         IUSaveText(&StatusValueT[1], lastActionString.c_str());
 
@@ -527,14 +531,17 @@ void Talon6::ProcessDomeMessage(char *buf)
         x3 = buf[5]  & 0x7F;
 
         // The 3 bytes are packed together to store the absolute position of the roof
-        xxx = x1 +x2 + x3;
-        xxxp =(int)100*( xxx / EncoderTicksN[0].value);
-        if (xxxp == 100){
+        xxx = x1 + x2 + x3;
+        xxxp = (int)100 * ( xxx / EncoderTicksN[0].value);
+        if (xxxp == 100)
+        {
             // If %=100 then the roof is set to fully open
-            fullClosedRoofSwitch =ISS_OFF;
+            fullClosedRoofSwitch = ISS_OFF;
             fullOpenRoofSwitch = ISS_ON;
 
-        }else{
+        }
+        else
+        {
             fullOpenRoofSwitch = ISS_OFF;
         }
         xxxString = std::to_string(xxx);
@@ -545,7 +552,7 @@ void Talon6::ProcessDomeMessage(char *buf)
         IUSaveText(&StatusValueT[3], xxxpString.c_str());
 
         //Parse power supply voltage
-        int b1,b2;
+        int b1, b2;
         int  bb;
         std::string bbString;
 
@@ -554,7 +561,7 @@ void Talon6::ProcessDomeMessage(char *buf)
         b2 = buf[7]  & 0x7F;
 
         // Values are then added. To get tension in V the result is *15/1024 (see Talon6 documentation)
-        bb = (b1+b2)*15/1024;
+        bb = (b1 + b2) * 15 / 1024;
         bbString = std::to_string(bb);
 
         IUSaveText(&StatusValueT[4], bbString.c_str());
@@ -586,7 +593,7 @@ void Talon6::ProcessDomeMessage(char *buf)
 
 
         // Values are then added (see Talon6 documentation)
-        pp = (p1+p2);
+        pp = (p1 + p2);
         ppString = std::to_string(pp);
 
         IUSaveText(&StatusValueT[6], ppString.c_str());
@@ -601,7 +608,7 @@ void Talon6::ProcessDomeMessage(char *buf)
         c2 = buf[14] & 0x7F;
 
         // Values are then added (see Talon6 documentation)
-        cc = (c1+c2);
+        cc = (c1 + c2);
         ccString = std::to_string(cc);
 
         IUSaveText(&StatusValueT[7], ccString.c_str());
@@ -613,69 +620,99 @@ void Talon6::ProcessDomeMessage(char *buf)
         m1 = (buf[15] & 0x07) << 7 ; //Switches
         m2 = buf[16] & 0x7F; //Sensors
 
-       // fprintf(stderr,"Readstring returns buf 15 %x\n",m1);
-       // fprintf(stderr,"Readstring returns buf 16 %x\n",m2);
+        // fprintf(stderr,"Readstring returns buf 15 %x\n",m1);
+        // fprintf(stderr,"Readstring returns buf 16 %x\n",m2);
 
-       //First bit contains Power Lost status
-       if (m2 & 0x01 ) {
-           SensorsL[0].s = IPS_OK;
-       }else{
-           SensorsL[0].s = IPS_IDLE;
-       }
-       //Second bit contains Weather Condition status
-       if (m2 & 0x02) {
-           SensorsL[1].s = IPS_OK;
-       }else{
-           SensorsL[1].s = IPS_IDLE;
-       }
-       //Third bit contains Mount At Park status
-       if (m2 & 0x04) {
-           SensorsL[2].s = IPS_OK;
-       }else{
-           SensorsL[2].s = IPS_IDLE;
-       }
-       //Fourth bit contains Open sensor status
-       if (m2 & 0x08) {
-           SensorsL[3].s = IPS_OK;
-       }else{
-           SensorsL[3].s = IPS_IDLE;
-       }
-       //Fifth bit contains Close sensor status
-       if (m2 & 0x10) {
-           SensorsL[4].s = IPS_OK;
-       }else{
-           SensorsL[4].s = IPS_IDLE;
-       }
-       //Sixth bit contains Open switch status
-       if (m2 & 0x20) {
-           SwitchesL[0].s = IPS_OK;
-       }else{
-           SwitchesL[0].s = IPS_IDLE;
-       }
-       //Seventh bit contains Stop switch status
-       if (m2 & 0x40) {
-           SwitchesL[1].s = IPS_OK;
-       }else{
-           SwitchesL[1].s = IPS_IDLE;
-       }
-       //First bit contains Close switch status
-       if (m1 & 0x01) {
-           SwitchesL[0].s = IPS_OK;
-       }else{
-           SwitchesL[0].s = IPS_IDLE;
-       }
-       //Second bit contains Direct Command switch status
-       if (m1 & 0x02) {
-           SwitchesL[1].s = IPS_OK;
-       }else{
-           SwitchesL[1].s = IPS_IDLE;
-       }
-       //Third bit contains Management Command switch status
-       if (m1 & 0x04) {
-           SwitchesL[2].s = IPS_OK;
-       }else{
-           SwitchesL[2].s = IPS_IDLE;
-       }
+        //First bit contains Power Lost status
+        if (m2 & 0x01 )
+        {
+            SensorsL[0].s = IPS_OK;
+        }
+        else
+        {
+            SensorsL[0].s = IPS_IDLE;
+        }
+        //Second bit contains Weather Condition status
+        if (m2 & 0x02)
+        {
+            SensorsL[1].s = IPS_OK;
+        }
+        else
+        {
+            SensorsL[1].s = IPS_IDLE;
+        }
+        //Third bit contains Mount At Park status
+        if (m2 & 0x04)
+        {
+            SensorsL[2].s = IPS_OK;
+        }
+        else
+        {
+            SensorsL[2].s = IPS_IDLE;
+        }
+        //Fourth bit contains Open sensor status
+        if (m2 & 0x08)
+        {
+            SensorsL[3].s = IPS_OK;
+        }
+        else
+        {
+            SensorsL[3].s = IPS_IDLE;
+        }
+        //Fifth bit contains Close sensor status
+        if (m2 & 0x10)
+        {
+            SensorsL[4].s = IPS_OK;
+        }
+        else
+        {
+            SensorsL[4].s = IPS_IDLE;
+        }
+        //Sixth bit contains Open switch status
+        if (m2 & 0x20)
+        {
+            SwitchesL[0].s = IPS_OK;
+        }
+        else
+        {
+            SwitchesL[0].s = IPS_IDLE;
+        }
+        //Seventh bit contains Stop switch status
+        if (m2 & 0x40)
+        {
+            SwitchesL[1].s = IPS_OK;
+        }
+        else
+        {
+            SwitchesL[1].s = IPS_IDLE;
+        }
+        //First bit contains Close switch status
+        if (m1 & 0x01)
+        {
+            SwitchesL[0].s = IPS_OK;
+        }
+        else
+        {
+            SwitchesL[0].s = IPS_IDLE;
+        }
+        //Second bit contains Direct Command switch status
+        if (m1 & 0x02)
+        {
+            SwitchesL[1].s = IPS_OK;
+        }
+        else
+        {
+            SwitchesL[1].s = IPS_IDLE;
+        }
+        //Third bit contains Management Command switch status
+        if (m1 & 0x04)
+        {
+            SwitchesL[2].s = IPS_OK;
+        }
+        else
+        {
+            SwitchesL[2].s = IPS_IDLE;
+        }
 
         SensorsLP.s = IPS_OK;
         SwitchesLP.s = IPS_OK;
@@ -713,11 +750,11 @@ IPState Talon6::Move(DomeDirection dir, DomeMotionCommand operation)
             LOG_WARN("Roof is already fully opened.");
             return IPS_ALERT;
         }
-        else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
-        {
-            LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
-            return IPS_ALERT;
-        }
+        //        else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
+        //        {
+        //            LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
+        //            return IPS_ALERT;
+        //        }
         else if (dir == DOME_CCW && fullClosedRoofSwitch == ISS_ON )
         {
             LOG_WARN("Roof is already fully closed.");
@@ -726,7 +763,7 @@ IPState Talon6::Move(DomeDirection dir, DomeMotionCommand operation)
         else if (dir == DOME_CCW && INDI::Dome::isLocked())
         {
             DEBUG(INDI::Logger::DBG_WARNING,
-                  "Cannot close dome when mount is locking. See: Telescope parkng policy, in options tab");
+                  "Cannot close dome when mount is locking. See: Mount Policy in options tab");
             return IPS_ALERT;
         }
 
@@ -745,16 +782,19 @@ IPState Talon6::Park()
     if (rc == IPS_BUSY)
     {
         LOG_INFO("Dome is parking.");
-        if (SafetyS[0].s == ISS_OFF){
+        if (SafetyS[0].s == ISS_OFF)
+        {
             WriteString("&C#");
-        }else{
+        }
+        else
+        {
             WriteString("&P#");
         }
         return IPS_BUSY;
     }
     else
         return IPS_ALERT;
- }
+}
 
 IPState Talon6::UnPark()
 {
@@ -787,22 +827,24 @@ bool Talon6::Abort()
 
 IPState Talon6::DomeGoTo(int GoTo )
 {
-    if (SafetyS[0].s == ISS_ON){
+    if (SafetyS[0].s == ISS_ON)
+    {
         LOG_INFO("Go To needs Safety Condition to be disabled");
         return IPS_IDLE;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,  "Dome is moving to %d percent open.",GoTo);
+    DEBUGF(INDI::Logger::DBG_SESSION,  "Dome is moving to %d percent open.", GoTo);
     // If GoTo < 100 we need to reset OpenSwitch else motion will not start
-    if(GoTo < 100){
+    if(GoTo < 100)
+    {
         fullOpenRoofSwitch   = ISS_OFF;
         fullClosedRoofSwitch = ISS_OFF;
     }
     // From percentage to ticks conversion
-    double DoubleTicks = ( GoTo * EncoderTicksN[0].value)/100;
+    double DoubleTicks = ( GoTo * EncoderTicksN[0].value) / 100;
     int IntTicks = (int)DoubleTicks;
 
-    DEBUGF(INDI::Logger::DBG_SESSION,  "Dome is moving to %d ticks.",IntTicks);
+    DEBUGF(INDI::Logger::DBG_SESSION,  "Dome is moving to %d ticks.", IntTicks);
 
     // Transform dec ticks to HEX with leading zeroes
     std::stringstream hexTicks;
@@ -811,11 +853,11 @@ IPState Talon6::DomeGoTo(int GoTo )
     std::string paddedHexTicks = std::string(5 - hexTicksString.length(), '0') + hexTicksString;
 
     //Transform to char and build command string formatted as to documentation
-    char hexTicksChar[paddedHexTicks.size()+1];
+    char hexTicksChar[paddedHexTicks.size() + 1];
     strcpy(hexTicksChar, paddedHexTicks.c_str());
     char commandString[8];
-    commandString[0] ='&';
-    commandString[1] ='A';
+    commandString[0] = '&';
+    commandString[1] = 'A';
     commandString[2] = ShiftChar(hexTicksChar[0]);
     commandString[3] = ShiftChar(hexTicksChar[1]);
     commandString[4] = ShiftChar(hexTicksChar[2]);
@@ -823,7 +865,7 @@ IPState Talon6::DomeGoTo(int GoTo )
     commandString[6] = ShiftChar(hexTicksChar[4]);
     commandString[7] = '#';
 
-  // Send command to the device
+    // Send command to the device
     IPState rc = INDI::Dome::Move(DOME_CW, MOTION_START);
     if (rc == IPS_BUSY)
     {
@@ -836,18 +878,20 @@ IPState Talon6::DomeGoTo(int GoTo )
         return IPS_ALERT;
 
 }
-char Talon6::ShiftChar(char shiftChar){
+char Talon6::ShiftChar(char shiftChar)
+{
 
-    char shiftedChar= 0;
+    char shiftedChar = 0;
 
-        switch (shiftChar) {
+    switch (shiftChar)
+    {
         case NULL:
             shiftedChar = '0';
             break;
         case 'a':
             shiftedChar = ':';
             break;
-         case 'b':
+        case 'b':
             shiftedChar = ';';
             break;
         case 'c':
@@ -862,13 +906,11 @@ char Talon6::ShiftChar(char shiftChar){
         case 'f':
             shiftedChar = '?';
             break;
-         default:
+        default:
             shiftedChar =  shiftChar ;
 
             break;
-        }
+    }
 
     return shiftedChar;
 }
-
-

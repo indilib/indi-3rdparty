@@ -491,18 +491,18 @@ bool ATIKCCD::setupParams()
     {
         uint8_t data[2] = {0};
         int len = 0, index = 0;
-        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOPresetMode, data, 2, &len);
+        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOPresetMode, data, 2, len);
         index = *(reinterpret_cast<uint16_t*>(&data));
         LOGF_DEBUG("Horizon current GO mode: data[0] %d data[1] %d index %d", data[0], data[1], index);
         IUResetSwitch(&ControlPresetsSP);
         ControlPresetsS[index].s = ISS_ON;
 
         // Get Gain & Offset valuse
-        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 2, &len);
+        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 2, len);
         index = *(reinterpret_cast<uint16_t*>(&data));
         LOGF_DEBUG("Horizon current gain: data[0] %d data[1] %d value %d", data[0], data[1], index);
 
-        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomOffset, data, 2, &len);
+        ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomOffset, data, 2, len);
         index = *(reinterpret_cast<uint16_t*>(&data));
         LOGF_DEBUG("Horizon current offset: data[0] %d data[1] %d value %d", data[0], data[1], index);
     }

@@ -31,10 +31,57 @@ struct {
   unsigned long davis_read;
 } sensor_read;
 
+
 /**
-   Send current sensor data as JSON document
+   Update all sensor data
 */
-String readSensorData(bool pretty) {
+void updateSensorData() {
+
+  // reset all timers
+  sensor_read = { 0, 0, 0, 0, 0, 0};
+  unsigned long start = 0;
+
+#ifdef USE_DAVIS_SENSOR
+  start = millis();
+  readAnemometer();
+  sensor_read.davis_read = millis() - start;
+#endif //USE_DAVIS_SENSOR
+
+#ifdef USE_BME_SENSOR
+  start = millis();
+  updateBME();
+  sensor_read.bme_read = millis() - start;
+#endif //USE_BME_SENSOR
+
+#ifdef USE_DHT_SENSOR
+  start = millis();
+  updateDHT();
+  sensor_read.dht_read = millis() - start;
+#endif //USE_DHT_SENSOR
+
+#ifdef USE_MLX_SENSOR
+  start = millis();
+  updateMLX();
+  sensor_read.mlx90614_read = millis() - start;
+#endif //USE_MLX_SENSOR
+
+#ifdef USE_TSL237_SENSOR
+  start = millis();
+  updateTSL237();
+  sensor_read.tsl237_read = millis() - start;
+#endif //USE_TSL237_SENSOR
+
+#ifdef USE_TSL2591_SENSOR
+  start = millis();
+  updateTSL2591();
+  sensor_read.tsl2591_read = millis() - start;
+#endif //USE_TSL2591_SENSOR
+}
+
+/**
+   Send current sensor data as JSON document to Serial
+*/
+String getSensorData(bool pretty) {
   const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
                       JSON_OBJECT_SIZE(1) + // token data
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
@@ -45,49 +92,29 @@ String readSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(6);  // Davis Anemometer
   StaticJsonDocument < docSize > weatherDoc;
 
-  // reset all timers
-  sensor_read = { 0, 0, 0, 0, 0, 0};
   unsigned long start = 0;
 
 #ifdef USE_DAVIS_SENSOR
-  start = millis();
-  readAnemometer();
-  sensor_read.davis_read = millis() - start;
   serializeAnemometer(weatherDoc);
 #endif //USE_DAVIS_SENSOR
 
 #ifdef USE_BME_SENSOR
-  start = millis();
-  updateBME();
-  sensor_read.bme_read = millis() - start;
   serializeBME(weatherDoc);
 #endif //USE_BME_SENSOR
 
 #ifdef USE_DHT_SENSOR
-  start = millis();
-  updateDHT();
-  sensor_read.dht_read = millis() - start;
   serializeDHT(weatherDoc);
 #endif //USE_DHT_SENSOR
 
 #ifdef USE_MLX_SENSOR
-  start = millis();
-  updateMLX();
-  sensor_read.mlx90614_read = millis() - start;
   serializeMLX(weatherDoc);
 #endif //USE_MLX_SENSOR
 
 #ifdef USE_TSL237_SENSOR
-  start = millis();
-  updateTSL237();
-  sensor_read.tsl237_read = millis() - start;
   serializeTSL237(weatherDoc);
 #endif //USE_TSL237_SENSOR
 
 #ifdef USE_TSL2591_SENSOR
-  start = millis();
-  updateTSL2591();
-  sensor_read.tsl2591_read = millis() - start;
   serializeTSL2591(weatherDoc);
 #endif //USE_TSL2591_SENSOR
 
@@ -100,20 +127,6 @@ String readSensorData(bool pretty) {
   return result;
 }
 
-String sensorDataCached = "";
-
-/**
-   Read the sensor data. If no pretty printing is required,
-   the cached value will be used. The cache is updated in loop().
-*/
-String getSensorData(bool pretty) {
-  if (!pretty && sensorDataCached == "")
-    sensorDataCached = readSensorData(pretty);
-  else if (pretty)
-    return readSensorData(pretty);
-
-  return sensorDataCached;
-}
 
 String getCurrentVersion() {
   StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
@@ -145,6 +158,7 @@ String getReadDurations() {
 #ifdef USE_DAVIS_SENSOR
   if (anemometerData.status) doc["Davis Anemometer"] = sensor_read.davis_read;
 #endif //USE_DAVIS_SENSOR
+
   String result = "";
   serializeJson(doc, result);
 
@@ -191,14 +205,14 @@ String getCurrentConfig() {
     wifidata["IP"]        = "";
 #endif
 
+  String result = "";
+  serializeJson(doc, result);
+
   if (doc.isNull())
     return "{}";
   else {
-    String result = "";
-    serializeJson(doc, result);
-
     return result;
-  };
+  }
 }
 
 unsigned long lastSensorRead;
@@ -260,6 +274,10 @@ void setup() {
 
   }
 #endif
+
+  // initial readout all sensors
+  updateSensorData();
+
 }
 
 String input = "";
@@ -282,6 +300,10 @@ void parseInput() {
       break;
     case 'p':
       Serial.println(getSensorData(true));
+
+      break;
+    case 't':
+      Serial.println(getReadDurations());
       break;
 #ifdef USE_WIFI
     case 's':
@@ -289,9 +311,6 @@ void parseInput() {
         parseCredentials(input.substring(2));
       disconnectWiFi();
       initWiFi();
-      break;
-    case 't':
-      Serial.println(getReadDurations());
       break;
     case 'd':
       disconnectWiFi();
@@ -342,10 +361,10 @@ void loop() {
       input += (char)ch;
   }
 
-  // update sensor data every 60 seconds
+  // regularly update sensor data
   unsigned long now = millis();
-  if (abs(now - lastSensorRead) > 60000) {
-    sensorDataCached = readSensorData(false);
+  if (abs(now - lastSensorRead) > MAX_CACHE_AGE) {
+    updateSensorData();
     lastSensorRead = now;
   }
 

@@ -378,10 +378,11 @@ bool indiduino::initProperties()
     //           of the driver.
     //addAuxControls();
 
-    // Only for testing
+    /* Switch only for testing
     IUFillSwitch(&TestStateS[0], "On", "", ISS_OFF);
     IUFillSwitch(&TestStateS[1], "Off", "", ISS_OFF);
-    IUFillSwitchVector(&TestStateSP, TestStateS, 2, getDeviceName(), "TEST", "Test", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&TestStateSP, TestStateS, 2, getDeviceName(), "TEST", "Test", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE)
+    */
 
     controller->initProperties();
 
@@ -451,7 +452,7 @@ bool indiduino::updateProperties()
                 }
             }
         }
-        defineSwitch(&TestStateSP);
+        // defineSwitch(&TestStateSP); Switch only for testing
     }
     controller->updateProperties();
     return true;
@@ -643,6 +644,7 @@ bool indiduino::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             }
         }
     }
+    /* Switch only for testing
     if (!strcmp(name, TestStateSP.name))
     {
         if (IUUpdateSwitch(&TestStateSP, states, names, n) < 0)
@@ -657,6 +659,7 @@ bool indiduino::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         IDSetSwitch(&TestStateSP, nullptr);
         return true;
     }
+    */
     controller->ISNewSwitch(dev, name, states, names, n);
 
     IUUpdateSwitch(svp, states, names, n);
