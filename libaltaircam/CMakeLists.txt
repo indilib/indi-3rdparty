@@ -8,8 +8,8 @@ include(GNUInstallDirs)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-# Using AltairCamera SDK Version: 32.13483.2018.1206
-set(LIBALTAIRCAM_VERSION "1.0.1")
+# Using AltairCamera SDK Version: 47.17497.2020.0722
+set(LIBALTAIRCAM_VERSION "1.47.0")
 set(LIBALTAIRCAM_SOVERSION "1")
 
 IF(APPLE)
@@ -35,7 +35,7 @@ IF(UNIX AND NOT WIN32)
   ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libaltaircam.bin ${CMAKE_BINARY_DIR}/libaltaircam.so.${LIBALTAIRCAM_VERSION})
   ELSE()
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libaltaircam.bin ${CMAKE_BINARY_DIR}/libaltaircam.so.${LIBALTAIRCAM_VERSION})
+    message(FATAL_ERROR "unsupported architecture.")
   ENDIF ()
 ENDIF(UNIX AND NOT WIN32)
 
