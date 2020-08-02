@@ -7,9 +7,8 @@ function loadImages() {
 
 function openLightbox(filename) {
     lightboxContent = document.getElementById("lightbox-content");
-    // clear the lightbox, remove existing DOM children
-    for (child of lightboxContent.children)
-	lightboxContent.removeChild(child);
+    // clear the lightbox
+    lightboxContent.innerHTML = "";
 
     // add selected image
     var img = document.createElement("img");
@@ -30,12 +29,9 @@ function updateCarousel() {
     $.get("data/images.json", function(files) {
 	carouselInner      = document.querySelector("#timelapse_carousel");
 	carouselIndicators = document.querySelector("#timelapse-indicators");
-	// clear the carousel, remove existing DOM children
-	for (child of carouselInner.children)
-	    carouselInner.removeChild(child);
-	// clear the carousel indicators, remove existing DOM children
-	for (child of carouselIndicators.children)
-	    carouselIndicators.removeChild(child);
+	// clear the carousel and indicators
+	carouselInner.innerHTML = "";
+	carouselIndicators.innerHTML = "";
 
 	pos = 0
 	n   = files.length - 1
@@ -75,9 +71,8 @@ function updateCarousel() {
 function updateImageBar() {
     $.get("data/images.json", function(files) {
 	imageBar = document.querySelector("#image_bar");
-	// clear the image bar, remove existing DOM children
-	for (child of imageBar.children)
-	    imageBar.removeChild(child);
+	// clear the image bar
+	imageBar.innerHTML = "";
 
 	for (file of files) {
 	    // images
