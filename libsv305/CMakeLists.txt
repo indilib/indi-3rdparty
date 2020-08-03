@@ -38,7 +38,7 @@ IF("${CMAKE_SYSTEM}" MATCHES "Linux")
         message("armv7 target")
         exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv7.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
 
-    ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "armv8l")
+    ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "armv8l" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
         # armv8 archirecture
         message("armv8 target")
         exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv8.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
