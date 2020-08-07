@@ -126,6 +126,7 @@ bool GPSD::initProperties()
     IUFillSwitch(&TimeSourceS[TS_SYSTEM], "TS_SYSTEM", "System", ISS_OFF);
     IUFillSwitchVector(&TimeSourceSP, TimeSourceS, 2, getDeviceName(), "GPS_TIME_SOURCE", "Time Source",
                        OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    addAuxControls();
 
     setDriverInterface(GPS_INTERFACE | AUX_INTERFACE);
 
