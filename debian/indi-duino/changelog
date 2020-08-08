@@ -1,3 +1,12 @@
+indi-duino (1.6) buster; urgency=medium
+
+  * Web cam view reworked with time series light bar and modal view for details
+  * Luminosity data added to sensors view
+  * Bug fix: timeout for RRD update script extended to 7 seconds
+  * Bug fix: Remove child nodes in Javascript corrected
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 08 Aug 2020 17:11:42 +0200
+
 indi-duino (1.5) buster; urgency=medium
 
   * Caching of sensor data instead of Json strings
