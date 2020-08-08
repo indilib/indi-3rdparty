@@ -226,7 +226,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
 
         // Upload file, used for testing purposes under simulation under native mode
         ITextVectorProperty UploadFileTP;
-        IText UploadFileT[1];
+        IText UploadFileT[1] {};
 
         IBLOBVectorProperty * imageBP = nullptr;
         IBLOB * imageB                = nullptr;
