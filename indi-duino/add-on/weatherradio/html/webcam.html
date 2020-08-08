@@ -33,11 +33,29 @@
     </div>
 
 <!-- The Lightbox modal -->
-<div id="lightbox" class="modal">
-  <span class="close cursor" onclick="closeLightbox()">&times;</span>
-	<!-- filled by openLightbox -->
-  <div id="lightbox-content" class="modal-content" />
-</div>
+    <div id="lightbox" class="modal">
+      <span class="close cursor" onclick="closeLightbox()">&times;</span>
+      <!-- filled by openLightbox() -->
+      <div id="lightbox-content" class="modal-content">
+	<!-- carousel -->
+	<div id="timeseries" class="carousel slide" data-ride="carousel">
+	  <!-- Indicators -->
+	  <ul class="carousel-indicators" id="timeseries-indicators">
+	    <!-- filled by updateCarousel() -->
+	  </ul>
+
+	  <div class="carousel-inner" id="timeseries-carousel">
+	    <!-- filled by updateCarousel() -->
+	  </div>
+	  <a class="carousel-control-prev" href="#timeseries" data-slide="prev">
+	    <span class="carousel-control-prev-icon"></span>
+	  </a>
+	  <a class="carousel-control-next" href="#timeseries" data-slide="next">
+	    <span class="carousel-control-next-icon"></span>
+	  </a>
+	</div> <!-- carousel end -->
+      </div> <!-- lightbox-content end -->
+    </div> <!-- lightbox end -->
     <script src="js/images.js"></script>
   </body>
 </html>

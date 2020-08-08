@@ -1,24 +1,18 @@
 function loadImages() {
     updateImageBar();
-    // updateCarousel();
+    updateCarousel();
     // update images every 5 min
-    setInterval( function(){ updateImageBar();}, 5*60000);
+    setInterval( function(){ loadImages();}, 5*60000);
 }
 
-function openLightbox(filename) {
+function openLightbox(n) {
     lightboxContent = document.getElementById("lightbox-content");
-    // clear the lightbox
-    lightboxContent.innerHTML = "";
-
-    // add selected image
-    var img = document.createElement("img");
-    img.setAttribute("id", filename);
-    img.setAttribute("src", "./media/" + filename);
-    img.setAttribute("width", "100%");
-    lightboxContent.appendChild(img);
-
-    // show modal
     document.getElementById("lightbox").style.display = "block";
+
+    // select the image from the series
+    $("#timeseries").carousel(n);
+
+
 }
 
 function closeLightbox() {
@@ -27,8 +21,8 @@ function closeLightbox() {
 
 function updateCarousel() {
     $.get("data/images.json", function(files) {
-	carouselInner      = document.querySelector("#timelapse_carousel");
-	carouselIndicators = document.querySelector("#timelapse-indicators");
+	carouselInner      = document.querySelector("#timeseries-carousel");
+	carouselIndicators = document.querySelector("#timeseries-indicators");
 	// clear the carousel and indicators
 	carouselInner.innerHTML = "";
 	carouselIndicators.innerHTML = "";
@@ -43,6 +37,7 @@ function updateCarousel() {
 	    var img = document.createElement("img");
 	    img.setAttribute("id", file.name);
 	    img.setAttribute("src", "./media/" + file.name);
+	    img.setAttribute("width", "100%");
 	    div.appendChild(img);
 
 	    // add date as caption
@@ -55,7 +50,7 @@ function updateCarousel() {
 	    
 	    // indicators
 	    var li = document.createElement("li");
-	    li.setAttribute("data-target", "#timelapse");
+	    li.setAttribute("data-target", "#timeseries");
 	    li.setAttribute("data-slide-to", pos);
 	    carouselIndicators.appendChild(li);
 	    // activate the first image
@@ -74,17 +69,21 @@ function updateImageBar() {
 	// clear the image bar
 	imageBar.innerHTML = "";
 
+	nr = 0;
 	for (file of files) {
 	    // images
 	    var img = document.createElement("img");
 	    img.setAttribute("id", file.name);
 	    img.setAttribute("src", "./media/" + file.name);
 	    img.setAttribute("width", "96");
-	    // open modal dialog
-	    img.setAttribute("onclick", "openLightbox(\"" + file.name + "\")");
-	    img.setAttribute("class", "hover-shadow");
 
-	    imageBar.appendChild(img);
+	    var link = document.createElement("a");
+	    link.setAttribute("href", "#");
+	    // open modal dialog
+	    link.setAttribute("onclick", "openLightbox(" + nr++ + ")");
+	    link.setAttribute("class", "hover-shadow");
+	    link.appendChild(img);
+	    imageBar.appendChild(link);
 	}
 
     });
