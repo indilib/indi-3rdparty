@@ -265,6 +265,7 @@ IPState GPSD::updateGPS()
         return IPS_BUSY;
     }
 
+    // Empty the buffer and keep only the last data block
     while (1)
     {
         if ((gpsData = gps->read()) == nullptr)
@@ -273,7 +274,7 @@ IPState GPSD::updateGPS()
             IDSetText(&GPSstatusTP, nullptr);
             return IPS_ALERT;
         }
-
+        // Exit the loop if there is no more data in the buffer
         if (!gps->waiting(0))
             break;
     }
