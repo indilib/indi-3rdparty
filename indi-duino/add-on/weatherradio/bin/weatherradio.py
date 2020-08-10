@@ -25,7 +25,7 @@ def connect(indi):
         # connect driver
         connection = indi.set_and_send_switchvector_by_elementlabel(INDIDEVICE,"CONNECTION","Connect")
         # wait for the connection
-        time.sleep(5)
+        time.sleep(7)
         # ensure that all information is up to date
         indi.process_events()
         # check if the connection has been established

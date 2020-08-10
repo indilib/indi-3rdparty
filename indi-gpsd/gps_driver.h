@@ -39,6 +39,7 @@ class GPSD : public INDI::GPS
         virtual bool updateProperties() override;
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool setSystemTime(time_t& raw_time);
     protected:
         virtual bool Connect() override;
@@ -59,10 +60,14 @@ class GPSD : public INDI::GPS
 
         ISwitchVectorProperty TimeSourceSP;
         ISwitch TimeSourceS[2];
+
+        //  A number vector that stores default lattitude and longitude
+        INumberVectorProperty SimLocationNP;
+        INumber SimLocationN[3];
+
         enum
         {
             TS_GPS,
             TS_SYSTEM
         };
-
 };

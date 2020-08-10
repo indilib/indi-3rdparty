@@ -947,10 +947,11 @@ void ToupBase::setupParams()
 
     //Start pull callback
     rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-    if (SUCCEEDED(rc))
+    if (FAILED(rc))
     {
         LOGF_ERROR("Failed to start camera pull mode. %s", errorCodes[rc].c_str());
-        Disconnect();
+        if (Disconnect())
+            setConnected(false);
         updateProperties();
         return;
     }
