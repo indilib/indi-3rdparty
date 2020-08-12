@@ -279,11 +279,14 @@ bool NexDome::updateProperties()
         defineText(&RotatorFirmwareVersionTP);
 
         // Shutter
-        defineNumber(&ShutterSettingsNP);
-        defineNumber(&ShutterBatteryLevelNP);
-        defineSwitch(&CloseShutterOnParkSP);
-        defineSwitch(&ShutterFactorySP);
-        defineText(&ShutterFirmwareVersionTP);
+        if (HasShutter())
+        {
+            defineNumber(&ShutterSettingsNP);
+            defineNumber(&ShutterBatteryLevelNP);
+            defineSwitch(&CloseShutterOnParkSP);
+            defineSwitch(&ShutterFactorySP);
+            defineText(&ShutterFirmwareVersionTP);
+        }
     }
     else
     {
@@ -296,11 +299,14 @@ bool NexDome::updateProperties()
         deleteProperty(RotatorFirmwareVersionTP.name);
 
         // Shutter
-        deleteProperty(ShutterSettingsNP.name);
-        deleteProperty(ShutterBatteryLevelNP.name);
-        deleteProperty(CloseShutterOnParkSP.name);
-        deleteProperty(ShutterFactorySP.name);
-        deleteProperty(ShutterFirmwareVersionTP.name);
+        if (HasShutter())
+        {
+            deleteProperty(ShutterSettingsNP.name);
+            deleteProperty(ShutterBatteryLevelNP.name);
+            deleteProperty(CloseShutterOnParkSP.name);
+            deleteProperty(ShutterFactorySP.name);
+            deleteProperty(ShutterFirmwareVersionTP.name);
+        }
     }
 
     return true;
@@ -683,10 +689,13 @@ bool NexDome::getStartupValues()
         RotatorSettingsN[S_RANGE].value = std::stoi(value);
 
     // Shutter Settings
-    if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
-        ShutterSettingsN[S_RAMP].value = std::stoi(value);
-    if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
-        ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+    if (HasShutter())
+    {
+        if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
+            ShutterSettingsN[S_RAMP].value = std::stoi(value);
+        if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
+            ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+    }
 
     // Home Setting
     if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
@@ -697,8 +706,11 @@ bool NexDome::getStartupValues()
         processEvent(value);
 
     // Shutter State
-    if (getParameter(ND::REPORT, ND::SHUTTER, value))
-        processEvent(value);
+    if (HasShutter())
+    {
+        if (getParameter(ND::REPORT, ND::SHUTTER, value))
+            processEvent(value);
+    }
 
     if (InitPark())
     {
