@@ -150,6 +150,9 @@ class NexDome : public INDI::Dome
         /// Private Members
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
+        double m_TargetAZ {-1000};
+
+        static constexpr const double DOME_AZ_THRESHOLD {0.5};
 
 };
 

@@ -535,14 +535,14 @@ void NexDome::TimerHit()
     if (checkEvents(response))
         processEvent(response);
 
-    if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || GoHomeSP.s == IPS_BUSY)
+    if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING)
     {
         std::string value;
         if (getParameter(ND::REPORT, ND::ROTATOR, value))
             processEvent(value);
     }
 
-    if (getShutterState() == SHUTTER_MOVING)
+    if (HasShutter() && getShutterState() == SHUTTER_MOVING)
     {
         std::string value;
         if (getParameter(ND::REPORT, ND::SHUTTER, value))
@@ -559,7 +559,10 @@ void NexDome::TimerHit()
 IPState NexDome::MoveAbs(double az)
 {
     if (setParameter(ND::GOTO_AZ, ND::ROTATOR, az))
+    {
+        m_TargetAZ = az;
         return IPS_BUSY;
+    }
     else
         return IPS_ALERT;
 }
@@ -1025,6 +1028,7 @@ bool NexDome::processRotatorReport(const std::string &report)
             DomeAbsPosN[0].value = posAngle;
             IDSetNumber(&DomeAbsPosNP, nullptr);
         }
+
         if (GoHomeSP.s == IPS_BUSY && at_home == 1)
         {
             LOG_INFO("Rotator reached home position.");
@@ -1046,23 +1050,27 @@ bool NexDome::processRotatorReport(const std::string &report)
             IDSetNumber(&RotatorSettingsNP, nullptr);
         }
 
-        if (getDomeState() == DOME_MOVING)
+        if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING)
         {
-            LOG_INFO("Dome reached target position.");
-            setDomeState(DOME_SYNCED);
+            // If we reach target position.
+            if (std::abs(m_TargetAZ - DomeAbsPosN[0].value) < DOME_AZ_THRESHOLD)
+            {
+                if (getDomeState() == DOME_MOVING)
+                {
+                    LOG_INFO("Dome reached target position.");
+                    setDomeState(DOME_SYNCED);
+                }
+                else if (getDomeState() == DOME_PARKING)
+                {
+                    LOG_INFO("Dome is parked.");
+                    setDomeState(DOME_PARKED);
+                }
+            }
         }
-        else if (getDomeState() == DOME_PARKING)
-        {
-            LOG_INFO("Dome is parked.");
-            setDomeState(DOME_PARKED);
-        }
-        else
-            setDomeState(DOME_IDLE);
     }
 
     return true;
 }
-
 
 //////////////////////////////////////////////////////////////////////
 ///
