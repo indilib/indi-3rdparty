@@ -76,7 +76,8 @@ void ISNewNumber(const char *dev, const char *name, double values[], char *names
 //////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
+                char *names[], int n)
 {
     INDI_UNUSED(dev);
     INDI_UNUSED(name);
@@ -106,7 +107,6 @@ NexDome::NexDome()
     SetDomeCapability(DOME_CAN_ABORT |
                       DOME_CAN_ABS_MOVE |
                       DOME_CAN_PARK |
-                      DOME_HAS_SHUTTER |
                       DOME_CAN_SYNC);
 }
 
@@ -123,38 +123,44 @@ bool NexDome::initProperties()
     /// Homeing
     ///////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&GoHomeS[0], "HOME_GO", "Go", ISS_OFF);
-    IUFillSwitchVector(&GoHomeSP, GoHomeS, 1, getDeviceName(), "DOME_HOMING", "Homing", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    IUFillSwitchVector(&GoHomeSP, GoHomeS, 1, getDeviceName(), "DOME_HOMING", "Homing", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1,
+                       60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Home Position
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&HomePositionN[0], "POSITON", "degrees", "%.f", 0.0, 360.0, 0.0, 0);
-    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", MAIN_CONTROL_TAB, IP_RW,
+                       60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Battery
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&ShutterBatteryLevelN[ND::ROTATOR], "VOLTS", "Voltage", "%.2f", 0.0, 16.0, 0.0, 0);
-    IUFillNumberVector(&ShutterBatteryLevelNP, ShutterBatteryLevelN, 1, getDeviceName(), "BATTERY", "Battery Level", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
+    IUFillNumberVector(&ShutterBatteryLevelNP, ShutterBatteryLevelN, 1, getDeviceName(), "BATTERY", "Battery Level",
+                       ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Rotator Firmware Info
     ///////////////////////////////////////////////////////////////////////////////
     IUFillText(&RotatorFirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
-    IUFillTextVector(&RotatorFirmwareVersionTP, RotatorFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", ND::ROTATOR_TAB.c_str(), IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&RotatorFirmwareVersionTP, RotatorFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware",
+                     ND::ROTATOR_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Shutter Firmware Info
     ///////////////////////////////////////////////////////////////////////////////
     IUFillText(&ShutterFirmwareVersionT[0], "FIRMWARE_VERSION", "Version", "");
-    IUFillTextVector(&ShutterFirmwareVersionTP, ShutterFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware", ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&ShutterFirmwareVersionTP, ShutterFirmwareVersionT, 1, getDeviceName(), "FIRMWARE", "Firmware",
+                     ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Close Shutter on Park?
     ///////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&CloseShutterOnParkS[ND::ENABLED], "ENABLED", "Enabled", ISS_ON);
     IUFillSwitch(&CloseShutterOnParkS[ND::DISABLED], "DISABLED", "Disabled", ISS_OFF);
-    IUFillSwitchVector(&CloseShutterOnParkSP, CloseShutterOnParkS, 2, getDeviceName(), "DOME_CLOSE_SHUTTER_ON_PARK", "Close Shutter on Park",
+    IUFillSwitchVector(&CloseShutterOnParkSP, CloseShutterOnParkS, 2, getDeviceName(), "DOME_CLOSE_SHUTTER_ON_PARK",
+                       "Close Shutter on Park",
                        ND::SHUTTER_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -164,7 +170,8 @@ bool NexDome::initProperties()
     IUFillNumber(&RotatorSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (steps/s)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&RotatorSettingsN[S_ZONE], "S_ZONE", "Dead Zone (steps)", "%.f", 0.0, 32000, 1000.0, 2400);
     IUFillNumber(&RotatorSettingsN[S_RANGE], "S_RANGE", "Travel Range (steps)", "%.f", 0.0, 55080, 1000.0, 55080);
-    IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator", ND::ROTATOR_TAB.c_str(),
+    IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator",
+                       ND::ROTATOR_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -172,7 +179,8 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&ShutterSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&ShutterSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "SHUTTER_SETTINGS", "Shutter", ND::SHUTTER_TAB.c_str(),
+    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "SHUTTER_SETTINGS", "Shutter",
+                       ND::SHUTTER_TAB.c_str(),
                        IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -205,18 +213,19 @@ bool NexDome::initProperties()
 bool NexDome::Handshake()
 {
     std::string value;
-    bool rc1 = false, rc2 = false;
+    bool rotatorOK = false;
 
     if (getParameter(ND::SEMANTIC_VERSION, ND::ROTATOR, value))
     {
         LOGF_INFO("Detected rotator firmware version %s", value.c_str());
         if (value < ND::MINIMUM_VERSION)
         {
-            LOGF_ERROR("Rotator version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
+            LOGF_ERROR("Rotator version %s is not supported. Please upgrade to version %s or higher.", value.c_str(),
+                       ND::MINIMUM_VERSION.c_str());
             return false;
         }
 
-        rc1 = true;
+        rotatorOK = true;
         RotatorFirmwareVersionTP.s = IPS_OK;
         IUSaveText(&RotatorFirmwareVersionT[0], value.c_str());
     }
@@ -226,16 +235,20 @@ bool NexDome::Handshake()
         LOGF_INFO("Detected shutter firmware version %s", value.c_str());
         if (value < ND::MINIMUM_VERSION)
         {
-            LOGF_ERROR("Shutter version %s is not supported. Please upgrade to version %s or higher.", value.c_str(), ND::MINIMUM_VERSION.c_str());
+            LOGF_ERROR("Shutter version %s is not supported. Please upgrade to version %s or higher.", value.c_str(),
+                       ND::MINIMUM_VERSION.c_str());
             return false;
         }
 
-        rc2 = true;
+        SetDomeCapability(GetDomeCapability() | DOME_HAS_SHUTTER);
+
         ShutterFirmwareVersionTP.s = IPS_OK;
         IUSaveText(&ShutterFirmwareVersionT[0], value.c_str());
     }
+    else
+        LOG_WARN("No shutter detected.");
 
-    return (rc1 && rc2);
+    return rotatorOK;
 }
 
 //////////////////////////////////////////////////////////////////////////////
