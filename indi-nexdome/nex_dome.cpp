@@ -1019,7 +1019,6 @@ bool NexDome::processRotatorReport(const std::string &report)
             DomeAbsPosN[0].value = posAngle;
             IDSetNumber(&DomeAbsPosNP, nullptr);
         }
-
         if (GoHomeSP.s == IPS_BUSY && at_home == 1)
         {
             LOG_INFO("Rotator reached home position.");
@@ -1040,6 +1039,19 @@ bool NexDome::processRotatorReport(const std::string &report)
             RotatorSettingsN[S_ZONE].value = dead_zone;
             IDSetNumber(&RotatorSettingsNP, nullptr);
         }
+
+        if (getDomeState() == DOME_MOVING)
+        {
+            LOG_INFO("Dome reached target position.");
+            setDomeState(DOME_SYNCED);
+        }
+        else if (getDomeState() == DOME_PARKING)
+        {
+            LOG_INFO("Dome is parked.");
+            setDomeState(DOME_PARKED);
+        }
+        else
+            setDomeState(DOME_IDLE);
     }
 
     return true;
