@@ -532,17 +532,23 @@ void NexDome::TimerHit()
 {
     std::string response;
 
-    //    if (getParameter(ND::REPORT, ND::ROTATOR, response))
-    //        processRotatorReport(response);
-
-    //    if (getParameter(ND::REPORT, ND::SHUTTER, response))
-    //        processShutterReport(response);
-
-    //    while (checkEvents(response))
-    //        processEvent(response);
-
     if (checkEvents(response))
         processEvent(response);
+
+    if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || GoHomeSP.s == IPS_BUSY)
+    {
+        std::string value;
+        if (getParameter(ND::REPORT, ND::ROTATOR, value))
+            processEvent(value);
+    }
+
+    if (getShutterState() == SHUTTER_MOVING)
+    {
+        std::string value;
+        if (getParameter(ND::REPORT, ND::SHUTTER, value))
+            processEvent(value);
+    }
+
 
     SetTimer(POLLMS);
 }
