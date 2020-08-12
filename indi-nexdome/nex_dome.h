@@ -106,17 +106,18 @@ class NexDome : public INDI::Dome
         // Settings
         enum
         {
+            S_POSITION,
             S_RAMP,
             S_VELOCITY,
             S_ZONE,
-            S_RANGE,
+            S_RANGE
         };
 
         INumberVectorProperty RotatorSettingsNP;
-        INumber RotatorSettingsN[4];
+        INumber RotatorSettingsN[5];
 
         INumberVectorProperty ShutterSettingsNP;
-        INumber ShutterSettingsN[2];
+        INumber ShutterSettingsN[3];
 
     private:
         ///////////////////////////////////////////////////////////////////////////////
@@ -150,9 +151,8 @@ class NexDome : public INDI::Dome
         /// Private Members
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
-        double m_TargetAZ {-1000};
-
-        static constexpr const double DOME_AZ_THRESHOLD {0.5};
+        uint32_t m_TargetAZSteps {1000000};
+        double StepsPerDegree { 153.0 };
 
 };
 
