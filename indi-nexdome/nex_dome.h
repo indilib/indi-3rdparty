@@ -151,7 +151,7 @@ class NexDome : public INDI::Dome
         /// Private Members
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
-        uint32_t m_TargetAZSteps {1000000};
+        int32_t m_TargetAZSteps {1000000};
         double StepsPerDegree { 153.0 };
 
 };

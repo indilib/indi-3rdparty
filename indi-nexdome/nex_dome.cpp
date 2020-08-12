@@ -573,8 +573,9 @@ void NexDome::TimerHit()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::MoveAbs(double az)
 {
-    uint32_t target = static_cast<uint32_t>(round(az * StepsPerDegree));
+    int32_t target = static_cast<uint32_t>(round(az * StepsPerDegree));
     if (setParameter(ND::GOTO_STEP, ND::ROTATOR, target))
+        //if (setParameter(ND::GOTO_AZ, ND::ROTATOR, static_cast<int32_t>(round(az))))
     {
         m_TargetAZSteps = target;
         return IPS_BUSY;
@@ -860,9 +861,9 @@ bool NexDome::getParameter(ND::Commands command, ND::Targets target, std::string
         // Firmware is exception since the response does not include the target
         // for everything else, the echo back includes the target.
         if (command != ND::SEMANTIC_VERSION)
-            re = (verb + ((target == ND::ROTATOR) ? "R" : "S") + "(.+[^#])");
+            re = (verb + ((target == ND::ROTATOR) ? "R" : "S") + "([^#]+)");
         else
-            re = (verb + "(.+[^#])");
+            re = (verb + "([^#]+)");
 
         std::smatch match;
 
@@ -896,10 +897,7 @@ bool NexDome::checkEvents(std::string &response)
 
     int rc = tty_nread_section(PortFD, res, ND::DRIVER_LEN, ND::DRIVER_EVENT_CHAR, ND::DRIVER_EVENT_TIMEOUT, &nbytes_read);
 
-    if (rc != TTY_OK)
-        return false;
-
-    if (nbytes_read < 3)
+    if (rc != TTY_OK || nbytes_read < 3)
         return false;
 
     std::string raw_response = res;
@@ -917,7 +915,7 @@ bool NexDome::processEvent(const std::string &event)
 {
     for (const auto &kv : ND::EventsMap)
     {
-        std::regex re(kv.second + "(.+[^#])");
+        std::regex re(kv.second + "([^#]+)");
         std::smatch match;
         std::string value;
 
