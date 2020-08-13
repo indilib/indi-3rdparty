@@ -1001,7 +1001,15 @@ bool NexDome::processEvent(const std::string &event)
             return true;
 
             case ND::SHUTTER_POSITION:
-                return true;
+            {
+                int32_t position = std::stoi(value);
+                if (std::abs(position - ShutterSyncN[0].value) > 0)
+                {
+                    ShutterSyncN[0].value = position;
+                    IDSetNumber(&ShutterSyncNP, nullptr);
+                }
+            }
+            return true;
 
             case ND::ROTATOR_REPORT:
                 return processRotatorReport(value);
@@ -1089,6 +1097,10 @@ bool NexDome::processRotatorReport(const std::string &report)
         uint32_t home_position = std::stoul(match.str(4));
         uint32_t dead_zone = std::stoul(match.str(5));
 
+        double newStepsPerDegree = cirumference / 360.0;
+        if (std::abs(newStepsPerDegree - StepsPerDegree) > 0.01)
+            StepsPerDegree = newStepsPerDegree;
+
         if (std::abs(position - RotatorSyncN[0].value) > 0)
         {
             RotatorSyncN[0].value = position;
@@ -1169,21 +1181,16 @@ bool NexDome::processShutterReport(const std::string &report)
 
         if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)
         {
-            if (open_limit_switch || position == travel_limit)
+            if (position == travel_limit || open_limit_switch)
             {
                 setShutterState(SHUTTER_OPENED);
                 LOG_INFO("Shutter is fully opened.");
             }
-            else if (close_limit_switch || position < 0)
+            else if (position == 0 || close_limit_switch)
             {
                 setShutterState(SHUTTER_CLOSED);
                 LOG_INFO("Shutter is fully closed.");
             }
-        }
-        else if (open_limit_switch == 0 && close_limit_switch == 0 && getShutterState() != SHUTTER_UNKNOWN)
-        {
-            setShutterState(SHUTTER_UNKNOWN);
-            LOG_WARN("Unknown shutter state. All limit switches are off.");
         }
     }
 
