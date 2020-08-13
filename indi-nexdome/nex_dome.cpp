@@ -746,39 +746,47 @@ bool NexDome::getStartupValues()
 {
     std::string value;
 
-    // Rotator Position
-    if (getParameter(ND::POSITION, ND::ROTATOR, value))
-        RotatorSyncN[0].value = std::stoi(value);
-
-    // Rotator Settings
-    if (getParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, value))
-        RotatorSettingsN[S_RAMP].value = std::stoi(value);
-    if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
-        RotatorSettingsN[S_VELOCITY].value = std::stoi(value);
-    if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
-        RotatorSettingsN[S_ZONE].value = std::stoi(value);
-    if (getParameter(ND::RANGE, ND::ROTATOR, value))
+    try
     {
-        RotatorSettingsN[S_RANGE].value = std::stoi(value);
-        RotatorSyncN[0].max = RotatorSettingsN[S_RANGE].value;
-        StepsPerDegree = RotatorSettingsN[S_RANGE].value / 360.0;
-    }
+        // Rotator Position
+        if (getParameter(ND::POSITION, ND::ROTATOR, value))
+            RotatorSyncN[0].value = std::stoi(value);
 
-    // Shutter Settings
-    if (HasShutter())
+        // Rotator Settings
+        if (getParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, value))
+            RotatorSettingsN[S_RAMP].value = std::stoi(value);
+        if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
+            RotatorSettingsN[S_VELOCITY].value = std::stoi(value);
+        if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
+            RotatorSettingsN[S_ZONE].value = std::stoi(value);
+        if (getParameter(ND::RANGE, ND::ROTATOR, value))
+        {
+            RotatorSettingsN[S_RANGE].value = std::stoi(value);
+            RotatorSyncN[0].max = RotatorSettingsN[S_RANGE].value;
+            StepsPerDegree = RotatorSettingsN[S_RANGE].value / 360.0;
+        }
+
+        // Shutter Settings
+        if (HasShutter())
+        {
+            if (getParameter(ND::POSITION, ND::SHUTTER, value))
+                ShutterSyncN[0].value = std::stoi(value);
+
+            if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
+                ShutterSettingsN[S_RAMP].value = std::stoi(value);
+            if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
+                ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+        }
+
+        // Home Setting
+        if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
+            HomePositionN[0].value = std::stoi(value) / StepsPerDegree;
+
+    }
+    catch(...)
     {
-        if (getParameter(ND::POSITION, ND::SHUTTER, value))
-            ShutterSyncN[0].value = std::stoi(value);
-
-        if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
-            ShutterSettingsN[S_RAMP].value = std::stoi(value);
-        if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
-            ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+        return false;
     }
-
-    // Home Setting
-    if (getParameter(ND::HOME_POSITION, ND::ROTATOR, value))
-        HomePositionN[0].value = std::stoi(value) / StepsPerDegree;
 
     // Rotator State
     if (getParameter(ND::REPORT, ND::ROTATOR, value))
@@ -990,23 +998,37 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::ROTATOR_POSITION:
             {
-                // 153 = full_steps_circumference / 360 = 55080 / 360
-                double newAngle = range360(std::stoi(value) / StepsPerDegree);
-                if (std::fabs(DomeAbsPosN[0].value - newAngle) > 0.001)
+                try
                 {
-                    DomeAbsPosN[0].value = newAngle;
-                    IDSetNumber(&DomeAbsPosNP, nullptr);
+                    // 153 = full_steps_circumference / 360 = 55080 / 360
+                    double newAngle = range360(std::stoi(value) / StepsPerDegree);
+                    if (std::fabs(DomeAbsPosN[0].value - newAngle) > 0.001)
+                    {
+                        DomeAbsPosN[0].value = newAngle;
+                        IDSetNumber(&DomeAbsPosNP, nullptr);
+                    }
+                }
+                catch (...)
+                {
+                    return false;
                 }
             }
             return true;
 
             case ND::SHUTTER_POSITION:
             {
-                int32_t position = std::stoi(value);
-                if (std::abs(position - ShutterSyncN[0].value) > 0)
+                try
                 {
-                    ShutterSyncN[0].value = position;
-                    IDSetNumber(&ShutterSyncNP, nullptr);
+                    int32_t position = std::stoi(value);
+                    if (std::abs(position - ShutterSyncN[0].value) > 0)
+                    {
+                        ShutterSyncN[0].value = position;
+                        IDSetNumber(&ShutterSyncNP, nullptr);
+                    }
+                }
+                catch (...)
+                {
+                    return false;
                 }
             }
             return true;
@@ -1061,14 +1083,21 @@ bool NexDome::processEvent(const std::string &event)
 
             case ND::SHUTTER_BATTERY:
             {
-                uint32_t battery_adu = std::stoul(value);
-                double vref = battery_adu * ND::ADU_TO_VREF;
-                if (std::fabs(vref - ShutterBatteryLevelN[0].value) > 0.01)
+                try
                 {
-                    ShutterBatteryLevelN[0].value = vref;
-                    // TODO: Must check if batter is OK, warning, or in critical level
-                    ShutterBatteryLevelNP.s = IPS_OK;
-                    IDSetNumber(&ShutterBatteryLevelNP, nullptr);
+                    uint32_t battery_adu = std::stoul(value);
+                    double vref = battery_adu * ND::ADU_TO_VREF;
+                    if (std::fabs(vref - ShutterBatteryLevelN[0].value) > 0.01)
+                    {
+                        ShutterBatteryLevelN[0].value = vref;
+                        // TODO: Must check if batter is OK, warning, or in critical level
+                        ShutterBatteryLevelNP.s = IPS_OK;
+                        IDSetNumber(&ShutterBatteryLevelNP, nullptr);
+                    }
+                }
+                catch(...)
+                {
+                    return false;
                 }
             }
             break;
@@ -1091,68 +1120,75 @@ bool NexDome::processRotatorReport(const std::string &report)
     std::smatch match;
     if (std::regex_search(report, match, re))
     {
-        uint32_t position = std::stoul(match.str(1));
-        uint32_t at_home = std::stoul(match.str(2));
-        uint32_t cirumference = std::stoul(match.str(3));
-        uint32_t home_position = std::stoul(match.str(4));
-        uint32_t dead_zone = std::stoul(match.str(5));
-
-        double newStepsPerDegree = cirumference / 360.0;
-        if (std::abs(newStepsPerDegree - StepsPerDegree) > 0.01)
-            StepsPerDegree = newStepsPerDegree;
-
-        if (std::abs(position - RotatorSyncN[0].value) > 0)
+        try
         {
-            RotatorSyncN[0].value = position;
-            IDSetNumber(&RotatorSyncNP, nullptr);
-        }
+            uint32_t position = std::stoul(match.str(1));
+            uint32_t at_home = std::stoul(match.str(2));
+            uint32_t cirumference = std::stoul(match.str(3));
+            uint32_t home_position = std::stoul(match.str(4));
+            uint32_t dead_zone = std::stoul(match.str(5));
 
-        double posAngle = range360(position / StepsPerDegree);
-        if (std::fabs(posAngle - DomeAbsPosN[0].value) > 0.01)
-        {
-            DomeAbsPosN[0].value = posAngle;
-            IDSetNumber(&DomeAbsPosNP, nullptr);
-        }
+            double newStepsPerDegree = cirumference / 360.0;
+            if (std::abs(newStepsPerDegree - StepsPerDegree) > 0.01)
+                StepsPerDegree = newStepsPerDegree;
 
-        if (GoHomeSP.s == IPS_BUSY && at_home == 1)
-        {
-            LOG_INFO("Rotator reached home position.");
-            GoHomeS[0].s = ISS_OFF;
-            GoHomeSP.s = IPS_OK;
-            IDSetSwitch(&GoHomeSP, nullptr);
-        }
-
-        double homeAngle = range360(home_position / StepsPerDegree);
-        if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
-        {
-            HomePositionN[0].value = homeAngle;
-            IDSetNumber(&HomePositionNP, nullptr);
-        }
-
-        if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
-        {
-            RotatorSettingsN[S_ZONE].value = dead_zone;
-            IDSetNumber(&RotatorSettingsNP, nullptr);
-        }
-
-        if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING)
-        {
-            int a = position;
-            int b = m_TargetAZSteps;
-            // If we reach target position.
-            if (std::abs(a - b) <= m_DomeAzThreshold)
+            if (std::abs(position - RotatorSyncN[0].value) > 0)
             {
-                if (getDomeState() == DOME_MOVING)
+                RotatorSyncN[0].value = position;
+                IDSetNumber(&RotatorSyncNP, nullptr);
+            }
+
+            double posAngle = range360(position / StepsPerDegree);
+            if (std::fabs(posAngle - DomeAbsPosN[0].value) > 0.01)
+            {
+                DomeAbsPosN[0].value = posAngle;
+                IDSetNumber(&DomeAbsPosNP, nullptr);
+            }
+
+            if (GoHomeSP.s == IPS_BUSY && at_home == 1)
+            {
+                LOG_INFO("Rotator reached home position.");
+                GoHomeS[0].s = ISS_OFF;
+                GoHomeSP.s = IPS_OK;
+                IDSetSwitch(&GoHomeSP, nullptr);
+            }
+
+            double homeAngle = range360(home_position / StepsPerDegree);
+            if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
+            {
+                HomePositionN[0].value = homeAngle;
+                IDSetNumber(&HomePositionNP, nullptr);
+            }
+
+            if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
+            {
+                RotatorSettingsN[S_ZONE].value = dead_zone;
+                IDSetNumber(&RotatorSettingsNP, nullptr);
+            }
+
+            if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING)
+            {
+                int a = position;
+                int b = m_TargetAZSteps;
+                // If we reach target position.
+                if (std::abs(a - b) <= m_DomeAzThreshold)
                 {
-                    LOG_INFO("Dome reached target position.");
-                    setDomeState(DOME_SYNCED);
-                }
-                else if (getDomeState() == DOME_PARKING)
-                {
-                    LOG_INFO("Dome is parked.");
-                    setDomeState(DOME_PARKED);
+                    if (getDomeState() == DOME_MOVING)
+                    {
+                        LOG_INFO("Dome reached target position.");
+                        setDomeState(DOME_SYNCED);
+                    }
+                    else if (getDomeState() == DOME_PARKING)
+                    {
+                        LOG_INFO("Dome is parked.");
+                        setDomeState(DOME_PARKED);
+                    }
                 }
             }
+        }
+        catch(...)
+        {
+            return false;
         }
     }
 
@@ -1168,29 +1204,37 @@ bool NexDome::processShutterReport(const std::string &report)
     std::smatch match;
     if (std::regex_search(report, match, re))
     {
-        int32_t position = std::stoi(match.str(1));
-        int32_t travel_limit = std::stoi(match.str(2));
-        bool open_limit_switch = std::stoul(match.str(3)) == 1;
-        bool close_limit_switch = std::stoul(match.str(4)) == 1;
-
-        if (std::abs(position - ShutterSyncN[0].value) > 0)
+        try
         {
-            ShutterSyncN[0].value = position;
-            IDSetNumber(&ShutterSyncNP, nullptr);
+            int32_t position = std::stoi(match.str(1));
+            int32_t travel_limit = std::stoi(match.str(2));
+            bool open_limit_switch = std::stoul(match.str(3)) == 1;
+            bool close_limit_switch = std::stoul(match.str(4)) == 1;
+
+            if (std::abs(position - ShutterSyncN[0].value) > 0)
+            {
+                ShutterSyncN[0].value = position;
+                IDSetNumber(&ShutterSyncNP, nullptr);
+            }
+
+            if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)
+            {
+                if (position == travel_limit || open_limit_switch)
+                {
+                    setShutterState(SHUTTER_OPENED);
+                    LOG_INFO("Shutter is fully opened.");
+                }
+                else if (position == 0 || close_limit_switch)
+                {
+                    setShutterState(SHUTTER_CLOSED);
+                    LOG_INFO("Shutter is fully closed.");
+                }
+            }
+
         }
-
-        if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)
+        catch(...)
         {
-            if (position == travel_limit || open_limit_switch)
-            {
-                setShutterState(SHUTTER_OPENED);
-                LOG_INFO("Shutter is fully opened.");
-            }
-            else if (position == 0 || close_limit_switch)
-            {
-                setShutterState(SHUTTER_CLOSED);
-                LOG_INFO("Shutter is fully closed.");
-            }
+            return false;
         }
     }
 
