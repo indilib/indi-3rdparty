@@ -166,23 +166,35 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     /// Rotator Settings
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&RotatorSettingsN[S_POSITION], "S_POSITION", "Position (steps)", "%.f", 0.0, 55080, 1000.0, 0);
     IUFillNumber(&RotatorSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&RotatorSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (steps/s)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&RotatorSettingsN[S_ZONE], "S_ZONE", "Dead Zone (steps)", "%.f", 0.0, 32000, 1000.0, 2400);
     IUFillNumber(&RotatorSettingsN[S_RANGE], "S_RANGE", "Travel Range (steps)", "%.f", 0.0, 55080, 1000.0, 55080);
-    IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 5, getDeviceName(), "ROTATOR_SETTINGS", "Rotator",
+    IUFillNumberVector(&RotatorSettingsNP, RotatorSettingsN, 4, getDeviceName(), "ROTATOR_SETTINGS", "Rotator",
+                       ND::ROTATOR_TAB.c_str(), IP_RW, 60, IPS_IDLE);
+
+
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Rotator Sync
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&RotatorSyncN[0], "ROTATOR_SYNC_VALUE", "Steps", "%.f", 0.0, 55080, 1000.0, 0);
+    IUFillNumberVector(&RotatorSyncNP, RotatorSyncN, 1, getDeviceName(), "ROTATOR_SYNC", "Sync",
                        ND::ROTATOR_TAB.c_str(), IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Shutter Settings
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&ShutterSettingsN[S_POSITION], "S_POSITION", "Position (steps)", "%.f", 0.0, 46000, 1000.0, 0);
     IUFillNumber(&ShutterSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
     IUFillNumber(&ShutterSettingsN[S_VELOCITY], "S_VELOCITY", "Velocity (step/s)", "%.f", 0.0, 5000, 1000.0, 0);
-    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 3, getDeviceName(), "SHUTTER_SETTINGS", "Shutter",
+    IUFillNumberVector(&ShutterSettingsNP, ShutterSettingsN, 2, getDeviceName(), "SHUTTER_SETTINGS", "Shutter",
                        ND::SHUTTER_TAB.c_str(), IP_RW, 60, IPS_IDLE);
 
+    ///////////////////////////////////////////////////////////////////////////////
+    /// Shutter Sync
+    ///////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&ShutterSyncN[0], "SHUTTER_SYNC_VALUE", "Steps", "%.f", 0.0, 46000, 1000.0, 0);
+    IUFillNumberVector(&ShutterSyncNP, ShutterSyncN, 1, getDeviceName(), "SHUTTER_SYNC", "Sync",
+                       ND::SHUTTER_TAB.c_str(), IP_RW, 60, IPS_IDLE);
     ///////////////////////////////////////////////////////////////////////////////
     /// Rotator Factory Settings
     ///////////////////////////////////////////////////////////////////////////////
@@ -275,6 +287,7 @@ bool NexDome::updateProperties()
 
         // Rotator
         defineNumber(&RotatorSettingsNP);
+        defineNumber(&RotatorSyncNP);
         defineSwitch(&RotatorFactorySP);
         defineText(&RotatorFirmwareVersionTP);
 
@@ -282,6 +295,7 @@ bool NexDome::updateProperties()
         if (HasShutter())
         {
             defineNumber(&ShutterSettingsNP);
+            defineNumber(&ShutterSyncNP);
             defineNumber(&ShutterBatteryLevelNP);
             defineSwitch(&CloseShutterOnParkSP);
             defineSwitch(&ShutterFactorySP);
@@ -295,6 +309,7 @@ bool NexDome::updateProperties()
 
         // Rotator
         deleteProperty(RotatorSettingsNP.name);
+        deleteProperty(RotatorSyncNP.name);
         deleteProperty(RotatorFactorySP.name);
         deleteProperty(RotatorFirmwareVersionTP.name);
 
@@ -302,6 +317,7 @@ bool NexDome::updateProperties()
         if (HasShutter())
         {
             deleteProperty(ShutterSettingsNP.name);
+            deleteProperty(RotatorSyncNP.name);
             deleteProperty(ShutterBatteryLevelNP.name);
             deleteProperty(CloseShutterOnParkSP.name);
             deleteProperty(ShutterFactorySP.name);
@@ -434,10 +450,6 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     switch (i)
                     {
-                        case S_POSITION:
-                            rc[i] = setParameter(ND::POSITION, ND::ROTATOR, values[i]);
-                            break;
-
                         case S_RAMP:
                             rc[i] = setParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, values[i]);
                             break;
@@ -469,14 +481,48 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             else
                 RotatorSettingsNP.s = IPS_ALERT;
 
-            if (std::abs(RotatorSettingsN[S_RANGE].value - RotatorSettingsN[S_POSITION].max) > 0)
+            if (std::abs(RotatorSettingsN[S_RANGE].value - RotatorSyncN[0].max) > 0)
             {
-                RotatorSettingsN[S_POSITION].max = RotatorSettingsN[S_RANGE].value;
+                RotatorSyncN[0].max = RotatorSettingsN[S_RANGE].value;
                 StepsPerDegree = RotatorSettingsN[S_RANGE].value / 360.0;
-                IUUpdateMinMax(&RotatorSettingsNP);
+                IUUpdateMinMax(&RotatorSyncNP);
+            }
+
+            IDSetNumber(&RotatorSettingsNP, nullptr);
+            return true;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Rotator Sync
+        ///////////////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, RotatorSyncNP.name))
+        {
+            if (setParameter(ND::POSITION, ND::ROTATOR, values[0]))
+            {
+                RotatorSyncN[0].value = values[0];
+                RotatorSyncNP.s = IPS_OK;
             }
             else
-                IDSetNumber(&RotatorSettingsNP, nullptr);
+                RotatorSyncNP.s = IPS_ALERT;
+
+            IDSetNumber(&RotatorSyncNP, nullptr);
+            return true;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Shutter Sync
+        ///////////////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, ShutterSyncNP.name))
+        {
+            if (setParameter(ND::POSITION, ND::SHUTTER, values[0]))
+            {
+                ShutterSyncN[0].value = values[0];
+                ShutterSyncNP.s = IPS_OK;
+            }
+            else
+                ShutterSyncNP.s = IPS_ALERT;
+
+            IDSetNumber(&RotatorSyncNP, nullptr);
             return true;
         }
 
@@ -497,10 +543,6 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     switch (i)
                     {
-                        case S_POSITION:
-                            rc[i] = setParameter(ND::POSITION, ND::SHUTTER, values[i]);
-                            break;
-
                         case S_RAMP:
                             rc[i] = setParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, values[i]);
                             break;
@@ -704,9 +746,11 @@ bool NexDome::getStartupValues()
 {
     std::string value;
 
-    // Rotator Settings
+    // Rotator Position
     if (getParameter(ND::POSITION, ND::ROTATOR, value))
-        RotatorSettingsN[S_POSITION].value = std::stoi(value);
+        RotatorSyncN[0].value = std::stoi(value);
+
+    // Rotator Settings
     if (getParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, value))
         RotatorSettingsN[S_RAMP].value = std::stoi(value);
     if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
@@ -716,7 +760,7 @@ bool NexDome::getStartupValues()
     if (getParameter(ND::RANGE, ND::ROTATOR, value))
     {
         RotatorSettingsN[S_RANGE].value = std::stoi(value);
-        RotatorSettingsN[S_POSITION].max = RotatorSettingsN[S_RANGE].value;
+        RotatorSyncN[0].max = RotatorSettingsN[S_RANGE].value;
         StepsPerDegree = RotatorSettingsN[S_RANGE].value / 360.0;
     }
 
@@ -724,7 +768,8 @@ bool NexDome::getStartupValues()
     if (HasShutter())
     {
         if (getParameter(ND::POSITION, ND::SHUTTER, value))
-            ShutterSettingsN[S_POSITION].value = std::stoi(value);
+            ShutterSyncN[0].value = std::stoi(value);
+
         if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
             ShutterSettingsN[S_RAMP].value = std::stoi(value);
         if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
@@ -1044,10 +1089,10 @@ bool NexDome::processRotatorReport(const std::string &report)
         uint32_t home_position = std::stoul(match.str(4));
         uint32_t dead_zone = std::stoul(match.str(5));
 
-        if (position != RotatorSettingsN[S_POSITION].value)
+        if (position != ShutterSyncN[0].value)
         {
-            RotatorSettingsN[S_POSITION].value = position;
-            IDSetNumber(&RotatorSettingsNP, nullptr);
+            ShutterSyncN[0].value = position;
+            IDSetNumber(&ShutterSyncNP, nullptr);
         }
 
         double posAngle = range360(position / StepsPerDegree);
@@ -1083,7 +1128,7 @@ bool NexDome::processRotatorReport(const std::string &report)
             int a = position;
             int b = m_TargetAZSteps;
             // If we reach target position.
-            if (std::abs(a - b) <= RotatorSettingsN[S_ZONE].value)
+            if (std::abs(a - b) <= m_DomeAzThreshold)
             {
                 if (getDomeState() == DOME_MOVING)
                 {
@@ -1116,10 +1161,10 @@ bool NexDome::processShutterReport(const std::string &report)
         bool open_limit_switch = std::stoul(match.str(3)) == 1;
         bool close_limit_switch = std::stoul(match.str(4)) == 1;
 
-        if (position != ShutterSettingsN[S_POSITION].value)
+        if (position != ShutterSyncN[0].value)
         {
-            ShutterSettingsN[S_POSITION].value = position;
-            IDSetNumber(&ShutterSettingsNP, nullptr);
+            ShutterSyncN[0].value = position;
+            IDSetNumber(&ShutterSyncNP, nullptr);
         }
 
         if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)

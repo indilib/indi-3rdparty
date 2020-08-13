@@ -106,7 +106,6 @@ class NexDome : public INDI::Dome
         // Settings
         enum
         {
-            S_POSITION,
             S_RAMP,
             S_VELOCITY,
             S_ZONE,
@@ -114,10 +113,16 @@ class NexDome : public INDI::Dome
         };
 
         INumberVectorProperty RotatorSettingsNP;
-        INumber RotatorSettingsN[5];
+        INumber RotatorSettingsN[4];
 
         INumberVectorProperty ShutterSettingsNP;
-        INumber ShutterSettingsN[3];
+        INumber ShutterSettingsN[2];
+
+        INumberVectorProperty RotatorSyncNP;
+        INumber RotatorSyncN[1];
+
+        INumberVectorProperty ShutterSyncNP;
+        INumber ShutterSyncN[1];
 
     private:
         ///////////////////////////////////////////////////////////////////////////////
@@ -152,6 +157,7 @@ class NexDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
         int32_t m_TargetAZSteps {1000000};
+        int32_t m_DomeAzThreshold {10};
         double StepsPerDegree { 153.0 };
 
 };
