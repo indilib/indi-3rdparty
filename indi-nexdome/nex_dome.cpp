@@ -1233,18 +1233,23 @@ bool NexDome::processShutterReport(const std::string &report)
                 IDSetNumber(&ShutterSyncNP, nullptr);
             }
 
+            INDI_UNUSED(travel_limit);
+
             if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_UNKNOWN)
             {
-                if (position == travel_limit || open_limit_switch)
+                //if (position == travel_limit || open_limit_switch)
+                if (open_limit_switch)
                 {
                     setShutterState(SHUTTER_OPENED);
                     LOG_INFO("Shutter is fully opened.");
                 }
-                else if (position == 0 || close_limit_switch)
+                //else if (position == 0 || close_limit_switch)
+                else if (close_limit_switch)
                 {
                     setShutterState(SHUTTER_CLOSED);
                     LOG_INFO("Shutter is fully closed.");
                 }
+
             }
 
         }
