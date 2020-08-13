@@ -143,7 +143,7 @@ const uint8_t DRIVER_TIMEOUT {3};
 // Wait up to a maximum of 1 for event input
 const uint8_t DRIVER_EVENT_TIMEOUT {1};
 // Maximum buffer for sending/receving.
-const uint8_t DRIVER_LEN {64};
+const uint16_t DRIVER_LEN {512};
 // ADU to VRef
 const double ADU_TO_VREF { 5.0 / 1023 * 3.0 };
 // Minimim supported version

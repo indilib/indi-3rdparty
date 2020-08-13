@@ -1158,19 +1158,22 @@ bool NexDome::processRotatorReport(const std::string &report)
                 IDSetNumber(&DomeAbsPosNP, nullptr);
             }
 
-            if (GoHomeSP.s == IPS_BUSY && at_home == 1)
+            double homeAngle = range360(home_position / StepsPerDegree);
+            if (std::fabs(homeAngle - HomePositionN[0].value) > 0.01)
+            {
+                HomePositionN[0].value = homeAngle;
+                IDSetNumber(&HomePositionNP, nullptr);
+            }
+
+            double homeDiff = std::abs(homeAngle - posAngle);
+            if (GoHomeSP.s == IPS_BUSY &&
+                    ((GoHomeS[HOME_FIND].s == ISS_ON && at_home == 1) ||
+                     (GoHomeS[HOME_GOTO].s == ISS_ON && homeDiff <= 0.1)))
             {
                 LOG_INFO("Rotator reached home position.");
                 IUResetSwitch(&GoHomeSP);
                 GoHomeSP.s = IPS_OK;
                 IDSetSwitch(&GoHomeSP, nullptr);
-            }
-
-            double homeAngle = range360(home_position / StepsPerDegree);
-            if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
-            {
-                HomePositionN[0].value = homeAngle;
-                IDSetNumber(&HomePositionNP, nullptr);
             }
 
             if (dead_zone != static_cast<uint32_t>(RotatorSettingsN[S_ZONE].value))
