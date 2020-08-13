@@ -74,7 +74,12 @@ class NexDome : public INDI::Dome
         /// Properties
         /////////////////////////////////////////////////////////////////////////////
         ISwitchVectorProperty GoHomeSP;
-        ISwitch GoHomeS[1];
+        ISwitch GoHomeS[2];
+        enum
+        {
+            HOME_FIND,
+            HOME_GOTO,
+        };
 
         INumberVectorProperty HomePositionNP;
         INumber HomePositionN[1];

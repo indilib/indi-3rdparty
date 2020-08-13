@@ -122,14 +122,15 @@ bool NexDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////
     /// Homeing
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&GoHomeS[0], "HOME_GO", "Go", ISS_OFF);
-    IUFillSwitchVector(&GoHomeSP, GoHomeS, 1, getDeviceName(), "DOME_HOMING", "Homing", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1,
+    IUFillSwitch(&GoHomeS[HOME_FIND], "HOME_FIND", "Find", ISS_OFF);
+    IUFillSwitch(&GoHomeS[HOME_GOTO], "HOME_GOTO", "Go", ISS_OFF);
+    IUFillSwitchVector(&GoHomeSP, GoHomeS, 2, getDeviceName(), "DOME_HOMING", "Home", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1,
                        60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Home Position
     ///////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&HomePositionN[0], "POSITON", "degrees", "%.f", 0.0, 360.0, 0.0, 0);
+    IUFillNumber(&HomePositionN[0], "POSITON", "degrees", "%.2f", 0.0, 360.0, 0.0, 0);
     IUFillNumberVector(&HomePositionNP, HomePositionN, 1, getDeviceName(), "HOME_POSITION", "Home Az", MAIN_CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
@@ -340,15 +341,29 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         ///////////////////////////////////////////////////////////////////////////////
         if(!strcmp(name, GoHomeSP.name))
         {
-            if (setParameter(ND::GOTO_HOME, ND::ROTATOR))
+            IUUpdateSwitch(&GoHomeSP, states, names, n);
+            if (GoHomeS[HOME_FIND].s == ISS_ON)
             {
-                GoHomeS[0].s = ISS_ON;
-                GoHomeSP.s = IPS_BUSY;
-                LOG_INFO("Finding home position...");
+                if (setParameter(ND::GOTO_HOME, ND::ROTATOR))
+                {
+                    setDomeState(DOME_MOVING);
+                    GoHomeSP.s = IPS_BUSY;
+                    LOG_INFO("Finding home position...");
+                }
+                else
+                    GoHomeSP.s = IPS_ALERT;
             }
-            else
+            else if (GoHomeS[HOME_GOTO].s == ISS_ON)
             {
-                GoHomeSP.s = IPS_ALERT;
+                if (MoveAbs(HomePositionN[0].value) == IPS_BUSY)
+                {
+
+                    setDomeState(DOME_MOVING);
+                    GoHomeSP.s = IPS_BUSY;
+                    LOGF_INFO("Going to home position %.2f degrees.", HomePositionN[0].value);
+                }
+                else
+                    GoHomeSP.s = IPS_ALERT;
             }
 
             IDSetSwitch(&GoHomeSP, nullptr);
@@ -424,8 +439,6 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
                 LOGF_INFO("Home position is updated to %.2f degrees.", values[0]);
                 HomePositionN[0].value = values[0];
                 HomePositionNP.s = IPS_OK;
-
-                setDomeState(DOME_MOVING);
             }
             else
                 HomePositionNP.s = IPS_ALERT;
@@ -1148,7 +1161,7 @@ bool NexDome::processRotatorReport(const std::string &report)
             if (GoHomeSP.s == IPS_BUSY && at_home == 1)
             {
                 LOG_INFO("Rotator reached home position.");
-                GoHomeS[0].s = ISS_OFF;
+                IUResetSwitch(&GoHomeSP);
                 GoHomeSP.s = IPS_OK;
                 IDSetSwitch(&GoHomeSP, nullptr);
             }
