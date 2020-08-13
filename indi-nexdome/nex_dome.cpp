@@ -1110,7 +1110,7 @@ bool NexDome::processRotatorReport(const std::string &report)
             IDSetSwitch(&GoHomeSP, nullptr);
         }
 
-        double homeAngle = range360(static_cast<double>(home_position) / cirumference);
+        double homeAngle = range360(home_position / StepsPerDegree);
         if (std::fabs(homeAngle - HomePositionN[0].value) > 0.001)
         {
             HomePositionN[0].value = homeAngle;
