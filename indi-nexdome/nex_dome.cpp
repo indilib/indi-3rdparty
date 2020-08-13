@@ -1089,10 +1089,10 @@ bool NexDome::processRotatorReport(const std::string &report)
         uint32_t home_position = std::stoul(match.str(4));
         uint32_t dead_zone = std::stoul(match.str(5));
 
-        if (position != ShutterSyncN[0].value)
+        if (std::abs(position - RotatorSyncN[0].value) > 0)
         {
-            ShutterSyncN[0].value = position;
-            IDSetNumber(&ShutterSyncNP, nullptr);
+            RotatorSyncN[0].value = position;
+            IDSetNumber(&RotatorSyncNP, nullptr);
         }
 
         double posAngle = range360(position / StepsPerDegree);
@@ -1161,7 +1161,7 @@ bool NexDome::processShutterReport(const std::string &report)
         bool open_limit_switch = std::stoul(match.str(3)) == 1;
         bool close_limit_switch = std::stoul(match.str(4)) == 1;
 
-        if (position != ShutterSyncN[0].value)
+        if (std::abs(position - ShutterSyncN[0].value) > 0)
         {
             ShutterSyncN[0].value = position;
             IDSetNumber(&ShutterSyncNP, nullptr);
