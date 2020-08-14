@@ -262,8 +262,8 @@ bool ASICCD::initProperties()
     IUFillSwitchVector(&VideoFormatSP, nullptr, 0, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
-    IUFillNumber(&BlinkN[0], "BLINK_TIMES", "Blinks before exposure", "%2.0f", 0, 100, 1, 0);
-    IUFillNumber(&BlinkN[1], "BLINK_DURATION", "Blink duration", "%2.3f", 0, 60, 0.001, 0);
+    IUFillNumber(&BlinkN[BLINK_COUNT], "BLINK_COUNT", "Blinks before exposure", "%2.0f", 0, 100, 1, 0);
+    IUFillNumber(&BlinkN[BLINK_DURATION], "BLINK_DURATION", "Blink duration", "%2.3f", 0, 60, 0.001, 0);
     IUFillNumberVector(&BlinkNP, BlinkN, NARRAY(BlinkN), getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     IUSaveText(&BayerT[2], getBayerString());
@@ -1037,12 +1037,12 @@ bool ASICCD::StartExposure(float duration)
 {
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
 
-    long blinks = BlinkN[0].value;
+    long blinks = BlinkN[BLINK_COUNT].value;
     if (blinks > 0)
     {
         LOGF_INFO("Blinking %ld time(s) before exposure", blinks);
 
-        const long duration = BlinkN[1].value * 1000000.0;
+        const long duration = BlinkN[BLINK_DURATION].value * 1000000.0;
         errCode = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, duration, ASI_FALSE);
         if (errCode != ASI_SUCCESS)
         {
@@ -2220,8 +2220,7 @@ bool ASICCD::saveConfigItems(FILE *fp)
     if (VideoFormatSP.nsp > 0)
         IUSaveConfigSwitch(fp, &VideoFormatSP);
 
-    if (BlinkNP.nnp > 0)
-        IUSaveConfigNumber(fp, &BlinkNP);
+    IUSaveConfigNumber(fp, &BlinkNP);
 
     return true;
 }
