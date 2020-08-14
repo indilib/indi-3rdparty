@@ -154,7 +154,7 @@ class ASICCD : public INDI::CCD
         uint8_t rememberVideoFormat = { 0 };
         ASI_IMG_TYPE currentVideoFormat;
 
-        INumber BlinkN[1];
+        INumber BlinkN[2];
         INumberVectorProperty BlinkNP;
 
         INumber ADCDepthN;
