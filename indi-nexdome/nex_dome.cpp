@@ -448,9 +448,33 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         }
 
         ///////////////////////////////////////////////////////////////////////////////
+        /// Dome Autosync Threshold
+        /// Override INDI::Dome implementaion since we need to update dead-zone
+        /// To be compatible with this.
+        ///////////////////////////////////////////////////////////////////////////////
+        else if (!strcmp(name, DomeParamNP.name))
+        {
+            IUUpdateNumber(&DomeParamNP, values, names, n);
+            DomeParamNP.s = IPS_OK;
+            IDSetNumber(&DomeParamNP, nullptr);
+
+            double minDeadZone = (DomeParamN[0].value - 0.1) * StepsPerDegree;
+            if (minDeadZone < RotatorSettingsN[S_ZONE].value)
+            {
+                if (setParameter(ND::DEAD_ZONE, ND::ROTATOR, minDeadZone))
+                {
+                    RotatorSettingsN[S_ZONE].value = minDeadZone;
+                    LOGF_INFO("Updating dead-zone to %.f steps since autosync threshold was set to %.2f degrees.", DomeParamN[0].value);
+                    IDSetNumber(&RotatorSettingsNP, nullptr);
+                }
+            }
+            return true;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
         /// Rotator Settings
         ///////////////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, RotatorSettingsNP.name))
+        else if (!strcmp(name, RotatorSettingsNP.name))
         {
             std::vector<double> currentSettings(RotatorSettingsNP.nnp);
             std::vector<bool> rc(RotatorSettingsNP.nnp, true);
@@ -508,7 +532,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         ///////////////////////////////////////////////////////////////////////////////
         /// Rotator Sync
         ///////////////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, RotatorSyncNP.name))
+        else if (!strcmp(name, RotatorSyncNP.name))
         {
             if (setParameter(ND::POSITION, ND::ROTATOR, values[0]))
             {
@@ -525,7 +549,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         ///////////////////////////////////////////////////////////////////////////////
         /// Shutter Sync
         ///////////////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, ShutterSyncNP.name))
+        else if (!strcmp(name, ShutterSyncNP.name))
         {
             if (setParameter(ND::POSITION, ND::SHUTTER, values[0]))
             {
@@ -542,7 +566,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         ///////////////////////////////////////////////////////////////////////////////
         /// Shutter Settings
         ///////////////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, ShutterSettingsNP.name))
+        else if (!strcmp(name, ShutterSettingsNP.name))
         {
             std::vector<double> currentSettings(ShutterSettingsNP.nnp);
             std::vector<bool> rc(ShutterSettingsNP.nnp, true);
@@ -615,7 +639,7 @@ void NexDome::TimerHit()
     if (HasShutter() && getShutterState() == SHUTTER_MOVING)
     {
         std::string value;
-        if (getParameter(ND::REPORT, ND::SHUTTER, value))
+        if (getParameter(ND::POSITION, ND::SHUTTER, value))
             processEvent(value);
     }
 
@@ -771,7 +795,18 @@ bool NexDome::getStartupValues()
         if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
             RotatorSettingsN[S_VELOCITY].value = std::stoi(value);
         if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
+        {
             RotatorSettingsN[S_ZONE].value = std::stoi(value);
+            double minAutoSyncThreshold = RotatorSettingsN[S_ZONE].value / StepsPerDegree;
+            if (DomeParamN[0].value < minAutoSyncThreshold)
+            {
+                // Add 0.1 degrees as buffer so that dome doesn't get stuck thinking it's
+                // still within the dead-zone.
+                DomeParamN[0].value = minAutoSyncThreshold + 0.1;
+                LOGF_INFO("Setting Autosync threshold to %.2f degrees since the dead-zone limit is set at %.f steps.",
+                          RotatorSettingsN[S_ZONE].value);
+            }
+        }
         if (getParameter(ND::RANGE, ND::ROTATOR, value))
         {
             RotatorSettingsN[S_RANGE].value = std::stoi(value);
