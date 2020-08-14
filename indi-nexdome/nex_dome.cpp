@@ -391,7 +391,34 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_DEFAULTS].name))
                 rc = executeFactoryCommand(FACTORY_DEFAULTS, ND::ROTATOR);
             else if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_LOAD].name))
+            {
                 rc = executeFactoryCommand(FACTORY_LOAD, ND::ROTATOR);
+                try
+                {
+                    std::string value;
+                    if (getParameter(ND::ACCELERATION_RAMP, ND::ROTATOR, value))
+                        RotatorSettingsN[S_RAMP].value = std::stoi(value);
+                    if (getParameter(ND::VELOCITY, ND::ROTATOR, value))
+                        RotatorSettingsN[S_VELOCITY].value = std::stoi(value);
+                    if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
+                    {
+                        RotatorSettingsN[S_ZONE].value = std::stoi(value);
+                    }
+                    if (getParameter(ND::RANGE, ND::ROTATOR, value))
+                    {
+                        RotatorSettingsN[S_RANGE].value = std::stoi(value);
+                        RotatorSyncN[0].max = RotatorSettingsN[S_RANGE].value;
+                        StepsPerDegree = RotatorSettingsN[S_RANGE].value / 360.0;
+                    }
+
+                    IDSetNumber(&RotatorSettingsNP, nullptr);
+                }
+                catch (...)
+                {
+                    LOG_WARN("Failed to parse rotator settings.");
+                }
+
+            }
             else if (!strcmp(requestedOP, RotatorFactoryS[FACTORY_SAVE].name))
                 rc = executeFactoryCommand(FACTORY_SAVE, ND::ROTATOR);
 
@@ -410,7 +437,22 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_DEFAULTS].name))
                 rc = executeFactoryCommand(FACTORY_DEFAULTS, ND::SHUTTER);
             else if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_LOAD].name))
+            {
                 rc = executeFactoryCommand(FACTORY_LOAD, ND::SHUTTER);
+                try
+                {
+                    std::string value;
+                    if (getParameter(ND::ACCELERATION_RAMP, ND::SHUTTER, value))
+                        ShutterSettingsN[S_RAMP].value = std::stoi(value);
+                    if (getParameter(ND::VELOCITY, ND::SHUTTER, value))
+                        ShutterSettingsN[S_VELOCITY].value = std::stoi(value);
+                    IDSetNumber(&ShutterSettingsNP, nullptr);
+                }
+                catch (...)
+                {
+                    LOG_WARN("Failed to parse shutter settings.");
+                }
+            }
             else if (!strcmp(requestedOP, ShutterFactoryS[FACTORY_SAVE].name))
                 rc = executeFactoryCommand(FACTORY_SAVE, ND::SHUTTER);
 
@@ -749,15 +791,19 @@ IPState NexDome::ControlShutter(ShutterOperation operation)
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::Abort()
 {
-    bool rc = setParameter(ND::EMERGENCY_STOP, ND::ROTATOR);
-    if (rc && GoHomeSP.s == IPS_BUSY)
+    bool rcRotator = setParameter(ND::EMERGENCY_STOP, ND::ROTATOR);
+    if (rcRotator && GoHomeSP.s == IPS_BUSY)
     {
         GoHomeS[0].s = ISS_OFF;
         GoHomeSP.s = IPS_IDLE;
         IDSetSwitch(&GoHomeSP, nullptr);
     }
 
-    return rc;
+    bool rcShutter = setParameter(ND::EMERGENCY_STOP, ND::SHUTTER);
+    if (rcShutter && getShutterState() == SHUTTER_MOVING)
+        setShutterState(SHUTTER_UNKNOWN);
+
+    return rcRotator && rcShutter;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -46,6 +46,8 @@ class NexDome : public INDI::Dome
         const char *getDefaultName() override;
         bool updateProperties() override;
 
+        //static void checkJamHelper(void *context);
+
     protected:
         bool Handshake() override;
         void TimerHit() override;
