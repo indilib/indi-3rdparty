@@ -458,13 +458,14 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             DomeParamNP.s = IPS_OK;
             IDSetNumber(&DomeParamNP, nullptr);
 
-            double minDeadZone = (DomeParamN[0].value - 0.1) * StepsPerDegree;
+            double minDeadZone = round((DomeParamN[0].value - 0.1) * StepsPerDegree);
             if (minDeadZone < RotatorSettingsN[S_ZONE].value)
             {
                 if (setParameter(ND::DEAD_ZONE, ND::ROTATOR, minDeadZone))
                 {
                     RotatorSettingsN[S_ZONE].value = minDeadZone;
-                    LOGF_INFO("Updating dead-zone to %.f steps since autosync threshold was set to %.2f degrees.", DomeParamN[0].value);
+                    LOGF_INFO("Updating dead-zone to %.f steps since autosync threshold was set to %.2f degrees.", minDeadZone,
+                              DomeParamN[0].value);
                     IDSetNumber(&RotatorSettingsNP, nullptr);
                 }
             }
@@ -496,7 +497,9 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
                             break;
 
                         case S_ZONE:
-                            rc[i] = setParameter(ND::DEAD_ZONE, ND::ROTATOR, values[i]);
+                            rc[i] = true;
+                            LOG_INFO("Cannot directly change dead-zone to prevent conflict with Autosync threshold in Slaving tab.");
+                            //rc[i] = setParameter(ND::DEAD_ZONE, ND::ROTATOR, values[i]);
                             break;
 
                         case S_RANGE:
@@ -797,15 +800,15 @@ bool NexDome::getStartupValues()
         if (getParameter(ND::DEAD_ZONE, ND::ROTATOR, value))
         {
             RotatorSettingsN[S_ZONE].value = std::stoi(value);
-            double minAutoSyncThreshold = RotatorSettingsN[S_ZONE].value / StepsPerDegree;
-            if (DomeParamN[0].value < minAutoSyncThreshold)
-            {
-                // Add 0.1 degrees as buffer so that dome doesn't get stuck thinking it's
-                // still within the dead-zone.
-                DomeParamN[0].value = minAutoSyncThreshold + 0.1;
-                LOGF_INFO("Setting Autosync threshold to %.2f degrees since the dead-zone limit is set at %.f steps.",
-                          RotatorSettingsN[S_ZONE].value);
-            }
+            //            double minAutoSyncThreshold = RotatorSettingsN[S_ZONE].value / StepsPerDegree;
+            //            if (DomeParamN[0].value < minAutoSyncThreshold)
+            //            {
+            //                // Add 0.1 degrees as buffer so that dome doesn't get stuck thinking it's
+            //                // still within the dead-zone.
+            //                DomeParamN[0].value = minAutoSyncThreshold + 0.1;
+            //                LOGF_INFO("Setting Autosync threshold to %.2f degrees since the dead-zone limit is set at %.f steps.",
+            //                          DomeParamN[0].value, RotatorSettingsN[S_ZONE].value);
+            //            }
         }
         if (getParameter(ND::RANGE, ND::ROTATOR, value))
         {
