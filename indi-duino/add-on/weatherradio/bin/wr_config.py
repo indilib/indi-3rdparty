@@ -21,7 +21,14 @@ INDIPORT="7624"
 
 # INDI device
 INDIDEVICE="Weather Radio"
+# INDI device connection mode: "Ethernet" or "Serial"
+INDIDEVICEMODE="Serial"
+# INDI serial device port (only necessary for Serial mode)
 INDIDEVICEPORT="/dev/ttyUSB0"
+# INDI IP address (only necessary for Ethernet mode)
+INDI_IP_ADDRESS="172.28.4.40"
+# INDI IP port (only necessary for Ethernet mode)
+INDI_IP_PORT="80"
 
 # RRD storage holding time series data
 RRDFILE="/usr/share/weatherradio/weather.rrd"

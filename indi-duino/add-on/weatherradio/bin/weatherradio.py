@@ -19,8 +19,16 @@ def connect(indi):
     #connect ones to configure the port
     connection = indi.get_vector(INDIDEVICE, "CONNECTION")
     if connection.get_element("CONNECT").get_active() == False:
-        # set the configured port
-        indi.set_and_send_text(INDIDEVICE,"DEVICE_PORT","PORT",INDIDEVICEPORT)
+        # select the connection mode
+        if INDIDEVICEMODE == "Serial":
+            # ensure serial mode
+            indi.set_and_send_switchvector_by_elementlabel(INDIDEVICE,"CONNECTION_MODE","Serial")
+            # set the configured port
+            indi.set_and_send_text(INDIDEVICE,"DEVICE_PORT","PORT",INDIDEVICEPORT)
+        else:
+            indi.set_and_send_switchvector_by_elementlabel(INDIDEVICE,"CONNECTION_MODE","Ethernet")
+            indi.set_and_send_text(INDIDEVICE,"DEVICE_ADDRESS","ADDRESS",INDI_IP_ADDRESS)
+            indi.set_and_send_text(INDIDEVICE,"DEVICE_ADDRESS","PORT",INDI_IP_PORT)
 
         # connect driver
         connection = indi.set_and_send_switchvector_by_elementlabel(INDIDEVICE,"CONNECTION","Connect")
