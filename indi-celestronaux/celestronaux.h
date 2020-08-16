@@ -8,8 +8,8 @@
 
 #include "auxproto.h"
 
-class CelestronAUX : 
-    public INDI::Telescope, 
+class CelestronAUX :
+    public INDI::Telescope,
     public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
   public:
@@ -75,7 +75,7 @@ class CelestronAUX :
     static const double TRACK_SCALE;
     static const long MAX_ALT;
     static const long MIN_ALT;
-    
+
     enum ScopeStatus_t
     {
         IDLE,
@@ -184,14 +184,14 @@ class CelestronAUX :
 
     // Additional interface elements specific to Celestron Scopes
     private:
-    // Firmware 
-    IText FirmwareT[9];
+    // Firmware
+    IText FirmwareT[9] {};
     ITextVectorProperty FirmwareTP;
     enum {FW_HC, FW_HCp, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
     // Networked Mount autodetect
     ISwitch NetDetectS[1];
     ISwitchVectorProperty NetDetectSP;
-    // Mount Cordwrap 
+    // Mount Cordwrap
     ISwitch CordWrapS[2];
     ISwitchVectorProperty CordWrapSP;
     enum { CORDWRAP_OFF, CORDWRAP_ON };

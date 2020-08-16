@@ -32,12 +32,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
-#include <libavdevice/avdevice.h>  
+#include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
-  
-#ifdef __cplusplus 
+
+#ifdef __cplusplus
 }
 #endif
 //#include <ctime>
@@ -88,7 +88,7 @@ protected:
     virtual bool StopStreaming() override;
 
     bool saveConfigItems(FILE *fp) override;
-    
+
 private:
 
     //Related to exposures
@@ -141,9 +141,9 @@ private:
     std::string bufferTimeout;
 
     //Related to Options in the Control Panel
-    IText InputOptionsT[4];
+    IText InputOptionsT[4] {};
     ITextVectorProperty InputOptionsTP;
-    IText HTTPInputOptions[4];
+    IText HTTPInputOptions[4] {};
     ITextVectorProperty HTTPInputOptionsP;
     ISwitch *CaptureDevices = nullptr;
     ISwitchVectorProperty CaptureDeviceSelection;
@@ -157,7 +157,7 @@ private:
     ISwitchVectorProperty RapidStackingSelection;
     ISwitch *OutputFormats = nullptr;
     ISwitchVectorProperty OutputFormatSelection;
-    IText TimeoutOptionsT[2];
+    IText TimeoutOptionsT[2] {};
     ITextVectorProperty TimeoutOptionsTP;
 
 
@@ -174,7 +174,7 @@ private:
     bool is_capturing;
     bool is_streaming;
     void start_capturing();
-    void stop_capturing();    
+    void stop_capturing();
 
     //FFMpeg Variables to make captures work.
     struct SwsContext *sws_ctx;
@@ -185,9 +185,9 @@ private:
     int              videoStream;
     AVCodecContext  *pCodecCtx;
     AVCodec         *pCodec;
-    AVFrame         *pFrame; 
+    AVFrame         *pFrame;
     AVFrame         *pFrameOUT;
     AVDictionary *optionsDict;
-    
+
 };
 #endif // indi_webcam_H

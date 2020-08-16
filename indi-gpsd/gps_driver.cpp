@@ -279,8 +279,11 @@ IPState GPSD::updateGPS()
             break;
     }
 
-
+#if GPSD_API_MAJOR_VERSION >= 10
+    if (gpsData->fix.status == STATUS_NO_FIX)
+#else  
     if (gpsData->status == STATUS_NO_FIX)
+#endif
     {
         // We have no fix and there is no point in further processing.
         IUSaveText(&GPSstatusT[0], "NO FIX");

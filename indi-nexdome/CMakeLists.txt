@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_nexdome CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -7,7 +7,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set(INDI_NEXDOME_VERSION_MAJOR 1)
-set(INDI_NEXDOME_VERSION_MINOR 4)
+set(INDI_NEXDOME_VERSION_MINOR 5)
 
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -23,7 +23,7 @@ include_directories( ${NOVA_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-########### MaxDome II ###########
+########### NexDome ###########
 set(indi_nexdome_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/nex_dome.cpp
    )

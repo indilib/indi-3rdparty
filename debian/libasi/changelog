@@ -1,3 +1,12 @@
+libasi (1.9) buster; urgency=medium
+
+  * ASICAM 1.15.0617 release:
+    V 1.15.0617 2020.6.17
+    Fix some bugs
+    Add new camera ASI462MC
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 11 Aug 2020 01:21:00 +0300
+
 libasi (1.8) buster; urgency=medium
 
   * ZWO EAF 0.2.0605 release:
