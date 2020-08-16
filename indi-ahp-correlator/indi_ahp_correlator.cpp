@@ -25,7 +25,7 @@
 #include <memory>
 #include <indicom.h>
 #include <connectionplugins/connectionserial.h>
-#include "indi_interferometer.h"
+#include "indi_ahp_correlator.h"
 
 static std::unique_ptr<Interferometer> array(new Interferometer());
 
@@ -63,8 +63,8 @@ void Interferometer::Callback()
 {
     int olen           = 0;
     double counts[NUM_LINES];
-    double correlations[NUM_BASELINES];
-    char buf[FRAME_SIZE+1];
+    double correlations[NUM_BASELINES()];
+    char buf[FRAME_SIZE()+1];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
@@ -77,12 +77,14 @@ void Interferometer::Callback()
     threadsRunning = true;
     while (threadsRunning)
     {
-        tty_nread_section(PortFD, buf, FRAME_SIZE, 13, 1, &olen);
-        if (olen != FRAME_SIZE) {
+        tty_nread_section(PortFD, buf, FRAME_SIZE(), 13, FRAME_TIME(), &olen);
+
+        timeleft = ExposureRequest-(getCurrentTime()-ExposureStart);
+
+        if (olen != FRAME_SIZE()) {
             continue;
         }
         if(InExposure) {
-            timeleft -= FRAME_TIME;
             if(timeleft <= 0.0) {
                 // We're no longer exposing...
                 AbortExposure();
@@ -95,26 +97,28 @@ void Interferometer::Callback()
                 ExposureComplete(&PrimaryCCD);
             }
         }
-        memset(counts, 0, NUM_LINES*sizeof(double));
-        memset(correlations, 0, NUM_BASELINES*sizeof(double));
+        memset(counts, 0, NUM_LINES*DELAY_LINES*sizeof(double));
+        memset(correlations, 0, NUM_BASELINES()*sizeof(double));
         int idx = HEADER_SIZE;
         int center = w*h/2;
         center += w/2;
         unsigned int tmp;
         for(int x = NUM_LINES-1; x >= 0; x--) {
-            memset(str, 0, SAMPLE_SIZE+1);
-            strncpy(str, buf+idx, SAMPLE_SIZE);
-            sscanf(str, "%X", &tmp);
-            counts[x] = static_cast<double>(tmp);
-            totalcounts[x] += counts[x];
-            idx += SAMPLE_SIZE;
-        }
-        for(int x = NUM_BASELINES-1; x >= 0; x--) {
-            for(int y = 0; y < DELAY_LINES; y++) {
+            for(int y = DELAY_LINES-1; y >= 0; y--) {
                 memset(str, 0, SAMPLE_SIZE+1);
                 strncpy(str, buf+idx, SAMPLE_SIZE);
                 sscanf(str, "%X", &tmp);
-                correlations[x] += static_cast<double>(tmp)/(fabs(y-DELAY_LINES/2)+1);
+                counts[x] = static_cast<double>(tmp);
+                totalcounts[x] += counts[x];
+                idx += SAMPLE_SIZE;
+            }
+        }
+        for(int x = NUM_BASELINES()-1; x >= 0; x--) {
+            for(int y = JITTER_LINES-1; y >= 0; y--) {
+                memset(str, 0, SAMPLE_SIZE+1);
+                strncpy(str, buf+idx, SAMPLE_SIZE);
+                sscanf(str, "%X", &tmp);
+                correlations[x] += static_cast<double>(tmp)/(fabs(y-JITTER_LINES/2)+1);
                 idx += SAMPLE_SIZE;
             }
             totalcorrelations[x] += correlations[x];
@@ -133,12 +137,12 @@ void Interferometer::Callback()
                         framebuffer[z] += correlations[idx]*2.0/(counts[x]+counts[y]);
                         framebuffer[w*h-1-z] += correlations[idx]*2.0/(counts[x]+counts[y]);
                     }
-                    double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
-                    double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
-                    get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
-                    farest = (minalt < alt[x] ? farest : x);
-                    minalt = (minalt < alt[x] ? minalt : alt[x]);
                 }
+                double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
+                double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
+                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
+                farest = (minalt < alt[x] ? farest : x);
+                minalt = (minalt < alt[x] ? minalt : alt[x]);
                 idx++;
             }
         }
@@ -162,7 +166,8 @@ void Interferometer::Callback()
         }
         for(int x = 0; x < NUM_LINES; x++) {
             unsigned int delay_clocks = delay[x] * clock_frequency / LIGHTSPEED;
-            SendCommand(SET_ACTIVE_LINE, x);
+            delay_clocks = (delay_clocks > 0 ? (delay_clocks < DELAY_LINES ? delay_clocks : DELAY_LINES-1) : 0);
+            SendCommand(SET_INDEX, x);
             SendCommand(CLEAR, 0);
             SendCommand(SET_DELAY, delay_clocks&0xf);
             delay_clocks >>= 4;
@@ -180,7 +185,6 @@ void Interferometer::Callback()
             delay_clocks >>= 4;
             SendCommand(SET_DELAY, delay_clocks&0xf);
             delay_clocks >>= 4;
-            SendCommand(COMMIT, 0);
         }
     }
     EnableCapture(false);
@@ -190,13 +194,14 @@ void Interferometer::Callback()
 Interferometer::Interferometer()
 {
     clock_frequency = 0;
+    clock_divider = 0;
 
     ExposureRequest = 0.0;
     InExposure = false;
 
     SAMPLE_SIZE = 0;
     NUM_LINES = 0;
-    DELAY_LINES = 0;
+    JITTER_LINES = 0;
 
     lineStatsN = static_cast<INumber*>(malloc(1));
     lineStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
@@ -257,7 +262,7 @@ bool Interferometer::Disconnect()
 
 const char * Interferometer::getDefaultName()
 {
-    return "AHP Telescope array correlator";
+    return "AHP XC Correlator";
 }
 
 const char * Interferometer::getDeviceName()
@@ -300,7 +305,7 @@ bool Interferometer::initProperties()
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
-    serialConnection->setWordSize(WORD_SIZE);
+    serialConnection->setWordSize(DATA_BITS);
     serialConnection->setStopBits(STOP_BITS);
     serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
     serialConnection->registerHandshake([&]() { return Handshake(); });
@@ -365,7 +370,7 @@ bool Interferometer::updateProperties()
         }
     }
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->updateProperties();
 
     return true;
@@ -394,10 +399,10 @@ bool Interferometer::StartExposure(float duration)
     if(InExposure)
         return false;
 
+    ExposureStart = getCurrentTime();
     ExposureRequest = duration;
     timeleft = ExposureRequest;
     PrimaryCCD.setExposureDuration(static_cast<double>(ExposureRequest));
-
     InExposure = true;
     // We're done
     return true;
@@ -420,12 +425,12 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
     if(!strcmp(settingsNP.name, name)) {
         IUUpdateNumber(&settingsNP, values, names, n);
-        for(int x = 0; x < NUM_BASELINES; x++) {
+        for(int x = 0; x < NUM_BASELINES(); x++) {
             baselines[x]->setWavelength(settingsN[0].value);
         }
         IDSetNumber(&settingsNP, nullptr);
@@ -449,18 +454,18 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         }
         IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
         if (states[3] == ISS_ON) {
-            SendCommand(SET_BAUDRATE, 0);
+            SendCommand(SET_BAUD_RATE, 0);
         }
         if (states[4] == ISS_ON) {
-            SendCommand(SET_BAUDRATE, 1);
+            SendCommand(SET_BAUD_RATE, 1);
         }
         if (states[5] == ISS_ON) {
-            SendCommand(SET_BAUDRATE, 2);
+            SendCommand(SET_BAUD_RATE, 2);
         }
         IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
 
     for(int x = 0; x < NUM_LINES; x++) {
@@ -502,7 +507,7 @@ bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], i
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 
     return INDI::CCD::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
@@ -541,7 +546,7 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
         }
     }
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
 
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -601,7 +606,7 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
         }
     }
 
-    for(int x = 0; x < NUM_BASELINES; x++)
+    for(int x = 0; x < NUM_BASELINES(); x++)
         baselines[x]->ISSnoopDevice(root);
 
     return INDI::CCD::ISSnoopDevice(root);
@@ -634,24 +639,26 @@ void Interferometer::TimerHit()
         PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
     }
 
-    IDSetNumber(&correlationsNP, nullptr);
     int idx = 0;
+    IDSetNumber(&correlationsNP, nullptr);
     for (int x = 0; x < NUM_LINES; x++) {
-        lineDelayNP[x].s = IPS_BUSY;
-        lineDelayNP[x].np[0].value = delay[x];
-        IDSetNumber(&lineDelayNP[x], nullptr);
-        lineStatsNP[x].s = IPS_BUSY;
-        lineStatsNP[x].np[0].value = totalcounts[x];
-        IDSetNumber(&lineStatsNP[x], nullptr);
+        double line_delay = delay[x];
+        double line_counts = totalcounts[x];
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
-        double photon_flux = totalcounts[x]*1000.0/POLLMS;
+        double photon_flux = line_counts*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
+        IDSetNumber(&lineDelayNP[x], nullptr);
+        lineDelayNP[x].s = IPS_BUSY;
+        lineDelayNP[x].np[0].value = line_delay;
+        IDSetNumber(&lineStatsNP[x], nullptr);
+        lineStatsNP[x].s = IPS_BUSY;
+        lineStatsNP[x].np[0].value = line_counts;
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         for(int y = x+1; y < NUM_LINES; y++) {
             correlationsNP.np[idx*2+0].value = totalcorrelations[idx];
-            correlationsNP.np[idx*2+1].value = totalcorrelations[idx]*2.0/(totalcounts[x]+totalcounts[y]);
+            correlationsNP.np[idx*2+1].value = totalcorrelations[idx]*2.0/(line_counts+totalcounts[y]);
             totalcorrelations[idx] = 0;
             idx++;
         }
@@ -670,6 +677,7 @@ bool Interferometer::Handshake()
         int tmp = 0;
         int sample_size = 0;
         int num_lines = 0;
+        int jitter_lines = 0;
         int delay_lines = 0;
 
         int olen;
@@ -684,6 +692,7 @@ bool Interferometer::Handshake()
             if(ntries == 0 || olen != 1) {
                 SAMPLE_SIZE = 0;
                 NUM_LINES = 0;
+                JITTER_LINES = 0;
                 DELAY_LINES = 0;
                 return false;
             }
@@ -693,11 +702,13 @@ bool Interferometer::Handshake()
         if(olen != HEADER_SIZE) {
             SAMPLE_SIZE = 0;
             NUM_LINES = 0;
+            JITTER_LINES = 0;
             DELAY_LINES = 0;
             return false;
         }
 
-        sscanf(buf, "%02X%02X%02X%02X%08X", &tmp, &sample_size, &num_lines, &delay_lines, &clock_frequency);
+        sscanf(buf, "%02X%01X%02X%03X%08X", &sample_size, &num_lines, &jitter_lines, &delay_lines, &clock_frequency);
+        num_lines++;
 
         for(int x = 0; x < NUM_LINES; x++) {
             if(baselines[x] != nullptr) {
@@ -808,7 +819,7 @@ bool Interferometer::Handshake()
             IUFillSwitch(&linePowerS[x*2+1], "LINE_POWER_OFF", "Off", ISS_ON);
 
             //report pulse counts
-            IUFillNumber(&lineStatsN[x*4+0], "LINE_COUNTS", "Counts", "%g", 0, 400000000, 1, 0);
+            IUFillNumber(&lineStatsN[x*4+0], "LINE_COUNTS", "Counts", "%g", 0.0, 400000000.0, 1.0, 0);
             IUFillNumber(&lineStatsN[x*4+1], "LINE_FLUX", "Photon Flux (Lm)", "%g", 0.0, 1.0, 1.0E-5, 0);
             IUFillNumber(&lineStatsN[x*4+2], "LINE_FLUX0", "Flux at mag0 (Lm)", "%g", 0.0, 1.0, 1.0E-5, 0);
             IUFillNumber(&lineStatsN[x*4+3], "LINE_MAGNITUDE", "Estimated magnitude", "%g", -22.0, 22.0, 1.0E-5, 0);
@@ -843,6 +854,7 @@ bool Interferometer::Handshake()
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_lines;
+        JITTER_LINES = jitter_lines;
         DELAY_LINES = delay_lines;
 
         std::thread(&Interferometer::Callback, this).detach();
@@ -861,16 +873,21 @@ bool Interferometer::SendCommand(it_cmd c, unsigned char value)
 bool Interferometer::SendChar(char c)
 {
     int olen;
-    usleep(1000);
+    usleep(5000);
     tty_write(PortFD, &c, 1, &olen);
-    tcdrain(PortFD);
     return olen == 1;
 }
 
 void Interferometer::ActiveLine(int line, bool on, bool power)
 {
-    SendCommand(SET_ACTIVE_LINE, line);
+    SendCommand(SET_INDEX, line);
     SendCommand(SET_LEDS, on | (power << 1));
+}
+
+void Interferometer::SetFrequencyDivider(int divider)
+{
+    SendCommand(SET_FREQ_DIV, divider);
+    clock_divider = divider;
 }
 
 void Interferometer::EnableCapture(bool start)
