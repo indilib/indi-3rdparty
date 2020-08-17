@@ -26,12 +26,12 @@
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define STOP_BITS 1
+#define STOP_BITS 2
 #define WORD_SIZE 8
 #define BAUD_SIZE (STOP_BITS+WORD_SIZE+1.0)
 #define BAUD_RATE (serialConnection->baud())
 #define NUM_BASELINES (NUM_LINES*(NUM_LINES-1)/2)
-#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
+#define FRAME_SIZE (((NUM_LINES+NUM_BASELINES*JITTER_LINES+NUM_LINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE)
 #define FRAME_TIME (BAUD_SIZE*FRAME_SIZE/BAUD_RATE)
 #define SAMPLE_RATE (pow(2, sample_size)*serialConnection->baud())
 class baseline : public INDI::Correlator
@@ -137,12 +137,12 @@ private:
 
     enum it_cmd {
         CLEAR = 0,
-        SET_ACTIVE_LINE = 0x01,
-        SET_LEDS = 0x02,
-        SET_BAUDRATE = 0x03,
-        SET_DELAY = 0x04,
-        COMMIT = 0x0c,
-        ENABLE_CAPTURE = 0x0d,
+        SET_INDEX = 1,
+        SET_LEDS = 2,
+        SET_BAUD_RATE = 3,
+        SET_DELAY = 4,
+        SET_FREQ_DIV = 5,
+        ENABLE_CAPTURE = 13
     };
 
     INumber *correlationsN;
@@ -213,6 +213,7 @@ private:
     bool threadsRunning;
 
     int NUM_LINES;
+    int JITTER_LINES;
     int DELAY_LINES;
     int SAMPLE_SIZE;
 };
