@@ -21,27 +21,27 @@ IF("${CMAKE_SYSTEM}" MATCHES "Linux")
         IF(CMAKE_SIZEOF_VOID_P MATCHES "8")
             # 64 bits
             message("64 bits target")
-            exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_amd64.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
+            exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_amd64.bin ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
         ELSE(CMAKE_SIZEOF_VOID_P MATCHES "8")
             # 32 bits
             message("32 bits target")
-            exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_x86.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
+            exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_x86.bin ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
         ENDIF (CMAKE_SIZEOF_VOID_P MATCHES "8")
 
     ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "armv6l")
         # armv6 archirecture
         message("armv6 target")
-        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv6.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
+        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv6.bin ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
 
     ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7l")
         # armv7 archirecture
         message("armv7 target")
-        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv7.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
+        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv7.bin ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
 
     ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "armv8l" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
         # armv8 archirecture
         message("armv8 target")
-        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv8.so ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
+        exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libSVBCameraSDK_armv8.bin ${CMAKE_BINARY_DIR}/libSVBCameraSDK.so.${SVBCAMERASDK_VERSION})
 
     ELSE()
         message(FATAL_ERROR "Your architecture isn't suppored")
@@ -73,7 +73,7 @@ SET(CPACK_PACKAGE_VERSION_MAJOR "1")
 SET(CPACK_PACKAGE_VERSION_MINOR "6")
 # real package is 1.6.1.0-day
 # I use may own numbering
-SET(CPACK_PACKAGE_VERSION_PATCH "3")
+SET(CPACK_PACKAGE_VERSION_PATCH "4")
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Blaise-Florentin Collin") #required
 INCLUDE(CPack)
