@@ -165,9 +165,6 @@ class Sv305CCD : public INDI::CCD
         float ExposureRequest;
         float CalcTimeLeft();
 
-        // drop a junk frame
-        void dropJunkFrame();
-
         // update CCD Params
         bool updateCCDParams();
 

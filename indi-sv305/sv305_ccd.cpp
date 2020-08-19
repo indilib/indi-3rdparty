@@ -609,18 +609,6 @@ bool Sv305CCD::Disconnect()
 }
 
 
-//
-void Sv305CCD::dropJunkFrame()
-{
-    pthread_mutex_lock(&cameraID_mutex);
-
-    // ************
-    // TODO
-    // ************
-
-    pthread_mutex_unlock(&cameraID_mutex);
-}
-
 // set CCD parameters
 bool Sv305CCD::updateCCDParams()
 {
@@ -652,9 +640,6 @@ bool Sv305CCD::StartExposure(float duration)
         LOGF_WARN("Exposure greater than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration, maxExposure);
         duration = maxExposure;
     }
-
-    // drop junk frame
-    dropJunkFrame();
 
     pthread_mutex_lock(&cameraID_mutex);
 
