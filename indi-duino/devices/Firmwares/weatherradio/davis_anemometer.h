@@ -34,6 +34,7 @@ volatile unsigned long startSlice;    // start time of the current time slice to
 volatile unsigned long lastInterrupt; // Last time a rotation has been detected
 volatile unsigned int rotations;      // total number of wind wheel rotations
 volatile unsigned int sliceRotations; // rotation occured in the current time slice
+volatile unsigned int slices;         // number of slices occured since startTime
 volatile float minSpeed;              // minimal wind speed since startTime
 volatile float maxSpeed;              // maximal wind speed since startTime
 
@@ -83,28 +84,6 @@ void isr_rotation () {
     rotations++;
     sliceRotations++;
     lastInterrupt = now;
-
-    if (lastInterrupt - startSlice >= SLICEDURATION) {
-      volatile float speed = windspeed(lastInterrupt, startSlice, sliceRotations);
-
-      // update min and max values
-      if (speed > maxSpeed)
-        maxSpeed = speed;
-      if (speed < minSpeed)
-        minSpeed = speed;
-
-      // reset the single interval
-      startSlice = now;
-      sliceRotations = 0;
-    }
-
-    // calculate the difference in the wind direction
-    volatile int current_direction = winddirection();
-    volatile int diff = initial_direction - current_direction;
-    // ensure that the diff is in the range -180 < diff <= 180
-    if (diff > 180) diff -= 360;
-    if (diff <= -180) diff += 360;
-    direction_diffs += diff;
   }
 }
 
@@ -115,6 +94,7 @@ void reset(unsigned long time) {
   lastInterrupt  = time;
   rotations      = 0;
   sliceRotations = 0;
+  slices         = 0;
   maxSpeed       = 0.0;
   minSpeed       = 9999.0;
   initial_direction = winddirection();
@@ -131,26 +111,57 @@ void initAnemometer() {
   reset(millis());
 }
 
+/**
+   Update anemometer counters
+*/
 void updateAnemometer() {
-
   if (anemometerData.status) {
-    // stop recording
-    detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
-    anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
-    anemometerData.minSpeed = minSpeed < anemometerData.avgSpeed ? minSpeed : anemometerData.avgSpeed;
-    anemometerData.maxSpeed = maxSpeed > anemometerData.avgSpeed ? maxSpeed : anemometerData.avgSpeed;
-    anemometerData.rotations = rotations;
+    if ((lastInterrupt > startSlice) && (lastInterrupt - startSlice >= SLICEDURATION)) {
+      // stop recording
+      detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
 
-    if (rotations > 0)
-      anemometerData.direction = round(initial_direction - (direction_diffs / rotations));
-    else
-      anemometerData.direction = initial_direction;
+      // update wind speed data
+      volatile float speed = windspeed(lastInterrupt, startSlice, sliceRotations);
 
-    reset(millis());
-    // start recording
-    attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
+      // update min and max values
+      minSpeed = speed < minSpeed ? speed : minSpeed;
+      maxSpeed = speed > maxSpeed ? speed : maxSpeed;
+
+      // reset the single interval
+      startSlice = millis();
+      sliceRotations = 0;
+      slices++;
+
+      // calculate the difference in the wind direction
+      volatile int current_direction = winddirection();
+      volatile int diff = initial_direction - current_direction;
+      // ensure that the diff is in the range -180 < diff <= 180
+      if (diff > 180) diff -= 360;
+      if (diff <= -180) diff += 360;
+      direction_diffs += diff;
+
+      // start recording
+      attachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN), isr_rotation, FALLING);
+    }
   } else
     initAnemometer();
+
+}
+
+/**
+   Read out the anemometer data and reset the counters
+*/
+void readAnemometer() {
+  updateAnemometer();
+  anemometerData.avgSpeed = windspeed(lastInterrupt, startTime, rotations);
+  anemometerData.minSpeed = min(minSpeed, maxSpeed);
+  anemometerData.maxSpeed = maxSpeed;
+  anemometerData.rotations = rotations;
+  if (slices > 0)
+    anemometerData.direction = round(initial_direction - (direction_diffs / slices));
+  else
+    anemometerData.direction = initial_direction;
+  reset(millis());
 }
 
 void serializeAnemometer(JsonDocument &doc) {

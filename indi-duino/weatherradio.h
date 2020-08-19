@@ -55,7 +55,7 @@ protected:
     virtual bool updateProperties() override;
 
     // Initial function to get data after connection is successful
-    void getBasicData();
+    IPState getBasicData();
 
     // host name and port for HTTP connections
     char hostname[MAXINDILABEL];
@@ -141,7 +141,9 @@ protected:
      * @brief TTY interface timeout
      */
     int getTTYTimeout() { return ttyTimeout; }
-    int ttyTimeout = 2;
+    // HINT: TSL2591 needs at night more than 1 sec for measuring, hence
+    //       we set the TTY timeout to 5sec
+    int ttyTimeout = 5;
     INumber ttyTimeoutN[1] = {};
     INumberVectorProperty ttyTimeoutNP;
 

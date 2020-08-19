@@ -761,7 +761,7 @@ void EQMod::abnormalDisconnectCallback(void *userpointer)
 void EQMod::abnormalDisconnect()
 {
     // Ignore disconnect errors
-    Disconnect();
+    INDI::Telescope::Disconnect();
 
     // Set Disconnected
     setConnected(false, IPS_IDLE);

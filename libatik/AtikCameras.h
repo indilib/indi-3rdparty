@@ -246,7 +246,7 @@ extern "C" {
 
 	// ------------ Camera Specific Options -------------
 	bool ArtemisHasCameraSpecificOption(    ArtemisHandle handle, unsigned short int id);
-	int  ArtemisCameraSpecificOptionGetData(ArtemisHandle handle, unsigned short int id, unsigned char * data, int dataLength, int *actualLength);
+	int  ArtemisCameraSpecificOptionGetData(ArtemisHandle handle, unsigned short int id, unsigned char * data, int dataLength, int &actualLength);
 	int  ArtemisCameraSpecificOptionSetData(ArtemisHandle handle, unsigned short int id, unsigned char * data, int dataLength);
 
 	// ------------------- Column Repair ----------------------------------	

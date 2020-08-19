@@ -42,6 +42,18 @@ if (HAVE_LIBRAW_SENSOR_TEMPERATURE)
   message(STATUS "Found SensorTemperature in 'libraw/libraw_types.h'")
 endif ()
 
+CHECK_STRUCT_HAS_MEMBER("libraw_metadata_common_t" CameraTemperature "libraw/libraw_types.h" HAVE_LIBRAW_CAMERA_TEMPERATURE2 LANGUAGE C)
+if (HAVE_LIBRAW_CAMERA_TEMPERATURE2)
+  set(LIBRAW_CAMERA_TEMPERATURE2 1)
+  message(STATUS "Found CameraTemperature in libraw_metadata_common_t 'libraw/libraw_types.h'")
+endif ()
+
+CHECK_STRUCT_HAS_MEMBER("libraw_metadata_common_t" SensorTemperature "libraw/libraw_types.h" HAVE_LIBRAW_SENSOR_TEMPERATURE2 LANGUAGE C)
+if (HAVE_LIBRAW_SENSOR_TEMPERATURE2)
+  set(LIBRAW_SENSOR_TEMPERATURE2 1)
+  message(STATUS "Found SensorTemperature in libraw_metadata_common_t 'libraw/libraw_types.h'")
+endif ()
+
 if (INDI_WEBSOCKET)
     find_package(websocketpp REQUIRED)
     find_package(Boost COMPONENTS system thread)
