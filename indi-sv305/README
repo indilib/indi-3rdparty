@@ -43,6 +43,7 @@ How to Use
 Features
 ========
 
+	+ Full acces to camera settings
 	+ Bayer color pattern
         + Analog gain
 	+ Subframing
@@ -52,17 +53,19 @@ Features
 Known issues
 ============
 
-	+ Subframing and binning don't work in liveview
-	+ Can't abort exposure yet
+	+ Initial gain setting sometime fails (SDK issue ?)
 
 Limitations
 ===========
 
-	+ None
+	+ Subframing and binning doesn't work in liveview
+        + Can't abort long exposure yet
+	+ Should support the SV305 PRO aswell, but not tested yet
 
 Changelog
 =========
 
+	+ 1.1.1 : Updated with the last SDK (20200812)
 	+ 1.1 : Ability to stretch camera's 12 bits pixel depth to 16 bits
 	+ 1.0 : Refactoring with the new SVBony SDK (1.6.1)
 	+ 0.9 : First version, with the CKCamera SDK
