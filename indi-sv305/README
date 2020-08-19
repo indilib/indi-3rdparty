@@ -53,7 +53,6 @@ Known issues
 ============
 
 	+ Subframing and binning don't work in liveview
-        + First frame wrong exposure time
 	+ Can't abort exposure yet
 
 Limitations
