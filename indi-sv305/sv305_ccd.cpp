@@ -232,7 +232,7 @@ Sv305CCD::~Sv305CCD()
 //
 const char *Sv305CCD::getDefaultName()
 {
-    return "SVBONY SV305 CAMERA";
+    return "SVBONY SV305";
 }
 
 
