@@ -1,3 +1,21 @@
+indi-sv305 (1.2) bionic; urgency=low
+
+  * Camera name fix
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Wed, 19 Aug 2020 16:00:00 +0300
+
+indi-sv305 (1.1) bionic; urgency=low
+
+  * Ability to stretch pixel values in 16 bits mode
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Mon, 20 Jul 2020 16:00:00 +0300
+
+indi-sv305 (1.0) bionic; urgency=low
+
+  * Refactored for the SVBONY 1.6.1 SDK, supporting arm and SV305 Pro
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Sun, 12 Jul 2020 16:00:00 +0300
+
 indi-sv305 (0.9) bionic; urgency=low
 
   * Initial Release.

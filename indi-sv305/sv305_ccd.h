@@ -28,47 +28,7 @@
 #include <indiccd.h>
 #include <iostream>
 
-#include "libsv305/CKCameraInterface.h"
-
-///////////////////////////////////////////////////
-// DEFAULT SETTINGS
-//
-
-// picture
-#define CAM_X_RESOLUTION	1920
-#define CAM_Y_RESOLUTION	1080
-#define CAM_DEPTH		16
-#define CAM_IMAGE_FORMAT	IMAGEOUT_MODE_1920X1080
-#define CAM_BAYER_PATTERN	"GRBG"
-
-// sensor pixel size
-#define CAM_X_PIXEL	2.9
-#define CAM_Y_PIXEL	2.9
-
-// default grab timeout (ms)
-#define CAM_DEFAULT_GRAB_TIMEOUT	100
-// default grab loops # if grab failed
-#define CAM_DEFAULT_GRAB_LOOPS	10
-
-
-/* I don't trust SDK get capabilities values : */
-/* -> hard settings */
-
-// reported exposure time :
-// min = 1 us : useless
-// max = 60 s : wrong, can expose much more
-// so, min exposure (s) hard setting :
-#define CAM_MIN_EXPOSURE		0.01
-
-// analog gain hard settings (1 to 30)
-#define CAM_MIN_GAIN	1
-#define CAM_MAX_GAIN	30
-#define CAM_STEP_GAIN	1
-#define CAM_DEFAULT_GAIN	1
-
-// max camera number
-#define CAM_MAX_DEVICES    8
-
+#include "libsv305/SVBCameraSDK.h"
 
 
 using namespace std;
@@ -112,43 +72,92 @@ class Sv305CCD : public INDI::CCD
 
         // handle UI settings
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n) override;
+
+        // Guide Port
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
 
     protected:
         // INDI periodic grab query
         void TimerHit() override;
 
     private:
-        // camera API return status
-        CameraSdkStatus status;
-        // hCamera mutex protection
-        pthread_mutex_t hCamera_mutex;
-        // camera API handler
-        HANDLE hCamera;
         // camera #
         int num;
         // camera name
         char name[32];
+        // camera API return status
+        SVB_ERROR_CODE status;
+        // camera infos
+        SVB_CAMERA_INFO cameraInfo;
+        // camera API handler
+        int cameraID;
+        // camera property
+        SVB_CAMERA_PROPERTY cameraProperty;
+        // number of camera control
+        int controlsNum;
+        // exposure limits
+        double minExposure;
+        double maxExposure;
+        // pixel size
+        float pixelSize;
 
-        // image offsets and size
-        int x_1, y_1, x_2, y_2;
-        // do we use subframes ?
-        bool subFrame;
-        // do we bin ?
+        // hCamera mutex protection
+        pthread_mutex_t cameraID_mutex;
+
+        // binning ?
         bool binning;
+        // bit per pixel
+        int bitDepth;
+        // stretch factor x2, x4, x8, x16 (bit shift)
+        int bitStretch;
+        ISwitch StretchS[5];
+        ISwitchVectorProperty StretchSP;
+        enum { STRETCH_OFF, STRETCH_X2, STRETCH_X4, STRETCH_X8, STRETCH_X16 };
 
-        // streaming
+        // streaming ?
         bool streaming;
+        // streaming mutex and thread control
         pthread_mutex_t streaming_mutex;
         pthread_t primary_thread;
         bool terminateThread;
 
-        // gain setting
-        INumber GainN[1];
-        INumberVectorProperty GainNP;
+        // controls settings
         enum
         {
-            CCD_GAIN_N
+            CCD_GAIN_N,
+            CCD_CONTRAST_N,
+            CCD_SHARPNESS_N,
+            CCD_SATURATION_N,
+            CCD_WBR_N,
+            CCD_WBG_N,
+            CCD_WBB_N,
+            CCD_GAMMA_N,
+            CCD_DOFFSET_N
         };
+        INumber ControlsN[9];
+        INumberVectorProperty ControlsNP[9];
+        // control helper
+        bool updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n);
+
+        // frame speed
+        ISwitch SpeedS[3];
+        ISwitchVectorProperty SpeedSP;
+        enum { SPEED_SLOW, SPEED_NORMAL, SPEED_FAST};
+        int frameSpeed;
+
+        // output frame format
+        // the camera is able to output RGB24, but not supported by INDI
+        // -> ignored
+        ISwitch FormatS[2];
+        ISwitchVectorProperty FormatSP;
+        enum { FORMAT_RAW12, FORMAT_RAW8};
+        SVB_IMG_TYPE frameFormatMapping[2] = {SVB_IMG_RAW12, SVB_IMG_RAW8};
+        int frameFormat;
+        const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
 
         // exposure timing
         int timerID;
@@ -156,11 +165,8 @@ class Sv305CCD : public INDI::CCD
         float ExposureRequest;
         float CalcTimeLeft();
 
-        // setups
-        bool setupParams();
-
-        // reads a junk frame and drops it
-        void GrabJunkFrame();
+        // update CCD Params
+        bool updateCCDParams();
 
         // save settings
         virtual bool saveConfigItems(FILE *fp) override;

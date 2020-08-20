@@ -33,7 +33,7 @@
 #include "eventloop.h"
 #include "stream/streammanager.h"
 
-#include "libsv305/CKCameraInterface.h"
+#include "libsv305/SVBCameraSDK.h"
 
 #include "sv305_ccd.h"
 
@@ -43,7 +43,7 @@ static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // cameras storage
 static int cameraCount;
-static Sv305CCD *cameras[CAM_MAX_DEVICES];
+static Sv305CCD *cameras[SVBCAMERA_ID_MAX];
 
 
 
@@ -68,24 +68,19 @@ void ISInit()
     static bool isInit = false;
     if (!isInit)
     {
-        CameraSdkStatus status;
         cameraCount = 0;
 
         // enumerate cameras
-        status = CameraEnumerateDevice(&cameraCount);
-        if(status != CAMERA_STATUS_SUCCESS)
+        cameraCount=SVBGetNumOfConnectedCameras();
+        if(cameraCount < 1)
         {
-            IDLog("Error, enumerate camera failed\n");
+            IDLog("Error, no camera found\n");
             return;
         }
 
         IDLog("Camera(s) found\n");
 
-        if(cameraCount == 0)
-        {
-            return;
-        }
-
+        // create Sv305CCD object for each camera
         for(int i = 0; i < cameraCount; i++)
         {
             cameras[i] = new Sv305CCD(i);
@@ -201,14 +196,26 @@ void ISSnoopDevice(XMLEle *root)
 //
 Sv305CCD::Sv305CCD(int numCamera)
 {
-    snprintf(this->name, 32, "SVBONY SV305 CCD %d", numCamera);
-    setDeviceName(this->name);
     num = numCamera;
 
+    // set driver version
     setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
 
+    // Get camera informations
+    status = SVBGetCameraInfo(&cameraInfo, num);
+    if(status!=SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, can't get camera's informations\n");
+    }
+
+    cameraID=cameraInfo.CameraID;
+
+    // Set camera name
+    snprintf(this->name, 32, "%s %d", cameraInfo.FriendlyName, numCamera);
+    setDeviceName(this->name);
+
     // mutex init
-    pthread_mutex_init(&hCamera_mutex, NULL);
+    pthread_mutex_init(&cameraID_mutex, NULL);
     pthread_mutex_init(&streaming_mutex, NULL);
 }
 
@@ -217,7 +224,7 @@ Sv305CCD::Sv305CCD(int numCamera)
 Sv305CCD::~Sv305CCD()
 {
     // mutex destroy
-    pthread_mutex_destroy(&hCamera_mutex);
+    pthread_mutex_destroy(&cameraID_mutex);
     pthread_mutex_destroy(&streaming_mutex);
 }
 
@@ -225,7 +232,7 @@ Sv305CCD::~Sv305CCD()
 //
 const char *Sv305CCD::getDefaultName()
 {
-    return "SVBONY SV305 CCD";
+    return "SVBONY SV305";
 }
 
 
@@ -235,16 +242,17 @@ bool Sv305CCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING);
+    // base capabilities
+    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
-    // Bayer settings
-    IUSaveText(&BayerT[0], "0");
-    IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], CAM_BAYER_PATTERN);
+    // SV305 Pro has an ST4 port
+    /* TODO : fix with real value */
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305 PRO")==0)
+    {
+        cap|= CCD_HAS_ST4_PORT;
+    }
 
-    // Gain
-    IUFillNumber(&GainN[0], "GAIN", "Gain", "%.f", CAM_MIN_GAIN, CAM_MAX_GAIN, CAM_STEP_GAIN, CAM_DEFAULT_GAIN);
-    IUFillNumberVector(&GainNP, GainN, 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    SetCCDCapability(cap);
 
     addConfigurationControl();
     addDebugControl();
@@ -267,11 +275,23 @@ bool Sv305CCD::updateProperties()
     if (isConnected())
     {
 
-        // gain
-        defineNumber(&GainNP);
+        // define controls
+        defineNumber(&ControlsNP[CCD_GAIN_N]);
+        defineNumber(&ControlsNP[CCD_CONTRAST_N]);
+        defineNumber(&ControlsNP[CCD_SHARPNESS_N]);
+        defineNumber(&ControlsNP[CCD_SATURATION_N]);
+        defineNumber(&ControlsNP[CCD_WBR_N]);
+        defineNumber(&ControlsNP[CCD_WBG_N]);
+        defineNumber(&ControlsNP[CCD_WBB_N]);
+        defineNumber(&ControlsNP[CCD_GAMMA_N]);
+        defineNumber(&ControlsNP[CCD_DOFFSET_N]);
 
-        // Let's get parameters now from CCD
-        setupParams();
+        // define frame format
+        defineSwitch(&FormatSP);
+        defineSwitch(&SpeedSP);
+
+        // stretch factor
+        defineSwitch(&StretchSP);
 
         timerID = SetTimer(POLLMS);
     }
@@ -279,8 +299,23 @@ bool Sv305CCD::updateProperties()
     {
         rmTimer(timerID);
 
-        // gain
-        deleteProperty(GainNP.name);
+        // delete controls
+        deleteProperty(ControlsNP[CCD_GAIN_N].name);
+        deleteProperty(ControlsNP[CCD_CONTRAST_N].name);
+        deleteProperty(ControlsNP[CCD_SHARPNESS_N].name);
+        deleteProperty(ControlsNP[CCD_SATURATION_N].name);
+        deleteProperty(ControlsNP[CCD_WBR_N].name);
+        deleteProperty(ControlsNP[CCD_WBG_N].name);
+        deleteProperty(ControlsNP[CCD_WBB_N].name);
+        deleteProperty(ControlsNP[CCD_GAMMA_N].name);
+        deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
+
+        // delete frame format
+        deleteProperty(FormatSP.name);
+        deleteProperty(SpeedSP.name);
+
+        // stretch factor
+        deleteProperty(StretchSP.name);
     }
 
     return true;
@@ -291,138 +326,249 @@ bool Sv305CCD::updateProperties()
 bool Sv305CCD::Connect()
 {
     // boolean init
-    subFrame = false;
-    binning = false;
     streaming = false;
 
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
-    // init camera
-    status = CameraInit(&hCamera, num);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // open camera
+    status = SVBOpenCamera(cameraID);
+    if (status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, open camera failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, open camera failed.\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera init\n");
 
-    // set slow framerate
-    status = CameraSetFrameSpeed(hCamera, FRAME_SPEED_LOW);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // get camera properties
+    status = SVBGetCameraProperty(cameraID, &cameraProperty);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get camera property failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // get camera pixel size
+    status = SVBGetSensorPixelSize(cameraID, &pixelSize);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get camera pixel size failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // get num of controls
+    status = SVBGetNumOfControls(cameraID, &controlsNum);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get camera controls failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // read controls and feed UI
+    for(int i=0; i<controlsNum; i++)
+    {
+         // read control
+         SVB_CONTROL_CAPS caps;
+         status = SVBGetControlCaps(cameraID, i, &caps);
+         if(status != SVB_SUCCESS)
+         {
+             LOG_ERROR("Error, get camera controls caps failed\n");
+             pthread_mutex_unlock(&cameraID_mutex);
+             return false;
+         }
+         switch(caps.ControlType)
+         {
+             case SVB_EXPOSURE :
+                 // Exposure
+                 minExposure = caps.MinValue / 1000000;
+                 maxExposure = caps.MaxValue / 1000000;
+                 break;
+
+             case SVB_GAIN :
+                 // Gain
+                 IUFillNumber(&ControlsN[CCD_GAIN_N], "GAIN", "Gain", "%.f", caps.MinValue, caps.MaxValue, 10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_GAIN_N], &ControlsN[CCD_GAIN_N], 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_GAIN , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set gain failed\n");
+                 }
+                 break;
+
+             case SVB_CONTRAST :
+                 // Contrast
+                 IUFillNumber(&ControlsN[CCD_CONTRAST_N], "CONTRAST", "Contrast", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_CONTRAST_N], &ControlsN[CCD_CONTRAST_N], 1, getDeviceName(), "CCD_CONTRAST", "Contrast", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_CONTRAST , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set contrast failed\n");
+                 }
+                 break;
+
+             case SVB_SHARPNESS :
+                 // Sharpness
+                 IUFillNumber(&ControlsN[CCD_SHARPNESS_N], "SHARPNESS", "Sharpness", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_SHARPNESS_N], &ControlsN[CCD_SHARPNESS_N], 1, getDeviceName(), "CCD_SHARPNESS", "Sharpness", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_SHARPNESS , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set sharpness failed\n");
+                 }
+                 break;
+
+             case SVB_SATURATION :
+                 // Saturation
+                 IUFillNumber(&ControlsN[CCD_SATURATION_N], "SATURATION", "Saturation", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_SATURATION_N], &ControlsN[CCD_SATURATION_N], 1, getDeviceName(), "CCD_SATURATION", "Saturation", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_SATURATION , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set saturation failed\n");
+                 }
+                 break;
+
+             case SVB_WB_R :
+                 // Red White Balance
+                 IUFillNumber(&ControlsN[CCD_WBR_N], "WBR", "Red White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_WBR_N], &ControlsN[CCD_WBR_N], 1, getDeviceName(), "CCD_WBR", "Red White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_WB_R , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set red WB failed\n");
+                 }
+                 break;
+
+             case SVB_WB_G :
+                 // Green White Balance
+                 IUFillNumber(&ControlsN[CCD_WBG_N], "WBG", "Green White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_WBG_N], &ControlsN[CCD_WBG_N], 1, getDeviceName(), "CCD_WBG", "Green White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_WB_G , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set green WB failed\n");
+                 }
+                 break;
+
+             case SVB_WB_B :
+                 // Blue White Balance
+                 IUFillNumber(&ControlsN[CCD_WBB_N], "WBB", "Blue White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_WBB_N], &ControlsN[CCD_WBB_N], 1, getDeviceName(), "CCD_WBB", "Blue White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_WB_B , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set blue WB failed\n");
+                 }
+                 break;
+
+             case SVB_GAMMA :
+                 // Gamma
+                 IUFillNumber(&ControlsN[CCD_GAMMA_N], "GAMMA", "Gamma", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_GAMMA_N], &ControlsN[CCD_GAMMA_N], 1, getDeviceName(), "CCD_GAMMA", "Gamma", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_GAMMA , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set gamma failed\n");
+                 }
+                 break;
+
+             case SVB_BLACK_LEVEL :
+                 // Dark Offset
+                 IUFillNumber(&ControlsN[CCD_DOFFSET_N], "DOFFSET", "Dark Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
+                 IUFillNumberVector(&ControlsNP[CCD_DOFFSET_N], &ControlsN[CCD_DOFFSET_N], 1, getDeviceName(), "CCD_DOFFSET", "Dark Offset", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                 status = SVBSetControlValue(cameraID, SVB_BLACK_LEVEL , caps.DefaultValue, SVB_FALSE);
+                 if(status != SVB_SUCCESS)
+                 {
+                     LOG_ERROR("Error, camera set dark offset failed\n");
+                 }
+
+             default :
+                 break;
+         }
+    }
+
+    // set frame speed
+    IUFillSwitch(&SpeedS[SPEED_SLOW], "SPEED_SLOW", "Slow", ISS_OFF);
+    IUFillSwitch(&SpeedS[SPEED_NORMAL], "SPEED_NORMAL", "Normal", ISS_ON);
+    IUFillSwitch(&SpeedS[SPEED_FAST], "SPEED_FAST", "Fast", ISS_OFF);
+    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "FRAME_RATE", "Frame rate", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    frameSpeed=SPEED_NORMAL;
+    status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , SPEED_NORMAL, SVB_FALSE);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set frame speed failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera slow frame speed\n");
 
-    // disable autoexposure
-    status = CameraSetAeState(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set frame format and feed UI
+    IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
+    IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
+    IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    frameFormat=FORMAT_RAW12;
+    bitDepth=16;
+    status = SVBSetOutputImageType(cameraID, frameFormatMapping[frameFormat]);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set manual mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, camera set frame format failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera manual mode\n");
+    IUSaveText(&BayerT[0], "0");
+    IUSaveText(&BayerT[1], "0");
+    IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
+    LOG_INFO("Camera set frame format mode\n");
 
-    // disable flicker
-    status = CameraSetAntiFlick(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set flicker mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera flicker off\n");
+    // set bit stretching and feed UI
+    IUFillSwitch(&StretchS[STRETCH_OFF], "STRETCH_OFF", "Off", ISS_ON);
+    IUFillSwitch(&StretchS[STRETCH_X2], "STRETCH_X2", "x2", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X4], "STRETCH_X4", "x4", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X8], "STRETCH_X8", "x8", ISS_OFF);
+    IUFillSwitch(&StretchS[STRETCH_X16], "STRETCH_X16", "x16", ISS_OFF);
+    IUFillSwitchVector(&StretchSP, StretchS, 5, getDeviceName(), "STRETCH_BITS", "12 bits 16 bits stretch", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    bitStretch=0;
 
-    // disable white balance
-    status = CameraSetWbMode(hCamera, FALSE);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set camera ROI and BIN
+    binning = false;
+    SetCCDParams(cameraProperty.MaxWidth, cameraProperty.MaxHeight, bitDepth, pixelSize, pixelSize);
+    status = SVBSetROIFormat(cameraID, 0, 0, cameraProperty.MaxWidth, cameraProperty.MaxHeight, 1);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set white balance mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, camera set ROI failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera white balance off\n");
-
-    // default analog gain
-    status = CameraSetAnalogGain(hCamera, CAM_DEFAULT_GAIN * 1000);
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set analog gain failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera set default analog gain\n");
-
-    // default exposure (us)
-    status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set exposure failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera set default exposure\n");
-
-    // set to bayer 16 bis depth
-    status = CameraSetSensorOutPixelFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set image format failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    status = CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BAYGR12);
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set image format failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera image format set\n");
-
-    // set default resolution
-    status = CameraSetResolution(hCamera, IMAGEOUT_MODE_1920X1080);
-    if(status != CAMERA_STATUS_SUCCESS)
-    {
-        LOG_ERROR("Error, camera set resolution failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return false;
-    }
-    LOG_INFO("Camera resolution set\n");
+    LOG_INFO("Camera set ROI\n");
 
     // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS)
+    status = SVBSetCameraMode(cameraID, SVB_MODE_TRIG_SOFT);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
     LOG_INFO("Camera soft trigger mode\n");
 
-    // start camera
-    status = CameraPlay(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // start framing
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera start failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera start\n");
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
-    // setting trigger mode gives at first a junk frame
-    // we drop it
-    GrabJunkFrame();
+    // set CCD up
+    updateCCDParams();
 
-    // streaming thread
+    // create streaming thread
     terminateThread = false;
     pthread_create(&primary_thread, nullptr, &streamVideoHelper, this);
 
@@ -442,61 +588,38 @@ bool Sv305CCD::Disconnect()
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
 
-    pthread_mutex_lock(&hCamera_mutex);
+    //pthread_mutex_lock(&cameraID_mutex);
 
-    // pause camera
-    status = CameraPause(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // stop camera
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, pause camera failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
     // destroy camera
-    status = CameraUnInit(hCamera);
+    status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
-    return true;
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    return true;
 }
 
 
 // set CCD parameters
-bool Sv305CCD::setupParams()
+bool Sv305CCD::updateCCDParams()
 {
-    float x_pixel_size, y_pixel_size;
-    int bit_depth;
-
-    subFrame = false;
-    binning = false;
-    streaming = false;
-
-    // pixel size
-    x_pixel_size = CAM_X_PIXEL;
-    y_pixel_size = CAM_Y_PIXEL;;
-
-    // frame offsets and size
-    x_1 = y_1 = 0;
-    x_2       = CAM_X_RESOLUTION;
-    y_2       = CAM_Y_RESOLUTION;
-
-    // pixel depth
-    bit_depth = CAM_DEPTH;
-    SetCCDParams(x_2 - x_1, y_2 - y_1, bit_depth, x_pixel_size, y_pixel_size);
+    // set CCD parameters
+    PrimaryCCD.setBPP(bitDepth);
 
     // Let's calculate required buffer
-    int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8; //  this is pixel cameraCount
-    // add some spare space
-    nbuf += 512;
+    int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     LOGF_INFO("PrimaryCCD buffer size : %d\n", nbuf);
-
-    // stream init
-    Streamer->setPixelFormat(INDI_BAYER_GRBG, CAM_DEPTH);
-    Streamer->setSize(PrimaryCCD.getXRes() / 2, PrimaryCCD.getYRes() / 2);
 
     return true;
 }
@@ -505,36 +628,40 @@ bool Sv305CCD::setupParams()
 //
 bool Sv305CCD::StartExposure(float duration)
 {
-    // checks for min time
-    if (duration < CAM_MIN_EXPOSURE)
+    // checks for time limits
+    if (duration < minExposure)
     {
-        LOGF_WARN(
-               "Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
-               CAM_MIN_EXPOSURE);
-        duration = CAM_MIN_EXPOSURE;
+        LOGF_WARN("Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration, minExposure);
+        duration = minExposure;
     }
 
-    pthread_mutex_lock(&hCamera_mutex);
+    if (duration > maxExposure)
+    {
+        LOGF_WARN("Exposure greater than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration, maxExposure);
+        duration = maxExposure;
+    }
+
+    pthread_mutex_lock(&cameraID_mutex);
 
     // set exposure time (s -> us)
-    status = CameraSetExposureTime(hCamera, (double)(duration * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS)
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(duration * 1000000), SVB_FALSE);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
     }
 
     // soft trigger
-    status = CameraSoftTrigger(hCamera);
-    if(status != CAMERA_STATUS_SUCCESS)
+    status = SVBSendSoftTrigger(cameraID);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, soft trigger failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
     }
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     PrimaryCCD.setExposureDuration(duration);
     ExposureRequest = duration;
@@ -551,37 +678,38 @@ bool Sv305CCD::StartExposure(float duration)
 //
 bool Sv305CCD::AbortExposure()
 {
-    // trick : we switch trigger mode to abort exposure
 
     LOG_INFO("Abort exposure\n");
 
     InExposure = false;
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
-    // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // *********
+    // TODO
+    // *********
+
+    // stop camera
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
-    // set camera soft trigger mode
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // start camera
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    // *********
 
-    // switching trigger mode gives at first a junk frame
-    // we drop it
-    GrabJunkFrame();
+    pthread_mutex_unlock(&cameraID_mutex);
 
     return true;
 }
@@ -590,32 +718,37 @@ bool Sv305CCD::AbortExposure()
 //
 bool Sv305CCD::StartStreaming()
 {
+    LOG_INFO("framing\n");
+
+    // stream init
+    Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
+    Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
+
     // streaming exposure time
-    // getTargetExposure only available since indi core 1.8
-    //ExposureRequest = Streamer->getTargetExposure();
     ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    pthread_mutex_lock(&hCamera_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
-    // set camera continuous trigger mode
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_CONTINUOUS);
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set exposure time (s -> us)
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(ExposureRequest * 1000000), SVB_FALSE);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        LOG_ERROR("Error, camera set exposure failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
-    // set exposure time (s -> us)
-    status = CameraSetExposureTime(hCamera, (double)(ExposureRequest * 1000000));
-    if(status != CAMERA_STATUS_SUCCESS)
+    // set camera normal mode
+    status = SVBSetCameraMode(cameraID, SVB_MODE_NORMAL);
+    if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set exposure failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
-        return -1;
+        LOG_ERROR("Error, camera soft trigger mode failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
     }
+    LOG_INFO("Camera soft trigger mode\n");
 
-    pthread_mutex_unlock(&hCamera_mutex);
+    pthread_mutex_unlock(&cameraID_mutex);
 
     pthread_mutex_lock(&condMutex);
     streaming = true;
@@ -632,21 +765,21 @@ bool Sv305CCD::StartStreaming()
 //
 bool Sv305CCD::StopStreaming()
 {
-    pthread_mutex_lock(&hCamera_mutex);
+    LOG_INFO("stop framing\n");
 
-    // set camera soft trigger mode back
-    status = CameraSetTriggerMode(hCamera, TRIGGER_MODE_SOFT);
-    if(status != CAMERA_STATUS_SUCCESS)
+    pthread_mutex_lock(&cameraID_mutex);
+
+    // set camera back to trigger mode
+    status = SVBSetCameraMode(cameraID, SVB_MODE_TRIG_SOFT);
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera soft trigger mode failed\n");
-        pthread_mutex_unlock(&hCamera_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+    LOG_INFO("Camera soft trigger mode\n");
 
-    pthread_mutex_unlock(&hCamera_mutex);
-
-    // grab the junk frame
-    GrabJunkFrame();
+    pthread_mutex_unlock(&cameraID_mutex);
 
     pthread_mutex_lock(&condMutex);
     streaming = false;
@@ -680,8 +813,7 @@ void* Sv305CCD::streamVideo()
         while (!streaming)
         {
             pthread_cond_wait(&cv, &condMutex);
-            // getTargetExposure only available since indi core 1.8
-            //ExposureRequest = Streamer->getTargetExposure();
+            // ???
             ExposureRequest = 1.0 / Streamer->getTargetFPS();
         }
 
@@ -690,46 +822,34 @@ void* Sv305CCD::streamVideo()
 
         pthread_mutex_unlock(&condMutex);
 
-        stImageInfo imgInfo;
-        HANDLE hRawBuf;
-        BYTE* pRawBuf;
-        BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
+        unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
 
-        pthread_mutex_lock(&hCamera_mutex);
+        pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
-        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-        if(status == CAMERA_STATUS_SUCCESS)
+        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100000 );
+
+        pthread_mutex_unlock(&cameraID_mutex);
+
+        finish = std::chrono::high_resolution_clock::now();
+
+        // stretching 12bits depth to 16bits depth
+        if(bitDepth==16 && (bitStretch != 0))
         {
-
-            // get frame informations
-            pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
-
-            // copy full frame
-            memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
-
-            // release camera frame buffer
-            status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-            if(status != CAMERA_STATUS_SUCCESS)
+            u_int16_t* tmp=(u_int16_t*)imageBuffer;
+            for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
             {
-                LOG_ERROR("Error, camera release buffer failed\n");
+                tmp[i]<<=bitStretch;
             }
-
-            pthread_mutex_unlock(&hCamera_mutex);
-
-            if(binning)
-                PrimaryCCD.binFrame();
-
-            finish = std::chrono::high_resolution_clock::now();
-
-            uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
-            Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
-
         }
-        else
+
+        if(binning)
         {
-            pthread_mutex_unlock(&hCamera_mutex);
+            PrimaryCCD.binFrame();
         }
+
+        uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
+        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
 
         std::chrono::duration<double> elapsed = finish - start;
         if (elapsed.count() < ExposureRequest)
@@ -745,27 +865,44 @@ void* Sv305CCD::streamVideo()
 // subframing
 bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if((x + w) > CAM_X_RESOLUTION || (y + h) > CAM_Y_RESOLUTION)
+    if((x + w) > cameraProperty.MaxWidth || (y + h) > cameraProperty.MaxHeight)
     {
         LOG_ERROR("Error : Subframe out of range");
         return false;
     }
 
-    // full frame or subframe ?
-    if(x == 0 && y == 0 && w == CAM_X_RESOLUTION && h == CAM_Y_RESOLUTION)
-        subFrame = false;
-    else
-        subFrame = true;
+    pthread_mutex_lock(&cameraID_mutex);
 
-    // update frame offsets and size
-    x_1 = x;
-    x_2 = x_1 + w;
-    y_1 = y;
-    y_2 = y_1 + h;
+    status = SVBSetROIFormat(cameraID, x, y, w, h, 1);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set subframe failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    LOG_INFO("Subframe set\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    // update streamer
+    long bin_width  = w / PrimaryCCD.getBinX();
+    long bin_height = h / PrimaryCCD.getBinY();
+
+    bin_width  = bin_width - (bin_width % 2);
+    bin_height = bin_height - (bin_height % 2);
+
+    if (Streamer->isBusy())
+    {
+        LOG_WARN("Cannot change binning while streaming/recording.\n");
+    }
+    else
+    {
+        Streamer->setSize(bin_width, bin_height);
+    }
 
     LOG_INFO("Subframe changed\n");
 
-    return INDI::CCD::UpdateCCDFrame(x, y, w, h);;
+    return INDI::CCD::UpdateCCDFrame(x, y, w, h);
 }
 
 
@@ -777,7 +914,22 @@ bool Sv305CCD::UpdateCCDBin(int hor, int ver)
     else
         binning = true;
 
+    // update streamer
+    uint32_t bin_width  = PrimaryCCD.getSubW() / hor;
+    uint32_t bin_height = PrimaryCCD.getSubH() / ver;
+
+    if (Streamer->isBusy())
+    {
+        LOG_WARN("Cannot change binning while streaming/recording.\n");
+    }
+    else
+    {
+        Streamer->setSize(bin_width, bin_height);
+    }
+
     LOG_INFO("Binning changed");
+
+    // hardware binning not supported. Using software binning
 
     return INDI::CCD::UpdateCCDBin(hor, ver);
 }
@@ -797,31 +949,6 @@ float Sv305CCD::CalcTimeLeft()
 
     timeleft = ExposureRequest - timesince;
     return timeleft;
-}
-
-
-// after trigger mode switching, first frame is a junk frame
-// we drop it
-void Sv305CCD::GrabJunkFrame()
-{
-    HANDLE hRawBuf;
-
-    pthread_mutex_lock(&hCamera_mutex);
-
-    status = CameraSetExposureTime(hCamera, (double)(CAM_MIN_EXPOSURE * 20 * 1000000));
-    status = CameraSoftTrigger(hCamera);
-    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-    int c = CAM_DEFAULT_GRAB_LOOPS;
-    while (status != CAMERA_STATUS_SUCCESS && c > 0)
-    {
-        c--;
-        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-    }
-    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-
-    pthread_mutex_unlock(&hCamera_mutex);
-
-    LOG_INFO("Junk frame dropped");
 }
 
 
@@ -855,78 +982,40 @@ void Sv305CCD::TimerHit()
                 }
                 else
                 {
-                    HANDLE hRawBuf;
+                    pthread_mutex_lock(&cameraID_mutex);
 
-                    pthread_mutex_lock(&hCamera_mutex);
-
-                    // grab frame
-                    status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
-                    // camera call already waited, no more than X loops needed
-                    // or we get a timeout
-                    int c = CAM_DEFAULT_GRAB_LOOPS;
-                    while (status != CAMERA_STATUS_SUCCESS && c > 0)
+                    unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
+                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
+                    while(status != SVB_SUCCESS)
                     {
-                        c--;
-                        status = CameraGetRawImageBuffer(hCamera, &hRawBuf, CAM_DEFAULT_GRAB_TIMEOUT);
+                        pthread_mutex_unlock(&cameraID_mutex);
+                        usleep(100000);
+                        pthread_mutex_lock(&cameraID_mutex);
+			status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
+                        LOG_INFO("Wait...");
                     }
 
-                    // timeout : we return a buffer full of 0
-                    if(c == 0)
-                    {
-                        LOG_ERROR("Camera get buffer timed out\n");
-                        pthread_mutex_unlock(&hCamera_mutex);
-                        PrimaryCCD.setExposureLeft(0);
-                        InExposure = false;
-                        BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
-                        memset(imageBuffer, 0x00, PrimaryCCD.getFrameBufferSize());
-                        ExposureComplete(&PrimaryCCD);
-                        return;
-                    }
+                    pthread_mutex_unlock(&cameraID_mutex);
 
-                    /* We're done exposing */
+                    // exposing done
                     PrimaryCCD.setExposureLeft(0);
                     InExposure = false;
 
-                    // grab and save the buffer
-                    stImageInfo imgInfo;
-                    BYTE* pRawBuf;
-                    BYTE* imageBuffer = PrimaryCCD.getFrameBuffer();
-
-                    // get frame info
-                    pRawBuf = CameraGetImageInfo(hCamera, hRawBuf, &imgInfo);
-
-                    // we don't use CameraGetOutImageBuffer to avoid post processing
-                    // we get raw datas
-
-                    if(subFrame)
+                    // stretching 12bits depth to 16bits depth
+                    if(bitDepth==16 && (bitStretch != 0))
                     {
-                        // copy sub frame
-                        int k = 0;
-                        for(int i = y_1; i < y_2; i++)
+                        u_int16_t* tmp=(u_int16_t*)imageBuffer;
+                        for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
                         {
-                            memcpy(imageBuffer + k, pRawBuf + (i * CAM_X_RESOLUTION * 2) + (x_1 * 2), (x_2 - x_1) * 2);
-                            k += (x_2 - x_1) * 2;
+                                tmp[i]<<=bitStretch;
                         }
                     }
-                    else
-                    {
-                        // copy full frame
-                        memcpy(imageBuffer, pRawBuf, imgInfo.TotalBytes);
-                    }
 
-                    // release camera frame buffer
-                    status = CameraReleaseFrameHandle(hCamera, hRawBuf);
-                    if(status != CAMERA_STATUS_SUCCESS)
-                    {
-                        LOG_ERROR("Error, camera release buffer failed\n");
-                    }
-
-                    pthread_mutex_unlock(&hCamera_mutex);
-
+                    // binning if needed
                     if(binning)
                         PrimaryCCD.binFrame();
 
-                    // done
+                    // exposure done
                     ExposureComplete(&PrimaryCCD);
                 }
             }
@@ -949,6 +1038,29 @@ void Sv305CCD::TimerHit()
 }
 
 
+// helper : update camera control depending on control type
+bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n)
+{
+    IUUpdateNumber(&ControlsNP[ControlType], values, names, n);
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    // set control
+    status = SVBSetControlValue(cameraID, SVB_Control , ControlsN[ControlType].value, SVB_FALSE);
+    if(status != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
+    }
+    LOGF_INFO("Camera control %d to %.f\n", ControlType, ControlsN[ControlType].value);
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    ControlsNP[ControlType].s = IPS_OK;
+    IDSetNumber(&ControlsNP[ControlType], nullptr);
+    return true;
+}
+
+
 //
 bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
@@ -956,29 +1068,192 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
         return false;
 
     // look for gain settings
-    if (!strcmp(name, GainNP.name))
+    if (!strcmp(name, ControlsNP[CCD_GAIN_N].name))
     {
-        IUUpdateNumber(&GainNP, values, names, n);
+        return updateControl(CCD_GAIN_N, SVB_GAIN, values, names, n);
+    }
 
-        pthread_mutex_unlock(&hCamera_mutex);
+    // look for contrast settings
+    if (!strcmp(name, ControlsNP[CCD_CONTRAST_N].name))
+    {
+        return updateControl(CCD_CONTRAST_N, SVB_CONTRAST, values, names, n);
+    }
 
-        // update camera get settings
-        status = CameraSetAnalogGain(hCamera, GainN[CCD_GAIN_N].value * 1000);
-        if(status != CAMERA_STATUS_SUCCESS)
-            LOG_ERROR("Error, camera set analog gain failed\n");
-        LOGF_INFO("Camera analog gain set to %.f\n", GainN[CCD_GAIN_N].value);
+    // look for sharpness settings
+    if (!strcmp(name, ControlsNP[CCD_SHARPNESS_N].name))
+    {
+        return updateControl(CCD_SHARPNESS_N, SVB_SHARPNESS, values, names, n);
+    }
 
-        pthread_mutex_unlock(&hCamera_mutex);
+    // look for saturation settings
+    if (!strcmp(name, ControlsNP[CCD_SATURATION_N].name))
+    {
+        return updateControl(CCD_SATURATION_N, SVB_SATURATION, values, names, n);
+    }
 
-        // avoid a mid frame gain change
-        GrabJunkFrame();
+    // look for red WB settings
+    if (!strcmp(name, ControlsNP[CCD_WBR_N].name))
+    {
+        return updateControl(CCD_WBR_N, SVB_WB_R, values, names, n);
+    }
 
-        GainNP.s = IPS_OK;
-        IDSetNumber(&GainNP, nullptr);
-        return true;
+    // look for green WB settings
+    if (!strcmp(name, ControlsNP[CCD_WBG_N].name))
+    {
+        return updateControl(CCD_WBG_N, SVB_WB_G, values, names, n);
+    }
+
+    // look for blue WB settings
+    if (!strcmp(name, ControlsNP[CCD_WBB_N].name))
+    {
+        return updateControl(CCD_WBB_N, SVB_WB_B, values, names, n);
+    }
+
+    // look for gamma settings
+    if (!strcmp(name, ControlsNP[CCD_GAMMA_N].name))
+    {
+        return updateControl(CCD_GAMMA_N, SVB_GAMMA, values, names, n);
+    }
+
+    // look for dark offset settings
+    if (!strcmp(name, ControlsNP[CCD_DOFFSET_N].name))
+    {
+        return updateControl(CCD_DOFFSET_N, SVB_BLACK_LEVEL, values, names, n);
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+}
+
+
+//
+bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    // Make sure the call is for our device
+    if(!strcmp(dev,getDeviceName()))
+    {
+        // Check if the call for BPP switch
+        if (!strcmp(name, FormatSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpFormat = IUFindOnSwitchIndex(&FormatSP);
+            if (!strcmp(actionName, FormatS[tmpFormat].name))
+            {
+                LOGF_INFO("Frame format is already %s", FormatS[tmpFormat].label);
+                FormatSP.s = IPS_IDLE;
+                IDSetSwitch(&FormatSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&FormatSP, states, names, n);
+            tmpFormat = IUFindOnSwitchIndex(&FormatSP);
+
+            pthread_mutex_lock(&cameraID_mutex);
+
+            // set new format
+            status = SVBSetOutputImageType(cameraID, frameFormatMapping[tmpFormat]);
+            if(status != SVB_SUCCESS)
+            {
+                LOG_ERROR("Error, camera set frame format failed\n");
+            }
+            LOGF_INFO("Frame format is now %s", FormatS[tmpFormat].label);
+
+            pthread_mutex_unlock(&cameraID_mutex);
+
+            frameFormat = tmpFormat;
+
+            // pixel depth
+            switch(frameFormat)
+            {
+                case FORMAT_RAW8 :
+                    bitDepth = 8;
+                    break;
+                case FORMAT_RAW12 :
+                    bitDepth = 16;
+                    break;
+                default :
+                    bitDepth = 16;
+            }
+            // update CCD parameters
+            updateCCDParams();
+
+            FormatSP.s = IPS_OK;
+            IDSetSwitch(&FormatSP, NULL);
+            return true;
+        }
+
+        // Check if the call for frame rate switch
+        if (!strcmp(name, SpeedSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpSpeed = IUFindOnSwitchIndex(&SpeedSP);
+            if (!strcmp(actionName, SpeedS[tmpSpeed].name))
+            {
+                LOGF_INFO("Frame rate is already %s", SpeedS[tmpSpeed].label);
+                SpeedSP.s = IPS_IDLE;
+                IDSetSwitch(&SpeedSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&SpeedSP, states, names, n);
+            tmpSpeed = IUFindOnSwitchIndex(&SpeedSP);
+
+            pthread_mutex_lock(&cameraID_mutex);
+
+            // set new frame rate
+            status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , tmpSpeed, SVB_FALSE);
+            if(status != SVB_SUCCESS)
+            {
+                LOG_ERROR("Error, camera set frame rate failed\n");
+            }
+            LOGF_INFO("Frame rate is now %s", SpeedS[tmpSpeed].label);
+
+            pthread_mutex_unlock(&cameraID_mutex);
+
+            frameSpeed = tmpSpeed;
+
+            SpeedSP.s = IPS_OK;
+            IDSetSwitch(&SpeedSP, NULL);
+            return true;
+        }
+
+        // Check if the 16 bist stretch factor
+        if (!strcmp(name, StretchSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpStretch = IUFindOnSwitchIndex(&StretchSP);
+            if (!strcmp(actionName, StretchS[tmpStretch].name))
+            {
+                LOGF_INFO("Stretch factor is already %s", StretchS[tmpStretch].label);
+                StretchSP.s = IPS_IDLE;
+                IDSetSwitch(&StretchSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&StretchSP, states, names, n);
+            tmpStretch = IUFindOnSwitchIndex(&StretchSP);
+
+            LOGF_INFO("Stretch factor is now %s", StretchS[tmpStretch].label);
+
+            bitStretch = tmpStretch;
+
+            StretchSP.s = IPS_OK;
+            IDSetSwitch(&StretchSP, NULL);
+            return true;
+        }
+
+    }
+
+    // If we did not process the switch, let us pass it to the parent class to process it
+    return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
 
@@ -988,8 +1263,23 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
     // Save CCD Config
     INDI::CCD::saveConfigItems(fp);
 
-    // Gain
-    IUSaveConfigNumber(fp, &GainNP);
+    // Controls
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_GAIN_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_CONTRAST_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_SHARPNESS_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_SATURATION_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_WBR_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_WBG_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_WBB_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_GAMMA_N]);
+    IUSaveConfigNumber(fp, &ControlsNP[CCD_DOFFSET_N]);
+
+    // Frame format
+    IUSaveConfigSwitch(fp, &FormatSP);
+    IUSaveConfigSwitch(fp, &SpeedSP);
+
+    // bit stretching
+    IUSaveConfigSwitch(fp, &StretchSP);
 
     return true;
 }
@@ -1000,7 +1290,91 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
-    // report gain in FITS file
+    // report controls in FITS file
     int _status = 0;
-    fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &_status);
+    fits_update_key_dbl(fptr, "Gain", ControlsN[CCD_GAIN_N].value, 3, "Gain", &_status);
+    fits_update_key_dbl(fptr, "Contrast", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast", &_status);
+    fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
+    fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
+    fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
+    fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
+    fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+    fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
+    fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
+    fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);
+    fits_update_key_dbl(fptr, "16 bits stretch factor (bit shift)", bitStretch, 3, "Stretch factor", &_status);
+}
+
+
+//
+IPState Sv305CCD::GuideNorth(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_NORTH, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide North failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding North\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideSouth(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_SOUTH, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide South failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding South\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideEast(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_EAST, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide East failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding East\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+    return IPS_OK;
+}
+
+
+//
+IPState Sv305CCD::GuideWest(uint32_t ms)
+{
+    pthread_mutex_lock(&cameraID_mutex);
+
+    status = SVBPulseGuide(cameraID, SVB_GUIDE_WEST, ms);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera guide West failed\n");
+        return IPS_ALERT;
+    }
+    LOG_INFO("Guiding North\n");
+
+    pthread_mutex_unlock(&cameraID_mutex);
+    return IPS_OK;
 }
