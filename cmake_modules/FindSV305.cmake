@@ -24,7 +24,7 @@ else (SV305_INCLUDE_DIR AND SV305_LIBRARIES)
   )
 
   # find libraries
-  find_library(SV305_LIBRARIES NAMES libSVBCameraSDK.so
+  find_library(SV305_LIBRARIES NAMES SVBCameraSDK
     PATHS
     ${_obLinkDir}
     ${GNUWIN32_DIR}/lib
