@@ -24,6 +24,7 @@
 #include "config.h"
 #include <stream/streammanager.h>
 
+#include <libnova/julian_day.h>
 #include <algorithm>
 #include <math.h>
 
@@ -342,7 +343,8 @@ bool QHYCCD::initProperties()
     // Slaving Mode
     IUFillSwitch(&GPSSlavingS[SLAVING_MASTER], "SLAVING_MASTER", "Master", ISS_ON);
     IUFillSwitch(&GPSSlavingS[SLAVING_SLAVE], "SLAVING_SLAVE", "Slave", ISS_OFF);
-    IUFillSwitchVector(&GPSSlavingSP, GPSSlavingS, 2, getDeviceName(), "SLAVING_MODE", "Slaving", GPS_TAB, IP_RW, ISR_1OFMANY,
+    IUFillSwitchVector(&GPSSlavingSP, GPSSlavingS, 2, getDeviceName(), "SLAVING_MODE", "Slaving", GPS_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY,
                        0, IPS_IDLE);
 
     // Slaving Params (for slaves only)
@@ -351,34 +353,81 @@ bool QHYCCD::initProperties()
     IUFillNumber(&GPSSlavingParamN[PARAM_DELTAT_SEC], "PARAM_DELTAT_SEC", "Delta sec", "%.f", 0, 1e9, 0, 0);
     IUFillNumber(&GPSSlavingParamN[PARAM_DELTAT_USEC], "PARAM_DELTAT_USEC", "Delta us", "%.f", 0, 1e9, 0, 0);
     IUFillNumber(&GPSSlavingParamN[PARAM_EXP_TIME], "PARAM_EXP_TIME", "Exp sec", "%.6f", 0.000001, 3600, 0, 0);
-    IUFillNumberVector(&GPSSlavingParamNP, GPSSlavingParamN, 5, getDeviceName(), "GPS_SLAVING_PARAMS", "Params", GPS_TAB, IP_RW,
+    IUFillNumberVector(&GPSSlavingParamNP, GPSSlavingParamN, 5, getDeviceName(), "GPS_SLAVING_PARAMS", "Params",
+                       GPS_CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
     // VCOX Frequency
     IUFillNumber(&VCOXFreqN[0], "FREQUENCY", "Freq", "%.f", 0, 4095, 100, 0);
-    IUFillNumberVector(&VCOXFreqNP, VCOXFreqN, 1, getDeviceName(), "VCOX_FREQUENCY", "VCOX", GPS_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&VCOXFreqNP, VCOXFreqN, 1, getDeviceName(), "VCOX_FREQUENCY", "VCOX", GPS_CONTROL_TAB, IP_RW, 60,
+                       IPS_IDLE);
 
     // LED Calibration
     IUFillSwitch(&GPSLEDCalibrationS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
     IUFillSwitch(&GPSLEDCalibrationS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
     IUFillSwitchVector(&GPSLEDCalibrationSP, GPSLEDCalibrationS, 2, getDeviceName(), "LED_CALIBRATION", "Calibration LED",
-                       GPS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       GPS_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // LED Pulse Position for Starting/Stopping Exposure
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
-    IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_TAB, IP_RW, 60,
+    IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_CONTROL_TAB,
+                       IP_RW, 60,
                        IPS_IDLE);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
-    IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_TAB, IP_RW, 60,
+    IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
     // GPS header On/Off
     IUFillSwitch(&GPSControlS[INDI_ENABLED], "INDI_ENABLED", "Enable", ISS_OFF);
     IUFillSwitch(&GPSControlS[INDI_DISABLED], "INDI_DISABLED", "Disable", ISS_ON);
-    IUFillSwitchVector(&GPSControlSP, GPSControlS, 2, getDeviceName(), "GPS_CONTROL", "GPS Header", GPS_TAB,
+    IUFillSwitchVector(&GPSControlSP, GPSControlS, 2, getDeviceName(), "GPS_CONTROL", "GPS Header", GPS_CONTROL_TAB,
                        IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    /////////////////////////////////////////////////////////////////////////////
+    /// Properties: GPS Data
+    /////////////////////////////////////////////////////////////////////////////
+
+    // GPS State
+    IUFillLight(&GPSStateL[GPS_ON], "GPS_ON", "Powered", IPS_OK);
+    IUFillLight(&GPSStateL[GPS_SEARCHING], "GPS_SEARCHING", "Searching", IPS_IDLE);
+    IUFillLight(&GPSStateL[GPS_LOCKING], "GPS_LOCKING", "Locking", IPS_IDLE);
+    IUFillLight(&GPSStateL[GPS_LOCKED], "GPS_LOCKED", "Locked", IPS_IDLE);
+    IUFillLightVector(&GPSStateLP, GPSStateL, 4, getDeviceName(), "GPS_STATE", "GPS", GPS_DATA_TAB, IPS_IDLE);
+
+    // RAW Data Header
+    IUFillText(&GPSDataHeaderT[GPS_DATA_SEQ_NUMBER], "GPS_DATA_SEQ_NUMBER", "Seq #", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_WIDTH], "GPS_DATA_WIDTH", "Width", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_HEIGHT], "GPS_DATA_HEIGHT", "Height", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_LONGITUDE], "GPS_DATA_LONGITUDE", "Longitude", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_LATITUDE], "GPS_DATA_LATITUDE", "Latitude", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_MAX_CLOCK], "GPS_DATA_MAX_CLOCK", "Max Clock", "NA");
+    IUFillTextVector(&GPSDataHeaderTP, GPSDataHeaderT, 6, getDeviceName(), "GPS_DATA_HEADER", "Header", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data Start
+    IUFillText(&GPSDataStartT[GPS_DATA_START_FLAG], "GPS_DATA_START_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_SEC], "GPS_DATA_START_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_USEC], "GPS_DATA_START_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_TS], "GPS_DATA_START_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataStartTP, GPSDataStartT, 4, getDeviceName(), "GPS_DATA_START", "Start", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data End
+    IUFillText(&GPSDataEndT[GPS_DATA_END_FLAG], "GPS_DATA_END_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_SEC], "GPS_DATA_END_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_USEC], "GPS_DATA_END_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_TS], "GPS_DATA_END_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataEndTP, GPSDataEndT, 4, getDeviceName(), "GPS_DATA_END", "End", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data Now
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_FLAG], "GPS_DATA_NOW_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_SEC], "GPS_DATA_NOW_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_USEC], "GPS_DATA_NOW_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_TS], "GPS_DATA_NOW_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataNowTP, GPSDataNowT, 4, getDeviceName(), "GPS_DATA_NOW", "Now", GPS_DATA_TAB, IP_RO, 60, IPS_IDLE);
 
     addAuxControls();
     setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
@@ -445,6 +494,12 @@ void QHYCCD::ISGetProperties(const char *dev)
             defineNumber(&GPSLEDEndPosNP);
 
             defineSwitch(&GPSControlSP);
+
+            defineLight(&GPSStateLP);
+            defineText(&GPSDataHeaderTP);
+            defineText(&GPSDataStartTP);
+            defineText(&GPSDataEndTP);
+            defineText(&GPSDataNowTP);
         }
     }
 }
@@ -651,13 +706,17 @@ bool QHYCCD::updateProperties()
         {
             defineSwitch(&GPSSlavingSP);
             defineNumber(&GPSSlavingParamNP);
-
             defineNumber(&VCOXFreqNP);
             defineSwitch(&GPSLEDCalibrationSP);
             defineNumber(&GPSLEDStartPosNP);
             defineNumber(&GPSLEDEndPosNP);
-
             defineSwitch(&GPSControlSP);
+
+            defineLight(&GPSStateLP);
+            defineText(&GPSDataHeaderTP);
+            defineText(&GPSDataStartTP);
+            defineText(&GPSDataEndTP);
+            defineText(&GPSDataNowTP);
         }
 
         // Let's get parameters now from CCD
@@ -721,6 +780,12 @@ bool QHYCCD::updateProperties()
             deleteProperty(GPSLEDStartPosNP.name);
             deleteProperty(GPSLEDEndPosNP.name);
             deleteProperty(GPSControlSP.name);
+
+            deleteProperty(GPSStateLP.name);
+            deleteProperty(GPSDataHeaderTP.name);
+            deleteProperty(GPSDataStartTP.name);
+            deleteProperty(GPSDataEndTP.name);
+            deleteProperty(GPSDataNowTP.name);
         }
     }
 
@@ -1873,9 +1938,9 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         //////////////////////////////////////////////////////////////////////
         else if (!strcmp(name, ReadModeNP.name))
         {
-            uint32_t imageRMw, imageRMh, ret;
+            uint32_t imageRMw, imageRMh;
             double newReadMode = ReadModeN[0].value;
-            uint32_t nbuf, imagew, imageh, bpp;
+
             double chipw, chiph, pixelw, pixelh;
             IUUpdateNumber(&ReadModeNP, values, names, n);
             int rc = SetQHYCCDReadMode(m_CameraHandle, ReadModeN[0].value);
@@ -1883,21 +1948,20 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             {
                 LOGF_INFO("Read mode updated to %.f", ReadModeN[0].value);
                 // Get resolution
-                ret = GetQHYCCDReadModeResolution(m_CameraHandle, ReadModeN[0].value, &imageRMw, &imageRMh);
-                LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: imageW: %d imageH: %d \n", imageRMw, imageRMh);
+                GetQHYCCDReadModeResolution(m_CameraHandle, ReadModeN[0].value, &imageRMw, &imageRMh);
+                LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: imageW: %d imageH: %d", imageRMw, imageRMh);
 
                 ReadModeNP.s = IPS_OK;
                 saveConfig(true, ReadModeNP.name);
+                uint32_t nbuf, imagew, imageh, bpp;
                 if (isSimulation())
                 {
-                    chipw = imagew = 1280;
-                    chiph = imageh = 1024;
                     pixelh = pixelw = 5.4;
                     bpp             = 8;
                 }
                 else
                 {
-                    ret = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
+                    int ret = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
 
                     /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
                     if (ret != QHYCCD_SUCCESS)
@@ -2363,7 +2427,12 @@ void QHYCCD::streamVideo()
         }
         guard.unlock();
         if (ret == QHYCCD_SUCCESS)
+        {
             Streamer->newFrame(buffer, size);
+
+            if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
+                decodeGPSHeader();
+        }
 
         pthread_mutex_lock(&condMutex);
     }
@@ -2491,41 +2560,54 @@ bool QHYCCD::updateFilterProperties()
 void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
+    int status = 0;
 
     if (HasGain)
     {
-        int status = 0;
         fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &status);
+    }
+
+    if (HasOffset)
+    {
+        fits_update_key_dbl(fptr, "Offset", OffsetN[0].value, 3, "Offset", &status);
+    }
+
+    if (HasAmpGlow)
+    {
+        fits_update_key_str(fptr, "Ampglow", IUFindOnSwitch(&AMPGlowSP)->label, "Mode", &status);
     }
 
     if (HasGPS)
     {
-        int status = 0;
-        char ts[64] = {0};
-
         // #1 Start
         // ## Flag
         fits_update_key_dbl(fptr, "GPS_SFlg", GPSHeader.start_flag, 0, "StartFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_SS", GPSHeader.start_sec, "StartShutterSeconds", &status);
         // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_SU", GPSHeader.start_us, 3, "StartShutterMicroSeconds", &status);
         // ## Time
-        fits_update_key_str(fptr, "GPS_ST", ts, "StartShutterTime", &status);
+        fits_update_key_str(fptr, "GPS_ST", GPSDataStartT[GPS_DATA_START_TS].text, "StartShutterTime", &status);
 
         // #2 End
         // ## Flag
         fits_update_key_dbl(fptr, "GPS_EFlg", GPSHeader.end_flag, 0, "EndFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_ES", GPSHeader.end_sec, "EndShutterSeconds", &status);
         // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_EU", GPSHeader.end_us, 3, "EndShutterMicroSeconds", &status);
         // ## Time
-        fits_update_key_str(fptr, "GPS_ET", ts, "EndShutterTime", &status);
+        fits_update_key_str(fptr, "GPS_ET", GPSDataStartT[GPS_DATA_END_TS].text, "EndShutterTime", &status);
 
         // #3 Now
         // ## Flag
         fits_update_key_dbl(fptr, "GPS_NFlg", GPSHeader.now_flag, 0, "NowFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_NS", GPSHeader.now_sec, "NowShutterSeconds", &status);
         // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_NU", GPSHeader.now_us, 3, "NowShutterMicroSeconds", &status);
         // ## Time
-        fits_update_key_str(fptr, "GPS_NT", ts, "NowShutterTime", &status);
+        fits_update_key_str(fptr, "GPS_NT", GPSDataStartT[GPS_DATA_NOW_TS].text, "NowShutterTime", &status);
 
         // PPS Counter
         fits_update_key_lng(fptr, "GPS_PPSC", GPSHeader.max_clock, "PPSCounter", &status);
@@ -2533,10 +2615,10 @@ void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
         // GPS Status
 
         // System Clock Offset
-        fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
+        //fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
 
         // Time Offset Stable for
-        fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
+        //fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
 
         // Longitude
         fits_update_key_dbl(fptr, "GPS_LONG", GPSHeader.longitude, 3, "GPS Longitude", &status);
@@ -2565,36 +2647,147 @@ void QHYCCD::setLEDStartPosNP(const INumberVectorProperty &value)
 
 void QHYCCD::decodeGPSHeader()
 {
+    char ts[64] = {0}, iso8601[64] = {0}, data[64] = {0};
+
     uint8_t gpsarray[64] = {0};
     memcpy(gpsarray, PrimaryCCD.getFrameBuffer(), 64);
 
+    // Sequence Number
     GPSHeader.seqNumber = gpsarray[0] << 24 | gpsarray[1] << 16 | gpsarray[2] << 8 | gpsarray[3];
+    snprintf(data, 64, "%u", GPSHeader.seqNumber);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_SEQ_NUMBER], data);
+
     GPSHeader.tempNumber = gpsarray[4];
+
+    // Width
     GPSHeader.width = gpsarray[5] << 8 | gpsarray[6];
+    snprintf(data, 64, "%u", GPSHeader.width);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_WIDTH], data);
+
+    // Height
     GPSHeader.height = gpsarray[7] << 8 | gpsarray[8];
+    snprintf(data, 64, "%u", GPSHeader.height);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_HEIGHT], data);
+
+    // Latitude
     GPSHeader.latitude = gpsarray[9] << 24 | gpsarray[10] << 16 | gpsarray[11] << 8 | gpsarray[12];
+    snprintf(data, 64, "%u", GPSHeader.latitude);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_LATITUDE], data);
+
+    // Longitude
     GPSHeader.longitude = gpsarray[13] << 24 | gpsarray[14] << 16 | gpsarray[15] << 8 | gpsarray[16];
-    // Start
+    snprintf(data, 64, "%u", GPSHeader.longitude);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_LONGITUDE], data);
+
+    // Start Flag
     GPSHeader.start_flag = gpsarray[17];
+    snprintf(data, 64, "%u", GPSHeader.start_flag);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_FLAG], data);
+
+    // Start Seconds
     GPSHeader.start_sec = gpsarray[18] << 24 | gpsarray[19] << 16 | gpsarray[20] << 8 | gpsarray[21];
-    GPSHeader.start_us = gpsarray[22] << 16 | gpsarray[23] << 8 | gpsarray[24];
+    snprintf(data, 64, "%u", GPSHeader.start_sec);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_SEC], data);
+
+    // Start microseconds
+    // It's a 10Mhz crystal so we divide by 10 to get microseconds
+    GPSHeader.start_us = (gpsarray[22] << 16 | gpsarray[23] << 8 | gpsarray[24]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.start_us);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_USEC], data);
+
+    // Start JD
     GPSHeader.start_jd = JStoJD(GPSHeader.start_sec, GPSHeader.start_us);
-    // End
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.start_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.start_us / 1000.0));
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_TS], ts);
+
+    // End Flag
     GPSHeader.end_flag = gpsarray[25];
+    snprintf(data, 64, "%u", GPSHeader.end_flag);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_FLAG], data);
+
+    // End Seconds
     GPSHeader.end_sec = gpsarray[26] << 24 | gpsarray[27] << 16 | gpsarray[28] << 8 | gpsarray[29];
-    GPSHeader.end_us = gpsarray[30] << 16 | gpsarray[31] << 8 | gpsarray[32];
+    snprintf(data, 64, "%u", GPSHeader.end_sec);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_SEC], data);
+
+    // End Microseconds
+    GPSHeader.end_us = (gpsarray[30] << 16 | gpsarray[31] << 8 | gpsarray[32]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.end_us);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_USEC], data);
+
+    // End JD
     GPSHeader.end_jd = JStoJD(GPSHeader.end_sec, GPSHeader.end_us);
-    // Now
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.end_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.end_us / 1000.0));
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_TS], ts);
+
+    // Now Flag
     GPSHeader.now_flag = gpsarray[33];
+    snprintf(data, 64, "%u", GPSHeader.now_flag);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_FLAG], data);
+
+    // Now Seconds
     GPSHeader.now_sec = gpsarray[34] << 24 | gpsarray[35] << 16 | gpsarray[36] << 8 | gpsarray[37];
-    GPSHeader.now_us = gpsarray[38] << 16 | gpsarray[39] << 8 | gpsarray[40];
-    GPSHeader.end_jd = JStoJD(GPSHeader.now_sec, GPSHeader.now_us);
+    snprintf(data, 64, "%u", GPSHeader.now_sec);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_SEC], data);
+
+    // Now microseconds
+    GPSHeader.now_us = (gpsarray[38] << 16 | gpsarray[39] << 8 | gpsarray[40]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.now_us);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_USEC], data);
+
+    // Now JD
+    GPSHeader.now_jd = JStoJD(GPSHeader.now_sec, GPSHeader.now_us);
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.now_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.now_us / 1000.0));
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_TS], ts);
+
     // PPS
     GPSHeader.max_clock = gpsarray[41] << 16 | gpsarray[42] << 8 | gpsarray[43];
+    snprintf(data, 64, "%u", GPSHeader.max_clock);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_MAX_CLOCK], data);
+
+    IDSetText(&GPSDataHeaderTP, nullptr);
+    IDSetText(&GPSDataStartTP, nullptr);
+    IDSetText(&GPSDataEndTP, nullptr);
+    IDSetText(&GPSDataNowTP, nullptr);
+
+    GPSState newGPState = static_cast<GPSState>((GPSHeader.now_flag & 0xF0) >> 4);
+    if (GPSStateL[newGPState].s == IPS_IDLE)
+    {
+        GPSStateL[GPS_ON].s = IPS_IDLE;
+        GPSStateL[GPS_SEARCHING].s = IPS_IDLE;
+        GPSStateL[GPS_LOCKING].s = IPS_IDLE;
+        GPSStateL[GPS_LOCKED].s = IPS_IDLE;
+
+        GPSStateL[newGPState].s = IPS_BUSY;
+        GPSStateLP.s = IPS_OK;
+        IDSetLight(&GPSStateLP, nullptr);
+    }
 }
 
-double QHYCCD::JStoJD(uint32_t JS, uint32_t uus)
+double QHYCCD::JStoJD(uint32_t JS, double us)
 {
-    const double secs_in_day = 3600 * 24;
-    return (JS + uus / 10000000.0) / secs_in_day + 2450000.5;
+    // Convert Julian seconds (plus microsecond) to Julian Days since epoch 2450000
+    // Since this is why QHY apparently uses as the basis.
+    // The 0.5 is added there since JD starts from MID day of the previous day
+    return (JS + us / 1e6) / (3600 * 24) + 2450000.5;
+}
+
+void QHYCCD::JDtoISO8601(double JD, char *iso8601)
+{
+    struct tm *tp = nullptr;
+    time_t gpstime;
+    ln_get_timet_from_julian(JD, &gpstime);
+    // Get UTC timestamp
+    tp = gmtime(&gpstime);
+    // Format it in ISO8601 format
+    strftime(iso8601, MAXINDIDEVICE, "%Y-%m-%dT%H:%M:%S", tp);
 }
