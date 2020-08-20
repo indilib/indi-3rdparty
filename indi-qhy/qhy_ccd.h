@@ -153,6 +153,18 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumberVectorProperty USBBufferNP;
 
         /////////////////////////////////////////////////////////////////////////////
+        /// Properties: Utility Controls
+        /////////////////////////////////////////////////////////////////////////////
+        // Amp glow control
+        ISwitchVectorProperty AMPGlowSP;
+        ISwitch AMPGlowS[3];
+        enum
+        {
+            AMP_AUTO,
+            AMP_ON,
+            AMP_OFF
+        };
+        /////////////////////////////////////////////////////////////////////////////
         /// Properties: GPS Controls
         /////////////////////////////////////////////////////////////////////////////
 
@@ -322,6 +334,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasCoolerManualMode { false };
         bool HasReadMode { false };
         bool HasGPS { false };
+        bool HasAmpGlow { false };
 
         /////////////////////////////////////////////////////////////////////////////
         /// Private Variables

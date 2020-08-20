@@ -52,7 +52,6 @@ static void QhyCCDCleanup()
 std::vector<std::string> GetDevicesIDs()
 {
     char camid[MAXINDIDEVICE];
-    int ret         = QHYCCD_ERROR;
     int deviceCount = 0;
     std::vector<std::string> devices;
 
@@ -74,10 +73,10 @@ std::vector<std::string> GetDevicesIDs()
         memset(camid, '\0', MAXINDIDEVICE);
 
 #if defined(USE_SIMULATION)
-        ret = QHYCCD_SUCCESS;
+        int ret = QHYCCD_SUCCESS;
         snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
 #else
-        ret = GetQHYCCDId(i, camid);
+        int ret = GetQHYCCDId(i, camid);
 #endif
         if (ret == QHYCCD_SUCCESS)
         {
@@ -328,6 +327,15 @@ bool QHYCCD::initProperties()
                        IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
 
     /////////////////////////////////////////////////////////////////////////////
+    /// Properties: Utility Controls
+    /////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&AMPGlowS[AMP_AUTO], "AMP_AUTO", "Auto", ISS_ON);
+    IUFillSwitch(&AMPGlowS[AMP_ON], "AMP_ON", "On", ISS_OFF);
+    IUFillSwitch(&AMPGlowS[AMP_OFF], "AMP_OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&AMPGlowSP, AMPGlowS, 3, getDeviceName(), "CCD_AMP_GLOW", "Amp Glow", MAIN_CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    /////////////////////////////////////////////////////////////////////////////
     /// Properties: GPS Controls
     /////////////////////////////////////////////////////////////////////////////
 
@@ -422,6 +430,9 @@ void QHYCCD::ISGetProperties(const char *dev)
         defineNumber(&USBBufferNP);
 
         defineText(&SDKVersionTP);
+
+        if (HasAmpGlow)
+            defineSwitch(&AMPGlowSP);
 
         if (HasGPS)
         {
@@ -628,6 +639,14 @@ bool QHYCCD::updateProperties()
 
         defineText(&SDKVersionTP);
 
+        if (HasAmpGlow)
+        {
+            int index = GetQHYCCDParam(m_CameraHandle, CONTROL_AMPV);
+            IUResetSwitch(&AMPGlowSP);
+            AMPGlowS[index].s = ISS_ON;
+            defineSwitch(&AMPGlowSP);
+        }
+
         if (HasGPS)
         {
             defineSwitch(&GPSSlavingSP);
@@ -689,6 +708,9 @@ bool QHYCCD::updateProperties()
         deleteProperty(USBBufferNP.name);
 
         deleteProperty(SDKVersionTP.name);
+
+        if (HasAmpGlow)
+            deleteProperty(AMPGlowSP.name);
 
         if (HasGPS)
         {
@@ -980,6 +1002,17 @@ bool QHYCCD::Connect()
             PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
 
         LOGF_INFO("Camera exposure limits: Min: %.6fs Max: %.fs Step %.fs", min / 1e6, max / 1e6, step / 1e6);
+
+        ////////////////////////////////////////////////////////////////////
+        /// Amp glow Support
+        ////////////////////////////////////////////////////////////////////
+        ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_AMPV);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasAmpGlow = true;
+        }
+
+        LOGF_DEBUG("Ampglow Control: %s", HasAmpGlow ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// GPS Support
@@ -1657,6 +1690,30 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IDSetSwitch(&GPSLEDCalibrationSP, nullptr);
             return true;
         }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Amp Glow
+        //////////////////////////////////////////////////////////////////////
+        else if (!strcmp(AMPGlowSP.name, name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&AMPGlowSP);
+            IUUpdateSwitch(&AMPGlowSP, states, names, n);
+            double targetIndex = IUFindOnSwitchIndex(&AMPGlowSP);
+            int rc = SetQHYCCDParam(m_CameraHandle, CONTROL_AMPV, targetIndex);
+            if (rc == QHYCCD_SUCCESS)
+            {
+                AMPGlowSP.s = IPS_OK;
+            }
+            else
+            {
+                IUResetSwitch(&AMPGlowSP);
+                AMPGlowS[prevIndex].s = ISS_ON;
+                AMPGlowSP.s = IPS_ALERT;
+            }
+
+            IDSetSwitch(&AMPGlowSP, nullptr);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -2098,6 +2155,9 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
 
+    if (HasAmpGlow)
+        IUSaveConfigSwitch(fp, &AMPGlowSP);
+
     if (HasGPS)
     {
         IUSaveConfigSwitch(fp, &GPSControlSP);
@@ -2441,20 +2501,54 @@ void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     if (HasGPS)
     {
         int status = 0;
+        char ts[64] = {0};
 
-
-        // Start
+        // #1 Start
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_SFlg", GPSHeader.start_flag, 0, "StartFlag", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_SU", GPSHeader.start_us, 3, "StartShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_ST", ts, "StartShutterTime", &status);
 
-        // End
+        // #2 End
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_EFlg", GPSHeader.end_flag, 0, "EndFlag", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_EU", GPSHeader.end_us, 3, "EndShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_ET", ts, "EndShutterTime", &status);
 
-        // Now
+        // #3 Now
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_NFlg", GPSHeader.now_flag, 0, "NowFlag", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_NU", GPSHeader.now_us, 3, "NowShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_NT", ts, "NowShutterTime", &status);
 
+        // PPS Counter
+        fits_update_key_lng(fptr, "GPS_PPSC", GPSHeader.max_clock, "PPSCounter", &status);
+
+        // GPS Status
+
+        // System Clock Offset
+        fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
+
+        // Time Offset Stable for
+        fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
+
+        // Longitude
+        fits_update_key_dbl(fptr, "GPS_LONG", GPSHeader.longitude, 3, "GPS Longitude", &status);
+
+        // Latitude
+        fits_update_key_dbl(fptr, "GPS_LAT", GPSHeader.latitude, 3, "GPS Latitude", &status);
+
+        // Sequence Number
+        fits_update_key_lng(fptr, "GPS_Seq", GPSHeader.seqNumber, "Sequence Number", &status);
+
+        // Temperorary Sequence Number
+        fits_update_key_lng(fptr, "GPS_Tmp", GPSHeader.tempNumber, "Temporary Sequence Number", &status);
     }
 
 }
