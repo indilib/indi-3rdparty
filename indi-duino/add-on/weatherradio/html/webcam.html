@@ -15,59 +15,47 @@
     <script src="js/popper.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
 
-    <script language="javascript"> 
-      function updateImage() { 
-	  obj = document.querySelector("#webcam");
-	  obj.src = obj.src + "?" + Math.random(); 
-	  //Following statement sets the delay before the function will 
-	  //call itself again (in milliseconds) 
-	  setTimeout("updateImage()",15000); 
-      } 
-    </script>
-    <style>
-      /* Make the image fully responsive */
-      .carousel-inner img {
-	  width: 100%;
-	  height: 100%;
-      }
-    </style>
   </head>
   <body onload="loadImages();">
     <div class="navigation">
         <a href="./weatherradio.html">Home</a> | <a href="./sensordata.html">Sensor Data</a> | Webcam
     </div>
     <div class="container-fluid">
-      <!--
-      <div class="row" align="center" style="padding-top: 50px">
-        <div class="col-sm-12">
-	  <img id="webcam" width="480px" src="http://weathercam/cam/cam_pic.php">
-        </div>
-      </div> --> <!-- Web cam images -->
-      <div class="row" align="center" style="padding: 50px 12px 12px 12px; ">
-	<div class="col-sm-6">
+      <div class="row" align="center" style="padding: 50px 0px 0px 0px; ">
+	<div class="col-sm-12">
 	  <video src="./media/timelapse_current.mp4" width="640" height="480" autobuffer autoplay controls />
         </div>
-        <div class="col-sm-6">
-	  <div id="timelapse" class="carousel slide" data-ride="carousel" style="width: 50%">
-	    <!-- Indicators -->
-	    
-	    <ul class="carousel-indicators" id="timelapse-indicators">
-	      <!-- filled by updateCarousel() -->
-	    </ul>
-
-	    <div class="carousel-inner" id="timelapse_carousel">
-	      <!-- filled by updateCarousel() -->
-	    </div>   
-	    <a class="carousel-control-prev" href="#timelapse" data-slide="prev">
-	      <span class="carousel-control-prev-icon"></span>
-	    </a>
-	    <a class="carousel-control-next" href="#timelapse" data-slide="next">
-	      <span class="carousel-control-next-icon"></span>
-	    </a>
-	  </div> <!-- carousel end -->
-        </div> <!-- carousel cell end -->
       </div> <!-- Time lapse images -->
+      <div class="row" align="center" style="padding: 0px; margin: 0px"> <!-- last images -->
+	<!-- filled by updateImageBar -->
+	<div class="col-sm-12" id="image_bar" />
+      </div> <!-- last images -->
     </div>
+
+<!-- The Lightbox modal -->
+    <div id="lightbox" class="modal">
+      <span class="close cursor" onclick="closeLightbox()">&times;</span>
+      <!-- filled by openLightbox() -->
+      <div id="lightbox-content" class="modal-content">
+	<!-- carousel -->
+	<div id="timeseries" class="carousel slide" data-ride="carousel">
+	  <!-- Indicators -->
+	  <ul class="carousel-indicators" id="timeseries-indicators">
+	    <!-- filled by updateCarousel() -->
+	  </ul>
+
+	  <div class="carousel-inner" id="timeseries-carousel">
+	    <!-- filled by updateCarousel() -->
+	  </div>
+	  <a class="carousel-control-prev" href="#timeseries" data-slide="prev">
+	    <span class="carousel-control-prev-icon"></span>
+	  </a>
+	  <a class="carousel-control-next" href="#timeseries" data-slide="next">
+	    <span class="carousel-control-next-icon"></span>
+	  </a>
+	</div> <!-- carousel end -->
+      </div> <!-- lightbox-content end -->
+    </div> <!-- lightbox end -->
     <script src="js/images.js"></script>
   </body>
 </html>

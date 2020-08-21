@@ -43,7 +43,7 @@ void configureSensorTSL2591(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t 
 
 
 // calibrate TSL2591 gain and integration time
-void calibrateTSL2591() {
+bool calibrateTSL2591() {
   if (tsl2591Data.visible < 100) { //Increase GAIN (and INTEGRATIONTIME) if light level too low
     switch (tsl2591Data.gain)
     {
@@ -71,6 +71,10 @@ void calibrateTSL2591() {
           case TSL2591_INTEGRATIONTIME_500MS :
             configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
             break;
+          case TSL2591_INTEGRATIONTIME_600MS :
+            // no higher sensitivity level available
+            return false;
+            break;
           default:
             configureSensorTSL2591(TSL2591_GAIN_MAX, TSL2591_INTEGRATIONTIME_600MS);
             break;
@@ -80,6 +84,9 @@ void calibrateTSL2591() {
         configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
     }
+
+    // calibration changed
+    return true;
   }
 
   if (tsl2591Data.visible > 30000) { //Decrease GAIN (and INTEGRATIONTIME) if light level too high
@@ -97,6 +104,11 @@ void calibrateTSL2591() {
           case TSL2591_INTEGRATIONTIME_300MS :
             configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
             break;
+          case TSL2591_INTEGRATIONTIME_200MS :
+            // no higher sensitivity level available
+            return false;
+            break;
+
           default:
             configureSensorTSL2591(TSL2591_GAIN_LOW, TSL2591_INTEGRATIONTIME_200MS);
             break;
@@ -115,7 +127,12 @@ void calibrateTSL2591() {
         configureSensorTSL2591(TSL2591_GAIN_MED, TSL2591_INTEGRATIONTIME_200MS);
         break;
     }
+    // calibraton changed
+    return true;
   }
+
+  // no calibration change necessary
+  return false;
 
 }
 
@@ -130,7 +147,8 @@ void updateTSL2591() {
     tsl2591Data.gain    = tsl.getGain();
     tsl2591Data.timing  = tsl.getTiming();
 
-    calibrateTSL2591();
+    bool changed = calibrateTSL2591();
+    if (changed) updateTSL2591();
   }
 }
 

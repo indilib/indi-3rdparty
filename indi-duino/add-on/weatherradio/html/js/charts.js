@@ -6,7 +6,7 @@ function createWeatherChart(category, unit, align, max, precision) {
         toolbar: {show: false},
     };
     var title = {
-        text: category + " [" + unit + "]",
+        text: category + " [" + unit.trim() + "]",
         align: align,
         offsetX: 6,
         offsetY: 15,
@@ -149,7 +149,7 @@ function selectTimeline(activeElement, update) {
 }
 
 
-var hchart, cchart, tchart, pchart, schart, wchart;
+var hchart, cchart, tchart, pchart, schart, wchart, lchart;
 var temperature, humidity, pressure, cloudCoverage, sqm, windSpeed;
 
 var settings = {t_min: -40, t_max: 50, t_prec: 1,
@@ -315,11 +315,16 @@ function initSensors() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-                            createWeatherChart("Temperature", "°C", "left", undefined, 1));
+                            createWeatherChart("Temperature", " °C", "left", undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
                             createWeatherChart("Humidity", "%", "left", 100, 0));
+    lchart = new ApexCharts(document.querySelector("#lum_series"),
+                            createWeatherChart("Luminosity", " lux", "left", undefined, 0));
+
     tchart.render();
     hchart.render();
+    lchart.render();
+
     // select timeline
     document.querySelector("#timeline_" + getCurrentTimeline()).classList.add('active');
     updateSensorSeries();
@@ -348,6 +353,9 @@ function updateSensorSeries(timeline) {
                               type: "area"},
                              {data: data.DHT_Hum.data,
                               name: "Hum. (DHT)",
+                              type: "area"}]);
+        lchart.updateSeries([{data: data.TSL2591_Lux.data,
+                              name: "Lum. (TSL2591)",
                               type: "area"}]);
     });
 };

@@ -5,6 +5,10 @@
                 <driver name="ToupCam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Omegon Pro" mdpd="true">
+                <driver name="ToupCam">indi_toupcam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
         <device label="Altair" mdpd="true">
                 <driver name="Altair">indi_altair_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>

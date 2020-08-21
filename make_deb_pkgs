@@ -1,16 +1,53 @@
 #!/bin/bash
 
-DRV_LIST="indi-beefocus indi-gphoto indi-nexstarevo indi-gpsd"
-SRC_DIR=`pwd`"/.."
+#make_deb_pkgs
+#shell script for building 3rd-party drivers for indi-library
 
+#please note, that some drivers have dependencies to other libraries
+#these must be installed first!
+
+#Example: indi-asi depends from libasi so we have to call this script like this:
+
+# ./make_deb_pkgs libasi
+
+# install the resulting debian package with sudo dpkg -i packagename
+#then we can call this script again:
+
+# ./make_deb_pkgs indi-asi
+
+set -e
+
+DRV_LIST=$@
+SRC_DIR=`pwd`
+
+#at least one driver is needed as argument
+#otherwise abort the script!
+if [ "$1" == "" ]; then
+  echo "usage:" "$0" "drivername1 [drivername2 drivername3 .. drivername10]"
+  echo "optional drivers: drivername2 to drivername10"
+  exit 1 
+fi
+
+#all driver arguments must exist as directories
+#otherwise abort the script!
 for drv in $DRV_LIST ; do
 (
-    mkdir deb_${drv}
-    cd deb_${drv}
-    cp -r ${SRC_DIR}/3rdparty/$drv .
-    cp -r ${SRC_DIR}/debian/$drv debian
-    cp -r ${SRC_DIR}/cmake_modules $drv/
-    fakeroot debian/rules binary
+  if [ ! -d "$drv" ]; then
+    echo "$drv" "directory doesn't exist"
+    exit 1
+  fi
+)
+done
+
+#now do the real stuff...
+for drv in $DRV_LIST ; do
+(
+  mkdir deb_${drv}
+  cd deb_${drv}
+  cp -r ${SRC_DIR}/$drv .
+  cp -r ${SRC_DIR}/debian/$drv debian
+  cp -r ${SRC_DIR}/cmake_modules $drv/
+  fakeroot debian/rules binary
 )
 done
 

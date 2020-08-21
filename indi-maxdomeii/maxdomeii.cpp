@@ -141,13 +141,13 @@ bool MaxDomeII::initProperties()
     IUFillSwitch(&ShutterConflictS[0], "MOVE", "Move", ISS_ON);
     IUFillSwitch(&ShutterConflictS[1], "NO_MOVE", "No move", ISS_OFF);
     IUFillSwitchVector(&ShutterConflictSP, ShutterConflictS, NARRAY(ShutterConflictS), getDeviceName(),
-            "AZIMUTH_ON_SHUTTER", "Azimuth on operating shutter", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       "AZIMUTH_ON_SHUTTER", "Azimuth on operating shutter", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Shutter mode
     IUFillSwitch(&ShutterModeS[0], "FULL", "Open full", ISS_ON);
     IUFillSwitch(&ShutterModeS[1], "UPPER", "Open upper only", ISS_OFF);
     IUFillSwitchVector(&ShutterModeSP, ShutterModeS, NARRAY(ShutterModeS), getDeviceName(),
-            "SHUTTER_MODE", "Shutter open mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       "SHUTTER_MODE", "Shutter open mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Home - Home command
     IUFillSwitch(&HomeS[0], "HOME", "Home", ISS_OFF);
@@ -246,15 +246,15 @@ void MaxDomeII::TimerHit()
         }
     }
 
-    if (getWeatherState() == IPS_ALERT)
-    {
-        // Close Shutter if it is not
-        if (shutterSt != SS_CLOSED)
-        {
-            DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
-            IDSetSwitch(&DomeShutterSP, "Closing shutter due Weather conditions");
-        }
-    }
+    //    if (getWeatherState() == IPS_ALERT)
+    //    {
+    //        // Close Shutter if it is not
+    //        if (shutterSt != SS_CLOSED)
+    //        {
+    //            DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
+    //            IDSetSwitch(&DomeShutterSP, "Closing shutter due Weather conditions");
+    //        }
+    //    }
 
     if (!nError)
     {
@@ -274,7 +274,8 @@ void MaxDomeII::TimerHit()
                 else
                 {
                     if (nTimeSinceShutterStart >= 0)
-                    { // A movement has started. Warn but don't change
+                    {
+                        // A movement has started. Warn but don't change
                         if (nTimeSinceShutterStart >= 4)
                         {
                             DomeShutterSP.s = IPS_ALERT; // Shutter close movement ends.
@@ -282,7 +283,8 @@ void MaxDomeII::TimerHit()
                         }
                     }
                     else
-                    { // For some reason (manual operation?) the shutter has closed
+                    {
+                        // For some reason (manual operation?) the shutter has closed
                         DomeShutterSP.s   = IPS_IDLE;
                         DomeShutterS[1].s = ISS_ON;
                         DomeShutterS[0].s = ISS_OFF;
@@ -292,20 +294,23 @@ void MaxDomeII::TimerHit()
                 break;
             case SS_OPENING:
                 if (DomeShutterS[0].s == ISS_OFF) // not opening Shutter
-                {                                 // For some reason the shutter is opening (manual operation?)
+                {
+                    // For some reason the shutter is opening (manual operation?)
                     DomeShutterSP.s   = IPS_ALERT;
                     DomeShutterS[1].s = ISS_OFF;
                     DomeShutterS[0].s = ISS_OFF;
                     IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
                 }
                 else if (nTimeSinceShutterStart < 0)
-                { // For some reason the shutter is opening (manual operation?)
+                {
+                    // For some reason the shutter is opening (manual operation?)
                     DomeShutterSP.s        = IPS_ALERT;
                     nTimeSinceShutterStart = 0;
                     IDSetSwitch(&DomeShutterSP, "Unexpected shutter opening");
                 }
                 else if (DomeShutterSP.s == IPS_ALERT)
-                { // The alert has corrected
+                {
+                    // The alert has corrected
                     DomeShutterSP.s = IPS_BUSY;
                     IDSetSwitch(&DomeShutterSP, "Shutter is opening");
                 }
@@ -323,7 +328,8 @@ void MaxDomeII::TimerHit()
                 else
                 {
                     if (nTimeSinceShutterStart >= 0)
-                    { // A movement has started. Warn but don't change
+                    {
+                        // A movement has started. Warn but don't change
                         if (nTimeSinceShutterStart >= 4)
                         {
                             DomeShutterSP.s = IPS_ALERT; // Shutter open movement alert.
@@ -331,7 +337,8 @@ void MaxDomeII::TimerHit()
                         }
                     }
                     else
-                    { // For some reason (manual operation?) the shutter has open
+                    {
+                        // For some reason (manual operation?) the shutter has open
                         DomeShutterSP.s   = IPS_IDLE;
                         DomeShutterS[1].s = ISS_ON;
                         DomeShutterS[0].s = ISS_OFF;
@@ -341,20 +348,23 @@ void MaxDomeII::TimerHit()
                 break;
             case SS_CLOSING:
                 if (DomeShutterS[1].s == ISS_OFF) // Not closing Shutter
-                {                                 // For some reason the shutter is closing (manual operation?)
+                {
+                    // For some reason the shutter is closing (manual operation?)
                     DomeShutterSP.s   = IPS_ALERT;
                     DomeShutterS[1].s = ISS_ON;
                     DomeShutterS[0].s = ISS_OFF;
                     IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
                 }
                 else if (nTimeSinceShutterStart < 0)
-                { // For some reason the shutter is opening (manual operation?)
+                {
+                    // For some reason the shutter is opening (manual operation?)
                     DomeShutterSP.s        = IPS_ALERT;
                     nTimeSinceShutterStart = 0;
                     IDSetSwitch(&DomeShutterSP, "Unexpected shutter closing");
                 }
                 else if (DomeShutterSP.s == IPS_ALERT)
-                { // The alert has corrected
+                {
+                    // The alert has corrected
                     DomeShutterSP.s = IPS_BUSY;
                     IDSetSwitch(&DomeShutterSP, "Shutter is closing");
                 }
@@ -381,7 +391,8 @@ void MaxDomeII::TimerHit()
         // Azimuth
         nAz = TicksToAzimuth(nCurrentTicks);
         if (DomeAbsPosN[0].value != nAz)
-        { // Only refresh position if it changed
+        {
+            // Only refresh position if it changed
             DomeAbsPosN[0].value = nAz;
             //sprintf(buf,"%d", nCurrentTicks);
             IDSetNumber(&DomeAbsPosNP, nullptr);
@@ -394,14 +405,15 @@ void MaxDomeII::TimerHit()
                 if (nTimeSinceAzimuthStart > 3)
                 {
                     if (nTargetAzimuth >= 0 &&
-                        AzimuthDistance(nTargetAzimuth, nCurrentTicks) > 3) // Maximum difference allowed: 3 ticks
+                            AzimuthDistance(nTargetAzimuth, nCurrentTicks) > 3) // Maximum difference allowed: 3 ticks
                     {
                         DomeAbsPosNP.s         = IPS_ALERT;
                         nTimeSinceAzimuthStart = -1;
                         IDSetNumber(&DomeAbsPosNP, "Could not position right");
                     }
                     else
-                    { // Succesfull end of movement
+                    {
+                        // Succesfull end of movement
                         if (DomeAbsPosNP.s != IPS_OK)
                         {
                             setDomeState(DOME_SYNCED);
@@ -792,7 +804,8 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         return true;
     }
 
-    if (!strcmp(name, ShutterModeSP.name)) {
+    if (!strcmp(name, ShutterModeSP.name))
+    {
         if (IUUpdateSwitch(&ShutterModeSP, states, names, n) < 0)
             return false;
 
@@ -954,7 +967,8 @@ IPState MaxDomeII::ControlShutter(ShutterOperation operation)
     else
     {
         if (ShutterModeS[0].s == ISS_ON)
-        { // Open Shutter
+        {
+            // Open Shutter
             while (nRetry)
             {
                 error = driver.OpenShutter();
@@ -969,7 +983,8 @@ IPState MaxDomeII::ControlShutter(ShutterOperation operation)
             return IPS_BUSY;
         }
         else
-        { // Open upper shutter only
+        {
+            // Open upper shutter only
             while (nRetry)
             {
                 error = driver.OpenUpperShutterOnly();

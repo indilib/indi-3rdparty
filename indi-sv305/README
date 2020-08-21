@@ -20,7 +20,7 @@ Requirements
 
 + libsv305
 
-	SVBONY SV305 SDK binaries, also provided by indi-3rdparty
+	SVBONY SV305 SDK binaries (1.6.1 or higher), also provided by indi-3rdparty
 
 Installation
 ============
@@ -43,22 +43,29 @@ How to Use
 Features
 ========
 
-	+ Abort Exposure
+	+ Full access to camera settings
 	+ Bayer color pattern
         + Analog gain
-	+ Software subframing
+	+ Subframing
 	+ Software binning
 	+ Streaming
 
 Known issues
 ============
 
-	+ Slow streaming start-up
-	+ In EKOS, toggle the bayer button to get live view streaming
+	+ Initial gain setting sometime fails (SDK issue ?)
 
 Limitations
 ===========
 
-	+ Image depth fixed to 16bits
-	+ WB, Anti Flicker, Auto Exposure disabled
-	+ Minimal exposure 0.01s
+	+ Subframing and binning doesn't work in liveview
+        + Can't abort long exposure yet
+	+ Should support the SV305 PRO aswell, but not tested yet
+
+Changelog
+=========
+
+	+ 1.1.1 : Updated with the last SDK (20200812)
+	+ 1.1 : Ability to stretch camera's 12 bits pixel depth to 16 bits
+	+ 1.0 : Refactoring with the new SVBony SDK (1.6.1)
+	+ 0.9 : First version, with the CKCamera SDK

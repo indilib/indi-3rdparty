@@ -70,12 +70,12 @@ private:
 
   // Options
   ITextVectorProperty PortTP;
-  IText PortT[1];
+  IText PortT[1] {};
 
   // Spectrograph Settings
   INumberVectorProperty SettingsNP;
   INumber SettingsN[2];
-  
+
   bool calibrationUnitCommand(char command, char parameter);
   bool resetLamps();
 };

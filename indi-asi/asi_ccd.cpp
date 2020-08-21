@@ -262,6 +262,10 @@ bool ASICCD::initProperties()
     IUFillSwitchVector(&VideoFormatSP, nullptr, 0, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
+    IUFillNumber(&BlinkN[BLINK_COUNT], "BLINK_COUNT", "Blinks before exposure", "%2.0f", 0, 100, 1, 0);
+    IUFillNumber(&BlinkN[BLINK_DURATION], "BLINK_DURATION", "Blink duration", "%2.3f", 0, 60, 0.001, 0);
+    IUFillNumberVector(&BlinkNP, BlinkN, NARRAY(BlinkN), getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+
     IUSaveText(&BayerT[2], getBayerString());
 
     IUFillNumber(&ADCDepthN, "BITS", "Bits", "%2.0f", 0, 32, 1, 0);
@@ -373,6 +377,8 @@ bool ASICCD::updateProperties()
             }
         }
 
+        defineNumber(&BlinkNP);
+
         defineNumber(&ADCDepthNP);
         defineText(&SDKVersionSP);
     }
@@ -395,6 +401,7 @@ bool ASICCD::updateProperties()
         if (VideoFormatSP.nsp > 0)
             deleteProperty(VideoFormatSP.name);
 
+        deleteProperty(BlinkNP.name);
         deleteProperty(SDKVersionSP.name);
         deleteProperty(ADCDepthNP.name);
     }
@@ -753,6 +760,13 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             IDSetNumber(&ControlNP, nullptr);
             return true;
         }
+
+        if (!strcmp(name, BlinkNP.name))
+        {
+            BlinkNP.s = IUUpdateNumber(&BlinkNP, values, names, n) < 0 ? IPS_ALERT : IPS_OK;
+            IDSetNumber(&BlinkNP, nullptr);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1022,6 +1036,51 @@ bool ASICCD::activateCooler(bool enable)
 bool ASICCD::StartExposure(float duration)
 {
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
+
+    long blinks = BlinkN[BLINK_COUNT].value;
+    if (blinks > 0)
+    {
+        LOGF_INFO("Blinking %ld time(s) before exposure", blinks);
+
+        const long duration = BlinkN[BLINK_DURATION].value * 1000000.0;
+        errCode = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, duration, ASI_FALSE);
+        if (errCode != ASI_SUCCESS)
+        {
+            LOGF_ERROR("Failed to set blink exposure to %ldus, error %d", duration, errCode);
+        }
+        else
+        {
+            do
+            {
+                errCode = ASIStartExposure(m_camInfo->CameraID, ASI_TRUE);
+                if (errCode != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to start blink exposure, error %d", errCode);
+                    break;
+                }
+
+                ASI_EXPOSURE_STATUS expStatus;
+                do
+                {
+                    usleep(100000);
+                    errCode = ASIGetExpStatus(m_camInfo->CameraID, &expStatus);
+                }
+                while (errCode == ASI_SUCCESS && expStatus == ASI_EXP_WORKING);
+
+                if (errCode != ASI_SUCCESS || expStatus != ASI_EXP_SUCCESS)
+                {
+                    LOGF_ERROR("Blink exposure failed, error %d, status %d", errCode, expStatus);
+                    break;
+                }
+            }
+            while (--blinks > 0);
+        }
+
+        if (blinks > 0)
+        {
+            LOGF_WARN("%ld blink exposure(s) NOT done", blinks);
+        }
+    }
 
     PrimaryCCD.setExposureDuration(duration);
     ExposureRequest = duration;
@@ -2160,6 +2219,8 @@ bool ASICCD::saveConfigItems(FILE *fp)
 
     if (VideoFormatSP.nsp > 0)
         IUSaveConfigSwitch(fp, &VideoFormatSP);
+
+    IUSaveConfigNumber(fp, &BlinkNP);
 
     return true;
 }

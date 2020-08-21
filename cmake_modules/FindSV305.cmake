@@ -17,30 +17,18 @@ if (SV305_INCLUDE_DIR AND SV305_LIBRARIES)
 else (SV305_INCLUDE_DIR AND SV305_LIBRARIES)
 
   # find headers
-  find_path(SV305_INCLUDE_DIR NAMES CKCameraInterface.h CKDeviceDef.h
+  find_path(SV305_INCLUDE_DIR NAMES SVBCameraSDK.h
     PATH_SUFFIXES libsv305
     ${_obIncDir}
     ${GNUWIN32_DIR}/include
   )
 
   # find libraries
-  if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    # 64 bits
-    find_library(SV305_LIBRARIES NAMES libCKCameraSDK_x64.so
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
-  else(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    # 32 bits
-    find_library(SV305_LIBRARIES NAMES libCKCameraSDK_x86.so
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
-  endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
-
-
+  find_library(SV305_LIBRARIES NAMES SVBCameraSDK
+    PATHS
+    ${_obLinkDir}
+    ${GNUWIN32_DIR}/lib
+  )
 
   if(SV305_INCLUDE_DIR AND SV305_LIBRARIES)
     set(SV305_FOUND TRUE)

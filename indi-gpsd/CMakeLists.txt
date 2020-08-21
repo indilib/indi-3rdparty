@@ -31,6 +31,11 @@ include(CMakeCommon)
 
 add_executable(indi_gpsd gps_driver.cpp)
 target_link_libraries(indi_gpsd ${INDI_LIBRARIES} ${GPSD_LIBRARIES} ${NOVA_LIBRARIES})
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+    target_link_libraries(indi_gpsd rt)
+endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+
 install(TARGETS indi_gpsd RUNTIME DESTINATION bin )
 
 install( FILES  ${CMAKE_CURRENT_BINARY_DIR}/indi_gpsd.xml DESTINATION ${INDI_DATA_DIR})
