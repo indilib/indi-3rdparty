@@ -107,15 +107,8 @@ option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
-option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
+option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
-
-# Limit SVBONY to x86 architecture now
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
-else()
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" Off)
-endif()
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -146,6 +139,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_FXLOAD Off)
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
+    set(WITH_SV305 Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -553,9 +547,9 @@ SET(LIBRARIES_FOUND FALSE)
 endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
-if (WITH_AHP_INTERFEROMETER)
-add_subdirectory(indi-ahp-interferometer)
-endif(WITH_AHP_INTERFEROMETER)
+if (WITH_AHP_CORRELATOR)
+add_subdirectory(indi-ahp-correlator)
+endif(WITH_AHP_CORRELATOR)
 
 # sv305
 if (WITH_SV305)
