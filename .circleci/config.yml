@@ -49,7 +49,7 @@ jobs:
             apt-get -y install apt-utils software-properties-common
             apt-add-repository -y ppa:mutlaqja/indinightly
             apt-get update
-            apt-get -y install libindi
+            apt-get -y install libindi1
             .circleci/build-core.sh
       - run:
           name: Run tests
