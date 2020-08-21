@@ -106,7 +106,7 @@ option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
-option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
+option(WITH_ASTROLINK4 "Install AstroLink4 Driver" Off)
 option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 
