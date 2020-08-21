@@ -49,7 +49,7 @@ jobs:
             apt-get -y install apt-utils software-properties-common
             apt-add-repository -y ppa:mutlaqja/indinightly
             apt-get update
-            apt-get -y install libindi1 libindi-dev libcfitsio-dev zlib1g-dev libnova-dev libusb-1.0-0-dev libgsl-dev libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev
+            apt-get -y install libindi1 libindi-dev libcurl4-gnutls-dev libtiff-dev libraw-dev
             .circleci/build-core.sh
       - run:
           name: Run tests
