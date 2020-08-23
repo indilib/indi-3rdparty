@@ -19,14 +19,15 @@ To build/install everything manually, first clone the indi-3rdparty repository:
 ```
 mkdir -p ~/Projects
 cd ~/Projects
-git clone https://github.com/indilib/indi-3rdparty/indi-3rdparty.git
+git clone https://github.com/indilib/indi-3rdparty.git
 ```
 
 Next install libRicohCameraSDK (skip for ARM64):
 
 ```
-cd ~/Projects/indi-3rdparty/libricohcamerasdk
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/libricohcamerasdk
+cd ~/Projects/build/libricohcamerasdk
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/libricohcamerasdk/
 make
 sudo make install
 ```
@@ -34,8 +35,9 @@ sudo make install
 Next build/install libPkTriggerCord:
 
 ```
-cd ~/Projects/indi-3rdparty/libpktriggercord
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/libpktriggercord
+cd ~/Projects/build/libpktriggercord
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/libpktriggercord/
 make
 sudo make install
 ```
@@ -43,8 +45,9 @@ sudo make install
 Finally, build/install indi-pentax:
 
 ```
-cd ~/Projects/indi-3rdparty/indi-pentax
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/indi-pentax
+cd ~/Projects/build/indi-pentax
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/indi-pentax/
 make
 sudo make install
 ```
