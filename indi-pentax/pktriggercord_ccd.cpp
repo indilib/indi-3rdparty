@@ -301,6 +301,13 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         return false;
     }
     else {
+        //just need to check if we changed exposure modes and are still connected before proceeding here
+        if (!getCaptureSettingsState()) {
+            LOG_INFO("Could not get camera state.  Are we still connected?");
+            return false;
+        }
+
+        //check if duration is valid
         if (!duration) {
             LOG_INFO("Shutter speed must be greater than 0.");
             return false;
@@ -310,19 +317,13 @@ bool PkTriggerCordCCD::StartExposure(float duration)
             return false;
         }
 
-        //just need to check if we changed exposure modes and are still connected before proceeding here
-        if (!getCaptureSettingsState()) {
-            LOG_INFO("Could not get camera state.  Are we still connected?");
-            return false;
-        }
-
         InExposure = true;
 
         //update shutter speed
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
             if (duration>30) {
                 duration = 30;
-                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer expsoures.");
+                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer exposures.");
             }
             else {
                 LOGF_INFO("Only pre-defined shutter speeds are supported in current mode.  The camera will select the pre-defined shutter speed that most closely matches %f.",duration);
