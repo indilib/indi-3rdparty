@@ -76,7 +76,7 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
     IUFillSwitchVector(&preserveOriginalSP, preserveOriginalS, 2, getDeviceName(), "PRESERVE_ORIGINAL", "Copy Option", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 7200, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
     IUSaveText(&BayerT[2], "RGGB");
 
@@ -305,9 +305,16 @@ bool PkTriggerCordCCD::StartExposure(float duration)
             LOG_INFO("Shutter speed must be greater than 0.");
             return false;
         }
+        else if (( status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) && (duration<1)) {
+            LOG_INFO("Shutter speed must be at least 1 in bulb mode.");
+            return false;
+        }
 
         //just need to check if we changed exposure modes and are still connected before proceeding here
-        if (!getCaptureSettingsState()) return false;
+        if (!getCaptureSettingsState()) {
+            LOG_INFO("Could not get camera state.  Are we still connected?");
+            return false;
+        }
 
         InExposure = true;
 
@@ -325,12 +332,15 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         ExposureRequest = duration;
         float F = duration;
         pslr_rational_t shutter_speed;
-		if (F < 5) {
-			F = F * 10;
-			shutter_speed.denom = 10;
+        shutter_speed.denom = 1;
+        int i = 0;
+        if (F < 5) {
+            while ((rintf(F)!=F)&& (i++<4)) {
+                F = F * 10;
+                shutter_speed.denom *= 10;
+            }
 			shutter_speed.nom = F;
 		} else {
-			shutter_speed.denom = 1;
 			shutter_speed.nom = F;
 		}
         //pslr_rational_t shutter_speed = {(int)(duration*100),100};
