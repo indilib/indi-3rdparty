@@ -8,23 +8,26 @@ This driver supports various Pentax cameras in PTP and/or MSC mode.
 
 The driver requires two libraries: libRicohCameraSDKCpp and libPkTriggerCord.  These are included with indi-pentax in the indi-3rdparty repository.
 
-*TODO (once packages are generated): Add instructions for installing packages.*
+```
+sudo apt install indi-pentax
+```
+
+## Building
 
 To build/install everything manually, first clone the indi-3rdparty repository:
 
 ```
 mkdir -p ~/Projects
 cd ~/Projects
-git clone https://github.com/karlrees/indi-3rdparty.git
+git clone https://github.com/indilib/indi-3rdparty.git
 ```
 
-*TODO (once pulled): update clone location to the main repository.*
-
-Next install libRicohCameraSDK:
+Next install libRicohCameraSDK (skip for ARM64):
 
 ```
-cd ~/Projects/indi-3rdparty/libricohcamerasdk
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/libricohcamerasdk
+cd ~/Projects/build/libricohcamerasdk
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/libricohcamerasdk/
 make
 sudo make install
 ```
@@ -32,8 +35,9 @@ sudo make install
 Next build/install libPkTriggerCord:
 
 ```
-cd ~/Projects/indi-3rdparty/libpktriggercord
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/libpktriggercord
+cd ~/Projects/build/libpktriggercord
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/libpktriggercord/
 make
 sudo make install
 ```
@@ -41,15 +45,16 @@ sudo make install
 Finally, build/install indi-pentax:
 
 ```
-cd ~/Projects/indi-3rdparty/indi-pentax
-cmake -DCMAKE_INSTALL_PREFIX=/usr .
+mkdir -p ~/Projects/build/indi-pentax
+cd ~/Projects/build/indi-pentax
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty/indi-pentax/
 make
 sudo make install
 ```
 
 ## Compatibility
 
-In general, a greater number of cameras are supported in MSC mode.  However, for more recent cameras, PTP mode will probably be more reliable, if you're okay with the trade-offs (see known issues).
+In general, a greater number of cameras are supported in MSC mode.  However, in certain use cases on more recent cameras (e.g. no bulb mode, no prime focus), PTP mode is more reliable and will get you live view as well.  See known issues.
 
 Based on the documentation for the libraries that this driver relies upon, the following cameras *should* work.  However, only cameras with an asterisk are actually confirmed.  Please update this list if you verify support for any camera:
 
@@ -62,7 +67,7 @@ Based on the documentation for the libraries that this driver relies upon, the f
 - Pentax K-7 (MSC)
 - Pentax K10D / Samsung GX-10 (MSC - fw 1.20 or later)
 - Pentax K20D / Samsung GX-20 (MSC)
-- Pentax K-30 (MSC)
+- Pentax K-30 (MSC - no bulb) *
 - Pentax K-50 (MSC - known bugs)
 - PENTAX K-70 (PTP, MSC - with bugs) *
 - Pentax K200D (MSC)
@@ -86,6 +91,7 @@ Cameras likely *not* to work include:
 - Pentax K110D
 - Pentax K100D
 - Pentax K-S2
+
 
 ## Features
 
@@ -113,10 +119,7 @@ The driver *should* support multiple cameras at once, and the author is happy to
 ## Operation
 
 1. First, be sure the camera is in the desired USB mode (PTP or MSC).  Then connect the camera via a USB cable to the Indi host and power the camera on.
-2. Set the camera to the appropriate capture mode.  For PTP mode, Manual (M) is suggested for maximum flexibility.  For MSC mode, Bulb (B) provides maximum flexibility.  
-
-*However, if your exposures are 30 seconds or less, other modes (e.g. Manual) are close to twice as fast at starting the exposure and returning the image.*
-
+2. Set the camera to the appropriate capture mode.  For MSC mode, Bulb (B) provides maximum flexibility for exposures greater than 1 second, and M mode is recommended otherwise.  For PTP mode, Manual (M) is suggested for maximum flexibility.    
 3. Start indiserver on the host with "Pentax DSLR (Native)" selected as a driver.  
 
 If you are starting indiserver from the command line, you can use:
@@ -144,9 +147,9 @@ To switch between PTP and MSC, you will need to unplug the camera from the host 
 ## Known Issues
 
 ### All modes
+- On low-power systems (e.g. Raspberry Pi 3 and older), for performance reasons, the Native output format is recommended for the driver instead of FITS.  In such environments, *if you need FITs, I would recommend running KStars remotely, and configuring Ekos to auto-convert to FITS.*
 - When DNG format is selected, images are currently saved with a "raw" extension.  This is because Indi seems to have a bug with .DNG files where it grabs the JPEG preview out of DNGs and discards the rest of the DNG file.  The raw files may be safely renamed to ".DNG."
 - Download time estimates computed by Ekos are wrong, especially if you're using a slower system like a Raspberry Pi 3.
-- On low-power systems (e.g. Raspberry Pi 3), for performance reasons, the Native output format is recommended for the driver instead of FITS.  In such environments, if you need FITs, I would recommend running KStars remotely, and configuring Ekos to auto-convert to FITS.
 
 ### PTP mode only
 - No support for PTP mode on 64-bit ARM-based operating systems.
