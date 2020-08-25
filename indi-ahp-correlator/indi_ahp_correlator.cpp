@@ -670,7 +670,6 @@ bool Interferometer::Handshake()
 {
     PortFD = serialConnection->getPortFD();
     if(PortFD != -1) {
-        int tmp = 0;
         int sample_size = 0;
         int num_lines = 0;
         int jitter_lines = 0;
@@ -688,7 +687,6 @@ bool Interferometer::Handshake()
             if(ntries == 0 || olen != 1) {
                 SAMPLE_SIZE = 0;
                 NUM_LINES = 0;
-                JITTER_LINES = 0;
                 DELAY_LINES = 0;
                 return false;
             }
@@ -697,9 +695,7 @@ bool Interferometer::Handshake()
         tty_read(PortFD, buf, HEADER_SIZE, 1, &olen);
         if(olen != HEADER_SIZE) {
             SAMPLE_SIZE = 0;
-            NUM_LINES = 0;
-            JITTER_LINES = 0;
-            DELAY_LINES = 0;
+            NUM_LINES = 0;            DELAY_LINES = 0;
             return false;
         }
 
@@ -850,7 +846,6 @@ bool Interferometer::Handshake()
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_lines;
-        JITTER_LINES = jitter_lines;
         DELAY_LINES = delay_lines;
 
         std::thread(&Interferometer::Callback, this).detach();
