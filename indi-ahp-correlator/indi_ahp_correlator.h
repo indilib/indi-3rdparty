@@ -26,7 +26,7 @@
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
 #define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define STOP_BITS 1
+#define STOP_BITS 2
 #define DATA_BITS 8
 #define BAUD_SIZE (STOP_BITS+DATA_BITS+1)
 
@@ -203,7 +203,7 @@ private:
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
     void ActiveLine(int, bool, bool);
-    void SetFrequencyDivider(int divider);
+    void SetFrequencyDivider(unsigned int divider);
     void EnableCapture(bool start);
     // Struct to keep timing
     struct timeval ExpStart;
@@ -212,7 +212,7 @@ private:
     bool threadsRunning;
 
     inline int NUM_BASELINES() { return NUM_LINES*(NUM_LINES-1)/2; }
-    inline int FRAME_SIZE() { return ((NUM_BASELINES()*JITTER_LINES+NUM_LINES*DELAY_LINES)*SAMPLE_SIZE)+HEADER_SIZE; }
+    inline int FRAME_SIZE() { return ((NUM_BASELINES()+NUM_LINES)*SAMPLE_SIZE)+HEADER_SIZE; }
     inline double FRAME_TIME() { return (double)FRAME_SIZE()*BAUD_SIZE/(double)serialConnection->baud(); }
     inline double SAMPLE_RATE() { return pow(2, SAMPLE_SIZE*4)*serialConnection->baud(); }
 
@@ -224,7 +224,6 @@ private:
     }
 
     int NUM_LINES;
-    int JITTER_LINES;
     int DELAY_LINES;
     int SAMPLE_SIZE;
 };

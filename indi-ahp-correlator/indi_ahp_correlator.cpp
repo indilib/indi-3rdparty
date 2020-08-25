@@ -63,6 +63,7 @@ void Interferometer::Callback()
 {
     int olen           = 0;
     double counts[NUM_LINES];
+    double spectra[NUM_LINES];
     double correlations[NUM_BASELINES()];
     char buf[FRAME_SIZE()+1];
     int w = PrimaryCCD.getXRes();
@@ -97,7 +98,7 @@ void Interferometer::Callback()
                 ExposureComplete(&PrimaryCCD);
             }
         }
-        memset(counts, 0, NUM_LINES*DELAY_LINES*sizeof(double));
+        memset(counts, 0, NUM_LINES*sizeof(double));
         memset(correlations, 0, NUM_BASELINES()*sizeof(double));
         int idx = HEADER_SIZE;
         int center = w*h/2;
@@ -113,14 +114,19 @@ void Interferometer::Callback()
                 idx += SAMPLE_SIZE;
             }
         }
+        for(int x = NUM_LINES-1; x >= 0; x--) {
+            memset(str, 0, SAMPLE_SIZE+1);
+            strncpy(str, buf+idx, SAMPLE_SIZE);
+            sscanf(str, "%X", &tmp);
+            spectra[x] = static_cast<double>(tmp);
+            idx += SAMPLE_SIZE;
+        }
         for(int x = NUM_BASELINES()-1; x >= 0; x--) {
-            for(int y = JITTER_LINES-1; y >= 0; y--) {
-                memset(str, 0, SAMPLE_SIZE+1);
-                strncpy(str, buf+idx, SAMPLE_SIZE);
-                sscanf(str, "%X", &tmp);
-                correlations[x] += static_cast<double>(tmp)/(fabs(y-JITTER_LINES/2)+1);
-                idx += SAMPLE_SIZE;
-            }
+            memset(str, 0, SAMPLE_SIZE+1);
+            strncpy(str, buf+idx, SAMPLE_SIZE);
+            sscanf(str, "%X", &tmp);
+            correlations[x] += static_cast<double>(tmp);
+            idx += SAMPLE_SIZE;
             totalcorrelations[x] += correlations[x];
         }
         idx = 0;
@@ -168,22 +174,13 @@ void Interferometer::Callback()
             unsigned int delay_clocks = delay[x] * clock_frequency / LIGHTSPEED;
             delay_clocks = (delay_clocks > 0 ? (delay_clocks < DELAY_LINES ? delay_clocks : DELAY_LINES-1) : 0);
             SendCommand(SET_INDEX, x);
-            SendCommand(CLEAR, 0);
-            SendCommand(SET_DELAY, delay_clocks&0xf);
+            SendCommand(static_cast<it_cmd>(SET_DELAY|0), delay_clocks&0xf);
             delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
+            SendCommand(static_cast<it_cmd>(SET_DELAY|1), delay_clocks&0xf);
             delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
+            SendCommand(static_cast<it_cmd>(SET_DELAY|2), delay_clocks&0xf);
             delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
-            delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
-            delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
-            delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
-            delay_clocks >>= 4;
-            SendCommand(SET_DELAY, delay_clocks&0xf);
+            SendCommand(static_cast<it_cmd>(SET_DELAY|3), delay_clocks&0xf);
             delay_clocks >>= 4;
         }
     }
@@ -201,7 +198,6 @@ Interferometer::Interferometer()
 
     SAMPLE_SIZE = 0;
     NUM_LINES = 0;
-    JITTER_LINES = 0;
 
     lineStatsN = static_cast<INumber*>(malloc(1));
     lineStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
@@ -674,7 +670,6 @@ bool Interferometer::Handshake()
 {
     PortFD = serialConnection->getPortFD();
     if(PortFD != -1) {
-        int tmp = 0;
         int sample_size = 0;
         int num_lines = 0;
         int jitter_lines = 0;
@@ -692,7 +687,6 @@ bool Interferometer::Handshake()
             if(ntries == 0 || olen != 1) {
                 SAMPLE_SIZE = 0;
                 NUM_LINES = 0;
-                JITTER_LINES = 0;
                 DELAY_LINES = 0;
                 return false;
             }
@@ -701,9 +695,7 @@ bool Interferometer::Handshake()
         tty_read(PortFD, buf, HEADER_SIZE, 1, &olen);
         if(olen != HEADER_SIZE) {
             SAMPLE_SIZE = 0;
-            NUM_LINES = 0;
-            JITTER_LINES = 0;
-            DELAY_LINES = 0;
+            NUM_LINES = 0;            DELAY_LINES = 0;
             return false;
         }
 
@@ -854,7 +846,6 @@ bool Interferometer::Handshake()
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_lines;
-        JITTER_LINES = jitter_lines;
         DELAY_LINES = delay_lines;
 
         std::thread(&Interferometer::Callback, this).detach();
@@ -867,7 +858,7 @@ bool Interferometer::Handshake()
 
 bool Interferometer::SendCommand(it_cmd c, unsigned char value)
 {
-    return SendChar(c|(value<<4));
+    return SendChar(static_cast<char>(c|(value<<4)));
 }
 
 bool Interferometer::SendChar(char c)
@@ -884,9 +875,9 @@ void Interferometer::ActiveLine(int line, bool on, bool power)
     SendCommand(SET_LEDS, on | (power << 1));
 }
 
-void Interferometer::SetFrequencyDivider(int divider)
+void Interferometer::SetFrequencyDivider(unsigned int divider)
 {
-    SendCommand(SET_FREQ_DIV, divider);
+    SendCommand(static_cast<it_cmd>(SET_FREQ_DIV|((divider>>4)&7)), divider);
     clock_divider = divider;
 }
 
