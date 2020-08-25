@@ -108,12 +108,6 @@ option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
-<<<<<<< HEAD
-
-# Limit SVBONY to x86 architecture now
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-=======
->>>>>>> refs/remotes/upstream/master
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 
 # FFMPEG required for INDI Webcam driver
