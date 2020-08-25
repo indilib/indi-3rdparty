@@ -105,12 +105,14 @@ void Interferometer::Callback()
         center += w/2;
         unsigned int tmp;
         for(int x = NUM_LINES-1; x >= 0; x--) {
-            memset(str, 0, SAMPLE_SIZE+1);
-            strncpy(str, buf+idx, SAMPLE_SIZE);
-            sscanf(str, "%X", &tmp);
-            counts[x] = static_cast<double>(tmp);
-            totalcounts[x] += counts[x];
-            idx += SAMPLE_SIZE;
+            for(int y = DELAY_LINES-1; y >= 0; y--) {
+                memset(str, 0, SAMPLE_SIZE+1);
+                strncpy(str, buf+idx, SAMPLE_SIZE);
+                sscanf(str, "%X", &tmp);
+                counts[x] = static_cast<double>(tmp);
+                totalcounts[x] += counts[x];
+                idx += SAMPLE_SIZE;
+            }
         }
         for(int x = NUM_LINES-1; x >= 0; x--) {
             memset(str, 0, SAMPLE_SIZE+1);
@@ -686,6 +688,7 @@ bool Interferometer::Handshake()
             if(ntries == 0 || olen != 1) {
                 SAMPLE_SIZE = 0;
                 NUM_LINES = 0;
+                JITTER_LINES = 0;
                 DELAY_LINES = 0;
                 return false;
             }
@@ -695,6 +698,7 @@ bool Interferometer::Handshake()
         if(olen != HEADER_SIZE) {
             SAMPLE_SIZE = 0;
             NUM_LINES = 0;
+            JITTER_LINES = 0;
             DELAY_LINES = 0;
             return false;
         }
@@ -846,6 +850,7 @@ bool Interferometer::Handshake()
 
         SAMPLE_SIZE = sample_size/4;
         NUM_LINES = num_lines;
+        JITTER_LINES = jitter_lines;
         DELAY_LINES = delay_lines;
 
         std::thread(&Interferometer::Callback, this).detach();

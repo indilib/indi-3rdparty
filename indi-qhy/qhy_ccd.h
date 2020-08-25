@@ -153,6 +153,18 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumberVectorProperty USBBufferNP;
 
         /////////////////////////////////////////////////////////////////////////////
+        /// Properties: Utility Controls
+        /////////////////////////////////////////////////////////////////////////////
+        // Amp glow control
+        ISwitchVectorProperty AMPGlowSP;
+        ISwitch AMPGlowS[3];
+        enum
+        {
+            AMP_AUTO,
+            AMP_ON,
+            AMP_OFF
+        };
+        /////////////////////////////////////////////////////////////////////////////
         /// Properties: GPS Controls
         /////////////////////////////////////////////////////////////////////////////
 
@@ -200,6 +212,56 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         ISwitchVectorProperty GPSControlSP;
         ISwitch GPSControlS[2];
 
+        // GPS Status
+        ILightVectorProperty GPSStateLP;
+        ILight GPSStateL[4];
+
+        // GPS Data Header
+        ITextVectorProperty GPSDataHeaderTP;
+        IText GPSDataHeaderT[6] {};
+        enum
+        {
+            GPS_DATA_SEQ_NUMBER,
+            GPS_DATA_WIDTH,
+            GPS_DATA_HEIGHT,
+            GPS_DATA_LONGITUDE,
+            GPS_DATA_LATITUDE,
+            GPS_DATA_MAX_CLOCK,
+        };
+
+        // GPS Data Start
+        ITextVectorProperty GPSDataStartTP;
+        IText GPSDataStartT[4] {};
+        enum
+        {
+            GPS_DATA_START_FLAG,
+            GPS_DATA_START_SEC,
+            GPS_DATA_START_USEC,
+            GPS_DATA_START_TS,
+        };
+
+        // GPS Data End
+        ITextVectorProperty GPSDataEndTP;
+        IText GPSDataEndT[4] {};
+        enum
+        {
+            GPS_DATA_END_FLAG,
+            GPS_DATA_END_SEC,
+            GPS_DATA_END_USEC,
+            GPS_DATA_END_TS,
+        };
+
+        // GPS Data Now
+        ITextVectorProperty GPSDataNowTP;
+        IText GPSDataNowT[4] {};
+        enum
+        {
+            GPS_DATA_NOW_FLAG,
+            GPS_DATA_NOW_SEC,
+            GPS_DATA_NOW_USEC,
+            GPS_DATA_NOW_TS,
+        };
+
 
     private:
         /////////////////////////////////////////////////////////////////////////////
@@ -225,6 +287,14 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subH = 0;
         } effectiveROI, overscanROI;
 
+        typedef enum GPSState
+        {
+            GPS_ON,
+            GPS_SEARCHING,
+            GPS_LOCKING,
+            GPS_LOCKED
+        } GPSState;
+
         struct
         {
             // Sequences
@@ -243,23 +313,29 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             // Start Time
             uint8_t start_flag = 0;
             uint32_t start_sec = 0;
-            uint32_t start_us = 0;
+            double start_us = 0;
             double start_jd = 0;
+            char start_js_ts[MAXINDIDEVICE] = {0};
 
             // End Time
             uint8_t end_flag = 0;
             uint32_t end_sec = 0;
-            uint32_t end_us = 0;
+            double end_us = 0;
             double end_jd = 0;
+            char end_js_ts[MAXINDIDEVICE] = {0};
 
             // Now time
             uint8_t now_flag = 0;
             uint32_t now_sec = 0;
-            uint32_t now_us = 0;
+            double now_us = 0;
             double now_jd = 0;
+            char now_js_ts[MAXINDIDEVICE] = {0};
 
             // Clock
             uint32_t max_clock = 0;
+
+            // GPS Status
+            GPSState gps_status = GPS_ON;
         } GPSHeader;
 
         struct
@@ -305,9 +381,14 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool updateFilterProperties();
         // Decode GPS Header
         void decodeGPSHeader();
-        // Convert from Julian Seconds to Julian Date.
-        // uus is internal clock in 0.1us unit.
-        double JStoJD(uint32_t JS, uint32_t uus);
+        /**
+         * @brief JStoJD Convert Julian Second to Julian Date
+         * @param JS Julian Second
+         * @param us microsends
+         * @return Julian Date
+         */
+        double JStoJD(uint32_t JS, double us);
+        void JDtoISO8601(double JD, char *iso8601);
 
         /////////////////////////////////////////////////////////////////////////////
         /// Camera Capabilities
@@ -322,6 +403,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasCoolerManualMode { false };
         bool HasReadMode { false };
         bool HasGPS { false };
+        bool HasAmpGlow { false };
 
         /////////////////////////////////////////////////////////////////////////////
         /// Private Variables
@@ -366,5 +448,6 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
         /////////////////////////////////////////////////////////////////////////////
-        static constexpr const char * GPS_TAB = "GPS";
+        static constexpr const char * GPS_CONTROL_TAB = "GPS Control";
+        static constexpr const char * GPS_DATA_TAB = "GPS Data";
 };

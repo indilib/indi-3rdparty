@@ -76,7 +76,7 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
     IUFillSwitchVector(&preserveOriginalSP, preserveOriginalS, 2, getDeviceName(), "PRESERVE_ORIGINAL", "Copy Option", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 7200, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
     IUSaveText(&BayerT[2], "RGGB");
 
@@ -301,13 +301,21 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         return false;
     }
     else {
+        //just need to check if we changed exposure modes and are still connected before proceeding here
+        if (!getCaptureSettingsState()) {
+            LOG_INFO("Could not get camera state.  Are we still connected?");
+            return false;
+        }
+
+        //check if duration is valid
         if (!duration) {
             LOG_INFO("Shutter speed must be greater than 0.");
             return false;
         }
-
-        //just need to check if we changed exposure modes and are still connected before proceeding here
-        if (!getCaptureSettingsState()) return false;
+        else if (( status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) && (duration<1)) {
+            LOG_INFO("Shutter speed must be at least 1 in bulb mode.");
+            return false;
+        }
 
         InExposure = true;
 
@@ -315,7 +323,7 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
             if (duration>30) {
                 duration = 30;
-                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer expsoures.");
+                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer exposures.");
             }
             else {
                 LOGF_INFO("Only pre-defined shutter speeds are supported in current mode.  The camera will select the pre-defined shutter speed that most closely matches %f.",duration);
@@ -325,12 +333,15 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         ExposureRequest = duration;
         float F = duration;
         pslr_rational_t shutter_speed;
-		if (F < 5) {
-			F = F * 10;
-			shutter_speed.denom = 10;
+        shutter_speed.denom = 1;
+        int i = 0;
+        if (F < 5) {
+            while ((rintf(F)!=F)&& (i++<4)) {
+                F = F * 10;
+                shutter_speed.denom *= 10;
+            }
 			shutter_speed.nom = F;
 		} else {
-			shutter_speed.denom = 1;
 			shutter_speed.nom = F;
 		}
         //pslr_rational_t shutter_speed = {(int)(duration*100),100};

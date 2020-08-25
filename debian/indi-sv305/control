@@ -2,10 +2,10 @@ Source: indi-sv305
 Section: libs
 Priority: extra
 Maintainer: Blaise-Florentin Collin <thx8411@yahoo.fr>
-Build-Depends: debhelper (>= 6), cdbs, cmake, libcfitsio3-dev|libcfitsio-dev, libindi-dev, zlib1g-dev
+Build-Depends: debhelper (>= 6), cdbs, cmake, libcfitsio3-dev|libcfitsio-dev, libindi-dev, zlib1g-dev, libsv305
 Standards-Version: 3.9.2
 
 Package: indi-sv305
-Architecture: i386 amd64            
+Architecture: i386 amd64 armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libsv305
 Description: INDI driver for the SVBONY SV305 Camera
