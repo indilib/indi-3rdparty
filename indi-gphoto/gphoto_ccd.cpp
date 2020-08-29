@@ -1493,7 +1493,6 @@ bool GPhotoCCD::grabImage()
 
             int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
             int oneFrameSize     = subW * subH * bpp / 8;
-            //uint8_t * subframeBuf = new uint8_t[subFrameSize];
 
             int lineW  = subW * bpp / 8;
 
@@ -1503,15 +1502,13 @@ bool GPhotoCCD::grabImage()
 
             if (naxis == 2)
             {
+                // JM 2020-08-29: Using memmove since regions are overlaping
+                // as proposed by Camiel Severijns on INDI forums.
                 for (int i = subY; i < subY + subH; i++)
-                    memcpy(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
-                //memcpy(subframeBuf + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
+                    memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
             }
             else
             {
-                //                uint8_t * subR = subframeBuf;
-                //                uint8_t * subG = subframeBuf + oneFrameSize;
-                //                uint8_t * subB = subframeBuf + oneFrameSize * 2;
                 uint8_t * subR = memptr;
                 uint8_t * subG = memptr + oneFrameSize;
                 uint8_t * subB = memptr + oneFrameSize * 2;
