@@ -1,3 +1,11 @@
+indi-duino (1.7) buster; urgency=medium
+
+  * Script support for WiFi connection to the Arduino 
+  * Support for multiple weather devices added
+  * Setting of geo location added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 30 Aug 2020 21:36:04 +0200
+
 indi-duino (1.6) buster; urgency=medium
 
   * Web cam view reworked with time series light bar and modal view for details
