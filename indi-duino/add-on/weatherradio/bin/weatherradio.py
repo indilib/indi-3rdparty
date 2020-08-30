@@ -22,10 +22,14 @@ def connect(indi):
     deviceports = INDIDEVICEPORT.split(",")
     ipaddresses = INDI_IP_ADDRESS.split(",")
     ipports     = INDI_IP_PORT.split(",")
+    coord_lats  = GEO_COORD_LAT.split(",")
+    coord_longs = GEO_COORD_LONG.split(",")
+    coord_elevs = GEO_COORD_ELEV.split(",")
     result      = True
 
     # ensure that all devices are connected
-    for dev, mode, devport, ipaddress, ipport in zip(devices, modes, deviceports, ipaddresses, ipports):
+    for dev, mode, devport, ipaddress, ipport, lat, long, elev in zip(devices, modes, deviceports, ipaddresses, ipports,
+                                                                      coord_lats, coord_longs, coord_elevs):
         connection = indi.get_vector(dev, "CONNECTION")
         if connection.get_element("CONNECT").get_active() == False:
             # select the connection mode
@@ -47,9 +51,15 @@ def connect(indi):
                 indi.process_events()
                 # check if the connection has been established
                 connection = indi.get_vector(dev, "CONNECTION")
+                # set location if connection was successful
+                if connection._light.is_ok():
+                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
+                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
+                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
+                    
 
-        # update the result states
-        result = result and connection._light.is_ok()
+            # update the result states
+            result = result and connection._light.is_ok()
 
     return result
 
