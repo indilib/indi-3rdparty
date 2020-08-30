@@ -483,6 +483,11 @@ static double *parse_shutterspeed(gphoto_driver *gphoto, gphoto_widget *widget)
         }
         else if ((val = strtod(widget->choices[i], nullptr)))
         {
+            // Fuji returns long exposure values ( > 60s) with m postfix
+            if (widget->choices[i][strlen(widget->choices[i]) - 1] == 'm')
+            {
+                val = val * 60;
+            }
             exposure[i] = val;
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "exposure[%d]=%g seconds", i, exposure[i]);
         }
