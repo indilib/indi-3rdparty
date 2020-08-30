@@ -156,15 +156,6 @@ bool NexDome::initProperties()
                      ND::SHUTTER_TAB.c_str(), IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////
-    /// Close Shutter on Park?
-    ///////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&CloseShutterOnParkS[ND::ENABLED], "ENABLED", "Enabled", ISS_ON);
-    IUFillSwitch(&CloseShutterOnParkS[ND::DISABLED], "DISABLED", "Disabled", ISS_OFF);
-    IUFillSwitchVector(&CloseShutterOnParkSP, CloseShutterOnParkS, 2, getDeviceName(), "DOME_CLOSE_SHUTTER_ON_PARK",
-                       "Close Shutter on Park",
-                       ND::SHUTTER_TAB.c_str(), IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
-
-    ///////////////////////////////////////////////////////////////////////////////
     /// Rotator Settings
     ///////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&RotatorSettingsN[S_RAMP], "S_RAMP", "Acceleration Ramp (ms)", "%.f", 0.0, 5000, 1000.0, 0);
@@ -298,7 +289,6 @@ bool NexDome::updateProperties()
             defineNumber(&ShutterSettingsNP);
             defineNumber(&ShutterSyncNP);
             defineNumber(&ShutterBatteryLevelNP);
-            defineSwitch(&CloseShutterOnParkSP);
             defineSwitch(&ShutterFactorySP);
             defineText(&ShutterFirmwareVersionTP);
         }
@@ -320,7 +310,6 @@ bool NexDome::updateProperties()
             deleteProperty(ShutterSettingsNP.name);
             deleteProperty(RotatorSyncNP.name);
             deleteProperty(ShutterBatteryLevelNP.name);
-            deleteProperty(CloseShutterOnParkSP.name);
             deleteProperty(ShutterFactorySP.name);
             deleteProperty(ShutterFirmwareVersionTP.name);
         }
@@ -367,17 +356,6 @@ bool NexDome::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             }
 
             IDSetSwitch(&GoHomeSP, nullptr);
-            return true;
-        }
-
-        ///////////////////////////////////////////////////////////////////////////////
-        /// Close Shutter on Park
-        ///////////////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, CloseShutterOnParkSP.name))
-        {
-            IUUpdateSwitch(&CloseShutterOnParkSP, states, names, n);
-            CloseShutterOnParkSP.s = IPS_OK;
-            IDSetSwitch(&CloseShutterOnParkSP, nullptr);
             return true;
         }
 
@@ -731,7 +709,7 @@ IPState NexDome::Park()
 
     LOGF_INFO("Parking to %.2f azimuth...", GetAxis1Park());
 
-    if (HasShutter() && IUFindOnSwitchIndex(&CloseShutterOnParkSP) == ND::ENABLED)
+    if (HasShutter() && IUFindOnSwitchIndex(&ShutterParkPolicySP) == SHUTTER_CLOSE_ON_PARK)
     {
         LOG_INFO("Closing shutter on parking...");
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
@@ -748,8 +726,20 @@ IPState NexDome::Park()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::UnPark()
 {
-    SetParked(false);
-    return IPS_OK;
+    if (HasShutter() && IUFindOnSwitchIndex(&ShutterParkPolicySP) == SHUTTER_OPEN_ON_UNPARK)
+    {
+        LOG_INFO("Opening shutter on unparking...");
+        ControlShutter(ShutterOperation::SHUTTER_OPEN);
+        DomeShutterS[SHUTTER_OPEN].s = ISS_ON;
+        DomeShutterS[SHUTTER_CLOSE].s = ISS_OFF;
+        setShutterState(SHUTTER_MOVING);
+        return IPS_BUSY;
+    }
+    else
+    {
+        SetParked(false);
+        return IPS_OK;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -920,7 +910,6 @@ bool NexDome::saveConfigItems(FILE * fp)
 
     IUSaveConfigNumber(fp, &RotatorSettingsNP);
     IUSaveConfigNumber(fp, &ShutterSettingsNP);
-    IUSaveConfigSwitch(fp, &CloseShutterOnParkSP);
     return true;
 }
 
@@ -1281,7 +1270,8 @@ bool NexDome::processRotatorReport(const std::string &report)
                     else if (getDomeState() == DOME_PARKING)
                     {
                         LOG_INFO("Dome is parked.");
-                        setDomeState(DOME_PARKED);
+                        SetParked(true);
+                        //setDomeState(DOME_PARKED);
                     }
                 }
             }
@@ -1326,6 +1316,9 @@ bool NexDome::processShutterReport(const std::string &report)
                 {
                     setShutterState(SHUTTER_OPENED);
                     LOG_INFO("Shutter is fully opened.");
+
+                    if (getDomeState() == DOME_UNPARKING)
+                        SetParked(false);
                 }
                 //else if (position == 0 || close_limit_switch)
                 else if (close_limit_switch)
