@@ -19,7 +19,9 @@
 INDISERVER="localhost"
 INDIPORT="7624"
 
-# INDI device
+# configure INDI devices - separate multiple devices with ","
+
+# INDI device name
 INDIDEVICE="Weather Radio"
 # INDI device connection mode: "Ethernet" or "Serial"
 INDIDEVICEMODE="Serial"
