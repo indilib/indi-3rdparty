@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <driversList>
 <devGroup group="CCDs">
-        <device label="SX CCD" mdpd="true">
+        <device label="SX CCD" mdpd="true" manufacturer="Starlight XPress">
                 <driver name="SX CCD">indi_sx_ccd</driver>
                 <version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
 </devGroup>
 <devGroup group="Filter Wheels">
-        <device label="SX Wheel">
+        <device label="SX Wheel" manufacturer="Starlight XPress">
                 <driver name="SX Wheel">indi_sx_wheel</driver>
                 <version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
 </devGroup>
 <devGroup group="Adaptive Optics">
-        <device label="SX AO">
+        <device label="SX AO" manufacturer="Starlight XPress">
                 <driver name="SX AO">indi_sx_ao</driver>
                 <version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
