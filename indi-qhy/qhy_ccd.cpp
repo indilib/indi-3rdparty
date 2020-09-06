@@ -1951,7 +1951,7 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             if (rc == QHYCCD_SUCCESS)
             {
                 LOGF_INFO("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effROI_subX, effROI_subY,
-                           effROI_subW, effROI_subH);
+                          effROI_subW, effROI_subH);
             }
             // Current effective area for mode [NEW CODE]
 
@@ -1964,8 +1964,10 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                 GetQHYCCDReadModeResolution(m_CameraHandle, ReadModeN[0].value, &imageRMw, &imageRMh);
 
                 // Test image resolution values if they are greater than effective area resolution then replace imageRMw / imageRMh values [NEW CODE]
-                if(imageRMw > effROI_subW || imageRMh > effROI_subH) {
-                    LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: [ imageW: %u > imageEAW: %u ] / [ imageH: %u > imageEAH: %u ]", imageRMw,effROI_subW,imageRMh,effROI_subH);
+                if(imageRMw > effROI_subW || imageRMh > effROI_subH)
+                {
+                    LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: [ imageW: %u > imageEAW: %u ] / [ imageH: %u > imageEAH: %u ]",
+                              imageRMw, effROI_subW, imageRMh, effROI_subH);
                     imageRMw = effROI_subW;
                     imageRMh = effROI_subH;
                 }
@@ -2438,7 +2440,7 @@ void QHYCCD::streamVideo()
         uint32_t retries = 0;
         std::unique_lock<std::mutex> guard(ccdBufferLock);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-        uint32_t size = PrimaryCCD.getFrameBufferSize();
+        //uint32_t size = PrimaryCCD.getFrameBufferSize();
         while (retries++ < 10)
         {
             ret = GetQHYCCDLiveFrame(m_CameraHandle, &w, &h, &bpp, &channels, buffer);
@@ -2450,7 +2452,7 @@ void QHYCCD::streamVideo()
         guard.unlock();
         if (ret == QHYCCD_SUCCESS)
         {
-            Streamer->newFrame(buffer, size);
+            Streamer->newFrame(buffer, w * h * bpp / 8 * channels);
 
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
                 decodeGPSHeader();
