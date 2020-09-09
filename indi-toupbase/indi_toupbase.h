@@ -489,11 +489,11 @@ class ToupBase : public INDI::CCD
             TC_BLACK_B,
         };
 
-        INumberVectorProperty BlackLevelNP;
-        INumber BlackLevelN[1];
+        INumberVectorProperty OffsetNP;
+        INumber OffsetN[1];
         enum
         {
-            TC_BLACK_LEVEL,
+            TC_OFFSET,
         };
 
         // R/G/B/Gray low/high levels

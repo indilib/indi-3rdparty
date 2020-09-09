@@ -268,8 +268,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     // Black Level RAW
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&BlackLevelN[TC_BLACK_LEVEL], "TC_BLACK_LEVEL", "Gray", "%.f", 0, 255, 10, 0);
-    IUFillNumberVector(&BlackLevelNP, BlackLevelN, 1, getDeviceName(), "CCD_BLACK_LEVEL", "Black Level", LEVEL_TAB, IP_RW,
+    IUFillNumber(&OffsetN[TC_OFFSET], "OFFSET", "Value", "%.f", 0, 255, 10, 0);
+    IUFillNumberVector(&OffsetNP, OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -443,7 +443,7 @@ bool ToupBase::updateProperties()
         // Levels
         defineNumber(&LevelRangeNP);
         defineNumber(&BlackBalanceNP);
-        defineNumber(&BlackLevelNP);
+        defineNumber(&OffsetNP);
 
         // Balance
         if (m_MonoCamera == false)
@@ -485,7 +485,7 @@ bool ToupBase::updateProperties()
 
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
-        deleteProperty(BlackLevelNP.name);
+        deleteProperty(OffsetNP.name);
 
         if (m_MonoCamera == false)
         {
@@ -936,8 +936,8 @@ void ToupBase::setupParams()
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_MaxBitDepth - 8);
-    BlackLevelN[TC_BLACK_LEVEL].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
-    BlackLevelN[TC_BLACK_LEVEL].step = bLevelStep;
+    OffsetN[TC_OFFSET].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    OffsetN[TC_OFFSET].step = bLevelStep;
 
 
     // Allocate memory
@@ -1196,31 +1196,31 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// Black Level RAW
+        /// Offset
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, BlackLevelNP.name))
+        if (!strcmp(name, OffsetNP.name))
         {
-            IUUpdateNumber(&BlackLevelNP, values, names, n);
+            IUUpdateNumber(&OffsetNP, values, names, n);
             int bLevel =
             {
-                static_cast<uint16_t>(BlackLevelN[TC_BLACK_LEVEL].value),
+                static_cast<uint16_t>(OffsetN[TC_OFFSET].value),
 
             };
 
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), BlackLevelN[TC_BLACK_LEVEL].value));
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), OffsetN[TC_OFFSET].value));
             if (FAILED(rc))
             {
-                BlackLevelNP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set Black Level. %s", errorCodes[rc].c_str());
+                OffsetNP.s = IPS_ALERT;
+                LOGF_ERROR("Failed to set Offset. %s", errorCodes[rc].c_str());
 
             }
             else
             {
-                BlackLevelNP.s = IPS_OK;
-                LOGF_DEBUG("Black level set to %d", bLevel);
+                OffsetNP.s = IPS_OK;
+                LOGF_DEBUG("Offset set to %d", bLevel);
             }
 
-            IDSetNumber(&BlackLevelNP, nullptr);
+            IDSetNumber(&OffsetNP, nullptr);
             return true;
         }
 
@@ -2239,7 +2239,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
     IUSaveConfigNumber(fp, &ControlNP);
 
     IUSaveConfigNumber(fp, &GainConversionNP);
-    IUSaveConfigNumber(fp, &BlackLevelNP);
+    IUSaveConfigNumber(fp, &OffsetNP);
 
     if (m_MonoCamera == false)
         IUSaveConfigSwitch(fp, &WBAutoSP);
