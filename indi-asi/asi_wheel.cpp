@@ -237,7 +237,6 @@ bool ASIWHEEL::Connect()
             return false;
         }
 
-
         LOGF_INFO("Detected %d-position filter wheel.", info.slotNum);
 
         FilterSlotN[0].min = 1;
@@ -264,15 +263,13 @@ bool ASIWHEEL::Connect()
 
 bool ASIWHEEL::Disconnect()
 {
-    EFW_ERROR_CODE result = EFW_SUCCESS;
-
     if (isSimulation())
     {
         LOG_INFO("Simulation disconnected.");
     }
     else if (fw_id >= 0)
     {
-        result = EFWClose(fw_id);
+        EFW_ERROR_CODE result = EFWClose(fw_id);
         if (result != EFW_SUCCESS)
         {
             LOGF_ERROR("%s(): EFWClose() = %d", __FUNCTION__, result);
@@ -329,14 +326,16 @@ bool ASIWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     {
         if (!strcmp(name, UniDirectionalSP.name))
         {
-            int prevSwitch = IUFindOnSwitchIndex(&UniDirectionalSP);
-            IUUpdateSwitch(&UniDirectionalSP, states, names, n);
-            if (isSimulation() || EFWSetDirection(fw_id, IUFindOnSwitchIndex(&UniDirectionalSP) == INDI_ENABLED))
+            EFW_ERROR_CODE rc = EFWSetDirection(fw_id, !strcmp(IUFindOnSwitchName(states, names, n),
+                                                UniDirectionalS[INDI_ENABLED].name));
+            if (rc == EFW_SUCCESS)
+            {
+                IUUpdateSwitch(&UniDirectionalSP, states, names, n);
                 UniDirectionalSP.s = IPS_OK;
+            }
             else
             {
-                IUResetSwitch(&UniDirectionalSP);
-                UniDirectionalS[prevSwitch].s = ISS_ON;
+                LOGF_ERROR("%s(): EFWSetDirection = %d", __FUNCTION__, rc);
                 UniDirectionalSP.s = IPS_ALERT;
             }
             IDSetSwitch(&UniDirectionalSP, nullptr);
