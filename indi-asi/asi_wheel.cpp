@@ -291,9 +291,60 @@ bool ASIWHEEL::Disconnect()
 bool ASIWHEEL::initProperties()
 {
     INDI::FilterWheel::initProperties();
+
+    // Unidirectional motion
+    IUFillSwitch(&UniDirectionalS[INDI_ENABLED], "INDI_ENABLED", "Enable", ISS_OFF);
+    IUFillSwitch(&UniDirectionalS[INDI_DISABLED], "INDI_DISABLED", "Disable", ISS_ON);
+    IUFillSwitchVector(&UniDirectionalSP, UniDirectionalS, 2, getDeviceName(), "FILTER_UNIDIRECTIONAL_MOTION", "Uni Direction",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     addAuxControls();
     setDefaultPollingPeriod(250);
     return true;
+}
+
+bool ASIWHEEL::updateProperties()
+{
+    INDI::FilterWheel::updateProperties();
+
+    if (isConnected())
+    {
+        bool isUniDirection = false;
+        if (!isSimulation() && EFWGetDirection(fw_id, &isUniDirection) == EFW_SUCCESS)
+        {
+            UniDirectionalS[INDI_ENABLED].s = isUniDirection ? ISS_ON : ISS_OFF;
+            UniDirectionalS[INDI_DISABLED].s = isUniDirection ? ISS_OFF : ISS_ON;
+        }
+        defineSwitch(&UniDirectionalSP);
+    }
+    else
+        deleteProperty(UniDirectionalSP.name);
+
+    return true;
+}
+
+bool ASIWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if (dev != nullptr && !strcmp(dev, getDeviceName()))
+    {
+        if (!strcmp(name, UniDirectionalSP.name))
+        {
+            int prevSwitch = IUFindOnSwitchIndex(&UniDirectionalSP);
+            IUUpdateSwitch(&UniDirectionalSP, states, names, n);
+            if (isSimulation() || EFWSetDirection(fw_id, IUFindOnSwitchIndex(&UniDirectionalSP) == INDI_ENABLED))
+                UniDirectionalSP.s = IPS_OK;
+            else
+            {
+                IUResetSwitch(&UniDirectionalSP);
+                UniDirectionalS[prevSwitch].s = ISS_ON;
+                UniDirectionalSP.s = IPS_ALERT;
+            }
+            IDSetSwitch(&UniDirectionalSP, nullptr);
+            return true;
+        }
+    }
+
+    return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
 }
 
 int ASIWHEEL::QueryFilter()
@@ -376,4 +427,11 @@ void ASIWHEEL::TimerHit()
     {
         SelectFilterDone(CurrentFilter);
     }
+}
+
+bool ASIWHEEL::saveConfigItems(FILE *fp)
+{
+    INDI::FilterWheel::saveConfigItems(fp);
+    IUSaveConfigSwitch(fp, &UniDirectionalSP);
+    return true;
 }

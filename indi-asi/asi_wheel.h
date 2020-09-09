@@ -30,24 +30,34 @@
 
 class ASIWHEEL : public INDI::FilterWheel
 {
-  public:
-    ASIWHEEL(int id, EFW_INFO info, bool enumerate);
-    ~ASIWHEEL();
+    public:
+        ASIWHEEL(int id, EFW_INFO info, bool enumerate);
+        ~ASIWHEEL();
 
-    char name[MAXINDIDEVICE];
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-  protected:
+        char name[MAXINDIDEVICE];
 
-    virtual bool Connect() override;
-    virtual bool Disconnect() override;
-    virtual const char *getDefaultName() override;
+    protected:
+        virtual bool Connect() override;
+        virtual bool Disconnect() override;
+        virtual const char *getDefaultName() override;
 
-    virtual bool initProperties() override;    
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
 
-    virtual int QueryFilter() override;
-    virtual bool SelectFilter(int) override;
-    virtual void TimerHit() override;
+        virtual int QueryFilter() override;
+        virtual bool SelectFilter(int) override;
+        virtual void TimerHit() override;
 
-private:
-    int fw_id = -1;
+        // Save config
+        virtual bool saveConfigItems(FILE *fp) override;
+
+    private:
+
+        ISwitchVectorProperty UniDirectionalSP;
+        ISwitch UniDirectionalS[2];
+
+    private:
+        int fw_id = -1;
 };
