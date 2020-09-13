@@ -341,6 +341,9 @@ bool Sv305CCD::Connect()
         return false;
     }
 
+    // wait a bit for the camera to get ready
+    usleep(0.5 * 1e6);
+
     // get camera properties
     status = SVBGetCameraProperty(cameraID, &cameraProperty);
     if (status != SVB_SUCCESS)
@@ -367,6 +370,10 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+
+    // fix for SDK gain error issue
+    // set exposure time
+    SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(1 * 1000000), SVB_FALSE);
 
     // read controls and feed UI
     for(int i=0; i<controlsNum; i++)
