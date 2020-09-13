@@ -667,7 +667,7 @@ bool Sv305CCD::StartExposure(float duration)
     ExposureRequest = duration;
 
     gettimeofday(&ExpStart, nullptr);
-    LOGF_INFO("Taking a %g seconds frame...\n", ExposureRequest);
+    LOGF_DEBUG("Taking a %g seconds frame...\n", ExposureRequest);
 
     InExposure = true;
 
@@ -992,7 +992,7 @@ void Sv305CCD::TimerHit()
                         usleep(100000);
                         pthread_mutex_lock(&cameraID_mutex);
 			status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                        LOG_INFO("Wait...");
+                        LOG_DEBUG("Wait...");
                     }
 
                     pthread_mutex_unlock(&cameraID_mutex);
