@@ -1050,6 +1050,7 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
     if(status != SVB_SUCCESS)
     {
         LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
+        return false;
     }
     LOGF_INFO("Camera control %d to %.f\n", ControlType, ControlsN[ControlType].value);
 
