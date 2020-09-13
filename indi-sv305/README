@@ -53,7 +53,7 @@ Features
 Known issues
 ============
 
-	+ Initial gain setting sometime fails (SDK issue ?)
+	+ None
 
 Limitations
 ===========
@@ -65,7 +65,8 @@ Limitations
 Changelog
 =========
 
-	+ 1.1.1 : Updated with the last SDK (20200812)
+	+ 1.2.1 : Camera gain issue fixed
+	+ 1.2 : Updated with the last SDK (20200812)
 	+ 1.1 : Ability to stretch camera's 12 bits pixel depth to 16 bits
 	+ 1.0 : Refactoring with the new SVBony SDK (1.6.1)
 	+ 0.9 : First version, with the CKCamera SDK
