@@ -389,6 +389,9 @@ bool ToupBase::initProperties()
     IUFillText(&FirmwareT[TC_FIRMWARE_REV], "Revision", "Revision", nullptr);
     IUFillTextVector(&FirmwareTP, FirmwareT, 5, getDeviceName(), "Firmware", "Firmware", "Firmware", IP_RO, 0, IPS_IDLE);
 
+    IUFillText(&SDKVersionT[0], "VERSION", "Version", nullptr);
+    IUFillTextVector(&SDKVersionTP, SDKVersionT, 1, getDeviceName(), "SDK", "SDK", "Firmware", IP_RO, 0, IPS_IDLE);
+
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
 
@@ -454,6 +457,7 @@ bool ToupBase::updateProperties()
 
         // Firmware
         defineText(&FirmwareTP);
+        defineText(&SDKVersionTP);
     }
     else
     {
@@ -493,8 +497,8 @@ bool ToupBase::updateProperties()
             deleteProperty(WBRGBNP.name);
         }
 
-
         deleteProperty(FirmwareTP.name);
+        deleteProperty(SDKVersionTP.name);
     }
 
     return true;
@@ -626,6 +630,11 @@ void ToupBase::setupParams()
     FP(get_Revision(m_CameraHandle, &pRevision));
     snprintf(firmwareBuffer, 32, "%d", pRevision);
     IUSaveText(&FirmwareT[TC_FIRMWARE_REV], firmwareBuffer);
+    FirmwareTP.s = IPS_OK;
+
+    // SDK Version
+    IUSaveText(&SDKVersionT[0], FP(Version()));
+    SDKVersionTP.s = IPS_OK;
 
     // Max supported bit depth
     m_MaxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));

@@ -579,6 +579,10 @@ class ToupBase : public INDI::CCD
             TC_FIRMWARE_REV
         };
 
+        // SDK Version
+        ITextVectorProperty SDKVersionTP;
+        IText SDKVersionT[1] = {};
+
         // Gain Conversion
         INumberVectorProperty GainConversionNP;
         INumber GainConversionN[2];
@@ -587,7 +591,7 @@ class ToupBase : public INDI::CCD
             TC_HCG_THRESHOLD,
             TC_HCG_LCG_RATIO,
         };
-        
+
         ISwitchVectorProperty GainConversionSP;
         ISwitch GainConversionS[3];
         enum
@@ -612,7 +616,7 @@ class ToupBase : public INDI::CCD
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
         uint8_t m_TimeoutRetries { 0 };
-        
+
         uint32_t m_MaxGainNative { 0 };
         uint32_t m_MaxGainHCG { 0 };
         uint32_t m_NativeGain { 0 };
