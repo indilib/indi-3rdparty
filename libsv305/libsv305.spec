@@ -16,6 +16,7 @@ Provides: libCKCameraSDK_x64.so()(64bit)
 Provides: libCKCameraSDK_x64.so
 Provides: libSVBCameraSDK.so()(64bit)
 Provides: libSVBCameraSDK.so
+Provides: libSVBCameraSDK.so(libSVBCameraSDK)(64bit)
 
 BuildRequires: cmake
 BuildRequires: libfli-devel
