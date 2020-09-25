@@ -719,8 +719,13 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                     duration = (static_cast<double>(num)) / (static_cast<double>(denom));
                     StartExposure(duration);
                 }
-                else if (sscanf(currentSwitch->label, "%g", &duration) == 1)
+                else if ((duration = strtod(currentSwitch->label, nullptr)))
                 {
+                    // Fuji returns long exposure values ( > 60s) with m postfix
+                    if (currentSwitch->label[strlen(currentSwitch->label) - 1] == 'm')
+                    {
+                        duration *= 60;
+                    }
                     StartExposure(duration);
                 }
             }
