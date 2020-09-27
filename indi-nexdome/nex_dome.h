@@ -107,9 +107,6 @@ class NexDome : public INDI::Dome
             FACTORY_SAVE,
         };
 
-        ISwitchVectorProperty CloseShutterOnParkSP;
-        ISwitch CloseShutterOnParkS[2];
-
         // Settings
         enum
         {

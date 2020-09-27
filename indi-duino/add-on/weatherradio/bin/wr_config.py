@@ -19,9 +19,24 @@
 INDISERVER="localhost"
 INDIPORT="7624"
 
-# INDI device
+# configure INDI devices - separate multiple devices with ","
+
+# INDI device name
 INDIDEVICE="Weather Radio"
+# INDI device connection mode: "Ethernet" or "Serial"
+INDIDEVICEMODE="Serial"
+# INDI serial device port (only necessary for Serial mode)
 INDIDEVICEPORT="/dev/ttyUSB0"
+# INDI IP address (only necessary for Ethernet mode)
+INDI_IP_ADDRESS="172.28.4.40"
+# INDI IP port (only necessary for Ethernet mode)
+INDI_IP_PORT="80"
+# Geo Coordinates - Latitude (as decimal)
+GEO_COORD_LAT="43.916876"
+# Geo Coordinates - Longitude (as decimal)
+GEO_COORD_LONG="5.716624"
+# Geo Coordinates - Elevation (as decimal)
+GEO_COORD_ELEV="650.0"
 
 # RRD storage holding time series data
 RRDFILE="/usr/share/weatherradio/weather.rrd"

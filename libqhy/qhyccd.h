@@ -10,6 +10,7 @@
 
 
 
+
 #if defined (_WIN32)
 #include "cyapi.h"
 #endif
@@ -20,7 +21,7 @@
 typedef void qhyccd_handle;
 
 
-EXPORTFUNC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
+EXPORTC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
@@ -713,7 +714,7 @@ EXPORTC uint32_t STDCALL SetQHYCCDGPSMasterSlave(qhyccd_handle *handle,uint8_t i
 
 EXPORTC void STDCALL SetQHYCCDGPSSlaveModeParameter(qhyccd_handle *handle,uint32_t target_sec,uint32_t target_us,uint32_t deltaT_sec,uint32_t deltaT_us,uint32_t expTime);
 
-EXPORTFUNC void STDCALL SetQHYCCDQuit();
+EXPORTC void STDCALL SetQHYCCDQuit();
 
 EXPORTC uint32_t STDCALL QHYCCDVendRequestWrite(qhyccd_handle *h,uint8_t req,uint16_t value,uint16_t index1,uint32_t length,uint8_t *data);
 
@@ -780,7 +781,7 @@ EXPORTC uint32_t STDCALL SetQHYCCDWriteCMOS(qhyccd_handle *h,uint8_t number,uint
 */
 
 
-EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+EXPORTC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
 /**
   @fn uint32_t SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
   @brief For the camera with high gain low gain two channel combine to 16bit function, this API can set the combination parameters
@@ -794,6 +795,16 @@ EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *h
 */
 
 EXPORTC uint32_t STDCALL EnableQHYCCDImageOSD(qhyccd_handle *h,uint32_t i);
+
+EXPORTC uint32_t STDCALL GetQHYCCDPreciseExposureInfo(qhyccd_handle *h,
+                                                         uint32_t *PixelPeriod_ps,
+                                                         uint32_t *LinePeriod_ns,
+                                                         uint32_t *FramePeriod_us,
+                                                         uint32_t *ClocksPerLine,
+                                                         uint32_t *LinesPerFrame,
+                                                         uint32_t *ActualExposureTime,
+                                                         uint8_t  *isLongExposureMode);
+
 
 EXPORTC void STDCALL QHYCCDQuit();
 

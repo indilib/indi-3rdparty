@@ -1,3 +1,15 @@
+libasi (1.10) buster; urgency=medium
+
+  * ASICAM 1.16.0915 release:
+    V 1.15.0915
+    Fix some bugs
+
+    V 1.15.0819
+    Add new cameras
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Thu, 24 Sep 2020 21:44:20 +0300
+
 libasi (1.9) buster; urgency=medium
 
   * ASICAM 1.15.0617 release:

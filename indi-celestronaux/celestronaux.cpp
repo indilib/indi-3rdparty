@@ -1,3 +1,25 @@
+/*
+    Celestron Aux Mount Driver.
+
+    Copyright (C) 2020 Paweł T. Jochym
+    Copyright (C) 2020 Fabrizio Pollastri
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+*/
+
 #include <algorithm>
 #include <math.h>
 #include <queue>
@@ -11,7 +33,6 @@
 #include "config.h"
 
 #define BUFFER_SIZE 10240
-//int MAX_CMD_LEN = 32;
 
 #define READ_TIMEOUT 1 		// s
 #define CTS_TIMEOUT 100		// ms
@@ -34,9 +55,7 @@ using namespace INDI::AlignmentSubsystem;
 
 #define MOUNTINFO_TAB "Mount info"
 
-// We declare an auto pointer to CelestronAUX.
 std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
-
 
 void msleep(unsigned ms)
 {
@@ -103,6 +122,9 @@ const long   CelestronAUX::MIN_ALT              = -90.0 * STEPS_PER_DEGREE;
 // to 60000/STEPS_PER_DEGREE = 1.2874603271484375.
 const double CelestronAUX::TRACK_SCALE = 60000 / STEPS_PER_DEGREE;
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 CelestronAUX::CelestronAUX()
     : ScopeStatus(IDLE), AxisStatusALT(STOPPED), AxisDirectionALT(FORWARD), AxisStatusAZ(STOPPED),
       AxisDirectionAZ(FORWARD), TraceThisTickCount(0), TraceThisTick(false),
@@ -111,8 +133,7 @@ CelestronAUX::CelestronAUX()
 {
     setVersion(CAUX_VERSION_MAJOR, CAUX_VERSION_MINOR);
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
-                           TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION,
-                           4);
+                           TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION, 4);
 
     LOG_INFO("Celestron AUX instancing");
 
@@ -132,13 +153,17 @@ CelestronAUX::CelestronAUX()
     azm_ver_maj = azm_ver_min = 0;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 CelestronAUX::~CelestronAUX()
 {
 }
 
 
-// Private methods
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Abort()
 {
     if (MovementNSSP.s == IPS_BUSY)
@@ -250,12 +275,17 @@ bool CelestronAUX::detectNetScope(bool set_ip)
     return false;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::detectNetScope()
 {
     return detectNetScope(false);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Handshake()
 {
     LOGF_DEBUG("CAUX: connect %d (%s)", PortFD, (getActiveConnection() == serialConnection) ? "serial" : "net");
@@ -320,17 +350,26 @@ bool CelestronAUX::Handshake()
 
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Disconnect()
 {
     Abort();
     return INDI::Telescope::Disconnect();
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 const char *CelestronAUX::getDefaultName()
 {
     return "Celestron AUX";
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Park()
 {
     // Park at the northern horizon
@@ -344,12 +383,18 @@ bool CelestronAUX::Park()
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::UnPark()
 {
     SetParked(false);
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
 {
     // Call the alignment subsystem to translate the celestial reference frame coordinate
@@ -414,7 +459,9 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
 }
 
 
-// TODO: Make adjustment for the approx time it takes to slew to the given pos.
+/////////////////////////////////////////////////////////////////////////////////////
+/// TODO: Make adjustment for the approx time it takes to slew to the given pos.
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Goto(double ra, double dec)
 {
     LOGF_DEBUG("Goto - Celestial reference frame target RA:%lf(%lf h) Dec:%lf", ra * 360.0 / 24.0, ra, dec);
@@ -503,6 +550,9 @@ bool CelestronAUX::Goto(double ra, double dec)
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::initProperties()
 {
     /* Make sure to init parent properties first */
@@ -562,9 +612,20 @@ bool CelestronAUX::initProperties()
     IUFillSwitch(&NetDetectS[ISS_OFF], "ISS_OFF", "Detect", ISS_OFF);
     IUFillSwitchVector(&NetDetectSP, NetDetectS, 1, getDeviceName(), "NETDETECT", "Network scope", CONNECTION_TAB, IP_RW,
                        ISR_ATMOST1, 60, IPS_IDLE);
+
+    // JM 2020-09-23 Make it easier for users to connect by default via WiFi if they
+    // selected the Celestron WiFi labeled driver.
+    if (strstr(getDeviceName(), "WiFi"))
+    {
+        setActiveConnection(tcpConnection);
+    }
+
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::updateProperties()
 {
     INDI::Telescope::updateProperties();
@@ -609,6 +670,9 @@ bool CelestronAUX::updateProperties()
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::saveConfigItems(FILE *fp)
 {
     INDI::Telescope::saveConfigItems(fp);
@@ -620,22 +684,21 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::ISGetProperties(const char *dev)
 {
     /* First we let our parent populate */
     INDI::Telescope::ISGetProperties(dev);
 
-    if (isConnected())
-    {
-    }
-
     defineSwitch(&NetDetectSP);
-    IUResetSwitch(&NetDetectSP);
-    IDSetSwitch(&NetDetectSP, nullptr);
-
     return;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
                              char *formats[], char *names[], int n)
 {
@@ -648,6 +711,9 @@ bool CelestronAUX::ISNewBLOB(const char *dev, const char *name, int sizes[], int
     return INDI::Telescope::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     //  first check if it's for our device
@@ -663,6 +729,9 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
     return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (strcmp(dev, getDeviceName()) == 0)
@@ -683,9 +752,9 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         {
             // Even if the switch is in the requested state
             // perform the action on the mount.
-            int CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+            //int CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
             IUUpdateSwitch(&CordWrapSP, states, names, n);
-            CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
+            int CWIndex = IUFindOnSwitchIndex(&CordWrapSP);
             LOGF_INFO("CordWrap is now %s (%d)", CordWrapS[CWIndex].label, CWIndex);
             CordWrapSP.s = IPS_OK;
             IDSetSwitch(&CordWrapSP, nullptr);
@@ -741,6 +810,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             gpsemu = Index;
             return true;
         }
+
+        // Detect networked mount
         if (!strcmp(name, NetDetectSP.name))
         {
             LOG_INFO("Detecting networked scope...");
@@ -769,6 +840,9 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
     return INDI::Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
     if (strcmp(dev, getDeviceName()) == 0)
@@ -780,6 +854,9 @@ bool CelestronAUX::ISNewText(const char *dev, const char *name, char *texts[], c
     return INDI::Telescope::ISNewText(dev, name, texts, names, n);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
     int rate = IUFindOnSwitchIndex(&SlewRateSP);
@@ -814,6 +891,9 @@ bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
         return SlewALT(0);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
     int rate = IUFindOnSwitchIndex(&SlewRateSP);
@@ -848,11 +928,17 @@ bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
         return SlewAZ(0);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackingRequested()
 {
     return (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ReadScopeStatus()
 {
     struct ln_hrz_posn AltAz;
@@ -948,6 +1034,9 @@ bool CelestronAUX::ReadScopeStatus()
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Sync(double ra, double dec)
 {
     struct ln_hrz_posn AltAz;
@@ -981,6 +1070,9 @@ bool CelestronAUX::Sync(double ra, double dec)
     return false;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::TimerHit()
 {
     TraceThisTickCount++;
@@ -1091,15 +1183,10 @@ void CelestronAUX::TimerHit()
             */
 
             // Fold Azimuth into 0-360
-            if (AltAz.az < 0)
-                AltAz.az += 360.0;
-            if (AltAz.az > 360.0)
-                AltAz.az -= 360.0;
-            //AltAz.az = fmod(AltAz.az, 360.0);
+            AltAz.az = range360(AltAz.az);
 
             {
                 long altRate, azRate;
-
 
                 // This is in steps per minute
                 altRate = long(AltAz.alt * STEPS_PER_DEGREE - GetALT());
@@ -1139,6 +1226,9 @@ void CelestronAUX::TimerHit()
     TraceThisTick = false;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::updateLocation(double latitude, double longitude, double elevation)
 {
     UpdateLocation(latitude, longitude, elevation);
@@ -1149,6 +1239,9 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 }
 
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 long CelestronAUX::GetALT()
 {
     // return alt encoder adjusted to -90...90
@@ -1162,16 +1255,25 @@ long CelestronAUX::GetALT()
     }
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 long CelestronAUX::GetAZ()
 {
     return Az % STEPS_PER_REVOLUTION;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::slewing()
 {
     return slewingAlt || slewingAz;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Slew(AUXtargets trg, int rate)
 {
     AUXCommand cmd((rate < 0) ? MC_MOVE_NEG : MC_MOVE_POS, APP, trg);
@@ -1182,18 +1284,27 @@ bool CelestronAUX::Slew(AUXtargets trg, int rate)
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::SlewALT(int rate)
 {
     slewingAlt = (rate != 0);
     return Slew(ALT, rate);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::SlewAZ(int rate)
 {
     slewingAz = (rate != 0);
     return Slew(AZM, rate);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::GoToFast(long alt, long az, bool track)
 {
     //DEBUG=true;
@@ -1217,7 +1328,9 @@ bool CelestronAUX::GoToFast(long alt, long az, bool track)
     return true;
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::GoToSlow(long alt, long az, bool track)
 {
     //DEBUG=false;
@@ -1241,6 +1354,9 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
     return true;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::getVersion(AUXtargets trg)
 {
     AUXCommand firmver(GET_VER, APP, trg);
@@ -1251,6 +1367,9 @@ bool CelestronAUX::getVersion(AUXtargets trg)
     return true;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::getVersions()
 {
     getVersion(ANY);
@@ -1266,7 +1385,9 @@ void CelestronAUX::getVersions()
     getVersion(LIGHT);
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::setCordwrap(bool enable)
 {
 
@@ -1288,6 +1409,9 @@ bool CelestronAUX::getCordwrap()
     return cordwrap;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::setCordwrapPos(long pos)
 {
     AUXCommand cwcmd(MC_SET_CORDWRAP_POS, APP, AZM);
@@ -1297,6 +1421,9 @@ bool CelestronAUX::setCordwrapPos(long pos)
     return true;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 long CelestronAUX::getCordwrapPos()
 {
     AUXCommand cwcmd(MC_GET_CORDWRAP_POS, APP, AZM);
@@ -1305,7 +1432,9 @@ long CelestronAUX::getCordwrapPos()
     return cordwrapPos;
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Track(long altRate, long azRate)
 {
     // The scope rates are per minute?
@@ -1332,7 +1461,9 @@ bool CelestronAUX::Track(long altRate, long azRate)
 
 int debug_timeout = 30;
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::TimerTick(double dt)
 {
     querryStatus();
@@ -1379,7 +1510,9 @@ bool CelestronAUX::TimerTick(double dt)
     return true;
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::querryStatus()
 {
     AUXtargets trg[2] = { ALT, AZM };
@@ -1403,6 +1536,9 @@ void CelestronAUX::querryStatus()
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::emulateGPS(AUXCommand &m)
 {
     if (m.dst != GPS)
@@ -1512,6 +1648,9 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::processCmd(AUXCommand &m)
 {
     if (PROC_DEBUG)
@@ -1598,6 +1737,9 @@ void CelestronAUX::processCmd(AUXCommand &m)
     // if (PROC_DEBUG) IDLog("\n");
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::serial_readMsgs(AUXCommand c)
 {
     int n;
@@ -1692,6 +1834,9 @@ bool CelestronAUX::serial_readMsgs(AUXCommand c)
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::tcp_readMsgs()
 {
 
@@ -1760,7 +1905,9 @@ bool CelestronAUX::tcp_readMsgs()
 }
 
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::readMsgs(AUXCommand c)
 {
     if (getActiveConnection() == serialConnection)
@@ -1769,7 +1916,9 @@ bool CelestronAUX::readMsgs(AUXCommand c)
         return tcp_readMsgs();
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 int CelestronAUX::sendBuffer(int PortFD, buffer buf)
 {
 
@@ -1791,7 +1940,9 @@ int CelestronAUX::sendBuffer(int PortFD, buffer buf)
         return 0;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::sendCmd(AUXCommand &c)
 {
     buffer buf;
@@ -1857,7 +2008,9 @@ void CelestronAUX::setRTS(bool rts)
         LOGF_ERROR("Error setting handshake lines %s(%d).\n", strerror(errno), errno);
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::waitCTS(float timeout)
 {
     float step = timeout / 20.;
@@ -1875,7 +2028,9 @@ bool CelestronAUX::waitCTS(float timeout)
     return 0;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::detectRTSCTS()
 {
     bool retval;
@@ -1886,6 +2041,9 @@ bool CelestronAUX::detectRTSCTS()
 }
 
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 int CelestronAUX::aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n)
 {
     int errcode;
@@ -1908,7 +2066,9 @@ int CelestronAUX::aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, i
     return errcode;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout, int *n)
 {
     int errcode, ne;
@@ -1972,7 +2132,9 @@ int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout
     return TTY_OK;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::tty_set_speed(int PortFD, speed_t speed)
 {
     struct termios tty_setting;
@@ -1999,7 +2161,9 @@ bool CelestronAUX::tty_set_speed(int PortFD, speed_t speed)
     return true;
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::hex_dump(char *buf, buffer data, size_t size)
 {
     for (size_t i = 0; i < size; i++)

@@ -34,9 +34,10 @@ DSI::Device *DSI::DeviceFactory::getInstance(const char *devname)
     std::cerr << "Found Camera " << tmp->getCameraName() << std::endl << "Found CCD " << tmp->getCcdChipName() << std::endl;
 
     std::string ccdChipName = tmp->getCcdChipName();
+    std::string cameraName = tmp->getCameraName();
     delete tmp;
 
-    if (ccdChipName == "ICX254AL")
+    if (ccdChipName == "ICX254AL" || cameraName == "DSI Pro")
         return new DSI::DsiPro(devname);
 
     if (ccdChipName == "ICX404AK")
