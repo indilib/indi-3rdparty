@@ -2,7 +2,7 @@ indi-rpicam (1.1) stable; urgency=low
 
   * Added support for the V2 camera (The Sony imx219-sensor)
 
- -- Lars Berntzon <lars.berntzon@cecilia-data.se>  Mon Sep 28 21:28:58 CEST 2020
+ -- Lars Berntzon <lars.berntzon@cecilia-data.se>  Mon, 28 Sep 2020 21:28:58 +0200
 
 indi-rpicam (1.0) stable; urgency=low
 
