@@ -27,6 +27,9 @@ class Pipeline
 {
 public:
     Pipeline();
+    virtual ~Pipeline();
+
+    // Add pipeline after this, also takes ownership of the object.
     void daisyChain(Pipeline *p);
     void reset_pipe();
 

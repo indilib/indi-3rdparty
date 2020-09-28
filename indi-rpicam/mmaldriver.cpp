@@ -19,9 +19,10 @@
  */
 
 /**
- * INDI driver for Raspberry Pi 12Mp High Quality camera.
+ * INDI driver for Raspberry Pi 8Mp and 12Mp High Quality camera.
  */
 #include <algorithm>
+#include <memory>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
@@ -34,16 +35,13 @@
 #include "cameracontrol.h"
 #include "jpegpipeline.h"
 #include "broadcompipeline.h"
+#include "raw10tobayer16pipeline.h"
 #include "raw12tobayer16pipeline.h"
 #include "pipetee.h"
 
-MMALDriver::MMALDriver() : INDI::CCD(), jpeg_pipe(), brcm_pipe(), raw12_pipe(&brcm_pipe, &PrimaryCCD)
+MMALDriver::MMALDriver() : INDI::CCD()
 {
     setVersion(1, 0);
-
-    jpeg_pipe.daisyChain(&brcm_pipe);
-    // receiver->daisyChain(&raw_writer);
-    brcm_pipe.daisyChain(&raw12_pipe);
 }
 
 MMALDriver::~MMALDriver()
@@ -127,6 +125,27 @@ bool MMALDriver::Connect()
     if (!strcmp(camera_control->get_camera()->get_name(), "imx477") ||
         !strcmp(camera_control->get_camera()->get_name(), "testc")) {
         pixel_size_x = pixel_size_y = 1.55F;
+
+        raw_pipe.reset(new JpegPipeline());
+
+        BroadcomPipeline *brcm_pipe = new BroadcomPipeline();
+        raw_pipe->daisyChain(brcm_pipe);
+
+        Raw12ToBayer16Pipeline *raw12_pipe = new Raw12ToBayer16Pipeline(brcm_pipe, &PrimaryCCD);
+        // receiver->daisyChain(&raw_writer);
+        brcm_pipe->daisyChain(raw12_pipe);
+    }
+    else if (!strcmp(camera_control->get_camera()->get_name(), "imx219")) {
+        pixel_size_x = pixel_size_y = 1.12F;
+
+        raw_pipe.reset(new JpegPipeline());
+
+        BroadcomPipeline *brcm_pipe = new BroadcomPipeline();
+        raw_pipe->daisyChain(brcm_pipe);
+
+        Raw10ToBayer16Pipeline *raw10_pipe = new Raw10ToBayer16Pipeline(brcm_pipe, &PrimaryCCD);
+        // receiver->daisyChain(&raw_writer);
+        brcm_pipe->daisyChain(raw10_pipe);
     }
     else {
         LOGF_WARN("%s: Unknown camera name: %s\n", __FUNCTION__, camera_control->get_camera()->get_name());
@@ -148,6 +167,8 @@ bool MMALDriver::Disconnect()
     DEBUG(INDI::Logger::DBG_SESSION, "MMAL device disconnected successfully!");
 
     camera_control = nullptr;
+
+    raw_pipe = nullptr;
 
     return true;
 }
@@ -264,7 +285,7 @@ bool MMALDriver::UpdateCCDFrame(int x, int y, int w, int h)
     int xRes = PrimaryCCD.getXRes();
     int yRes = PrimaryCCD.getYRes();
     int bpp = PrimaryCCD.getBPP();
-    int nbuf = (xRes * yRes * (bpp / 8));
+    unsigned int nbuf = static_cast<unsigned int>(xRes * yRes * (bpp / 8));
 
     nbuf *= 2;
 
@@ -314,13 +335,13 @@ bool MMALDriver::StartExposure(float duration)
 
 
     ccdBufferLock.lock();
-    jpeg_pipe.reset_pipe();
+    raw_pipe->reset_pipe();
 
     image_buffer_pointer = PrimaryCCD.getFrameBuffer();
     try {
         camera_control->get_camera()->set_iso(isoSpeed);
         camera_control->get_camera()->set_gain(gain);
-        camera_control->get_camera()->set_shutter_speed_us(static_cast<long>(ExposureTime * 1E6F));
+        camera_control->get_camera()->set_shutter_speed_us(static_cast<long>(ExposureTime) * 1000000L);
         camera_control->start_capture();
     }
     catch (MMALException &e)
@@ -432,7 +453,7 @@ void MMALDriver::TimerHit()
 void MMALDriver::pixels_received(uint8_t *buffer, size_t length)
 {
     while(length--) {
-        jpeg_pipe.acceptByte(*buffer++);
+        raw_pipe->acceptByte(*buffer++);
     }
 }
 

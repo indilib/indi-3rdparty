@@ -26,6 +26,13 @@ Pipeline::Pipeline()
 
 }
 
+Pipeline::~Pipeline()
+{
+    if (nextPipeline) {
+        delete nextPipeline;
+    }
+}
+
 void Pipeline::daisyChain(Pipeline *p)
 {
     Pipeline *last = this;

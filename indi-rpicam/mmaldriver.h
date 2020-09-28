@@ -88,10 +88,7 @@ private:
 
   std::unique_ptr<CameraControl> camera_control; // Controller object for the camera communication.
 
-  JpegPipeline jpeg_pipe; // Start of pipeline that recieved raw data from camera.
-  BroadcomPipeline brcm_pipe;  // Second in pipe.
-  //    PipeTee raw_writer("/dev/shm/capture.tap"); // Only for debugging by tapping intermediate data.
-  Raw12ToBayer16Pipeline raw12_pipe; // Final in pipe, converting RAW12 to Bayer 16 bits.
+  std::unique_ptr<Pipeline> raw_pipe; // Start of pipeline that recieved raw data from camera.
 };
 
 extern std::unique_ptr<MMALDriver> mmalDevice;
