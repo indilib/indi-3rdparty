@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 PROJECT(indi_rpicam CXX C)
 
 set(INDI_RPICAM_VERSION_MAJOR 1)
-set(INDI_RPICAM_VERSION_MINOR 0)
+set(INDI_RPICAM_VERSION_MINOR 1)
 
 include(GNUInstallDirs)
 include(CMakeCommon)
