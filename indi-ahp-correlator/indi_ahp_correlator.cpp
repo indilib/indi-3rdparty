@@ -62,12 +62,10 @@ void ISSnoopDevice (XMLEle *root)
 void Interferometer::Callback()
 {
     unsigned long counts[xc_get_nlines()];
-    unsigned long autocorrelations[xc_get_nlines()];
     unsigned long crosscorrelations[xc_get_nbaselines()];
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
-    memset(framebuffer, 0, w*h*sizeof(double));
     char str[MAXINDINAME];
     str[xc_get_bps()] = 0;
 
@@ -75,7 +73,7 @@ void Interferometer::Callback()
     threadsRunning = true;
     while (threadsRunning)
     {
-        xc_get_packet(counts, autocorrelations, crosscorrelations);
+        xc_get_packet(counts, nullptr, crosscorrelations);
         timeleft = ExposureRequest-(getCurrentTime()-ExposureStart);
 
         if(InExposure) {
@@ -90,9 +88,10 @@ void Interferometer::Callback()
                 LOG_INFO("Download complete.");
                 ExposureComplete(&PrimaryCCD);
             }
+        } else {
+            memset(framebuffer, 0, w*h*sizeof(double));
         }
 
-        int center = w*h/2+w/2;
         int idx = 0;
         double minalt = 0;
         int farest = 0;
@@ -100,14 +99,16 @@ void Interferometer::Callback()
             totalcounts[x] += counts[x];
             for(int y = x+1; y < xc_get_nlines(); y++) {
                 totalcorrelations[idx] += crosscorrelations[idx];
-                if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                    INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                    int xx = static_cast<int>(w*uv.u/2.0);
-                    int yy = static_cast<int>(h*uv.v/2.0);
-                    int z = center+xx+yy*w;
-                    if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                        framebuffer[z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
-                        framebuffer[w*h-1-z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
+                if(InExposure) {
+                    if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
+                        INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                        int xx = static_cast<int>(w*uv.u/2.0);
+                        int yy = static_cast<int>(h*uv.v/2.0);
+                        int z = w*h/2+w/2+xx+yy*w;
+                        if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
+                            framebuffer[z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
+                            framebuffer[w*h-1-z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
+                        }
                     }
                 }
                 double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);

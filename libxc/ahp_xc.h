@@ -97,6 +97,15 @@ typedef enum {
     ENABLE_CAPTURE = 13
 } it_cmd;
 
+/**
+* \brief This type is used for correlations
+*/
+typedef struct {
+    unsigned long correlations;
+    unsigned long counts;
+    double coherence;
+} correlation;
+
 /*@}*/
 
 /**
@@ -107,32 +116,125 @@ typedef enum {
  * \defgroup Communication
 */
 /*@{*/
+
+/**
+* \brief Connect to a serial port
+* \param port The serial port name or filename
+* \return Returns 0 on success, -1 if any error was encountered
+* \sa xc_disconnect
+*/
 DLL_EXPORT int xc_connect(const char *port);
-DLL_EXPORT void xc_disconnect();
-DLL_EXPORT int xc_get_baudrate();
-DLL_EXPORT void xc_set_baudrate(baud_rate rate, int setterm);
+
+/**
+* \brief Connect to a serial port or other stream with the given file descriptor
+* \param fd The file descriptor of the stream
+*/
 DLL_EXPORT void xc_connect_fd(int fd);
+
+/**
+* \brief Disconnect from the serial port opened with xc_connect()
+* \sa xc_connect
+*/
+DLL_EXPORT void xc_disconnect();
+
+/**
+* \brief Obtain the current baud rate
+* \return Returns the baud rate
+*/
+DLL_EXPORT int xc_get_baudrate();
+
+/**
+* \brief Obtain the current baud rate
+* \param rate The new baud rate index
+* \param setterm Change the termios settings of the current fd or port opened
+*/
+DLL_EXPORT void xc_set_baudrate(baud_rate rate, int setterm);
+
 /*@}*/
 /**
  * \defgroup Features of the correlator
 */
 /*@{*/
+
+/**
+* \brief Obtain the current baud rate
+* \return Returns 0 on success, -1 if any error was encountered
+*/
 DLL_EXPORT int xc_get_properties();
+
+/**
+* \brief Obtain the correlator bits per sample
+* \return Returns the bits per sample value
+*/
 DLL_EXPORT int xc_get_bps();
+
+/**
+* \brief Obtain the correlator number of lines
+* \return Returns the number of lines
+*/
 DLL_EXPORT int xc_get_nlines();
+
+/**
+* \brief Obtain the correlator total baselines
+* \return Returns the baselines quantity
+*/
 DLL_EXPORT int xc_get_nbaselines();
+
+/**
+* \brief Obtain the correlator maximum delay value
+* \return Returns the delay size
+*/
 DLL_EXPORT int xc_get_delaysize();
+
+/**
+* \brief Obtain the correlator maximum readout frequency
+* \return Returns the maximum readout frequency
+*/
 DLL_EXPORT int xc_get_frequency();
+
+/**
+* \brief Obtain the serial packet time
+* \return Returns the packet transmission time
+*/
 DLL_EXPORT unsigned int xc_get_packettime();
+
+/**
+* \brief Obtain the serial packet size
+* \return Returns the packet size
+*/
 DLL_EXPORT int xc_get_packetsize();
 /*@}*/
 /**
  * \defgroup Data and streaming
 */
 /*@{*/
-DLL_EXPORT void xc_scan_autocorrelations(unsigned long *spectrum, double *percent, int *interrupt);
-DLL_EXPORT void xc_scan_crosscorrelations(unsigned long *crosscorrelations, double *percent, int *interrupt);
-DLL_EXPORT void xc_get_packet(unsigned long *counts, unsigned long *autocorrelations, unsigned long *correlations);
+
+/**
+* \brief Grab a data packet
+* \param counts The counts of each input pulses within the packet time
+* \param autocorrelations The autocorrelations counts of each input pulses with itself delayed by the clock cycles defined with xc_set_line.
+* \param crosscorrelations The crosscorrelations counts of each input's with others' pulses.
+* \sa xc_set_line
+* \sa xc_set_delay
+*/
+DLL_EXPORT void xc_get_packet(unsigned long *counts, unsigned long *autocorrelations, unsigned long *crosscorrelations);
+
+/**
+* \brief Scan all available delay channels and get autocorrelations of each input
+* \param autocorrelations A pre-allocated correlation array of size delay_size*num_lines which will be filled with the autocorrelated values.
+* \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
+* \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
+*/
+DLL_EXPORT void xc_scan_autocorrelations(correlation *autocorrelations, double *percent, int *interrupt);
+
+/**
+* \brief Scan all available delay channels and get crosscorrelations of each input with others
+* \param autocorrelations A pre-allocated correlation array of size (delay_size*2+1)*num_baselines which will be filled with the crosscorrelated values.
+* \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
+* \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
+*/
+DLL_EXPORT void xc_scan_crosscorrelations(correlation *crosscorrelations, double *percent, int *interrupt);
+
 /*@}*/
 /**
  * \defgroup Commands and setup of the correlator
