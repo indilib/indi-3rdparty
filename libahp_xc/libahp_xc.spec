@@ -64,12 +64,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libxc
+cd libahp_xc
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libxc
+cd libahp_xc
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
