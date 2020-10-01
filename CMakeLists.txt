@@ -43,9 +43,10 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} fxload DIR7_FOUND)
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsv305 DIR9_FOUND)
+            STRING(FIND ${SOURCE_FILE} libxc DIR10_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
-                NOT ${DIR9_FOUND} EQUAL -1)
+                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND})
                 LIST(REMOVE_ITEM ALL_SOURCE_FILES ${SOURCE_FILE})
             ENDIF ()
         ENDFOREACH ()
@@ -547,8 +548,15 @@ SET(LIBRARIES_FOUND FALSE)
 endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
+# AHP
 if (WITH_AHP_CORRELATOR)
+find_package(AHPXC)
+if(AHPXC_FOUND)
 add_subdirectory(indi-ahp-correlator)
+else (AHPXC_FOUND)
+add_subdirectory(libxc)
+SET(LIBRARIES_FOUND FALSE)
+endif (AHPXC_FOUND)
 endif(WITH_AHP_CORRELATOR)
 
 # sv305
@@ -643,6 +651,10 @@ endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 if (WITH_SV305 AND NOT SV305_FOUND)
 message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
 endif (WITH_SV305 AND NOT SV305_FOUND)
+
+if (WITH_AHP_CORRELATOR AND NOT AHPXC_FOUND)
+message(STATUS "libahp_xc was not found and will now be built. Please install libahp_xc first before running cmake again to install indi-ahp-correlator.")
+endif (WITH_AHP_CORRELATOR AND NOT AHPXC_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)

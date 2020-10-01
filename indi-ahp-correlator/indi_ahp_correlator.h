@@ -22,13 +22,11 @@
 
 #include "indiccd.h"
 #include "indicorrelator.h"
+#include <ahp_xc.h>
 
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
-#define PIXEL_SIZE (AIRY / settingsN[0].value / MAX_RESOLUTION)
-#define STOP_BITS 2
-#define DATA_BITS 8
-#define BAUD_SIZE (STOP_BITS+DATA_BITS+1)
+#define PIXEL_SIZE (AIRY * settingsN[0].value / MAX_RESOLUTION)
 
 class baseline : public INDI::Correlator
 {
@@ -47,8 +45,14 @@ class Interferometer : public INDI::CCD
 public:
     Interferometer();
     ~Interferometer() {
-        for(int x = 0; x < NUM_BASELINES(); x++)
+        for(int x = 0; x < xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
+
+        for(int x = 0; x < xc_get_nlines(); x++)
+            xc_set_power(x, false, false);
+
+        xc_set_baudrate(R_57600, false);
+        xc_disconnect();
 
         free(correlationsN);
 
@@ -127,7 +131,7 @@ protected:
     Connection::Serial *serialConnection;
 
     // For Serial connection
-    int PortFD = -1;
+    int PortFD;
 
 private:
 
@@ -203,7 +207,7 @@ private:
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
     void ActiveLine(int, bool, bool);
-    void SetFrequencyDivider(unsigned int divider);
+    void SetFrequencyDivider(unsigned char divider);
     void EnableCapture(bool start);
     // Struct to keep timing
     struct timeval ExpStart;
@@ -211,19 +215,10 @@ private:
     double ExposureStart;
     bool threadsRunning;
 
-    inline int NUM_BASELINES() { return NUM_LINES*(NUM_LINES-1)/2; }
-    inline int FRAME_SIZE() { return ((NUM_BASELINES()+NUM_LINES)*SAMPLE_SIZE)+HEADER_SIZE; }
-    inline double FRAME_TIME() { return (double)FRAME_SIZE()*BAUD_SIZE/(double)serialConnection->baud(); }
-    inline double SAMPLE_RATE() { return pow(2, SAMPLE_SIZE*4)*serialConnection->baud(); }
-
     inline double getCurrentTime()
     {
         struct timeval curTime;
         gettimeofday(&curTime, nullptr);
         return (double)curTime.tv_sec+(double)curTime.tv_usec/1000000.0;
     }
-
-    int NUM_LINES;
-    int DELAY_LINES;
-    int SAMPLE_SIZE;
 };
