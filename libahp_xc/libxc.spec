@@ -1,4 +1,4 @@
-Name: libxc
+Name: libahp_xc
 Version: 1.8.7.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
