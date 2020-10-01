@@ -1,3 +1,9 @@
+indi-astromechfoc (0.2) bionic; urgency=low
+
+  * Fixed position limits.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 1 Oct 2020 05:00:00 +0300
+
 indi-astromechfoc (0.1) bionic; urgency=low
 
   * Initial Release

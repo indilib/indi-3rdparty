@@ -20,23 +20,22 @@
 *******************************************************************************/
 
 #include "astromech_focuser.h"
-#include "indicom.h"
-#include "connectionplugins/connectionserial.h"
+#include "config.h"
+
+#include <indicom.h>
+#include <connectionplugins/connectionserial.h>
 
 #include <cmath>
 #include <memory>
 #include <cstring>
 #include <unistd.h>
 
-// We declare an auto pointer to astromechanics_foc.
 static std::unique_ptr<astromechanics_foc> Astromechanics_foc(new astromechanics_foc());
 
 // Delay for receiving messages
 #define FOCUS_TIMEOUT  1000
 #define FOC_POSMAX_HARDWARE 9999
 #define FOC_POSMIN_HARDWARE 0
-
-void ISPoll(void *p);
 
 void ISGetProperties(const char *dev)
 {
@@ -71,10 +70,9 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
     INDI_UNUSED(n);
 }
 
-bool astromechanics_foc::Disconnect() {
+bool astromechanics_foc::Disconnect()
+{
     SetApperture(0);
-    MoveAbsFocuser(0);
-
     return true;
 }
 
@@ -88,6 +86,7 @@ void ISSnoopDevice(XMLEle *root)
 ************************************************************************************/
 astromechanics_foc::astromechanics_foc()
 {
+    setVersion(INDI_ASTROMECHFOC_VERSION_MAJOR, INDI_ASTROMECHFOC_VERSION_MINOR);
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
 }
 
@@ -108,17 +107,24 @@ bool astromechanics_foc::initProperties()
 
     FocusMaxPosN[0].min = FOC_POSMIN_HARDWARE;
     FocusMaxPosN[0].max = FOC_POSMAX_HARDWARE;
-    FocusMaxPosN[0].step = (FocusMaxPosN[0].max - FocusMaxPosN[0].min) / 20.0;
-    FocusMaxPosN[0].value = 5000;
-    FocusAbsPosN[0].max = FocusAbsPosN[0].value;
+    FocusMaxPosN[0].step = 500;
+    FocusMaxPosN[0].value = FOC_POSMAX_HARDWARE;
 
-    FocusRelPosN[0].min = 1;
-    FocusRelPosN[0].max = FocusAbsPosN[0].max;
-    FocusRelPosN[0].value = 500;
-    FocusRelPosN[0].step = 10;
+    FocusAbsPosN[0].min = FOC_POSMIN_HARDWARE;
+    FocusAbsPosN[0].max = FOC_POSMAX_HARDWARE;
+    FocusAbsPosN[0].step = 500;
+    FocusAbsPosN[0].value = 0;
 
+    FocusRelPosN[0].min = FocusAbsPosN[0].min;
+    FocusRelPosN[0].max = FocusAbsPosN[0].max / 2;
+    FocusRelPosN[0].step = 250;
+    FocusRelPosN[0].value = 0;
+
+    // Aperture
     IUFillNumber(&AppertureN[0], "LENS_APP", "Index", "%2d", 0, 22, 1, 0);
-    IUFillNumberVector(&AppertureNP, AppertureN, 1, getDeviceName(),"LENS_APP_SETTING", "Apperture", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&AppertureNP, AppertureN, 1, getDeviceName(), "LENS_APP_SETTING", "Apperture", MAIN_CONTROL_TAB, IP_RW,
+                       60, IPS_IDLE);
+
     serialConnection->setDefaultBaudRate(Connection::Serial::B_38400);
     return true;
 }
@@ -159,8 +165,9 @@ bool astromechanics_foc::Handshake()
     LOG_DEBUG("Handshake");
 
     tty_write_string(PortFD, FOC_cmd, &nbytes_written);
-    LOGF_INFO("CMD (%s)", FOC_cmd);
-    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK) {
+    LOGF_INFO("CMD <%s>", FOC_cmd);
+    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+    {
         LOGF_DEBUG("RES (%s)", FOC_res);
         sscanf(FOC_res, "%d#", &FOC_pos_measd);
         LOGF_INFO("Set to absolute focus position (%d)", FOC_pos_measd);
@@ -169,7 +176,9 @@ bool astromechanics_foc::Handshake()
 
         SetApperture(0);
         return true;
-    } else {
+    }
+    else
+    {
         LOG_ERROR("ERROR HANDSHAKE");
     }
 
@@ -183,7 +192,8 @@ bool astromechanics_foc::ISNewNumber(const char *dev, const char *name, double v
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        if (strcmp(name, "LENS_APP_SETTING") == 0) {
+        if (strcmp(name, "LENS_APP_SETTING") == 0)
+        {
             AppertureNP.s = IPS_OK;
             IUUpdateNumber(&AppertureNP, values, names, n);
 
@@ -205,7 +215,8 @@ IPState astromechanics_foc::MoveAbsFocuser(uint32_t targetTicks)
 {
     LOGF_DEBUG("MoveAbsFocuser (%d)", targetTicks);
 
-    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max) {
+    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+    {
         LOG_ERROR("Error, requested position is out of range!");
         return IPS_ALERT;
     }
@@ -214,11 +225,11 @@ IPState astromechanics_foc::MoveAbsFocuser(uint32_t targetTicks)
     char abs_pos_char[32]  = {0};
     int nbytes_written = 0;
 
-    sprintf(abs_pos_char, "%d", targetTicks);
+    sprintf(abs_pos_char, "%u", targetTicks);
     strcat(abs_pos_char, "#");
     strcat(FOC_cmd, abs_pos_char);
 
-    LOGF_DEBUG("CMD (%s)", FOC_cmd);
+    LOGF_DEBUG("CMD <%s>", FOC_cmd);
     tty_write_string(PortFD, FOC_cmd, &nbytes_written);
 
     FocusAbsPosN[0].value = GetAbsFocuserPosition();
@@ -231,24 +242,29 @@ IPState astromechanics_foc::MoveAbsFocuser(uint32_t targetTicks)
 ************************************************************************************/
 IPState astromechanics_foc::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 {
-    // Calculation of the demand absolute position
-    uint32_t targetTicks = FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
+    // Clamp
+    int32_t offset = ((dir == FOCUS_INWARD) ? -1 : 1) * static_cast<int32_t>(ticks);
+    int32_t newPosition = FocusAbsPosN[0].value + offset;
+    newPosition = std::max(static_cast<int32_t>(FocusAbsPosN[0].min), std::min(static_cast<int32_t>(FocusAbsPosN[0].max),
+                           newPosition));
+
     FocusAbsPosNP.s = IPS_BUSY;
     IDSetNumber(&FocusAbsPosNP, nullptr);
 
-    return MoveAbsFocuser(targetTicks);
+    return MoveAbsFocuser(newPosition);
 }
 
 /************************************************************************************
  *
 ************************************************************************************/
-void astromechanics_foc::SetApperture(uint32_t index) {
-    LOGF_INFO("SetApperture(%d)", index);
+void astromechanics_foc::SetApperture(uint32_t index)
+{
+    LOGF_DEBUG("SetApperture(%d)", index);
     char FOC_cmd[32] = "A";
     char app_index_char[32]  = {0};
     int nbytes_written = 0;
 
-    sprintf(app_index_char, "%d", index);
+    sprintf(app_index_char, "%u", index);
     strcat(app_index_char, "#");
     strcat(FOC_cmd, app_index_char);
 
@@ -260,7 +276,7 @@ void astromechanics_foc::SetApperture(uint32_t index) {
 ************************************************************************************/
 uint32_t astromechanics_foc::GetAbsFocuserPosition()
 {
-    LOGF_INFO("GetAbsFocuserPosition",0);
+    LOGF_DEBUG("GetAbsFocuserPosition", 0);
     char FOC_cmd[32] = "P#";
     char FOC_res[32] = {0};
     int FOC_pos_measd = 0;
@@ -270,7 +286,8 @@ uint32_t astromechanics_foc::GetAbsFocuserPosition()
 
     tty_write_string(PortFD, FOC_cmd, &nbytes_written);
     LOGF_DEBUG("CMD (%s)", FOC_cmd);
-    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK) {
+    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+    {
         sscanf(FOC_res, "%d#", &FOC_pos_measd);
 
         LOGF_DEBUG("RES (%s)", FOC_res);
