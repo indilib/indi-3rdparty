@@ -1,4 +1,4 @@
-Name: libxc
+Name: libahp_xc
 Version: 1.8.7.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -45,7 +45,7 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-Provides: libahp_xc.so.1()(64bit)
+Provides: libahp_xc.so()(64bit)
 Provides: libahp_xc.so
 
 %description
@@ -64,12 +64,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libxc
+cd libahp_xc
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libxc
+cd libahp_xc
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
