@@ -1,6 +1,6 @@
 /*  Memory information for Ardiono.
 
-    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public

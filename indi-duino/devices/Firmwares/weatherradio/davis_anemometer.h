@@ -8,7 +8,7 @@
     The wind speed is measured in m/s, the direction is measured in deg, i.e.
     N = 0 deg, E = 90 deg etc.
 
-    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public

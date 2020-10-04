@@ -1,6 +1,6 @@
 /*  Firmware for a weather sensor device streaming the data as JSON documents.
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -19,7 +19,6 @@
 
 *********************************************************************** */
 #include "config.h"
-#include "version.h"
 
 // sensor measuring duration
 struct {
@@ -76,6 +75,10 @@ void updateSensorData() {
   updateTSL2591();
   sensor_read.tsl2591_read = millis() - start;
 #endif //USE_TSL2591_SENSOR
+
+#ifdef USE_OLED
+    setDisplayText(getSensorData(true));
+#endif // USE_OLED
 }
 
 /**
@@ -130,7 +133,7 @@ String getSensorData(bool pretty) {
 
 String getCurrentVersion() {
   StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
-  doc["version"] = METEORADIO_VERSION;
+  doc["version"] = WEATHERRADIO_VERSION;
 
   String result = "";
   serializeJson(doc, result);
@@ -224,6 +227,16 @@ void setup() {
 
   // sensors never read
   lastSensorRead = 0;
+
+#ifdef USE_OLED
+  // initial text
+  String init_text  = "Weather Radio V ";
+  init_text += WEATHERRADIO_VERSION;
+
+  initDisplay();
+  setDisplayText(init_text);
+#endif
+
 
 #ifdef USE_DAVIS_SENSOR
   initAnemometer();
@@ -340,6 +353,10 @@ void loop() {
 
 #ifdef USE_WIFI
   wifiServerLoop();
+#endif
+
+#ifdef USE_OLED
+  displayText();
 #endif
 
 #ifdef USE_TSL237_SENSOR

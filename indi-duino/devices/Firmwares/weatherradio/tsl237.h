@@ -1,7 +1,7 @@
 /*  Measuring functions for the TSL 237 light sensor.
 
     Copyright (C) 2020 Allesandro Pensato,
-                       Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+                       Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
