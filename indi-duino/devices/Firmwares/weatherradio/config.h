@@ -48,6 +48,8 @@
 
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100  // the timeout between scrolling a single display line
+#define OLED_DISPLAY_TIMEOUT -1  // the timeout in secs after which the display will turn off
+#define OLED_BUTTONPIN 15        // pin for button to turn display on
 #define OLED_I2C_ADDRESS    0x3C // I2C address of the OLED display - consult data sheet
 
 // ============== device configurations (end) ==============
