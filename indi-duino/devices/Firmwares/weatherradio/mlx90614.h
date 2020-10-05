@@ -44,3 +44,9 @@ void serializeMLX(JsonDocument & doc) {
     data["T obj"] = mlxData.object_t;
   }
 }
+
+String displayMLXParameters() {
+  if (mlxData.status == false) return "";
+  
+  return " T amb: " + String(mlxData.ambient_t, 1) + "\n T obj: " + String(mlxData.object_t, 1) + "\n";
+}

@@ -41,3 +41,9 @@ void serializeDHT(JsonDocument &doc) {
     data["Hum"] = dhtData.humidity;
   }
 }
+
+String displayDHTParameters() {
+  if (dhtData.status == false) return "";
+  
+  return " Temp: " + String(dhtData.temperature, 1) + "\n Hum: " + String(dhtData.humidity, 1) + "\n";
+}

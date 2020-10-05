@@ -165,3 +165,12 @@ void serializeTSL2591(JsonDocument &doc) {
     data["Timing"]  = tsl2591Data.timing;
   }
 }
+
+String displayTSL2591Parameters() {
+  //if (tsl2591Data.status == false) return "";
+  
+  String result = " Lux: " + String(tsl2591Data.lux, 1) + "\n Visible: " + String(tsl2591Data.visible, DEC);
+  result += "\n IR: " + String(tsl2591Data.ir, DEC) + "\n" + "\n Gain: " + String(tsl2591Data.gain, DEC);
+  result += "\n Timing: " + String(tsl2591Data.timing, DEC) + "\n";
+  return result;
+}

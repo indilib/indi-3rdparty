@@ -37,3 +37,9 @@ void serializeBME(JsonDocument &doc) {
     data["Hum"] = bmeData.humidity;
   }
 }
+
+String displayBMEParameters() {
+  if (bmeData.status == false) return "";
+
+  return " Temp: " + String(bmeData.temperature, 1) + "\n Pres: " + String(bmeData.pressure, 1) + "\n Hum: " + String(bmeData.humidity, 1) + "\n";
+}

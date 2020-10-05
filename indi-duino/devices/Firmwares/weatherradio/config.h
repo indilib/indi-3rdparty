@@ -19,8 +19,8 @@
 #define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
-#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
-#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
+//#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
+//#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)

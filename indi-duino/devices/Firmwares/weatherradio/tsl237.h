@@ -70,3 +70,9 @@ void serializeTSL237(JsonDocument &doc) {
     data["Frequency"] = tsl237Data.frequency;
   }
 }
+
+String displayTSL237Parameters() {
+  if (tsl237Data.status == false) return "";
+  
+  return " SQM: " + String(tsl237Data.sqm, 1) + "\n Frequency: " + String(tsl237Data.frequency, 1) + "\n";
+}
