@@ -15,10 +15,12 @@
 SSD1306AsciiWire oled;
 
 struct {
-  String oled_display_text;
+  char * text;
+  char * line;
+  char * text_orig;
   unsigned long lastShowDisplay;
   bool show;
-} oledData {"", 0, true};
+} oledData {NULL, NULL, NULL, 0, true};
 
 
 void oledShow (bool status) {
@@ -65,8 +67,6 @@ int oledCountLines(String text) {
   return count;
 }
 
-char *oled_text = NULL;
-char *oled_line = NULL;
 uint32_t scrollTime = 0;
 bool oled_rolling;
 bool oled_print_finished;
@@ -76,14 +76,22 @@ void setDisplayText(String text) {
   // Set cursor to last line of memory window.
   oled.setCursor(0, oled.displayRows() - oled.fontRows());
 
+  // clean up
+  if (oledData.text != NULL) free(oledData.text);
+  if (oledData.text_orig != NULL) free(oledData.text_orig);
+  oledData.text = NULL;
+  oledData.line = NULL;
+
   // copy the text to the buffer and initialize from string
-  oledData.oled_display_text = text;
+  oledData.text = new char[text.length() + 1];
+  oledData.text_orig = new char[text.length() + 1];
+  text.toCharArray(oledData.text, text.length() + 1);
+  strcpy(oledData.text_orig, oledData.text);
+
   // determine whether we need to roll the display
-  oled_rolling = (oledCountLines(oledData.oled_display_text) > oled.fontRows());
+  oled_rolling = (oledCountLines(text) > oled.fontRows());
   // fill the first line
   oled_print_finished = false;
-  oled_text = NULL;
-  oled_line = NULL;
 }
 
 void displayText() {
@@ -101,25 +109,24 @@ void displayText() {
       scrollTime = now;
     }
   } else if ((millis() - scrollTime) > OLED_SCROLL_TIMEOUT) {
-    if (oled_line == NULL && ! oled_print_finished) {
+    if (oledData.line == NULL && ! oled_print_finished) {
       // initialize the text to restart the loop
-      oled_text = new char[oledData.oled_display_text.length() + 1];
-      oledData.oled_display_text.toCharArray(oled_text, oledData.oled_display_text.length() + 1);
-      oled_line = strtok(oled_text, "\r\n");
+      strcpy(oledData.text, oledData.text_orig);
+      oledData.line = strtok(oledData.text, "\r\n");
+
       // do not repeat this if display is not rolling
-      if (! oled_rolling)
-        oled_print_finished = true;
+      if (! oled_rolling) oled_print_finished = true;
     } else {
       // take next line
-      oled_line = strtok(NULL, "\r\n");
+      oledData.line = strtok(NULL, "\r\n");
     }
-    if (oled_line != NULL) {
+    if (oledData.line != NULL) {
       // Scroll memory window.
       oled.scrollMemory(oled.fontRows());
       // jump to line start
       oled.setCol(0);
       // print line and clean up behind
-      oled.print(oled_line);
+      oled.print(oledData.line);
       oled.clearToEOL();
     }
   }
