@@ -392,8 +392,8 @@ void Skywatcher::Init()
 void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
 {
     unsigned nprop             = 0;
-    char *boardinfo[2];
-    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER" };
+    char *boardinfo[3];
+    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
 
     /*
     uint32_t tmpMCVersion = 0;
@@ -406,7 +406,7 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     */
     minperiods[Axis1] = 6;
     minperiods[Axis2] = 6;
-    nprop             = 2;
+    nprop             = 3;
     //  strcpy(boardinfopropnames[0],"MOUNT_TYPE");
     boardinfo[0] = (char *)malloc(20 * sizeof(char));
     switch (MountCode)
@@ -447,6 +447,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
         case 0x90:
             strcpy(boardinfo[0], "DOB");
             break;
+        case 0xA5:
+            strcpy(boardinfo[0], "AZ-GTi");
+            break;
         case 0xF0:
             strcpy(boardinfo[0], "GEEHALEL");
             minperiods[Axis1] = 13;
@@ -460,6 +463,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     boardinfo[1] = (char *)malloc(5);
     sprintf(boardinfo[1], "%04x", (MCVersion >> 8));
     boardinfo[1][4] = '\0';
+    boardinfo[2] = (char *)malloc(5);
+    sprintf(boardinfo[2], "0x%02X", MountCode);
+    boardinfo[2][4] = '\0';
     // should test this is ok
     IUUpdateText(boardTP, boardinfo, (char **)boardinfopropnames, nprop);
     IDSetText(boardTP, nullptr);
@@ -474,6 +480,7 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     */
     free(boardinfo[0]);
     free(boardinfo[1]);
+    free(boardinfo[2]);
 }
 
 void Skywatcher::InquireFeatures()
@@ -545,7 +552,7 @@ bool Skywatcher::HasPPEC()
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x23;
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x23 || MountCode == 0xA5;
 }
 
 bool Skywatcher::HasSnapPort2()
