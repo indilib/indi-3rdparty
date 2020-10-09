@@ -1,3 +1,4 @@
+%define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-qsi
 Version: 1.8.7.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
