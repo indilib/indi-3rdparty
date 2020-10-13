@@ -23,7 +23,6 @@ BuildRequires: gphoto2-devel
 BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
-BuildRequires: libtiff-devel
 BuildRequires: cfitsio-devel
 BuildRequires: zlib-devel
 BuildRequires: gsl-devel

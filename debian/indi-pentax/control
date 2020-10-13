@@ -2,7 +2,7 @@ Source: indi-pentax
 Section: science
 Priority: extra
 Maintainer:Karl Rees <indidev@karlrees.com>
-Build-Depends: debhelper (>= 6), cdbs, cmake, libindi-dev, zlib1g-dev, libusb-dev, libjpeg-dev,  libcfitsio3-dev|libcfitsio-dev, libraw-dev, libtiff5-dev, libpktriggercord, libricohcamerasdk [!arm64]
+Build-Depends: debhelper (>= 6), cdbs, cmake, libindi-dev, zlib1g-dev, libusb-dev, libjpeg-dev,  libcfitsio3-dev|libcfitsio-dev, libraw-dev, libpktriggercord, libricohcamerasdk [!arm64]
 Standards-Version: 3.9.2
 
 Package: indi-pentax

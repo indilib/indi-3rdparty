@@ -26,7 +26,6 @@ BuildRequires: gsl-devel
 BuildRequires: libcurl-devel
 BuildRequires: libjpeg-turbo-devel
 BuildRequires: fftw-devel
-BuildRequires: libftdi-devel
 BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
