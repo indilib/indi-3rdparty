@@ -23,9 +23,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/ioctl.h> /* ioctl()*/
-#include <tiffio.h>
-#include <tiffio.hxx>
+#include <sys/ioctl.h>
 #include <cstdlib>
 
 #include <config.h>

@@ -24,8 +24,6 @@ find_package(Threads REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(LibRaw REQUIRED)
 find_package(USB1 REQUIRED)
-find_package(TIFF REQUIRED)
-find_package(TIFFXX REQUIRED)
 
 include(CMakeCommon)
 include(CheckStructHasMember)
@@ -81,7 +79,6 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${GPHOTO2_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${USB1_INCLUDE_DIRS})
-include_directories( ${TIFF_INCLUDE_DIR})
 
 ########### Gphoto ###########
 set(indigphoto_SRCS
