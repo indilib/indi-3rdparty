@@ -214,7 +214,7 @@
 
 /**
  * Type define for QHY5III290*/
-#define DEVICETYPE_QHY5III290   4024
+#define DEVICETYPE_QHY5III290    4024
 
 /**
  * Type define for QHY5III290C*/
@@ -364,7 +364,11 @@
 #define DEVICETYPE_QHY461M     	    4081
 #define DEVICETYPE_QHY461C     	    4082
 
-
+#define DEVICETYPE_QHY492MT      	4083
+#define DEVICETYPE_QHY5III485       4084
+#define DEVICETYPE_QHY294PRO        4085
+#define DEVICETYPE_QHY294MPRO        4086
+#define DEVICETYPE_QHY294CPRO        4087
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -947,8 +951,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH        		9000
-#define QHY5IIICOMMON_MAX_HEIGHT        	7000
+#define QHY5IIICOMMON_MAX_WIDTH        3864	//8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT       2180    //5648	  
 
 /**
  * Type define for QHY247*/
@@ -992,6 +996,23 @@
 
 #define QHY294_MAX_WIDTH        	4212
 #define QHY294_MAX_HEIGHT        	2850
+// FixME fix  number
+#define QHY294CPRO_MAX_WIDTH_Mod_14        4212
+#define QHY294CPRO_MAX_HEIGHT_Mod_14       2850
+#define QHY294CPRO_Live_WIDTH_Mod_14        4164
+#define QHY294CPRO_Live_HEIGHT_Mod_14       2824
+#define QHY294CPRO_MAX_WIDTH_Mod_12        8432
+#define QHY294CPRO_MAX_HEIGHT_Mod_12       5648
+//#define QHY294CPRO_MAX_WIDTH_Mod_12        4212 //fixme  test 12bit frame head
+//#define QHY294CPRO_MAX_HEIGHT_Mod_12       2850 //fixme  test 12bit frame head
+// FixME fix  number
+#define QHY294MPRO_MAX_WIDTH_Mod_14         4212
+#define QHY294MPRO_MAX_HEIGHT_Mod_14        2850
+#define QHY294MPRO_MAX_WIDTH_Mod_12         8432
+#define QHY294MPRO_MAX_HEIGHT_Mod_12       5648
+
+#define QHY492_MAX_WIDTH        	4212
+#define QHY492_MAX_HEIGHT        	2850
 
 #define QHY2020_MAX_WIDTH        	4096
 #define QHY2020_MAX_HEIGHT        	2048
@@ -1238,7 +1259,7 @@
 
 #define		MAX_CAMERA_NUMBER		200
 #define		CAMERA_ID_LENGTH		64
-#define   	MAXDEVICES 				8
+#define   	MAXDEVICES 				10
 
 
 #define		MAX_READMODE_NAME			256
@@ -1283,6 +1304,10 @@
 
 #define   SINGLE_MODE 								0
 #define   LIVE_MODE 								1
+
+#define   FPGA_MODE_DEFAULT 						99
+#define   FPGA_MODE_12 								12
+#define   FPGA_MODE_14 								14
 
 #define   GET_IMAGE_TIMEOUT							60000     //QHY09000 DRIFT SCAN MOD  600000  
 //#define   GET_IMAGE_TIMEOUT							900000     //QHY09000 DRIFT SCAN MOD  600000  
@@ -1347,6 +1372,7 @@
 
 #define	PCIE_DWORD				(4)
 
+//TODO try to find out what this stand for
 #define	FRAME_BUFF_NUM	3
 
 #define IS_WRITE  1
