@@ -1040,13 +1040,13 @@ bool ASICCD::StartExposure(float duration)
     long blinks = BlinkN[BLINK_COUNT].value;
     if (blinks > 0)
     {
-        LOGF_INFO("Blinking %ld time(s) before exposure", blinks);
+        LOGF_DEBUG("Blinking %ld time(s) before exposure", blinks);
 
-        const long duration = BlinkN[BLINK_DURATION].value * 1000000.0;
-        errCode = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, duration, ASI_FALSE);
+        const long blink_duration = BlinkN[BLINK_DURATION].value * 1000000.0;
+        errCode = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, blink_duration, ASI_FALSE);
         if (errCode != ASI_SUCCESS)
         {
-            LOGF_ERROR("Failed to set blink exposure to %ldus, error %d", duration, errCode);
+            LOGF_ERROR("Failed to set blink exposure to %ldus, error %d", blink_duration, errCode);
         }
         else
         {
