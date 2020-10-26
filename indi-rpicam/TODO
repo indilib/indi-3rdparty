@@ -1,0 +1,3 @@
+- Try using encoding MMAL_ENCODING_BAYER_SBGGR12P if that works and is even faster.
+- Exposure time does not seem to affect exposure now. printf(stderr from mmalcamera does not get output anywhere.
+- Speed improved from 40s to about 7s but only one exposure works.
