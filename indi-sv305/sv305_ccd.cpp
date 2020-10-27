@@ -341,6 +341,9 @@ bool Sv305CCD::Connect()
         return false;
     }
 
+    // wait a bit for the camera to get ready
+    usleep(0.5 * 1e6);
+
     // get camera properties
     status = SVBGetCameraProperty(cameraID, &cameraProperty);
     if (status != SVB_SUCCESS)
@@ -367,6 +370,10 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+
+    // fix for SDK gain error issue
+    // set exposure time
+    SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(1 * 1000000), SVB_FALSE);
 
     // read controls and feed UI
     for(int i=0; i<controlsNum; i++)
@@ -667,7 +674,7 @@ bool Sv305CCD::StartExposure(float duration)
     ExposureRequest = duration;
 
     gettimeofday(&ExpStart, nullptr);
-    LOGF_INFO("Taking a %g seconds frame...\n", ExposureRequest);
+    LOGF_DEBUG("Taking a %g seconds frame...\n", ExposureRequest);
 
     InExposure = true;
 
@@ -992,7 +999,7 @@ void Sv305CCD::TimerHit()
                         usleep(100000);
                         pthread_mutex_lock(&cameraID_mutex);
 			status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                        LOG_INFO("Wait...");
+                        LOG_DEBUG("Wait...");
                     }
 
                     pthread_mutex_unlock(&cameraID_mutex);
@@ -1050,6 +1057,7 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
     if(status != SVB_SUCCESS)
     {
         LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
+        return false;
     }
     LOGF_INFO("Camera control %d to %.f\n", ControlType, ControlsN[ControlType].value);
 
