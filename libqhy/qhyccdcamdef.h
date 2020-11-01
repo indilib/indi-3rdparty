@@ -997,19 +997,10 @@
 #define QHY294_MAX_WIDTH        	4212
 #define QHY294_MAX_HEIGHT        	2850
 // FixME fix  number
-#define QHY294CPRO_MAX_WIDTH_Mod_14        4212
-#define QHY294CPRO_MAX_HEIGHT_Mod_14       2850
-#define QHY294CPRO_Live_WIDTH_Mod_14        4164
-#define QHY294CPRO_Live_HEIGHT_Mod_14       2824
-#define QHY294CPRO_MAX_WIDTH_Mod_12        8432
-#define QHY294CPRO_MAX_HEIGHT_Mod_12       5648
-//#define QHY294CPRO_MAX_WIDTH_Mod_12        4212 //fixme  test 12bit frame head
-//#define QHY294CPRO_MAX_HEIGHT_Mod_12       2850 //fixme  test 12bit frame head
-// FixME fix  number
-#define QHY294MPRO_MAX_WIDTH_Mod_14         4212
-#define QHY294MPRO_MAX_HEIGHT_Mod_14        2850
-#define QHY294MPRO_MAX_WIDTH_Mod_12         8432
-#define QHY294MPRO_MAX_HEIGHT_Mod_12       5648
+#define QHY294_M_C_PRO_MAX_WIDTH_Mod_14        4212
+#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_14       2850
+#define QHY294_M_C_PRO_MAX_WIDTH_Mod_12        8432
+#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_12       5648
 
 #define QHY492_MAX_WIDTH        	4212
 #define QHY492_MAX_HEIGHT        	2850
