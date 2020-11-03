@@ -2317,7 +2317,7 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
 
     INDI_UNUSED(bSnap);
 
-    if (Streamer->isStreaming())
+    if (Streamer->isStreaming() || Streamer->isRecording())
     {
         //std::unique_lock<std::mutex> guard(ccdBufferLock);
         //HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
@@ -2411,7 +2411,7 @@ void ToupBase::eventPullCallBack(unsigned event)
 
                 int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
 
-                if (Streamer->isStreaming())
+                if (Streamer->isStreaming() || Streamer->isRecording())
                 {
                     std::unique_lock<std::mutex> guard(ccdBufferLock);
                     HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
