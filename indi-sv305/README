@@ -49,6 +49,7 @@ Features
 	+ Subframing
 	+ Software binning
 	+ Streaming
+	+ SV305PRO ST4 port supported
 
 Known issues
 ============
@@ -60,11 +61,11 @@ Limitations
 
 	+ Subframing and binning doesn't work in liveview
         + Can't abort long exposure yet
-	+ Should support the SV305 PRO aswell, but not tested yet
 
 Changelog
 =========
 
+	+ 1.2.2 : Fix SV305PRO detection
 	+ 1.2.1 : Camera gain issue fixed
 	+ 1.2 : Updated with the last SDK (20200812)
 	+ 1.1 : Ability to stretch camera's 12 bits pixel depth to 16 bits
