@@ -12,7 +12,7 @@
 
 #include "ApnCamData.h"
 
-#include "apgHelper.h" 
+#include "apgHelper.h"
 #include "helpers.h"
 #include "parseCfgTabDelim.h"
 
@@ -21,107 +21,107 @@
 
 namespace
 {
-    //////////////////////////// 
-    // MK       PATTERN      FILENAME
-    std::string MkPatternFileName( const std::string & path, 
-                                           const std::string & baseName)
-    {
-        std::string result = help::FixPath( path ) + baseName + ".txt";
-        return result;
-    }
+////////////////////////////
+// MK       PATTERN      FILENAME
+std::string MkPatternFileName( const std::string &path,
+                               const std::string &baseName)
+{
+    std::string result = help::FixPath( path ) + baseName + ".txt";
+    return result;
+}
 }
 
-//////////////////////////// 
-// CTOR 
-CApnCamData::CApnCamData() : m_FileName( __FILE__ )
+////////////////////////////
+// CTOR
+CApnCamData::CApnCamData() : m_FileName( __BASE_FILE__ )
 {
     Clear();
 }
 
 
-//////////////////////////// 
-// CTOR 
-CApnCamData::CApnCamData(const CamCfg::APN_CAMERA_METADATA & meta,
-        const CamCfg::APN_VPATTERN_FILE & vert,
-        const CamCfg::APN_HPATTERN_FILE & clampNorm,
-        const CamCfg::APN_HPATTERN_FILE & skipNorm,
-        const CamCfg::APN_HPATTERN_FILE & roiNorm,
-        const CamCfg::APN_HPATTERN_FILE & clampFast,
-        const CamCfg::APN_HPATTERN_FILE & skipFast,
-        const CamCfg::APN_HPATTERN_FILE & roiFast,
-        const CamCfg::APN_VPATTERN_FILE & vertVideo,
-        const CamCfg::APN_HPATTERN_FILE & clampVideo,
-        const CamCfg::APN_HPATTERN_FILE & skipVideo,
-        const CamCfg::APN_HPATTERN_FILE & roiVideo,
-        const CamCfg::APN_HPATTERN_FILE & clampNormDual,
-        const CamCfg::APN_HPATTERN_FILE & skipNormDual,
-        const CamCfg::APN_HPATTERN_FILE & roiNormDual,
-        const CamCfg::APN_HPATTERN_FILE & clampFastDual,
-        const CamCfg::APN_HPATTERN_FILE & skipFastDual,
-        const CamCfg::APN_HPATTERN_FILE & roiFastDual ) :
-        m_MetaData( meta ),
-        m_VerticalPattern( vert ),
-        m_ClampPatternNormal( clampNorm ),
-        m_SkipPatternNormal( skipNorm ),
-        m_RoiPatternNormal( roiNorm ),
-        m_ClampPatternFast( clampFast ),
-        m_SkipPatternFast( skipFast ),
-        m_RoiPatternFast( roiFast ),
-        m_VerticalPatternVideo( vertVideo ),
-        m_ClampPatternVideo( clampVideo ),
-        m_SkipPatternVideo( skipVideo ),
-        m_RoiPatternVideo( roiVideo ),
-        m_ClampPatternNormalDual( clampNormDual ),
-        m_SkipPatternNormalDual( skipNormDual ),
-        m_RoiPatternNormalDual( roiNormDual ),
-        m_ClampPatternFastDual( clampFastDual ),
-        m_SkipPatternFastDual( skipFastDual ),
-        m_RoiPatternFastDual( roiFastDual ),
-        m_FileName( __FILE__ )
+////////////////////////////
+// CTOR
+CApnCamData::CApnCamData(const CamCfg::APN_CAMERA_METADATA &meta,
+                         const CamCfg::APN_VPATTERN_FILE &vert,
+                         const CamCfg::APN_HPATTERN_FILE &clampNorm,
+                         const CamCfg::APN_HPATTERN_FILE &skipNorm,
+                         const CamCfg::APN_HPATTERN_FILE &roiNorm,
+                         const CamCfg::APN_HPATTERN_FILE &clampFast,
+                         const CamCfg::APN_HPATTERN_FILE &skipFast,
+                         const CamCfg::APN_HPATTERN_FILE &roiFast,
+                         const CamCfg::APN_VPATTERN_FILE &vertVideo,
+                         const CamCfg::APN_HPATTERN_FILE &clampVideo,
+                         const CamCfg::APN_HPATTERN_FILE &skipVideo,
+                         const CamCfg::APN_HPATTERN_FILE &roiVideo,
+                         const CamCfg::APN_HPATTERN_FILE &clampNormDual,
+                         const CamCfg::APN_HPATTERN_FILE &skipNormDual,
+                         const CamCfg::APN_HPATTERN_FILE &roiNormDual,
+                         const CamCfg::APN_HPATTERN_FILE &clampFastDual,
+                         const CamCfg::APN_HPATTERN_FILE &skipFastDual,
+                         const CamCfg::APN_HPATTERN_FILE &roiFastDual ) :
+    m_MetaData( meta ),
+    m_VerticalPattern( vert ),
+    m_ClampPatternNormal( clampNorm ),
+    m_SkipPatternNormal( skipNorm ),
+    m_RoiPatternNormal( roiNorm ),
+    m_ClampPatternFast( clampFast ),
+    m_SkipPatternFast( skipFast ),
+    m_RoiPatternFast( roiFast ),
+    m_VerticalPatternVideo( vertVideo ),
+    m_ClampPatternVideo( clampVideo ),
+    m_SkipPatternVideo( skipVideo ),
+    m_RoiPatternVideo( roiVideo ),
+    m_ClampPatternNormalDual( clampNormDual ),
+    m_SkipPatternNormalDual( skipNormDual ),
+    m_RoiPatternNormalDual( roiNormDual ),
+    m_ClampPatternFastDual( clampFastDual ),
+    m_SkipPatternFastDual( skipFastDual ),
+    m_RoiPatternFastDual( roiFastDual ),
+    m_FileName( __BASE_FILE__ )
 {
-        
+
 }
 
-//////////////////////////// 
-// COPY       CTOR 
+////////////////////////////
+// COPY       CTOR
 CApnCamData::CApnCamData( const CApnCamData &rhs ) :
     m_MetaData( rhs.m_MetaData ),
-        m_VerticalPattern( rhs.m_VerticalPattern ),
-        m_ClampPatternNormal( rhs.m_ClampPatternNormal ),
-        m_SkipPatternNormal( rhs.m_SkipPatternNormal ),
-        m_RoiPatternNormal( rhs.m_RoiPatternNormal ),
-        m_ClampPatternFast( rhs.m_ClampPatternFast ),
-        m_SkipPatternFast( rhs.m_SkipPatternFast ),
-        m_RoiPatternFast( rhs.m_RoiPatternFast ),
-        m_VerticalPatternVideo( rhs.m_VerticalPatternVideo ),
-        m_ClampPatternVideo( rhs.m_ClampPatternVideo ),
-        m_SkipPatternVideo( rhs.m_SkipPatternVideo ),
-        m_RoiPatternVideo( rhs.m_RoiPatternVideo ),
-        m_ClampPatternNormalDual( rhs.m_ClampPatternNormalDual ),
-        m_SkipPatternNormalDual( rhs.m_SkipPatternNormalDual ),
-        m_RoiPatternNormalDual( rhs.m_RoiPatternNormalDual ),
-        m_ClampPatternFastDual( rhs.m_ClampPatternFastDual ),
-        m_SkipPatternFastDual( rhs.m_SkipPatternFastDual ),
-        m_RoiPatternFastDual( rhs.m_RoiPatternFastDual ),
-        m_FileName( __FILE__ )
+    m_VerticalPattern( rhs.m_VerticalPattern ),
+    m_ClampPatternNormal( rhs.m_ClampPatternNormal ),
+    m_SkipPatternNormal( rhs.m_SkipPatternNormal ),
+    m_RoiPatternNormal( rhs.m_RoiPatternNormal ),
+    m_ClampPatternFast( rhs.m_ClampPatternFast ),
+    m_SkipPatternFast( rhs.m_SkipPatternFast ),
+    m_RoiPatternFast( rhs.m_RoiPatternFast ),
+    m_VerticalPatternVideo( rhs.m_VerticalPatternVideo ),
+    m_ClampPatternVideo( rhs.m_ClampPatternVideo ),
+    m_SkipPatternVideo( rhs.m_SkipPatternVideo ),
+    m_RoiPatternVideo( rhs.m_RoiPatternVideo ),
+    m_ClampPatternNormalDual( rhs.m_ClampPatternNormalDual ),
+    m_SkipPatternNormalDual( rhs.m_SkipPatternNormalDual ),
+    m_RoiPatternNormalDual( rhs.m_RoiPatternNormalDual ),
+    m_ClampPatternFastDual( rhs.m_ClampPatternFastDual ),
+    m_SkipPatternFastDual( rhs.m_SkipPatternFastDual ),
+    m_RoiPatternFastDual( rhs.m_RoiPatternFastDual ),
+    m_FileName( __BASE_FILE__ )
 {
 }
 
-//////////////////////////// 
-// DTOR 
+////////////////////////////
+// DTOR
 CApnCamData::~CApnCamData()
 {
     Clear();
 }
 
-//////////////////////////// 
+////////////////////////////
 //      ASSIGNMENT    OPERATOR
-CApnCamData& CApnCamData::operator=(CApnCamData const&d)
+CApnCamData &CApnCamData::operator=(CApnCamData const &d)
 {
-     // Gracefully handle self assignment
+    // Gracefully handle self assignment
     // from http://www.parashift.com/c++-faq-lite/assignment-operators.html
-    if (this != &d) 
-    {  
+    if (this != &d)
+    {
         this->m_ClampPatternFast = d.m_ClampPatternFast;
         this->m_ClampPatternNormal = d.m_ClampPatternNormal;
         this->m_ClampPatternVideo = d.m_ClampPatternVideo;
@@ -141,102 +141,102 @@ CApnCamData& CApnCamData::operator=(CApnCamData const&d)
         this->m_SkipPatternFastDual = d.m_SkipPatternFastDual;
         this->m_RoiPatternFastDual = d.m_RoiPatternFastDual;
     }
-   return *this;
+    return *this;
 }
 
-//////////////////////////// 
-// SET 
-void CApnCamData::Set( const std::string & path, 
-                      const std::string & cfgFile, 
-                      const uint16_t CamId )
+////////////////////////////
+// SET
+void CApnCamData::Set( const std::string &path,
+                       const std::string &cfgFile,
+                       const uint16_t CamId )
 {
 
     try
     {
         std::string fixedPath = help::FixPath(path);
         std::string fullFile = fixedPath + cfgFile;
-        
+
         m_MetaData = parseCfgTabDelim::FetchMetaData( fullFile, CamId );
 
         //use the sensor data to
         //get the pattern data
-        m_VerticalPattern = parseCfgTabDelim::FetchVerticalPattern( 
-            MkPatternFileName( fixedPath, m_MetaData.VerticalPattern ) );
-        
+        m_VerticalPattern = parseCfgTabDelim::FetchVerticalPattern(
+                                MkPatternFileName( fixedPath, m_MetaData.VerticalPattern ) );
+
         //normal clamp
         m_ClampPatternNormal = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.ClampPatternNormal )  );
-     
+                                   MkPatternFileName( fixedPath, m_MetaData.ClampPatternNormal )  );
+
         //normal skip
         m_SkipPatternNormal = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.SkipPatternNormal )  );
+                                  MkPatternFileName( fixedPath, m_MetaData.SkipPatternNormal )  );
 
         //normal roi
         m_RoiPatternNormal = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.RoiPatternNormal )  );
+                                 MkPatternFileName( fixedPath, m_MetaData.RoiPatternNormal )  );
 
         //fast clamp
         m_ClampPatternFast = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.ClampPatternFast )  );
+                                 MkPatternFileName( fixedPath, m_MetaData.ClampPatternFast )  );
 
         //Fast skip
         m_SkipPatternFast = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.SkipPatternFast )  );
+                                MkPatternFileName( fixedPath, m_MetaData.SkipPatternFast )  );
 
         //Fast roi
         m_RoiPatternFast = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.RoiPatternFast )  );
+                               MkPatternFileName( fixedPath, m_MetaData.RoiPatternFast )  );
 
         //veritcal video
-        m_VerticalPatternVideo = parseCfgTabDelim::FetchVerticalPattern( 
-            MkPatternFileName( fixedPath, m_MetaData.VerticalPatternVideo )  );
-        
+        m_VerticalPatternVideo = parseCfgTabDelim::FetchVerticalPattern(
+                                     MkPatternFileName( fixedPath, m_MetaData.VerticalPatternVideo )  );
+
         //video clamp
         m_ClampPatternVideo  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.ClampPatternVideo )  );
-       
+                                   MkPatternFileName( fixedPath, m_MetaData.ClampPatternVideo )  );
+
         //video skip
         m_SkipPatternVideo = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.SkipPatternVideo )  );
+                                 MkPatternFileName( fixedPath, m_MetaData.SkipPatternVideo )  );
 
         //video roi
         m_RoiPatternVideo = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.RoiPatternVideo )  );
+                                MkPatternFileName( fixedPath, m_MetaData.RoiPatternVideo )  );
 
-         //normal clamp dual
+        //normal clamp dual
         m_ClampPatternNormalDual = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.ClampPatternNormalDual  )  );
-     
+                                       MkPatternFileName( fixedPath, m_MetaData.ClampPatternNormalDual  )  );
+
         //normal skip dual
         m_SkipPatternNormalDual  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.SkipPatternNormalDual )  );
+                                       MkPatternFileName( fixedPath, m_MetaData.SkipPatternNormalDual )  );
 
         //normal roi dual
         m_RoiPatternNormalDual  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.RoiPatternNormalDual )  );
+                                      MkPatternFileName( fixedPath, m_MetaData.RoiPatternNormalDual )  );
 
         //fast clamp dual
         m_ClampPatternFastDual  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.ClampPatternFastDual )  );
+                                      MkPatternFileName( fixedPath, m_MetaData.ClampPatternFastDual )  );
 
         //Fast skip dual
         m_SkipPatternFastDual  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.SkipPatternFastDual )  );
+                                     MkPatternFileName( fixedPath, m_MetaData.SkipPatternFastDual )  );
 
         //Fast roi dual
         m_RoiPatternFastDual  = parseCfgTabDelim::FetchHorizontalPattern(
-            MkPatternFileName( fixedPath, m_MetaData.RoiPatternFastDual )  );
+                                    MkPatternFileName( fixedPath, m_MetaData.RoiPatternFastDual )  );
     }
-    catch( std::exception & e)
+    catch( std::exception &e)
     {
         std::string errStr( e.what() );
         errStr += " exception thrown for camera id = " + help::uShort2Str( CamId );
-        apgHelper::throwRuntimeException( __FILE__, errStr, 
-            __LINE__, Apg::ErrorType_Configuration );
+        apgHelper::throwRuntimeException( __FILE__, errStr,
+                                          __LINE__, Apg::ErrorType_Configuration );
     }
 }
 
-//////////////////////////// 
+////////////////////////////
 // CLEAR
 void CApnCamData::Clear()
 {
@@ -260,7 +260,7 @@ void CApnCamData::Clear()
     CamCfg::Clear( m_RoiPatternFastDual  );
 }
 
-void CApnCamData::Write2File( const std::string & fname )
+void CApnCamData::Write2File( const std::string &fname )
 {
     std::ofstream f( fname.c_str(), std::ios::out | std::ios::app );
     f << "---------------------------------------" << std::endl;
@@ -358,7 +358,7 @@ void CApnCamData::Write2File( const std::string & fname )
 
     WriteHPattern( fname, m_RoiPatternVideo );
 
-     f.open( fname.c_str(), std::ios::out | std::ios::app );
+    f.open( fname.c_str(), std::ios::out | std::ios::app );
     f << "---------------------------------------" << std::endl;
     f << "Clamp Normal Dual" << std::endl;
     f << "---------------------------------------" << std::endl;
@@ -407,7 +407,7 @@ void CApnCamData::Write2File( const std::string & fname )
     WriteHPattern( fname, m_RoiPatternFastDual );
 }
 
-void CApnCamData::WriteMeta( const std::string & fname )
+void CApnCamData::WriteMeta( const std::string &fname )
 {
     std::ofstream f( fname.c_str(), std::ios::out | std::ios::app );
 
@@ -483,10 +483,10 @@ void CApnCamData::WriteMeta( const std::string & fname )
 }
 
 
-void CApnCamData::WriteHPattern( const std::string & fname,
-                                const CamCfg::APN_HPATTERN_FILE & horiztonal)
+void CApnCamData::WriteHPattern( const std::string &fname,
+                                 const CamCfg::APN_HPATTERN_FILE &horiztonal)
 {
-     std::ofstream f( fname.c_str(), std::ios::out | std::ios::app );
+    std::ofstream f( fname.c_str(), std::ios::out | std::ios::app );
 
     f << "Mask: " << horiztonal.Mask << std::endl;
 
@@ -494,28 +494,28 @@ void CApnCamData::WriteHPattern( const std::string & fname,
 
     std::vector<uint16_t>::const_iterator iter;
 
-    for( iter = horiztonal.RefPatternData.begin(); 
-        iter != horiztonal.RefPatternData.end(); ++iter )
+    for( iter = horiztonal.RefPatternData.begin();
+            iter != horiztonal.RefPatternData.end(); ++iter )
     {
-          f << (*iter) << " ";
+        f << (*iter) << " ";
     }
 
     f << std::endl;
 
     f << "Sig: ";
 
-    for( iter = horiztonal.SigPatternData.begin(); 
-        iter != horiztonal.SigPatternData.end(); ++iter )
+    for( iter = horiztonal.SigPatternData.begin();
+            iter != horiztonal.SigPatternData.end(); ++iter )
     {
-          f << (*iter) << " ";
+        f << (*iter) << " ";
     }
 
     f << std::endl;
 
     int c = 0;
     std::vector< std::vector<uint16_t> >::const_iterator jj;
-    for( jj = horiztonal.BinPatternData.begin(); 
-        jj != horiztonal.BinPatternData.end(); ++jj, ++c )
+    for( jj = horiztonal.BinPatternData.begin();
+            jj != horiztonal.BinPatternData.end(); ++jj, ++c )
     {
         f << "Bin " << c << ": ";
         std::vector<uint16_t>::const_iterator ii;
@@ -533,12 +533,12 @@ void CApnCamData::WriteHPattern( const std::string & fname,
 
 }
 
-void CApnCamData::WriteVPattern( const std::string & fname, 
-                                const CamCfg::APN_VPATTERN_FILE & vert )
+void CApnCamData::WriteVPattern( const std::string &fname,
+                                 const CamCfg::APN_VPATTERN_FILE &vert )
 {
     std::ofstream f( fname.c_str(), std::ios::out | std::ios::app );
 
-     f << "Mask: " << vert.Mask << std::endl;
+    f << "Mask: " << vert.Mask << std::endl;
 
     f << "Pattern: ";
 
@@ -546,7 +546,7 @@ void CApnCamData::WriteVPattern( const std::string & fname,
 
     for( iter = vert.PatternData.begin(); iter != vert.PatternData.end(); ++iter )
     {
-          f << (*iter) << " ";
+        f << (*iter) << " ";
     }
 
     f << std::endl;

@@ -47,7 +47,7 @@ namespace
 AltaIo::AltaIo( CamModel::InterfaceType type, 
                const std::string & deviceAddr ) :
                 CameraIo( type ),
-                m_fileName( __FILE__ )
+                m_fileName( __BASE_FILE__ )
 { 
 
     //log that we are trying to connect

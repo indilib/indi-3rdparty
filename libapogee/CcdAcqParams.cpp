@@ -28,7 +28,7 @@ namespace
 CcdAcqParams::CcdAcqParams(std::shared_ptr<CApnCamData> & camData,
                            std::shared_ptr<CameraIo> & camIo,  
                            std::shared_ptr<PlatformData> & platformData) : 
-                                                    m_fileName( __FILE__ ),
+                                                    m_fileName( __BASE_FILE__ ),
                                                     m_CamData(camData),
                                                     m_CamIo(camIo),
                                                     m_PlatformData(platformData),

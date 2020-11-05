@@ -33,7 +33,7 @@ namespace
 // CTOR 
 CamGen2Base::CamGen2Base(CamModel::PlatformType platform) : 
                 ApogeeCam(platform),
-                m_fileName( __FILE__ )
+                m_fileName( __BASE_FILE__ )
 { 
 
 } 

@@ -42,7 +42,7 @@ namespace
 //////////////////////////// 
 // CTOR 
 Alta::Alta() : ApogeeCam(CamModel::ALTAU),
-                m_fileName( __FILE__ )
+                m_fileName( __BASE_FILE__ )
 { 
      //alloc and set the camera constants
     m_CameraConsts = std::shared_ptr<PlatformData>( new AltaData() );

@@ -26,7 +26,7 @@
 // CTOR 
 Aspen::Aspen() : 
              CamGen2Base(CamModel::ASPEN),
-             m_fileName( __FILE__ )
+             m_fileName( __BASE_FILE__ )
 {
 
     //alloc and set the camera constants

@@ -54,7 +54,7 @@ namespace
 //////////////////////////// 
 // CTOR 
 CLibCurlWrap::CLibCurlWrap() : m_curlHandle( 0 ),
-                               m_fileName( __FILE__ )
+                               m_fileName( __BASE_FILE__ )
 { 
     m_curlHandle = curl_easy_init();
 	m_timeout = OPERATION_TIMEOUT;

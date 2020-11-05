@@ -24,7 +24,7 @@
 //////////////////////////// 
 // CTOR 
 AltaF::AltaF() :  CamGen2Base(CamModel::ALTAF),
-                m_fileName( __FILE__ )
+                m_fileName( __BASE_FILE__ )
 {
      //alloc and set the camera constants
     m_CameraConsts = std::shared_ptr<PlatformData>( new AscentData() );

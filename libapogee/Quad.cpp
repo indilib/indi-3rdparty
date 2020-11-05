@@ -25,7 +25,7 @@
 //////////////////////////// 
 // CTOR 
 Quad::Quad( ) :   CamGen2Base( CamModel::QUAD ),
-                            m_fileName( __FILE__ ),
+                            m_fileName( __BASE_FILE__ ),
                             m_DoPixelReorder( true )
 {   
     //alloc and set the camera constants
