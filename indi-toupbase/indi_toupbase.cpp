@@ -329,6 +329,12 @@ bool ToupBase::initProperties()
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
+    /// Analog Digital Converter
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&ADCN[0], "ADC_BITDEPTH", "Bit Depth", "%.f", 8, 32, 0, 8);
+    IUFillNumberVector(&ADCNP, ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB,  IP_RO, 60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
     /// Gain Conversion settings
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&GainConversionN[TC_HCG_THRESHOLD], "HCG Threshold", "HCG Threshold", "%.f", 0, 1000, 100, 900);
@@ -435,6 +441,7 @@ bool ToupBase::updateProperties()
         defineSwitch(&AutoExposureSP);
         defineSwitch(&VideoFormatSP);
         defineSwitch(&ResolutionSP);
+        defineNumber(&ADCNP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
         {
@@ -480,6 +487,7 @@ bool ToupBase::updateProperties()
         deleteProperty(AutoExposureSP.name);
         deleteProperty(VideoFormatSP.name);
         deleteProperty(ResolutionSP.name);
+        deleteProperty(ADCNP.name);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
         {
@@ -639,6 +647,7 @@ void ToupBase::setupParams()
     // Max supported bit depth
     m_MaxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
     LOGF_DEBUG("Max bit depth: %d", m_MaxBitDepth);
+    ADCN[0].value = m_MaxBitDepth;
 
     m_BitsPerPixel = 8;
     int nVal = 0;
