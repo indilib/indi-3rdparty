@@ -598,9 +598,8 @@ bool QHYCCD::updateProperties()
                 {
                     LOGF_INFO("Using default read mode (error reading it): %zu", currentReadMode);
                 }
-
-
             }
+            defineNumber(&ReadModeNP);
         }
         // ---
 
