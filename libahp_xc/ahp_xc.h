@@ -190,10 +190,16 @@ DLL_EXPORT int ahp_xc_get_nbaselines();
 DLL_EXPORT int ahp_xc_get_delaysize();
 
 /**
-* \brief Obtain the correlator jitter buffer size
+* \brief Obtain the correlator jitter buffer size for autocorrelations
 * \return Returns the jitter size
 */
-DLL_EXPORT int ahp_xc_get_jittersize();
+DLL_EXPORT int ahp_xc_get_autocorrelator_jittersize();
+
+/**
+* \brief Obtain the correlator jitter buffer size for crosscorrelations
+* \return Returns the jitter size
+*/
+DLL_EXPORT int ahp_xc_get_crosscorrelator_jittersize();
 
 /**
 * \brief Obtain the correlator maximum readout frequency
