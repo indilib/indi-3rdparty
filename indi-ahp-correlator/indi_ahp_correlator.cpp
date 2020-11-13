@@ -61,23 +61,23 @@ void ISSnoopDevice (XMLEle *root)
 
 void Interferometer::Callback()
 {
-    unsigned long counts[xc_get_nlines()];
-    unsigned long crosscorrelations[xc_get_nbaselines()];
+    unsigned long* counts = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nlines())));
+    unsigned long* crosscorrelations = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
-    double *framebuffer = static_cast<double*>(malloc(w*h*sizeof(double)));
+    double *framebuffer = static_cast<double*>(malloc(static_cast<unsigned int>(w*h)*sizeof(double)));
     char str[MAXINDINAME];
-    str[xc_get_bps()] = 0;
+    str[ahp_xc_get_bps()] = 0;
 
     EnableCapture(true);
     threadsRunning = true;
     while (threadsRunning)
     {
-        xc_get_packet(counts, nullptr, crosscorrelations);
+        ahp_xc_get_packet(counts, nullptr, crosscorrelations);
         timeleft = ExposureRequest-(getCurrentTime()-ExposureStart);
 
         if(InExposure) {
-            if(timeleft <= 0.0) {
+            if(timeleft <= 0.0f) {
                 // We're no longer exposing...
                 AbortExposure();
                 /* We're done exposing */
@@ -89,16 +89,16 @@ void Interferometer::Callback()
                 ExposureComplete(&PrimaryCCD);
             }
         } else {
-            memset(framebuffer, 0, w*h*sizeof(double));
+            memset(framebuffer, 0, static_cast<unsigned int>(w*h)*sizeof(double));
         }
 
         int idx = 0;
         double minalt = 0;
         int farest = 0;
-        for(int x = 0; x < xc_get_nlines(); x++) {
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             totalcounts[x] += counts[x];
-            for(int y = x+1; y < xc_get_nlines(); y++) {
-                totalcorrelations[idx] += crosscorrelations[idx];
+            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx];
                 if(InExposure) {
                     if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
                         INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
@@ -121,8 +121,8 @@ void Interferometer::Callback()
         }
         delay[farest] = 0;
         idx = 0;
-        for(int x = 0; x < xc_get_nlines(); x++) {
-            for(int y = x+1; y < xc_get_nlines(); y++) {
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                 INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
                 double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
                 idx++;
@@ -137,10 +137,10 @@ void Interferometer::Callback()
                 }
             }
         }
-        for(int x = 0; x < xc_get_nlines(); x++) {
-            int delay_clocks = delay[x] * xc_get_frequency() / LIGHTSPEED;
-            delay_clocks = (delay_clocks > 0 ? (delay_clocks < xc_get_delaysize() ? delay_clocks : xc_get_delaysize()-1) : 0);
-            xc_set_delay(x, delay_clocks);
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            int delay_clocks = delay[x] * ahp_xc_get_frequency() / LIGHTSPEED;
+            delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
+            ahp_xc_set_delay(x, delay_clocks);
         }
     }
     EnableCapture(false);
@@ -203,7 +203,7 @@ Interferometer::Interferometer()
 
 bool Interferometer::Disconnect()
 {
-    for(int x = 0; x < xc_get_nlines(); x++)
+    for(int x = 0; x < ahp_xc_get_nlines(); x++)
         ActiveLine(x, false, false);
 
     threadsRunning = false;
@@ -225,7 +225,7 @@ const char * Interferometer::getDeviceName()
 
 bool Interferometer::saveConfigItems(FILE *fp)
 {
-    for(int x = 0; x < xc_get_nlines(); x++) {
+    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         IUSaveConfigSwitch(fp, &lineEnableSP[x]);
         if(lineEnableSP[x].sp[0].s == ISS_ON) {
             IUSaveConfigText(fp, &lineDevicesTP[x]);
@@ -275,7 +275,7 @@ void Interferometer::ISGetProperties(const char *dev)
 
     if (isConnected())
     {
-        for (int x=0; x<xc_get_nlines(); x++) {
+        for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
         defineNumber(&correlationsNP);
@@ -300,7 +300,7 @@ bool Interferometer::updateProperties()
         // Let's get parameters now from CCD
         setupParams();
 
-        for (int x=0; x<xc_get_nlines(); x++) {
+        for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
         defineNumber(&correlationsNP);
@@ -311,7 +311,7 @@ bool Interferometer::updateProperties()
     {
         deleteProperty(correlationsNP.name);
         deleteProperty(settingsNP.name);
-        for (int x=0; x<xc_get_nlines(); x++) {
+        for (int x=0; x<ahp_xc_get_nlines(); x++) {
             deleteProperty(lineEnableSP[x].name);
             deleteProperty(linePowerSP[x].name);
             deleteProperty(lineGPSNP[x].name);
@@ -322,7 +322,7 @@ bool Interferometer::updateProperties()
         }
     }
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->updateProperties();
 
     return true;
@@ -339,8 +339,8 @@ void Interferometer::setupParams()
     int nbuf;
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     nbuf += 512;  //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(nbuf);
-    memset(PrimaryCCD.getFrameBuffer(), 0, PrimaryCCD.getFrameBufferSize());
+    PrimaryCCD.setFrameBufferSize(static_cast<unsigned int>(nbuf));
+    memset(PrimaryCCD.getFrameBuffer(), 0, static_cast<unsigned int>(PrimaryCCD.getFrameBufferSize()));
 }
 
 /**************************************************************************************
@@ -377,12 +377,12 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
     if(!strcmp(settingsNP.name, name)) {
         IUUpdateNumber(&settingsNP, values, names, n);
-        for(int x = 0; x < xc_get_nbaselines(); x++) {
+        for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
             baselines[x]->setWavelength(settingsN[0].value);
         }
         IDSetNumber(&settingsNP, nullptr);
@@ -406,21 +406,21 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         }
         IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
         if (states[3] == ISS_ON) {
-            xc_set_baudrate(R_57600, false);
+            ahp_xc_set_baudrate(R_57600);
         }
         if (states[4] == ISS_ON) {
-            xc_set_baudrate(R_115200, false);
+            ahp_xc_set_baudrate(R_115200);
         }
         if (states[5] == ISS_ON) {
-            xc_set_baudrate(R_230400, false);
+            ahp_xc_set_baudrate(R_230400);
         }
         IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewSwitch(dev, name, states, names, n);
 
-    for(int x = 0; x < xc_get_nlines(); x++) {
+    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         if(!strcmp(name, lineEnableSP[x].name)){
             IUUpdateSwitch(&lineEnableSP[x], states, names, n);
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
@@ -459,7 +459,7 @@ bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], i
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 
     return INDI::CCD::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
@@ -475,7 +475,7 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 
     //  This is for our device
     //  Now lets see if it's something we process here
-    for(int x = 0; x < xc_get_nlines(); x++) {
+    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         if (!strcmp(name, lineDevicesTP[x].name))
         {
             lineDevicesTP[x].s = IPS_OK;
@@ -498,7 +498,7 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
         }
     }
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
 
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -509,7 +509,7 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 ***************************************************************************************/
 bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
-    for(int i = 0; i < xc_get_nlines(); i++) {
+    for(int i = 0; i < ahp_xc_get_nlines(); i++) {
         if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
             lineTelescopeNP[i].s = IPS_BUSY;
             lineTelescopeNP[i].np[0].value = snoopTelescopeNP[i].np[0].value;
@@ -529,8 +529,8 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
             lineGPSNP[i].np[1].value = snoopGPSNP[i].np[1].value;
             lineGPSNP[i].np[2].value = snoopGPSNP[i].np[2].value;
             int idx = 0;
-            for(int x = 0; x < xc_get_nlines(); x++) {
-                for(int y = x+1; y < xc_get_nlines(); y++) {
+            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(x==i||y==i) {
                         double Lat1, Lon1;
                         Lat0 = snoopGPSNP[x].np[0].value*M_PI/180.0;
@@ -558,7 +558,7 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
         }
     }
 
-    for(int x = 0; x < xc_get_nbaselines(); x++)
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISSnoopDevice(root);
 
     return INDI::CCD::ISSnoopDevice(root);
@@ -593,7 +593,7 @@ void Interferometer::TimerHit()
 
     int idx = 0;
     IDSetNumber(&correlationsNP, nullptr);
-    for (int x = 0; x < xc_get_nlines(); x++) {
+    for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
         double photon_flux = ((double)totalcounts[x])*1000.0/POLLMS;
@@ -607,7 +607,7 @@ void Interferometer::TimerHit()
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
-        for(int y = x+1; y < xc_get_nlines(); y++) {
+        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
             correlationsNP.np[idx*2+0].value = (double)totalcorrelations[idx]*1000.0/(double)POLLMS;
             correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx]*2.0/(double)(totalcounts[x]+totalcounts[y]);
             totalcorrelations[idx] = 0;
@@ -627,62 +627,62 @@ bool Interferometer::Handshake()
     if(PortFD == -1)
         return false;
 
-    xc_connect_fd(PortFD);
+    ahp_xc_connect_fd(PortFD);
 
-    if(0 != xc_get_properties())
+    if(0 != ahp_xc_get_properties())
         return false;
 
-    lineStatsN = static_cast<INumber*>(realloc(lineStatsN, 4*xc_get_nlines()*sizeof(INumber)+1));
-    lineStatsNP = static_cast<INumberVectorProperty*>(realloc(lineStatsNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    lineStatsN = static_cast<INumber*>(realloc(lineStatsN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    lineStatsNP = static_cast<INumberVectorProperty*>(realloc(lineStatsNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    lineEnableS = static_cast<ISwitch*>(realloc(lineEnableS, xc_get_nlines()*2*sizeof(ISwitch)));
-    lineEnableSP = static_cast<ISwitchVectorProperty*>(realloc(lineEnableSP, xc_get_nlines()*sizeof(ISwitchVectorProperty)+1));
+    lineEnableS = static_cast<ISwitch*>(realloc(lineEnableS, static_cast<unsigned long>(ahp_xc_get_nlines())*2*sizeof(ISwitch)));
+    lineEnableSP = static_cast<ISwitchVectorProperty*>(realloc(lineEnableSP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ISwitchVectorProperty)+1));
 
-    linePowerS = static_cast<ISwitch*>(realloc(linePowerS, xc_get_nlines()*2*sizeof(ISwitch)+1));
-    linePowerSP = static_cast<ISwitchVectorProperty*>(realloc(linePowerSP, xc_get_nlines()*sizeof(ISwitchVectorProperty)+1));
+    linePowerS = static_cast<ISwitch*>(realloc(linePowerS, static_cast<unsigned long>(ahp_xc_get_nlines())*2*sizeof(ISwitch)+1));
+    linePowerSP = static_cast<ISwitchVectorProperty*>(realloc(linePowerSP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ISwitchVectorProperty)+1));
 
-    lineDevicesT = static_cast<IText*>(realloc(lineDevicesT, 3*xc_get_nlines()*sizeof(IText)+1));
-    lineDevicesTP = static_cast<ITextVectorProperty*>(realloc(lineDevicesTP, xc_get_nlines()*sizeof(ITextVectorProperty)+1));
+    lineDevicesT = static_cast<IText*>(realloc(lineDevicesT, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(IText)+1));
+    lineDevicesTP = static_cast<ITextVectorProperty*>(realloc(lineDevicesTP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ITextVectorProperty)+1));
 
-    lineGPSN = static_cast<INumber*>(realloc(lineGPSN, 3*xc_get_nlines()*sizeof(INumber)+1));
-    lineGPSNP = static_cast<INumberVectorProperty*>(realloc(lineGPSNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    lineGPSN = static_cast<INumber*>(realloc(lineGPSN, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    lineGPSNP = static_cast<INumberVectorProperty*>(realloc(lineGPSNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    lineTelescopeN = static_cast<INumber*>(realloc(lineTelescopeN, 4*xc_get_nlines()*sizeof(INumber)+1));
-    lineTelescopeNP = static_cast<INumberVectorProperty*>(realloc(lineTelescopeNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    lineTelescopeN = static_cast<INumber*>(realloc(lineTelescopeN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    lineTelescopeNP = static_cast<INumberVectorProperty*>(realloc(lineTelescopeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    lineDomeN = static_cast<INumber*>(realloc(lineDomeN, 2*xc_get_nlines()*sizeof(INumber)+1));
-    lineDomeNP = static_cast<INumberVectorProperty*>(realloc(lineDomeNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    lineDomeN = static_cast<INumber*>(realloc(lineDomeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    lineDomeNP = static_cast<INumberVectorProperty*>(realloc(lineDomeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    snoopGPSN = static_cast<INumber*>(realloc(snoopGPSN, 3*xc_get_nlines()*sizeof(INumber)+1));
-    snoopGPSNP = static_cast<INumberVectorProperty*>(realloc(snoopGPSNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    snoopGPSN = static_cast<INumber*>(realloc(snoopGPSN, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    snoopGPSNP = static_cast<INumberVectorProperty*>(realloc(snoopGPSNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, 2*xc_get_nlines()*sizeof(INumber)+1));
-    snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    snoopTelescopeInfoN = static_cast<INumber*>(realloc(snoopTelescopeInfoN, 4*xc_get_nlines()*sizeof(INumber)+1));
-    snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeInfoNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    snoopTelescopeInfoN = static_cast<INumber*>(realloc(snoopTelescopeInfoN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeInfoNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    snoopDomeN = static_cast<INumber*>(realloc(snoopDomeN, 2*xc_get_nlines()*sizeof(INumber)+1));
-    snoopDomeNP = static_cast<INumberVectorProperty*>(realloc(snoopDomeNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    snoopDomeN = static_cast<INumber*>(realloc(snoopDomeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
+    snoopDomeNP = static_cast<INumberVectorProperty*>(realloc(snoopDomeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    lineDelayN = static_cast<INumber*>(realloc(lineDelayN, xc_get_nlines()*sizeof(INumber)+1));
-    lineDelayNP = static_cast<INumberVectorProperty*>(realloc(lineDelayNP, xc_get_nlines()*sizeof(INumberVectorProperty)+1));
+    lineDelayN = static_cast<INumber*>(realloc(lineDelayN, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumber)+1));
+    lineDelayNP = static_cast<INumberVectorProperty*>(realloc(lineDelayNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    correlationsN = static_cast<INumber*>(realloc(correlationsN, 2*xc_get_nlines()*(xc_get_nlines()-1)/2*sizeof(INumber)+1));
+    correlationsN = static_cast<INumber*>(realloc(correlationsN, static_cast<unsigned long>(2*ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(INumber)+1));
 
-    totalcounts = static_cast<double*>(realloc(totalcounts, xc_get_nlines()*sizeof(double)+1));
-    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, (xc_get_nlines()*(xc_get_nlines()-1)/2)*sizeof(double)+1));
-    alt = static_cast<double*>(realloc(alt, xc_get_nlines()*sizeof(double)+1));
-    az = static_cast<double*>(realloc(az, xc_get_nlines()*sizeof(double)+1));
-    delay = static_cast<double*>(realloc(delay, xc_get_nlines()*sizeof(double)+1));
-    baselines = static_cast<baseline**>(realloc(baselines, xc_get_nbaselines()*sizeof(baseline*)+1));
+    totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
+    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(double)+1));
+    alt = static_cast<double*>(realloc(alt, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
+    az = static_cast<double*>(realloc(az, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
+    delay = static_cast<double*>(realloc(delay, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
+    baselines = static_cast<baseline**>(realloc(baselines, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(baseline*)+1));
 
-    memset (totalcounts, 0, xc_get_nlines()*sizeof(double)+1);
-    memset (totalcorrelations, 0, xc_get_nbaselines()*sizeof(double)+1);
-    memset (alt, 0, xc_get_nlines()*sizeof(double)+1);
-    memset (az, 0, xc_get_nlines()*sizeof(double)+1);
+    memset (totalcounts, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
+    memset (totalcorrelations, 0, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1);
+    memset (alt, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
+    memset (az, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
 
-    for(int x = 0; x < (xc_get_nlines()*(xc_get_nlines()-1)/2); x++) {
+    for(int x = 0; x < (ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2); x++) {
         baselines[x] = new baseline();
         baselines[x]->initProperties();
     }
@@ -691,7 +691,7 @@ bool Interferometer::Handshake()
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDINAME];
-    for (int x = 0; x < xc_get_nlines(); x++) {
+    for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         //snoop properties
         IUFillNumber(&snoopTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
         IUFillNumber(&snoopTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
@@ -755,7 +755,7 @@ bool Interferometer::Handshake()
         IUFillNumberVector(&lineDelayNP[x], &lineDelayN[x], 1, getDeviceName(), name, "Delay line", tab, IP_RO, 60, IPS_IDLE);
         sprintf(name, "LINE_STATS_%02d", x+1);
         IUFillNumberVector(&lineStatsNP[x], &lineStatsN[x*4], 4, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
-        for (int y = x+1; y < xc_get_nlines(); y++) {
+        for (int y = x+1; y < ahp_xc_get_nlines(); y++) {
             sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
             sprintf(label, "Correlations %d*%d", x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
@@ -764,7 +764,7 @@ bool Interferometer::Handshake()
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
         }
     }
-    IUFillNumberVector(&correlationsNP, correlationsN, ((xc_get_nlines()*(xc_get_nlines()-1)/2)*2), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+    IUFillNumberVector(&correlationsNP, correlationsN, ((ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*2), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
     std::thread(&Interferometer::Callback, this).detach();
     // Start the timer
@@ -774,15 +774,15 @@ bool Interferometer::Handshake()
 
 void Interferometer::ActiveLine(int line, bool on, bool power)
 {
-    xc_set_power(line, on, power);
+    ahp_xc_set_leds(line, (on?1:0)|(power?2:0));
 }
 
 void Interferometer::SetFrequencyDivider(unsigned char divider)
 {
-    xc_set_frequency_divider(divider);
+    ahp_xc_set_frequency_divider(divider);
 }
 
 void Interferometer::EnableCapture(bool start)
 {
-    xc_enable_capture(start);
+    ahp_xc_enable_capture(start);
 }
