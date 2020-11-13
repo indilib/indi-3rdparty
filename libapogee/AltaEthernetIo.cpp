@@ -105,7 +105,7 @@ namespace
 //////////////////////////// 
 // CTOR 
 AltaEthernetIo::AltaEthernetIo( const std::string url ) : m_url( url ),
-                                                          m_fileName( __FILE__ )
+                                                          m_fileName( __BASE_FILE__ )
 
 { 
     //open a session with the camera

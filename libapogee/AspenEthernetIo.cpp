@@ -68,7 +68,7 @@ namespace
 //////////////////////////// 
 // CTOR 
 AspenEthernetIo::AspenEthernetIo( const std::string url ) : m_url( url ),
-                                                          m_fileName( __FILE__ ),
+                                                          m_fileName( __BASE_FILE__ ),
                                                           m_libcurl( new CLibCurlWrap ),
                                                           m_sessionKey(""),
                                                           m_sessionKeyUrlStr("")

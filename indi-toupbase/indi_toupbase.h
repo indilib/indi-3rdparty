@@ -583,6 +583,10 @@ class ToupBase : public INDI::CCD
         ITextVectorProperty SDKVersionTP;
         IText SDKVersionT[1] = {};
 
+        // ADC / Max Bitdepth
+        INumberVectorProperty ADCNP;
+        INumber ADCN[1];
+
         // Gain Conversion
         INumberVectorProperty GainConversionNP;
         INumber GainConversionN[2];

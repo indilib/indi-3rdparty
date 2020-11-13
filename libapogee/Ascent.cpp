@@ -107,7 +107,7 @@ namespace
 // CTOR 
 Ascent::Ascent() : 
                 CamGen2Base(CamModel::ASCENT),
-                m_fileName( __FILE__ ),
+                m_fileName( __BASE_FILE__ ),
                 m_filterWheelType( Ascent::FW_UNKNOWN_TYPE ),
                 m_FwDiffTime( 0.0 ),
 				m_FwTimer( new ApgTimer )

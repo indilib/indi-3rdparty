@@ -43,7 +43,7 @@ namespace
 // CTOR 
 ApogeeCam::ApogeeCam(const CamModel::PlatformType platform) : 
                                 m_PlatformType( platform ),
-                                m_fileName( __FILE__ ),
+                                m_fileName( __BASE_FILE__ ),
                                 m_FirmwareVersion( 0 ),
                                 m_Id( 0 ),
                                 m_NumImgsDownloaded(0),
