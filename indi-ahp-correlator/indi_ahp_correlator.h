@@ -45,14 +45,14 @@ class Interferometer : public INDI::CCD
 public:
     Interferometer();
     ~Interferometer() {
-        for(int x = 0; x < xc_get_nbaselines(); x++)
+        for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
-        for(int x = 0; x < xc_get_nlines(); x++)
-            xc_set_power(x, false, false);
+        for(int x = 0; x < ahp_xc_get_nlines(); x++)
+            ahp_xc_set_leds(x, 0);
 
-        xc_set_baudrate(R_57600, false);
-        xc_disconnect();
+        ahp_xc_set_baudrate(R_57600);
+        ahp_xc_disconnect();
 
         free(correlationsN);
 
