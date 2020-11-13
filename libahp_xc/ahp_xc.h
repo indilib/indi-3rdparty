@@ -46,6 +46,9 @@ extern "C" {
 */
 /*@{*/
 
+#define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
+#define AHP_XC_LIVE_CROSSCORRELATOR (1<<1)
+
 /**
  * \defgroup DSP_Defines DSP API defines
 */
@@ -66,7 +69,7 @@ extern "C" {
 #endif
 
 ///XC_BASE_RATE is the base baud rate of the XC cross-correlators
-#define XC_BASE_RATE 57600
+#define XC_BASE_RATE ((int)57600)
 
 /*@}*/
 
@@ -148,7 +151,7 @@ DLL_EXPORT int ahp_xc_get_baudrate();
 * \param rate The new baud rate index
 * \param setterm Change the termios settings of the current fd or port opened
 */
-DLL_EXPORT void ahp_xc_set_baudrate(baud_rate rate, int setterm);
+DLL_EXPORT void ahp_xc_set_baudrate(baud_rate rate);
 
 /*@}*/
 /**
@@ -185,6 +188,12 @@ DLL_EXPORT int ahp_xc_get_nbaselines();
 * \return Returns the delay size
 */
 DLL_EXPORT int ahp_xc_get_delaysize();
+
+/**
+* \brief Obtain the correlator jitter buffer size
+* \return Returns the jitter size
+*/
+DLL_EXPORT int ahp_xc_get_jittersize();
 
 /**
 * \brief Obtain the correlator maximum readout frequency
@@ -247,7 +256,7 @@ DLL_EXPORT void ahp_xc_scan_crosscorrelations(correlation *crosscorrelations, in
 */
 /*@{*/
 DLL_EXPORT void ahp_xc_enable_capture(int enable);
-DLL_EXPORT void ahp_xc_set_power(int index, int lv, int hv);
+DLL_EXPORT void ahp_xc_set_leds(int index, int leds);
 DLL_EXPORT void ahp_xc_set_delay(int index, int value);
 DLL_EXPORT void ahp_xc_set_line(int index, int value);
 DLL_EXPORT void ahp_xc_set_frequency_divider(unsigned char value);

@@ -26,7 +26,7 @@
 
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
-#define PIXEL_SIZE (AIRY * settingsN[0].value / MAX_RESOLUTION)
+#define PIXEL_SIZE ((float)(AIRY * settingsN[0].value / MAX_RESOLUTION))
 
 class baseline : public INDI::Correlator
 {
@@ -197,7 +197,7 @@ private:
     unsigned int clock_frequency;
     unsigned int clock_divider;
 
-    double timeleft;
+    float timeleft;
     double wavelength;
     void Callback();
     bool callHandshake();
@@ -212,13 +212,13 @@ private:
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
-    double ExposureStart;
+    float ExposureStart;
     bool threadsRunning;
 
-    inline double getCurrentTime()
+    inline float getCurrentTime()
     {
         struct timeval curTime;
         gettimeofday(&curTime, nullptr);
-        return (double)curTime.tv_sec+(double)curTime.tv_usec/1000000.0;
+        return static_cast<float>(curTime.tv_sec+static_cast<float>(curTime.tv_usec/1000000.0));
     }
 };
