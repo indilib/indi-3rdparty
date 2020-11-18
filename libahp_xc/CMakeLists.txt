@@ -24,7 +24,7 @@ IF(UNIX AND NOT WIN32 AND NOT APPLE)
 ENDIF(UNIX AND NOT WIN32 AND NOT APPLE)
 
 install( FILES ${CMAKE_BINARY_DIR}/libahp_xc.so.${AHPXC_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ahp_xc.h DESTINATION include/ahp)
+install( FILES ahp_xc.h DESTINATION include)
 # Make sure symbolic links are installed
 install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libahp_xc.so.${AHPXC_VERSION}\" \"libahp_xc.so.${AHPXC_SOVERSION}\" 
 WORKING_DIRECTORY \"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
