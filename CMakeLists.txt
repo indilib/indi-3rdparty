@@ -551,13 +551,8 @@ endif(WITH_PENTAX)
 
 # AHP
 if (WITH_AHP_CORRELATOR)
-find_package(AHPXC)
-if(AHPXC_FOUND)
-add_subdirectory(indi-ahp-correlator)
-else (AHPXC_FOUND)
 add_subdirectory(libahp_xc)
-SET(LIBRARIES_FOUND FALSE)
-endif (AHPXC_FOUND)
+add_subdirectory(indi-ahp-correlator)
 endif(WITH_AHP_CORRELATOR)
 
 # sv305
