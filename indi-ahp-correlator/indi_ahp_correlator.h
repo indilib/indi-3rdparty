@@ -22,7 +22,7 @@
 
 #include "indiccd.h"
 #include "indicorrelator.h"
-#include <ahp_xc.h>
+#include <ahp/ahp_xc.h>
 
 #define HEADER_SIZE 16
 #define MAX_RESOLUTION 2048
