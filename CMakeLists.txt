@@ -212,6 +212,11 @@ endif()
 add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
 
+# libahp_xc
+if (WITH_AHP_CORRELATOR)
+add_subdirectory(libahp_xc)
+endif(WITH_AHP_CORRELATOR)
+
 #toupbase dependencies
 if (WITH_TOUPBASE)
 add_subdirectory(libtoupcam)
