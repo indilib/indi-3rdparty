@@ -124,7 +124,7 @@ protected:
     void TimerHit();
     void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip);
 
-    bool Handshake();
+    bool Connect();
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 

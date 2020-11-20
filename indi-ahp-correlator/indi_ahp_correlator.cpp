@@ -205,6 +205,7 @@ bool Interferometer::Disconnect()
 {
     for(int x = 0; x < ahp_xc_get_nlines(); x++)
         ActiveLine(x, false, false);
+    ahp_xc_disconnect();
 
     threadsRunning = false;
     usleep(1000000);
@@ -260,7 +261,6 @@ bool Interferometer::initProperties()
     serialConnection = new Connection::Serial(this);
     serialConnection->setStopBits(2);
     serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
-    serialConnection->registerHandshake([&]() { return Handshake(); });
     registerConnection(serialConnection);
 
     return true;
@@ -400,21 +400,23 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
         return false;
 
     if(!strcmp(name, "DEVICE_BAUD_RATE")) {
-        if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
-            states[0] = states[1] = states[2] = ISS_OFF;
-            states[3] = ISS_ON;
+        if(isConnected()) {
+            if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
+                states[0] = states[1] = states[2] = ISS_OFF;
+                states[3] = ISS_ON;
+            }
+            IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+            if (states[3] == ISS_ON) {
+                ahp_xc_set_baudrate(R_57600);
+            }
+            if (states[4] == ISS_ON) {
+                ahp_xc_set_baudrate(R_115200);
+            }
+            if (states[5] == ISS_ON) {
+                ahp_xc_set_baudrate(R_230400);
+            }
+            IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
         }
-        IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
-        if (states[3] == ISS_ON) {
-            ahp_xc_set_baudrate(R_57600);
-        }
-        if (states[4] == ISS_ON) {
-            ahp_xc_set_baudrate(R_115200);
-        }
-        if (states[5] == ISS_ON) {
-            ahp_xc_set_baudrate(R_230400);
-        }
-        IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
 
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
@@ -621,13 +623,9 @@ void Interferometer::TimerHit()
     return;
 }
 
-bool Interferometer::Handshake()
+bool Interferometer::Connect()
 {
-    PortFD = serialConnection->getPortFD();
-    if(PortFD == -1)
-        return false;
-
-    ahp_xc_connect_fd(PortFD);
+    ahp_xc_connect(serialConnection->port());
 
     if(0 != ahp_xc_get_properties())
         return false;
@@ -764,7 +762,7 @@ bool Interferometer::Handshake()
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
         }
     }
-    IUFillNumberVector(&correlationsNP, correlationsN, ((ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*2), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+    IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
     std::thread(&Interferometer::Callback, this).detach();
     // Start the timer
