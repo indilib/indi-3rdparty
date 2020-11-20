@@ -142,7 +142,7 @@ private:
         ENABLE_CAPTURE = 13
     };
 
-    std::thread readThread;
+    std::thread *readThread;
 
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;

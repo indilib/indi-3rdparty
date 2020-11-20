@@ -206,11 +206,12 @@ bool AHP_XC::Disconnect()
         ActiveLine(x, false, false);
 
     threadsRunning = false;
-    readThread.join();
+    usleep(1000000);
+    readThread->join();
+    readThread->~thread();
 
     ahp_xc_disconnect();
 
-    usleep(1000000);
 
     return true;
 }
@@ -765,8 +766,7 @@ bool AHP_XC::Connect()
     }
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
-    readThread = std::thread(&AHP_XC::Callback, this);
-    readThread.detach();
+    readThread = new std::thread(&AHP_XC::Callback, this);
     // Start the timer
     SetTimer(POLLMS);
     return true;
