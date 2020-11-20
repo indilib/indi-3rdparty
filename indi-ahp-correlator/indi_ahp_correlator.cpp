@@ -27,7 +27,7 @@
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
-static std::unique_ptr<Interferometer> array(new Interferometer());
+static std::unique_ptr<AHP_XC> array(new AHP_XC());
 
 void ISGetProperties(const char *dev)
 {
@@ -59,7 +59,7 @@ void ISSnoopDevice (XMLEle *root)
     array->ISSnoopDevice(root);
 }
 
-void Interferometer::Callback()
+void AHP_XC::Callback()
 {
     unsigned long* counts = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nlines())));
     correlation* crosscorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
@@ -147,9 +147,8 @@ void Interferometer::Callback()
     free (framebuffer);
 }
 
-Interferometer::Interferometer()
+AHP_XC::AHP_XC()
 {
-    PortFD = -1;
     clock_divider = 0;
 
     ExposureRequest = 0.0;
@@ -201,30 +200,32 @@ Interferometer::Interferometer()
     baselines = static_cast<baseline**>(malloc(1));
 }
 
-bool Interferometer::Disconnect()
+bool AHP_XC::Disconnect()
 {
     for(int x = 0; x < ahp_xc_get_nlines(); x++)
         ActiveLine(x, false, false);
-    ahp_xc_disconnect();
 
     threadsRunning = false;
+    readThread.join();
+
+    ahp_xc_disconnect();
+
     usleep(1000000);
 
-    PortFD = -1;
-    return INDI::CCD::Disconnect();
+    return true;
 }
 
-const char * Interferometer::getDefaultName()
+const char * AHP_XC::getDefaultName()
 {
     return "AHP XC Correlator";
 }
 
-const char * Interferometer::getDeviceName()
+const char * AHP_XC::getDeviceName()
 {
     return getDefaultName();
 }
 
-bool Interferometer::saveConfigItems(FILE *fp)
+bool AHP_XC::saveConfigItems(FILE *fp)
 {
     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         IUSaveConfigSwitch(fp, &lineEnableSP[x]);
@@ -242,7 +243,7 @@ bool Interferometer::saveConfigItems(FILE *fp)
 /**************************************************************************************
 ** INDI is asking us to init our properties.
 ***************************************************************************************/
-bool Interferometer::initProperties()
+bool AHP_XC::initProperties()
 {
 
     // Must init parent properties first!
@@ -252,7 +253,7 @@ bool Interferometer::initProperties()
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
@@ -269,7 +270,7 @@ bool Interferometer::initProperties()
 /**************************************************************************************
 ** INDI is asking us to submit list of properties for the device
 ***************************************************************************************/
-void Interferometer::ISGetProperties(const char *dev)
+void AHP_XC::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
@@ -289,7 +290,7 @@ void Interferometer::ISGetProperties(const char *dev)
 ** INDI is asking us to update the properties because there is a change in CONNECTION status
 ** This fucntion is called whenever the device is connected or disconnected.
 *********************************************************************************************/
-bool Interferometer::updateProperties()
+bool AHP_XC::updateProperties()
 {
     // Call parent update properties
     INDI::CCD::updateProperties();
@@ -331,7 +332,7 @@ bool Interferometer::updateProperties()
 /**************************************************************************************
 ** Setting up CCD parameters
 ***************************************************************************************/
-void Interferometer::setupParams()
+void AHP_XC::setupParams()
 {
     SetCCDParams(MAX_RESOLUTION, MAX_RESOLUTION, 16,  PIXEL_SIZE, PIXEL_SIZE);
 
@@ -346,7 +347,7 @@ void Interferometer::setupParams()
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool Interferometer::StartExposure(float duration)
+bool AHP_XC::StartExposure(float duration)
 {
     if(InExposure)
         return false;
@@ -363,7 +364,7 @@ bool Interferometer::StartExposure(float duration)
 /**************************************************************************************
 ** Client is asking us to abort an exposure
 ***************************************************************************************/
-bool Interferometer::AbortExposure()
+bool AHP_XC::AbortExposure()
 {
     InExposure = false;
     return true;
@@ -372,7 +373,7 @@ bool Interferometer::AbortExposure()
 /**************************************************************************************
 ** Client is asking us to set a new number
 ***************************************************************************************/
-bool Interferometer::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -394,7 +395,7 @@ bool Interferometer::ISNewNumber(const char *dev, const char *name, double value
 /**************************************************************************************
 ** Client is asking us to set a new switch
 ***************************************************************************************/
-bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -456,7 +457,7 @@ bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *sta
 /**************************************************************************************
 ** Client is asking us to set a new BLOB
 ***************************************************************************************/
-bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+bool AHP_XC::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -470,7 +471,7 @@ bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], i
 /**************************************************************************************
 ** Client is asking us to set a new text
 ***************************************************************************************/
-bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -509,7 +510,7 @@ bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[],
 /**************************************************************************************
 ** Client is asking us to set a new snoop device
 ***************************************************************************************/
-bool Interferometer::ISSnoopDevice(XMLEle *root)
+bool AHP_XC::ISSnoopDevice(XMLEle *root)
 {
     for(int i = 0; i < ahp_xc_get_nlines(); i++) {
         if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
@@ -569,7 +570,7 @@ bool Interferometer::ISSnoopDevice(XMLEle *root)
 /**************************************************************************************
 ** INDI is asking us to add any FITS keywords to the FITS header
 ***************************************************************************************/
-void Interferometer::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     // Let's first add parent keywords
     INDI::CCD::addFITSKeywords(fptr, targetChip);
@@ -583,7 +584,7 @@ void Interferometer::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 /**************************************************************************************
 ** Main device loop. We check for exposure and temperature progress here
 ***************************************************************************************/
-void Interferometer::TimerHit()
+void AHP_XC::TimerHit()
 {
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
@@ -623,7 +624,7 @@ void Interferometer::TimerHit()
     return;
 }
 
-bool Interferometer::Connect()
+bool AHP_XC::Connect()
 {
     ahp_xc_connect(serialConnection->port());
 
@@ -669,7 +670,7 @@ bool Interferometer::Connect()
     correlationsN = static_cast<INumber*>(realloc(correlationsN, static_cast<unsigned long>(2*ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(INumber)+1));
 
     totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
-    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(double)+1));
+    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1));
     alt = static_cast<double*>(realloc(alt, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     az = static_cast<double*>(realloc(az, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     delay = static_cast<double*>(realloc(delay, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
@@ -680,7 +681,7 @@ bool Interferometer::Connect()
     memset (alt, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     memset (az, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
 
-    for(int x = 0; x < (ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2); x++) {
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
         baselines[x] = new baseline();
         baselines[x]->initProperties();
     }
@@ -764,23 +765,24 @@ bool Interferometer::Connect()
     }
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
-    std::thread(&Interferometer::Callback, this).detach();
+    readThread = std::thread(&AHP_XC::Callback, this);
+    readThread.detach();
     // Start the timer
     SetTimer(POLLMS);
     return true;
 }
 
-void Interferometer::ActiveLine(int line, bool on, bool power)
+void AHP_XC::ActiveLine(int line, bool on, bool power)
 {
     ahp_xc_set_leds(line, (on?1:0)|(power?2:0));
 }
 
-void Interferometer::SetFrequencyDivider(unsigned char divider)
+void AHP_XC::SetFrequencyDivider(unsigned char divider)
 {
     ahp_xc_set_frequency_divider(divider);
 }
 
-void Interferometer::EnableCapture(bool start)
+void AHP_XC::EnableCapture(bool start)
 {
     ahp_xc_enable_capture(start);
 }

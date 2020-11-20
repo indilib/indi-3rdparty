@@ -40,11 +40,11 @@ public:
     inline bool Handshake() { return true; }
 };
 
-class Interferometer : public INDI::CCD
+class AHP_XC : public INDI::CCD
 {
 public:
-    Interferometer();
-    ~Interferometer() {
+    AHP_XC();
+    ~AHP_XC() {
         for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
@@ -130,9 +130,6 @@ protected:
 
     Connection::Serial *serialConnection;
 
-    // For Serial connection
-    int PortFD;
-
 private:
 
     enum it_cmd {
@@ -144,6 +141,8 @@ private:
         SET_FREQ_DIV = 5,
         ENABLE_CAPTURE = 13
     };
+
+    std::thread readThread;
 
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
