@@ -62,7 +62,7 @@ void ISSnoopDevice (XMLEle *root)
 void Interferometer::Callback()
 {
     unsigned long* counts = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nlines())));
-    unsigned long* crosscorrelations = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
+    correlation* crosscorrelations = static_cast<correlation*>(malloc(static_cast<unsigned int>(sizeof(correlation)*ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(static_cast<unsigned int>(w*h)*sizeof(double)));
@@ -98,7 +98,7 @@ void Interferometer::Callback()
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             totalcounts[x] += counts[x];
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx];
+                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx].correlations;
                 if(InExposure) {
                     if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
                         INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
@@ -106,8 +106,8 @@ void Interferometer::Callback()
                         int yy = static_cast<int>(h*uv.v/2.0);
                         int z = w*h/2+w/2+xx+yy*w;
                         if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                            framebuffer[z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
-                            framebuffer[w*h-1-z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
+                            framebuffer[z] += crosscorrelations[idx].coherence;
+                            framebuffer[w*h-1-z] += crosscorrelations[idx].coherence;
                         }
                     }
                 }
