@@ -657,10 +657,6 @@ if (WITH_SV305 AND NOT SV305_FOUND)
 message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
 endif (WITH_SV305 AND NOT SV305_FOUND)
 
-if (WITH_AHP_CORRELATOR AND NOT AHPXC_FOUND)
-message(STATUS "libahp_xc was not found and will now be built. Please install libahp_xc first before running cmake again to install indi-ahp-correlator.")
-endif (WITH_AHP_CORRELATOR AND NOT AHPXC_FOUND)
-
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)
 
