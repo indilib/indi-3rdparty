@@ -997,10 +997,10 @@
 #define QHY294_MAX_WIDTH        	4212
 #define QHY294_MAX_HEIGHT        	2850
 // FixME fix  number
-#define QHY294_M_C_PRO_MAX_WIDTH_Mod_14        4212
-#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_14       2850
-#define QHY294_M_C_PRO_MAX_WIDTH_Mod_12        8432
-#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_12       5648
+#define QHY294_M_C_PRO_MAX_WIDTH_Mod_14_11M        4212
+#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_14_11M       2850
+#define QHY294_M_C_PRO_MAX_WIDTH_Mod_12_47M        8432
+#define QHY294_M_C_PRO_MAX_HEIGHT_Mod_12_47M       5648
 
 #define QHY492_MAX_WIDTH        	4212
 #define QHY492_MAX_HEIGHT        	2850
@@ -1297,8 +1297,8 @@
 #define   LIVE_MODE 								1
 
 #define   FPGA_MODE_DEFAULT 						99
-#define   FPGA_MODE_12 								12
-#define   FPGA_MODE_14 								14
+#define   FPGA_MODE_12_11M 								12
+#define   FPGA_MODE_14_47M 								14
 
 #define   GET_IMAGE_TIMEOUT							60000     //QHY09000 DRIFT SCAN MOD  600000  
 //#define   GET_IMAGE_TIMEOUT							900000     //QHY09000 DRIFT SCAN MOD  600000  
@@ -1368,5 +1368,9 @@
 
 #define IS_WRITE  1
 #define IS_READ	  2
+
+#define CAM_CONN_STATUS_TO_NOTHING    1
+#define CAM_CONN_STATUS_TO_PC         2
+#define CAM_CONN_STATUS_TO_SDK        3
 
 #endif
