@@ -92,6 +92,12 @@ public:
         free(lineDevicesT);
         free(lineDevicesTP);
 
+        free(autocorrelationsB);
+        free(crosscorrelationsB);
+
+        free(autocorrelations_str);
+        free(crosscorrelations_str);
+
         free(totalcounts);
         free(totalcorrelations);
         free(alt);
@@ -189,6 +195,15 @@ private:
     double *az;
     double *delay;
     baseline** baselines;
+
+    IBLOB *autocorrelationsB;
+    IBLOBVectorProperty autocorrelationsBP;
+
+    IBLOB *crosscorrelationsB;
+    IBLOBVectorProperty crosscorrelationsBP;
+
+    dsp_stream_p *autocorrelations_str;
+    dsp_stream_p *crosscorrelations_str;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
