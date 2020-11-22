@@ -40,11 +40,11 @@ public:
     inline bool Handshake() { return true; }
 };
 
-class AHP_XC : public INDI::CCD
+class Interferometer : public INDI::CCD
 {
 public:
-    AHP_XC();
-    ~AHP_XC() {
+    Interferometer();
+    ~Interferometer() {
         for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
@@ -124,11 +124,14 @@ protected:
     void TimerHit();
     void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip);
 
-    bool Connect();
+    bool Handshake();
     void setConnection(const uint8_t &value);
     uint8_t getConnection() const;
 
     Connection::Serial *serialConnection;
+
+    // For Serial connection
+    int PortFD;
 
 private:
 
@@ -141,8 +144,6 @@ private:
         SET_FREQ_DIV = 5,
         ENABLE_CAPTURE = 13
     };
-
-    std::thread *readThread;
 
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
