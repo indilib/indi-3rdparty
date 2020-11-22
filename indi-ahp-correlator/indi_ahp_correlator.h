@@ -40,11 +40,11 @@ public:
     inline bool Handshake() { return true; }
 };
 
-class Interferometer : public INDI::CCD
+class AHP_XC : public INDI::CCD
 {
 public:
-    Interferometer();
-    ~Interferometer() {
+    AHP_XC();
+    ~AHP_XC() {
         for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
@@ -92,6 +92,12 @@ public:
         free(lineDevicesT);
         free(lineDevicesTP);
 
+        free(autocorrelationsB);
+        free(crosscorrelationsB);
+
+        free(autocorrelations_str);
+        free(crosscorrelations_str);
+
         free(totalcounts);
         free(totalcorrelations);
         free(alt);
@@ -107,7 +113,6 @@ public:
     bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     bool ISSnoopDevice(XMLEle *root);
 
-    void CaptureThread();
 protected:
 
     // General device functions
@@ -124,14 +129,9 @@ protected:
     void TimerHit();
     void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip);
 
-    bool Handshake();
-    void setConnection(const uint8_t &value);
-    uint8_t getConnection() const;
+    bool Connect();
 
     Connection::Serial *serialConnection;
-
-    // For Serial connection
-    int PortFD;
 
 private:
 
@@ -144,6 +144,8 @@ private:
         SET_FREQ_DIV = 5,
         ENABLE_CAPTURE = 13
     };
+
+    std::thread *readThread;
 
     INumber *correlationsN;
     INumberVectorProperty correlationsNP;
@@ -191,6 +193,15 @@ private:
     double *delay;
     baseline** baselines;
 
+    IBLOB *autocorrelationsB;
+    IBLOBVectorProperty autocorrelationsBP;
+
+    IBLOB *crosscorrelationsB;
+    IBLOBVectorProperty crosscorrelationsBP;
+
+    dsp_stream_p *autocorrelations_str;
+    dsp_stream_p *crosscorrelations_str;
+
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
@@ -209,6 +220,8 @@ private:
     void ActiveLine(int, bool, bool);
     void SetFrequencyDivider(unsigned char divider);
     void EnableCapture(bool start);
+    void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len);
+    int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
@@ -219,6 +232,6 @@ private:
     {
         struct timeval curTime;
         gettimeofday(&curTime, nullptr);
-        return static_cast<float>(curTime.tv_sec+static_cast<float>(curTime.tv_usec/1000000.0));
+        return static_cast<float>(curTime.tv_sec)+static_cast<float>(curTime.tv_usec)/1000000.0f;
     }
 };
