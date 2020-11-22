@@ -20,17 +20,14 @@
 
 #include <stdlib.h>
 #include <termios.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <sys/file.h>
 #include <memory>
-#include <regex>
 #include <indicom.h>
-#include <sys/stat.h>
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
-static std::unique_ptr<AHP_XC> array(new AHP_XC());
+static std::unique_ptr<Interferometer> array(new Interferometer());
 
 void ISGetProperties(const char *dev)
 {
@@ -62,182 +59,10 @@ void ISSnoopDevice (XMLEle *root)
     array->ISSnoopDevice(root);
 }
 
-std::string regex_replace_compat(const std::string &input, const std::string &pattern, const std::string &replace)
+void Interferometer::Callback()
 {
-    std::stringstream s;
-    std::regex_replace(std::ostreambuf_iterator<char>(s), input.begin(), input.end(), std::regex(pattern), replace);
-    return s.str();
-}
-
-int AHP_XC::getFileIndex(const char * dir, const char * prefix, const char * ext)
-{
-    INDI_UNUSED(ext);
-
-    DIR * dpdf = nullptr;
-    struct dirent * epdf = nullptr;
-    std::vector<std::string> files = std::vector<std::string>();
-
-    std::string prefixIndex = prefix;
-    prefixIndex             = regex_replace_compat(prefixIndex, "_ISO8601", "");
-    prefixIndex             = regex_replace_compat(prefixIndex, "_XXX", "");
-
-    // Create directory if does not exist
-    struct stat st;
-
-    if (stat(dir, &st) == -1)
-    {
-        if (errno == ENOENT)
-        {
-            LOGF_INFO("Creating directory %s...", dir);
-            if (mkdir(dir, 0755) == -1)
-                LOGF_ERROR("Error creating directory %s (%s)", dir, strerror(errno));
-        }
-        else
-        {
-            LOGF_ERROR("Couldn't stat directory %s: %s", dir, strerror(errno));
-            return -1;
-        }
-    }
-
-    dpdf = opendir(dir);
-    if (dpdf != nullptr)
-    {
-        while ((epdf = readdir(dpdf)))
-        {
-            if (strstr(epdf->d_name, prefixIndex.c_str()))
-                files.push_back(epdf->d_name);
-        }
-    }
-    else
-    {
-        closedir(dpdf);
-        return -1;
-    }
-    int maxIndex = 0;
-
-    for (uint32_t i = 0; i < files.size(); i++)
-    {
-        int index = -1;
-
-        std::string file  = files.at(i);
-        std::size_t start = file.find_last_of("_");
-        std::size_t end   = file.find_last_of(".");
-        if (start != std::string::npos)
-        {
-            index = atoi(file.substr(start + 1, end).c_str());
-            if (index > maxIndex)
-                maxIndex = index;
-        }
-    }
-
-    closedir(dpdf);
-    return (maxIndex + 1);
-}
-
-void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len)
-{
-    bool sendImage = (UploadS[0].s == ISS_ON || UploadS[2].s == ISS_ON);
-    bool saveImage = (UploadS[1].s == ISS_ON || UploadS[2].s == ISS_ON);
-    for(int x = 0; x < len; x++) {
-        if (saveImage)
-        {
-            snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
-
-            FILE * fp = nullptr;
-            char imageFileName[MAXRBUF];
-
-            std::string prefix = UploadSettingsT[UPLOAD_PREFIX].text;
-            int maxIndex       = getFileIndex(UploadSettingsT[UPLOAD_DIR].text, UploadSettingsT[UPLOAD_PREFIX].text,
-                                              Blobs[x].format);
-
-            if (maxIndex < 0)
-            {
-                LOGF_ERROR("Error iterating directory %s. %s", UploadSettingsT[0].text,
-                           strerror(errno));
-                return;
-            }
-
-            if (maxIndex > 0)
-            {
-                char ts[32];
-                struct tm * tp;
-                time_t t;
-                time(&t);
-                tp = localtime(&t);
-                strftime(ts, sizeof(ts), "%Y-%m-%dT%H-%M-%S", tp);
-                std::string filets(ts);
-                prefix = std::regex_replace(prefix, std::regex("ISO8601"), filets);
-
-                char indexString[8];
-                snprintf(indexString, 8, "%03d", maxIndex);
-                std::string prefixIndex = indexString;
-                //prefix.replace(prefix.find("XXX"), std::string::npos, prefixIndex);
-                prefix = std::regex_replace(prefix, std::regex("XXX"), prefixIndex);
-            }
-
-            snprintf(imageFileName, MAXRBUF, "%s/%s%s", UploadSettingsT[0].text, prefix.c_str(), Blobs[x].format);
-
-            fp = fopen(imageFileName, "w");
-            if (fp == nullptr)
-            {
-                LOGF_ERROR("Unable to save image file (%s). %s", imageFileName, strerror(errno));
-                return;
-            }
-
-            int n = 0;
-            for (int nr = 0; nr < Blobs[x].bloblen; nr += n)
-                n = fwrite((static_cast<char *>(Blobs[x].blob) + nr), 1, Blobs[x].bloblen - nr, fp);
-
-            fclose(fp);
-
-            // Save image file path
-            IUSaveText(&FileNameT[0], imageFileName);
-
-            LOGF_INFO("Image saved to %s", imageFileName);
-            FileNameTP.s = IPS_OK;
-            IDSetText(&FileNameTP, nullptr);
-        }
-
-        snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
-    }
-    BlobP.s   = IPS_OK;
-
-    if (sendImage)
-    {
-#ifdef HAVE_WEBSOCKET
-        if (HasWebSocket() && WebSocketS[WEBSOCKET_ENABLED].s == ISS_ON)
-        {
-            for(int x = 0; x < len; x++) {
-                auto start = std::chrono::high_resolution_clock::now();
-
-                // Send format/size/..etc first later
-                wsServer.send_text(std::string(Blobs[x].format));
-                wsServer.send_binary(Blobs[x].blob, Blobs[x].bloblen);
-
-                auto end = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> diff = end - start;
-                LOGF_DEBUG("Websocket transfer took %g seconds", diff.count());
-            }
-        }
-        else
-#endif
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            IDSetBLOB(&BlobP, nullptr);
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> diff = end - start;
-            LOGF_DEBUG("BLOB transfer took %g seconds", diff.count());
-        }
-    }
-
-    LOG_INFO( "Upload complete");
-}
-
-void AHP_XC::Callback()
-{
-    unsigned long* counts = static_cast<unsigned long*>(malloc(sizeof(unsigned long)*static_cast<unsigned int>(ahp_xc_get_nlines())));
-    correlation* autocorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nlines()*(ahp_xc_get_autocorrelator_jittersize()))));
-    correlation* crosscorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
+    unsigned long* counts = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nlines())));
+    unsigned long* crosscorrelations = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(static_cast<unsigned int>(w*h)*sizeof(double)));
@@ -248,10 +73,8 @@ void AHP_XC::Callback()
     threadsRunning = true;
     while (threadsRunning)
     {
-        if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
-            continue;
-        double frametime = getCurrentTime();
-        timeleft = ExposureRequest-(frametime-ExposureStart);
+        ahp_xc_get_packet(counts, nullptr, crosscorrelations);
+        timeleft = ExposureRequest-(getCurrentTime()-ExposureStart);
 
         if(InExposure) {
             if(timeleft <= 0.0f) {
@@ -262,89 +85,8 @@ void AHP_XC::Callback()
                 dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
                 dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
                 // Let INDI::CCD know we're done filling the image buffer
-                ExposureComplete(&PrimaryCCD);
-                /* Additional BLOBs */
-                LOG_INFO("Generating additional BLOBs...");
-                char **blobs = new char*[ahp_xc_get_nbaselines()+1];
-                char *name = new char[MAXINDINAME];
-                if(ahp_xc_get_nlines() > 0) {
-                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                        sprintf(name, "AUTOCORRELATION_%02d", x);
-                        size_t memsize = autocorrelations_str[x]->len*sizeof(double);
-                        blobs[x] = new char[memsize];
-                        void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
-                        if(fits != NULL) {
-                            blobs[x] = (char*)realloc(blobs[x], memsize);
-                            memcpy(blobs[x], fits, memsize);
-                            free(fits);
-                        }
-                        autocorrelationsB[x].blob = blobs[x];
-                        autocorrelationsB[x].bloblen = memsize;
-                        strcpy(autocorrelationsB[x].format, "fits");
-                        strcpy(autocorrelationsB[x].name, name);
-                        autocorrelations_str[x]->sizes[1] = 1;
-                        autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0];
-                        dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
-                    }
-                    LOG_INFO("Autocorrelations BLOB generated, downloading...");
-                    sendFile(autocorrelationsB, autocorrelationsBP, ahp_xc_get_nlines());
-                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                        free(blobs[x]);
-                    }
-                }
-                if(ahp_xc_get_nbaselines() > 0) {
-                    int idx = 0;
-                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                            sprintf(name, "CROSSCORRELATION_%02d_%02d", x, y);
-                            size_t memsize = crosscorrelations_str[idx]->len*sizeof(double);
-                            blobs[idx] = new char[memsize];
-                            void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[idx]);
-                            if(fits != NULL) {
-                                blobs[x] = (char*)realloc(blobs[x], memsize);
-                                memcpy(blobs[x], fits, memsize);
-                                free(fits);
-                            }
-                            autocorrelationsB[x].blob = blobs[x];
-                            autocorrelationsB[x].bloblen = memsize;
-                            strcpy(autocorrelationsB[x].format, "fits");
-                            strcpy(autocorrelationsB[x].name, name);
-                            crosscorrelations_str[idx]->sizes[1] = 1;
-                            crosscorrelations_str[idx]->len = crosscorrelations_str[idx]->sizes[0];
-                            dsp_stream_alloc_buffer(crosscorrelations_str[idx], crosscorrelations_str[idx]->len);
-                            idx++;
-                        }
-                    }
-                    LOG_INFO("Crosscorrelations BLOB generated, downloading...");
-                    sendFile(crosscorrelationsB, crosscorrelationsBP, ahp_xc_get_nbaselines());
-                    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
-                        free(blobs[x]);
-                    }
-                }
-                free(blobs);
                 LOG_INFO("Download complete.");
-            } else {
-                /* Additional BLOBs */
-                int idx = 0;
-                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                    int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0];
-                    autocorrelations_str[x]->sizes[1]++;
-                    autocorrelations_str[x]->len += autocorrelations_str[x]->sizes[0];
-                    autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, sizeof(dsp_t)*autocorrelations_str[x]->len);
-                    for(int i = 0; i < ahp_xc_get_autocorrelator_jittersize(); i++)
-                        autocorrelations_str[x]->buf[pos++] = autocorrelations[idx++].coherence;
-                    autocorrelations_str[x]->buf[pos++] = frametime;
-                }
-                idx = 0;
-                for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
-                    int pos = crosscorrelations_str[x]->len-crosscorrelations_str[x]->sizes[0];
-                    crosscorrelations_str[x]->sizes[1]++;
-                    crosscorrelations_str[x]->len += crosscorrelations_str[x]->sizes[0];
-                    crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf, sizeof(dsp_t)*crosscorrelations_str[x]->len);
-                    for(int i = 0; i < ahp_xc_get_crosscorrelator_jittersize()*2-1; i++)
-                        crosscorrelations_str[x]->buf[pos++] = crosscorrelations[idx++].coherence;
-                    crosscorrelations_str[x]->buf[pos++] = frametime;
-                }
+                ExposureComplete(&PrimaryCCD);
             }
         } else {
             memset(framebuffer, 0, static_cast<unsigned int>(w*h)*sizeof(double));
@@ -356,7 +98,7 @@ void AHP_XC::Callback()
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             totalcounts[x] += counts[x];
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx].correlations;
+                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx];
                 if(InExposure) {
                     if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
                         INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
@@ -364,8 +106,8 @@ void AHP_XC::Callback()
                         int yy = static_cast<int>(h*uv.v/2.0);
                         int z = w*h/2+w/2+xx+yy*w;
                         if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                            framebuffer[z] += (double)crosscorrelations[idx].coherence;
-                            framebuffer[w*h-1-z] += (double)crosscorrelations[idx].coherence;
+                            framebuffer[z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
+                            framebuffer[w*h-1-z] += (double)crosscorrelations[idx]*2.0/(counts[x]+counts[y]);
                         }
                     }
                 }
@@ -405,15 +147,13 @@ void AHP_XC::Callback()
     free (framebuffer);
 }
 
-AHP_XC::AHP_XC()
+Interferometer::Interferometer()
 {
+    PortFD = -1;
     clock_divider = 0;
 
     ExposureRequest = 0.0;
     InExposure = false;
-
-    autocorrelationsB = static_cast<IBLOB*>(malloc(1));
-    crosscorrelationsB = static_cast<IBLOB*>(malloc(1));
 
     lineStatsN = static_cast<INumber*>(malloc(1));
     lineStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
@@ -453,9 +193,6 @@ AHP_XC::AHP_XC()
 
     correlationsN = static_cast<INumber*>(malloc(1));
 
-    autocorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
-    crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
-
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<double*>(malloc(1));
     alt = static_cast<double*>(malloc(1));
@@ -464,41 +201,29 @@ AHP_XC::AHP_XC()
     baselines = static_cast<baseline**>(malloc(1));
 }
 
-bool AHP_XC::Disconnect()
+bool Interferometer::Disconnect()
 {
-    int idx = 0;
-    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-        dsp_stream_free_buffer(autocorrelations_str[x]);
-        dsp_stream_free(autocorrelations_str[x]);
+    for(int x = 0; x < ahp_xc_get_nlines(); x++)
         ActiveLine(x, false, false);
-        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            dsp_stream_free_buffer(crosscorrelations_str[idx]);
-            dsp_stream_free(crosscorrelations_str[idx]);
-            idx++;
-        }
-    }
 
     threadsRunning = false;
+    usleep(1000000);
 
-    readThread->join();
-    readThread->~thread();
-
-    ahp_xc_disconnect();
-
-    return true;
+    PortFD = -1;
+    return INDI::CCD::Disconnect();
 }
 
-const char * AHP_XC::getDefaultName()
+const char * Interferometer::getDefaultName()
 {
     return "AHP XC Correlator";
 }
 
-const char * AHP_XC::getDeviceName()
+const char * Interferometer::getDeviceName()
 {
     return getDefaultName();
 }
 
-bool AHP_XC::saveConfigItems(FILE *fp)
+bool Interferometer::saveConfigItems(FILE *fp)
 {
     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         IUSaveConfigSwitch(fp, &lineEnableSP[x]);
@@ -516,7 +241,7 @@ bool AHP_XC::saveConfigItems(FILE *fp)
 /**************************************************************************************
 ** INDI is asking us to init our properties.
 ***************************************************************************************/
-bool AHP_XC::initProperties()
+bool Interferometer::initProperties()
 {
 
     // Must init parent properties first!
@@ -526,7 +251,7 @@ bool AHP_XC::initProperties()
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "Interferometer Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
@@ -535,6 +260,7 @@ bool AHP_XC::initProperties()
     serialConnection = new Connection::Serial(this);
     serialConnection->setStopBits(2);
     serialConnection->setDefaultBaudRate(Connection::Serial::B_57600);
+    serialConnection->registerHandshake([&]() { return Handshake(); });
     registerConnection(serialConnection);
 
     return true;
@@ -543,7 +269,7 @@ bool AHP_XC::initProperties()
 /**************************************************************************************
 ** INDI is asking us to submit list of properties for the device
 ***************************************************************************************/
-void AHP_XC::ISGetProperties(const char *dev)
+void Interferometer::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
@@ -552,8 +278,6 @@ void AHP_XC::ISGetProperties(const char *dev)
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
-        defineBLOB(&autocorrelationsBP);
-        defineBLOB(&crosscorrelationsBP);
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
 
@@ -565,7 +289,7 @@ void AHP_XC::ISGetProperties(const char *dev)
 ** INDI is asking us to update the properties because there is a change in CONNECTION status
 ** This fucntion is called whenever the device is connected or disconnected.
 *********************************************************************************************/
-bool AHP_XC::updateProperties()
+bool Interferometer::updateProperties()
 {
     // Call parent update properties
     INDI::CCD::updateProperties();
@@ -579,16 +303,12 @@ bool AHP_XC::updateProperties()
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
-        defineBLOB(&autocorrelationsBP);
-        defineBLOB(&crosscorrelationsBP);
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
     }
     else
         // We're disconnected
     {
-        deleteProperty(autocorrelationsBP.name);
-        deleteProperty(crosscorrelationsBP.name);
         deleteProperty(correlationsNP.name);
         deleteProperty(settingsNP.name);
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
@@ -611,7 +331,7 @@ bool AHP_XC::updateProperties()
 /**************************************************************************************
 ** Setting up CCD parameters
 ***************************************************************************************/
-void AHP_XC::setupParams()
+void Interferometer::setupParams()
 {
     SetCCDParams(MAX_RESOLUTION, MAX_RESOLUTION, 16,  PIXEL_SIZE, PIXEL_SIZE);
 
@@ -626,7 +346,7 @@ void AHP_XC::setupParams()
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool AHP_XC::StartExposure(float duration)
+bool Interferometer::StartExposure(float duration)
 {
     if(InExposure)
         return false;
@@ -643,7 +363,7 @@ bool AHP_XC::StartExposure(float duration)
 /**************************************************************************************
 ** Client is asking us to abort an exposure
 ***************************************************************************************/
-bool AHP_XC::AbortExposure()
+bool Interferometer::AbortExposure()
 {
     InExposure = false;
     return true;
@@ -652,7 +372,7 @@ bool AHP_XC::AbortExposure()
 /**************************************************************************************
 ** Client is asking us to set a new number
 ***************************************************************************************/
-bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+bool Interferometer::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -674,29 +394,27 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
 /**************************************************************************************
 ** Client is asking us to set a new switch
 ***************************************************************************************/
-bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool Interferometer::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
 
     if(!strcmp(name, "DEVICE_BAUD_RATE")) {
-        if(isConnected()) {
-            if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
-                states[0] = states[1] = states[2] = ISS_OFF;
-                states[3] = ISS_ON;
-            }
-            IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
-            if (states[3] == ISS_ON) {
-                ahp_xc_set_baudrate(R_57600);
-            }
-            if (states[4] == ISS_ON) {
-                ahp_xc_set_baudrate(R_115200);
-            }
-            if (states[5] == ISS_ON) {
-                ahp_xc_set_baudrate(R_230400);
-            }
-            IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
+        if(states[0] == ISS_ON || states[1] == ISS_ON || states[2] == ISS_ON) {
+            states[0] = states[1] = states[2] = ISS_OFF;
+            states[3] = ISS_ON;
         }
+        IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+        if (states[3] == ISS_ON) {
+            ahp_xc_set_baudrate(R_57600);
+        }
+        if (states[4] == ISS_ON) {
+            ahp_xc_set_baudrate(R_115200);
+        }
+        if (states[5] == ISS_ON) {
+            ahp_xc_set_baudrate(R_230400);
+        }
+        IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
     }
 
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
@@ -736,7 +454,7 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 /**************************************************************************************
 ** Client is asking us to set a new BLOB
 ***************************************************************************************/
-bool AHP_XC::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+bool Interferometer::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -750,7 +468,7 @@ bool AHP_XC::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobs
 /**************************************************************************************
 ** Client is asking us to set a new text
 ***************************************************************************************/
-bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+bool Interferometer::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -789,7 +507,7 @@ bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *n
 /**************************************************************************************
 ** Client is asking us to set a new snoop device
 ***************************************************************************************/
-bool AHP_XC::ISSnoopDevice(XMLEle *root)
+bool Interferometer::ISSnoopDevice(XMLEle *root)
 {
     for(int i = 0; i < ahp_xc_get_nlines(); i++) {
         if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
@@ -849,7 +567,7 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
 /**************************************************************************************
 ** INDI is asking us to add any FITS keywords to the FITS header
 ***************************************************************************************/
-void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void Interferometer::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     // Let's first add parent keywords
     INDI::CCD::addFITSKeywords(fptr, targetChip);
@@ -863,12 +581,10 @@ void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 /**************************************************************************************
 ** Main device loop. We check for exposure and temperature progress here
 ***************************************************************************************/
-void AHP_XC::TimerHit()
+void Interferometer::TimerHit()
 {
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
-
-    SetTimer(POLLMS);
 
     if(InExposure) {
         // Just update time left in client
@@ -876,20 +592,21 @@ void AHP_XC::TimerHit()
     }
 
     int idx = 0;
+    IDSetNumber(&correlationsNP, nullptr);
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
         double photon_flux = ((double)totalcounts[x])*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
+        IDSetNumber(&lineDelayNP[x], nullptr);
         lineDelayNP[x].s = IPS_BUSY;
         lineDelayNP[x].np[0].value = line_delay;
-        IDSetNumber(&lineDelayNP[x], nullptr);
+        IDSetNumber(&lineStatsNP[x], nullptr);
         lineStatsNP[x].s = IPS_BUSY;
         lineStatsNP[x].np[0].value = ((double)totalcounts[x])*1000.0/(double)POLLMS;
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
-        IDSetNumber(&lineStatsNP[x], nullptr);
         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
             correlationsNP.np[idx*2+0].value = (double)totalcorrelations[idx]*1000.0/(double)POLLMS;
             correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx]*2.0/(double)(totalcounts[x]+totalcounts[y]);
@@ -898,14 +615,19 @@ void AHP_XC::TimerHit()
         }
         totalcounts[x] = 0;
     }
-    IDSetNumber(&correlationsNP, nullptr);
+
+    SetTimer(POLLMS);
 
     return;
 }
 
-bool AHP_XC::Connect()
+bool Interferometer::Handshake()
 {
-    ahp_xc_connect(serialConnection->port());
+    PortFD = serialConnection->getPortFD();
+    if(PortFD == -1)
+        return false;
+
+    ahp_xc_connect_fd(PortFD);
 
     if(0 != ahp_xc_get_properties())
         return false;
@@ -948,14 +670,8 @@ bool AHP_XC::Connect()
 
     correlationsN = static_cast<INumber*>(realloc(correlationsN, static_cast<unsigned long>(2*ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(INumber)+1));
 
-    autocorrelationsB = static_cast<IBLOB*>(realloc(autocorrelationsB, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(IBLOB)+1));
-    crosscorrelationsB = static_cast<IBLOB*>(realloc(crosscorrelationsB, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(IBLOB)+1));
-
-    autocorrelations_str = static_cast<dsp_stream_p*>(realloc(autocorrelations_str, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(dsp_stream_p)+1));
-    crosscorrelations_str = static_cast<dsp_stream_p*>(realloc(crosscorrelations_str, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(dsp_stream_p)+1));
-
     totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
-    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1));
+    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(double)+1));
     alt = static_cast<double*>(realloc(alt, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     az = static_cast<double*>(realloc(az, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     delay = static_cast<double*>(realloc(delay, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
@@ -966,12 +682,12 @@ bool AHP_XC::Connect()
     memset (alt, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     memset (az, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
 
-    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+    for(int x = 0; x < (ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2); x++) {
         baselines[x] = new baseline();
         baselines[x]->initProperties();
     }
 
-    int idx = 0, z = 0;
+    int idx = 0;
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDINAME];
@@ -1039,15 +755,6 @@ bool AHP_XC::Connect()
         IUFillNumberVector(&lineDelayNP[x], &lineDelayN[x], 1, getDeviceName(), name, "Delay line", tab, IP_RO, 60, IPS_IDLE);
         sprintf(name, "LINE_STATS_%02d", x+1);
         IUFillNumberVector(&lineStatsNP[x], &lineStatsN[x*4], 4, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
-        sprintf(name, "AUTOCORRELATIONS_%02d", x+1);
-        sprintf(label, "Autocorrelations %d", x+1);
-        IUFillBLOB(&autocorrelationsB[x], name, label, "fits");
-
-        autocorrelations_str[x] = dsp_stream_new();
-        dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize()+1);
-        dsp_stream_add_dim(autocorrelations_str[x], 1);
-        dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
-
         for (int y = x+1; y < ahp_xc_get_nlines(); y++) {
             sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
             sprintf(label, "Correlations %d*%d", x+1, y+1);
@@ -1055,38 +762,27 @@ bool AHP_XC::Connect()
             sprintf(name, "COHERENCE_%0d_%0d", x+1, y+1);
             sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
-            sprintf(name, "CROSSCORRELATIONS_%02d_%02d", x+1, y+1);
-            sprintf(label, "Crosscorrelations %d*%d", x+1, y+1);
-            IUFillBLOB(&crosscorrelationsB[z], name, label, "fits");
-            crosscorrelations_str[idx/2] = dsp_stream_new();
-            dsp_stream_add_dim(crosscorrelations_str[z], ahp_xc_get_crosscorrelator_jittersize()*2);
-            dsp_stream_add_dim(crosscorrelations_str[z], 1);
-            dsp_stream_alloc_buffer(crosscorrelations_str[z], crosscorrelations_str[z]->len);
-            z++;
         }
     }
-    IUFillBLOBVector(&autocorrelationsBP, autocorrelationsB, ahp_xc_get_nlines(), getDeviceName(), "AUTOCORRELATIONS", "Autocorrelations", "Stats", IP_RO, 60, IPS_BUSY);
-    IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
-    IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+    IUFillNumberVector(&correlationsNP, correlationsN, ((ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*2), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
+    std::thread(&Interferometer::Callback, this).detach();
     // Start the timer
     SetTimer(POLLMS);
-
-    readThread = new std::thread(&AHP_XC::Callback, this);
     return true;
 }
 
-void AHP_XC::ActiveLine(int line, bool on, bool power)
+void Interferometer::ActiveLine(int line, bool on, bool power)
 {
     ahp_xc_set_leds(line, (on?1:0)|(power?2:0));
 }
 
-void AHP_XC::SetFrequencyDivider(unsigned char divider)
+void Interferometer::SetFrequencyDivider(unsigned char divider)
 {
     ahp_xc_set_frequency_divider(divider);
 }
 
-void AHP_XC::EnableCapture(bool start)
+void Interferometer::EnableCapture(bool start)
 {
     ahp_xc_enable_capture(start);
 }
