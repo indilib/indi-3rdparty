@@ -251,7 +251,7 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
             continue;
         double frametime = getCurrentTime();
-        timeleft = ExposureRequest-(frametime-ExposureStart);
+        timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
 
         if(InExposure) {
             if(timeleft <= 0.0f) {
@@ -631,7 +631,7 @@ bool AHP_XC::StartExposure(float duration)
     if(InExposure)
         return false;
 
-    ExposureStart = getCurrentTime();
+    gettimeofday(&ExpStart, nullptr);
     ExposureRequest = duration;
     timeleft = ExposureRequest;
     PrimaryCCD.setExposureDuration(static_cast<double>(ExposureRequest));
@@ -860,6 +860,23 @@ void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 
 }
 
+float AHP_XC::CalcTimeLeft(timeval start, float req)
+{
+    double timesince;
+    double timeleft;
+    struct timeval now
+    {
+        0, 0
+    };
+    gettimeofday(&now, nullptr);
+
+    timesince =
+        (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(start.tv_sec * 1000.0 + start.tv_usec / 1000);
+    timesince = timesince / 1000;
+    timeleft  = req - timesince;
+    return timeleft;
+}
+
 /**************************************************************************************
 ** Main device loop. We check for exposure and temperature progress here
 ***************************************************************************************/
@@ -872,7 +889,7 @@ void AHP_XC::TimerHit()
 
     if(InExposure) {
         // Just update time left in client
-        PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
+        PrimaryCCD.setExposureLeft(timeleft);
     }
 
     int idx = 0;
@@ -1073,6 +1090,7 @@ bool AHP_XC::Connect()
     SetTimer(POLLMS);
 
     readThread = new std::thread(&AHP_XC::Callback, this);
+
     return true;
 }
 

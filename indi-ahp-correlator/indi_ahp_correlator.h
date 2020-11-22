@@ -222,16 +222,20 @@ private:
     void EnableCapture(bool start);
     void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len);
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
+    float CalcTimeLeft(timeval start, float req);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
     float ExposureStart;
     bool threadsRunning;
 
-    inline float getCurrentTime()
+    inline double getCurrentTime()
     {
-        struct timeval curTime;
-        gettimeofday(&curTime, nullptr);
-        return static_cast<float>(curTime.tv_sec)+static_cast<float>(curTime.tv_usec)/1000000.0f;
+        struct timeval now
+        {
+            0, 0
+        };
+        gettimeofday(&now, nullptr);
+        return (double)(now.tv_sec)+(double)now.tv_usec/1000000.0;
     }
 };
