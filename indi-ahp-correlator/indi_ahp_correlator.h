@@ -113,7 +113,6 @@ public:
     bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     bool ISSnoopDevice(XMLEle *root);
 
-    void CaptureThread();
 protected:
 
     // General device functions
@@ -131,8 +130,6 @@ protected:
     void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip);
 
     bool Connect();
-    void setConnection(const uint8_t &value);
-    uint8_t getConnection() const;
 
     Connection::Serial *serialConnection;
 
@@ -223,6 +220,8 @@ private:
     void ActiveLine(int, bool, bool);
     void SetFrequencyDivider(unsigned char divider);
     void EnableCapture(bool start);
+    void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len);
+    int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;
     float ExposureRequest;
@@ -233,6 +232,6 @@ private:
     {
         struct timeval curTime;
         gettimeofday(&curTime, nullptr);
-        return static_cast<float>(curTime.tv_sec+static_cast<float>(curTime.tv_usec/1000000.0));
+        return static_cast<float>(curTime.tv_sec)+static_cast<float>(curTime.tv_usec)/1000000.0f;
     }
 };

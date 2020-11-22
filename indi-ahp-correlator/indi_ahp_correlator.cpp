@@ -20,10 +20,13 @@
 
 #include <stdlib.h>
 #include <termios.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <sys/file.h>
 #include <memory>
+#include <regex>
 #include <indicom.h>
+#include <sys/stat.h>
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
@@ -59,9 +62,180 @@ void ISSnoopDevice (XMLEle *root)
     array->ISSnoopDevice(root);
 }
 
+std::string regex_replace_compat(const std::string &input, const std::string &pattern, const std::string &replace)
+{
+    std::stringstream s;
+    std::regex_replace(std::ostreambuf_iterator<char>(s), input.begin(), input.end(), std::regex(pattern), replace);
+    return s.str();
+}
+
+int AHP_XC::getFileIndex(const char * dir, const char * prefix, const char * ext)
+{
+    INDI_UNUSED(ext);
+
+    DIR * dpdf = nullptr;
+    struct dirent * epdf = nullptr;
+    std::vector<std::string> files = std::vector<std::string>();
+
+    std::string prefixIndex = prefix;
+    prefixIndex             = regex_replace_compat(prefixIndex, "_ISO8601", "");
+    prefixIndex             = regex_replace_compat(prefixIndex, "_XXX", "");
+
+    // Create directory if does not exist
+    struct stat st;
+
+    if (stat(dir, &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            LOGF_INFO("Creating directory %s...", dir);
+            if (mkdir(dir, 0755) == -1)
+                LOGF_ERROR("Error creating directory %s (%s)", dir, strerror(errno));
+        }
+        else
+        {
+            LOGF_ERROR("Couldn't stat directory %s: %s", dir, strerror(errno));
+            return -1;
+        }
+    }
+
+    dpdf = opendir(dir);
+    if (dpdf != nullptr)
+    {
+        while ((epdf = readdir(dpdf)))
+        {
+            if (strstr(epdf->d_name, prefixIndex.c_str()))
+                files.push_back(epdf->d_name);
+        }
+    }
+    else
+    {
+        closedir(dpdf);
+        return -1;
+    }
+    int maxIndex = 0;
+
+    for (uint32_t i = 0; i < files.size(); i++)
+    {
+        int index = -1;
+
+        std::string file  = files.at(i);
+        std::size_t start = file.find_last_of("_");
+        std::size_t end   = file.find_last_of(".");
+        if (start != std::string::npos)
+        {
+            index = atoi(file.substr(start + 1, end).c_str());
+            if (index > maxIndex)
+                maxIndex = index;
+        }
+    }
+
+    closedir(dpdf);
+    return (maxIndex + 1);
+}
+
+void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len)
+{
+    bool sendImage = (UploadS[0].s == ISS_ON || UploadS[2].s == ISS_ON);
+    bool saveImage = (UploadS[1].s == ISS_ON || UploadS[2].s == ISS_ON);
+    for(int x = 0; x < len; x++) {
+        if (saveImage)
+        {
+            snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
+
+            FILE * fp = nullptr;
+            char imageFileName[MAXRBUF];
+
+            std::string prefix = UploadSettingsT[UPLOAD_PREFIX].text;
+            int maxIndex       = getFileIndex(UploadSettingsT[UPLOAD_DIR].text, UploadSettingsT[UPLOAD_PREFIX].text,
+                                              Blobs[x].format);
+
+            if (maxIndex < 0)
+            {
+                LOGF_ERROR("Error iterating directory %s. %s", UploadSettingsT[0].text,
+                           strerror(errno));
+                return;
+            }
+
+            if (maxIndex > 0)
+            {
+                char ts[32];
+                struct tm * tp;
+                time_t t;
+                time(&t);
+                tp = localtime(&t);
+                strftime(ts, sizeof(ts), "%Y-%m-%dT%H-%M-%S", tp);
+                std::string filets(ts);
+                prefix = std::regex_replace(prefix, std::regex("ISO8601"), filets);
+
+                char indexString[8];
+                snprintf(indexString, 8, "%03d", maxIndex);
+                std::string prefixIndex = indexString;
+                //prefix.replace(prefix.find("XXX"), std::string::npos, prefixIndex);
+                prefix = std::regex_replace(prefix, std::regex("XXX"), prefixIndex);
+            }
+
+            snprintf(imageFileName, MAXRBUF, "%s/%s%s", UploadSettingsT[0].text, prefix.c_str(), Blobs[x].format);
+
+            fp = fopen(imageFileName, "w");
+            if (fp == nullptr)
+            {
+                LOGF_ERROR("Unable to save image file (%s). %s", imageFileName, strerror(errno));
+                return;
+            }
+
+            int n = 0;
+            for (int nr = 0; nr < Blobs[x].bloblen; nr += n)
+                n = fwrite((static_cast<char *>(Blobs[x].blob) + nr), 1, Blobs[x].bloblen - nr, fp);
+
+            fclose(fp);
+
+            // Save image file path
+            IUSaveText(&FileNameT[0], imageFileName);
+
+            LOGF_INFO("Image saved to %s", imageFileName);
+            FileNameTP.s = IPS_OK;
+            IDSetText(&FileNameTP, nullptr);
+        }
+
+        snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
+    }
+    BlobP.s   = IPS_OK;
+
+    if (sendImage)
+    {
+#ifdef HAVE_WEBSOCKET
+        if (HasWebSocket() && WebSocketS[WEBSOCKET_ENABLED].s == ISS_ON)
+        {
+            for(int x = 0; x < len; x++) {
+                auto start = std::chrono::high_resolution_clock::now();
+
+                // Send format/size/..etc first later
+                wsServer.send_text(std::string(Blobs[x].format));
+                wsServer.send_binary(Blobs[x].blob, Blobs[x].bloblen);
+
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff = end - start;
+                LOGF_DEBUG("Websocket transfer took %g seconds", diff.count());
+            }
+        }
+        else
+#endif
+        {
+            auto start = std::chrono::high_resolution_clock::now();
+            IDSetBLOB(&BlobP, nullptr);
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> diff = end - start;
+            LOGF_DEBUG("BLOB transfer took %g seconds", diff.count());
+        }
+    }
+
+    LOG_INFO( "Upload complete");
+}
+
 void AHP_XC::Callback()
 {
-    unsigned long* counts = static_cast<unsigned long*>(malloc(static_cast<unsigned int>(ahp_xc_get_nlines())));
+    unsigned long* counts = static_cast<unsigned long*>(malloc(sizeof(unsigned long)*static_cast<unsigned int>(ahp_xc_get_nlines())));
     correlation* autocorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nlines()*(ahp_xc_get_autocorrelator_jittersize()))));
     correlation* crosscorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
     int w = PrimaryCCD.getXRes();
@@ -76,7 +250,8 @@ void AHP_XC::Callback()
     {
         if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
             continue;
-        timeleft = ExposureRequest-(getCurrentTime()-ExposureStart);
+        double frametime = getCurrentTime();
+        timeleft = ExposureRequest-(frametime-ExposureStart);
 
         if(InExposure) {
             if(timeleft <= 0.0f) {
@@ -87,61 +262,91 @@ void AHP_XC::Callback()
                 dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
                 dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
                 // Let INDI::CCD know we're done filling the image buffer
-                char **blobs = new char*[ahp_xc_get_nbaselines()];
-                char **names = new char*[ahp_xc_get_nbaselines()];
-                int *sizes = new int[ahp_xc_get_nbaselines()];
-                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                    blobs[x] = static_cast<char*>(dsp_file_write_fits(-64, autocorrelations_str[x]));
-                    sizes[x] = autocorrelations_str[x]->len;
-                    names[x] = new char[MAXINDINAME];
-                    sprintf(names[x], "AUTOCORRELATION_%02d", x);
-                    free(names[x]);
-                    free(blobs[x]);
-                    autocorrelations_str[x]->sizes[2] = 1;
-                    autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0]*autocorrelations_str[x]->sizes[1];
-                    autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, autocorrelations_str[x]->len);
-                }
-                IUUpdateBLOB(&autocorrelationsBP, sizes, nullptr, nullptr, blobs, names, ahp_xc_get_nlines());
-                int idx = 0;
-                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                    for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                        blobs[idx] = static_cast<char*>(dsp_file_write_fits(-64, crosscorrelations_str[idx]));
-                        sizes[idx] = autocorrelations_str[idx]->len;
-                        names[idx] = new char[MAXINDINAME];
-                        sprintf(names[idx], "CROSSCORRELATION_%02d_%02d", x, y);
-                        free(names[idx]);
-                        free(blobs[idx]);
-                        idx++;
+                ExposureComplete(&PrimaryCCD);
+                /* Additional BLOBs */
+                LOG_INFO("Generating additional BLOBs...");
+                char **blobs = new char*[ahp_xc_get_nbaselines()+1];
+                char *name = new char[MAXINDINAME];
+                if(ahp_xc_get_nlines() > 0) {
+                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                        sprintf(name, "AUTOCORRELATION_%02d", x);
+                        size_t memsize = autocorrelations_str[x]->len*sizeof(double);
+                        blobs[x] = new char[memsize];
+                        void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
+                        if(fits != NULL) {
+                            blobs[x] = (char*)realloc(blobs[x], memsize);
+                            memcpy(blobs[x], fits, memsize);
+                            free(fits);
+                        }
+                        autocorrelationsB[x].blob = blobs[x];
+                        autocorrelationsB[x].bloblen = memsize;
+                        strcpy(autocorrelationsB[x].format, "fits");
+                        strcpy(autocorrelationsB[x].name, name);
+                        autocorrelations_str[x]->sizes[1] = 1;
+                        autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0];
+                        dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
+                    }
+                    LOG_INFO("Autocorrelations BLOB generated, downloading...");
+                    sendFile(autocorrelationsB, autocorrelationsBP, ahp_xc_get_nlines());
+                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                        free(blobs[x]);
                     }
                 }
-                IUUpdateBLOB(&crosscorrelationsBP, sizes, nullptr, nullptr, blobs, names, ahp_xc_get_nbaselines());
+                if(ahp_xc_get_nbaselines() > 0) {
+                    int idx = 0;
+                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                            sprintf(name, "CROSSCORRELATION_%02d_%02d", x, y);
+                            size_t memsize = crosscorrelations_str[idx]->len*sizeof(double);
+                            blobs[idx] = new char[memsize];
+                            void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[idx]);
+                            if(fits != NULL) {
+                                blobs[x] = (char*)realloc(blobs[x], memsize);
+                                memcpy(blobs[x], fits, memsize);
+                                free(fits);
+                            }
+                            autocorrelationsB[x].blob = blobs[x];
+                            autocorrelationsB[x].bloblen = memsize;
+                            strcpy(autocorrelationsB[x].format, "fits");
+                            strcpy(autocorrelationsB[x].name, name);
+                            crosscorrelations_str[idx]->sizes[1] = 1;
+                            crosscorrelations_str[idx]->len = crosscorrelations_str[idx]->sizes[0];
+                            dsp_stream_alloc_buffer(crosscorrelations_str[idx], crosscorrelations_str[idx]->len);
+                            idx++;
+                        }
+                    }
+                    LOG_INFO("Crosscorrelations BLOB generated, downloading...");
+                    sendFile(crosscorrelationsB, crosscorrelationsBP, ahp_xc_get_nbaselines());
+                    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+                        free(blobs[x]);
+                    }
+                }
                 free(blobs);
-                free(sizes);
-                free(names);
-                IDSetBLOB(&autocorrelationsBP, nullptr);
-                IDSetBLOB(&crosscorrelationsBP, nullptr);
                 LOG_INFO("Download complete.");
-                ExposureComplete(&PrimaryCCD);
+            } else {
+                /* Additional BLOBs */
+                int idx = 0;
+                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                    int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0];
+                    autocorrelations_str[x]->sizes[1]++;
+                    autocorrelations_str[x]->len += autocorrelations_str[x]->sizes[0];
+                    autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, sizeof(dsp_t)*autocorrelations_str[x]->len);
+                    for(int i = 0; i < ahp_xc_get_autocorrelator_jittersize(); i++)
+                        autocorrelations_str[x]->buf[pos++] = autocorrelations[idx++].coherence;
+                    autocorrelations_str[x]->buf[pos++] = frametime;
+                }
+                idx = 0;
+                for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+                    int pos = crosscorrelations_str[x]->len-crosscorrelations_str[x]->sizes[0];
+                    crosscorrelations_str[x]->sizes[1]++;
+                    crosscorrelations_str[x]->len += crosscorrelations_str[x]->sizes[0];
+                    crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf, sizeof(dsp_t)*crosscorrelations_str[x]->len);
+                    for(int i = 0; i < ahp_xc_get_crosscorrelator_jittersize()*2-1; i++)
+                        crosscorrelations_str[x]->buf[pos++] = crosscorrelations[idx++].coherence;
+                    crosscorrelations_str[x]->buf[pos++] = frametime;
+                }
             }
         } else {
-            int idx = 0;
-            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0]*autocorrelations_str[x]->sizes[1];
-                autocorrelations_str[x]->sizes[2]++;
-                autocorrelations_str[x]->len += autocorrelations_str[x]->sizes[0]*autocorrelations_str[x]->sizes[1];
-                autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, autocorrelations_str[x]->len);
-                for(int i = 0; i < ahp_xc_get_autocorrelator_jittersize(); i++)
-                    autocorrelations_str[x]->buf[pos++] = autocorrelations[idx++].coherence;
-            }
-            idx = 0;
-            for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
-                int pos = autocorrelations_str[x]->len-crosscorrelations_str[x]->sizes[0]*crosscorrelations_str[x]->sizes[1];
-                crosscorrelations_str[x]->sizes[2]++;
-                crosscorrelations_str[x]->len += crosscorrelations_str[x]->sizes[0]*crosscorrelations_str[x]->sizes[1];
-                crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf, crosscorrelations_str[x]->len);
-                for(int i = 0; i < ahp_xc_get_crosscorrelator_jittersize()*2-1; i++)
-                    crosscorrelations_str[x]->buf[pos++] = crosscorrelations[idx++].coherence;
-            }
             memset(framebuffer, 0, static_cast<unsigned int>(w*h)*sizeof(double));
         }
 
@@ -274,12 +479,11 @@ bool AHP_XC::Disconnect()
     }
 
     threadsRunning = false;
-    usleep(1000000);
+
     readThread->join();
     readThread->~thread();
 
     ahp_xc_disconnect();
-
 
     return true;
 }
@@ -664,27 +868,28 @@ void AHP_XC::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
+    SetTimer(POLLMS);
+
     if(InExposure) {
         // Just update time left in client
         PrimaryCCD.setExposureLeft(static_cast<double>(timeleft));
     }
 
     int idx = 0;
-    IDSetNumber(&correlationsNP, nullptr);
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
         double photon_flux = ((double)totalcounts[x])*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
-        IDSetNumber(&lineDelayNP[x], nullptr);
         lineDelayNP[x].s = IPS_BUSY;
         lineDelayNP[x].np[0].value = line_delay;
-        IDSetNumber(&lineStatsNP[x], nullptr);
+        IDSetNumber(&lineDelayNP[x], nullptr);
         lineStatsNP[x].s = IPS_BUSY;
         lineStatsNP[x].np[0].value = ((double)totalcounts[x])*1000.0/(double)POLLMS;
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
+        IDSetNumber(&lineStatsNP[x], nullptr);
         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
             correlationsNP.np[idx*2+0].value = (double)totalcorrelations[idx]*1000.0/(double)POLLMS;
             correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx]*2.0/(double)(totalcounts[x]+totalcounts[y]);
@@ -693,8 +898,7 @@ void AHP_XC::TimerHit()
         }
         totalcounts[x] = 0;
     }
-
-    SetTimer(POLLMS);
+    IDSetNumber(&correlationsNP, nullptr);
 
     return;
 }
@@ -767,7 +971,7 @@ bool AHP_XC::Connect()
         baselines[x]->initProperties();
     }
 
-    int idx = 0;
+    int idx = 0, z = 0;
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDINAME];
@@ -836,35 +1040,39 @@ bool AHP_XC::Connect()
         sprintf(name, "LINE_STATS_%02d", x+1);
         IUFillNumberVector(&lineStatsNP[x], &lineStatsN[x*4], 4, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
         sprintf(name, "AUTOCORRELATIONS_%02d", x+1);
-        IUFillBLOB(&autocorrelationsB[x], name, "Autocorrelations", "fits");
+        sprintf(label, "Autocorrelations %d", x+1);
+        IUFillBLOB(&autocorrelationsB[x], name, label, "fits");
 
         autocorrelations_str[x] = dsp_stream_new();
-        dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize());
+        dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize()+1);
         dsp_stream_add_dim(autocorrelations_str[x], 1);
-        dsp_stream_add_dim(autocorrelations_str[x], 1);
+        dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
 
         for (int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            crosscorrelations_str[idx/2] = dsp_stream_new();
-            dsp_stream_add_dim(crosscorrelations_str[idx/2], ahp_xc_get_crosscorrelator_jittersize()*2-1);
-            dsp_stream_add_dim(crosscorrelations_str[idx/2], 1);
-            dsp_stream_add_dim(crosscorrelations_str[idx/2], 1);
-            sprintf(name, "CROSSCORRELATIONS_%02d_%02d", x+1, y+1);
-            IUFillBLOB(&crosscorrelationsB[idx/2], name, "Crosscorrelations", "fits");
             sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
             sprintf(label, "Correlations %d*%d", x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
             sprintf(name, "COHERENCE_%0d_%0d", x+1, y+1);
             sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
+            sprintf(name, "CROSSCORRELATIONS_%02d_%02d", x+1, y+1);
+            sprintf(label, "Crosscorrelations %d*%d", x+1, y+1);
+            IUFillBLOB(&crosscorrelationsB[z], name, label, "fits");
+            crosscorrelations_str[idx/2] = dsp_stream_new();
+            dsp_stream_add_dim(crosscorrelations_str[z], ahp_xc_get_crosscorrelator_jittersize()*2);
+            dsp_stream_add_dim(crosscorrelations_str[z], 1);
+            dsp_stream_alloc_buffer(crosscorrelations_str[z], crosscorrelations_str[z]->len);
+            z++;
         }
     }
     IUFillBLOBVector(&autocorrelationsBP, autocorrelationsB, ahp_xc_get_nlines(), getDeviceName(), "AUTOCORRELATIONS", "Autocorrelations", "Stats", IP_RO, 60, IPS_BUSY);
     IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
-    readThread = new std::thread(&AHP_XC::Callback, this);
     // Start the timer
     SetTimer(POLLMS);
+
+    readThread = new std::thread(&AHP_XC::Callback, this);
     return true;
 }
 
