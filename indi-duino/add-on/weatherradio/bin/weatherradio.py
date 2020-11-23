@@ -43,20 +43,19 @@ def connect(indi):
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","ADDRESS",ipaddress)
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","PORT",ipport)
 
-                # connect driver
-                connection = indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION","Connect")
-                # wait for the connection
-                time.sleep(7)
-                # ensure that all information is up to date
-                indi.process_events()
-                # check if the connection has been established
-                connection = indi.get_vector(dev, "CONNECTION")
-                # set location if connection was successful
-                if connection._light.is_ok():
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
-                    
+            # connect driver
+            connection = indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION","Connect")
+            # wait for the connection
+            time.sleep(7)
+            # ensure that all information is up to date
+            indi.process_events()
+            # check if the connection has been established
+            connection = indi.get_vector(dev, "CONNECTION")
+            # set location if connection was successful
+            if connection._light.is_ok():
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
 
             # update the result states
             result = result and connection._light.is_ok()
