@@ -138,13 +138,13 @@ DLL_EXPORT void ahp_xc_connect_fd(int fd);
 * \brief Disconnect from the serial port opened with ahp_xc_connect()
 * \sa ahp_xc_connect
 */
-DLL_EXPORT void ahp_xc_disconnect();
+DLL_EXPORT void ahp_xc_disconnect(void);
 
 /**
 * \brief Obtain the current baud rate
 * \return Returns the baud rate
 */
-DLL_EXPORT int ahp_xc_get_baudrate();
+DLL_EXPORT int ahp_xc_get_baudrate(void);
 
 /**
 * \brief Obtain the current baud rate
@@ -163,67 +163,67 @@ DLL_EXPORT void ahp_xc_set_baudrate(baud_rate rate);
 * \brief Obtain the current baud rate
 * \return Returns 0 on success, -1 if any error was encountered
 */
-DLL_EXPORT int ahp_xc_get_properties();
+DLL_EXPORT int ahp_xc_get_properties(void);
 
 /**
 * \brief Obtain the correlator bits per sample
 * \return Returns the bits per sample value
 */
-DLL_EXPORT int ahp_xc_get_bps();
+DLL_EXPORT int ahp_xc_get_bps(void);
 
 /**
 * \brief Obtain the correlator number of lines
 * \return Returns the number of lines
 */
-DLL_EXPORT int ahp_xc_get_nlines();
+DLL_EXPORT int ahp_xc_get_nlines(void);
 
 /**
 * \brief Obtain the correlator total baselines
 * \return Returns the baselines quantity
 */
-DLL_EXPORT int ahp_xc_get_nbaselines();
+DLL_EXPORT int ahp_xc_get_nbaselines(void);
 
 /**
 * \brief Obtain the correlator maximum delay value
 * \return Returns the delay size
 */
-DLL_EXPORT int ahp_xc_get_delaysize();
+DLL_EXPORT int ahp_xc_get_delaysize(void);
 
 /**
 * \brief Obtain the correlator jitter buffer size for autocorrelations
 * \return Returns the jitter size
 */
-DLL_EXPORT int ahp_xc_get_autocorrelator_jittersize();
+DLL_EXPORT int ahp_xc_get_autocorrelator_jittersize(void);
 
 /**
 * \brief Obtain the correlator jitter buffer size for crosscorrelations
 * \return Returns the jitter size
 */
-DLL_EXPORT int ahp_xc_get_crosscorrelator_jittersize();
+DLL_EXPORT int ahp_xc_get_crosscorrelator_jittersize(void);
 
 /**
 * \brief Obtain the correlator maximum readout frequency
 * \return Returns the maximum readout frequency
 */
-DLL_EXPORT int ahp_xc_get_frequency();
+DLL_EXPORT int ahp_xc_get_frequency(void);
 
 /**
 * \brief Obtain the correlator maximum readout frequency
 * \return Returns the maximum readout frequency
 */
-DLL_EXPORT int ahp_xc_get_frequency_divider();
+DLL_EXPORT int ahp_xc_get_frequency_divider(void);
 
 /**
 * \brief Obtain the serial packet time
 * \return Returns the packet transmission time
 */
-DLL_EXPORT unsigned int ahp_xc_get_packettime();
+DLL_EXPORT unsigned int ahp_xc_get_packettime(void);
 
 /**
 * \brief Obtain the serial packet size
 * \return Returns the packet size
 */
-DLL_EXPORT int ahp_xc_get_packetsize();
+DLL_EXPORT int ahp_xc_get_packetsize(void);
 /*@}*/
 /**
  * \defgroup Data and streaming
@@ -238,7 +238,7 @@ DLL_EXPORT int ahp_xc_get_packetsize();
 * \sa ahp_xc_set_line
 * \sa ahp_xc_set_delay
 */
-DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, unsigned long *autocorrelations, unsigned long *crosscorrelations);
+DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, correlation *autocorrelations, correlation *crosscorrelations);
 
 /**
 * \brief Scan all available delay channels and get autocorrelations of each input
@@ -261,12 +261,47 @@ DLL_EXPORT void ahp_xc_scan_crosscorrelations(correlation *crosscorrelations, in
  * \defgroup Commands and setup of the correlator
 */
 /*@{*/
+
+/**
+* \brief Enable capture by starting serial transmission from the correlator
+* \param enable 1 to enable capture, 0 to stop capturing.
+*/
 DLL_EXPORT void ahp_xc_enable_capture(int enable);
+
+/**
+* \brief Switch on or off the led lines of the correlator
+* \param index The input line index starting from 0
+* \param leds The enable mask of the leds
+*/
 DLL_EXPORT void ahp_xc_set_leds(int index, int leds);
+
+/**
+* \brief Set the delay index of the selected input for cross-correlation
+* \param index The input line index starting from 0
+* \param value The delay line index
+*/
 DLL_EXPORT void ahp_xc_set_delay(int index, int value);
+
+/**
+* \brief Set the delay index of the selected input for auto-correlation
+* \param index The input line index starting from 0
+* \param value The delay line index
+*/
 DLL_EXPORT void ahp_xc_set_line(int index, int value);
+
+/**
+* \brief Set the clock divider for autocorrelation and crosscorrelation
+* \param value The clock divider power of 2
+*/
 DLL_EXPORT void ahp_xc_set_frequency_divider(unsigned char value);
-DLL_EXPORT ssize_t ahp_xc_send_command(it_cmd c, unsigned char value);
+
+/**
+* \brief Send an arbitrary command to the AHP xc device
+* \param cmd The command
+* \param value The command parameter
+*/
+DLL_EXPORT ssize_t ahp_xc_send_command(it_cmd cmd, unsigned char value);
+
 /*@}*/
 /*@}*/
 /*@}*/
