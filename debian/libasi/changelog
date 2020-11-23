@@ -1,6 +1,15 @@
+libasi (1.11) buster; urgency=medium
+
+  * ASICAM 1.16 release:
+    V 1.16
+    ASI294MM camera support 44M resolution.
+    Fixed some bugs.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 23 Nov 2020 18:56:21 +0200
+
 libasi (1.10) buster; urgency=medium
 
-  * ASICAM 1.16.0915 release:
+  * ASICAM 1.15.0915 release:
     V 1.15.0915
     Fix some bugs
 
