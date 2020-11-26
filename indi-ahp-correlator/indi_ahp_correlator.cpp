@@ -175,7 +175,7 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len)
                 prefix = std::regex_replace(prefix, std::regex("XXX"), prefixIndex);
             }
 
-            snprintf(imageFileName, MAXRBUF, "%s/%s%s", UploadSettingsT[0].text, prefix.c_str(), Blobs[x].format);
+            snprintf(imageFileName, MAXRBUF, "%s/%s_%s%s", UploadSettingsT[0].text, prefix.c_str(), Blobs[x].name, Blobs[x].format);
 
             fp = fopen(imageFileName, "w");
             if (fp == nullptr)
@@ -267,11 +267,11 @@ void AHP_XC::Callback()
                 LOG_INFO("Generating additional BLOBs...");
                 char **blobs = new char*[ahp_xc_get_nbaselines()+1];
                 char *name = new char[MAXINDINAME];
-                if(ahp_xc_get_nlines() > 0) {
+                if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         sprintf(name, "AUTOCORRELATION_%02d", x);
                         size_t memsize = autocorrelations_str[x]->len*sizeof(double);
-                        blobs[x] = new char[memsize];
+                        blobs[x] = static_cast<char*>(malloc(memsize));
                         void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
                         if(fits != NULL) {
                             blobs[x] = (char*)realloc(blobs[x], memsize);
@@ -292,13 +292,13 @@ void AHP_XC::Callback()
                         free(blobs[x]);
                     }
                 }
-                if(ahp_xc_get_nbaselines() > 0) {
+                if(ahp_xc_get_nbaselines() > 0 && ahp_xc_get_crosscorrelator_jittersize() > 1) {
                     int idx = 0;
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                             sprintf(name, "CROSSCORRELATION_%02d_%02d", x, y);
                             size_t memsize = crosscorrelations_str[idx]->len*sizeof(double);
-                            blobs[idx] = new char[memsize];
+                            blobs[x] = static_cast<char*>(malloc(memsize));
                             void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[idx]);
                             if(fits != NULL) {
                                 blobs[x] = (char*)realloc(blobs[x], memsize);
@@ -466,15 +466,17 @@ AHP_XC::AHP_XC()
 
 bool AHP_XC::Disconnect()
 {
-    int idx = 0;
     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-        dsp_stream_free_buffer(autocorrelations_str[x]);
-        dsp_stream_free(autocorrelations_str[x]);
+        if(ahp_xc_get_autocorrelator_jittersize() > 1) {
+            dsp_stream_free_buffer(autocorrelations_str[x]);
+            dsp_stream_free(autocorrelations_str[x]);
+        }
         ActiveLine(x, false, false);
-        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            dsp_stream_free_buffer(crosscorrelations_str[idx]);
-            dsp_stream_free(crosscorrelations_str[idx]);
-            idx++;
+    }
+    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1) {
+            dsp_stream_free_buffer(crosscorrelations_str[x]);
+            dsp_stream_free(crosscorrelations_str[x]);
         }
     }
 
@@ -552,8 +554,10 @@ void AHP_XC::ISGetProperties(const char *dev)
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
-        defineBLOB(&autocorrelationsBP);
-        defineBLOB(&crosscorrelationsBP);
+        if(ahp_xc_get_autocorrelator_jittersize() > 1)
+            defineBLOB(&autocorrelationsBP);
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+            defineBLOB(&crosscorrelationsBP);
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
 
@@ -579,16 +583,20 @@ bool AHP_XC::updateProperties()
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
             defineSwitch(&lineEnableSP[x]);
         }
-        defineBLOB(&autocorrelationsBP);
-        defineBLOB(&crosscorrelationsBP);
+        if(ahp_xc_get_autocorrelator_jittersize() > 1)
+            defineBLOB(&autocorrelationsBP);
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+            defineBLOB(&crosscorrelationsBP);
         defineNumber(&correlationsNP);
         defineNumber(&settingsNP);
     }
     else
         // We're disconnected
     {
-        deleteProperty(autocorrelationsBP.name);
-        deleteProperty(crosscorrelationsBP.name);
+        if(ahp_xc_get_autocorrelator_jittersize() > 1)
+            deleteProperty(autocorrelationsBP.name);
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+            deleteProperty(crosscorrelationsBP.name);
         deleteProperty(correlationsNP.name);
         deleteProperty(settingsNP.name);
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
@@ -633,7 +641,6 @@ bool AHP_XC::StartExposure(float duration)
 
     gettimeofday(&ExpStart, nullptr);
     ExposureRequest = duration;
-    timeleft = ExposureRequest;
     PrimaryCCD.setExposureDuration(static_cast<double>(ExposureRequest));
     InExposure = true;
     // We're done
@@ -885,8 +892,6 @@ void AHP_XC::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
-    SetTimer(POLLMS);
-
     if(InExposure) {
         // Just update time left in client
         PrimaryCCD.setExposureLeft(timeleft);
@@ -916,6 +921,8 @@ void AHP_XC::TimerHit()
         totalcounts[x] = 0;
     }
     IDSetNumber(&correlationsNP, nullptr);
+
+    SetTimer(POLLMS);
 
     return;
 }
@@ -963,13 +970,17 @@ bool AHP_XC::Connect()
     lineDelayN = static_cast<INumber*>(realloc(lineDelayN, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumber)+1));
     lineDelayNP = static_cast<INumberVectorProperty*>(realloc(lineDelayNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
-    correlationsN = static_cast<INumber*>(realloc(correlationsN, static_cast<unsigned long>(2*ahp_xc_get_nlines()*(ahp_xc_get_nlines()-1)/2)*sizeof(INumber)+1));
+    correlationsN = static_cast<INumber*>(realloc(correlationsN, static_cast<unsigned long>(2*ahp_xc_get_nbaselines())*sizeof(INumber)+1));
 
-    autocorrelationsB = static_cast<IBLOB*>(realloc(autocorrelationsB, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(IBLOB)+1));
-    crosscorrelationsB = static_cast<IBLOB*>(realloc(crosscorrelationsB, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(IBLOB)+1));
+    if(ahp_xc_get_autocorrelator_jittersize() > 1)
+        autocorrelationsB = static_cast<IBLOB*>(realloc(autocorrelationsB, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(IBLOB)+1));
+    if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+        crosscorrelationsB = static_cast<IBLOB*>(realloc(crosscorrelationsB, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(IBLOB)+1));
 
-    autocorrelations_str = static_cast<dsp_stream_p*>(realloc(autocorrelations_str, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(dsp_stream_p)+1));
-    crosscorrelations_str = static_cast<dsp_stream_p*>(realloc(crosscorrelations_str, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(dsp_stream_p)+1));
+    if(ahp_xc_get_autocorrelator_jittersize() > 1)
+        autocorrelations_str = static_cast<dsp_stream_p*>(realloc(autocorrelations_str, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(dsp_stream_p)+1));
+    if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+        crosscorrelations_str = static_cast<dsp_stream_p*>(realloc(crosscorrelations_str, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(dsp_stream_p)+1));
 
     totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1));
@@ -982,17 +993,29 @@ bool AHP_XC::Connect()
     memset (totalcorrelations, 0, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1);
     memset (alt, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     memset (az, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
-
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1) {
+            crosscorrelations_str[x] = dsp_stream_new();
+            dsp_stream_add_dim(crosscorrelations_str[x], ahp_xc_get_crosscorrelator_jittersize()*2-1);
+            dsp_stream_add_dim(crosscorrelations_str[x], 1);
+            dsp_stream_alloc_buffer(crosscorrelations_str[x], crosscorrelations_str[x]->len);
+        }
         baselines[x] = new baseline();
         baselines[x]->initProperties();
     }
 
-    int idx = 0, z = 0;
+    int idx = 0;
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDINAME];
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
+        if(ahp_xc_get_autocorrelator_jittersize() > 1) {
+            autocorrelations_str[x] = dsp_stream_new();
+            dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize()+1);
+            dsp_stream_add_dim(autocorrelations_str[x], 1);
+            dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
+        }
+
         //snoop properties
         IUFillNumber(&snoopTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
         IUFillNumber(&snoopTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
@@ -1056,40 +1079,38 @@ bool AHP_XC::Connect()
         IUFillNumberVector(&lineDelayNP[x], &lineDelayN[x], 1, getDeviceName(), name, "Delay line", tab, IP_RO, 60, IPS_IDLE);
         sprintf(name, "LINE_STATS_%02d", x+1);
         IUFillNumberVector(&lineStatsNP[x], &lineStatsN[x*4], 4, getDeviceName(), name, "Stats", tab, IP_RO, 60, IPS_BUSY);
-        sprintf(name, "AUTOCORRELATIONS_%02d", x+1);
-        sprintf(label, "Autocorrelations %d", x+1);
-        IUFillBLOB(&autocorrelationsB[x], name, label, "fits");
 
-        autocorrelations_str[x] = dsp_stream_new();
-        dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize()+1);
-        dsp_stream_add_dim(autocorrelations_str[x], 1);
-        dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
+        if(ahp_xc_get_crosscorrelator_jittersize() > 1) {
+            sprintf(name, "AUTOCORRELATIONS_%02d", x+1);
+            sprintf(label, "Autocorrelations %d", x+1);
+            IUFillBLOB(&autocorrelationsB[x], name, label, ".fits");
+        }
 
         for (int y = x+1; y < ahp_xc_get_nlines(); y++) {
+            if(ahp_xc_get_crosscorrelator_jittersize() > 1) {
+                sprintf(name, "CROSSCORRELATIONS_%02d_%02d", x+1, y+1);
+                sprintf(label, "Crosscorrelations %d*%d", x+1, y+1);
+                IUFillBLOB(&crosscorrelationsB[idx/2], name, label, ".fits");
+            }
             sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
             sprintf(label, "Correlations %d*%d", x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%8.0f", 0, 400000000, 1, 0);
             sprintf(name, "COHERENCE_%0d_%0d", x+1, y+1);
             sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
-            sprintf(name, "CROSSCORRELATIONS_%02d_%02d", x+1, y+1);
-            sprintf(label, "Crosscorrelations %d*%d", x+1, y+1);
-            IUFillBLOB(&crosscorrelationsB[z], name, label, "fits");
-            crosscorrelations_str[idx/2] = dsp_stream_new();
-            dsp_stream_add_dim(crosscorrelations_str[z], ahp_xc_get_crosscorrelator_jittersize()*2);
-            dsp_stream_add_dim(crosscorrelations_str[z], 1);
-            dsp_stream_alloc_buffer(crosscorrelations_str[z], crosscorrelations_str[z]->len);
-            z++;
         }
     }
-    IUFillBLOBVector(&autocorrelationsBP, autocorrelationsB, ahp_xc_get_nlines(), getDeviceName(), "AUTOCORRELATIONS", "Autocorrelations", "Stats", IP_RO, 60, IPS_BUSY);
-    IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
+    if(ahp_xc_get_autocorrelator_jittersize() > 1)
+        IUFillBLOBVector(&autocorrelationsBP, autocorrelationsB, ahp_xc_get_nlines(), getDeviceName(), "AUTOCORRELATIONS", "Autocorrelations", "Stats", IP_RO, 60, IPS_BUSY);
+    if(ahp_xc_get_crosscorrelator_jittersize() > 1)
+        IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
     // Start the timer
     SetTimer(POLLMS);
 
     readThread = new std::thread(&AHP_XC::Callback, this);
+    readThread->detach();
 
     return true;
 }
