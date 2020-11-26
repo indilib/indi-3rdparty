@@ -27,6 +27,11 @@
 #include <regex>
 #include <indicom.h>
 #include <sys/stat.h>
+
+#include <libnova/sidereal_time.h>
+#include <libnova/transform.h>
+#include <libnova/julian_day.h>
+
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
@@ -241,35 +246,49 @@ void AHP_XC::Callback()
     int w = PrimaryCCD.getXRes();
     int h = PrimaryCCD.getYRes();
     double *framebuffer = static_cast<double*>(malloc(static_cast<unsigned int>(w*h)*sizeof(double)));
-    char str[MAXINDINAME];
-    str[ahp_xc_get_bps()] = 0;
+    dsp_buffer_set(framebuffer, w*h, 0);
 
     EnableCapture(true);
     threadsRunning = true;
     while (threadsRunning)
     {
-        if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
-            continue;
-        double frametime = getCurrentTime();
-        timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
+        ahp_xc_get_packet(counts, autocorrelations, crosscorrelations);
 
+        int idx = 0;
         if(InExposure) {
+            timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
+            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                    if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
+                        int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
+                        totalcorrelations[idx] += crosscorrelations[_idx].correlations;
+                        INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                        int xx = static_cast<int>(w*uv.u/2.0);
+                        int yy = static_cast<int>(h*uv.v/2.0);
+                        int z = w*h/2+w/2+xx+yy*w;
+                        if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
+                            framebuffer[z] += (double)crosscorrelations[_idx].coherence;
+                            framebuffer[w*h-1-z] += (double)crosscorrelations[_idx].coherence;
+                        }
+                    }
+                    idx++;
+                }
+            }
             if(timeleft <= 0.0f) {
                 // We're no longer exposing...
                 AbortExposure();
-                /* We're done exposing */
+                // We're done exposing
                 LOG_INFO("Exposure done, downloading image...");
-                dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
+                //dsp_buffer_stretch(framebuffer, w*h, 0, 65535);
                 dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
+                dsp_buffer_set(framebuffer, w*h, 0);
                 // Let INDI::CCD know we're done filling the image buffer
                 ExposureComplete(&PrimaryCCD);
-                /* Additional BLOBs */
+                // Additional BLOBs
                 LOG_INFO("Generating additional BLOBs...");
-                char **blobs = new char*[ahp_xc_get_nbaselines()+1];
-                char *name = new char[MAXINDINAME];
+                char **blobs = static_cast<char**>(malloc(sizeof(char*)*ahp_xc_get_nbaselines()+1));
                 if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                        sprintf(name, "AUTOCORRELATION_%02d", x);
                         size_t memsize = autocorrelations_str[x]->len*sizeof(double);
                         blobs[x] = static_cast<char*>(malloc(memsize));
                         void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
@@ -281,7 +300,6 @@ void AHP_XC::Callback()
                         autocorrelationsB[x].blob = blobs[x];
                         autocorrelationsB[x].bloblen = memsize;
                         strcpy(autocorrelationsB[x].format, "fits");
-                        strcpy(autocorrelationsB[x].name, name);
                         autocorrelations_str[x]->sizes[1] = 1;
                         autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0];
                         dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
@@ -296,7 +314,6 @@ void AHP_XC::Callback()
                     int idx = 0;
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                            sprintf(name, "CROSSCORRELATION_%02d_%02d", x, y);
                             size_t memsize = crosscorrelations_str[idx]->len*sizeof(double);
                             blobs[x] = static_cast<char*>(malloc(memsize));
                             void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[idx]);
@@ -308,7 +325,6 @@ void AHP_XC::Callback()
                             autocorrelationsB[x].blob = blobs[x];
                             autocorrelationsB[x].bloblen = memsize;
                             strcpy(autocorrelationsB[x].format, "fits");
-                            strcpy(autocorrelationsB[x].name, name);
                             crosscorrelations_str[idx]->sizes[1] = 1;
                             crosscorrelations_str[idx]->len = crosscorrelations_str[idx]->sizes[0];
                             dsp_stream_alloc_buffer(crosscorrelations_str[idx], crosscorrelations_str[idx]->len);
@@ -324,74 +340,69 @@ void AHP_XC::Callback()
                 free(blobs);
                 LOG_INFO("Download complete.");
             } else {
-                /* Additional BLOBs */
-                int idx = 0;
-                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                    int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0];
-                    autocorrelations_str[x]->sizes[1]++;
-                    autocorrelations_str[x]->len += autocorrelations_str[x]->sizes[0];
-                    autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, sizeof(dsp_t)*autocorrelations_str[x]->len);
-                    for(int i = 0; i < ahp_xc_get_autocorrelator_jittersize(); i++)
-                        autocorrelations_str[x]->buf[pos++] = autocorrelations[idx++].coherence;
-                    autocorrelations_str[x]->buf[pos++] = frametime;
+                // Additional BLOBs
+                if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
+                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                        int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0];
+                        autocorrelations_str[x]->sizes[1]++;
+                        autocorrelations_str[x]->len += autocorrelations_str[x]->sizes[0];
+                        autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf, sizeof(dsp_t)*autocorrelations_str[x]->len);
+                        for(int i = 0; i < ahp_xc_get_autocorrelator_jittersize(); i++)
+                            autocorrelations_str[x]->buf[pos++] = autocorrelations[idx++].coherence;
+                    }
                 }
                 idx = 0;
-                for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
-                    int pos = crosscorrelations_str[x]->len-crosscorrelations_str[x]->sizes[0];
-                    crosscorrelations_str[x]->sizes[1]++;
-                    crosscorrelations_str[x]->len += crosscorrelations_str[x]->sizes[0];
-                    crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf, sizeof(dsp_t)*crosscorrelations_str[x]->len);
-                    for(int i = 0; i < ahp_xc_get_crosscorrelator_jittersize()*2-1; i++)
-                        crosscorrelations_str[x]->buf[pos++] = crosscorrelations[idx++].coherence;
-                    crosscorrelations_str[x]->buf[pos++] = frametime;
+                if(ahp_xc_get_nbaselines() > 0 && ahp_xc_get_crosscorrelator_jittersize() > 1) {
+                    for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
+                        int pos = crosscorrelations_str[x]->len-crosscorrelations_str[x]->sizes[0];
+                        crosscorrelations_str[x]->sizes[1]++;
+                        crosscorrelations_str[x]->len += crosscorrelations_str[x]->sizes[0];
+                        crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf, sizeof(dsp_t)*crosscorrelations_str[x]->len);
+                        for(int i = 0; i < ahp_xc_get_crosscorrelator_jittersize()*2-1; i++)
+                            crosscorrelations_str[x]->buf[pos++] = crosscorrelations[idx++].coherence;
+                    }
                 }
             }
-        } else {
-            memset(framebuffer, 0, static_cast<unsigned int>(w*h)*sizeof(double));
         }
 
-        int idx = 0;
-        double minalt = 0;
+        double minalt = 180.0;
         int farest = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             totalcounts[x] += counts[x];
-            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                totalcorrelations[idx*ahp_xc_get_crosscorrelator_jittersize()+ahp_xc_get_crosscorrelator_jittersize()-1] += crosscorrelations[idx].correlations;
-                if(InExposure) {
-                    if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
-                        INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                        int xx = static_cast<int>(w*uv.u/2.0);
-                        int yy = static_cast<int>(h*uv.v/2.0);
-                        int z = w*h/2+w/2+xx+yy*w;
-                        if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                            framebuffer[z] += (double)crosscorrelations[idx].coherence;
-                            framebuffer[w*h-1-z] += (double)crosscorrelations[idx].coherence;
-                        }
-                    }
-                }
-                double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
-                double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value);
-                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
+            if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                ln_equ_posn lnradec { 0, 0 };
+                ln_lnlat_posn lnlat { 0, 0 };
+                ln_hrz_posn altaz { 0, 0 };
+
+                lnlat.lat = lineGPSNP[x].np[0].value;
+                lnlat.lng = lineGPSNP[x].np[1].value;
+
+                lnradec.ra  = lineTelescopeNP[x].np[0].value * 15;
+                lnradec.dec = lineTelescopeNP[x].np[1].value;
+
+                ln_get_hrz_from_equ(&lnradec, &lnlat, ln_get_julian_from_sys(), &altaz);
+                alt[x] = altaz.alt;
+
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
-                idx++;
             }
         }
         delay[farest] = 0;
         idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
-                double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
-                idx++;
-                double t = minalt*M_PI/180.0;
-                if(x == farest) {
-                    t -=  alt[y]*M_PI/180.0;
-                    delay[y] = d * cos(t);
-                }
-                if(y == farest) {
-                    t -=  alt[x]*M_PI/180.0;
-                    delay[x] = d * cos(t);
+                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
+                    INDI::Correlator::Baseline b = baselines[idx++]->getBaseline();
+                    double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
+                    double t = minalt*M_PI/180.0;
+                    if(x == farest) {
+                        t -=  alt[y]*M_PI/180.0;
+                        delay[y] = d * cos(fabs(t));
+                    }
+                    if(y == farest) {
+                        t -=  alt[x]*M_PI/180.0;
+                        delay[x] = d * cos(fabs(t));
+                    }
                 }
             }
         }
@@ -621,7 +632,9 @@ bool AHP_XC::updateProperties()
 ***************************************************************************************/
 void AHP_XC::setupParams()
 {
-    SetCCDParams(MAX_RESOLUTION, MAX_RESOLUTION, 16,  PIXEL_SIZE, PIXEL_SIZE);
+    int size = ahp_xc_get_delaysize()*2;
+    float pixelsize = (float)AIRY * ((float)LIGHTSPEED / (float)ahp_xc_get_frequency()) / (float)ahp_xc_get_delaysize();
+    SetCCDParams(size, size, 16,  pixelsize, pixelsize);
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
@@ -892,12 +905,8 @@ void AHP_XC::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
-    if(InExposure) {
-        // Just update time left in client
-        PrimaryCCD.setExposureLeft(timeleft);
-    }
-
     int idx = 0;
+    correlationsNP.s = IPS_BUSY;
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
         double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
@@ -921,6 +930,11 @@ void AHP_XC::TimerHit()
         totalcounts[x] = 0;
     }
     IDSetNumber(&correlationsNP, nullptr);
+
+    if(InExposure) {
+        // Just update time left in client
+        PrimaryCCD.setExposureLeft(timeleft);
+    }
 
     SetTimer(POLLMS);
 
@@ -1011,7 +1025,7 @@ bool AHP_XC::Connect()
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         if(ahp_xc_get_autocorrelator_jittersize() > 1) {
             autocorrelations_str[x] = dsp_stream_new();
-            dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize()+1);
+            dsp_stream_add_dim(autocorrelations_str[x], ahp_xc_get_autocorrelator_jittersize());
             dsp_stream_add_dim(autocorrelations_str[x], 1);
             dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
         }
