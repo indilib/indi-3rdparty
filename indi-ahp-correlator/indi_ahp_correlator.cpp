@@ -294,7 +294,7 @@ void AHP_XC::Callback()
                         size_t memsize = autocorrelations_str[x]->len*sizeof(double);
                         blobs[x] = static_cast<char*>(malloc(memsize));
                         void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
-                        if(fits != NULL) {
+                        if(fits != nullptr) {
                             blobs[x] = (char*)realloc(blobs[x], memsize);
                             memcpy(blobs[x], fits, memsize);
                             free(fits);
@@ -319,7 +319,7 @@ void AHP_XC::Callback()
                             size_t memsize = crosscorrelations_str[idx]->len*sizeof(double);
                             blobs[x] = static_cast<char*>(malloc(memsize));
                             void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[idx]);
-                            if(fits != NULL) {
+                            if(fits != nullptr) {
                                 blobs[x] = (char*)realloc(blobs[x], memsize);
                                 memcpy(blobs[x], fits, memsize);
                                 free(fits);
@@ -367,14 +367,15 @@ void AHP_XC::Callback()
             }
         }
 
-
+        idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 totalcounts[x] += counts[x];
                 for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(lineEnableSP[y].sp[0].s == ISS_ON) {
                         int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
-                        totalcorrelations[idx] += crosscorrelations[_idx].correlations;
+                        totalcorrelations[idx].correlations += crosscorrelations[_idx].correlations;
+                        totalcorrelations[idx].counts += crosscorrelations[_idx].counts;
                         idx++;
                     }
                 }
@@ -383,7 +384,6 @@ void AHP_XC::Callback()
 
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                totalcounts[x] += counts[x];
 
                 double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
                 double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value) * 180.0 / 12.0;
@@ -402,7 +402,6 @@ void AHP_XC::Callback()
                     INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
                     double d = sqrt(pow(uv.u, 2) + pow(uv.v, 2));
                     d /= AIRY / baselines[idx]->getWavelength();
-                    double t = minalt;
                     if(x == farest) {
                         delay[y] = d;
                     }
@@ -476,7 +475,7 @@ AHP_XC::AHP_XC()
     crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
 
     totalcounts = static_cast<double*>(malloc(1));
-    totalcorrelations = static_cast<double*>(malloc(1));
+    totalcorrelations = static_cast<correlation*>(malloc(1));
     alt = static_cast<double*>(malloc(1));
     az = static_cast<double*>(malloc(1));
     delay = static_cast<double*>(malloc(1));
@@ -640,8 +639,8 @@ bool AHP_XC::updateProperties()
 ***************************************************************************************/
 void AHP_XC::setupParams()
 {
-    int size = ahp_xc_get_delaysize()*2;
-    float pixelsize = (float)AIRY * ((float)LIGHTSPEED / (float)ahp_xc_get_frequency()) / (float)ahp_xc_get_delaysize();
+    float pixelsize = (float)AIRY * (float)LIGHTSPEED / (float)ahp_xc_get_frequency();
+    int size = (float)ahp_xc_get_delaysize()*2.0f*pixelsize;
     SetCCDParams(size, size, 16,  pixelsize, pixelsize);
 
     // Let's calculate how much memory we need for the primary CCD buffer
@@ -930,9 +929,10 @@ void AHP_XC::TimerHit()
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         IDSetNumber(&lineStatsNP[x], nullptr);
         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            correlationsNP.np[idx*2+0].value = (double)totalcorrelations[idx]*1000.0/(double)POLLMS;
-            correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx]*2.0/(double)(totalcounts[x]+totalcounts[y]);
-            totalcorrelations[idx] = 0;
+            correlationsNP.np[idx*2+0].value = (double)totalcorrelations[idx].correlations*1000.0/(double)POLLMS;
+            correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx].correlations/(double)(totalcorrelations[idx].counts);
+            totalcorrelations[idx].correlations = 0;
+            totalcorrelations[idx].counts = 0;
             idx++;
         }
         totalcounts[x] = 0;
@@ -1005,14 +1005,14 @@ bool AHP_XC::Connect()
         crosscorrelations_str = static_cast<dsp_stream_p*>(realloc(crosscorrelations_str, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(dsp_stream_p)+1));
 
     totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
-    totalcorrelations = static_cast<double*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1));
+    totalcorrelations = static_cast<correlation*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(correlation)+1));
     alt = static_cast<double*>(realloc(alt, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     az = static_cast<double*>(realloc(az, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     delay = static_cast<double*>(realloc(delay, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     baselines = static_cast<baseline**>(realloc(baselines, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(baseline*)+1));
 
     memset (totalcounts, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
-    memset (totalcorrelations, 0, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(double)+1);
+    memset (totalcorrelations, 0, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(correlation)+1);
     memset (alt, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     memset (az, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
