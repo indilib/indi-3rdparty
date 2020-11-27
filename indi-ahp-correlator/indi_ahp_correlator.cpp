@@ -252,7 +252,8 @@ void AHP_XC::Callback()
     threadsRunning = true;
     while (threadsRunning)
     {
-        ahp_xc_get_packet(counts, autocorrelations, crosscorrelations);
+        if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
+            continue;
 
         int idx = 0;
         double minalt = 90.0;
