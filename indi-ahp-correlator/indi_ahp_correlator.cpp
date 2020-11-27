@@ -255,13 +255,15 @@ void AHP_XC::Callback()
         ahp_xc_get_packet(counts, autocorrelations, crosscorrelations);
 
         int idx = 0;
+        double minalt = 90.0;
+        int farest = 0;
+
         if(InExposure) {
             timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
             for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                 for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
                         int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
-                        totalcorrelations[idx] += crosscorrelations[_idx].correlations;
                         INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
                         int xx = static_cast<int>(w*uv.u/2.0);
                         int yy = static_cast<int>(h*uv.v/2.0);
@@ -365,47 +367,53 @@ void AHP_XC::Callback()
             }
         }
 
-        double minalt = 180.0;
-        int farest = 0;
+
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-            totalcounts[x] += counts[x];
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                ln_equ_posn lnradec { 0, 0 };
-                ln_lnlat_posn lnlat { 0, 0 };
-                ln_hrz_posn altaz { 0, 0 };
+                totalcounts[x] += counts[x];
+                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                    if(lineEnableSP[y].sp[0].s == ISS_ON) {
+                        int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
+                        totalcorrelations[idx] += crosscorrelations[_idx].correlations;
+                        idx++;
+                    }
+                }
+            }
+        }
 
-                lnlat.lat = lineGPSNP[x].np[0].value;
-                lnlat.lng = lineGPSNP[x].np[1].value;
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                totalcounts[x] += counts[x];
 
-                lnradec.ra  = lineTelescopeNP[x].np[0].value * 15;
-                lnradec.dec = lineTelescopeNP[x].np[1].value;
-
-                ln_get_hrz_from_equ(&lnradec, &lnlat, ln_get_julian_from_sys(), &altaz);
-                alt[x] = altaz.alt;
+                double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
+                double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value) * 180.0 / 12.0;
+                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
 
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
             }
         }
+
         delay[farest] = 0;
         idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                 if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
-                    INDI::Correlator::Baseline b = baselines[idx++]->getBaseline();
-                    double d = sqrt(pow(b.x, 2) + pow(b.y, 2) + pow(b.z, 2));
-                    double t = minalt*M_PI/180.0;
+                    INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                    double d = sqrt(pow(uv.u, 2) + pow(uv.v, 2));
+                    d /= AIRY / baselines[idx]->getWavelength();
+                    double t = minalt;
                     if(x == farest) {
-                        t -=  alt[y]*M_PI/180.0;
-                        delay[y] = d * cos(fabs(t));
+                        delay[y] = d;
                     }
                     if(y == farest) {
-                        t -=  alt[x]*M_PI/180.0;
-                        delay[x] = d * cos(fabs(t));
+                        delay[x] = d;
                     }
                 }
+                idx++;
             }
         }
+
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             int delay_clocks = delay[x] * ahp_xc_get_frequency() / LIGHTSPEED;
             delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
@@ -1124,7 +1132,6 @@ bool AHP_XC::Connect()
     SetTimer(POLLMS);
 
     readThread = new std::thread(&AHP_XC::Callback, this);
-    readThread->detach();
 
     return true;
 }
