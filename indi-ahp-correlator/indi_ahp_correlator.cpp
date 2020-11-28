@@ -253,7 +253,7 @@ void AHP_XC::Callback()
         int w = PrimaryCCD.getXRes();
         int h = PrimaryCCD.getYRes();
         int idx = 0;
-        double minalt = M_PI;
+        double minalt = 90.0;
         int farest = 0;
 
         if(InExposure) {
@@ -380,6 +380,8 @@ void AHP_XC::Callback()
             }
         }
 
+        double julian = ln_get_julian_from_sys();
+
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 ln_equ_posn equ;
@@ -391,14 +393,12 @@ void AHP_XC::Callback()
 
                 obs.lat = lineGPSNP[x].np[0].value;
                 obs.lng = lineGPSNP[x].np[1].value;
+                ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
 
-                double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
-                ln_get_hrz_from_equ_sidereal_time(&equ, &obs, lst, &hrz);
-
-                alt[x] = hrz.alt*M_PI/180.0;
-                az[x] = hrz.az*M_PI/180.0;
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
+                alt[x] = hrz.alt*M_PI/180.0;
+                az[x] = hrz.az*M_PI/180.0;
             }
         }
 
@@ -409,7 +409,7 @@ void AHP_XC::Callback()
                 if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
                     INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
                     double d = sqrt(pow(b.x, 2)+pow(b.y, 2)+pow(b.z, 2));
-                    double rad = acos(b.x/d);
+                    double rad = acos(-b.x/d)+asin(-b.y/d)-M_PI/2.0;
                     if(x == farest) {
                         rad -= az[y];
                         while (rad < 0)
