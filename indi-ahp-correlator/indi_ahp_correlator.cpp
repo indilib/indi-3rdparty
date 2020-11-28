@@ -374,7 +374,7 @@ void AHP_XC::Callback()
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                 if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
                     int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize()-1;
-                    totalcorrelations[idx].coherence = (totalcorrelations[idx].coherence + crosscorrelations[_idx].coherence) / 2.0;
+                    totalcorrelations[idx].correlations += crosscorrelations[_idx].correlations;
                 }
                 idx++;
             }
@@ -955,7 +955,8 @@ void AHP_XC::TimerHit()
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         IDSetNumber(&lineStatsNP[x], nullptr);
         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            correlationsNP.np[idx].value = (double)totalcorrelations[idx].coherence;
+            correlationsNP.np[idx].value = (double)totalcorrelations[idx].correlations*1000.0/(double)POLLMS;
+            totalcorrelations[idx].correlations = 0;
             idx++;
         }
         totalcounts[x] = 0;
@@ -1137,8 +1138,8 @@ bool AHP_XC::Connect()
                 sprintf(label, "Crosscorrelations %d*%d", x+1, y+1);
                 IUFillBLOB(&crosscorrelationsB[idx], name, label, ".fits");
             }
-            sprintf(name, "COHERENCE_%0d_%0d", x+1, y+1);
-            sprintf(label, "Coherence ratio (%d*%d)/(%d+%d)", x+1, y+1, x+1, y+1);
+            sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
+            sprintf(label, "Correlations (%d*%d)", x+1, y+1, x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
         }
     }
