@@ -35,7 +35,7 @@
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
-static int nplots = 0;
+static int nplots = 1;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
 
 void ISGetProperties(const char *dev)
@@ -251,13 +251,12 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(autocorrelations, crosscorrelations))
             continue;
 
-        int w = PrimaryCCD.getXRes();
-        int h = PrimaryCCD.getYRes();
         int idx = 0;
         double minalt = 0.0;
         int farest = 0;
 
         if(InExposure) {
+            timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
             if(timeleft <= 0.0f) {
                 // We're no longer exposing...
                 AbortExposure();
@@ -580,7 +579,7 @@ bool AHP_XC::initProperties()
     // Must init parent properties first!
     INDI::CCD::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_CAN_SUBFRAME|CCD_HAS_DSP);
+    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_DSP);
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
@@ -677,9 +676,10 @@ bool AHP_XC::updateProperties()
 ***************************************************************************************/
 void AHP_XC::setupParams()
 {
-    float pixelsize = (float)AIRY * (float)LIGHTSPEED / (float)ahp_xc_get_frequency();
+    float pixelsize = (float)AIRY * (float)LIGHTSPEED / ahp_xc_get_frequency();
     int size = (float)ahp_xc_get_delaysize()*2.0f*pixelsize;
-    SetCCDParams(size, size, -64, pixelsize, pixelsize);
+    pixelsize *= 1000000.0f;
+    SetCCDParams(size, size, 64, pixelsize, pixelsize);
 
     if(nplots > 0) {
         plot_str[0]->sizes[0] = size;
@@ -735,8 +735,6 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
-
-    setupParams();
 
     return true;
 }
@@ -955,7 +953,6 @@ void AHP_XC::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
-    timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
     int idx = 0;
     correlationsNP.s = IPS_BUSY;
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
@@ -1182,8 +1179,6 @@ bool AHP_XC::Connect()
     if(ahp_xc_get_crosscorrelator_jittersize() > 1)
         IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines(), getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
-
-    setupParams();
 
     // Start the timer
     SetTimer(POLLMS);
