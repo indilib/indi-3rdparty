@@ -382,12 +382,21 @@ void AHP_XC::Callback()
 
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                ln_equ_posn equ;
+                ln_lnlat_posn obs;
+                ln_hrz_posn hrz;
+
+                equ.ra = lineTelescopeNP[x].np[0].value;
+                equ.dec = lineTelescopeNP[x].np[1].value;
+
+                obs.lat = lineGPSNP[x].np[0].value;
+                obs.lng = lineGPSNP[x].np[1].value;
 
                 double lst = get_local_sidereal_time(lineGPSNP[x].np[1].value);
-                double ha = get_local_hour_angle(lst, lineTelescopeNP[x].np[0].value) * 180.0 / 12.0;
-                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
-                alt[x] *= M_PI/180.0;
-                az[x] *= M_PI/180.0;
+                ln_get_hrz_from_equ_sidereal_time(&equ, &obs, lst, &hrz);
+
+                alt[x] = hrz.alt*M_PI/180.0;
+                az[x] = hrz.az*M_PI/180.0;
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
             }
@@ -400,12 +409,22 @@ void AHP_XC::Callback()
                 if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
                     INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
                     double d = sqrt(pow(b.x, 2)+pow(b.y, 2)+pow(b.z, 2));
-                    double rad = acos(b.x/d)+asin(b.y/d)-M_PI/2;
+                    double rad = acos(b.x/d);
                     if(x == farest) {
-                        delay[y] = d*cos(alt[y])*sin(acos(az[y])-rad);
+                        rad -= az[y];
+                        while (rad < 0)
+                            rad += M_PI;
+                        while (rad >= M_PI)
+                            rad -= M_PI;
+                        delay[y] = d*cos(alt[y])*sin(rad);
                     }
                     if(y == farest) {
-                        delay[x] = d*cos(alt[x])*sin(acos(az[x])-rad);
+                        rad -= az[x];
+                        while (rad < 0)
+                            rad += M_PI;
+                        while (rad >= M_PI)
+                            rad -= M_PI;
+                        delay[x] = d*cos(alt[x])*sin(rad);
                     }
                 }
                 idx++;
