@@ -253,7 +253,7 @@ void AHP_XC::Callback()
         int w = PrimaryCCD.getXRes();
         int h = PrimaryCCD.getYRes();
         int idx = 0;
-        double minalt = 90.0;
+        double minalt = 0.0;
         int farest = 0;
 
         if(InExposure) {
@@ -395,8 +395,8 @@ void AHP_XC::Callback()
                 obs.lng = lineGPSNP[x].np[1].value;
                 ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
 
-                farest = (minalt < alt[x] ? farest : x);
-                minalt = (minalt < alt[x] ? minalt : alt[x]);
+                farest = (minalt > alt[x] ? farest : x);
+                minalt = (minalt > alt[x] ? minalt : alt[x]);
                 alt[x] = hrz.alt*M_PI/180.0;
                 az[x] = hrz.az*M_PI/180.0;
             }
