@@ -35,7 +35,7 @@
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
-static int nplots = 1;
+static int nplots = 0;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
 
 void ISGetProperties(const char *dev)
@@ -258,34 +258,12 @@ void AHP_XC::Callback()
         int farest = 0;
 
         if(InExposure) {
-            timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
-            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                    if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
-                        int w = plot_str[0]->sizes[0];
-                        int h = plot_str[0]->sizes[1];
-                        int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
-                        INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
-                        int xx = static_cast<int>(w*uv.u/2.0);
-                        int yy = static_cast<int>(h*uv.v/2.0);
-                        int z = w*h/2+w/2+xx+yy*w;
-                        if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                            plot_str[0]->buf[z] += (double)crosscorrelations[_idx].coherence;
-                            plot_str[0]->buf[w*h-1-z] += (double)crosscorrelations[_idx].coherence;
-                        }
-                    }
-                    idx++;
-                }
-            }
             if(timeleft <= 0.0f) {
                 // We're no longer exposing...
                 AbortExposure();
                 // We're done exposing
-                LOG_INFO("Exposure done, downloading image...");
-                // Let INDI::CCD know we're done filling the image buffer
-                sendFile(plotB, plotBP, nplots);
+                LOG_INFO("Integration complete, downloading plots...");
                 // Additional BLOBs
-                LOG_INFO("Generating additional BLOBs...");
                 char **blobs = static_cast<char**>(malloc(sizeof(char*)*plotBP.nbp+1));
                 for(int x = 0; x < nplots; x++) {
                     size_t memsize = plot_str[x]->len*sizeof(double);
@@ -298,15 +276,14 @@ void AHP_XC::Callback()
                     }
                     plotB[x].blob = blobs[x];
                     plotB[x].bloblen = memsize;
-                    plot_str[x]->sizes[1] = 1;
-                    plot_str[x]->len = plot_str[x]->sizes[0];
-                    dsp_stream_alloc_buffer(plot_str[x], plot_str[x]->len);
                 }
-                LOG_INFO("Plots BLOB generated, downloading...");
-                sendFile(plotB, plotBP, ahp_xc_get_nlines());
-                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                LOG_INFO("Plots BLOBs generated, downloading...");
+                sendFile(plotB, plotBP, nplots);
+                for(int x = 0; x < nplots; x++) {
                     free(blobs[x]);
+                    dsp_buffer_set(plot_str[x]->buf, plot_str[x]->len, 0);
                 }
+                LOG_INFO("Generating additional BLOBs...");
                 if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         size_t memsize = autocorrelations_str[x]->len*sizeof(double);
@@ -323,7 +300,7 @@ void AHP_XC::Callback()
                         autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0];
                         dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
                     }
-                    LOG_INFO("Autocorrelations BLOB generated, downloading...");
+                    LOG_INFO("Autocorrelations BLOBs generated, downloading...");
                     sendFile(autocorrelationsB, autocorrelationsBP, ahp_xc_get_nlines());
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         free(blobs[x]);
@@ -349,7 +326,7 @@ void AHP_XC::Callback()
                             idx++;
                         }
                     }
-                    LOG_INFO("Crosscorrelations BLOB generated, downloading...");
+                    LOG_INFO("Crosscorrelations BLOBs generated, downloading...");
                     sendFile(crosscorrelationsB, crosscorrelationsBP, ahp_xc_get_nbaselines());
                     for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
                         free(blobs[x]);
@@ -358,7 +335,27 @@ void AHP_XC::Callback()
                 free(blobs);
                 LOG_INFO("Download complete.");
             } else {
-                // Additional BLOBs
+                // Filling BLOBs
+                if(nplots > 0) {
+                    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                        for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                            if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
+                                int w = plot_str[0]->sizes[0];
+                                int h = plot_str[0]->sizes[1];
+                                int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
+                                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                                int xx = static_cast<int>(w*uv.u/2.0);
+                                int yy = static_cast<int>(h*uv.v/2.0);
+                                int z = w*h/2+w/2+xx+yy*w;
+                                if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
+                                    plot_str[0]->buf[z] += (double)crosscorrelations[_idx].coherence;
+                                    plot_str[0]->buf[w*h-1-z] += (double)crosscorrelations[_idx].coherence;
+                                }
+                            }
+                            idx++;
+                        }
+                    }
+                }
                 if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         int pos = autocorrelations_str[x]->len-autocorrelations_str[x]->sizes[0];
@@ -682,17 +679,14 @@ void AHP_XC::setupParams()
 {
     float pixelsize = (float)AIRY * (float)LIGHTSPEED / (float)ahp_xc_get_frequency();
     int size = (float)ahp_xc_get_delaysize()*2.0f*pixelsize;
-    plot_str[0]->sizes[0] = size;
-    plot_str[0]->sizes[1] = size;
-    plot_str[0]->len = plot_str[0]->sizes[0]*plot_str[0]->sizes[1];
-    dsp_stream_alloc_buffer(plot_str[0], plot_str[0]->len);
+    SetCCDParams(size, size, -64, pixelsize, pixelsize);
 
-    // Let's calculate how much memory we need for the primary CCD buffer
-    int nbuf;
-    nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
-    nbuf += 512;  //  leave a little extra at the end
-    PrimaryCCD.setFrameBufferSize(static_cast<unsigned int>(nbuf));
-    memset(PrimaryCCD.getFrameBuffer(), 0, static_cast<unsigned int>(PrimaryCCD.getFrameBufferSize()));
+    if(nplots > 0) {
+        plot_str[0]->sizes[0] = size;
+        plot_str[0]->sizes[1] = size;
+        plot_str[0]->len = size*size;
+        dsp_stream_alloc_buffer(plot_str[0], plot_str[0]->len);
+    }
 }
 
 /**************************************************************************************
@@ -961,6 +955,7 @@ void AHP_XC::TimerHit()
     if(!isConnected())
         return;  //  No need to reset timer if we are not connected anymore
 
+    timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
     int idx = 0;
     correlationsNP.s = IPS_BUSY;
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
@@ -1084,6 +1079,9 @@ bool AHP_XC::Connect()
 
     for(int x = 0; x < nplots; x++) {
         plot_str[x] = dsp_stream_new();
+        dsp_stream_add_dim(plot_str[x], 1);
+        dsp_stream_add_dim(plot_str[x], 1);
+        dsp_stream_alloc_buffer(plot_str[x], plot_str[x]->len);
         sprintf(name, "PLOT%02d", x+1);
         sprintf(label, "Plot %d", x+1);
         IUFillBLOB(&plotB[x], name, label, ".fits");
