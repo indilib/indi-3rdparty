@@ -35,6 +35,7 @@
 #include <connectionplugins/connectionserial.h>
 #include "indi_ahp_correlator.h"
 
+static int nplots = 1;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
 
 void ISGetProperties(const char *dev)
@@ -250,8 +251,6 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(autocorrelations, crosscorrelations))
             continue;
 
-        int w = PrimaryCCD.getXRes();
-        int h = PrimaryCCD.getYRes();
         int idx = 0;
         double minalt = 0.0;
         int farest = 0;
@@ -261,14 +260,16 @@ void AHP_XC::Callback()
             for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                 for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
+                        int w = plot_str[0]->sizes[0];
+                        int h = plot_str[0]->sizes[1];
                         int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
                         INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
                         int xx = static_cast<int>(w*uv.u/2.0);
                         int yy = static_cast<int>(h*uv.v/2.0);
                         int z = w*h/2+w/2+xx+yy*w;
                         if(xx >= -w/2 && xx < w/2 && yy >= -w/2 && yy < h/2) {
-                            framebuffer[z] += (double)crosscorrelations[_idx].coherence;
-                            framebuffer[w*h-1-z] += (double)crosscorrelations[_idx].coherence;
+                            plot_str[0]->buf[z] += (double)crosscorrelations[_idx].coherence;
+                            plot_str[0]->buf[w*h-1-z] += (double)crosscorrelations[_idx].coherence;
                         }
                     }
                     idx++;
@@ -279,14 +280,31 @@ void AHP_XC::Callback()
                 AbortExposure();
                 // We're done exposing
                 LOG_INFO("Exposure done, downloading image...");
-                dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
-                dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
-                memset(framebuffer, 0, w*h*sizeof(double));
                 // Let INDI::CCD know we're done filling the image buffer
-                ExposureComplete(&PrimaryCCD);
+                sendFile(plotB, plotBP, nplots);
                 // Additional BLOBs
                 LOG_INFO("Generating additional BLOBs...");
-                char **blobs = static_cast<char**>(malloc(sizeof(char*)*ahp_xc_get_nbaselines()+1));
+                char **blobs = static_cast<char**>(malloc(sizeof(char*)*plotBP.nbp+1));
+                for(int x = 0; x < nplots; x++) {
+                    size_t memsize = plot_str[x]->len*sizeof(double);
+                    blobs[x] = static_cast<char*>(malloc(memsize));
+                    void* fits = dsp_file_write_fits(-64, &memsize, plot_str[x]);
+                    if(fits != nullptr) {
+                        blobs[x] = (char*)realloc(blobs[x], memsize);
+                        memcpy(blobs[x], fits, memsize);
+                        free(fits);
+                    }
+                    plotB[x].blob = blobs[x];
+                    plotB[x].bloblen = memsize;
+                    plot_str[x]->sizes[1] = 1;
+                    plot_str[x]->len = plot_str[x]->sizes[0];
+                    dsp_stream_alloc_buffer(plot_str[x], plot_str[x]->len);
+                }
+                LOG_INFO("Plots BLOB generated, downloading...");
+                sendFile(plotB, plotBP, ahp_xc_get_nlines());
+                for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                    free(blobs[x]);
+                }
                 if(ahp_xc_get_nlines() > 0 && ahp_xc_get_autocorrelator_jittersize() > 1) {
                     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                         size_t memsize = autocorrelations_str[x]->len*sizeof(double);
@@ -299,7 +317,6 @@ void AHP_XC::Callback()
                         }
                         autocorrelationsB[x].blob = blobs[x];
                         autocorrelationsB[x].bloblen = memsize;
-                        strcpy(autocorrelationsB[x].format, "fits");
                         autocorrelations_str[x]->sizes[1] = 1;
                         autocorrelations_str[x]->len = autocorrelations_str[x]->sizes[0];
                         dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
@@ -324,7 +341,6 @@ void AHP_XC::Callback()
                             }
                             autocorrelationsB[x].blob = blobs[x];
                             autocorrelationsB[x].bloblen = memsize;
-                            strcpy(autocorrelationsB[x].format, "fits");
                             crosscorrelations_str[idx]->sizes[1] = 1;
                             crosscorrelations_str[idx]->len = crosscorrelations_str[idx]->sizes[0];
                             dsp_stream_alloc_buffer(crosscorrelations_str[idx], crosscorrelations_str[idx]->len);
@@ -364,7 +380,7 @@ void AHP_XC::Callback()
                 }
             }
         } else {
-            memset(framebuffer, 0, PrimaryCCD.getXRes()*PrimaryCCD.getYRes()*sizeof(double));
+            dsp_buffer_set(plot_str[0]->buf, plot_str[0]->len, 0);
         }
 
         idx = 0;
@@ -438,7 +454,6 @@ void AHP_XC::Callback()
         }
     }
     EnableCapture(false);
-    free (framebuffer);
 }
 
 AHP_XC::AHP_XC()
@@ -450,6 +465,7 @@ AHP_XC::AHP_XC()
 
     autocorrelationsB = static_cast<IBLOB*>(malloc(1));
     crosscorrelationsB = static_cast<IBLOB*>(malloc(1));
+    plotB = static_cast<IBLOB*>(malloc(1));
 
     lineStatsN = static_cast<INumber*>(malloc(1));
     lineStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
@@ -491,8 +507,8 @@ AHP_XC::AHP_XC()
 
     autocorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
     crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
+    plot_str = static_cast<dsp_stream_p*>(malloc(1));
 
-    framebuffer = static_cast<double*>(malloc(1));
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<correlation*>(malloc(1));
     alt = static_cast<double*>(malloc(1));
@@ -504,6 +520,10 @@ AHP_XC::AHP_XC()
 
 bool AHP_XC::Disconnect()
 {
+    for(int x = 0; x < nplots; x++) {
+        dsp_stream_free_buffer(plot_str[x]);
+        dsp_stream_free(plot_str[x]);
+    }
     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         if(ahp_xc_get_autocorrelator_jittersize() > 1) {
             dsp_stream_free_buffer(autocorrelations_str[x]);
@@ -661,8 +681,10 @@ void AHP_XC::setupParams()
 {
     float pixelsize = (float)AIRY * (float)LIGHTSPEED / (float)ahp_xc_get_frequency();
     int size = (float)ahp_xc_get_delaysize()*2.0f*pixelsize;
-    SetCCDParams(size, size, 16,  pixelsize, pixelsize);
-    framebuffer = static_cast<double*>(realloc(framebuffer, static_cast<unsigned long>(size*size)*sizeof(double)+1));
+    plot_str[0]->sizes[0] = size;
+    plot_str[0]->sizes[1] = size;
+    plot_str[0]->len = plot_str[0]->sizes[0]*plot_str[0]->sizes[1];
+    dsp_stream_alloc_buffer(plot_str[0], plot_str[0]->len);
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
@@ -719,7 +741,7 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         return true;
     }
 
-    framebuffer = static_cast<double*>(realloc(framebuffer, static_cast<unsigned long>(PrimaryCCD.getXRes()*PrimaryCCD.getYRes())*sizeof(double)+1));
+    setupParams();
 
     return true;
 }
@@ -915,8 +937,8 @@ void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 
 float AHP_XC::CalcTimeLeft(timeval start, float req)
 {
-    double timesince;
-    double timeleft;
+    float timesince;
+    float timeleft;
     struct timeval now
     {
         0, 0
@@ -924,7 +946,7 @@ float AHP_XC::CalcTimeLeft(timeval start, float req)
     gettimeofday(&now, nullptr);
 
     timesince =
-        (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(start.tv_sec * 1000.0 + start.tv_usec / 1000);
+        (float)(now.tv_sec * 1000.0f + now.tv_usec / 1000.0f) - (float)(start.tv_sec * 1000.0f + start.tv_usec / 1000.0f);
     timesince = timesince / 1000;
     timeleft  = req - timesince;
     return timeleft;
@@ -965,7 +987,7 @@ void AHP_XC::TimerHit()
 
     if(InExposure) {
         // Just update time left in client
-        PrimaryCCD.setExposureLeft(timeleft);
+        PrimaryCCD.setExposureLeft((double)timeleft);
     }
 
     SetTimer(POLLMS);
@@ -1022,11 +1044,15 @@ bool AHP_XC::Connect()
         autocorrelationsB = static_cast<IBLOB*>(realloc(autocorrelationsB, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(IBLOB)+1));
     if(ahp_xc_get_crosscorrelator_jittersize() > 1)
         crosscorrelationsB = static_cast<IBLOB*>(realloc(crosscorrelationsB, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(IBLOB)+1));
+    if(nplots > 0)
+        plotB = static_cast<IBLOB*>(realloc(plotB, static_cast<unsigned long>(nplots)*sizeof(IBLOB)+1));
 
     if(ahp_xc_get_autocorrelator_jittersize() > 1)
         autocorrelations_str = static_cast<dsp_stream_p*>(realloc(autocorrelations_str, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(dsp_stream_p)+1));
     if(ahp_xc_get_crosscorrelator_jittersize() > 1)
         crosscorrelations_str = static_cast<dsp_stream_p*>(realloc(crosscorrelations_str, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(dsp_stream_p)+1));
+    if(nplots > 0)
+        plot_str = static_cast<dsp_stream_p*>(realloc(plot_str, static_cast<unsigned long>(nplots)*sizeof(dsp_stream_p)+1));
 
     totalcounts = static_cast<double*>(realloc(totalcounts, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     totalcorrelations = static_cast<correlation*>(realloc(totalcorrelations, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(correlation)+1));
@@ -1054,6 +1080,15 @@ bool AHP_XC::Connect()
     char tab[MAXINDINAME];
     char name[MAXINDINAME];
     char label[MAXINDINAME];
+
+    for(int x = 0; x < nplots; x++) {
+        plot_str[x] = dsp_stream_new();
+        sprintf(name, "PLOT%02d", x+1);
+        sprintf(label, "Plot %d", x+1);
+        IUFillBLOB(&plotB[x], name, label, ".fits");
+    }
+    IUFillBLOBVector(&plotBP, plotB, nplots, getDeviceName(), "PLOTS", "Plots", "Stats", IP_RO, 60, IPS_BUSY);
+
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         if(ahp_xc_get_autocorrelator_jittersize() > 1) {
             autocorrelations_str[x] = dsp_stream_new();
@@ -1139,7 +1174,7 @@ bool AHP_XC::Connect()
                 IUFillBLOB(&crosscorrelationsB[idx], name, label, ".fits");
             }
             sprintf(name, "CORRELATIONS_%0d_%0d", x+1, y+1);
-            sprintf(label, "Correlations (%d*%d)", x+1, y+1, x+1, y+1);
+            sprintf(label, "Correlations (%d*%d)", x+1, y+1);
             IUFillNumber(&correlationsN[idx++], name, label, "%1.4f", 0, 1.0, 1, 0);
         }
     }

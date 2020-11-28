@@ -24,8 +24,6 @@
 #include "indicorrelator.h"
 #include <ahp/ahp_xc.h>
 
-#define HEADER_SIZE 16
-
 class baseline : public INDI::Correlator
 {
 public:
@@ -92,9 +90,11 @@ public:
 
         free(autocorrelationsB);
         free(crosscorrelationsB);
+        free(plotB);
 
         free(autocorrelations_str);
         free(crosscorrelations_str);
+        free(plot_str);
 
         free(totalcounts);
         free(totalcorrelations);
@@ -198,8 +198,12 @@ private:
     IBLOB *crosscorrelationsB;
     IBLOBVectorProperty crosscorrelationsBP;
 
+    IBLOB *plotB;
+    IBLOBVectorProperty plotBP;
+
     dsp_stream_p *autocorrelations_str;
     dsp_stream_p *crosscorrelations_str;
+    dsp_stream_p *plot_str;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
