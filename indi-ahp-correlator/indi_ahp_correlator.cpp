@@ -279,7 +279,7 @@ void AHP_XC::Callback()
                 AbortExposure();
                 // We're done exposing
                 LOG_INFO("Exposure done, downloading image...");
-                dsp_buffer_stretch(framebuffer, w*h, 0, 65535);
+                dsp_buffer_stretch(framebuffer, w*h, 0.0, 65535.0);
                 dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
                 memset(framebuffer, 0, w*h*sizeof(double));
                 // Let INDI::CCD know we're done filling the image buffer
