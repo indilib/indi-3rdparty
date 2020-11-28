@@ -25,8 +25,6 @@
 #include <ahp/ahp_xc.h>
 
 #define HEADER_SIZE 16
-#define MAX_RESOLUTION 2048
-#define PIXEL_SIZE ((float)(AIRY * settingsN[0].value / MAX_RESOLUTION))
 
 class baseline : public INDI::Correlator
 {
@@ -187,10 +185,11 @@ private:
     ITextVectorProperty *lineDevicesTP;
 
     double *totalcounts;
-    double *totalcorrelations;
+    correlation *totalcorrelations;
     double  *alt;
     double *az;
     double *delay;
+    double *framebuffer;
     baseline** baselines;
 
     IBLOB *autocorrelationsB;
