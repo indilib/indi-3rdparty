@@ -238,7 +238,7 @@ DLL_EXPORT int ahp_xc_get_packetsize(void);
 * \sa ahp_xc_set_line
 * \sa ahp_xc_set_delay
 */
-DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, correlation *autocorrelations, correlation *crosscorrelations);
+DLL_EXPORT int ahp_xc_get_packet(correlation *autocorrelations, correlation *crosscorrelations);
 
 /**
 * \brief Scan all available delay channels and get autocorrelations of each input

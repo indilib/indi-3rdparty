@@ -240,21 +240,18 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len)
 
 void AHP_XC::Callback()
 {
-    unsigned long* counts = static_cast<unsigned long*>(malloc(sizeof(unsigned long)*static_cast<unsigned int>(ahp_xc_get_nlines())));
     correlation* autocorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nlines()*(ahp_xc_get_autocorrelator_jittersize()))));
     correlation* crosscorrelations = static_cast<correlation*>(malloc(sizeof(correlation)*static_cast<unsigned int>(ahp_xc_get_nbaselines()*(ahp_xc_get_crosscorrelator_jittersize()*2-1))));
-    int w = PrimaryCCD.getXRes();
-    int h = PrimaryCCD.getYRes();
-    double *framebuffer = static_cast<double*>(malloc(static_cast<unsigned int>(w*h)*sizeof(double)));
-    dsp_buffer_set(framebuffer, w*h, 0);
 
     EnableCapture(true);
     threadsRunning = true;
     while (threadsRunning)
     {
-        if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
+        if(ahp_xc_get_packet(autocorrelations, crosscorrelations))
             continue;
 
+        int w = PrimaryCCD.getXRes();
+        int h = PrimaryCCD.getYRes();
         int idx = 0;
         double minalt = 90.0;
         int farest = 0;
@@ -282,9 +279,9 @@ void AHP_XC::Callback()
                 AbortExposure();
                 // We're done exposing
                 LOG_INFO("Exposure done, downloading image...");
-                //dsp_buffer_stretch(framebuffer, w*h, 0, 65535);
+                dsp_buffer_stretch(framebuffer, w*h, 0, 65535);
                 dsp_buffer_copy(framebuffer, static_cast<unsigned short*>(static_cast<void*>(PrimaryCCD.getFrameBuffer())), w*h);
-                dsp_buffer_set(framebuffer, w*h, 0);
+                memset(framebuffer, 0, w*h*sizeof(double));
                 // Let INDI::CCD know we're done filling the image buffer
                 ExposureComplete(&PrimaryCCD);
                 // Additional BLOBs
@@ -366,12 +363,14 @@ void AHP_XC::Callback()
                     }
                 }
             }
+        } else {
+            memset(framebuffer, 0, PrimaryCCD.getXRes()*PrimaryCCD.getYRes()*sizeof(double));
         }
 
         idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                totalcounts[x] += counts[x];
+                totalcounts[x] += autocorrelations[x*ahp_xc_get_autocorrelator_jittersize()].counts;
                 for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(lineEnableSP[y].sp[0].s == ISS_ON) {
                         int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
@@ -475,12 +474,14 @@ AHP_XC::AHP_XC()
     autocorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
     crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
 
+    framebuffer = static_cast<double*>(malloc(1));
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<correlation*>(malloc(1));
     alt = static_cast<double*>(malloc(1));
     az = static_cast<double*>(malloc(1));
     delay = static_cast<double*>(malloc(1));
     baselines = static_cast<baseline**>(malloc(1));
+
 }
 
 bool AHP_XC::Disconnect()
@@ -643,6 +644,7 @@ void AHP_XC::setupParams()
     float pixelsize = (float)AIRY * (float)LIGHTSPEED / (float)ahp_xc_get_frequency();
     int size = (float)ahp_xc_get_delaysize()*2.0f*pixelsize;
     SetCCDParams(size, size, 16,  pixelsize, pixelsize);
+    framebuffer = static_cast<double*>(realloc(framebuffer, static_cast<unsigned long>(size*size)*sizeof(double)+1));
 
     // Let's calculate how much memory we need for the primary CCD buffer
     int nbuf;
@@ -685,6 +687,8 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
     if (strcmp (dev, getDeviceName()))
         return false;
 
+    INDI::CCD::ISNewNumber(dev, name, values, names, n);
+
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
@@ -696,7 +700,10 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
-    return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+
+    framebuffer = static_cast<double*>(realloc(framebuffer, static_cast<unsigned long>(PrimaryCCD.getXRes()*PrimaryCCD.getYRes())*sizeof(double)+1));
+
+    return true;
 }
 
 /**************************************************************************************
@@ -1128,6 +1135,8 @@ bool AHP_XC::Connect()
     if(ahp_xc_get_crosscorrelator_jittersize() > 1)
         IUFillBLOBVector(&crosscorrelationsBP, crosscorrelationsB, ahp_xc_get_nbaselines(), getDeviceName(), "CROSSCORRELATIONS", "Crosscorrelations", "Stats", IP_RO, 60, IPS_BUSY);
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
+
+    setupParams();
 
     // Start the timer
     SetTimer(POLLMS);
