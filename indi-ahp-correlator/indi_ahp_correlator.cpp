@@ -251,6 +251,8 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(autocorrelations, crosscorrelations))
             continue;
 
+        int w = PrimaryCCD.getXRes();
+        int h = PrimaryCCD.getYRes();
         int idx = 0;
         double minalt = 0.0;
         int farest = 0;
@@ -379,8 +381,6 @@ void AHP_XC::Callback()
                     }
                 }
             }
-        } else {
-            dsp_buffer_set(plot_str[0]->buf, plot_str[0]->len, 0);
         }
 
         idx = 0;
@@ -509,6 +509,7 @@ AHP_XC::AHP_XC()
     crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
     plot_str = static_cast<dsp_stream_p*>(malloc(1));
 
+    framebuffer = static_cast<double*>(malloc(1));
     totalcounts = static_cast<double*>(malloc(1));
     totalcorrelations = static_cast<correlation*>(malloc(1));
     alt = static_cast<double*>(malloc(1));
