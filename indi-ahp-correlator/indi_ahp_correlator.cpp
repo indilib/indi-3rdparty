@@ -369,16 +369,15 @@ void AHP_XC::Callback()
 
         idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-            if(lineEnableSP[x].sp[0].s == ISS_ON) {
+            if(lineEnableSP[x].sp[0].s == ISS_ON)
                 totalcounts[x] += autocorrelations[x*ahp_xc_get_autocorrelator_jittersize()].counts;
-                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                    if(lineEnableSP[y].sp[0].s == ISS_ON) {
-                        int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
-                        totalcorrelations[idx].correlations += crosscorrelations[_idx].correlations;
-                        totalcorrelations[idx].counts += crosscorrelations[_idx].counts;
-                        idx++;
-                    }
+            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                if(lineEnableSP[x].sp[0].s == ISS_ON&&lineEnableSP[y].sp[0].s == ISS_ON) {
+                    int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
+                    totalcorrelations[idx].correlations += crosscorrelations[_idx].correlations;
+                    totalcorrelations[idx].counts += crosscorrelations[_idx].counts;
                 }
+                idx++;
             }
         }
 

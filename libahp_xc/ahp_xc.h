@@ -48,6 +48,7 @@ extern "C" {
 
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
 #define AHP_XC_LIVE_CROSSCORRELATOR (1<<1)
+#define AHP_XC_VERSION 0x010006
 
 /**
  * \defgroup DSP_Defines DSP API defines
@@ -301,6 +302,11 @@ DLL_EXPORT void ahp_xc_set_frequency_divider(unsigned char value);
 * \param value The command parameter
 */
 DLL_EXPORT ssize_t ahp_xc_send_command(it_cmd cmd, unsigned char value);
+
+/**
+* \brief Obtain the current libahp-xc version
+*/
+DLL_EXPORT inline unsigned int ahp_xc_get_version() { return AHP_XC_VERSION; }
 
 /*@}*/
 /*@}*/
