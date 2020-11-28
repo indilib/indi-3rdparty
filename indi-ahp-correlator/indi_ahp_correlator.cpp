@@ -940,7 +940,7 @@ float AHP_XC::CalcTimeLeft(timeval start, float req)
 
     timesince =
         (float)(now.tv_sec * 1000.0f + now.tv_usec / 1000.0f) - (float)(start.tv_sec * 1000.0f + start.tv_usec / 1000.0f);
-    timesince = timesince / 1000;
+    timesince = timesince / 1000.0f;
     timeleft  = req - timesince;
     return timeleft;
 }
