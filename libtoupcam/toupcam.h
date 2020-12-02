@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 48.17739.2020.0924 */
+/* Version: 48.18042.2020.1128 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -138,7 +138,7 @@ typedef struct {
 typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 
 #define TOUPCAM_MAX                      16
-
+                                         
 #define TOUPCAM_FLAG_CMOS                0x00000001  /* cmos sensor */
 #define TOUPCAM_FLAG_CCD_PROGRESSIVE     0x00000002  /* progressive ccd sensor */
 #define TOUPCAM_FLAG_CCD_INTERLACED      0x00000004  /* interlaced ccd sensor */
@@ -271,7 +271,7 @@ typedef struct {
 }ToupcamInstV2, ToupcamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 48.17739.2020.0924
+    get the version of this dll/so/dylib, which is: 48.18042.2020.1128
 */
 #ifdef _WIN32
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -309,7 +309,7 @@ TOUPCAM_API(HToupcam) Toupcam_Open(const char* id);
 */
 TOUPCAM_API(HToupcam) Toupcam_OpenByIndex(unsigned index);
 
-TOUPCAM_API(void)     Toupcam_Close(HToupcam h); /* close the handle */
+TOUPCAM_API(void)     Toupcam_Close(HToupcam h);  /* close the handle */
 
 #define TOUPCAM_EVENT_EXPOSURE          0x0001    /* exposure time or gain changed */
 #define TOUPCAM_EVENT_TEMPTINT          0x0002    /* white balance changed, Temp/Tint mode */
@@ -356,7 +356,7 @@ typedef struct {
     bits: 24 (RGB24), 32 (RGB32), 8 (Gray) or 16 (Gray). In RAW mode, this parameter is ignored.
     pnWidth, pnHeight: OUT parameter
     rowPitch: The distance from one row to the next row. rowPitch = 0 means using the default row pitch.
-
+    
     -------------------------------------------------------------------------------------
     | format                                            | default row pitch             |
     |---------------------------------------------------|-------------------------------|
@@ -407,7 +407,7 @@ TOUPCAM_API(HRESULT)  Toupcam_SnapN(HToupcam h, unsigned nResolutionIndex, unsig
 TOUPCAM_API(HRESULT)  Toupcam_Trigger(HToupcam h, unsigned short nNumber);
 
 /*
-    put_Size, put_eSize, can be used to set the video output resolution BEFORE Toupcam_Start.
+    put_Size, put_eSize, can be used to set the video output resolution BEFORE Toupcam_StartXXXX.
     put_Size use width and height parameters, put_eSize use the index parameter.
     for example, UCMOS03100KPA support the following resolutions:
             index 0:    2048,   1536
@@ -694,7 +694,7 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
 #define TOUPCAM_TEC_TARGET_MIN               (-300)     /* -30.0 degrees Celsius */
 #define TOUPCAM_TEC_TARGET_DEF               0          /* 0.0 degrees Celsius */
 #define TOUPCAM_TEC_TARGET_MAX               300        /* 30.0 degrees Celsius */
-
+                                             
 #define TOUPCAM_OPTION_NOFRAME_TIMEOUT       0x01       /* no frame timeout: 1 = enable; 0 = disable. default: disable */
 #define TOUPCAM_OPTION_THREAD_PRIORITY       0x02       /* set the priority of the internal thread which grab data from the usb device. iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; default: 0; see: msdn SetThreadPriority */
 #define TOUPCAM_OPTION_PROCESSMODE           0x03       /* 0 = better image quality, more cpu usage. this is the default value
@@ -804,6 +804,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
 #define TOUPCAM_OPTION_HEAT_MAX              0x36       /* maximum level: heat to prevent fogging up */
 #define TOUPCAM_OPTION_HEAT                  0x37       /* heat to prevent fogging up */
 #define TOUPCAM_OPTION_LOW_NOISE             0x38       /* low noise mode: 1 => enable */
+#define TOUPCAM_OPTION_POWER                 0x39       /* get power consumption, unit: milliwatt */
+#define TOUPCAM_OPTION_GLOBAL_RESET_MODE     0x3a       /* global reset mode */
 
 /* pixel format */
 #define TOUPCAM_PIXELFORMAT_RAW8             0x00
@@ -910,7 +912,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
 #define TOUPCAM_IOCONTROLTYPE_SET_STROBEDELAYTIME         0x24
 #define TOUPCAM_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, [0, 5000000] */
 #define TOUPCAM_IOCONTROLTYPE_SET_STROBEDURATION          0x26
-#define TOUPCAM_IOCONTROLTYPE_GET_USERVALUE               0x27 /*
+#define TOUPCAM_IOCONTROLTYPE_GET_USERVALUE               0x27 /* 
                                                                   bit0-> Opto-isolated output
                                                                   bit1-> GPIO0 output
                                                                   bit2-> GPIO1 output
