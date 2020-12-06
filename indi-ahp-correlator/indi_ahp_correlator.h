@@ -186,7 +186,7 @@ private:
 
     double *totalcounts;
     correlation *totalcorrelations;
-    double  *alt;
+    double *alt;
     double *az;
     double *delay;
     double *framebuffer;
