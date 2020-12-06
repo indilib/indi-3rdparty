@@ -877,3 +877,7 @@ EXPORTC void STDCALL QHYCCD_fpga_reset();
 #endif
 
 #endif
+
+/// ----------------------------------
+
+void call_pnp_event();
