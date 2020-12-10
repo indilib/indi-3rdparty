@@ -48,7 +48,7 @@ extern "C" {
 
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
 #define AHP_XC_LIVE_CROSSCORRELATOR (1<<1)
-#define AHP_XC_VERSION 0x010007
+#define AHP_XC_VERSION 0x010008
 
 /**
  * \defgroup DSP_Defines DSP API defines

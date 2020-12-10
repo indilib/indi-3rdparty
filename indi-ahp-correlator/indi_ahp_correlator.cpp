@@ -252,10 +252,32 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(counts, autocorrelations, crosscorrelations))
             continue;
 
+        double julian = ln_get_julian_from_sys();
+        ln_equ_posn equ;
+        ln_lnlat_posn obs;
+        ln_hrz_posn hrz;
+
         int idx = 0;
         double minalt = 90.0;
         int farest = 0;
 
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                equ.ra = lineTelescopeNP[x].np[0].value;
+                equ.dec = lineTelescopeNP[x].np[1].value;
+
+                obs.lat = lineGPSNP[x].np[0].value;
+                obs.lng = lineGPSNP[x].np[1].value;
+                ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
+
+
+
+                farest = (minalt > alt[x] ? farest : x);
+                minalt = (minalt > alt[x] ? minalt : alt[x]);
+                alt[x] = hrz.alt*M_PI/180.0;
+                az[x] = hrz.az*M_PI/180.0;
+            }
+        }
         if(InExposure) {
             timeleft = CalcTimeLeft(ExpStart, ExposureRequest);
             if(timeleft <= 0.0f) {
@@ -343,7 +365,7 @@ void AHP_XC::Callback()
                                 int w = plot_str[0]->sizes[0];
                                 int h = plot_str[0]->sizes[1];
                                 int _idx = idx*(ahp_xc_get_crosscorrelator_jittersize()*2-1)+ahp_xc_get_crosscorrelator_jittersize();
-                                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates(alt[x], az[x]);
                                 int xx = static_cast<int>(w*uv.u/2.0);
                                 int yy = static_cast<int>(h*uv.v/2.0);
                                 int z = w*h/2+w/2+xx+yy*w;
@@ -394,53 +416,16 @@ void AHP_XC::Callback()
             }
         }
 
-        double julian = ln_get_julian_from_sys();
-
-        for(int x = 0; x < ahp_xc_get_nlines()-1; x++) {
-            if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                ln_equ_posn equ;
-                ln_lnlat_posn obs;
-                ln_hrz_posn hrz;
-
-                equ.ra = lineTelescopeNP[x].np[0].value;
-                equ.dec = lineTelescopeNP[x].np[1].value;
-
-                obs.lat = lineGPSNP[x].np[0].value;
-                obs.lng = lineGPSNP[x].np[1].value;
-                ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
-
-                farest = (minalt < alt[x] ? farest : x);
-                minalt = (minalt < alt[x] ? minalt : alt[x]);
-                alt[x] = hrz.alt*M_PI/180.0;
-                az[x] = hrz.az*M_PI/180.0;
-            }
-        }
-
         delay[farest] = 0;
         idx = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                 if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
-                    INDI::Correlator::Baseline b = baselines[idx]->getBaseline();
-                    double d = sqrt(pow(b.x, 2)+pow(b.y, 2)+pow(b.z, 2));
-                    double rad[3] = { acos(b.x/d), acos(b.y/d), acos(b.z/d) };
-
                     if(y == farest) {
-                        double target[3] = { acos(sin(az[x])*cos(alt[x])), acos(cos(az[x])*cos(alt[x])), asin(sin(alt[x])) };
-
-                        delay[x] = d;
-                        delay[x] *= 1.0-cos(target[0]-rad[0]);
-                        delay[x] *= 1.0-cos(target[1]-rad[1]);
-                        delay[x] *= 1.0-cos(target[2]-rad[2]);
+                        delay[x] = baselines[idx]->getDelay(alt[x], az[x]);
                     }
-
                     if(x == farest) {
-                        double target[3] = { asin(sin(az[y])*cos(alt[y])), asin(cos(az[y])*cos(alt[y])), asin(sin(alt[y])) };
-
-                        delay[y] = d;
-                        delay[y] *= 1.0-cos(target[0]-rad[0]);
-                        delay[y] *= 1.0-cos(target[1]-rad[1]);
-                        delay[y] *= 1.0-cos(target[2]-rad[2]);
+                        delay[y] = baselines[idx]->getDelay(alt[y], az[y]);
                     }
                 }
                 idx++;
@@ -887,23 +872,20 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
             for(int x = 0; x < ahp_xc_get_nlines(); x++) {
                 for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                     if(x==i||y==i) {
-                        double Lat1, Lon1;
-                        Lat0 = snoopGPSNP[x].np[0].value*M_PI/180.0;
-                        Lon0 = snoopGPSNP[x].np[1].value*M_PI/180.0;
-                        Lat1 = snoopGPSNP[y].np[0].value*M_PI/180.0;
-                        Lon1 = snoopGPSNP[y].np[1].value*M_PI/180.0;
-                        double radius = (EARTHRADIUSPOLAR+snoopGPSNP[y].np[2].value)+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(Lat0);
-                        double x0 = cos(Lat0)*cos(Lon0)*radius;
-                        double y0 = cos(Lat0)*sin(Lon0)*radius;
-                        double z0 = sin(Lat0)*radius;
-                        radius = (EARTHRADIUSPOLAR+snoopGPSNP[y].np[2].value)+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(Lat1);
-                        double x1 = cos(Lat1)*cos(Lon1)*radius;
-                        double y1 = cos(Lat1)*sin(Lon1)*radius;
-                        double z1 = sin(Lat1)*radius;
+                        double Lat, Lon;
+                        Lat0 = (snoopGPSNP[y].np[0].value-snoopGPSNP[x].np[0].value);
+                        Lon0 = (snoopGPSNP[y].np[1].value-snoopGPSNP[x].np[1].value);
+                        Lon = rangeDec(Lon0);
+                        Lon0 = 0;
+                        Lon *= M_PI/180.0;
+                        Lat = rangeDec(Lat0);
+                        Lat0 = 0;
+                        Lat *= M_PI/180.0;
+                        double radius = EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value;
                         INDI::Correlator::Baseline b;
-                        b.x = (x0-x1);
-                        b.y = (y0-y1);
-                        b.z = (z0-z1);
+                        b.x = sin(Lon)*radius;
+                        b.y = sin(Lat)*radius;
+                        b.z = (1.0-cos(Lat)*cos(Lon))*radius;
                         baselines[idx]->setBaseline(b);
                     }
                     idx++;
