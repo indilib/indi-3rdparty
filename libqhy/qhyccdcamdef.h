@@ -1297,8 +1297,8 @@
 #define   LIVE_MODE 								1
 
 #define   FPGA_MODE_DEFAULT 						99
-#define   FPGA_MODE_12_11M 								12
-#define   FPGA_MODE_14_47M 								14
+#define   FPGA_MODE_12_47M 								12     //14bit rigister= 11M  12bit rigister = 47M
+#define   FPGA_MODE_14_11M 								14         //14bit rigister= 11M  12bit rigister = 47M
 
 #define   GET_IMAGE_TIMEOUT							60000     //QHY09000 DRIFT SCAN MOD  600000  
 //#define   GET_IMAGE_TIMEOUT							900000     //QHY09000 DRIFT SCAN MOD  600000  
