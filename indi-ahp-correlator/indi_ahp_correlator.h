@@ -185,8 +185,8 @@ private:
     ITextVectorProperty *lineDevicesTP;
 
     double *totalcounts;
-    correlation *totalcorrelations;
-    double *alt;
+    ahp_xc_correlation *totalcorrelations;
+    double  *alt;
     double *az;
     double *delay;
     double *framebuffer;
