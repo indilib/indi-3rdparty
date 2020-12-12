@@ -48,7 +48,7 @@ extern "C" {
 
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
 #define AHP_XC_LIVE_CROSSCORRELATOR (1<<1)
-#define AHP_XC_VERSION 0x010006
+#define AHP_XC_VERSION 0x010008
 
 /**
  * \defgroup DSP_Defines DSP API defines
@@ -239,7 +239,7 @@ DLL_EXPORT int ahp_xc_get_packetsize(void);
 * \sa ahp_xc_set_line
 * \sa ahp_xc_set_delay
 */
-DLL_EXPORT int ahp_xc_get_packet(correlation *autocorrelations, correlation *crosscorrelations);
+DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, correlation *autocorrelations, correlation *crosscorrelations);
 
 /**
 * \brief Scan all available delay channels and get autocorrelations of each input
