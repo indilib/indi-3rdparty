@@ -267,13 +267,14 @@ void AHP_XC::Callback()
                 obs.lat = lineGPSNP[x].np[0].value;
                 obs.lng = lineGPSNP[x].np[1].value;
                 ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
+                double el = EARTHRADIUSMEAN+(EARTHRADIUSMEAN*(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(obs.lat = lineGPSNP[x].np[0].value*M_PI/180.0));
+                el = (lineGPSNP[x].np[2].value + el) / el;
 
-
-
+                alt[x] = hrz.alt;
+                alt[x] += cos(alt[x]*M_PI/180.0)*el;
+                az[x] = hrz.az;
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
-                alt[x] = hrz.alt*M_PI/180.0;
-                az[x] = hrz.az*M_PI/180.0;
             }
         }
         if(InExposure) {
