@@ -270,8 +270,8 @@ void AHP_XC::Callback()
 
 
 
-                farest = (minalt > alt[x] ? farest : x);
-                minalt = (minalt > alt[x] ? minalt : alt[x]);
+                farest = (minalt < alt[x] ? farest : x);
+                minalt = (minalt < alt[x] ? minalt : alt[x]);
                 alt[x] = hrz.alt*M_PI/180.0;
                 az[x] = hrz.az*M_PI/180.0;
             }
