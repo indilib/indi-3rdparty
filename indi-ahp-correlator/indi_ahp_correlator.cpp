@@ -260,7 +260,7 @@ void AHP_XC::Callback()
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 double lst = ln_get_apparent_sidereal_time(julian-(360.0-lineGPSNP[x].np[1].value/15));
                 lst = range24(lst);
-                get_alt_az_coordinates(lineTelescopeNP[x].np[0].value, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
+                get_alt_az_coordinates(lineTelescopeNP[x].np[0].value, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, lst, &alt[x], &az[x]);
                 double el =
                         estimate_geocentric_elevation(lineGPSNP[x].np[0].value, 0) /
                         estimate_geocentric_elevation(lineGPSNP[x].np[0].value, lineGPSNP[x].np[2].value);
