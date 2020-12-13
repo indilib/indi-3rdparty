@@ -251,9 +251,6 @@ void AHP_XC::Callback()
             continue;
 
         double julian = ln_get_julian_from_sys();
-        ln_equ_posn obj;
-        ln_lnlat_posn obs;
-        ln_hrz_posn hrz;
 
         int idx = 0;
         double minalt = 90.0;
@@ -263,15 +260,7 @@ void AHP_XC::Callback()
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 double lst = ln_get_apparent_sidereal_time(julian-(360.0-lineGPSNP[x].np[1].value/15));
                 lst = range24(lst);
-                obj.ra = lineTelescopeNP[x].np[0].value;
-                obj.dec = lineTelescopeNP[x].np[1].value;
-                obs.lat = lineGPSNP[x].np[0].value;
-                obs.lng = lineGPSNP[x].np[1].value;
-
-                ln_get_hrz_from_equ_sidereal_time(&obj, &obs, lst, &hrz);
-                alt[x] = hrz.alt;
-                az[x] = hrz.az;
-
+                get_alt_az_coordinates(lineTelescopeNP[x].np[0].value, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
                 double el =
                         estimate_geocentric_elevation(lineGPSNP[x].np[0].value, 0) /
                         estimate_geocentric_elevation(lineGPSNP[x].np[0].value, lineGPSNP[x].np[2].value);
