@@ -250,10 +250,7 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(packet))
             continue;
 
-        double julian = ln_get_julian_from_sys();
-        ln_equ_posn equ;
-        ln_lnlat_posn obs;
-        ln_hrz_posn hrz;
+        double lst = get_local_sidereal_time(0.0);
 
         int idx = 0;
         double minalt = 90.0;
@@ -261,19 +258,11 @@ void AHP_XC::Callback()
 
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                equ.ra = lineTelescopeNP[x].np[0].value;
-                equ.dec = lineTelescopeNP[x].np[1].value;
-
-                obs.lat = lineGPSNP[x].np[0].value;
-                obs.lng = lineGPSNP[x].np[1].value;
-                ln_get_hrz_from_equ(&equ, &obs, julian, &hrz);
-                double el = EARTHRADIUSMEAN+(EARTHRADIUSMEAN*(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(obs.lat = lineGPSNP[x].np[0].value*M_PI/180.0));
+                double ha = get_local_hour_angle(lst+lineGPSNP[x].np[1].value*24.0/360.0, lineTelescopeNP[x].np[0].value);
+                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
+                double el = EARTHRADIUSPOLAR+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(lineGPSNP[x].np[0].value*M_PI/180.0);
                 el = el/(lineGPSNP[x].np[2].value + el);
-
-                alt[x] = hrz.alt;
-                az[x] = hrz.az;
-                alt[x] -= acos(el)*180.0/M_PI;
-
+                alt[x] -= 180.0*acos(el)/M_PI;
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
             }
@@ -364,7 +353,7 @@ void AHP_XC::Callback()
                             if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
                                 int w = plot_str[0]->sizes[0];
                                 int h = plot_str[0]->sizes[1];
-                                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates();
+                                INDI::Correlator::UVCoordinate uv = baselines[idx]->getUVCoordinates(alt[farest], az[farest]);
                                 int xx = static_cast<int>(w*uv.u/2.0);
                                 int yy = static_cast<int>(h*uv.v/2.0);
                                 int z = w*h/2+w/2+xx+yy*w;
@@ -420,10 +409,10 @@ void AHP_XC::Callback()
             for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
                 if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
                     if(y == farest) {
-                        delay[x] = baselines[idx]->getDelay(alt[x], az[x]);
+                        delay[x] = baselines[idx]->getDelay(alt[farest], az[farest]);
                     }
                     if(x == farest) {
-                        delay[y] = baselines[idx]->getDelay(alt[y], az[y]);
+                        delay[y] = baselines[idx]->getDelay(alt[farest], az[farest]);
                     }
                 }
                 idx++;
