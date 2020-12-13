@@ -250,7 +250,10 @@ void AHP_XC::Callback()
         if(ahp_xc_get_packet(packet))
             continue;
 
-        double lst = get_local_sidereal_time(0.0);
+        double julian = ln_get_julian_from_sys();
+        ln_equ_posn obj;
+        ln_lnlat_posn obs;
+        ln_hrz_posn hrz;
 
         int idx = 0;
         double minalt = 90.0;
@@ -258,10 +261,20 @@ void AHP_XC::Callback()
 
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                double ha = get_local_hour_angle(lst+lineGPSNP[x].np[1].value*24.0/360.0, lineTelescopeNP[x].np[0].value);
-                get_alt_az_coordinates(ha, lineTelescopeNP[x].np[1].value, lineGPSNP[x].np[0].value, &alt[x], &az[x]);
-                double el = EARTHRADIUSPOLAR+(EARTHRADIUSEQUATORIAL-EARTHRADIUSPOLAR)*cos(lineGPSNP[x].np[0].value*M_PI/180.0);
-                el = el/(lineGPSNP[x].np[2].value + el);
+                double lst = ln_get_apparent_sidereal_time(julian-(360.0-lineGPSNP[x].np[1].value/15));
+                lst = range24(lst);
+                obj.ra = lineTelescopeNP[x].np[0].value;
+                obj.dec = lineTelescopeNP[x].np[1].value;
+                obs.lat = lineGPSNP[x].np[0].value;
+                obs.lng = lineGPSNP[x].np[1].value;
+
+                ln_get_hrz_from_equ_sidereal_time(&obj, &obs, lst, &hrz);
+                alt[x] = hrz.alt;
+                az[x] = hrz.az;
+
+                double el =
+                        estimate_geocentric_elevation(lineGPSNP[x].np[0].value, 0) /
+                        estimate_geocentric_elevation(lineGPSNP[x].np[0].value, lineGPSNP[x].np[2].value);
                 alt[x] -= 180.0*acos(el)/M_PI;
                 farest = (minalt < alt[x] ? farest : x);
                 minalt = (minalt < alt[x] ? minalt : alt[x]);
@@ -505,6 +518,7 @@ bool AHP_XC::Disconnect()
             dsp_stream_free(autocorrelations_str[x]);
         }
         ActiveLine(x, false, false);
+        usleep(10000);
     }
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
         if(ahp_xc_get_crosscorrelator_jittersize() > 1) {
@@ -869,7 +883,7 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
                         Lat = rangeDec(Lat0);
                         Lat0 = 0;
                         Lat *= M_PI/180.0;
-                        double radius = EARTHRADIUSMEAN+snoopGPSNP[x].np[2].value;
+                        double radius = estimate_geocentric_elevation(snoopGPSNP[x].np[0].value, snoopGPSNP[x].np[2].value);
                         INDI::Correlator::Baseline b;
                         b.x = sin(Lon)*radius;
                         b.y = sin(Lat)*radius;
@@ -970,8 +984,10 @@ bool AHP_XC::Connect()
 {
     ahp_xc_connect(serialConnection->port());
 
-    if(0 != ahp_xc_get_properties())
+    if(0 != ahp_xc_get_properties()) {
+        ahp_xc_disconnect();
         return false;
+    }
 
     lineStatsN = static_cast<INumber*>(realloc(lineStatsN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
     lineStatsNP = static_cast<INumberVectorProperty*>(realloc(lineStatsNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
