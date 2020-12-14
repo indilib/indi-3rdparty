@@ -46,9 +46,17 @@ extern "C" {
 */
 /*@{*/
 
+///AHP_XC_VERSION This library version
+#define AHP_XC_VERSION 0x010009
+
+///AHP_XC_LIVE_AUTOCORRELATOR indicates if the correlator can do live spectrum analysis
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
+///AHP_XC_LIVE_CROSSCORRELATOR indicates if the correlator can do live cross-correlation
 #define AHP_XC_LIVE_CROSSCORRELATOR (1<<1)
-#define AHP_XC_VERSION 0x010008
+///AHP_XC_HAS_LED_FLAGS indicates if the correlator has led lines available to drive
+#define AHP_XC_HAS_LED_FLAGS (1<<2)
+///AHP_XC_HAS_CROSSCORRELATOR indicates if the correlator can cross-correlate or can autocorrelate only
+#define AHP_XC_HAS_CROSSCORRELATOR (1<<3)
 
 /**
  * \defgroup DSP_Defines DSP API defines
@@ -108,7 +116,24 @@ typedef struct {
     unsigned long correlations;
     unsigned long counts;
     double coherence;
-} correlation;
+} ahp_xc_correlation;
+
+typedef struct {
+    unsigned long jitter_size;
+    ahp_xc_correlation *correlations;
+} ahp_xc_sample;
+
+typedef struct {
+    unsigned long n_lines;
+    unsigned long n_baselines;
+    unsigned long tau;
+    unsigned long bps;
+    unsigned long cross_lag;
+    unsigned long auto_lag;
+    unsigned long* counts;
+    ahp_xc_sample* autocorrelations;
+    ahp_xc_sample* crosscorrelations;
+} ahp_xc_packet;
 
 /*@}*/
 
@@ -232,6 +257,30 @@ DLL_EXPORT int ahp_xc_get_packetsize(void);
 /*@{*/
 
 /**
+* \brief Allocate and return a packet structure
+* \return Returns the packet structure
+*/
+DLL_EXPORT ahp_xc_packet *ahp_xc_alloc_packet();
+
+/**
+* \brief Free a previously allocated packet structure
+* \param packet the packet structure to be freed
+*/
+DLL_EXPORT void ahp_xc_free_packet(ahp_xc_packet *packet);
+
+/**
+* \brief Allocate and return a samples array
+* \return Returns the samples array
+*/
+DLL_EXPORT ahp_xc_sample *ahp_xc_alloc_samples(unsigned long nlines, unsigned long len);
+
+/**
+* \brief Free a previously allocated samples array
+* \param packet the samples array to be freed
+*/
+DLL_EXPORT void ahp_xc_free_samples(unsigned long nlines, ahp_xc_sample *samples);
+
+/**
 * \brief Grab a data packet
 * \param counts The counts of each input pulses within the packet time
 * \param autocorrelations The autocorrelations counts of each input pulses with itself delayed by the clock cycles defined with ahp_xc_set_line.
@@ -239,7 +288,7 @@ DLL_EXPORT int ahp_xc_get_packetsize(void);
 * \sa ahp_xc_set_line
 * \sa ahp_xc_set_delay
 */
-DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, correlation *autocorrelations, correlation *crosscorrelations);
+DLL_EXPORT int ahp_xc_get_packet(ahp_xc_packet *packet);
 
 /**
 * \brief Scan all available delay channels and get autocorrelations of each input
@@ -247,7 +296,7 @@ DLL_EXPORT int ahp_xc_get_packet(unsigned long *counts, correlation *autocorrela
 * \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
 * \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
 */
-DLL_EXPORT void ahp_xc_scan_autocorrelations(correlation *autocorrelations, int stacksize, double *percent, int *interrupt);
+DLL_EXPORT void ahp_xc_scan_autocorrelations(ahp_xc_sample *autocorrelations, int stacksize, double *percent, int *interrupt);
 
 /**
 * \brief Scan all available delay channels and get crosscorrelations of each input with others
@@ -255,7 +304,7 @@ DLL_EXPORT void ahp_xc_scan_autocorrelations(correlation *autocorrelations, int 
 * \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
 * \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
 */
-DLL_EXPORT void ahp_xc_scan_crosscorrelations(correlation *crosscorrelations, int stacksize, double *percent, int *interrupt);
+DLL_EXPORT void ahp_xc_scan_crosscorrelations(ahp_xc_sample *crosscorrelations, int stacksize, double *percent, int *interrupt);
 
 /*@}*/
 /**
