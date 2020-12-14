@@ -1456,13 +1456,13 @@ void CelestronAUX::querryStatus()
         sendAUXCommand(cmd);
         readAUXResponse(cmd);
     }
-    if (m_SlewingAlt)
+    if (m_SlewingAlt && ScopeStatus != SLEWING_MANUAL)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, ALT);
         sendAUXCommand(cmd);
         readAUXResponse(cmd);
     }
-    if (m_SlewingAz)
+    if (m_SlewingAz && ScopeStatus != SLEWING_MANUAL)
     {
         AUXCommand cmd(MC_SLEW_DONE, APP, AZM);
         sendAUXCommand(cmd);
