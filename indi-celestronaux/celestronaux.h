@@ -92,6 +92,10 @@ class CelestronAUX :
         bool TimerTick(double dt);
 
     private:
+
+        bool pastAlignmentSubsystemStatus;
+        bool currentAlignmentSubsystemStatus;
+
         enum ScopeStatus_t
         {
             IDLE,
