@@ -622,6 +622,7 @@ bool CelestronAUX::initProperties()
 
     // set alignment system be on the first time by default
     getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
+    pastAlignmentSubsystemStatus = true;
 
     return true;
 }
@@ -1084,6 +1085,13 @@ void CelestronAUX::TimerHit()
         TraceThisTick      = true;
         TraceThisTickCount = 0;
     }
+
+    // issue a warning when alignment subsystem is off
+    currentAlignmentSubsystemStatus = IsAlignmentSubsystemActive();
+    if (pastAlignmentSubsystemStatus && !currentAlignmentSubsystemStatus)
+        LOG_WARN("Alignment Subsystem is NOT active: SYNC will be ignored.");
+    pastAlignmentSubsystemStatus = currentAlignmentSubsystemStatus;
+
     // Simulate mount movement
 
     static struct timeval ltv; // previous system time

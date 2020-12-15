@@ -98,6 +98,9 @@ class CelestronAUX :
         static const long MAX_ALT;
         static const long MIN_ALT;
 
+        bool pastAlignmentSubsystemStatus;
+        bool currentAlignmentSubsystemStatus;
+
         enum ScopeStatus_t
         {
             IDLE,
