@@ -559,6 +559,9 @@ bool CelestronAUX::initProperties()
         setActiveConnection(tcpConnection);
     }
 
+    // set alignment system be on the first time by default
+    getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
+
     return true;
 }
 
