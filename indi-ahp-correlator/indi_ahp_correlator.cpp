@@ -269,7 +269,7 @@ void AHP_XC::Callback()
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 double lst = ln_get_apparent_sidereal_time(julian)-(360.0-lineGPSNP[x].np[1].value)/15.0;
                 lst = range24(lst);
-                get_hrz_from_equ_sidereal_time(&radec, &obs, lst, &altaz);
+                ln_get_hrz_from_equ_sidereal_time(&radec, &obs, lst, &altaz);
                 alt[x] = altaz.alt;
                 az[x] = altaz.az;
                 double el =
