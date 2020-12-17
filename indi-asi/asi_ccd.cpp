@@ -557,15 +557,13 @@ void ASICCD::setupParams()
             break;
         nVideoFormats++;
     }
-    size_t size = sizeof(ISwitch) * nVideoFormats;
-    VideoFormatS = static_cast<ISwitch *>(malloc(size));
+    VideoFormatS = static_cast<ISwitch *>(calloc(nVideoFormats, sizeof(ISwitch)));
     if (VideoFormatS == nullptr)
     {
         LOGF_ERROR("Camera ID: %d malloc failed (setup)",  m_camInfo->CameraID);
         VideoFormatSP.nsp = 0;
         return;
     }
-    (void)memset(VideoFormatS, 0, size);
     ISwitch *oneVF = VideoFormatS;
     int unknownCount = 0;
     bool unknown = false;
@@ -1604,15 +1602,14 @@ void ASICCD::createControls(int piNumberOfControls)
     if (pControlCaps != nullptr)
         free(pControlCaps);
 
-    size = sizeof(ASI_CONTROL_CAPS) * piNumberOfControls;
-    pControlCaps = (ASI_CONTROL_CAPS *)malloc(size);
+    pControlCaps = static_cast<ASI_CONTROL_CAPS *>(calloc(piNumberOfControls, sizeof(ASI_CONTROL_CAPS)));
     if (pControlCaps == nullptr)
     {
         LOGF_ERROR("CCD ID: %d malloc failed (controls)",
                    m_camInfo->CameraID);
         return;
     }
-    (void)memset(pControlCaps, 0, size);
+
     ASI_CONTROL_CAPS *oneControlCap = pControlCaps;
 
     if (ControlNP.nnp != 0)
@@ -1621,8 +1618,7 @@ void ASICCD::createControls(int piNumberOfControls)
         ControlNP.nnp = 0;
     }
 
-    size = sizeof(INumber) * piNumberOfControls;
-    control_number = (INumber *)malloc(size);
+    control_number = static_cast<INumber *>(calloc(piNumberOfControls, sizeof(INumber)));
     if (control_number == nullptr)
     {
         LOGF_ERROR(
@@ -1631,7 +1627,7 @@ void ASICCD::createControls(int piNumberOfControls)
         pControlCaps = nullptr;
         return;
     }
-    (void)memset(control_number, 0, size);
+
     control_np = control_number;
 
     if (ControlSP.nsp != 0)
@@ -1640,8 +1636,7 @@ void ASICCD::createControls(int piNumberOfControls)
         ControlSP.nsp = 0;
     }
 
-    size = sizeof(ISwitch) * piNumberOfControls;
-    auto_switch = (ISwitch *)malloc(size);
+    auto_switch = static_cast<ISwitch *>(calloc(piNumberOfControls, sizeof(ISwitch)));
     if (auto_switch == nullptr)
     {
         LOGF_ERROR(
@@ -1651,7 +1646,6 @@ void ASICCD::createControls(int piNumberOfControls)
         pControlCaps = nullptr;
         return;
     }
-    (void)memset(auto_switch, 0, size);
     auto_sp = auto_switch;
 
     for (int i = 0; i < piNumberOfControls; i++)
