@@ -1290,7 +1290,7 @@ int ASICCD::grabImage()
         PrimaryCCD.setNAxis(2);
 
     // If mono camera or we're sending Luma or RGB, turn off bayering
-    if (m_camInfo->IsColorCam == false || type == ASI_IMG_Y8 || type == ASI_IMG_RGB24)
+    if (m_camInfo->IsColorCam == false || type == ASI_IMG_Y8 || type == ASI_IMG_RGB24 || isMonoBinActive())
         SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
     else
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
@@ -1300,6 +1300,37 @@ int ASICCD::grabImage()
 
     ExposureComplete(&PrimaryCCD);
     return 0;
+}
+
+bool ASICCD::isMonoBinActive()
+{
+    long monoBin = 0;
+    ASI_BOOL isAuto = ASI_FALSE;
+    ASI_ERROR_CODE errCode = ASIGetControlValue(m_camInfo->CameraID, ASI_MONO_BIN, &monoBin, &isAuto);
+    if (errCode != ASI_SUCCESS)
+    {
+        if (errCode != ASI_ERROR_INVALID_CONTROL_TYPE)
+        {
+            LOGF_ERROR("ASIGetControlValue ASI_MONO_BIN error(%d)", errCode);
+        }
+        return false;
+    }
+
+    if (monoBin == 0)
+    {
+        return false;
+    }
+
+    int width = 0, height = 0, bin = 1;
+    ASI_IMG_TYPE imgType = ASI_IMG_RAW8;
+    errCode = ASIGetROIFormat(m_camInfo->CameraID, &width, &height, &bin, &imgType);
+    if (errCode != ASI_SUCCESS)
+    {
+        LOGF_ERROR("ASIGetROIFormat error(%d)", errCode);
+        return false;
+    }
+
+    return (imgType == ASI_IMG_RAW8 || imgType == ASI_IMG_RAW16) && bin > 1;
 }
 
 /* The generic timer call back is used for temperature monitoring */
