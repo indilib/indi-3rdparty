@@ -1036,8 +1036,7 @@ bool ASICCD::StartExposure(float duration)
     }
     for (int i = 0; i < 3; i++)
     {
-        if ((errCode = ASIStartExposure(m_camInfo->CameraID, isDark)) !=
-                ASI_SUCCESS)
+        if ((errCode = ASIStartExposure(m_camInfo->CameraID, isDark)) != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIStartExposure error (%d)", errCode);
             // Wait 100ms before trying again
@@ -1779,21 +1778,17 @@ void *ASICCD::imagingHelper(void *context)
  */
 void *ASICCD::imagingThreadEntry()
 {
-    //pthread_mutex_lock(&condMutex);
     {
         std::lock_guard<std::mutex> lock(condMutex);
         threadState = StateIdle;
     }
     cv.notify_one();
-    //pthread_cond_signal(&cv);
+
     while (true)
     {
         std::unique_lock<std::mutex> lock(condMutex);
         cv.wait(lock, [this] {return threadRequest != StateIdle;});
-        //        while (threadRequest == StateIdle)
-        //        {
-        //            pthread_cond_wait(&cv, &condMutex);
-        //        }
+
         threadState = threadRequest;
         if (threadRequest == StateExposure)
         {
@@ -1810,11 +1805,9 @@ void *ASICCD::imagingThreadEntry()
         else if (threadRequest == StateRestartExposure)
         {
             threadRequest = StateIdle;
-            //pthread_mutex_unlock(&condMutex);
             lock.unlock();
             StartExposure(ExposureRequest);
             lock.lock();
-            //pthread_mutex_lock(&condMutex);
         }
         else if (threadRequest == StateTerminate)
         {
@@ -1824,7 +1817,6 @@ void *ASICCD::imagingThreadEntry()
         {
             threadRequest = StateIdle;
             cv.notify_one();
-            //pthread_cond_signal(&cv);
         }
         threadState = StateIdle;
 
@@ -1836,10 +1828,6 @@ void *ASICCD::imagingThreadEntry()
         threadState = StateTerminated;
     }
     cv.notify_one();
-
-
-    //pthread_cond_signal(&cv);
-    //pthread_mutex_unlock(&condMutex);
 
     return nullptr;
 }
@@ -1868,7 +1856,6 @@ void ASICCD::streamVideo()
 
     while (threadRequest == StateStream)
     {
-        //pthread_mutex_unlock(&condMutex);
         lock.unlock();
 
         std::unique_lock<std::mutex> guard(ccdBufferLock);
@@ -1882,7 +1869,6 @@ void ASICCD::streamVideo()
             if (ret != ASI_ERROR_TIMEOUT)
             {
                 Streamer->setStream(false);
-                //pthread_mutex_lock(&condMutex);
                 lock.lock();
                 if (threadRequest == StateStream)
                 {
@@ -1918,7 +1904,6 @@ void ASICCD::streamVideo()
             //            }
         }
 
-        //pthread_mutex_lock(&condMutex);
         lock.lock();
     }
 }
@@ -1938,7 +1923,6 @@ void ASICCD::getExposure()
 
     while (threadRequest == StateExposure)
     {
-        //pthread_mutex_unlock(&condMutex);
         lock.unlock();
 
         errCode = ASIGetExpStatus(m_camInfo->CameraID, &status);
@@ -1951,13 +1935,13 @@ void ASICCD::getExposure()
                 PrimaryCCD.setExposureLeft(0.0);
                 if (PrimaryCCD.getExposureDuration() > 3)
                     LOG_INFO("Exposure done, downloading image...");
-                //pthread_mutex_lock(&condMutex);
+
                 lock.lock();
                 exposureSetRequest(StateIdle);
                 lock.unlock();
-                //pthread_mutex_unlock(&condMutex);
+
                 grabImage();
-                //pthread_mutex_lock(&condMutex);
+
                 lock.lock();
                 break;
             }
@@ -1980,7 +1964,7 @@ void ASICCD::getExposure()
                     InExposure = false;
                     ASIStopExposure(m_camInfo->CameraID);
                     usleep(100000);
-                    //pthread_mutex_lock(&condMutex);
+
                     lock.lock();
                     exposureSetRequest(StateRestartExposure);
                     break;
@@ -1996,7 +1980,7 @@ void ASICCD::getExposure()
                     ASIStopExposure(m_camInfo->CameraID);
                     PrimaryCCD.setExposureFailed();
                     usleep(100000);
-                    //pthread_mutex_lock(&condMutex);
+
                     lock.lock();
                     exposureSetRequest(StateIdle);
                     break;
@@ -2016,7 +2000,7 @@ void ASICCD::getExposure()
                 }
                 PrimaryCCD.setExposureFailed();
                 InExposure = false;
-                //pthread_mutex_lock(&condMutex);
+
                 lock.lock();
                 exposureSetRequest(StateIdle);
                 break;
@@ -2056,7 +2040,6 @@ void ASICCD::getExposure()
         }
         usleep(uSecs);
 
-        //pthread_mutex_lock(&condMutex);
         lock.lock();
     }
 }
