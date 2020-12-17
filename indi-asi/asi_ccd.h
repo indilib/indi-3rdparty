@@ -24,6 +24,8 @@
 
 #include <ASICamera2.h>
 
+#include <vector>
+
 #include <condition_variable>
 #include <mutex>
 #include <indiccd.h>
@@ -176,7 +178,7 @@ class ASICCD : public INDI::CCD
         uint8_t m_ExposureRetry {0};
 
         ASI_CAMERA_INFO *m_camInfo;
-        ASI_CONTROL_CAPS *pControlCaps;
+        std::vector<ASI_CONTROL_CAPS> m_controlCaps;
 
         int genTimerID;
 

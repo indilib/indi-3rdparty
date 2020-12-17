@@ -186,7 +186,6 @@ ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     ControlN     = nullptr;
     ControlS     = nullptr;
-    pControlCaps = nullptr;
     m_camInfo    = camInfo;
 
     WEPulseRequest = NSPulseRequest = 0;
@@ -1593,15 +1592,7 @@ void ASICCD::createControls(int piNumberOfControls)
     INumber *control_number;
     ISwitch *auto_switch;
 
-    if (pControlCaps != nullptr)
-        free(pControlCaps);
-
-    pControlCaps = static_cast<ASI_CONTROL_CAPS *>(calloc(piNumberOfControls, sizeof(ASI_CONTROL_CAPS)));
-    if (pControlCaps == nullptr)
-    {
-        LOGF_ERROR("CCD ID: %d malloc failed (controls)", m_camInfo->CameraID);
-        return;
-    }
+    m_controlCaps.resize(piNumberOfControls);
 
     if (ControlNP.nnp != 0)
     {
@@ -1612,10 +1603,7 @@ void ASICCD::createControls(int piNumberOfControls)
     control_number = static_cast<INumber *>(calloc(piNumberOfControls, sizeof(INumber)));
     if (control_number == nullptr)
     {
-        LOGF_ERROR(
-            "CCD ID: %d malloc failed (control number)", m_camInfo->CameraID);
-        free(pControlCaps);
-        pControlCaps = nullptr;
+        LOGF_ERROR("CCD ID: %d malloc failed (control number)", m_camInfo->CameraID);
         return;
     }
 
@@ -1628,15 +1616,12 @@ void ASICCD::createControls(int piNumberOfControls)
     auto_switch = static_cast<ISwitch *>(calloc(piNumberOfControls, sizeof(ISwitch)));
     if (auto_switch == nullptr)
     {
-        LOGF_ERROR(
-            "CCD ID: %d malloc failed (control auto)", m_camInfo->CameraID);
+        LOGF_ERROR("CCD ID: %d malloc failed (control auto)", m_camInfo->CameraID);
         free(control_number);
-        free(pControlCaps);
-        pControlCaps = nullptr;
         return;
     }
 
-    ASI_CONTROL_CAPS *cap = pControlCaps;
+    ASI_CONTROL_CAPS *cap = m_controlCaps.data();
     INumber *control_np   = control_number;
     ISwitch *auto_sp      = auto_switch;
     int nWritableControls = 0;
