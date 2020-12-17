@@ -81,10 +81,9 @@ void ASI_CCD_ISInit()
         return;
     }
 
-    camerasInfo.resize(iAvailableCamerasCount);
-
-    if (camerasInfo.size() != size_t(iAvailableCamerasCount))
-    {
+    try {
+        camerasInfo.resize(iAvailableCamerasCount);
+    } catch(const std::bad_alloc& e) {
         IDLog("Failed to allocate memory.");
         return;
     }
@@ -184,8 +183,6 @@ void ISSnoopDevice(XMLEle *root)
 ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
-    ControlN     = nullptr;
-    ControlS     = nullptr;
     m_camInfo    = camInfo;
 
     WEPulseRequest = NSPulseRequest = 0;
@@ -473,22 +470,8 @@ void ASICCD::setupParams()
     if (errCode != ASI_SUCCESS)
         LOGF_DEBUG("ASIGetNumOfControls error (%d)", errCode);
 
-    if (ControlNP.nnp > 0)
-    {
-        free(ControlN);
-        ControlNP.nnp = 0;
-    }
 
-    if (ControlSP.nsp > 0)
-    {
-        free(ControlS);
-        ControlSP.nsp = 0;
-    }
-
-    if (piNumberOfControls > 0)
-    {
-        createControls(piNumberOfControls);
-    }
+    createControls(piNumberOfControls);
 
     if (HasCooler())
     {
@@ -801,10 +784,7 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 return true;
             }
 
-            if (CoolerS[0].s == ISS_ON)
-                activateCooler(true);
-            else
-                activateCooler(false);
+            activateCooler(CoolerS[0].s == ISS_ON);
 
             return true;
         }
@@ -1589,47 +1569,25 @@ void ASICCD::createControls(int piNumberOfControls)
 {
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
 
-    INumber *control_number;
-    ISwitch *auto_switch;
+    ControlNP.nnp = 0;
+    ControlSP.nsp = 0;
 
-    m_controlCaps.resize(piNumberOfControls);
-
-    if (ControlNP.nnp != 0)
-    {
-        free(ControlNP.np);
-        ControlNP.nnp = 0;
-    }
-
-    control_number = static_cast<INumber *>(calloc(piNumberOfControls, sizeof(INumber)));
-    if (control_number == nullptr)
-    {
-        LOGF_ERROR("CCD ID: %d malloc failed (control number)", m_camInfo->CameraID);
+    try {
+        m_controlCaps.resize(piNumberOfControls);
+        ControlN.resize(piNumberOfControls);
+        ControlS.resize(piNumberOfControls);
+    } catch(const std::bad_alloc& e) {
+        IDLog("Failed to allocate memory.");
         return;
     }
 
-    if (ControlSP.nsp != 0)
-    {
-        free(ControlSP.sp);
-        ControlSP.nsp = 0;
-    }
+    INumber *control_np   = ControlN.data();
+    ISwitch *auto_sp      = ControlS.data();
 
-    auto_switch = static_cast<ISwitch *>(calloc(piNumberOfControls, sizeof(ISwitch)));
-    if (auto_switch == nullptr)
+    int i = 0;
+    for(auto &cap : m_controlCaps)
     {
-        LOGF_ERROR("CCD ID: %d malloc failed (control auto)", m_camInfo->CameraID);
-        free(control_number);
-        return;
-    }
-
-    ASI_CONTROL_CAPS *cap = m_controlCaps.data();
-    INumber *control_np   = control_number;
-    ISwitch *auto_sp      = auto_switch;
-    int nWritableControls = 0;
-    int nAutoSwitches     = 0;
-
-    for (int i = 0; i < piNumberOfControls; i++)
-    {
-        if ((errCode = ASIGetControlCaps(m_camInfo->CameraID, i, cap)) != ASI_SUCCESS)
+        if ((errCode = ASIGetControlCaps(m_camInfo->CameraID, i++, &cap)) != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIGetControlCaps error (%d)", errCode);
             return;
@@ -1637,111 +1595,84 @@ void ASICCD::createControls(int piNumberOfControls)
 
         LOGF_DEBUG("Control #%d: name (%s), Descp (%s), Min (%ld), Max (%ld), Default Value (%ld), IsAutoSupported (%s), "
                    "isWritale (%s) ",
-                   i, cap->Name, cap->Description, cap->MinValue, cap->MaxValue,
-                   cap->DefaultValue, cap->IsAutoSupported ? "True" : "False",
-                   cap->IsWritable ? "True" : "False");
+                   i, cap.Name, cap.Description, cap.MinValue, cap.MaxValue,
+                   cap.DefaultValue, cap.IsAutoSupported ? "True" : "False",
+                   cap.IsWritable ? "True" : "False");
 
-        if (cap->IsWritable == ASI_FALSE || cap->ControlType == ASI_TARGET_TEMP || cap->ControlType == ASI_COOLER_ON)
+        if (cap.IsWritable == ASI_FALSE || cap.ControlType == ASI_TARGET_TEMP || cap.ControlType == ASI_COOLER_ON)
             continue;
 
         // Update Min/Max exposure as supported by the camera
-        if (cap->ControlType == ASI_EXPOSURE)
+        if (cap.ControlType == ASI_EXPOSURE)
         {
-            double minExp = cap->MinValue / 1000000.0;
-            double maxExp = cap->MaxValue / 1000000.0;
+            double minExp = cap.MinValue / 1000000.0;
+            double maxExp = cap.MaxValue / 1000000.0;
             PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExp, maxExp, 1);
             continue;
         }
 
-        long pValue     = 0;
-        ASI_BOOL isAuto = ASI_FALSE;
+        if (cap.ControlType == ASI_BANDWIDTHOVERLOAD)
+        {
+            long value = cap.MinValue;
 
-#ifdef LOW_USB_BANDWIDTH
-        if (cap->ControlType == ASI_BANDWIDTHOVERLOAD)
-        {
-            LOGF_DEBUG("createControls->set USB %d", cap->MinValue);
-            ASISetControlValue(m_camInfo->CameraID, cap->ControlType, cap->MinValue, ASI_FALSE);
-        }
-#else
-        if (cap->ControlType == ASI_BANDWIDTHOVERLOAD)
-        {
+#ifndef LOW_USB_BANDWIDTH
             if (m_camInfo->IsUSB3Camera && !m_camInfo->IsUSB3Host)
-            {
-                LOGF_DEBUG("createControls->set USB %d", 0.8 * cap->MaxValue);
-                ASISetControlValue(m_camInfo->CameraID, cap->ControlType, 0.8 * cap->MaxValue, ASI_FALSE);
-            }
-            else
-            {
-                LOGF_DEBUG("createControls->set USB %d", cap->MinValue);
-                ASISetControlValue(m_camInfo->CameraID, cap->ControlType, cap->MinValue, ASI_FALSE);
-            }
-        }
+                value = 0.8 * cap.MaxValue;
 #endif
 
-        ASIGetControlValue(m_camInfo->CameraID, cap->ControlType, &pValue, &isAuto);
+            LOGF_DEBUG("createControls->set USB %d", value);
+            ASISetControlValue(m_camInfo->CameraID, cap.ControlType, value, ASI_FALSE);
+        }
 
-        if (cap->IsWritable)
+        long pValue     = 0;
+        ASI_BOOL isAuto = ASI_FALSE;
+        ASIGetControlValue(m_camInfo->CameraID, cap.ControlType, &pValue, &isAuto);
+
+        if (cap.IsWritable)
         {
-            nWritableControls++;
-
-            LOGF_DEBUG("Adding above control as writable control number %d", nWritableControls);
+            LOGF_DEBUG("Adding above control as writable control number %d", ControlNP.nnp);
 
             // JM 2018-07-04: If Max-Min == 1 then it's boolean value
             // So no need to set a custom step value.
             double step = 1;
             if (cap->MaxValue - cap->MinValue > 1)
                 step = (cap->MaxValue - cap->MinValue) / 10.0;
+
             IUFillNumber(control_np,
-                         cap->Name,
-                         cap->Name,
+                         cap.Name,
+                         cap.Name,
                          "%g",
-                         cap->MinValue,
-                         cap->MaxValue,
+                         cap.MinValue,
+                         cap.MaxValue,
                          step,
                          pValue);
-            control_np->aux0 = (void *)&cap->ControlType;
-            control_np->aux1 = (void *)&cap->IsAutoSupported;
+
+            control_np->aux0 = &cap.ControlType;
+            control_np->aux1 = &cap.IsAutoSupported;
             control_np++;
+            ControlNP.nnp++;
         }
 
-        if (cap->IsAutoSupported)
+        if (cap.IsAutoSupported)
         {
-            nAutoSwitches++;
-
-            LOGF_DEBUG("Adding above control as auto control number %d", nAutoSwitches);
+            LOGF_DEBUG("Adding above control as auto control number %d", ControlSP.nsp);
 
             char autoName[MAXINDINAME];
-            snprintf(autoName, MAXINDINAME, "AUTO_%s", cap->Name);
-            IUFillSwitch(auto_sp, autoName, cap->Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
-            auto_sp->aux = (void *)&cap->ControlType;
+            snprintf(autoName, MAXINDINAME, "AUTO_%s", cap.Name);
+            IUFillSwitch(auto_sp, autoName, cap.Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
+
+            auto_sp->aux = &cap.ControlType;
             auto_sp++;
+            ControlSP.nsp++;
         }
-
-        cap++;
     }
 
-    /*
-     * Resize the buffers to free up unused space -- there is no need to
-     * check for realloc() failures because we are reducing the size
-     */
-    if (nWritableControls != piNumberOfControls)
-    {
-        size_t size = sizeof(INumber) * nWritableControls;
-        control_number = (INumber *)realloc(control_number, size);
-    }
-    if (nAutoSwitches != piNumberOfControls)
-    {
-        size_t size = sizeof(ISwitch) * nAutoSwitches;
-        auto_switch = (ISwitch *)realloc(auto_switch, size);
-    }
+    // Resize the buffers to free up unused space
+    ControlN.resize(ControlNP.nnp);
+    ControlS.resize(ControlSP.nsp);
 
-    ControlNP.nnp = nWritableControls;
-    ControlNP.np  = control_number;
-    ControlN      = control_number;
-
-    ControlSP.nsp = nAutoSwitches;
-    ControlSP.sp  = auto_switch;
-    ControlS      = auto_switch;
+    ControlNP.np  = ControlN.data();
+    ControlSP.sp  = ControlS.data();
 }
 
 const char *ASICCD::getBayerString()

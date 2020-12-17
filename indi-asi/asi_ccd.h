@@ -147,10 +147,10 @@ class ASICCD : public INDI::CCD
         ISwitch CoolerS[2];
         ISwitchVectorProperty CoolerSP;
 
-        INumber *ControlN = nullptr;
+        std::vector<INumber>  ControlN;
         INumberVectorProperty ControlNP;
 
-        ISwitch *ControlS = nullptr;
+        std::vector<ISwitch>  ControlS;
         ISwitchVectorProperty ControlSP;
 
         ISwitch *VideoFormatS;
