@@ -122,7 +122,6 @@ void ASI_CCD_ISInit()
 void ISGetProperties(const char *dev)
 {
     ASI_CCD_ISInit();
-
     if (iAvailableCamerasCount == 0)
     {
         IDMessage(nullptr, "No ASI cameras detected. Power on?");
@@ -277,10 +276,11 @@ bool ASICCD::initProperties()
     IUFillTextVector(&SDKVersionSP, SDKVersionS, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     int maxBin = 1;
-    for (int i = 0; i < 16; i++)
+
+    for (const auto &supportedBin: m_camInfo->SupportedBins)
     {
-        if (m_camInfo->SupportedBins[i] != 0)
-            maxBin = m_camInfo->SupportedBins[i];
+        if (supportedBin != 0)
+            maxBin = supportedBin;
         else
             break;
     }
@@ -2009,14 +2009,9 @@ void ASICCD::streamVideo()
         else
         {
             if (currentVideoFormat == ASI_IMG_RGB24)
-            {
                 for (uint32_t i = 0; i < totalBytes; i += 3)
-                {
-                    uint8_t r = targetFrame[i];
-                    targetFrame[i] = targetFrame[i + 2];
-                    targetFrame[i + 2] = r;
-                }
-            }
+                    std::swap(targetFrame[i], targetFrame[i + 2]);
+
             guard.unlock();
 
             Streamer->newFrame(targetFrame, totalBytes);
