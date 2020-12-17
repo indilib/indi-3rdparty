@@ -1591,13 +1591,7 @@ void ASICCD::createControls(int piNumberOfControls)
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
 
     INumber *control_number;
-    INumber *control_np;
-    int nWritableControls   = 0;
-
     ISwitch *auto_switch;
-    ISwitch *auto_sp;
-    int nAutoSwitches    = 0;
-    size_t size;
 
     if (pControlCaps != nullptr)
         free(pControlCaps);
@@ -1605,12 +1599,9 @@ void ASICCD::createControls(int piNumberOfControls)
     pControlCaps = static_cast<ASI_CONTROL_CAPS *>(calloc(piNumberOfControls, sizeof(ASI_CONTROL_CAPS)));
     if (pControlCaps == nullptr)
     {
-        LOGF_ERROR("CCD ID: %d malloc failed (controls)",
-                   m_camInfo->CameraID);
+        LOGF_ERROR("CCD ID: %d malloc failed (controls)", m_camInfo->CameraID);
         return;
     }
-
-    ASI_CONTROL_CAPS *oneControlCap = pControlCaps;
 
     if (ControlNP.nnp != 0)
     {
@@ -1628,8 +1619,6 @@ void ASICCD::createControls(int piNumberOfControls)
         return;
     }
 
-    control_np = control_number;
-
     if (ControlSP.nsp != 0)
     {
         free(ControlSP.sp);
@@ -1646,11 +1635,16 @@ void ASICCD::createControls(int piNumberOfControls)
         pControlCaps = nullptr;
         return;
     }
-    auto_sp = auto_switch;
+
+    ASI_CONTROL_CAPS *cap = pControlCaps;
+    INumber *control_np   = control_number;
+    ISwitch *auto_sp      = auto_switch;
+    int nWritableControls = 0;
+    int nAutoSwitches     = 0;
 
     for (int i = 0; i < piNumberOfControls; i++)
     {
-        if ((errCode = ASIGetControlCaps(m_camInfo->CameraID, i, oneControlCap)) != ASI_SUCCESS)
+        if ((errCode = ASIGetControlCaps(m_camInfo->CameraID, i, cap)) != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIGetControlCaps error (%d)", errCode);
             return;
@@ -1658,21 +1652,19 @@ void ASICCD::createControls(int piNumberOfControls)
 
         LOGF_DEBUG("Control #%d: name (%s), Descp (%s), Min (%ld), Max (%ld), Default Value (%ld), IsAutoSupported (%s), "
                    "isWritale (%s) ",
-                   i, oneControlCap->Name, oneControlCap->Description, oneControlCap->MinValue, oneControlCap->MaxValue,
-                   oneControlCap->DefaultValue, oneControlCap->IsAutoSupported ? "True" : "False",
-                   oneControlCap->IsWritable ? "True" : "False");
+                   i, cap->Name, cap->Description, cap->MinValue, cap->MaxValue,
+                   cap->DefaultValue, cap->IsAutoSupported ? "True" : "False",
+                   cap->IsWritable ? "True" : "False");
 
-        if (oneControlCap->IsWritable == ASI_FALSE || oneControlCap->ControlType == ASI_TARGET_TEMP ||
-                oneControlCap->ControlType == ASI_COOLER_ON)
+        if (cap->IsWritable == ASI_FALSE || cap->ControlType == ASI_TARGET_TEMP || cap->ControlType == ASI_COOLER_ON)
             continue;
 
         // Update Min/Max exposure as supported by the camera
-        if (oneControlCap->ControlType == ASI_EXPOSURE)
+        if (cap->ControlType == ASI_EXPOSURE)
         {
-            double minExp = (double)oneControlCap->MinValue / 1000000.0;
-            double maxExp = (double)oneControlCap->MaxValue / 1000000.0;
-            PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE",
-                                     minExp, maxExp, 1);
+            double minExp = cap->MinValue / 1000000.0;
+            double maxExp = cap->MaxValue / 1000000.0;
+            PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExp, maxExp, 1);
             continue;
         }
 
@@ -1680,71 +1672,67 @@ void ASICCD::createControls(int piNumberOfControls)
         ASI_BOOL isAuto = ASI_FALSE;
 
 #ifdef LOW_USB_BANDWIDTH
-        if (oneControlCap->ControlType == ASI_BANDWIDTHOVERLOAD)
+        if (cap->ControlType == ASI_BANDWIDTHOVERLOAD)
         {
-            LOGF_DEBUG("createControls->set USB %d", oneControlCap->MinValue);
-            ASISetControlValue(m_camInfo->CameraID, oneControlCap->ControlType, oneControlCap->MinValue, ASI_FALSE);
+            LOGF_DEBUG("createControls->set USB %d", cap->MinValue);
+            ASISetControlValue(m_camInfo->CameraID, cap->ControlType, cap->MinValue, ASI_FALSE);
         }
 #else
-        if (oneControlCap->ControlType == ASI_BANDWIDTHOVERLOAD)
+        if (cap->ControlType == ASI_BANDWIDTHOVERLOAD)
         {
             if (m_camInfo->IsUSB3Camera && !m_camInfo->IsUSB3Host)
             {
-                LOGF_DEBUG("createControls->set USB %d", 0.8 * oneControlCap->MaxValue);
-                ASISetControlValue(m_camInfo->CameraID, oneControlCap->ControlType, 0.8 * oneControlCap->MaxValue,
-                                   ASI_FALSE);
+                LOGF_DEBUG("createControls->set USB %d", 0.8 * cap->MaxValue);
+                ASISetControlValue(m_camInfo->CameraID, cap->ControlType, 0.8 * cap->MaxValue, ASI_FALSE);
             }
             else
             {
-                LOGF_DEBUG("createControls->set USB %d", oneControlCap->MinValue);
-                ASISetControlValue(m_camInfo->CameraID, oneControlCap->ControlType, oneControlCap->MinValue, ASI_FALSE);
+                LOGF_DEBUG("createControls->set USB %d", cap->MinValue);
+                ASISetControlValue(m_camInfo->CameraID, cap->ControlType, cap->MinValue, ASI_FALSE);
             }
         }
 #endif
 
-        ASIGetControlValue(m_camInfo->CameraID, oneControlCap->ControlType, &pValue, &isAuto);
+        ASIGetControlValue(m_camInfo->CameraID, cap->ControlType, &pValue, &isAuto);
 
-        if (oneControlCap->IsWritable)
+        if (cap->IsWritable)
         {
             nWritableControls++;
 
-            LOGF_DEBUG(
-                "Adding above control as writable control number %d",
-                nWritableControls);
+            LOGF_DEBUG("Adding above control as writable control number %d", nWritableControls);
 
             // JM 2018-07-04: If Max-Min == 1 then it's boolean value
             // So no need to set a custom step value.
             double step = 1;
-            if (oneControlCap->MaxValue - oneControlCap->MinValue > 1)
-                step = (oneControlCap->MaxValue - oneControlCap->MinValue) / 10.0;
+            if (cap->MaxValue - cap->MinValue > 1)
+                step = (cap->MaxValue - cap->MinValue) / 10.0;
             IUFillNumber(control_np,
-                         oneControlCap->Name,
-                         oneControlCap->Name,
+                         cap->Name,
+                         cap->Name,
                          "%g",
-                         oneControlCap->MinValue,
-                         oneControlCap->MaxValue,
+                         cap->MinValue,
+                         cap->MaxValue,
                          step,
                          pValue);
-            control_np->aux0 = (void *)&oneControlCap->ControlType;
-            control_np->aux1 = (void *)&oneControlCap->IsAutoSupported;
+            control_np->aux0 = (void *)&cap->ControlType;
+            control_np->aux1 = (void *)&cap->IsAutoSupported;
             control_np++;
         }
 
-        if (oneControlCap->IsAutoSupported)
+        if (cap->IsAutoSupported)
         {
             nAutoSwitches++;
 
             LOGF_DEBUG("Adding above control as auto control number %d", nAutoSwitches);
 
             char autoName[MAXINDINAME];
-            snprintf(autoName, MAXINDINAME, "AUTO_%s", oneControlCap->Name);
-            IUFillSwitch(auto_sp, autoName, oneControlCap->Name,
-                         isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
-            auto_sp->aux = (void *)&oneControlCap->ControlType;
+            snprintf(autoName, MAXINDINAME, "AUTO_%s", cap->Name);
+            IUFillSwitch(auto_sp, autoName, cap->Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
+            auto_sp->aux = (void *)&cap->ControlType;
             auto_sp++;
         }
 
-        oneControlCap++;
+        cap++;
     }
 
     /*
@@ -1753,12 +1741,12 @@ void ASICCD::createControls(int piNumberOfControls)
      */
     if (nWritableControls != piNumberOfControls)
     {
-        size = sizeof(INumber) * nWritableControls;
+        size_t size = sizeof(INumber) * nWritableControls;
         control_number = (INumber *)realloc(control_number, size);
     }
     if (nAutoSwitches != piNumberOfControls)
     {
-        size = sizeof(ISwitch) * nAutoSwitches;
+        size_t size = sizeof(ISwitch) * nAutoSwitches;
         auto_switch = (ISwitch *)realloc(auto_switch, size);
     }
 
