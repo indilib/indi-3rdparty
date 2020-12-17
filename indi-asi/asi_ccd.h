@@ -153,7 +153,7 @@ class ASICCD : public INDI::CCD
         std::vector<ISwitch>  ControlS;
         ISwitchVectorProperty ControlSP;
 
-        ISwitch *VideoFormatS;
+        std::vector<ISwitch>  VideoFormatS;
         ISwitchVectorProperty VideoFormatSP;
         uint8_t rememberVideoFormat = { 0 };
         ASI_IMG_TYPE currentVideoFormat;

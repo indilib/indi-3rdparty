@@ -524,31 +524,26 @@ void ASICCD::setupParams()
             break;
     }
 
-    if (VideoFormatSP.nsp > 0)
-    {
-        free(VideoFormatS);
-        VideoFormatSP.nsp = 0;
-    }
+    VideoFormatSP.nsp = 0;
 
-    VideoFormatS      = nullptr;
     int nVideoFormats = 0;
 
-    for (int i = 0; i < 8; i++)
+    for (const auto &videoFormat : m_camInfo->SupportedVideoFormat)
     {
-        if (m_camInfo->SupportedVideoFormat[i] == ASI_IMG_END)
+        if (videoFormat == ASI_IMG_END)
             break;
         nVideoFormats++;
     }
-    VideoFormatS = static_cast<ISwitch *>(calloc(nVideoFormats, sizeof(ISwitch)));
-    if (VideoFormatS == nullptr)
-    {
+
+    try {
+        VideoFormatS.resize(nVideoFormats);
+    } catch (const std::bad_alloc &e) {
         LOGF_ERROR("Camera ID: %d malloc failed (setup)",  m_camInfo->CameraID);
-        VideoFormatSP.nsp = 0;
         return;
     }
-    ISwitch *oneVF = VideoFormatS;
-    int unknownCount = 0;
-    bool unknown = false;
+
+    ISwitch *oneVF = VideoFormatS.data();
+
     for (int i = 0; i < nVideoFormats; i++)
     {
         switch (m_camInfo->SupportedVideoFormat[i])
@@ -574,23 +569,19 @@ void ASICCD::setupParams()
                 break;
 
             default:
-                unknown = true;
-                unknownCount++;
                 LOGF_DEBUG("Unknown video format (%d)", m_camInfo->SupportedVideoFormat[i]);
-                break;
+                continue;
         }
 
-        if (unknown == false)
-        {
-            oneVF->aux = &m_camInfo->SupportedVideoFormat[i];
-            oneVF++;
-        }
-        unknown = false;
+        oneVF->aux = &m_camInfo->SupportedVideoFormat[i];
+        oneVF++;
+        VideoFormatSP.nsp++;
     }
-    nVideoFormats -= unknownCount;
 
-    VideoFormatSP.nsp = nVideoFormats;
-    VideoFormatSP.sp  = VideoFormatS;
+    // Resize the buffers to free up unused space
+    VideoFormatS.resize(VideoFormatSP.nsp);
+
+    VideoFormatSP.sp  = VideoFormatS.data();
     rememberVideoFormat = IUFindOnSwitchIndex(&VideoFormatSP);
 
     float x_pixel_size, y_pixel_size;
@@ -642,8 +633,7 @@ void ASICCD::setupParams()
 
     ASIStopVideoCapture(m_camInfo->CameraID);
 
-    LOGF_DEBUG("setupParams ASISetROIFormat (%dx%d,  bin %d, type %d)", maxWidth,
-               maxHeight, 1, imgType);
+    LOGF_DEBUG("setupParams ASISetROIFormat (%dx%d,  bin %d, type %d)", maxWidth, maxHeight, 1, imgType);
     ASISetROIFormat(m_camInfo->CameraID, maxWidth, maxHeight, 1, imgType);
 
     updateRecorderFormat();
@@ -1635,8 +1625,8 @@ void ASICCD::createControls(int piNumberOfControls)
             // JM 2018-07-04: If Max-Min == 1 then it's boolean value
             // So no need to set a custom step value.
             double step = 1;
-            if (cap->MaxValue - cap->MinValue > 1)
-                step = (cap->MaxValue - cap->MinValue) / 10.0;
+            if (cap.MaxValue - cap.MinValue > 1)
+                step = (cap.MaxValue - cap.MinValue) / 10.0;
 
             IUFillNumber(control_np,
                          cap.Name,
