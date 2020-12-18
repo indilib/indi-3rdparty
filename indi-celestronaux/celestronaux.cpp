@@ -908,6 +908,9 @@ bool CelestronAUX::Sync(double ra, double dec)
         Initialise(this);
         LOGF_DEBUG("Sync - new entry added RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
         ReadScopeStatus();
+
+	CurrentTrackingTarget = NewTrackingTarget;
+
         return true;
     }
     LOGF_DEBUG("Sync - duplicate entry RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
