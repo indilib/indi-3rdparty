@@ -1,3 +1,11 @@
+indi-duino (1.8) buster; urgency=medium
+
+  * Added support for a OLED display
+  * Button for turning display on added
+  * display string handling reworked to fix memory leak
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 18 Dec 2020 21:22:38 +0100
+
 indi-duino (1.7) buster; urgency=medium
 
   * Script support for WiFi connection to the Arduino 
