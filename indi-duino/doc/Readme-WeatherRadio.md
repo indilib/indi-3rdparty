@@ -150,7 +150,7 @@ cp -a add-on/weatherradio/html add-on/weatherradio/bin  /usr/share/weatherradio
 Install and activate the Apache configuration
 ```
 sudo cp add-on/weatherradio/weatherradio.conf /etc/apache2/conf-available
-sudo a2enmod weatherradio
+sudo a2enconf weatherradio
 sudo systemctl reload apache2
 ```
 That's it for the web server installation, check if [http://yourserver/weatherradio](http://yourserver/weatherradio) shows up with empty charts.
