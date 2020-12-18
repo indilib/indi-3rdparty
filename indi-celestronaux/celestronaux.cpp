@@ -197,7 +197,9 @@ bool CelestronAUX::Abort()
     AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
     AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
     sendCmd(stopAlt);
+    readMsgs(stopAlt);
     sendCmd(stopAz);
+    readMsgs(stopAz);
 
     AbortSP.s = IPS_OK;
     IUResetSwitch(&AbortSP);
@@ -946,6 +948,7 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Sync(double ra, double dec)
 {
+
     struct ln_hrz_posn AltAz;
     AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
     AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
@@ -1476,7 +1479,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[1] = 0x00;
             AUXCommand cmd(GET_VER, GPS, m.src, dat);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         case GPS_GET_LAT:
@@ -1490,7 +1493,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             else
                 cmd.setPosition(Lon);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         case GPS_GET_TIME:
@@ -1508,7 +1511,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[2] = unsigned(ptm->tm_sec);
             AUXCommand cmd(GPS_GET_TIME, GPS, m.src, dat);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         case GPS_GET_DATE:
@@ -1525,7 +1528,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[1] = unsigned(ptm->tm_mday);
             AUXCommand cmd(GPS_GET_DATE, GPS, m.src, dat);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         case GPS_GET_YEAR:
@@ -1544,7 +1547,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
                 IDLog(" Sending: %d [%d,%d]\n", ptm->tm_year, dat[0], dat[1]);
             AUXCommand cmd(GPS_GET_YEAR, GPS, m.src, dat);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         case GPS_LINKED:
@@ -1556,7 +1559,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[0] = unsigned(1);
             AUXCommand cmd(GPS_LINKED, GPS, m.src, dat);
             sendCmd(cmd);
-            //readMsgs();
+            readMsgs(cmd);
             break;
         }
         default:
