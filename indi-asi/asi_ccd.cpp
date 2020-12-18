@@ -476,8 +476,7 @@ void ASICCD::setupParams()
     if (HasCooler())
     {
         ASI_CONTROL_CAPS pCtrlCaps;
-        errCode = ASIGetControlCaps(m_camInfo->CameraID, ASI_TARGET_TEMP,
-                                    &pCtrlCaps);
+        errCode = ASIGetControlCaps(m_camInfo->CameraID, ASI_TARGET_TEMP, &pCtrlCaps);
         if (errCode == ASI_SUCCESS)
         {
             CoolerN[0].min = pCtrlCaps.MinValue;
@@ -490,9 +489,9 @@ void ASICCD::setupParams()
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM
 #ifdef LOW_USB_BANDWIDTH
-    ASI_CONTROL_CAPS pCtrlCaps;
     for (int j = 0; j < piNumberOfControls; j++)
     {
+        ASI_CONTROL_CAPS pCtrlCaps;
         ASIGetControlCaps(m_camInfo->CameraID, j, &pCtrlCaps);
         if (pCtrlCaps.ControlType == ASI_BANDWIDTHOVERLOAD)
         {
@@ -649,8 +648,8 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         if (!strcmp(name, ControlNP.name))
         {
             std::vector<double> oldValues;
-            for (int i = 0; i < ControlNP.nnp; i++)
-                oldValues.push_back(ControlN[i].value);
+            for (const auto &num : ControlN)
+                oldValues.push_back(num.value);
 
             if (IUUpdateNumber(&ControlNP, values, names, n) < 0)
             {
@@ -661,18 +660,16 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
             for (int i = 0; i < ControlNP.nnp; i++)
             {
-                ASI_BOOL nAuto         = *(static_cast<ASI_BOOL *>(ControlN[i].aux1));
-                ASI_CONTROL_TYPE nType = *(static_cast<ASI_CONTROL_TYPE *>(ControlN[i].aux0));
+                auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(ControlN[i].aux0);
 
                 if (fabs(ControlN[i].value - oldValues[i]) < 0.01)
                     continue;
 
                 LOGF_DEBUG("Setting %s --> %.2f", ControlN[i].label, ControlN[i].value);
-                if ((errCode = ASISetControlValue(m_camInfo->CameraID, nType, static_cast<long>(ControlN[i].value), ASI_FALSE)) !=
-                        ASI_SUCCESS)
+                errCode = ASISetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, static_cast<long>(ControlN[i].value), ASI_FALSE);
+                if (errCode != ASI_SUCCESS)
                 {
-                    LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", ControlN[i].name,
-                               ControlN[i].value, errCode);
+                    LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", ControlN[i].name,ControlN[i].value, errCode);
                     ControlNP.s = IPS_ALERT;
                     for (int i = 0; i < ControlNP.nnp; i++)
                         ControlN[i].value = oldValues[i];
@@ -680,16 +677,16 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     return false;
                 }
 
-                // If it was set to nAuto value to turn it off
-                if (nAuto)
+                // If it was set to numCtrlCap->IsAutoSupported value to turn it off
+                if (numCtrlCap->IsAutoSupported)
                 {
-                    for (int j = 0; j < ControlSP.nsp; j++)
+                    for (auto &sw : ControlS)
                     {
-                        ASI_CONTROL_TYPE swType = *(static_cast<ASI_CONTROL_TYPE *>(ControlS[j].aux));
+                        auto swCtrlCap = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
 
-                        if (swType == nType)
+                        if (swCtrlCap->ControlType == numCtrlCap->ControlType)
                         {
-                            ControlS[j].s = ISS_OFF;
+                            sw.s = ISS_OFF;
                             break;
                         }
                     }
@@ -716,8 +713,6 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
 bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    ASI_ERROR_CODE errCode = ASI_SUCCESS;
-
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
         if (!strcmp(name, ControlSP.name))
@@ -729,33 +724,32 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 return true;
             }
 
-            for (int i = 0; i < ControlSP.nsp; i++)
+            for (auto &sw : ControlS)
             {
-                ASI_CONTROL_TYPE swType = *(static_cast<ASI_CONTROL_TYPE *>(ControlS[i].aux));
-                ASI_BOOL swAuto         = (ControlS[i].s == ISS_ON) ? ASI_TRUE : ASI_FALSE;
+                auto swCtrlCap  = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
+                ASI_BOOL swAuto = (sw.s == ISS_ON) ? ASI_TRUE : ASI_FALSE;
 
-                for (int j = 0; j < ControlNP.nnp; j++)
+                for (auto &num : ControlN)
                 {
-                    ASI_CONTROL_TYPE nType = *(static_cast<ASI_CONTROL_TYPE *>(ControlN[j].aux0));
+                    auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.aux0);
 
-                    if (swType == nType)
+                    if (swCtrlCap->ControlType != numCtrlCap->ControlType)
+                        continue;
+
+                    LOGF_DEBUG("Setting %s --> %.2f", num.label, num.value);
+
+                    ASI_ERROR_CODE errCode = ASISetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, num.value, swAuto);
+                    if (errCode != ASI_SUCCESS)
                     {
-                        LOGF_DEBUG("Setting %s --> %.2f", ControlN[j].label, ControlN[j].value);
-                        if ((errCode = ASISetControlValue(m_camInfo->CameraID, nType, ControlN[j].value, swAuto)) !=
-                                ASI_SUCCESS)
-                        {
-                            LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", ControlN[j].name,
-                                       ControlN[j].value, errCode);
-                            ControlNP.s = IPS_ALERT;
-                            ControlSP.s = IPS_ALERT;
-                            IDSetNumber(&ControlNP, nullptr);
-                            IDSetSwitch(&ControlSP, nullptr);
-                            return false;
-                        }
-
-                        *(static_cast<ASI_BOOL *>(ControlN[j].aux1)) = swAuto;
-                        break;
+                        LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", num.name, num.value, errCode);
+                        ControlNP.s = IPS_ALERT;
+                        ControlSP.s = IPS_ALERT;
+                        IDSetNumber(&ControlNP, nullptr);
+                        IDSetSwitch(&ControlSP, nullptr);
+                        return false;
                     }
+                    numCtrlCap->IsAutoSupported = swAuto;
+                    break;
                 }
             }
 
@@ -1310,8 +1304,7 @@ void ASICCD::TimerHit()
                              ASI_TEMPERATURE, &ASIControlValue, &ASIControlAuto);
     if (errCode != ASI_SUCCESS)
     {
-        LOGF_ERROR(
-            "ASIGetControlValue ASI_TEMPERATURE error (%d)", errCode);
+        LOGF_ERROR("ASIGetControlValue ASI_TEMPERATURE error (%d)", errCode);
         TemperatureNP.s = IPS_ALERT;
     }
     else
@@ -1323,8 +1316,7 @@ void ASICCD::TimerHit()
     {
         case IPS_IDLE:
         case IPS_OK:
-            if (fabs(currentTemperature - TemperatureN[0].value)
-                    > TEMP_THRESHOLD / 10.0)
+            if (fabs(currentTemperature - TemperatureN[0].value) > TEMP_THRESHOLD / 10.0)
             {
                 IDSetNumber(&TemperatureNP, nullptr);
             }
@@ -1335,8 +1327,7 @@ void ASICCD::TimerHit()
 
         case IPS_BUSY:
             // If we're within threshold, let's make it BUSY ---> OK
-            if (fabs(TemperatureRequest - TemperatureN[0].value)
-                    <= TEMP_THRESHOLD)
+            if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
             {
                 TemperatureNP.s = IPS_OK;
             }
@@ -1350,17 +1341,13 @@ void ASICCD::TimerHit()
                                      ASI_COOLER_POWER_PERC, &ASIControlValue, &ASIControlAuto);
         if (errCode != ASI_SUCCESS)
         {
-            LOGF_ERROR(
-                "ASIGetControlValue ASI_COOLER_POWER_PERC error (%d)", errCode);
+            LOGF_ERROR("ASIGetControlValue ASI_COOLER_POWER_PERC error (%d)", errCode);
             CoolerNP.s = IPS_ALERT;
         }
         else
         {
             CoolerN[0].value = ASIControlValue;
-            if (ASIControlValue > 0)
-                CoolerNP.s = IPS_BUSY;
-            else
-                CoolerNP.s = IPS_IDLE;
+            CoolerNP.s = ASIControlValue > 0 ? IPS_BUSY : IPS_IDLE;
         }
         IDSetNumber(&CoolerNP, nullptr);
     }
@@ -1556,8 +1543,6 @@ IPState ASICCD::GuideWest(uint32_t ms)
 
 void ASICCD::createControls(int piNumberOfControls)
 {
-    ASI_ERROR_CODE errCode = ASI_SUCCESS;
-
     ControlNP.nnp = 0;
     ControlSP.nsp = 0;
 
@@ -1570,13 +1555,14 @@ void ASICCD::createControls(int piNumberOfControls)
         return;
     }
 
-    INumber *control_np   = ControlN.data();
-    ISwitch *auto_sp      = ControlS.data();
+    INumber *control_np = ControlN.data();
+    ISwitch *auto_sp    = ControlS.data();
 
     int i = 0;
     for(auto &cap : m_controlCaps)
     {
-        if ((errCode = ASIGetControlCaps(m_camInfo->CameraID, i++, &cap)) != ASI_SUCCESS)
+        ASI_ERROR_CODE errCode = ASIGetControlCaps(m_camInfo->CameraID, i++, &cap);
+        if (errCode != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIGetControlCaps error (%d)", errCode);
             return;
@@ -1636,8 +1622,7 @@ void ASICCD::createControls(int piNumberOfControls)
                          step,
                          pValue);
 
-            control_np->aux0 = &cap.ControlType;
-            control_np->aux1 = &cap.IsAutoSupported;
+            control_np->aux0 = &cap;
             control_np++;
             ControlNP.nnp++;
         }
@@ -1650,7 +1635,7 @@ void ASICCD::createControls(int piNumberOfControls)
             snprintf(autoName, MAXINDINAME, "AUTO_%s", cap.Name);
             IUFillSwitch(auto_sp, autoName, cap.Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
 
-            auto_sp->aux = &cap.ControlType;
+            auto_sp->aux = &cap;
             auto_sp++;
             ControlSP.nsp++;
         }
@@ -1698,21 +1683,21 @@ void ASICCD::updateControls()
     long pValue     = 0;
     ASI_BOOL isAuto = ASI_FALSE;
 
-    for (int i = 0; i < ControlNP.nnp; i++)
+    for (auto &num : ControlN)
     {
-        ASI_CONTROL_TYPE nType = *(static_cast<ASI_CONTROL_TYPE *>(ControlN[i].aux0));
+        auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.aux0);
 
-        ASIGetControlValue(m_camInfo->CameraID, nType, &pValue, &isAuto);
+        ASIGetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, &pValue, &isAuto);
 
-        ControlN[i].value = pValue;
+        num.value = pValue;
 
-        for (int j = 0; j < ControlSP.nsp; j++)
+        for (auto &sw : ControlS)
         {
-            ASI_CONTROL_TYPE sType = *(static_cast<ASI_CONTROL_TYPE *>(ControlS[j].aux));
+            auto swCtrlCap = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
 
-            if (sType == nType)
+            if (numCtrlCap->ControlType == swCtrlCap->ControlType)
             {
-                ControlS[j].s = (isAuto == ASI_TRUE) ? ISS_ON : ISS_OFF;
+                sw.s = (isAuto == ASI_TRUE) ? ISS_ON : ISS_OFF;
                 break;
             }
         }
