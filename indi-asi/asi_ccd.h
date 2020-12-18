@@ -133,6 +133,8 @@ class ASICCD : public INDI::CCD
         bool activateCooler(bool enable);
         /** Set Video Format */
         bool setVideoFormat(uint8_t index);
+        /** Get if MonoBin is active, thus Bayer is irrelevant */
+        bool isMonoBinActive();
 
         char name[MAXINDIDEVICE];
 

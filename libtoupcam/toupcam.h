@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 46.17118.2020.0518 */
+/* Version: 48.18042.2020.1128 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -123,6 +123,16 @@ typedef struct {
 /*    | E_GEN_FAILURE  |   device not functioning              | 0x8007001F |   */
 /*    |----------------|---------------------------------------|------------|   */
 /********************************************************************************/
+/*                                                                              */
+/* Please note that the return value >= 0 means success                         */
+/* (especially S_FALSE is also successful, indicating that the internal value and the value set by the user is equivalent, which means "no operation"). */
+/* Therefore, the SUCCEEDEDand FAILED macros should generally be used to determine whether the return value is successful or failed. */
+/* (Unless there are special needs, do not use "==S_OK" or "==0" to judge the return value) */
+/*                                                                              */
+/* #define SUCCEEDED(hr)   (((HRESULT)(hr)) >= 0)                               */
+/* #define FAILED(hr)      (((HRESULT)(hr)) < 0)                                */
+/*                                                                              */
+/********************************************************************************/
 
 /* handle */
 typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
@@ -140,7 +150,6 @@ typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_FLAG_USB30_OVER_USB20    0x00000100  /* usb3.0 camera connected to usb2.0 port */
 #define TOUPCAM_FLAG_ST4                 0x00000200  /* ST4 port */
 #define TOUPCAM_FLAG_GETTEMPERATURE      0x00000400  /* support to get the temperature of the sensor */
-#define TOUPCAM_FLAG_PUTTEMPERATURE      0x00000800  /* support to put the target temperature of the sensor */
 #define TOUPCAM_FLAG_RAW10               0x00001000  /* pixel format, RAW 10bits */
 #define TOUPCAM_FLAG_RAW12               0x00002000  /* pixel format, RAW 12bits */
 #define TOUPCAM_FLAG_RAW14               0x00004000  /* pixel format, RAW 14bits */
@@ -169,6 +178,9 @@ typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_FLAG_FOCUSMOTOR          0x0000002000000000  /* support focus motor */
 #define TOUPCAM_FLAG_PRECISE_FRAMERATE   0x0000004000000000  /* support precise framerate & bandwidth, see TOUPCAM_OPTION_PRECISE_FRAMERATE & TOUPCAM_OPTION_BANDWIDTH */
 #define TOUPCAM_FLAG_HEAT                0x0000008000000000  /* heat to prevent fogging up */
+#define TOUPCAM_FLAG_LOW_NOISE           0x0000010000000000  /* low noise mode */
+#define TOUPCAM_FLAG_LEVELRANGE_HARDWARE 0x0000020000000000  /* hardware level range, put(get)_LevelRangeV2 */
+#define TOUPCAM_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 
 #define TOUPCAM_TEMP_DEF                 6503    /* temp, default */
 #define TOUPCAM_TEMP_MIN                 2000    /* temp, minimum */
@@ -256,10 +268,10 @@ typedef struct {
     char                  id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #endif
     const ToupcamModelV2* model;
-}ToupcamDeviceV2, ToupcamInstV2; /* camera instance for enumerating */
+}ToupcamInstV2, ToupcamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 46.17118.2020.0518
+    get the version of this dll/so/dylib, which is: 48.18042.2020.1128
 */
 #ifdef _WIN32
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -297,9 +309,9 @@ TOUPCAM_API(HToupcam) Toupcam_Open(const char* id);
 */
 TOUPCAM_API(HToupcam) Toupcam_OpenByIndex(unsigned index);
 
-TOUPCAM_API(void)     Toupcam_Close(HToupcam h); /* close the handle */
+TOUPCAM_API(void)     Toupcam_Close(HToupcam h);  /* close the handle */
 
-#define TOUPCAM_EVENT_EXPOSURE          0x0001    /* exposure time changed */
+#define TOUPCAM_EVENT_EXPOSURE          0x0001    /* exposure time or gain changed */
 #define TOUPCAM_EVENT_TEMPTINT          0x0002    /* white balance changed, Temp/Tint mode */
 #define TOUPCAM_EVENT_IMAGE             0x0004    /* live image arrived, use Toupcam_PullImage to get this image */
 #define TOUPCAM_EVENT_STILLIMAGE        0x0005    /* snap (still) frame arrived, use Toupcam_PullStillImage to get this frame */
@@ -309,12 +321,16 @@ TOUPCAM_API(void)     Toupcam_Close(HToupcam h); /* close the handle */
 #define TOUPCAM_EVENT_FFC               0x0009    /* flat field correction status changed */
 #define TOUPCAM_EVENT_DFC               0x000a    /* dark field correction status changed */
 #define TOUPCAM_EVENT_ROI               0x000b    /* roi changed */
+#define TOUPCAM_EVENT_LEVELRANGE        0x000c    /* level range changed */
 #define TOUPCAM_EVENT_ERROR             0x0080    /* generic error */
 #define TOUPCAM_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define TOUPCAM_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
 #define TOUPCAM_EVENT_AFFEEDBACK        0x0083    /* auto focus feedback information */
 #define TOUPCAM_EVENT_AFPOSITION        0x0084    /* auto focus sensor board positon */
 #define TOUPCAM_EVENT_NOPACKETTIMEOUT   0x0085    /* no packet timeout */
+#define TOUPCAM_EVENT_EXPO_START        0x4000    /* exposure start */
+#define TOUPCAM_EVENT_EXPO_STOP         0x4001    /* exposure stop */
+#define TOUPCAM_EVENT_TRIGGER_ALLOW     0x4002    /* next trigger allow */
 #define TOUPCAM_EVENT_FACTORY           0x8001    /* restore factory settings */
 
 #ifdef _WIN32
@@ -391,7 +407,7 @@ TOUPCAM_API(HRESULT)  Toupcam_SnapN(HToupcam h, unsigned nResolutionIndex, unsig
 TOUPCAM_API(HRESULT)  Toupcam_Trigger(HToupcam h, unsigned short nNumber);
 
 /*
-    put_Size, put_eSize, can be used to set the video output resolution BEFORE Toupcam_Start.
+    put_Size, put_eSize, can be used to set the video output resolution BEFORE Toupcam_StartXXXX.
     put_Size use width and height parameters, put_eSize use the index parameter.
     for example, UCMOS03100KPA support the following resolutions:
             index 0:    2048,   1536
@@ -457,9 +473,9 @@ TOUPCAM_API(HRESULT)  Toupcam_get_RawFormat(HToupcam h, unsigned* nFourCC, unsig
 #ifndef __TOUPCAM_CALLBACK_DEFINED__
 #define __TOUPCAM_CALLBACK_DEFINED__
 typedef void (__stdcall* PITOUPCAM_EXPOSURE_CALLBACK)(void* pCtx);                                     /* auto exposure */
-typedef void (__stdcall* PITOUPCAM_WHITEBALANCE_CALLBACK)(const int aGain[3], void* pCtx);             /* one push white balance, RGB Gain mode */
-typedef void (__stdcall* PITOUPCAM_BLACKBALANCE_CALLBACK)(const unsigned short aSub[3], void* pCtx);   /* one push black balance */
-typedef void (__stdcall* PITOUPCAM_TEMPTINT_CALLBACK)(const int nTemp, const int nTint, void* pCtx);   /* one push white balance, Temp/Tint Mode */
+typedef void (__stdcall* PITOUPCAM_WHITEBALANCE_CALLBACK)(const int aGain[3], void* pCtx);             /* once white balance, RGB Gain mode */
+typedef void (__stdcall* PITOUPCAM_BLACKBALANCE_CALLBACK)(const unsigned short aSub[3], void* pCtx);   /* once black balance */
+typedef void (__stdcall* PITOUPCAM_TEMPTINT_CALLBACK)(const int nTemp, const int nTint, void* pCtx);   /* once white balance, Temp/Tint Mode */
 typedef void (__stdcall* PITOUPCAM_HISTOGRAM_CALLBACK)(const float aHistY[256], const float aHistR[256], const float aHistG[256], const float aHistB[256], void* pCtx);
 typedef void (__stdcall* PITOUPCAM_CHROME_CALLBACK)(void* pCtx);
 #endif
@@ -484,8 +500,8 @@ TOUPCAM_API(HRESULT)  Toupcam_get_ExpoAGain(HToupcam h, unsigned short* AGain); 
 TOUPCAM_API(HRESULT)  Toupcam_put_ExpoAGain(HToupcam h, unsigned short AGain); /* percent */
 TOUPCAM_API(HRESULT)  Toupcam_get_ExpoAGainRange(HToupcam h, unsigned short* nMin, unsigned short* nMax, unsigned short* nDef);
 
-/* Auto White Balance, Temp/Tint Mode */
-TOUPCAM_API(HRESULT)  Toupcam_AwbOnePush(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx); /* auto white balance "one push". This function must be called AFTER Toupcam_StartXXXX */
+/* Auto White Balance "Once", Temp/Tint Mode */
+TOUPCAM_API(HRESULT)  Toupcam_AwbOnce(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx); /* auto white balance "once". This function must be called AFTER Toupcam_StartXXXX */
 
 /* Auto White Balance, RGB Gain Mode */
 TOUPCAM_API(HRESULT)  Toupcam_AwbInit(HToupcam h, PITOUPCAM_WHITEBALANCE_CALLBACK fnWBProc, void* pWBCtx);
@@ -499,12 +515,12 @@ TOUPCAM_API(HRESULT)  Toupcam_put_WhiteBalanceGain(HToupcam h, int aGain[3]);
 TOUPCAM_API(HRESULT)  Toupcam_get_WhiteBalanceGain(HToupcam h, int aGain[3]);
 
 /* Black Balance */
-TOUPCAM_API(HRESULT)  Toupcam_AbbOnePush(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx); /* auto black balance "one push". This function must be called AFTER Toupcam_StartXXXX */
+TOUPCAM_API(HRESULT)  Toupcam_AbbOnce(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx); /* auto black balance "once". This function must be called AFTER Toupcam_StartXXXX */
 TOUPCAM_API(HRESULT)  Toupcam_put_BlackBalance(HToupcam h, unsigned short aSub[3]);
 TOUPCAM_API(HRESULT)  Toupcam_get_BlackBalance(HToupcam h, unsigned short aSub[3]);
 
 /* Flat Field Correction */
-TOUPCAM_API(HRESULT)  Toupcam_FfcOnePush(HToupcam h);
+TOUPCAM_API(HRESULT)  Toupcam_FfcOnce(HToupcam h);
 #ifdef _WIN32
 TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const wchar_t* filepath);
 TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const wchar_t* filepath);
@@ -514,7 +530,7 @@ TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const char* filepath);
 #endif
 
 /* Dark Field Correction */
-TOUPCAM_API(HRESULT)  Toupcam_DfcOnePush(HToupcam h);
+TOUPCAM_API(HRESULT)  Toupcam_DfcOnce(HToupcam h);
 
 #ifdef _WIN32
 TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const wchar_t* filepath);
@@ -643,13 +659,22 @@ TOUPCAM_API(HRESULT)  Toupcam_get_FpgaVersion(HToupcam h, char fpgaver[16]);
 */
 TOUPCAM_API(HRESULT)  Toupcam_get_PixelSize(HToupcam h, unsigned nResolutionIndex, float* x, float* y);
 
+/* software level range */
 TOUPCAM_API(HRESULT)  Toupcam_put_LevelRange(HToupcam h, unsigned short aLow[4], unsigned short aHigh[4]);
 TOUPCAM_API(HRESULT)  Toupcam_get_LevelRange(HToupcam h, unsigned short aLow[4], unsigned short aHigh[4]);
+
+/* hardware level range mode */
+#define TOUPCAM_LEVELRANGE_MANUAL       0x0000  /* manual */
+#define TOUPCAM_LEVELRANGE_ONCE         0x0001  /* once */
+#define TOUPCAM_LEVELRANGE_CONTINUE     0x0002  /* continue */
+#define TOUPCAM_LEVELRANGE_ROI          0xffff  /* update roi rect only */
+TOUPCAM_API(HRESULT)  Toupcam_put_LevelRangeV2(HToupcam h, unsigned short mode, const RECT* pRoiRect, unsigned short aLow[4], unsigned short aHigh[4]);
+TOUPCAM_API(HRESULT)  Toupcam_get_LevelRangeV2(HToupcam h, unsigned short* pMode, RECT* pRoiRect, unsigned short aLow[4], unsigned short aHigh[4]);
 
 /*
     The following functions must be called AFTER Toupcam_StartPushMode or Toupcam_StartPullModeWithWndMsg or Toupcam_StartPullModeWithCallback
 */
-TOUPCAM_API(HRESULT)  Toupcam_LevelRangeAuto(HToupcam h);
+TOUPCAM_API(HRESULT)  Toupcam_LevelRangeAuto(HToupcam h);  /* software level range */
 TOUPCAM_API(HRESULT)  Toupcam_GetHistogram(HToupcam h, PITOUPCAM_HISTOGRAM_CALLBACK fnHistogramProc, void* pHistogramCtx);
 
 /* led state:
@@ -748,7 +773,7 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
                                                             default: 1 (win), 0 (linux/macos)
                                                         */
 #define TOUPCAM_OPTION_AFPOSITION            0x24       /* auto focus sensor board positon */
-#define TOUPCAM_OPTION_AFMODE                0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:onepush focus; 3:conjugate calibration) */
+#define TOUPCAM_OPTION_AFMODE                0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:once focus; 3:conjugate calibration) */
 #define TOUPCAM_OPTION_AFZONE                0x26       /* auto focus zone */
 #define TOUPCAM_OPTION_AFFEEDBACK            0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
 #define TOUPCAM_OPTION_TESTPATTERN           0x28       /* test pattern:
@@ -778,6 +803,9 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
 #define TOUPCAM_OPTION_DENOISE               0x35       /* denoise, strength range: [0, 100], 0 means disable */
 #define TOUPCAM_OPTION_HEAT_MAX              0x36       /* maximum level: heat to prevent fogging up */
 #define TOUPCAM_OPTION_HEAT                  0x37       /* heat to prevent fogging up */
+#define TOUPCAM_OPTION_LOW_NOISE             0x38       /* low noise mode: 1 => enable */
+#define TOUPCAM_OPTION_POWER                 0x39       /* get power consumption, unit: milliwatt */
+#define TOUPCAM_OPTION_GLOBAL_RESET_MODE     0x3a       /* global reset mode */
 
 /* pixel format */
 #define TOUPCAM_PIXELFORMAT_RAW8             0x00
@@ -1001,6 +1029,22 @@ TOUPCAM_API(HRESULT)  Toupcam_put_ExpoCallback(HToupcam h, PITOUPCAM_EXPOSURE_CA
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_ChromeCallback(HToupcam h, PITOUPCAM_CHROME_CALLBACK fnChromeProc, void* pChromeCtx);
 
+/* Toupcam_FfcOnePush is obsolete, it's a synonyms for Toupcam_FfcOnce. */
+TOUPCAM_DEPRECATED
+TOUPCAM_API(HRESULT)  Toupcam_FfcOnePush(HToupcam h);
+
+/* Toupcam_DfcOnePush is obsolete, it's a synonyms for Toupcam_DfcOnce. */
+TOUPCAM_DEPRECATED
+TOUPCAM_API(HRESULT)  Toupcam_DfcOnePush(HToupcam h);
+
+/* Toupcam_AwbOnePush is obsolete, it's a synonyms for Toupcam_AwbOnce. */
+TOUPCAM_DEPRECATED
+TOUPCAM_API(HRESULT)  Toupcam_AwbOnePush(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx);
+
+/* Toupcam_AbbOnePush is obsolete, it's a synonyms for Toupcam_AbbOnce. */
+TOUPCAM_DEPRECATED
+TOUPCAM_API(HRESULT)  Toupcam_AbbOnePush(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx);
+
 #ifndef _WIN32
 
 /*
@@ -1021,7 +1065,7 @@ TOUPCAM_API(void)   Toupcam_HotPlug(PTOUPCAM_HOTPLUG pHotPlugCallback, void* pCa
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_Start(HToupcam h, PTOUPCAM_DATA_CALLBACK pDataCallback, void* pCallbackCtx);
 
-/* Toupcam_put_TempTintInit is obsolete, it's a synonyms for Toupcam_AwbOnePush. */
+/* Toupcam_put_TempTintInit is obsolete, it's a synonyms for Toupcam_AwbOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_TempTintInit(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx);
 

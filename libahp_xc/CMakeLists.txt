@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 PROJECT(libahp_xc C CXX)
 
-set(AHPXC_VERSION "1.0.5")
+set(AHPXC_VERSION "1.0.9")
 set(AHPXC_SOVERSION "1")
 
 include(GNUInstallDirs)
@@ -19,7 +19,7 @@ IF(UNIX AND NOT WIN32 AND NOT APPLE)
  ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
   exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libahp_xc.so.amd64 ${CMAKE_BINARY_DIR}/libahp_xc.so.${AHPXC_VERSION})
  ELSE(CMAKE_SIZEOF_VOID_P MATCHES "8")
-  exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libahp_xc.so.i686 ${CMAKE_BINARY_DIR}/libahp_xc.so.${AHPXC_VERSION})
+  exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libahp_xc.so.i386 ${CMAKE_BINARY_DIR}/libahp_xc.so.${AHPXC_VERSION})
  ENDIF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
 ENDIF(UNIX AND NOT WIN32 AND NOT APPLE)
 

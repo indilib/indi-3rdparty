@@ -33,16 +33,14 @@
 
 void scansolution(char* solution, char *flags, char *type, double *dms, enum rtkrcv_fix_status *fix, double *timestamp)
 {
-    double pos[3]={0},Qr[9],Qe[9]={0},dms1[3]={0},dms2[3]={0},bl[3]={0},rr[3]={0};
-    double pitch=0.0,yaw=0.0,len;
+    double pos[3]={0},Qe[9]={0},dms1[3]={0},dms2[3]={0},rr[3]={0};
     double sol_age,sol_ratio;
     int sol_ns;
-    int solflag, soltype;
+    char solflag, soltype;
     char ns, we, el, enu[3]={0};
     int matched;
-    int i;
     char status[6];
-    sscanf(solution,"(%-6s)",&status);
+    sscanf(solution,"(%6c)",status);
 
     if(!strcmp(status, RTKRCV_FIX_NONE))
         *fix = status_no_fix;
@@ -61,16 +59,16 @@ void scansolution(char* solution, char *flags, char *type, double *dms, enum rtk
     else if(!strcmp(status, RTKRCV_FIX_UNKNOWN))
         *fix = status_unknown;
 
+    solflag = 0;
     matched = 0;
-    matched += sscanf(solution," %c:%2.0f %02.0f %07.4f",&ns,&dms1[0],&dms1[1],&dms1[2]);
-    matched += sscanf(solution," %c:%3.0f %02.0f %07.4f",&we,&dms2[0],&dms2[1],&dms2[2]);
-    matched += sscanf(solution," %c:%8.3f",&el,&pos[2]);
-    if(matched == 9)
-        soltype=0;
-    else {
-        matched += sscanf(solution," %c:%12.3f",&ns,&rr[0]);
-        matched += sscanf(solution," %c:%12.3f",&we,&rr[1]);
-        matched += sscanf(solution," %c:%12.3f",&el,&rr[2]);
+    soltype = 0;
+    matched += sscanf(solution," %c:%lf %lf %lf",&ns,&dms1[0],&dms1[1],&dms1[2]);
+    matched += sscanf(solution," %c:%lf %lf %lf",&we,&dms2[0],&dms2[1],&dms2[2]);
+    matched += sscanf(solution," %c:%lf",&el,&pos[2]);
+    if(matched != 9) {
+        matched += sscanf(solution," %c:%lf",&ns,&rr[0]);
+        matched += sscanf(solution," %c:%lf",&we,&rr[1]);
+        matched += sscanf(solution," %c:%lf",&el,&rr[2]);
         if(matched == 6) {
             switch (ns) {
             case 'N':
@@ -89,7 +87,7 @@ void scansolution(char* solution, char *flags, char *type, double *dms, enum rtk
             }
         }
     }
-    matched = sscanf(solution," (%c:%6.3f %c:%6.3f %c:%6.3f)",&enu[0],Qe[0],&enu[1],&Qe[4],&enu[2],&Qe[8]);
+    matched = sscanf(solution," (%c:%lf %c:%lf %c:%lf)",&enu[0],&Qe[0],&enu[1],&Qe[4],&enu[2],&Qe[8]);
     if(matched == 6) {
         solflag |= 1;
         switch (enu[0]) {
@@ -111,7 +109,7 @@ void scansolution(char* solution, char *flags, char *type, double *dms, enum rtk
         }
     }
     *timestamp = 0;
-    matched = sscanf(solution," A:%4.1f R:%5.1f N:%2d",&sol_age,&sol_ratio,&sol_ns);
+    matched = sscanf(solution," A:%lf R:%lf N:%2d",&sol_age,&sol_ratio,&sol_ns);
     if(matched == 3) {
         *timestamp = sol_age+(sol_ratio/1000000000.0);
         solflag |= 2;

@@ -24,10 +24,6 @@
 #include "indicorrelator.h"
 #include <ahp/ahp_xc.h>
 
-#define HEADER_SIZE 16
-#define MAX_RESOLUTION 2048
-#define PIXEL_SIZE ((float)(AIRY * settingsN[0].value / MAX_RESOLUTION))
-
 class baseline : public INDI::Correlator
 {
 public:
@@ -94,9 +90,11 @@ public:
 
         free(autocorrelationsB);
         free(crosscorrelationsB);
+        free(plotB);
 
         free(autocorrelations_str);
         free(crosscorrelations_str);
+        free(plot_str);
 
         free(totalcounts);
         free(totalcorrelations);
@@ -187,10 +185,11 @@ private:
     ITextVectorProperty *lineDevicesTP;
 
     double *totalcounts;
-    double *totalcorrelations;
+    ahp_xc_correlation *totalcorrelations;
     double  *alt;
     double *az;
     double *delay;
+    double *framebuffer;
     baseline** baselines;
 
     IBLOB *autocorrelationsB;
@@ -199,8 +198,12 @@ private:
     IBLOB *crosscorrelationsB;
     IBLOBVectorProperty crosscorrelationsBP;
 
+    IBLOB *plotB;
+    IBLOBVectorProperty plotBP;
+
     dsp_stream_p *autocorrelations_str;
     dsp_stream_p *crosscorrelations_str;
+    dsp_stream_p *plot_str;
 
     INumber settingsN[2];
     INumberVectorProperty settingsNP;
