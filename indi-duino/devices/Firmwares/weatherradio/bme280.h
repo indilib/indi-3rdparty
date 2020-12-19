@@ -1,6 +1,6 @@
 /*  Streaming functions for the BME280 environment sensor.
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -36,4 +36,10 @@ void serializeBME(JsonDocument &doc) {
     data["Pres"] = bmeData.pressure;
     data["Hum"] = bmeData.humidity;
   }
+}
+
+String displayBMEParameters() {
+  if (bmeData.status == false) return "";
+
+  return " Temp: " + String(bmeData.temperature, 1) + "\n Pres: " + String(bmeData.pressure, 1) + "\n Hum: " + String(bmeData.humidity, 1) + "\n";
 }

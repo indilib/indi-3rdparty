@@ -1,6 +1,6 @@
 /*  Firmware for a weather sensor device streaming the data as JSON documents.
 
-    Copyright (C) 2019-20 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019-20 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -10,6 +10,8 @@
     Based upon ideas from indiduinoMETEO (http://indiduino.wordpress.com).
 */
 
+#include "version.h"
+
 // BAUD rate for the serial interface
 #define BAUD_RATE 9600   // standard rate that should always work
 // #define BAUD_RATE 115200 // ESP8266
@@ -17,11 +19,12 @@
 #define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
-#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
-#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
+//#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
+//#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
+//#define USE_OLED                  // USE a OLED display
 
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 60000
@@ -43,8 +46,17 @@
 #define ANEMOMETER_WINDDIRECTIONPIN A0 // The analog pin for the wind direction
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
+// OLED display
+#define OLED_SCROLL_TIMEOUT 100  // the timeout between scrolling a single display line
+#define OLED_DISPLAY_TIMEOUT -1  // the timeout in secs after which the display will turn off
+#define OLED_BUTTONPIN 15        // pin for button to turn display on
+#define OLED_I2C_ADDRESS    0x3C // I2C address of the OLED display - consult data sheet
+
 // ============== device configurations (end) ==============
 
+#ifdef USE_OLED
+#include "oled.h"
+#endif // USE_OLED
 
 #ifdef USE_TSL2591_SENSOR
 #include "tsl2591.h"
