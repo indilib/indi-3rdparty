@@ -191,11 +191,12 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(4) + // max 4 configurations
+  const int docSize = JSON_OBJECT_SIZE(5) + // max 5 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
+                      JSON_OBJECT_SIZE(3) + // OTA
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
 
@@ -227,6 +228,10 @@ String getCurrentConfig() {
   else
     wifidata["IP"]        = "";
 #endif
+
+#ifdef USE_OTA
+  serializeOTA(doc);
+#endif // USE_OTA
 
   String result = "";
   serializeJson(doc, result);
@@ -308,6 +313,11 @@ void setup() {
   }
 #endif
 
+
+#ifdef USE_OTA
+  initOTA();
+#endif // USE_OTA
+
   // initial readout all sensors
   updateSensorData();
 
@@ -370,6 +380,10 @@ void loop() {
   byte ch;
   String valStr;
   int val;
+
+#ifdef USE_OTA
+  otaLoop();
+#endif // USE_OTA
 
 #ifdef USE_WIFI
   wifiServerLoop();
