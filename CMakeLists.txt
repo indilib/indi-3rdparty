@@ -43,7 +43,7 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} fxload DIR7_FOUND)
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsv305 DIR9_FOUND)
-            STRING(FIND ${SOURCE_FILE} libahp_xc DIR10_FOUND)
+            STRING(FIND ${SOURCE_FILE} libahp-xc DIR10_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
                 NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND})
@@ -212,9 +212,9 @@ endif()
 add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
 
-# libahp_xc
+# libahp-xc
 if (WITH_AHP_CORRELATOR)
-add_subdirectory(libahp_xc)
+add_subdirectory(libahp-xc)
 endif(WITH_AHP_CORRELATOR)
 
 #toupbase dependencies
@@ -560,7 +560,7 @@ find_package(AHPXC)
 if(AHPXC_FOUND)
 add_subdirectory(indi-ahp-correlator)
 else(AHPXC_FOUND)
-add_subdirectory(libahp_xc)
+add_subdirectory(libahp-xc)
 endif(AHPXC_FOUND)
 endif(WITH_AHP_CORRELATOR)
 
