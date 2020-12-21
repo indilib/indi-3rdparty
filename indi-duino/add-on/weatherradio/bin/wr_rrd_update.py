@@ -39,7 +39,7 @@ try:
     indi=indiclient(INDISERVER,int(INDIPORT))
 
     # ensure that the INDI driver is connected to the device
-    connect = connect(indi)
+    connect = connect(indi, verbose=args.verbose)
 
     if (connect):
         if (args.verbose):
@@ -47,7 +47,7 @@ try:
 
         data = None
         if path.exists(args.rrdfile):
-            data = readWeather(indi)
+            data = readWeather(indi, verbose=args.verbose)
             updateRRD(args.rrdfile, data)
 
         data = None
