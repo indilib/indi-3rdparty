@@ -8,7 +8,7 @@
     The wind speed is measured in m/s, the direction is measured in deg, i.e.
     N = 0 deg, E = 90 deg etc.
 
-    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -26,7 +26,7 @@ struct {
   float avgSpeed;
   float minSpeed;
   float maxSpeed;
-} anemometerData;
+} anemometerData = {false, 0, 0, 0.0, 0.0, 0.0};
 
 // intermediate values to translate #rotations into wind speed
 volatile unsigned long startTime;     // overall start time for calculating the wind speed
@@ -176,4 +176,13 @@ void serializeAnemometer(JsonDocument &doc) {
     data["max speed"] = anemometerData.maxSpeed;
     data["rotations"] = anemometerData.rotations;
   }
+}
+
+String displayAnemometerParameters() {
+  if (anemometerData.status == false) return "";
+  
+  String result = " direction: " + String(anemometerData.direction, DEC) + "\n avg speed: " + String(anemometerData.avgSpeed, 1);
+  result += "\n min speed: " + String(anemometerData.minSpeed, 1) + "\n" + "\n max speed: " + String(anemometerData.maxSpeed, 1);
+  result += "\n rotations: " + String(anemometerData.rotations, DEC) + "\n";
+  return result;
 }

@@ -1,6 +1,6 @@
 /*  Streaming functions for the Melexis IR sensor MLX90614.
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -43,4 +43,10 @@ void serializeMLX(JsonDocument & doc) {
     data["T amb"] = mlxData.ambient_t;
     data["T obj"] = mlxData.object_t;
   }
+}
+
+String displayMLXParameters() {
+  if (mlxData.status == false) return "";
+  
+  return " T amb: " + String(mlxData.ambient_t, 1) + "\n T obj: " + String(mlxData.object_t, 1) + "\n";
 }

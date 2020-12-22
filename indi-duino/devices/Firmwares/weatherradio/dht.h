@@ -1,6 +1,6 @@
 /*  Streaming functions for the DHT humidity sensor family.
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -40,4 +40,10 @@ void serializeDHT(JsonDocument &doc) {
     data["Temp"] = dhtData.temperature;
     data["Hum"] = dhtData.humidity;
   }
+}
+
+String displayDHTParameters() {
+  if (dhtData.status == false) return "";
+  
+  return " Temp: " + String(dhtData.temperature, 1) + "\n Hum: " + String(dhtData.humidity, 1) + "\n";
 }
