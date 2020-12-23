@@ -1040,14 +1040,21 @@ bool QHYCCD::Connect()
         //if(ret != QHYCCD_ERROR && ret != QHYCCD_ERROR_NOTSUPPORT)
         if (ret != QHYCCD_ERROR)
         {
+            cap |= CCD_HAS_BAYER;
+
             if (ret == BAYER_GB)
                 IUSaveText(&BayerT[2], "GBRG");
             else if (ret == BAYER_GR)
                 IUSaveText(&BayerT[2], "GRBG");
             else if (ret == BAYER_BG)
                 IUSaveText(&BayerT[2], "BGGR");
-            else
+            else if (ret == BAYER_RG)
                 IUSaveText(&BayerT[2], "RGGB");
+            else
+            {
+                IUSaveText(&BayerT[2], "");
+                cap &= ~CCD_HAS_BAYER;
+    	    }
 
             LOGF_DEBUG("Color camera: %s", BayerT[2].text);
 
