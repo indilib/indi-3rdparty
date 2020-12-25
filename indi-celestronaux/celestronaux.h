@@ -93,7 +93,11 @@ class CelestronAUX :
 
     private:
 
-        bool pastAlignmentSubsystemStatus;
+        // mount type
+        MountType_t requestedMountType;
+        MountType_t currentMountType;
+
+        bool pastAlignmentSubsystemStatus = true;
         bool currentAlignmentSubsystemStatus;
 
         enum ScopeStatus_t
@@ -222,6 +226,14 @@ class CelestronAUX :
         // Networked Mount autodetect
         ISwitch NetDetectS[1];
         ISwitchVectorProperty NetDetectSP;
+        // Mount type
+        ISwitch MountTypeS[2];
+        ISwitchVectorProperty MountTypeSP;
+        enum
+        {
+            MOUNT_EQUATORIAL,
+            MOUNT_ALTAZ
+        };
         // Mount Cordwrap
         ISwitch CordWrapS[2];
         ISwitchVectorProperty CordWrapSP;
