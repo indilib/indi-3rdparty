@@ -48,10 +48,11 @@
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
 // OLED display
-#define OLED_SCROLL_TIMEOUT 100  // the timeout between scrolling a single display line
-#define OLED_DISPLAY_TIMEOUT 20  // the timeout in secs after which the display will turn off (set to -1 to disable the timeout)
-#define OLED_BUTTONPIN 15        // pin for button to turn display on
-#define OLED_I2C_ADDRESS    0x3C // I2C address of the OLED display - consult data sheet
+#define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
+#define OLED_DISPLAY_TIMEOUT 20       // the timeout in secs after which the display will turn off (set to -1 to disable the timeout)
+#define OLED_BUTTONPIN 15             // pin for button to turn display on
+#define OLED_I2C_ADDRESS    0x3C      // I2C address of the OLED display - consult data sheet
+#define OLED_WIRE_CLOCK_SPEED 100000L // set to 100kHz if using in combination with MLX90614
 
 // ============== device configurations (end) ==============
 

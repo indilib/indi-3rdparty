@@ -41,7 +41,7 @@ void isr_oled_show () {
 
 void initDisplay() {
   Wire.begin();
-  Wire.setClock(400000L);
+  Wire.setClock(OLED_WIRE_CLOCK_SPEED);
   oled.begin(&Adafruit128x32, OLED_I2C_ADDRESS);
   oled.setFont(System5x7);
   oled.clear();
