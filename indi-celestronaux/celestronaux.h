@@ -88,6 +88,7 @@ class CelestronAUX :
         bool getVersion(AUXtargets trg);
         void getVersions();
         bool Track(long altRate, long azRate);
+        bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
 
     private:
