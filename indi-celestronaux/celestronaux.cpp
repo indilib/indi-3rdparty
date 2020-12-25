@@ -103,7 +103,7 @@ CelestronAUX::CelestronAUX()
     setVersion(CAUX_VERSION_MAJOR, CAUX_VERSION_MINOR);
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC |
         TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME |
-	TELESCOPE_HAS_LOCATION, 4);
+	TELESCOPE_HAS_LOCATION | TELESCOPE_CAN_CONTROL_TRACK, 4);
 
     LOG_DEBUG("Celestron AUX instancing.");
 
@@ -1000,9 +1000,10 @@ bool CelestronAUX::Sync(double ra, double dec)
         // Tell the math plugin to reinitialise
         Initialise(this);
         LOGF_DEBUG("Sync - new entry added RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
-        ReadScopeStatus();
 
-	CurrentTrackingTarget = NewTrackingTarget;
+	// update tracking target
+        ReadScopeStatus();
+        CurrentTrackingTarget = NewTrackingTarget;
 
         return true;
     }
@@ -1409,6 +1410,42 @@ bool CelestronAUX::Track(long altRate, long azRate)
     readAUXResponse(azmcmd);
     return true;
 };
+
+
+bool CelestronAUX::SetTrackEnabled(bool enabled)
+{
+    if (enabled)
+    {
+	if (TrackState == SCOPE_IDLE)
+        {
+            LOG_INFO("Start Tracking.");
+            CurrentTrackingTarget = NewTrackingTarget;
+	    TrackState = SCOPE_TRACKING;
+	}
+    }
+    else
+    {
+	if (TrackState == SCOPE_TRACKING)
+	{
+            LOG_WARN("Stopping Tracking.");
+            TrackState = SCOPE_IDLE;
+            AxisStatusAZ = AxisStatusALT = STOPPED;
+            ScopeStatus = IDLE;
+            Track(0, 0);
+            AUXBuffer b(1);
+            b[0] = 0;
+            AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
+            AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
+            sendAUXCommand(stopAlt);
+            readAUXResponse(stopAlt);
+            sendAUXCommand(stopAz);
+            readAUXResponse(stopAz);
+	}
+    }
+
+    return true;
+};
+
 
 int debug_timeout = 30;
 
