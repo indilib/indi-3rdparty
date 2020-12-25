@@ -900,23 +900,37 @@ bool CelestronAUX::trackingRequested()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ReadScopeStatus()
 {
+    TelescopeDirectionVector TDV;
+    struct ln_equ_posn RaDec;
     struct ln_hrz_posn AltAz;
     double RightAscension, Declination;
 
-    AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
-    // libnova indexes Az from south while Celestron controllers index from north
-    // Never mix two controllers/drivers they will never agree perfectly.
-    // Furthermore the celestron hand controler resets the position encoders
-    // on alignment and this will mess-up all orientation in the driver.
-    // Here we are not attempting to make the driver agree with the hand
-    // controller (That would involve adding 180deg here to the azimuth -
-    // this way the celestron nexstar driver and this would agree in some
-    // situations but not in other - better not to attepmpt impossible!).
-    AltAz.az                     = double(GetAZ()) / STEPS_PER_DEGREE;
-    TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+    {
+        RaDec.ra   = double(GetAZ()) / STEPS_PER_DEGREE;
+        RaDec.dec  = double(GetALT()) / STEPS_PER_DEGREE;
+        TDV = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
 
-    if (TraceThisTick)
-        LOGF_DEBUG("ReadScopeStatus - Alt %lf deg ; Az %lf deg", AltAz.alt, AltAz.az);
+        if (TraceThisTick)
+            LOGF_DEBUG("ReadScopeStatus - HA %lf deg ; Dec %lf deg", RaDec.ra, RaDec.dec);
+    }
+    else
+    {
+        // libnova indexes Az from south while Celestron controllers index from north
+        // Never mix two controllers/drivers they will never agree perfectly.
+        // Furthermore the celestron hand controler resets the position encoders
+        // on alignment and this will mess-up all orientation in the driver.
+        // Here we are not attempting to make the driver agree with the hand
+        // controller (That would involve adding 180deg here to the azimuth -
+        // this way the celestron nexstar driver and this would agree in some
+        // situations but not in other - better not to attepmpt impossible!).
+        AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
+        AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
+        TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+
+        if (TraceThisTick)
+            LOGF_DEBUG("ReadScopeStatus - Alt %lf deg ; Az %lf deg", AltAz.alt, AltAz.az);
+    }
 
     if (TransformTelescopeToCelestial(TDV, RightAscension, Declination))
     {
@@ -942,16 +956,31 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Sync(double ra, double dec)
 {
-    struct ln_hrz_posn AltAz;
-    AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
-    AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
-
     AlignmentDatabaseEntry NewEntry;
+    struct ln_equ_posn RaDec { 0, 0 };
+    struct ln_hrz_posn AltAz { 0, 0 };
+
+    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+    {
+        RaDec.ra   = double(GetAZ()) / STEPS_PER_DEGREE;
+        RaDec.dec  = double(GetALT()) / STEPS_PER_DEGREE;
+    }
+    else
+    {
+        AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
+        AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
+    }
+
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
     NewEntry.RightAscension        = ra;
     NewEntry.Declination           = dec;
-    NewEntry.TelescopeDirection    = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
-    NewEntry.PrivateDataSize       = 0;
+
+    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+    else
+        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+
+    NewEntry.PrivateDataSize = 0;
 
     LOGF_DEBUG("Sync - Celestial reference frame target right ascension %lf(%lf) declination %lf",
                ra * 360.0 / 24.0, ra, dec);
@@ -962,6 +991,11 @@ bool CelestronAUX::Sync(double ra, double dec)
 
         // Tell the client about size change
         UpdateSize();
+
+        // equatorial/telescope conversions needs more than 1 sync point
+        if (GetAlignmentDatabase().size() < 2 &&
+            MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+            LOG_WARN("Equatorial mounts need two SYNC points at least.");
 
         // Tell the math plugin to reinitialise
         Initialise(this);
