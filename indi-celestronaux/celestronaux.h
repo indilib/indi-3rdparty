@@ -198,7 +198,6 @@ class CelestronAUX :
         bool gpsemu;
         bool cordwrap;
         long cordwrapPos;
-        unsigned mb_ver_maj, mb_ver_min;
         unsigned alt_ver_maj, alt_ver_min;
         unsigned azm_ver_maj, azm_ver_min;
 
@@ -217,9 +216,9 @@ class CelestronAUX :
         // Additional interface elements specific to Celestron Scopes
     private:
         // Firmware
-        IText FirmwareT[9] {};
+        IText FirmwareT[10] {};
         ITextVectorProperty FirmwareTP;
-        enum {FW_HC, FW_HCp, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
+        enum {FW_HC, FW_HCp, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
         // Networked Mount autodetect
         ISwitch NetDetectS[1];
         ISwitchVectorProperty NetDetectSP;
