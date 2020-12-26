@@ -424,7 +424,6 @@ bool CelestronAUX::Goto(double ra, double dec)
         AltAz.alt = trgAltAz.alt + ((d > 0) ? Approach : -Approach);
     }
 
-
     // Fold Azimuth into 0-360
     AltAz.az = range360(AltAz.az);
     // Altitude encoder runs -90 to +90 there is no point going outside.
