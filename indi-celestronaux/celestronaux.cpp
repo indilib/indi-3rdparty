@@ -479,11 +479,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     }
 
     // Fold Azimuth into 0-360
-    if (AltAz.az < 0)
-        AltAz.az += 360.0;
-    if (AltAz.az > 360.0)
-        AltAz.az -= 360.0;
-    // AltAz.az = fmod(AltAz.az, 360.0);
+    AltAz.az = range360(AltAz.az);
 
     // Altitude encoder runs -90 to +90 there is no point going outside.
     if (AltAz.alt > 90.0)
