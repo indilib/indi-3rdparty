@@ -278,7 +278,6 @@ bool CelestronAUX::Handshake()
         if (getVersion(AZM) && getVersion(ALT))
         {
             LOG_INFO("Got response from target ALT or AZM. Probing all targets.");
-            getVersions();
         }
         else
         {
@@ -491,14 +490,15 @@ bool CelestronAUX::initProperties()
     // Firmware
     IUFillText(&FirmwareT[FW_HC], "HC version", "", nullptr);
     IUFillText(&FirmwareT[FW_HCp], "HC+ version", "", nullptr);
+    IUFillText(&FirmwareT[FW_MB], "Mother Board version", "", nullptr);
     IUFillText(&FirmwareT[FW_AZM], "Ra/AZM version", "", nullptr);
     IUFillText(&FirmwareT[FW_ALT], "Dec/ALT version", "", nullptr);
     IUFillText(&FirmwareT[FW_WiFi], "WiFi version", "", nullptr);
     IUFillText(&FirmwareT[FW_BAT], "Battery version", "", nullptr);
     IUFillText(&FirmwareT[FW_CHG], "Charger version", "", nullptr);
-    IUFillText(&FirmwareT[FW_LIGHT], "Ligts version", "", nullptr);
+    IUFillText(&FirmwareT[FW_LIGHT], "Lights version", "", nullptr);
     IUFillText(&FirmwareT[FW_GPS], "GPS version", "", nullptr);
-    IUFillTextVector(&FirmwareTP, FirmwareT, 9, getDeviceName(), "Firmware Info", "", MOUNTINFO_TAB, IP_RO, 0,
+    IUFillTextVector(&FirmwareTP, FirmwareT, 10, getDeviceName(), "Firmware Info", "", MOUNTINFO_TAB, IP_RO, 0,
                      IPS_IDLE);
 
     // mount type
@@ -575,14 +575,23 @@ bool CelestronAUX::updateProperties()
         GPSEmuS[gpsemu].s = ISS_ON;
         IDSetSwitch(&GPSEmuSP, nullptr);
 
+        getVersions();
+
+        // display firmware versions
+        char fwText[10];
         IUSaveText(&FirmwareT[FW_HC], "HC version");
         IUSaveText(&FirmwareT[FW_HCp], "HC+ version");
-        IUSaveText(&FirmwareT[FW_AZM], "Ra/AZM version");
-        IUSaveText(&FirmwareT[FW_ALT], "Dec/ALT version");
+        //IUSaveText(&FirmwareT[FW_MODEL], fwInfo.Model.c_str());
+        //IUSaveText(&FirmwareT[FW_VERSION], fwInfo.Version.c_str());
+        IUSaveText(&FirmwareT[FW_MB], "Mother Board version");
+        snprintf(fwText, 10, "%d.%02d", m_AzimuthVersionMajor, m_AzimuthVersionMinor);
+        IUSaveText(&FirmwareT[FW_AZM], fwText);
+        snprintf(fwText, 10, "%d.%02d", m_AltitudeVersionMajor, m_AltitudeVersionMinor);
+        IUSaveText(&FirmwareT[FW_ALT], fwText);
         IUSaveText(&FirmwareT[FW_WiFi], "WiFi version");
         IUSaveText(&FirmwareT[FW_BAT], "Battery version");
         IUSaveText(&FirmwareT[FW_CHG], "Charger version");
-        IUSaveText(&FirmwareT[FW_LIGHT], "Ligts version");
+        IUSaveText(&FirmwareT[FW_LIGHT], "Lights version");
         IUSaveText(&FirmwareT[FW_GPS], "GPS version");
         defineProperty(&FirmwareTP);
     }
@@ -900,6 +909,9 @@ bool CelestronAUX::trackingRequested()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ReadScopeStatus()
 {
+    if (!isConnected())
+	return false;
+
     TelescopeDirectionVector TDV;
     struct ln_equ_posn RaDec;
     struct ln_hrz_posn AltAz;
@@ -1324,17 +1336,17 @@ bool CelestronAUX::getVersion(AUXTargets trg)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::getVersions()
 {
-    getVersion(ANY);
-    getVersion(MB);
-    getVersion(HC);
-    getVersion(HCP);
+    //getVersion(ANY);
+    //getVersion(MB);
+    //getVersion(HC);
+    //getVersion(HCP);
     getVersion(AZM);
     getVersion(ALT);
-    getVersion(GPS);
-    getVersion(WiFi);
-    getVersion(BAT);
-    getVersion(CHG);
-    getVersion(LIGHT);
+    //getVersion(GPS);
+    //getVersion(WiFi);
+    //getVersion(BAT);
+    //getVersion(CHG);
+    //getVersion(LIGHT);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////

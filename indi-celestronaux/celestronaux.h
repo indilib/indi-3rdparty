@@ -195,7 +195,6 @@ class CelestronAUX :
         bool m_SlewingAlt {false}, m_SlewingAz {false};
         bool gpsemu;
 
-
         uint8_t m_MainBoardVersionMajor {0}, m_MainBoardVersionMinor {0};
         uint8_t m_AltitudeVersionMajor {0}, m_AltitudeVersionMinor {0};
         uint8_t m_AzimuthVersionMajor {0}, m_AzimuthVersionMinor {0};
@@ -221,9 +220,9 @@ class CelestronAUX :
         ///////////////////////////////////////////////////////////////////////////////
 
         // Firmware
-        IText FirmwareT[9] {};
+        IText FirmwareT[10] {};
         ITextVectorProperty FirmwareTP;
-        enum {FW_HC, FW_HCp, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
+        enum {FW_HC, FW_HCp, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
         // Networked Mount autodetect
         ISwitch NetDetectS[1];
         ISwitchVectorProperty NetDetectSP;
