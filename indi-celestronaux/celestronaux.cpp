@@ -1194,6 +1194,12 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     // Update INDI Alignment Subsystem Location
     UpdateLocation(latitude, longitude, elevation);
 
+    // check for site non null latitude/longitude
+    if (!latitude)
+        LOG_ERROR("Missing latitude (INDI panel > Celestron AUX > Site Management)");
+    if (!longitude)
+        LOG_ERROR("Missing longitude (INDI panel > Celestron AUX > Site Management)");
+
     // take care of latitude for north or south emisphere
     currentMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ : EQUATORIAL;
     SetApproximateMountAlignmentFromMountType(currentMountType);
