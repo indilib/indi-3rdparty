@@ -464,7 +464,7 @@ void LX200Skywalker::getBasicData()
     LOG_DEBUG(__FUNCTION__);
     if (!isSimulation())
     {
-        checkLX200Format();
+        checkLX200EquatorialFormat();
 
         if (INDI::Telescope::capability & TELESCOPE_CAN_PARK)
         {
@@ -1091,7 +1091,7 @@ bool LX200Skywalker::transmit(const char* buffer)
     return true;
 }
 
-bool LX200Skywalker::checkLX200Format()
+bool LX200Skywalker::checkLX200EquatorialFormat()
 {
     LOG_DEBUG(__FUNCTION__);
     char response[TCS_RESPONSE_BUFFER_LENGTH];

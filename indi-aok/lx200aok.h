@@ -156,7 +156,7 @@ class LX200Skywalker : public LX200Telescope
         virtual bool setSiteLatitude(double Lat);
         virtual bool setSiteLongitude(double Long);
 
-        bool checkLX200Format();
+        bool checkLX200EquatorialFormat();
         // Guide Commands
         virtual IPState GuideNorth(uint32_t ms) override;
         virtual IPState GuideSouth(uint32_t ms) override;
