@@ -20,7 +20,8 @@ struct {
   char * text_orig;
   unsigned long lastShowDisplay;
   bool show;
-} oledData {NULL, NULL, NULL, 0, true};
+  bool buttonPushed;
+} oledData {NULL, NULL, NULL, 0, true, false};
 
 
 void oledShow (bool status) {
@@ -35,8 +36,13 @@ void ICACHE_RAM_ATTR isr_oled_show () {
 #else
 void isr_oled_show () {
 #endif
+  oledData.buttonPushed = true;
+}
+
+void oledHandleButton() {
   oledData.lastShowDisplay = millis();
   oledShow(true);
+  // reset interrupt
 }
 
 void initDisplay() {
@@ -95,6 +101,11 @@ void setDisplayText(String text) {
 }
 
 void displayText() {
+  // react upon a pushed button
+  if (oledData.buttonPushed) {
+    oledHandleButton();
+    oledData.buttonPushed = false;
+  }
   // check whether the display should be turned off
   if (OLED_DISPLAY_TIMEOUT >= 0 && millis() > oledData.lastShowDisplay + OLED_DISPLAY_TIMEOUT * 1000) {
     oledShow(false);
