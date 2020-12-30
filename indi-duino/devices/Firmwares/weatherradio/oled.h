@@ -21,7 +21,8 @@ struct {
   unsigned long lastShowDisplay;
   bool show;
   bool buttonPushed;
-} oledData {NULL, NULL, NULL, 0, true, false};
+  bool refresh;
+} oledData {NULL, NULL, NULL, 0, true, false, true};
 
 
 void oledShow (bool status) {
@@ -41,6 +42,8 @@ void isr_oled_show () {
 
 void oledHandleButton() {
   oledData.lastShowDisplay = millis();
+  // get latest data
+  oledData.refresh = true;
   oledShow(true);
   // reset interrupt
 }
@@ -98,6 +101,9 @@ void setDisplayText(String text) {
   oled_rolling = (oledCountLines(text) > oled.fontRows());
   // fill the first line
   oled_print_finished = false;
+
+  // clear the refresh flag
+  oledData.refresh = false;
 }
 
 void displayText() {

@@ -30,7 +30,36 @@ struct {
   unsigned long davis_read;
 } sensor_read;
 
+void updateDisplayText() {
+#ifdef USE_OLED
+  String result = "Weather Radio V ";
+  result += WEATHERRADIO_VERSION;
+  result += " \n \n";
+#ifdef USE_WIFI
+  result += displayWiFiParameters() + " \n";
+#endif //USE_WIFI
+#ifdef USE_BME_SENSOR
+  result += "BME\n" + displayBMEParameters() + " \n";
+#endif //USE_BME_SENSOR
+#ifdef USE_DAVIS_SENSOR
+  result += "Davis Anemometer\n" + displayAnemometerParameters() + " \n";
+#endif //USE_DAVIS_SENSOR
+#ifdef USE_DHT_SENSOR
+  result += "DHT\n" + displayDHTParameters() + " \n";
+#endif //USE_DHT_SENSOR
+#ifdef USE_MLX_SENSOR
+  result += "MLX90614\n" + displayMLXParameters() + " \n";
+#endif //USE_MLX_SENSOR
+#ifdef USE_TSL237_SENSOR
+  result += "TSL237\n" + displayTSL237Parameters() + " \n";
+#endif //USE_TSL237_SENSOR
+#ifdef USE_TSL2591_SENSOR
+  result += "TSL2591\n" + displayTSL2591Parameters() + " \n";
+#endif //USE_TSL2591_SENSOR
 
+  setDisplayText(result);
+#endif // USE_OLED
+}
 /**
    Update all sensor data
 */
@@ -76,32 +105,9 @@ void updateSensorData() {
   sensor_read.tsl2591_read = millis() - start;
 #endif //USE_TSL2591_SENSOR
 
+  // set the flag for display text refresh
 #ifdef USE_OLED
-  String result = "Weather Radio V ";
-  result += WEATHERRADIO_VERSION;
-  result += " \n \n";
-#ifdef USE_WIFI
-  result += displayWiFiParameters() + " \n";
-#endif //USE_WIFI
-#ifdef USE_BME_SENSOR
-  result += "BME\n" + displayBMEParameters() + " \n";
-#endif //USE_BME_SENSOR
-#ifdef USE_DAVIS_SENSOR
-  result += "Davis Anemometer\n" + displayAnemometerParameters() + " \n";
-#endif //USE_DAVIS_SENSOR
-#ifdef USE_DHT_SENSOR
-  result += "DHT\n" + displayDHTParameters() + " \n";
-#endif //USE_DHT_SENSOR
-#ifdef USE_MLX_SENSOR
-  result += "MLX90614\n" + displayMLXParameters() + " \n";
-#endif //USE_MLX_SENSOR
-#ifdef USE_TSL237_SENSOR
-  result += "TSL237\n" + displayTSL237Parameters() + " \n";
-#endif //USE_TSL237_SENSOR
-#ifdef USE_TSL2591_SENSOR
-  result += "TSL2591\n" + displayTSL2591Parameters() + " \n";
-#endif //USE_TSL2591_SENSOR
-  if (result != "") setDisplayText(result);
+  oledData.refresh = true;
 #endif // USE_OLED
 }
 
@@ -322,6 +328,9 @@ void setup() {
   // initial readout all sensors
   updateSensorData();
 
+  // initially set display text
+  updateDisplayText();
+
 }
 
 String input = "";
@@ -390,6 +399,9 @@ void loop() {
 #endif
 
 #ifdef USE_OLED
+  // refresh the display text if necessary
+  if (oledData.refresh) updateDisplayText();
+  // update the display
   displayText();
 #endif
 

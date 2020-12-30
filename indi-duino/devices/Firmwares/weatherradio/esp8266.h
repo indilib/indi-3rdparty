@@ -41,6 +41,13 @@ void reset() {
   ESP.restart();
 }
 
+void refreshDisplay() {
+  // set the flag for display text refresh
+#ifdef USE_OLED
+  oledData.refresh = true;
+#endif // USE_OLED
+}
+
 // turn wifi on and connect to the access point
 void initWiFi() {
   // set wifi to station mode
@@ -58,6 +65,7 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
     esp8266Data.status = WIFI_CONNECTED;
     esp8266Data.retry_count = 0;
+    refreshDisplay();
     Serial.println("succeeded.");
   } else {
     WiFi.begin(esp8266Data.ssid, esp8266Data.password);
@@ -65,6 +73,7 @@ void connectWiFi() {
       esp8266Data.status = WIFI_CONNECTED;
       // reset retry counter
       esp8266Data.retry_count = 0;
+      refreshDisplay();
       Serial.println("succeeded.");
     } else {
       // increase retry counter
@@ -75,6 +84,7 @@ void connectWiFi() {
         Serial.print(".");
       } else {
         esp8266Data.status =  WIFI_CONNECTION_FAILED;
+        refreshDisplay();
         Serial.println("failed!");
       }
     }
@@ -101,12 +111,14 @@ void disconnectWiFi() {
       Serial.print(".");
     } else {
       esp8266Data.status =  WIFI_CONNECTED;
+      refreshDisplay();
       Serial.println("failed!");
     }
   } else {
     esp8266Data.status = WIFI_IDLE;
     // reset retry counter
     esp8266Data.retry_count = 0;
+    refreshDisplay();
     Serial.println("succeeded.");
   }
 }
