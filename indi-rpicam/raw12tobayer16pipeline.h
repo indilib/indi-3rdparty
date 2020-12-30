@@ -25,9 +25,7 @@
 #include "pipeline.h"
 
 struct BroadcomPipeline;
-namespace INDI {
-class CCDChip;
-};
+class ChipWrapper;
 
 /**
  * @brief The Raw12ToBayer16Pipeline class
@@ -39,17 +37,16 @@ class CCDChip;
 class Raw12ToBayer16Pipeline : public Pipeline
 {
 public:
-    Raw12ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, INDI::CCDChip *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
+    Raw12ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, ChipWrapper *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
 
-    virtual void acceptByte(uint8_t byte) override;
+    virtual void data_received(uint8_t *data,  uint32_t length) override;
     virtual void reset() override;
 
 private:
     const BroadcomPipeline *bcm_pipe;
-    INDI::CCDChip *ccd;
+    ChipWrapper *ccd;
     int x {0};
     int y {0};
-    int pos {0};
     int raw_x {0};  // Position in the raw-data comming in.
     enum {b0, b1, b2} state = b0; // Which byte in the RAW12 format (see above).
 };

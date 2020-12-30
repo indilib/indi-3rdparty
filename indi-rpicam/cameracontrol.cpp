@@ -21,16 +21,17 @@
 #include <stdio.h>
 #include <bcm_host.h>
 #include <stdexcept>
+#include <chrono>
 
 #include <mmal_logging.h>
 #include "cameracontrol.h"
 #include "mmalexception.h"
-#include "pixellistener.h"
+#include "pipeline.h"
 
 CameraControl::CameraControl()
 {
     camera.reset(new MMALCamera(0));
-    encoder.reset(new MMALEncoder());
+    encoder.reset(new MMALEncoder());   // Seems using an encoder is required to get to the raw data.
     encoder->add_port_listener(this);
 
     camera->connect(2, encoder.get(), 0); // Connected the capture port to the encoder.
@@ -55,17 +56,12 @@ void CameraControl::buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
         assert(buffer->type->video.planes == 1);
 
         if (buffer->length) {
-            for(auto l : pixel_listeners) {
-                l->pixels_received(buffer->data + buffer->offset, buffer->length);
-            }
+            signal_data_received(buffer->data + buffer->offset, buffer->length);
         }
 
-        // Now flag if we have completed
+        // Signal if completed
         if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_EOS | MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED)) {
-            for(auto l : pixel_listeners) {
-                l->capture_complete();
-            }
-            camera->abort();
+            signal_complete();
         }
     }
 }
@@ -75,7 +71,13 @@ void CameraControl::buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
  */
 void CameraControl::start_capture()
 {
+    if (capture_listeners.size() == 0) {
+        throw std::runtime_error("No capture listeners registered, start_capture not possible.");
+    }
+
+    camera->set_camera_parameters();
     camera->capture();
+    start_time = std::chrono::steady_clock::now();
 }
 
 /**
@@ -84,4 +86,23 @@ void CameraControl::start_capture()
 void CameraControl::stop_capture()
 {
     camera->abort();
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+    fprintf(stderr, "exposure aborted after %f s\n", diff.count());
 }
+
+void CameraControl::signal_data_received(uint8_t *data, uint32_t length)
+{
+    for(auto p : pipelines) {
+        p->data_received(data, length);
+    }
+}
+
+void CameraControl::signal_complete()
+{
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+    fprintf(stderr, "exposure finished after %f s\n", diff.count());
+    for(auto p : capture_listeners) {
+        p->capture_complete();
+    }
+}
+

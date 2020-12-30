@@ -18,6 +18,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <stdio.h>
 #include <memory>
 #include <string.h>
 
@@ -58,6 +59,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 ***************************************************************************************/
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
+    fprintf(stderr, "ISNewBLOB c-function called\n");
 	mmalDevice->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 /**************************************************************************************

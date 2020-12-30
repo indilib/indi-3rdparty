@@ -57,6 +57,12 @@ void MMALComponent::enable_port_with_callback(MMAL_PORT_T *port)
     MMALException::throw_if(status, "Failed to enable port");
 }
 
+/**
+ * @brief MMALComponent::c_callback Wraps a simple C-callback to a C++ object callback.
+ * Uses the userdata as a pointer to the object to be called.
+ * @param port MMAL Component port
+ * @param buffer MMAL Buffer of data
+ */
 void MMALComponent::c_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
     MMALComponent *p = dynamic_cast<MMALComponent *>(port->component->userdata);
@@ -64,7 +70,7 @@ void MMALComponent::c_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 }
 
 /**
- *  Fan out port callbacks.
+ *  Fan out port callbacks to all listeners of this component.
  *
  *  Callback will dump buffer data to the specific file
  *
@@ -100,20 +106,29 @@ void MMALComponent::return_buffer(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffe
 
 void MMALComponent::connect(int src_port, MMALComponent *dst, int dst_port)
 {
-   MMAL_STATUS_T status;
+    MMAL_STATUS_T status;
 
-   MMALException::throw_if(connection, "Only one connection supported");
+    MMALException::throw_if(connection, "Only one connection supported");
 
-   status =  mmal_connection_create(&connection, component->output[src_port], dst->component->input[dst_port], MMAL_CONNECTION_FLAG_TUNNELLING | MMAL_CONNECTION_FLAG_ALLOCATION_ON_INPUT);
-   MMALException::throw_if(status, "Failed to connect components");
-   if (status == MMAL_SUCCESS)
-   {
-      status =  mmal_connection_enable(connection);
-      if (status != MMAL_SUCCESS) {
-         mmal_connection_destroy(connection);
-         connection = nullptr;
-         throw MMALException("Failed to enable connection");
-      }
-   }
+    status =  mmal_connection_create(&connection, component->output[src_port], dst->component->input[dst_port], MMAL_CONNECTION_FLAG_TUNNELLING | MMAL_CONNECTION_FLAG_ALLOCATION_ON_INPUT);
+    MMALException::throw_if(status, "Failed to connect components");
+    if (status == MMAL_SUCCESS)
+    {
+        status =  mmal_connection_enable(connection);
+        if (status != MMAL_SUCCESS) {
+             mmal_connection_destroy(connection);
+             connection = nullptr;
+             throw MMALException("Failed to enable connection");
+        }
+    }
 }
 
+void MMALComponent::disconnect()
+{
+    if (!connection) {
+        return;
+    }
+
+   MMALException::throw_if(mmal_connection_destroy(connection), "Failed to release connection");
+   connection = nullptr;
+}

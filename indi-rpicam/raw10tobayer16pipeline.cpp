@@ -20,10 +20,10 @@
 
 #include <iostream>
 #include <cassert>
-#include <indiccdchip.h>
 
 #include "raw10tobayer16pipeline.h"
 #include "broadcompipeline.h"
+#include "chipwrapper.h"
 
 void Raw10ToBayer16Pipeline::reset()
 {
@@ -34,62 +34,69 @@ void Raw10ToBayer16Pipeline::reset()
     state = b0;
 }
 
-void Raw10ToBayer16Pipeline::acceptByte(uint8_t byte)
+void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
 {
-    if (raw_x >= bcm_pipe->header.omx_data.raw_width) {
-        y += 1;
-        x = 0;
-        raw_x = 0;
-    }
-
     assert(bcm_pipe->header.omx_data.raw_width == 4128);
     assert(ccd->getXRes() == 3280);
     assert(ccd->getYRes() == 2464);
 
-    if ( x < ccd->getXRes() && y < ccd->getYRes()) {
-        uint16_t *cur_row = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer()) + y * ccd->getXRes();
+    uint8_t byte;
+    for(;length; data++, length--)
+    {
+        byte = *data;
 
-        assert((cur_row - reinterpret_cast<uint16_t *>(ccd->getFrameBuffer())) % 3280 == 0);
-
-        // RAW according to experiment.
-        switch(state)
-        {
-        case b0:
-            cur_row[x] = static_cast<uint16_t>(byte << 2);
-            x++;
-            state = b1;
-            break;
-
-        case b1:
-            cur_row[x] = static_cast<uint16_t>(byte << 2);
-            x++;
-            state = b2;
-            break;
-
-        case b2:
-            cur_row[x] = static_cast<uint16_t>(byte << 2);
-            x++;
-            state = b3;
-            break;
-
-        case b3:
-            cur_row[x] = static_cast<uint16_t>(byte << 2);
-            x++;
-            state = b4;
-            break;
-
-        case b4:
-            cur_row[x-4] |= byte & 0x03;
-            cur_row[x-3] |= (byte >> 2) & 0x03;
-            cur_row[x-2] |= (byte >> 4) & 0x03;
-            cur_row[x-1] |= (byte >> 6) & 0x03;
-            state = b0;
-            break;
+        if (raw_x >= bcm_pipe->header.omx_data.raw_width) {
+            y += 1;
+            x = 0;
+            raw_x = 0;
         }
-    }
 
-    pos++;
-    raw_x++;
+        if ( x < ccd->getXRes() && y < ccd->getYRes()) {
+            uint16_t *cur_row = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer()) + y * ccd->getXRes();
+
+            assert((cur_row - reinterpret_cast<uint16_t *>(ccd->getFrameBuffer())) % 3280 == 0);
+
+            // RAW according to experiment.
+            switch(state)
+            {
+            case b0:
+                // FIXME: Optimize, if at least 5 bytes remaining here, all data can be calculated faster in one step.
+                cur_row[x] = static_cast<uint16_t>(byte << 2);
+                x++;
+                state = b1;
+                break;
+
+            case b1:
+                cur_row[x] = static_cast<uint16_t>(byte << 2);
+                x++;
+                state = b2;
+                break;
+
+            case b2:
+                cur_row[x] = static_cast<uint16_t>(byte << 2);
+                x++;
+                state = b3;
+                break;
+
+            case b3:
+                cur_row[x] = static_cast<uint16_t>(byte << 2);
+                x++;
+                state = b4;
+                break;
+
+            case b4:
+                cur_row[x-4] |= byte & 0x03;
+                cur_row[x-3] |= (byte >> 2) & 0x03;
+                cur_row[x-2] |= (byte >> 4) & 0x03;
+                cur_row[x-1] |= (byte >> 6) & 0x03;
+                state = b0;
+                break;
+            }
+        }
+
+        pos++;
+        raw_x++;
+    }
 }
 
 

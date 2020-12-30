@@ -28,6 +28,7 @@ Pipeline::Pipeline()
 
 Pipeline::~Pipeline()
 {
+    // Cascade delete.
     if (nextPipeline) {
         delete nextPipeline;
     }
@@ -42,13 +43,13 @@ void Pipeline::daisyChain(Pipeline *p)
     last->nextPipeline = p;
 }
 
-void Pipeline::forward(uint8_t byte)
+void Pipeline::forward(uint8_t *data,  uint32_t length)
 {
     if (nextPipeline == nullptr) {
         throw std::runtime_error("No next pipeline to forward bytes to.");
     }
 
-    nextPipeline->acceptByte(byte);
+    nextPipeline->data_received(data, length);
 }
 
 void Pipeline::reset_pipe()

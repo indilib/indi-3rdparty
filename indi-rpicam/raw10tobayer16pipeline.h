@@ -25,9 +25,7 @@
 #include "pipeline.h"
 
 struct BroadcomPipeline;
-namespace INDI {
-class CCDChip;
-};
+class ChipWrapper;
 
 /**
  * @brief The Raw10ToBayer16Pipeline class
@@ -38,14 +36,14 @@ class CCDChip;
 class Raw10ToBayer16Pipeline : public Pipeline
 {
 public:
-    Raw10ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, INDI::CCDChip *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
+    Raw10ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, ChipWrapper *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
 
-    virtual void acceptByte(uint8_t byte) override;
+    virtual void data_received(uint8_t *data,  uint32_t length) override;
     virtual void reset() override;
 
 private:
     const BroadcomPipeline *bcm_pipe;
-    INDI::CCDChip *ccd;
+    ChipWrapper *ccd;
     int x {0};
     int y {0};
     int pos {0};
