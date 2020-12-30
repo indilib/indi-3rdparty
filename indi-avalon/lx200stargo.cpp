@@ -710,7 +710,7 @@ void LX200StarGo::getBasicData()
     LOG_DEBUG(__FUNCTION__);
     if (!isSimulation())
     {
-        checkLX200Format();
+        checkLX200EquatorialFormat();
 
         if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
             getAlignment();
@@ -1870,7 +1870,7 @@ bool LX200StarGo::SetTrackMode(uint8_t mode)
     return true;
 }
 
-bool LX200StarGo::checkLX200Format()
+bool LX200StarGo::checkLX200EquatorialFormat()
 {
     LOG_DEBUG(__FUNCTION__);
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
