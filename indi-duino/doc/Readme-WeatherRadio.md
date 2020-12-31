@@ -84,10 +84,35 @@ If everything is shown as expected, your hardware is ready!
 ## INDI driver **Weather Radio**
 Weather Radio comes with its own INDI weather driver and supports observatory control through **weather warnings** and **weather alerts**.
 
-Using the INDI driver is quite straight forward. In KStars, select **Weather Radio** as weather device in your profile. If you want to start the INDI server separately, you need to use the `indi_weatherradio` driver.
+### INDI server setup
+Using the INDI driver depends upon the scenario how you want to use **Weather Radio**. If you want to simply use it in combination with your INDI client of choice (like e.g. KStars), there is no special setup required.
 
-Now start your INDI client of choice (if you are using KStars, start EKOS with `Tools > EKOS`):
-* Switch to the **Connection** tab and **select the port** where your weather station is connected to.
+If you want to provide weather data in a 24x7 mode to weather station clients like for example its own web interface (see below), you need to **start the INDI server separately**. The simples way for this is starting `indiserver -v indi_weatherradio` from a terminal. On Linux machines, you may create a dedicated service that automaticall starts during startup. Create the following service definition in `/etc/systemd/system/indi-weatherradio.service`:
+```
+[Unit]
+Description=INDI server for weather radio
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/indiserver -v indi_weatherradio
+
+[Install]
+WantedBy=multi-user.target
+```
+
+For activating and starting this service, execute the following commands:
+```
+sudo systemctl enable indi-weatherradio.service
+sudo systemctl start indi-weatherradio.service
+```
+   
+### Driver configuration
+In KStars, select **Weather Radio** as weather device in your profile. 
+
+Now start your INDI client of choice (if you are using KStars, start EKOS with `Tools > EKOS`), switch to the **Connection** tab and **select the port** where your weather station is connected to.
 
 The INDI driver supports both a serial USB connection as well as an ethernet connection to the Arduino.
 
@@ -167,14 +192,27 @@ Edit the configuration file `/usr/share/weatherradio/bin/wr_config.py`. In most 
 * INDISERVER is the address of the INDI server where your weather station is connected to.
 * INDIDEVICEPORT is the connection port of your weather station (e.g. "/dev/ttyUSB0")
 
-Create the RRD files that will store time series data from your weather station:
+Starting with version 1.8, there is an option to read weather parameters from **multiple weather devices**. The only restriction is that these devices are available from a single INDI server. In this setup, separate the parameter values with ",".
+
+Here a sample with two devices, one named "Weather Radio" and another one "Davis Weather". Both are using ESP8266 devices and are reachable via WiFi:
+```
+INDIDEVICE="Weather Radio,Davis Weather"
+INDIDEVICEMODE="Ethernet,Ethernet"
+INDI_IP_ADDRESS="172.28.4.40,172.28.4.80"
+INDI_IP_PORT="80,80"
+GEO_COORD_LAT="49.1064,49.1064"
+GEO_COORD_LONG="9.765,9.765"
+GEO_COORD_ELEV="375,375"
+```
+
+Next step is **creating the RRD files** that will store time series data from your weather station:
 ```
 cd /usr/share/weatherradio
 ./bin/wr_rrd_create.py
 ./bin/wr_rrd_create_sensorfile.py
 ```
 
-As the next step, try to update the weather data manually to see if everything is configured correctly. There are three types of scripts for these actions:
+Now try to update the weather data manually to see if everything is configured correctly. There are three types of scripts for these actions:
 * `wr_rrd_update.py` reads weather data from your weather station's INDI server and stores it in the RRD files for weather and sensor data
 * `wr_rrd_lastupdate.py` creating a JSON document with the latest weather parameters
 * `wr_rrd_fetch.py` which fetches a time series for a given interval
@@ -231,13 +269,13 @@ Optionally, you could atach a [pan/tilt device](https://learn.sparkfun.com/tutor
 
 As a first step you need to learn how to shoot images with your camera. If you are using a Raspberry Camera, the Raspberry plattform brings `raspistill` as command line tool to shoot images -- see the [Camera Module Documentation](https://www.raspberrypi.org/documentation/hardware/camera/README.md) on the Raspberry pages.
 
-Weather Radio does not provide scripts for shooting images. If you want to automate the image acquisition, simply create a cron job that regularly shoots images.
-
 The web interface contains a page to display a timelapse and recent images in a image slider:
 
 ![Weather camera page](weatherradio/img/weathercam_page_480px.jpg)
 
 There are some helper scripts provided:
+* `camery.py` for shooting images and automatically adapting exposure time, ISO etc so that it can be regularly executed by a cron job.
 * `wr_list_media.py` creates a JSON document that provides the image slider informations to the web page. It takes all image files from the media directory (option `-d`) and places them sorted in the image slider.
 * `wr_video_create.py` creates timelapse sequences from the captured images. Create a link called `html/media/timelapse_current.mp4` to display the video on the web page.
 
+Have fun!
