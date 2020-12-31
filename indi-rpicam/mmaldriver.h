@@ -23,23 +23,18 @@
 
 #include <indiccd.h>
 #include <atomic>
-#include <cstdint>
 #include "cameracontrol.h"
+#include "pixellistener.h"
 #include "jpegpipeline.h"
 #include "broadcompipeline.h"
 #include "raw12tobayer16pipeline.h"
-#include "capturelistener.h"
-#include "chipwrapper.h"
-#include "config.h"
 
-#ifdef USE_ISO
+#undef USE_ISO
 #define DEFAULT_ISO 400
-#endif
 
 class Pipeline;
-class TestMMALDriver;
 
-class MMALDriver : public INDI::CCD, CaptureListener
+class MMALDriver : public INDI::CCD, PixelListener
 {
 public:
 	MMALDriver();
@@ -50,7 +45,7 @@ public:
     virtual void ISGetProperties(const char *dev);
     virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n) override;
     virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-    virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
+    virtual void pixels_received(uint8_t *buffer, size_t length) override;
     virtual void capture_complete() override;
 
 protected:
@@ -94,10 +89,6 @@ private:
   std::unique_ptr<CameraControl> camera_control; // Controller object for the camera communication.
 
   std::unique_ptr<Pipeline> raw_pipe; // Start of pipeline that recieved raw data from camera.
-
-  ChipWrapper chipWrapper;
-
-  friend TestMMALDriver;
 };
 
 extern std::unique_ptr<MMALDriver> mmalDevice;

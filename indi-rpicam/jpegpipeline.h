@@ -51,12 +51,14 @@ public:
 
     JpegPipeline() {}
 
-    virtual void data_received(uint8_t *data,  uint32_t length) override;
+    virtual void acceptByte(uint8_t byte) override;
     virtual void reset() override;
 
     State getState() { return state; }
+    int getPosition() { return pos; }
 
 private:
+    int pos {-1};
     int s1 {0}; // Length field, first byte MSB.
     int s2 {0}; // Length field, second byte LSB.
     int skip_bytes {0}; //Counter for skipping bytes.

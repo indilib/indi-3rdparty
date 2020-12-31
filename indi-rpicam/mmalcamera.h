@@ -30,11 +30,6 @@ class MMALEncoder;
 
 #include "mmalcomponent.h"
 #include "mmallistener.h"
-#include "config.h"
-
-/**
- * @brief The MMALCamera class is a C++ wrapper around the pure MMAL camera component.
- */
 
 class MMALCamera : public MMALComponent
 {
@@ -45,24 +40,21 @@ public:
     static const int MMAL_CAMERA_VIDEO_PORT {1};
     static const int MMAL_CAMERA_CAPTURE_PORT {2};
 
-    void set_shutter_speed(uint32_t shutter_speed)  { this->shutter_speed = shutter_speed; }
-    uint32_t get_shutter_speed();
-#ifdef USE_ISO
+    void set_shutter_speed_us(long shutter_speed)  { this->shutter_speed = shutter_speed; }
     void set_iso(int iso) { this->iso = iso; }
-#endif
     void set_gain(double gain) { this->gain = gain; }
     int capture();
     void abort();
     uint32_t get_width() { return width; }
     uint32_t get_height() { return height; }
     const char *get_name() { return cameraName; }
-    void set_camera_parameters();
 
 private:
     void create_camera_component();
     void create_encoder();
     void set_capture_port_format();
     void get_sensor_info();
+    void set_camera_parameters();
 
     int32_t cameraNum {};
     char cameraName[MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN] {};

@@ -33,11 +33,11 @@ public:
     void daisyChain(Pipeline *p);
     void reset_pipe();
 
-    virtual void data_received(uint8_t  *data,  uint32_t length) = 0;
+    virtual void acceptByte(uint8_t byte) = 0;
     virtual void reset() = 0;
 
 protected:
-    void forward(uint8_t *data,  uint32_t length);
+    void forward(uint8_t);
 
 private:
     Pipeline *nextPipeline {};

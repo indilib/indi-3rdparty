@@ -24,44 +24,27 @@
 
 void BroadcomPipeline::reset()
 {
+    pos = -1;
     memset(&header, 0, sizeof header);
-    state = State::WANT_BRCMO;
-    pos = 0;
 }
 
-void BroadcomPipeline::data_received(uint8_t  *data,  uint32_t length)
+void BroadcomPipeline::acceptByte(uint8_t byte)
 {
-    uint8_t byte;
-    for(;length; data++, length--)
-    {
-        byte = *data;
-        switch(state)
-        {
-        case State::FORWARDING:
-            // Fast lane.
-            forward(data, length);
-            return;
+    pos++;
 
-        case State::WANT_BRCMO:
-            if (pos >= sizeof header.BRCM) {
-                throw std::runtime_error("Did not find BRCMo header");
+    if (pos < 9) {
+        header.BRCM[pos] = byte;
+        if (pos == 8) {
+            if (strcmp(header.BRCM, "@BRCMo") != 0) {
+                throw std::runtime_error("Did not find BRCM header");
             }
-            header.BRCM[pos++] = byte;
-            if (pos >= 8 && strncmp(header.BRCM + pos - 8, "BRCMo", 5) == 0) {
-                state = State::WANT_OMX_DATA;
-                pos = 0;
-            }
-            break;
-
-        case State::WANT_OMX_DATA:
-            if (pos < (signed)((sizeof header.omx_data))) {
-                reinterpret_cast<uint8_t *>(&header.omx_data)[pos] = byte;
-            }
-            else if (pos >= (32767 - 8)) {
-                state = State::FORWARDING;
-            }
-            pos++;
-            break;
         }
     }
+    else if (pos < (signed)((9 + sizeof header.omx_data))) {
+        reinterpret_cast<uint8_t *>(&header.omx_data)[pos - 9] = byte;
+    }
+    else if (pos >= 32768) {
+        forward(byte);
+    }
 }
+

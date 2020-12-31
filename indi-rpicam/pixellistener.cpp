@@ -18,28 +18,9 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef MMALENCODER_H
-#define MMALENCODER_H
+#include "pixellistener.h"
 
-#include <mmal.h>
-#include <vector>
-
-#include "mmalcomponent.h"
-#include "mmallistener.h"
-
-
-class MMALEncoder : public MMALComponent
+PixelListener::PixelListener()
 {
-public:
-    MMALEncoder();
-    virtual ~MMALEncoder();
-    void activate();
 
-protected:
-    virtual void return_buffer(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) override;
-
-private:
-    MMAL_POOL_T *pool {};
-};
-
-#endif // MMALENCODER_H
+}

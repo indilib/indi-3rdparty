@@ -23,20 +23,13 @@
 
 #include <memory>
 #include <bcm_host.h>
-#include <chrono>
-#include <unordered_set>
-
 #include "mmalcamera.h"
 #include "mmalencoder.h"
 #include "mmallistener.h"
-#include "capturelistener.h"
+#include <vector>
 
-class Pipeline;
+class PixelListener;
 
-/**
- * @brief The CameraControl class Initializes all MMAL components and connections.
- * Also sets up handles callbacks to receivers of the image.
- */
 class CameraControl : MMALListener
 {
 public:
@@ -45,20 +38,13 @@ public:
     void start_capture();
     void stop_capture();
     MMALCamera *get_camera() { return camera.get(); }
-    void add_pipeline(Pipeline *p) { pipelines.insert(p); }
-    void erase_pipeline(Pipeline *p) { pipelines.erase(p); }
-    void add_capture_listener(CaptureListener *c) { capture_listeners.insert(c); }
-    void erase_capture_listener(CaptureListener *c) { capture_listeners.insert(c); }
+    void add_pixel_listener(PixelListener *l) { pixel_listeners.push_back(l); }
 
 private:
     virtual void buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) override;
     std::unique_ptr<MMALCamera> camera {};
     std::unique_ptr<MMALEncoder> encoder {};
-    std::unordered_set<Pipeline *> pipelines;
-    std::unordered_set<CaptureListener *> capture_listeners;
-    void signal_complete();
-    void signal_data_received(uint8_t *data, uint32_t length);
-    std::chrono::steady_clock::time_point start_time;
+    std::vector<PixelListener *> pixel_listeners;
 };
 
 #endif // CAMERACONTROL_H

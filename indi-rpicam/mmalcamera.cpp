@@ -66,17 +66,17 @@ MMALCamera::MMALCamera(int n) : MMALComponent(MMAL_COMPONENT_DEFAULT_CAMERA), ca
         MMALException::throw_if(status, "Failed to set camera config");
     }
 
+    set_camera_parameters();
+
     set_capture_port_format();
 
-    // Save cameras default FPS range.
+    // Save cameras default FPG range.
     MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {0, 0}, {0, 0}};
     status = mmal_port_parameter_get(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
     MMALException::throw_if(status, "Failed to get FPS range");
 
     fps_low = fps_range.fps_low;
     fps_high = fps_range.fps_high;
-
-    fprintf(stderr, "MMALCamera: fps_low=%d/%d, fps_high=%d/%d\n", fps_low.num, fps_low.den, fps_high.num, fps_high.den);
 }
 
 MMALCamera::~MMALCamera()
@@ -97,6 +97,9 @@ MMALCamera::~MMALCamera()
 /**
  * @brief MMALCamera::capture Main exposure method.
  *
+ * @param speed Shutter speed time in us.
+ * @param iso ISO value.
+ *
  * @return MMAL_SUCCESS if all OK, something else otherwise
  *
  */
@@ -105,11 +108,41 @@ int MMALCamera::capture()
     int exit_code = 0;
     MMAL_STATUS_T status = MMAL_SUCCESS;
 
+    status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1);
+    MMALException::throw_if(status, "Failed to set raw capture");
+
+    // Gain settings
+    status = mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_ANALOG_GAIN, MMAL_RATIONAL_T {static_cast<int32_t>(gain * 65536), 65536});
+    MMALException::throw_if(status, "Failed to set analog gain");
+
+    // Exposure time
+    if(shutter_speed > 6000000)
+    {
+        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {5, 1000}, {166, 1000}};
+        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
+        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS very low range");
+    }
+    else if(shutter_speed > 1000000)
+    {
+         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {167, 1000}, {999, 1000}};
+        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
+        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS low range");
+    }
+    else
+    {
+        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},fps_low, fps_high};
+        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
+        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS default range");
+    }
+
+    // FIXME: Seconds does not work completely ok.
+    status = mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, shutter_speed);
+    MMALException::throw_if(status, "Failed to set shutter speed");
+
     status = mmal_component_enable(component);
     MMALException::throw_if(status, "camera component couldn't be enabled");
 
     // Start capturing.
-    fprintf(stderr, "%s: Starting capture with speed %d\n", __FUNCTION__, shutter_speed);
     status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_CAPTURE, 1);
     MMALException::throw_if(status, "Failed to start capture");
 
@@ -123,87 +156,36 @@ void MMALCamera::abort()
     MMALException::throw_if(status, "Failed to abort capture");
 
     status = mmal_component_disable(component);
-    MMALException::throw_if(status, "camera component couldn't be disabled");
-
-    fprintf(stderr, "%s: Capture aborted\n", __FUNCTION__);
+    MMALException::throw_if(status, "camera component couldn't be enabled");
 }
 
 void MMALCamera::set_camera_parameters()
 {
-    MMAL_PARAMETER_AWBMODE_T awb = {{MMAL_PARAMETER_AWB_MODE,sizeof awb}, MMAL_PARAM_AWBMODE_AUTO};
-    MMALException::throw_if(mmal_port_parameter_set(component->control, &awb.hdr), "Failed to set AWB mode");
-
     MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_SATURATION, MMAL_RATIONAL_T {10, 0}), "Failed to set saturation");
-
-    MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_DIGITAL_GAIN, MMAL_RATIONAL_T {1, 1}), "Failed to set digital gain");
-
-#ifdef USE_ISO
     MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_ISO, iso), "Failed to set ISO");
-    fprintf(stderr, "MMALCamera: ISO set to %d\n", iso);
-#endif
-
+    MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_DIGITAL_GAIN, MMAL_RATIONAL_T {1, 1}), "Failed to set digital gain");
     MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_BRIGHTNESS, MMAL_RATIONAL_T{50, 100}), "Failed to set brightness");
 
-    MMAL_PARAMETER_EXPOSUREMODE_T exposure = {{MMAL_PARAMETER_EXPOSURE_MODE, sizeof exposure}, MMAL_PARAM_EXPOSUREMODE_OFF};
-    MMALException::throw_if(mmal_port_parameter_set(component->control, &exposure.hdr), "Failed to set exposure mode");
-
-    MMAL_PARAMETER_INPUT_CROP_T crop = {{MMAL_PARAMETER_INPUT_CROP, sizeof crop}, {0, 0, 0x1000, 0x1000}};
-    MMALException::throw_if(mmal_port_parameter_set(component->control, &crop.hdr), "Failed to set ROI");
-
+    {
+        MMAL_PARAMETER_AWBMODE_T param = {{MMAL_PARAMETER_AWB_MODE,sizeof param}, MMAL_PARAM_AWBMODE_AUTO};
+        MMALException::throw_if(mmal_port_parameter_set(component->control, &param.hdr), "Failed to set AWB mode");
+    }
+    {
+        MMAL_PARAMETER_EXPOSUREMODE_T param {{MMAL_PARAMETER_EXPOSURE_MODE, sizeof param}, MMAL_PARAM_EXPOSUREMODE_OFF};
+        MMALException::throw_if(mmal_port_parameter_set(component->control, &param.hdr), "Failed to set exposure mode");
+    }
+    {
+        MMAL_PARAMETER_INPUT_CROP_T crop = {{MMAL_PARAMETER_INPUT_CROP, sizeof(MMAL_PARAMETER_INPUT_CROP_T)}, {}};
+        crop.rect.x = (0);
+        crop.rect.y = (0);
+        crop.rect.width = (0x10000);
+        crop.rect.height = (0x10000);
+        MMALException::throw_if(mmal_port_parameter_set(component->control, &crop.hdr), "Failed to set ROI");
+    }
 
     component->port[MMAL_CAMERA_CAPTURE_PORT]->buffer_size = component->port[MMAL_CAMERA_CAPTURE_PORT]->buffer_size_recommended;
 
-    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_VIDEO_PORT], MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE),
-                            "Failed to turn on zero-copy for video port");
-
-    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1), "Failed to set raw capture");
-
-    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_CAPTURE_STATS_PASS, MMAL_TRUE), "Failed to set CAPTURE_STATS_PASS");
-
-    // Exposure time.
-    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, shutter_speed), "Failed to set shutter speed");
-    uint32_t actual_shutter_speed;
-    actual_shutter_speed = get_shutter_speed();
-    if (actual_shutter_speed < shutter_speed - 100000 || actual_shutter_speed > shutter_speed + 100000) {
-        fprintf(stderr, "MMALCamera: Failed to set shutter speed, requested %d but actual value is %d\n", shutter_speed, actual_shutter_speed); 
-    }
-
-    // Exposure ranges
-    MMAL_RATIONAL_T low, high;
-    if(shutter_speed > 6000000) {
-        low = {5, 1000};
-        high = {166, 1000};
-    }
-    else if(shutter_speed > 1000000) {
-        low = {167, 1000};
-        high = {999, 1000};
-    }
-    else {
-        low = fps_low;
-        high = fps_high;
-    }
-    fprintf(stderr, "MMALCamera: seting fps range %d/%d -> %d/%d\n", low.num, low.den, high.num, high.den);
-    MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, low, high};
-    MMALException::throw_if(mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr), "Failed to set FPS range");
-    MMALException::throw_if(mmal_port_parameter_get(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr), "Failed to get FPS range");
-    if (fps_range.fps_low.num != low.num || fps_range.fps_low.den != low.den || 
-        fps_range.fps_high.num != high.num || fps_range.fps_high.den != high.den) {
-        fprintf(stderr, "%s: failed to set fps ranges: low range is %d/%d, high range is %d/%d\n", __FUNCTION__,
-                fps_range.fps_low.num, fps_range.fps_low.den, fps_range.fps_high.num, fps_range.fps_high.den);
-    }
-
-    // Gain settings
-    MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_ANALOG_GAIN, MMAL_RATIONAL_T {static_cast<int32_t>(gain * 65536), 65536}),
-                            "Failed to set analog gain");
-    fprintf(stderr, "MMALCamera: Gain set to %d/%d\n", (int)(gain*65536), 65536);
-
-}
-
-uint32_t MMALCamera::get_shutter_speed()
-{
-    uint32_t actual_shutter_speed;
-    MMALException::throw_if(mmal_port_parameter_get_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, &actual_shutter_speed), "Failed to get shutter speed");
-    return actual_shutter_speed;
+    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_VIDEO_PORT], MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE), "Failed to turn on zero-copy for video port");
 }
 
 /**
@@ -211,6 +193,8 @@ uint32_t MMALCamera::get_shutter_speed()
  */
 void MMALCamera::set_capture_port_format()
 {
+    MMAL_STATUS_T status {MMAL_EINVAL};
+
     // Set our stills format on the stills (for encoder) port
     MMAL_ES_FORMAT_T *format {component->output[MMAL_CAMERA_CAPTURE_PORT]->format};
 
@@ -237,7 +221,8 @@ void MMALCamera::set_capture_port_format()
     format->es->video.par.num = 1;
     format->es->video.par.den = 1;
 
-    MMALException::throw_if(mmal_port_format_commit(component->output[MMAL_CAMERA_CAPTURE_PORT]), "camera capture port format couldn't be set");
+    status = mmal_port_format_commit(component->output[MMAL_CAMERA_CAPTURE_PORT]);
+    MMALException::throw_if(status, "camera capture port format couldn't be set");
 }
 
 /**
