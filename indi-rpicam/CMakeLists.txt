@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.0)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -6,12 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 PROJECT(indi_rpicam CXX C)
 
 set(INDI_RPICAM_VERSION_MAJOR 1)
-set(INDI_RPICAM_VERSION_MINOR 2)
-
-set(CMAKE_PREFIX_PATH /opt/vc)
-
-# ISO does not seem to be supported by the camere. If used, the gain stops working. So leave it off
-option(USE_ISO "Enable ISO settings Subsystem" OFF)
+set(INDI_RPICAM_VERSION_MINOR 1)
 
 include(GNUInstallDirs)
 include(CMakeCommon)
@@ -19,20 +14,12 @@ include(CMakeCommon)
 find_package(MMAL REQUIRED)
 find_package(INDI REQUIRED)
 find_package(CFITSIO REQUIRED)
-find_package(Nova REQUIRED)
-find_package(USB1 REQUIRED)
-find_package(FFTW3 REQUIRED)
-find_package(FFTW3 REQUIRED)
 
-find_library(M_LIBRARY NAMES m)
-
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-find_package(Threads REQUIRED)
-
-include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${INDI_INCLUDE_DIR})
 include_directories(${MMAL_INCLUDE_DIR})
 include_directories(${CFITSIO_INCLUDE_DIR})
+
+find_package(Threads REQUIRED)
 
 set(INDI_RPICAM_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/mmalcamera.cpp
@@ -52,6 +39,8 @@ set(INDI_RPICAM_SRCS
 
 add_executable(indi_rpicam ${INDI_RPICAM_SRCS})
 
+
+
 target_link_libraries(indi_rpicam
     ${INDI_DRIVER_LIBRARIES}
     ${CFITSIO_LIBRARIES}
@@ -62,24 +51,6 @@ target_link_libraries(indi_rpicam
 )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_rpicam.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_rpicam.xml )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
 install(TARGETS indi_rpicam RUNTIME DESTINATION bin)
-
-find_package (GTest)
-find_package (GMock)
-
-set(INDI_BUILD_UNITTESTS TRUE)
-
-IF (GTEST_FOUND)
-  IF (INDI_BUILD_UNITTESTS)
-    MESSAGE (STATUS  "Building unit tests")
-    ADD_SUBDIRECTORY(test)
-  ELSE (INDI_BUILD_UNITTESTS)
-    MESSAGE (STATUS  "Not building unit tests")
-  ENDIF (INDI_BUILD_UNITTESTS)
-ELSE()
-  MESSAGE (STATUS  "GTEST not found, not building unit tests")
-ENDIF (GTEST_FOUND)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_rpicam.xml CONFIGURATIONS Release DESTINATION ${INDI_DATA_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_rpicam.xml DESTINATION ${INDI_DATA_DIR})

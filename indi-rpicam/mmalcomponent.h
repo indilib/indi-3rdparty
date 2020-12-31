@@ -25,20 +25,16 @@
 #include <mmal_component.h>
 #include <mmal_pool.h>
 
+
 class MMALListener;
 class MMAL_CONNECTION_T;
 
-/**
- * @brief The MMALComponent class Base class for MMAL component wrappers MMALCamera and MMALEncoder
- * Dealing with connections and callbacks basics.
- */
 class MMALComponent
 {
 public:
     MMALComponent(const char *component_type);
     virtual ~MMALComponent();
     void connect(int src_port, MMALComponent *dst, int dst_port);
-    void disconnect();
     void add_port_listener(MMALListener *l) { port_listeners.push_back(l); }
 
 protected:
