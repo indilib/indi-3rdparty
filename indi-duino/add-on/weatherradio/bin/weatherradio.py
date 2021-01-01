@@ -15,7 +15,7 @@ import time
 import rrdtool
 from wr_config import *
 
-def connect(indi):
+def connect(indi, verbose=False):
     # separate device configurations
     devices     = INDIDEVICE.split(",")
     modes       = INDIDEVICEMODE.split(",")
@@ -38,25 +38,34 @@ def connect(indi):
                 indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION_MODE","Serial")
                 # set the configured port
                 indi.set_and_send_text(dev,"DEVICE_PORT","PORT",devport)
+                if verbose:
+                    print "Setting serial port to %s" % (devport)
             else:
                 indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION_MODE","Ethernet")
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","ADDRESS",ipaddress)
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","PORT",ipport)
+                if verbose:
+                    print "Setting ethernet ip:port to %s:%s" % (ipaddress, ipport)
 
-                # connect driver
-                connection = indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION","Connect")
-                # wait for the connection
-                time.sleep(7)
-                # ensure that all information is up to date
-                indi.process_events()
-                # check if the connection has been established
-                connection = indi.get_vector(dev, "CONNECTION")
-                # set location if connection was successful
-                if connection._light.is_ok():
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
-                    indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
-                    
+            # connect driver
+            connection = indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION","Connect")
+            if verbose:
+                print "Waiting for connection..."
+            # wait for the connection
+            time.sleep(7)
+            # ensure that all information is up to date
+            indi.process_events()
+            # check if the connection has been established
+            connection = indi.get_vector(dev, "CONNECTION")
+            # set location if connection was successful
+            if connection._light.is_ok():
+                if verbose:
+                    print "Connection succeeded."
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
+                indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
+                if verbose:
+                    print "Setting location to lat=%s, long=%s, elev=%s." % (lat, long, elev)
 
             # update the result states
             result = result and connection._light.is_ok()
@@ -74,7 +83,7 @@ def vector_exists(indi, device, name):
     return False;
 
 
-def readWeather(indi):
+def readWeather(indi, verbose=False):
     result  = {}
     # ensure that all information is up to date
     indi.process_events()
@@ -83,6 +92,8 @@ def readWeather(indi):
         weather = indi.get_vector(device,WEATHER)
         # ensure that parameters are available
         if weather._light.is_ok():
+            if verbose:
+                print "Reading weather sensor values..."
             read_indi_value(result, 'Temperature', weather, WEATHER_TEMPERATURE)
             read_indi_value(result, 'Pressure', weather, WEATHER_PRESSURE)
             read_indi_value(result, 'Humidity', weather, WEATHER_HUMIDITY)
@@ -93,6 +104,8 @@ def readWeather(indi):
             read_indi_value(result, 'WindSpeed', weather, WEATHER_WIND_SPEED)
             read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
             read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
+            if verbose:
+                print "Reading weather sensor values... (succeeded)"
 
     return result;
 

@@ -14,7 +14,7 @@
 
 // BAUD rate for the serial interface
 #define BAUD_RATE 9600   // standard rate that should always work
-// #define BAUD_RATE 115200 // ESP8266
+//#define BAUD_RATE 115200 // ESP8266
 
 #define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
@@ -25,6 +25,7 @@
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
+//#define USE_OTA                    // USE Arduino Over the Air updating
 
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 60000
@@ -47,10 +48,11 @@
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
 // OLED display
-#define OLED_SCROLL_TIMEOUT 100  // the timeout between scrolling a single display line
-#define OLED_DISPLAY_TIMEOUT -1  // the timeout in secs after which the display will turn off
-#define OLED_BUTTONPIN 15        // pin for button to turn display on
-#define OLED_I2C_ADDRESS    0x3C // I2C address of the OLED display - consult data sheet
+#define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
+#define OLED_DISPLAY_TIMEOUT 60       // the timeout in secs after which the display will turn off (set to -1 to disable the timeout)
+#define OLED_BUTTONPIN 15             // pin for button to turn display on
+#define OLED_I2C_ADDRESS    0x3C      // I2C address of the OLED display - consult data sheet
+#define OLED_WIRE_CLOCK_SPEED 100000L // set to 100kHz if using in combination with MLX90614
 
 // ============== device configurations (end) ==============
 
@@ -85,3 +87,7 @@
 #ifdef USE_WIFI
 #include "esp8266.h"
 #endif
+
+#ifdef USE_OTA
+#include "ota.h"
+#endif // USE_OTA

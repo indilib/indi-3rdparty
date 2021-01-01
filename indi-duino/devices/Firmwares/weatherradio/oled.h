@@ -20,7 +20,9 @@ struct {
   char * text_orig;
   unsigned long lastShowDisplay;
   bool show;
-} oledData {NULL, NULL, NULL, 0, true};
+  bool buttonPushed;
+  bool refresh;
+} oledData {NULL, NULL, NULL, 0, true, false, true};
 
 
 void oledShow (bool status) {
@@ -35,13 +37,20 @@ void ICACHE_RAM_ATTR isr_oled_show () {
 #else
 void isr_oled_show () {
 #endif
+  oledData.buttonPushed = true;
+}
+
+void oledHandleButton() {
   oledData.lastShowDisplay = millis();
+  // get latest data
+  oledData.refresh = true;
   oledShow(true);
+  // reset interrupt
 }
 
 void initDisplay() {
   Wire.begin();
-  Wire.setClock(400000L);
+  Wire.setClock(OLED_WIRE_CLOCK_SPEED);
   oled.begin(&Adafruit128x32, OLED_I2C_ADDRESS);
   oled.setFont(System5x7);
   oled.clear();
@@ -92,9 +101,17 @@ void setDisplayText(String text) {
   oled_rolling = (oledCountLines(text) > oled.fontRows());
   // fill the first line
   oled_print_finished = false;
+
+  // clear the refresh flag
+  oledData.refresh = false;
 }
 
 void displayText() {
+  // react upon a pushed button
+  if (oledData.buttonPushed) {
+    oledHandleButton();
+    oledData.buttonPushed = false;
+  }
   // check whether the display should be turned off
   if (OLED_DISPLAY_TIMEOUT >= 0 && millis() > oledData.lastShowDisplay + OLED_DISPLAY_TIMEOUT * 1000) {
     oledShow(false);
