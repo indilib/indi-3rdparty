@@ -135,7 +135,7 @@ bool MMALDriver::Connect()
     camera_control.reset(new CameraControl());
 
     // FIXME: Seems the HIQ-camera is quite buggy, it needs the mmal_component to be opened twice
-    camera_control.reset(new CameraControl());
+    //camera_control.reset(new CameraControl());
 
     camera_control->add_capture_listener(this);
 
@@ -154,6 +154,18 @@ bool MMALDriver::Connect()
 
         Raw12ToBayer16Pipeline *raw12_pipe = new Raw12ToBayer16Pipeline(brcm_pipe, &chipWrapper);
         brcm_pipe->daisyChain(raw12_pipe);
+    }
+    else if (!strcmp(camera_control->get_camera()->get_name(), "ov5647")) {
+        pixel_size_x = pixel_size_y = 1.4F;
+
+        raw_pipe.reset(new JpegPipeline());
+
+        BroadcomPipeline *brcm_pipe = new BroadcomPipeline();
+        raw_pipe->daisyChain(brcm_pipe);
+
+        Raw10ToBayer16Pipeline *raw10_pipe = new Raw10ToBayer16Pipeline(brcm_pipe, &chipWrapper);
+        // receiver->daisyChain(&raw_writer);
+        brcm_pipe->daisyChain(raw10_pipe);
     }
     else if (!strcmp(camera_control->get_camera()->get_name(), "imx219")) {
         pixel_size_x = pixel_size_y = 1.12F;
