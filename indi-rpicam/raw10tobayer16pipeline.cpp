@@ -32,6 +32,7 @@ void Raw10ToBayer16Pipeline::reset()
     raw_x = 0;
     pos = 0;
     state = b0;
+    frame_buffer = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer());
 }
 
 void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
@@ -43,6 +44,7 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
     assert(yRes == 2464 || yRes == 1944);
 
     uint8_t byte;
+    uint16_t* cur_row = frame_buffer + y * xRes ;
     for(;length; data++, length--)
     {
         byte = *data;
@@ -52,12 +54,13 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
             x = 0;
             raw_x = 0;
 	    state = b0;
+            cur_row = frame_buffer + y * xRes;
+	    //this is kind of superflous given the previous line...
+            //assert((cur_row - reinterpret_cast<uint16_t *>(ccd->getFrameBuffer())) % xRes == 0);
         }
 
         if ( x < xRes && y < yRes) {
-            uint16_t *cur_row = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer()) + y * xRes;
 
-            assert((cur_row - reinterpret_cast<uint16_t *>(ccd->getFrameBuffer())) % xRes == 0);
 
             // RAW according to experiment.
             switch(state)
@@ -101,5 +104,4 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
         raw_x++;
     }
 }
-
 

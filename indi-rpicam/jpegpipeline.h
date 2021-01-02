@@ -59,7 +59,7 @@ public:
 private:
     int s1 {0}; // Length field, first byte MSB.
     int s2 {0}; // Length field, second byte LSB.
-    int skip_bytes {0}; //Counter for skipping bytes.
+    uint32_t skip_bytes {0}; //Counter for skipping bytes.
     bool entropy_data_follows {false};
     int current_type {}; // For debugging only.
 };
