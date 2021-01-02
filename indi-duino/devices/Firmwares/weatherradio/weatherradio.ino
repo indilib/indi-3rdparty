@@ -272,6 +272,11 @@ String getCurrentConfig() {
   JsonObject waterdata = doc.createNestedObject("Water");
   waterdata["pin"] = WATER_PIN;
 #endif
+#ifdef USE_RAIN_SENSOR
+  JsonObject rainsensordata          = doc.createNestedObject("Rain Sensor");
+  rainsensordata["rain sensor pin"]  = RAINSENSOR_PIN;
+  rainsensordata["bucket size"]      = RAINSENSOR_BUCKET_SIZE;
+#endif //USE_RAIN_SENSOR
 
 #ifdef USE_RAIN_SENSOR
   JsonObject rainsensordata          = doc.createNestedObject("Rain Sensor");

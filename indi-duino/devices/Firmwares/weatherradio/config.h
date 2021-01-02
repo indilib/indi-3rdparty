@@ -53,6 +53,9 @@
 
 // Resistor based water sensor
 #define WATER_PIN A0
+// dipping bucket rain sensor (e.g. RG-11)
+#define RAINSENSOR_PIN 13            // the digital pin for the rain sensor
+#define RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
 
 // Resistor based dew heater
 #define DEWHEATER_MAX_DELTA 1 // maximum allowable temperature difference between ambient and dew point before heater turns on
@@ -103,6 +106,9 @@
 #ifdef USE_WATER_SENSOR
 #include "water.h"
 #endif //USE_WATER_SENSOR
+#ifdef USE_RAIN_SENSOR
+#include "rainsensor.h"
+#endif //USE_RAIN_SENSOR
 
 #ifdef USE_DEW_HEATER
 #include "dewheater.h"
