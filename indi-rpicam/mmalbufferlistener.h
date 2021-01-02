@@ -18,9 +18,17 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "pixellistener.h"
+#ifndef MMALBUFFERLISTENER_H
+#define MMALBUFFERLISTENER_H
 
-PixelListener::PixelListener()
+#include <mmal_port.h>
+#include <mmal_buffer.h>
+
+/** A buffer listener gets called by when a buffer has been received from a mmal component. */
+class MMALBufferListener
 {
+public:
+    virtual void buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) = 0;
+};
 
-}
+#endif // MMALBUFFERLISTENER_H

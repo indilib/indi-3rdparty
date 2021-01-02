@@ -1,3 +1,10 @@
+indi-rpicam (1.2) stable; urgency=low
+
+  * Supports long exposure for imx477 (requires one initial waste frame)
+  * Support subframing
+
+ -- Lars Berntzon <lars.berntzon@cecilia-data.se>  Sat, 01 Jan 2021 23:28:58 +0200
+
 indi-rpicam (1.1) stable; urgency=low
 
   * Added support for the V2 camera (The Sony imx219-sensor)

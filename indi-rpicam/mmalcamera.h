@@ -29,41 +29,54 @@ class MMALEncoder;
 #include <mmal.h>
 
 #include "mmalcomponent.h"
-#include "mmallistener.h"
+#include "mmalbufferlistener.h"
+#include "config.h"
+
+/**
+ * @brief The MMALCamera class is a C++ wrapper around the pure MMAL camera component.
+ */
 
 class MMALCamera : public MMALComponent
 {
 public:
     MMALCamera(int cameraNum = 0);
     virtual ~MMALCamera();
-    static const int MMAL_CAMERA_PREVIEW_PORT {0};
-    static const int MMAL_CAMERA_VIDEO_PORT {1};
-    static const int MMAL_CAMERA_CAPTURE_PORT {2};
+    static const int PREVIEW_PORT_NO {0};
+    static const int VIDEO_PORT_NO {1};
+    static const int CAPTURE_PORT_NO {2};
 
-    void set_shutter_speed_us(long shutter_speed)  { this->shutter_speed = shutter_speed; }
-    void set_iso(int iso) { this->iso = iso; }
-    void set_gain(double gain) { this->gain = gain; }
-    int capture();
-    void abort();
+    /** Return the current active shutter speed for camera.h */
+    uint32_t getShutterSpeed();
+
+#ifdef USE_ISO
+    void setISO(int iso) { this->iso = iso; }
+#endif
+    void startCapture();
+    void stopCapture();
     uint32_t get_width() { return width; }
     uint32_t get_height() { return height; }
-    const char *get_name() { return cameraName; }
+    const char *getModel() { return cameraModel; }
+    void set_crop(int x, int y, int w, int h);
+    void setCapturePortFormat();
+    void setExposureParameters(double gain, uint32_t shutter_speed);
+    void getSensorInfo();
+    void selectCameraNumber(uint32_t n);
+    void selectSensorConfig(uint32_t config);
+    void configureCamera();
+    void getFPSRange();
+    void setFPSRange(MMAL_RATIONAL_T low, MMAL_RATIONAL_T high);
+
+    float xPixelSize {}, yPixelSize {};
 
 private:
-    void create_camera_component();
-    void create_encoder();
-    void set_capture_port_format();
-    void get_sensor_info();
-    void set_camera_parameters();
-
+    virtual void return_buffer(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) override { (void)port; (void)buffer; }
     int32_t cameraNum {};
-    char cameraName[MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN] {};
-    uint32_t shutter_speed {100000};
+    char cameraModel[MMAL_PARAMETER_CAMERA_INFO_MAX_STR_LEN] {""};
     unsigned int iso {0};
-    double gain {1};
     uint32_t width {};
     uint32_t height {};
     MMAL_RATIONAL_T fps_low {}, fps_high {};
+    MMAL_RECT_T crop {0, 0, 0x1000, 0x1000};
 };
 
 #endif // _MMAL_CAMERA_H

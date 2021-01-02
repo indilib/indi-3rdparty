@@ -27,9 +27,9 @@
 class PipeTee : public Pipeline
 {
 public:
-    PipeTee(const char *filename);
+    PipeTee(const std::string &filename);
     virtual ~PipeTee();
-    virtual void acceptByte(uint8_t byte) override;
+    virtual void data_received(uint8_t *data,  uint32_t length) override;
     virtual void reset() override;
 
 private:

@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include "pipetee.h"
 
-PipeTee::PipeTee(const char *filename) : filename(filename)
+PipeTee::PipeTee(const std::string &filename) : filename(filename)
 {
     reset();
 }
@@ -34,10 +34,10 @@ PipeTee::~PipeTee()
     }
 }
 
-void PipeTee::acceptByte(uint8_t byte)
+void PipeTee::data_received(uint8_t *data,  uint32_t length)
 {
-    fwrite(&byte, 1, 1, fp);
-    forward(byte);
+    fwrite(&data, 1, length, fp);
+    forward(data, length);
 }
 
 void PipeTee::reset()
