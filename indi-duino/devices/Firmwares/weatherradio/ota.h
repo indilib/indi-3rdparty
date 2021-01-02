@@ -57,8 +57,6 @@ void initOTA() {
         break;
     }
   });
-  ArduinoOTA.begin();
-  otaData.init = true;
 }
 
 void serializeOTA(JsonDocument &doc) {
@@ -74,5 +72,11 @@ void serializeOTA(JsonDocument &doc) {
 }
 
 void otaLoop() {
-  ArduinoOTA.handle();
+  if (otaData.init == false && WiFi.status() == WL_CONNECTED) {
+    // lazy instantiation to ensure that OTA is started AFTER WiFi is connected
+    ArduinoOTA.begin();
+    otaData.init = true;
+  } else {
+    ArduinoOTA.handle();
+  }
 }
