@@ -25,11 +25,11 @@
 // Mostly guesswork.
 struct BroadcomHeader
 {
-    char BRCM[9];               // @BRCM
+    char BRCM[20];              // Used for searching for BRCMo.
     struct
     {
-        uint16_t size;          // Total size for buffer, excluding BRCM.
-        uint16_t dummy1[3];     // 00 00 00 00 00 00
+        uint32_t size;          // Some kind of size of this header.
+        uint16_t dummy1[2];     // 00 00 00 00 00 00
         char name[144];         // Driver name and version??
         uint16_t raw_width;     // Scanline size resolution x + padding.
         uint16_t dummy2[7];     // 00 * 7
@@ -48,12 +48,17 @@ class BroadcomPipeline : public Pipeline
 {
 public:
     BroadcomPipeline() {}
-    virtual void acceptByte(uint8_t byte) override;
+    virtual void data_received(uint8_t  *data,  uint32_t length) override;
     virtual void reset();
     BroadcomHeader header;
 
 private:
-    int pos {-1};
+    unsigned int pos {0};
+    enum class State {
+        WANT_BRCMO,
+        WANT_OMX_DATA,
+	FORWARDING
+    } state {State::WANT_BRCMO};
 };
 
 #endif // BROADCOMPIPELINE_H

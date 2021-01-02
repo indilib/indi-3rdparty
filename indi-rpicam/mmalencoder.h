@@ -25,9 +25,11 @@
 #include <vector>
 
 #include "mmalcomponent.h"
-#include "mmallistener.h"
+#include "mmalbufferlistener.h"
 
-
+/**
+ * @brief The MMALEncoder class is a C++ wrapper around the pure MMAL encoder component.
+ */
 class MMALEncoder : public MMALComponent
 {
 public:
@@ -35,10 +37,8 @@ public:
     virtual ~MMALEncoder();
     void activate();
 
-protected:
-    virtual void return_buffer(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) override;
-
 private:
+    virtual void return_buffer(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) override;
     MMAL_POOL_T *pool {};
 };
 

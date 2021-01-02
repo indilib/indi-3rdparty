@@ -21,10 +21,15 @@
 #ifndef MMALEXCEPTION_H
 #define MMALEXCEPTION_H
 #include <stdexcept>
+#include <cstdarg>
+
 class MMALException : public std::runtime_error
 {
 public:
-    MMALException(const char *text);
-    static void throw_if(bool status, const char *text);
+    MMALException(const char *text="", ...);
+    static void throw_if(bool status, const char *text, ...);
+
+private:
+    char msg[265];
 };
 #endif // MMALEXCEPTION_H
