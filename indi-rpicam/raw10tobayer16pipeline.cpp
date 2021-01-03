@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <algorithm>
 
 #include "raw10tobayer16pipeline.h"
 #include "broadcompipeline.h"
@@ -30,34 +31,79 @@ void Raw10ToBayer16Pipeline::reset()
     x = 0;
     y = 0;
     raw_x = 0;
-    pos = 0;
     state = b0;
-    frame_buffer = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer());
 }
+
+void Raw10ToBayer16Pipeline::next_line()
+{
+    y += 1;
+    cur_row = frame_buffer + (y * xRes);
+    raw_x = 0;
+    x = 0;
+    state = b0;
+}
+
 
 void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
 {
-    assert(bcm_pipe->header.omx_data.raw_width == 4128 || bcm_pipe->header.omx_data.raw_width == 3264);
-    int xRes = ccd->getXRes();
-    int yRes = ccd->getYRes();
+    frame_buffer = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer());
+    raw_width = bcm_pipe->header.omx_data.raw_width;
+    assert(raw_width == 4128 || raw_width == 3264);
+    xRes = ccd->getXRes();
+    yRes = ccd->getYRes();
     assert(xRes == 3280 || xRes == 2592);
     assert(yRes == 2464 || yRes == 1944);
 
     uint8_t byte;
-    uint16_t* cur_row = frame_buffer + y * xRes ;
-    for(;length; data++, length--)
-    {
+    cur_row = frame_buffer + y * xRes;
+    
+    const uint32_t u32Magic = 0x4001; // bit expansion multiplier (2 pairs of bits at a time)
+    const uint32_t u32Mask = 0x30003; // mask to preserve lower 2 bits of expanded values
+    uint32_t u32Temp, u32_01, u32_23, *pu32;
+    while(length > 0)
+    {  
+        //If we are aligned to the 4 pixel stride (state b0), try to do some bulk conversion 
+        if(state == b0)
+        {
+            //Use 32bit aligned pixel chunks to convert 4 pixels  at the same time
+            while(length >= 5 && x < xRes)
+            {
+                assert(x % 4 == 0);
+                pu32 = (uint32_t *)(&cur_row[x]);
+                u32_01 = (*data++ << 18);
+                u32_01 |= (*data++ << 2); // each 32-bit value will hold 2 source bytes spread out to 16-bits
+                u32_23 = (*data++ << 18); // and shifted over 2 to make room for lower 2 bits
+                u32_23 |= (*data++ << 2);
+                u32Temp = *data++ * u32Magic; // 5th byte contains 4 pairs of bits (0/1) for the 4 pixels
+                u32_01 |= (u32Temp & u32Mask); // combine lower 2 bits to bytes 0 and 1
+                u32Temp >>= 4; // shift down to access bits for bytes 2/3
+                u32_23 |= (u32Temp & u32Mask);
+                *pu32++ = u32_01; // store 4 16-bit pixels (10 significant bits)
+                *pu32++ = u32_23;
+          	    length -= 5;
+            	x += 4;
+                raw_x += 5;
+            }
+            if(length == 0)
+            {
+                return;
+            }
+        }
+        
+        if (x >= xRes) {
+            int diff = std::min(length, raw_width - raw_x);
+            raw_x += diff;
+            length -= diff;
+            data += diff;
+            if(raw_x >= raw_width)
+                next_line();
+            continue;
+        }
+        
+        //IF we are not in b0 state, we are not aligned and do at least one cycle of byte 
+        //wise processing until we are in b0 or buffer ends
         byte = *data;
 
-        if (raw_x >= bcm_pipe->header.omx_data.raw_width) {
-            y += 1;
-            x = 0;
-            raw_x = 0;
-	    state = b0;
-            cur_row = frame_buffer + y * xRes;
-	    //this is kind of superflous given the previous line...
-            //assert((cur_row - reinterpret_cast<uint16_t *>(ccd->getFrameBuffer())) % xRes == 0);
-        }
 
         if ( x < xRes && y < yRes) {
 
@@ -66,7 +112,6 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
             switch(state)
             {
             case b0:
-                // FIXME: Optimize, if at least 5 bytes remaining here, all data can be calculated faster in one step.
                 cur_row[x] = static_cast<uint16_t>(byte << 2);
                 x++;
                 state = b1;
@@ -99,9 +144,10 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
                 break;
             }
         }
-
-        pos++;
+        length--;
         raw_x++;
+        data++;
     }
+    return;
 }
 

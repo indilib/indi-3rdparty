@@ -42,14 +42,17 @@ public:
     virtual void reset() override;
 
 private:
+    void next_line();
     const BroadcomPipeline *bcm_pipe;
     ChipWrapper *ccd;
-    int x {0};
-    int y {0};
-    int pos {0};
-    int raw_x {0};  // Position in the raw-data comming in.
+    uint32_t x {0};
+    uint32_t y {0};
+    uint32_t raw_x {0};  // Position in the raw-data comming in.
     enum {b0, b1, b2, b3, b4} state = b0; // Which byte in the RAW10 format.
     uint16_t* frame_buffer;
+    uint32_t raw_width{0};
+    uint32_t xRes, yRes = 0;
+    uint16_t* cur_row {0};
 };
 
 #endif // RAW10TOBAYER16PIPELINE_H
