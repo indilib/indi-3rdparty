@@ -11,6 +11,7 @@
 #include <Wire.h>
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiWire.h"
+#include "OneButton.h"
 
 SSD1306AsciiWire oled;
 
@@ -20,46 +21,16 @@ struct {
   char * text_orig;
   unsigned long lastShowDisplay;
   bool show;
-  bool buttonPushed;
   bool refresh;
-} oledData {NULL, NULL, NULL, 0, true, false, true};
+} oledData {NULL, NULL, NULL, 0, true, true};
+
+OneButton displayButton;
 
 
 void oledShow (bool status) {
   oledData.show = status;
   // clear display equals turning display off
   oled.ssd1306WriteCmd(status ? SSD1306_DISPLAYON : SSD1306_DISPLAYOFF);
-}
-
-// interrupt called to turn display on
-#ifdef ESP8266
-void ICACHE_RAM_ATTR isr_oled_show () {
-#else
-void isr_oled_show () {
-#endif
-  oledData.buttonPushed = true;
-}
-
-void oledHandleButton() {
-  oledData.lastShowDisplay = millis();
-  // get latest data
-  oledData.refresh = true;
-  oledShow(true);
-  // reset interrupt
-}
-
-void initDisplay() {
-  Wire.begin();
-  Wire.setClock(OLED_WIRE_CLOCK_SPEED);
-  oled.begin(&Adafruit128x32, OLED_I2C_ADDRESS);
-  oled.setFont(System5x7);
-  oled.clear();
-
-  oled.setScrollMode(SCROLL_MODE_APP);
-
-  pinMode(OLED_BUTTONPIN, INPUT);
-  // attach to react upon interrupts when the reed element closes the circuit
-  attachInterrupt(digitalPinToInterrupt(OLED_BUTTONPIN), isr_oled_show, RISING);
 }
 
 
@@ -106,12 +77,27 @@ void setDisplayText(String text) {
   oledData.refresh = false;
 }
 
-void displayText() {
-  // react upon a pushed button
-  if (oledData.buttonPushed) {
-    oledHandleButton();
-    oledData.buttonPushed = false;
-  }
+
+void initDisplay() {
+  Wire.begin();
+  Wire.setClock(OLED_WIRE_CLOCK_SPEED);
+  oled.begin(&Adafruit128x32, OLED_I2C_ADDRESS);
+  oled.setFont(System5x7);
+  oled.clear();
+
+  oled.setScrollMode(SCROLL_MODE_APP);
+
+  // initialize the display button
+  displayButton = OneButton(OLED_BUTTONPIN,
+                            false,       // Button is active high
+                            false        // Disable internal pull-up resistor
+                           );
+
+}
+
+void updateOledDisplay() {
+  // update button state
+  displayButton.tick();
   // check whether the display should be turned off
   if (OLED_DISPLAY_TIMEOUT >= 0 && millis() > oledData.lastShowDisplay + OLED_DISPLAY_TIMEOUT * 1000) {
     oledShow(false);

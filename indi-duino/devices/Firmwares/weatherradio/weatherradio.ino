@@ -34,7 +34,7 @@ struct {
 
 void updateDisplayText() {
 #ifdef USE_OLED
-String result = "";
+  String result = "";
   result += "Weather Radio V ";
   result += WEATHERRADIO_VERSION;
   result += " \n \n";
@@ -134,7 +134,7 @@ void updateSensorData() {
    Send current sensor data as JSON document to Serial
 */
 String getSensorData(bool pretty) {
-  const int docSize = JSON_OBJECT_SIZE(8) + // max 7 sensors
+  const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
                       JSON_OBJECT_SIZE(1) + // token data
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
@@ -143,8 +143,8 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2);  // Water sensor
-                      JSON_OBJECT_SIZE(6);  // Davis Anemometer
-                      JSON_OBJECT_SIZE(2);  // Rain sensor
+  JSON_OBJECT_SIZE(6);  // Davis Anemometer
+  JSON_OBJECT_SIZE(2);  // Rain sensor
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -301,6 +301,19 @@ String getCurrentConfig() {
   }
 }
 
+void oledSingleButtonClicked() {
+  // reset the turn off timeout
+  oledData.lastShowDisplay = millis();
+  // get latest data
+  oledData.refresh = true;
+  // clear the display
+  oled.clear();
+  // update the display text
+  updateDisplayText();
+  // turn on the display
+  oledShow(true);
+}
+
 unsigned long lastSensorRead;
 
 void setup() {
@@ -382,6 +395,9 @@ void setup() {
   // initial readout all sensors
   updateSensorData();
 
+  // define handling of clicks
+  displayButton.attachClick(oledSingleButtonClicked);
+
   // initially set display text
   updateDisplayText();
 
@@ -456,7 +472,7 @@ void loop() {
   // refresh the display text if necessary
   if (oledData.refresh) updateDisplayText();
   // update the display
-  displayText();
+  updateOledDisplay();
 #endif
 
 #ifdef USE_TSL237_SENSOR
