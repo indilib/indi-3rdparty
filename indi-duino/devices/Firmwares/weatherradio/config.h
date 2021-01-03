@@ -23,6 +23,7 @@
 //#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
+//#define USE_WATER_SENSOR           // Water sensor - detects rain by measuring resistence
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
 //#define USE_OTA                    // USE Arduino Over the Air updating
@@ -46,6 +47,8 @@
 #define ANEMOMETER_WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
 #define ANEMOMETER_WINDDIRECTIONPIN A0 // The analog pin for the wind direction
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
+
+#define WATER_PIN A0
 
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
@@ -83,6 +86,10 @@
 #ifdef USE_DAVIS_SENSOR
 #include "davis_anemometer.h"
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_WATER_SENSOR
+#include "water.h"
+#endif //USE_WATER_SENSOR
 
 #ifdef USE_WIFI
 #include "esp8266.h"
