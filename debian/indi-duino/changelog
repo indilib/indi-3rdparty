@@ -1,3 +1,18 @@
+indi-duino (1.9.1) buster; urgency=medium
+
+  * Bug fix ensuring that OTA is started after WiFi connection is established
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 01 Jan 2021 19:49:43 +0100
+
+indi-duino (1.9) buster; urgency=medium
+
+  * Over the air updating option added
+  * I2C speed made configurable since MLX90614 seems to have problems with 400kHz speed
+  * WiFi handling reworked asynchronously speeding up startup
+  * Several bug fixes and documentation updates
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Thu, 31 Dec 2020 21:44:28 +0100
+
 indi-duino (1.8) buster; urgency=medium
 
   * Added support for a OLED display

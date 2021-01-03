@@ -47,8 +47,10 @@ private:
     ChipWrapper *ccd;
     int x {0};
     int y {0};
-    int raw_x {0};  // Position in the raw-data comming in.
-    enum {b0, b1, b2} state = b0; // Which byte in the RAW12 format (see above).
+    int raw_x {0}; //! Position in the raw-data comming in.
+    int raw_y {0}; //! Position in the raw-data comming in.
+    int startRawX {0};
+    uint8_t state = 0; //! Which byte in the RAW12 format (see above).
 };
 
 #endif // RAW12TOBAYER16PIPELINE_H

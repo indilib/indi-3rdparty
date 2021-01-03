@@ -21,6 +21,7 @@
 #include <cstring>
 #include <stdexcept>
 #include "broadcompipeline.h"
+#include "inditest.h"
 
 void BroadcomPipeline::reset()
 {
@@ -58,6 +59,7 @@ void BroadcomPipeline::data_received(uint8_t  *data,  uint32_t length)
                 reinterpret_cast<uint8_t *>(&header.omx_data)[pos] = byte;
             }
             else if (pos >= (32767 - 8)) {
+                LOG_TEST("finished broadcom processing");
                 state = State::FORWARDING;
             }
             pos++;

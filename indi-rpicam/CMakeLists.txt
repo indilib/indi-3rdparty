@@ -34,9 +34,8 @@ include_directories(${INDI_INCLUDE_DIR})
 include_directories(${MMAL_INCLUDE_DIR})
 include_directories(${CFITSIO_INCLUDE_DIR})
 
-set(INDI_RPICAM_SRCS
+set(LIB_RPICAM_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/mmalcamera.cpp
-   ${CMAKE_CURRENT_SOURCE_DIR}/indi_rpicam.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/mmaldriver.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/mmalencoder.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/mmalexception.cpp
@@ -50,9 +49,12 @@ set(INDI_RPICAM_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/pipetee.cpp
 )
 
-add_executable(indi_rpicam ${INDI_RPICAM_SRCS})
+add_library(rpicam STATIC ${LIB_RPICAM_SRCS})
+
+add_executable(indi_rpicam ${CMAKE_CURRENT_SOURCE_DIR}/indi_rpicam.cpp)
 
 target_link_libraries(indi_rpicam
+    rpicam
     ${INDI_DRIVER_LIBRARIES}
     ${CFITSIO_LIBRARIES}
     ${INDI_LIBRARIES}

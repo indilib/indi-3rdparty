@@ -27,25 +27,62 @@
 #include "cameracontrol.h"
 #include "mmalexception.h"
 #include "pipeline.h"
+#include "inditest.h"
 
 CameraControl::CameraControl()
 {
+    LOG_TEST("enter");
     camera.reset(new MMALCamera(0));
-    encoder.reset(new MMALEncoder());   // Seems using an encoder is required to get to the raw data.
-    encoder->add_port_listener(this);
 
-    camera->connect(2, encoder.get(), 0); // Connected the capture port to the encoder.
+    camera->setCapturePortFormat();
 
+    encoder.reset(new MMALEncoder());
+    encoder->add_buffer_listener(this);
     encoder->activate();
+
+    camera->enableComponent();
 }
 
 CameraControl::~CameraControl()
 {
+    LOG_TEST("enter");
+    camera->disableComponent();
+    encoder.reset();
+}
+
+void CameraControl::startCapture()
+{
+    camera->connect(MMALCamera::CAPTURE_PORT_NO, encoder.get(), 0); // Connected the capture port to the encoder.
+
+    camera->setExposureParameters(gain, shutter_speed);
+
+    LOGF_TEST("shutter speed after enabling camera: %d", camera->getShutterSpeed());
+
+    if (capture_listeners.size() == 0) {
+        throw MMALException("No capture listeners registered, refusing to do capture.");
+    }
+
+#ifndef NDEBUG
+    buffer_processing_time = std::chrono::duration<double>::zero();
+#endif
+
+    camera->startCapture();
+
+    start_time = std::chrono::steady_clock::now();
+    print_first = true;
+}
+
+void CameraControl::stopCapture()
+{
+    LOGF_TEST("total time consumed by buffer processing: %f", buffer_processing_time.count());
+    camera->stopCapture();
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+    LOGF_TEST("exposure stopped after %f s", diff.count());
+    camera->disconnect();
 }
 
 /**
- * @brief CameraControl::buffer_received Buffer received to what ever we are listened to.
- * This method is responsible to feed image data to the indi-driver code.
+ * @brief Buffer received from a port.
  * @param port
  * @param buffer
  */
@@ -66,43 +103,33 @@ void CameraControl::buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
     }
 }
 
-/**
- * @brief CameraControl::capture Start thread to perform the actual capture.
- */
-void CameraControl::start_capture()
-{
-    if (capture_listeners.size() == 0) {
-        throw std::runtime_error("No capture listeners registered, start_capture not possible.");
-    }
-
-    camera->set_camera_parameters();
-    camera->capture();
-    start_time = std::chrono::steady_clock::now();
-}
-
-/**
- * @brief CameraControl::stop_capture Tell camera object to stop capturing.
- */
-void CameraControl::stop_capture()
-{
-    camera->abort();
-    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
-    fprintf(stderr, "exposure aborted after %f s\n", diff.count());
-}
-
 void CameraControl::signal_data_received(uint8_t *data, uint32_t length)
 {
+#ifndef NDEBUG
+    std::chrono::steady_clock::time_point buffer_start_time = std::chrono::steady_clock::now();
+#endif
+
+    if (print_first) {
+        std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+        LOGF_TEST("first buffer received after %f s", diff.count());
+        print_first = false;
+    }
+
     for(auto p : pipelines) {
         p->data_received(data, length);
     }
+
+#ifndef NDEBUG
+    buffer_processing_time += std::chrono::steady_clock::now() - buffer_start_time;
+#endif
 }
 
 void CameraControl::signal_complete()
 {
     std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
-    fprintf(stderr, "exposure finished after %f s\n", diff.count());
+    LOGF_TEST("all buffers received after %f s", diff.count());
     for(auto p : capture_listeners) {
         p->capture_complete();
     }
+    stopCapture();
 }
-

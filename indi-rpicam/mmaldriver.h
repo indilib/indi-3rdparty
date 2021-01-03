@@ -24,6 +24,7 @@
 #include <indiccd.h>
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include "cameracontrol.h"
 #include "jpegpipeline.h"
 #include "broadcompipeline.h"
@@ -71,10 +72,10 @@ protected:
 private:
   // Utility functions
   double CalcTimeLeft();
-  void setupParams();
-  void grabImage();
-  void updateFrameBufferSize();
   void assert_framebuffer(INDI::CCDChip *ccd);
+
+  /** Setup the pipeline of buffer processors, depending of camera type. */
+  void setupPipeline();
 
   // Struct to keep timing
   struct timeval ExpStart { 0, 0 };

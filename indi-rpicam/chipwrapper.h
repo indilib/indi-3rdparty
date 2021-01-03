@@ -45,13 +45,12 @@ public:
         return chip->getFrameBuffer();
     }
 
-    virtual int getXRes() {
-        return chip->getXRes();
-    }
-
-    virtual int getYRes() {
-        return chip->getYRes();
-    }
+    virtual int getSubX() { return chip->getSubX(); }
+    virtual int getSubY() { return chip->getSubY(); }
+    virtual int getSubW() { return chip->getSubW(); }
+    virtual int getSubH() { return chip->getSubH(); }
+    virtual int getXRes() { return chip->getXRes(); }
+    virtual int getYRes() { return chip->getYRes(); }
 
 private:
     INDI::CCDChip *chip {nullptr};

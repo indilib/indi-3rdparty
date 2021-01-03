@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdexcept>
 #include "jpegpipeline.h"
+#include "inditest.h"
 
 void JpegPipeline::reset()
 {
@@ -127,6 +128,7 @@ void JpegPipeline::reset()
                 break;
 
             case 0xd9: // EOI (End of image)
+                LOG_TEST("finished jpeg processing"); 
                 state = State::END_OF_JPEG;
                 break;
 

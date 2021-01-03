@@ -2,8 +2,6 @@
 This is an INDI driver for Raspberry Pi High Quality Camera.
 
 ## Long exposures
-In order to use exposures longer than 1 second is problematic.
-The problem really seems to be related to the HIQ-camera and not to this driver.
 For long exposures to work one must first first grab a waste-frame with the desired exposure time.
 Once this is done, the exposure works as usual.
 

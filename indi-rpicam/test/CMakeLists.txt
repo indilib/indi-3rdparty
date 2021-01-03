@@ -16,23 +16,22 @@ INCLUDE_DIRECTORIES ( ${GTEST_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES ( ${GMOCK_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES ( ${CMAKE_SOURCE_DIR} )
 
-SET (test_mmaldriver_SRCS
-	test_mmaldriver.cpp ${INDI_RPICAM_SRCS}
-)
+SET (test_imx477_SRCS test_imx477.cpp ${CMAKE_SOURCE_DIR}/indi_rpicam.cpp)
+SET (test_imx219_SRCS test_imx219.cpp ${CMAKE_SOURCE_DIR}/indi_rpicam.cpp)
 
 if (NOT MSVC)
     set (PTHREAD_LIBRARIES -pthread)
 endif()
 
-ADD_EXECUTABLE(test_mmaldriver
-	${test_mmaldriver_SRCS}
-)
+ADD_EXECUTABLE(test_imx477 ${test_imx477_SRCS})
+ADD_EXECUTABLE(test_imx219 ${test_imx219_SRCS})
 
 if (NOT MSVC)
     set (PTHREAD_LIBRARIES -pthread)
 endif()
 
-target_link_libraries(test_mmaldriver 
+SET (test_libs
+        rpicam
         ${INDI_DRIVER_LIBRARIES}
         ${CFITSIO_LIBRARIES}
         ${GTEST_BOTH_LIBRARIES}
@@ -43,4 +42,8 @@ target_link_libraries(test_mmaldriver
         ${PTHREAD_LIBRARIES} 
         ${CMAKE_DL_LIBS})
 
-ADD_TEST(test_mmaldriver test_mmaldriver)
+target_link_libraries(test_imx477 ${test_libs})
+target_link_libraries(test_imx219 ${test_libs})
+
+ADD_TEST(test_imx477 test_imx477)
+ADD_TEST(test_imx219 test_imx219)
