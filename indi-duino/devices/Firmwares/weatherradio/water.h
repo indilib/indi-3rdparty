@@ -1,7 +1,7 @@
 /*  Functions for water detection using a rain sensor such as  
     https://create.arduino.cc/projecthub/MisterBotBreak/how-to-use-a-rain-sensor-bcecd9
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
+    Copyright (C) 2021 Mark Cheverton <mark.cheverton@ecafe.org>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
