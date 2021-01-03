@@ -22,6 +22,9 @@ For building your own weather station, you need
   * **MLX90614** for cloud detection
   * **TSL2591** for measuring light and determining the sky quality
   * [Davis Instruments Anemometer](https://www.davisinstruments.com/product/anemometer-for-vantage-pro2-vantage-pro/) for measuring wind speed and wind direction
+  * Tipping bucket based rain sensors like [Hydreon Rain Sensors](https://rainsensors.com)
+  * Resistor based rain drop sensors (see [this example](https://create.arduino.cc/projecthub/MisterBotBreak/how-to-use-a-rain-sensor-bcecd9))
+  * SSD1306 based OLED displays
 * A housing
 
 ## Connecting Sensors to the Arduino
@@ -43,6 +46,11 @@ So before you solder everything together, it is a good idea to install everythin
 ![Breadboard sample](weatherradio/img/breadboard_480px.jpg)
 
 In this example, the SDA port of the two sensors is connected to D2 (black wire), SCL to D1 (white wire), VIN (3.3V, red wire), GND (brown wire).
+
+## Adding an OLED Display
+In case that you want to show the your sensor data directly on your weather station, you may attach an SSD1306 based OLED to your Arduino. Connecting the display itself is quite trivial, since the display can be attached to the I2C bus.
+
+The display has a configurable timeout turning off the display. If you want to use this feature, you need to add a push button to one of the digital ports of the Arduino. The port can be configured with the OLED_BUTTONPIN variable in config.h. The button should connect the digital port to +5V/+3.3V if it is closed. Additionally, add a 47k pull down resistor connected to GND.
 
 ## Firmware Installation
 For installing the firmware onto a Arduino, you first need the [Arduino IDE](https://www.arduino.cc/en/Main/Software). Download it for our operating system of choice and install it.
