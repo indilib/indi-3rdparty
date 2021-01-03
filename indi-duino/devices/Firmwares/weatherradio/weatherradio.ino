@@ -28,7 +28,7 @@ struct {
   unsigned long tsl237_read;
   unsigned long tsl2591_read;
   unsigned long davis_read;
-  unsigned long rain_read;
+  unsigned long water_read;
 } sensor_read;
 
 void updateDisplayText() {
@@ -106,11 +106,11 @@ void updateSensorData() {
   sensor_read.tsl2591_read = millis() - start;
 #endif //USE_TSL2591_SENSOR
 
-#ifdef USE_RAIN_SENSOR
+#ifdef USE_WATER_SENSOR
   start = millis();
-  updaterain();
-  sensor_read.rain_read = millis() - start;
-#endif //USE_RAIN_SENSOR
+  updatewater();
+  sensor_read.water_read = millis() - start;
+#endif //USE_WATER_SENSOR
 
   // set the flag for display text refresh
 #ifdef USE_OLED
@@ -130,7 +130,7 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(3) + // TSL237 sensor
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(2);  // Rain sensor
+                      JSON_OBJECT_SIZE(2);  // Water sensor
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -159,9 +159,9 @@ String getSensorData(bool pretty) {
   serializeTSL2591(weatherDoc);
 #endif //USE_TSL2591_SENSOR
 
-#ifdef USE_RAIN_SENSOR
-  serializerain(weatherDoc);
-#endif //USE_RAIN_SENSOR
+#ifdef USE_WATER_SENSOR
+  serializewater(weatherDoc);
+#endif //USE_WATER_SENSOR
 
   String result = "";
   if (pretty)
@@ -203,9 +203,9 @@ String getReadDurations() {
 #ifdef USE_DAVIS_SENSOR
   if (anemometerData.status) doc["Davis Anemometer"] = sensor_read.davis_read;
 #endif //USE_DAVIS_SENSOR
-#ifdef USE_RAIN_SENSOR
-  if (rainData.status)       doc["Rain"]             = sensor_read.rain_read;
-#endif //USE_RAIN_SENSOR
+#ifdef USE_WATER_SENSOR
+  if (waterData.status)       doc["Water"]             = sensor_read.water_read;
+#endif //USE_WATER_SENSOR
 
   String result = "";
   serializeJson(doc, result);
@@ -219,7 +219,7 @@ String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(6) + // max 6 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(1) + // Rain sensor
+                      JSON_OBJECT_SIZE(1) + // Water sensor
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(3) + // OTA
@@ -245,9 +245,9 @@ String getCurrentConfig() {
   davisdata["wind direction offset"] = ANEMOMETER_WINDOFFSET;
 #endif
 
-#ifdef USE_RAIN_SENSOR
-  JsonObject raindata = doc.createNestedObject("Rain");
-  raindata["pin"] = RAIN_PIN;
+#ifdef USE_WATER_SENSOR
+  JsonObject waterdata = doc.createNestedObject("Water");
+  waterdata["pin"] = WATER_PIN;
 #endif
 
 #ifdef USE_WIFI
