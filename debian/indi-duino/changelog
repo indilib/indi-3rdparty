@@ -1,3 +1,11 @@
+indi-duino (1.10) buster; urgency=medium
+
+  * Bucket tipping rain sensor support added
+  * Resistor based water sensor support added
+  * Button handling reworked based upon OneButton
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 03 Jan 2021 19:56:09 +0100
+
 indi-duino (1.9.1) buster; urgency=medium
 
   * Bug fix ensuring that OTA is started after WiFi connection is established

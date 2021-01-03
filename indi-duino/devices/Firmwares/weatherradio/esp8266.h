@@ -66,7 +66,7 @@ void connectWiFi() {
     esp8266Data.status = WIFI_CONNECTED;
     esp8266Data.retry_count = 0;
     refreshDisplay();
-    Serial.println("succeeded.");
+    Serial.println(" succeeded.");
   } else {
     WiFi.begin(esp8266Data.ssid, esp8266Data.password);
     if (WiFi.status() == WL_CONNECTED) {
@@ -74,7 +74,7 @@ void connectWiFi() {
       // reset retry counter
       esp8266Data.retry_count = 0;
       refreshDisplay();
-      Serial.println("succeeded.");
+      Serial.println(" succeeded.");
     } else {
       // increase retry counter
       esp8266Data.retry_count++;
@@ -85,7 +85,7 @@ void connectWiFi() {
       } else {
         esp8266Data.status =  WIFI_CONNECTION_FAILED;
         refreshDisplay();
-        Serial.println("failed!");
+        Serial.println(" failed!");
       }
     }
   }
@@ -200,7 +200,7 @@ void parseCredentials(String input) {
 String displayWiFiParameters() {
   String result = "WiFi: " + WiFi.SSID();
   if (WiFi.status() == WL_CONNECTED) {
-    result += "\n ip: " + WiFi.localIP().toString() + "\n";
+    result += "\n IP: " + WiFi.localIP().toString() + "\n";
   } else {
     result += "\n status: disconnected\n";
   }
