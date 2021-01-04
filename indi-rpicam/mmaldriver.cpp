@@ -140,10 +140,6 @@ bool MMALDriver::Connect()
 
     camera_control.reset(new CameraControl());
 
-    //    // FIXME: Seems the HIQ-camera is quite buggy, it needs the mmal_component to be opened twice
-    //    camera_control.reset(); // Since the reset below would allocate the second camera object before the first got deleted.
-    //    camera_control.reset(new CameraControl());
-
     camera_control->add_capture_listener(this);
 
     setupPipeline();
@@ -209,8 +205,7 @@ bool MMALDriver::initProperties()
     IUFillSwitch(&mIsoS[1], "ISO_200", "200", ISS_OFF);
     IUFillSwitch(&mIsoS[2], "ISO_400", "400", ISS_ON);
     IUFillSwitch(&mIsoS[3], "ISO_800", "800", ISS_OFF);
-    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60,
-                       IPS_IDLE);
+    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 #endif
 
     // CCD Gain
@@ -447,6 +442,9 @@ void MMALDriver::TimerHit()
             // We're no longer exposing...
             ccdBufferLock.unlock();
             InExposure = false;
+
+            // Stop capturing (must be done from main thread).
+            camera_control->stopCapture();
 
             // Let INDI::CCD know we're done filling the image buffer
             LOG_DEBUG("Exposure complete.");

@@ -17,7 +17,7 @@ include(GNUInstallDirs)
 include(CMakeCommon)
 
 find_package(MMAL REQUIRED)
-find_package(INDI REQUIRED)
+find_package(INDI COMPONENTS driver REQUIRED)
 find_package(CFITSIO REQUIRED)
 find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
