@@ -7,7 +7,7 @@ DEB_SRCDIR=libasi
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
 
 # ASICAM version
-ASICAM_VERSION=1.16
+ASICAM_VERSION=1.16.3
 ASICAM_SO_VERSION= 1
 
 # ASIEFW Version
