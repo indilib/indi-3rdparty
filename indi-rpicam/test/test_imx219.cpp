@@ -117,6 +117,7 @@ public:
             sleep(1);
         }
         fprintf(stderr, "Capture done\n");
+        stopCapture();
 
         // Dump raw-file if requested.
         if (fname) {
@@ -254,5 +255,6 @@ int main(int argc, char **argv)
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
 
+    get_bias_photons();
     return RUN_ALL_TESTS();
 }
