@@ -157,9 +157,8 @@ bool MMALDriver::Connect()
                  camera_control->get_camera()->xPixelSize,
                  camera_control->get_camera()->yPixelSize);
 
-//    // Should probably not be called by the subclass of CCD - not clear.
-//    UpdateCCDFrame(0, 0, static_cast<int>(camera_control->get_camera()->get_width()),
-//                   static_cast<int>(camera_control->get_camera()->get_height()));
+    uint32_t nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    PrimaryCCD.setFrameBufferSize(nbuf);
 
     return true;
 }
@@ -312,6 +311,8 @@ bool MMALDriver::UpdateCCDFrame(int x, int y, int w, int h)
 bool MMALDriver::StartExposure(float duration)
 {
     LOGF_DEBUG("%s(%f)", __FUNCTION__, duration);
+    assert(PrimaryCCD.getFrameBuffer() != 0);
+
 
     if (InExposure)
     {
