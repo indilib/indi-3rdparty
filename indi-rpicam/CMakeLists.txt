@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.0)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 PROJECT(indi_rpicam CXX C)
 
 set(INDI_RPICAM_VERSION_MAJOR 1)
-set(INDI_RPICAM_VERSION_MINOR 2)
+set(INDI_RPICAM_VERSION_MINOR 3)
 
 set(CMAKE_PREFIX_PATH /opt/vc)
 
@@ -83,5 +83,23 @@ IF (GTEST_FOUND)
 ELSE()
   MESSAGE (STATUS  "GTEST not found, not building unit tests")
 ENDIF (GTEST_FOUND)
+
+# ARM specific flags
+include(FindARM.cmake)
+IF (NEON_FOUND)
+  MESSAGE(STATUS "Neon found with compiler flag : -mfpu=neon -D__NEON__")
+  SET(CMAKE_C_FLAGS "-mfpu=neon -D__NEON__ -ftree-vectorize ${CMAKE_C_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "-mfpu=neon -D__NEON__ -ftree-vectorize ${CMAKE_CXX_FLAGS}")
+ENDIF (NEON_FOUND)
+IF (CORTEXA8_FOUND)
+  MESSAGE(STATUS "Cortex-A8 Found with compiler flag : -mcpu=cortex-a8")
+  SET(CMAKE_C_FLAGS "-mcpu=cortex-a8 -fprefetch-loop-arrays ${CMAKE_C_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "-mcpu=cortex-a8 -fprefetch-loop-arrays ${CMAKE_CXX_FLAGS}")
+ENDIF (CORTEXA8_FOUND)
+IF (CORTEXA9_FOUND)
+  MESSAGE(STATUS "Cortex-A9 Found with compiler flag : -mcpu=cortex-a9")
+  SET(CMAKE_C_FLAGS "-mcpu=cortex-a9 ${CMAKE_C_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "-mcpu=cortex-a9 ${CMAKE_CXX_FLAGS}")
+ENDIF (CORTEXA9_FOUND)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_rpicam.xml CONFIGURATIONS Release DESTINATION ${INDI_DATA_DIR})

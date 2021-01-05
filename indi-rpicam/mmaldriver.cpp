@@ -153,9 +153,8 @@ bool MMALDriver::Connect()
                  camera_control->get_camera()->xPixelSize,
                  camera_control->get_camera()->yPixelSize);
 
-//    // Should probably not be called by the subclass of CCD - not clear.
-//    UpdateCCDFrame(0, 0, static_cast<int>(camera_control->get_camera()->get_width()),
-//                   static_cast<int>(camera_control->get_camera()->get_height()));
+    uint32_t nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    PrimaryCCD.setFrameBufferSize(nbuf);
 
     return true;
 }
@@ -307,6 +306,8 @@ bool MMALDriver::UpdateCCDFrame(int x, int y, int w, int h)
 bool MMALDriver::StartExposure(float duration)
 {
     LOGF_DEBUG("%s(%f)", __FUNCTION__, duration);
+    assert(PrimaryCCD.getFrameBuffer() != 0);
+
 
     if (InExposure)
     {
@@ -565,6 +566,18 @@ void MMALDriver::setupPipeline()
         Raw12ToBayer16Pipeline *raw12_pipe = new Raw12ToBayer16Pipeline(brcm_pipe, &chipWrapper);
         brcm_pipe->daisyChain(raw12_pipe);
     }
+    else if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+        
+
+        raw_pipe.reset(new JpegPipeline());
+
+        BroadcomPipeline *brcm_pipe = new BroadcomPipeline();
+        raw_pipe->daisyChain(brcm_pipe);
+
+        Raw10ToBayer16Pipeline *raw10_pipe = new Raw10ToBayer16Pipeline(brcm_pipe, &chipWrapper);
+        // receiver->daisyChain(&raw_writer);
+        brcm_pipe->daisyChain(raw10_pipe);
+    }    
     else if (!strcmp(camera_control->get_camera()->getModel(), "imx219"))
     {
         raw_pipe.reset(new JpegPipeline());

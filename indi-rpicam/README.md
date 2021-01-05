@@ -1,5 +1,5 @@
 # indi_rpicam
-This is an INDI driver for Raspberry Pi High Quality Camera.
+This is an INDI driver for Raspberry Pi High Quality Camera, the V2 camera (imx219 chip) and the V1 camera (omv5647 chip).
 
 ## Long exposures
 For long exposures to work one must first first grab a waste-frame with the desired exposure time.
