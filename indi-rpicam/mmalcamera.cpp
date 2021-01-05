@@ -260,6 +260,9 @@ void MMALCamera::getSensorInfo()
     if (!strcmp(cameraModel, "imx477")) {
         xPixelSize = yPixelSize = 1.55F;
     }
+    else if (!strcmp(cameraModel, "ov5647")) {
+        xPixelSize = yPixelSize = 1.4F;
+    }
     else if (!strcmp(cameraModel, "imx219")) {
         xPixelSize = yPixelSize = 1.12F;
     }

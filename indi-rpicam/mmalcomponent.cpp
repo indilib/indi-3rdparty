@@ -80,15 +80,9 @@ void MMALComponent::port_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffe
 {
     mmal_buffer_header_mem_lock(buffer);
 
-    try {
-        for(auto *l : buffer_listeners)
-        {
-            l->buffer_received(port, buffer);
-        }
-    }
-    catch (std::exception &e) {
-        mmal_buffer_header_mem_unlock(buffer);
-        throw e;
+    for(auto *l : buffer_listeners)
+    {
+        l->buffer_received(port, buffer);
     }
 
     mmal_buffer_header_mem_unlock(buffer);

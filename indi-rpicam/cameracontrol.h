@@ -64,6 +64,7 @@ private:
     bool print_first {true};
     double gain {1};
     uint32_t shutter_speed {100000};
+    bool is_capturing {false};
 
 #ifndef NDEBUG
     std::chrono::duration <double> buffer_processing_time {};

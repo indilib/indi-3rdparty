@@ -118,6 +118,7 @@ public:
             sleep(1);
         }
         printf("Capture done\n");
+        stopCapture();
 
         // Dump raw-file if requested.
         if (fname) {
