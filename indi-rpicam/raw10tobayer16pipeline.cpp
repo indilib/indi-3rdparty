@@ -141,7 +141,7 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
         }
         
         // Skip over bytes outside of sub frame
-        if(raw_x < startRawX || x >= maxX)
+        if(raw_x < startRawX || ( (x >= maxX) && (state != 4)))
         {
             uint32_t diff;
             if(raw_x < startRawX)
@@ -164,13 +164,11 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
         byte = *data;
 
         //At this point we are for sure within the raw y coordinates of the subframe and only need to check x range
-        if (raw_x >= startRawX && x < maxX) {
+        if (raw_x >= startRawX && x <= maxX) {
             // RAW according to experiment.
             switch(state)
             {
             case 0:
-                // FIXME: Optimize, if at least 5 bytes remaining here, all data can be calculated faster in one step.
-	        	// FIXME: upp the data to upper bits.
                 cur_row[x] = static_cast<uint16_t>(byte << 2);
                 x++;
                 state = 1;
