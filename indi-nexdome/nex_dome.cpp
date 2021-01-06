@@ -709,7 +709,7 @@ IPState NexDome::Park()
 
     LOGF_INFO("Parking to %.2f azimuth...", GetAxis1Park());
 
-    if (HasShutter() && IUFindOnSwitchIndex(&ShutterParkPolicySP) == SHUTTER_CLOSE_ON_PARK)
+    if (HasShutter() && ShutterParkPolicyS[SHUTTER_CLOSE_ON_PARK].s == ISS_ON)
     {
         LOG_INFO("Closing shutter on parking...");
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
@@ -726,7 +726,7 @@ IPState NexDome::Park()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::UnPark()
 {
-    if (HasShutter() && IUFindOnSwitchIndex(&ShutterParkPolicySP) == SHUTTER_OPEN_ON_UNPARK)
+    if (HasShutter() && ShutterParkPolicyS[SHUTTER_OPEN_ON_UNPARK].s == ISS_ON)
     {
         LOG_INFO("Opening shutter on unparking...");
         ControlShutter(ShutterOperation::SHUTTER_OPEN);
