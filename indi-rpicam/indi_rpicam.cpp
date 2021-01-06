@@ -18,10 +18,12 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <stdio.h>
 #include <memory>
 #include <string.h>
 
 #include "mmaldriver.h"
+#include "inditest.h"
 
 std::unique_ptr<MMALDriver> mmalDevice(new MMALDriver());
 
@@ -58,6 +60,7 @@ void ISNewNumber (const char *dev, const char *name, double values[], char *name
 ***************************************************************************************/
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
+    LOG_TEST("ISNewBLOB c-function called");
 	mmalDevice->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 /**************************************************************************************

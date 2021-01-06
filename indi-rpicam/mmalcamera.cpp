@@ -28,180 +28,157 @@
 #include "mmalcamera.h"
 #include "mmalexception.h"
 #include "mmalencoder.h"
+#include "inditest.h"
 
 MMALCamera::MMALCamera(int n) : MMALComponent(MMAL_COMPONENT_DEFAULT_CAMERA), cameraNum(n)
 {
-    MMAL_STATUS_T status;
+    LOG_TEST("entered");
 
-    MMAL_PARAMETER_INT32_T camera_num_param = {{MMAL_PARAMETER_CAMERA_NUM, sizeof(camera_num_param)}, cameraNum};
-    status = mmal_port_parameter_set(component->control, &camera_num_param.hdr);
-    MMALException::throw_if(status, "Could not select camera");
-    MMALException::throw_if(component->output_num == 0, "Camera doesn't have output ports");
+    selectCameraNumber(cameraNum);
 
-    status = mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG, 0);
-    MMALException::throw_if(status, "Could not set sensor mode");
+    getSensorInfo();
 
-    // Enable the camera, and tell it its control callback function
-    enable_port_with_callback(component->control);
+    // FIXME #001
+    selectSensorConfig(0 /* What ever 0 means */);
 
-    get_sensor_info();
+    configureCamera();
 
-    //  set up the camera configuration
-    {
-        MMAL_PARAMETER_CAMERA_CONFIG_T cam_config;
-        cam_config.hdr.id = MMAL_PARAMETER_CAMERA_CONFIG;
-        cam_config.hdr.size = sizeof cam_config;
-        cam_config.max_stills_w = width;
-        cam_config.max_stills_h = height;
-        cam_config.stills_yuv422 = 0;
-        cam_config.one_shot_stills = 1;
-        cam_config.max_preview_video_w = 1024;  // Must really be set, even though we are not interested in a preview.
-        cam_config.max_preview_video_h = 768;   // -''-
-        cam_config.num_preview_video_frames = 1;
-        cam_config.stills_capture_circular_buffer_height = 0;
-        cam_config.fast_preview_resume = 0;
-        cam_config.use_stc_timestamp = MMAL_PARAM_TIMESTAMP_MODE_RESET_STC;
+    getFPSRange();
 
-        status = mmal_port_parameter_set(component->control, &cam_config.hdr);
-        MMALException::throw_if(status, "Failed to set camera config");
-    }
+    // FIXME: moved from #001 to after sensor Enable the controlport so calls below works.
+    enablePort(component->control, false);
 
-    set_camera_parameters();
-
-    set_capture_port_format();
-
-    // Save cameras default FPG range.
-    MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {0, 0}, {0, 0}};
-    status = mmal_port_parameter_get(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
-    MMALException::throw_if(status, "Failed to get FPS range");
-
-    fps_low = fps_range.fps_low;
-    fps_high = fps_range.fps_high;
+    LOGF_TEST("fps_low=%d/%d, fps_high=%d/%d", fps_low.num, fps_low.den, fps_high.num, fps_high.den);
 }
 
 MMALCamera::~MMALCamera()
 {
-    MMAL_STATUS_T status;
-
-    if (component->output[MMAL_CAMERA_CAPTURE_PORT]->is_enabled) {
-        status = mmal_port_disable(component->output[MMAL_CAMERA_CAPTURE_PORT]);
-        MMALException::throw_if(status, "Failed to disable capture port");
+    if (component->output[CAPTURE_PORT_NO]->is_enabled) {
+        MMALException::throw_if(mmal_port_disable(component->output[CAPTURE_PORT_NO]), "Failed to disable capture port");
     }
 
     if(component->control->is_enabled) {
-        status = mmal_port_disable(component->control);
-        MMALException::throw_if(status, "Failed to disable control port");
+        MMALException::throw_if(mmal_port_disable(component->control), "Failed to disable control port");
     }
 }
 
 /**
- * @brief MMALCamera::capture Main exposure method.
- *
- * @param speed Shutter speed time in us.
- * @param iso ISO value.
+ * @brief Main exposure method.
  *
  * @return MMAL_SUCCESS if all OK, something else otherwise
  *
  */
-int MMALCamera::capture()
+void MMALCamera::startCapture()
 {
-    int exit_code = 0;
-    MMAL_STATUS_T status = MMAL_SUCCESS;
-
-    status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1);
-    MMALException::throw_if(status, "Failed to set raw capture");
-
-    // Gain settings
-    status = mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_ANALOG_GAIN, MMAL_RATIONAL_T {static_cast<int32_t>(gain * 65536), 65536});
-    MMALException::throw_if(status, "Failed to set analog gain");
-
-    // Exposure time
-    if(shutter_speed > 6000000)
-    {
-        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {5, 1000}, {166, 1000}};
-        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
-        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS very low range");
-    }
-    else if(shutter_speed > 1000000)
-    {
-         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {167, 1000}, {999, 1000}};
-        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
-        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS low range");
-    }
-    else
-    {
-        MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},fps_low, fps_high};
-        status = mmal_port_parameter_set(component->output[MMAL_CAMERA_CAPTURE_PORT], &fps_range.hdr);
-        MMALException::throw_if(status != MMAL_SUCCESS, "Failed to set FPS default range");
-    }
-
-    // FIXME: Seconds does not work completely ok.
-    status = mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, shutter_speed);
-    MMALException::throw_if(status, "Failed to set shutter speed");
-
-    status = mmal_component_enable(component);
-    MMALException::throw_if(status, "camera component couldn't be enabled");
-
     // Start capturing.
-    status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_CAPTURE, 1);
-    MMALException::throw_if(status, "Failed to start capture");
-
-    return exit_code;
+    LOGF_TEST("starting capture with speed %d", getShutterSpeed());
+    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[CAPTURE_PORT_NO], MMAL_PARAMETER_CAPTURE, 1), "Failed to start capture");
 }
 
-void MMALCamera::abort()
+void MMALCamera::stopCapture()
 {
-    MMAL_STATUS_T status = MMAL_SUCCESS;
-    status = mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_CAPTURE_PORT], MMAL_PARAMETER_CAPTURE, 0);
-    MMALException::throw_if(status, "Failed to abort capture");
+    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[CAPTURE_PORT_NO], MMAL_PARAMETER_CAPTURE, 0), "Failed to stop capture");
 
-    status = mmal_component_disable(component);
-    MMALException::throw_if(status, "camera component couldn't be enabled");
+    LOG_TEST("capture stopped");
 }
 
-void MMALCamera::set_camera_parameters()
+void MMALCamera::setExposureParameters(double gain, uint32_t shutter_speed)
 {
+    MMAL_PARAMETER_AWBMODE_T awb = {{MMAL_PARAMETER_AWB_MODE,sizeof awb}, MMAL_PARAM_AWBMODE_AUTO};
+    MMALException::throw_if(mmal_port_parameter_set(component->control, &awb.hdr), "Failed to set AWB mode");
+
     MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_SATURATION, MMAL_RATIONAL_T {10, 0}), "Failed to set saturation");
-    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_ISO, iso), "Failed to set ISO");
+
     MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_DIGITAL_GAIN, MMAL_RATIONAL_T {1, 1}), "Failed to set digital gain");
+
+#ifdef USE_ISO
+    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_ISO, iso), "Failed to set ISO");
+    LOGF_TEST("ISO set to %d", iso);
+#endif
+
     MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_BRIGHTNESS, MMAL_RATIONAL_T{50, 100}), "Failed to set brightness");
 
-    {
-        MMAL_PARAMETER_AWBMODE_T param = {{MMAL_PARAMETER_AWB_MODE,sizeof param}, MMAL_PARAM_AWBMODE_AUTO};
-        MMALException::throw_if(mmal_port_parameter_set(component->control, &param.hdr), "Failed to set AWB mode");
+    MMAL_PARAMETER_EXPOSUREMODE_T exposure = {{MMAL_PARAMETER_EXPOSURE_MODE, sizeof exposure}, MMAL_PARAM_EXPOSUREMODE_OFF};
+    MMALException::throw_if(mmal_port_parameter_set(component->control, &exposure.hdr), "Failed to set exposure mode");
+
+    MMAL_PARAMETER_INPUT_CROP_T crop_param = {{MMAL_PARAMETER_INPUT_CROP, sizeof crop_param}, crop};
+    MMALException::throw_if(mmal_port_parameter_set(component->control, &crop_param.hdr), "Failed to set ROI");
+    MMALException::throw_if(mmal_port_parameter_get(component->control, &crop_param.hdr), "Failed to get ROI");
+    LOGF_TEST("Camera crop set to %d,%d,%d,%d\n", crop_param.rect.x, crop_param.rect.y, crop_param.rect.width, crop_param.rect.height);
+
+    component->port[CAPTURE_PORT_NO]->buffer_size = component->port[CAPTURE_PORT_NO]->buffer_size_recommended;
+
+    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[VIDEO_PORT_NO], MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE),
+                            "Failed to turn on zero-copy for video port");
+
+    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[CAPTURE_PORT_NO], MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1), "Failed to set raw capture");
+
+    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_CAPTURE_STATS_PASS, MMAL_TRUE), "Failed to set CAPTURE_STATS_PASS");
+
+    // Exposure ranges
+    MMAL_RATIONAL_T low, high;
+    if(shutter_speed > 6000000) {
+        low = {5, 1000};
+        high = {166, 1000};
     }
-    {
-        MMAL_PARAMETER_EXPOSUREMODE_T param {{MMAL_PARAMETER_EXPOSURE_MODE, sizeof param}, MMAL_PARAM_EXPOSUREMODE_OFF};
-        MMALException::throw_if(mmal_port_parameter_set(component->control, &param.hdr), "Failed to set exposure mode");
+    else if(shutter_speed > 1000000) {
+        low = {167, 1000};
+        high = {999, 1000};
     }
-    {
-        MMAL_PARAMETER_INPUT_CROP_T crop = {{MMAL_PARAMETER_INPUT_CROP, sizeof(MMAL_PARAMETER_INPUT_CROP_T)}, {}};
-        crop.rect.x = (0);
-        crop.rect.y = (0);
-        crop.rect.width = (0x10000);
-        crop.rect.height = (0x10000);
-        MMALException::throw_if(mmal_port_parameter_set(component->control, &crop.hdr), "Failed to set ROI");
+    else {
+        low = fps_low;
+        high = fps_high;
+    }
+    LOGF_TEST("setting fps range %d/%d -> %d/%d", low.num, low.den, high.num, high.den);
+    MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, low, high};
+    MMALException::throw_if(mmal_port_parameter_set(component->output[CAPTURE_PORT_NO], &fps_range.hdr), "Failed to set FPS range");
+    MMALException::throw_if(mmal_port_parameter_get(component->output[CAPTURE_PORT_NO], &fps_range.hdr), "Failed to get FPS range");
+    if (fps_range.fps_low.num != low.num || fps_range.fps_low.den != low.den || 
+        fps_range.fps_high.num != high.num || fps_range.fps_high.den != high.den) {
+        LOGF_TEST("failed to set fps ranges: low range is %d/%d, high range is %d/%d",
+                fps_range.fps_low.num, fps_range.fps_low.den, fps_range.fps_high.num, fps_range.fps_high.den);
     }
 
-    component->port[MMAL_CAMERA_CAPTURE_PORT]->buffer_size = component->port[MMAL_CAMERA_CAPTURE_PORT]->buffer_size_recommended;
+    // Exposure time.
+    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, shutter_speed), "Failed to set shutter speed");
+    uint32_t actual_shutter_speed;
+    actual_shutter_speed = getShutterSpeed();
+    if (actual_shutter_speed < shutter_speed - 100000 || actual_shutter_speed > shutter_speed + 100000) {
+        LOGF_TEST("Failed to set shutter speed, requested %d but actual value is %d", shutter_speed, actual_shutter_speed); 
+    }
+    LOGF_TEST("shutter speed set to %d", actual_shutter_speed); 
 
-    MMALException::throw_if(mmal_port_parameter_set_boolean(component->output[MMAL_CAMERA_VIDEO_PORT], MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE), "Failed to turn on zero-copy for video port");
+    // Gain settings
+    MMALException::throw_if(mmal_port_parameter_set_rational(component->control, MMAL_PARAMETER_ANALOG_GAIN, MMAL_RATIONAL_T {static_cast<int32_t>(gain * 65536), 65536}),
+                            "Failed to set analog gain");
+    MMAL_RATIONAL_T actual_gain;
+    MMALException::throw_if(mmal_port_parameter_get_rational(component->control, MMAL_PARAMETER_ANALOG_GAIN, &actual_gain), "failed to get gain");
+    LOGF_TEST("gain set to %d/%d", actual_gain.num, actual_gain.den);
+}
+
+uint32_t MMALCamera::getShutterSpeed()
+{
+    uint32_t actual_shutter_speed;
+    MMALException::throw_if(mmal_port_parameter_get_uint32(component->control, MMAL_PARAMETER_SHUTTER_SPEED, &actual_shutter_speed), "Failed to get shutter speed");
+    return actual_shutter_speed;
 }
 
 /**
- * @brief MMALCamera::set_capture_port_format Set format for the output capture port.
+ * @brief Set format for the output capture port.
  */
-void MMALCamera::set_capture_port_format()
+void MMALCamera::setCapturePortFormat()
 {
-    MMAL_STATUS_T status {MMAL_EINVAL};
+    LOG_TEST("entered");
+    assert(component->is_enabled == 0);
+    assert(component->output[CAPTURE_PORT_NO]->is_enabled == 0);
 
     // Set our stills format on the stills (for encoder) port
-    MMAL_ES_FORMAT_T *format {component->output[MMAL_CAMERA_CAPTURE_PORT]->format};
+    MMAL_ES_FORMAT_T *format {component->output[CAPTURE_PORT_NO]->format};
 
     // Special case for raw format.
     format->encoding = MMAL_ENCODING_OPAQUE; format->encoding_variant = 0;
 
-    if (!mmal_util_rgb_order_fixed(component->output[MMAL_CAMERA_CAPTURE_PORT]))
+    if (!mmal_util_rgb_order_fixed(component->output[CAPTURE_PORT_NO]))
     {
        if (format->encoding == MMAL_ENCODING_RGB24)
           format->encoding = MMAL_ENCODING_BGR24;
@@ -221,52 +198,121 @@ void MMALCamera::set_capture_port_format()
     format->es->video.par.num = 1;
     format->es->video.par.den = 1;
 
-    status = mmal_port_format_commit(component->output[MMAL_CAMERA_CAPTURE_PORT]);
-    MMALException::throw_if(status, "camera capture port format couldn't be set");
+    MMALException::throw_if(mmal_port_format_commit(component->output[CAPTURE_PORT_NO]), "camera capture port format couldn't be set");
 }
 
 /**
- * @brief MMALCamera::get_sensor_size gets default size for camrea.
- * @param camera_num
- * @param camera_name
- * @param len Length of camera_name string
- * @param width
- * @param height
+ * @breif Sets the size of subframe.
  */
-void MMALCamera::get_sensor_info()
+void MMALCamera::set_crop(int x, int y, int w, int h)
 {
-   MMAL_COMPONENT_T *camera_info;
-   MMAL_STATUS_T status;
+    crop.x = x;
+    crop.y = y;
+    crop.width = w;
+    crop.height = h;
+}
 
-   // Try to get the camera name and maximum supported resolution
-   status = mmal_component_create(MMAL_COMPONENT_DEFAULT_CAMERA_INFO, &camera_info);
+/**
+ * @brief Gets default size for camrea.
+ */
+void MMALCamera::getSensorInfo()
+{
+    MMAL_COMPONENT_T *camera_info;
+    MMAL_STATUS_T status;
 
-   // Default to the OV5647 setup
-   strncpy(cameraName, "OV5647", sizeof cameraName);
+    // Try to get the camera name and maximum supported resolution
+    status = mmal_component_create(MMAL_COMPONENT_DEFAULT_CAMERA_INFO, &camera_info);
 
-   MMAL_PARAMETER_CAMERA_INFO_T param;
-   param.hdr.id = MMAL_PARAMETER_CAMERA_INFO;
-   param.hdr.size = sizeof(param)-4;  // Deliberately undersize to check firmware version
-   status = mmal_port_parameter_get(component->control, &param.hdr);
+    // Default to the OV5647 setup
+    strncpy(cameraModel, "OV5647", sizeof cameraModel);
 
-   if (status != MMAL_SUCCESS)
-   {
-       // Running on newer firmware
-       param.hdr.size = sizeof(param);
-       status = mmal_port_parameter_get(camera_info->control, &param.hdr);
-       MMALException::throw_if(status, "Failed to get camera parameters.");
-       MMALException::throw_if(param.num_cameras <= static_cast<uint32_t>(cameraNum), "Camera number not found.");
-      // Take the parameters from the first camera listed.
-      width = param.cameras[cameraNum].max_width;
-      height = param.cameras[cameraNum].max_height;
-      strncpy(cameraName, param.cameras[cameraNum].camera_name, sizeof cameraName);
-      cameraName[sizeof cameraName - 1] = 0;
-   }
-   else {
-       // default to OV5647 if nothing detected..
-      width = 2592;
-      height = 1944;
-   }
+    MMAL_PARAMETER_CAMERA_INFO_T param;
+    param.hdr.id = MMAL_PARAMETER_CAMERA_INFO;
+    param.hdr.size = sizeof(param) - 4;  // Deliberately undersize to check firmware version
+    status = mmal_port_parameter_get(component->control, &param.hdr);
 
-   mmal_component_destroy(camera_info);
+    if (status != MMAL_SUCCESS)
+    {
+        // Running on newer firmware
+        param.hdr.size = sizeof(param);
+        status = mmal_port_parameter_get(camera_info->control, &param.hdr);
+        MMALException::throw_if(status, "Failed to get camera parameters.");
+        MMALException::throw_if(param.num_cameras <= static_cast<uint32_t>(cameraNum), "Camera number not found.");
+        // Take the parameters from the first camera listed.
+        width = param.cameras[cameraNum].max_width;
+        height = param.cameras[cameraNum].max_height;
+        strncpy(cameraModel, param.cameras[cameraNum].camera_name, sizeof cameraModel);
+        cameraModel[sizeof cameraModel - 1] = 0;
+    }
+    else {
+        // default to OV5647 if nothing detected..
+        width = 2592;
+        height = 1944;
+    }
+
+    mmal_component_destroy(camera_info);
+
+    /** Workaround for faulty model name. */
+    if (!strcmp(cameraModel, "testc")) {
+        strncpy(cameraModel, "imx477", sizeof cameraModel);
+    }
+   
+    if (!strcmp(cameraModel, "imx477")) {
+        xPixelSize = yPixelSize = 1.55F;
+    }
+    else if (!strcmp(cameraModel, "ov5647")) {
+        xPixelSize = yPixelSize = 1.4F;
+    }
+    else if (!strcmp(cameraModel, "imx219")) {
+        xPixelSize = yPixelSize = 1.12F;
+    }
+    else {
+        throw MMALException("Unsupported camera");
+    }
+
+    LOGF_TEST("width=%d, height=%d", width, height);
+}
+
+/*
+ *  Helper functions.
+ */
+void MMALCamera::selectCameraNumber(uint32_t n)
+{
+    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_CAMERA_NUM, n), "Could not select camera number");
+}
+
+void MMALCamera::selectSensorConfig(uint32_t config)
+{
+    MMALException::throw_if(mmal_port_parameter_set_uint32(component->control, MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG, config), "Could not set sensor mode");
+}
+
+void MMALCamera::configureCamera()
+{
+    //  set up the camera configuration
+    MMAL_PARAMETER_CAMERA_CONFIG_T cam_config;
+
+    cam_config.hdr.id = MMAL_PARAMETER_CAMERA_CONFIG;
+    cam_config.hdr.size = sizeof cam_config;
+    cam_config.max_stills_w = width;
+    cam_config.max_stills_h = height;
+    cam_config.stills_yuv422 = 0;
+    cam_config.one_shot_stills = 1;
+    cam_config.max_preview_video_w = 1024;  // Must really be set, even though we are not interested in a preview.
+    cam_config.max_preview_video_h = 768;   // -''-
+    cam_config.num_preview_video_frames = 1;
+    cam_config.stills_capture_circular_buffer_height = 0;
+    cam_config.fast_preview_resume = 0;
+    cam_config.use_stc_timestamp = MMAL_PARAM_TIMESTAMP_MODE_RESET_STC;
+
+    MMALException::throw_if(mmal_port_parameter_set(component->control, &cam_config.hdr), "Failed to set camera config");
+}
+
+void MMALCamera::getFPSRange()
+{
+    // Save cameras default FPS range.
+    MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)}, {0, 0}, {0, 0}};
+    MMALException::throw_if(mmal_port_parameter_get(component->output[CAPTURE_PORT_NO], &fps_range.hdr), "Failed to get FPS range");
+
+    fps_low = fps_range.fps_low;
+    fps_high = fps_range.fps_high;
 }

@@ -25,9 +25,7 @@
 #include "pipeline.h"
 
 struct BroadcomPipeline;
-namespace INDI {
-class CCDChip;
-};
+class ChipWrapper;
 
 /**
  * @brief The Raw10ToBayer16Pipeline class
@@ -38,19 +36,27 @@ class CCDChip;
 class Raw10ToBayer16Pipeline : public Pipeline
 {
 public:
-    Raw10ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, INDI::CCDChip *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
+    Raw10ToBayer16Pipeline(const BroadcomPipeline *bcm_pipe, ChipWrapper *ccd) : Pipeline(), bcm_pipe(bcm_pipe), ccd(ccd) {}
 
-    virtual void acceptByte(uint8_t byte) override;
+    virtual void data_received(uint8_t *data,  uint32_t length) override;
     virtual void reset() override;
 
 private:
+    void next_line(uint32_t maxX);
     const BroadcomPipeline *bcm_pipe;
-    INDI::CCDChip *ccd;
-    int x {0};
-    int y {0};
-    int pos {0};
-    int raw_x {0};  // Position in the raw-data comming in.
-    enum {b0, b1, b2, b3, b4} state = b0; // Which byte in the RAW10 format.
+    ChipWrapper *ccd;
+    uint32_t x {0};
+    uint32_t y {0};
+    uint32_t raw_x {0};  // Position in the raw-data comming in.
+    uint32_t raw_y {0};  //! Position in the raw-data comming in.
+    uint32_t startRawX {0};
+    uint32_t startRawY {0};
+    uint8_t state = 0;
+    uint16_t* frame_buffer;
+    uint32_t raw_width{0};
+    uint32_t xRes, yRes = 0;
+    uint16_t* cur_row {0};
+    uint32_t bytes_consumed = 0;
 };
 
 #endif // RAW10TOBAYER16PIPELINE_H

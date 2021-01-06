@@ -21,30 +21,79 @@
 #include <stdio.h>
 #include <bcm_host.h>
 #include <stdexcept>
+#include <chrono>
 
 #include <mmal_logging.h>
 #include "cameracontrol.h"
 #include "mmalexception.h"
-#include "pixellistener.h"
+#include "pipeline.h"
+#include "inditest.h"
 
 CameraControl::CameraControl()
 {
+    LOG_TEST("enter");
     camera.reset(new MMALCamera(0));
+
+    camera->setCapturePortFormat();
+
     encoder.reset(new MMALEncoder());
-    encoder->add_port_listener(this);
-
-    camera->connect(2, encoder.get(), 0); // Connected the capture port to the encoder.
-
+    encoder->add_buffer_listener(this);
     encoder->activate();
+
+    camera->enableComponent();
 }
 
 CameraControl::~CameraControl()
 {
+    LOG_TEST("enter");
+    camera->disableComponent();
+    encoder.reset();
+}
+
+void CameraControl::startCapture()
+{
+    LOG_TEST("entered");
+    if (is_capturing) {
+        LOG_TEST("camera is already capturing..");
+        return;
+    }
+    camera->connect(MMALCamera::CAPTURE_PORT_NO, encoder.get(), 0); // Connected the capture port to the encoder.
+
+    camera->setExposureParameters(gain, shutter_speed);
+
+    LOGF_TEST("shutter speed after enabling camera: %d", camera->getShutterSpeed());
+
+    if (capture_listeners.size() == 0) {
+        throw MMALException("No capture listeners registered, refusing to do capture.");
+    }
+
+#ifndef NDEBUG
+    buffer_processing_time = std::chrono::duration<double>::zero();
+#endif
+
+    camera->startCapture();
+    is_capturing = true;
+
+    start_time = std::chrono::steady_clock::now();
+    print_first = true;
+}
+
+void CameraControl::stopCapture()
+{
+    LOGF_TEST("total time consumed by buffer processing: %f", buffer_processing_time.count());
+    if (!is_capturing) {
+        LOG_TEST("camera is not capturing..");
+        return;
+    }
+    camera->stopCapture();
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+    LOGF_TEST("exposure stopped after %f s", diff.count());
+    camera->disconnect();
+    is_capturing = false;
 }
 
 /**
- * @brief CameraControl::buffer_received Buffer received to what ever we are listened to.
- * This method is responsible to feed image data to the indi-driver code.
+ * @brief Buffer received from a port.
  * @param port
  * @param buffer
  */
@@ -55,33 +104,42 @@ void CameraControl::buffer_received(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
         assert(buffer->type->video.planes == 1);
 
         if (buffer->length) {
-            for(auto l : pixel_listeners) {
-                l->pixels_received(buffer->data + buffer->offset, buffer->length);
-            }
+            signal_data_received(buffer->data + buffer->offset, buffer->length);
         }
 
-        // Now flag if we have completed
+        // Signal if completed
         if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_EOS | MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED)) {
-            for(auto l : pixel_listeners) {
-                l->capture_complete();
-            }
-            camera->abort();
+            signal_complete();
         }
     }
 }
 
-/**
- * @brief CameraControl::capture Start thread to perform the actual capture.
- */
-void CameraControl::start_capture()
+void CameraControl::signal_data_received(uint8_t *data, uint32_t length)
 {
-    camera->capture();
+#ifndef NDEBUG
+    std::chrono::steady_clock::time_point buffer_start_time = std::chrono::steady_clock::now();
+#endif
+
+    if (print_first) {
+        std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+        LOGF_TEST("first buffer received after %f s", diff.count());
+        print_first = false;
+    }
+
+    for(auto p : pipelines) {
+        p->data_received(data, length);
+    }
+
+#ifndef NDEBUG
+    buffer_processing_time += std::chrono::steady_clock::now() - buffer_start_time;
+#endif
 }
 
-/**
- * @brief CameraControl::stop_capture Tell camera object to stop capturing.
- */
-void CameraControl::stop_capture()
+void CameraControl::signal_complete()
 {
-    camera->abort();
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
+    LOGF_TEST("all buffers received after %f s", diff.count());
+    for(auto p : capture_listeners) {
+        p->capture_complete();
+    }
 }

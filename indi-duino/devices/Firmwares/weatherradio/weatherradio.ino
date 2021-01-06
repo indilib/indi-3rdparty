@@ -28,16 +28,52 @@ struct {
   unsigned long tsl237_read;
   unsigned long tsl2591_read;
   unsigned long davis_read;
+  unsigned long water_read;
+  unsigned long rainsensor_read;
 } sensor_read;
 
+void updateDisplayText() {
+#ifdef USE_OLED
+  String result = "";
+  result += "Weather Radio V ";
+  result += WEATHERRADIO_VERSION;
+  result += " \n \n";
+#ifdef USE_WIFI
+  result += displayWiFiParameters() + " \n";
+#endif //USE_WIFI
+#ifdef USE_BME_SENSOR
+  result += "BME\n" + displayBMEParameters() + " \n";
+#endif //USE_BME_SENSOR
+#ifdef USE_DAVIS_SENSOR
+  result += "Davis Anemometer\n" + displayAnemometerParameters() + " \n";
+#endif //USE_DAVIS_SENSOR
+#ifdef USE_DHT_SENSOR
+  result += "DHT\n" + displayDHTParameters() + " \n";
+#endif //USE_DHT_SENSOR
+#ifdef USE_MLX_SENSOR
+  result += "MLX90614\n" + displayMLXParameters() + " \n";
+#endif //USE_MLX_SENSOR
+#ifdef USE_TSL237_SENSOR
+  result += "TSL237\n" + displayTSL237Parameters() + " \n";
+#endif //USE_TSL237_SENSOR
+#ifdef USE_TSL2591_SENSOR
+  result += "TSL2591\n" + displayTSL2591Parameters() + " \n";
+#endif //USE_TSL2591_SENSOR
+#ifdef USE_RAIN_SENSOR
+  result += "Rain Sensor\n" + displayRainSensorParameters() + " \n";
+#endif //USE_RAIN_SENSOR
 
+
+  setDisplayText(result);
+#endif // USE_OLED
+}
 /**
    Update all sensor data
 */
 void updateSensorData() {
 
   // reset all timers
-  sensor_read = { 0, 0, 0, 0, 0, 0};
+  sensor_read = { 0, 0, 0, 0, 0, 0, 0, 0 };
   unsigned long start = 0;
 
 #ifdef USE_DAVIS_SENSOR
@@ -45,6 +81,12 @@ void updateSensorData() {
   readAnemometer();
   sensor_read.davis_read = millis() - start;
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_RAIN_SENSOR
+  start = millis();
+  updateRainSensor();
+  sensor_read.rainsensor_read = millis() - start;
+#endif //USE_RAIN_SENSOR
 
 #ifdef USE_BME_SENSOR
   start = millis();
@@ -76,28 +118,15 @@ void updateSensorData() {
   sensor_read.tsl2591_read = millis() - start;
 #endif //USE_TSL2591_SENSOR
 
-#ifdef USE_OLED
-String result = "";
-#ifdef USE_BME_SENSOR
-    result += "BME\n" + displayBMEParameters() + " \n";
-#endif //USE_BME_SENSOR
-#ifdef USE_DAVIS_SENSOR
-   result += "Davis Anemometer\n" + displayAnemometerParameters() + " \n";
-#endif //USE_DAVIS_SENSOR
-#ifdef USE_DHT_SENSOR
-   result += "DHT\n" + displayDHTParameters() + " \n";
-#endif //USE_DHT_SENSOR
-#ifdef USE_MLX_SENSOR
-   result += "MLX90614\n" + displayMLXParameters() + " \n";
-#endif //USE_MLX_SENSOR
-#ifdef USE_TSL237_SENSOR
-   result += "TSL237\n" + displayTSL237Parameters() + " \n";
-#endif //USE_TSL237_SENSOR
-#ifdef USE_TSL2591_SENSOR
-   result += "TSL2591\n" + displayTSL2591Parameters() + " \n";
-#endif //USE_TSL2591_SENSOR
+#ifdef USE_WATER_SENSOR
+  start = millis();
+  updatewater();
+  sensor_read.water_read = millis() - start;
+#endif //USE_WATER_SENSOR
 
-if (result != "") setDisplayText(result); 
+  // set the flag for display text refresh
+#ifdef USE_OLED
+  oledData.refresh = true;
 #endif // USE_OLED
 }
 
@@ -105,14 +134,17 @@ if (result != "") setDisplayText(result);
    Send current sensor data as JSON document to Serial
 */
 String getSensorData(bool pretty) {
-  const int docSize = JSON_OBJECT_SIZE(6) + // max 6 sensors
+  const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
                       JSON_OBJECT_SIZE(1) + // token data
                       JSON_OBJECT_SIZE(4) + // BME280 sensor
                       JSON_OBJECT_SIZE(3) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // MLX90614 sensor
                       JSON_OBJECT_SIZE(3) + // TSL237 sensor
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
-                      JSON_OBJECT_SIZE(6);  // Davis Anemometer
+                      JSON_OBJECT_SIZE(6) + // Davis Anemometer
+                      JSON_OBJECT_SIZE(2);  // Water sensor
+  JSON_OBJECT_SIZE(6);  // Davis Anemometer
+  JSON_OBJECT_SIZE(2);  // Rain sensor
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -120,6 +152,10 @@ String getSensorData(bool pretty) {
 #ifdef USE_DAVIS_SENSOR
   serializeAnemometer(weatherDoc);
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_RAIN_SENSOR
+  serializeRainSensor(weatherDoc);
+#endif //USE_RAIN_SENSOR
 
 #ifdef USE_BME_SENSOR
   serializeBME(weatherDoc);
@@ -140,6 +176,10 @@ String getSensorData(bool pretty) {
 #ifdef USE_TSL2591_SENSOR
   serializeTSL2591(weatherDoc);
 #endif //USE_TSL2591_SENSOR
+
+#ifdef USE_WATER_SENSOR
+  serializewater(weatherDoc);
+#endif //USE_WATER_SENSOR
 
   String result = "";
   if (pretty)
@@ -162,7 +202,7 @@ String getCurrentVersion() {
 }
 
 String getReadDurations() {
-  StaticJsonDocument <JSON_OBJECT_SIZE(6)> doc;
+  StaticJsonDocument <JSON_OBJECT_SIZE(9)> doc;
 #ifdef USE_BME_SENSOR
   if (bmeData.status)        doc["BME"]              = sensor_read.bme_read;
 #endif //USE_BME_SENSOR
@@ -181,6 +221,12 @@ String getReadDurations() {
 #ifdef USE_DAVIS_SENSOR
   if (anemometerData.status) doc["Davis Anemometer"] = sensor_read.davis_read;
 #endif //USE_DAVIS_SENSOR
+#ifdef USE_WATER_SENSOR
+  if (waterData.status)       doc["Water"]             = sensor_read.water_read;
+#endif //USE_WATER_SENSOR
+#ifdef USE_RAIN_SENSOR
+  if (rainsensor_status.status) doc["Rain Sensor"]   = sensor_read.rainsensor_read;
+#endif //USE_RAIN_SENSOR
 
   String result = "";
   serializeJson(doc, result);
@@ -191,11 +237,14 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(4) + // max 4 configurations
+  const int docSize = JSON_OBJECT_SIZE(7) + // max 7 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
+                      JSON_OBJECT_SIZE(1) + // Water sensor
+                      JSON_OBJECT_SIZE(2) + // Rain Sensor
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
+                      JSON_OBJECT_SIZE(3) + // OTA
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
 
@@ -218,15 +267,29 @@ String getCurrentConfig() {
   davisdata["wind direction offset"] = ANEMOMETER_WINDOFFSET;
 #endif
 
+#ifdef USE_WATER_SENSOR
+  JsonObject waterdata = doc.createNestedObject("Water");
+  waterdata["pin"] = WATER_PIN;
+#endif
+#ifdef USE_RAIN_SENSOR
+  JsonObject rainsensordata          = doc.createNestedObject("Rain Sensor");
+  rainsensordata["rain sensor pin"]  = RAINSENSOR_PIN;
+  rainsensordata["bucket size"]      = RAINSENSOR_BUCKET_SIZE;
+#endif //USE_RAIN_SENSOR
+
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"] = esp8266Data.ssid;
+  wifidata["SSID"] = WiFi.SSID();
   wifidata["connected"] = WiFi.status() == WL_CONNECTED;
   if (WiFi.status() == WL_CONNECTED)
     wifidata["IP"]        = WiFi.localIP().toString();
   else
     wifidata["IP"]        = "";
 #endif
+
+#ifdef USE_OTA
+  serializeOTA(doc);
+#endif // USE_OTA
 
   String result = "";
   serializeJson(doc, result);
@@ -238,6 +301,19 @@ String getCurrentConfig() {
   }
 }
 
+void oledSingleButtonClicked() {
+  // reset the turn off timeout
+  oledData.lastShowDisplay = millis();
+  // get latest data
+  oledData.refresh = true;
+  // clear the display
+  oled.clear();
+  // update the display text
+  updateDisplayText();
+  // turn on the display
+  oledShow(true);
+}
+
 unsigned long lastSensorRead;
 
 void setup() {
@@ -245,13 +321,15 @@ void setup() {
   // wait for serial port to connect. Needed for native USB
   while (!Serial) continue;
 
+  String init_text = "Weather Radio V ";
+  init_text += WEATHERRADIO_VERSION;
+  Serial.println(" \n" + init_text);
+
   // sensors never read
   lastSensorRead = 0;
 
 #ifdef USE_OLED
   // initial text
-  String init_text  = "Weather Radio V ";
-  init_text += WEATHERRADIO_VERSION;
 
   initDisplay();
   setDisplayText(init_text);
@@ -262,6 +340,10 @@ void setup() {
   initAnemometer();
 #endif //USE_DAVIS_SENSOR
 
+#ifdef USE_RAIN_SENSOR
+  initRainSensor();
+#endif //USE_RAIN_SENSOR
+
 #ifdef USE_TSL237_SENSOR
   initTSL237();
 #endif //USE_TSL237_SENSOR
@@ -269,47 +351,55 @@ void setup() {
 #ifdef USE_WIFI
   initWiFi();
 
-  if (WiFi.status() == WL_CONNECTED) {
-    server.on("/", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false));
-    });
+  server.on("/", []() {
+    server.send(200, "application/json; charset=utf-8", getSensorData(false));
+  });
 
-    server.on("/w", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(false));
-    });
+  server.on("/w", []() {
+    server.send(200, "application/json; charset=utf-8", getSensorData(false));
+  });
 
-    server.on("/p", []() {
-      server.send(200, "application/json; charset=utf-8", getSensorData(true));
-    });
+  server.on("/p", []() {
+    server.send(200, "application/json; charset=utf-8", getSensorData(true));
+  });
 
-    server.on("/c", []() {
-      server.send(200, "application/json; charset=utf-8", getCurrentConfig());
-    });
+  server.on("/c", []() {
+    server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+  });
 
-    server.on("/v", []() {
-      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
-    });
+  server.on("/v", []() {
+    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+  });
 
-    server.on("/r", []() {
-      reset();
-      server.send(200, "application/json; charset=utf-8", getCurrentVersion());
-    });
+  server.on("/r", []() {
+    reset();
+    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+  });
 
-    server.on("/t", []() {
-      server.send(200, "application/json; charset=utf-8", getReadDurations());
-    });
+  server.on("/t", []() {
+    server.send(200, "application/json; charset=utf-8", getReadDurations());
+  });
 
-    server.onNotFound([]() {
-      server.send(404, "text/plain", "Ressource not found: " + server.uri());
-    });
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "Ressource not found: " + server.uri());
+  });
 
-    server.begin();
-
-  }
+  server.begin();
 #endif
+
+
+#ifdef USE_OTA
+  initOTA();
+#endif // USE_OTA
 
   // initial readout all sensors
   updateSensorData();
+
+  // define handling of clicks
+  displayButton.attachClick(oledSingleButtonClicked);
+
+  // initially set display text
+  updateDisplayText();
 
 }
 
@@ -342,11 +432,10 @@ void parseInput() {
     case 's':
       if (input.length() > 2 && input.charAt(1) == '?')
         parseCredentials(input.substring(2));
-      disconnectWiFi();
       initWiFi();
       break;
     case 'd':
-      disconnectWiFi();
+      stopWiFi();
       break;
     case 'r':
       reset();
@@ -371,12 +460,19 @@ void loop() {
   String valStr;
   int val;
 
+#ifdef USE_OTA
+  otaLoop();
+#endif // USE_OTA
+
 #ifdef USE_WIFI
   wifiServerLoop();
 #endif
 
 #ifdef USE_OLED
-  displayText();
+  // refresh the display text if necessary
+  if (oledData.refresh) updateDisplayText();
+  // update the display
+  updateOledDisplay();
 #endif
 
 #ifdef USE_TSL237_SENSOR
@@ -386,6 +482,10 @@ void loop() {
 #ifdef USE_DAVIS_SENSOR
   updateAnemometer();
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_RAIN_SENSOR
+  updateRainSensor();
+#endif //USE_RAIN_SENSOR
 
   if (Serial.available() > 0) {
     ch = Serial.read();

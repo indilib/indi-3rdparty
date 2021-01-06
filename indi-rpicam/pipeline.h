@@ -29,15 +29,30 @@ public:
     Pipeline();
     virtual ~Pipeline();
 
-    // Add pipeline after this, also takes ownership of the object.
+    /**
+     * Add pipeline after this.
+     *
+     * This also takes ownership of the object and will call its delete.
+     */
     void daisyChain(Pipeline *p);
+
+    /**
+     * Cascading reset of whole pipeline.
+     */
     void reset_pipe();
 
-    virtual void acceptByte(uint8_t byte) = 0;
+    virtual void data_received(uint8_t  *data,  uint32_t length) = 0;
+
+    /**
+     * Reset this pipeline object to its intial state. 
+     * 
+     * Nothing about the image to be received can be changed after calling this and 
+     * until all buffers has been received.
+     */
     virtual void reset() = 0;
 
 protected:
-    void forward(uint8_t);
+    void forward(uint8_t *data,  uint32_t length);
 
 private:
     Pipeline *nextPipeline {};

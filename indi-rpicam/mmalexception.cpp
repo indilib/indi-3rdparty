@@ -19,15 +19,27 @@
  */
 
 #include <iostream>
+#include <cstdarg>
 #include "mmalexception.h"
 
-MMALException::MMALException(const char *text) : std::runtime_error(text)
+MMALException::MMALException(const char *text, ...) : std::runtime_error(msg)
 {
+    va_list args;
+    va_start(args, text);
+    vsnprintf(msg, sizeof msg, text, args);
+    va_end(args);
 }
 
-void  MMALException::throw_if(bool status, const char *text)
+void  MMALException::throw_if(bool status, const char *text, ...)
 {
     if(status) {
-        throw MMALException(text);
+        MMALException e;
+
+        va_list args;
+        va_start(args, text);
+        vsprintf(e.msg, text, args);
+        va_end(args);
+        
+        throw MMALException(e);
     }
 }

@@ -176,7 +176,7 @@ endif(NOT ${INDI_PUBLIC_VAR_NS}_FIND_COMPONENTS)
 find_path(
     ${INDI_PUBLIC_VAR_NS}_INCLUDE_DIR
     indidevapi.h
-    PATH_SUFFIXES libindi
+    PATH_SUFFIXES libindi include/libindi
     ${PC_INDI_INCLUDE_DIR}
     ${_obIncDir}
     ${GNUWIN32_DIR}/include
