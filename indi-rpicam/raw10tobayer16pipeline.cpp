@@ -193,10 +193,10 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
                 break;
 
             case 4:
-                cur_row[x-1] = (cur_row[x-1] | ((byte >> 0) & 0x03)) << (16-10); // Merge bits together and upshift from bit9 to bit15.
-                cur_row[x-2] = (cur_row[x-2] | ((byte >> 2) & 0x03)) << (16-10);
-                cur_row[x-3] = (cur_row[x-3] | ((byte >> 4) & 0x03)) << (16-10);
-                cur_row[x-4] = (cur_row[x-4] | ((byte >> 6) & 0x03)) << (16-10);
+                cur_row[x-1] = (cur_row[x-1] | ((byte >> 6) & 0x03)) << (16-10); // Merge bits together and upshift from bit9 to bit15.
+                cur_row[x-2] = (cur_row[x-2] | ((byte >> 4) & 0x03)) << (16-10);
+                cur_row[x-3] = (cur_row[x-3] | ((byte >> 2) & 0x03)) << (16-10);
+                cur_row[x-4] = (cur_row[x-4] | ((byte >> 0) & 0x03)) << (16-10);
                 state = 0;
                 break;
             }
