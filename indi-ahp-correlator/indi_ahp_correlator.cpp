@@ -435,8 +435,8 @@ void AHP_XC::Callback()
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             int delay_clocks = delay[x] * ahp_xc_get_frequency() / LIGHTSPEED;
             delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
-            ahp_xc_set_line(x, 0);
-            ahp_xc_set_delay(x, delay_clocks);
+            ahp_xc_set_lag_auto(x, 0);
+            ahp_xc_set_lag_cross(x, delay_clocks);
         }
     }
     EnableCapture(false);

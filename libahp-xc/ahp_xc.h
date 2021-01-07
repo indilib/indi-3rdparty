@@ -47,7 +47,7 @@ extern "C" {
 /*@{*/
 
 ///AHP_XC_VERSION This library version
-#define AHP_XC_VERSION 0x010009
+#define AHP_XC_VERSION 0x010010
 
 ///AHP_XC_LIVE_AUTOCORRELATOR indicates if the correlator can do live spectrum analysis
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
@@ -62,20 +62,6 @@ extern "C" {
  * \defgroup DSP_Defines DSP API defines
 */
 /*@{*/
-///if min() is not present you can use this one
-#ifndef min
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (a) _b = (b); \
-     _a < _b ? _a : _b; })
-#endif
-///if max() is not present you can use this one
-#ifndef max
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (a) _b = (b); \
-     _a > _b ? _a : _b; })
-#endif
 
 ///XC_BASE_RATE is the base baud rate of the XC cross-correlators
 #define XC_BASE_RATE ((int)57600)
@@ -240,7 +226,7 @@ DLL_EXPORT int ahp_xc_get_frequency(void);
 DLL_EXPORT int ahp_xc_get_frequency_divider(void);
 
 /**
-* \brief Obtain the serial packet time
+* \brief Obtain the serial packet transmission time in microseconds
 * \return Returns the packet transmission time
 */
 DLL_EXPORT unsigned int ahp_xc_get_packettime(void);
@@ -283,10 +269,10 @@ DLL_EXPORT void ahp_xc_free_samples(unsigned long nlines, ahp_xc_sample *samples
 /**
 * \brief Grab a data packet
 * \param counts The counts of each input pulses within the packet time
-* \param autocorrelations The autocorrelations counts of each input pulses with itself delayed by the clock cycles defined with ahp_xc_set_line.
+* \param autocorrelations The autocorrelations counts of each input pulses with itself delayed by the clock cycles defined with ahp_xc_set_lag_auto.
 * \param crosscorrelations The crosscorrelations counts of each input's with others' pulses.
-* \sa ahp_xc_set_line
-* \sa ahp_xc_set_delay
+* \sa ahp_xc_set_lag_auto
+* \sa ahp_xc_set_lag_cross
 */
 DLL_EXPORT int ahp_xc_get_packet(ahp_xc_packet *packet);
 
@@ -326,18 +312,18 @@ DLL_EXPORT void ahp_xc_enable_capture(int enable);
 DLL_EXPORT void ahp_xc_set_leds(int index, int leds);
 
 /**
-* \brief Set the delay index of the selected input for cross-correlation
+* \brief Set the lag of the selected input in clock cycles (for cross-correlation)
 * \param index The input line index starting from 0
-* \param value The delay line index
+* \param value The lag amount in clock cycles
 */
-DLL_EXPORT void ahp_xc_set_delay(int index, int value);
+DLL_EXPORT void ahp_xc_set_lag_cross(int index, int value);
 
 /**
-* \brief Set the delay index of the selected input for auto-correlation
+* \brief Set the lag of the selected input in clock cycles (for auto-correlation)
 * \param index The input line index starting from 0
-* \param value The delay line index
+* \param value The lag amount in clock cycles
 */
-DLL_EXPORT void ahp_xc_set_line(int index, int value);
+DLL_EXPORT void ahp_xc_set_lag_auto(int index, int value);
 
 /**
 * \brief Set the clock divider for autocorrelation and crosscorrelation
