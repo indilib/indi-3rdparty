@@ -71,10 +71,10 @@ os.system("raspistill %s -ISO %d -br %d -co %d -sa %d %s -o %s"  % (opts, iso, b
 os.system("convert %s -resize 640 %s" % (tmpname, filename))
 
 # calculate the optimal exposure time
-(realExpTime, brightness) = calibrateExpTime(tmpname, config)
+(imgExpTime, imgBrightness) = calibrateExpTime(tmpname, config)
 
 configfile = open(inifile_name, 'w')
 config.write(configfile)
 configfile.close()
 
-print "date=%s; time=%s; file=%s; ex=%d; iso=%d; bright=%s" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, realExpTime, iso, brightness)
+print "date=%s; time=%s; file=%s; ex=%d; iso=%d; br=%s; sat=%d; co=%d img brightness=%d" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, imgExpTime, iso, brightness, saturation, contrast, imgBrightness)
