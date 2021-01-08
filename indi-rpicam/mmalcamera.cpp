@@ -38,7 +38,6 @@ MMALCamera::MMALCamera(int n) : MMALComponent(MMAL_COMPONENT_DEFAULT_CAMERA), ca
 
     getSensorInfo();
 
-    // FIXME #001
     selectSensorConfig(0 /* What ever 0 means */);
 
     configureCamera();
@@ -53,10 +52,6 @@ MMALCamera::MMALCamera(int n) : MMALComponent(MMAL_COMPONENT_DEFAULT_CAMERA), ca
 
 MMALCamera::~MMALCamera()
 {
-    if (component->output[CAPTURE_PORT_NO]->is_enabled) {
-        MMALException::throw_if(mmal_port_disable(component->output[CAPTURE_PORT_NO]), "Failed to disable capture port");
-    }
-
     if(component->control->is_enabled) {
         MMALException::throw_if(mmal_port_disable(component->control), "Failed to disable control port");
     }
@@ -315,4 +310,18 @@ void MMALCamera::getFPSRange()
 
     fps_low = fps_range.fps_low;
     fps_high = fps_range.fps_high;
+}
+
+void MMALCamera::enableOutput()
+{
+    assert(component);
+    assert(component->output[0]);
+    enablePort(component->output[CAPTURE_PORT_NO], false);
+}
+
+void MMALCamera::disableOutput()
+{
+    assert(component);
+    assert(component->output[0]);
+    disablePort(component->output[CAPTURE_PORT_NO]);
 }
