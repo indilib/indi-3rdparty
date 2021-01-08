@@ -8,7 +8,11 @@ PROJECT(indi_rpicam CXX C)
 set(INDI_RPICAM_VERSION_MAJOR 1)
 set(INDI_RPICAM_VERSION_MINOR 3)
 
-set(CMAKE_PREFIX_PATH /opt/vc)
+if (NOT DEFINED VC_ROOT)
+    set(VC_ROOT "/opt/vc")
+endif(NOT DEFINED VC_ROOT)
+
+set(CMAKE_PREFIX_PATH ${VC_ROOT})
 
 # ISO does not seem to be supported by the camere. If used, the gain stops working. So leave it off
 option(USE_ISO "Enable ISO settings Subsystem" OFF)

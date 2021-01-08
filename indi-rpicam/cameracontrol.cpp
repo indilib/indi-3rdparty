@@ -38,7 +38,6 @@ CameraControl::CameraControl()
 
     encoder.reset(new MMALEncoder());
     encoder->add_buffer_listener(this);
-    encoder->activate();
 
     camera->enableComponent();
 }
@@ -71,6 +70,8 @@ void CameraControl::startCapture()
     buffer_processing_time = std::chrono::duration<double>::zero();
 #endif
 
+    encoder->enableOutput();
+
     camera->startCapture();
     is_capturing = true;
 
@@ -88,6 +89,7 @@ void CameraControl::stopCapture()
     camera->stopCapture();
     std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
     LOGF_TEST("exposure stopped after %f s", diff.count());
+    encoder->disableOutput();
     camera->disconnect();
     is_capturing = false;
 }

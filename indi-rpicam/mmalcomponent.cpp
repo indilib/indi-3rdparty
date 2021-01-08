@@ -54,12 +54,29 @@ MMALComponent::~MMALComponent()
 
 void MMALComponent::enablePort(MMAL_PORT_T *port, bool use_callback)
 {
+    assert(!port->is_enabled);
+
     if (use_callback) {
         MMALException::throw_if(mmal_port_enable(port, c_port_callback), "Failed to enable port on component %s", component->name);
     }
     else {
         MMALException::throw_if(mmal_port_enable(port, nullptr), "Failed to enable port on component %s", component->name);
     }
+}
+
+void MMALComponent::disablePort(MMAL_PORT_T *port)
+{
+    assert(port->is_enabled);
+
+#ifdef NDEBUG
+    // Probably safe to just ignore close (but in debug I want to find the error).
+    if(!port->is_enabled) {
+        return;
+    }
+#endif
+
+    MMALException::throw_if(mmal_port_flush(port), "Failed to flush port before disabling it");
+    MMALException::throw_if(mmal_port_disable(port), "Failed to enable port on component %s", component->name);
 }
 
 void MMALComponent::c_port_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
