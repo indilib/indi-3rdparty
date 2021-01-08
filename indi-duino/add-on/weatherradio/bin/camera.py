@@ -49,6 +49,7 @@ config = init_config()
 dir = config.get('Camera', 'BaseDirectory') + '/' +  now.strftime("%Y-%m-%d")
 
 filename   = dir + "/" + now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
+tmpname    = "/tmp/weathercam.jpg"
 exptime    = config.getint('Camera', 'ExposureTime')
 iso        = config.getint('Camera', 'ISOSpeedRatings')
 brightness = config.getint('Camera', 'Brightness')
@@ -64,18 +65,16 @@ if not Path(dir).exists():
 expstr = "-ss %d" % (exptime) if exptime > 10000 else "-ex auto"
 
 # shoot the image
-os.system("raspistill %s -ISO %d -br %d -co %d -sa %d %s -o %s"  % (opts, iso, brightness, contrast, saturation, expstr, filename))
+os.system("raspistill %s -ISO %d -br %d -co %d -sa %d %s -o %s"  % (opts, iso, brightness, contrast, saturation, expstr, tmpname))
+
+# convert to 640px width
+os.system("convert %s -resize 640 %s" % (tmpname, filename))
 
 # calculate the optimal exposure time
-(realExpTime, brightness) = calibrateExpTime(filename, config)
-
+(realExpTime, brightness) = calibrateExpTime(tmpname, config)
 
 configfile = open(inifile_name, 'w')
 config.write(configfile)
 configfile.close()
 
 print "date=%s; time=%s; file=%s; ex=%d; iso=%d; bright=%s" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, realExpTime, iso, brightness)
-
-#opts = "-awb greyworld -md 4 -ss 6000000 -ISO 800 -br 80 -co 100 -ex fixedfps -t 21000000 -tl 30000"
-#opts = "-q 100 -md 4 -ss 10000000 -ISO 200 -ex fixedfps"
-

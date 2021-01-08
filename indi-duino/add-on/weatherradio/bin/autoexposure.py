@@ -38,35 +38,6 @@ def brightness(image):
    stat = ImageStat.Stat(im)
    return stat.rms[0]
 
-def init_config():
-    config = ConfigParser.ConfigParser()
-    config.optionxform = str
-    # default values
-    config.add_section('Camera')
-    config.set('Camera', 'ExposureTime', '400') # 1/250 sec
-    config.set('Camera', 'BaseDirectory', ".")
-    config.set('Camera', 'ISOSpeedRatings', '50')
-    config.set('Camera', 'Contrast', '0')
-    config.set('Camera', 'Brightness', '50')
-    config.set('Camera', 'Saturation', '0')
-    config.set('Camera', 'Options', '-md 4 -ex fixedfps')
-    # night default settings
-    config.add_section('Night')
-    config.set('Night', 'Contrast', '100')
-    config.set('Night', 'Brightness', '20')
-    config.set('Night', 'Saturation', '-80')
-    config.set('Night', 'MaxExposure', '10000000')
-    config.set('Night', 'MaxISO', '800')
-    return config
-
-def config_camera(camera, config):
-    camera.shutter_speed =  config.getint('Camera', 'ExposureTime')
-    camera.exposure_mode = 'fixedfps'
-    camera.iso           = config.getint('Camera', 'ISOSpeedRatings')
-    camera.brightness    = config.getint('Camera', 'Brightness')
-    camera.contrast      = config.getint('Camera', 'Contrast')
-    camera.saturation    = config.getint('Camera', 'Saturation')
-
 def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img_brightness):
     factor = img_brightness / 120
 
