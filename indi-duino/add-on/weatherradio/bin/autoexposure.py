@@ -90,9 +90,20 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
         newISO     *= 2
         newExpTime /= 2
 
-    # brightness and contrast depend upon ISO value
+    # target brightness and contrast depend upon ISO value
     newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
     newContrast   =  0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
+    # change brightness and contrast slowly
+    # brightness + 10 equals exptime * 2
+    if newBrightness > brightness:
+      newBrightness = brightness + 1
+    elif newBrightness < brightness:
+      newBrightness = brightness - 1
+
+    if newContrast > contrast:
+      newContrast = contrast + 1
+    elif newContrast < contrast:
+      newContrast = contrast - 1
 
     # limit to maximal exposure value
     newExpTime = min(newExpTime, config.getint('Night', 'MaxExposure'))
@@ -102,6 +113,12 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
       newSaturation = int(config.getint('Night', 'Saturation') * (newExpTime - 2000000)/(config.getint('Night', 'MaxExposure') - 2000000))
     else:
       newSaturation = 0
+
+    # change saturation slowly
+    if newSaturation > saturation:
+      newSaturation = saturation + 1
+    elif newSaturation < saturation:
+      newSaturation = saturation - 1
       
     return (newExpTime, newISO, newBrightness, newContrast, newSaturation)
 
@@ -111,7 +128,7 @@ def calibrateExpTime(filename, config):
     exif = image._getexif()
 
     realExpTime    = 1000000 * get_field(exif, 'ExposureTime')[0] / get_field(exif, 'ExposureTime')[1]
-    realISO        = get_field(exif, 'ISOSpeedRatings')
+    realISO        = config.getint('Camera', 'ISOSpeedRatings')
     bright         = brightness(image)
     realBrightness = config.getint('Camera', 'Brightness')
     realContrast   = config.getint('Camera', 'Contrast')
