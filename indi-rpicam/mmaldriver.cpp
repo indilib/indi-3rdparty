@@ -258,13 +258,15 @@ bool MMALDriver::updateProperties()
     // We must ALWAYS call the parent class updateProperties() first
     INDI::CCD::updateProperties();
     
-    if (!strcmp(camera_control->get_camera()->getModel(), "ov5647"))
-        IUSaveText(&BayerT[2], "GBRG");
-    else
-        IUSaveText(&BayerT[2], "BGGR");
-
     if (isConnected())
     {
+        if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+            IUSaveText(&BayerT[2], "GBRG");
+        }
+        else {
+            IUSaveText(&BayerT[2], "BGGR");
+        }
+
 #ifdef USE_ISO
         if (mIsoSP.nsp > 0)
         {
