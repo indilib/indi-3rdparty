@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 PROJECT(libsv305 C CXX)
 
-set(SVBCAMERASDK_VERSION "1.6.4")
+set(SVBCAMERASDK_VERSION "1.6.5")
 set(SVBCAMERASDK_SOVERSION "1")
 
 include(GNUInstallDirs)

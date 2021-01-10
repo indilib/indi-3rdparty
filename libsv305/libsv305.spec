@@ -13,8 +13,6 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 %global debug_package %{nil}
 %define __find_requires %{nil}
 
-Provides: libCKCameraSDK_x64.so()(64bit)
-Provides: libCKCameraSDK_x64.so
 Provides: libSVBCameraSDK.so()(64bit)
 Provides: libSVBCameraSDK.so
 Provides: libSVBCameraSDK.so(libSVBCameraSDK)(64bit)
