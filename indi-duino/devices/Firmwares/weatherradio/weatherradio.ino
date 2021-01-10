@@ -216,13 +216,14 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(6) + // max 6 configurations
+  const int docSize = JSON_OBJECT_SIZE(7) + // max 7 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(1) + // Water sensor
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(3) + // OTA
+                      JSON_OBJECT_SIZE(4) + // OTA
+                      JSON_OBJECT_SIZE(5) + // Dew heater
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
 
@@ -258,6 +259,10 @@ String getCurrentConfig() {
     wifidata["IP"]        = WiFi.localIP().toString();
   else
     wifidata["IP"]        = "";
+#endif
+
+#ifdef USE_DEW_HEATER
+  serializeDewheater(doc);
 #endif
 
 #ifdef USE_OTA
@@ -346,6 +351,10 @@ void setup() {
   initOTA();
 #endif // USE_OTA
 
+#ifdef USE_DEW_HEATER
+  initDewheater();
+#endif // USE_DEW_HEATER
+
   // initial readout all sensors
   updateSensorData();
 
@@ -433,6 +442,11 @@ void loop() {
 #ifdef USE_DAVIS_SENSOR
   updateAnemometer();
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_DEW_HEATER
+  // Change this if you want to use a different sensor for the dew heater
+  updateDewheater(dhtData.temperature, dhtData.humidity);
+#endif // USE_DEW_HEATER
 
   if (Serial.available() > 0) {
     ch = Serial.read();

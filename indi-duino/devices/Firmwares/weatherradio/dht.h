@@ -8,7 +8,7 @@
     version 2 of the License, or (at your option) any later version.
 */
 
-#include "DHT.h"
+#include <DHT.h>
 
 DHT dht(DHTPIN, DHTTYPE);
 

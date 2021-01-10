@@ -27,6 +27,7 @@
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
 //#define USE_OTA                    // USE Arduino Over the Air updating
+//#define USE_DEWHEATER             // Resistor based dew heater
 
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 60000
@@ -49,6 +50,10 @@
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
 #define WATER_PIN A0
+
+#define DEWHEATER_MAX_DELTA 1 // maximum allowable temperature difference between ambient and dew point before heater turns on
+#define DEWHEATER_MIN_TEMPERATURE 0 // Minimum temperature below which dew heater turns on to combat snow and ice
+#define DEWHEATER_PIN 5
 
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
@@ -90,6 +95,10 @@
 #ifdef USE_WATER_SENSOR
 #include "water.h"
 #endif //USE_WATER_SENSOR
+
+#ifdef USE_DEW_HEATER
+#include "dewheater.h"
+#endif //USE_DEW_HEATER
 
 #ifdef USE_WIFI
 #include "esp8266.h"
