@@ -38,7 +38,6 @@ CameraControl::CameraControl()
 
     encoder.reset(new MMALEncoder());
     encoder->add_buffer_listener(this);
-    encoder->activate();
 
     camera->enableComponent();
 }
@@ -52,6 +51,11 @@ CameraControl::~CameraControl()
 
 void CameraControl::startCapture()
 {
+    LOG_TEST("entered");
+    if (is_capturing) {
+        LOG_TEST("camera is already capturing..");
+        return;
+    }
     camera->connect(MMALCamera::CAPTURE_PORT_NO, encoder.get(), 0); // Connected the capture port to the encoder.
 
     camera->setExposureParameters(gain, shutter_speed);
@@ -66,7 +70,10 @@ void CameraControl::startCapture()
     buffer_processing_time = std::chrono::duration<double>::zero();
 #endif
 
+    encoder->enableOutput();
+
     camera->startCapture();
+    is_capturing = true;
 
     start_time = std::chrono::steady_clock::now();
     print_first = true;
@@ -75,10 +82,16 @@ void CameraControl::startCapture()
 void CameraControl::stopCapture()
 {
     LOGF_TEST("total time consumed by buffer processing: %f", buffer_processing_time.count());
+    if (!is_capturing) {
+        LOG_TEST("camera is not capturing..");
+        return;
+    }
     camera->stopCapture();
     std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start_time;
     LOGF_TEST("exposure stopped after %f s", diff.count());
+    encoder->disableOutput();
     camera->disconnect();
+    is_capturing = false;
 }
 
 /**
@@ -131,5 +144,4 @@ void CameraControl::signal_complete()
     for(auto p : capture_listeners) {
         p->capture_complete();
     }
-    stopCapture();
 }

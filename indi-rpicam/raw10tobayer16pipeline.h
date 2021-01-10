@@ -42,15 +42,21 @@ public:
     virtual void reset() override;
 
 private:
+    void next_line(uint32_t maxX);
     const BroadcomPipeline *bcm_pipe;
     ChipWrapper *ccd;
-    int x {0};
-    int y {0};
-    int pos {0};
-    int raw_x {0};  //! Position in the raw-data comming in.
-    int raw_y {0};  //! Position in the raw-data comming in.
-    int startRawX {0};
-    uint8_t state = 0; // Which byte in the RAW10 format.
+    uint32_t x {0};
+    uint32_t y {0};
+    uint32_t raw_x {0};  // Position in the raw-data comming in.
+    uint32_t raw_y {0};  //! Position in the raw-data comming in.
+    uint32_t startRawX {0};
+    uint32_t startRawY {0};
+    uint8_t state = 0;
+    uint16_t* frame_buffer;
+    uint32_t raw_width{0};
+    uint32_t xRes, yRes = 0;
+    uint16_t* cur_row {0};
+    uint32_t bytes_consumed = 0;
 };
 
 #endif // RAW10TOBAYER16PIPELINE_H

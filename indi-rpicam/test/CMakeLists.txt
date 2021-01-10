@@ -16,8 +16,10 @@ INCLUDE_DIRECTORIES ( ${GTEST_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES ( ${GMOCK_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES ( ${CMAKE_SOURCE_DIR} )
 
-SET (test_imx477_SRCS test_imx477.cpp ${CMAKE_SOURCE_DIR}/indi_rpicam.cpp)
-SET (test_imx219_SRCS test_imx219.cpp ${CMAKE_SOURCE_DIR}/indi_rpicam.cpp)
+get_filename_component(RPI_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+
+SET (test_imx477_SRCS test_imx477.cpp ${RPI_DIR}/indi_rpicam.cpp)
+SET (test_imx219_SRCS test_imx219.cpp ${RPI_DIR}/indi_rpicam.cpp)
 
 if (NOT MSVC)
     set (PTHREAD_LIBRARIES -pthread)

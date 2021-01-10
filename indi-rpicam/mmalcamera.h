@@ -65,6 +65,8 @@ public:
     void configureCamera();
     void getFPSRange();
     void setFPSRange(MMAL_RATIONAL_T low, MMAL_RATIONAL_T high);
+    void enableOutput();
+    void disableOutput();
 
     float xPixelSize {}, yPixelSize {};
 

@@ -140,10 +140,6 @@ bool MMALDriver::Connect()
 
     camera_control.reset(new CameraControl());
 
-    //    // FIXME: Seems the HIQ-camera is quite buggy, it needs the mmal_component to be opened twice
-    //    camera_control.reset(); // Since the reset below would allocate the second camera object before the first got deleted.
-    //    camera_control.reset(new CameraControl());
-
     camera_control->add_capture_listener(this);
 
     setupPipeline();
@@ -157,9 +153,26 @@ bool MMALDriver::Connect()
                  camera_control->get_camera()->xPixelSize,
                  camera_control->get_camera()->yPixelSize);
 
-//    // Should probably not be called by the subclass of CCD - not clear.
-//    UpdateCCDFrame(0, 0, static_cast<int>(camera_control->get_camera()->get_width()),
-//                   static_cast<int>(camera_control->get_camera()->get_height()));
+    uint32_t nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    PrimaryCCD.setFrameBufferSize(nbuf);
+    //V1 cam
+    if (!strcmp(camera_control->get_camera()->getModel(), "ov5647"))
+    {
+        IUSaveText(&BayerT[2], "GBRG");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 6, .0001, false);
+    }
+    //V2 cam
+    else if (!strcmp(camera_control->get_camera()->getModel(), "imx219"))
+    {
+        IUSaveText(&BayerT[2], "BGGR");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 10, .0001, false);
+    }
+    //HQ cam
+    else if (!strcmp(camera_control->get_camera()->getModel(), "imx477"))
+    {
+        IUSaveText(&BayerT[2], "BGGR");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 200, .0001, false);
+    }
 
     return true;
 }
@@ -209,8 +222,7 @@ bool MMALDriver::initProperties()
     IUFillSwitch(&mIsoS[1], "ISO_200", "200", ISS_OFF);
     IUFillSwitch(&mIsoS[2], "ISO_400", "400", ISS_ON);
     IUFillSwitch(&mIsoS[3], "ISO_800", "800", ISS_OFF);
-    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60,
-                       IPS_IDLE);
+    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 #endif
 
     // CCD Gain
@@ -245,11 +257,16 @@ bool MMALDriver::updateProperties()
     LOGF_DEBUG("%s()", __FUNCTION__);
     // We must ALWAYS call the parent class updateProperties() first
     INDI::CCD::updateProperties();
-
-    IUSaveText(&BayerT[2], "BGGR");
-
+    
     if (isConnected())
     {
+        if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+            IUSaveText(&BayerT[2], "GBRG");
+        }
+        else {
+            IUSaveText(&BayerT[2], "BGGR");
+        }
+
 #ifdef USE_ISO
         if (mIsoSP.nsp > 0)
         {
@@ -312,6 +329,8 @@ bool MMALDriver::UpdateCCDFrame(int x, int y, int w, int h)
 bool MMALDriver::StartExposure(float duration)
 {
     LOGF_DEBUG("%s(%f)", __FUNCTION__, duration);
+    assert(PrimaryCCD.getFrameBuffer() != 0);
+
 
     if (InExposure)
     {
@@ -448,6 +467,9 @@ void MMALDriver::TimerHit()
             ccdBufferLock.unlock();
             InExposure = false;
 
+            // Stop capturing (must be done from main thread).
+            camera_control->stopCapture();
+
             // Let INDI::CCD know we're done filling the image buffer
             LOG_DEBUG("Exposure complete.");
             ExposureComplete(&PrimaryCCD);
@@ -567,6 +589,18 @@ void MMALDriver::setupPipeline()
         Raw12ToBayer16Pipeline *raw12_pipe = new Raw12ToBayer16Pipeline(brcm_pipe, &chipWrapper);
         brcm_pipe->daisyChain(raw12_pipe);
     }
+    else if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+        
+
+        raw_pipe.reset(new JpegPipeline());
+
+        BroadcomPipeline *brcm_pipe = new BroadcomPipeline();
+        raw_pipe->daisyChain(brcm_pipe);
+
+        Raw10ToBayer16Pipeline *raw10_pipe = new Raw10ToBayer16Pipeline(brcm_pipe, &chipWrapper);
+        // receiver->daisyChain(&raw_writer);
+        brcm_pipe->daisyChain(raw10_pipe);
+    }    
     else if (!strcmp(camera_control->get_camera()->getModel(), "imx219"))
     {
         raw_pipe.reset(new JpegPipeline());

@@ -14,9 +14,9 @@
 
 // BAUD rate for the serial interface
 #define BAUD_RATE 9600   // standard rate that should always work
-//#define BAUD_RATE 115200 // ESP8266
+//#define BAUD_RATE 115200 // modern boards like ESP8266
 
-#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
+//#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
 //#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
@@ -24,13 +24,14 @@
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WATER_SENSOR           // Water sensor - detects rain by measuring resistence
+//#define USE_RAIN_SENSOR           // USE a rain sensor (e.g. RG-11 or rain bucket sensors)
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
-//#define USE_OTA                    // USE Arduino Over the Air updating
+//#define USE_OTA                   // USE Arduino Over the Air updating
 //#define USE_DEWHEATER             // Resistor based dew heater
 
 // refresh cache interval (ms)
-#define MAX_CACHE_AGE 60000
+#define MAX_CACHE_AGE 30000
 
 // ============== device configurations (begin) ============
 
@@ -41,19 +42,26 @@
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)      - Uncomment whatever type you're using!
 
 // WiFi settings
-#define WIFI_SSID "your WiFi SSID"
-#define WIFI_PWD  "your WiFi password"
+// Fill in your WiFi ID and password - leave empty if nothing has changed
+#define WIFI_SSID ""
+#define WIFI_PWD  ""
 
 // Davis Anemometer
 #define ANEMOMETER_WINDSPEEDPIN (2)    // The digital pin for the wind speed sensor
 #define ANEMOMETER_WINDDIRECTIONPIN A0 // The analog pin for the wind direction
 #define ANEMOMETER_WINDOFFSET 0        // anemometer arm direction (0=N, 90=E, ...)
 
+// Resistor based water sensor
 #define WATER_PIN A0
 
+// Resistor based dew heater
 #define DEWHEATER_MAX_DELTA 1 // maximum allowable temperature difference between ambient and dew point before heater turns on
 #define DEWHEATER_MIN_TEMPERATURE 0 // Minimum temperature below which dew heater turns on to combat snow and ice
 #define DEWHEATER_PIN 5
+
+// dipping bucket rain sensor (e.g. RG-11)
+#define RAINSENSOR_PIN 13            // the digital pin for the rain sensor
+#define RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
 
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
@@ -99,6 +107,10 @@
 #ifdef USE_DEW_HEATER
 #include "dewheater.h"
 #endif //USE_DEW_HEATER
+
+#ifdef USE_RAIN_SENSOR
+#include "rainsensor.h"
+#endif //USE_RAIN_SENSOR
 
 #ifdef USE_WIFI
 #include "esp8266.h"

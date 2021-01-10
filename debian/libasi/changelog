@@ -1,3 +1,17 @@
+libasi (1.12) buster; urgency=medium
+
+  * ASICAM 1.16.3 release:
+    V1.16.3
+    Fix bug: ASI294MM Pro BIN2/BIN4 ROI problem.
+  
+    V1.16.2
+    Fix some bugs.
+  
+    V 1.16.1
+    Fix some bugs.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 04 Jan 2021 18:28:27 +0200
+
 libasi (1.11) buster; urgency=medium
 
   * ASICAM 1.16 release:
