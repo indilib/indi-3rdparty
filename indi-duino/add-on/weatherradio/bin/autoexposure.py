@@ -41,11 +41,11 @@ def brightness(image):
 def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img_brightness):
     factor = img_brightness / 120
 
-    # avoid overshooting    
+    # avoid overshooting
     factor = 0.85 if (factor < 0.85) else factor
     factor = 1.15 if (factor > 1.15) else factor
 
-    newExpTime = int(round(exptime / factor**2))
+    newExpTime = exptime / factor**2
 
     # we start with the old values
     newISO        = iso
@@ -55,12 +55,11 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
     if (newExpTime < 3000000 and iso > 50):
         # adapt ISO - less than 3 sec (avoid ISO flipping)
         newISO     /= 2
-        newExpTime *= 2
+        newExpTime = newExpTime * 1.4
     elif (newExpTime > 5000000 and iso < config.getint('Night', 'MaxISO')):
         # adapt ISO - more than 1 sec
         newISO     *= 2
-        newExpTime /= 2
-
+        newExpTime = newExpTime / 1.4
     # target brightness and contrast depend upon ISO value
     newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
     newContrast   =  0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
@@ -78,7 +77,7 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
 
     # limit to maximal exposure value
     newExpTime = min(newExpTime, config.getint('Night', 'MaxExposure'))
-        
+
     # reduce saturation for long exposures
     if (newExpTime > 2000000):
       newSaturation = int(config.getint('Night', 'Saturation') * (newExpTime - 2000000)/(config.getint('Night', 'MaxExposure') - 2000000))
@@ -90,7 +89,7 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
       newSaturation = saturation + 1
     elif newSaturation < saturation:
       newSaturation = saturation - 1
-      
+
     return (newExpTime, newISO, newBrightness, newContrast, newSaturation)
 
 def calibrateExpTime(filename, config):
@@ -108,10 +107,10 @@ def calibrateExpTime(filename, config):
     # calculate the optimal exposure time
     (newExpTime, newISO, newBrightness, newContrast, newSaturation) = calculateExpTime(config, realExpTime, realISO, realBrightness, realContrast, realSaturation, bright)
     # store for future use
-    config.set('Camera', 'ExposureTime', str(newExpTime))
-    config.set('Camera', 'ISOSpeedRatings', str(newISO))
-    config.set('Camera', 'Brightness', str(newBrightness))
-    config.set('Camera', 'Contrast', str(newContrast))
-    config.set('Camera', 'Saturation', str(newSaturation))
+    config.set('Camera', 'ExposureTime', str(int(round(newExpTime))))
+    config.set('Camera', 'ISOSpeedRatings', str(int(round(newISO))))
+    config.set('Camera', 'Brightness', str(int(round(newBrightness))))
+    config.set('Camera', 'Contrast', str(int(round(newContrast))))
+    config.set('Camera', 'Saturation', str(int(round(newSaturation))))
     return (realExpTime, bright)
 
