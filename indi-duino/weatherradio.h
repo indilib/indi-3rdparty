@@ -65,7 +65,7 @@ protected:
     void updateConfigData();
 
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
-        humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
+        humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP, rainFallSensorSP;
 
     /**
      * @brief get the interface version from the Arduino device.
@@ -89,7 +89,7 @@ protected:
     /**
       * Device specific configurations
       */
-    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, INTERNAL_SENSOR};
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, RAINFALL_SENSOR, INTERNAL_SENSOR};
 
     struct sensor_config
     {
@@ -200,6 +200,7 @@ protected:
         sensor_name wind_speed;
         sensor_name wind_gust;
         sensor_name wind_direction;
+        sensor_name rainfall;
     } currentSensors;
 
     struct
@@ -213,6 +214,7 @@ protected:
         std::vector<sensor_name> wind_speed;
         std::vector<sensor_name> wind_gust;
         std::vector<sensor_name> wind_direction;
+        std::vector<sensor_name> rainfall;
     } sensorRegistry;
 
     /**
