@@ -114,8 +114,13 @@ uint32_t Skywatcher::GetRAEncoder()
 {
     // Axis Position
     dispatch_command(GetAxisPosition, Axis1, nullptr);
-    //read_eqmod();
-    RAStep = Revu24str2long(response + 1);
+
+    uint32_t steps = Revu24str2long(response + 1);
+    if (steps & 0x80000000)
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = Ignoring invalid response %s", __FUNCTION__, response);
+    else
+        RAStep = steps;
+
     gettimeofday(&lastreadmotorposition[Axis1], nullptr);
     if (RAStep != lastRAStep)
     {
@@ -129,9 +134,12 @@ uint32_t Skywatcher::GetDEEncoder()
 {
     // Axis Position
     dispatch_command(GetAxisPosition, Axis2, nullptr);
-    //read_eqmod();
 
-    DEStep = Revu24str2long(response + 1);
+    uint32_t steps = Revu24str2long(response + 1);
+    if (steps & 0x80000000)
+        DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = Ignoring invalid response %s", __FUNCTION__, response);
+    else
+        DEStep = steps;
     gettimeofday(&lastreadmotorposition[Axis2], nullptr);
     if (DEStep != lastDEStep)
     {
