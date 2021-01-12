@@ -244,7 +244,8 @@ String getCurrentConfig() {
                       JSON_OBJECT_SIZE(2) + // Rain Sensor
                       JSON_OBJECT_SIZE(3) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(3) + // OTA
+                      JSON_OBJECT_SIZE(4) + // OTA
+                      JSON_OBJECT_SIZE(5) + // Dew heater
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> doc;
 
@@ -271,6 +272,7 @@ String getCurrentConfig() {
   JsonObject waterdata = doc.createNestedObject("Water");
   waterdata["pin"] = WATER_PIN;
 #endif
+
 #ifdef USE_RAIN_SENSOR
   JsonObject rainsensordata          = doc.createNestedObject("Rain Sensor");
   rainsensordata["rain sensor pin"]  = RAINSENSOR_PIN;
@@ -287,6 +289,10 @@ String getCurrentConfig() {
     wifidata["IP"]        = "";
 #endif
 
+#ifdef USE_DEW_HEATER
+  serializeDewheater(doc);
+#endif
+
 #ifdef USE_OTA
   serializeOTA(doc);
 #endif // USE_OTA
@@ -301,6 +307,7 @@ String getCurrentConfig() {
   }
 }
 
+#ifdef USE_OLED
 void oledSingleButtonClicked() {
   // reset the turn off timeout
   oledData.lastShowDisplay = millis();
@@ -313,6 +320,7 @@ void oledSingleButtonClicked() {
   // turn on the display
   oledShow(true);
 }
+#endif // USE_OLED
 
 unsigned long lastSensorRead;
 
@@ -392,11 +400,17 @@ void setup() {
   initOTA();
 #endif // USE_OTA
 
+#ifdef USE_DEW_HEATER
+  initDewheater();
+#endif // USE_DEW_HEATER
+
   // initial readout all sensors
   updateSensorData();
 
+#ifdef USE_OLED
   // define handling of clicks
   displayButton.attachClick(oledSingleButtonClicked);
+#endif // USE_OLED
 
   // initially set display text
   updateDisplayText();
@@ -482,6 +496,10 @@ void loop() {
 #ifdef USE_DAVIS_SENSOR
   updateAnemometer();
 #endif //USE_DAVIS_SENSOR
+
+#ifdef USE_DEW_HEATER
+  updateDewheater();
+#endif // USE_DEW_HEATER
 
 #ifdef USE_RAIN_SENSOR
   updateRainSensor();
