@@ -307,6 +307,7 @@ String getCurrentConfig() {
   }
 }
 
+#ifdef USE_OLED
 void oledSingleButtonClicked() {
   // reset the turn off timeout
   oledData.lastShowDisplay = millis();
@@ -319,6 +320,7 @@ void oledSingleButtonClicked() {
   // turn on the display
   oledShow(true);
 }
+#endif // USE_OLED
 
 unsigned long lastSensorRead;
 
@@ -405,8 +407,10 @@ void setup() {
   // initial readout all sensors
   updateSensorData();
 
+#ifdef USE_OLED
   // define handling of clicks
   displayButton.attachClick(oledSingleButtonClicked);
+#endif // USE_OLED
 
   // initially set display text
   updateDisplayText();
@@ -494,8 +498,7 @@ void loop() {
 #endif //USE_DAVIS_SENSOR
 
 #ifdef USE_DEW_HEATER
-  // Change this if you want to use a different sensor for the dew heater
-  updateDewheater(dhtData.temperature, dhtData.humidity);
+  updateDewheater();
 #endif // USE_DEW_HEATER
 
 #ifdef USE_RAIN_SENSOR

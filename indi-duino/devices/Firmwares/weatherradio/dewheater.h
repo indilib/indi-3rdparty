@@ -44,6 +44,15 @@ void updateDewheater(float t, float h) {
   }
 }
 
+void updateDewheater() {
+#ifdef USE_DHT_SENSOR
+  updateDewheater(dhtData.temperature, dhtData.humidity);
+#endif // USE_DHT_SENSOR
+#ifdef USE_BME_SENSOR
+  updateDewheater(bmeData.temperature, bmeData.humidity);
+#endif // USE_BME_SENSOR
+}
+
 void serializeDewheater(JsonDocument &doc) {
   JsonObject data = doc.createNestedObject("Dew Heater");
   
