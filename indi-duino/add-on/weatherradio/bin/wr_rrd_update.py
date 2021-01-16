@@ -33,7 +33,7 @@ indi = None
 
 try:
     if (args.verbose):
-        print "Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+        print ("Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
     # open connection to the INDI server
     indi=indiclient(INDISERVER,int(INDIPORT))
@@ -43,7 +43,7 @@ try:
 
     if (connect):
         if (args.verbose):
-            print "Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+            print ("Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
         data = None
         if path.exists(args.rrdfile):
@@ -56,15 +56,15 @@ try:
             updateRRD(args.rrdsensorsfile, data)
 
         if (args.verbose):
-            print "Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+            print ("Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
     else:
-        print "Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT)
+        print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
 
     indi.quit()
 
 except:
-    print "Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT)
+    print ("Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT))
     if indi != None:
         indi.quit()
     sys.exit()

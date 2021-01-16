@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for listing all media files and store the information as JSON document.

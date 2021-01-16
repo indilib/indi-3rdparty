@@ -39,18 +39,18 @@ def connect(indi, verbose=False):
                 # set the configured port
                 indi.set_and_send_text(dev,"DEVICE_PORT","PORT",devport)
                 if verbose:
-                    print "Setting serial port to %s" % (devport)
+                    print ("Setting serial port to %s" % (devport))
             else:
                 indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION_MODE","Ethernet")
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","ADDRESS",ipaddress)
                 indi.set_and_send_text(dev,"DEVICE_ADDRESS","PORT",ipport)
                 if verbose:
-                    print "Setting ethernet ip:port to %s:%s" % (ipaddress, ipport)
+                    print ("Setting ethernet ip:port to %s:%s" % (ipaddress, ipport))
 
             # connect driver
             connection = indi.set_and_send_switchvector_by_elementlabel(dev,"CONNECTION","Connect")
             if verbose:
-                print "Waiting for connection..."
+                print ("Waiting for connection...")
             # wait for the connection
             time.sleep(7)
             # ensure that all information is up to date
@@ -60,12 +60,12 @@ def connect(indi, verbose=False):
             # set location if connection was successful
             if connection._light.is_ok():
                 if verbose:
-                    print "Connection succeeded."
+                    print ("Connection succeeded.")
                 indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LAT",float(lat))
                 indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","LONG",float(long))
                 indi.set_and_send_float(dev,"GEOGRAPHIC_COORD","ELEV",float(elev))
                 if verbose:
-                    print "Setting location to lat=%s, long=%s, elev=%s." % (lat, long, elev)
+                    print ("Setting location to lat=%s, long=%s, elev=%s." % (lat, long, elev))
 
             # update the result states
             result = result and connection._light.is_ok()
@@ -93,7 +93,7 @@ def readWeather(indi, verbose=False):
         # ensure that parameters are available
         if weather._light.is_ok():
             if verbose:
-                print "Reading weather sensor values..."
+                print ("Reading weather sensor values...")
             read_indi_value(result, 'Temperature', weather, WEATHER_TEMPERATURE)
             read_indi_value(result, 'Pressure', weather, WEATHER_PRESSURE)
             read_indi_value(result, 'Humidity', weather, WEATHER_HUMIDITY)
@@ -105,7 +105,7 @@ def readWeather(indi, verbose=False):
             read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
             read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
             if verbose:
-                print "Reading weather sensor values... (succeeded)"
+                print ("Reading weather sensor values... (succeeded)")
 
     return result;
 
@@ -151,4 +151,4 @@ def updateRRD(rrdfile, data):
 
         ret = rrdtool.update(rrdfile, "--template", templateString ,updateString);
         if ret:
-            print rrdtool.error()
+            print (rrdtool.error())

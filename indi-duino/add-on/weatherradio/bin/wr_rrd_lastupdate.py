@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for extracting the last update from the RRD file and export them

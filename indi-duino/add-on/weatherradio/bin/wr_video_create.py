@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for creating videos sequences from time lapse frames.
@@ -31,7 +31,7 @@ def create_video(input, starttime, targetdir, mode):
     if Path(name).exists():
         return
     
-    print "Creating video %s" % (name)
+    print("Creating video %s" % (name))
     pos = 0
     # link the files
     for file in input:
@@ -62,7 +62,7 @@ args = parser.parse_args()
 files = sorted(Path(args.mediadir).iterdir(), key=lambda d: d.stat().st_mtime)
 
 if len(files) == 0:
-    print "No media files found"
+    print("No media files found")
     sys.exit()
 
 starttime = files[0].stat().st_mtime
