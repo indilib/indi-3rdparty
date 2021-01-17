@@ -63,10 +63,6 @@
 #define DEWHEATER_MIN_TEMPERATURE 0 // Minimum temperature below which dew heater turns on to combat snow and ice
 #define DEWHEATER_PIN 5
 
-// dipping bucket rain sensor (e.g. RG-11)
-#define RAINSENSOR_PIN 13            // the digital pin for the rain sensor
-#define RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
-
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
 #define OLED_DISPLAY_TIMEOUT 60       // the timeout in secs after which the display will turn off (set to -1 to disable the timeout)
@@ -107,9 +103,6 @@
 #ifdef USE_WATER_SENSOR
 #include "water.h"
 #endif //USE_WATER_SENSOR
-#ifdef USE_RAIN_SENSOR
-#include "rainsensor.h"
-#endif //USE_RAIN_SENSOR
 
 #ifdef USE_DEW_HEATER
 #include "dewheater.h"

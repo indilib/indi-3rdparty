@@ -10,15 +10,18 @@
     version 2 of the License, or (at your option) any later version.
 */
 
+#define RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single speed mesure (ms)
+
 struct rainsensor_data {
   bool status;
   unsigned long lastInterrupt;  // last time an event has been registered
-  unsigned int count;           // counter for "bucket full" events
-  unsigned int lastcount;       // last counter value that has been processed
-  float rainfall;               // measured rain fall in mm
+  unsigned long startMeasuring; // start time of the measuring interval
+  unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
+  unsigned int count;           // counter for "bucket full" events during last full measurement interval
+  float rainfall;               // current measured rain fall in mm/h
 };
 
-volatile rainsensor_data rainsensor_status = {false, 0, 0, 0, 0.0};
+volatile rainsensor_data rainsensor_status = {false, 0, 0, 0, 0, 0.0};
 
 // function that the interrupt calls to increment the rain bucket counter
 #ifdef ESP8266
@@ -30,17 +33,17 @@ void isr_rainbucket_full () {
   unsigned long now = millis();
   if ((now - rainsensor_status.lastInterrupt) > 200 ) { // debounce the switch contact.
     rainsensor_status.lastInterrupt = now;
-    rainsensor_status.count++;
-    Serial.print("Rain bucket full, count = "); Serial.println(rainsensor_status.count);
+    rainsensor_status.intervalCount++;
   }
 }
 
 
 void resetRainSensor() {
   // clear the status
-  rainsensor_status.count = 0;
-  rainsensor_status.lastcount = 0;
   rainsensor_status.lastInterrupt = millis();
+  rainsensor_status.startMeasuring = rainsensor_status.lastInterrupt;
+  rainsensor_status.intervalCount = 0;
+  rainsensor_status.count = 0;
   rainsensor_status.rainfall = 0.0;
 }
 
@@ -55,9 +58,16 @@ void initRainSensor() {
 
 
 void updateRainSensor() {
-  if (rainsensor_status.lastcount < rainsensor_status.count) {
-    rainsensor_status.rainfall += RAINSENSOR_BUCKET_SIZE * (rainsensor_status.count - rainsensor_status.lastcount);
-    rainsensor_status.lastcount = rainsensor_status.count;
+  unsigned long now = millis();
+  unsigned long elapsed = now - rainsensor_status.startMeasuring;
+  if (elapsed > RAINSENSOR_INTERVAL_LENGTH) {
+    // measuring interval over, fix counting
+    rainsensor_status.count += rainsensor_status.intervalCount;
+    // calculate rain fall: bucket_size * count scaled up from elapsed time to 1h
+    rainsensor_status.rainfall = RAINSENSOR_BUCKET_SIZE * rainsensor_status.intervalCount * 3600000 / elapsed;
+    // clear interval data
+    rainsensor_status.startMeasuring = now;
+    rainsensor_status.intervalCount = 0;
   }
 }
 
@@ -69,7 +79,7 @@ void serializeRainSensor(JsonDocument &doc) {
   data["init"] = rainsensor_status.status;
 
   if (rainsensor_status.status) {
-    data["rainfall"] = rainsensor_status.rainfall;
+    data["rain intensity"] = rainsensor_status.rainfall;
     data["count"] = rainsensor_status.count;
   }
 }
@@ -77,6 +87,6 @@ void serializeRainSensor(JsonDocument &doc) {
 String displayRainSensorParameters() {
   if (rainsensor_status.status == false) return "";
 
-  String result = " rainfall: " + String(rainsensor_status.rainfall, 4) + " \n";
+  String result = " rain: " + String(rainsensor_status.rainfall, 3) + " mm/h \n";
   return result;
 }
