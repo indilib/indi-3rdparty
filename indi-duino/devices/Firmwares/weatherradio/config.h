@@ -13,21 +13,21 @@
 #include "version.h"
 
 // BAUD rate for the serial interface
-#define BAUD_RATE 9600   // standard rate that should always work
-//#define BAUD_RATE 115200 // modern boards like ESP8266
+//#define BAUD_RATE 9600   // standard rate that should always work
+#define BAUD_RATE 115200 // modern boards like ESP8266
 
-//#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
+#define USE_BME_SENSOR            // USE BME280 ENVIRONMENT SENSOR.
 //#define USE_DHT_SENSOR            // USE DHT HUMITITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
 //#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
-//#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
+#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
 //#define USE_WATER_SENSOR           // Water sensor - detects rain by measuring resistence
-//#define USE_RAIN_SENSOR           // USE a rain sensor (e.g. RG-11 or rain bucket sensors)
-//#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
-//#define USE_OLED                  // USE a OLED display
-//#define USE_OTA                   // USE Arduino Over the Air updating
+#define USE_RAIN_SENSOR           // USE a rain sensor (e.g. RG-11 or rain bucket sensors)
+#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
+#define USE_OLED                  // USE a OLED display
+#define USE_OTA                   // USE Arduino Over the Air updating
 //#define USE_DEWHEATER             // Resistor based dew heater
 
 // refresh cache interval (ms)

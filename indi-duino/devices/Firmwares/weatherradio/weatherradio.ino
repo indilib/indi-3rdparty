@@ -143,7 +143,7 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2) + // Water sensor
-                      JSON_OBJECT_SIZE(2);  // Rain sensor
+                      JSON_OBJECT_SIZE(3);  // Rain sensor
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;

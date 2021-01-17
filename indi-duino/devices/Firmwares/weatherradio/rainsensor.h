@@ -17,11 +17,12 @@ struct rainsensor_data {
   unsigned long lastInterrupt;  // last time an event has been registered
   unsigned long startMeasuring; // start time of the measuring interval
   unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
-  unsigned int count;           // counter for "bucket full" events during last full measurement interval
-  float rainfall;               // current measured rain fall in mm/h
+  unsigned int count;           // overall counter for "bucket full" events
+  float rain_intensity;         // current measured rain fall in mm/h
+  float rain_volume;            // overall rain fall measured in mm
 };
 
-volatile rainsensor_data rainsensor_status = {false, 0, 0, 0, 0, 0.0};
+volatile rainsensor_data rainsensor_status = {false, 0, 0, 0, 0, 0.0, 0.0};
 
 // function that the interrupt calls to increment the rain bucket counter
 #ifdef ESP8266
@@ -44,7 +45,8 @@ void resetRainSensor() {
   rainsensor_status.startMeasuring = rainsensor_status.lastInterrupt;
   rainsensor_status.intervalCount = 0;
   rainsensor_status.count = 0;
-  rainsensor_status.rainfall = 0.0;
+  rainsensor_status.rain_intensity = 0.0;
+  rainsensor_status.rain_volume = 0.0;
 }
 
 void initRainSensor() {
@@ -61,10 +63,12 @@ void updateRainSensor() {
   unsigned long now = millis();
   unsigned long elapsed = now - rainsensor_status.startMeasuring;
   if (elapsed > RAINSENSOR_INTERVAL_LENGTH) {
-    // measuring interval over, fix counting
+    // measuring interval over, update event counter
     rainsensor_status.count += rainsensor_status.intervalCount;
-    // calculate rain fall: bucket_size * count scaled up from elapsed time to 1h
-    rainsensor_status.rainfall = RAINSENSOR_BUCKET_SIZE * rainsensor_status.intervalCount * 3600000 / elapsed;
+    // calculate rain intensity: bucket_size * count scaled up from elapsed time to 1h
+    rainsensor_status.rain_intensity = RAINSENSOR_BUCKET_SIZE * rainsensor_status.intervalCount * 3600000 / elapsed;
+    // update total rain fall volume
+    rainsensor_status.rain_volume += RAINSENSOR_BUCKET_SIZE * rainsensor_status.intervalCount;
     // clear interval data
     rainsensor_status.startMeasuring = now;
     rainsensor_status.intervalCount = 0;
@@ -79,14 +83,16 @@ void serializeRainSensor(JsonDocument &doc) {
   data["init"] = rainsensor_status.status;
 
   if (rainsensor_status.status) {
-    data["rain intensity"] = rainsensor_status.rainfall;
-    data["count"] = rainsensor_status.count;
+    data["rain intensity"] = rainsensor_status.rain_intensity;
+    data["rain volume"]    = rainsensor_status.rain_volume;
+    data["count"]          = rainsensor_status.count;
   }
 }
 
 String displayRainSensorParameters() {
   if (rainsensor_status.status == false) return "";
 
-  String result = " rain: " + String(rainsensor_status.rainfall, 3) + " mm/h \n";
+  String result = " rain: " + String(rainsensor_status.rain_intensity, 3) + " mm/h \n";
+  result += " rain vol: " + String(rainsensor_status.rain_volume, 3) + " mm \n";
   return result;
 }
