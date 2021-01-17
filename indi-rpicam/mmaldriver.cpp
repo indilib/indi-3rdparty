@@ -155,6 +155,24 @@ bool MMALDriver::Connect()
 
     uint32_t nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
+    //V1 cam
+    if (!strcmp(camera_control->get_camera()->getModel(), "ov5647"))
+    {
+        IUSaveText(&BayerT[2], "GBRG");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 6, .0001, false);
+    }
+    //V2 cam
+    else if (!strcmp(camera_control->get_camera()->getModel(), "imx219"))
+    {
+        IUSaveText(&BayerT[2], "BGGR");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 10, .0001, false);
+    }
+    //HQ cam
+    else if (!strcmp(camera_control->get_camera()->getModel(), "imx477"))
+    {
+        IUSaveText(&BayerT[2], "BGGR");
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 200, .0001, false);
+    }
 
     return true;
 }
@@ -239,11 +257,16 @@ bool MMALDriver::updateProperties()
     LOGF_DEBUG("%s()", __FUNCTION__);
     // We must ALWAYS call the parent class updateProperties() first
     INDI::CCD::updateProperties();
-
-    IUSaveText(&BayerT[2], "BGGR");
-
+    
     if (isConnected())
     {
+        if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+            IUSaveText(&BayerT[2], "GBRG");
+        }
+        else {
+            IUSaveText(&BayerT[2], "BGGR");
+        }
+
 #ifdef USE_ISO
         if (mIsoSP.nsp > 0)
         {

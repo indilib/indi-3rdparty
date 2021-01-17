@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 PROJECT(indi_miccd CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 find_package(MICAM REQUIRED)
 find_package(INDI REQUIRED)
@@ -30,17 +32,17 @@ set(indi_miccd_SRCS
 
 add_executable(indi_mi_ccd ${indi_miccd_SRCS})
 if (APPLE)
-    target_link_libraries(indi_mi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MICAM_LIBRARIES} ${USB1_LIBRARIES})
+    target_link_libraries(indi_mi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MICAM_LIBRARIES} ${USB1_LIBRARIES} Threads::Threads)
 else (APPLE)
-    target_link_libraries(indi_mi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MICAM_LIBRARIES} ${USB1_LIBRARIES} rt)
+    target_link_libraries(indi_mi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MICAM_LIBRARIES} ${USB1_LIBRARIES} Threads::Threads rt)
 endif(APPLE)
 
-if(THREADS_HAVE_PTHREAD_ARG)
-  target_compile_options(indi_mi_ccd "-pthread")
-endif()
-if(CMAKE_THREAD_LIBS_INIT)
-  target_link_libraries(indi_mi_ccd "${CMAKE_THREAD_LIBS_INIT}")
-endif()
+#if(THREADS_HAVE_PTHREAD_ARG)
+#  target_compile_options(indi_mi_ccd "-pthread")
+#endif()
+#if(CMAKE_THREAD_LIBS_INIT)
+#  target_link_libraries(indi_mi_ccd "${CMAKE_THREAD_LIBS_INIT}")
+#endif()
 
 install(TARGETS indi_mi_ccd RUNTIME DESTINATION bin)
 

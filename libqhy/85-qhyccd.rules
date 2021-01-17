@@ -113,6 +113,7 @@ ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="018
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0224", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III224.img -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0290", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III290.img -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0462", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III462.img -D $env{DEVNAME}"
+ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0485", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III485.img -D $env{DEVNAME}"
 
 #QHYCCD Scientific Camera (7:QHY42,QHY42PRO,QHY2020,QHY4040,QHY4040PRO,QHY6060,QHY411,QHY461)
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="4200", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY42.img -D $env{DEVNAME}"

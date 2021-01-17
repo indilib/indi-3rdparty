@@ -119,16 +119,16 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
             {
                 assert(x % 4 == 0);
                 pu32 = (uint32_t *)(&cur_row[x]);
-                u32_01 = (*data++ << 18);
-                u32_01 |= (*data++ << 2); // each 32-bit value will hold 2 source bytes spread out to 16-bits
-                u32_23 = (*data++ << 18); // and shifted over 2 to make room for lower 2 bits
-                u32_23 |= (*data++ << 2);
+                u32_01 = (*data++ << 2);
+                u32_01 |= (*data++ << 18); // each 32-bit value will hold 2 source bytes spread out to 16-bits
+                u32_23 = (*data++ << 2); // and shifted over 2 to make room for lower 2 bits
+                u32_23 |= (*data++ << 18);
                 u32Temp = *data++ * u32Magic; // 5th byte contains 4 pairs of bits (0/1) for the 4 pixels
                 u32_01 |= (u32Temp & u32Mask); // combine lower 2 bits to bytes 0 and 1
                 u32Temp >>= 4; // shift down to access bits for bytes 2/3
                 u32_23 |= (u32Temp & u32Mask);
-                *pu32++ = u32_01; // store 4 16-bit pixels (10 significant bits)
-                *pu32++ = u32_23;
+                *pu32++ = u32_01 << (16-10); // store 4 16-bit pixels (10 significant bits). Upshifted so bit 9 -> bit 15.
+                *pu32++ = u32_23 << (16-10);
           	    length -= 5;
             	x += 4;
                 raw_x += 5;
@@ -139,9 +139,9 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
                 return;
             }
         }
-        
+    
         // Skip over bytes outside of sub frame
-        if(raw_x < startRawX || x >= maxX)
+        if(raw_x < startRawX || ( (x >= maxX) && (state != 4)))
         {
             uint32_t diff;
             if(raw_x < startRawX)
@@ -164,13 +164,11 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
         byte = *data;
 
         //At this point we are for sure within the raw y coordinates of the subframe and only need to check x range
-        if (raw_x >= startRawX && x < maxX) {
+        if (raw_x >= startRawX && x <= maxX) {
             // RAW according to experiment.
             switch(state)
             {
             case 0:
-                // FIXME: Optimize, if at least 5 bytes remaining here, all data can be calculated faster in one step.
-	        	// FIXME: upp the data to upper bits.
                 cur_row[x] = static_cast<uint16_t>(byte << 2);
                 x++;
                 state = 1;
@@ -195,10 +193,10 @@ void Raw10ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
                 break;
 
             case 4:
-                cur_row[x-1] |= byte & 0x03;
-                cur_row[x-2] |= (byte >> 2) & 0x03;
-                cur_row[x-3] |= (byte >> 4) & 0x03;
-                cur_row[x-4] |= (byte >> 6) & 0x03;
+                cur_row[x-1] = (cur_row[x-1] | ((byte >> 6) & 0x03)) << (16-10); // Merge bits together and upshift from bit9 to bit15.
+                cur_row[x-2] = (cur_row[x-2] | ((byte >> 4) & 0x03)) << (16-10);
+                cur_row[x-3] = (cur_row[x-3] | ((byte >> 2) & 0x03)) << (16-10);
+                cur_row[x-4] = (cur_row[x-4] | ((byte >> 0) & 0x03)) << (16-10);
                 state = 0;
                 break;
             }

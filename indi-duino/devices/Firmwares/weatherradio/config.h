@@ -28,6 +28,7 @@
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
 //#define USE_OTA                   // USE Arduino Over the Air updating
+//#define USE_DEWHEATER             // Resistor based dew heater
 
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 30000
@@ -52,6 +53,11 @@
 
 // Resistor based water sensor
 #define WATER_PIN A0
+
+// Resistor based dew heater
+#define DEWHEATER_MAX_DELTA 1 // maximum allowable temperature difference between ambient and dew point before heater turns on
+#define DEWHEATER_MIN_TEMPERATURE 0 // Minimum temperature below which dew heater turns on to combat snow and ice
+#define DEWHEATER_PIN 5
 
 // dipping bucket rain sensor (e.g. RG-11)
 #define RAINSENSOR_PIN 13            // the digital pin for the rain sensor
@@ -97,6 +103,11 @@
 #ifdef USE_WATER_SENSOR
 #include "water.h"
 #endif //USE_WATER_SENSOR
+
+#ifdef USE_DEW_HEATER
+#include "dewheater.h"
+#endif //USE_DEW_HEATER
+
 #ifdef USE_RAIN_SENSOR
 #include "rainsensor.h"
 #endif //USE_RAIN_SENSOR

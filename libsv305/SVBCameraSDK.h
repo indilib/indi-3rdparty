@@ -41,7 +41,7 @@ while(1)
 	#define SVBCAMERA_API __declspec(dllimport)
 #endif
 #else
-	#define SVBCAMERA_API
+	#define SVBCAMERA_API 
 #endif
 
 #define SVBCAMERA_ID_MAX 128
@@ -53,7 +53,7 @@ typedef enum SVB_BAYER_PATTERN{
 	SVB_BAYER_GB
 }SVB_BAYER_PATTERN;
 
-typedef enum SVB_IMG_TYPE{ //Supported Video Format
+typedef enum SVB_IMG_TYPE{ //Supported Video Format 
 	SVB_IMG_RAW8 = 0,
 	SVB_IMG_RAW10,
 	SVB_IMG_RAW12,
@@ -112,7 +112,7 @@ typedef enum SVB_ERROR_CODE{ //SVB ERROR CODE
 	SVB_ERROR_CAMERA_CLOSED, //camera didn't open
 	SVB_ERROR_CAMERA_REMOVED, //failed to find the camera, maybe the camera has been removed
 	SVB_ERROR_INVALID_PATH, //cannot find the path of the file
-	SVB_ERROR_INVALID_FILEFORMAT,
+	SVB_ERROR_INVALID_FILEFORMAT, 
 	SVB_ERROR_INVALID_SIZE, //wrong video format size
 	SVB_ERROR_INVALID_IMGTYPE, //unsupported image formate
 	SVB_ERROR_OUTOF_BOUNDARY, //the startpos is out of boundary
@@ -148,7 +148,7 @@ typedef struct SVB_CAMERA_PROPERTY
 	long MaxWidth;	//the max width of the camera
 
 	SVB_BOOL IsColorCam;
-	SVB_BAYER_PATTERN BayerPattern;
+	SVB_BAYER_PATTERN BayerPattern; 
 	int SupportedBins[16]; //1 means bin1 which is supported by every camera, 2 means bin 2 etc.. 0 is the end of supported binning method
 	SVB_IMG_TYPE SupportedVideoFormat[8];
 
@@ -185,7 +185,7 @@ typedef struct _SVB_CONTROL_CAPS
 	long MinValue;
 	long DefaultValue;
 	SVB_BOOL IsAutoSupported; //support auto set 1, don't support 0
-	SVB_BOOL IsWritable; //some control like temperature can only be read by some cameras
+	SVB_BOOL IsWritable; //some control like temperature can only be read by some cameras 
 	SVB_CONTROL_TYPE ControlType;//this is used to get value and set value of the control
 	char Unused[32];
 } SVB_CONTROL_CAPS;
@@ -225,15 +225,15 @@ extern "C" {
 #endif
 
 /***************************************************************************
-Descriptions:
+Descriptions: 
 this should be the first API to be called
 get number of connected SVB cameras,
 
-Paras:
+Paras: 
 
 return:number of connected SVB cameras. 1 means 1 camera connected.
 ***************************************************************************/
-SVBCAMERA_API  int SVBGetNumOfConnectedCameras();
+SVBCAMERA_API  int SVBGetNumOfConnectedCameras(); 
 
 /***************************************************************************
 Descriptions:
@@ -247,8 +247,8 @@ for(int i = 0; i < iNumofConnectCameras; i++)
 ppSVBCameraInfo[i] = (SVB_CAMERA_INFO *)malloc(sizeof(SVB_CAMERA_INFO ));
 SVBGetCameraInfo(ppSVBCameraInfo[i], i);
 }
-
-Paras:
+				
+Paras:		
 	SVB_CAMERA_INFO *pSVBCameraInfo: Pointer to structure containing the information of camera
 									user need to malloc the buffer
 	int iCameraIndex: 0 means the first connect camera, 1 means the second connect camera
@@ -283,7 +283,7 @@ Descriptions:
 	open the camera before any operation to the camera, this will not affect the camera which is capturing
 	All APIs below need to open the camera at first.
 
-Paras:
+Paras:		
 	int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 
 return:
@@ -301,7 +301,7 @@ Descriptions:
 you need to close the camera to free all the resource
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 
 return:
@@ -320,7 +320,7 @@ Get number of controls available for this camera. the camera need be opened at f
 
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 int * piNumberOfControls: pointer to an int to save the number of controls
 
@@ -339,7 +339,7 @@ user need to malloc and maintain the buffer.
 
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 int iControlIndex: index of control, NOT control type
 SVB_CONTROL_CAPS * pControlCaps: Pointer to structure containing the property of the control
@@ -358,7 +358,7 @@ Get controls property value and auto value
 note:the value of the temperature is the float value * 10 to convert it to long type, control name is "Temperature"
 because long is the only type for control(except cooler's target temperature, because it is an integer)
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 int ControlType: this is get from control property use the API SVBGetControlCaps
 long *plValue: pointer to the value you want to save the value get from control
@@ -378,7 +378,7 @@ Set controls property value and auto value
 it will return success and set the max value or min value if the value is beyond the boundary
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 int ControlType: this is get from control property use the API SVBGetControlCaps
 long lValue: the value set to the control
@@ -433,11 +433,11 @@ you must stop capture before call it.
 the width and height is the value after binning.
 ie. you need to set width to 640 and height to 480 if you want to run at 640X480@BIN2
 SVB120's data size must be times of 1024 which means width*height%1024=0SVBSetStartPos
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
-int iWidth,  the width of the ROI area. Make sure iWidth%8 = 0.
-int iHeight,  the height of the ROI area. Make sure iHeight%2 = 0,
-further, for USB2.0 camera SVB120, please make sure that iWidth*iHeight%1024=0.
+int iWidth,  the width of the ROI area. Make sure iWidth%8 = 0. 
+int iHeight,  the height of the ROI area. Make sure iHeight%2 = 0, 
+further, for USB2.0 camera SVB120, please make sure that iWidth*iHeight%1024=0. 
 int iBin,   binning method. bin1=1, bin2=2
 
 return:
@@ -454,9 +454,9 @@ SVBCAMERA_API  SVB_ERROR_CODE SVBSetROIFormat(int iCameraID, int iStartX, int iS
 Descriptions:
 Get the current ROI area setting .
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
-int *piWidth,  pointer to the width of the ROI area
+int *piWidth,  pointer to the width of the ROI area   
 int *piHeight, pointer to the height of the ROI area.
 int *piBin,   pointer to binning method. bin1=1, bin2=2
 
@@ -474,7 +474,7 @@ Get the droped frames .
 drop frames happen when USB is traffic or harddisk write speed is slow
 it will reset to 0 after stop capture
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 int *piDropFrames pointer to drop frames
 
@@ -493,7 +493,7 @@ Start video capture
 then you can get the data from the API SVBGetVideoData
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 
 return:
@@ -509,7 +509,7 @@ Descriptions:
 Stop video capture
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 
 return:
@@ -522,14 +522,14 @@ SVBCAMERA_API  SVB_ERROR_CODE SVBStopVideoCapture(int iCameraID);
 
 /***************************************************************************
 Descriptions:
-get data from the video buffer.the buffer is very small
+get data from the video buffer.the buffer is very small 
 you need to call this API as fast as possible, otherwise frame will be discarded
 so the best way is maintain one buffer loop and call this API in a loop
 please make sure the buffer size is biger enough to hold one image
 otherwise the this API will crash
 
 
-Paras:
+Paras:		
 int CameraID: this is get from the camera property use the API SVBGetCameraInfo
 unsigned char* pBuffer, caller need to malloc the buffer, make sure the size is big enough
 		the size in byte:
@@ -711,6 +711,20 @@ SVB_ERROR_INVALID_ID  :no camera of this ID is connected or ID value is out of b
 SVB_ERROR_UNKNOW_SENSOR_TYPE : unknow sensor type
 ***************************************************************************/
 SVBCAMERA_API SVB_ERROR_CODE  SVBGetSensorPixelSize(int iCameraID, float *fPixelSize);
+
+/***************************************************************************
+Description:
+Get whether to support pulse guide
+Paras:
+int CameraID: this is get from the camera property use the API SVBGetCameraInfo.
+SVB_BOOL *pIsSupportPulseGuide: if SVB_TRUE then support pulse guide
+
+return:
+SVB_SUCCESS : Operation is successful
+SVB_ERROR_INVALID_ID  :no camera of this ID is connected or ID value is out of boundary
+***************************************************************************/
+SVBCAMERA_API SVB_ERROR_CODE SVBCanPulseGuide(int iCameraID, SVB_BOOL *pCanPulseGuide);
+
 
 #ifdef __cplusplus
 }
