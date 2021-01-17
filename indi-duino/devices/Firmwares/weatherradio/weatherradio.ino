@@ -62,7 +62,9 @@ void updateDisplayText() {
 #ifdef USE_RAIN_SENSOR
   result += "Rain Sensor\n" + displayRainSensorParameters() + " \n";
 #endif //USE_RAIN_SENSOR
-
+#ifdef USE_WATER_SENSOR
+  result += "Water Sensor\n" + displayWaterSensorParameters() + " \n";
+#endif //USE_WATER_SENSOR
 
   setDisplayText(result);
 #endif // USE_OLED

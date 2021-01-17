@@ -34,3 +34,10 @@ void serializewater(JsonDocument &doc) {
     data["wetness"] = waterData.wetness;
   }
 }
+
+String displayWaterSensorParameters() {
+  if (waterData.status == false) return "";
+
+  String result = " rain: " + String(waterData.wetness * 100, 1) + " % \n";
+  return result;
+}
