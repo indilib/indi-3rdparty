@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 PROJECT(libahp_xc C CXX)
 
-set(AHPXC_VERSION "1.0.10")
+set(AHPXC_VERSION "1.0.11")
 set(AHPXC_SOVERSION "1")
 
 include(GNUInstallDirs)
