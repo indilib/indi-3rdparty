@@ -247,37 +247,59 @@ void AHP_XC::Callback()
     threadsRunning = true;
     while (threadsRunning)
     {
-        int ntries = 10;
-        while(ahp_xc_get_packet(packet) && ntries-- > 0)
+        if(ahp_xc_get_packet(packet)) {
             usleep(ahp_xc_get_packettime());
-
-        if(ntries <= 0) {
-            threadsRunning = false;
-            break;
+            continue;
         }
 
         double julian = ln_get_julian_from_sys();
-        ln_hrz_posn altaz;
-        ln_equ_posn radec;
-        ln_lnlat_posn obs;
-
         int idx = 0;
-        double minalt = 90.0;
         int farest = 0;
-
+        double delay_max = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                double lst = ln_get_apparent_sidereal_time(julian)-(360.0-lineGPSNP[x].np[1].value)/15.0;
-                lst = range24(lst);
-                ln_get_hrz_from_equ_sidereal_time(&radec, &obs, lst, &altaz);
+                ln_hrz_posn altaz;
+                ln_lnlat_posn obs;
+                ln_equ_posn obj;
+                obs.lng = Longitude;
+                obs.lat = Latitude;
+                if (obs.lng > 180)
+                    obs.lng -= 360;
+                obj.ra = RA * 15;
+                obj.dec = Dec;
+                get_hrz_from_equ(&obj, &obs, julian, &altaz);
                 alt[x] = altaz.alt;
                 az[x] = altaz.az;
-                double el =
-                        estimate_geocentric_elevation(lineGPSNP[x].np[0].value, 0) /
-                        estimate_geocentric_elevation(lineGPSNP[x].np[0].value, lineGPSNP[x].np[2].value);
-                alt[x] -= 180.0*acos(el)/M_PI;
-                farest = (minalt < alt[x] ? farest : x);
-                minalt = (minalt < alt[x] ? minalt : alt[x]);
+                double delay_tmp = fabs(baseline_delay(alt[x], az[x], center[x].values)/sqrt(pow(center[x].x, 2)+pow(center[x].y, 2)+pow(center[x].z, 2)));
+                farest = (delay_max < delay_tmp ? farest : x);
+                delay_max = (delay_max < delay_tmp ? delay_max : delay_tmp);
+            }
+        }
+        delay[farest] = 0;
+        ahp_xc_set_lag_auto(farest, 0);
+        ahp_xc_set_lag_cross(farest, 0);
+        idx = 0;
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
+                    if(y == farest) {
+                        delay[x] = fabs(baselines[idx]->getDelay(alt[x], az[x]));
+                        int delay_clocks = delay[x] * ahp_xc_get_frequency() / LIGHTSPEED;
+                        delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
+                        delay_clocks >>= ahp_xc_get_frequency_divider();
+                        ahp_xc_set_lag_auto(x, 0);
+                        ahp_xc_set_lag_cross(x, delay_clocks);
+                    }
+                    if(x == farest) {
+                        delay[y] = fabs(baselines[idx]->getDelay(alt[y], az[y]));
+                        int delay_clocks = delay[y] * ahp_xc_get_frequency() / LIGHTSPEED;
+                        delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
+                        delay_clocks >>= ahp_xc_get_frequency_divider();
+                        ahp_xc_set_lag_auto(y, 0);
+                        ahp_xc_set_lag_cross(y, delay_clocks);
+                    }
+                }
+                idx++;
             }
         }
         if(InExposure) {
@@ -415,29 +437,6 @@ void AHP_XC::Callback()
                 idx++;
             }
         }
-
-        delay[farest] = 0;
-        idx = 0;
-        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-            for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON) {
-                    if(y == farest) {
-                        delay[x] = baselines[idx]->getDelay(alt[farest], az[farest]);
-                    }
-                    if(x == farest) {
-                        delay[y] = baselines[idx]->getDelay(alt[farest], az[farest]);
-                    }
-                }
-                idx++;
-            }
-        }
-
-        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-            int delay_clocks = delay[x] * ahp_xc_get_frequency() / LIGHTSPEED;
-            delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize()-1) : 0);
-            ahp_xc_set_lag_auto(x, 0);
-            ahp_xc_set_lag_cross(x, delay_clocks);
-        }
     }
     EnableCapture(false);
     ahp_xc_free_packet(packet);
@@ -463,32 +462,17 @@ AHP_XC::AHP_XC()
     linePowerS = static_cast<ISwitch*>(malloc(1));
     linePowerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
 
-    lineDevicesT = static_cast<IText*>(malloc(1));
-    lineDevicesTP = static_cast<ITextVectorProperty*>(malloc(1));
+    lineActiveEdgeS = static_cast<ISwitch*>(malloc(1));
+    lineActiveEdgeSP = static_cast<ISwitchVectorProperty*>(malloc(1));
 
-    snoopGPSN = static_cast<INumber*>(malloc(1));
-    snoopGPSNP = static_cast<INumberVectorProperty*>(malloc(1));
+    lineEdgeTriggerS = static_cast<ISwitch*>(malloc(1));
+    lineEdgeTriggerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
 
-    snoopTelescopeN = static_cast<INumber*>(malloc(1));
-    snoopTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
-
-    snoopTelescopeInfoN = static_cast<INumber*>(malloc(1));
-    snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(malloc(1));
-
-    snoopDomeN = static_cast<INumber*>(malloc(1));
-    snoopDomeNP = static_cast<INumberVectorProperty*>(malloc(1));
+    lineLocationN = static_cast<INumber*>(malloc(1));
+    lineLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     lineDelayN = static_cast<INumber*>(malloc(1));
     lineDelayNP = static_cast<INumberVectorProperty*>(malloc(1));
-
-    lineGPSN = static_cast<INumber*>(malloc(1));
-    lineGPSNP = static_cast<INumberVectorProperty*>(malloc(1));
-
-    lineTelescopeN = static_cast<INumber*>(malloc(1));
-    lineTelescopeNP = static_cast<INumberVectorProperty*>(malloc(1));
-
-    lineDomeN = static_cast<INumber*>(malloc(1));
-    lineDomeNP = static_cast<INumberVectorProperty*>(malloc(1));
 
     correlationsN = static_cast<INumber*>(malloc(1));
 
@@ -517,7 +501,7 @@ bool AHP_XC::Disconnect()
             dsp_stream_free_buffer(autocorrelations_str[x]);
             dsp_stream_free(autocorrelations_str[x]);
         }
-        ActiveLine(x, false, false);
+        ActiveLine(x, false, false, false, false);
         usleep(10000);
     }
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
@@ -552,8 +536,10 @@ bool AHP_XC::saveConfigItems(FILE *fp)
     for(int x = 0; x < ahp_xc_get_nlines(); x++) {
         IUSaveConfigSwitch(fp, &lineEnableSP[x]);
         if(lineEnableSP[x].sp[0].s == ISS_ON) {
-            IUSaveConfigText(fp, &lineDevicesTP[x]);
             IUSaveConfigSwitch(fp, &linePowerSP[x]);
+            IUSaveConfigSwitch(fp, &lineActiveEdgeSP[x]);
+            IUSaveConfigSwitch(fp, &lineEdgeTriggerSP[x]);
+            IUSaveConfigNumber(fp, &lineLocationNP[x]);
         }
     }
     IUSaveConfigNumber(fp, &settingsNP);
@@ -575,7 +561,8 @@ bool AHP_XC::initProperties()
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
-    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&settingsN[2], "INTERFEROMETER_RESOLUTION_VALUE", "Clock divider", "%g", 0, 15, 1, 0);
+    IUFillNumberVector(&settingsNP, settingsN, 3, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
@@ -649,10 +636,10 @@ bool AHP_XC::updateProperties()
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
             deleteProperty(lineEnableSP[x].name);
             deleteProperty(linePowerSP[x].name);
-            deleteProperty(lineGPSNP[x].name);
-            deleteProperty(lineTelescopeNP[x].name);
+            deleteProperty(lineLocationNP[x].name);
+            deleteProperty(lineActiveEdgeSP[x].name);
+            deleteProperty(lineEdgeTriggerSP[x].name);
             deleteProperty(lineStatsNP[x].name);
-            deleteProperty(lineDevicesTP[x].name);
             deleteProperty(lineDelayNP[x].name);
         }
     }
@@ -719,11 +706,55 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
 
+    for(int i = 0; i < ahp_xc_get_nlines(); i++) {
+        if(!strcmp(lineLocationNP[i].name, name)) {
+            IUUpdateNumber(&lineLocationNP[i], values, names, n);
+            int idx = 0;
+            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
+                    if(x==i||y==i) {
+                        INDI::Correlator::Baseline b;
+                        b.x = lineLocationNP[y].np[0].value-lineLocationNP[x].np[0].value;
+                        b.y = lineLocationNP[y].np[1].value-lineLocationNP[x].np[1].value;
+                        b.z = lineLocationNP[y].np[2].value-lineLocationNP[x].np[2].value;
+                        baselines[idx]->setBaseline(b);
+                    }
+                    idx++;
+                }
+            }
+            IDSetNumber(&lineLocationNP[i], nullptr);
+            double center_tmp[3] = {0};
+            int first = -1;
+            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+                if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                    if(first > -1) {
+                        center_tmp[0] += lineLocationNP[x].np[0].value-lineLocationNP[first].np[0].value;
+                        center_tmp[1] += lineLocationNP[x].np[1].value-lineLocationNP[first].np[1].value;
+                        center_tmp[2] += lineLocationNP[x].np[2].value-lineLocationNP[first].np[2].value;
+                        idx++;
+                    } else {
+                        first = x;
+                    }
+                }
+            }
+            center_tmp[0] /= idx;
+            center_tmp[1] /= idx;
+            center_tmp[2] /= idx;
+            center_tmp[0] += lineLocationNP[first].np[0].value;
+            center_tmp[1] += lineLocationNP[first].np[1].value;
+            center_tmp[2] += lineLocationNP[first].np[2].value;
+            center[i].x = lineLocationNP[i].np[0].value-center_tmp[0];
+            center[i].y = lineLocationNP[i].np[1].value-center_tmp[1];
+            center[i].z = lineLocationNP[i].np[2].value-center_tmp[2];
+        }
+    }
+
     if(!strcmp(settingsNP.name, name)) {
         IUUpdateNumber(&settingsNP, values, names, n);
         for(int x = 0; x < ahp_xc_get_nbaselines(); x++) {
             baselines[x]->setWavelength(settingsN[0].value);
         }
+        ahp_xc_set_frequency_divider(settingsN[2].value);
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
@@ -766,28 +797,38 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
         if(!strcmp(name, lineEnableSP[x].name)){
             IUUpdateSwitch(&lineEnableSP[x], states, names, n);
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                ActiveLine(x, true, linePowerSP[x].sp[0].s == ISS_ON);
+                ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON, lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
                 defineSwitch(&linePowerSP[x]);
-                defineNumber(&lineGPSNP[x]);
-                defineNumber(&lineTelescopeNP[x]);
+                defineSwitch(&lineActiveEdgeSP[x]);
+                defineSwitch(&lineEdgeTriggerSP[x]);
+                defineNumber(&lineLocationNP[x]);
                 defineNumber(&lineDelayNP[x]);
                 defineNumber(&lineStatsNP[x]);
-                defineText(&lineDevicesTP[x]);
             } else {
-                ActiveLine(x, false, false);
+                ActiveLine(x, false, false, false, false);
                 deleteProperty(linePowerSP[x].name);
-                deleteProperty(lineGPSNP[x].name);
-                deleteProperty(lineTelescopeNP[x].name);
+                deleteProperty(lineActiveEdgeSP[x].name);
+                deleteProperty(lineEdgeTriggerSP[x].name);
+                deleteProperty(lineLocationNP[x].name);
                 deleteProperty(lineStatsNP[x].name);
-                deleteProperty(lineDevicesTP[x].name);
                 deleteProperty(lineDelayNP[x].name);
             }
             IDSetSwitch(&lineEnableSP[x], nullptr);
         }
         if(!strcmp(name, linePowerSP[x].name)){
             IUUpdateSwitch(&linePowerSP[x], states, names, n);
-            ActiveLine(x, true, linePowerSP[x].sp[0].s == ISS_ON);
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON, lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&linePowerSP[x], nullptr);
+        }
+        if(!strcmp(name, lineActiveEdgeSP[x].name)){
+            IUUpdateSwitch(&lineActiveEdgeSP[x], states, names, n);
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON, lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
+            IDSetSwitch(&lineActiveEdgeSP[x], nullptr);
+        }
+        if(!strcmp(name, lineEdgeTriggerSP[x].name)){
+            IUUpdateSwitch(&lineEdgeTriggerSP[x], states, names, n);
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON, lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
+            IDSetSwitch(&lineEdgeTriggerSP[x], nullptr);
         }
     }
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -815,31 +856,6 @@ bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *n
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    //  This is for our device
-    //  Now lets see if it's something we process here
-    for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-        if (!strcmp(name, lineDevicesTP[x].name))
-        {
-            lineDevicesTP[x].s = IPS_OK;
-            IUUpdateText(&lineDevicesTP[x], texts, names, n);
-            IDSetText(&lineDevicesTP[x], nullptr);
-
-            // Update the property name!
-            strncpy(snoopTelescopeNP[x].device, lineDevicesTP[x].tp[0].text, MAXINDIDEVICE);
-            strncpy(snoopTelescopeInfoNP[x].device, lineDevicesTP[x].tp[0].text, MAXINDIDEVICE);
-            strncpy(snoopGPSNP[x].device, lineDevicesTP[x].tp[1].text, MAXINDIDEVICE);
-            strncpy(snoopDomeNP[x].device, lineDevicesTP[x].tp[2].text, MAXINDIDEVICE);
-
-            IDSnoopDevice(lineDevicesTP[x].tp[0].text, "EQUATORIAL_EOD_COORD");
-            IDSnoopDevice(lineDevicesTP[x].tp[0].text, "TELESCOPE_INFO");
-            IDSnoopDevice(snoopGPSNP[x].device, "GEOGRAPHIC_COORD");
-            IDSnoopDevice(snoopDomeNP[x].device, "GEOGRAPHIC_COORD");
-
-            //  We processed this one, so, tell the world we did it
-            return true;
-        }
-    }
-
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
 
@@ -851,52 +867,6 @@ bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *n
 ***************************************************************************************/
 bool AHP_XC::ISSnoopDevice(XMLEle *root)
 {
-    for(int i = 0; i < ahp_xc_get_nlines(); i++) {
-        if(!IUSnoopNumber(root, &snoopTelescopeNP[i])) {
-            lineTelescopeNP[i].s = IPS_BUSY;
-            lineTelescopeNP[i].np[0].value = snoopTelescopeNP[i].np[0].value;
-            lineTelescopeNP[i].np[1].value = snoopTelescopeNP[i].np[1].value;
-            IDSetNumber(&lineTelescopeNP[i], nullptr);
-        }
-        if(!IUSnoopNumber(root, &snoopTelescopeInfoNP[i])) {
-            lineTelescopeNP[i].s = IPS_BUSY;
-            lineTelescopeNP[i].np[2].value = snoopTelescopeInfoNP[i].np[0].value;
-            lineTelescopeNP[i].np[3].value = snoopTelescopeInfoNP[i].np[1].value;
-            IDSetNumber(&lineTelescopeNP[i], nullptr);
-        }
-        if(!IUSnoopNumber(root, &snoopGPSNP[i])) {
-            lineGPSNP[i].s = IPS_BUSY;
-            double Lat0, Lon0;
-            lineGPSNP[i].np[0].value = snoopGPSNP[i].np[0].value;
-            lineGPSNP[i].np[1].value = snoopGPSNP[i].np[1].value;
-            lineGPSNP[i].np[2].value = snoopGPSNP[i].np[2].value;
-            int idx = 0;
-            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-                    if(x==i||y==i) {
-                        double Lat, Lon;
-                        Lat0 = (snoopGPSNP[y].np[0].value-snoopGPSNP[x].np[0].value);
-                        Lon0 = (snoopGPSNP[y].np[1].value-snoopGPSNP[x].np[1].value);
-                        Lon = rangeDec(Lon0);
-                        Lon0 = 0;
-                        Lon *= M_PI/180.0;
-                        Lat = rangeDec(Lat0);
-                        Lat0 = 0;
-                        Lat *= M_PI/180.0;
-                        double radius = estimate_geocentric_elevation(snoopGPSNP[x].np[0].value, snoopGPSNP[x].np[2].value);
-                        INDI::Correlator::Baseline b;
-                        b.x = sin(Lon)*radius;
-                        b.y = sin(Lat)*radius;
-                        b.z = (1.0-cos(Lat)*cos(Lon))*radius;
-                        baselines[idx]->setBaseline(b);
-                    }
-                    idx++;
-                }
-            }
-            IDSetNumber(&lineGPSNP[i], nullptr);
-        }
-    }
-
     for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISSnoopDevice(root);
 
@@ -946,7 +916,7 @@ void AHP_XC::TimerHit()
     correlationsNP.s = IPS_BUSY;
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
-        double steradian = pow(asin(lineTelescopeNP[x].np[2].value*0.5/lineTelescopeNP[x].np[3].value), 2);
+        double steradian = pow(asin(primaryAperture*0.5/primaryFocalLength), 2);
         double photon_flux = ((double)totalcounts[x])*1000.0/POLLMS;
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         lineDelayNP[x].s = IPS_BUSY;
@@ -998,29 +968,14 @@ bool AHP_XC::Connect()
     linePowerS = static_cast<ISwitch*>(realloc(linePowerS, static_cast<unsigned long>(ahp_xc_get_nlines())*2*sizeof(ISwitch)+1));
     linePowerSP = static_cast<ISwitchVectorProperty*>(realloc(linePowerSP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ISwitchVectorProperty)+1));
 
-    lineDevicesT = static_cast<IText*>(realloc(lineDevicesT, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(IText)+1));
-    lineDevicesTP = static_cast<ITextVectorProperty*>(realloc(lineDevicesTP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ITextVectorProperty)+1));
+    lineActiveEdgeS = static_cast<ISwitch*>(realloc(lineActiveEdgeS, static_cast<unsigned long>(ahp_xc_get_nlines())*2*sizeof(ISwitch)+1));
+    lineActiveEdgeSP = static_cast<ISwitchVectorProperty*>(realloc(lineActiveEdgeSP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ISwitchVectorProperty)+1));
 
-    lineGPSN = static_cast<INumber*>(realloc(lineGPSN, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    lineGPSNP = static_cast<INumberVectorProperty*>(realloc(lineGPSNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
+    lineEdgeTriggerS = static_cast<ISwitch*>(realloc(lineEdgeTriggerS, static_cast<unsigned long>(ahp_xc_get_nlines())*2*sizeof(ISwitch)+1));
+    lineEdgeTriggerSP = static_cast<ISwitchVectorProperty*>(realloc(lineEdgeTriggerSP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(ISwitchVectorProperty)+1));
 
-    lineTelescopeN = static_cast<INumber*>(realloc(lineTelescopeN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    lineTelescopeNP = static_cast<INumberVectorProperty*>(realloc(lineTelescopeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
-
-    lineDomeN = static_cast<INumber*>(realloc(lineDomeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    lineDomeNP = static_cast<INumberVectorProperty*>(realloc(lineDomeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
-
-    snoopGPSN = static_cast<INumber*>(realloc(snoopGPSN, static_cast<unsigned long>(3*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    snoopGPSNP = static_cast<INumberVectorProperty*>(realloc(snoopGPSNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
-
-    snoopTelescopeN = static_cast<INumber*>(realloc(snoopTelescopeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    snoopTelescopeNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
-
-    snoopTelescopeInfoN = static_cast<INumber*>(realloc(snoopTelescopeInfoN, static_cast<unsigned long>(4*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    snoopTelescopeInfoNP = static_cast<INumberVectorProperty*>(realloc(snoopTelescopeInfoNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
-
-    snoopDomeN = static_cast<INumber*>(realloc(snoopDomeN, static_cast<unsigned long>(2*ahp_xc_get_nlines())*sizeof(INumber)+1));
-    snoopDomeNP = static_cast<INumberVectorProperty*>(realloc(snoopDomeNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
+    lineLocationN = static_cast<INumber*>(realloc(lineLocationN, static_cast<unsigned long>(ahp_xc_get_nlines()*3)*sizeof(INumber)+1));
+    lineLocationNP = static_cast<INumberVectorProperty*>(realloc(lineLocationNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
 
     lineDelayN = static_cast<INumber*>(realloc(lineDelayN, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumber)+1));
     lineDelayNP = static_cast<INumberVectorProperty*>(realloc(lineDelayNP, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(INumberVectorProperty)+1));
@@ -1047,6 +1002,7 @@ bool AHP_XC::Connect()
     az = static_cast<double*>(realloc(az, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     delay = static_cast<double*>(realloc(delay, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1));
     baselines = static_cast<baseline**>(realloc(baselines, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(baseline*)+1));
+    center = static_cast<INDI::Correlator::Baseline*>(malloc(sizeof (INDI::Correlator::Baseline)*static_cast<unsigned long>(ahp_xc_get_nlines())));
 
     memset (totalcounts, 0, static_cast<unsigned long>(ahp_xc_get_nlines())*sizeof(double)+1);
     memset (totalcorrelations, 0, static_cast<unsigned long>(ahp_xc_get_nbaselines())*sizeof(ahp_xc_correlation)+1);
@@ -1087,47 +1043,24 @@ bool AHP_XC::Connect()
             dsp_stream_alloc_buffer(autocorrelations_str[x], autocorrelations_str[x]->len);
         }
 
-        //snoop properties
-        IUFillNumber(&snoopTelescopeN[x*2+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
-        IUFillNumber(&snoopTelescopeN[x*2+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
-
-        IUFillNumber(&snoopTelescopeInfoN[x*4+0], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
-        IUFillNumber(&snoopTelescopeInfoN[x*4+1], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
-        IUFillNumber(&snoopTelescopeInfoN[x*4+2], "GUIDER_APERTURE", "Guider Aperture (mm)", "%g", 10, 5000, 0, 0.0);
-        IUFillNumber(&snoopTelescopeInfoN[x*4+3], "GUIDER_FOCAL_LENGTH", "Guider Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
-
-        IUFillNumber(&snoopGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
-        IUFillNumber(&snoopGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
-        IUFillNumber(&snoopGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
+        IUFillNumber(&lineLocationN[x*3+0], "LOCATION_X", "X Location (m)", "%g", -EARTHRADIUSMEAN, EARTHRADIUSMEAN, 1.0E-9, 0);
+        IUFillNumber(&lineLocationN[x*3+1], "LOCATION_Y", "Y Location (m)", "%g", -EARTHRADIUSMEAN, EARTHRADIUSMEAN, 1.0E-9, 0);
+        IUFillNumber(&lineLocationN[x*3+2], "LOCATION_Z", "Z Location (m)", "%g", -EARTHRADIUSMEAN, EARTHRADIUSMEAN, 1.0E-9, 0);
 
         IUFillNumber(&lineDelayN[x], "DELAY", "Delay (m)", "%g", 0, EARTHRADIUSMEAN, 1.0E-9, 0);
 
-        IUFillNumberVector(&snoopGPSNP[x], &snoopGPSN[x*3], 3, getDeviceName(), "GEOGRAPHIC_COORD", "Location", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
-        IUFillNumberVector(&snoopTelescopeNP[x], &snoopTelescopeN[x*2], 2, getDeviceName(), "EQUATORIAL_EOD_COORD", "Target coordinates", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-        IUFillNumberVector(&snoopTelescopeInfoNP[x], &snoopTelescopeInfoN[x*4], 4, getDeviceName(), "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
-
-        lineDevicesT[x*3+0].text = static_cast<char*>(malloc(1));
-        IUFillText(&lineDevicesT[x*3+0], "ACTIVE_TELESCOPE", "Telescope", "Telescope Simulator");
-        lineDevicesT[x*3+1].text = static_cast<char*>(malloc(1));
-        IUFillText(&lineDevicesT[x*3+1], "ACTIVE_GPS", "GPS", "GPS Simulator");
-        lineDevicesT[x*3+2].text = static_cast<char*>(malloc(1));
-        IUFillText(&lineDevicesT[x*3+2], "ACTIVE_DOME", "DOME", "Dome Simulator");
-
         //interferometer properties
-        IUFillNumber(&lineTelescopeN[x*4+0], "RA", "RA (hh:mm:ss)", "%010.6m", 0, 24, 0, 0);
-        IUFillNumber(&lineTelescopeN[x*4+1], "DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
-        IUFillNumber(&lineTelescopeN[x*4+2], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
-        IUFillNumber(&lineTelescopeN[x*4+3], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
-
-        IUFillNumber(&lineGPSN[x*3+0], "LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 0.0);
-        IUFillNumber(&lineGPSN[x*3+1], "LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 0.0);
-        IUFillNumber(&lineGPSN[x*3+2], "ELEV", "Elevation (m)", "%g", -200, 10000, 0, 0);
-
         IUFillSwitch(&lineEnableS[x*2+0], "LINE_ENABLE", "Enable", ISS_OFF);
         IUFillSwitch(&lineEnableS[x*2+1], "LINE_DISABLE", "Disable", ISS_ON);
 
         IUFillSwitch(&linePowerS[x*2+0], "LINE_POWER_ON", "On", ISS_OFF);
         IUFillSwitch(&linePowerS[x*2+1], "LINE_POWER_OFF", "Off", ISS_ON);
+
+        IUFillSwitch(&lineActiveEdgeS[x*2+0], "LINE_ACTIVE_EDGE_HIGH", "High", ISS_ON);
+        IUFillSwitch(&lineActiveEdgeS[x*2+1], "LINE_ACTIVE_EDGE_LOW", "Low", ISS_OFF);
+
+        IUFillSwitch(&lineEdgeTriggerS[x*2+0], "LINE_EDGE_SAMPLE", "On sample", ISS_OFF);
+        IUFillSwitch(&lineEdgeTriggerS[x*2+1], "LINE_EDGE_EDGE", "On edge", ISS_ON);
 
         //report pulse counts
         IUFillNumber(&lineStatsN[x*4+0], "LINE_COUNTS", "Counts", "%g", 0.0, 400000000.0, 1.0, 0);
@@ -1140,12 +1073,12 @@ bool AHP_XC::Connect()
         IUFillSwitchVector(&lineEnableSP[x], &lineEnableS[x*2], 2, getDeviceName(), name, "Enable Line", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
         sprintf(name, "LINE_POWER_%02d", x+1);
         IUFillSwitchVector(&linePowerSP[x], &linePowerS[x*2], 2, getDeviceName(), name, "Power", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        sprintf(name, "LINE_SNOOP_DEVICES_%02d", x+1);
-        IUFillTextVector(&lineDevicesTP[x], &lineDevicesT[x*3], 3, getDeviceName(), name, "Locator devices", tab, IP_RW, 60, IPS_IDLE);
-        sprintf(name, "LINE_GEOGRAPHIC_COORD_%02d", x+1);
-        IUFillNumberVector(&lineGPSNP[x], &lineGPSN[x*3], 3, getDeviceName(), name, "Location", tab, IP_RO, 60, IPS_IDLE);
-        sprintf(name, "TELESCOPE_INFO_%02d", x+1);
-        IUFillNumberVector(&lineTelescopeNP[x], &lineTelescopeN[x*4], 4, getDeviceName(), name, "Target coordinates", tab, IP_RO, 60, IPS_IDLE);
+        sprintf(name, "LINE_ACTIVE_EDGE_%02d", x+1);
+        IUFillSwitchVector(&lineActiveEdgeSP[x], &lineActiveEdgeS[x*2], 2, getDeviceName(), name, "Active edge", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        sprintf(name, "LINE_EDGE_TRIGGER_%02d", x+1);
+        IUFillSwitchVector(&lineEdgeTriggerSP[x], &lineEdgeTriggerS[x*2], 2, getDeviceName(), name, "Trigger", tab, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        sprintf(name, "LINE_LOCATION_%02d", x+1);
+        IUFillNumberVector(&lineLocationNP[x], &lineLocationN[x*3], 3, getDeviceName(), name, "Line location", tab, IP_RW, 60, IPS_IDLE);
         sprintf(name, "LINE_DELAY_%02d", x+1);
         IUFillNumberVector(&lineDelayNP[x], &lineDelayN[x], 1, getDeviceName(), name, "Delay line", tab, IP_RO, 60, IPS_IDLE);
         sprintf(name, "LINE_STATS_%02d", x+1);
@@ -1186,9 +1119,9 @@ bool AHP_XC::Connect()
     return true;
 }
 
-void AHP_XC::ActiveLine(int line, bool on, bool power)
+void AHP_XC::ActiveLine(int line, bool on, bool power, bool active_low, bool edge_triggered)
 {
-    ahp_xc_set_leds(line, (on?1:0)|(power?2:0));
+    ahp_xc_set_leds(line, (on?1:0)|(power?2:0)|(active_low?4:0)|(edge_triggered?8:0));
 }
 
 void AHP_XC::SetFrequencyDivider(unsigned char divider)
