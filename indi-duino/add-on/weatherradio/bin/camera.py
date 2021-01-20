@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for shooting single images with automatic exposure adaption
@@ -16,13 +16,13 @@
 import os
 from datetime import datetime
 from pathlib import Path
-import ConfigParser
+import configparser
 from autoexposure import *
 
 inifile_name = os.path.dirname(os.path.realpath(__file__)) + '/camera.ini'
 
 def init_config():
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser(interpolation=None)
     config.optionxform = str
     # default values
     config.add_section('Camera')
@@ -77,4 +77,4 @@ configfile = open(inifile_name, 'w')
 config.write(configfile)
 configfile.close()
 
-print "date=%s; time=%s; file=%s; ex=%d; iso=%d; br=%s; sat=%d; co=%d img brightness=%d" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, imgExpTime, iso, brightness, saturation, contrast, imgBrightness)
+print("date=%s; time=%s; file=%s; ex=%d; iso=%d; br=%s; sat=%d; co=%d img brightness=%d" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, imgExpTime, iso, brightness, saturation, contrast, imgBrightness))

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Tool library for automatic exposure control
@@ -12,18 +12,17 @@
 #
 #-----------------------------------------------------------------------
 
-import ConfigParser as ConfigParser
 from PIL import Image
 from PIL import ImageStat
 from PIL.ExifTags import TAGS
 
 def dump_exif(exif):
-  for (k,v) in exif.iteritems():
+  for (k,v) in exif.items():
     print("%s: %s" % (TAGS.get(k), v))
 
 def get_fields (exif, fields) :
   result = {}
-  for (k,v) in exif.iteritems():
+  for (k,v) in exif.items():
     tag = TAGS.get(k)
     if tag in fields:
       result[tag] = v
