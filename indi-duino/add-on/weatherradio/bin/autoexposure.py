@@ -52,28 +52,30 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
     newBrightness = brightness
     newContrast   = contrast
     newSaturation = saturation
-    if (newExpTime < 3000000 and iso > 50):
+    if (newExpTime < 1000000 and iso > 50):
         # adapt ISO - less than 3 sec (avoid ISO flipping)
         newISO     /= 2
-        newExpTime = newExpTime * 1.4
+        newExpTime = newExpTime * 2.5
     elif (newExpTime > 5000000 and iso < config.getint('Night', 'MaxISO')):
         # adapt ISO - more than 1 sec
         newISO     *= 2
-        newExpTime = newExpTime / 1.4
-    # target brightness and contrast depend upon ISO value
-    newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
-    newContrast   =  0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
-    # change brightness and contrast slowly
-    # brightness + 10 equals exptime * 2
-    if newBrightness > brightness:
-      newBrightness = brightness + 1
-    elif newBrightness < brightness:
-      newBrightness = brightness - 1
+        newExpTime = newExpTime / 2.5
+    else:
+        # adapt only if no ISO change happened to avoid miscorrections
+        # target brightness and contrast depend upon ISO value
+        newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
+        newContrast   =  0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
+        # change brightness and contrast slowly
+        # brightness + 10 equals exptime * 2
+        if newBrightness > brightness:
+            newBrightness = brightness + 1
+        elif newBrightness < brightness:
+            newBrightness = brightness - 1
 
-    if newContrast > contrast:
-      newContrast = contrast + 1
-    elif newContrast < contrast:
-      newContrast = contrast - 1
+        if newContrast > contrast:
+            newContrast = contrast + 1
+        elif newContrast < contrast:
+            newContrast = contrast - 1
 
     # limit to maximal exposure value
     newExpTime = min(newExpTime, config.getint('Night', 'MaxExposure'))
