@@ -253,11 +253,34 @@ void AHP_XC::Callback()
         }
 
         double julian = ln_get_julian_from_sys();
-        int idx = 0;
+        double center_tmp[3] = {0, 0, 0};
+        int first = -1;
+        int idx = 1;
+        for(int x = 0; x < ahp_xc_get_nlines(); x++) {
+            if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                if(first > -1) {
+                    center_tmp[0] += lineLocationNP[x].np[0].value-lineLocationNP[first].np[0].value;
+                    center_tmp[1] += lineLocationNP[x].np[1].value-lineLocationNP[first].np[1].value;
+                    center_tmp[2] += lineLocationNP[x].np[2].value-lineLocationNP[first].np[2].value;
+                    idx++;
+                } else {
+                    first = x;
+                }
+            }
+        }
+        center_tmp[0] /= idx;
+        center_tmp[1] /= idx;
+        center_tmp[2] /= idx;
+        center_tmp[0] += lineLocationNP[first].np[0].value;
+        center_tmp[1] += lineLocationNP[first].np[1].value;
+        center_tmp[2] += lineLocationNP[first].np[2].value;
         int farest = 0;
         double delay_max = 0;
         for(int x = 0; x < ahp_xc_get_nlines(); x++) {
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
+                center[x].x = lineLocationNP[x].np[0].value-center_tmp[0];
+                center[x].y = lineLocationNP[x].np[1].value-center_tmp[1];
+                center[x].z = lineLocationNP[x].np[2].value-center_tmp[2];
                 ln_hrz_posn altaz;
                 ln_lnlat_posn obs;
                 ln_equ_posn obj;
@@ -270,9 +293,9 @@ void AHP_XC::Callback()
                 get_hrz_from_equ(&obj, &obs, julian, &altaz);
                 alt[x] = altaz.alt;
                 az[x] = altaz.az;
-                double delay_tmp = fabs(baseline_delay(alt[x], az[x], center[x].values)/sqrt(pow(center[x].x, 2)+pow(center[x].y, 2)+pow(center[x].z, 2)));
-                farest = (delay_max < delay_tmp ? farest : x);
-                delay_max = (delay_max < delay_tmp ? delay_max : delay_tmp);
+                double delay_tmp = baseline_delay(alt[x], az[x], center[x].values)/sqrt(pow(center[x].x, 2)+pow(center[x].y, 2)+pow(center[x].z, 2));
+                farest = (delay_max > delay_tmp ? farest : x);
+                delay_max = (delay_max > delay_tmp ? delay_max : delay_tmp);
             }
         }
         delay[farest] = 0;
@@ -723,29 +746,6 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
                 }
             }
             IDSetNumber(&lineLocationNP[i], nullptr);
-            double center_tmp[3] = {0};
-            int first = -1;
-            for(int x = 0; x < ahp_xc_get_nlines(); x++) {
-                if(lineEnableSP[x].sp[0].s == ISS_ON) {
-                    if(first > -1) {
-                        center_tmp[0] += lineLocationNP[x].np[0].value-lineLocationNP[first].np[0].value;
-                        center_tmp[1] += lineLocationNP[x].np[1].value-lineLocationNP[first].np[1].value;
-                        center_tmp[2] += lineLocationNP[x].np[2].value-lineLocationNP[first].np[2].value;
-                        idx++;
-                    } else {
-                        first = x;
-                    }
-                }
-            }
-            center_tmp[0] /= idx;
-            center_tmp[1] /= idx;
-            center_tmp[2] /= idx;
-            center_tmp[0] += lineLocationNP[first].np[0].value;
-            center_tmp[1] += lineLocationNP[first].np[1].value;
-            center_tmp[2] += lineLocationNP[first].np[2].value;
-            center[i].x = lineLocationNP[i].np[0].value-center_tmp[0];
-            center[i].y = lineLocationNP[i].np[1].value-center_tmp[1];
-            center[i].z = lineLocationNP[i].np[2].value-center_tmp[2];
         }
     }
 
