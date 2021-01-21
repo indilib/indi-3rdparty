@@ -43,6 +43,7 @@ const char * PentaxEventHandler::getDeviceName() {
 
 void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const CameraImage>& image)
 {
+    INDI_UNUSED(sender);
 
     if (driver->transferFormatS[1].s != ISS_ON) {
         uint8_t * memptr = driver->PrimaryCCD.getFrameBuffer();
@@ -141,12 +142,15 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
 
 void PentaxEventHandler::liveViewFrameUpdated(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const unsigned char>& liveViewFrame, uint64_t frameSize)
 {
+    INDI_UNUSED(sender);
     std::unique_lock<std::mutex> ccdguard(driver->ccdBufferLock);
     driver->Streamer->newFrame(liveViewFrame.get(), frameSize);
     ccdguard.unlock();
 }
 
 void PentaxEventHandler::deviceDisconnected (const std::shared_ptr< const CameraDevice > &sender, DeviceInterface inf) {
+    INDI_UNUSED(sender);
+    INDI_UNUSED(inf);
     if (driver->Disconnect()) {
         driver->setConnected(false, IPS_IDLE);
         driver->updateProperties();
@@ -154,6 +158,8 @@ void PentaxEventHandler::deviceDisconnected (const std::shared_ptr< const Camera
 }
 
 void PentaxEventHandler::captureSettingsChanged(const std::shared_ptr<const CameraDevice>& sender, const std::vector<std::shared_ptr<const CaptureSetting>>& newSettings) {
+    INDI_UNUSED(sender);
+    INDI_UNUSED(newSettings);
     driver->getCaptureSettingsState();
     driver->deleteCaptureSwitches();
     driver->buildCaptureSwitches();

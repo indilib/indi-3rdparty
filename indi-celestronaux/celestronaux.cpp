@@ -632,19 +632,19 @@ bool CelestronAUX::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&CordWrapSP);
+        defineProperty(&CordWrapSP);
         getCordwrap();
         IUResetSwitch(&CordWrapSP);
         CordWrapS[cordwrap].s = ISS_ON;
         IDSetSwitch(&CordWrapSP, nullptr);
 
-        defineSwitch(&CWPosSP);
+        defineProperty(&CWPosSP);
         getCordwrapPos();
         IUResetSwitch(&CWPosSP);
         CordWrapS[int(cordwrapPos % 90)].s = ISS_ON;
         IDSetSwitch(&CWPosSP, nullptr);
 
-        defineSwitch(&GPSEmuSP);
+        defineProperty(&GPSEmuSP);
         IUResetSwitch(&GPSEmuSP);
         GPSEmuS[gpsemu].s = ISS_ON;
         IDSetSwitch(&GPSEmuSP, nullptr);
@@ -658,7 +658,7 @@ bool CelestronAUX::updateProperties()
         IUSaveText(&FirmwareT[FW_CHG], "Charger version");
         IUSaveText(&FirmwareT[FW_LIGHT], "Ligts version");
         IUSaveText(&FirmwareT[FW_GPS], "GPS version");
-        defineText(&FirmwareTP);
+        defineProperty(&FirmwareTP);
     }
     else
     {
@@ -692,7 +692,7 @@ void CelestronAUX::ISGetProperties(const char *dev)
     /* First we let our parent populate */
     INDI::Telescope::ISGetProperties(dev);
 
-    defineSwitch(&NetDetectSP);
+    defineProperty(&NetDetectSP);
     return;
 }
 

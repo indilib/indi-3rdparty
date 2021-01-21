@@ -327,7 +327,7 @@ void indiduino::TimerHit()
     }
     // START: Switch of for debugging!
     time_t sec_since_reply = sf->secondsSinceVersionReply();
-    time_t max_delay = static_cast<time_t>(5*POLLMS < 30000 ? 30 : 5*POLLMS/1000);
+    time_t max_delay = static_cast<time_t>(5*getCurrentPollingPeriod() < 30000 ? 30 : 5*getCurrentPollingPeriod()/1000);
     if (sec_since_reply > max_delay)
     {
         LOGF_ERROR("No reply from the device for %d secs, disconnecting", max_delay);
@@ -341,7 +341,7 @@ void indiduino::TimerHit()
         sf->askFirmwareVersion();
     }
     // END: Switch of for debugging!
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 /**************************************************************************************
@@ -452,7 +452,7 @@ bool indiduino::updateProperties()
                 }
             }
         }
-        // defineSwitch(&TestStateSP); Switch only for testing
+        // defineProperty(&TestStateSP); Switch only for testing
     }
     controller->updateProperties();
     return true;
@@ -740,7 +740,7 @@ bool indiduino::Connect()
         }
         else
         {
-            SetTimer(POLLMS);
+            SetTimer(getCurrentPollingPeriod());
             return true;
         }
     }
@@ -978,7 +978,7 @@ bool indiduino::setPinModesFromSKEL()
             }
         }
     }
-    sf->setSamplingInterval(POLLMS / 2);
+    sf->setSamplingInterval(getCurrentPollingPeriod() / 2);
     sf->reportAnalogPorts(1);
     sf->reportDigitalPorts(1);
     return true;

@@ -382,9 +382,9 @@ bool LX200Skywalker::updateProperties()
     if (isConnected())
     {
         // registering here results in display at bottom of tab
-        defineSwitch(&MountStateSP);
-        defineNumber(&SystemSlewSpeedNP);
-        defineText(&FirmwareVersionTP);
+        defineProperty(&MountStateSP);
+        defineProperty(&SystemSlewSpeedNP);
+        defineProperty(&FirmwareVersionTP);
     }
     else
     {
@@ -1468,38 +1468,38 @@ void LX200Skywalker::ISGetProperties(const char *dev)
     if (isConnected())
     {
         if (HasTrackMode() && TrackModeS != nullptr)
-            defineSwitch(&TrackModeSP);
+            defineProperty(&TrackModeSP);
         if (CanControlTrack())
-            defineSwitch(&TrackStateSP);
+            defineProperty(&TrackStateSP);
         if (HasTrackRate())
-            defineNumber(&TrackRateNP);        
+            defineProperty(&TrackRateNP);        
     }
     /*
         if (isConnected())
         {
             if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
-                defineSwitch(&AlignmentSP);
+                defineProperty(&AlignmentSP);
 
             if (genericCapability & LX200_HAS_TRACKING_FREQ)
-                defineNumber(&TrackingFreqNP);
+                defineProperty(&TrackingFreqNP);
 
             if (genericCapability & LX200_HAS_PULSE_GUIDING)
-                defineSwitch(&UsePulseCmdSP);
+                defineProperty(&UsePulseCmdSP);
 
             if (genericCapability & LX200_HAS_SITES)
             {
-                defineSwitch(&SiteSP);
-                defineText(&SiteNameTP);
+                defineProperty(&SiteSP);
+                defineProperty(&SiteNameTP);
             }
 
-            defineNumber(&GuideNSNP);
-            defineNumber(&GuideWENP);
+            defineProperty(&GuideNSNP);
+            defineProperty(&GuideWENP);
 
             if (genericCapability & LX200_HAS_FOCUS)
             {
-                defineSwitch(&FocusMotionSP);
-                defineNumber(&FocusTimerNP);
-                defineSwitch(&FocusModeSP);
+                defineProperty(&FocusMotionSP);
+                defineProperty(&FocusTimerNP);
+                defineProperty(&FocusModeSP);
             }
         }
         */

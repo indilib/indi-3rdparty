@@ -274,23 +274,23 @@ bool NexDome::updateProperties()
     {
         getStartupValues();
 
-        defineSwitch(&GoHomeSP);
-        defineNumber(&HomePositionNP);
+        defineProperty(&GoHomeSP);
+        defineProperty(&HomePositionNP);
 
         // Rotator
-        defineNumber(&RotatorSettingsNP);
-        defineNumber(&RotatorSyncNP);
-        defineSwitch(&RotatorFactorySP);
-        defineText(&RotatorFirmwareVersionTP);
+        defineProperty(&RotatorSettingsNP);
+        defineProperty(&RotatorSyncNP);
+        defineProperty(&RotatorFactorySP);
+        defineProperty(&RotatorFirmwareVersionTP);
 
         // Shutter
         if (HasShutter())
         {
-            defineNumber(&ShutterSettingsNP);
-            defineNumber(&ShutterSyncNP);
-            defineNumber(&ShutterBatteryLevelNP);
-            defineSwitch(&ShutterFactorySP);
-            defineText(&ShutterFirmwareVersionTP);
+            defineProperty(&ShutterSettingsNP);
+            defineProperty(&ShutterSyncNP);
+            defineProperty(&ShutterBatteryLevelNP);
+            defineProperty(&ShutterFactorySP);
+            defineProperty(&ShutterFirmwareVersionTP);
         }
     }
     else
@@ -667,7 +667,7 @@ void NexDome::TimerHit()
     }
 
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 //////////////////////////////////////////////////////////////////////////////

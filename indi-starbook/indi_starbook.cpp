@@ -166,9 +166,9 @@ bool StarbookDriver::updateProperties()
     Telescope::updateProperties();
     if (isConnected())
     {
-        defineText(&VersionTP);
-        defineText(&StateTP);
-        defineSwitch(&StartSP);
+        defineProperty(&VersionTP);
+        defineProperty(&StateTP);
+        defineProperty(&StartSP);
     }
     else
     {

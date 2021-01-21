@@ -2212,22 +2212,22 @@ int CCCDCamera::put_FanMode(FanMode newVal)
 	return S_OK;
 }
 
-int CCCDCamera::get_FlushCycles(FlushCycles& pVal)
+int CCCDCamera::get_FlushCycles(FlushCycles&)
 {
 	return Error ( "No longer support.  Use PreExposureFlush", IID_ICamera, MAKE_HRESULT(1,FACILITY_ITF, QSI_NOTSUPPORTED) );
 }
 
-int CCCDCamera::put_FlushCycles(FlushCycles newVal)
+int CCCDCamera::put_FlushCycles(FlushCycles)
 {
 	return Error ( "No longer support.  Use PreExposureFlush", IID_ICamera, MAKE_HRESULT(1,FACILITY_ITF, QSI_NOTSUPPORTED) );
 }
 
-int CCCDCamera::get_ShutterMode(ShutterMode& pVal)
+int CCCDCamera::get_ShutterMode(ShutterMode&)
 {
 	return Error ( "No longer support.  Use ShutterPriority", IID_ICamera, MAKE_HRESULT(1,FACILITY_ITF, QSI_NOTSUPPORTED) );
 }
 
-int CCCDCamera::put_ShutterMode(ShutterMode newVal)
+int CCCDCamera::put_ShutterMode(ShutterMode)
 {
 	return Error ( "No longer support.  Use ShutterPriority", IID_ICamera, MAKE_HRESULT(1,FACILITY_ITF, QSI_NOTSUPPORTED) );
 }

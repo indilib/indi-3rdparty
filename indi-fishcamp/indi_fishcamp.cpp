@@ -272,11 +272,11 @@ bool FishCampCCD::updateProperties()
 
     if (isConnected())
     {
-        defineText(&CamInfoTP);
-        defineNumber(&CoolerNP);
-        defineNumber(&GainNP);
+        defineProperty(&CamInfoTP);
+        defineProperty(&CoolerNP);
+        defineProperty(&GainNP);
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -643,7 +643,7 @@ void FishCampCCD::TimerHit()
     }
 
     if (timerHitID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 

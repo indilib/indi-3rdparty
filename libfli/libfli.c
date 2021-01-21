@@ -49,6 +49,11 @@
 #include "libfli-mem.h"
 #include "libfli-debug.h"
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 static long devalloc(flidev_t *dev);
 static long devfree(flidev_t dev);
 static long fli_open(flidev_t *dev, char *name, long domain);
@@ -227,6 +232,10 @@ LIBFLIAPI FLIUsbBulkIO(flidev_t dev, int ep, void *buf, long *len)
 LIBFLIAPI FLIGrabFrame(flidev_t dev, void* buff,
 		       size_t buffsize, size_t* bytesgrabbed)
 {
+  INDI_UNUSED(dev);
+  INDI_UNUSED(buff);
+  INDI_UNUSED(buffsize);
+  INDI_UNUSED(bytesgrabbed);
 	return -EINVAL;
 }
 

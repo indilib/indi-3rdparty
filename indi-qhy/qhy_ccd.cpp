@@ -443,63 +443,63 @@ void QHYCCD::ISGetProperties(const char *dev)
     {
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
 
             if (HasCoolerManualMode)
             {
-                defineSwitch(&CoolerModeSP);
+                defineProperty(&CoolerModeSP);
             }
 
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
         }
 
         if (HasUSBSpeed)
-            defineNumber(&SpeedNP);
+            defineProperty(&SpeedNP);
 
         if (HasReadMode)
-            defineNumber(&ReadModeNP);
+            defineProperty(&ReadModeNP);
 
         if (HasGain)
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
 
         if (HasOffset)
-            defineNumber(&OffsetNP);
+            defineProperty(&OffsetNP);
 
         if (HasFilters)
         {
             //Define the Filter Slot and name properties
-            defineNumber(&FilterSlotNP);
+            defineProperty(&FilterSlotNP);
             if (FilterNameT != nullptr)
-                defineText(FilterNameTP);
+                defineProperty(FilterNameTP);
         }
 
         if (HasUSBTraffic)
-            defineNumber(&USBTrafficNP);
+            defineProperty(&USBTrafficNP);
 
-        defineNumber(&USBBufferNP);
+        defineProperty(&USBBufferNP);
 
-        defineText(&SDKVersionTP);
+        defineProperty(&SDKVersionTP);
 
         if (HasAmpGlow)
-            defineSwitch(&AMPGlowSP);
+            defineProperty(&AMPGlowSP);
 
         if (HasGPS)
         {
-            defineSwitch(&GPSSlavingSP);
-            defineNumber(&GPSSlavingParamNP);
+            defineProperty(&GPSSlavingSP);
+            defineProperty(&GPSSlavingParamNP);
 
-            defineNumber(&VCOXFreqNP);
-            defineSwitch(&GPSLEDCalibrationSP);
-            defineNumber(&GPSLEDStartPosNP);
-            defineNumber(&GPSLEDEndPosNP);
+            defineProperty(&VCOXFreqNP);
+            defineProperty(&GPSLEDCalibrationSP);
+            defineProperty(&GPSLEDStartPosNP);
+            defineProperty(&GPSLEDEndPosNP);
 
-            defineSwitch(&GPSControlSP);
+            defineProperty(&GPSControlSP);
 
-            defineLight(&GPSStateLP);
-            defineText(&GPSDataHeaderTP);
-            defineText(&GPSDataStartTP);
-            defineText(&GPSDataEndTP);
-            defineText(&GPSDataNowTP);
+            defineProperty(&GPSStateLP);
+            defineProperty(&GPSDataHeaderTP);
+            defineProperty(&GPSDataStartTP);
+            defineProperty(&GPSDataEndTP);
+            defineProperty(&GPSDataNowTP);
         }
     }
 }
@@ -513,16 +513,16 @@ bool QHYCCD::updateProperties()
     {
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
             if (HasCoolerManualMode)
             {
-                defineSwitch(&CoolerModeSP);
+                defineProperty(&CoolerModeSP);
             }
 
             CoolerNP.p = HasCoolerManualMode ? IP_RW : IP_RO;
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
 
-            m_TemperatureTimerID = IEAddTimer(POLLMS, QHYCCD::updateTemperatureHelper, this);
+            m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
         }
 
         double min = 0, max = 0, step = 0;
@@ -551,7 +551,7 @@ bool QHYCCD::updateProperties()
                           SpeedN[0].min, SpeedN[0].max, SpeedN[0].step);
             }
 
-            defineNumber(&SpeedNP);
+            defineProperty(&SpeedNP);
         }
 
         // Read mode support
@@ -599,7 +599,7 @@ bool QHYCCD::updateProperties()
                     LOGF_INFO("Using default read mode (error reading it): %zu", currentReadMode);
                 }
             }
-            defineNumber(&ReadModeNP);
+            defineProperty(&ReadModeNP);
         }
         // ---
 
@@ -627,7 +627,7 @@ bool QHYCCD::updateProperties()
                           GainN[0].max, GainN[0].step);
             }
 
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
         }
 
         if (HasOffset)
@@ -655,7 +655,7 @@ bool QHYCCD::updateProperties()
             }
 
             //Define the Offset
-            defineNumber(&OffsetNP);
+            defineProperty(&OffsetNP);
         }
 
         if (HasFilters)
@@ -686,36 +686,36 @@ bool QHYCCD::updateProperties()
                 LOGF_INFO("USB Traffic Settings: Value: %.f Min: %.f Max: %.f Step %.f", USBTrafficN[0].value,
                           USBTrafficN[0].min, USBTrafficN[0].max, USBTrafficN[0].step);
             }
-            defineNumber(&USBTrafficNP);
+            defineProperty(&USBTrafficNP);
         }
 
-        defineNumber(&USBBufferNP);
+        defineProperty(&USBBufferNP);
 
-        defineText(&SDKVersionTP);
+        defineProperty(&SDKVersionTP);
 
         if (HasAmpGlow)
         {
             int index = GetQHYCCDParam(m_CameraHandle, CONTROL_AMPV);
             IUResetSwitch(&AMPGlowSP);
             AMPGlowS[index].s = ISS_ON;
-            defineSwitch(&AMPGlowSP);
+            defineProperty(&AMPGlowSP);
         }
 
         if (HasGPS)
         {
-            defineSwitch(&GPSSlavingSP);
-            defineNumber(&GPSSlavingParamNP);
-            defineNumber(&VCOXFreqNP);
-            defineSwitch(&GPSLEDCalibrationSP);
-            defineNumber(&GPSLEDStartPosNP);
-            defineNumber(&GPSLEDEndPosNP);
-            defineSwitch(&GPSControlSP);
+            defineProperty(&GPSSlavingSP);
+            defineProperty(&GPSSlavingParamNP);
+            defineProperty(&VCOXFreqNP);
+            defineProperty(&GPSLEDCalibrationSP);
+            defineProperty(&GPSLEDStartPosNP);
+            defineProperty(&GPSLEDEndPosNP);
+            defineProperty(&GPSControlSP);
 
-            defineLight(&GPSStateLP);
-            defineText(&GPSDataHeaderTP);
-            defineText(&GPSDataStartTP);
-            defineText(&GPSDataEndTP);
-            defineText(&GPSDataNowTP);
+            defineProperty(&GPSStateLP);
+            defineProperty(&GPSDataHeaderTP);
+            defineProperty(&GPSDataStartTP);
+            defineProperty(&GPSDataEndTP);
+            defineProperty(&GPSDataNowTP);
         }
 
         // Let's get parameters now from CCD
@@ -1110,7 +1110,7 @@ bool QHYCCD::Connect()
         }
         pthread_mutex_unlock(&condMutex);
 
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
 
         return true;
     }
@@ -1488,7 +1488,7 @@ int QHYCCD::grabImage()
     //if (useSoftBin)
     //    PrimaryCCD.binFrame();
 
-    if (m_ExposureRequest > POLLMS * 5)
+    if (m_ExposureRequest > getCurrentPollingPeriod() * 5)
         LOG_INFO("Download complete.");
     else
         LOG_DEBUG("Download complete.");
@@ -1518,7 +1518,7 @@ void QHYCCD::TimerHit()
     //            {
     //                deleteProperty("FILTER_NAME");
     //                IUUpdateMinMax(&FilterSlotNP);
-    //                defineText(FilterNameTP);
+    //                defineProperty(FilterNameTP);
     //            }
     //        }
     //    }
@@ -1550,7 +1550,7 @@ void QHYCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 IPState QHYCCD::GuideNorth(uint32_t ms)
@@ -2215,7 +2215,7 @@ void QHYCCD::updateTemperature()
     IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&CoolerNP, nullptr);
 
-    m_TemperatureTimerID = IEAddTimer(POLLMS, QHYCCD::updateTemperatureHelper, this);
+    m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
 }
 
 bool QHYCCD::saveConfigItems(FILE *fp)
@@ -2507,7 +2507,7 @@ void QHYCCD::getExposure()
         {
             InExposure = false;
             PrimaryCCD.setExposureLeft(0.0);
-            if (m_ExposureRequest * 1000 > 5 * POLLMS)
+            if (m_ExposureRequest * 1000 > 5 * getCurrentPollingPeriod())
                 DEBUG(INDI::Logger::DBG_SESSION, "Exposure done, downloading image...");
             pthread_mutex_lock(&condMutex);
             exposureSetRequest(StateIdle);

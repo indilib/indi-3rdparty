@@ -28,11 +28,18 @@
     #define Sleep(x) usleep((x)*1000)
 #endif 
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
+#ifdef DEBUGGING_CAMERA
 namespace
 {
     int32_t NumDebugMsgTries = 0;
     const int32_t MAX_NUM_DEBUG_TRIES = 3;
 }
+#endif
 
 using namespace std;
 
@@ -40,13 +47,15 @@ using namespace std;
 //      DEBUG       MSG 
 void apgHelper::DebugMsg( const char *fmt, ... )
 {
-    #ifdef DEBUGGING_CAMERA
-        // from http://stackoverflow.com/questions/69738/c-how-to-get-fprintf-results-as-a-stdstring-w-o-sprintf
-        va_list ap;
-        va_start( ap, fmt );
-        apgHelper::LogDebugMsg( 1024, fmt, ap );
-        va_end( ap );
-    #endif
+#ifdef DEBUGGING_CAMERA
+    // from http://stackoverflow.com/questions/69738/c-how-to-get-fprintf-results-as-a-stdstring-w-o-sprintf
+    va_list ap;
+    va_start( ap, fmt );
+    apgHelper::LogDebugMsg( 1024, fmt, ap );
+    va_end( ap );
+#else
+    INDI_UNUSED(fmt);
+#endif
 }
 
 //----------------------------------------------
@@ -94,6 +103,10 @@ void apgHelper::DebugMsg( const char *fmt, ... )
     NumDebugMsgTries = 0;
     std::string msg( &buf[0] );
     ApgLogger::Instance().Write(ApgLogger::LEVEL_DEBUG, "debug", msg);
+#else
+    INDI_UNUSED(size);
+    INDI_UNUSED(fmt);
+    INDI_UNUSED(ap);
 #endif
  }
 

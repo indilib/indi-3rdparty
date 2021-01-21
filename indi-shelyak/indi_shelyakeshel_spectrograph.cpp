@@ -146,8 +146,8 @@ bool ShelyakEshel::initProperties()
 void ShelyakEshel::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
-    defineText(&PortTP);
-    defineNumber(&SettingsNP);
+    defineProperty(&PortTP);
+    defineProperty(&SettingsNP);
     loadConfig(true, PortTP.name);
 }
 
@@ -157,8 +157,8 @@ bool ShelyakEshel::updateProperties()
     if (isConnected())
     {
         // create properties if we are connected
-        defineSwitch(&MirrorSP);
-        defineSwitch(&LampSP);
+        defineProperty(&MirrorSP);
+        defineProperty(&LampSP);
     }
     else
     {

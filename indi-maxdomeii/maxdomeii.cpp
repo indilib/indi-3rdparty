@@ -171,13 +171,13 @@ bool MaxDomeII::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&HomeAzimuthNP);
-        defineNumber(&TicksPerTurnNP);
-        defineNumber(&ShutterOperationAzimuthNP);
-        defineSwitch(&ShutterConflictSP);
-        defineSwitch(&ShutterModeSP);
-        defineSwitch(&HomeSP);
-        defineNumber(&WatchDogNP);
+        defineProperty(&HomeAzimuthNP);
+        defineProperty(&TicksPerTurnNP);
+        defineProperty(&ShutterOperationAzimuthNP);
+        defineProperty(&ShutterConflictSP);
+        defineProperty(&ShutterModeSP);
+        defineProperty(&HomeSP);
+        defineProperty(&WatchDogNP);
 
         SetupParms();
     }
@@ -458,7 +458,7 @@ void MaxDomeII::TimerHit()
         return;
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

@@ -110,14 +110,14 @@ void HorizonLimits::ISGetProperties()
 {
     if (telescope->isConnected())
     {
-        telescope->defineText(HorizonLimitsDataFileTP);
-        telescope->defineBLOB(HorizonLimitsDataFitsBP);
-        telescope->defineNumber(HorizonLimitsPointNP);
-        telescope->defineSwitch(HorizonLimitsTraverseSP);
-        telescope->defineSwitch(HorizonLimitsManageSP);
-        telescope->defineSwitch(HorizonLimitsFileOperationSP);
-        telescope->defineSwitch(HorizonLimitsOnLimitSP);
-        telescope->defineSwitch(HorizonLimitsLimitGotoSP);
+        telescope->defineProperty(HorizonLimitsDataFileTP);
+        telescope->defineProperty(HorizonLimitsDataFitsBP);
+        telescope->defineProperty(HorizonLimitsPointNP);
+        telescope->defineProperty(HorizonLimitsTraverseSP);
+        telescope->defineProperty(HorizonLimitsManageSP);
+        telescope->defineProperty(HorizonLimitsFileOperationSP);
+        telescope->defineProperty(HorizonLimitsOnLimitSP);
+        telescope->defineProperty(HorizonLimitsLimitGotoSP);
     }
 }
 
@@ -127,14 +127,14 @@ bool HorizonLimits::updateProperties()
     //IDLog("HorizonLimits update properties connected = %d.\n",(telescope->isConnected()?1:0) );
     if (telescope->isConnected())
     {
-        telescope->defineText(HorizonLimitsDataFileTP);
-        telescope->defineBLOB(HorizonLimitsDataFitsBP);
-        telescope->defineNumber(HorizonLimitsPointNP);
-        telescope->defineSwitch(HorizonLimitsTraverseSP);
-        telescope->defineSwitch(HorizonLimitsManageSP);
-        telescope->defineSwitch(HorizonLimitsFileOperationSP);
-        telescope->defineSwitch(HorizonLimitsOnLimitSP);
-        telescope->defineSwitch(HorizonLimitsLimitGotoSP);
+        telescope->defineProperty(HorizonLimitsDataFileTP);
+        telescope->defineProperty(HorizonLimitsDataFitsBP);
+        telescope->defineProperty(HorizonLimitsPointNP);
+        telescope->defineProperty(HorizonLimitsTraverseSP);
+        telescope->defineProperty(HorizonLimitsManageSP);
+        telescope->defineProperty(HorizonLimitsFileOperationSP);
+        telescope->defineProperty(HorizonLimitsOnLimitSP);
+        telescope->defineProperty(HorizonLimitsLimitGotoSP);
         Init();
     }
     else if (HorizonLimitsDataFileTP)

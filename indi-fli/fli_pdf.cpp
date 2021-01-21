@@ -112,7 +112,7 @@ void FLIPDF::ISGetProperties(const char *dev)
 {
     INDI::Focuser::ISGetProperties(dev);
 
-    defineSwitch(&PortSP);
+    defineProperty(&PortSP);
 
     addAuxControls();
 }
@@ -123,13 +123,13 @@ bool FLIPDF::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&FocusAbsPosNP);
-        defineNumber(&FocusRelPosNP);
-        defineSwitch(&HomeSP);
-        defineText(&FocusInfoTP);
+        defineProperty(&FocusAbsPosNP);
+        defineProperty(&FocusRelPosNP);
+        defineProperty(&HomeSP);
+        defineProperty(&FocusInfoTP);
         setupParams();
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -364,7 +364,7 @@ void FLIPDF::TimerHit()
         else if ((err = FLIGetStepsRemaining(fli_dev, &FLIFocus.steps_remaing)))
         {
             LOGF_ERROR("FLIGetStepsRemaining() failed. %s.", strerror((int)-err));
-            SetTimer(POLLMS);
+            SetTimer(getCurrentPollingPeriod());
             return;
         }
         if (!FLIFocus.steps_remaing)
@@ -393,7 +393,7 @@ void FLIPDF::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 

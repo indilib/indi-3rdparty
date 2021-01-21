@@ -148,10 +148,10 @@ bool GPSD::updateProperties()
 
     if (isConnected())
     {
-        defineText(&GPSstatusTP);
-        defineNumber(&PolarisNP);
-        defineSwitch(&TimeSourceSP);
-        defineNumber(&SimLocationNP);
+        defineProperty(&GPSstatusTP);
+        defineProperty(&PolarisNP);
+        defineProperty(&TimeSourceSP);
+        defineProperty(&SimLocationNP);
     }
     else
     {

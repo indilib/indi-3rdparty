@@ -265,11 +265,11 @@ bool SXCCD::updateProperties()
     {
         SetupParms();
         if (HasCooler)
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
         if (HasShutter)
-            defineSwitch(&ShutterSP);
+            defineProperty(&ShutterSP);
         //        if (HasColor) {
-        //            defineSwitch(&BayerSP);
+        //            defineProperty(&BayerSP);
         //        }
     }
     else
@@ -877,7 +877,7 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     //        IDSetSwitch(&BayerSP, nullptr);
     //        if (BayerS[0].s == ISS_ON) {
     //            SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-    //            defineText(&BayerTP);
+    //            defineProperty(&BayerTP);
     //        }
     //        else {
     //            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);

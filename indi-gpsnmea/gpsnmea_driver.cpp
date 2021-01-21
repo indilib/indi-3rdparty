@@ -127,7 +127,7 @@ bool GPSNMEA::updateProperties()
 
     if (isConnected())
     {
-        defineText(&GPSstatusTP);
+        defineProperty(&GPSstatusTP);
 
         pthread_create(&nmeaThread, nullptr, &GPSNMEA::parseNMEAHelper, this);
     }

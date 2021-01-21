@@ -124,7 +124,7 @@ bool NexStarEvo::Abort()
 #if 0
 bool NexStarEvo::Connect()
 {
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     // Check if TCP Address exists and not empty.
     // We call the TCP function in case the connection mode is set explicitly to TCP **OR** if the address is not empty (for CONNECTION_BOTH) then
     // TCP connection has higher priority than serial port.

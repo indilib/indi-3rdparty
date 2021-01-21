@@ -28,6 +28,10 @@
     #include "linux/linuxHelpers.h"
 #endif
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
 
 //////////////////////////// 
 // DTOR 
@@ -195,8 +199,9 @@ std::vector< std::vector<uint16_t> > FindDeviceUsb::GetApgDevices()
 bool FindDeviceUsb::IsDeviceAlreadyOpen( const uint16_t deviceNum )
 {
 #ifdef WIN_OS
-         return windozeHelpers::IsDeviceAlreadyOpen( deviceNum );
+    return windozeHelpers::IsDeviceAlreadyOpen( deviceNum );
 #else
+    INDI_UNUSED(deviceNum);
     return false;
 #endif
 

@@ -586,14 +586,14 @@ void AHP_XC::ISGetProperties(const char *dev)
     if (isConnected())
     {
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
-            defineSwitch(&lineEnableSP[x]);
+            defineProperty(&lineEnableSP[x]);
         }
         if(ahp_xc_get_autocorrelator_jittersize() > 1)
-            defineBLOB(&autocorrelationsBP);
+            defineProperty(&autocorrelationsBP);
         if(ahp_xc_get_crosscorrelator_jittersize() > 1)
-            defineBLOB(&crosscorrelationsBP);
-        defineNumber(&correlationsNP);
-        defineNumber(&settingsNP);
+            defineProperty(&crosscorrelationsBP);
+        defineProperty(&correlationsNP);
+        defineProperty(&settingsNP);
 
         // Define our properties
     }
@@ -615,14 +615,14 @@ bool AHP_XC::updateProperties()
         setupParams();
 
         for (int x=0; x<ahp_xc_get_nlines(); x++) {
-            defineSwitch(&lineEnableSP[x]);
+            defineProperty(&lineEnableSP[x]);
         }
         if(ahp_xc_get_autocorrelator_jittersize() > 1)
-            defineBLOB(&autocorrelationsBP);
+            defineProperty(&autocorrelationsBP);
         if(ahp_xc_get_crosscorrelator_jittersize() > 1)
-            defineBLOB(&crosscorrelationsBP);
-        defineNumber(&correlationsNP);
-        defineNumber(&settingsNP);
+            defineProperty(&crosscorrelationsBP);
+        defineProperty(&correlationsNP);
+        defineProperty(&settingsNP);
     }
     else
         // We're disconnected
@@ -798,12 +798,12 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IUUpdateSwitch(&lineEnableSP[x], states, names, n);
             if(lineEnableSP[x].sp[0].s == ISS_ON) {
                 ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON, lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
-                defineSwitch(&linePowerSP[x]);
-                defineSwitch(&lineActiveEdgeSP[x]);
-                defineSwitch(&lineEdgeTriggerSP[x]);
-                defineNumber(&lineLocationNP[x]);
-                defineNumber(&lineDelayNP[x]);
-                defineNumber(&lineStatsNP[x]);
+                defineProperty(&linePowerSP[x]);
+                defineProperty(&lineActiveEdgeSP[x]);
+                defineProperty(&lineEdgeTriggerSP[x]);
+                defineProperty(&lineLocationNP[x]);
+                defineProperty(&lineDelayNP[x]);
+                defineProperty(&lineStatsNP[x]);
             } else {
                 ActiveLine(x, false, false, false, false);
                 deleteProperty(linePowerSP[x].name);
@@ -917,20 +917,20 @@ void AHP_XC::TimerHit()
     for (int x = 0; x < ahp_xc_get_nlines(); x++) {
         double line_delay = delay[x];
         double steradian = pow(asin(primaryAperture*0.5/primaryFocalLength), 2);
-        double photon_flux = ((double)totalcounts[x])*1000.0/POLLMS;
+        double photon_flux = ((double)totalcounts[x])*1000.0/getCurrentPollingPeriod();
         double photon_flux0 = calc_photon_flux(0, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         lineDelayNP[x].s = IPS_BUSY;
         lineDelayNP[x].np[0].value = line_delay;
         IDSetNumber(&lineDelayNP[x], nullptr);
         lineStatsNP[x].s = IPS_BUSY;
-        lineStatsNP[x].np[0].value = ((double)totalcounts[x])*1000.0/(double)POLLMS;
+        lineStatsNP[x].np[0].value = ((double)totalcounts[x])*1000.0/(double)getCurrentPollingPeriod();
         lineStatsNP[x].np[1].value = photon_flux/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[2].value = photon_flux0/LUMEN(settingsNP.np[0].value);
         lineStatsNP[x].np[3].value = calc_rel_magnitude(photon_flux, settingsNP.np[1].value, settingsNP.np[0].value, steradian);
         IDSetNumber(&lineStatsNP[x], nullptr);
         totalcounts[x] = 0;
         for(int y = x+1; y < ahp_xc_get_nlines(); y++) {
-            correlationsNP.np[idx*2].value = (double)totalcorrelations[idx].correlations*1000.0/(double)POLLMS;
+            correlationsNP.np[idx*2].value = (double)totalcorrelations[idx].correlations*1000.0/(double)getCurrentPollingPeriod();
             correlationsNP.np[idx*2+1].value = (double)totalcorrelations[idx].correlations/(double)totalcorrelations[idx].counts;
             totalcorrelations[idx].counts = 0;
             totalcorrelations[idx].correlations = 0;
@@ -945,7 +945,7 @@ void AHP_XC::TimerHit()
         PrimaryCCD.setExposureLeft((double)timeleft);
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     return;
 }
@@ -1112,7 +1112,7 @@ bool AHP_XC::Connect()
     IUFillNumberVector(&correlationsNP, correlationsN, ahp_xc_get_nbaselines()*2, getDeviceName(), "CORRELATIONS", "Correlations", "Stats", IP_RO, 60, IPS_BUSY);
 
     // Start the timer
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     readThread = new std::thread(&AHP_XC::Callback, this);
 

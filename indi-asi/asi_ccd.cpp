@@ -301,33 +301,33 @@ bool ASICCD::updateProperties()
 
         if (HasCooler())
         {
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
             loadConfig(true, CoolerNP.name);
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
             loadConfig(true, CoolerSP.name);
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
         {
             TemperatureNP.p = IP_RO;
-            defineNumber(&TemperatureNP);
+            defineProperty(&TemperatureNP);
         }
 
         if (ControlNP.nnp > 0)
         {
-            defineNumber(&ControlNP);
+            defineProperty(&ControlNP);
             loadConfig(true, ControlNP.name);
         }
 
         if (ControlSP.nsp > 0)
         {
-            defineSwitch(&ControlSP);
+            defineProperty(&ControlSP);
             loadConfig(true, ControlSP.name);
         }
 
         if (VideoFormatSP.nsp > 0)
         {
-            defineSwitch(&VideoFormatSP);
+            defineProperty(&VideoFormatSP);
 
             // Try to set 16bit RAW by default.
             // It can get be overwritten by config value.
@@ -345,10 +345,10 @@ bool ASICCD::updateProperties()
             }
         }
 
-        defineNumber(&BlinkNP);
+        defineProperty(&BlinkNP);
 
-        defineNumber(&ADCDepthNP);
-        defineText(&SDKVersionSP);
+        defineProperty(&ADCDepthNP);
+        defineProperty(&SDKVersionSP);
     }
     else
     {
@@ -483,8 +483,8 @@ void ASICCD::setupParams()
             CoolerN[0].max = pCtrlCaps.MaxValue;
             CoolerN[0].value = pCtrlCaps.DefaultValue;
         }
-        //defineNumber(&CoolerNP);
-        //defineSwitch(&CoolerSP);
+        //defineProperty(&CoolerNP);
+        //defineProperty(&CoolerSP);
     }
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM

@@ -127,7 +127,7 @@ bool RTKLIB::updateProperties()
 
     if (isConnected())
     {
-        defineText(&GPSstatusTP);
+        defineProperty(&GPSstatusTP);
 
         pthread_create(&rtkThread, nullptr, &RTKLIB::parse_rtkrcv_helper, this);
     }

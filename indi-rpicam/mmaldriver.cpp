@@ -136,7 +136,7 @@ bool MMALDriver::Connect()
 {
     LOGF_DEBUG("%s()", __FUNCTION__);
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     camera_control.reset(new CameraControl());
 
@@ -270,10 +270,10 @@ bool MMALDriver::updateProperties()
 #ifdef USE_ISO
         if (mIsoSP.nsp > 0)
         {
-            defineSwitch(&mIsoSP);
+            defineProperty(&mIsoSP);
         }
 #endif
-        defineNumber(&mGainNP);
+        defineProperty(&mGainNP);
     }
     else
     {
@@ -439,7 +439,7 @@ double MMALDriver::CalcTimeLeft()
  **************************************************************************************/
 void MMALDriver::TimerHit()
 {
-    uint32_t nextTimer = POLLMS;
+    uint32_t nextTimer = getCurrentPollingPeriod();
 
     if (!isConnected())
     {

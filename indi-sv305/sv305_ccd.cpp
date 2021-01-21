@@ -275,24 +275,24 @@ bool Sv305CCD::updateProperties()
     {
 
         // define controls
-        defineNumber(&ControlsNP[CCD_GAIN_N]);
-        defineNumber(&ControlsNP[CCD_CONTRAST_N]);
-        defineNumber(&ControlsNP[CCD_SHARPNESS_N]);
-        defineNumber(&ControlsNP[CCD_SATURATION_N]);
-        defineNumber(&ControlsNP[CCD_WBR_N]);
-        defineNumber(&ControlsNP[CCD_WBG_N]);
-        defineNumber(&ControlsNP[CCD_WBB_N]);
-        defineNumber(&ControlsNP[CCD_GAMMA_N]);
-        defineNumber(&ControlsNP[CCD_DOFFSET_N]);
+        defineProperty(&ControlsNP[CCD_GAIN_N]);
+        defineProperty(&ControlsNP[CCD_CONTRAST_N]);
+        defineProperty(&ControlsNP[CCD_SHARPNESS_N]);
+        defineProperty(&ControlsNP[CCD_SATURATION_N]);
+        defineProperty(&ControlsNP[CCD_WBR_N]);
+        defineProperty(&ControlsNP[CCD_WBG_N]);
+        defineProperty(&ControlsNP[CCD_WBB_N]);
+        defineProperty(&ControlsNP[CCD_GAMMA_N]);
+        defineProperty(&ControlsNP[CCD_DOFFSET_N]);
 
         // define frame format
-        defineSwitch(&FormatSP);
-        defineSwitch(&SpeedSP);
+        defineProperty(&FormatSP);
+        defineProperty(&SpeedSP);
 
         // stretch factor
-        defineSwitch(&StretchSP);
+        defineProperty(&StretchSP);
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -1039,7 +1039,7 @@ void Sv305CCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 

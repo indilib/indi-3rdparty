@@ -2,6 +2,11 @@
 #include "QSI_Registry.h"
 #include "QSI_Global.h"
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 HostIO_TCP::HostIO_TCP(void)
 {
 	m_log = new QSILog(_T("QSIINTERFACELOG.TXT"), _T("LOGTCPTOFILE"), _T("TCP"));
@@ -241,7 +246,9 @@ int HostIO_TCP::GetReadWriteQueueStatus(int * RxBytes, int * TxBytes)
 {
 	int iStatus = GetReadQueueStatus(RxBytes);
 	// TODO
-	TxBytes = 0;
+	// TxBytes = 0;
+	INDI_UNUSED(TxBytes);
+
 	m_log->Write(2,  _T("TCP/IP GetReadWriteQueueStatus Done."));
 	return iStatus;
 }
@@ -332,12 +339,12 @@ int HostIO_TCP::MaxBytesPerReadBlock()
 	return 65536;
 }
 
-int HostIO_TCP::WritePacket(UCHAR * pBuff, int iBuffLen, int * iBytesWritten)
+int HostIO_TCP::WritePacket(UCHAR *, int, int *)
 {
 	return 0;
 }
 
-int HostIO_TCP::ReadPacket(UCHAR * pBuff, int iBuffLen, int * iBytesRead)
+int HostIO_TCP::ReadPacket(UCHAR *, int, int *)
 {
 	return 0;
 }
