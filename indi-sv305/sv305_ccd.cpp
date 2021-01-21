@@ -390,8 +390,9 @@ bool Sv305CCD::Connect()
          {
              case SVB_EXPOSURE :
                  // Exposure
-                 minExposure = caps.MinValue / 1000000;
-                 maxExposure = caps.MaxValue / 1000000;
+                 minExposure = (double)caps.MinValue / 1000000.0;
+                 maxExposure = (double)caps.MaxValue / 1000000.0;
+                 PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExposure, maxExposure, 1, true);
                  break;
 
              case SVB_GAIN :
