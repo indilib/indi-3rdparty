@@ -67,12 +67,13 @@ namespace
 
 //////////////////////////// 
 // CTOR 
-AspenEthernetIo::AspenEthernetIo( const std::string url ) : m_url( url ),
-                                                          m_fileName( __BASE_FILE__ ),
-                                                          m_libcurl( new CLibCurlWrap ),
-                                                          m_sessionKey(""),
-                                                          m_sessionKeyUrlStr("")
-
+AspenEthernetIo::AspenEthernetIo( const std::string url )
+    : m_url( url )
+    , m_fileName( __BASE_FILE__ )
+    , m_sessionKey("")
+    , m_sessionKeyUrlStr("")
+    , m_libcurl( new CLibCurlWrap )
+    
 { 
 
     //make the guid for the session key from

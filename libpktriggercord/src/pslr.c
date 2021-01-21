@@ -57,6 +57,11 @@
 #define BLOCK_RETRY 3 /* Number of retries, since we can occasionally
                        * get SCSI errors when downloading data */
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 void sleep_sec(double sec) {
     int i;
     for (i=0; i<floor(sec); ++i) {
@@ -607,6 +612,7 @@ char *get_hardwired_setting_uint16_info( pslr_uint16_setting setting) {
 }
 
 char *collect_settings_info( pslr_handle_t h, pslr_settings settings ) {
+    INDI_UNUSED(h);
     char *strbuffer = malloc(8192);
     sprintf(strbuffer,"%-32s: %-8s%s\n", "one push bracketing", get_special_setting_info(settings.one_push_bracketing.pslr_setting_status) ?: settings.one_push_bracketing.value ? "on" : "off", get_hardwired_setting_bool_info(settings.one_push_bracketing));
     sprintf(strbuffer+strlen(strbuffer),"%-32s: %-8s%s\n", "bulb mode", get_special_setting_info(settings.bulb_mode_press_press.pslr_setting_status) ?: settings.bulb_mode_press_press.value ? "press-press" : "press-hold", get_hardwired_setting_bool_info(settings.bulb_mode_press_press));
@@ -687,6 +693,8 @@ int pslr_get_buffer(pslr_handle_t h, int bufno, pslr_buffer_type type, int resol
 }
 
 int pslr_set_progress_callback(pslr_handle_t h, pslr_progress_callback_t cb, uintptr_t user_data) {
+    INDI_UNUSED(h);
+    INDI_UNUSED(user_data);
     progress_callback = cb;
     return PSLR_OK;
 }
@@ -1059,7 +1067,7 @@ int pslr_buffer_open(pslr_handle_t h, int bufno, pslr_buffer_type buftype, int b
 
 uint32_t pslr_buffer_read(pslr_handle_t h, uint8_t *buf, uint32_t size) {
     ipslr_handle_t *p = (ipslr_handle_t *) h;
-    int i;
+    uint32_t i;
     uint32_t pos = 0;
     uint32_t seg_offs;
     uint32_t addr;
@@ -1114,7 +1122,7 @@ uint32_t pslr_fullmemory_read(pslr_handle_t h, uint8_t *buf, uint32_t offset, ui
 
 uint32_t pslr_buffer_get_size(pslr_handle_t h) {
     ipslr_handle_t *p = (ipslr_handle_t *) h;
-    int i;
+    uint32_t i;
     uint32_t len = 0;
     for (i = 0; i < p->segment_count; i++) {
         len += p->segments[i].length;
@@ -1767,10 +1775,10 @@ static int read_result(FDTYPE fd, uint8_t *buf, uint32_t n) {
     DPRINT("[C]\t\t\tread_result(0x%x, size=%d)\n", fd, n);
     uint8_t cmd[8] = {0xf0, 0x49, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     int r;
-    int i;
+    uint32_t i;
     set_uint32_le(n, &cmd[4]);
     r = scsi_read(fd, cmd, sizeof (cmd), buf, n);
-    if (r != n) {
+    if ((uint32_t)r != n) {
         return PSLR_READ_ERROR;
     }  else {
         //  Print first 32 bytes of the result.

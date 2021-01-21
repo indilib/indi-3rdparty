@@ -33,6 +33,11 @@ int WriteTIFF(unsigned short * buffer, int cols, int rows, char * filename);
 #endif /* HAVE_FITSIO_H */
 int WriteFITS(unsigned short * buffer, int cols, int rows, char * filename);
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 void	usage() {
 	std::cerr << "usage: qsidemo [ -ft ] [ -d directory ]" << std::endl;
 	std::cerr << "options:" << std::endl;
@@ -53,12 +58,12 @@ int main(int argc, char** argv)
 	const char	*extension = "tiff";
 	bool canSetTemp;
 	bool hasFilters;
-	short binX;
-	short binY;
+	//short binX;
+	//short binY;
 	long xsize;
 	long ysize;
-	long startX;
-	long startY;
+	//long startX;
+	//long startY;
 	int iNumFound;
 	bool	tiffoutput = false;
 	bool	fitsoutput = false;
@@ -259,6 +264,10 @@ int	WriteFITS(unsigned short *buffer, int cols, int rows, char *filename) {
 	fits_write_pix(fits, TUSHORT, fpixel, cols * rows, buffer, &status);
 	fits_close_file(fits, &status);
 #else
+	INDI_UNUSED(buffer);
+	INDI_UNUSED(cols);
+	INDI_UNUSED(rows);
+	INDI_UNUSED(filename);
 	std::cerr << "FITS not supported" << std::endl;
 	return -1;
 #endif
@@ -308,6 +317,10 @@ int WriteTIFF(unsigned short * buffer, int cols, int rows, char * filename)
 	// Close the file
 	TIFFClose(image);
 #else /* HAVE_TIFFIO_H */
+	INDI_UNUSED(buffer);
+	INDI_UNUSED(cols);
+	INDI_UNUSED(rows);
+	INDI_UNUSED(filename);
 	std::cerr << "TIFF not supported" << std::endl;
 	return -1;
 #endif /* HAVE_TIFFIO_H */

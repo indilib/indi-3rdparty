@@ -462,18 +462,18 @@ bool LX200StarGo::updateProperties()
     if (! LX200Telescope::updateProperties()) return false;
     if (isConnected())
     {
-        defineSwitch(&Aux1FocuserSP);
-        defineSwitch(&SyncHomeSP);
-        defineSwitch(&MountGotoHomeSP);
-        defineSwitch(&MountSetParkSP);
-        defineNumber(&GuidingSpeedNP);
-        defineSwitch(&ST4StatusSP);
-        defineSwitch(&KeypadStatusSP);
-        defineSwitch(&SystemSpeedSlewSP);
-        defineNumber(&TrackingAdjustmentNP);
-        defineSwitch(&MeridianFlipModeSP);
-        defineNumber(&MountRequestDelayNP);
-        defineText(&MountFirmwareInfoTP);
+        defineProperty(&Aux1FocuserSP);
+        defineProperty(&SyncHomeSP);
+        defineProperty(&MountGotoHomeSP);
+        defineProperty(&MountSetParkSP);
+        defineProperty(&GuidingSpeedNP);
+        defineProperty(&ST4StatusSP);
+        defineProperty(&KeypadStatusSP);
+        defineProperty(&SystemSpeedSlewSP);
+        defineProperty(&TrackingAdjustmentNP);
+        defineProperty(&MeridianFlipModeSP);
+        defineProperty(&MountRequestDelayNP);
+        defineProperty(&MountFirmwareInfoTP);
     }
     else
     {
@@ -2396,38 +2396,38 @@ void LX200StarGo::ISGetProperties(const char *dev)
     if (isConnected())
     {
         if (HasTrackMode() && TrackModeS != nullptr)
-            defineSwitch(&TrackModeSP);
+            defineProperty(&TrackModeSP);
         if (CanControlTrack())
-            defineSwitch(&TrackStateSP);
+            defineProperty(&TrackStateSP);
         //        if (HasTrackRate())
-        //            defineNumber(&TrackRateNP);
+        //            defineProperty(&TrackRateNP);
     }
     /*
         if (isConnected())
         {
             if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
-                defineSwitch(&AlignmentSP);
+                defineProperty(&AlignmentSP);
 
             if (genericCapability & LX200_HAS_TRACKING_FREQ)
-                defineNumber(&TrackingFreqNP);
+                defineProperty(&TrackingFreqNP);
 
             if (genericCapability & LX200_HAS_PULSE_GUIDING)
-                defineSwitch(&UsePulseCmdSP);
+                defineProperty(&UsePulseCmdSP);
 
             if (genericCapability & LX200_HAS_SITES)
             {
-                defineSwitch(&SiteSP);
-                defineText(&SiteNameTP);
+                defineProperty(&SiteSP);
+                defineProperty(&SiteNameTP);
             }
 
-            defineNumber(&GuideNSNP);
-            defineNumber(&GuideWENP);
+            defineProperty(&GuideNSNP);
+            defineProperty(&GuideWENP);
 
             if (genericCapability & LX200_HAS_FOCUS)
             {
-                defineSwitch(&FocusMotionSP);
-                defineNumber(&FocusTimerNP);
-                defineSwitch(&FocusModeSP);
+                defineProperty(&FocusMotionSP);
+                defineProperty(&FocusTimerNP);
+                defineProperty(&FocusModeSP);
             }
         }
         */

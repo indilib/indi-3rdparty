@@ -229,8 +229,8 @@ bool WeatherRadio::updateProperties()
             addSensorSelection(&temperatureSensorSP, sensorRegistry.temperature, "TEMPERATURE_SENSOR", "Temperature Sensor");
             addSensorSelection(&ambientTemperatureSensorSP, sensorRegistry.temperature, "AMBIENT_TEMP_SENSOR", "Ambient Temp. Sensor");
 
-            defineNumber(&temperatureCalibrationNP);
-            defineNumber(&skyTemperatureCalibrationNP);
+            defineProperty(&temperatureCalibrationNP);
+            defineProperty(&skyTemperatureCalibrationNP);
             LOG_INFO("Temperature sensor selections added.");
         }
         if (sensorRegistry.pressure.size() > 0)
@@ -247,7 +247,7 @@ bool WeatherRadio::updateProperties()
             setCriticalParameter(WEATHER_HUMIDITY);
             addSensorSelection(&humiditySensorSP, sensorRegistry.humidity, "HUMIDITY_SENSOR", "Humidity Sensor");
 
-            defineNumber(&humidityCalibrationNP);
+            defineProperty(&humidityCalibrationNP);
             LOG_INFO("Humidity sensor selections added.");
         }
         if (sensorRegistry.luminosity.size() > 0 || sensorRegistry.sqm.size() > 0)
@@ -262,7 +262,7 @@ bool WeatherRadio::updateProperties()
             if (sensorRegistry.sqm.size() > 0)
             {
                 addSensorSelection(&sqmSensorSP, sensorRegistry.sqm, "SQM_SENSOR", "SQM Sensor");
-                defineNumber(&sqmCalibrationNP);
+                defineProperty(&sqmCalibrationNP);
                 LOG_INFO("SQM sensor selections added.");
             }
         }
@@ -293,11 +293,11 @@ bool WeatherRadio::updateProperties()
             addParameter(WEATHER_WIND_DIRECTION, "Wind direction (deg)", 0, 360, 10);
             addSensorSelection(&windDirectionSensorSP, sensorRegistry.wind_direction, "WIND_DIRECTION_SENSOR", "Wind Direction Sensor");
 
-            defineNumber(&windDirectionCalibrationNP);
+            defineProperty(&windDirectionCalibrationNP);
             LOG_INFO("Wind direction sensor selections added.");
         }
         for (size_t i = 0; i < rawDevices.size(); i++)
-            defineNumber(&rawDevices[i]);
+            defineProperty(&rawDevices[i]);
         LOG_INFO("Raw sensors added.");
 
         result = getBasicData();
@@ -309,7 +309,7 @@ bool WeatherRadio::updateProperties()
             result = INDI::Weather::updateProperties();
         }
 
-        defineSwitch(&resetArduinoSP);
+        defineProperty(&resetArduinoSP);
     }
     else
     {
@@ -388,7 +388,7 @@ IPState WeatherRadio::getBasicData()
     else
         LOGF_INFO("Firmware version: %s", FirmwareInfoT[0].text);
 
-    defineText(&FirmwareInfoTP);
+    defineProperty(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
 
     FirmwareConfig config;
@@ -411,13 +411,13 @@ IPState WeatherRadio::getBasicData()
     }
 
     IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
-    defineText(&FirmwareConfigTP);
+    defineProperty(&FirmwareConfigTP);
 
     // refresh button
-    defineSwitch(&refreshConfigSP);
+    defineProperty(&refreshConfigSP);
 
     if (hasWiFi)
-        defineSwitch(&wifiConnectionSP);
+        defineProperty(&wifiConnectionSP);
 
     return IPS_OK;
 }
@@ -628,7 +628,7 @@ void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector
         IUFillSwitch(&switches[i], name.c_str(), name.c_str(), ISS_OFF);
     }
     IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    defineSwitch(sensor);
+    defineProperty(sensor);
 }
 
 /**************************************************************************************
@@ -1027,7 +1027,7 @@ bool WeatherRadio::parseWeatherData(char *data)
                 IUFillNumberVector(deviceProp, sensors, static_cast<int>(sensorData.size()), getDeviceName(), name, name, "Raw Sensors", IP_RO, 60, IPS_OK);
                 // make it visible
                 if (isConnected())
-                    defineNumber(deviceProp);
+                    defineProperty(deviceProp);
                 rawDevices.push_back(*deviceProp);
             }
         }

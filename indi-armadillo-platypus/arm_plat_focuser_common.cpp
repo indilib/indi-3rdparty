@@ -194,17 +194,17 @@ bool ArmPlat::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&PerPortSP);
-        defineNumber(&MaxSpeedNP);
-        defineNumber(&TemperatureNP);
-        defineSwitch(&IntExtTempSensorSP);
-//        defineSwitch(&FocuserBacklashSP);
-//        defineNumber(&BacklashNP);
-        defineSwitch(&HalfStepSP);
-        defineSwitch(&MotorTypeSP);
-        defineSwitch(&WiringSP);
-        //defineNumber(&SyncNP);
-        defineText(&FirmwareVersionTP);
+        defineProperty(&PerPortSP);
+        defineProperty(&MaxSpeedNP);
+        defineProperty(&TemperatureNP);
+        defineProperty(&IntExtTempSensorSP);
+//        defineProperty(&FocuserBacklashSP);
+//        defineProperty(&BacklashNP);
+        defineProperty(&HalfStepSP);
+        defineProperty(&MotorTypeSP);
+        defineProperty(&WiringSP);
+        //defineProperty(&SyncNP);
+        defineProperty(&FirmwareVersionTP);
         if ( !loadConfig() )
                 LOG_ERROR("Error loading config" );
     }
@@ -700,7 +700,7 @@ void ArmPlat::TimerHit()
 
     if (!isConnected())
     {
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return;
     }
 
@@ -711,7 +711,7 @@ void ArmPlat::TimerHit()
                 DEBUG( INDI::Logger::DBG_WARNING, "Port must be selected (and configuration saved)" );
                 portWarned = true;
         }
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return;
     }
     else
@@ -756,7 +756,7 @@ void ArmPlat::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 bool ArmPlat::AbortFocuser()

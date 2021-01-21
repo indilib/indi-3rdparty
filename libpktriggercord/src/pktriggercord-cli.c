@@ -61,6 +61,7 @@ bool astrotracer_before=false;
 bool need_bulb_new_cleanup=false;
 bool need_one_push_bracketing_cleanup=false;
 
+#if 0 // UNUSED
 static struct option const longopts[] = {
     {"exposure_mode", required_argument, NULL, 'm'},
     {"resolution", required_argument, NULL, 'r'},
@@ -109,6 +110,7 @@ static struct option const longopts[] = {
     {"settings", no_argument, NULL, 'S'},
     { NULL, 0, NULL, 0}
 };
+#endif
 
 int save_buffer(pslr_handle_t camhandle, int bufno, int fd, pslr_status *status, user_file_format filefmt, int jpeg_stars) {
     pslr_buffer_type imagetype;

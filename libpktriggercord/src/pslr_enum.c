@@ -294,22 +294,22 @@ char *get_pslr_af11_point_str( uint32_t value ) {
     if (value==0) {
         return "none";
     }
-    int bitidx=0;
-    char *ret = malloc(1024);
-    sprintf(ret, "%s", "");
-    while (value>0 && bitidx<11) {
+    int bitidx = 0;
+    char *ret = (char *)malloc(1024);
+    char *ptr = ret;
+    *ptr = '\0';
+
+    for (bitidx=0; value>0 && bitidx<11; ++bitidx, value >>= 1) {
         if ((value & 0x01) == 1) {
-            sprintf(ret, "%s%s%s", ret, strlen(ret) == 0 ? "" : ",", pslr_af11_point_str[bitidx]);
+            ptr += sprintf(ptr, "%s%s", ptr == ret ? "" : ",", pslr_af11_point_str[bitidx]);
         }
-        value >>= 1;
-        ++bitidx;
     }
+
     if (value>0) {
-        sprintf(ret, "%s", "invalid");
+        sprintf(ret, "invalid");
     }
     return ret;
 }
-
 
 pslr_jpeg_image_tone_t get_pslr_jpeg_image_tone( char *str ) {
     return find_in_array( pslr_jpeg_image_tone_str, sizeof(pslr_jpeg_image_tone_str)/sizeof(pslr_jpeg_image_tone_str[0]),str);

@@ -352,8 +352,8 @@ bool FFMVCCD::updateProperties()
         setupParams();
 
         // Start the timer
-        SetTimer(POLLMS);
-        defineSwitch(&GainSP);
+        SetTimer(getCurrentPollingPeriod());
+        defineProperty(&GainSP);
     }
     else
     {
@@ -634,7 +634,7 @@ void FFMVCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

@@ -326,32 +326,32 @@ bool ATIKCCD::updateProperties()
     {
         if (HasCooler())
         {
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
             loadConfig(true, "CCD_COOLER_POWER");
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
             loadConfig(true, "CCD_COOLER");
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
         {
             TemperatureNP.p = IP_RO;
-            defineNumber(&TemperatureNP);
+            defineProperty(&TemperatureNP);
         }
 
         if (m_isHorizon)
         {
-            defineSwitch(&ControlPresetsSP);
+            defineProperty(&ControlPresetsSP);
             loadConfig(true, "CCD_CONTROL_PRESETS");
-            defineNumber(&ControlNP);
+            defineProperty(&ControlNP);
             if (ControlPresetsS[0].s == ISS_ON)
                 loadConfig(true, "CCD_CONTROLS");
-            defineSwitch(&PadDataSP);
+            defineProperty(&PadDataSP);
             loadConfig(true, "CCD_PAD_DATA");
-            defineSwitch(&EvenIlluminationSP);
+            defineProperty(&EvenIlluminationSP);
             loadConfig(true, "CCD_EVEN_ILLUMINATION");
-            defineSwitch(&FastModeSP);
+            defineProperty(&FastModeSP);
             loadConfig(true, "CCD_FAST_MODE");
-            defineSwitch(&BitSendSP);
+            defineProperty(&BitSendSP);
             loadConfig(true, "CCD_BIT_SEND");
 }
 
@@ -360,7 +360,7 @@ bool ATIKCCD::updateProperties()
             INDI::FilterInterface::updateProperties();
         }
 
-        defineText(&VersionInfoSP);
+        defineProperty(&VersionInfoSP);
     }
     else
     {

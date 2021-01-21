@@ -208,9 +208,9 @@ bool QSICCD::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&CoolerSP);
-        defineSwitch(&ShutterSP);
-        defineNumber(&CoolerNP);
+        defineProperty(&CoolerSP);
+        defineProperty(&ShutterSP);
+        defineProperty(&CoolerNP);
 
         setupParams();
 
@@ -221,7 +221,7 @@ bool QSICCD::updateProperties()
 
         manageDefaults();
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -375,7 +375,7 @@ bool QSICCD::setupParams()
         {
             IUResetSwitch(&GainSP);
             GainS[cGain].s = ISS_ON;
-            defineSwitch(&GainSP);
+            defineProperty(&GainSP);
         }
     }
 
@@ -401,7 +401,7 @@ bool QSICCD::setupParams()
         {
             IUResetSwitch(&ABSP);
             ABS[cAB].s = ISS_ON;
-            defineSwitch(&ABSP);
+            defineProperty(&ABSP);
         }
     }
 
@@ -422,7 +422,7 @@ bool QSICCD::setupParams()
     {
         IUResetSwitch(&FanSP);
         FanS[fMode].s = ISS_ON;
-        defineSwitch(&FanSP);
+        defineProperty(&FanSP);
     }
 
     canChangeReadoutSpeed = true;
@@ -455,7 +455,7 @@ bool QSICCD::setupParams()
         {
             IUResetSwitch(&ReadOutSP);
             ReadOutS[cReadoutSpeed].s = ISS_ON;
-            defineSwitch(&ReadOutSP);
+            defineProperty(&ReadOutSP);
         }
     }
 
@@ -1371,7 +1371,7 @@ void QSICCD::TimerHit()
             break;
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

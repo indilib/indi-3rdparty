@@ -309,67 +309,67 @@ void EQMod::ISGetProperties(const char *dev)
 
     if (isConnected())
     {
-        defineNumber(&GuideNSNP);
-        defineNumber(&GuideWENP);
-        defineNumber(SlewSpeedsNP);
-        defineNumber(GuideRateNP);
-        defineNumber(PulseLimitsNP);
-        defineText(MountInformationTP);
-        defineNumber(SteppersNP);
-        defineNumber(CurrentSteppersNP);
-        defineNumber(PeriodsNP);
-        defineNumber(JulianNP);
-        defineNumber(TimeLSTNP);
-        defineLight(RAStatusLP);
-        defineLight(DEStatusLP);
-        defineSwitch(HemisphereSP);
-        defineNumber(HorizontalCoordNP);
-        defineSwitch(ReverseDECSP);
-        defineSwitch(TargetPierSideSP);
-        defineNumber(StandardSyncNP);
-        defineNumber(StandardSyncPointNP);
-        defineNumber(SyncPolarAlignNP);
-        defineSwitch(SyncManageSP);
-        defineNumber(BacklashNP);
-        defineSwitch(UseBacklashSP);
-        defineSwitch(TrackDefaultSP);
-        defineSwitch(ST4GuideRateNSSP);
-        defineSwitch(ST4GuideRateWESP);
+        defineProperty(&GuideNSNP);
+        defineProperty(&GuideWENP);
+        defineProperty(SlewSpeedsNP);
+        defineProperty(GuideRateNP);
+        defineProperty(PulseLimitsNP);
+        defineProperty(MountInformationTP);
+        defineProperty(SteppersNP);
+        defineProperty(CurrentSteppersNP);
+        defineProperty(PeriodsNP);
+        defineProperty(JulianNP);
+        defineProperty(TimeLSTNP);
+        defineProperty(RAStatusLP);
+        defineProperty(DEStatusLP);
+        defineProperty(HemisphereSP);
+        defineProperty(HorizontalCoordNP);
+        defineProperty(ReverseDECSP);
+        defineProperty(TargetPierSideSP);
+        defineProperty(StandardSyncNP);
+        defineProperty(StandardSyncPointNP);
+        defineProperty(SyncPolarAlignNP);
+        defineProperty(SyncManageSP);
+        defineProperty(BacklashNP);
+        defineProperty(UseBacklashSP);
+        defineProperty(TrackDefaultSP);
+        defineProperty(ST4GuideRateNSSP);
+        defineProperty(ST4GuideRateWESP);
 
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
-        defineSwitch(&AlignMethodSP);
+        defineProperty(&AlignMethodSP);
 #endif
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
-        defineSwitch(AlignSyncModeSP);
+        defineProperty(AlignSyncModeSP);
 #endif
         if (mount->HasHomeIndexers())
         {
-            defineSwitch(AutoHomeSP);
+            defineProperty(AutoHomeSP);
         }
 
         if (mount->HasAuxEncoders())
         {
-            defineSwitch(AuxEncoderSP);
-            defineNumber(AuxEncoderNP);
+            defineProperty(AuxEncoderSP);
+            defineProperty(AuxEncoderNP);
         }
         if (mount->HasPPEC())
         {
-            defineSwitch(RAPPECTrainingSP);
-            defineSwitch(RAPPECSP);
-            defineSwitch(DEPPECTrainingSP);
-            defineSwitch(DEPPECSP);
+            defineProperty(RAPPECTrainingSP);
+            defineProperty(RAPPECSP);
+            defineProperty(DEPPECTrainingSP);
+            defineProperty(DEPPECSP);
         }
         if (mount->HasSnapPort1())
         {
-            defineSwitch(SNAPPORT1SP);
+            defineProperty(SNAPPORT1SP);
         }
         if (mount->HasSnapPort2())
         {
-            defineSwitch(SNAPPORT2SP);
+            defineProperty(SNAPPORT2SP);
         }
         if (mount->HasPolarLed())
         {
-            defineNumber(LEDBrightnessNP);
+            defineProperty(LEDBrightnessNP);
         }
 
 #ifdef WITH_ALIGN_GEEHALEL
@@ -472,38 +472,38 @@ bool EQMod::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&GuideNSNP);
-        defineNumber(&GuideWENP);
-        defineNumber(SlewSpeedsNP);
-        defineNumber(GuideRateNP);
-        defineNumber(PulseLimitsNP);
-        defineText(MountInformationTP);
-        defineNumber(SteppersNP);
-        defineNumber(CurrentSteppersNP);
-        defineNumber(PeriodsNP);
-        defineNumber(JulianNP);
-        defineNumber(TimeLSTNP);
-        defineLight(RAStatusLP);
-        defineLight(DEStatusLP);
-        defineSwitch(HemisphereSP);
-        defineNumber(HorizontalCoordNP);
-        defineSwitch(ReverseDECSP);
-        defineSwitch(TargetPierSideSP);
-        defineNumber(StandardSyncNP);
-        defineNumber(StandardSyncPointNP);
-        defineNumber(SyncPolarAlignNP);
-        defineSwitch(SyncManageSP);
-        defineNumber(BacklashNP);
-        defineSwitch(UseBacklashSP);
-        defineSwitch(TrackDefaultSP);
-        defineSwitch(ST4GuideRateNSSP);
-        defineSwitch(ST4GuideRateWESP);
+        defineProperty(&GuideNSNP);
+        defineProperty(&GuideWENP);
+        defineProperty(SlewSpeedsNP);
+        defineProperty(GuideRateNP);
+        defineProperty(PulseLimitsNP);
+        defineProperty(MountInformationTP);
+        defineProperty(SteppersNP);
+        defineProperty(CurrentSteppersNP);
+        defineProperty(PeriodsNP);
+        defineProperty(JulianNP);
+        defineProperty(TimeLSTNP);
+        defineProperty(RAStatusLP);
+        defineProperty(DEStatusLP);
+        defineProperty(HemisphereSP);
+        defineProperty(HorizontalCoordNP);
+        defineProperty(ReverseDECSP);
+        defineProperty(TargetPierSideSP);
+        defineProperty(StandardSyncNP);
+        defineProperty(StandardSyncPointNP);
+        defineProperty(SyncPolarAlignNP);
+        defineProperty(SyncManageSP);
+        defineProperty(BacklashNP);
+        defineProperty(UseBacklashSP);
+        defineProperty(TrackDefaultSP);
+        defineProperty(ST4GuideRateNSSP);
+        defineProperty(ST4GuideRateWESP);
 
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
-        defineSwitch(&AlignMethodSP);
+        defineProperty(&AlignMethodSP);
 #endif
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
-        defineSwitch(AlignSyncModeSP);
+        defineProperty(AlignSyncModeSP);
 #endif
         try
         {
@@ -530,13 +530,13 @@ bool EQMod::updateProperties()
             if (mount->HasHomeIndexers())
             {
                 LOG_INFO("Mount has home indexers. Enabling Autohome.");
-                defineSwitch(AutoHomeSP);
+                defineProperty(AutoHomeSP);
             }
 
             if (mount->HasAuxEncoders())
             {
-                defineSwitch(AuxEncoderSP);
-                defineNumber(AuxEncoderNP);
+                defineProperty(AuxEncoderSP);
+                defineProperty(AuxEncoderNP);
                 LOG_INFO("Mount has auxiliary encoders. Turning them off.");
                 mount->TurnRAEncoder(false);
                 mount->TurnDEEncoder(false);
@@ -544,10 +544,10 @@ bool EQMod::updateProperties()
             if (mount->HasPPEC())
             {
                 bool intraining, inppec;
-                defineSwitch(RAPPECTrainingSP);
-                defineSwitch(RAPPECSP);
-                defineSwitch(DEPPECTrainingSP);
-                defineSwitch(DEPPECSP);
+                defineProperty(RAPPECTrainingSP);
+                defineProperty(RAPPECSP);
+                defineProperty(DEPPECTrainingSP);
+                defineProperty(DEPPECSP);
                 LOG_INFO("Mount has PPEC.");
                 mount->GetRAPPECStatus(&intraining, &inppec);
                 if (intraining)
@@ -583,7 +583,7 @@ bool EQMod::updateProperties()
 
             if (mount->HasPolarLed())
             {
-                defineNumber(LEDBrightnessNP);
+                defineProperty(LEDBrightnessNP);
             }
 
             LOG_DEBUG("Init backlash.");
@@ -594,11 +594,11 @@ bool EQMod::updateProperties()
 
             if (mount->HasSnapPort1())
             {
-                defineSwitch(SNAPPORT1SP);
+                defineProperty(SNAPPORT1SP);
             }
             if (mount->HasSnapPort2())
             {
-                defineSwitch(SNAPPORT2SP);
+                defineProperty(SNAPPORT2SP);
             }
 
             mount->Init();
@@ -815,7 +815,7 @@ void EQMod::TimerHit()
             IDSetNumber(&EqNP, nullptr);
         }
 
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
 }
 
@@ -1292,7 +1292,7 @@ bool EQMod::ReadScopeStatus()
                             mount->GetRAIndexer();
                             if ((indexRA = mount->GetlastreadRAIndexer()) != 0xFFFFFF)
                             {
-                                ah_waitRA = 3000 / POLLMS;
+                                ah_waitRA = 3000 / getCurrentPollingPeriod();
                                 DEBUGF(INDI::Logger::DBG_SESSION,
                                        "Autohome phase 3: detected RA Index changed, waiting %d poll periods",
                                        ah_waitRA);
@@ -1313,7 +1313,7 @@ bool EQMod::ReadScopeStatus()
                             mount->GetDEIndexer();
                             if ((indexDE = mount->GetlastreadDEIndexer()) != 0xFFFFFF)
                             {
-                                ah_waitDE = 3000 / POLLMS;
+                                ah_waitDE = 3000 / getCurrentPollingPeriod();
                                 DEBUGF(INDI::Logger::DBG_SESSION,
                                        "Autohome phase 3: detected DE Index changed, waiting %d poll periods",
                                        ah_waitDE);

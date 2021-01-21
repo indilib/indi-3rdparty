@@ -141,7 +141,7 @@ bool astromechanics_foc::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&AppertureNP);
+        defineProperty(&AppertureNP);
     }
     else
     {

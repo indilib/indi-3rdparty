@@ -581,7 +581,7 @@ void SBIGCCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
-    defineSwitch(&PortSP);
+    defineProperty(&PortSP);
 
     loadConfig(true, "DEVICE_PORT_TYPE");
     loadConfig(true, "IP_ADDRESS");
@@ -594,29 +594,29 @@ bool SBIGCCD::updateProperties()
     INDI::CCD::updateProperties();
     if (isConnected())
     {
-        defineText(&ProductInfoTP);
+        defineProperty(&ProductInfoTP);
         if (IsFanControlAvailable())
         {
-            defineSwitch(&FanStateSP);
+            defineProperty(&FanStateSP);
         }
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerSP);
+            defineProperty(&CoolerNP);
         }
-        defineSwitch(&IgnoreErrorsSP);
+        defineProperty(&IgnoreErrorsSP);
         if (m_hasFilterWheel)
         {
-            defineSwitch(&FilterConnectionSP);
-            defineSwitch(&FilterTypeSP);
+            defineProperty(&FilterConnectionSP);
+            defineProperty(&FilterTypeSP);
         }
 
         // AO Properties
         if (m_hasAO)
         {
-            defineNumber(&AONSNP);
-            defineNumber(&AOWENP);
-            defineSwitch(&CenterSP);
+            defineProperty(&AONSNP);
+            defineProperty(&AOWENP);
+            defineProperty(&CenterSP);
         }
 
         setupParams();
@@ -632,7 +632,7 @@ bool SBIGCCD::updateProperties()
                 CFWConnect();
             }
         }
-        m_TimerID = SetTimer(POLLMS);
+        m_TimerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -710,7 +710,7 @@ bool SBIGCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             IUUpdateSwitch(&PortSP, states, names, n);
             if (*(static_cast<uint32_t *>(IUFindOnSwitch(&PortSP)->aux)) == DEV_ETH)
             {
-                defineText(&IpTP);
+                defineProperty(&IpTP);
             }
             else
             {
@@ -1602,7 +1602,7 @@ void SBIGCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -2737,7 +2737,7 @@ int SBIGCCD::CFWConnect()
         }
         LOGF_DEBUG("CFW Firmware: %s", fw);
         FilterProdcutTP.s = IPS_OK;
-        defineText(&FilterProdcutTP);
+        defineProperty(&FilterProdcutTP);
         FilterSlotN[0].min   = 1;
         FilterSlotN[0].max   = CFWr.cfwResult2;
         FilterSlotN[0].value = CFWr.cfwPosition;
@@ -2752,11 +2752,11 @@ int SBIGCCD::CFWConnect()
 
         LOGF_DEBUG("CFW min: 1 Max: %g Current Slot: %g", FilterSlotN[0].max, FilterSlotN[0].value);
 
-        defineNumber(&FilterSlotNP);
+        defineProperty(&FilterSlotNP);
         if (FilterNameT == nullptr)
             GetFilterNames();
         if (FilterNameT)
-            defineText(FilterNameTP);
+            defineProperty(FilterNameTP);
 
         LOG_DEBUG("Loading FILTER_SLOT from config file...");
         loadConfig(true, "FILTER_SLOT");

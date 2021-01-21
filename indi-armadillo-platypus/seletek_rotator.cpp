@@ -150,7 +150,7 @@ void SeletekRotator::ISGetProperties(const char *dev)
 {
     INDI::Rotator::ISGetProperties(dev);
 
-    defineSwitch(&PerPortSP);
+    defineProperty(&PerPortSP);
     loadConfig(true, PerPortSP.name);
 }
 
@@ -162,12 +162,12 @@ bool SeletekRotator::updateProperties()
     {
         getParam("getpos", m_ZeroPosition);
 
-        defineText(&FirmwareVersionTP);
-        defineNumber(&RotatorAbsPosNP);
-        defineNumber(&SettingNP);
-        defineSwitch(&MotorTypeSP);
-        defineSwitch(&HalfStepSP);
-        defineSwitch(&WiringSP);
+        defineProperty(&FirmwareVersionTP);
+        defineProperty(&RotatorAbsPosNP);
+        defineProperty(&SettingNP);
+        defineProperty(&MotorTypeSP);
+        defineProperty(&HalfStepSP);
+        defineProperty(&WiringSP);
     }
     else
     {
@@ -550,7 +550,7 @@ void SeletekRotator::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 /////////////////////////////////////////////////////////////////////////////

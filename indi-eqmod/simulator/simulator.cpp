@@ -114,12 +114,12 @@ bool EQModSimulator::updateProperties(bool enable)
 {
     if (enable)
     {
-        telescope->defineSwitch(SimModeSP);
-        telescope->defineNumber(SimWormNP);
-        telescope->defineNumber(SimRatioNP);
-        telescope->defineNumber(SimMotorNP);
-        telescope->defineSwitch(SimHighSpeedSP);
-        telescope->defineText(SimMCVersionTP);
+        telescope->defineProperty(SimModeSP);
+        telescope->defineProperty(SimWormNP);
+        telescope->defineProperty(SimRatioNP);
+        telescope->defineProperty(SimMotorNP);
+        telescope->defineProperty(SimHighSpeedSP);
+        telescope->defineProperty(SimMCVersionTP);
 
         defined = true;
         /*

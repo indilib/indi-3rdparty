@@ -126,13 +126,13 @@ void Align::ISGetProperties()
 {
     if (telescope->isConnected())
     {
-        telescope->defineText(AlignDataFileTP);
-        telescope->defineBLOB(AlignDataBP);
-        telescope->defineNumber(AlignPointNP);
-        telescope->defineSwitch(AlignListSP);
-        telescope->defineNumber(AlignTelescopeCoordsNP);
-        telescope->defineNumber(AlignCountNP);
-        telescope->defineSwitch(AlignModeSP);
+        telescope->defineProperty(AlignDataFileTP);
+        telescope->defineProperty(AlignDataBP);
+        telescope->defineProperty(AlignPointNP);
+        telescope->defineProperty(AlignListSP);
+        telescope->defineProperty(AlignTelescopeCoordsNP);
+        telescope->defineProperty(AlignCountNP);
+        telescope->defineProperty(AlignModeSP);
     }
 }
 
@@ -158,13 +158,13 @@ bool Align::updateProperties()
     /*IDLog("Align update properties connected = %d.\n",(telescope->isConnected()?1:0) ); */
     if (telescope->isConnected())
     {
-        telescope->defineText(AlignDataFileTP);
-        telescope->defineBLOB(AlignDataBP);
-        telescope->defineNumber(AlignPointNP);
-        telescope->defineSwitch(AlignListSP);
-        telescope->defineNumber(AlignTelescopeCoordsNP);
-        telescope->defineNumber(AlignCountNP);
-        telescope->defineSwitch(AlignModeSP);
+        telescope->defineProperty(AlignDataFileTP);
+        telescope->defineProperty(AlignDataBP);
+        telescope->defineProperty(AlignPointNP);
+        telescope->defineProperty(AlignListSP);
+        telescope->defineProperty(AlignTelescopeCoordsNP);
+        telescope->defineProperty(AlignCountNP);
+        telescope->defineProperty(AlignModeSP);
         Init();
     }
     else if (AlignDataBP)

@@ -118,9 +118,9 @@ void ApogeeCFW::ISGetProperties(const char *dev)
 {
     INDI::FilterWheel::ISGetProperties(dev);
 
-    defineSwitch(&FilterTypeSP);
-    defineSwitch(&PortTypeSP);
-    defineText(&NetworkInfoTP);
+    defineProperty(&FilterTypeSP);
+    defineProperty(&PortTypeSP);
+    defineProperty(&NetworkInfoTP);
 
     loadConfig(true, FilterTypeSP.name);
     loadConfig(true, PortTypeSP.name);
@@ -133,8 +133,8 @@ bool ApogeeCFW::updateProperties()
 
     if (isConnected())
     {
-        defineText(&FilterInfoTP);
-        SetTimer(POLLMS);
+        defineProperty(&FilterInfoTP);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -551,7 +551,7 @@ void ApogeeCFW::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 void ApogeeCFW::debugTriggered(bool enabled)

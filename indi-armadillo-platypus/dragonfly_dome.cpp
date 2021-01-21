@@ -90,7 +90,7 @@ Relay::Relay(uint8_t id, const std::string &device, const std::string &group)
 
 void Relay::define(DD *parent)
 {
-    parent->defineSwitch(&RelaySP);
+    parent->defineProperty(&RelaySP);
 }
 
 void Relay::remove(DD *parent)
@@ -206,7 +206,7 @@ void DragonFlyDome::ISGetProperties(const char *dev)
 {
     INDI::Dome::ISGetProperties(dev);
 
-    defineSwitch(&PerPortSP);
+    defineProperty(&PerPortSP);
     loadConfig(true, PerPortSP.name);
 }
 
@@ -235,16 +235,16 @@ bool DragonFlyDome::updateProperties()
                 SetParked(isSensorOn(parkedSensor));
         }
 
-        defineText(&FirmwareVersionTP);
+        defineProperty(&FirmwareVersionTP);
 
         // Relays
-        defineNumber(&DomeControlRelayNP);
+        defineProperty(&DomeControlRelayNP);
         for (auto &oneRelay : Relays)
             oneRelay->define(this);
 
         // Sensors
-        defineNumber(&DomeControlSensorNP);
-        defineNumber(&SensorNP);
+        defineProperty(&DomeControlSensorNP);
+        defineProperty(&SensorNP);
 
     }
     else
@@ -464,7 +464,7 @@ void DragonFlyDome::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -240,7 +240,7 @@ bool SpectraCyber::Connect()
     {
         LOGF_INFO("%s Spectrometer: Simulating connection to port %s.", type_name.c_str(),
                tProp->tp[0].text);
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return true;
     }
 
@@ -255,7 +255,7 @@ bool SpectraCyber::Connect()
     if (reset() == true)
     {
         LOG_INFO("Spectrometer is online. Retrieving preliminary data...");
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return init_spectrometer();
     }
     else
@@ -957,14 +957,14 @@ void SpectraCyber::TimerHit()
 
                 IDSetNumber(FreqNP, nullptr);
                 IDSetSwitch(ScanSP, "Scan complete.");
-                SetTimer(POLLMS);
+                SetTimer(getCurrentPollingPeriod());
                 return;
             }
 
             if (update_freq(current_freq) == false)
             {
                 abort_scan();
-                SetTimer(POLLMS);
+                SetTimer(getCurrentPollingPeriod());
                 return;
             }
 
@@ -1024,7 +1024,7 @@ void SpectraCyber::TimerHit()
             break;
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 void SpectraCyber::abort_scan()

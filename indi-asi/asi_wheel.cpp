@@ -312,7 +312,7 @@ bool ASIWHEEL::updateProperties()
             UniDirectionalS[INDI_ENABLED].s = isUniDirection ? ISS_ON : ISS_OFF;
             UniDirectionalS[INDI_DISABLED].s = isUniDirection ? ISS_OFF : ISS_ON;
         }
-        defineSwitch(&UniDirectionalSP);
+        defineProperty(&UniDirectionalSP);
     }
     else
         deleteProperty(UniDirectionalSP.name);
@@ -386,12 +386,12 @@ bool ASIWHEEL::SelectFilter(int f)
         result = EFWSetPosition(fw_id, f - 1);
         if (result == EFW_SUCCESS)
         {
-            SetTimer(POLLMS);
+            SetTimer(getCurrentPollingPeriod());
             do
             {
                 result = EFWGetPosition(fw_id, &CurrentFilter);
                 CurrentFilter++;
-                usleep(POLLMS * 1000);
+                usleep(getCurrentPollingPeriod() * 1000);
             }
             while (result == EFW_SUCCESS && CurrentFilter != TargetFilter);
             if (result != EFW_SUCCESS)
@@ -420,7 +420,7 @@ void ASIWHEEL::TimerHit()
 
     if (CurrentFilter != TargetFilter)
     {
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
     {

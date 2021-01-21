@@ -317,14 +317,14 @@ bool MGenAutoguider::updateProperties()
     if (isConnected())
     {
         _D("registering properties", "");
-        defineText(&version.firmware.property);
-        defineNumber(&voltage.property);
-        defineSwitch(&ui.remote.property);
-        defineNumber(&ui.framerate.property);
-        defineSwitch(&ui.buttons.properties[0]);
-        defineSwitch(&ui.buttons.properties[1]);
-        defineSwitch(&ui.buttons.properties[2]);
-        defineSwitch(&ui.buttons.properties[3]);
+        defineProperty(&version.firmware.property);
+        defineProperty(&voltage.property);
+        defineProperty(&ui.remote.property);
+        defineProperty(&ui.framerate.property);
+        defineProperty(&ui.buttons.properties[0]);
+        defineProperty(&ui.buttons.properties[1]);
+        defineProperty(&ui.buttons.properties[2]);
+        defineProperty(&ui.buttons.properties[3]);
     }
     else
     {

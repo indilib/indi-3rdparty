@@ -237,11 +237,11 @@ bool DSICCD::updateProperties()
         setupParams();
 
         // Start the timer
-        SetTimer(POLLMS);
-        defineNumber(&GainNP);
-        defineNumber(&OffsetNP);
-        defineNumber(&CCDTempNP);
-        defineSwitch(&VddExpSP);
+        SetTimer(getCurrentPollingPeriod());
+        defineProperty(&GainNP);
+        defineProperty(&OffsetNP);
+        defineProperty(&CCDTempNP);
+        defineProperty(&VddExpSP);
     }
     else
     {
@@ -470,7 +470,7 @@ void DSICCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

@@ -85,14 +85,14 @@ bool LX200StarGoFocuser::updateProperties()
         return false;
     } else {
         if (isConnected()) {
-            baseDevice->defineNumber(&FocusSpeedNP);
-            baseDevice->defineSwitch(&FocusMotionSP);
-            baseDevice->defineNumber(&FocusTimerNP);
-            baseDevice->defineNumber(&FocusAbsPosNP);
-            baseDevice->defineNumber(&FocusRelPosNP);
-            baseDevice->defineSwitch(&FocusAbortSP);
-            baseDevice->defineNumber(&FocusSyncPosNP);
-            baseDevice->defineSwitch(&FocusReverseSP);
+            baseDevice->defineProperty(&FocusSpeedNP);
+            baseDevice->defineProperty(&FocusMotionSP);
+            baseDevice->defineProperty(&FocusTimerNP);
+            baseDevice->defineProperty(&FocusAbsPosNP);
+            baseDevice->defineProperty(&FocusRelPosNP);
+            baseDevice->defineProperty(&FocusAbortSP);
+            baseDevice->defineProperty(&FocusSyncPosNP);
+            baseDevice->defineProperty(&FocusReverseSP);
         }
         else {
             baseDevice->deleteProperty(FocusSpeedNP.name);

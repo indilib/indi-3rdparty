@@ -52,6 +52,11 @@
 #include "libfli-mem.h"
 #include "libfli-usb.h"
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 #define FLIUSB_MIN_TIMEOUT (5000)
 
 libusb_device_handle * libusb_fli_find_handle(struct libusb_context *usb_ctx, char *name);
@@ -309,6 +314,7 @@ long libusb_bulkwrite(flidev_t dev, void *buf, long *wlen)
 
 long libusb_bulkread(flidev_t dev, void *buf, long *rlen)
 {
+  INDI_UNUSED(dev);
   int ep;
 
   switch (DEVICE->devinfo.devid)
@@ -333,6 +339,7 @@ long libusb_bulkread(flidev_t dev, void *buf, long *rlen)
 
 long libusb_usb_disconnect(flidev_t dev,  fli_unixio_t *io)
 {
+  INDI_UNUSED(dev);
   long err = 0;
 	
   debug(FLIDEBUG_INFO, "Disconnecting");
@@ -396,7 +403,7 @@ int libusb_fli_create_name(libusb_device *usb_dev, char *name, size_t max_name)
   numports = libusb_get_port_numbers(usb_dev, port_nums, sizeof(port_nums));
   addr = libusb_get_device_address(usb_dev);
 
-  if ( (numports < 0) || (numports > sizeof(port_nums)) )
+  if ( (size_t)numports > sizeof(port_nums) )
   {
     return 0;
   }
@@ -465,6 +472,7 @@ int libusb_fli_create_name(libusb_device *usb_dev, char *name, size_t max_name)
 
 long libusb_list(char *pattern, flidomain_t domain, char ***names)
 {
+  INDI_UNUSED(pattern);
   int r, i;
   char **list;
   libusb_device **usb_devs;
@@ -631,6 +639,7 @@ long libusb_list(char *pattern, flidomain_t domain, char ***names)
 
 libusb_device_handle * libusb_fli_find_handle(struct libusb_context *usb_ctx, char *name)
 {
+  INDI_UNUSED(usb_ctx);
   int r, i;
   libusb_device **usb_devs;
   libusb_device *usb_dev;
