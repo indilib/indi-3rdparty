@@ -1,3 +1,9 @@
+indi-sv305 (1.2.3) bionic; urgency=low
+
+  * min/max exposure values fix
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Thu, 21 Jan 2021 16:00:00 +0300
+
 indi-sv305 (1.2.2) bionic; urgency=low
 
   * SV305PRO detection fixed
