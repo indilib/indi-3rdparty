@@ -244,7 +244,7 @@ bool CelestronAUX::Handshake()
             LOGF_DEBUG("detectRTSCTS = %s.",  detectRTSCTS() ? "true" : "false");
 
             // if serial connection, check if hardware control flow is required.
-            // yes for AUX and PC ports, no for HC port.
+            // yes for AUX and PC ports, no for HC port and mount USB port.
             if ((isRTSCTS = detectRTSCTS()))
             {
                 LOG_INFO("Detected AUX or PC port connection.");
@@ -255,7 +255,6 @@ bool CelestronAUX::Handshake()
             }
             else
             {
-                LOG_INFO("Detected Hand Controller serial connection.");
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
                 if (!tty_set_speed(PortFD, B9600))
                 {
@@ -263,7 +262,18 @@ bool CelestronAUX::Handshake()
                     return false;
                 }
 
+		// wait for speed to settle
+                msleep(200);
+
                 LOG_INFO("Setting serial speed to 9600 baud.");
+
+		// detect if connectd to HC port or to mount USB port
+		// ask for HC version
+		char version[10];
+		if ((isHC = detectHC(version,(size_t)10)))
+                    LOGF_INFO("Detected Hand Controller (v%s) serial connection.",version);
+		else
+                    LOG_INFO("Detected Mount USB serial connection.");
             }
         }
         else
@@ -1748,7 +1758,7 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
     if ( PortFD <= 0 )
         return false;
 
-    if (isRTSCTS)
+    if (isRTSCTS || !isHC)
     {
         // if connected to AUX or PC ports, receive AUX command response.
         // search for packet preamble (0x3b)
@@ -1932,13 +1942,13 @@ bool CelestronAUX::sendAUXCommand(AUXCommand &c)
     AUXBuffer buf;
     c.logCommand();
 
-    if (isRTSCTS || getActiveConnection() != serialConnection)
-        // Direct connection (AUX/PC port)
+    if (isRTSCTS || !isHC || getActiveConnection() != serialConnection)
+        // Direct connection (AUX/PC/USB port)
         c.fillBuf(buf);
     else
     {
-        // connection is through HC serial, convert AUX command to a
-        // passthrough command
+        // connection is through HC serial and destination is not HC,
+        // convert AUX command to a passthrough command
         buf.resize(8);                 // fixed len = 8
         buf[0] = 0x50;                 // prefix
         buf[1] = 1 + c.data.size();    // length
@@ -2009,6 +2019,41 @@ bool CelestronAUX::detectRTSCTS()
     bool retval = waitCTS(300.);
     setRTS(0);
     return retval;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::detectHC(char *version, size_t size)
+{
+    buffer b;
+    char buf[3];
+
+    b.resize(1);
+    b[0] = 'V';
+
+    // We are not connected. Nothing to do.
+    if ( PortFD <= 0 )
+        return false;
+
+    // send get firmware version command
+    if (sendBuffer(PortFD, b) != (int)b.size())
+        return false;
+
+    // read response
+    int n;
+    if (aux_tty_read(PortFD, (char*)buf, 3, READ_TIMEOUT, &n) != TTY_OK)
+        return false;
+
+    // non error response must end with '#'
+    if (buf[2] != '#')
+        return false;
+
+    // return printable HC version
+    snprintf(version, size, "%d.%02d", static_cast<uint8_t>(buf[0]), static_cast<uint8_t>(buf[1]));
+
+    return true;
 }
 
 
