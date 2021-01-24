@@ -167,6 +167,7 @@ class CelestronAUX :
 
         // connection
         bool isRTSCTS;
+        bool isHC;
 
         unsigned int DBG_CAUX;
         unsigned int DBG_AUXMOUNT;
@@ -206,6 +207,7 @@ class CelestronAUX :
         void setRTS(bool rts);
         bool waitCTS(float timeout);
         bool detectRTSCTS();
+        bool detectHC(char *version, size_t size);
         int response_data_size;
         int aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n);
         int aux_tty_write (int PortFD, char *buf, int bufsiz, float timeout, int *n);
