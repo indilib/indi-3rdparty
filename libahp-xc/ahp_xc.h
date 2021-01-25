@@ -336,7 +336,7 @@ DLL_EXPORT void ahp_xc_set_frequency_divider(unsigned char value);
 * \brief Set the supply voltage on the current line
 * \param value The voltage level
 */
-DLL_EXPORT void ahp_xc_set_voltage(unsigned char value);
+DLL_EXPORT void ahp_xc_set_voltage(int index, unsigned char value);
 
 /**
 * \brief Send an arbitrary command to the AHP xc device
