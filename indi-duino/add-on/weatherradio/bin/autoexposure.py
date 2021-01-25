@@ -51,11 +51,11 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
     newBrightness = brightness
     newContrast   = contrast
     newSaturation = saturation
-    if (newExpTime < 1000000 and iso > 50):
+    if (newExpTime < 100000 and iso > 50):
         # adapt ISO - less than 3 sec (avoid ISO flipping)
         newISO     /= 2
         newExpTime = newExpTime * 2.5
-    elif (newExpTime > 5000000 and iso < config.getint('Night', 'MaxISO')):
+    elif (newExpTime > 500000 and iso < config.getint('Night', 'MaxISO')):
         # adapt ISO - more than 1 sec
         newISO     *= 2
         newExpTime = newExpTime / 2.5
