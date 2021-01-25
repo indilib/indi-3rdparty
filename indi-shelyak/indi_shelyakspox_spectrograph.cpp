@@ -32,6 +32,11 @@
 #include "indi_shelyakspox_spectrograph.h"
 #include "config.h"
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 //const char *SPECTROGRAPH_SETTINGS_TAB = "Spectrograph Settings";
 const char *CALIBRATION_UNIT_TAB      = "Calibration Module";
 
@@ -129,8 +134,8 @@ bool ShelyakSpox::initProperties()
 void ShelyakSpox::ISGetProperties(const char *dev)
 {
   INDI::DefaultDevice::ISGetProperties(dev);
-  defineText(&PortTP);
-  defineNumber(&SettingsNP);
+  defineProperty(&PortTP);
+  defineProperty(&SettingsNP);
   loadConfig(true, PortTP.name);
 }
 
@@ -140,7 +145,7 @@ bool ShelyakSpox::updateProperties()
   if (isConnected())
   {
     // create properties if we are connected
-    defineSwitch(&LampSP);
+    defineProperty(&LampSP);
   }
   else
   {
@@ -167,7 +172,8 @@ bool ShelyakSpox::Connect()
 
     int bytes_read=0;
     int tty_rc = tty_nread_section(PortFD, line, 80, 0x0a, 3, &bytes_read);
-    
+    INDI_UNUSED(tty_rc);
+
     line[bytes_read] = '\n';
     DEBUGF(INDI::Logger::DBG_SESSION, "bytes read :  %i", bytes_read);
 

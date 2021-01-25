@@ -20,9 +20,10 @@
 
 //////////////////////////// 
 // CTOR 
-CameraIo::CameraIo(CamModel::InterfaceType type ) : m_fileName(__FILE__),
-                                                                 m_type(type),
-                                                                 m_RegMirror( new CamRegMirror() )
+CameraIo::CameraIo(CamModel::InterfaceType type )
+    :  m_type(type)
+    , m_RegMirror( new CamRegMirror() )
+    , m_fileName(__FILE__)
 {
 
 }

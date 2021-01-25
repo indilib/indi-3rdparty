@@ -17,6 +17,11 @@
 #include "ApgLogger.h" 
 #include <sstream>
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 namespace
 {
     // values for configuring the camera's pixel A to D converter
@@ -309,7 +314,7 @@ void CamGen2CcdAcqParams::Write2AdcReg(  const uint16_t value2Write )
 void CamGen2CcdAcqParams::SetResolution( 
             const Apg::Resolution res )
 {
-    NO_OP_PARAMETER( res );
+    INDI_UNUSED( res );
     std::string errStr("cannot set CCD adc resolution on ascent/Aspencameras");
     apgHelper::throwRuntimeException( m_fileName, errStr, 
         __LINE__, Apg::ErrorType_InvalidOperation );

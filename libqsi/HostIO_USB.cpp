@@ -24,6 +24,11 @@
 	#error "No ftdi library selected."
 #endif
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 const ULONG QSI_FSVIDPID = 0x0403eb48;
 const ULONG QSI_HSVIDPID = 0x0403eb49;
 
@@ -555,6 +560,7 @@ int HostIO_USB::WritePacket(UCHAR * pBuff, int iBuffLen, int * iBytesWritten)
 
 int HostIO_USB::ReadPacket(UCHAR * pBuff, int iBuffLen, int * iBytesRead)
 {
+	INDI_UNUSED(iBuffLen);
 	int iStatus;
 	int dwBytesToRead;
 	int dwBytesReturned;

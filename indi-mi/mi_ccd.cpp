@@ -308,25 +308,25 @@ void MICCD::ISGetProperties(const char *dev)
     {
         if (HasCooler())
         {
-            defineNumber(&TemperatureRampNP);
-            defineSwitch(&CoolerSP);
-            defineNumber(&CoolerNP);
+            defineProperty(&TemperatureRampNP);
+            defineProperty(&CoolerSP);
+            defineProperty(&CoolerNP);
         }
 
         if (numReadModes > 0)
-            defineSwitch(&ReadModeSP);
+            defineProperty(&ReadModeSP);
 
         if (maxFanValue > 0)
-            defineNumber(&FanNP);
+            defineProperty(&FanNP);
 
         if (maxHeatingValue > 0)
-            defineNumber(&WindowHeatingNP);
+            defineProperty(&WindowHeatingNP);
 
         if (hasGain)
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
 
         if (canDoPreflash)
-            defineNumber(&PreflashNP);
+            defineProperty(&PreflashNP);
 
         if (numFilters > 0)
         {
@@ -343,26 +343,26 @@ bool MICCD::updateProperties()
     {
         if (HasCooler())
         {
-            defineNumber(&TemperatureRampNP);
-            defineSwitch(&CoolerSP);
-            defineNumber(&CoolerNP);
-            temperatureID = IEAddTimer(POLLMS, MICCD::updateTemperatureHelper, this);
+            defineProperty(&TemperatureRampNP);
+            defineProperty(&CoolerSP);
+            defineProperty(&CoolerNP);
+            temperatureID = IEAddTimer(getCurrentPollingPeriod(), MICCD::updateTemperatureHelper, this);
         }
 
         if (numReadModes > 0)
-            defineSwitch(&ReadModeSP);
+            defineProperty(&ReadModeSP);
 
         if (maxFanValue > 0)
-            defineNumber(&FanNP);
+            defineProperty(&FanNP);
 
         if (maxHeatingValue > 0)
-            defineNumber(&WindowHeatingNP);
+            defineProperty(&WindowHeatingNP);
 
         if (hasGain)
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
 
         if (canDoPreflash)
-            defineNumber(&PreflashNP);
+            defineProperty(&PreflashNP);
 
         if (numFilters > 0)
         {
@@ -372,7 +372,7 @@ bool MICCD::updateProperties()
         // Let's get parameters now from CCD
         setupParams();
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -779,7 +779,7 @@ void MICCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 int MICCD::QueryFilter()
@@ -1087,7 +1087,7 @@ void MICCD::updateTemperature()
 
     IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&CoolerNP, nullptr);
-    temperatureID = IEAddTimer(POLLMS, MICCD::updateTemperatureHelper, this);
+    temperatureID = IEAddTimer(getCurrentPollingPeriod(), MICCD::updateTemperatureHelper, this);
 }
 
 bool MICCD::saveConfigItems(FILE *fp)

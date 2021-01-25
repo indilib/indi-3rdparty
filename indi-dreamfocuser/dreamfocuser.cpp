@@ -218,12 +218,12 @@ bool DreamFocuser::updateProperties()
 
     if (isConnected())
     {
-        //defineSwitch(&SyncSP);
-        defineSwitch(&ParkSP);
-        defineNumber(&WeatherNP);
-        defineSwitch(&StatusSP);
-        //defineNumber(&MaxPositionNP);
-        //defineNumber(&MaxTravelNP);
+        //defineProperty(&SyncSP);
+        defineProperty(&ParkSP);
+        defineProperty(&WeatherNP);
+        defineProperty(&StatusSP);
+        //defineProperty(&MaxPositionNP);
+        //defineProperty(&MaxTravelNP);
     }
     else
     {
@@ -243,7 +243,7 @@ void DreamFocuser::ISGetProperties(const char *dev)
 {
   if(dev && strcmp(dev,getDeviceName()))
   {
-    defineNumber(&MaxPositionNP);
+    defineProperty(&MaxPositionNP);
     loadConfig(true, "MAXPOSITION");
   };
   return INDI::Focuser::ISGetProperties(dev);
@@ -487,9 +487,9 @@ IPState DreamFocuser::MoveFocuser(FocusDirection dir, int speed, uint16_t durati
     focusMoveRequest = duration/1000.0;
     if ( read_response() )
       if ( ( currentResponse.k == 'R' ) && (currentResponse.d == d) )
-        if (duration <= POLLMS)
+        if (duration <= getCurrentPollingPeriod())
         {
-          usleep(POLLMS * 1000);
+          usleep(getCurrentPollingPeriod() * 1000);
           AbortFocuser();
           return IPS_OK;
         }
@@ -667,7 +667,7 @@ void DreamFocuser::TimerHit()
     IDSetSwitch(&StatusSP, nullptr);
    IDSetSwitch(&ParkSP, NULL);
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
 }
 

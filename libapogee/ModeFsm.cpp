@@ -21,17 +21,18 @@
 
 //////////////////////////// 
 // CTOR 
-ModeFsm::ModeFsm( std::shared_ptr<CameraIo> & io,
+ModeFsm::ModeFsm(std::shared_ptr<CameraIo> & io,
                  std::shared_ptr<CApnCamData> & camData, 
-                 uint16_t rev) :
-                 m_fileName(__FILE__),
-                 m_mode(Apg::CameraMode_Normal),
-                 m_CamIo(io),
-                 m_CamData(camData),
-                 m_FirmwareVersion(rev),
-                 m_IsBulkDownloadOn(false),
-                 m_IsPipelineDownloadOn(true),
-                 m_TdiRows( 1 )
+                 uint16_t rev
+)
+    : m_mode(Apg::CameraMode_Normal)
+    , m_CamIo(io)
+    , m_CamData(camData)
+    , m_FirmwareVersion(rev)
+    , m_IsBulkDownloadOn(false)
+    , m_IsPipelineDownloadOn(true)
+    , m_fileName(__FILE__)
+    , m_TdiRows( 1 )
 {
     m_CamIo->ReadOrWriteReg( CameraRegs::CMD_A, CameraRegs::CMD_A_PIPELINE_BIT );
 }

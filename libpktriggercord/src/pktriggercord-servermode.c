@@ -89,7 +89,7 @@ int client_sock;
 
 void write_socket_answer( char *answer ) {
     ssize_t r = write(client_sock, answer, strlen(answer));
-    if (r != strlen(answer)) {
+    if ((size_t)r != strlen(answer)) {
         fprintf(stderr, "write(answer) failed");
     }
 }

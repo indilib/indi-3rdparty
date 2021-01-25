@@ -105,13 +105,13 @@ bool PkTriggerCordCCD::updateProperties()
 
         buildCaptureSwitches();
 
-        defineSwitch(&transferFormatSP);
-        defineSwitch(&autoFocusSP);
+        defineProperty(&transferFormatSP);
+        defineProperty(&autoFocusSP);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         }
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -205,7 +205,7 @@ void PkTriggerCordCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control,
         IUFillSwitchVector(control, create_switch(name, optionList, numOptions, set_idx),
                            numOptions, getDeviceName(), name, label,
                            IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        defineSwitch(control);
+        defineProperty(control);
     }
 }
 
@@ -507,7 +507,7 @@ void PkTriggerCordCCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -660,7 +660,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         transferFormatSP.s = IPS_OK;
         IDSetSwitch(&transferFormatSP, nullptr);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         } else {
             deleteProperty(preserveOriginalSP.name);
         }

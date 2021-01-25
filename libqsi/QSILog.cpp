@@ -77,8 +77,8 @@ void QSILog::TestForLogging()
 		return;
 	}
 	
-	m_logLevel = 0;
-	fscanf(pFile, "%d", &m_logLevel);
+	if (fscanf(pFile, "%d", &m_logLevel) != 1)
+		m_logLevel = 0;
 
 	if (m_logLevel != 0)
 	{

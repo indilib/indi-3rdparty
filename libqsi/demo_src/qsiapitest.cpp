@@ -101,7 +101,9 @@ int main(int argc, char** argv)
 	std::string desc("");
 	std::string info("");
 	std::string modelNumber("");
+#ifdef HAVE_TIFFIO_H
 	char filename[256] = "";
+#endif
 	long * offsets = NULL;
 	bool LEDEnabled;
 	bool soundEnabled;

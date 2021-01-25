@@ -56,6 +56,11 @@
 
 #define DEFAULT_NUM_POINTERS (1024)
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 static struct _mem_ptrs {
   void **pointers;
   int total;
@@ -272,6 +277,7 @@ char *xstrndup(const char *s, size_t siz)
 
 int xasprintf(char **strp, const char *fmt, ...)
 {
+  INDI_UNUSED(strp);
   va_list ap;
   char *tmp;
   int err;

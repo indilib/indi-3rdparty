@@ -21,12 +21,12 @@ public:
 	virtual int OpenEx(CameraID);
 	virtual int SetTimeouts(int, int);
 	virtual int Close();
-	virtual int Write(unsigned char *, int, int *);
-	virtual int Read(unsigned char *, int, int *);
-	virtual int GetReadWriteQueueStatus(int *, int *);
+	virtual int Write(unsigned char * sendBuf, int bytesToSend, int *bytesSent);
+	virtual int Read(unsigned char * recvBuf, int bytesRequested, int * bytesReceived);
+	virtual int GetReadWriteQueueStatus(int * RxBytes, int * TxBytes);
 	virtual int ResetDevice();
 	virtual int Purge();
-	virtual int GetReadQueueStatus(int *);
+	virtual int GetReadQueueStatus(int * bytesAvailable);
 	virtual int SetStandardReadTimeout ( int ulTimeout);
 	virtual int SetStandardWriteTimeout( int ulTimeout);
 	virtual int SetIOTimeout(IOTimeout ioTimeout);

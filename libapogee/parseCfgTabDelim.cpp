@@ -63,7 +63,7 @@ namespace
     {
         return ( 0 == str.compare("TRUE") ? true : false );
     }
-
+#if 0 // unused
     // HEX   STR  2   USHORT
     uint16_t HexStr2uShort(const std::string & str)
     {
@@ -72,7 +72,7 @@ namespace
         is >> std::hex >> val;
         return val;
     }
-
+#endif
     //      STR  2  APN   AD    TYPE
     CamCfg::ApnAdType Str2ApnAdType(const std::string & str)
     {

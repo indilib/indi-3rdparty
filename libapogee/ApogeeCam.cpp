@@ -41,18 +41,18 @@ namespace
 
 //////////////////////////// 
 // CTOR 
-ApogeeCam::ApogeeCam(const CamModel::PlatformType platform) : 
-                                m_PlatformType( platform ),
-                                m_fileName( __BASE_FILE__ ),
-                                m_FirmwareVersion( 0 ),
-                                m_Id( 0 ),
-                                m_NumImgsDownloaded(0),
-                                m_ImageInProgress( false ),
-                                m_IsPreFlashOn( false ),
-                                m_IsInitialized( false ),
-                                m_IsConnected(false),
-								m_ExposureTimer( new ApgTimer ),
-								m_LastExposureTime(0)
+ApogeeCam::ApogeeCam(const CamModel::PlatformType platform)
+    : m_ExposureTimer( new ApgTimer )
+    , m_PlatformType( platform )
+    , m_fileName( __BASE_FILE__ )
+    , m_FirmwareVersion( 0 )
+    , m_Id( 0 )
+    , m_NumImgsDownloaded(0)
+    , m_ImageInProgress( false )
+    , m_IsPreFlashOn( false )
+    , m_IsInitialized( false )
+    , m_IsConnected(false)
+    , m_LastExposureTime(0)
 { 
 #ifdef DEBUGGING_CAMERA 
     ApgLogger::Instance().SetLogLevel( ApgLogger::LEVEL_DEBUG );

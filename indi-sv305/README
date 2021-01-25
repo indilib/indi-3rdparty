@@ -65,6 +65,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.3 : min/max exposure values fix
 	+ 1.2.2 : Fix SV305PRO detection
 	+ 1.2.1 : Camera gain issue fixed
 	+ 1.2 : Updated with the last SDK (20200812)

@@ -60,6 +60,11 @@
 #define SUBKEY_FilterFocus std::string("FilterFocusOffset")
 #define SUBKEY_FilterTrim std::string("FilterTrim")
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 class QSI_Registry
 {
 public:
@@ -372,6 +377,9 @@ public:
 
 	int RegQueryValueEx(std::string strKeyPath, std::string strSubKeyName, int n0, int n1, int * piData, int dSize)
 	{
+		INDI_UNUSED(n0);
+		INDI_UNUSED(n1);
+		INDI_UNUSED(dSize);
 		m_rc = m_ini.LoadFile(m_szPath);
 		if (m_rc < 0)
 			return -1;

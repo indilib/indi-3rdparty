@@ -220,8 +220,8 @@ void GigECCD::_update_indi_properties(void)
     IUFillTextVector(&indiprop_info_prop, indiprop_info, 3, getDeviceName(), "Camera Info", "", MAIN_CONTROL_TAB, IP_RO,
                      0, IPS_IDLE);
 
-    defineText(&indiprop_info_prop);
-    defineNumber(&this->indiprop_gain_prop);
+    defineProperty(&indiprop_info_prop);
+    defineProperty(&this->indiprop_gain_prop);
 }
 
 void GigECCD::_delete_indi_properties(void)

@@ -21,6 +21,10 @@
 #include "ApgLogger.h" 
 #include <sstream>
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
 
 //////////////////////////// 
 // CTOR 
@@ -371,6 +375,9 @@ void Quad::SetFanMode( const Apg::FanMode mode, const bool PreCondCheck )
 #ifdef DEBUGGING_CAMERA
     apgHelper::DebugMsg( "Quad::SetFanMode -> mode = %d, PreCondCheck =%d ", 
         mode, PreCondCheck );
+#else
+    INDI_UNUSED(mode);
+    INDI_UNUSED(PreCondCheck);
 #endif
     // no op on purpose, no fan control for v108 firmware and hic cameras
     // just ignore request...

@@ -192,9 +192,9 @@ void ApogeeCCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
-    defineSwitch(&PortTypeSP);
-    defineText(&NetworkInfoTP);
-    defineSwitch(&FilterTypeSP);
+    defineProperty(&PortTypeSP);
+    defineProperty(&NetworkInfoTP);
+    defineProperty(&FilterTypeSP);
 
     loadConfig(true, PortTypeSP.name);
     loadConfig(true, NetworkInfoTP.name);
@@ -207,20 +207,20 @@ bool ApogeeCCD::updateProperties()
 
     if (isConnected())
     {
-        defineText(&CamInfoTP);
-        defineSwitch(&CoolerSP);
-        defineNumber(&CoolerNP);
-        defineSwitch(&ReadOutSP);
-        defineSwitch(&FanStatusSP);
+        defineProperty(&CamInfoTP);
+        defineProperty(&CoolerSP);
+        defineProperty(&CoolerNP);
+        defineProperty(&ReadOutSP);
+        defineProperty(&FanStatusSP);
         getCameraParams();
 
         if (cfwFound)
         {
             INDI::FilterInterface::updateProperties();
-            defineText(&FilterInfoTP);
+            defineProperty(&FilterInfoTP);
         }
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -1471,7 +1471,7 @@ void ApogeeCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

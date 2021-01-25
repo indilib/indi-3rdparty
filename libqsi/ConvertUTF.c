@@ -56,6 +56,41 @@ static const UTF32 halfMask = 0x3FFUL;
 #define false	   0
 #define true	    1
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_HAS_CPP_ATTRIBUTE
+# ifdef __has_cpp_attribute
+#   define INDI_HAS_CPP_ATTRIBUTE(x)  __has_cpp_attribute(x)
+# else
+#   define INDI_HAS_CPP_ATTRIBUTE(x)  0
+# endif
+#endif
+
+#ifndef INDI_HAS_ATTRIBUTE
+# ifdef __has_attribute
+#   define INDI_HAS_ATTRIBUTE(x)      __has_attribute(x)
+# else
+#   define INDI_HAS_CPP_ATTRIBUTE(x)   0
+# endif
+#endif
+
+#ifndef INDI_FALLTHROUGH
+# if defined(__cplusplus)
+#  if INDI_HAS_CPP_ATTRIBUTE(clang::fallthrough)
+#   define INDI_FALLTHROUGH [[clang::fallthrough]]
+#  elif INDI_HAS_CPP_ATTRIBUTE(gnu::fallthrough)
+#   define INDI_FALLTHROUGH [[gnu::fallthrough]]
+#  elif INDI_HAS_CPP_ATTRIBUTE(fallthrough)
+#   define INDI_FALLTHROUGH [[fallthrough]]
+#  endif
+# else
+#  if INDI_HAS_ATTRIBUTE(fallthrough)
+#   define INDI_FALLTHROUGH __attribute__((fallthrough))
+#  else
+#   define INDI_FALLTHROUGH do {} while (0)
+#  endif
+# endif
+#endif
+
 /* --------------------------------------------------------------------- */
 
 ConversionResult ConvertUTF32toUTF16 (
@@ -267,9 +302,9 @@ ConversionResult ConvertUTF16toUTF8 (
 	    target -= bytesToWrite; result = targetExhausted; break;
 	}
 	switch (bytesToWrite) { /* note: everything falls through. */
-	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; //@suppress("No break at end of case")
-	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; //@suppress("No break at end of case")
-	    case 2: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; //@suppress("No break at end of case")
+	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 2: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
 	    case 1: *--target =  (UTF8)(ch | firstByteMark[bytesToWrite]);
 	}
 	target += bytesToWrite;
@@ -298,8 +333,8 @@ static Boolean isLegalUTF8(const UTF8 *source, int length) {
     switch (length) {
     default: return false;
 	/* Everything else falls through when "true"... */
-    case 4: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false; //@suppress("No break at end of case")
-    case 3: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false; //@suppress("No break at end of case")
+    case 4: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+    case 3: if ((a = (*--srcptr)) < 0x80 || a > 0xBF) return false; INDI_FALLTHROUGH; //@suppress("No break at end of case")
     case 2: if ((a = (*--srcptr)) > 0xBF) return false;
 
 	switch (*source) {
@@ -309,7 +344,7 @@ static Boolean isLegalUTF8(const UTF8 *source, int length) {
 	    case 0xF0: if (a < 0x90) return false; break;
 	    case 0xF4: if (a > 0x8F) return false; break;
 	    default:   if (a < 0x80) return false;
-	} //@suppress("No break at end of case")
+	} INDI_FALLTHROUGH; //@suppress("No break at end of case")
 
     case 1: if (*source >= 0x80 && *source < 0xC2) return false; break;
 
@@ -355,11 +390,11 @@ ConversionResult ConvertUTF8toUTF16 (
 	 * The cases all fall through. See "Note A" below.
 	 */
 	switch (extraBytesToRead) {
-	    case 5: ch += *source++; ch <<= 6; /* remember, illegal UTF-8 */ //@suppress("No break at end of case")
-	    case 4: ch += *source++; ch <<= 6; /* remember, illegal UTF-8 */ //@suppress("No break at end of case")
-	    case 3: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 2: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 1: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
+	    case 5: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; /* remember, illegal UTF-8 */ //@suppress("No break at end of case")
+	    case 4: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; /* remember, illegal UTF-8 */ //@suppress("No break at end of case")
+	    case 3: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 2: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 1: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
 	    case 0: ch += *source++;
 	}
 	ch -= offsetsFromUTF8[extraBytesToRead];
@@ -446,9 +481,9 @@ ConversionResult ConvertUTF32toUTF8 (
 	    target -= bytesToWrite; result = targetExhausted; break;
 	}
 	switch (bytesToWrite) { /* note: everything falls through. */
-	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;//@suppress("No break at end of case")
-	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;//@suppress("No break at end of case")
-	    case 2: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;//@suppress("No break at end of case")
+	    case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;INDI_FALLTHROUGH;//@suppress("No break at end of case")
+	    case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;INDI_FALLTHROUGH;//@suppress("No break at end of case")
+	    case 2: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;INDI_FALLTHROUGH;//@suppress("No break at end of case")
 	    case 1: *--target = (UTF8) (ch | firstByteMark[bytesToWrite]);
 	}
 	target += bytesToWrite;
@@ -481,11 +516,11 @@ ConversionResult ConvertUTF8toUTF32 (
 	 * The cases all fall through. See "Note A" below.
 	 */
 	switch (extraBytesToRead) {
-	    case 5: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 4: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 3: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 2: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
-	    case 1: ch += *source++; ch <<= 6;//@suppress("No break at end of case")
+	    case 5: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 4: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 3: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 2: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
+	    case 1: ch += *source++; ch <<= 6; INDI_FALLTHROUGH; //@suppress("No break at end of case")
 	    case 0: ch += *source++;
 	}
 	ch -= offsetsFromUTF8[extraBytesToRead];

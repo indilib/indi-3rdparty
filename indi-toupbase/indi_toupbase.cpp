@@ -417,54 +417,54 @@ bool ToupBase::updateProperties()
 
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
             loadConfig(true, "CCD_COOLER");
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
             TemperatureNP.p = IP_RO;
-            defineNumber(&TemperatureNP);
+            defineProperty(&TemperatureNP);
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
         {
-            defineSwitch(&FanControlSP);
-            defineSwitch(&FanSpeedSP);
+            defineProperty(&FanControlSP);
+            defineProperty(&FanSpeedSP);
         }
 
         if (m_MonoCamera == false)
-            defineSwitch(&WBAutoSP);
+            defineProperty(&WBAutoSP);
 
-        defineNumber(&ControlNP);
-        defineSwitch(&AutoControlSP);
-        defineSwitch(&AutoExposureSP);
-        defineSwitch(&VideoFormatSP);
-        defineSwitch(&ResolutionSP);
-        defineNumber(&ADCNP);
+        defineProperty(&ControlNP);
+        defineProperty(&AutoControlSP);
+        defineProperty(&AutoExposureSP);
+        defineProperty(&VideoFormatSP);
+        defineProperty(&ResolutionSP);
+        defineProperty(&ADCNP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
         {
             m_hasDualGain = true;
-            defineNumber(&GainConversionNP);
-            defineSwitch(&GainConversionSP);
+            defineProperty(&GainConversionNP);
+            defineProperty(&GainConversionSP);
         }
 
         // Levels
-        defineNumber(&LevelRangeNP);
-        defineNumber(&BlackBalanceNP);
-        defineNumber(&OffsetNP);
+        defineProperty(&LevelRangeNP);
+        defineProperty(&BlackBalanceNP);
+        defineProperty(&OffsetNP);
 
         // Balance
         if (m_MonoCamera == false)
         {
-            defineNumber(&WBTempTintNP);
-            defineNumber(&WBRGBNP);
+            defineProperty(&WBTempTintNP);
+            defineProperty(&WBRGBNP);
         }
 
         // Firmware
-        defineText(&FirmwareTP);
-        defineText(&SDKVersionTP);
+        defineProperty(&FirmwareTP);
+        defineProperty(&SDKVersionTP);
     }
     else
     {
@@ -961,7 +961,7 @@ void ToupBase::setupParams()
     // Allocate memory
     allocateFrameBuffer();
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     //Start pull callback
     rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
@@ -1920,7 +1920,7 @@ bool ToupBase::StartExposure(float duration)
     //    int timeMS = uSecs / 1000 - 50;
     //    if (timeMS <= 0)
     //        sendImageCallBack();
-    //    else if (static_cast<uint32_t>(timeMS) < POLLMS)
+    //    else if (static_cast<uint32_t>(timeMS) < getCurrentPollingPeriod())
     //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
 
     // Trigger an exposure
@@ -2059,7 +2059,7 @@ void ToupBase::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
 }
 

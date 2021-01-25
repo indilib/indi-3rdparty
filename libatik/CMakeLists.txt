@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 PROJECT(libatik C CXX)
 
-# Built June 23th, 2020 - SDK API 2020.06.18
-set(ATIK_VERSION "2.2.8")
+# Built October 19th, 2021 - SDK API 2020.10.19
+set(ATIK_VERSION "2.2.9")
 set(ATIK_SOVERSION "2")
 
 set(FLYCAPTURE_VERSION "2.13.3.31")

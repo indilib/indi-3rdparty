@@ -73,7 +73,7 @@ bool CamGen2ModeFsm::IsContinuousImagingAvailable()
 
 //////////////////////////// 
 // IS      EXTERNAL        TRIGGER       AVAILABLE
-bool CamGen2ModeFsm::IsExternalTriggerAvailable( const Apg::TriggerMode trigMode )
+bool CamGen2ModeFsm::IsExternalTriggerAvailable( const Apg::TriggerMode /*trigMode*/ )
 {
     //No io port on HiC camera, so cannot set the triggers
     const uint16_t HIC_ID = 511;

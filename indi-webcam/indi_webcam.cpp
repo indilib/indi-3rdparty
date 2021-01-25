@@ -524,7 +524,7 @@ bool indi_webcam::initProperties()
 
     IUFillSwitchVector(&RapidStackingSelection, RapidStacking, 3, getDeviceName(), "RAPID_STACKING_OPTION", "Rapid Stacking",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-    defineSwitch(&RapidStackingSelection);
+    defineProperty(&RapidStackingSelection);
 
     OutputFormats = new ISwitch[3];
     IUFillSwitch(&OutputFormats[0], "16 bit Grayscale", "16 bit Grayscale", ISS_OFF);
@@ -533,7 +533,7 @@ bool indi_webcam::initProperties()
 
     IUFillSwitchVector(&OutputFormatSelection, OutputFormats, 3, getDeviceName(), "OUTPUT_FORMAT_OPTION", "Output Format",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-    defineSwitch(&OutputFormatSelection);
+    defineProperty(&OutputFormatSelection);
 
     loadConfig(true, "RAPID_STACKING_OPTION");
     loadConfig(true, "OUTPUT_FORMAT_OPTION");
@@ -566,7 +566,7 @@ bool indi_webcam::refreshInputDevices()
     IUFillSwitch(&CaptureDevices[numDevices], "IP Camera", "IP Camera", ISS_OFF);
     IUFillSwitchVector(&CaptureDeviceSelection, CaptureDevices, numDevices + 1, getDeviceName(), "CAPTURE_DEVICE", "Capture Devices",
                        CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-    defineSwitch(&CaptureDeviceSelection);
+    defineProperty(&CaptureDeviceSelection);
 
     return true;
 }
@@ -661,7 +661,7 @@ bool indi_webcam::refreshInputSources()
 
     if (videoDevice == "IP Camera")
     {
-        defineText(&HTTPInputOptionsP);
+        defineProperty(&HTTPInputOptionsP);
 
         deleteProperty(CaptureSourceSelection.name);
         deleteProperty(VideoSizeSelection.name);
@@ -670,10 +670,10 @@ bool indi_webcam::refreshInputSources()
     }
     else
     {
-        defineText(&InputOptionsTP);
-        defineSwitch(&CaptureSourceSelection);
-        defineSwitch(&VideoSizeSelection);
-        defineSwitch(&FrameRateSelection);
+        defineProperty(&InputOptionsTP);
+        defineProperty(&CaptureSourceSelection);
+        defineProperty(&VideoSizeSelection);
+        defineProperty(&FrameRateSelection);
 
         deleteProperty(HTTPInputOptionsP.name);
     }
@@ -690,12 +690,12 @@ void indi_webcam::ISGetProperties(const char *dev)
     IUFillText(&TimeoutOptionsT[1], "BUFFER_TIMEOUT_TEXT", "Buffer", bufferTimeout.c_str());
     IUFillTextVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS", "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
-    defineText(&TimeoutOptionsTP);
+    defineProperty(&TimeoutOptionsTP);
 
     IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
     IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-    defineSwitch(&RefreshSP);
+    defineProperty(&RefreshSP);
 
     IUFillText(&InputOptionsT[0], "CAPTURE_DEVICE_TEXT", "Capture Device", videoDevice.c_str());
     IUFillText(&InputOptionsT[1], "CAPTURE_SOURCE_TEXT", "Capture Source", videoSource.c_str());
@@ -1043,7 +1043,7 @@ bool indi_webcam::StartExposure(float duration)
     ExposureRequest = duration;
     PrimaryCCD.setExposureDuration(duration);
     gettimeofday(&ExpStart, nullptr);
-    timerID = SetTimer(POLLMS);
+    timerID = SetTimer(getCurrentPollingPeriod());
     InExposure = true;
     //Set up the stream, if there is an error, return
     if(!setupStreaming())
@@ -1130,7 +1130,7 @@ void indi_webcam::TimerHit()
             SetTimer(10);//The time should be as short as possible to get as many frames as possible in the set.
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 // Downloads the image from the Webcam.

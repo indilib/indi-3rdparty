@@ -746,7 +746,7 @@ void AltaEthernetIo::SetSerialParity( uint16_t PortId,
 
 //////////////////////////// 
 //      READ       SERIAL         
-void AltaEthernetIo::ReadSerial( uint16_t PortId, std::string & buffer )
+void AltaEthernetIo::ReadSerial( uint16_t, std::string & )
 {
         apgHelper::throwRuntimeException( m_fileName, "Not implemented", 
                 __LINE__, Apg::ErrorType_InvalidUsage );
@@ -754,7 +754,7 @@ void AltaEthernetIo::ReadSerial( uint16_t PortId, std::string & buffer )
 
 //////////////////////////// 
 //      WRITE       SERIAL   
-void AltaEthernetIo::WriteSerial( uint16_t PortId, const std::string & buffer )
+void AltaEthernetIo::WriteSerial( uint16_t, const std::string & )
 {
    apgHelper::throwRuntimeException( m_fileName, "Not implemented", 
                 __LINE__, Apg::ErrorType_InvalidUsage );

@@ -88,7 +88,7 @@ namespace Connection {
     }
 
     void Curl::Activated() {
-        m_Device->defineText(&AddressTP);
+        m_Device->defineProperty(&AddressTP);
 //        m_Device->loadConfig(true, "DEVICE_ADDRESS");
     }
 

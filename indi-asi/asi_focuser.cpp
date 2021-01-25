@@ -250,25 +250,25 @@ bool ASIEAF::updateProperties()
         {
             TemperatureN[0].value = temperature;
             TemperatureNP.s = IPS_OK;
-            defineNumber(&TemperatureNP);
+            defineProperty(&TemperatureNP);
         }
 
-        defineSwitch(&BeepSP);
-        //        defineSwitch(&FocuserBacklashSP);
-        //        defineNumber(&BacklashNP);
+        defineProperty(&BeepSP);
+        //        defineProperty(&FocuserBacklashSP);
+        //        defineProperty(&BacklashNP);
 
         char firmware[12];
         unsigned char major, minor, build;
         EAFGetFirmwareVersion(m_ID, &major, &minor, &build);
         snprintf(firmware, sizeof(firmware), "%d.%d.%d", major, minor, build);
         IUSaveText(&VersionInfoS[0], firmware);
-        defineText(&VersionInfoSP);
+        defineProperty(&VersionInfoSP);
 
         GetFocusParams();
 
         LOG_INFO("ASI EAF parameters updated, focuser ready for use.");
 
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -577,7 +577,7 @@ void ASIEAF::TimerHit()
 {
     if (!isConnected())
     {
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return;
     }
 
@@ -617,7 +617,7 @@ void ASIEAF::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 bool ASIEAF::AbortFocuser()

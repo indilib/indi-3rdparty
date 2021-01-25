@@ -50,8 +50,14 @@
 #include "libfli-mem.h"
 #include "libfli-raw.h"
 
+// #PS: move to e.g. indimacro.h
+#ifndef INDI_UNUSED
+# define INDI_UNUSED(x) (void)x
+#endif
+
 long fli_raw_open(flidev_t dev)
 {
+  INDI_UNUSED(dev);
 	return 0;
 }
 
@@ -80,5 +86,8 @@ long fli_raw_close(flidev_t dev)
 
 long fli_raw_command(flidev_t dev, int cmd, int argc, ...)
 {
+  INDI_UNUSED(dev);
+  INDI_UNUSED(cmd);
+  INDI_UNUSED(argc);
 	return -EINVAL;		
 }

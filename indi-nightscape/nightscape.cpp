@@ -221,7 +221,7 @@ bool NightscapeCCD::Connect()
     dn->startThread();
     st->startThread();
     // Let's set a timer that checks nighscape status every POLLMS milliseconds.
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return true;
 }
 
@@ -283,7 +283,7 @@ bool NightscapeCCD::initProperties()
     IUFillNumberVector(&CamNumNP, CamNumN, 1, getDeviceName(), "CAMNUM", "Camera Number",
                        MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
-    defineNumber(&CamNumNP);
+    defineProperty(&CamNumNP);
 
     IUFillSwitch(&D2xxS[0], "USEFTDI", "libftdi", useD2xx == 0 ? ISS_ON : ISS_OFF);
 #ifdef HAVE_D2XX
@@ -314,7 +314,7 @@ bool NightscapeCCD::initProperties()
                        MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
 #endif
 #endif
-    defineSwitch(&D2xxSP);
+    defineProperty(&D2xxSP);
 
     // We set the CCD capabilities
     uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_COOLER | CCD_HAS_SHUTTER ;
@@ -349,11 +349,11 @@ bool NightscapeCCD::updateProperties()
     {
         // Let's get parameters now from CCD
         setupParams();
-        defineSwitch(&CoolerSP);
-        defineSwitch(&FanSP);
+        defineProperty(&CoolerSP);
+        defineProperty(&FanSP);
 
         // Start the timer
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -382,10 +382,10 @@ void NightscapeCCD::setupParams()
 
     IUResetSwitch(&FanSP);
     FanS[fanspeed - 1].s = ISS_ON;
-    defineSwitch(&FanSP);
+    defineProperty(&FanSP);
     IUResetSwitch(&CoolerSP);
     CoolerS[!cooler].s = ISS_ON;
-    defineSwitch(&CoolerSP);
+    defineProperty(&CoolerSP);
 
 
 }
@@ -471,7 +471,7 @@ float NightscapeCCD::CalcTimeLeft(timeval start, float req)
 ***************************************************************************************/
 void NightscapeCCD::TimerHit()
 {
-    uint32_t nextTimer = POLLMS;
+    uint32_t nextTimer = getCurrentPollingPeriod();
 
     if (!isConnected())
         return; //  No need to reset timer if we are not connected anymore
