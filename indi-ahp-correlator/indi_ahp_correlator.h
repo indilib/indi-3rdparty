@@ -83,8 +83,6 @@ public:
 
         free(totalcounts);
         free(totalcorrelations);
-        free(alt);
-        free(az);
         free(delay);
         free(baselines);
     }
@@ -156,21 +154,21 @@ private:
 
     double *totalcounts;
     ahp_xc_correlation *totalcorrelations;
-    double  *alt;
-    double *az;
+    double Altitude;
+    double Azimuth;
     double *delay;
     double *framebuffer;
     baseline** baselines;
     INDI::Correlator::Baseline *center;
+
+    IBLOB *plotB;
+    IBLOBVectorProperty plotBP;
 
     IBLOB *autocorrelationsB;
     IBLOBVectorProperty autocorrelationsBP;
 
     IBLOB *crosscorrelationsB;
     IBLOBVectorProperty crosscorrelationsBP;
-
-    IBLOB *plotB;
-    IBLOBVectorProperty plotBP;
 
     dsp_stream_p *autocorrelations_str;
     dsp_stream_p *crosscorrelations_str;
@@ -182,12 +180,12 @@ private:
     unsigned int clock_frequency;
     unsigned int clock_divider;
 
-    float timeleft;
+    double timeleft;
     double wavelength;
     void Callback();
     bool callHandshake();
     // Utility functions
-    float CalcTimeLeft();
+    double CalcTimeLeft();
     void  setupParams();
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
@@ -196,11 +194,10 @@ private:
     void EnableCapture(bool start);
     void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len);
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
-    float CalcTimeLeft(timeval start, float req);
     // Struct to keep timing
     struct timeval ExpStart;
-    float ExposureRequest;
-    float ExposureStart;
+    double ExposureRequest;
+    double ExposureStart;
     bool threadsRunning;
 
     inline double getCurrentTime()
