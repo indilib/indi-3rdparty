@@ -70,14 +70,14 @@ class TimelapseService:
         camera.contrast      = self.config.getint('Camera', 'Contrast')
         camera.brightness    = self.config.getint('Camera', 'Brightness')
         camera.saturation    = self.config.getint('Camera', 'Saturation')
-        
-    
+        camera.zoom          = (0.1, 0.1, 0.8, 0.75)
+
     def get_image_name(self, now):
         dir = self.config.get('Camera', 'BaseDirectory') + '/' + now.strftime("%Y-%m-%d")
         # ensure that the image directory exists
         if not Path(dir).exists():
             Path(dir).mkdir(parents=True)
-        filename =  dir + '/' + now.strftime("tl_%Y-%m-%d_%H%M%S") + ".jpg"
+        filename =  dir + '/' + now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
         return filename
 
     def calculate_framerate(self):
