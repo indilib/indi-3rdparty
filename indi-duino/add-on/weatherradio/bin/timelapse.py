@@ -13,7 +13,7 @@
 #
 #-----------------------------------------------------------------------
 
-import io, os, sys, math
+import io, os, stat, sys, math
 from time import time, sleep, perf_counter
 from datetime import datetime
 from configparser import ConfigParser
@@ -72,12 +72,24 @@ class TimelapseService:
         camera.saturation    = self.config.getint('Camera', 'Saturation')
         camera.zoom          = (0.1, 0.1, 0.8, 0.75)
 
-    def get_image_name(self, now):
-        dir = self.config.get('Camera', 'BaseDirectory') + '/' + now.strftime("%Y-%m-%d")
+    def get_capture_dir(self):
+        dir = self.config.get('Camera', 'BaseDirectory')
         # ensure that the image directory exists
         if not Path(dir).exists():
             Path(dir).mkdir(parents=True)
-        filename =  dir + '/' + now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
+        return dir
+
+    def get_target_dir(self, now):
+        targetdir = self.config.get('Camera', 'BaseDirectory') + '/' + now.strftime("%Y-%m-%d")
+        # ensure that the image directory exists
+        if not Path(targetdir).exists():
+            Path(targetdir).mkdir(parents=True)
+        return targetdir
+
+    def get_image_name(self, now, dir=None):
+        filename = now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
+        if dir != None:
+            filename = dir + '/' + filename
         return filename
 
     def calculate_framerate(self):
@@ -94,15 +106,13 @@ class TimelapseService:
         # calculate wait time in seconds
         start = time()
         diff = (int(start / interval)+1)*interval - start
-        #print("Sleeping %0.1fs..." % diff)
         sleep(diff)
         # start capturing
         start_capture = perf_counter()
         #print("Start capturing...")
         now = datetime.fromtimestamp(start+diff)
-        fullname = self.get_image_name(now)
+        fullname = self.get_image_name(now, dir=self.get_capture_dir())
         camera.capture(fullname)
-        #print("Capture finished after %0.1fs, exp = %0.1f" % (perf_counter()-start_capture, camera.shutter_speed))
         # calculate the optimal exposure time
         (imgExpTime, imgBrightness) = calibrateExpTime(fullname, self.config)
         # store new configuration
@@ -110,6 +120,18 @@ class TimelapseService:
         self.config.write(configfile)
         configfile.close()
         print("date=%s; time=%s; file=%s ex=%d iso=%d br=%s sat=%d co=%d img_brightness=%d sleep=%0.1f" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), fullname, imgExpTime, camera.iso, camera.brightness, camera.saturation, camera.contrast, imgBrightness, diff))
+
+        # start converter process
+        fifo = self.config.get('Camera', 'ConverterFIFO')
+        if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
+            with open(fifo, 'w') as pipeout:
+                pipeout.write("%s\n" % self.get_image_name(now))
+        else:
+            # otherwise move to target directory
+            target = self.get_image_name(now, dir=self.get_target_dir(now))
+            # mv to target directory
+            os.rename(fullname, target)
+
 
 
     def settle(self):
