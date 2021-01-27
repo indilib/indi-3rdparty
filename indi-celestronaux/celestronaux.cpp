@@ -547,6 +547,10 @@ bool CelestronAUX::initProperties()
     /* Add alignment properties */
     InitAlignmentProperties(this);
 
+    // set alignment system be on the first time by default
+    getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
+    pastAlignmentSubsystemStatus = true;
+
     // Default connection options
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
     tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
@@ -600,10 +604,6 @@ bool CelestronAUX::initProperties()
     {
         setActiveConnection(tcpConnection);
     }
-
-    // set alignment system be on the first time by default
-    getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
-    pastAlignmentSubsystemStatus = true;
 
     return true;
 }
