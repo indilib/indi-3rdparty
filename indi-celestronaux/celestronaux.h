@@ -46,6 +46,9 @@ class CelestronAUX :
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
+	long requestedCordwrapPos;
+	double getNorthAz();
+
     protected:
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
@@ -84,13 +87,16 @@ class CelestronAUX :
         bool GoToSlow(long alt, long az, bool track);
         bool setCordwrap(bool enable);
         bool getCordwrap();
+    public:
         bool setCordwrapPos(long pos);
         long getCordwrapPos();
+    private:
         bool getVersion(AUXTargets trg);
         void getVersions();
         bool Track(long altRate, long azRate);
         bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
+
 
     private:
 
@@ -256,7 +262,9 @@ class CelestronAUX :
         // AUX commands use 24bit integer as a representation of angle in units of
         // fractional revolutions. Thus 2^24 steps makes full revolution.
         static constexpr uint32_t STEPS_PER_REVOLUTION {16777216};
+    public:
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
+    private:
         static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
         static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
