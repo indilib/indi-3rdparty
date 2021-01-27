@@ -101,10 +101,22 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
     telescope_caux->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
+
 void ISSnoopDevice(XMLEle *root)
 {
+    const char *propName = findXMLAttValu(root, "name");
+
+    // update cordwrap position at each init of the alignment subsystem
+    if (!strcmp(propName, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE"))
+    {
+        long cwpos = range360(telescope_caux->requestedCordwrapPos + telescope_caux->getNorthAz()) * CelestronAUX::STEPS_PER_DEGREE;
+        telescope_caux->setCordwrapPos(cwpos);
+        telescope_caux->getCordwrapPos();
+    }
+
     telescope_caux->ISSnoopDevice(root);
 }
+
 
 // One definition rule (ODR) constants
 // AUX commands use 24bit integer as a representation of angle in units of
@@ -152,6 +164,7 @@ CelestronAUX::CelestronAUX()
     //mb_ver_maj = mb_ver_min = 0;
     alt_ver_maj = alt_ver_min = 0;
     azm_ver_maj = azm_ver_min = 0;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -358,6 +371,11 @@ bool CelestronAUX::Handshake()
         // tell the alignment math plugin to reinitialise
         Initialise(this);
 
+        // update cordwrap position at each init of the alignment subsystem
+        long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        setCordwrapPos(cwpos);
+        getCordwrapPos();
+
         LOG_INFO("Connection ready. Starting Processing.");
         return true;
     }
@@ -433,6 +451,22 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
     }
 
     return AltAz;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::getNorthAz()
+{
+    ln_lnlat_posn location;
+    double northAz;
+    if (!GetDatabaseReferencePosition(location))
+	northAz = 0.;
+    else
+        northAz = AltAzFromRaDec(get_local_sidereal_time(location.lng), 0., 0.).az;
+    LOGF_INFO("North Azimuth = %lf", northAz);
+    return northAz;
 }
 
 
@@ -597,6 +631,9 @@ bool CelestronAUX::initProperties()
     IUFillSwitch(&NetDetectS[ISS_OFF], "ISS_OFF", "Detect", ISS_OFF);
     IUFillSwitchVector(&NetDetectSP, NetDetectS, 1, getDeviceName(), "NETDETECT", "Network scope", CONNECTION_TAB, IP_RW,
                        ISR_ATMOST1, 60, IPS_IDLE);
+
+    // to update cordwrap pos at each init of alignment subsystem
+    IDSnoopDevice(getDeviceName(),"ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
 
     // JM 2020-09-23 Make it easier for users to connect by default via WiFi if they
     // selected the Celestron WiFi labeled driver.
@@ -763,6 +800,11 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             // tell the alignment math plugin to reinitialise
             Initialise(this);
 
+            // update cordwrap position at each init of the alignment subsystem
+            long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            setCordwrapPos(cwpos);
+            getCordwrapPos();
+
             return true;
         }
  
@@ -804,25 +846,25 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             DEBUGF(DBG_CAUX, "CordWrap Position is now %s (%d)", CWPosS[CWIndex].label, CWIndex);
             CWPosSP.s = IPS_OK;
             IDSetSwitch(&CWPosSP, nullptr);
-            long cwpos = 0;
             switch (CWIndex)
             {
                 case CORDWRAP_N:
-                    cwpos = 0;
+                    requestedCordwrapPos = 0;
                     break;
                 case CORDWRAP_E:
-                    cwpos = 90 * STEPS_PER_DEGREE;
+                    requestedCordwrapPos = 90;
                     break;
                 case CORDWRAP_S:
-                    cwpos = 180 * STEPS_PER_DEGREE;
+                    requestedCordwrapPos = 180;
                     break;
                 case CORDWRAP_W:
-                    cwpos = 270 * STEPS_PER_DEGREE;
+                    requestedCordwrapPos = 270;
                     break;
                 default:
-                    cwpos = 0;
+                    requestedCordwrapPos = 0;
                     break;
             }
+	    long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
             return true;
@@ -1075,6 +1117,11 @@ bool CelestronAUX::Sync(double ra, double dec)
         Initialise(this);
         DEBUGF(DBG_CAUX, "Sync - new entry added RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
 
+        // update cordwrap position at each init of the alignment subsystem
+        long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        setCordwrapPos(cwpos);
+        getCordwrapPos();
+
 	// update tracking target
         ReadScopeStatus();
         CurrentTrackingTarget = NewTrackingTarget;
@@ -1270,6 +1317,11 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     // tell the alignment math plugin to reinitialise
     Initialise(this);
 
+    // update cordwrap position at each init of the alignment subsystem
+    long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+    setCordwrapPos(cwpos);
+    getCordwrapPos();
+
     return true;
 }
 
@@ -1443,6 +1495,7 @@ bool CelestronAUX::getCordwrap()
     LOGF_INFO("getCordWrap after %d", cordwrap);
     return cordwrap;
 };
+
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///

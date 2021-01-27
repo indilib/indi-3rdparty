@@ -45,6 +45,12 @@ class CelestronAUX :
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
+	long requestedCordwrapPos;
+	double getNorthAz();
+        static const double STEPS_PER_DEGREE;
+        bool setCordwrapPos(long pos);
+        long getCordwrapPos();
+
     protected:
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
@@ -83,17 +89,15 @@ class CelestronAUX :
         bool GoToSlow(long alt, long az, bool track);
         bool setCordwrap(bool enable);
         bool getCordwrap();
-        bool setCordwrapPos(long pos);
-        long getCordwrapPos();
         bool getVersion(AUXtargets trg);
         void getVersions();
         bool Track(long altRate, long azRate);
         bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
 
+
     private:
         static const long STEPS_PER_REVOLUTION;
-        static const double STEPS_PER_DEGREE;
         static const double DEFAULT_SLEW_RATE;
         static const double TRACK_SCALE;
         static const long MAX_ALT;
