@@ -44,7 +44,9 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
     factor = 0.85 if (factor < 0.85) else factor
     factor = 1.15 if (factor > 1.15) else factor
 
-    newExpTime = exptime / factor**2
+    #newExpTime = exptime / factor**2
+    # smoothen reaction
+    newExpTime = exptime / factor
 
     # we start with the old values
     newISO        = iso
