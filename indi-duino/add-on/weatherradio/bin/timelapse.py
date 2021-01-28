@@ -43,6 +43,7 @@ class TimelapseService:
         self.config.set('Camera', 'Contrast', '0')
         self.config.set('Camera', 'Brightness', '50')
         self.config.set('Camera', 'Saturation', '0')
+        self.config.set('Camera', 'interval', '60')
         # night default settings
         self.config.add_section('Night')
         self.config.set('Night', 'Contrast', '100')
@@ -170,7 +171,4 @@ class TimelapseService:
 
 if __name__ == "__main__":
     service = TimelapseService()
-    service.start(60)
-
-
-
+    service.start(service.config.getint('Camera', 'interval'))
