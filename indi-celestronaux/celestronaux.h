@@ -23,6 +23,7 @@
 #pragma once
 
 #include <indicom.h>
+#include <libindi/indiguiderinterface.h>
 #include <inditelescope.h>
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
@@ -32,6 +33,7 @@
 
 class CelestronAUX :
     public INDI::Telescope,
+    public INDI::GuiderInterface,
     public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
     public:
@@ -68,6 +70,16 @@ class CelestronAUX :
         virtual bool Park() override;
         virtual bool UnPark() override;
 
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
+
+        virtual bool HandleGetAutoguideRate(INDI_EQ_AXIS axis,uint8_t rate);
+        virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
+        virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
+        virtual bool HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done);
+
         // TODO: Switch to AltAz from N-S/W-E
         virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command) override;
         virtual bool MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command) override;
@@ -94,6 +106,7 @@ class CelestronAUX :
         bool Track(long altRate, long azRate);
         bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
+        bool GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
 
 
     private:
@@ -185,7 +198,7 @@ class CelestronAUX :
         bool serial_readMsgs(AUXCommand c);
         bool tcp_readMsgs();
         bool readMsgs(AUXCommand c);
-        void processCmd(AUXCommand &cmd);
+        bool processCmd(AUXCommand &cmd);
         void querryStatus();
         int sendBuffer(int PortFD, buffer buf);
         bool sendCmd(AUXCommand &c);
@@ -247,4 +260,9 @@ class CelestronAUX :
         ISwitch GPSEmuS[2];
         ISwitchVectorProperty GPSEmuSP;
         enum { GPSEMU_OFF, GPSEMU_ON };
+
+        // guide
+        INumber GuideRateN[2]{};
+        INumberVectorProperty GuideRateNP;
+
 };
