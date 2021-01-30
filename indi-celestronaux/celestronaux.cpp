@@ -502,6 +502,7 @@ bool CelestronAUX::Goto(double ra, double dec)
 bool CelestronAUX::initProperties()
 {
     INDI::Telescope::initProperties();
+    setDriverInterface(getDriverInterface() | GUIDER_INTERFACE);
 
     // Set Debug Information for AUX Commands
     AUXCommand::setDebugInfo(getDeviceName(), DBG_CAUX);
@@ -576,6 +577,13 @@ bool CelestronAUX::initProperties()
     IUFillSwitchVector(&NetDetectSP, NetDetectS, 1, getDeviceName(), "NETDETECT", "Network scope", CONNECTION_TAB, IP_RW,
                        ISR_ATMOST1, 60, IPS_IDLE);
 
+    // Guide Properties
+    initGuiderProperties(getDeviceName(), GUIDE_TAB);
+    /* How fast do we guide compared to sidereal rate */
+    IUFillNumber(&GuideRateN[AXIS_RA], "GUIDE_RATE_WE", "W/E Rate", "%.f", 10, 100, 1, 50);
+    IUFillNumber(&GuideRateN[AXIS_DE], "GUIDE_RATE_NS", "N/S Rate", "%.f", 10, 100, 1, 50);
+    IUFillNumberVector(&GuideRateNP, GuideRateN, 2, getDeviceName(), "GUIDE_RATE", "Guiding Rate", GUIDE_TAB, IP_RW, 0, IPS_IDLE);
+
     // to update cordwrap pos at each init of alignment subsystem
     IDSnoopDevice(getDeviceName(),"ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
 
@@ -599,6 +607,11 @@ bool CelestronAUX::updateProperties()
     if (isConnected())
     {
         defineProperty(&CordWrapSP);
+
+        defineProperty(&GuideNSNP);
+        defineProperty(&GuideWENP);
+        defineProperty(&GuideRateNP);
+        loadConfig(true, GuideRateNP.name);
 
         defineProperty(&MountTypeSP);
 
@@ -641,6 +654,9 @@ bool CelestronAUX::updateProperties()
     {
         deleteProperty(MountTypeSP.name);
         deleteProperty(CordWrapSP.name);
+        deleteProperty(GuideNSNP.name);
+        deleteProperty(GuideWENP.name);
+        deleteProperty(GuideRateNP.name);
         deleteProperty(CWPosSP.name);
         deleteProperty(GPSEmuSP.name);
         deleteProperty(FirmwareTP.name);
@@ -699,6 +715,17 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
 
     if (strcmp(dev, getDeviceName()) == 0)
     {
+        if (strcmp(name, "GUIDE_RATE") == 0)
+        {
+            IUUpdateNumber(&GuideRateNP, values, names, n);
+            GuideRateNP.s = IPS_OK;
+            IDSetNumber(&GuideRateNP, nullptr);
+
+            return true;
+        }
+
+        processGuiderProperties(name, values, names, n);
+
         // Process alignment properties
         ProcessAlignmentNumberProperties(this, name, values, names, n);
     }
@@ -909,6 +936,7 @@ bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
+
 bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
     int rate = IUFindOnSwitchIndex(&SlewRateSP);
@@ -942,6 +970,101 @@ bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
     else
         return SlewAZ(0);
 }
+
+
+//++++ autoguide 
+
+IPState CelestronAUX::GuideNorth(uint32_t ms)
+{
+    IDLog("Guiding: N %d ms\n", ms);
+
+    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_DE].value);
+
+    GuidePulse(AXIS_DE, ms, rate);
+
+    return IPS_BUSY;
+}
+
+IPState CelestronAUX::GuideSouth(uint32_t ms)
+{
+    IDLog("Guiding: S %d ms\n", ms);
+
+    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_DE].value);
+
+    GuidePulse(AXIS_DE, ms, -rate);
+
+    return IPS_BUSY;
+}
+
+IPState CelestronAUX::GuideEast(uint32_t ms)
+{
+    IDLog("Guiding: E %d ms\n", ms);
+
+    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_RA].value);
+
+    GuidePulse(AXIS_RA, ms, -rate);
+
+    return IPS_BUSY;
+}
+
+IPState CelestronAUX::GuideWest(uint32_t ms)
+{
+    IDLog("Guiding: W %d ms\n", ms);
+
+    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_RA].value);
+
+    GuidePulse(AXIS_RA, ms, rate);
+
+    return IPS_BUSY;
+}
+
+bool CelestronAUX::GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
+{
+    uint8_t ticks = std::min(uint32_t(255), ms / 10);
+    AUXBuffer data(2);
+    data[0] = rate;
+    data[1] = ticks;
+    AUXCommand cmd(MC_AUX_GUIDE, APP, axis == AXIS_DE ? ALT : AZM, data);
+    return sendAUXCommand(cmd);
+}
+
+
+bool CelestronAUX::HandleGetAutoguideRate(INDI_EQ_AXIS axis, uint8_t rate)
+{
+    switch (axis)
+    {
+    case AXIS_DE:
+        GuideRateN[AXIS_DE].value = rate;
+        break;
+    case AXIS_RA:
+        GuideRateN[AXIS_RA].value = rate;
+        break;
+    }
+
+    return true;
+}
+
+bool CelestronAUX::HandleSetAutoguideRate(INDI_EQ_AXIS axis)
+{
+    INDI_UNUSED(axis);
+    return true;
+}
+
+bool CelestronAUX::HandleGuidePulse(INDI_EQ_AXIS axis)
+{
+    INDI_UNUSED(axis);
+    return true;
+}
+
+bool CelestronAUX::HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done)
+{
+    if (done)
+        GuideComplete(axis);
+
+    return true;
+}
+
+//---- autoguide
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -1709,7 +1832,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-void CelestronAUX::processResponse(AUXCommand &m)
+bool CelestronAUX::processResponse(AUXCommand &m)
 {
     m.logResponse();
 
@@ -1763,6 +1886,55 @@ void CelestronAUX::processResponse(AUXCommand &m)
                     LOGF_DEBUG("Got cordwrap position %.1f", float(m_CordWrapPosition) / STEPS_PER_DEGREE);
                 }
                 break;
+
+            case MC_GET_AUTOGUIDE_RATE:
+                switch (m.src)
+                {
+                case ALT:
+                    return HandleGetAutoguideRate(AXIS_DE, m.data[0] * 100.0 / 255);
+                case AZM:
+                    return HandleGetAutoguideRate(AXIS_RA, m.data[0] * 100.0 / 255);
+                default:
+                    IDLog("unknown src 0x%02x\n", m.src);
+                }
+                break;
+
+            case MC_SET_AUTOGUIDE_RATE:
+                switch (m.src)
+                {
+                case ALT:
+                    return HandleSetAutoguideRate(AXIS_DE);
+                case AZM:
+                    return HandleSetAutoguideRate(AXIS_RA);
+                default:
+                    IDLog("unknown src 0x%02x\n", m.src);
+                }
+                break;
+
+            case MC_AUX_GUIDE:
+                switch (m.src)
+                {
+                case ALT:
+                    return HandleGuidePulse(AXIS_DE);
+                case AZM:
+                    return HandleGuidePulse(AXIS_RA);
+                default:
+                    IDLog("unknown src 0x%02x\n", m.src);
+                }
+                break;
+
+            case MC_AUX_GUIDE_ACTIVE:
+                switch (m.src)
+                {
+                case ALT:
+                    return HandleGuidePulseDone(AXIS_DE, m.data[0] == 0x00);
+                case AZM:
+                    return HandleGuidePulseDone(AXIS_RA, m.data[0] == 0x00);
+                default:
+                    IDLog("unknown src 0x%02x\n", m.src);
+                }
+                break;
+
             case GET_VER:
                 if (m.src != APP)
                     LOGF_INFO("Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1],
@@ -1790,7 +1962,9 @@ void CelestronAUX::processResponse(AUXCommand &m)
                 break;
             default:
                 break;
+
         }
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
