@@ -214,9 +214,12 @@ bool WeatherRadio::initProperties()
     deviceConfig["Davis Anemometer"]["max speed"] = {"Wind speed (max, m/s)", WIND_GUST_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.0f", 0., 360.0, 1.0};
     deviceConfig["Davis Anemometer"]["rotations"] = {"Wind wheel rotations", INTERNAL_SENSOR, "%.0f", 0., 360.0, 1.0};
-    deviceConfig["Rain Sensor"]["rain intensity"] = {"Rain intensity (mm/h)", RAIN_INTENSITY_SENSOR, "%.3f", 0., 1000.0, 1.0};
-    deviceConfig["Rain Sensor"]["rain volume"]    = {"Rain volume (mm)", RAIN_VOLUME_SENSOR, "%.3f", 0., 10000.0, 1.0};
-    deviceConfig["Rain Sensor"]["count"]          = {"Bucket full count", INTERNAL_SENSOR, "%.0f", 0., 1000000.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["rain intensity"] = {"Rain intensity (mm/h)", RAIN_INTENSITY_SENSOR, "%.3f", 0., 1000.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["rain volume"]    = {"Rain volume (mm)", RAIN_VOLUME_SENSOR, "%.3f", 0., 10000.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["count"]          = {"Bucket full count", INTERNAL_SENSOR, "%.0f", 0., 1000000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["rain intensity"] = {"Rain intensity (mm/h)", RAIN_INTENSITY_SENSOR, "%.3f", 0., 1000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["rain volume"]    = {"Rain volume (mm)", RAIN_VOLUME_SENSOR, "%.3f", 0., 10000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["count"]          = {"Bucket full count", INTERNAL_SENSOR, "%.0f", 0., 1000000.0, 1.0};
     deviceConfig["Water"]["wetness"]              = {"Wetness (%)", WETNESS_SENSOR, "%.1f", 0., 100.0, 0.1};
 
     LOG_DEBUG("Properties initialization finished successfully.");
