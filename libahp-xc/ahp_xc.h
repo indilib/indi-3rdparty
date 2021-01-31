@@ -47,7 +47,7 @@ extern "C" {
 /*@{*/
 
 ///AHP_XC_VERSION This library version
-#define AHP_XC_VERSION 0x010011
+#define AHP_XC_VERSION 0x010012
 
 ///AHP_XC_LIVE_AUTOCORRELATOR indicates if the correlator can do live spectrum analysis
 #define AHP_XC_LIVE_AUTOCORRELATOR (1<<0)
@@ -93,8 +93,20 @@ typedef enum {
     SET_DELAY = 4,
     SET_FREQ_DIV = 8,
     SET_VOLTAGE = 9,
+    ENABLE_TEST = 12,
     ENABLE_CAPTURE = 13
-} it_cmd;
+} xc_cmd;
+
+/**
+* \brief The XC firmare commands
+*/
+typedef enum {
+    TEST_NONE = 0,
+    TEST_SIGNAL = 1,
+    SCAN_AUTO = 2,
+    SCAN_CROSS = 4,
+    TEST_ALL = 0xf,
+} xc_test;
 
 /**
 * \brief This type is used for correlations
@@ -283,7 +295,7 @@ DLL_EXPORT int ahp_xc_get_packet(ahp_xc_packet *packet);
 * \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
 * \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
 */
-DLL_EXPORT void ahp_xc_scan_autocorrelations(ahp_xc_sample *autocorrelations, int stacksize, double *percent, int *interrupt);
+DLL_EXPORT void ahp_xc_scan_autocorrelations(int index, ahp_xc_sample **autocorrelations, int *interrupt, double *percent);
 
 /**
 * \brief Scan all available delay channels and get crosscorrelations of each input with others
@@ -291,7 +303,7 @@ DLL_EXPORT void ahp_xc_scan_autocorrelations(ahp_xc_sample *autocorrelations, in
 * \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
 * \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
 */
-DLL_EXPORT void ahp_xc_scan_crosscorrelations(ahp_xc_sample *crosscorrelations, int stacksize, double *percent, int *interrupt);
+DLL_EXPORT void ahp_xc_scan_crosscorrelations(int index1, int index2, ahp_xc_sample **crosscorrelation, int *interrupt, double *percent);
 
 /*@}*/
 /**
@@ -334,16 +346,31 @@ DLL_EXPORT void ahp_xc_set_frequency_divider(unsigned char value);
 
 /**
 * \brief Set the supply voltage on the current line
+* \param index The input line index starting from 0
 * \param value The voltage level
 */
-DLL_EXPORT void ahp_xc_set_voltage(unsigned char value);
+DLL_EXPORT void ahp_xc_set_voltage(int index, unsigned char value);
+
+/**
+* \brief Enable tests on the current line
+* \param index The input line index starting from 0
+* \param value The test type
+*/
+DLL_EXPORT void ahp_xc_set_test(int index, xc_test value);
+
+/**
+* \brief Disable tests on the current line
+* \param index The input line index starting from 0
+* \param value The test type
+*/
+DLL_EXPORT void ahp_xc_clear_test(int index, xc_test value);
 
 /**
 * \brief Send an arbitrary command to the AHP xc device
 * \param cmd The command
 * \param value The command parameter
 */
-DLL_EXPORT ssize_t ahp_xc_send_command(it_cmd cmd, unsigned char value);
+DLL_EXPORT ssize_t ahp_xc_send_command(xc_cmd cmd, unsigned char value);
 
 /**
 * \brief Obtain the current libahp-xc version

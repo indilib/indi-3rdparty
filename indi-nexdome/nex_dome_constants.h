@@ -46,6 +46,7 @@ typedef enum
 typedef enum
 {
     ACCELERATION_RAMP,
+    BATTERY_VOLTAGE,
     DEAD_ZONE,
     SEMANTIC_VERSION,
     GOTO_AZ,
@@ -66,6 +67,7 @@ typedef enum
 static const std::map<Commands, std::string> CommandsMap =
 {
     {ACCELERATION_RAMP, "A"},
+    {BATTERY_VOLTAGE,   "B"},  // Added in firmware V3.4.0
     {DEAD_ZONE,         "D"},
     {SEMANTIC_VERSION,  "F"},
     {GOTO_AZ,           "GA"},
@@ -115,6 +117,7 @@ typedef enum
     ROTATOR_STOPPED,
     ROTATOR_POSITION,
     SHUTTER_POSITION,
+    BATTERY_LOW,
 } Events;
 
 static const std::map<Events, std::string> EventsMap =
@@ -132,6 +135,7 @@ static const std::map<Events, std::string> EventsMap =
     {ROTATOR_STOPPED,   "STOP"},
     {ROTATOR_POSITION,  "P"},
     {SHUTTER_POSITION,  "S"},
+    {BATTERY_LOW,       "Volts"},
 };
 
 // # is the stop char
