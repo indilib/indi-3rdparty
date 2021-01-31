@@ -13,6 +13,7 @@
 #-----------------------------------------------------------------------
 
 mediadir="/usr/local/share/weatherradio/html/media"
+savedir="$mediadir/save"
 img_limit=6
 
 # current day
@@ -23,10 +24,13 @@ DATE=`date +"%F"`
 BIN="/usr/local/share/weatherradio/bin"
 WEATHERDIR="/ext/multimedia/weather"
 
+# ensure that save directory exists
+mkdir -p $savedir
+
 # clear old images
 i=0; h="no"; for f in `ls -Rt $mediadir/*.jpg`; do
     if [ $i -gt $img_limit ]; then
-	rm -v $f
+	mv $f $savedir
     else
 	# determine the capture hour
 	hh=`echo $f | sed -e 's/.*_//' -e 's/\([0-9][0-9]\).*/\1/'`
@@ -34,7 +38,7 @@ i=0; h="no"; for f in `ls -Rt $mediadir/*.jpg`; do
 	    # new hour
 	    i=$(($i + 1))
 	else
-	    rm -v $f
+	    mv $f $savedir
 	fi
 	h=$hh
     fi
@@ -42,6 +46,9 @@ done
 
 # update JSON file for carousel
 $BIN/wr_list_media.py
+
+# restore images from save dir
+mv $savedir/* $mediadir
 
 # remove latest time lapse
 if [ `find $WEATHERDIR -maxdepth 1 -name timelapse_${DATE}_[0-2]\*.mp4 | wc -l` -gt 0 ]; then
