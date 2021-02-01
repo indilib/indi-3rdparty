@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for creating the RRD file used to store the weather radio
@@ -23,13 +23,19 @@ from wr_config import *
 parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio raw sensors time series")
 parser.add_argument("rrdfile", nargs='?', default=RRDSENSORSFILE,
                     help="RRD file holding all time series of the raw sensor data")
+parser.add_argument("-s", "--source",
+                    help="Source file holding already captured data")
 
 args=parser.parse_args()
 
 
-# 1min raw values for 24 hours, 15 min for 7*24 hours, 1hour for 1 year,
-# 1day dor 10 years.
-ret = rrdtool.create(args.rrdfile, "--step", "60", "--start", '0',
+rrd_args = [args.rrdfile, "--step", "300"]
+
+if (args.source):
+    rrd_args += ["--source", args.source]
+
+# 5min raw values for 24 hours, 15 min for 7*24 hours, 1hour for 10 years.
+ret = rrdtool.create(rrd_args,
 		     "DS:BME280_Temp:GAUGE:600:U:U",
 		     "DS:BME280_Pres:GAUGE:600:U:U",
 		     "DS:BME280_Hum:GAUGE:600:U:U",
@@ -38,20 +44,19 @@ ret = rrdtool.create(args.rrdfile, "--step", "60", "--start", '0',
 		     "DS:MLX90614_Tamb:GAUGE:600:U:U",
 		     "DS:MLX90614_Tobj:GAUGE:600:U:U",
 		     "DS:TSL2591_Lux:GAUGE:600:U:U",
-		     "RRA:AVERAGE:0.5:1:1440",
-		     "RRA:AVERAGE:0.5:15:672",
-		     "RRA:AVERAGE:0.5:60:8760",
-		     "RRA:AVERAGE:0.5:1440:3650",
-		     "RRA:MIN:0.5:1:288",
-		     "RRA:MIN:0.5:15:672",
-		     "RRA:MIN:0.5:60:8760",
-		     "RRA:MIN:0.5:1440:3650",
-		     "RRA:MAX:0.5:1:288",
-		     "RRA:MAX:0.5:15:672",
-                     "RRA:MAX:0.5:60:8760",
-		     "RRA:MAX:0.5:1440:3650")
-
+		     "RRA:AVERAGE:0.5:5m:24h",
+		     "RRA:AVERAGE:0.5:15m:7d",
+		     "RRA:AVERAGE:0.5:1h:1y",
+		     "RRA:AVERAGE:0.5:1d:10y",
+		     "RRA:MIN:0.5:5m:24h",
+		     "RRA:MIN:0.5:15m:7d",
+		     "RRA:MIN:0.5:1h:1y",
+		     "RRA:MIN:0.5:1d:10y",
+		     "RRA:MAX:0.5:5m:24h",
+		     "RRA:MAX:0.5:15m:7d",
+		     "RRA:MAX:0.5:1h:1y",
+		     "RRA:MAX:0.5:1d:10y")
 
 if ret:
-		print rrdtool.error()
+		print(rrdtool.error())
 

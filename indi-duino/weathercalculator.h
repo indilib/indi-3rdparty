@@ -139,7 +139,7 @@ public:
 
     struct linearCalibration {
         double factor = 1.0, shift = 0;
-    } humidityCalibration, temperatureCalibration, sqmCalibration;
+    } humidityCalibration, temperatureCalibration, sqmCalibration, wetnessCalibration;
 
     double calibrate (linearCalibration calibration, double value)
     {return calibration.factor * value + calibration.shift;}

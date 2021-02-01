@@ -23,7 +23,7 @@ void updatewater() {
     waterData.status = true;
   }
 
-  waterData.wetness = 1.0 - float(analogRead(WATER_PIN))/1023;
+  waterData.wetness = 100 - 100*float(analogRead(WATER_PIN))/1023;
 }
 
 void serializewater(JsonDocument &doc) {
@@ -33,4 +33,11 @@ void serializewater(JsonDocument &doc) {
   if (waterData.status) {
     data["wetness"] = waterData.wetness;
   }
+}
+
+String displayWaterSensorParameters() {
+  if (waterData.status == false) return "";
+
+  String result = " rain: " + String(waterData.wetness, 1) + " % \n";
+  return result;
 }

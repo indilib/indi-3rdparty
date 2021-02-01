@@ -1,4 +1,4 @@
-/*  Streaming functions for rain sensors
+/*  Abstract streaming functions for all types of rain sensors.
     Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     Developed on basis of the hookup guide from cactus.io
@@ -10,73 +10,76 @@
     version 2 of the License, or (at your option) any later version.
 */
 
+#if !defined(RAINSENSOR_H)
+#define RAINSENSOR_H
 struct rainsensor_data {
   bool status;
   unsigned long lastInterrupt;  // last time an event has been registered
-  unsigned int count;           // counter for "bucket full" events
-  unsigned int lastcount;       // last counter value that has been processed
-  float rainfall;               // measured rain fall in mm
+  unsigned long startMeasuring; // start time of the measuring interval
+  unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
+  unsigned int count;           // overall counter for "bucket full" events
+  float rain_intensity;         // current measured rain fall in mm/h
+  float rain_volume;            // overall rain fall measured in mm
 };
 
-volatile rainsensor_data rainsensor_status = {false, 0, 0, 0, 0.0};
 
 // function that the interrupt calls to increment the rain bucket counter
-#ifdef ESP8266
-void ICACHE_RAM_ATTR isr_rainbucket_full () {
-#else
-void isr_rainbucket_full () {
-#endif
+void rainbucket_full (rainsensor_data &data) {
 
   unsigned long now = millis();
-  if ((now - rainsensor_status.lastInterrupt) > 200 ) { // debounce the switch contact.
-    rainsensor_status.lastInterrupt = now;
-    rainsensor_status.count++;
-    Serial.print("Rain bucket full, count = "); Serial.println(rainsensor_status.count);
+  if ((now - data.lastInterrupt) > 200 ) { // debounce the switch contact.
+    data.lastInterrupt = now;
+    data.intervalCount++;
+    Serial.print("Rain bucket full, count="); Serial.println(data.intervalCount);
   }
 }
 
 
-void resetRainSensor() {
+void resetRainSensor(rainsensor_data &data) {
   // clear the status
-  rainsensor_status.count = 0;
-  rainsensor_status.lastcount = 0;
-  rainsensor_status.lastInterrupt = millis();
-  rainsensor_status.rainfall = 0.0;
+  data.lastInterrupt = millis();
+  data.startMeasuring = data.lastInterrupt;
+  data.intervalCount = 0;
+  data.count = 0;
+  data.rain_intensity = 0.0;
+  data.rain_volume = 0.0;
 }
 
-void initRainSensor() {
-  pinMode(RAINSENSOR_PIN, INPUT);
-  // attach to react upon interrupts when the reed element closes the circuit
-  attachInterrupt(digitalPinToInterrupt(RAINSENSOR_PIN), isr_rainbucket_full, FALLING);
-  rainsensor_status.status = true;
-  // reset measuring data
-  resetRainSensor();
-}
-
-
-void updateRainSensor() {
-  if (rainsensor_status.lastcount < rainsensor_status.count) {
-    rainsensor_status.rainfall += RAINSENSOR_BUCKET_SIZE * (rainsensor_status.count - rainsensor_status.lastcount);
-    rainsensor_status.lastcount = rainsensor_status.count;
+void updateRainSensor(rainsensor_data &data, unsigned long interval_length, int bucket_size) {
+  unsigned long now = millis();
+  unsigned long elapsed = now - data.startMeasuring;
+  if (elapsed > interval_length) {
+    // measuring interval over, update event counter
+    data.count += data.intervalCount;
+    // calculate rain intensity: bucket_size * count scaled up from elapsed time to 1h
+    data.rain_intensity = bucket_size * data.intervalCount * 3600000 / elapsed;
+    // update total rain fall volume
+    data.rain_volume += bucket_size * data.intervalCount;
+    // clear interval data
+    data.startMeasuring = now;
+    data.intervalCount = 0;
   }
 }
 
 
 
-void serializeRainSensor(JsonDocument &doc) {
+void serializeRainSensor(JsonDocument &doc, rainsensor_data &data, String name) {
 
-  JsonObject data = doc.createNestedObject("Rain Sensor");
-  data["init"] = rainsensor_status.status;
+  JsonObject json = doc.createNestedObject(name);
+  json["init"] = data.status;
 
-  if (rainsensor_status.status) {
-    data["rainfall"] = rainsensor_status.rainfall;
-    data["count"] = rainsensor_status.count;
+  if (data.status) {
+    json["rain intensity"] = data.rain_intensity;
+    json["rain volume"]    = data.rain_volume;
+    json["count"]          = data.count;
   }
 }
 
-String displayRainSensorParameters() {
-  if (rainsensor_status.status == false) return "";
+String displayRainSensorParameters(rainsensor_data &data) {
+  if (data.status == false) return "";
 
-  String result = " rainfall: " + String(rainsensor_status.rainfall, 4) + " \n";
+  String result = " rain: " + String(data.rain_intensity, 3) + " mm/h \n";
+  result += " rain vol: " + String(data.rain_volume, 3) + " mm \n";
   return result;
 }
+#endif //!defined(RAINSENSOR_H)

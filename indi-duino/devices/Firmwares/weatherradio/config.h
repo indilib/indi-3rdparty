@@ -23,8 +23,9 @@
 //#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
 //#define USE_DAVIS_SENSOR          // USE the Davis Anemometer.
-//#define USE_WATER_SENSOR           // Water sensor - detects rain by measuring resistence
-//#define USE_RAIN_SENSOR           // USE a rain sensor (e.g. RG-11 or rain bucket sensors)
+//#define USE_WATER_SENSOR        // Water sensor - detects rain by measuring resistence
+//#define USE_RG11_RAIN_SENSOR      // USE the RG-11 rain sensor
+//#define USE_W174_RAIN_SENSOR      // USE the Ventus W174 rain sensor
 //#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 //#define USE_OLED                  // USE a OLED display
 //#define USE_OTA                   // USE Arduino Over the Air updating
@@ -54,14 +55,18 @@
 // Resistor based water sensor
 #define WATER_PIN A0
 
+// dipping bucket rain sensor for RG-11
+#define RG11_RAINSENSOR_PIN 13            // the digital pin for the rain sensor
+#define RG11_RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
+
+// dipping bucket rain sensor for Ventus W174
+#define W174_RAINSENSOR_PIN 12            // the digital pin for the rain sensor
+#define W174_RAINSENSOR_BUCKET_SIZE 0.5   // the bucket size: 28.46cm², 1.42ml bucket size --> 1x bucket full = 0.5mm rain fall
+
 // Resistor based dew heater
 #define DEWHEATER_MAX_DELTA 1 // maximum allowable temperature difference between ambient and dew point before heater turns on
 #define DEWHEATER_MIN_TEMPERATURE 0 // Minimum temperature below which dew heater turns on to combat snow and ice
 #define DEWHEATER_PIN 5
-
-// dipping bucket rain sensor (e.g. RG-11)
-#define RAINSENSOR_PIN 13            // the digital pin for the rain sensor
-#define RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
 
 // OLED display
 #define OLED_SCROLL_TIMEOUT 100       // the timeout between scrolling a single display line
@@ -108,9 +113,13 @@
 #include "dewheater.h"
 #endif //USE_DEW_HEATER
 
-#ifdef USE_RAIN_SENSOR
-#include "rainsensor.h"
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+#include "rg11.h"
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+#include "w174.h"
+#endif //USE_W174_RAIN_SENSOR
 
 #ifdef USE_WIFI
 #include "esp8266.h"
