@@ -12,7 +12,7 @@ set(RULES_INSTALL_DIR "/etc/udev/rules.d")
 set(FIRMWARE_INSTALL_DIR "/lib/firmware")
 ENDIF()
 set (DSI_VERSION_MAJOR 0)
-set (DSI_VERSION_MINOR 3)
+set (DSI_VERSION_MINOR 4)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)

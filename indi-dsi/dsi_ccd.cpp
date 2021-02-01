@@ -111,10 +111,6 @@ bool DSICCD::Connect()
     if (dsi->isColor())
         cap |= CCD_HAS_BAYER;
 
-    IUSaveText(&BayerT[0], "0");
-    IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], nullptr);
-
     ccd = dsi->getCcdChipName();
     if (ccd == "ICX254AL")
     {
@@ -139,6 +135,8 @@ bool DSICCD::Connect()
     else if (ccd == "ICX285AQ")
     {
         // DSI III has a RGB color matrix
+        IUSaveText(&BayerT[0], "0");
+        IUSaveText(&BayerT[1], "0");
         IUSaveText(&BayerT[2], "RGGB");
         LOG_INFO("Found a DSI III!");
     }
