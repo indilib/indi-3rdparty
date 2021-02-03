@@ -45,7 +45,7 @@ void resetRainSensor(rainsensor_data &data) {
   data.rain_volume = 0.0;
 }
 
-void updateRainSensor(rainsensor_data &data, unsigned long interval_length, int bucket_size) {
+void updateRainSensor(rainsensor_data &data, unsigned long interval_length, float bucket_size) {
   unsigned long now = millis();
   unsigned long elapsed = now - data.startMeasuring;
   if (elapsed > interval_length) {
