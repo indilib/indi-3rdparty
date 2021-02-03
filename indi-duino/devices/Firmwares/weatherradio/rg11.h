@@ -14,16 +14,16 @@
 
 #define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single speed mesure (ms)
 
-rainsensor_data rg11_rainsensor_status = {false, 0, 0, 0, 0, 0.0, 0.0};
+rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0};
 
 // function that the interrupt calls to increment the rain bucket counter
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_rg11_rainbucket_full () {
+void ICACHE_RAM_ATTR isr_rg11_rain_event () {
 #else
-void isr_rg11_rainbucket_full () {
+void isr_rg11_rain_event () {
 #endif
 
-  rainbucket_full(rg11_rainsensor_status);
+  rain_event(rg11_rainsensor_status);
 }
 
 
@@ -33,9 +33,10 @@ void rg11_resetRainSensor() {
 }
 
 void rg11_initRainSensor() {
+  rg11_rainsensor_status.mode = RG11_MODE;
   pinMode(RG11_RAINSENSOR_PIN, INPUT);
   // attach to react upon interrupts when the reed element closes the circuit
-  attachInterrupt(digitalPinToInterrupt(RG11_RAINSENSOR_PIN), isr_rg11_rainbucket_full, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RG11_RAINSENSOR_PIN), isr_rg11_rain_event, FALLING);
   rg11_rainsensor_status.status = true;
   // reset measuring data
   rg11_resetRainSensor();

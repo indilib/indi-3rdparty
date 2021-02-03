@@ -14,23 +14,23 @@
 #define RAINSENSOR_H
 struct rainsensor_data {
   bool status;
+  unsigned int mode;            // 0 = tipping bucket mode, 1 = drop detection
   unsigned long lastInterrupt;  // last time an event has been registered
   unsigned long startMeasuring; // start time of the measuring interval
   unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
-  unsigned int count;           // overall counter for "bucket full" events
-  float rain_intensity;         // current measured rain fall in mm/h
+  unsigned int count;           // overall counter for "bucket full" or "drop detected" events
   float rain_volume;            // overall rain fall measured in mm
 };
 
 
-// function that the interrupt calls to increment the rain bucket counter
-void rainbucket_full (rainsensor_data &data) {
+// function that the interrupt calls to increment the rain event counter
+void rain_event (rainsensor_data &data) {
 
   unsigned long now = millis();
   if ((now - data.lastInterrupt) > 200 ) { // debounce the switch contact.
     data.lastInterrupt = now;
     data.intervalCount++;
-    Serial.print("Rain bucket full, count="); Serial.println(data.intervalCount);
+    // Serial.print("Rain event, count="); Serial.println(data.intervalCount + data.count);
   }
 }
 
@@ -41,7 +41,6 @@ void resetRainSensor(rainsensor_data &data) {
   data.startMeasuring = data.lastInterrupt;
   data.intervalCount = 0;
   data.count = 0;
-  data.rain_intensity = 0.0;
   data.rain_volume = 0.0;
 }
 
@@ -51,8 +50,6 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
   if (elapsed > interval_length) {
     // measuring interval over, update event counter
     data.count += data.intervalCount;
-    // calculate rain intensity: bucket_size * count scaled up from elapsed time to 1h
-    data.rain_intensity = bucket_size * data.intervalCount * 3600000 / elapsed;
     // update total rain fall volume
     data.rain_volume += bucket_size * data.intervalCount;
     // clear interval data
@@ -67,19 +64,26 @@ void serializeRainSensor(JsonDocument &doc, rainsensor_data &data, String name) 
 
   JsonObject json = doc.createNestedObject(name);
   json["init"] = data.status;
+  json["mode"] = data.mode == 0 ? "tipping bucket" : "drop detect";
 
   if (data.status) {
-    json["rain intensity"] = data.rain_intensity;
-    json["rain volume"]    = data.rain_volume;
-    json["count"]          = data.count;
+    json["count"] = data.count;
+    // only relevant in tipping bucket mode
+    if (data.mode == 0) {
+      json["rain volume"]    = data.rain_volume;
+    }
   }
 }
 
 String displayRainSensorParameters(rainsensor_data &data) {
-  if (data.status == false) return "";
+  String result = "";
+  if (data.status == false) return result;
 
-  String result = " rain: " + String(data.rain_intensity, 3) + " mm/h \n";
-  result += " rain vol: " + String(data.rain_volume, 3) + " mm \n";
+  if (data.mode == 0)
+    result += " rain vol: " + String(data.rain_volume, 3) + " mm \n";
+  else
+    result += " drop count: " + String(data.count) + " \n";
+
   return result;
 }
 #endif //!defined(RAINSENSOR_H)
