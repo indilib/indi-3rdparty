@@ -103,14 +103,6 @@ bool DSICCD::Connect()
         return false;
     }
 
-    cap |= CCD_CAN_ABORT;
-
-    if (dsi->isBinnable())
-        cap |= CCD_CAN_BIN;
-
-    if (dsi->isColor())
-        cap |= CCD_HAS_BAYER;
-
     ccd = dsi->getCcdChipName();
     if (ccd == "ICX254AL")
     {
@@ -134,16 +126,20 @@ bool DSICCD::Connect()
     }
     else if (ccd == "ICX285AQ")
     {
-        // DSI III has a RGB color matrix
-        IUSaveText(&BayerT[0], "0");
-        IUSaveText(&BayerT[1], "0");
-        IUSaveText(&BayerT[2], "RGGB");
-        LOG_INFO("Found a DSI III!");
+        LOG_INFO("Found a DSI Color III!");
     }
     else
     {
         LOGF_INFO("Found a DSI with an unknown CCD: %s", ccd.c_str());
     }
+
+    cap |= CCD_CAN_ABORT;
+
+    if (dsi->isBinnable())
+        cap |= CCD_CAN_BIN;
+
+    if (dsi->isColor())
+        cap |= CCD_HAS_BAYER;
 
     SetCCDCapability(cap);
 
@@ -226,6 +222,14 @@ bool DSICCD::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 3600, 1, false);
 
     setDefaultPollingPeriod(250);
+
+    if (dsi->getCcdChipName() == "ICX285AQ")
+    {
+        // DSI III has a RGB color matrix
+        IUSaveText(&BayerT[0], "0");
+        IUSaveText(&BayerT[1], "0");
+        IUSaveText(&BayerT[2], "RGGB");
+    }
 
     return true;
 }
