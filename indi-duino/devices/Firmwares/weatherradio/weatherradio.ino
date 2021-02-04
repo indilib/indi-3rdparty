@@ -155,7 +155,7 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2) + // Water sensor
-                      JSON_OBJECT_SIZE(4)*2;  // Rain sensors
+                      JSON_OBJECT_SIZE(4) * 2; // Rain sensors
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -293,14 +293,15 @@ String getCurrentConfig() {
 
 #ifdef USE_RG11_RAIN_SENSOR
   JsonObject rg11_rainsensordata          = doc.createNestedObject("RG11 Rain Sensor");
-  rg11_rainsensordata["mode"]             = RG11_MODE;
+  rg11_rainsensordata["mode"]             = RG11_MODE == 0 ? "tipping bucket" : "drop detect";
   rg11_rainsensordata["rain sensor pin"]  = RG11_RAINSENSOR_PIN;
-  rg11_rainsensordata["bucket size"]      = RG11_RAINSENSOR_BUCKET_SIZE;
+  if (RG11_MODE == 0)
+    rg11_rainsensordata["bucket size"]    = RG11_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_RG11_RAIN_SENSOR
 
 #ifdef USE_W174_RAIN_SENSOR
   JsonObject w174_rainsensordata          = doc.createNestedObject("W174 Rain Sensor");
-  w174_rainsensordata["mode"]             = 0; // tipping bucket by design
+  w174_rainsensordata["mode"]             = "tipping bucket";
   w174_rainsensordata["rain sensor pin"]  = W174_RAINSENSOR_PIN;
   w174_rainsensordata["bucket size"]      = W174_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_W174_RAIN_SENSOR

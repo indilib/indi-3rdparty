@@ -12,11 +12,11 @@
 
 #include "rainsensor.h"
 
-#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single speed mesure (ms)
+#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for drop counts (ms)
 
-rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0};
+rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0, 0.0};
 
-// function that the interrupt calls to increment the rain bucket counter
+// function that the interrupt calls to increment the rain event counter
 #ifdef ESP8266
 void ICACHE_RAM_ATTR isr_rg11_rain_event () {
 #else

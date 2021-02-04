@@ -19,7 +19,8 @@ struct rainsensor_data {
   unsigned long startMeasuring; // start time of the measuring interval
   unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
   unsigned int count;           // overall counter for "bucket full" or "drop detected" events
-  float rain_volume;            // overall rain fall measured in mm
+  float rainVolume;            // overall rain fall measured in mm
+  float eventFrequency;         // frequency of rain events ("bucket full" or "drop detected") in events/min
 };
 
 
@@ -30,7 +31,6 @@ void rain_event (rainsensor_data &data) {
   if ((now - data.lastInterrupt) > 200 ) { // debounce the switch contact.
     data.lastInterrupt = now;
     data.intervalCount++;
-    // Serial.print("Rain event, count="); Serial.println(data.intervalCount + data.count);
   }
 }
 
@@ -41,7 +41,7 @@ void resetRainSensor(rainsensor_data &data) {
   data.startMeasuring = data.lastInterrupt;
   data.intervalCount = 0;
   data.count = 0;
-  data.rain_volume = 0.0;
+  data.rainVolume = 0.0;
 }
 
 void updateRainSensor(rainsensor_data &data, unsigned long interval_length, float bucket_size) {
@@ -51,7 +51,9 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
     // measuring interval over, update event counter
     data.count += data.intervalCount;
     // update total rain fall volume
-    data.rain_volume += bucket_size * data.intervalCount;
+    data.rainVolume += bucket_size * data.intervalCount;
+    // update event frequency
+    data.eventFrequency = data.count * 60000 / elapsed;
     // clear interval data
     data.startMeasuring = now;
     data.intervalCount = 0;
@@ -70,7 +72,10 @@ void serializeRainSensor(JsonDocument &doc, rainsensor_data &data, String name) 
     json["count"] = data.count;
     // only relevant in tipping bucket mode
     if (data.mode == 0) {
-      json["rain volume"]    = data.rain_volume;
+      json["rain volume"] = data.rainVolume;
+    } else {
+      json["drop freq"] = data.eventFrequency;
+
     }
   }
 }
@@ -80,7 +85,7 @@ String displayRainSensorParameters(rainsensor_data &data) {
   if (data.status == false) return result;
 
   if (data.mode == 0)
-    result += " rain vol: " + String(data.rain_volume, 3) + " mm \n";
+    result += " rain vol: " + String(data.rainVolume, 3) + " mm \n";
   else
     result += " drop count: " + String(data.count) + " \n";
 
