@@ -1,0 +1,17 @@
+[Unit]
+Description=Service controlling the camera for time lapse series
+Wants=network-online.target
+Wants=imageconverter.service
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 -u /usr/local/share/weatherradio/bin/timelapse.py
+StandardOutput=append:/var/log/timelapse.log
+StandardError=append:/var/log/timelapse.log
+
+ExecStop=/bin/sh /usr/local/share/weatherradio/bin/timelapse-stop.sh $MAINPID
+
+[Install]
+WantedBy=multi-user.target

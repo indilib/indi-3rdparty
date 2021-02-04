@@ -17,7 +17,7 @@
 */
 #include <math.h>
 
-#define SLICEDURATION 5000 // interval for a single speed mesure
+#define DAVIS_SLICEDURATION 5000 // interval for a single speed mesure (ms)
 
 struct {
   bool status;
@@ -116,7 +116,7 @@ void initAnemometer() {
 */
 void updateAnemometer() {
   if (anemometerData.status) {
-    if ((lastInterrupt > startSlice) && (lastInterrupt - startSlice >= SLICEDURATION)) {
+    if ((lastInterrupt > startSlice) && (lastInterrupt - startSlice >= DAVIS_SLICEDURATION)) {
       // stop recording
       detachInterrupt(digitalPinToInterrupt(ANEMOMETER_WINDSPEEDPIN));
 

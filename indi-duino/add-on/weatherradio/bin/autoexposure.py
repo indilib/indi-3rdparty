@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Tool library for automatic exposure control
@@ -12,18 +12,17 @@
 #
 #-----------------------------------------------------------------------
 
-import ConfigParser as ConfigParser
 from PIL import Image
 from PIL import ImageStat
 from PIL.ExifTags import TAGS
 
 def dump_exif(exif):
-  for (k,v) in exif.iteritems():
+  for (k,v) in exif.items():
     print("%s: %s" % (TAGS.get(k), v))
 
 def get_fields (exif, fields) :
   result = {}
-  for (k,v) in exif.iteritems():
+  for (k,v) in exif.items():
     tag = TAGS.get(k)
     if tag in fields:
       result[tag] = v
@@ -38,71 +37,63 @@ def brightness(image):
    stat = ImageStat.Stat(im)
    return stat.rms[0]
 
-def init_config():
-    config = ConfigParser.ConfigParser()
-    config.optionxform = str
-    # default values
-    config.add_section('Camera')
-    config.set('Camera', 'ExposureTime', '400') # 1/250 sec
-    config.set('Camera', 'BaseDirectory', ".")
-    config.set('Camera', 'ISOSpeedRatings', '50')
-    config.set('Camera', 'Contrast', '0')
-    config.set('Camera', 'Brightness', '50')
-    config.set('Camera', 'Saturation', '0')
-    config.set('Camera', 'Options', '-md 4 -ex fixedfps')
-    # night default settings
-    config.add_section('Night')
-    config.set('Night', 'Contrast', '100')
-    config.set('Night', 'Brightness', '20')
-    config.set('Night', 'Saturation', '-80')
-    config.set('Night', 'MaxExposure', '10000000')
-    config.set('Night', 'MaxISO', '800')
-    return config
-
-def config_camera(camera, config):
-    camera.shutter_speed =  config.getint('Camera', 'ExposureTime')
-    camera.exposure_mode = 'fixedfps'
-    camera.iso           = config.getint('Camera', 'ISOSpeedRatings')
-    camera.brightness    = config.getint('Camera', 'Brightness')
-    camera.contrast      = config.getint('Camera', 'Contrast')
-    camera.saturation    = config.getint('Camera', 'Saturation')
-
 def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img_brightness):
     factor = img_brightness / 120
 
-    # avoid overshooting    
-    factor = 0.85 if (factor < 0.85) else factor
-    factor = 1.15 if (factor > 1.15) else factor
+    # avoid overshooting
+    factor = 0.7 if (factor < 0.7) else factor
+    factor = 1.3 if (factor > 1.3) else factor
 
-    newExpTime = int(round(exptime / factor**2))
+    #newExpTime = exptime / factor**2
+    # smoothen reaction
+    newExpTime = exptime / factor
 
     # we start with the old values
     newISO        = iso
     newBrightness = brightness
     newContrast   = contrast
     newSaturation = saturation
-    if (newExpTime < 3000000 and iso > 50):
+    if (newExpTime < 100000 and iso > 50):
         # adapt ISO - less than 3 sec (avoid ISO flipping)
         newISO     /= 2
-        newExpTime *= 2
-    elif (newExpTime > 5000000 and iso < config.getint('Night', 'MaxISO')):
+        newExpTime = newExpTime * 1.4
+    elif (newExpTime > 500000 and iso < config.getint('Night', 'MaxISO')):
         # adapt ISO - more than 1 sec
         newISO     *= 2
-        newExpTime /= 2
+        newExpTime = newExpTime / 1.4
+    else:
+        # adapt only if no ISO change happened to avoid miscorrections
+        # target brightness depends upon ISO value
+        newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
+        # change brightness and contrast slowly
+        # brightness + 10 equals exptime * 2
+        if newBrightness > brightness:
+            newBrightness = brightness + 1
+        elif newBrightness < brightness:
+            newBrightness = brightness - 1
 
-    # brightness and contrast depend upon ISO value
-    newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
-    newContrast   =  0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
+    # target contrast also depends upon ISO value, but does not impact brightness
+    newContrast = 0 + int(config.getint('Night', 'Contrast') * (newISO - 50) / 750)
+    if newContrast > contrast:
+        newContrast = min(contrast + 2, newContrast)
+    elif newContrast < contrast:
+        newContrast = max(contrast - 2, newContrast)
 
     # limit to maximal exposure value
     newExpTime = min(newExpTime, config.getint('Night', 'MaxExposure'))
-        
+
     # reduce saturation for long exposures
     if (newExpTime > 2000000):
       newSaturation = int(config.getint('Night', 'Saturation') * (newExpTime - 2000000)/(config.getint('Night', 'MaxExposure') - 2000000))
     else:
       newSaturation = 0
-      
+
+    # change saturation slowly
+    if newSaturation > saturation:
+      newSaturation = saturation + 1
+    elif newSaturation < saturation:
+      newSaturation = saturation - 1
+
     return (newExpTime, newISO, newBrightness, newContrast, newSaturation)
 
 def calibrateExpTime(filename, config):
@@ -111,7 +102,7 @@ def calibrateExpTime(filename, config):
     exif = image._getexif()
 
     realExpTime    = 1000000 * get_field(exif, 'ExposureTime')[0] / get_field(exif, 'ExposureTime')[1]
-    realISO        = get_field(exif, 'ISOSpeedRatings')
+    realISO        = config.getint('Camera', 'ISOSpeedRatings')
     bright         = brightness(image)
     realBrightness = config.getint('Camera', 'Brightness')
     realContrast   = config.getint('Camera', 'Contrast')
@@ -120,10 +111,10 @@ def calibrateExpTime(filename, config):
     # calculate the optimal exposure time
     (newExpTime, newISO, newBrightness, newContrast, newSaturation) = calculateExpTime(config, realExpTime, realISO, realBrightness, realContrast, realSaturation, bright)
     # store for future use
-    config.set('Camera', 'ExposureTime', str(newExpTime))
-    config.set('Camera', 'ISOSpeedRatings', str(newISO))
-    config.set('Camera', 'Brightness', str(newBrightness))
-    config.set('Camera', 'Contrast', str(newContrast))
-    config.set('Camera', 'Saturation', str(newSaturation))
+    config.set('Camera', 'ExposureTime', str(int(round(newExpTime))))
+    config.set('Camera', 'ISOSpeedRatings', str(int(round(newISO))))
+    config.set('Camera', 'Brightness', str(int(round(newBrightness))))
+    config.set('Camera', 'Contrast', str(int(round(newContrast))))
+    config.set('Camera', 'Saturation', str(int(round(newSaturation))))
     return (realExpTime, bright)
 

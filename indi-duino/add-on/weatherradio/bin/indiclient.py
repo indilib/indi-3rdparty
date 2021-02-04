@@ -197,13 +197,12 @@ An INDI Client Library
 
 import socket
 import xml.parsers.expat
-import string
 import base64
 import sys
 import array
 import os
 import threading
-import Queue
+import queue
 import copy
 import math
 import zlib
@@ -349,7 +348,7 @@ class _inditagfactory(_indinameconventions):
 		@return: An L{indixmltag} created according to the information given in  L{tag} 
 		@rtype: L{indixmltag}
 		"""
-		if self.dict.has_key(tag):
+		if tag in self.dict:
 			inditag=self.dict[tag]
 			return copy.deepcopy(inditag)
 		else:
@@ -731,7 +730,7 @@ class indielement(indinamedobject):
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print "   ",self.name,self.label,self.tag.get_type(),self._value
+		print ("   ",self.name,self.label,self.tag.get_type(),self._value)
 			
 	def get_text(self):
 		"""
@@ -845,7 +844,7 @@ class indinumber(indielement):
 			except:
 				success=False
 				time.sleep(1)
-				print "INDI Warning: invalid float", self._value
+				print ("INDI Warning: invalid float", self._value)
 		return x
 	
 	def get_digits_after_point(self):
@@ -999,7 +998,7 @@ class indilight(indielement):
 				indielement._set_value(self,value)
 
 	def set_text(self,text):
-		raise Exception, "INDILigths are read only"
+		raise (Exception, "INDILigths are read only")
 		#self._set_value(str(text))
 	
 	def update(self,attrs,tag):
@@ -1207,7 +1206,7 @@ class indivector(indinamedobject):
 		self._light=indilight(attrs,tag)
 		self.group=_normalize_whitespace(attrs.get('group', ""))
 		self._perm= indipermissions(_normalize_whitespace(attrs.get('perm', "")))
-		if attrs.has_key('message'):
+		if 'message' in attrs:
 				self._message=indimessage(attrs)
 		else:
 			self._message=None
@@ -1240,7 +1239,7 @@ class indivector(indinamedobject):
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print self.device,self.name,self.label,self.tag.get_type(),self._perm.get_text()
+		print (self.device,self.name,self.label,self.tag.get_type(),self._perm.get_text())
 		for element in self.elements: 
 			element.tell()
 		
@@ -1296,10 +1295,10 @@ class indivector(indinamedobject):
 		while not(self._light.is_ok()):
 			time.sleep(checkinterval)
 			if (time.time()-t)>timeout:
-				raise Exception, ("timeout waiting for state to turn Ok "+
+				raise (Exception, ("timeout waiting for state to turn Ok "+
 					"devicename=" +self.device+" vectorname= " + self.name+
 					" "+str(timeout)+ " "+str(time.time()-t)
-					)
+					))
 
 	def wait_for_ok_timeout(self,timeout):
 		"""
@@ -1371,7 +1370,7 @@ class indiswitchvector(indivector):
 		self.rule = _normalize_whitespace(attrs.get('rule', ""))
 		
 	def tell(self):
-		print self.device,self.name,self.label,self.tag.get_type(),self.rule
+		print (self.device,self.name,self.label,self.tag.get_type(),self.rule)
 		for element in self.elements:
 			element.tell()
 	
@@ -1499,7 +1498,7 @@ class indimessage(indiobject):
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print "    "+"INDImessage " +self.device+" "+self.get_text()
+		print ("    "+"INDImessage " +self.device+" "+self.get_text())
 	
 	def get_text(self):
 		"""
@@ -1653,8 +1652,8 @@ class gui_indi_object_handler(_blocking_indi_object_handler):
 		@return: B{None}
 		@rtype:  NoneType		
 		"""
-		print "indiclient warning: signal received from GUI while changing gui element"
-		print "Danger of loopback!!!!"
+		print ("indiclient warning: signal received from GUI while changing gui element")
+		print ("Danger of loopback!!!!")
 		self.on_gui_changed(*args)
 	def on_gui_changed(self,*args):
 		"""
@@ -1933,9 +1932,9 @@ class bigindiclient:
 	@type host  : StringType
 	@ivar receive_event_queue : A background process (L{_receiver}) is continuesly receiving data and putting them into this queue. 
 	This queue  will be read by the L{process_events} method, that the user has to call in order to process any custom handlers.
-	@type receive_event_queue : Queue.Queue
+	@type receive_event_queue : queue.Queue
 	@ivar running_queue : During its destructor indiclient puts signal into this queue in order to stop the background process.
-	@type running_queue : Queue.Queue
+	@type running_queue : queue.Queue
 	@ivar  timeout : A timeout value (see L{timeout_handler})
 	@type  timeout : FloatType
 	@ivar  timeout_handler : 	This function will be called whenever an indielement has been requested but was not received 
@@ -1983,10 +1982,10 @@ class bigindiclient:
 		self.socket.settimeout(0.001)
 		self.host=host;
 		self.port=port;
-		self.socket.send("<getProperties version='1.5'/>")
-		self.receive_event_queue=Queue.Queue()
-		self.running_queue=Queue.Queue()
-		self.receive_vector_queue=Queue.Queue()
+		self.socket.send(b"<getProperties version='1.5'/>")
+		self.receive_event_queue=queue.Queue()
+		self.running_queue=queue.Queue()
+		self.receive_vector_queue=queue.Queue()
 		self.timeout=1
 		self.blob_def_handler=self._default_def_handler
 		self.number_def_handler=self._default_def_handler
@@ -2038,7 +2037,7 @@ class bigindiclient:
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print "resetting connection port"
+		print ("resetting connection port")
 		for i in range(10):
 			time.sleep(0.1)
 			self.receivetimer.cancel()
@@ -2057,13 +2056,13 @@ class bigindiclient:
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.socket.settimeout(0.1);
 				self.socket.connect((self.host, self.port))
-				self.socket.send("<getProperties version='1.5'/>")
+				self.socket.send(b"<getProperties version='1.5'/>")
 				self.socket.settimeout(0.01);
 			except:
 				time.sleep(1)
-				print "Reconnecting"
+				print ("Reconnecting")
 				failed=True
-		print "connection reset successfully"
+		print ("connection reset successfully")
 		self.receivetimer = threading.Timer(0.01, self._receiver)
 		self.receivetimer.start()
 	
@@ -2321,7 +2320,7 @@ class bigindiclient:
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print "Timeout",devicename,vectorname
+		print ("Timeout",devicename,vectorname)
 		#raise Exception
 		#self._receive()
 
@@ -2388,7 +2387,7 @@ class bigindiclient:
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		print "got message by host :"+indi.host+" : "
+		print ("got message by host :"+indi.host+" : ")
 		message.tell()
 	
 	def process_events(self):
@@ -2430,19 +2429,19 @@ class bigindiclient:
 							self.light_def_handler(vector,self)
 						self.defvectorlist.append(vector)
 				else:
-					print "Received bogus INDIVector"
+					print ("Received bogus INDIVector")
 					try:
 						vector.tell()
-						raise Exception 
+						raise (Exception)
 						vector.tell()
 					except:
-						print "Error printing bogus INDIVector"
-						raise Exception 
+						print ("Error printing bogus INDIVector")
+						raise (Exception)
 		except:
 			a,b,c =sys.exc_info()
 			sys.excepthook(  a,b,c	)
 			self.quit()
-			raise Exception, "indiclient: Error during process events"
+			raise (Exception, "indiclient: Error during process events")
 
 			
 	def _receive(self):
@@ -2456,7 +2455,7 @@ class bigindiclient:
 			self.data=""
 		if self.data!="":
 			if self.verbose:
-				print self.data
+				print (self.data)
 			self.expat.Parse( self.data,0)
 		
 	def _char_data(self,data):
@@ -2472,7 +2471,7 @@ class bigindiclient:
 				return
 			if self.currentVector==None:
 				return
-			data=string.replace(str(data),'\\n','')
+			data=str.replace(str(data),'\\n','')
 			data = _normalize_whitespace(data)
 			if data=="'":
 				return
@@ -2482,7 +2481,7 @@ class bigindiclient:
 		except:
 			a,b,c =sys.exc_info()
 			sys.excepthook(  a,b,c	)
-			raise Exception, "indiclient: Error during char data handler"
+			raise (Exception, "indiclient: Error during char data handler")
 		
 	def _end_element(self,name):
 		"""End of XML element handler for expat parser. For details (see 
@@ -2513,7 +2512,7 @@ class bigindiclient:
 		except:
 			a,b,c =sys.exc_info()
 			sys.excepthook(  a,b,c	)
-			raise Exception, "indiclient: Error during end element handler"
+			raise (Exception, "indiclient: Error during end element handler")
 		
 	def _start_element(self,name, attrs):
 		"""
@@ -2529,7 +2528,7 @@ class bigindiclient:
 		obj=self._factory.create(name,attrs)
 		if obj==None:
 			return
-		if attrs.has_key('message'):
+		if 'message' in attrs:
 			None
 			self.receive_event_queue.put(indimessage(attrs))
 		if obj.tag.is_vector():
@@ -2560,7 +2559,7 @@ class bigindiclient:
 		@return: B{None}
 		@rtype: NoneType
 		"""
-		data="<enableBLOB>Also</enableBLOB>\n"
+		data=b"<enableBLOB>Also</enableBLOB>\n"
 		self.socket.send(data)
 		
 class indiclient(bigindiclient):

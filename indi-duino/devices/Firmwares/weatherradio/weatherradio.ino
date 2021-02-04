@@ -29,7 +29,8 @@ struct {
   unsigned long tsl2591_read;
   unsigned long davis_read;
   unsigned long water_read;
-  unsigned long rainsensor_read;
+  unsigned long rg11_rainsensor_read;
+  unsigned long w174_rainsensor_read;
 } sensor_read;
 
 void updateDisplayText() {
@@ -59,10 +60,15 @@ void updateDisplayText() {
 #ifdef USE_TSL2591_SENSOR
   result += "TSL2591\n" + displayTSL2591Parameters() + " \n";
 #endif //USE_TSL2591_SENSOR
-#ifdef USE_RAIN_SENSOR
-  result += "Rain Sensor\n" + displayRainSensorParameters() + " \n";
-#endif //USE_RAIN_SENSOR
-
+#ifdef USE_RG11_RAIN_SENSOR
+  result += "RG11 Rain Sensor\n" + rg11_displayRainSensorParameters() + " \n";
+#endif //USE_RG11_RAIN_SENSOR
+#ifdef USE_W174_RAIN_SENSOR
+  result += "W174 Rain Sensor\n" + w174_displayRainSensorParameters() + " \n";
+#endif //USE_W174_RAIN_SENSOR
+#ifdef USE_WATER_SENSOR
+  result += "Water Sensor\n" + displayWaterSensorParameters() + " \n";
+#endif //USE_WATER_SENSOR
 
   setDisplayText(result);
 #endif // USE_OLED
@@ -82,11 +88,17 @@ void updateSensorData() {
   sensor_read.davis_read = millis() - start;
 #endif //USE_DAVIS_SENSOR
 
-#ifdef USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
   start = millis();
-  updateRainSensor();
-  sensor_read.rainsensor_read = millis() - start;
-#endif //USE_RAIN_SENSOR
+  rg11_updateRainSensor();
+  sensor_read.rg11_rainsensor_read = millis() - start;
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+  start = millis();
+  w174_updateRainSensor();
+  sensor_read.w174_rainsensor_read = millis() - start;
+#endif //USE_W174_RAIN_SENSOR
 
 #ifdef USE_BME_SENSOR
   start = millis();
@@ -142,9 +154,8 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(3) + // TSL237 sensor
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(2);  // Water sensor
-  JSON_OBJECT_SIZE(6);  // Davis Anemometer
-  JSON_OBJECT_SIZE(2);  // Rain sensor
+                      JSON_OBJECT_SIZE(2) + // Water sensor
+                      JSON_OBJECT_SIZE(3)*2;  // Rain sensors
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -153,9 +164,13 @@ String getSensorData(bool pretty) {
   serializeAnemometer(weatherDoc);
 #endif //USE_DAVIS_SENSOR
 
-#ifdef USE_RAIN_SENSOR
-  serializeRainSensor(weatherDoc);
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+  rg11_serializeRainSensor(weatherDoc);
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+  w174_serializeRainSensor(weatherDoc);
+#endif //USE_W174_RAIN_SENSOR
 
 #ifdef USE_BME_SENSOR
   serializeBME(weatherDoc);
@@ -224,9 +239,12 @@ String getReadDurations() {
 #ifdef USE_WATER_SENSOR
   if (waterData.status)       doc["Water"]             = sensor_read.water_read;
 #endif //USE_WATER_SENSOR
-#ifdef USE_RAIN_SENSOR
-  if (rainsensor_status.status) doc["Rain Sensor"]   = sensor_read.rainsensor_read;
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+  if (rg11_rainsensor_status.status) doc["RG11 Rain Sensor"]   = sensor_read.rg11_rainsensor_read;
+#endif //USE_RG11_RAIN_SENSOR
+#ifdef USE_W174_RAIN_SENSOR
+  if (w174_rainsensor_status.status) doc["W174 Rain Sensor"]   = sensor_read.w174_rainsensor_read;
+#endif //USE_W174_RAIN_SENSOR
 
   String result = "";
   serializeJson(doc, result);
@@ -273,11 +291,17 @@ String getCurrentConfig() {
   waterdata["pin"] = WATER_PIN;
 #endif
 
-#ifdef USE_RAIN_SENSOR
-  JsonObject rainsensordata          = doc.createNestedObject("Rain Sensor");
-  rainsensordata["rain sensor pin"]  = RAINSENSOR_PIN;
-  rainsensordata["bucket size"]      = RAINSENSOR_BUCKET_SIZE;
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+  JsonObject rg11_rainsensordata          = doc.createNestedObject("RG11 Rain Sensor");
+  rg11_rainsensordata["rain sensor pin"]  = RG11_RAINSENSOR_PIN;
+  rg11_rainsensordata["bucket size"]      = RG11_RAINSENSOR_BUCKET_SIZE;
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+  JsonObject w174_rainsensordata          = doc.createNestedObject("W174 Rain Sensor");
+  w174_rainsensordata["rain sensor pin"]  = W174_RAINSENSOR_PIN;
+  w174_rainsensordata["bucket size"]      = W174_RAINSENSOR_BUCKET_SIZE;
+#endif //USE_W174_RAIN_SENSOR
 
 #ifdef USE_WIFI
   JsonObject wifidata = doc.createNestedObject("WiFi");
@@ -348,9 +372,13 @@ void setup() {
   initAnemometer();
 #endif //USE_DAVIS_SENSOR
 
-#ifdef USE_RAIN_SENSOR
-  initRainSensor();
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+  rg11_initRainSensor();
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+  w174_initRainSensor();
+#endif //USE_W174_RAIN_SENSOR
 
 #ifdef USE_TSL237_SENSOR
   initTSL237();
@@ -501,9 +529,13 @@ void loop() {
   updateDewheater();
 #endif // USE_DEW_HEATER
 
-#ifdef USE_RAIN_SENSOR
-  updateRainSensor();
-#endif //USE_RAIN_SENSOR
+#ifdef USE_RG11_RAIN_SENSOR
+  rg11_updateRainSensor();
+#endif //USE_RG11_RAIN_SENSOR
+
+#ifdef USE_W174_RAIN_SENSOR
+  w174_updateRainSensor();
+#endif //USE_W174_RAIN_SENSOR
 
   if (Serial.available() > 0) {
     ch = Serial.read();

@@ -282,7 +282,12 @@ The web interface contains a page to display a timelapse and recent images in a 
 ![Weather camera page](weatherradio/img/weathercam_page_480px.jpg)
 
 There are some helper scripts provided:
-* `camery.py` for shooting images and automatically adapting exposure time, ISO etc so that it can be regularly executed by a cron job.
+* `autoexposure.py` is a library for calculating optimal exposure setup for time lapse capturing.
+* `camery.py` for shooting images and automatically adapting exposure time, ISO etc so that it can be regularly executed by a cron job. During daylight, an image frequency of 60 seconds is feasible, during night time the underlying raspistill is too slow.
+* `imageconverter.py` is a service that converts captured frames to smaller sizes. It is designed to collaborate with both camera.py and timelapse.py.
+* `timelapse.py` is a time lapse service for shooting regularly images with a raspberry camera. It uses also the functions from autoexposure.py to adapt the exposure time. With this service it is possible to shoot an image every 30-45 seconds even with longer exposure times.
+* `timelapse-stop.sh` is a shell script to stop the time lapse service. Do not kill the time lapse process directly, since this may either fail or may block the camera device making it necessary to reboot the Raspberry.
+* `updatemedia.sh` is a script that creates time lapse videos and updates the image slider using wr_list_media.py and wr_video_create.py.
 * `wr_list_media.py` creates a JSON document that provides the image slider informations to the web page. It takes all image files from the media directory (option `-d`) and places them sorted in the image slider.
 * `wr_video_create.py` creates timelapse sequences from the captured images. Create a link called `html/media/timelapse_current.mp4` to display the video on the web page.
 

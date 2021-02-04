@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for shooting single images with automatic exposure adaption
@@ -13,21 +13,22 @@
 #
 #-----------------------------------------------------------------------
 
-import os
+import os, stat
 from datetime import datetime
 from pathlib import Path
-import ConfigParser
+from configparser import ConfigParser
+from pid.decorator import pidfile
+from pid import PidFileError
 from autoexposure import *
 
-inifile_name = os.path.dirname(os.path.realpath(__file__)) + '/camera.ini'
-
-def init_config():
-    config = ConfigParser.ConfigParser()
+def init_config(inifile_name):
+    config = ConfigParser(interpolation=None)
     config.optionxform = str
     # default values
     config.add_section('Camera')
     config.set('Camera', 'ExposureTime', '400') # 1/250 sec
     config.set('Camera', 'BaseDirectory', ".")
+    config.set('Camera', 'ConverterFIFO', "/tmp/imageconverter.fifo")
     config.set('Camera', 'ISOSpeedRatings', '50')
     config.set('Camera', 'Contrast', '0')
     config.set('Camera', 'Brightness', '50')
@@ -40,42 +41,63 @@ def init_config():
     config.set('Night', 'Saturation', '-80')
     config.set('Night', 'MaxExposure', '10000000')
     config.set('Night', 'MaxISO', '800')
+    
     config.read(inifile_name)
     return config
     
-now = datetime.now()
-config = init_config()
+@pidfile()
+def main():
+    inifile_name = os.path.dirname(os.path.realpath(__file__)) + '/camera.ini'
 
-dir = config.get('Camera', 'BaseDirectory') + '/' +  now.strftime("%Y-%m-%d")
+    now = datetime.now()
+    config = init_config(inifile_name)
 
-filename   = dir + "/" + now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
-exptime    = config.getint('Camera', 'ExposureTime')
-iso        = config.getint('Camera', 'ISOSpeedRatings')
-brightness = config.getint('Camera', 'Brightness')
-contrast   = config.getint('Camera', 'Contrast')
-saturation = config.getint('Camera', 'Saturation')
-opts       = config.get('Camera', 'Options')
+    dir = config.get('Camera', 'BaseDirectory')
 
-# ensure that the image directory exists
-if not Path(dir).exists():
-    Path(dir).mkdir(parents=True)
+    filename   = now.strftime("%Y-%m-%d_%H%M%S") + ".jpg"
+    fullname   = dir + '/' + filename
+    fifo       = config.get('Camera', 'ConverterFIFO')
+    exptime    = config.getint('Camera', 'ExposureTime')
+    iso        = config.getint('Camera', 'ISOSpeedRatings')
+    brightness = config.getint('Camera', 'Brightness')
+    contrast   = config.getint('Camera', 'Contrast')
+    saturation = config.getint('Camera', 'Saturation')
+    opts       = config.get('Camera', 'Options')
 
-# change to auto exposure for short exposure times
-expstr = "-ss %d" % (exptime) if exptime > 10000 else "-ex auto"
+    # ensure that the image directory exists
+    if not Path(dir).exists():
+        Path(dir).mkdir(parents=True)
 
-# shoot the image
-os.system("raspistill %s -ISO %d -br %d -co %d -sa %d %s -o %s"  % (opts, iso, brightness, contrast, saturation, expstr, filename))
+    # change to auto exposure for short exposure times
+    expstr = "-ss %d" % (exptime) if exptime > 10000 else "-ex auto"
 
-# calculate the optimal exposure time
-(realExpTime, brightness) = calibrateExpTime(filename, config)
+    # shoot the image
+    os.system("raspistill %s -ISO %d -br %d -co %d -sa %d %s -o %s"  % (opts, iso, brightness, contrast, saturation, expstr, fullname))
 
+    # calculate the optimal exposure time
+    (imgExpTime, imgBrightness) = calibrateExpTime(fullname, config)
 
-configfile = open(inifile_name, 'w')
-config.write(configfile)
-configfile.close()
+    # start converter process
+    if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
+        with open(fifo, 'w') as pipeout:
+            pipeout.write("%s\n" % filename)
+    else:
+        targetdir = dir + '/' + now.strftime("%Y-%m-%d")
+        target    = targetdir + '/' + filename
+        # ensure that the image directory exists
+        if not Path(targetdir).exists():
+            Path(targetdir).mkdir(parents=True)
+        # mv to target directory
+        os.rename(fullname, target)
 
-print "date=%s; time=%s; file=%s; ex=%d; iso=%d; bright=%s" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, realExpTime, iso, brightness)
+    configfile = open(inifile_name, 'w')
+    config.write(configfile)
+    configfile.close()
 
-#opts = "-awb greyworld -md 4 -ss 6000000 -ISO 800 -br 80 -co 100 -ex fixedfps -t 21000000 -tl 30000"
-#opts = "-q 100 -md 4 -ss 10000000 -ISO 200 -ex fixedfps"
+    print("date=%s; time=%s; file=%s; ex=%d; iso=%d; br=%s; sat=%d; co=%d img brightness=%d" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), filename, imgExpTime, iso, brightness, saturation, contrast, imgBrightness))
 
+if __name__ == "__main__":
+    try:
+        main()
+    except PidFileError:
+        print ("Capture still running")

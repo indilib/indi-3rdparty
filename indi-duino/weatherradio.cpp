@@ -62,6 +62,9 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 #define WEATHER_WIND_GUST       "WEATHER_WIND_GUST"
 #define WEATHER_WIND_SPEED      "WEATHER_WIND_SPEED"
 #define WEATHER_WIND_DIRECTION  "WEATHER_WIND_DIRECTION"
+#define WEATHER_RAIN_INTENSITY  "WEATHER_RAIN_INTENSITY"
+#define WEATHER_RAIN_VOLUME     "WEATHER_RAIN_VOLUME"
+#define WEATHER_WETNESS         "WEATHER_WETNESS"
 
 /**************************************************************************************
 **
@@ -181,6 +184,10 @@ bool WeatherRadio::initProperties()
     IUFillNumber(&sqmCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
     IUFillNumberVector(&sqmCalibrationNP, sqmCalibrationN, 2, getDeviceName(), "SQM_CALIBRATION", "SQM calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
 
+    IUFillNumber(&wetnessCalibrationN[0], "FACTOR", "Factor", "%.3f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&wetnessCalibrationN[1], "SHIFT", "Shift", "%.3f", -100, 100, 1, 0.0);
+    IUFillNumberVector(&wetnessCalibrationNP, wetnessCalibrationN, 2, getDeviceName(), "WETNESS_CALIBRATION", "Wetness calibr.", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
+
     IUFillNumber(&windDirectionCalibrationN[0], "OFFSET", "Offset", "%.3f", 0, 360, 1, 0.0);
     IUFillNumberVector(&windDirectionCalibrationNP, windDirectionCalibrationN, 1, getDeviceName(), "WIND_DIRECTION_CALIBRATION", "Wind direction", CALIBRATION_TAB, IP_RW, 0, IPS_OK);
 
@@ -207,6 +214,13 @@ bool WeatherRadio::initProperties()
     deviceConfig["Davis Anemometer"]["max speed"] = {"Wind speed (max, m/s)", WIND_GUST_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["Davis Anemometer"]["direction"] = {"Wind direction (deg)", WIND_DIRECTION_SENSOR, "%.0f", 0., 360.0, 1.0};
     deviceConfig["Davis Anemometer"]["rotations"] = {"Wind wheel rotations", INTERNAL_SENSOR, "%.0f", 0., 360.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["rain intensity"] = {"Rain intensity (mm/h)", RAIN_INTENSITY_SENSOR, "%.3f", 0., 1000.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["rain volume"]    = {"Rain volume (mm)", RAIN_VOLUME_SENSOR, "%.3f", 0., 10000.0, 1.0};
+    deviceConfig["RG11 Rain Sensor"]["count"]          = {"Bucket full count", INTERNAL_SENSOR, "%.0f", 0., 1000000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["rain intensity"] = {"Rain intensity (mm/h)", RAIN_INTENSITY_SENSOR, "%.3f", 0., 1000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["rain volume"]    = {"Rain volume (mm)", RAIN_VOLUME_SENSOR, "%.3f", 0., 10000.0, 1.0};
+    deviceConfig["W174 Rain Sensor"]["count"]          = {"Bucket full count", INTERNAL_SENSOR, "%.0f", 0., 1000000.0, 1.0};
+    deviceConfig["Water"]["wetness"]              = {"Wetness (%)", WETNESS_SENSOR, "%.1f", 0., 100.0, 0.1};
 
     LOG_DEBUG("Properties initialization finished successfully.");
     return true;
@@ -296,6 +310,32 @@ bool WeatherRadio::updateProperties()
             defineProperty(&windDirectionCalibrationNP);
             LOG_INFO("Wind direction sensor selections added.");
         }
+        if (sensorRegistry.rain_intensity.size() > 0)
+        {
+            addParameter(WEATHER_RAIN_INTENSITY, "Rain intensity (mm/h)", 0, 1, 10);
+            setCriticalParameter(WEATHER_RAIN_INTENSITY);
+            addSensorSelection(&rainIntensitySensorSP, sensorRegistry.rain_intensity, "RAIN_INTENSITY_SENSOR", "Rain Intensity Sensor");
+
+            // no calibration needed
+            LOG_INFO("Rain intensity sensor selection added.");
+        }
+        if (sensorRegistry.rain_volume.size() > 0)
+        {
+            addParameter(WEATHER_RAIN_VOLUME, "Rain volume (mm)", 0, 100000, 10);
+            addSensorSelection(&rainVolumeSensorSP, sensorRegistry.rain_volume, "RAIN_VOLUME_SENSOR", "Rain Volume Sensor");
+
+            // no calibration needed
+            LOG_INFO("Rain volume sensor selection added.");
+        }
+        if (sensorRegistry.wetness.size() > 0)
+        {
+            addParameter(WEATHER_WETNESS, "Wetness (%)", 0, 100, 10);
+            setCriticalParameter(WEATHER_WETNESS);
+            addSensorSelection(&wetnessSensorSP, sensorRegistry.wetness, "WETNESS_SENSOR", "Wetness Sensor");
+
+            defineNumber(&wetnessCalibrationNP);
+            LOG_INFO("Wetness sensor selection added.");
+        }
         for (size_t i = 0; i < rawDevices.size(); i++)
             defineProperty(&rawDevices[i]);
         LOG_INFO("Raw sensors added.");
@@ -318,6 +358,10 @@ bool WeatherRadio::updateProperties()
             deleteProperty(rawDevices[i].name);
 
         deleteProperty(resetArduinoSP.name);
+        deleteProperty(wetnessSensorSP.name);
+        deleteProperty(wetnessCalibrationNP.name);
+        deleteProperty(rainVolumeSensorSP.name);
+        deleteProperty(rainIntensitySensorSP.name);
         deleteProperty(windDirectionCalibrationNP.name);
         deleteProperty(sqmCalibrationNP.name);
         deleteProperty(temperatureCalibrationNP.name);
@@ -734,6 +778,16 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             return windDirectionCalibrationNP.s;
             LOG_DEBUG("Wind direction value calibration updated.");
         }
+        else if (strcmp(name, wetnessCalibrationNP.name) == 0)
+        {
+            IUUpdateNumber(&wetnessCalibrationNP, values, names, n);
+            weatherCalculator->wetnessCalibration.factor = values[0];
+            weatherCalculator->wetnessCalibration.shift  = values[1];
+            wetnessCalibrationNP.s = IPS_OK;
+            IDSetNumber(&wetnessCalibrationNP, nullptr);
+            return wetnessCalibrationNP.s;
+            LOG_DEBUG("Wetness value calibration updated.");
+        }
     }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
@@ -905,6 +959,42 @@ bool WeatherRadio::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             LOGF_DEBUG("Wind direction sensor selected: %s", selected);
             return (windDirectionSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, rainIntensitySensorSP.name) == 0)
+        {
+            // rain intensity sensor selected
+            IUUpdateSwitch(&rainIntensitySensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&rainIntensitySensorSP, selected);
+            currentSensors.rain_intensity = sensor;
+
+            LOGF_DEBUG("Rain intensity sensor selected: %s", selected);
+            return (rainIntensitySensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, rainVolumeSensorSP.name) == 0)
+        {
+            // rain volume sensor selected
+            IUUpdateSwitch(&rainVolumeSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&rainVolumeSensorSP, selected);
+            currentSensors.rain_volume = sensor;
+
+            LOGF_DEBUG("Rain intensity sensor selected: %s", selected);
+            return (rainVolumeSensorSP.s == IPS_OK);
+        }
+        else if (strcmp(name, wetnessSensorSP.name) == 0)
+        {
+            // wetness sensor selected
+            IUUpdateSwitch(&wetnessSensorSP, states, names, n);
+
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            sensor_name sensor = updateSensorSelection(&wetnessSensorSP, selected);
+            currentSensors.wetness = sensor;
+
+            LOGF_DEBUG("Wetness sensor selected: %s", selected);
+            return (wetnessSensorSP.s == IPS_OK);
         }
     }
     return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
@@ -1138,6 +1228,12 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         setParameterValue(WEATHER_WIND_SPEED, value);
     else if (currentSensors.wind_direction == sensor)
         setParameterValue(WEATHER_WIND_DIRECTION, weatherCalculator->calibratedWindDirection(value));
+    else if (currentSensors.rain_intensity == sensor)
+        setParameterValue(WEATHER_RAIN_INTENSITY, value);
+    else if (currentSensors.rain_volume == sensor)
+        setParameterValue(WEATHER_RAIN_VOLUME, value);
+    else if (currentSensors.wetness == sensor)
+        setParameterValue(WEATHER_WETNESS, weatherCalculator->calibrate(weatherCalculator->wetnessCalibration, value));
 }
 
 /**************************************************************************************
@@ -1173,6 +1269,15 @@ void WeatherRadio::registerSensor(WeatherRadio::sensor_name sensor, SENSOR_TYPE 
     case WIND_DIRECTION_SENSOR:
         sensorRegistry.wind_direction.push_back(sensor);
         break;
+    case RAIN_INTENSITY_SENSOR:
+        sensorRegistry.rain_intensity.push_back(sensor);
+        break;
+    case RAIN_VOLUME_SENSOR:
+        sensorRegistry.rain_volume.push_back(sensor);
+        break;
+    case WETNESS_SENSOR:
+        sensorRegistry.wetness.push_back(sensor);
+        break;
     case INTERNAL_SENSOR:
         // do nothing
         break;
@@ -1192,6 +1297,7 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigNumber(fp, &humidityCalibrationNP);
     IUSaveConfigNumber(fp, &sqmCalibrationNP);
     IUSaveConfigNumber(fp, &windDirectionCalibrationNP);
+    IUSaveConfigNumber(fp, &wetnessCalibrationNP);
     IUSaveConfigSwitch(fp, &temperatureSensorSP);
     IUSaveConfigSwitch(fp, &pressureSensorSP);
     IUSaveConfigSwitch(fp, &humiditySensorSP);
@@ -1202,6 +1308,9 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &windGustSensorSP);
     IUSaveConfigSwitch(fp, &windSpeedSensorSP);
     IUSaveConfigSwitch(fp, &windDirectionSensorSP);
+    IUSaveConfigSwitch(fp, &rainIntensitySensorSP);
+    IUSaveConfigSwitch(fp, &rainVolumeSensorSP);
+    IUSaveConfigSwitch(fp, &wetnessSensorSP);
     if (ParametersRangeNP != nullptr)
         IUSaveConfigNumber(fp, ParametersRangeNP);
     IUSaveConfigNumber(fp, &ttyTimeoutNP);
