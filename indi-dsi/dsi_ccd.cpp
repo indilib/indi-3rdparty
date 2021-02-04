@@ -228,7 +228,7 @@ bool DSICCD::initProperties()
         // DSI III has a RGB color matrix
         IUSaveText(&BayerT[0], "0");
         IUSaveText(&BayerT[1], "0");
-        IUSaveText(&BayerT[2], "RGGB");
+        IUSaveText(&BayerT[2], "GBRG");
     }
 
     return true;
