@@ -901,6 +901,8 @@ bool ASICCD::StopStreaming()
 
     setThreadRequest(StateAbort);
 
+    waitUntil(StateIdle);
+
     //    pthread_mutex_lock(&condMutex);
     //    threadRequest = StateAbort;
     //    pthread_cond_signal(&cv);
