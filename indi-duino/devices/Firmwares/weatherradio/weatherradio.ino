@@ -155,7 +155,7 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2) + // Water sensor
-                      JSON_OBJECT_SIZE(4) * 2; // Rain sensors
+                  2 * JSON_OBJECT_SIZE(4);  // Rain sensors
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -259,8 +259,8 @@ String getCurrentConfig() {
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(1) + // Water sensor
-                      JSON_OBJECT_SIZE(3) + // Rain Sensor
-                      JSON_OBJECT_SIZE(3) + // WiFi parameters
+                  2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
+                      JSON_OBJECT_SIZE(4) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(4) + // OTA
                       JSON_OBJECT_SIZE(5) + // Dew heater
@@ -310,9 +310,10 @@ String getCurrentConfig() {
   JsonObject wifidata = doc.createNestedObject("WiFi");
   wifidata["SSID"] = WiFi.SSID();
   wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-  if (WiFi.status() == WL_CONNECTED)
+  if (WiFi.status() == WL_CONNECTED) {
     wifidata["IP"]        = WiFi.localIP().toString();
-  else
+    wifidata["rssi"]      = WiFi.RSSI();
+  } else
     wifidata["IP"]        = "";
 #endif
 

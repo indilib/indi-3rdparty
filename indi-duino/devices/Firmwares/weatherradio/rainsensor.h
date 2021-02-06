@@ -53,7 +53,7 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
     // update total rain fall volume
     data.rainVolume += bucket_size * data.intervalCount;
     // update event frequency
-    data.eventFrequency = data.count * 60000 / elapsed;
+    data.eventFrequency = data.intervalCount * 60000.0 / elapsed;
     // clear interval data
     data.startMeasuring = now;
     data.intervalCount = 0;
