@@ -289,12 +289,18 @@ bool DSICCD::UpdateCCDBin(int hor, int ver)
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set1x1Binning();
+        // DSI III 1x1 binning results in a GBRG frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "GBRG");
         return true;
     }
     else if ((hor == 2) && (ver == 2)) // ... and 2x2 binning is supported
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set2x2Binning();
+        // DSI III 1x1 binning results in a consolidated mono frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "");
         return true;
     }
     else
