@@ -104,6 +104,8 @@ def readWeather(indi, verbose=False):
             read_indi_value(result, 'WindSpeed', weather, WEATHER_WIND_SPEED)
             read_indi_value(result, 'WindGust', weather, WEATHER_WIND_GUST)
             read_indi_value(result, 'WindDirection', weather, WEATHER_WIND_DIRECTION)
+            read_indi_value(result, 'RaindropFrequency', weather, WEATHER_RAIN_DROPS)
+            read_indi_value(result, 'RainVolume', weather, WEATHER_RAIN_VOLUME)
             if verbose:
                 print ("Reading weather sensor values... (succeeded)")
 
