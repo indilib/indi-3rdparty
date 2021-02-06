@@ -329,8 +329,8 @@ bool QHYCCD::initProperties()
 
 
     //NEW CODE - Add support for overscan/calibration area 
-    IUFillSwitch(&OverscanAreaS[0], "INDI_ENABLED", "Include", (IgnoreOverscanArea ? ISS_OFF : ISS_ON));
-    IUFillSwitch(&OverscanAreaS[1], "INDI_DISABLED", "Ignore", (IgnoreOverscanArea ? ISS_ON : ISS_OFF));
+    IUFillSwitch(&OverscanAreaS[0], "INDI_ENABLED", "Include", ISS_OFF);
+    IUFillSwitch(&OverscanAreaS[1], "INDI_DISABLED", "Ignore", ISS_ON);
     IUFillSwitchVector(&OverscanAreaSP, OverscanAreaS, 2, getDeviceName(), "OVERSCAN_MODE", "Overscan Area", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 0, (IgnoreOverscanArea ? IPS_IDLE : IPS_OK));
 
@@ -605,8 +605,7 @@ bool QHYCCD::updateProperties()
                     ReadModeN[0].value = currentReadMode;
                     
                     //NEW CODE - Query and display read mode name for more informative console output 
-                    char currentReadModeName[255];
-                    strcpy(currentReadModeName,"");
+                    char currentReadModeName[255] = {0};
                     int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
                     if (retVal == QHYCCD_SUCCESS) {
                         LOGF_INFO("Current read mode is: %s", currentReadModeName);
@@ -1852,7 +1851,11 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             bool isIgnored = (OverscanAreaS[INDI_ENABLED].s == ISS_OFF); //Overscan Area included switch is 'off', thus excluded
             
             if (isIgnored == IgnoreOverscanArea)
+            {
+                OverscanAreaSP.s = IPS_OK;
+                IDSetSwitch(&OverscanAreaSP, nullptr);
                 return true;
+            }
 
             IgnoreOverscanArea = isIgnored;
             
@@ -1860,8 +1863,6 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             OverscanAreaS[INDI_ENABLED].s = IgnoreOverscanArea ? ISS_OFF : ISS_ON;
 
             OverscanAreaSP.s = IgnoreOverscanArea ? IPS_IDLE : IPS_OK;
-
-            IDSetSwitch(&OverscanAreaSP, nullptr);
 
             if (IgnoreOverscanArea)
             {
@@ -2067,7 +2068,7 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                 
                 currentReadMode = newReadMode;
                 
-                char currentReadModeName[255];
+                char currentReadModeName[255] = {0};
                 strcpy(currentReadModeName,"");
                 int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
                 if (retVal == QHYCCD_SUCCESS) {
