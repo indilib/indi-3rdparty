@@ -1,3 +1,10 @@
+indi-duino (1.12) buster; urgency=medium
+
+  * rain drops counting feature added to INDI service
+  * several minor bug fixes
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 06 Feb 2021 14:05:14 +0100
+
 indi-duino (1.11) buster; urgency=medium
 
   * Multiple rain sensors may be used in parallel
