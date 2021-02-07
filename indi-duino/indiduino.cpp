@@ -27,6 +27,7 @@
 
 #include "indiduino.h"
 #include "connectionplugins/connectionserial.h"
+#include "connectionplugins/connectiontcp.h"
 
 #include "config.h"
 #include "firmata.h"
@@ -331,8 +332,28 @@ void indiduino::TimerHit()
     if (sec_since_reply > max_delay)
     {
         LOGF_ERROR("No reply from the device for %d secs, disconnecting", max_delay);
-        setConnected(false, IPS_ALERT);
+        setConnected(false, IPS_OK);
+        delete sf;
+        sf = NULL;
         Disconnect();
+
+        if (getActiveConnection() == tcpConnection)
+        {
+            // handle reset of the device
+            // serial connection survives but tcp must be reconnected
+            bool rc = Connect();
+            if (rc)
+            {
+                // Connection is successful, set it to OK and updateProperties.
+                setConnected(true, IPS_OK);
+                updateProperties();
+            }
+            else {
+                setConnected(false, IPS_ALERT);
+            }
+            return;
+        }
+        setConnected(false, IPS_ALERT);
         return;
     }
     if (sec_since_reply > 10)
@@ -395,6 +416,10 @@ bool indiduino::initProperties()
     serialConnection->setDefaultPort("/dev/ttyACM0");
     registerConnection(serialConnection);
 
+    tcpConnection = new Connection::TCP(this);
+    tcpConnection->registerHandshake([&]() { return Handshake(); });
+    registerConnection(tcpConnection);
+
     addDebugControl();
     addPollPeriodControl();
     return true;
@@ -408,7 +433,15 @@ bool indiduino::Handshake()
         return true;
     }
 
-    sf = new Firmata(serialConnection->getPortFD());
+    int PortFD;
+    if (getActiveConnection() == serialConnection)
+        PortFD = serialConnection->getPortFD();
+    else if (getActiveConnection() == tcpConnection)
+        PortFD = tcpConnection->getPortFD();
+    else
+        return false;
+
+    sf = new Firmata(PortFD);
     if (!sf->portOpen) {
         delete sf;
         sf = NULL;
@@ -422,6 +455,33 @@ bool indiduino::updateProperties()
 {
     if (isConnected())
     {
+        if (!sf)
+        {
+            LOG_ERROR("Firmata not connected in updateProperties().");
+            return false;
+        }
+
+        if (sf->initState() != 0)
+        {
+            LOG_ERROR("Failed to get Arduino state");
+            IDSetSwitch(getSwitch("CONNECTION"), "Fail to get Arduino state");
+            delete sf;
+            this->serialConnection->Disconnect();
+            return false;
+        }
+        LOG_INFO("Arduino board connected.");
+        LOGF_INFO("FIRMATA version:%s", sf->firmata_name);
+        IDSetSwitch(getSwitch("CONNECTION"), "CONNECTED. FIRMATA version:%s", sf->firmata_name);
+        if (!setPinModesFromSKEL())
+        {
+            LOG_ERROR("Failed to map Arduino pins, check skeleton file syntax.");
+            IDSetSwitch(getSwitch("CONNECTION"), "Failed to map Arduino pins, check skeleton file syntax.");
+            delete sf;
+            this->serialConnection->Disconnect();
+            return false;
+        }
+
+
         // Mapping the controller according to the properties previously read from the XML file
         // We only map controls for pin of type AO and SERVO
         for (int numiopin = 0; numiopin < MAX_IO_PIN; numiopin++)
@@ -454,6 +514,12 @@ bool indiduino::updateProperties()
         }
         // defineProperty(&TestStateSP); Switch only for testing
     }
+    else
+    {
+        delete sf;
+        sf = NULL;
+        LOG_INFO("Arduino board disconnected.");
+    }
     controller->updateProperties();
     return true;
 }
@@ -482,23 +548,10 @@ bool indiduino::ISNewText(const char *dev, const char *name, char *texts[], char
     if (strcmp(dev, getDeviceName()))
         return false;
 
-    ITextVectorProperty *tProp = getText(name);
-    // Device Port Text
-    if (!strcmp(tProp->name, "DEVICE_PORT"))
-    {
-        if (IUUpdateText(tProp, texts, names, n) < 0)
-            return false;
-
-        tProp->s = IPS_OK;
-        tProp->s = IPS_IDLE;
-        IDSetText(tProp, "Port updated.");
-
-        return true;
-    }
-
     controller->ISNewText(dev, name, texts, names, n);
 
-    return false;
+    return DefaultDevice::ISNewText(dev, name, texts, names, n);
+
 }
 
 /**************************************************************************************
@@ -712,50 +765,6 @@ bool indiduino::ISNewBLOB(const char *dev, const char *name, int sizes[], int bl
 /**************************************************************************************
 **
 ***************************************************************************************/
-bool indiduino::Connect()
-{
-    //This way it tries to connect using the Serial connection method with autosearch capability.
-    this->serialConnection->Connect();
-
-    if (sf)
-    {
-        if (sf->initState() != 0)
-        {
-            LOG_ERROR("Failed to get Arduino state");
-            IDSetSwitch(getSwitch("CONNECTION"), "Fail to get Arduino state");
-            delete sf;
-            this->serialConnection->Disconnect();
-            return false;
-        }
-        LOG_INFO("Arduino board connected.");
-        LOGF_INFO("FIRMATA version:%s", sf->firmata_name);
-        IDSetSwitch(getSwitch("CONNECTION"), "CONNECTED. FIRMATA version:%s", sf->firmata_name);
-        if (!setPinModesFromSKEL())
-        {
-            LOG_ERROR("Failed to map Arduino pins, check skeleton file syntax.");
-            IDSetSwitch(getSwitch("CONNECTION"), "Failed to map Arduino pins, check skeleton file syntax.");
-            delete sf;
-            this->serialConnection->Disconnect();
-            return false;
-        }
-        else
-        {
-            SetTimer(getCurrentPollingPeriod());
-            return true;
-        }
-    }
-    return false;
-}
-
-bool indiduino::Disconnect()
-{
-    delete sf;
-    this->serialConnection->Disconnect();
-    LOG_INFO("Arduino board disconnected.");
-    IDSetSwitch(getSwitch("CONNECTION"), "DISCONNECTED");
-    return true;
-}
-
 const char *indiduino::getDefaultName()
 {
     return "Arduino";
