@@ -223,14 +223,6 @@ bool DSICCD::initProperties()
 
     setDefaultPollingPeriod(250);
 
-    if (dsi->getCcdChipName() == "ICX285AQ")
-    {
-        // DSI III has a RGB color matrix
-        IUSaveText(&BayerT[0], "0");
-        IUSaveText(&BayerT[1], "0");
-        IUSaveText(&BayerT[2], "GBRG");
-    }
-
     return true;
 }
 
@@ -277,6 +269,8 @@ void DSICCD::setupParams()
 
     /* calculate how much memory we need for the primary CCD buffer */
     PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8);
+
+    UpdateCCDBin(PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
 }
 
 /*******************************************************************************
