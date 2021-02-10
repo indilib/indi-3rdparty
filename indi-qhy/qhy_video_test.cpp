@@ -174,18 +174,6 @@ int main(int, char **)
         return 1;
     }
 
-    // initialize camera
-    rc = InitQHYCCD(pCamHandle);
-    if (QHYCCD_SUCCESS == rc)
-    {
-        fprintf(stderr, "InitQHYCCD success.\n");
-    }
-    else
-    {
-        fprintf(stderr, "InitQHYCCD faililure, error: %d\n", rc);
-        return 1;
-    }
-
     // get overscan area
     rc = GetQHYCCDOverScanArea(pCamHandle, &overscanStartX, &overscanStartY, &overscanSizeX, &overscanSizeY);
     if (QHYCCD_SUCCESS == rc)
@@ -274,6 +262,15 @@ int main(int, char **)
     if (rc != QHYCCD_SUCCESS)
     {
         fprintf(stderr, "SetQHYCCDStreamMode failed: %d", rc);
+    }
+
+    // initialize camera after setting stream mode
+    rc = InitQHYCCD(pCamHandle);
+    if (QHYCCD_SUCCESS == rc) {
+        printf("InitQHYCCD success.\n");
+    } else {
+        printf("InitQHYCCD faililure, error: %d\n", rc);
+        return 1;
     }
 
     // check traffic
