@@ -1899,9 +1899,8 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 SetCCDParams(effectiveROI.subW, effectiveROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(),
                              PrimaryCCD.getPixelSizeX());
 
-                // Image Settings
-                // The true frame origin is at (effectiveROI.subX ,effectiveROI.subY).
-                // This vector that needs to be used for offset-correction when taking exposures or streaming while ignoring overscan areas.
+                //Image Settings
+                //The true frame origin is at (effectiveROI.subX ,effectiveROI.subY), need to correct for this offset when taking exposure or streaming.
                 UpdateCCDFrame(0, 0, effectiveROI.subW, effectiveROI.subH);
 
             }
@@ -2081,10 +2080,23 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             //NEW CODE - Fix read mode handling
             IUUpdateNumber(&ReadModeNP, values, names, n);
-            uint32_t newReadMode = static_cast<uint32_t>(ReadModeN[0].value);
+            uint32_t newReadMode = ReadModeN[0].value;
+
+            //Check if camera already is in the requested read mode
+            int rc = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
+            if (rc == QHYCCD_SUCCESS)
+            {
+                if (newReadMode == currentReadMode)
+                {
+
+                    LOGF_INFO("Camera is already in read mode: %u", currentReadMode);
+                    return true;
+                }
+            }
 
             // Set readout mode
-            if (newReadMode != currentQHYReadMode)
+            rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
+            if (rc == QHYCCD_SUCCESS)
             {
                 /* change readout mode */
                 int rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
@@ -2117,6 +2129,22 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     ReadModeN[0].value = currentQHYReadMode;
                     LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
+#endif
+
+                //reinitialized the camera paramters...
+                QHYCCD::setupParams();
+
+                ReadModeNP.s = IPS_OK;
+                saveConfig(true, ReadModeNP.name);
+
+            }
+            else
+            {
+                ReadModeNP.s = IPS_ALERT;
+                //TODO - currentReadMode?
+                //ReadModeN[0].value = currentReadMode;
+                ReadModeN[0].value = newReadMode;
+                LOGF_ERROR("Failed to update read mode: %d", rc);
             }
             else
             {
