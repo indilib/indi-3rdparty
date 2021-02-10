@@ -279,7 +279,9 @@ IPState GPSD::updateGPS()
             break;
     }
 
-#if GPSD_API_MAJOR_VERSION >= 10
+#if GPSD_API_MAJOR_VERSION >= 11
+    if (gpsData->fix.status == STATUS_NO_FIX && gpsData->fix.mode < MODE_2D)
+#elif GPSD_API_MAJOR_VERSION >= 10
     if (gpsData->fix.status == STATUS_NO_FIX)
 #else  
     if (gpsData->status == STATUS_NO_FIX)
