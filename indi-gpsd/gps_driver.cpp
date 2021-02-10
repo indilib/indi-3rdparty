@@ -280,11 +280,13 @@ IPState GPSD::updateGPS()
     }
 
 #if GPSD_API_MAJOR_VERSION >= 11
-    if (gpsData->fix.status == STATUS_NO_FIX && gpsData->fix.mode < MODE_2D)
+    // From gpsd v3.22 STATUS_NO_FIX may also mean unknown fix state, can
+    // only tell from the mode value
+    if (gpsData->fix.mode < MODE_2D)
 #elif GPSD_API_MAJOR_VERSION >= 10
-    if (gpsData->fix.status == STATUS_NO_FIX)
+    if (gpsData->fix.status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D)
 #else  
-    if (gpsData->status == STATUS_NO_FIX)
+    if (gpsData->status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D )
 #endif
     {
         // We have no fix and there is no point in further processing.
@@ -296,24 +298,6 @@ IPState GPSD::updateGPS()
         GPSstatusTP.s = IPS_BUSY;
         IDSetText(&GPSstatusTP, nullptr);
         return IPS_BUSY;
-    }
-    else
-    {
-        // We may have a fix. Check if fix structure contains proper fix.
-        // We require at least 2D fix - the altitude is not so crucial (?)
-        if (gpsData->fix.mode < MODE_2D)
-        {
-            // The position is not realy measured yet - we have no valid data
-            // Keep looking
-            IUSaveText(&GPSstatusT[0], "NO FIX");
-            if (GPSstatusTP.s == IPS_OK)
-            {
-                LOG_WARN("GPS fix lost.");
-            }
-            GPSstatusTP.s = IPS_BUSY;
-            IDSetText(&GPSstatusTP, nullptr);
-            return IPS_BUSY;
-        }
     }
 
     // detect gps fix showing up after not being avaliable
