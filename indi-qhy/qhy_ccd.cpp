@@ -851,7 +851,38 @@ bool QHYCCD::Connect()
         {
             HasReadMode = true;
             //NEW CODE - format modifier %zu --> %u
-            LOGF_INFO("Number of read modes: %u", readModes);
+            LOGF_INFO("Number of read modes: %u", numReadModes);
+        }
+
+        readModeInfo = new QHYReadModeInfo[numReadModes];
+
+        for (uint32_t rm = 0; rm < numReadModes; rm++)
+        {
+            readModeInfo[rm].id = rm;
+            ret = GetQHYCCDReadModeName(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].label[0]);
+            if (ret == QHYCCD_SUCCESS) {
+                LOGF_INFO("Mode %d: %s\n", readModeInfo[rm].id, readModeInfo[rm].label);
+            } else {
+                LOGF_INFO("Failed to obtain read mode name for modeNumber: %d\n", readModeInfo[rm].id);
+                strcpy(readModeInfo[rm].label, "UNKNOWN");
+            }
+            ret = GetQHYCCDReadModeResolution(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].subW,
+                &readModeInfo[rm].subH);
+            if (ret == QHYCCD_SUCCESS) {
+                LOGF_INFO("Sensor resolution for mode %s: %dx%d px\n", readModeInfo[rm].label,
+                    readModeInfo[rm].subW, readModeInfo[rm].subH);
+            } else {
+                LOGF_WARN("Failed to read mode resolution name for modeNumber: %d\n", readModeInfo[rm].id);
+                readModeInfo[rm].subW = readModeInfo[rm].subH = 0;
+            }
+        }
+
+        //Correctly initialize current read mode
+        ret = GetQHYCCDReadMode(m_CameraHandle, &currentQHYReadMode);
+        if (ret == QHYCCD_SUCCESS && numReadModes > 1)
+        {
+            LOGF_INFO("Current read mode: %s (%dx%d)\n", readModeInfo[currentQHYReadMode].label,
+                readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -1155,7 +1186,10 @@ bool QHYCCD::Disconnect()
 bool QHYCCD::setupParams()
 {
 
-    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+
+    LOG_DEBUG("setup params\n");
+
+   //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
 
@@ -1845,8 +1879,9 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 SetCCDParams(effectiveROI.subW, effectiveROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(),
                              PrimaryCCD.getPixelSizeX());
 
-                //Image Settings
-                //The true frame origin is at (effectiveROI.subX ,effectiveROI.subY), need to correct for this offset when taking exposure or streaming.
+                // Image Settings
+                // The true frame origin is at (effectiveROI.subX ,effectiveROI.subY).
+                // This vector that needs to be used for offset-correction when taking exposures or streaming while ignoring overscan areas.
                 UpdateCCDFrame(0, 0, effectiveROI.subW, effectiveROI.subH);
 
             }
@@ -2025,60 +2060,15 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         else if (!strcmp(name, ReadModeNP.name))
         {
             //NEW CODE - Fix read mode handling
-            uint32_t currentReadMode;
 
             IUUpdateNumber(&ReadModeNP, values, names, n);
-            uint32_t newReadMode = ReadModeN[0].value;
-
-            //Check if camera already is in the requested read mode
-            int rc = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
-            if (rc == QHYCCD_SUCCESS)
-            {
-                if (newReadMode == currentReadMode)
-                {
-
-                    LOGF_INFO("Camera is already in read mode: %u", currentReadMode);
-                    return true;
-                }
-            }
+            uint32_t newReadMode = static_cast<uint32_t>(ReadModeN[0].value);
 
             // Set readout mode
-            rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
-            if (rc == QHYCCD_SUCCESS)
+            if (newReadMode != currentQHYReadMode)
             {
-
-                currentReadMode = newReadMode;
-
-                char currentReadModeName[255] = {0};
-                strcpy(currentReadModeName, "");
-                int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
-                if (retVal == QHYCCD_SUCCESS)
-                {
-                    LOGF_INFO("Read mode is now updated to: %s", currentReadModeName);
-                }
-                else
-                {
-                    LOGF_INFO("Read mode is now updated to: %u", currentReadMode);
-                }
-
-                //Reinitialize camera to get new chip characteristics
-                rc = InitQHYCCD(m_CameraHandle);
-                if (rc != QHYCCD_SUCCESS)
-                {
-                    LOGF_ERROR("Init Camera failed (%d)", rc);
-                    return false;
-                }
-
-
-                //NEW CODE - Fix read mode handling, move to setupParams()
-#if 0
-                uint32_t nbuf, imagew, imageh, bpp;
-                if (isSimulation())
-                {
-                    pixelh = pixelw = 5.4;
-                    bpp             = 8;
-                }
-                else
+                int rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
+                if (rc == QHYCCD_SUCCESS)
                 {
 
                     //Reinitialize camera to get new chip characteristics
@@ -2109,22 +2099,6 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     ReadModeN[0].value = newReadMode;
                     LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
-#endif
-
-                //reinitialized the camera paramters...
-                QHYCCD::setupParams();
-
-                ReadModeNP.s = IPS_OK;
-                saveConfig(true, ReadModeNP.name);
-
-            }
-            else
-            {
-                ReadModeNP.s = IPS_ALERT;
-                //TODO - currentReadMode?
-                //ReadModeN[0].value = currentReadMode;
-                ReadModeN[0].value = newReadMode;
-                LOGF_ERROR("Failed to update read mode: %d", rc);
             }
 
             IDSetNumber(&ReadModeNP, nullptr);
