@@ -2371,9 +2371,11 @@ bool QHYCCD::StartStreaming()
     //SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
     if (currentQHYStreamMode == 0  && !isSimulation())
     {
-        //LOG_INFO("Start streaming\n");
+        //LOG_INFO("Start streaming\n"); //DEBUG
         currentQHYStreamMode = 1;
     	SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        // FIX: some cameras may need init again to start streaming,.
+        // This code structure was also updated in SDK 21.02.01
     	ret = InitQHYCCD(m_CameraHandle);
     	if(ret != QHYCCD_SUCCESS)
     	{
@@ -2441,7 +2443,8 @@ bool QHYCCD::StartStreaming()
         Streamer->setPixelFormat(qhyFormat, PrimaryCCD.getBPP());
     }
 
-    //LOG_INFO("start live mode\n");
+    //LOG_INFO("start live mode\n"); //DEBUG
+    
     LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS)", m_ExposureRequest, Streamer->getTargetFPS());
     BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
@@ -2463,7 +2466,8 @@ bool QHYCCD::StopStreaming()
     }
     pthread_mutex_unlock(&condMutex);
     StopQHYCCDLive(m_CameraHandle);
-    //LOG_INFO("stopped live mode\n");
+    
+    //LOG_INFO("stopped live mode\n"); //DEBUG
 
     //if (HasUSBSpeed)
     //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
@@ -2472,8 +2476,11 @@ bool QHYCCD::StopStreaming()
 
     currentQHYStreamMode = 0;
     SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+    
+    // FIX: Helps for cleaner teardown and prevents camera from staling
     InitQHYCCD(m_CameraHandle);
-    //LOG_INFO("Stopped streaming\n");
+    
+    //LOG_INFO("Stopped streaming\n");  //DEBUG
 
     // Try to set 16bit mode if supported back.
     SetQHYCCDBitsMode(m_CameraHandle, 16);
@@ -2539,7 +2546,7 @@ void *QHYCCD::imagingThreadEntry()
 void QHYCCD::streamVideo()
 {
     uint32_t ret = 0, w, h, bpp, channels;
-    uint32_t t_start = time(NULL), frames = 0;
+    uint32_t t_start = time(NULL), frames = 0; //DEBUG
     while (m_ThreadRequest == StateStream)
     {
         pthread_mutex_unlock(&condMutex);
@@ -2563,6 +2570,7 @@ void QHYCCD::streamVideo()
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
                 decodeGPSHeader();
 
+            //DEBUG 
             if(!frames)
                 LOG_INFO("Receiving frames ...");
             if(!(++frames%30))
