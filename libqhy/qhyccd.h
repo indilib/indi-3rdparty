@@ -881,3 +881,5 @@ EXPORTC void STDCALL QHYCCD_fpga_reset();
 /// ----------------------------------
 
 void call_pnp_event();
+void call_data_event_live(char *id, uint8_t *imgdata);
+void call_transfer_event_error();
