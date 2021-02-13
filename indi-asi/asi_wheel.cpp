@@ -295,6 +295,10 @@ bool ASIWHEEL::initProperties()
     IUFillSwitchVector(&UniDirectionalSP, UniDirectionalS, 2, getDeviceName(), "FILTER_UNIDIRECTIONAL_MOTION", "Uni Direction",
                        MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    IUFillSwitch(&CalibrateS[0], "CALIBRATE", "Calibrate", ISS_OFF);
+    IUFillSwitchVector(&CalibrateSP, CalibrateS, 1, getDeviceName(), "FILTER_CALIBRATION", "Calibrate",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
+
     addAuxControls();
     setDefaultPollingPeriod(250);
     return true;
@@ -313,9 +317,13 @@ bool ASIWHEEL::updateProperties()
             UniDirectionalS[INDI_DISABLED].s = isUniDirection ? ISS_OFF : ISS_ON;
         }
         defineProperty(&UniDirectionalSP);
+        defineProperty(&CalibrateSP);
     }
     else
+    {
         deleteProperty(UniDirectionalSP.name);
+        deleteProperty(CalibrateSP.name);
+    }
 
     return true;
 }
@@ -339,6 +347,28 @@ bool ASIWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 UniDirectionalSP.s = IPS_ALERT;
             }
             IDSetSwitch(&UniDirectionalSP, nullptr);
+            return true;
+        }
+        if (!strcmp(name, CalibrateSP.name))
+        {
+            CalibrateS[0].s = ISS_OFF;
+            CalibrateSP.s   = IPS_BUSY;
+            IDSetSwitch(&CalibrateSP, nullptr);
+
+            LOGF_DEBUG("Calibrating EFW %d", fw_id);
+            EFW_ERROR_CODE rc = EFWCalibrate(fw_id);
+
+            if (rc == EFW_SUCCESS)
+            {
+                LOGF_DEBUG("Successfully calibrated EFW %d", fw_id);
+                CalibrateSP.s = IPS_OK;
+            }
+            else
+            {
+                LOGF_ERROR("%(): EFWCalibrate = %d", __FUNCTION__, rc);
+                CalibrateSP.s = IPS_ALERT;
+            }
+            IDSetSwitch(&CalibrateSP, nullptr);
             return true;
         }
     }

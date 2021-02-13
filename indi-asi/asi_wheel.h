@@ -55,8 +55,13 @@ class ASIWHEEL : public INDI::FilterWheel
 
     private:
 
+        // Unidirectional
         ISwitchVectorProperty UniDirectionalSP;
         ISwitch UniDirectionalS[2];
+
+        // Calibrate
+        ISwitchVectorProperty CalibrateSP;
+        ISwitch CalibrateS[1];
 
     private:
         int fw_id = -1;
