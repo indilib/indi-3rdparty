@@ -21,7 +21,7 @@ include(CMakeCommon)
 
 set(GPIO_LIBRARIES "pigpiod_if2.so")
 
-################ Astroberry PWM ################
+################ ASI Power ################
 set(indi_asi_power_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/asipower.cpp
    )

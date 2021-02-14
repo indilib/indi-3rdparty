@@ -107,7 +107,7 @@ bool IndiAsiPower::Connect()
     Device1SP.s=IPS_BUSY;
     IDSetSwitch(&Device1SP, nullptr);
 
-    DEBUG(INDI::Logger::DBG_SESSION, "Astroberry PWM connected successfully.");
+    DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
     return true;
 }
 bool IndiAsiPower::Disconnect()
@@ -119,12 +119,12 @@ bool IndiAsiPower::Disconnect()
     Device1SP.s=IPS_IDLE;
     IDSetSwitch(&Device1SP, nullptr);
 
-    DEBUG(INDI::Logger::DBG_SESSION, "Astroberry PWM disconnected successfully.");
+    DEBUG(INDI::Logger::DBG_SESSION, "ASI Power disconnected successfully.");
     return true;
 }
 const char * IndiAsiPower::getDefaultName()
 {
-        return (char *)"Astroberry PWM";
+        return (char *)"ASI Power";
 }
 bool IndiAsiPower::initProperties()
 {
