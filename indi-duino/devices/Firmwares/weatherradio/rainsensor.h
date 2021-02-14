@@ -19,8 +19,8 @@ struct rainsensor_data {
   unsigned long startMeasuring; // start time of the measuring interval
   unsigned int intervalCount;   // counter for "bucket full" events since startMeasuring
   unsigned int count;           // overall counter for "bucket full" or "drop detected" events
-  float rainVolume;            // overall rain fall measured in mm
-  float eventFrequency;         // frequency of rain events ("bucket full" or "drop detected") in events/min
+  float rainVolume;             // overall rain fall measured in mm
+  unsigned int eventFrequency;  // frequency of rain events ("bucket full" or "drop detected") in events/min
 };
 
 
@@ -53,7 +53,7 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
     // update total rain fall volume
     data.rainVolume += bucket_size * data.intervalCount;
     // update event frequency
-    data.eventFrequency = data.intervalCount * 60000.0 / elapsed;
+    data.eventFrequency = round(data.intervalCount * 60000.0 / elapsed);
     // clear interval data
     data.startMeasuring = now;
     data.intervalCount = 0;
