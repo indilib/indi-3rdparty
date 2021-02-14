@@ -136,6 +136,7 @@ bool IndiAsiPower::initProperties()
 {
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
+    INDI::DefaultDevice::addDebugControl();
 
     std::string dev="DEV";
     std::string port="Port ";
@@ -155,9 +156,7 @@ bool IndiAsiPower::initProperties()
     
         IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle", "%0.0f", 0, max_pwm_duty, 1, 0);
         IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), "Duty Cycle", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
-    
-        defineProperty(&DeviceSP[i]);
-    }
+        }
     loadConfig();
 
     return true;
@@ -172,6 +171,7 @@ bool IndiAsiPower::updateProperties()
         // We're connected
         for(int i=0; i<n_gpio_pin; i++)
         {
+            defineProperty(&DeviceSP[i]);
             defineProperty(&OnOffSP[i]);
             defineProperty(&DutyCycleNP[i]);
         }
@@ -181,6 +181,7 @@ bool IndiAsiPower::updateProperties()
         // We're disconnected
         for(int i=0; i<n_gpio_pin; i++)
         {
+            deleteProperty(DeviceSP[i].name);
             deleteProperty(OnOffSP[i].name);
             deleteProperty(DutyCycleNP[i].name);
         }
@@ -216,18 +217,18 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 {
                     DutyCycleNP[i].s=IPS_ALERT;
                     IDSetNumber(&DutyCycleNP[i], nullptr);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "Cannot alter duty cycle for device %s", dev_type[m_type[i]]);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "Cannot alter duty cycle on %s %s", name, dev_type[m_type[i]].c_str());
                     return false;
                  }
                 IUUpdateNumber(&DutyCycleNP[i],values,names,n);
                 DutyCycleNP[i].s=IPS_OK;
                 IDSetNumber(&DutyCycleNP[i], nullptr);
-                DEBUGF(INDI::Logger::DBG_SESSION, "Device %d set to duty cycle %0.0f", i, DutyCycleN[i][0].value);
+                DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to duty cycle %0.0f", name, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
 
 // If the device is ON and it is a PWM device then apply the duty cycle
                 if(OnOffS[i][1].s == ISS_ON && dev_pwm[m_type[i]])
                 {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d PWM ON %0.0f\%", i, m_type[i], DutyCycleN[i][0].value);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", name, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
                     set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                 }
                 return true;
@@ -261,10 +262,10 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 }
                 else  // Force duty cycle to 100% for non-PWM. Cosmetic only
                 {
-                    DutyCycleNP[i].s=IPS_IDLE;
-                    DutyCycleN[i][0].value = 100;
-                    IDSetNumber(&DutyCycleNP[i], nullptr);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "100\% duty cycle for device %s", dev_type[m_type[i]]);
+//                    DutyCycleNP[i].s=IPS_IDLE;
+//                    DutyCycleN[i][0].value = 100;
+//                    IDSetNumber(&DutyCycleNP[i], nullptr);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "100\% duty cycle for %s %s", name, dev_type[m_type[i]].c_str() );
                 }
             }
             // handle on/off
@@ -276,12 +277,12 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 {
                     if(!dev_pwm[m_type[i]])
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d set to OFF", i, m_type[i]);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to OFF", name, dev_type[m_type[i]].c_str());
                         gpio_write(m_piId, gpio_pin[i], PI_LOW);
                     }
                     else
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d PWM OFF", i, m_type[i]);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM OFF", name, dev_type[m_type[i]].c_str() );
                         set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
                     }
                     OnOffSP[i].s = IPS_OK;
@@ -293,12 +294,12 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 {
                     if(!dev_pwm[m_type[i]])
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d set to ON", i, m_type[i]);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to ON", name, dev_type[m_type[i]].c_str() );
                         gpio_write(m_piId, gpio_pin[i], PI_HIGH);
                     }
                     else
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d PWM ON %0.0f\%", i, m_type[i], DutyCycleN[i][0].value);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", name, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
                         set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                     }
                     OnOffSP[i].s = IPS_IDLE;
