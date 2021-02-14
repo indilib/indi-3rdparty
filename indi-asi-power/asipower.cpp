@@ -260,7 +260,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
 //                    DutyCycleNP[i].s=IPS_IDLE;
 //                    DutyCycleN[i][0].value = 100;
 //                    IDSetNumber(&DutyCycleNP[i], nullptr);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "100%% duty cycle set on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
+                    DEBUGF(INDI::Logger::DBG_SESSION, "100%% duty cycle set on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
             }
             // handle on/off
