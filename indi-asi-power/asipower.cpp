@@ -148,14 +148,14 @@ bool IndiAsiPower::initProperties()
         {
             IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), ISS_ON);
         }
-        IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i)).c_str(), OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i)).c_str(), MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
         IUFillSwitch(&OnOffS[i][0], (onoff + std::to_string(i) +"OFF").c_str(), "Off", ISS_ON);
         IUFillSwitch(&OnOffS[i][1], (onoff + std::to_string(i) +"ON").c_str(), "On", ISS_OFF);
-        IUFillSwitchVector(&OnOffSP[i], OnOffS[i], 2, getDeviceName(), (onoff + std::to_string(i)).c_str(), "On/Off", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        IUFillSwitchVector(&OnOffSP[i], OnOffS[i], 2, getDeviceName(), (onoff + std::to_string(i)).c_str(), "On/Off", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
     
         IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle", "%0.0f", 0, max_pwm_duty, 1, 0);
-        IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), "Duty Cycle", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+        IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), "Duty Cycle", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
         }
     loadConfig();
 
@@ -260,7 +260,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
 //                    DutyCycleNP[i].s=IPS_IDLE;
 //                    DutyCycleN[i][0].value = 100;
 //                    IDSetNumber(&DutyCycleNP[i], nullptr);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "100\% duty cycle for %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
+                    DEBUGF(INDI::Logger::DBG_ERROR, "100%% duty cycle set on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
             }
             // handle on/off
