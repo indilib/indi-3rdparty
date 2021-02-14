@@ -55,8 +55,9 @@
 // Resistor based water sensor
 #define WATER_PIN A0
 
-// dipping bucket rain sensor for RG-11
+// rain sensor for RG-11
 #define RG11_RAINSENSOR_PIN 13            // the digital pin for the rain sensor
+#define RG11_MODE 1                       // Use either 1 for "Drop Detector" or 0 for "Tipping Bucket"
 #define RG11_RAINSENSOR_BUCKET_SIZE 0.001 // the bucket size in mm configured with the dip switches
 
 // dipping bucket rain sensor for Ventus W174

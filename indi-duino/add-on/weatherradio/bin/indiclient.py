@@ -2147,7 +2147,7 @@ class bigindiclient:
 		if not vector.tag.is_vector(): 
 			return
 		data=vector.get_xml(inditransfertypes.inew)
-		self.socket.send(data)
+		self.socket.send(data.encode())
 		vector._light._set_value("Busy")
 		
 	def wait_until_vector_available(self,devicename,vectorname):
@@ -2560,7 +2560,7 @@ class bigindiclient:
 		@rtype: NoneType
 		"""
 		data=b"<enableBLOB>Also</enableBLOB>\n"
-		self.socket.send(data)
+		self.socket.send(data.encode())
 		
 class indiclient(bigindiclient):
 	"""providing a simplified interface to L{bigindiclient}"""

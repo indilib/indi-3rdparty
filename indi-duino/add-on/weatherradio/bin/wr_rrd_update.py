@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #-----------------------------------------------------------------------
 # Script for updating the RRD time series.
@@ -18,53 +18,63 @@ from indiclient import *
 from weatherradio import *
 from os import path
 import argparse
-
-parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
-parser.add_argument("-v", "--verbose", action='store_true',
-                    help="Display progress information")
-parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
-                    help="RRD file holding all time series")
-parser.add_argument("rrdsensorsfile", nargs='?', default=RRDSENSORSFILE,
-                    help="RRD file holding all sensor data time series")
-
-args = parser.parse_args()
-indi = None
+from pid.decorator import pidfile
+from pid import PidFileError
 
 
-try:
-    if (args.verbose):
-        print ("Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
-
-    # open connection to the INDI server
-    indi=indiclient(INDISERVER,int(INDIPORT))
-
-    # ensure that the INDI driver is connected to the device
-    connect = connect(indi, verbose=args.verbose)
-
-    if (connect):
+@pidfile()
+def update(args, indi=None):
+    try:
         if (args.verbose):
-            print ("Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+            print ("Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
-        data = None
-        if path.exists(args.rrdfile):
-            data = readWeather(indi, verbose=args.verbose)
-            updateRRD(args.rrdfile, data)
+        # open connection to the INDI server
+        indi=indiclient(INDISERVER,int(INDIPORT))
 
-        data = None
-        if path.exists(args.rrdsensorsfile):
-            data = readSensors(indi)
-            updateRRD(args.rrdsensorsfile, data)
+        # ensure that the INDI driver is connected to the device
+        connected = connect(indi, verbose=args.verbose)
 
-        if (args.verbose):
-            print ("Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
-    else:
-        print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+        if (connected):
+            if (args.verbose):
+                print ("Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+
+            data = None
+            if path.exists(args.rrdfile):
+                data = readWeather(indi, verbose=args.verbose)
+                updateRRD(args.rrdfile, data)
+
+                data = None
+                if path.exists(args.rrdsensorsfile):
+                    data = readSensors(indi)
+                    updateRRD(args.rrdsensorsfile, data)
+
+                if (args.verbose):
+                    print ("Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+                else:
+                    print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
 
-    indi.quit()
-
-except:
-    print ("Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT))
-    if indi != None:
         indi.quit()
-    sys.exit()
+
+    except:
+        print ("Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT))
+        if indi != None:
+            indi.quit()
+        sys.exit()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
+    parser.add_argument("-v", "--verbose", action='store_true',
+                        help="Display progress information")
+    parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+                        help="RRD file holding all time series")
+    parser.add_argument("rrdsensorsfile", nargs='?', default=RRDSENSORSFILE,
+                        help="RRD file holding all sensor data time series")
+
+    args = parser.parse_args()
+
+    try:
+        update(args)
+    except PidFileError:
+        print ("RRD update still running")

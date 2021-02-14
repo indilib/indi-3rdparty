@@ -1,3 +1,12 @@
+indi-duino (1.12) buster; urgency=medium
+
+  * rain volume and rain drops counting features added to INDI service
+  * robustness of wr_rrd_update.py improved using PID file to avoid
+    multiple concurrent occurences
+  * several bug fixes
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 06 Feb 2021 14:05:14 +0100
+
 indi-duino (1.11) buster; urgency=medium
 
   * Multiple rain sensors may be used in parallel

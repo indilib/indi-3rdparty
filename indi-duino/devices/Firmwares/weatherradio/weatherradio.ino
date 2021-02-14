@@ -155,7 +155,7 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2) + // Water sensor
-                      JSON_OBJECT_SIZE(3)*2;  // Rain sensors
+                  2 * JSON_OBJECT_SIZE(4);  // Rain sensors
   StaticJsonDocument < docSize > weatherDoc;
 
   unsigned long start = 0;
@@ -259,8 +259,8 @@ String getCurrentConfig() {
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(1) + // Water sensor
-                      JSON_OBJECT_SIZE(2) + // Rain Sensor
-                      JSON_OBJECT_SIZE(3) + // WiFi parameters
+                  2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
+                      JSON_OBJECT_SIZE(4) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(4) + // OTA
                       JSON_OBJECT_SIZE(5) + // Dew heater
@@ -293,12 +293,15 @@ String getCurrentConfig() {
 
 #ifdef USE_RG11_RAIN_SENSOR
   JsonObject rg11_rainsensordata          = doc.createNestedObject("RG11 Rain Sensor");
+  rg11_rainsensordata["mode"]             = RG11_MODE == 0 ? "tipping bucket" : "drop detect";
   rg11_rainsensordata["rain sensor pin"]  = RG11_RAINSENSOR_PIN;
-  rg11_rainsensordata["bucket size"]      = RG11_RAINSENSOR_BUCKET_SIZE;
+  if (RG11_MODE == 0)
+    rg11_rainsensordata["bucket size"]    = RG11_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_RG11_RAIN_SENSOR
 
 #ifdef USE_W174_RAIN_SENSOR
   JsonObject w174_rainsensordata          = doc.createNestedObject("W174 Rain Sensor");
+  w174_rainsensordata["mode"]             = "tipping bucket";
   w174_rainsensordata["rain sensor pin"]  = W174_RAINSENSOR_PIN;
   w174_rainsensordata["bucket size"]      = W174_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_W174_RAIN_SENSOR
@@ -307,9 +310,10 @@ String getCurrentConfig() {
   JsonObject wifidata = doc.createNestedObject("WiFi");
   wifidata["SSID"] = WiFi.SSID();
   wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-  if (WiFi.status() == WL_CONNECTED)
+  if (WiFi.status() == WL_CONNECTED) {
     wifidata["IP"]        = WiFi.localIP().toString();
-  else
+    wifidata["rssi"]      = WiFi.RSSI();
+  } else
     wifidata["IP"]        = "";
 #endif
 

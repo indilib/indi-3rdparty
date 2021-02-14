@@ -14,31 +14,28 @@
 
 #define W174_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single speed mesure (ms)
 
-rainsensor_data w174_rainsensor_status = {false, 0, 0, 0, 0, 0.0, 0.0};
+rainsensor_data w174_rainsensor_status = {false, 0, 0, 0, 0, 0, 0.0, 0.0};
 
 // function that the interrupt calls to increment the rain bucket counter
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_w174_rainbucket_full () {
+void ICACHE_RAM_ATTR isr_w174_rain_event () {
 #else
-void isr_w174_rainbucket_full () {
+void isr_w174_rain_event () {
 #endif
 
-  rainbucket_full(w174_rainsensor_status);
+  rain_event(w174_rainsensor_status);
 }
 
-
-void w174_resetRainSensor() {
-  // clear the status
-  resetRainSensor(w174_rainsensor_status);
-}
 
 void w174_initRainSensor() {
+  // tipping bucket mode
+  w174_rainsensor_status.mode = 0;
   pinMode(W174_RAINSENSOR_PIN, INPUT);
   // attach to react upon interrupts when the reed element closes the circuit
-  attachInterrupt(digitalPinToInterrupt(W174_RAINSENSOR_PIN), isr_w174_rainbucket_full, FALLING);
+  attachInterrupt(digitalPinToInterrupt(W174_RAINSENSOR_PIN), isr_w174_rain_event, FALLING);
   w174_rainsensor_status.status = true;
-  // reset measuring data
-  w174_resetRainSensor();
+  // clear the status
+  resetRainSensor(w174_rainsensor_status);
 }
 
 
