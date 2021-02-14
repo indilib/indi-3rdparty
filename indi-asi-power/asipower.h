@@ -24,7 +24,12 @@
 #include <stdio.h>
 
 #include <defaultdevice.h>
-
+    static const int n_gpio_pin =4;
+    static const int gpio_pin[n_gpio_pin]={12, 13, 18, 26};
+    static const int n_dev_type =5;
+    static const std::string dev_type[n_dev_type] = {"None","Camera","Focuser","Dew Heater","Flat Panel"};
+    static const bool dev_pwm[n_dev_type] = { false, false, false, true, true };
+    
 class IndiAsiPower : public INDI::DefaultDevice
 {
 public:
@@ -59,14 +64,22 @@ private:
 // Any GPIO: Ok for dew heater
 
 //Device 1 is GPIO 12. 
-    ISwitch Device1S[5];
-    ISwitchVectorProperty Device1SP;
-    ISwitch OnOff1S[2];
-    ISwitchVectorProperty OnOff1SP;
-    INumber DutyCycle1N[1];
-    INumberVectorProperty DutyCycle1NP;
+//    ISwitch Device1S[5];
+//    ISwitchVectorProperty Device1SP;
+//    ISwitch OnOff1S[2];
+//    ISwitchVectorProperty OnOff1SP;
+//    INumber DutyCycle1N[1];
+//    INumberVectorProperty DutyCycle1NP;
+    
+    ISwitch DeviceS[4][5];
+    ISwitchVectorProperty DeviceSP[4];
+    ISwitch OnOffS[4][2];
+    ISwitchVectorProperty OnOffSP[4];
+    INumber DutyCycleN[4][1];
+    INumberVectorProperty DutyCycleNP[4];
 
-    int m_type1;
+//    int m_type1;
+    int m_type[4];
     int m_piId;
 };
 

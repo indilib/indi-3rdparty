@@ -81,13 +81,20 @@ void ISSnoopDevice (XMLEle *root)
 IndiAsiPower::IndiAsiPower()
 {
     setVersion(VERSION_MAJOR,VERSION_MINOR);
-    m_type1 = 0;
+    m_type[0] = 0;
+    m_type[1] = 0;
+    m_type[2] = 0;
+    m_type[3] = 0;
+
 }
 IndiAsiPower::~IndiAsiPower()
 {
-    deleteProperty(Device1SP.name);
-    deleteProperty(OnOff1SP.name);
-    deleteProperty(DutyCycle1NP.name);
+   for(int i=0; i<n_gpio_pin;i++)
+   {
+       deleteProperty(DeviceSP[i].name);
+       deleteProperty(OnOffSP[i].name);
+       deleteProperty(DutyCycleNP[i].name);
+   }
 }
 bool IndiAsiPower::Connect()
 {
@@ -104,8 +111,8 @@ bool IndiAsiPower::Connect()
    }
 
     // Lock Device 1 setting
-    Device1SP.s=IPS_BUSY;
-    IDSetSwitch(&Device1SP, nullptr);
+//    Device1SP.s=IPS_BUSY;
+//    IDSetSwitch(&Device1SP, nullptr);
 
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
     return true;
@@ -116,8 +123,8 @@ bool IndiAsiPower::Disconnect()
    pigpio_stop(m_piId);
 
     // Unlock BCM Pins setting
-    Device1SP.s=IPS_IDLE;
-    IDSetSwitch(&Device1SP, nullptr);
+//    Device1SP.s=IPS_IDLE;
+//    IDSetSwitch(&Device1SP, nullptr);
 
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power disconnected successfully.");
     return true;
@@ -130,7 +137,7 @@ bool IndiAsiPower::initProperties()
 {
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
-
+/*
     IUFillSwitch(&Device1S[0], "DEV100", "NONE", ISS_ON);
     IUFillSwitch(&Device1S[1], "DEV101", "Camera", ISS_OFF);
     IUFillSwitch(&Device1S[2], "DEV102", "Focuser", ISS_OFF);
@@ -146,6 +153,29 @@ bool IndiAsiPower::initProperties()
     IUFillNumberVector(&DutyCycle1NP, DutyCycle1N, 1, getDeviceName(), "DUTYCYCLE1", "Duty Cycle", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     defineProperty(&Device1SP);
+*/
+
+    std::string dev="DEV";
+    std::string port="Port ";
+    std::string onoff = "ONOFF";
+    std::string dutyc = "DUTYCYCLE";
+    for(int i=0; i<n_gpio_pin; i++)
+    {
+        for(int j=0; j<n_dev_type;j++)
+        {
+            IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), ISS_ON);
+        }
+        IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i)).c_str(), MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+        IUFillSwitch(&OnOffS[i][0], (onoff + std::to_string(i) +"OFF").c_str(), "Off", ISS_ON);
+        IUFillSwitch(&OnOffS[i][1], (onoff + std::to_string(i) +"ON").c_str(), "On", ISS_OFF);
+        IUFillSwitchVector(&OnOffSP[i], OnOffS[i], 2, getDeviceName(), (onoff + std::to_string(i)).c_str(), "On/Off", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    
+        IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle", "%0.0f", 0, 100, 1, 0);
+        IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), "Duty Cycle", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+    
+        defineProperty(&DeviceSP[i]);
+    }
     loadConfig();
 
     return true;
@@ -158,15 +188,25 @@ bool IndiAsiPower::updateProperties()
     if (isConnected())
     {
         // We're connected
-        defineProperty(&OnOff1SP);
+//        defineProperty(&OnOff1SP);
 //        if(m_type1 > 2)
-            defineProperty(&DutyCycle1NP);
+//            defineProperty(&DutyCycle1NP);
+        for(int i=0; i<n_gpio_pin; i++)
+        {
+            defineProperty(&OnOffSP[i]);
+            defineProperty(&DutyCycleNP[i]);
+        }
     }
     else
     {
         // We're disconnected
-        deleteProperty(OnOff1SP.name);
-        deleteProperty(DutyCycle1NP.name);
+//        deleteProperty(OnOff1SP.name);
+//        deleteProperty(DutyCycle1NP.name);
+        for(int i=0; i<n_gpio_pin; i++)
+        {
+            deleteProperty(OnOffSP[i].name);
+            deleteProperty(DutyCycleNP[i].name);
+        }
     }
     return true;
 }
@@ -181,26 +221,27 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
     // first we check if it's for our device
     if(strcmp(dev,getDeviceName())==0)
     {
-            // handle Duty Cycle on device 1
-        if (!strcmp(name, DutyCycle1NP.name))
+        // handle Duty Cycle on device i
+        for(int i=0; i<n_gpio_pin; i++)
         {
-            // verify a number is a valid Duty Cycle
-            if ( values[0] < 0 || values[0] > 100 )
+            if (!strcmp(name, DutyCycleNP[i].name))
             {
-                DutyCycle1NP.s=IPS_ALERT;
-                IDSetNumber(&DutyCycle1NP, nullptr);
-                DEBUGF(INDI::Logger::DBG_ERROR, "Value %0.0f is not a valid Duty Cycle!", values[0]);
-                return false;
+                // verify a number is a valid Duty Cycle
+                if ( values[0] < 0 || values[0] > 100 )
+                {
+                    DutyCycleNP[i].s=IPS_ALERT;
+                    IDSetNumber(&DutyCycleNP[i], nullptr);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "Value %0.0f is not a valid Duty Cycle!", values[0]);
+                    return false;
+                }
+                IUUpdateNumber(&DutyCycleNP[i],values,names,n);
+                DutyCycleNP[i].s=IPS_OK;
+                IDSetNumber(&DutyCycleNP[i], nullptr);
+                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 set to duty cycle %0.0f", DutyCycleN[i][0].value);
+                return true;
             }
-
-            IUUpdateNumber(&DutyCycle1NP,values,names,n);
-            DutyCycle1NP.s=IPS_OK;
-            IDSetNumber(&DutyCycle1NP, nullptr);
-            DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 set to duty cycle %0.0f", DutyCycle1N[0].value);
-            return true;
         }
     }
-
     return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
 }
 bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -209,73 +250,63 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
     if (!strcmp(dev, getDeviceName()))
     {
         // handle parity
-        if (!strcmp(name, Device1SP.name))
+        for(int i=0; i<n_gpio_pin; i++)
         {
-            if(isConnected()) 
+            if (!strcmp(name, DeviceSP[i].name))
             {
-//                DEBUG(INDI::Logger::DBG_WARNING, "Cannot set port type while device is connected.");
-//                return false;
+                if(isConnected()) 
+                {
+//                    DEBUG(INDI::Logger::DBG_WARNING, "Cannot set port type while device is connected.");
+//                    return false;
+                }
+                IUUpdateSwitch(&DeviceSP[i], states, names, n);
+                m_type[i] = IUFindOnSwitchIndex(&DeviceSP[i]);
+                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 New Type %d", m_type[i]);
+                if(m_type[i] > 2)
+                {
+                    set_PWM_frequency(m_piId, gpio_pin[i], 1000);
+                    set_PWM_range(m_piId, gpio_pin[i], 100);
+                }
             }
-            IUUpdateSwitch(&Device1SP, states, names, n);
-            m_type1 = IUFindOnSwitchIndex(&Device1SP);
-//            for( int i=0; i<n; i++)
-//            {
-//                if ( Device1S[i].s == ISS_ON )
-//                {
-//                    m_type1 = i;
-//                    DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 selected Type %d", i);
-//                    Device1SP.s = IPS_OK;
-//                    Device1S[1].s = ISS_OFF;
-//                    IDSetSwitch(&Device1SP, NULL);
-//                }
-//            }
-            DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 New Type %d", m_type1);
-            if(m_type1 > 2)
+            // handle relay 1
+            if (!strcmp(name, OnOffSP[i].name))
             {
-                set_PWM_frequency(m_piId, 12, 1000);
-                set_PWM_range(m_piId, 12, 100);
-            }
-        }
-        // handle relay 1
-        if (!strcmp(name, OnOff1SP.name))
-        {
-            IUUpdateSwitch(&OnOff1SP, states, names, n);
-
-            if ( OnOff1S[0].s == ISS_ON )
-            {
-                if(m_type1 <= 2)
+                IUUpdateSwitch(&OnOffSP[i], states, names, n);
+    
+                if ( OnOffS[i][0].s == ISS_ON )
                 {
-                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 Type %d set to OFF", m_type1);
-                    gpio_write(m_piId, 12, PI_LOW);
+                    if(m_type[i] <= 2)
+                    {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d set to OFF", i, m_type[i]);
+                        gpio_write(m_piId, gpio_pin[i], PI_LOW);
+                    }
+                    else
+                    {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d PWM OFF", i, m_type[i]);
+                        set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
+                    }
+                    OnOffSP[i].s = IPS_OK;
+                    OnOffS[i][1].s = ISS_OFF;
+                    IDSetSwitch(&OnOffSP[i], NULL);
+                    return true;
                 }
-                else
+                if ( OnOffS[i][1].s == ISS_ON )
                 {
-                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 Type %d PWM OFF", m_type1);
-                    set_PWM_dutycycle(m_piId, 12, 0);
+                    if(m_type[i] <= 2)
+                    {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d set to ON", i, m_type[i]);
+                        gpio_write(m_piId, gpio_pin[i], PI_HIGH);
+                    }
+                    else
+                    {
+                    DEBUGF(INDI::Logger::DBG_SESSION, "Device %d Type %d PWM ON %0.0f\%", i, m_type[i], DutyCycleN[i][0].value);
+                        set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
+                    }
+                    OnOffSP[i].s = IPS_IDLE;
+                    OnOffS[i][0].s = ISS_OFF;
+                    IDSetSwitch(&OnOffSP[i], NULL);
+                    return true;
                 }
-                DEBUG(INDI::Logger::DBG_SESSION, "Device 1 set to OFF");
-                OnOff1SP.s = IPS_OK;
-                OnOff1S[1].s = ISS_OFF;
-                IDSetSwitch(&OnOff1SP, NULL);
-                return true;
-            }
-            if ( OnOff1S[1].s == ISS_ON )
-            {
-                if(m_type1 <= 2)
-                {
-                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 Type %d set to ON", m_type1);
-                    gpio_write(m_piId, 12, PI_HIGH);
-                }
-                else
-                {
-                DEBUGF(INDI::Logger::DBG_SESSION, "Device 1 Type %d PWM ON %0.0f\%", m_type1, DutyCycle1N[0].value);
-                    set_PWM_dutycycle(m_piId, 12, DutyCycle1N[0].value);
-                }
-                DEBUG(INDI::Logger::DBG_SESSION, "Device 1 set to ON");
-                OnOff1SP.s = IPS_IDLE;
-                OnOff1S[0].s = ISS_OFF;
-                IDSetSwitch(&OnOff1SP, NULL);
-                return true;
             }
         }
     }
@@ -295,9 +326,11 @@ bool IndiAsiPower::ISSnoopDevice(XMLEle *root)
 }
 bool IndiAsiPower::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigSwitch(fp, &Device1SP);
-    IUSaveConfigSwitch(fp, &OnOff1SP);
-    IUSaveConfigNumber(fp, &DutyCycle1NP);
-
+    for(int i=0; i<n_gpio_pin; i++)
+    {
+        IUSaveConfigSwitch(fp, &DeviceSP[i]);
+        IUSaveConfigSwitch(fp, &OnOffSP[i]);
+        IUSaveConfigNumber(fp, &DutyCycleNP[i]);
+    }
     return true;
 }
