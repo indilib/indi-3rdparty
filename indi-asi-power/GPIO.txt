@@ -1,0 +1,12 @@
+This software used various low libraries to access Raspberry Pi GPIO:
+* libgpiod - all commits after bc6f898 (after Gordon decided to stop developing WiringPi on August 6, 2019)
+* WiringPi only - from commit abd7b3b to bc6f898
+* BC2835 and WiringPi - up to commit 3283e99
+
+Rationale behind moving this to libgpiod is that it is part of mainland kernel and it does not depend on
+any library other than the standard C library with GNU extensions.
+libgpiod is available here: https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git
+
+[1] https://www.kernel.org/doc/Documentation/ABI/testing/gpio-cdev
+[2] https://www.beyondlogic.org/an-introduction-to-chardev-gpio-and-libgpiod-on-the-raspberry-pi/
+[3] https://www.raspberrypi.org/forums/viewtopic.php?t=100028

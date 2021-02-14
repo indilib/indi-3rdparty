@@ -1,0 +1,80 @@
+v2.6
+* Major changes and new functionalities added
+  - added: Support for DS18B20 temperature sensor added
+  - added: Temperature compensation added
+  - added: Resolution unlocked from 1/1 to 1/32 step
+  - added: Changing to lower resolution fine tuned
+  - update: README
+  - update: system info driver separated from board/relay driver
+  - update: default BCM pins changed (!!!)
+
+v2.5
+* WiringPi dependency removed - from now on only libgpiod low level library is supported
+  - update: README
+  - update: CMakeLists.txt
+  - update: splitting relays from system info
+  - add: BCM pins configuration
+
+v2.4
+* Resolution setting fixed
+
+v2.3
+* bcm2835 dependency removed - from now on only wiringpi low level library is supported
+  - update: README
+  - added: debian packaging files
+  - update: CMakeLists.txt
+  - added: cmake_modules
+
+v2.2
+* indi_rpifocus - hot fixes to version 2.3
+  - fixed: reading/saving focuser position independent of resolution (always save in max resolution)
+  - update: README
+  - add: separate Changelog file
+
+v2.1
+* indi_rpifocus - hot fixes to version 2.3
+  - added: saving status of stepper reverse direction
+  - update: README
+
+v2.0
+* indi_rpifocus - major update to version 2.3
+  - added: support for A4988 controller
+  - added: standby mode
+  - parking mode removed in favor of focuser position remembered between runs
+  - reset button removed
+  - stepper resolution improved
+  - stepper reverse direction improved
+
+v1.0
+* indi_rpigps -	removed because already stable version is distributed with core INDI library
+* indi_rpialtimu  - removed because separate project is maintained for this driver (https://github.com/rkaczorek/astroberry-altimu)
+* indi_rpifocus -	update to version 2.2
+  - ADDED:stepper resolution, speed control, direction control, configurable max absolute position
+
+v0.5
+* all -	Sync to latest libindi changes. Focuser controller mapping removed
+* other - Adding bcm2835-1.52 lib and setting statical linking
+
+v0.4
+* indi_rpifocus	- Sync to latest libindi changes. Focuser controller mapping added
+* other - FindINDI/cmake updated to the latest version
+
+v0.3
+* indi_rpigps	- Sync to latest INDI::GPS changes
+* indi_rpibrd	- Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
+* indi_rpifocus	- Code improvements
+
+v0.2
+* indi_rpigps - Rewrite fo the driver to sync with libindi changes (GPS::INDI)
+* indi_rpigs  - Adding Polaris Hour Angle for easy polar alignment
+* indi_rpibrd - Shutdown button added for secure system power off
+
+v0.1
+* indi_rpigps - FIX for gps reading freeze and full integration with gpsd service (required)
+* indi_rpifocus - FIX for lack of focuser status handling e.g. taking images during move
+* indi_rpifocus - FIX for inconsistences in focus direction
+* indi_rpifocus - disabling dualspeed mode. single speed mode only used (native)
+* indi_rpialtimu  - change of values format from 0.3f to 0.1f
+
+v0.0
+* all - Initial release of astroberry drivers
