@@ -24,6 +24,8 @@
 #include <stdio.h>
 
 #include <defaultdevice.h>
+    static const int max_pwm_duty = 100;
+    static const int pwm_freq = 1000;
     static const int n_gpio_pin =4;
     static const int gpio_pin[n_gpio_pin]={12, 13, 18, 26};
     static const int n_dev_type =5;
