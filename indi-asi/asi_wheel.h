@@ -62,9 +62,10 @@ class ASIWHEEL : public INDI::FilterWheel
         ISwitch UniDirectionalS[2];
 
         // Calibrate
+        static void TimerHelperCalibrate(void *context);
+        void TimerCalibrate();
         ISwitchVectorProperty CalibrateSP;
         ISwitch CalibrateS[1];
-        virtual bool Calibrate();
 
     private:
         int fw_id = -1;
