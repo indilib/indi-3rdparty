@@ -1,3 +1,15 @@
+indi-dsi (0.4) bionic; urgency=medium
+
+  * Support for DSI Color III Bayer pattern.
+
+ -- Eric Dejouhanet <eric.dejouhanet@gmail.com>  Fri, 5 Feb 2021 08:00:00 +0100
+
+indi-dsi (0.3) bionic; urgency=medium
+
+  * OSX adaptation
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 14 Nov 2017 13:00:00 +0300
+
 indi-dsi (0.2) bionic; urgency=medium
 
   * Upstream update

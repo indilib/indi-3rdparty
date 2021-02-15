@@ -103,14 +103,6 @@ bool DSICCD::Connect()
         return false;
     }
 
-    cap |= CCD_CAN_ABORT;
-
-    if (dsi->isBinnable())
-        cap |= CCD_CAN_BIN;
-
-    if (dsi->isColor())
-        cap |= CCD_HAS_BAYER;
-
     ccd = dsi->getCcdChipName();
     if (ccd == "ICX254AL")
     {
@@ -134,16 +126,20 @@ bool DSICCD::Connect()
     }
     else if (ccd == "ICX285AQ")
     {
-        // DSI III has a RGB color matrix
-        IUSaveText(&BayerT[0], "0");
-        IUSaveText(&BayerT[1], "0");
-        IUSaveText(&BayerT[2], "RGGB");
-        LOG_INFO("Found a DSI III!");
+        LOG_INFO("Found a DSI Color III!");
     }
     else
     {
         LOGF_INFO("Found a DSI with an unknown CCD: %s", ccd.c_str());
     }
+
+    cap |= CCD_CAN_ABORT;
+
+    if (dsi->isBinnable())
+        cap |= CCD_CAN_BIN;
+
+    if (dsi->isColor())
+        cap |= CCD_HAS_BAYER;
 
     SetCCDCapability(cap);
 
@@ -273,6 +269,8 @@ void DSICCD::setupParams()
 
     /* calculate how much memory we need for the primary CCD buffer */
     PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8);
+
+    UpdateCCDBin(PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
 }
 
 /*******************************************************************************
@@ -285,12 +283,18 @@ bool DSICCD::UpdateCCDBin(int hor, int ver)
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set1x1Binning();
+        // DSI III 1x1 binning results in a GBRG frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "GBRG");
         return true;
     }
     else if ((hor == 2) && (ver == 2)) // ... and 2x2 binning is supported
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set2x2Binning();
+        // DSI III 1x1 binning results in a consolidated mono frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "");
         return true;
     }
     else

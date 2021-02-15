@@ -327,6 +327,13 @@ bool QHYCCD::initProperties()
     IUFillSwitchVector(&CoolerModeSP, CoolerModeS, 2, getDeviceName(), "CCD_COOLER_MODE", "Cooler Mode", MAIN_CONTROL_TAB,
                        IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
 
+
+    //NEW CODE - Add support for overscan/calibration area
+    IUFillSwitch(&OverscanAreaS[0], "INDI_ENABLED", "Include", ISS_OFF);
+    IUFillSwitch(&OverscanAreaS[1], "INDI_DISABLED", "Ignore", ISS_ON);
+    IUFillSwitchVector(&OverscanAreaSP, OverscanAreaS, 2, getDeviceName(), "OVERSCAN_MODE", "Overscan Area", MAIN_CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
     /////////////////////////////////////////////////////////////////////////////
     /// Properties: Utility Controls
     /////////////////////////////////////////////////////////////////////////////
@@ -344,8 +351,7 @@ bool QHYCCD::initProperties()
     IUFillSwitch(&GPSSlavingS[SLAVING_MASTER], "SLAVING_MASTER", "Master", ISS_ON);
     IUFillSwitch(&GPSSlavingS[SLAVING_SLAVE], "SLAVING_SLAVE", "Slave", ISS_OFF);
     IUFillSwitchVector(&GPSSlavingSP, GPSSlavingS, 2, getDeviceName(), "SLAVING_MODE", "Slaving", GPS_CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY,
-                       0, IPS_IDLE);
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Slaving Params (for slaves only)
     IUFillNumber(&GPSSlavingParamN[PARAM_TARGET_SEC], "PARAM_TARGET_SEC", "Target sec", "%.f", 0, 1e9, 0, 0);
@@ -354,8 +360,7 @@ bool QHYCCD::initProperties()
     IUFillNumber(&GPSSlavingParamN[PARAM_DELTAT_USEC], "PARAM_DELTAT_USEC", "Delta us", "%.f", 0, 1e9, 0, 0);
     IUFillNumber(&GPSSlavingParamN[PARAM_EXP_TIME], "PARAM_EXP_TIME", "Exp sec", "%.6f", 0.000001, 3600, 0, 0);
     IUFillNumberVector(&GPSSlavingParamNP, GPSSlavingParamN, 5, getDeviceName(), "GPS_SLAVING_PARAMS", "Params",
-                       GPS_CONTROL_TAB, IP_RW,
-                       60, IPS_IDLE);
+                       GPS_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // VCOX Frequency
     IUFillNumber(&VCOXFreqN[0], "FREQUENCY", "Freq", "%.f", 0, 4095, 100, 0);
@@ -372,8 +377,7 @@ bool QHYCCD::initProperties()
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
     IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_CONTROL_TAB,
-                       IP_RW, 60,
-                       IPS_IDLE);
+                       IP_RW, 60, IPS_IDLE);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
     IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_CONTROL_TAB, IP_RW, 60,
@@ -501,6 +505,10 @@ void QHYCCD::ISGetProperties(const char *dev)
             defineProperty(&GPSDataEndTP);
             defineProperty(&GPSDataNowTP);
         }
+
+        //NEW CODE - Add support for overscan/calibration area
+        if(HasOverscanArea)
+            defineProperty(&OverscanAreaSP);
     }
 }
 
@@ -592,11 +600,23 @@ bool QHYCCD::updateProperties()
                 if (ret == QHYCCD_SUCCESS)
                 {
                     ReadModeN[0].value = currentReadMode;
-                    LOGF_INFO("Current read mode: %zu", currentReadMode);
+
+                    //NEW CODE - Query and display read mode name for more informative console output
+                    char currentReadModeName[255] = {0};
+                    int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
+                    if (retVal == QHYCCD_SUCCESS)
+                    {
+                        LOGF_INFO("Current read mode is: %s", currentReadModeName);
+                    }
+                    else
+                    {
+                        LOGF_INFO("Current read mode is: %u", currentReadMode);
+                    }
                 }
                 else
                 {
-                    LOGF_INFO("Using default read mode (error reading it): %zu", currentReadMode);
+                    //NEW CODE - format modifier %zu --> %u
+                    LOGF_INFO("Using default read mode (error reading it): %u", currentReadMode);
                 }
             }
             defineProperty(&ReadModeNP);
@@ -718,6 +738,10 @@ bool QHYCCD::updateProperties()
             defineProperty(&GPSDataNowTP);
         }
 
+        //NEW CODE - Add support for overscan/calibration area
+        if (HasOverscanArea)
+            defineProperty(&OverscanAreaSP);
+
         // Let's get parameters now from CCD
         setupParams();
     }
@@ -786,6 +810,10 @@ bool QHYCCD::updateProperties()
             deleteProperty(GPSDataEndTP.name);
             deleteProperty(GPSDataNowTP.name);
         }
+
+        //NEW CODE - Add support for overscan/calibration area
+        if (HasOverscanArea)
+            deleteProperty(OverscanAreaSP.name);
     }
 
     return true;
@@ -863,7 +891,8 @@ bool QHYCCD::Connect()
         if (ret == QHYCCD_SUCCESS && readModes > 1)
         {
             HasReadMode = true;
-            LOGF_INFO("Number of read modes: %zu", readModes);
+            //NEW CODE - format modifier %zu --> %u
+            LOGF_INFO("Number of read modes: %u", readModes);
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -1089,6 +1118,19 @@ bool QHYCCD::Connect()
 
         LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
 
+        ////////////////////////////////////////////////////////////////////
+        /// Overscan Area Support
+        ////////////////////////////////////////////////////////////////////
+        //NEW CODE - Add support for overscan/calibration area
+        uint32_t overscanSubX, overscanSubY, overscanSubW, overscanSubH;
+        ret = GetQHYCCDOverScanArea(m_CameraHandle, &overscanSubX, &overscanSubY, &overscanSubW, &overscanSubH);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasOverscanArea = (overscanSubW + overscanSubH > 0);
+        }
+
+        LOGF_DEBUG("Overscan Area Support: %s", HasOverscanArea ? "True" : "False");
+
         // Set Camera Capability
         SetCCDCapability(cap);
 
@@ -1151,20 +1193,29 @@ bool QHYCCD::Disconnect()
 
 bool QHYCCD::setupParams()
 {
-    uint32_t nbuf, imagew, imageh, bpp;
+
+
+    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+    uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
+
+    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+    //raw frame origin is always at (0,0)
+    sensorROI.subX = sensorROI.subY = 0;
+
 
     if (isSimulation())
     {
-        chipw = imagew = 1280;
-        chiph = imageh = 1024;
+        //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+        sensorROI.subW  = 1280;
+        sensorROI.subH = 1024;
         pixelh = pixelw = 5.4;
         bpp             = 8;
     }
     else
     {
-        int rc = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
 
+        int rc = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &sensorROI.subW, &sensorROI.subH, &pixelw, &pixelh, &bpp);
         /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
         if (rc != QHYCCD_SUCCESS)
         {
@@ -1173,7 +1224,7 @@ bool QHYCCD::setupParams()
         }
 
         LOGF_DEBUG("GetQHYCCDChipInfo: chipW :%g chipH: %g imageW: %d imageH: %d pixelW: %g pixelH: %g bbp %d", chipw,
-                   chiph, imagew, imageh, pixelw, pixelh, bpp);
+                   chiph, sensorROI.subW, sensorROI.subH, pixelw, pixelh, bpp);
 
         rc = GetQHYCCDEffectiveArea(m_CameraHandle, &effectiveROI.subX, &effectiveROI.subY, &effectiveROI.subW, &effectiveROI.subH);
         if (rc == QHYCCD_SUCCESS)
@@ -1182,21 +1233,29 @@ bool QHYCCD::setupParams()
                        effectiveROI.subW, effectiveROI.subH);
         }
 
-        if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
-        {
-            imagew = effectiveROI.subW;
-            imageh = effectiveROI.subH;
-        }
+        //NEW CODE - Add support for overscan/calibration area, we want to allow also pixels outside of effectiveROI
+        //if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
+        //{
+        //    imagew = effectiveROI.subW;
+        //    imageh = effectiveROI.subH;
+        //}
 
-        rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
-        if (rc == QHYCCD_SUCCESS)
-        {
-            LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
-                       overscanROI.subW, overscanROI.subH);
-        }
+        //NEW CODE - Overscan Area not needed here, deprecated variable overscanROI
+        //rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
+        //if (rc == QHYCCD_SUCCESS)
+        //{
+        //    LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
+        //               overscanROI.subW, overscanROI.subH);
+        //}
     }
 
-    SetCCDParams(imagew, imageh, bpp, pixelw, pixelh);
+    //NEW CODE - Add support for overscan/calibration area
+    if (IgnoreOverscanArea)
+        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw,
+                     pixelh);    //Overscan area is ignored, exposure frame to be within effectiveROI
+    else
+        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw,
+                     pixelh);          //Overscan area is not ignored, exposure frame to be within full sensor frame
 
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -1204,7 +1263,10 @@ bool QHYCCD::setupParams()
     if (HasStreaming())
     {
         Streamer->setPixelFormat(INDI_MONO);
-        Streamer->setSize(imagew, imageh);
+        //NEW CODE - Add support for overscan/calibration area
+        //TODO - should overscan area be allowd in streaming mode, too?
+        //Streamer->setSize(IgnoreOverscanArea ? effectiveROI.subW : sensorROI.subW, IgnoreOverscanArea ? effectiveROI.subH : sensorROI.subH);
+        Streamer->setSize(effectiveROI.subW, effectiveROI.subH);
     }
 
     return true;
@@ -1232,8 +1294,9 @@ bool QHYCCD::StartExposure(float duration)
 {
     unsigned int ret = QHYCCD_ERROR;
 
-    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
-    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    //NEW CODE - Add support for overscan/calibration area, add frame offset to be modular based on overscan area settings
+    uint32_t subX = (PrimaryCCD.getSubX() + (IgnoreOverscanArea ? effectiveROI.subX : 0)) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + (IgnoreOverscanArea ? effectiveROI.subY : 0)) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
@@ -1778,6 +1841,57 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IDSetSwitch(&AMPGlowSP, nullptr);
             return true;
         }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Overscan Area
+        //////////////////////////////////////////////////////////////////////
+        //NEW CODE - Add support for overscan/calibration area
+        else if (!strcmp(OverscanAreaSP.name, name))
+        {
+
+            IUUpdateSwitch(&OverscanAreaSP, states, names, n);
+            bool isIgnored = (OverscanAreaS[INDI_ENABLED].s == ISS_OFF); //Overscan Area included switch is 'off', thus excluded
+
+            if (isIgnored == IgnoreOverscanArea)
+            {
+                OverscanAreaSP.s = IPS_OK;
+                IDSetSwitch(&OverscanAreaSP, nullptr);
+                return true;
+            }
+
+            IgnoreOverscanArea = isIgnored;
+
+            OverscanAreaS[INDI_DISABLED].s = IgnoreOverscanArea ? ISS_ON : ISS_OFF;
+            OverscanAreaS[INDI_ENABLED].s = IgnoreOverscanArea ? ISS_OFF : ISS_ON;
+
+            OverscanAreaSP.s = IgnoreOverscanArea ? IPS_IDLE : IPS_OK;
+
+            if (IgnoreOverscanArea)
+            {
+                //Image Info
+                SetCCDParams(effectiveROI.subW, effectiveROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(),
+                             PrimaryCCD.getPixelSizeX());
+
+                //Image Settings
+                //The true frame origin is at (effectiveROI.subX ,effectiveROI.subY), need to correct for this offset when taking exposure or streaming.
+                UpdateCCDFrame(0, 0, effectiveROI.subW, effectiveROI.subH);
+
+            }
+            else
+            {
+                //Image Info
+                SetCCDParams(sensorROI.subW, sensorROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(), PrimaryCCD.getPixelSizeX());
+                //Image Settings
+                UpdateCCDFrame(sensorROI.subX, sensorROI.subY, sensorROI.subW, sensorROI.subH);
+            }
+
+            LOGF_INFO("The overscan area is %s now. The effective frame starts at coordinates (%u, %u) ",
+                      IgnoreOverscanArea ? "ignored" : "included", IgnoreOverscanArea ? effectiveROI.subX : 0,
+                      IgnoreOverscanArea ? effectiveROI.subY : 0);
+
+            IDSetSwitch(&OverscanAreaSP, nullptr);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -1937,45 +2051,54 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         //////////////////////////////////////////////////////////////////////
         else if (!strcmp(name, ReadModeNP.name))
         {
-            uint32_t imageRMw, imageRMh;
-            double newReadMode = ReadModeN[0].value;
+            //NEW CODE - Fix read mode handling
+            uint32_t currentReadMode;
 
-            double chipw, chiph, pixelw, pixelh;
             IUUpdateNumber(&ReadModeNP, values, names, n);
-            int rc;
+            uint32_t newReadMode = ReadModeN[0].value;
 
-            // Current effective area for mode [NEW CODE]
-            uint32_t effROI_subX, effROI_subY, effROI_subW, effROI_subH;
-            rc = GetQHYCCDEffectiveArea(m_CameraHandle, &effROI_subX, &effROI_subY, &effROI_subW, &effROI_subH);
+            //Check if camera already is in the requested read mode
+            int rc = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
             if (rc == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effROI_subX, effROI_subY,
-                          effROI_subW, effROI_subH);
+                if (newReadMode == currentReadMode)
+                {
+
+                    LOGF_INFO("Camera is already in read mode: %u", currentReadMode);
+                    return true;
+                }
             }
-            // Current effective area for mode [NEW CODE]
 
             // Set readout mode
-            rc = SetQHYCCDReadMode(m_CameraHandle, ReadModeN[0].value); // [NEW CODE] declaration int rc removed
+            rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
             if (rc == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("Read mode updated to %.f", ReadModeN[0].value);
-                // Get resolution
-                GetQHYCCDReadModeResolution(m_CameraHandle, ReadModeN[0].value, &imageRMw, &imageRMh);
 
-                // Test image resolution values if they are greater than effective area resolution then replace imageRMw / imageRMh values [NEW CODE]
-                if(imageRMw > effROI_subW || imageRMh > effROI_subH)
+                currentReadMode = newReadMode;
+
+                char currentReadModeName[255] = {0};
+                strcpy(currentReadModeName, "");
+                int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
+                if (retVal == QHYCCD_SUCCESS)
                 {
-                    LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: [ imageW: %u > imageEAW: %u ] / [ imageH: %u > imageEAH: %u ]",
-                              imageRMw, effROI_subW, imageRMh, effROI_subH);
-                    imageRMw = effROI_subW;
-                    imageRMh = effROI_subH;
+                    LOGF_INFO("Read mode is now updated to: %s", currentReadModeName);
                 }
-                // Test image resolution values if they are greater than effective area resolution then replace imageRMw / imageRMh values [NEW CODE]
+                else
+                {
+                    LOGF_INFO("Read mode is now updated to: %u", currentReadMode);
+                }
 
-                LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: imageW: %d imageH: %d", imageRMw, imageRMh);
+                //Reinitialize camera to get new chip characteristics
+                rc = InitQHYCCD(m_CameraHandle);
+                if (rc != QHYCCD_SUCCESS)
+                {
+                    LOGF_ERROR("Init Camera failed (%d)", rc);
+                    return false;
+                }
 
-                ReadModeNP.s = IPS_OK;
-                saveConfig(true, ReadModeNP.name);
+
+                //NEW CODE - Fix read mode handling, move to setupParams()
+#if 0
                 uint32_t nbuf, imagew, imageh, bpp;
                 if (isSimulation())
                 {
@@ -2004,12 +2127,20 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     Streamer->setPixelFormat(INDI_MONO);
                     Streamer->setSize(imageRMw, imageRMh);
                 }
+#endif
 
+                //reinitialized the camera paramters...
+                QHYCCD::setupParams();
+
+                ReadModeNP.s = IPS_OK;
+                saveConfig(true, ReadModeNP.name);
 
             }
             else
             {
                 ReadModeNP.s = IPS_ALERT;
+                //TODO - currentReadMode?
+                //ReadModeN[0].value = currentReadMode;
                 ReadModeN[0].value = newReadMode;
                 LOGF_ERROR("Failed to update read mode: %d", rc);
             }
@@ -2267,8 +2398,9 @@ bool QHYCCD::StartStreaming()
     int ret = 0;
     m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
-    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    //NEW CODE - Add support for overscan/calibration area
+    uint32_t subX = (PrimaryCCD.getSubX() + (IgnoreOverscanArea ? effectiveROI.subX : 0)) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + (IgnoreOverscanArea ? effectiveROI.subY : 0)) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 

@@ -122,6 +122,17 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             COOLER_MANUAL,
         };
 
+
+        // Overscan area Switch
+        //NEW CODE - Add support for overscan/calibration area 
+        ISwitchVectorProperty OverscanAreaSP;
+        ISwitch OverscanAreaS[2];
+        enum
+        {
+            INDI_ENABLED,   //Overscan Area included
+            INDI_DISABLED,  //Overscan Area excluded
+        };
+
         /////////////////////////////////////////////////////////////////////////////
         /// Properties: Image Adjustment Controls
         /////////////////////////////////////////////////////////////////////////////
@@ -285,7 +296,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subY = 0;
             uint32_t subW = 0;
             uint32_t subH = 0;
-        } effectiveROI, overscanROI;
+        } effectiveROI, sensorROI;  //NEW CODE - Add support for overscan/calibration area, obsolete overscanROI
 
         typedef enum GPSState
         {
@@ -404,6 +415,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasReadMode { false };
         bool HasGPS { false };
         bool HasAmpGlow { false };
+        //NEW CODE - Add support for overscan/calibration area 
+        bool HasOverscanArea { false };
+        bool IgnoreOverscanArea { true };
 
         /////////////////////////////////////////////////////////////////////////////
         /// Private Variables

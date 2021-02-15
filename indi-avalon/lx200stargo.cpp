@@ -414,9 +414,9 @@ bool LX200StarGo::initProperties()
     IUFillTextVector(&MountFirmwareInfoTP, MountFirmwareInfoT, 1, getDeviceName(), "MOUNT_INFO", "Mount Info", INFO_TAB, IP_RO, 60, IPS_OK);
 
     // Guiding settings
-    IUFillNumber(&GuidingSpeedP[0], "GUIDING_SPEED_RA", "RA Speed", "%.2f", 0.0, 2.0, 0.1, 0);
-    IUFillNumber(&GuidingSpeedP[1], "GUIDING_SPEED_DEC", "DEC Speed", "%.2f", 0.0, 2.0, 0.1, 0);
-    IUFillNumberVector(&GuidingSpeedNP, GuidingSpeedP, 2, getDeviceName(), "GUIDING_SPEED", "Autoguiding", RA_DEC_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&GuidingSpeedP[0], "GUIDE_RATE_WE", "RA Speed", "%.2f", 0.0, 2.0, 0.1, 0);
+    IUFillNumber(&GuidingSpeedP[1], "GUIDE_RATE_NS", "DEC Speed", "%.2f", 0.0, 2.0, 0.1, 0);
+    IUFillNumberVector(&GuidingSpeedNP, GuidingSpeedP, 2, getDeviceName(), "GUIDE_RATE", "Autoguiding", RA_DEC_TAB, IP_RW, 60, IPS_IDLE);
 
     IUFillSwitch(&ST4StatusS[0], "ST4_DISABLED", "disabled", ISS_OFF);
     IUFillSwitch(&ST4StatusS[1], "ST4_ENABLED", "enabled", ISS_ON);

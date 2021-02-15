@@ -4,7 +4,7 @@
 # Script for creating the RRD file used to store the weather radio
 # time series.
 #
-# Copyright (C) 2020 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+# Copyright (C) 2020-21 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 #
 # This application is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public
@@ -30,13 +30,13 @@ args=parser.parse_args()
 
 #from meteoconfig import *
 
-rrd_args = [args.rrdfile, "--step", "300"]
+rrd_args = [args.rrdfile, "--step", "60"]
 
 if (args.source):
     rrd_args += ["--source", args.source]
 
-# 5min raw values for 24 hours, 15 min for 7*24 hours, 1hour for 1 year,
-# 1day dor 10 years.
+# 1min raw values for 1h, 5 min fpr 24 hours, 15 min for 7*24 hours,
+# 1hour for 1 year, 1day dor 10 years.
 ret = rrdtool.create(rrd_args,
 		     "DS:Temperature:GAUGE:600:U:U",
 		     "DS:Pressure:GAUGE:600:U:U",
@@ -48,18 +48,23 @@ ret = rrdtool.create(rrd_args,
 		     "DS:WindSpeed:GAUGE:600:U:U",
 		     "DS:WindGust:GAUGE:600:U:U",
 		     "DS:WindDirection:GAUGE:600:U:U",
+		     "DS:RaindropFrequency:GAUGE:600:U:U",
+		     "DS:RainVolume:GAUGE:600:U:U",
+		     "RRA:AVERAGE:0.5:1m:1h",
 		     "RRA:AVERAGE:0.5:5m:1d",
 		     "RRA:AVERAGE:0.5:15m:7d",
 		     "RRA:AVERAGE:0.5:1h:1y",
 		     "RRA:AVERAGE:0.5:1d:10y",
-		     "RRA:MIN:0.5:1:288",
-		     "RRA:MIN:0.5:3:672",
-		     "RRA:MIN:0.5:12:8760",
-		     "RRA:MIN:0.5:288:3650",
-		     "RRA:MAX:0.5:1:288",
-		     "RRA:MAX:0.5:5:672",
-                     "RRA:MAX:0.5:12:8760",
-		     "RRA:MAX:0.5:288:3650")
+		     "RRA:MIN:0.5:1m:1h",
+		     "RRA:MIN:0.5:5m:1d",
+		     "RRA:MIN:0.5:15m:7d",
+		     "RRA:MIN:0.5:1h:1y",
+		     "RRA:MIN:0.5:1d:10y",
+		     "RRA:MAX:0.5:1m:1h",
+		     "RRA:MAX:0.5:5m:1d",
+		     "RRA:MAX:0.5:15m:7d",
+		     "RRA:MAX:0.5:1h:1y",
+		     "RRA:MAX:0.5:1d:10y")
 
 
 if ret:
