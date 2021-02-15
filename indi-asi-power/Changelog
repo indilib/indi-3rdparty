@@ -1,3 +1,14 @@
+v0.5
+* Tidy up code to replace literal with const values wherever sensible for adaptability
+
+v0.4
+* tested on ASIAir Pro
+
+v0.3
+* Improve messaging and error conditions
+
+v0.2
+* Expand to 4 outputs
 
 v0.1
 * indi_asi_power - Moved under indi-3rdparty. Works with one port: GPIO 12
