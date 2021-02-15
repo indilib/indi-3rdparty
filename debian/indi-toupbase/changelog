@@ -1,3 +1,10 @@
+indi-toupbase (0.5) bionic; urgency=low
+
+  * Added support to Low Noise Mode.
+  * Added support to heating up.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 15 Feb 2021 09:00:00 +0300
+
 indi-toupbase (0.4) bionic; urgency=low
 
   * Added support to High Conversion Gain
