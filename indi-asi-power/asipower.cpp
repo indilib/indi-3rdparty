@@ -207,7 +207,7 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 // verify a number is a valid Duty Cycle
                 if ( values[0] < 0 || values[0] > max_pwm_duty )
                 {
-                    DutyCycleNP[i].s=IPS_ALERT;
+                    DutyCycleNP[i].s = IPS_ALERT;
                     IDSetNumber(&DutyCycleNP[i], nullptr);
                     DEBUGF(INDI::Logger::DBG_ERROR, "Value %0.0f is not a valid Duty Cycle!", values[0]);
                     return false;
@@ -215,13 +215,13 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 // cannot alter duty cycle on a non-PWM device
                 if(!dev_pwm[m_type[i]])
                 {
-                    DutyCycleNP[i].s=IPS_ALERT;
+                    DutyCycleNP[i].s = IPS_ALERT;
                     IDSetNumber(&DutyCycleNP[i], nullptr);
                     DEBUGF(INDI::Logger::DBG_ERROR, "Cannot alter duty cycle on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                     return false;
                  }
                 IUUpdateNumber(&DutyCycleNP[i],values,names,n);
-                DutyCycleNP[i].s=IPS_OK;
+                DutyCycleNP[i].s = IPS_OK;
                 IDSetNumber(&DutyCycleNP[i], nullptr);
                 DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to duty cycle %0.0f", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
 
@@ -242,24 +242,25 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
     // first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
     {
-        // handle parity
         for(int i=0; i<n_gpio_pin; i++)
         {
             if (!strcmp(name, DeviceSP[i].name))
             {
+// Device type selected
                 IUUpdateSwitch(&DeviceSP[i], states, names, n);
                 m_type[i] = IUFindOnSwitchIndex(&DeviceSP[i]);
                 DEBUGF(INDI::Logger::DBG_SESSION, "%s New Type %s", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                 if(dev_pwm[m_type[i]])
                 {
+                    DutyCycleNP[i].s = IPS_OK;
                     set_PWM_frequency(m_piId, gpio_pin[i], pwm_freq);
                     set_PWM_range(m_piId, gpio_pin[i], max_pwm_duty);
                 }
                 else  // Force duty cycle to 100% for non-PWM. Cosmetic only
                 {
-//                    DutyCycleNP[i].s=IPS_IDLE;
-//                    DutyCycleN[i][0].value = 100;
-//                    IDSetNumber(&DutyCycleNP[i], nullptr);
+                    DutyCycleNP[i].s = IPS_IDLE;
+                    DutyCycleN[i][0].value = 100;
+                    IDSetNumber(&DutyCycleNP[i], nullptr);
                     DEBUGF(INDI::Logger::DBG_SESSION, "100%% duty cycle set on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
             }
@@ -280,7 +281,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                         set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
                     }
-                    OnOffSP[i].s = IPS_OK;
+                    OnOffSP[i].s = IPS_IDLE;
                     OnOffS[i][1].s = ISS_OFF;
                     IDSetSwitch(&OnOffSP[i], NULL);
                     return true;
@@ -297,7 +298,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
                         set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                     }
-                    OnOffSP[i].s = IPS_IDLE;
+                    OnOffSP[i].s = IPS_OK;
                     OnOffS[i][0].s = ISS_OFF;
                     IDSetSwitch(&OnOffSP[i], NULL);
                     return true;
