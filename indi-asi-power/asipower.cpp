@@ -249,12 +249,16 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
 // Device type selected
                 IUUpdateSwitch(&DeviceSP[i], states, names, n);
                 m_type[i] = IUFindOnSwitchIndex(&DeviceSP[i]);
+                DeviceSP[i].s = IPS_OK;
+                IDSetSwitch(&DeviceSP[i], NULL);
                 DEBUGF(INDI::Logger::DBG_SESSION, "%s New Type %s", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                 if(dev_pwm[m_type[i]])
                 {
                     DutyCycleNP[i].s = IPS_OK;
                     set_PWM_frequency(m_piId, gpio_pin[i], pwm_freq);
                     set_PWM_range(m_piId, gpio_pin[i], max_pwm_duty);
+                    IDSetNumber(&DutyCycleNP[i], nullptr);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "PWM device selected on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
                 else  // Force duty cycle to 100% for non-PWM. Cosmetic only
                 {
@@ -273,12 +277,12 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 {
                     if(!dev_pwm[m_type[i]])
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str());
+                        DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                         gpio_write(m_piId, gpio_pin[i], PI_LOW);
                     }
                     else
                     {
-                    DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
+                        DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                         set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
                     }
                     OnOffSP[i].s = IPS_IDLE;
