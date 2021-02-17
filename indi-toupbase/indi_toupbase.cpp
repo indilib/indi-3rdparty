@@ -56,7 +56,7 @@
 #define FMT_RGB888  MAKEFOURCC('R', 'G', 'B', '8')
 
 static int iConnectedCamerasCount;
-static XP(InstV2) pCameraInfo[CP(MAX)];
+static XP(DeviceV2) pCameraInfo[CP(MAX)];
 static ToupBase *cameras[CP(MAX)];
 
 /********************************************************************************/
@@ -212,7 +212,7 @@ void ISSnoopDevice(XMLEle *root)
     }
 }
 
-ToupBase::ToupBase(const XP(InstV2) *instance) : m_Instance(instance)
+ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
@@ -881,7 +881,7 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM)
+#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
@@ -1375,7 +1375,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             return true;
         }
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM)
+#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
         //////////////////////////////////////////////////////////////////////
         /// Low Noise
         //////////////////////////////////////////////////////////////////////

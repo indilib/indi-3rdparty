@@ -68,7 +68,7 @@ typedef unsigned long   ulong;            /* Short for unsigned long */
 class ToupBase : public INDI::CCD
 {
     public:
-        explicit ToupBase(const XP(InstV2) *instance);
+        explicit ToupBase(const XP(DeviceV2) *instance);
         ~ToupBase() override = default;
 
         virtual const char *getDefaultName() override;
@@ -439,7 +439,7 @@ class ToupBase : public INDI::CCD
         // Camera Handle & Instance
         //#############################################################################
         THAND m_CameraHandle { nullptr };
-        const XP(InstV2) *m_Instance;
+        const XP(DeviceV2) *m_Instance;
         // Camera Display Name
         char name[MAXINDIDEVICE];
 
