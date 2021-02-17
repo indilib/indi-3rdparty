@@ -1,0 +1,23 @@
+*.o
+*.so
+*.so.*
+*.pyc
+pig2vcd
+pigpiod
+pigs
+x_pigpio
+x_pigpiod_if
+x_pigpiod_if2
+__pycache__
+build
+dist
+*.egg-info
+
+tmp/
+
+# DOC files
+DOC/dbase/pigpio.sqlite.*
+DOC/tmp
+DOC/MAN/*
+!DOC/MAN/README*
+DOC/HTML/*.html

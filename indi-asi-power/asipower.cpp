@@ -121,6 +121,7 @@ bool IndiAsiPower::initProperties()
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
     INDI::DefaultDevice::addDebugControl();
+    setDriverInterface(AUX_INTERFACE);
 
     const std::string dev = "DEV";
     const std::string port = "Port ";
@@ -286,7 +287,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                         set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
                     }
                     OnOffSP[i].s = IPS_IDLE;
-                    OnOffS[i][1].s = ISS_OFF;
+////////                    OnOffS[i][1].s = ISS_OFF;
                     IDSetSwitch(&OnOffSP[i], NULL);
                     return true;
                 }
@@ -304,7 +305,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                         set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                     }
                     OnOffSP[i].s = IPS_OK;
-                    OnOffS[i][0].s = ISS_OFF;
+////////                    OnOffS[i][0].s = ISS_OFF;
                     IDSetSwitch(&OnOffSP[i], NULL);
                     return true;
                 }
