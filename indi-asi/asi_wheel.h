@@ -28,6 +28,8 @@
 
 #include <indifilterwheel.h>
 
+#define EFW_IS_MOVING -1
+
 class ASIWHEEL : public INDI::FilterWheel
 {
     public:
@@ -55,8 +57,15 @@ class ASIWHEEL : public INDI::FilterWheel
 
     private:
 
+        // Unidirectional
         ISwitchVectorProperty UniDirectionalSP;
         ISwitch UniDirectionalS[2];
+
+        // Calibrate
+        static void TimerHelperCalibrate(void *context);
+        void TimerCalibrate();
+        ISwitchVectorProperty CalibrateSP;
+        ISwitch CalibrateS[1];
 
     private:
         int fw_id = -1;
