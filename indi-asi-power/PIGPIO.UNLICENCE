@@ -1,4 +1,3 @@
-/*
 This is free and unencumbered software released into the public domain.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -23,19 +22,4 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>
-*/
-
-/*
-This version is for pigpio version 67+
-*/
-
-#ifndef PIGS_H
-#define PIGS_H
-
-#define PIGS_OK            0
-#define PIGS_CONNECT_ERR 255
-#define PIGS_OPTION_ERR  254
-#define PIGS_SCRIPT_ERR  253
-
-#endif
 

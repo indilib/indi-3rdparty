@@ -9,41 +9,33 @@ Features:
 
 # Source
 https://github.com/ken-self/indi-3rdparty/indi-asi-power
+https://github.com/joan2937/pigpio
 
 # Requirements
 * INDI available here http://indilib.org/download.html
-* CMake >= 2.4.7
+* CMake >= 3.0
 
 # Installation
-You need to download and install required libraries before compiling. See [INDI site](http://indilib.org/download.html) for more details.
-In addition you need to install pigpio from http://abyz.me.uk/rpi/pigpio/download.html as follows:
+You need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
+In addition you need to install pigpio client libraries and headers
 ```
-sudo apt install python-setuptools python3-setuptools
-wget https://github.com/joan2937/pigpio/archive/master.zip
-unzip master.zip
-cd pigpio-master
-make
-sudo make install
-```
-Compile the driver:
-```
+sudo apt -y install libpigpio-if-dev libpigpio-if2-1 pigpio-tools
+
+cd ~/Projects
 git clone https://github.com/ken-self/indi-3rdparty.git
 cd indi-3rdparty
 git checkout asipower
-cd ..
-mkdir /p build/indi-asi-power
+```
+And you also need to have pigpiod installed and running as root to use the driver
+Compile and install the driver and pigpiod
+```
+cd ~/Projects/indi-3rd-party
+git checkout asipower
+mkdir -p ~/projects/build/indi-asi-power
 cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
 make
-```
-Install the driver:
-```
 sudo make install
 ```
-
-# How to use it?
-The driver uses the pigpiod daemon. and pigpio library 
-In order to run as non-root user the pigpiod daemon must be running
-pigpio is used rather than libgpiod as pigpio provides PWM functionality
 Run the pigpiod daemon as root using systemd:
 ```
 sudo cp pigpiod.service /etc/systemd/system/
@@ -52,9 +44,15 @@ sudo systemctl daemon-reload
 sudo systemctl enable pigpiod.service
 sudo systemctl start pigpiod.service
 ```
-Alternatively, edit rc.local.
 
-Start indiserve with the driver
+# How to use it?
+The driver uses the pigpiod daemon. and pigpio library 
+In order to run as non-root user the pigpiod daemon must be running
+pigpio is used rather than libgpiod or wiringpi as pigpio provides PWM output
+with hardware timing on GPIO 0-31
+http://abyz.me.uk/rpi/pigpio/
+
+Start indiserver with the driver
 ```
 indi_server indi_asi_power
 ```

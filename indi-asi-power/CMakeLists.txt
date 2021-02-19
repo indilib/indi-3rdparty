@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.4.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi-asi-power CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -9,9 +9,13 @@ set (VERSION_MAJOR 0)
 set (VERSION_MINOR 5)
 
 find_package(INDI REQUIRED)
+find_package(Threads REQUIRED)
+find_package(RT REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_asi_power.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_asi_power.xml)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pigpiod.service ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.service)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/install_pigpiod.sh ${CMAKE_CURRENT_BINARY_DIR}/install_pigpiod.sh)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -29,8 +33,14 @@ set(indi_asi_power_SRCS
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indi_asi_power indi_asi_power_SRCS 6 cpp)
 ENDIF ()
+# daemon for controlling GPIO
+# pigpiod
+add_executable(pigpiod pigpiod.c)
+target_link_libraries(pigpiod pigpio RT::RT Threads::Threads)
 
 add_executable(indi_asi_power ${indi_asi_power_SRCS})
 target_link_libraries(indi_asi_power ${INDI_LIBRARIES} ${GPIO_LIBRARIES})
-install(TARGETS indi_asi_power RUNTIME DESTINATION bin )
+install(TARGETS indi_asi_power pigpiod RUNTIME DESTINATION bin )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_asi_power.xml DESTINATION ${INDI_DATA_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.service DESTINATION /etc/systemd/system/)
+install(CODE "execute_process(COMMAND install_pigpiod.sh)")
