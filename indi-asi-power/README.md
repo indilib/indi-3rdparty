@@ -19,7 +19,7 @@ https://github.com/joan2937/pigpio
 You need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
 In addition you need to install pigpio client libraries and headers
 ```
-sudo apt -y install libpigpio-if-dev libpigpio-if2-1 pigpio-tools
+sudo apt -y install libpigpiod-if-dev libpigpiod-if2-1 pigpio-tools
 
 cd ~/Projects
 git clone https://github.com/ken-self/indi-3rdparty.git
