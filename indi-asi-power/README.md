@@ -28,6 +28,7 @@ git checkout asipower
 ```
 And you also need to have pigpiod installed and running as root to use the driver
 Compile and install the driver and pigpiod
+Install Run the pigpiod daemon as root using systemd
 ```
 cd ~/Projects/indi-3rd-party
 git checkout asipower
@@ -36,9 +37,9 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
 make
 sudo make install
 ```
-Run the pigpiod daemon as root using systemd:
+Manually install and run pigpiod daemon as root using systemd:
 ```
-sudo cp pigpiod.service /etc/systemd/system/
+sudo cp pigpiod.service /lib/systemd/system/
 sudo chmod 644 /etc/systemd/system/pigpiod.service
 sudo systemctl daemon-reload
 sudo systemctl enable pigpiod.service
@@ -46,10 +47,10 @@ sudo systemctl start pigpiod.service
 ```
 
 # How to use it?
-The driver uses the pigpiod daemon. and pigpio library 
-In order to run as non-root user the pigpiod daemon must be running
-pigpio is used rather than libgpiod or wiringpi as pigpio provides PWM output
-with hardware timing on GPIO 0-31
+The driver uses the pigpiod daemon and pigpio library 
+In order to run the driver as non-root user the pigpiod daemon must be running
+pigpio library is used rather than libgpiod or wiringpi as pigpio provides PWM output
+with accurate hardware timing on GPIO 0-31
 http://abyz.me.uk/rpi/pigpio/
 
 Start indiserver with the driver

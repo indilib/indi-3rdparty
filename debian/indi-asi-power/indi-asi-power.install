@@ -1,2 +1,3 @@
-usr/bin/
-usr/share/indi/
+pigpiod usr/bin/
+indi_asi_power usr/bin/
+pigpiod.service lib/systemd/system/

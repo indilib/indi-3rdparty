@@ -1,29 +1,23 @@
-indi-asi-power (0.5) vivid; urgency=low
+v0.6
+* Link pigpio library statically into pigpiod daemon
+* cmake installs systemd pigpiod.service to correct directory
+* install script to run daemon-reload, enable pigpiod.service and start pigpiod.service
+* Use currrent gcc compiler for pigpio and pigpiod - suppress multitude of warnings
 
-  * Updated SDK. Name changed to indi-asi
+v0.5
+* Tidy up code to replace literal with const values wherever sensible for adaptability
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 12 Jun 2016 13:00:00 +0300
+v0.4
+* tested on ASIAir Pro
 
-indi-asi-power (0.4) vivid; urgency=low
+v0.3
+* Improve messaging and error conditions
 
-  * Fix west/east guide issues.
+v0.2
+* Expand to 4 outputs
 
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 22 Sep 2015 20:00:00 +0300
+v0.1
+* indi_asi_power - Moved under indi-3rdparty. Works with one port: GPIO 12
 
-indi-asi-power (0.3) vivid; urgency=low
-
-  * Updated SDK and fixed issue with memory consumption.
-
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 26 Jun 2015 13:00:00 +0300
-
-indi-asi-power (0.2) vivid; urgency=low
-
-  * New upstream release.
-
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 03 Mar 2014 09:00:00 +0300
-
-indi-asi-power (0.1) trusty; urgency=low
-
-  * New upstream release.
-
- -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 14 Mar 2014 09:00:00 +0300
+v0.0
+* all - Initial prototype of asi power driver
