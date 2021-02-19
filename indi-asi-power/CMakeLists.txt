@@ -33,6 +33,13 @@ set(indi_asi_power_SRCS
 IF (UNITY_BUILD)
     ENABLE_UNITY_BUILD(indi_asi_power indi_asi_power_SRCS 6 cpp)
 ENDIF ()
+
+add_compile_options(-Wall)
+
+# libpigpio.(so|a)
+add_library(pigpio pigpio.c command.c custom.cext)
+target_compile_options(pigpio PRIVATE -Wno-type-limits -Wno-sign-compare -Wno-maybe-uninitialized -Wno-unused-parameter)
+
 # daemon for controlling GPIO
 # pigpiod
 add_executable(pigpiod pigpiod.c)
@@ -40,7 +47,11 @@ target_link_libraries(pigpiod pigpio RT::RT Threads::Threads)
 
 add_executable(indi_asi_power ${indi_asi_power_SRCS})
 target_link_libraries(indi_asi_power ${INDI_LIBRARIES} ${GPIO_LIBRARIES})
-install(TARGETS indi_asi_power pigpiod RUNTIME DESTINATION bin )
+install(TARGETS indi_asi_power pigpio pigpiod 
+    LIBRARY  DESTINATION lib
+    ARCHIVE  DESTINATION lib
+    RUNTIME DESTINATION bin
+)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_asi_power.xml DESTINATION ${INDI_DATA_DIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.service DESTINATION /etc/systemd/system/)
 install(CODE "execute_process(COMMAND install_pigpiod.sh)")
