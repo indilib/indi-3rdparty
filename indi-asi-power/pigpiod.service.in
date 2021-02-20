@@ -3,7 +3,7 @@ Description=pigpiod daemon to control Raspberry Pi GPIO
 
 [Service]
 Type=forking
-PIDFile=pigpiod.pid
+PIDFile=pigpio.pid
 ExecStart=@CMAKE_INSTALL_PREFIX@/bin/pigpiod
 
 [Install]
