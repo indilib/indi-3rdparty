@@ -1,10 +1,10 @@
 #!/usr/bin/make -f
 
-#include /usr/share/cdbs/1/rules/debhelper.mk
-#include /usr/share/cdbs/1/class/cmake.mk
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=indi-asi-power
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
 
-%:
-	dh $@ --with=systemd
+#%:
+#	dh $@ --with=systemd -v
