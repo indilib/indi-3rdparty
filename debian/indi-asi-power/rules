@@ -5,6 +5,3 @@ include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=indi-asi-power
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
-
-#%:
-#	dh $@ --with=systemd -v

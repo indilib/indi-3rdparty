@@ -21,10 +21,3 @@ Description: INDI Driver for RaspberryPi GPIO
  INDI Driver for RaspberryPi GPIO on/off and PWM
  This driver is compatible with any INDI client but only works on Raspberry Pi devices
  This package contains the debug symbols for the this driver, useful to investigate problems in INDI.
-
-Package: pigpiod
-Section: science
-Architecture: all
-Depends: ${misc:Depends}
-Description: pigpiod systemd service
- Install pigpiod as a service to access GPIO

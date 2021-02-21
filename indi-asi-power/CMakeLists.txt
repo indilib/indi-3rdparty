@@ -65,7 +65,7 @@ if (SYSTEMD_FOUND AND "${SYSTEMD_SERVICES_INSTALL_DIR}" STREQUAL "")
             @ONLY)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.service DESTINATION
             ${SYSTEMD_SERVICES_INSTALL_DIR} COMPONENT cp)
-    install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_BINARY_DIR}/install_pigpiod.sh)")
+### install(CODE "execute_process(COMMAND ${CMAKE_CURRENT_BINARY_DIR}/install_pigpiod.sh)")
 
 elseif (NOT SYSTEMD_FOUND AND SYSTEMD_SERVICES_INSTALL_DIR)
     message (FATAL_ERROR "Variable SYSTEMD_SERVICES_INSTALL_DIR is\
