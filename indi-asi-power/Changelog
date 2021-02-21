@@ -1,0 +1,23 @@
+v0.6
+* Link pigpio library statically into pigpiod daemon
+* cmake installs systemd pigpiod.service to correct directory
+* install script to run daemon-reload, enable pigpiod.service and start pigpiod.service
+* Use currrent gcc compiler for pigpio and pigpiod - suppress multitude of warnings
+
+v0.5
+* Tidy up code to replace literal with const values wherever sensible for adaptability
+
+v0.4
+* tested on ASIAir Pro
+
+v0.3
+* Improve messaging and error conditions
+
+v0.2
+* Expand to 4 outputs
+
+v0.1
+* indi_asi_power - Moved under indi-3rdparty. Works with one port: GPIO 12
+
+v0.0
+* all - Initial prototype of asi power driver
