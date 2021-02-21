@@ -2502,6 +2502,8 @@ bool QHYCCD::StopStreaming()
     SetQHYCCDStreamMode(m_CameraHandle, 0);
     StopQHYCCDLive(m_CameraHandle);
 
+    // Try to set 16bit mode if supported back.
+    SetQHYCCDBitsMode(m_CameraHandle, 16);
     return true;
 }
 
