@@ -3,6 +3,7 @@
 
     Copyright (C) 2020 Paweł T. Jochym
     Copyright (C) 2020 Fabrizio Pollastri
+    Copyright (C) 2021 Jasem Mutlaq
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -76,7 +77,7 @@ class CelestronAUX :
         long GetALT();
         long GetAZ();
         bool slewing();
-        bool Slew(AUXtargets trg, int rate);
+        bool Slew(AUXTargets trg, int rate);
         bool SlewALT(int rate);
         bool SlewAZ(int rate);
         bool GoToFast(long alt, long az, bool track);
@@ -85,19 +86,12 @@ class CelestronAUX :
         bool getCordwrap();
         bool setCordwrapPos(long pos);
         long getCordwrapPos();
-        bool getVersion(AUXtargets trg);
+        bool getVersion(AUXTargets trg);
         void getVersions();
         bool Track(long altRate, long azRate);
         bool TimerTick(double dt);
 
     private:
-        static const long STEPS_PER_REVOLUTION;
-        static const double STEPS_PER_DEGREE;
-        static const double DEFAULT_SLEW_RATE;
-        static const double TRACK_SCALE;
-        static const long MAX_ALT;
-        static const long MIN_ALT;
-
         enum ScopeStatus_t
         {
             IDLE,
@@ -155,13 +149,12 @@ class CelestronAUX :
         // Tracing in timer tick
         int TraceThisTickCount;
         bool TraceThisTick;
-        bool simulator = false;
 
         // connection
         bool isRTSCTS;
 
-        unsigned int DBG_CAUX;
-        unsigned int DBG_AUXMOUNT;
+        uint32_t DBG_CAUX {0};
+        uint32_t DBG_SERIAL {0};
 
         void initScope(char const *ip, int port);
         void initScope();
@@ -169,30 +162,38 @@ class CelestronAUX :
         bool detectNetScope();
         void closeConnection();
         void emulateGPS(AUXCommand &m);
-        bool serial_readMsgs(AUXCommand c);
-        bool tcp_readMsgs();
-        bool readMsgs(AUXCommand c);
-        void processCmd(AUXCommand &cmd);
+        bool serialReadResponse(AUXCommand c);
+        bool tcpReadResponse();
+        bool readAUXResponse(AUXCommand c);
+        void processResponse(AUXCommand &cmd);
         void querryStatus();
-        int sendBuffer(int PortFD, buffer buf);
-        bool sendCmd(AUXCommand &c);
+        int sendBuffer(int PortFD, AUXBuffer buf);
+        bool sendAUXCommand(AUXCommand &c);
 
-        double Lat, Lon, Elv;
-        long Alt;
-        long Az;
-        long AltRate;
-        long AzRate;
-        long targetAlt;
-        long targetAz;
-        long slewRate;
-        bool tracking;
-        bool slewingAlt, slewingAz;
+        // Current steps from controller
+        uint32_t m_AltSteps {0};
+        uint32_t m_AzSteps {0};
+        // FIXME: Current rate in steps per sec?
+        int32_t m_AltRate {0};
+        int32_t m_AzRate {0};
+        // Desired target steps in both axis
+        uint32_t targetAlt {0};
+        uint32_t targetAz {0};
+        // FIXME: Combined slew rate?
+        long slewRate {0};
+
+        bool m_Tracking {false};
+        bool m_SlewingAlt {false}, m_SlewingAz {false};
         bool gpsemu;
-        bool cordwrap;
-        long cordwrapPos;
-        unsigned mb_ver_maj, mb_ver_min;
-        unsigned alt_ver_maj, alt_ver_min;
-        unsigned azm_ver_maj, azm_ver_min;
+
+
+        uint8_t m_MainBoardVersionMajor {0}, m_MainBoardVersionMinor {0};
+        uint8_t m_AltitudeVersionMajor {0}, m_AltitudeVersionMinor {0};
+        uint8_t m_AzimuthVersionMajor {0}, m_AzimuthVersionMinor {0};
+
+        // Coord Wrap
+        bool m_CordWrapActive {false};
+        uint32_t m_CordWrapPosition {0};
 
         // FP
         int modem_ctrl;
@@ -203,11 +204,13 @@ class CelestronAUX :
         int aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n);
         int aux_tty_write (int PortFD, char *buf, int bufsiz, float timeout, int *n);
         bool tty_set_speed(int PortFD, speed_t speed);
-        void hex_dump(char *buf, buffer data, size_t size);
+        void hex_dump(char *buf, AUXBuffer data, size_t size);
 
 
-        // Additional interface elements specific to Celestron Scopes
-    private:
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Celestron AUX Properties
+        ///////////////////////////////////////////////////////////////////////////////
+
         // Firmware
         IText FirmwareT[9] {};
         ITextVectorProperty FirmwareTP;
@@ -226,4 +229,37 @@ class CelestronAUX :
         ISwitch GPSEmuS[2];
         ISwitchVectorProperty GPSEmuSP;
         enum { GPSEMU_OFF, GPSEMU_ON };
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Static Const Private Variables
+        ///////////////////////////////////////////////////////////////////////////////
+
+        // One definition rule (ODR) constants
+        // AUX commands use 24bit integer as a representation of angle in units of
+        // fractional revolutions. Thus 2^24 steps makes full revolution.
+        static constexpr uint32_t STEPS_PER_REVOLUTION {16777216};
+        static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
+        static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
+        static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
+        static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
+
+        // The guide rate is probably (???) measured in 1000 arcmin/min
+        // This is based on experimentation and guesswork.
+        // The rate is calculated in steps/min - thus conversion is required.
+        // The best experimental value was 1.315 which is quite close
+        // to 60000/STEPS_PER_DEGREE = 1.2874603271484375.
+        static constexpr double TRACK_SCALE {60000 / STEPS_PER_DEGREE};
+
+        static constexpr uint8_t MAX_SLEW_RATE {9};
+        static constexpr uint8_t FIND_SLEW_RATE {7};
+        static constexpr uint8_t CENTERING_SLEW_RATE {3};
+        static constexpr uint8_t GUIDE_SLEW_RATE {2};
+        static constexpr uint32_t BUFFER_SIZE {10240};
+        // seconds
+        static constexpr uint8_t READ_TIMEOUT {1};
+        // ms
+        static constexpr uint8_t CTS_TIMEOUT {100};
+        // ms
+        static constexpr uint8_t RTS_DELAY {50};
+
 };
