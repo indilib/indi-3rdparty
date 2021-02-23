@@ -68,7 +68,7 @@ typedef unsigned long   ulong;            /* Short for unsigned long */
 class ToupBase : public INDI::CCD
 {
     public:
-        explicit ToupBase(const XP(InstV2) *instance);
+        explicit ToupBase(const XP(DeviceV2) *instance);
         ~ToupBase() override = default;
 
         virtual const char *getDefaultName() override;
@@ -268,7 +268,12 @@ class ToupBase : public INDI::CCD
             OPTION_FACTORY         = 0x1f,    /* restore the factory settings */
             OPTION_TEC_VOLTAGE     = 0x20,    /* get the current TEC voltage in 0.1V, 59 mean 5.9V; readonly */
             OPTION_TEC_VOLTAGE_MAX = 0x21,    /* get the TEC maximum voltage in 0.1V; readonly */
-            OPTION_DEVICE_RESET    = 0x22     /* reset usb device, simulate a replug */
+            OPTION_DEVICE_RESET    = 0x22,    /* reset usb device, simulate a replug */
+
+            OPTION_DENOISE         = 0x35,     /* denoise, strength range: [0, 100], 0 means disable */
+            OPTION_HEAT_MAX        = 0x36,     /* maximum level: heat to prevent fogging up */
+            OPTION_HEAT            = 0x37,     /* heat to prevent fogging up */
+            OPTION_LOW_NOISE       = 0x38,     /* low noise mode: 1 => enable */
         };
 
         enum eGUIDEDIRECTION
@@ -434,7 +439,7 @@ class ToupBase : public INDI::CCD
         // Camera Handle & Instance
         //#############################################################################
         THAND m_CameraHandle { nullptr };
-        const XP(InstV2) *m_Instance;
+        const XP(DeviceV2) *m_Instance;
         // Camera Display Name
         char name[MAXINDIDEVICE];
 
@@ -567,6 +572,21 @@ class ToupBase : public INDI::CCD
             TC_VIDEO_MONO_16,
         };
 
+        // Low Noise
+        ISwitchVectorProperty LowNoiseSP;
+        ISwitch LowNoiseS[2];
+
+        // Heat Up
+        ISwitchVectorProperty HeatUpSP;
+        ISwitch HeatUpS[3];
+        enum
+        {
+            TC_HEAT_OFF,
+            TC_HEAT_ON,
+            TC_HEAT_MAX,
+        };
+
+
         // Firmware Info
         ITextVectorProperty FirmwareTP;
         IText FirmwareT[5] = {};
@@ -614,6 +634,8 @@ class ToupBase : public INDI::CCD
         bool m_RAWHighDepthSupport { false };
         bool m_MonoCamera { false };
         bool m_hasDualGain { false };
+        bool m_HasLowNoise { false };
+        bool m_HasHeatUp { false };
 
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };
