@@ -111,8 +111,8 @@ CelestronAUX::CelestronAUX()
 {
     setVersion(CAUX_VERSION_MAJOR, CAUX_VERSION_MINOR);
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC |
-        TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME |
-	TELESCOPE_HAS_LOCATION | TELESCOPE_CAN_CONTROL_TRACK, 4);
+                           TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME |
+                           TELESCOPE_HAS_LOCATION | TELESCOPE_CAN_CONTROL_TRACK, 4);
 
     LOG_DEBUG("Celestron AUX instancing.");
 
@@ -140,8 +140,7 @@ CelestronAUX::~CelestronAUX()
 bool CelestronAUX::Abort()
 {
     AxisStatusAZ = AxisStatusALT = STOPPED;
-    ScopeStatus = IDLE;
-
+    TrackState = SCOPE_IDLE;
     Track(0, 0);
     AUXBuffer b(1);
     b[0] = 0;
@@ -151,11 +150,6 @@ bool CelestronAUX::Abort()
     readAUXResponse(stopAlt);
     sendAUXCommand(stopAz);
     readAUXResponse(stopAz);
-
-    AbortSP.s = IPS_OK;
-    IUResetSwitch(&AbortSP);
-    IDSetSwitch(&AbortSP, nullptr);
-    LOG_INFO("Telescope movement aborted.");
 
     LOG_INFO("Telescope motion aborted.");
     return true;
@@ -271,17 +265,17 @@ bool CelestronAUX::Handshake()
                     return false;
                 }
 
-		// wait for speed to settle
+                // wait for speed to settle
                 msleep(200);
 
                 LOG_INFO("Setting serial speed to 9600 baud.");
 
-		// detect if connectd to HC port or to mount USB port
-		// ask for HC version
-		char version[10];
-		if ((isHC = detectHC(version,(size_t)10)))
-                    LOGF_INFO("Detected Hand Controller (v%s) serial connection.",version);
-		else
+                // detect if connectd to HC port or to mount USB port
+                // ask for HC version
+                char version[10];
+                if ((isHC = detectHC(version, (size_t)10)))
+                    LOGF_INFO("Detected Hand Controller (v%s) serial connection.", version);
+                else
                     LOG_INFO("Detected Mount USB serial connection.");
             }
         }
@@ -307,8 +301,8 @@ bool CelestronAUX::Handshake()
 
         LOG_DEBUG("Connection ready. Starting Processing.");
 
-	// set mount type to alignment subsystem
-        currentMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ:EQUATORIAL;
+        // set mount type to alignment subsystem
+        currentMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ : EQUATORIAL;
         SetApproximateMountAlignmentFromMountType(currentMountType);
         // tell the alignment math plugin to reinitialise
         Initialise(this);
@@ -349,11 +343,12 @@ const char *CelestronAUX::getDefaultName()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Park()
 {
-    // Park at the northern horizon
+    // Park at the northern or southern horizon
     // This is a designated by celestron parking position
     Abort();
     LOG_INFO("Telescope park in progress...");
-    GoToFast(0, STEPS_PER_REVOLUTION / 2, false);
+    GoToFast(0, LocationN[LOCATION_LATITUDE].value >= 0 ? 0 : 180, false);
+    TrackState = SCOPE_PARKING;
     return true;
 }
 
@@ -382,7 +377,7 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
     else
     {
         LOG_ERROR("AltAzFromRaDec - TransformCelestialToTelescope failed");
-        LOG_ERROR("Activate the Alignment Subsystem");
+        LOG_WARN("Activate the Alignment Subsystem.");
         // the best I can do
         AltAz.az = ra;
         AltAz.alt = dec;
@@ -400,10 +395,10 @@ double CelestronAUX::getNorthAz()
     ln_lnlat_posn location;
     double northAz;
     if (!GetDatabaseReferencePosition(location))
-	northAz = 0.;
+        northAz = 0.;
     else
         northAz = AltAzFromRaDec(get_local_sidereal_time(location.lng), 0., 0.).az;
-    LOGF_INFO("North Azimuth = %lf", northAz);
+    LOGF_DEBUG("North Azimuth = %lf", northAz);
     return northAz;
 }
 
@@ -549,8 +544,8 @@ bool CelestronAUX::initProperties()
     IUFillSwitch(&MountTypeS[EQUATORIAL], "EQUATORIAL", "Equatorial", ISS_OFF);
     IUFillSwitch(&MountTypeS[ALTAZ], "ALTAZ", "AltAz", ISS_ON);
     IUFillSwitchVector(&MountTypeSP, MountTypeS, 2, getDeviceName(),
-      "MOUNT_TYPE", "Mount Type", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60,
-      IPS_IDLE );
+                       "MOUNT_TYPE", "Mount Type", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60,
+                       IPS_IDLE );
 
     // cord wrap
     IUFillSwitch(&CordWrapS[CORDWRAP_OFF], "CORDWRAP_OFF", "OFF", ISS_OFF);
@@ -582,10 +577,11 @@ bool CelestronAUX::initProperties()
     /* How fast do we guide compared to sidereal rate */
     IUFillNumber(&GuideRateN[AXIS_RA], "GUIDE_RATE_WE", "W/E Rate", "%.f", 10, 100, 1, 50);
     IUFillNumber(&GuideRateN[AXIS_DE], "GUIDE_RATE_NS", "N/S Rate", "%.f", 10, 100, 1, 50);
-    IUFillNumberVector(&GuideRateNP, GuideRateN, 2, getDeviceName(), "GUIDE_RATE", "Guiding Rate", GUIDE_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&GuideRateNP, GuideRateN, 2, getDeviceName(), "GUIDE_RATE", "Guiding Rate", GUIDE_TAB, IP_RW, 0,
+                       IPS_IDLE);
 
     // to update cordwrap pos at each init of alignment subsystem
-    IDSnoopDevice(getDeviceName(),"ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
+    IDSnoopDevice(getDeviceName(), "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
 
     // JM 2020-09-23 Make it easier for users to connect by default via WiFi if they
     // selected the Celestron WiFi labeled driver.
@@ -633,7 +629,7 @@ bool CelestronAUX::updateProperties()
         getVersions();
 
         // display firmware versions
-        char fwText[10];
+        char fwText[16] = {0};
         IUSaveText(&FirmwareT[FW_HC], "HC version");
         IUSaveText(&FirmwareT[FW_HCp], "HC+ version");
         //IUSaveText(&FirmwareT[FW_MODEL], fwInfo.Model.c_str());
@@ -742,8 +738,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-       // mount type
-       if (strcmp(name, MountTypeSP.name) == 0)
+        // mount type
+        if (strcmp(name, MountTypeSP.name) == 0)
         {
             if (IUUpdateSwitch(&MountTypeSP, states, names, n) < 0)
                 return false;
@@ -765,7 +761,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             LOGF_INFO("update mount: mount type %d", currentMountType);
 
-	    // set mount type to alignment subsystem
+            // set mount type to alignment subsystem
             SetApproximateMountAlignmentFromMountType(currentMountType);
             // tell the alignment math plugin to reinitialise
             Initialise(this);
@@ -777,7 +773,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             return true;
         }
- 
+
         // Slew mode
         if (!strcmp(name, SlewRateSP.name))
         {
@@ -834,7 +830,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                     requestedCordwrapPos = 0;
                     break;
             }
-	    long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
             return true;
@@ -972,11 +968,11 @@ bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 }
 
 
-//++++ autoguide 
+//++++ autoguide
 
 IPState CelestronAUX::GuideNorth(uint32_t ms)
 {
-    IDLog("Guiding: N %d ms\n", ms);
+    LOGF_DEBUG("Guiding: N %d ms", ms);
 
     int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_DE].value);
 
@@ -987,7 +983,7 @@ IPState CelestronAUX::GuideNorth(uint32_t ms)
 
 IPState CelestronAUX::GuideSouth(uint32_t ms)
 {
-    IDLog("Guiding: S %d ms\n", ms);
+    LOGF_DEBUG("Guiding: S %d ms", ms);
 
     int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_DE].value);
 
@@ -998,7 +994,7 @@ IPState CelestronAUX::GuideSouth(uint32_t ms)
 
 IPState CelestronAUX::GuideEast(uint32_t ms)
 {
-    IDLog("Guiding: E %d ms\n", ms);
+    LOGF_DEBUG("Guiding: E %d ms", ms);
 
     int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_RA].value);
 
@@ -1009,7 +1005,7 @@ IPState CelestronAUX::GuideEast(uint32_t ms)
 
 IPState CelestronAUX::GuideWest(uint32_t ms)
 {
-    IDLog("Guiding: W %d ms\n", ms);
+    LOGF_DEBUG("Guiding: W %d ms", ms);
 
     int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_RA].value);
 
@@ -1033,12 +1029,12 @@ bool CelestronAUX::HandleGetAutoguideRate(INDI_EQ_AXIS axis, uint8_t rate)
 {
     switch (axis)
     {
-    case AXIS_DE:
-        GuideRateN[AXIS_DE].value = rate;
-        break;
-    case AXIS_RA:
-        GuideRateN[AXIS_RA].value = rate;
-        break;
+        case AXIS_DE:
+            GuideRateN[AXIS_DE].value = rate;
+            break;
+        case AXIS_RA:
+            GuideRateN[AXIS_RA].value = rate;
+            break;
     }
 
     return true;
@@ -1080,7 +1076,7 @@ bool CelestronAUX::trackingRequested()
 bool CelestronAUX::ReadScopeStatus()
 {
     if (!isConnected())
-	return false;
+        return false;
 
     TelescopeDirectionVector TDV;
     struct ln_equ_posn RaDec;
@@ -1139,8 +1135,14 @@ bool CelestronAUX::ReadScopeStatus()
 bool CelestronAUX::Sync(double ra, double dec)
 {
     AlignmentDatabaseEntry NewEntry;
-    struct ln_equ_posn RaDec { 0, 0 };
-    struct ln_hrz_posn AltAz { 0, 0 };
+    struct ln_equ_posn RaDec
+    {
+        0, 0
+    };
+    struct ln_hrz_posn AltAz
+    {
+        0, 0
+    };
 
     if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
     {
@@ -1176,7 +1178,7 @@ bool CelestronAUX::Sync(double ra, double dec)
 
         // equatorial/telescope conversions needs more than 1 sync point
         if (GetAlignmentDatabase().size() < 2 &&
-            MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+                MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
             LOG_WARN("Equatorial mounts need two SYNC points at least.");
 
         // Tell the math plugin to reinitialise
@@ -1188,7 +1190,7 @@ bool CelestronAUX::Sync(double ra, double dec)
         setCordwrapPos(cwpos);
         getCordwrapPos();
 
-	// update tracking target
+        // update tracking target
         ReadScopeStatus();
         CurrentTrackingTarget = NewTrackingTarget;
 
@@ -1242,6 +1244,7 @@ void CelestronAUX::TimerHit()
         case SCOPE_PARKING:
             if (!slewing())
             {
+                SetTrackEnabled(false);
                 SetParked(true);
                 LOG_DEBUG("Telescope parked.");
             }
@@ -1468,8 +1471,8 @@ bool CelestronAUX::GoToFast(long alt, long az, bool track)
     AUXCommand azmcmd(MC_GOTO_FAST, APP, AZM);
     altcmd.setPosition(alt);
     // N-based azimuth
-    az += STEPS_PER_REVOLUTION / 2;
-    az %= STEPS_PER_REVOLUTION;
+    //    az += STEPS_PER_REVOLUTION / 2;
+    //    az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendAUXCommand(altcmd);
     readAUXResponse(altcmd);
@@ -1493,8 +1496,8 @@ bool CelestronAUX::GoToSlow(long alt, long az, bool track)
     AUXCommand azmcmd(MC_GOTO_SLOW, APP, AZM);
     altcmd.setPosition(alt);
     // N-based azimuth
-    az += STEPS_PER_REVOLUTION / 2;
-    az %= STEPS_PER_REVOLUTION;
+    //    az += STEPS_PER_REVOLUTION / 2;
+    //    az %= STEPS_PER_REVOLUTION;
     azmcmd.setPosition(az);
     sendAUXCommand(altcmd);
     readAUXResponse(altcmd);
@@ -1615,17 +1618,17 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
 {
     if (enabled)
     {
-	if (TrackState == SCOPE_IDLE)
+        if (TrackState == SCOPE_IDLE)
         {
             LOG_INFO("Start Tracking.");
             CurrentTrackingTarget = NewTrackingTarget;
-	    TrackState = SCOPE_TRACKING;
-	}
+            TrackState = SCOPE_TRACKING;
+        }
     }
     else
     {
-	if (TrackState == SCOPE_TRACKING)
-	{
+        if (TrackState == SCOPE_TRACKING || TrackState == SCOPE_PARKING)
+        {
             LOG_WARN("Stopping Tracking.");
             TrackState = SCOPE_IDLE;
             AxisStatusAZ = AxisStatusALT = STOPPED;
@@ -1639,7 +1642,7 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
             readAUXResponse(stopAlt);
             sendAUXCommand(stopAz);
             readAUXResponse(stopAz);
-	}
+        }
     }
 
     return true;
@@ -1852,8 +1855,8 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                     case AZM:
                         m_AzSteps = m.getPosition();
                         // Celestron uses N as zero Azimuth!
-                        m_AzSteps += STEPS_PER_REVOLUTION / 2;
-                        m_AzSteps %= STEPS_PER_REVOLUTION;
+                        //                        m_AzSteps += STEPS_PER_REVOLUTION / 2;
+                        //                        m_AzSteps %= STEPS_PER_REVOLUTION;
                         LOGF_DEBUG("AZ: %ld", m_AzSteps);
                         break;
                     default:
@@ -1890,48 +1893,48 @@ bool CelestronAUX::processResponse(AUXCommand &m)
             case MC_GET_AUTOGUIDE_RATE:
                 switch (m.src)
                 {
-                case ALT:
-                    return HandleGetAutoguideRate(AXIS_DE, m.data[0] * 100.0 / 255);
-                case AZM:
-                    return HandleGetAutoguideRate(AXIS_RA, m.data[0] * 100.0 / 255);
-                default:
-                    IDLog("unknown src 0x%02x\n", m.src);
+                    case ALT:
+                        return HandleGetAutoguideRate(AXIS_DE, m.data[0] * 100.0 / 255);
+                    case AZM:
+                        return HandleGetAutoguideRate(AXIS_RA, m.data[0] * 100.0 / 255);
+                    default:
+                        IDLog("unknown src 0x%02x\n", m.src);
                 }
                 break;
 
             case MC_SET_AUTOGUIDE_RATE:
                 switch (m.src)
                 {
-                case ALT:
-                    return HandleSetAutoguideRate(AXIS_DE);
-                case AZM:
-                    return HandleSetAutoguideRate(AXIS_RA);
-                default:
-                    IDLog("unknown src 0x%02x\n", m.src);
+                    case ALT:
+                        return HandleSetAutoguideRate(AXIS_DE);
+                    case AZM:
+                        return HandleSetAutoguideRate(AXIS_RA);
+                    default:
+                        IDLog("unknown src 0x%02x\n", m.src);
                 }
                 break;
 
             case MC_AUX_GUIDE:
                 switch (m.src)
                 {
-                case ALT:
-                    return HandleGuidePulse(AXIS_DE);
-                case AZM:
-                    return HandleGuidePulse(AXIS_RA);
-                default:
-                    IDLog("unknown src 0x%02x\n", m.src);
+                    case ALT:
+                        return HandleGuidePulse(AXIS_DE);
+                    case AZM:
+                        return HandleGuidePulse(AXIS_RA);
+                    default:
+                        IDLog("unknown src 0x%02x\n", m.src);
                 }
                 break;
 
             case MC_AUX_GUIDE_ACTIVE:
                 switch (m.src)
                 {
-                case ALT:
-                    return HandleGuidePulseDone(AXIS_DE, m.data[0] == 0x00);
-                case AZM:
-                    return HandleGuidePulseDone(AXIS_RA, m.data[0] == 0x00);
-                default:
-                    IDLog("unknown src 0x%02x\n", m.src);
+                    case ALT:
+                        return HandleGuidePulseDone(AXIS_DE, m.data[0] == 0x00);
+                    case AZM:
+                        return HandleGuidePulseDone(AXIS_RA, m.data[0] == 0x00);
+                    default:
+                        IDLog("unknown src 0x%02x\n", m.src);
                 }
                 break;
 
