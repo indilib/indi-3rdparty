@@ -261,7 +261,7 @@ class CelestronAUX :
         enum { CORDWRAP_OFF, CORDWRAP_ON };
         ISwitch CWPosS[4];
         ISwitchVectorProperty CWPosSP;
-        enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W};
+        enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W };
         // GPS emulator
         ISwitch GPSEmuS[2];
         ISwitchVectorProperty GPSEmuSP;

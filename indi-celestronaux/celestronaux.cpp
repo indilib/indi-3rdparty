@@ -91,7 +91,8 @@ void ISSnoopDevice(XMLEle *root)
     // update cordwrap position at each init of the alignment subsystem
     if (!strcmp(propName, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE"))
     {
-        long cwpos = range360(telescope_caux->requestedCordwrapPos + telescope_caux->getNorthAz()) * CelestronAUX::STEPS_PER_DEGREE;
+        //long cwpos = range360(telescope_caux->requestedCordwrapPos + telescope_caux->getNorthAz()) * CelestronAUX::STEPS_PER_DEGREE;
+        long cwpos = range360(telescope_caux->requestedCordwrapPos) * CelestronAUX::STEPS_PER_DEGREE;
         telescope_caux->setCordwrapPos(cwpos);
         telescope_caux->getCordwrapPos();
     }
@@ -308,7 +309,8 @@ bool CelestronAUX::Handshake()
         Initialise(this);
 
         // update cordwrap position at each init of the alignment subsystem
-        long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        //long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        long cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
         setCordwrapPos(cwpos);
         getCordwrapPos();
 
@@ -618,7 +620,8 @@ bool CelestronAUX::updateProperties()
 
         getCordwrapPos();
         IUResetSwitch(&CWPosSP);
-        CordWrapS[int(m_CordWrapPosition % 90)].s = ISS_ON;
+        LOGF_INFO("Set CordwrapPos index %d", (int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90));
+        CWPosS[(int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90)].s = ISS_ON;
         defineProperty(&CWPosSP);
 
         defineProperty(&GPSEmuSP);
@@ -634,7 +637,7 @@ bool CelestronAUX::updateProperties()
         IUSaveText(&FirmwareT[FW_HCp], "HC+ version");
         //IUSaveText(&FirmwareT[FW_MODEL], fwInfo.Model.c_str());
         //IUSaveText(&FirmwareT[FW_VERSION], fwInfo.Version.c_str());
-        IUSaveText(&FirmwareT[FW_MB], "Mother Board version");
+        IUSaveText(&FirmwareT[FW_MB], "Motherboard version");
         snprintf(fwText, 10, "%d.%02d", m_AzimuthVersionMajor, m_AzimuthVersionMinor);
         IUSaveText(&FirmwareT[FW_AZM], fwText);
         snprintf(fwText, 10, "%d.%02d", m_AltitudeVersionMajor, m_AltitudeVersionMinor);
@@ -767,7 +770,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             Initialise(this);
 
             // update cordwrap position at each init of the alignment subsystem
-            long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            //long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            long cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
 
@@ -830,7 +834,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                     requestedCordwrapPos = 0;
                     break;
             }
-            long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            //long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            long cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
             return true;
@@ -1186,7 +1191,8 @@ bool CelestronAUX::Sync(double ra, double dec)
         LOGF_DEBUG("Sync - new entry added RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
 
         // update cordwrap position at each init of the alignment subsystem
-        long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        //long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+        long cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
         setCordwrapPos(cwpos);
         getCordwrapPos();
 
@@ -1386,7 +1392,8 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     Initialise(this);
 
     // update cordwrap position at each init of the alignment subsystem
-    long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+    //long cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+    long cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
     setCordwrapPos(cwpos);
     getCordwrapPos();
 
@@ -1527,13 +1534,13 @@ void CelestronAUX::getVersions()
 {
     //getVersion(ANY);
     //getVersion(MB);
-    //getVersion(HC);
-    //getVersion(HCP);
+    getVersion(HC);
+    getVersion(HCP);
     getVersion(AZM);
     getVersion(ALT);
-    //getVersion(GPS);
-    //getVersion(WiFi);
-    //getVersion(BAT);
+    getVersion(GPS);
+    getVersion(WiFi);
+    getVersion(BAT);
     //getVersion(CHG);
     //getVersion(LIGHT);
 };
@@ -1570,6 +1577,7 @@ bool CelestronAUX::setCordwrapPos(long pos)
 {
     AUXCommand cwcmd(MC_SET_CORDWRAP_POS, APP, AZM);
     cwcmd.setPosition(pos);
+    LOGF_INFO("setCordwrapPos %.1f deg", (pos / STEPS_PER_DEGREE) );
     sendAUXCommand(cwcmd);
     readAUXResponse(cwcmd);
     return true;
@@ -1583,6 +1591,7 @@ long CelestronAUX::getCordwrapPos()
     AUXCommand cwcmd(MC_GET_CORDWRAP_POS, APP, AZM);
     sendAUXCommand(cwcmd);
     readAUXResponse(cwcmd);
+    LOGF_INFO("getCordwrapPos %.1f deg", (m_CordWrapPosition / STEPS_PER_DEGREE) );
     return m_CordWrapPosition;
 };
 
