@@ -108,6 +108,30 @@ bool GPSD::Disconnect()
     return true;
 }
 
+void GPSD::ISGetProperties(const char *dev)
+{
+    // If not for us, return.
+    if (dev && strcmp(dev, getDeviceName()))
+        return;
+
+    // JM 2021-02-27: In case GPS driver is CONNECTED, and
+    // Location or Time properties are OK (i.e. they were updated from GPS successfully already)
+    // then reset their status to IDLE first. The reason for this is that snooping drivers could
+    // possible receive again the Location and Time properties and Time property would be most likely
+    // already out of date which could lead to issues as reported in #334
+    // Therefore, we reset their status to IDLE as not to cause any abnormal behavior in downstream drivers
+    // and clients alike. Next time refresh is used, they can be set to IPS_OK again.
+    if (isConnected() && (LocationNP.s == IPS_OK || TimeTP.s == IPS_OK))
+    {
+        LocationNP.s = IPS_IDLE;
+        TimeTP.s = IPS_IDLE;
+        IDSetNumber(&LocationNP, nullptr);
+        IDSetText(&TimeTP, nullptr);
+    }
+
+    INDI::GPS::ISGetProperties(dev);
+}
+
 bool GPSD::initProperties()
 {
     // We init parent properties first
@@ -131,7 +155,8 @@ bool GPSD::initProperties()
     IUFillNumber(&SimLocationN[LOCATION_LATITUDE], "SIM_LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 29.1);
     IUFillNumber(&SimLocationN[LOCATION_LONGITUDE], "SIM_LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 48.5);
     IUFillNumber(&SimLocationN[LOCATION_ELEVATION], "SIM_ELEV", "Elevation (m)", "%g", -200, 10000, 0, 12);
-    IUFillNumberVector(&SimLocationNP, SimLocationN, 3, getDeviceName(), "SIM_GEOGRAPHIC_COORD", "Simulated Location", OPTIONS_TAB,
+    IUFillNumberVector(&SimLocationNP, SimLocationN, 3, getDeviceName(), "SIM_GEOGRAPHIC_COORD", "Simulated Location",
+                       OPTIONS_TAB,
                        IP_RW, 60, IPS_IDLE);
 
     addAuxControls();
@@ -163,21 +188,21 @@ bool GPSD::updateProperties()
     }
     return true;
 }
-bool GPSD::setSystemTime(time_t& raw_time)
+bool GPSD::setSystemTime(time_t &raw_time)
 {
-    #ifdef __linux__
-        #if defined(__GNU_LIBRARY__)
-            #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-                timespec sTime = {};
-                sTime.tv_sec = raw_time;
-                clock_settime(CLOCK_REALTIME, &sTime);
-            #else
-                stime(&raw_time);
-            #endif
-        #else
-            stime(&raw_time);
-        #endif
-    #endif
+#ifdef __linux__
+#if defined(__GNU_LIBRARY__)
+#if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+    timespec sTime = {};
+    sTime.tv_sec = raw_time;
+    clock_settime(CLOCK_REALTIME, &sTime);
+#else
+    stime(&raw_time);
+#endif
+#else
+    stime(&raw_time);
+#endif
+#endif
     return true;
 }
 
@@ -285,7 +310,7 @@ IPState GPSD::updateGPS()
     if (gpsData->fix.mode < MODE_2D)
 #elif GPSD_API_MAJOR_VERSION >= 10
     if (gpsData->fix.status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D)
-#else  
+#else
     if (gpsData->status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D )
 #endif
     {
@@ -355,7 +380,7 @@ IPState GPSD::updateGPS()
 #else
         raw_time = gpsData->fix.time.tv_sec;
 #endif
-    
+
         setSystemTime(raw_time);
 
 #if GPSD_API_MAJOR_VERSION < 9

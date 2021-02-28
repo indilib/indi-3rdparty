@@ -529,7 +529,7 @@ void PentaxCCD::updateCaptureSetting(CaptureSetting *setting, string newval) {
             return;
         }
     }
-    LOGF_ERROR("Error setting %S to %s: not supported in current camera mode", setting->getName(), newval.c_str());
+    LOGF_ERROR("Error setting %S to %s: not supported in current camera mode", setting->getName().c_str(), newval.c_str());
 }
 
 bool PentaxCCD::ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n)
