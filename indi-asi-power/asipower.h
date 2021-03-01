@@ -28,9 +28,9 @@
     static const int pwm_freq = 1000;
     static const int n_gpio_pin = 4;
     static const int gpio_pin[n_gpio_pin] = {12, 13, 26, 18};
-    static const int n_dev_type = 5;
-    static const std::string dev_type[n_dev_type] = {"None","Camera","Focuser","Dew Heater","Flat Panel"};
-    static const bool dev_pwm[n_dev_type] = { false, false, false, true, true };
+    static const int n_dev_type = 9;
+    static const std::string dev_type[n_dev_type] = {"None","Camera","Focuser","Dew Heater","Flat Panel","Mount","Fan","Other on/off","Other variable"};
+    static const bool dev_pwm[n_dev_type] = { false, false, false, true, true, false, true, false, true };
     
 class IndiAsiPower : public INDI::DefaultDevice
 {

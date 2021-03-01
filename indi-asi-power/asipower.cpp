@@ -102,6 +102,10 @@ bool IndiAsiPower::Connect()
         DEBUGF(INDI::Logger::DBG_ERROR, "pigpio initialisation failed: %d", m_piId);
         return false;
     }
+    for(int i=0; i<n_gpio_pin; i++)
+    {
+        set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
+    }
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
     return true;
 }
