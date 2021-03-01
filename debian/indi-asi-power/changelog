@@ -1,3 +1,12 @@
+indi-asi-power (0.7) buster; urgency=medium
+
+  * Fix package dependencies
+  * Enable pigpiod.service during install
+  * Initialise GPIO pins to Pull-Down
+  * Add additional port labels
+
+ -- Ken Self <ken.kgself@gmail.com>  Mon, 01 Mar 2021 11:05:00 +1100
+
 indi-asi-power (0.6) buster; urgency=medium
 
   * Link pigpio library statically into pigpiod daemon

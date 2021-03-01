@@ -1,3 +1,9 @@
+v0.7
+* Fix package dependencies
+* Enable pigpiod.service during install
+* Initialise GPIO pins to Pull-Down
+* Add additional port labels
+
 v0.6
 * Link pigpio library statically into pigpiod daemon
 * cmake installs systemd pigpiod.service to correct directory
