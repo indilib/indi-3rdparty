@@ -24,6 +24,7 @@
 #pragma once
 
 #include <indicom.h>
+#include <libindi/indiguiderinterface.h>
 #include <inditelescope.h>
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
@@ -33,6 +34,7 @@
 
 class CelestronAUX :
     public INDI::Telescope,
+    public INDI::GuiderInterface,
     public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
     public:
@@ -45,6 +47,9 @@ class CelestronAUX :
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+
+	long requestedCordwrapPos;
+	double getNorthAz();
 
     protected:
         virtual bool initProperties() override;
@@ -62,6 +67,16 @@ class CelestronAUX :
         virtual bool Abort() override;
         virtual bool Park() override;
         virtual bool UnPark() override;
+
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
+
+        virtual bool HandleGetAutoguideRate(INDI_EQ_AXIS axis,uint8_t rate);
+        virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
+        virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
+        virtual bool HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done);
 
         // TODO: Switch to AltAz from N-S/W-E
         virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command) override;
@@ -84,14 +99,27 @@ class CelestronAUX :
         bool GoToSlow(long alt, long az, bool track);
         bool setCordwrap(bool enable);
         bool getCordwrap();
+    public:
         bool setCordwrapPos(long pos);
         long getCordwrapPos();
+    private:
         bool getVersion(AUXTargets trg);
         void getVersions();
         bool Track(long altRate, long azRate);
+        bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
+        bool GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
+
 
     private:
+
+        // mount type
+        MountType_t requestedMountType;
+        MountType_t currentMountType;
+
+        bool pastAlignmentSubsystemStatus = true;
+        bool currentAlignmentSubsystemStatus;
+
         enum ScopeStatus_t
         {
             IDLE,
@@ -152,6 +180,7 @@ class CelestronAUX :
 
         // connection
         bool isRTSCTS;
+        bool isHC;
 
         uint32_t DBG_CAUX {0};
         uint32_t DBG_SERIAL {0};
@@ -165,7 +194,7 @@ class CelestronAUX :
         bool serialReadResponse(AUXCommand c);
         bool tcpReadResponse();
         bool readAUXResponse(AUXCommand c);
-        void processResponse(AUXCommand &cmd);
+        bool processResponse(AUXCommand &cmd);
         void querryStatus();
         int sendBuffer(int PortFD, AUXBuffer buf);
         bool sendAUXCommand(AUXCommand &c);
@@ -186,7 +215,6 @@ class CelestronAUX :
         bool m_SlewingAlt {false}, m_SlewingAz {false};
         bool gpsemu;
 
-
         uint8_t m_MainBoardVersionMajor {0}, m_MainBoardVersionMinor {0};
         uint8_t m_AltitudeVersionMajor {0}, m_AltitudeVersionMinor {0};
         uint8_t m_AzimuthVersionMajor {0}, m_AzimuthVersionMinor {0};
@@ -200,6 +228,7 @@ class CelestronAUX :
         void setRTS(bool rts);
         bool waitCTS(float timeout);
         bool detectRTSCTS();
+        bool detectHC(char *version, size_t size);
         int response_data_size;
         int aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n);
         int aux_tty_write (int PortFD, char *buf, int bufsiz, float timeout, int *n);
@@ -212,23 +241,34 @@ class CelestronAUX :
         ///////////////////////////////////////////////////////////////////////////////
 
         // Firmware
-        IText FirmwareT[9] {};
+        IText FirmwareT[10] {};
         ITextVectorProperty FirmwareTP;
-        enum {FW_HC, FW_HCp, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
+        enum {FW_HC, FW_HCp, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
         // Networked Mount autodetect
         ISwitch NetDetectS[1];
         ISwitchVectorProperty NetDetectSP;
+        // Mount type
+        ISwitch MountTypeS[2];
+        ISwitchVectorProperty MountTypeSP;
+        enum
+        {
+            MOUNT_EQUATORIAL,
+            MOUNT_ALTAZ
+        };
         // Mount Cordwrap
         ISwitch CordWrapS[2];
         ISwitchVectorProperty CordWrapSP;
         enum { CORDWRAP_OFF, CORDWRAP_ON };
         ISwitch CWPosS[4];
         ISwitchVectorProperty CWPosSP;
-        enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W};
+        enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W };
         // GPS emulator
         ISwitch GPSEmuS[2];
         ISwitchVectorProperty GPSEmuSP;
         enum { GPSEMU_OFF, GPSEMU_ON };
+        // guide
+        INumber GuideRateN[2]{};
+        INumberVectorProperty GuideRateNP;
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables
@@ -238,7 +278,9 @@ class CelestronAUX :
         // AUX commands use 24bit integer as a representation of angle in units of
         // fractional revolutions. Thus 2^24 steps makes full revolution.
         static constexpr uint32_t STEPS_PER_REVOLUTION {16777216};
+    public:
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
+    private:
         static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
         static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
