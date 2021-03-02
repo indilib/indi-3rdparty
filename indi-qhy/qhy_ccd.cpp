@@ -1308,16 +1308,30 @@ bool QHYCCD::StartExposure(float duration)
     // Set streaming mode and re-initialize camera
     if (currentQHYStreamMode == 1 && !isSimulation())
     {
+        
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+        //    return false;
+        //}
+
         currentQHYStreamMode = 0;
         SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+
+        
         ret = InitQHYCCD(m_CameraHandle);
         if(ret != QHYCCD_SUCCESS)
         {
             LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
             return false;
         }
-    }
 
+        // Try to set 16bit mode if supported back.
+        SetQHYCCDBitsMode(m_CameraHandle,PrimaryCCD.getBPP());
+    }
 
     m_ImageFrameType = PrimaryCCD.getFrameType();
 
@@ -2066,18 +2080,17 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         else if (!strcmp(name, ReadModeNP.name))
         {
             //NEW CODE - Fix read mode handling
-
             IUUpdateNumber(&ReadModeNP, values, names, n);
             uint32_t newReadMode = static_cast<uint32_t>(ReadModeN[0].value);
 
             // Set readout mode
             if (newReadMode != currentQHYReadMode)
             {
+                /* change readout mode */
                 int rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
                 if (rc == QHYCCD_SUCCESS)
                 {
-
-                    //Reinitialize camera to get new chip characteristics
+                    /* re-initialize the camera */
                     rc = InitQHYCCD(m_CameraHandle);
                     if (rc != QHYCCD_SUCCESS)
                     {
@@ -2092,7 +2105,7 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
                               readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
 
-                    //reinitialized the camera paramters...
+                    /* re-initialize the camera parameters */
                     QHYCCD::setupParams();
                     saveConfig(true, ReadModeNP.name);
                     ReadModeNP.s = IPS_OK;
@@ -2100,15 +2113,14 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                 else
                 {
                     ReadModeNP.s = IPS_ALERT;
-                    //TODO - currentReadMode?
-                    //ReadModeN[0].value = currentQHYReadMode;
-                    ReadModeN[0].value = newReadMode;
+                    /* assume the camera did not switch read modes and thus is still in the former read mode */
+                    ReadModeN[0].value = currentQHYReadMode;
                     LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
             }
             else
             {
-                //reinitialized the camera paramters...
+                /* re-initialize the camera parameters */
                 QHYCCD::setupParams();
                 saveConfig(true, ReadModeNP.name);
                 ReadModeNP.s = IPS_OK;
@@ -2384,9 +2396,21 @@ bool QHYCCD::StartStreaming()
     //SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
     if (currentQHYStreamMode == 0  && !isSimulation())
     {
-        //LOG_INFO("Start streaming\n"); //DEBUG
+
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    currentQHYStreamMode = 0;
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+        //    return false;
+        //}
+
+        /* switch camera to streaming mode */
         currentQHYStreamMode = 1;
         SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        /* re-initialize camera */
         ret = InitQHYCCD(m_CameraHandle);
         if(ret != QHYCCD_SUCCESS)
         {
@@ -2478,23 +2502,15 @@ bool QHYCCD::StopStreaming()
     pthread_mutex_unlock(&condMutex);
     StopQHYCCDLive(m_CameraHandle);
     
-    //LOG_INFO("stopped live mode\n"); //DEBUG
-
-    //if (HasUSBSpeed)
-    //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
-    //if (HasUSBTraffic)
-    //    SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
-
     currentQHYStreamMode = 0;
     SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
     
     // FIX: Helps for cleaner teardown and prevents camera from staling
     InitQHYCCD(m_CameraHandle);
     
-    //LOG_INFO("Stopped streaming\n");  //DEBUG
-
-    // Try to set 16bit mode if supported back.
-    SetQHYCCDBitsMode(m_CameraHandle, 16);
+    // Try to set 16bit mode if supported back. Use PrimaryCCD.getBPP as this is what we use to allocate the image buffer.
+    // Instead of doing this here, set the new bitmode when we go into exposure mode out of streaming mode. 
+    //SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     return true;
 }
 
@@ -2557,7 +2573,7 @@ void *QHYCCD::imagingThreadEntry()
 void QHYCCD::streamVideo()
 {
     uint32_t ret = 0, w, h, bpp, channels;
-    uint32_t t_start = time(NULL), frames = 0; //DEBUG
+    //uint32_t t_start = time(NULL), frames = 0;
     while (m_ThreadRequest == StateStream)
     {
         pthread_mutex_unlock(&condMutex);
@@ -2582,10 +2598,10 @@ void QHYCCD::streamVideo()
                 decodeGPSHeader();
 
             //DEBUG 
-            if(!frames)
-                LOG_INFO("Receiving frames ...");
-            if(!(++frames % 30))
-                LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
+            //if(!frames)
+            //    LOG_INFO("Receiving frames ...");
+            //if(!(++frames % 30))
+            //    LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
         }
         pthread_mutex_lock(&condMutex);
     }
