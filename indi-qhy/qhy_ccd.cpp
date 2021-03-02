@@ -860,18 +860,24 @@ bool QHYCCD::Connect()
         {
             readModeInfo[rm].id = rm;
             ret = GetQHYCCDReadModeName(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].label[0]);
-            if (ret == QHYCCD_SUCCESS) {
+            if (ret == QHYCCD_SUCCESS)
+            {
                 LOGF_INFO("Mode %d: %s\n", readModeInfo[rm].id, readModeInfo[rm].label);
-            } else {
+            }
+            else
+            {
                 LOGF_INFO("Failed to obtain read mode name for modeNumber: %d\n", readModeInfo[rm].id);
                 strcpy(readModeInfo[rm].label, "UNKNOWN");
             }
             ret = GetQHYCCDReadModeResolution(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].subW,
-                &readModeInfo[rm].subH);
-            if (ret == QHYCCD_SUCCESS) {
+                                              &readModeInfo[rm].subH);
+            if (ret == QHYCCD_SUCCESS)
+            {
                 LOGF_INFO("Sensor resolution for mode %s: %dx%d px\n", readModeInfo[rm].label,
-                    readModeInfo[rm].subW, readModeInfo[rm].subH);
-            } else {
+                          readModeInfo[rm].subW, readModeInfo[rm].subH);
+            }
+            else
+            {
                 LOGF_WARN("Failed to read mode resolution name for modeNumber: %d\n", readModeInfo[rm].id);
                 readModeInfo[rm].subW = readModeInfo[rm].subH = 0;
             }
@@ -882,7 +888,7 @@ bool QHYCCD::Connect()
         if (ret == QHYCCD_SUCCESS && numReadModes > 1)
         {
             LOGF_INFO("Current read mode: %s (%dx%d)\n", readModeInfo[currentQHYReadMode].label,
-                readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
+                      readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -1189,7 +1195,7 @@ bool QHYCCD::setupParams()
 
     LOG_DEBUG("setup params\n");
 
-   //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
 
@@ -1302,15 +1308,15 @@ bool QHYCCD::StartExposure(float duration)
     // Set streaming mode and re-initialize camera
     if (currentQHYStreamMode == 1 && !isSimulation())
     {
-    	currentQHYStreamMode = 0;
-    	SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
-    	ret = InitQHYCCD(m_CameraHandle);
-    	if(ret != QHYCCD_SUCCESS)
-    	{
-      		LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
-      		return false;
-    	}
-	}
+        currentQHYStreamMode = 0;
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+            return false;
+        }
+    }
 
 
     m_ImageFrameType = PrimaryCCD.getFrameType();
@@ -2084,12 +2090,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     currentQHYReadMode = newReadMode;
 
                     LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
-                        readModeInfo[currentQHYReadMode].subW,readModeInfo[currentQHYReadMode].subH);
+                              readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
 
                     //reinitialized the camera paramters...
                     QHYCCD::setupParams();
-                    ReadModeNP.s = IPS_OK;
                     saveConfig(true, ReadModeNP.name);
+                    ReadModeNP.s = IPS_OK;
                 }
                 else
                 {
@@ -2099,6 +2105,13 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     ReadModeN[0].value = newReadMode;
                     LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
+            }
+            else
+            {
+                //reinitialized the camera paramters...
+                QHYCCD::setupParams();
+                saveConfig(true, ReadModeNP.name);
+                ReadModeNP.s = IPS_OK;
             }
 
             IDSetNumber(&ReadModeNP, nullptr);
@@ -2373,17 +2386,15 @@ bool QHYCCD::StartStreaming()
     {
         //LOG_INFO("Start streaming\n"); //DEBUG
         currentQHYStreamMode = 1;
-    	SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
-        // FIX: some cameras may need init again to start streaming,.
-        // This code structure was also updated in SDK 21.02.01
-    	ret = InitQHYCCD(m_CameraHandle);
-    	if(ret != QHYCCD_SUCCESS)
-    	{
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
             currentQHYStreamMode = 0;
-      		LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
-      		return false;
-    	}
-	}
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+            return false;
+        }
+    }
 
     // Set binning mode
     if (isSimulation())
@@ -2573,8 +2584,8 @@ void QHYCCD::streamVideo()
             //DEBUG 
             if(!frames)
                 LOG_INFO("Receiving frames ...");
-            if(!(++frames%30))
-                LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0*frames/(time(NULL) - t_start));
+            if(!(++frames % 30))
+                LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
         }
         pthread_mutex_lock(&condMutex);
     }

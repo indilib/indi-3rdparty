@@ -203,7 +203,8 @@ int main(int, char **)
     }
 
     // get chip info
-    rc = GetQHYCCDChipInfo(pCamHandle, &chipWidthMM, &chipHeightMM, &maxImageSizeX, &maxImageSizeY, &pixelWidthUM, &pixelHeightUM, &bpp);
+    rc = GetQHYCCDChipInfo(pCamHandle, &chipWidthMM, &chipHeightMM, &maxImageSizeX, &maxImageSizeY, &pixelWidthUM,
+                           &pixelHeightUM, &bpp);
     if (QHYCCD_SUCCESS == rc)
     {
         fprintf(stderr, "GetQHYCCDChipInfo:\n");
@@ -266,9 +267,12 @@ int main(int, char **)
 
     // initialize camera after setting stream mode
     rc = InitQHYCCD(pCamHandle);
-    if (QHYCCD_SUCCESS == rc) {
+    if (QHYCCD_SUCCESS == rc)
+    {
         printf("InitQHYCCD success.\n");
-    } else {
+    }
+    else
+    {
         printf("InitQHYCCD faililure, error: %d\n", rc);
         return 1;
     }
