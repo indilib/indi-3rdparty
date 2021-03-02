@@ -1308,7 +1308,7 @@ bool QHYCCD::StartExposure(float duration)
     // Set streaming mode and re-initialize camera
     if (currentQHYStreamMode == 1 && !isSimulation())
     {
-        
+
         /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
         //CloseQHYCCD(m_CameraHandle);
         //ret = InitQHYCCD(m_CameraHandle);
@@ -1321,7 +1321,7 @@ bool QHYCCD::StartExposure(float duration)
         currentQHYStreamMode = 0;
         SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
 
-        
+
         ret = InitQHYCCD(m_CameraHandle);
         if(ret != QHYCCD_SUCCESS)
         {
@@ -1330,7 +1330,7 @@ bool QHYCCD::StartExposure(float duration)
         }
 
         // Try to set 16bit mode if supported back.
-        SetQHYCCDBitsMode(m_CameraHandle,PrimaryCCD.getBPP());
+        SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     }
 
     m_ImageFrameType = PrimaryCCD.getFrameType();
@@ -2479,7 +2479,7 @@ bool QHYCCD::StartStreaming()
     }
 
     //LOG_INFO("start live mode\n"); //DEBUG
-    
+
     LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS)", m_ExposureRequest, Streamer->getTargetFPS());
     BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
@@ -2501,15 +2501,15 @@ bool QHYCCD::StopStreaming()
     }
     pthread_mutex_unlock(&condMutex);
     StopQHYCCDLive(m_CameraHandle);
-    
+
     currentQHYStreamMode = 0;
     SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
-    
+
     // FIX: Helps for cleaner teardown and prevents camera from staling
     InitQHYCCD(m_CameraHandle);
-    
+
     // Try to set 16bit mode if supported back. Use PrimaryCCD.getBPP as this is what we use to allocate the image buffer.
-    // Instead of doing this here, set the new bitmode when we go into exposure mode out of streaming mode. 
+    // Instead of doing this here, set the new bitmode when we go into exposure mode out of streaming mode.
     //SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     return true;
 }
@@ -2597,7 +2597,7 @@ void QHYCCD::streamVideo()
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
                 decodeGPSHeader();
 
-            //DEBUG 
+            //DEBUG
             //if(!frames)
             //    LOG_INFO("Receiving frames ...");
             //if(!(++frames % 30))
