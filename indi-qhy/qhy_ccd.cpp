@@ -2501,6 +2501,21 @@ bool QHYCCD::StopStreaming()
     }
     pthread_mutex_unlock(&condMutex);
     StopQHYCCDLive(m_CameraHandle);
+    
+    //LOG_INFO("stopped live mode\n"); //DEBUG
+
+    //if (HasUSBSpeed)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
+    //if (HasUSBTraffic)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
+
+    currentQHYStreamMode = 0;
+    SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+    
+    // FIX: Helps for cleaner teardown and prevents camera from staling
+    InitQHYCCD(m_CameraHandle);
+    
+    //LOG_INFO("Stopped streaming\n");  //DEBUG
 
     currentQHYStreamMode = 0;
     SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
