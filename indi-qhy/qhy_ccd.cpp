@@ -862,23 +862,23 @@ bool QHYCCD::Connect()
             ret = GetQHYCCDReadModeName(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].label[0]);
             if (ret == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("Mode %d: %s\n", readModeInfo[rm].id, readModeInfo[rm].label);
+                LOGF_INFO("Mode %d: %s", readModeInfo[rm].id, readModeInfo[rm].label);
             }
             else
             {
-                LOGF_INFO("Failed to obtain read mode name for modeNumber: %d\n", readModeInfo[rm].id);
+                LOGF_INFO("Failed to obtain read mode name for modeNumber: %d", readModeInfo[rm].id);
                 strcpy(readModeInfo[rm].label, "UNKNOWN");
             }
             ret = GetQHYCCDReadModeResolution(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].subW,
                                               &readModeInfo[rm].subH);
             if (ret == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("Sensor resolution for mode %s: %dx%d px\n", readModeInfo[rm].label,
+                LOGF_INFO("Sensor resolution for mode %s: %dx%d px", readModeInfo[rm].label,
                           readModeInfo[rm].subW, readModeInfo[rm].subH);
             }
             else
             {
-                LOGF_WARN("Failed to read mode resolution name for modeNumber: %d\n", readModeInfo[rm].id);
+                LOGF_WARN("Failed to read mode resolution name for modeNumber: %d", readModeInfo[rm].id);
                 readModeInfo[rm].subW = readModeInfo[rm].subH = 0;
             }
         }
@@ -887,7 +887,7 @@ bool QHYCCD::Connect()
         ret = GetQHYCCDReadMode(m_CameraHandle, &currentQHYReadMode);
         if (ret == QHYCCD_SUCCESS && numReadModes > 1)
         {
-            LOGF_INFO("Current read mode: %s (%dx%d)\n", readModeInfo[currentQHYReadMode].label,
+            LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
                       readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
         }
 
@@ -1192,9 +1192,6 @@ bool QHYCCD::Disconnect()
 bool QHYCCD::setupParams()
 {
 
-
-    LOG_DEBUG("setup params\n");
-
     //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
@@ -1314,18 +1311,17 @@ bool QHYCCD::StartExposure(float duration)
         //ret = InitQHYCCD(m_CameraHandle);
         //if(ret != QHYCCD_SUCCESS)
         //{
-        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
         //    return false;
         //}
 
         currentQHYStreamMode = 0;
         SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
 
-
         ret = InitQHYCCD(m_CameraHandle);
         if(ret != QHYCCD_SUCCESS)
         {
-            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
             return false;
         }
 
@@ -2403,7 +2399,7 @@ bool QHYCCD::StartStreaming()
         //if(ret != QHYCCD_SUCCESS)
         //{
         //    currentQHYStreamMode = 0;
-        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
         //    return false;
         //}
 
@@ -2415,7 +2411,7 @@ bool QHYCCD::StartStreaming()
         if(ret != QHYCCD_SUCCESS)
         {
             currentQHYStreamMode = 0;
-            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d\n", ret);
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
             return false;
         }
     }
@@ -2478,9 +2474,10 @@ bool QHYCCD::StartStreaming()
         Streamer->setPixelFormat(qhyFormat, PrimaryCCD.getBPP());
     }
 
-    //LOG_INFO("start live mode\n"); //DEBUG
+    //LOG_INFO("start live mode"); //DEBUG
 
-    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS)", m_ExposureRequest, Streamer->getTargetFPS());
+    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS), w=%d h=%d", m_ExposureRequest,
+              Streamer->getTargetFPS(), subW, subH);
     BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
     m_ThreadRequest = StateStream;
@@ -2501,21 +2498,13 @@ bool QHYCCD::StopStreaming()
     }
     pthread_mutex_unlock(&condMutex);
     StopQHYCCDLive(m_CameraHandle);
-    
-    //LOG_INFO("stopped live mode\n"); //DEBUG
+
+    //LOG_INFO("stopped live mode"); //DEBUG
 
     //if (HasUSBSpeed)
     //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
     //if (HasUSBTraffic)
     //    SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
-
-    currentQHYStreamMode = 0;
-    SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
-    
-    // FIX: Helps for cleaner teardown and prevents camera from staling
-    InitQHYCCD(m_CameraHandle);
-    
-    //LOG_INFO("Stopped streaming\n");  //DEBUG
 
     currentQHYStreamMode = 0;
     SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
@@ -2614,7 +2603,7 @@ void QHYCCD::streamVideo()
 
             //DEBUG
             //if(!frames)
-            //    LOG_INFO("Receiving frames ...");
+            //    LOGF_DEBUG("Receiving frames ...");
             //if(!(++frames % 30))
             //    LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
         }
