@@ -8,7 +8,7 @@ Features:
   - PWM control in increments of 1%
 
 # Source
-https://github.com/ken-self/indi-3rdparty/indi-asi-power
+https://github.com/indilib/indi-3rdparty.git
 https://github.com/joan2937/pigpio
 
 # Requirements
@@ -16,19 +16,22 @@ https://github.com/joan2937/pigpio
 * CMake >= 3.0
 
 # Installation
-You need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
+For normal use install from the INDI PPA with:
+```
+sudo apt install indi-asi-power
+```
+This installs the driver and the pigpiod service it requires; and enables and starts the pigpiod service
+
+To build from source you need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
 In addition you need to install pigpio client libraries and headers
 ```
 sudo apt -y install libpigpiod-if-dev libpigpiod-if2-1 pigpio-tools
 
 cd ~/Projects
-git clone https://github.com/ken-self/indi-3rdparty.git
+git clone https://github.com/indilib/indi-3rdparty.git
 cd indi-3rdparty
-git checkout asipower
 ```
-And you also need to have pigpiod installed and running as root to use the driver
 Compile and install the driver and pigpiod
-Install Run the pigpiod daemon as root using systemd
 ```
 cd ~/Projects/indi-3rd-party
 git checkout asipower
@@ -37,10 +40,8 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
 make
 sudo make install
 ```
-Manually install and run pigpiod daemon as root using systemd:
+Manually enable and start the pigpiod service with systemd
 ```
-sudo cp pigpiod.service /lib/systemd/system/
-sudo chmod 644 /etc/systemd/system/pigpiod.service
 sudo systemctl daemon-reload
 sudo systemctl enable pigpiod.service
 sudo systemctl start pigpiod.service
