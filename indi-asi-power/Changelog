@@ -1,3 +1,7 @@
+v0.8
+* Label ports 1-4
+* Force type None to OFF
+
 v0.7
 * Fix package dependencies
 * Enable pigpiod.service during install
