@@ -1,18 +1,18 @@
 /*
  QHY FW loader
- 
+
  Copyright (C) 2015 Peter Polakovic (peter.polakovic@cloudmakers.eu)
- 
+
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
  License as published by the Free Software Foundation; either
  version 2.1 of the License, or (at your option) any later version.
- 
+
  This library is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  Lesser General Public License for more details.
- 
+
  You should have received a copy of the GNU Lesser General Public
  License along with this library; if not, write to the Free Software
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -38,47 +38,48 @@ static struct uninitialized_cameras
     const char *loader;
     const char *firmware;
 } uninitialized_cameras[] = { { 0x1618, 0xb618, nullptr, "IMG0H.HEX" },
-                              { 0x1618, 0x0412, nullptr, "QHY2.HEX" },
-                              { 0x1618, 0x2850, nullptr, "QHY2P.HEX" },
-                              { 0x1618, 0xb285, nullptr, "QHY2S.HEX" },
-                              { 0x1618, 0x0901, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x1618, 0x1002, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x0547, 0x1002, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x296a, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x04b4, 0x8613, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x0818, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x081a, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x296e, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x296c, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x16c0, 0x2986, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x1781, 0x0c7c, "QHY5LOADER.HEX", "QHY5.HEX" },
-                              { 0x1618, 0x0920, nullptr, "QHY5II.HEX" },
-                              { 0x1618, 0x0921, nullptr, "QHY5II.HEX" },
-                              { 0x1618, 0x0259, nullptr, "QHY6.HEX" },
-                              { 0x1618, 0x4022, nullptr, "QHY7.HEX" },
-                              { 0x1618, 0x6000, nullptr, "QHY8.HEX" },
-                              { 0x1618, 0x6002, nullptr, "QHY8PRO.HEX" },
-                              { 0x1618, 0x6004, nullptr, "QHY8L.HEX" },
-                              { 0x1618, 0x6006, nullptr, "QHY8M.HEX" },
-                              { 0x1618, 0x8300, nullptr, "QHY9S.HEX" },
-                              { 0x1618, 0x1000, nullptr, "QHY10.HEX" },
-                              { 0x1618, 0x1110, nullptr, "QHY11.HEX" },
-                              { 0x1618, 0x1200, nullptr, "QHY12.HEX" },
-                              { 0x1618, 0x1500, nullptr, "QHY15.HEX" },
-                              { 0x1618, 0x1600, nullptr, "QHY16.HEX" },
-                              { 0x1618, 0x8050, nullptr, "QHY20.HEX" },
-                              { 0x1618, 0x6740, nullptr, "QHY21.HEX" },
-                              { 0x1618, 0x6940, nullptr, "QHY22.HEX" },
-                              { 0x1618, 0x8140, nullptr, "QHY23.HEX" },
-                              { 0x1618, 0x1650, nullptr, "QHY27.HEX" },
-                              { 0x1618, 0x1670, nullptr, "QHY28.HEX" },
-                              { 0x1618, 0x2950, nullptr, "QHY29.HEX" },
-                              { 0x1618, 0x8310, nullptr, "IC8300.HEX" },
-                              { 0x1618, 0x1620, nullptr, "IC16200A.HEX" },
-                              { 0x1618, 0x1630, nullptr, "IC16803.HEX" },
-                              { 0x1618, 0x8320, nullptr, "IC90A.HEX" },
-                              { 0x1618, 0x0930, nullptr, "miniCam5.HEX" },
-                              { 0, 0, nullptr, nullptr } };
+    { 0x1618, 0x0412, nullptr, "QHY2.HEX" },
+    { 0x1618, 0x2850, nullptr, "QHY2P.HEX" },
+    { 0x1618, 0xb285, nullptr, "QHY2S.HEX" },
+    { 0x1618, 0x0901, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x1618, 0x1002, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x0547, 0x1002, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x296a, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x04b4, 0x8613, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x0818, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x081a, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x296e, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x296c, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x16c0, 0x2986, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x1781, 0x0c7c, "QHY5LOADER.HEX", "QHY5.HEX" },
+    { 0x1618, 0x0920, nullptr, "QHY5II.HEX" },
+    { 0x1618, 0x0921, nullptr, "QHY5II.HEX" },
+    { 0x1618, 0x0259, nullptr, "QHY6.HEX" },
+    { 0x1618, 0x4022, nullptr, "QHY7.HEX" },
+    { 0x1618, 0x6000, nullptr, "QHY8.HEX" },
+    { 0x1618, 0x6002, nullptr, "QHY8PRO.HEX" },
+    { 0x1618, 0x6004, nullptr, "QHY8L.HEX" },
+    { 0x1618, 0x6006, nullptr, "QHY8M.HEX" },
+    { 0x1618, 0x8300, nullptr, "QHY9S.HEX" },
+    { 0x1618, 0x1000, nullptr, "QHY10.HEX" },
+    { 0x1618, 0x1110, nullptr, "QHY11.HEX" },
+    { 0x1618, 0x1200, nullptr, "QHY12.HEX" },
+    { 0x1618, 0x1500, nullptr, "QHY15.HEX" },
+    { 0x1618, 0x1600, nullptr, "QHY16.HEX" },
+    { 0x1618, 0x8050, nullptr, "QHY20.HEX" },
+    { 0x1618, 0x6740, nullptr, "QHY21.HEX" },
+    { 0x1618, 0x6940, nullptr, "QHY22.HEX" },
+    { 0x1618, 0x8140, nullptr, "QHY23.HEX" },
+    { 0x1618, 0x1650, nullptr, "QHY27.HEX" },
+    { 0x1618, 0x1670, nullptr, "QHY28.HEX" },
+    { 0x1618, 0x2950, nullptr, "QHY29.HEX" },
+    { 0x1618, 0x8310, nullptr, "IC8300.HEX" },
+    { 0x1618, 0x1620, nullptr, "IC16200A.HEX" },
+    { 0x1618, 0x1630, nullptr, "IC16803.HEX" },
+    { 0x1618, 0x8320, nullptr, "IC90A.HEX" },
+    { 0x1618, 0x0930, nullptr, "miniCam5.HEX" },
+    { 0, 0, nullptr, nullptr }
+};
 
 static int poke(libusb_device_handle *handle, unsigned short addr, unsigned char *data, unsigned length)
 {
@@ -87,7 +88,7 @@ static int poke(libusb_device_handle *handle, unsigned short addr, unsigned char
     while ((rc = libusb_control_transfer(handle,
                                          LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
                                          0xA0, addr, 0, data, length, 3000)) < 0 &&
-           retry < 5)
+            retry < 5)
     {
         if (errno != ETIMEDOUT)
             break;
@@ -267,8 +268,8 @@ void UploadFW()
         for (int j = 0; uninitialized_cameras[j].vid; j++)
         {
             if (!libusb_get_device_descriptor(device, &descriptor) &&
-                descriptor.idVendor == uninitialized_cameras[j].vid &&
-                descriptor.idProduct == uninitialized_cameras[j].pid)
+                    descriptor.idVendor == uninitialized_cameras[j].vid &&
+                    descriptor.idProduct == uninitialized_cameras[j].pid)
             {
                 initialize(device, j);
             }

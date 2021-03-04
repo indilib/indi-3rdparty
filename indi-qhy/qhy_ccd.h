@@ -124,7 +124,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 
 
         // Overscan area Switch
-        //NEW CODE - Add support for overscan/calibration area 
+        //NEW CODE - Add support for overscan/calibration area
         ISwitchVectorProperty OverscanAreaSP;
         ISwitch OverscanAreaS[2];
         enum
@@ -298,6 +298,14 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subH = 0;
         } effectiveROI, sensorROI;  //NEW CODE - Add support for overscan/calibration area, obsolete overscanROI
 
+        typedef struct
+        {
+            char label[128] = {0};
+            uint32_t id = 0;
+            uint32_t subW = 0;
+            uint32_t subH = 0;
+        } QHYReadModeInfo; // N.R. - Add support for read mode selection
+
         typedef enum GPSState
         {
             GPS_ON,
@@ -415,7 +423,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasReadMode { false };
         bool HasGPS { false };
         bool HasAmpGlow { false };
-        //NEW CODE - Add support for overscan/calibration area 
+        //NEW CODE - Add support for overscan/calibration area
         bool HasOverscanArea { false };
         bool IgnoreOverscanArea { true };
 
@@ -446,6 +454,15 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         double m_LastGainRequest = 1e6;
         // Filter Wheel Timeout
         uint16_t m_FilterCheckCounter = 0;
+        // Camera's current stream operating mode (0: exposure mode, 1: stream mode)
+        uint8_t currentQHYStreamMode = 0;
+        // Number of read modes which the camera supports
+        uint32_t numReadModes = 0;
+        // currently set read mode
+        uint32_t currentQHYReadMode;
+        // dynamic array to hold read mode information
+        QHYReadModeInfo *readModeInfo = nullptr;
+
 
         /////////////////////////////////////////////////////////////////////////////
         /// Threading

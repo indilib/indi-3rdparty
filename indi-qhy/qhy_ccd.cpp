@@ -574,54 +574,13 @@ bool QHYCCD::updateProperties()
             }
             else
             {
-
                 ReadModeN[0].min  = 0;
-
-                ////////////////////////////////////////////////////////////////////
-                /// Read Modes
-                ////////////////////////////////////////////////////////////////////
-                int ret;
-                uint32_t maxNumOfReadModes = 0;
-                ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &maxNumOfReadModes);
-                if (ret == QHYCCD_SUCCESS && maxNumOfReadModes > 0)
-                {
-                    ReadModeN[0].max  = maxNumOfReadModes - 1;
-                }
-                else
-                {
-                    ReadModeN[0].max = 0;
-                }
-
+                ReadModeN[0].max = (numReadModes > 0 ? numReadModes - 1 : 0);
                 ReadModeN[0].step = 1;
-
-                uint32_t currentReadMode = 0;
-
-                ret = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
-                if (ret == QHYCCD_SUCCESS)
-                {
-                    ReadModeN[0].value = currentReadMode;
-
-                    //NEW CODE - Query and display read mode name for more informative console output
-                    char currentReadModeName[255] = {0};
-                    int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
-                    if (retVal == QHYCCD_SUCCESS)
-                    {
-                        LOGF_INFO("Current read mode is: %s", currentReadModeName);
-                    }
-                    else
-                    {
-                        LOGF_INFO("Current read mode is: %u", currentReadMode);
-                    }
-                }
-                else
-                {
-                    //NEW CODE - format modifier %zu --> %u
-                    LOGF_INFO("Using default read mode (error reading it): %u", currentReadMode);
-                }
+                ReadModeN[0].value = currentQHYReadMode;
             }
             defineProperty(&ReadModeNP);
         }
-        // ---
 
         if (HasGain)
         {
@@ -822,7 +781,6 @@ bool QHYCCD::updateProperties()
 bool QHYCCD::Connect()
 {
     uint32_t cap;
-    uint32_t readModes = 0;
 
 
     if (isSimulation())
@@ -862,7 +820,8 @@ bool QHYCCD::Connect()
         cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME;
 
         // Disable the stream mode before connecting
-        uint32_t ret = SetQHYCCDStreamMode(m_CameraHandle, 0);
+        currentQHYStreamMode = 0;
+        uint32_t ret = SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
         if (ret != QHYCCD_SUCCESS)
         {
             LOGF_ERROR("Can not disable stream mode (%d)", ret);
@@ -887,12 +846,49 @@ bool QHYCCD::Connect()
         ////////////////////////////////////////////////////////////////////
         /// Read Modes
         ////////////////////////////////////////////////////////////////////
-        ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &readModes);
-        if (ret == QHYCCD_SUCCESS && readModes > 1)
+        ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &numReadModes);
+        if (ret == QHYCCD_SUCCESS && numReadModes > 1)
         {
             HasReadMode = true;
             //NEW CODE - format modifier %zu --> %u
-            LOGF_INFO("Number of read modes: %u", readModes);
+            LOGF_INFO("Number of read modes: %u", numReadModes);
+        }
+
+        readModeInfo = new QHYReadModeInfo[numReadModes];
+
+        for (uint32_t rm = 0; rm < numReadModes; rm++)
+        {
+            readModeInfo[rm].id = rm;
+            ret = GetQHYCCDReadModeName(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].label[0]);
+            if (ret == QHYCCD_SUCCESS)
+            {
+                LOGF_INFO("Mode %d: %s", readModeInfo[rm].id, readModeInfo[rm].label);
+            }
+            else
+            {
+                LOGF_INFO("Failed to obtain read mode name for modeNumber: %d", readModeInfo[rm].id);
+                strcpy(readModeInfo[rm].label, "UNKNOWN");
+            }
+            ret = GetQHYCCDReadModeResolution(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].subW,
+                                              &readModeInfo[rm].subH);
+            if (ret == QHYCCD_SUCCESS)
+            {
+                LOGF_INFO("Sensor resolution for mode %s: %dx%d px", readModeInfo[rm].label,
+                          readModeInfo[rm].subW, readModeInfo[rm].subH);
+            }
+            else
+            {
+                LOGF_WARN("Failed to read mode resolution name for modeNumber: %d", readModeInfo[rm].id);
+                readModeInfo[rm].subW = readModeInfo[rm].subH = 0;
+            }
+        }
+
+        //Correctly initialize current read mode
+        ret = GetQHYCCDReadMode(m_CameraHandle, &currentQHYReadMode);
+        if (ret == QHYCCD_SUCCESS && numReadModes > 1)
+        {
+            LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
+                      readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -1173,18 +1169,20 @@ bool QHYCCD::Disconnect()
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
     pthread_join(m_ImagingThread, nullptr);
-    tState = StateNone;
+    //tState = StateNone;
     if (isSimulation() == false)
     {
         if (tState == StateStream)
         {
-            SetQHYCCDStreamMode(m_CameraHandle, 0x0);
             StopQHYCCDLive(m_CameraHandle);
+            SetQHYCCDStreamMode(m_CameraHandle, 0x0);
         }
         else if (tState == StateExposure)
             CancelQHYCCDExposingAndReadout(m_CameraHandle);
         CloseQHYCCD(m_CameraHandle);
     }
+
+    tState = StateNone;
 
     LOG_INFO("Camera is offline.");
 
@@ -1194,7 +1192,6 @@ bool QHYCCD::Disconnect()
 bool QHYCCD::setupParams()
 {
 
-
     //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
@@ -1202,7 +1199,6 @@ bool QHYCCD::setupParams()
     //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     //raw frame origin is always at (0,0)
     sensorROI.subX = sensorROI.subY = 0;
-
 
     if (isSimulation())
     {
@@ -1304,6 +1300,33 @@ bool QHYCCD::StartExposure(float duration)
     {
         LOG_ERROR("Cannot take exposure while streaming/recording is active.");
         return false;
+    }
+
+    // Set streaming mode and re-initialize camera
+    if (currentQHYStreamMode == 1 && !isSimulation())
+    {
+
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+        //    return false;
+        //}
+
+        currentQHYStreamMode = 0;
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+            return false;
+        }
+
+        // Try to set 16bit mode if supported back.
+        SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     }
 
     m_ImageFrameType = PrimaryCCD.getFrameType();
@@ -1872,8 +1895,9 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 SetCCDParams(effectiveROI.subW, effectiveROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(),
                              PrimaryCCD.getPixelSizeX());
 
-                //Image Settings
-                //The true frame origin is at (effectiveROI.subX ,effectiveROI.subY), need to correct for this offset when taking exposure or streaming.
+                // Image Settings
+                // The true frame origin is at (effectiveROI.subX ,effectiveROI.subY).
+                // This vector that needs to be used for offset-correction when taking exposures or streaming while ignoring overscan areas.
                 UpdateCCDFrame(0, 0, effectiveROI.subW, effectiveROI.subH);
 
             }
@@ -2052,97 +2076,50 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         else if (!strcmp(name, ReadModeNP.name))
         {
             //NEW CODE - Fix read mode handling
-            uint32_t currentReadMode;
-
             IUUpdateNumber(&ReadModeNP, values, names, n);
-            uint32_t newReadMode = ReadModeN[0].value;
-
-            //Check if camera already is in the requested read mode
-            int rc = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
-            if (rc == QHYCCD_SUCCESS)
-            {
-                if (newReadMode == currentReadMode)
-                {
-
-                    LOGF_INFO("Camera is already in read mode: %u", currentReadMode);
-                    return true;
-                }
-            }
+            uint32_t newReadMode = static_cast<uint32_t>(ReadModeN[0].value);
 
             // Set readout mode
-            rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
-            if (rc == QHYCCD_SUCCESS)
+            if (newReadMode != currentQHYReadMode)
             {
-
-                currentReadMode = newReadMode;
-
-                char currentReadModeName[255] = {0};
-                strcpy(currentReadModeName, "");
-                int retVal = GetQHYCCDReadModeName(m_CameraHandle, currentReadMode, currentReadModeName);
-                if (retVal == QHYCCD_SUCCESS)
+                /* change readout mode */
+                int rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
+                if (rc == QHYCCD_SUCCESS)
                 {
-                    LOGF_INFO("Read mode is now updated to: %s", currentReadModeName);
-                }
-                else
-                {
-                    LOGF_INFO("Read mode is now updated to: %u", currentReadMode);
-                }
-
-                //Reinitialize camera to get new chip characteristics
-                rc = InitQHYCCD(m_CameraHandle);
-                if (rc != QHYCCD_SUCCESS)
-                {
-                    LOGF_ERROR("Init Camera failed (%d)", rc);
-                    return false;
-                }
-
-
-                //NEW CODE - Fix read mode handling, move to setupParams()
-#if 0
-                uint32_t nbuf, imagew, imageh, bpp;
-                if (isSimulation())
-                {
-                    pixelh = pixelw = 5.4;
-                    bpp             = 8;
-                }
-                else
-                {
-                    int ret = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
-
-                    /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
-                    if (ret != QHYCCD_SUCCESS)
+                    /* re-initialize the camera */
+                    rc = InitQHYCCD(m_CameraHandle);
+                    if (rc != QHYCCD_SUCCESS)
                     {
-                        LOGF_ERROR("Error: GetQHYCCDChipInfo() (%d)", ret);
+                        LOGF_ERROR("Init Camera failed (%d)", rc);
+                        SetQHYCCDReadMode(m_CameraHandle, currentQHYReadMode);
+                        IDSetNumber(&ReadModeNP, nullptr);
                         return false;
                     }
 
+                    currentQHYReadMode = newReadMode;
+
+                    LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
+                              readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
+
+                    /* re-initialize the camera parameters */
+                    QHYCCD::setupParams();
+                    saveConfig(true, ReadModeNP.name);
+                    ReadModeNP.s = IPS_OK;
                 }
-
-                SetCCDParams(imageRMw, imageRMh, bpp, pixelw, pixelh);
-                nbuf = imageRMw * imageRMh * PrimaryCCD.getBPP() / 8;
-                PrimaryCCD.setFrameBufferSize(nbuf);
-
-                if (HasStreaming())
+                else
                 {
-                    Streamer->setPixelFormat(INDI_MONO);
-                    Streamer->setSize(imageRMw, imageRMh);
+                    ReadModeNP.s = IPS_ALERT;
+                    /* assume the camera did not switch read modes and thus is still in the former read mode */
+                    ReadModeN[0].value = currentQHYReadMode;
+                    LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
-#endif
-
-                //reinitialized the camera paramters...
-                QHYCCD::setupParams();
-
-                ReadModeNP.s = IPS_OK;
-                saveConfig(true, ReadModeNP.name);
-
             }
             else
             {
-                ReadModeNP.s = IPS_ALERT;
-                //TODO - currentReadMode?
-                //ReadModeN[0].value = currentReadMode;
-                ReadModeN[0].value = newReadMode;
-                LOGF_ERROR("Failed to update read mode: %d", rc);
+                /* re-initialize the camera parameters */
+                QHYCCD::setupParams();
+                saveConfig(true, ReadModeNP.name);
+                ReadModeNP.s = IPS_OK;
             }
 
             IDSetNumber(&ReadModeNP, nullptr);
@@ -2411,8 +2388,33 @@ bool QHYCCD::StartStreaming()
         { "RGGB", INDI_BAYER_RGGB }
     };
 
-    // Set Stream Mode
-    SetQHYCCDStreamMode(m_CameraHandle, 1);
+    // Set Stream Mode and re-initialize camera
+    //SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+    if (currentQHYStreamMode == 0  && !isSimulation())
+    {
+
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    currentQHYStreamMode = 0;
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+        //    return false;
+        //}
+
+        /* switch camera to streaming mode */
+        currentQHYStreamMode = 1;
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        /* re-initialize camera */
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
+            currentQHYStreamMode = 0;
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+            return false;
+        }
+    }
 
     // Set binning mode
     if (isSimulation())
@@ -2447,8 +2449,6 @@ bool QHYCCD::StartStreaming()
 
     double uSecs = static_cast<long>(m_ExposureRequest * 950000.0);
 
-    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS)", m_ExposureRequest, Streamer->getTargetFPS());
-
     SetQHYCCDParam(m_CameraHandle, CONTROL_EXPOSURE, uSecs);
 
     if (HasUSBSpeed)
@@ -2474,8 +2474,11 @@ bool QHYCCD::StartStreaming()
         Streamer->setPixelFormat(qhyFormat, PrimaryCCD.getBPP());
     }
 
-    BeginQHYCCDLive(m_CameraHandle);
+    //LOG_INFO("start live mode"); //DEBUG
 
+    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS), w=%d h=%d", m_ExposureRequest,
+              Streamer->getTargetFPS(), subW, subH);
+    BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
     m_ThreadRequest = StateStream;
     pthread_cond_signal(&cv);
@@ -2494,16 +2497,24 @@ bool QHYCCD::StopStreaming()
         pthread_cond_wait(&cv, &condMutex);
     }
     pthread_mutex_unlock(&condMutex);
-
-    if (HasUSBSpeed)
-        SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
-    if (HasUSBTraffic)
-        SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
-    SetQHYCCDStreamMode(m_CameraHandle, 0);
     StopQHYCCDLive(m_CameraHandle);
 
-    // Try to set 16bit mode if supported back.
-    SetQHYCCDBitsMode(m_CameraHandle, 16);
+    //LOG_INFO("stopped live mode"); //DEBUG
+
+    //if (HasUSBSpeed)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
+    //if (HasUSBTraffic)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
+
+    currentQHYStreamMode = 0;
+    SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+
+    // FIX: Helps for cleaner teardown and prevents camera from staling
+    InitQHYCCD(m_CameraHandle);
+
+    // Try to set 16bit mode if supported back. Use PrimaryCCD.getBPP as this is what we use to allocate the image buffer.
+    // Instead of doing this here, set the new bitmode when we go into exposure mode out of streaming mode.
+    //SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     return true;
 }
 
@@ -2566,16 +2577,16 @@ void *QHYCCD::imagingThreadEntry()
 void QHYCCD::streamVideo()
 {
     uint32_t ret = 0, w, h, bpp, channels;
-
+    //uint32_t t_start = time(NULL), frames = 0;
     while (m_ThreadRequest == StateStream)
     {
         pthread_mutex_unlock(&condMutex);
         uint32_t retries = 0;
         std::unique_lock<std::mutex> guard(ccdBufferLock);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-        //uint32_t size = PrimaryCCD.getFrameBufferSize();
         while (retries++ < 10)
         {
+
             ret = GetQHYCCDLiveFrame(m_CameraHandle, &w, &h, &bpp, &channels, buffer);
             if (ret == QHYCCD_ERROR)
                 usleep(1000);
@@ -2589,8 +2600,13 @@ void QHYCCD::streamVideo()
 
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
                 decodeGPSHeader();
-        }
 
+            //DEBUG
+            //if(!frames)
+            //    LOGF_DEBUG("Receiving frames ...");
+            //if(!(++frames % 30))
+            //    LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
+        }
         pthread_mutex_lock(&condMutex);
     }
 }
