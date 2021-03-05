@@ -1,0 +1,6 @@
+#!/bin/sh
+# postinst script for indi-asi-power
+
+sudo systemctl daemon-reload
+sudo systemctl enable pigpiod.service
+sudo systemctl start pigpiod.service
