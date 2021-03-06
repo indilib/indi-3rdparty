@@ -66,7 +66,6 @@ option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 # Define standard set of drivers to build (default linux target)
 option(WITH_EQMOD "Install EQMod Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
-option(WITH_NSE "Install Nexstar Evo Driver" On)
 option(WITH_CAUX "Install Celestron AUX Driver" On)
 option(WITH_SX "Install StarLight Xpress Driver" On)
 option(WITH_MAXDOME "Install MaxDomeII Driver" On)
@@ -289,11 +288,6 @@ if (WITH_CLOUDWATCHER)
 add_subdirectory(indi-aagcloudwatcher)
 add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
-
-## Nexstar Evo
-if (WITH_NSE)
-add_subdirectory(indi-nexstarevo)
-endif (WITH_NSE)
 
 ## Celestron AUX
 if (WITH_CAUX)
