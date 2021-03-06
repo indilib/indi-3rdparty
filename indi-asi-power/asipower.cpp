@@ -93,8 +93,7 @@ IndiAsiPower::~IndiAsiPower()
 bool IndiAsiPower::Connect()
 {
     // Init GPIO
-    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
-    DEBUGF(INDI::Logger::DBG_SESSION, "Hardware revision %lu.", get_hardware_revision(m_piId));
+    DEBUGF(INDI::Logger::DBG_SESSION, "pigpiod_if2 version %lu.", pigpiod_if_version());
     m_piId = pigpio_start(NULL,NULL);
 
     if (m_piId < 0)
@@ -102,6 +101,8 @@ bool IndiAsiPower::Connect()
         DEBUGF(INDI::Logger::DBG_ERROR, "pigpio initialisation failed: %d", m_piId);
         return false;
     }
+    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
+    DEBUGF(INDI::Logger::DBG_SESSION, "Hardware revision %x.", get_hardware_revision(m_piId));
     for(int i=0; i<n_gpio_pin; i++)
     {
         set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
