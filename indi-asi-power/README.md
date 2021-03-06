@@ -8,8 +8,8 @@ Features:
   - PWM control in increments of 1%
 
 # Source
-https://github.com/indilib/indi-3rdparty.git
-https://github.com/joan2937/pigpio
+* https://github.com/indilib/indi-3rdparty.git
+* https://github.com/joan2937/pigpio
 
 # Requirements
 * INDI available here http://indilib.org/download.html

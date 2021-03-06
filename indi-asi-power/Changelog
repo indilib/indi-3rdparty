@@ -1,3 +1,6 @@
+v0.9
+* Initialize device type to None
+
 v0.8
 * Label ports 1-4
 * Force type None to OFF

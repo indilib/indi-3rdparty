@@ -135,7 +135,7 @@ bool IndiAsiPower::initProperties()
     {
         for(int j=0; j<n_dev_type;j++)
         {
-            IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), ISS_ON);
+            IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), j==0?ISS_ON:ISS_OFF);
         }
         // Label ports 1-4 using i+1 rather than 0-3
         IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
