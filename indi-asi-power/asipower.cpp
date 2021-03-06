@@ -93,8 +93,7 @@ IndiAsiPower::~IndiAsiPower()
 bool IndiAsiPower::Connect()
 {
     // Init GPIO
-    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
-    DEBUGF(INDI::Logger::DBG_SESSION, "Hardware revision %lu.", get_hardware_revision(m_piId));
+    DEBUGF(INDI::Logger::DBG_SESSION, "pigpiod_if2 version %lu.", pigpiod_if_version());
     m_piId = pigpio_start(NULL,NULL);
 
     if (m_piId < 0)
@@ -102,6 +101,8 @@ bool IndiAsiPower::Connect()
         DEBUGF(INDI::Logger::DBG_ERROR, "pigpio initialisation failed: %d", m_piId);
         return false;
     }
+    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
+    DEBUGF(INDI::Logger::DBG_SESSION, "Hardware revision %x.", get_hardware_revision(m_piId));
     for(int i=0; i<n_gpio_pin; i++)
     {
         set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
@@ -135,7 +136,7 @@ bool IndiAsiPower::initProperties()
     {
         for(int j=0; j<n_dev_type;j++)
         {
-            IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), ISS_ON);
+            IUFillSwitch(&DeviceS[i][j], (dev +std::to_string(i) + std::to_string(j)).c_str(), dev_type[j].c_str(), j==0?ISS_ON:ISS_OFF);
         }
         // Label ports 1-4 using i+1 rather than 0-3
         IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);

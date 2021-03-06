@@ -1,3 +1,8 @@
+v0.9
+* Initialize device type to None
+* Fix hardware revision and pigpio version reporting
+* make pigpiod a simple non-forking service
+
 v0.8
 * Label ports 1-4
 * Force type None to OFF

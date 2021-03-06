@@ -1,3 +1,16 @@
+indi-asi-power (0.9) buster; urgency=medium
+
+* Initialize device type to None
+
+ -- Ken Self <ken.kgself@gmail.com>  Sat, 06 Mar 2021 14:40:00 +1100
+
+indi-asi-power (0.8) buster; urgency=medium
+
+* Label ports 1-4
+* Force type None to OFF
+
+ -- Ken Self <ken.kgself@gmail.com>  Tue, 02 Mar 2021 13:50:00 +1100
+
 indi-asi-power (0.7) buster; urgency=medium
 
   * Fix package dependencies
