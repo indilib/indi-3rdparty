@@ -102,6 +102,7 @@ class CelestronAUX :
     public:
         bool setCordwrapPos(long pos);
         long getCordwrapPos();
+        bool getCWBase();
     private:
         bool getVersion(AUXTargets trg);
         void getVersions();
@@ -198,6 +199,7 @@ class CelestronAUX :
         void querryStatus();
         int sendBuffer(int PortFD, AUXBuffer buf);
         bool sendAUXCommand(AUXCommand &c);
+        void formatVersionString(char *s, int n, uint8_t *verBuf);
 
         // Current steps from controller
         uint32_t m_AltSteps {0};
@@ -214,10 +216,17 @@ class CelestronAUX :
         bool m_Tracking {false};
         bool m_SlewingAlt {false}, m_SlewingAz {false};
         bool gpsemu;
+        bool cw_base_sky = false ;
 
-        uint8_t m_MainBoardVersionMajor {0}, m_MainBoardVersionMinor {0};
-        uint8_t m_AltitudeVersionMajor {0}, m_AltitudeVersionMinor {0};
-        uint8_t m_AzimuthVersionMajor {0}, m_AzimuthVersionMinor {0};
+
+
+        uint8_t m_MainBoardVersion[4] {0};
+        uint8_t m_AltitudeVersion[4] {0};
+        uint8_t m_AzimuthVersion[4] {0};
+        uint8_t m_HCVersion[4] {0};
+        uint8_t m_BATVersion[4] {0};
+        uint8_t m_WiFiVersion[4] {0};
+        uint8_t m_GPSVersion[4] {0};
 
         // Coord Wrap
         bool m_CordWrapActive {false};
@@ -243,7 +252,7 @@ class CelestronAUX :
         // Firmware
         IText FirmwareT[10] {};
         ITextVectorProperty FirmwareTP;
-        enum {FW_HC, FW_HCp, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_CHG, FW_LIGHT, FW_GPS};
+        enum {FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS};
         // Networked Mount autodetect
         ISwitch NetDetectS[1];
         ISwitchVectorProperty NetDetectSP;
@@ -262,6 +271,11 @@ class CelestronAUX :
         ISwitch CWPosS[4];
         ISwitchVectorProperty CWPosSP;
         enum { CORDWRAP_N, CORDWRAP_E, CORDWRAP_S, CORDWRAP_W };
+        // Cordwrap base (0-encoder/True directions)
+        ISwitch CWBaseS[2];
+        ISwitchVectorProperty CWBaseSP;
+        enum {CW_BASE_ENC, CW_BASE_SKY}; // Use 0-encoders / Sky directions as base for parking and cordwrap
+
         // GPS emulator
         ISwitch GPSEmuS[2];
         ISwitchVectorProperty GPSEmuSP;
