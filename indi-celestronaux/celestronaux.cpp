@@ -1409,11 +1409,11 @@ long CelestronAUX::GetALT()
     // return alt encoder adjusted to -90...90
     if (m_AltSteps > STEPS_PER_REVOLUTION / 2)
     {
-        return m_AltSteps - STEPS_PER_REVOLUTION;
+        return static_cast<int32_t>(m_AltSteps) - STEPS_PER_REVOLUTION;
     }
     else
     {
-        return m_AltSteps;
+        return static_cast<int32_t>(m_AltSteps);
     }
 };
 
