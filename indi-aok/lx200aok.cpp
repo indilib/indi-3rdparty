@@ -1021,7 +1021,7 @@ bool LX200Skywalker::setSystemSlewSpeed (int xx)
  */
 bool LX200Skywalker::getFirmwareInfo(char* vstring)
 {
-    char lstat[20] = {0};
+    char lstat[40] = {0};
     if(!getJSONData_gp(1, lstat))
         return false;
     else
