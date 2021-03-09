@@ -31,6 +31,10 @@
     static const int n_dev_type = 9;
     static const std::string dev_type[n_dev_type] = {"None","Camera","Focuser","Dew Heater","Flat Panel","Mount","Fan","Other on/off","Other variable"};
     static const bool dev_pwm[n_dev_type] = { false, false, false, true, true, false, true, false, true };
+    static const int dslr_pin = 21;
+    static const uint32_t max_tick = 4294967295;
+    static const int32_t max_timer_ms = 50000;
+    
     
 class IndiAsiPower : public INDI::DefaultDevice
 {
@@ -46,6 +50,8 @@ public:
     virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
     virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     virtual bool ISSnoopDevice(XMLEle *root);
+    void DslrTimer(int pi, unsigned user_gpio, unsigned level, uint32_t tick);
+
 protected:
     virtual bool saveConfigItems(FILE *fp);
 private:
@@ -61,6 +67,20 @@ private:
 
     int m_type[n_gpio_pin];
     int m_piId;
+
+// DSLR properties: DurationN, DelayN, CountN, StartS, AbortS
+    ISwitch DslrS[2];
+    ISwitchVectorProperty DslrSP;
+    INumber DslrExpN[3];
+    INumberVectorProperty DslrExpNP;
+    
+    int dslr_cb;
+    uint64_t dslr_end;
+    uint32_t dslr_last;
+    bool dslr_isexp;
+    int dslr_counter;
+    void DslrChange(bool isInit=false, bool abort=false);
+
 };
 
 #endif
