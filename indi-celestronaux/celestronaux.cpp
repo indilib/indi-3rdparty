@@ -89,7 +89,7 @@ void ISSnoopDevice(XMLEle *root)
     const char *propName = findXMLAttValu(root, "name");
 
     // update cordwrap position at each init of the alignment subsystem
-    if (!strcmp(propName, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE"))
+    if (!strcmp(propName, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE") && telescope_caux->isConnected())
     {
         long cwpos;
         if (telescope_caux->getCWBase()) 
@@ -203,16 +203,22 @@ bool CelestronAUX::detectNetScope(bool set_ip)
     /* now loop, receiving data and printing what we received
         wait max 20 sec
     */
+    int cnt {0};
     for (int n = 0; n < 10; n++)
-    {
+    {   
         recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
         // Scope broadcasts 110b UDP packets from port 2000 to 55555
         // we use it for detection
         // Not true anymore - Celestron changed WiFi chip and/or firmware
-        // We can only use source port
-        //if (ntohs(remaddr.sin_port) == 2000 && recvlen == 110)
+        // We can only use destination port
+        if ( (recvlen > 90 && recvlen < 150) ) // New  and old NSEvo - count the packages
         {
-            LOGF_INFO("%s:%d (%d)", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
+            cnt++;
+            LOGF_INFO("Got broadcast from %s:%d (%d)", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
+        }
+        if (cnt > 4) // We got 4 packages in a row. It is probably the scope
+        {
+            LOGF_INFO("Detected scope at %s:%d (%d)", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
             //addr.sin_addr.s_addr = remaddr.sin_addr.s_addr;
             //addr.sin_port        = remaddr.sin_port;
             if (set_ip)
@@ -314,14 +320,16 @@ bool CelestronAUX::Handshake()
         Initialise(this);
 
         // update cordwrap position at each init of the alignment subsystem
-        long cwpos;
-        if (cw_base_sky)
-            cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-        else 
-            cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
-        setCordwrapPos(cwpos);
-        getCordwrapPos();
-
+        if (isConnected())
+        {
+            long cwpos;
+            if (cw_base_sky)
+                cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+            else 
+                cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
+            setCordwrapPos(cwpos);
+            getCordwrapPos();
+        }
         return true;
     }
     else
@@ -797,13 +805,16 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             Initialise(this);
 
             // update cordwrap position at each init of the alignment subsystem
-            long cwpos;
-            if (cw_base_sky)
-                cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-            else 
-                cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
-            setCordwrapPos(cwpos);
-            getCordwrapPos();
+            if ( isConnected() )
+            {
+                long cwpos;
+                if (cw_base_sky)
+                    cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+                else 
+                    cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
+                setCordwrapPos(cwpos);
+                getCordwrapPos();
+            }
 
             return true;
         }
@@ -2234,7 +2245,8 @@ bool CelestronAUX::readAUXResponse(AUXCommand c)
 /////////////////////////////////////////////////////////////////////////////////////
 int CelestronAUX::sendBuffer(int PortFD, AUXBuffer buf)
 {
-    if ( PortFD > 0 )
+    //if ( PortFD > 0 )
+    if ( isConnected() )
     {
         int n;
 
