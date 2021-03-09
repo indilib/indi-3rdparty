@@ -208,9 +208,11 @@ bool CelestronAUX::detectNetScope(bool set_ip)
         recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
         // Scope broadcasts 110b UDP packets from port 2000 to 55555
         // we use it for detection
-        if (ntohs(remaddr.sin_port) == 2000 && recvlen == 110)
+        // Not true anymore - Celestron changed WiFi chip and/or firmware
+        // We can only use source port
+        //if (ntohs(remaddr.sin_port) == 2000 && recvlen == 110)
         {
-            LOGF_WARN("%s:%d (%d)", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
+            LOGF_INFO("%s:%d (%d)", inet_ntoa(remaddr.sin_addr), ntohs(remaddr.sin_port), recvlen);
             //addr.sin_addr.s_addr = remaddr.sin_addr.s_addr;
             //addr.sin_port        = remaddr.sin_port;
             if (set_ip)
@@ -277,7 +279,7 @@ bool CelestronAUX::Handshake()
                 // detect if connectd to HC port or to mount USB port
                 // ask for HC version
                 char version[10];
-                if ((isHC = detectHC(version, (size_t)10)))
+                if ((isHC = detectHC(version, (size_t)10))) 
                     LOGF_INFO("Detected Hand Controller (v%s) serial connection.", version);
                 else
                     LOG_INFO("Detected Mount USB serial connection.");
@@ -294,7 +296,7 @@ bool CelestronAUX::Handshake()
         LOG_DEBUG("Communicating with mount motor controllers...");
         if (getVersion(AZM) && getVersion(ALT))
         {
-            LOG_INFO("Got response from target ALT or AZM. Probing all targets.");
+            LOG_INFO("Got response from target ALT or AZM.");
         }
         else
         {
@@ -1574,14 +1576,22 @@ bool CelestronAUX::getVersion(AUXTargets trg)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::getVersions()
 {
-    getVersion(MB);
-    getVersion(HC);
-    getVersion(HCP);
+    if (!isHC) 
+    {
+        // Do not ask HC/MB for the version over AUX channel
+        // We got HC version from detectHC
+        getVersion(MB);
+        getVersion(HC);
+        getVersion(HCP);
+    }   
     getVersion(AZM);
     getVersion(ALT);
     getVersion(GPS);
     getVersion(WiFi);
     getVersion(BAT);
+
+    // These are the same as battery controller
+    // Probably the same chip inside the mount
     //getVersion(CHG);
     //getVersion(LIGHT);
     //getVersion(ANY);
@@ -1756,24 +1766,27 @@ bool CelestronAUX::TimerTick(double dt)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::querryStatus()
 {
-    AUXTargets trg[2] = { ALT, AZM };
-    for (int i = 0; i < 2; i++)
+    if ( isConnected() )
     {
-        AUXCommand cmd(MC_GET_POSITION, APP, trg[i]);
-        sendAUXCommand(cmd);
-        readAUXResponse(cmd);
-    }
-    if (m_SlewingAlt && ScopeStatus != SLEWING_MANUAL)
-    {
-        AUXCommand cmd(MC_SLEW_DONE, APP, ALT);
-        sendAUXCommand(cmd);
-        readAUXResponse(cmd);
-    }
-    if (m_SlewingAz && ScopeStatus != SLEWING_MANUAL)
-    {
-        AUXCommand cmd(MC_SLEW_DONE, APP, AZM);
-        sendAUXCommand(cmd);
-        readAUXResponse(cmd);
+        AUXTargets trg[2] = { ALT, AZM };
+        for (int i = 0; i < 2; i++)
+        {
+            AUXCommand cmd(MC_GET_POSITION, APP, trg[i]);
+            sendAUXCommand(cmd);
+            readAUXResponse(cmd);
+        }
+        if (m_SlewingAlt && ScopeStatus != SLEWING_MANUAL)
+        {
+            AUXCommand cmd(MC_SLEW_DONE, APP, ALT);
+            sendAUXCommand(cmd);
+            readAUXResponse(cmd);
+        }
+        if (m_SlewingAz && ScopeStatus != SLEWING_MANUAL)
+        {
+            AUXCommand cmd(MC_SLEW_DONE, APP, AZM);
+            sendAUXCommand(cmd);
+            readAUXResponse(cmd);
+        }
     }
 }
 
@@ -2361,6 +2374,11 @@ bool CelestronAUX::detectHC(char *version, size_t size)
         return false;
 
     // return printable HC version
+    // fill in the version field
+    m_HCVersion[0] = static_cast<uint8_t>(buf[0]);
+    m_HCVersion[1] = static_cast<uint8_t>(buf[1]);
+    m_HCVersion[2] = 0;
+    m_HCVersion[3] = 0;
     snprintf(version, size, "%d.%02d", static_cast<uint8_t>(buf[0]), static_cast<uint8_t>(buf[1]));
 
     return true;
