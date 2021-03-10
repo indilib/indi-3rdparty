@@ -56,7 +56,6 @@ double anglediff(double a, double b)
     return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
 }
 
-
 void ISGetProperties(const char *dev)
 {
     telescope_caux->ISGetProperties(dev);
@@ -205,7 +204,7 @@ bool CelestronAUX::detectNetScope(bool set_ip)
     */
     int cnt {0};
     for (int n = 0; n < 10; n++)
-    {   
+    {
         recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
         // Scope broadcasts 110b UDP packets from port 2000 to 55555
         // we use it for detection
@@ -325,7 +324,7 @@ bool CelestronAUX::Handshake()
             long cwpos;
             if (cw_base_sky)
                 cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-            else 
+            else
                 cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
@@ -621,7 +620,10 @@ bool CelestronAUX::initProperties()
 
 void CelestronAUX::formatVersionString(char *s, int n, uint8_t *verBuf)
 {
-    snprintf(s, n, "%d.%02d.%d", verBuf[0], verBuf[1], verBuf[2]*256+verBuf[3]);
+    if (verBuf[0]==0 && verBuf[1]==0 && verBuf[2]==0 && verBuf[3]==0)
+        snprintf(s, n, "Unknown");
+    else
+        snprintf(s, n, "%d.%02d.%d", verBuf[0], verBuf[1], verBuf[2]*256+verBuf[3]);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -810,7 +812,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                 long cwpos;
                 if (cw_base_sky)
                     cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-                else 
+                else
                     cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
                 setCordwrapPos(cwpos);
                 getCordwrapPos();
@@ -1275,7 +1277,6 @@ void CelestronAUX::TimerHit()
         TraceThisTick      = true;
         TraceThisTickCount = 0;
     }
-
     // issue a warning when alignment subsystem is off
     currentAlignmentSubsystemStatus = IsAlignmentSubsystemActive();
     if (pastAlignmentSubsystemStatus && !currentAlignmentSubsystemStatus)
@@ -1366,16 +1367,6 @@ void CelestronAUX::TimerHit()
 
         case SCOPE_TRACKING:
         {
-            // Continue or start tracking
-            // Calculate where the mount needs to be in a minute
-            double JulianOffset = 60.0 / (24.0 * 60 * 60);
-            TelescopeDirectionVector TDV;
-            ln_hrz_posn AltAz, AAzero;
-
-            AltAz  = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, JulianOffset);
-            AAzero = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, 0);
-            if (TraceThisTick)
-                LOGF_DEBUG("Tracking - Calculated Alt %lf deg ; Az %lf deg", AltAz.alt, AltAz.az);
             /*
             TODO
             The tracking should take into account movement of the scope
@@ -1385,39 +1376,55 @@ void CelestronAUX::TimerHit()
             designated target by corrective tracking.
             */
 
-            // Fold Azimuth into 0-360
-            AltAz.az = range360(AltAz.az);
+            // Continue or start tracking
+            // Calculate where the mount needs to be in a minute (+/- 30s)
+            double JulianOffset = 30.0 / (24.0 * 60 * 60);
+            TelescopeDirectionVector TDV;
+            ln_hrz_posn AAplus, AAzero, AAminus;
 
+            AAplus  = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, JulianOffset);
+            AAzero = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, 0);
+            AAminus  = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, -JulianOffset);
+
+            // Fold Azimuth into 0-360
+            AAminus.az = range360(AAminus.az);
+            AAzero.az = range360(AAzero.az);
+            AAplus.az = range360(AAplus.az);
             {
-                long altRate, azRate;
+                double altRate, azRate;
+                double altError, azError;
+
+                // Proportional term in the control loop
+                // Weight of error in the control loop
+                // For now set at zero - no corrective tracking
+                double Kp {0.0};
 
                 // This is in steps per minute
-                altRate = long(AltAz.alt * STEPS_PER_DEGREE - GetALT());
-                azRate  = long(AltAz.az * STEPS_PER_DEGREE - GetAZ());
+                altError = AAzero.alt * STEPS_PER_DEGREE - GetALT();
+                azError  = range360(AAzero.az) * STEPS_PER_DEGREE - GetAZ();
+
+                altRate =  STEPS_PER_DEGREE * (AAplus.alt - AAminus.alt);
+                azRate = STEPS_PER_DEGREE * anglediff(AAplus.az, AAminus.az);
 
                 if (TraceThisTick)
-                    LOGF_DEBUG("Target (AltAz): %f  %f  Scope  (AltAz)  %f  %f", AltAz.alt, AltAz.az,
+                    LOGF_DEBUG("Target (AltAz): %f  %f  Scope  (AltAz)  %f  %f", AAzero.alt, AAzero.az,
                                GetALT() / STEPS_PER_DEGREE, GetAZ() / STEPS_PER_DEGREE);
 
-                if (std::abs(azRate) > STEPS_PER_REVOLUTION / 2)
-                {
-                    // Crossing the meridian. AZ skips from 350+ to 0+
-                    // Correct for wrap-around
-                    azRate += STEPS_PER_REVOLUTION;
-                    if (azRate > STEPS_PER_REVOLUTION)
-                        azRate %= STEPS_PER_REVOLUTION;
-                }
-
-                // Track function needs rates in 1000*arcmin/minute
-                // Rates here are in steps/minute
-                // conv. factor: TRACK_SCALE = 60000/STEPS_PER_DEGREE
-                altRate = long(TRACK_SCALE * altRate);
-                azRate  = long(TRACK_SCALE * azRate);
-                Track(altRate, azRate);
-
+                // Fold the Az difference to +/- STEPS_PER_REVOLUTION / 2
+                while (azError > STEPS_PER_REVOLUTION / 2)
+                    azError -= STEPS_PER_REVOLUTION;
+                while (azError < -(STEPS_PER_REVOLUTION / 2))
+                    azError += STEPS_PER_REVOLUTION;
+                
                 if (TraceThisTick)
-                    LOGF_DEBUG("TimerHit - Tracking AltRate %d AzRate %d ; Pos diff (deg): Alt: %f Az: %f",
-                               altRate, azRate, AltAz.alt - AAzero.alt, anglediff(AltAz.az, AAzero.az));
+                    LOGF_DEBUG("Tracking rate: Alt %f Az %f ; Errors : Alt: %f Az: %f",
+                               altRate, azRate, altError, azError);
+
+                altRate = SIDERAL_RATE * TRACK_SCALE * (altRate + altError*Kp);
+                azRate  = SIDERAL_RATE * TRACK_SCALE * (azRate + azError*Kp);
+
+                Track(static_cast<int32_t>(altRate), static_cast<int32_t>(azRate));
+
             }
             break;
         }
@@ -1461,29 +1468,38 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     return true;
 }
 
+int32_t CelestronAUX::range360int(int32_t steps)
+{
+    while (steps < 0)
+        steps += STEPS_PER_REVOLUTION;
+    while (steps > STEPS_PER_REVOLUTION)
+        steps -= STEPS_PER_REVOLUTION;
+    
+    return steps;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-long CelestronAUX::GetALT()
+int32_t CelestronAUX::GetALT()
 {
     // return alt encoder adjusted to -90...90
-    if (m_AltSteps > STEPS_PER_REVOLUTION / 2)
-    {
-        return static_cast<int32_t>(m_AltSteps) - STEPS_PER_REVOLUTION;
-    }
-    else
-    {
-        return static_cast<int32_t>(m_AltSteps);
-    }
+    while (m_AltSteps > STEPS_PER_REVOLUTION)
+        m_AltSteps -= STEPS_PER_REVOLUTION;
+    return m_AltSteps;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-long CelestronAUX::GetAZ()
+int32_t CelestronAUX::GetAZ()
 {
-    return m_AzSteps % STEPS_PER_REVOLUTION;
+    while (m_AzSteps < 0)
+        m_AzSteps += STEPS_PER_REVOLUTION;
+    while (m_AzSteps > STEPS_PER_REVOLUTION)
+        m_AzSteps -= STEPS_PER_REVOLUTION;
+
+    return m_AzSteps;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1528,7 +1544,7 @@ bool CelestronAUX::SlewAZ(int rate)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::GoToFast(long alt, long az, bool track)
+bool CelestronAUX::GoToFast(int32_t alt, int32_t az, bool track)
 {
     targetAlt  = alt;
     targetAz   = az;
@@ -1550,7 +1566,7 @@ bool CelestronAUX::GoToFast(long alt, long az, bool track)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::GoToSlow(long alt, long az, bool track)
+bool CelestronAUX::GoToSlow(int32_t alt, int32_t az, bool track)
 {
     targetAlt  = alt;
     targetAz   = az;
@@ -1636,7 +1652,7 @@ bool CelestronAUX::getCordwrap()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::setCordwrapPos(long pos)
+bool CelestronAUX::setCordwrapPos(int32_t pos)
 {
     AUXCommand cwcmd(MC_SET_CORDWRAP_POS, APP, AZM);
     cwcmd.setPosition(pos);
@@ -1661,7 +1677,7 @@ long CelestronAUX::getCordwrapPos()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::Track(long altRate, long azRate)
+bool CelestronAUX::Track(int32_t altRate, int32_t azRate)
 {
     // The scope rates are per minute?
     m_AltRate = altRate;
@@ -1672,11 +1688,11 @@ bool CelestronAUX::Track(long altRate, long azRate)
         m_AzRate  = 0;
     }
     m_Tracking = true;
-    LOGF_DEBUG("Set tracking rates: ALT: %ld   AZM: %ld\n", m_AltRate, m_AzRate);
+    //LOGF_DEBUG("Set tracking rates: ALT: %d   AZM: %d\n", m_AltRate, m_AzRate);
     AUXCommand altcmd((altRate < 0) ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, ALT);
     AUXCommand azmcmd((azRate < 0) ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, AZM);
-    altcmd.setPosition(long(std::abs(m_AltRate)));
-    azmcmd.setPosition(long(std::abs(m_AzRate)));
+    altcmd.setPosition(std::abs(m_AltRate));
+    azmcmd.setPosition(std::abs(m_AzRate));
 
     sendAUXCommand(altcmd);
     readAUXResponse(altcmd);
@@ -1743,7 +1759,7 @@ bool CelestronAUX::TimerTick(double dt)
     if (isSimulation())
     {
         bool slewing = false;
-        long da;
+        int32_t da;
         int dir;
 
         // update both axis
@@ -1751,14 +1767,14 @@ bool CelestronAUX::TimerTick(double dt)
         {
             da  = targetAlt - m_AltSteps;
             dir = (da > 0) ? 1 : -1;
-            m_AltSteps += dir * std::max(std::min(std::abs(da) / 2, slewRate), 1L);
+            m_AltSteps += dir * std::max(std::min(std::abs(da) / 2, slewRate), 1);
             slewing = true;
         }
         if (m_AzSteps != targetAz)
         {
             da  = targetAz - m_AzSteps;
             dir = (da > 0) ? 1 : -1;
-            m_AzSteps += dir * std::max(std::min(long(std::abs(da) / 2), slewRate), 1L);
+            m_AzSteps += dir * std::max(std::min(static_cast<int32_t>(std::abs(da) / 2), slewRate), 1);
             slewing = true;
         }
 
@@ -1927,16 +1943,14 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 switch (m.src)
                 {
                     case ALT:
+                        // The Alt encoder value is signed!
                         m_AltSteps = m.getPosition();
-                        LOGF_DEBUG("ALT: %ld", m_AltSteps);
-                        // if (PROC_DEBUG) IDLog("ALT: %ld", Alt);
+                        DEBUGF(DBG_CAUX, "Got Alt: %ld", m_AltSteps);
                         break;
                     case AZM:
-                        m_AzSteps = m.getPosition();
                         // Celestron uses N as zero Azimuth!
-                        //                        m_AzSteps += STEPS_PER_REVOLUTION / 2;
-                        //                        m_AzSteps %= STEPS_PER_REVOLUTION;
-                        LOGF_DEBUG("AZ: %ld", m_AzSteps);
+                        m_AzSteps = range360int(m.getPosition());
+                        DEBUGF(DBG_CAUX, "Got Az: %ld", m_AzSteps);
                         break;
                     default:
                         break;
@@ -1947,11 +1961,9 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 {
                     case ALT:
                         m_SlewingAlt = m.data[0] != 0xff;
-                        // if (PROC_DEBUG) IDLog("ALT %d ", slewingAlt);
                         break;
                     case AZM:
                         m_SlewingAz = m.data[0] != 0xff;
-                        // if (PROC_DEBUG) IDLog("AZM %d ", slewingAz);
                         break;
                     default:
                         break;
@@ -1964,7 +1976,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
             case MC_GET_CORDWRAP_POS:
                 if (m.src == AZM)
                 {
-                    m_CordWrapPosition = m.getPosition();
+                    m_CordWrapPosition = range360int(m.getPosition());
                     LOGF_DEBUG("Got cordwrap position %.1f", float(m_CordWrapPosition) / STEPS_PER_DEGREE);
                 }
                 break;
@@ -2073,7 +2085,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
         }
     else 
     {
-        LOGF_DEBUG("Got msg not for me (%s). Ignoring.", m.node_name(m.dst));
+        DEBUGF(DBG_CAUX, "Got msg not for me (%s). Ignoring.", m.node_name(m.dst));
     }
     return true;
 }
@@ -2245,8 +2257,7 @@ bool CelestronAUX::readAUXResponse(AUXCommand c)
 /////////////////////////////////////////////////////////////////////////////////////
 int CelestronAUX::sendBuffer(int PortFD, AUXBuffer buf)
 {
-    //if ( PortFD > 0 )
-    if ( isConnected() )
+    if ( PortFD > 0 )
     {
         int n;
 

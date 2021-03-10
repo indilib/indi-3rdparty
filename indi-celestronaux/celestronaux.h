@@ -89,24 +89,24 @@ class CelestronAUX :
 
         bool trackingRequested();
 
-        long GetALT();
-        long GetAZ();
+        int32_t GetALT();
+        int32_t GetAZ();
         bool slewing();
         bool Slew(AUXTargets trg, int rate);
-        bool SlewALT(int rate);
-        bool SlewAZ(int rate);
-        bool GoToFast(long alt, long az, bool track);
-        bool GoToSlow(long alt, long az, bool track);
+        bool SlewALT(int32_t rate);
+        bool SlewAZ(int32_t rate);
+        bool GoToFast(int32_t alt, int32_t az, bool track);
+        bool GoToSlow(int32_t alt, int32_t az, bool track);
         bool setCordwrap(bool enable);
         bool getCordwrap();
     public:
-        bool setCordwrapPos(long pos);
+        bool setCordwrapPos(int32_t pos);
         long getCordwrapPos();
         bool getCWBase();
     private:
         bool getVersion(AUXTargets trg);
         void getVersions();
-        bool Track(long altRate, long azRate);
+        bool Track(int32_t altRate, int32_t azRate);
         bool SetTrackEnabled(bool enabled) override;
         bool TimerTick(double dt);
         bool GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
@@ -186,6 +186,7 @@ class CelestronAUX :
         uint32_t DBG_CAUX {0};
         uint32_t DBG_SERIAL {0};
 
+        int32_t range360int(int32_t);
         void initScope(char const *ip, int port);
         void initScope();
         bool detectNetScope(bool set_ip);
@@ -201,17 +202,18 @@ class CelestronAUX :
         bool sendAUXCommand(AUXCommand &c);
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
-        // Current steps from controller
-        uint32_t m_AltSteps {0};
-        uint32_t m_AzSteps {0};
+        // Current steps from controller 
+        // AUX protocol uses signed 24bit integers for positions
+        int32_t m_AltSteps {0};
+        int32_t m_AzSteps {0};
         // FIXME: Current rate in steps per sec?
         int32_t m_AltRate {0};
         int32_t m_AzRate {0};
         // Desired target steps in both axis
-        uint32_t targetAlt {0};
-        uint32_t targetAz {0};
+        int32_t targetAlt {0};
+        int32_t targetAz {0};
         // FIXME: Combined slew rate?
-        long slewRate {0};
+        int32_t slewRate {0};
 
         bool m_Tracking {false};
         bool m_SlewingAlt {false}, m_SlewingAz {false};
@@ -230,7 +232,7 @@ class CelestronAUX :
 
         // Coord Wrap
         bool m_CordWrapActive {false};
-        uint32_t m_CordWrapPosition {0};
+        int32_t m_CordWrapPosition {0};
 
         // FP
         int modem_ctrl;
@@ -291,7 +293,7 @@ class CelestronAUX :
         // One definition rule (ODR) constants
         // AUX commands use 24bit integer as a representation of angle in units of
         // fractional revolutions. Thus 2^24 steps makes full revolution.
-        static constexpr uint32_t STEPS_PER_REVOLUTION {16777216};
+        static constexpr int32_t STEPS_PER_REVOLUTION {16777216};
     public:
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
     private:
@@ -299,13 +301,13 @@ class CelestronAUX :
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
         static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
 
-        // The guide rate is probably (???) measured in 1000 arcmin/min
+        // The guide rate is probably (???) measured in 1024 arcmin/min
         // This is based on experimentation and guesswork.
         // The rate is calculated in steps/min - thus conversion is required.
         // The best experimental value was 1.315 which is quite close
-        // to 60000/STEPS_PER_DEGREE = 1.2874603271484375.
-        static constexpr double TRACK_SCALE {60000 / STEPS_PER_DEGREE};
-
+        // to 61440/STEPS_PER_DEGREE = 1.318359375.
+        static constexpr double TRACK_SCALE {61440 / STEPS_PER_DEGREE};
+        static constexpr double SIDERAL_RATE {1.002737909350795};
         static constexpr uint8_t MAX_SLEW_RATE {9};
         static constexpr uint8_t FIND_SLEW_RATE {7};
         static constexpr uint8_t CENTERING_SLEW_RATE {3};
