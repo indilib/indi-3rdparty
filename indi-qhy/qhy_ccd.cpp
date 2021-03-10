@@ -2750,6 +2750,11 @@ void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
         fits_update_key_str(fptr, "Ampglow", IUFindOnSwitch(&AMPGlowSP)->label, "Mode", &status);
     }
 
+    if (HasReadMode)
+    {
+        fits_update_key_dbl(fptr, "ReadMode", ReadModeN[0].value, 1, "Read Mode", &status);
+    }
+
     if (HasGPS)
     {
         // #1 Start
