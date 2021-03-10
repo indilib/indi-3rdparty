@@ -638,7 +638,7 @@ bool LX200Skywalker::SavePark()
 bool LX200Skywalker::notifyPierSide()
 {
     char lstat[20] = {0};
-    if (getJSONData_Y(5, lstat)) // this is the model!
+    if (getJSONData_Y(5, lstat,20)) // this is the model!
     {
         int li = std::stoi(lstat);
         li = li & (1 << 7);
@@ -785,7 +785,7 @@ bool LX200Skywalker::setSiteLatitude(double Lat)
 
 }
 
-bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardcoded  :gp-query
+bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr, int jstrlen) // preliminary hardcoded  :gp-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -811,11 +811,11 @@ bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardc
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr, data[jindex]);
+    strncpy(jstr, data[jindex], jstrlen);
     return true;
 }
 
-bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardcoded query :Y#-query
+bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr, int jstrlen) // preliminary hardcoded query :Y#-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -841,14 +841,14 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardco
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr, data[jindex]);
+    strncpy(jstr, data[jindex], jstrlen);
     return true;
 }
 
 bool LX200Skywalker::MountLocked()
 {
     char lstat[20] = {0};
-    if(!getJSONData_gp(2, lstat))
+    if(!getJSONData_gp(2, lstat,20))
         return false;
     else
     {
@@ -1021,8 +1021,8 @@ bool LX200Skywalker::setSystemSlewSpeed (int xx)
  */
 bool LX200Skywalker::getFirmwareInfo(char* vstring)
 {
-    char lstat[20] = {0};
-    if(!getJSONData_gp(1, lstat))
+    char lstat[40] = {0};
+    if(!getJSONData_gp(1, lstat,40))
         return false;
     else
     {
