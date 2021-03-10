@@ -351,21 +351,24 @@ bool LX200Skywalker::initProperties()
 
     // System Slewspeed
     IUFillNumber(&SystemSlewSpeedP[0], "SLEW_SPEED", "Slewspeed", "%.2f", 0.0, 30.0, 1, 0);
-    IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
 
     // Motors Status
     IUFillSwitch(&MountStateS[0], "On", "", ISS_OFF);
     IUFillSwitch(&MountStateS[1], "Off", "", ISS_OFF);
-    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "Mount lock", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "Mount lock", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Infotab
     IUFillText(&FirmwareVersionT[0], "Firmware", "Version", "123456");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60,
+                     IPS_IDLE);
 
     // Setting the park position in the controller (with webinterface) evokes a restart of the very same!
     // 4th option "purge" of INDI::Telescope doesn't make any sense here, so it is not displayed
     IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Copy", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read",ISS_OFF);
+    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read", ISS_OFF);
     IUFillSwitch(&ParkOptionS[PARK_WRITE_DATA], "PARK_WRITE_DATA", "Write", ISS_OFF);
     IUFillSwitchVector(&ParkOptionSP, ParkOptionS, 3, getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options",
                        SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
@@ -480,7 +483,7 @@ void LX200Skywalker::getBasicData()
             if (! getTrackFrequency(&TrackFreqN[0].value))
                 LOG_ERROR("Failed to get tracking frequency from device.");
             else
-                IDSetNumber(&TrackingFreqNP, nullptr);
+                IDSetNumber(&TrackFreqNP, nullptr);
         }
 
         int slewSpeed;
@@ -508,16 +511,16 @@ void LX200Skywalker::getBasicData()
             LOG_INFO("Parkdata loaded");
             if (!INDI::Telescope::isParked()) // Mount is unparked and working on connection of the driver!
             {
-                    if ((MountLocked()) && (MountTracking())) // default state of working mount
-                     {
-                        notifyMountLock(true);
-                        notifyTrackState(SCOPE_TRACKING);
-                        ParkSP.s = IPS_OK;
-                        IDSetSwitch(&ParkSP, nullptr);
-                        //LOG_INFO("Mount is working");
-                     }
-                     else
-                        LOG_WARN("Mount is unparked but not locked and/or not tracking!");
+                if ((MountLocked()) && (MountTracking())) // default state of working mount
+                {
+                    notifyMountLock(true);
+                    notifyTrackState(SCOPE_TRACKING);
+                    ParkSP.s = IPS_OK;
+                    IDSetSwitch(&ParkSP, nullptr);
+                    //LOG_INFO("Mount is working");
+                }
+                else
+                    LOG_WARN("Mount is unparked but not locked and/or not tracking!");
             }
             else // Mount is parked
             {
@@ -572,7 +575,7 @@ bool LX200Skywalker::updateLocation(double latitude, double longitude, double el
 
     // LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L); Info provided by "inditelescope"
 
-   return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -638,7 +641,7 @@ bool LX200Skywalker::SavePark()
 bool LX200Skywalker::notifyPierSide()
 {
     char lstat[20] = {0};
-    if (getJSONData_Y(5, lstat,20)) // this is the model!
+    if (getJSONData_Y(5, lstat, 20)) // this is the model!
     {
         int li = std::stoi(lstat);
         li = li & (1 << 7);
@@ -835,7 +838,8 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr, int jstrlen) // preli
         return false;
     }
     char data[6][20] = {"", "", "", "", "", ""};
-    int returnCode = sscanf(lresponse, "%20[^,]%*[,]%20[^,]%*[,]%20[^#]%*[#\",]%20[^,]%*[,]%20[^,]%*[,]%20[^,]", data[0], data[1], data[2], data[3], data[4], data[5]);
+    int returnCode = sscanf(lresponse, "%20[^,]%*[,]%20[^,]%*[,]%20[^#]%*[#\",]%20[^,]%*[,]%20[^,]%*[,]%20[^,]", data[0],
+                            data[1], data[2], data[3], data[4], data[5]);
     if (returnCode < 1)
     {
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
@@ -848,7 +852,7 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr, int jstrlen) // preli
 bool LX200Skywalker::MountLocked()
 {
     char lstat[20] = {0};
-    if(!getJSONData_gp(2, lstat,20))
+    if(!getJSONData_gp(2, lstat, 20))
         return false;
     else
     {
@@ -1022,7 +1026,7 @@ bool LX200Skywalker::setSystemSlewSpeed (int xx)
 bool LX200Skywalker::getFirmwareInfo(char* vstring)
 {
     char lstat[40] = {0};
-    if(!getJSONData_gp(1, lstat,40))
+    if(!getJSONData_gp(1, lstat, 40))
         return false;
     else
     {
@@ -1472,7 +1476,7 @@ void LX200Skywalker::ISGetProperties(const char *dev)
         if (CanControlTrack())
             defineProperty(&TrackStateSP);
         if (HasTrackRate())
-            defineProperty(&TrackRateNP);        
+            defineProperty(&TrackRateNP);
     }
     /*
         if (isConnected())
