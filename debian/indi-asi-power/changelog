@@ -1,9 +1,14 @@
+indi-asi-power (0.91) buster; urgency=medium
+
+  * Add DSLR port control
+
+ -- Ken Self <ken.kgself@gmail.com>  Tue, 09 Mar 2021 12:20:00 +1100
+
 indi-asi-power (0.9) buster; urgency=medium
 
   * Initialize device type to None
   * Fix hardware revision and pigpio version reporting
   * make pigpiod a simple non-forking service
-
 
  -- Ken Self <ken.kgself@gmail.com>  Sat, 06 Mar 2021 17:50:00 +1100
 
