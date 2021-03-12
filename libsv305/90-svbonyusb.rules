@@ -1,6 +1,4 @@
-#===============================================================================
-# Udev rules for SVBONY SV305 Cameras
-#===============================================================================
+ACTION=="add", ATTR{idVendor}=="f266", RUN+="/bin/sh -c '/bin/echo 512 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 
-KERNEL=="*", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ACTION=="add", ATTR{idVendor}=="f266", MODE="666", TAG="ckusb_dev",  A"
-KERNEL=="*", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ACTION=="remove", TAG=="ckusb_dev", R"
+# SVBONY
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="f266", MODE="0666", TAG="ckusb_dev"
