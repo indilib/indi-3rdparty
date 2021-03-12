@@ -237,7 +237,7 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 {
                     DutyCycleNP[i].s = IPS_ALERT;
                     IDSetNumber(&DutyCycleNP[i], nullptr);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "Value %0.0f is not a valid Duty Cycle!", values[0]);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "%s Duty Cycle %0.0f is not a valid value", DeviceSP[i].label, values[0]);
                     return false;
                 }
                 // cannot alter duty cycle on a non-PWM device -except to maximum
