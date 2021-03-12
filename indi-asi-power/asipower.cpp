@@ -395,7 +395,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 DslrChange(true);
                 DslrExpNP.s = IPS_BUSY;
                 IDSetNumber(&DslrExpNP, nullptr);
-                return false;
+                return true;
             }
             if( DslrS[1].s == ISS_ON )
             {
@@ -405,10 +405,11 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 DEBUG(INDI::Logger::DBG_SESSION, "DSLR Stop exposure");
                 DslrExpNP.s = IPS_IDLE;
                 IDSetNumber(&DslrExpNP, nullptr);
-                return false;
+                return true;
             }
-            DslrSP.s = IPS_OK;
+            DslrSP.s = IPS_ALERT;
             IDSetSwitch(&DslrSP, nullptr);
+            return false;
         }
     }
     return INDI::DefaultDevice::ISNewSwitch (dev, name, states, names, n);
