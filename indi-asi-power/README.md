@@ -34,7 +34,6 @@ cd indi-3rdparty
 Compile and install the driver and pigpiod
 ```
 cd ~/Projects/indi-3rd-party
-git checkout asipower
 mkdir -p ~/projects/build/indi-asi-power
 cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
 make

@@ -1,3 +1,11 @@
+indi-asi-power (0.92) buster; urgency=medium
+
+  * Fix install for Raspbian - clash with pigpiod
+  * Minor fix to messages
+  * Fix return from ISNewSwitch for DSLR
+
+ -- Ken Self <ken.kgself@gmail.com>  Fri, 12 Mar 2021 22:40:00 +1100
+
 indi-asi-power (0.91) buster; urgency=medium
 
   * Add DSLR port control

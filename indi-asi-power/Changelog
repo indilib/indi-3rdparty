@@ -1,3 +1,8 @@
+v0.92
+* Fix install for Raspbian - clash with pigpiod
+* Minor fix to messages
+* Fix return from ISNewSwitch for DSLR
+
 v0.91
 * Add DSLR port control
 
