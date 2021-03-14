@@ -66,7 +66,12 @@ class TimelapseService:
 
 
     def config_camera(self, camera):
-        camera.shutter_speed = self.config.getint('Camera', 'ExposureTime')
+        # change to auto exposure for short exposure times
+        if self.config.getint('Camera', 'ExposureTime') < 10000:
+            camera.shutter_speed = 0 # auto
+        else:
+            camera.shutter_speed = self.config.getint('Camera', 'ExposureTime')
+
         camera.iso           = self.config.getint('Camera', 'ISOSpeedRatings')
         camera.contrast      = self.config.getint('Camera', 'Contrast')
         camera.brightness    = self.config.getint('Camera', 'Brightness')
@@ -95,7 +100,9 @@ class TimelapseService:
 
     def calculate_framerate(self):
         if self.config.getint('Camera', 'ExposureTime') <= 1000000:
-            return self.rates['short']
+            # return self.rates['short']
+            # in any case, we use the long time
+            return self.rates['long']
         else:
             return self.rates['long']
 
