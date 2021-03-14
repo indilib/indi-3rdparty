@@ -6,11 +6,17 @@ function createWeatherChart(category, unit, align, max, precision) {
         toolbar: {show: false},
     };
     var title = {
-        text: category + " [" + unit.trim() + "]",
+        text: category,
         align: align,
-        offsetX: 6,
-        offsetY: 15,
+        offsetX: 0,
+        offsetY: 0,
         style: {fontSize: '14px', color: '#ccc'}
+    };
+    var subtitle = {
+        align: align,
+        offsetX: 0,
+        offsetY: 18,
+        style: {fontSize: '24px', color: '#ccc'}
     };
     var xaxis = {
         type: "datetime",
@@ -23,7 +29,8 @@ function createWeatherChart(category, unit, align, max, precision) {
     };
 
     return {chart: chart,
-            subtitle: title,
+	    title: title,
+            subtitle: subtitle,
             xaxis: xaxis,
             yaxis: yaxis,
             series: [],
@@ -150,7 +157,6 @@ function selectTimeline(activeElement, update) {
 
 
 var hchart, cchart, tchart, pchart, schart, wchart, lchart;
-var temperature, humidity, pressure, cloudCoverage, sqm, windSpeed;
 
 var settings = {t_min: -40, t_max: 50, t_prec: 1,
                 p_min: 973, p_max: 1053, p_prec: 0,
@@ -170,46 +176,24 @@ function init() {
         addEventListener('click', function (e) {selectTimeline(e, updateSeries);});
 
 
-    // create charts for current values
-    temperature = new ApexCharts(document.querySelector("#temperature"),
-                                 createRadialBarChart('Temperature', '°C',
-                                                      settings.t_min, settings.t_max, settings.t_prec));
-    humidity = new ApexCharts(document.querySelector("#humidity"),
-                              createBarChart('Humidity', '%', 0, 100));
-    pressure = new ApexCharts(document.querySelector("#pressure"),
-                              createRadialBarChart('Pressure', ' hPa',
-                                                   settings.p_min, settings.p_max, settings.p_prec));
-    cloudCoverage = new ApexCharts(document.querySelector("#clouds"),
-                                   createRadialBarChart('Cloud Coverage', '%', 0, 100, 0));
-    sqm = new ApexCharts(document.querySelector("#sqm"),
-                              createBarChart('SQM', '%', settings.sqm_min, settings.sqm_max));
-    windSpeed = new ApexCharts(document.querySelector("#windSpeed"),
-                              createBarChart('Wind Speed', '%', settings.windSpeed_min, settings.windSpeed_max));
-    temperature.render();
-    humidity.render();
-    pressure.render();
-    cloudCoverage.render();
-    sqm.render();
-    windSpeed.render();
-
-    // special case for temperature
-    temperature.updateOptions({
-    }, true, false, false);
-    
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-                            createWeatherChart("Temperature", "°C", "left", undefined, 1));
+                            createWeatherChart("Temperature", "°C", "right", undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-                            createWeatherChart("Humidity", "%", "left", 100, 0));
+                            createWeatherChart("Humidity", "%", "right", 100, 0));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-                            createWeatherChart("Pressure", "hPa", "left", undefined, 0));
+                            createWeatherChart("Pressure", " hPa", "right", undefined, 0));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-                            createWeatherChart("Cloud Coverage", "%", "left", 100, 0));
+                            createWeatherChart("Cloud Coverage", "%", "right", 100, 0));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-                            createWeatherChart("Sky Quality", "mag/arcsec²", "left", undefined, 1));
+                            createWeatherChart("Sky Quality", " mag/arcsec²", "right", undefined, 1));
     wchart = new ApexCharts(document.querySelector("#windSpeed_series"),
-                            createWeatherChart("Wind Speed", "m/s", "left", undefined, 1));
+                            createWeatherChart("Wind Speed", " m/s", "right", undefined, 1));
+    rvchart = new ApexCharts(document.querySelector("#rainvolume_series"),
+                            createWeatherChart("Rain Volume", " mm", "right", undefined, 1));
+    rdchart = new ApexCharts(document.querySelector("#raindropfreq_series"),
+                            createWeatherChart("Rain Drops", " drops/min", "right", undefined, 1));
 
     hchart.render();
     cchart.render();
@@ -217,6 +201,8 @@ function init() {
     pchart.render();
     schart.render();
     wchart.render();
+    rvchart.render();
+    rdchart.render();
 
     tchart.updateOptions({colors: ["#0077b3"],
                           fill: {type: ['gradient', 'pattern'],
@@ -246,29 +232,31 @@ function updateSeries() {
         var currentSQM           = data.SQM;
         var currentWindSpeed     = data.WindSpeed;
         var currentWindGust      = data.WindGust;
+	var currentRainVolume    = data.RainVolume;
+	var currentRaindropFreq  = data.RaindropFrequency;
 
-        // calculate filling percentage from current temperature and pressure (slightly ugly code)
 	if (currentTemperature != null)
-            temperature.updateSeries([100 * (currentTemperature - settings.t_min) / (settings.t_max - settings.t_min)]);
+	    tchart.updateOptions({subtitle: {text: currentTemperature.toFixed(1) + "°C"}});
+
 	if (currentPressure != null)
-            pressure.updateSeries([100 * (currentPressure - settings.p_min) / (settings.p_max - settings.p_min)]);
+	    pchart.updateOptions({subtitle: {text: currentPressure.toFixed(0) + " hPa"}});
+
 	if (currentCloudCoverage != null)
-            cloudCoverage.updateSeries([currentCloudCoverage]);
-	if (currentHumidity != null) {
-            humidity.updateSeries([{name: "Humidity", data: [currentHumidity]}]);
-            document.querySelector("#humidityValue").textContent = currentHumidity.toFixed(0) + "%";
-	}
-	if (currentSQM != null) {
-            sqm.updateSeries([{name: "SQM", data: [currentSQM]}]);
-            document.querySelector("#sqmValue").textContent = currentSQM.toFixed(1);
-	}
-	if (currentWindSpeed != null) {
-            windSpeed.updateSeries([{name: "Wind Speed", data: [currentWindSpeed]}]);
-	    if (currentWindGust != null)
-		document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s (max: " + currentWindGust.toFixed(1) + " m/s)";
-	    else
-		document.querySelector("#windSpeedValue").textContent = currentWindSpeed.toFixed(1) + " m/s";
-	}
+	    cchart.updateOptions({subtitle: {text: currentCloudCoverage.toFixed(0) + "%"}});
+	if (currentHumidity != null)
+	    hchart.updateOptions({subtitle: {text: currentHumidity.toFixed(0) + "%"}});
+
+	if (currentSQM != null)
+	    schart.updateOptions({subtitle: {text: currentSQM.toFixed(1)}});
+
+	if (currentWindSpeed != null)
+	    wchart.updateOptions({subtitle: {text: currentWindSpeed.toFixed(1) + " m/s"}});
+
+	if (currentRainVolume != null)
+	    rvchart.updateOptions({subtitle: {text: currentRainVolume.toFixed(1) + " mm"}});
+
+	if (currentRaindropFreq != null)
+	    rdchart.updateOptions({subtitle: {text: currentRaindropFreq.toFixed(1) + " /min"}});
 
         // update time stamp at the bottom line
         var lastUpdate = data.timestamp;
@@ -295,6 +283,8 @@ function updateSeries() {
                              {data: data.WindSpeed.data,
                               name: data.WindSpeed.name,
                               type: "area"}]);
+        rvchart.updateSeries([data.RainVolume]);
+        rdchart.updateSeries([data.RaindropFrequency]);
     });
 
 };
@@ -315,11 +305,11 @@ function initSensors() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-                            createWeatherChart("Temperature", " °C", "left", undefined, 1));
+                            createWeatherChart("Temperature", " °C", "right", undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-                            createWeatherChart("Humidity", "%", "left", 100, 0));
+                            createWeatherChart("Humidity", "%", "right", 100, 0));
     lchart = new ApexCharts(document.querySelector("#lum_series"),
-                            createWeatherChart("Luminosity", " lux", "left", undefined, 0));
+                            createWeatherChart("Luminosity", " lux", "right", undefined, 0));
 
     tchart.render();
     hchart.render();
@@ -333,6 +323,14 @@ function initSensors() {
 function updateSensorSeries(timeline) {
 
     timeline = getCurrentTimeline();
+
+    // update last values
+    $.get("data/RTsensors_lastupdate.json", function(data) {
+
+        // update time stamp
+        var lastUpdate = data.timestamp;
+        document.querySelector("#lastupdate").textContent = new Date(lastUpdate).toLocaleString();
+    });
 
     $.get("data/RTsensors_" + timeline + ".json", function(data) {
 
