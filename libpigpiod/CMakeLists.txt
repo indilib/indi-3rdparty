@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (VERSION_MAJOR 0)
-set (VERSION_MINOR 92)
+set (VERSION_MINOR 1)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
@@ -34,6 +34,7 @@ target_link_libraries(pigpiod pigpio RT::RT Threads::Threads)
 
 # Install pigpiod
 install(TARGETS pigpiod RUNTIME DESTINATION bin )
+install( FILES pigpio.h DESTINATION include)
 
 # Install pigpiod systemd service
 include(FindPkgConfig)
