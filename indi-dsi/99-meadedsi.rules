@@ -1,4 +1,3 @@
-ACTION=="add", ATTR{idVendor}=="156c", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 
 # 1. Pre-renumeration IDs
 # Meade DSI

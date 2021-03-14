@@ -22,13 +22,7 @@
 # 1. Increase usbfs memory limit
 #===============================================================================
 # QHY-Based camera by other vendors
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1856", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1781", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="04b4", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 # QHYCCD
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 
 #===============================================================================
 # 2. Pre-enumerated device IDs:

@@ -1,3 +1,2 @@
-ACTION=="add", ATTRS{idVendor}=="0f18", RUN+="/bin/sh -c '/bin/echo 512 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 # All FLI Cameras and filter wheels
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="0f18", MODE="0666"

@@ -1,4 +1,3 @@
-ACTION=="add", ATTR{idVendor}=="f266", RUN+="/bin/sh -c '/bin/echo 512 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 
 # SVBONY
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="f266", MODE="0666", TAG="ckusb_dev"
