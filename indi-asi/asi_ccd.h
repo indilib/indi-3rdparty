@@ -209,11 +209,4 @@ class ASICCD : public INDI::CCD
 
         // Camera ROI
         uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
-
-        friend void ::ISGetProperties(const char *dev);
-        friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-        friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-        friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                                char *formats[], char *names[], int n);
 };
