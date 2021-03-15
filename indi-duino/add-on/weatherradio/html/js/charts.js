@@ -1,4 +1,4 @@
-function createWeatherChart(category, unit, align, max, precision) {
+function createWeatherChart(category, unit, align, min, max, precision) {
 
     var chart = {
         height: 250,
@@ -24,8 +24,10 @@ function createWeatherChart(category, unit, align, max, precision) {
     };
     var yaxis = {
         labels: {style: {color: '#ccc'}},
-        decimalsInFloat: precision,
-        max: max
+        decimalsInFloat: 0,
+	min: min,
+        max: max,
+	tickAmount: 6,
     };
 
     return {chart: chart,
@@ -179,21 +181,21 @@ function init() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-                            createWeatherChart("Temperature", "°C", "right", undefined, 1));
+                            createWeatherChart("Temperature", "°C", "right", undefined, undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-                            createWeatherChart("Humidity", "%", "right", 100, 0));
+                            createWeatherChart("Humidity", "%", "right", undefined, 100, 0));
     pchart = new ApexCharts(document.querySelector("#pressure_series"),
-                            createWeatherChart("Pressure", " hPa", "right", undefined, 0));
+                            createWeatherChart("Pressure", " hPa", "right", undefined, undefined, 0));
     cchart = new ApexCharts(document.querySelector("#clouds_series"),
-                            createWeatherChart("Cloud Coverage", "%", "right", 100, 0));
+                            createWeatherChart("Cloud Coverage", "%", "right", undefined, 100, 0));
     schart = new ApexCharts(document.querySelector("#sqm_series"),
-                            createWeatherChart("Sky Quality", " mag/arcsec²", "right", undefined, 1));
+                            createWeatherChart("Sky Quality", " mag/arcsec²", "right", undefined, undefined, 1));
     wchart = new ApexCharts(document.querySelector("#windSpeed_series"),
-                            createWeatherChart("Wind Speed", " m/s", "right", undefined, 1));
-    rvchart = new ApexCharts(document.querySelector("#rainvolume_series"),
-                            createWeatherChart("Rain Volume", " mm", "right", undefined, 1));
-    rdchart = new ApexCharts(document.querySelector("#raindropfreq_series"),
-                            createWeatherChart("Rain Drops", " drops/min", "right", undefined, 1));
+                            createWeatherChart("Wind Speed", " m/s", "right", 0, undefined, 1));
+    rvchart = new ApexCharts(document.querySelector("#rain_volume_series"),
+                             createWeatherChart("Rain Volume", " l", "right", undefined, undefined, 1));
+    richart = new ApexCharts(document.querySelector("#rain_intensity_series"),
+                             createWeatherChart("Rain Intensity", " /min", "right", 0, undefined, 0));
 
     hchart.render();
     cchart.render();
@@ -202,7 +204,7 @@ function init() {
     schart.render();
     wchart.render();
     rvchart.render();
-    rdchart.render();
+    richart.render();
 
     tchart.updateOptions({colors: ["#0077b3"],
                           fill: {type: ['gradient', 'pattern'],
@@ -212,13 +214,18 @@ function init() {
     wchart.updateOptions({colors: ["#ff0000", "#0077b3"],
                           legend: {show: false}});
 
+    rvchart.updateOptions({yaxis: {
+	labels: {style: {color: '#ccc'}},
+        decimalsInFloat: 1,
+    }});
+
     // select timeline
     document.querySelector("#timeline_" + getCurrentTimeline()).classList.add('active');
 
     updateSeries();
 
-    // update timelines every 5 min
-    setInterval( function(){ updateSeries(getCurrentTimeline());}, 5*60000);
+    // update timelines every min
+    setInterval( function(){ updateSeries(getCurrentTimeline());}, 1*60000);
 };
 
 function updateSeries() {
@@ -232,8 +239,8 @@ function updateSeries() {
         var currentSQM           = data.SQM;
         var currentWindSpeed     = data.WindSpeed;
         var currentWindGust      = data.WindGust;
-	var currentRainVolume    = data.RainVolume;
-	var currentRaindropFreq  = data.RaindropFrequency;
+        var currentRainVolume    = data.RainVolume;
+        var currentRainIntensity = data.RaindropFrequency;
 
 	if (currentTemperature != null)
 	    tchart.updateOptions({subtitle: {text: currentTemperature.toFixed(1) + "°C"}});
@@ -253,10 +260,10 @@ function updateSeries() {
 	    wchart.updateOptions({subtitle: {text: currentWindSpeed.toFixed(1) + " m/s"}});
 
 	if (currentRainVolume != null)
-	    rvchart.updateOptions({subtitle: {text: currentRainVolume.toFixed(1) + " mm"}});
+	    rvchart.updateOptions({subtitle: {text: currentRainVolume.toFixed(1) + " l"}});
 
-	if (currentRaindropFreq != null)
-	    rdchart.updateOptions({subtitle: {text: currentRaindropFreq.toFixed(1) + " /min"}});
+	if (currentRainIntensity != null)
+	    richart.updateOptions({subtitle: {text: currentRainIntensity.toFixed(0) + " /min"}});
 
         // update time stamp at the bottom line
         var lastUpdate = data.timestamp;
@@ -284,7 +291,7 @@ function updateSeries() {
                               name: data.WindSpeed.name,
                               type: "area"}]);
         rvchart.updateSeries([data.RainVolume]);
-        rdchart.updateSeries([data.RaindropFrequency]);
+        richart.updateSeries([data.RaindropFrequency]);
     });
 
 };
@@ -305,11 +312,11 @@ function initSensors() {
     // create the time series charts
     
     tchart = new ApexCharts(document.querySelector("#temperature_series"),
-                            createWeatherChart("Temperature", " °C", "right", undefined, 1));
+                            createWeatherChart("Temperature", " °C", "right", undefined, undefined, 1));
     hchart = new ApexCharts(document.querySelector("#humidity_series"),
-                            createWeatherChart("Humidity", "%", "right", 100, 0));
+                            createWeatherChart("Humidity", "%", "right", undefined, 100, 0));
     lchart = new ApexCharts(document.querySelector("#lum_series"),
-                            createWeatherChart("Luminosity", " lux", "right", undefined, 0));
+                            createWeatherChart("Luminosity", " lux", "right", undefined, undefined, 0));
 
     tchart.render();
     hchart.render();
