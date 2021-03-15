@@ -26,6 +26,7 @@
 
 #include <libnova/julian_day.h>
 #include <algorithm>
+#include <map>
 #include <math.h>
 
 #define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
