@@ -1,0 +1,5 @@
+libpigpiod (0.1) buster; urgency=medium
+
+  * Initial build of pigpiod services under INDI
+
+ -- Ken Self <ken.kgself@gmail.com>  Sun, 14 Mar 2021 15:40:00 +1100
