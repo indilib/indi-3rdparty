@@ -42,9 +42,6 @@
 
 //#define USE_SIMULATION
 
-static std::unordered_map<std::string, ASICCD> cameras;
-static std::vector<ASI_CAMERA_INFO> camerasInfo;
-
 static bool warn_roi_height = true;
 static bool warn_roi_width = true;
 
@@ -65,120 +62,48 @@ static ASI_ERROR_CODE _ASIGetCameraProperty(ASI_CAMERA_INFO *pASICameraInfo, int
 # define _ASIGetCameraProperty ASIGetCameraProperty
 #endif
 
-void ASI_CCD_ISInit()
+static class Loader
 {
-    static bool isInit = false;
-    if (isInit)
-        return;
-
-    isInit = true;
-
-    int iAvailableCamerasCount = _ASIGetNumOfConnectedCameras();
-    if (iAvailableCamerasCount <= 0)
+public:
+    Loader()
     {
-        IDMessage(nullptr, "No ASI cameras detected. Power on?");
-        IDLog("No ASI Cameras detected. Power on?");
-        return;
+        int iAvailableCamerasCount = _ASIGetNumOfConnectedCameras();
+        if (iAvailableCamerasCount <= 0)
+        {
+            IDMessage(nullptr, "No ASI cameras detected. Power on?");
+            IDLog("No ASI Cameras detected. Power on?");
+            return;
+        }
+
+        try {
+            camerasInfo.resize(iAvailableCamerasCount);
+        } catch(const std::bad_alloc& e) {
+            IDLog("Failed to allocate memory.");
+            return;
+        }
+
+        std::unordered_map<std::string, int> cameraNamesUsed;
+        int i = 0;
+        for(auto &cameraInfo: camerasInfo)
+        {
+            _ASIGetCameraProperty(&cameraInfo, i++);
+            std::string cameraName = "ZWO CCD " + std::string(cameraInfo.Name + 4);
+
+            if (cameraNamesUsed[cameraInfo.Name]++ != 0)
+                cameraName += " " + std::to_string(cameraNamesUsed[cameraInfo.Name]);
+
+            cameras.emplace(
+                std::piecewise_construct,
+                std::make_tuple(cameraName),
+                std::make_tuple(&cameraInfo, cameraName)
+            );
+        }
     }
 
-    try {
-        camerasInfo.resize(iAvailableCamerasCount);
-    } catch(const std::bad_alloc& e) {
-        IDLog("Failed to allocate memory.");
-        return;
-    }
-
-    std::unordered_map<std::string, int> cameraNamesUsed;
-    int i = 0;
-    for(auto &cameraInfo: camerasInfo)
-    {
-        _ASIGetCameraProperty(&cameraInfo, i++);
-        std::string cameraName = "ZWO CCD " + std::string(cameraInfo.Name + 4);
-
-        if (cameraNamesUsed[cameraInfo.Name]++ != 0)
-            cameraName += " " + std::to_string(cameraNamesUsed[cameraInfo.Name]);
-
-        cameras.emplace(
-            std::piecewise_construct,
-            std::make_tuple(cameraName),
-            std::make_tuple(&cameraInfo, cameraName)
-        );
-    }
-}
-
-template <typename Function>
-static void for_each_camera(const char *dev, Function f)
-{
-    // camera not specified - eval for all
-    if (dev == nullptr)
-    {
-        for(auto &camera : cameras)
-            f(camera.second);
-
-        return;
-    }
-
-    auto camera = cameras.find(dev);
-    if (camera != cameras.end())
-       f(camera->second);
-}
-
-void ISGetProperties(const char *dev)
-{
-    ASI_CCD_ISInit();
-
-    for_each_camera(dev, [&](ASICCD &camera){
-        camera.ISGetProperties(dev);
-    });
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ASI_CCD_ISInit();
-
-    for_each_camera(dev, [&](ASICCD &camera){
-        camera.ISNewSwitch(dev, name, states, names, num);
-    });
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ASI_CCD_ISInit();
-
-    for_each_camera(dev, [&](ASICCD &camera){
-        camera.ISNewText(dev, name, texts, names, num);
-    });
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ASI_CCD_ISInit();
-
-    for_each_camera(dev, [&](ASICCD &camera){
-        camera.ISNewNumber(dev, name, values, names, num);
-    });
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ASI_CCD_ISInit();
-
-    for (auto &camera : cameras)
-        camera.second.ISSnoopDevice(root);
-}
+public:
+    std::unordered_map<std::string, ASICCD> cameras;
+    std::vector<ASI_CAMERA_INFO> camerasInfo;
+} loader;
 
 ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
 {
