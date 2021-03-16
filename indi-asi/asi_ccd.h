@@ -137,7 +137,7 @@ private:
     /** Get if MonoBin is active, thus Bayer is irrelevant */
     bool isMonoBinActive();
 
-    char name[MAXINDIDEVICE];
+    std::string cameraName;
 
     /** Additional Properties to INDI::CCD */
     INumber CoolerN[1];

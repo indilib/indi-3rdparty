@@ -106,12 +106,11 @@ public:
 } loader;
 
 ASICCD::ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName)
+    : cameraName(cameraName)
+    , m_camInfo(camInfo)
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
-    m_camInfo    = camInfo;
-
-    strncpy(this->name, cameraName.c_str(), MAXINDIDEVICE);
-    setDeviceName(this->name);
+    setDeviceName(cameraName.c_str());
 }
 
 ASICCD::~ASICCD()
@@ -299,7 +298,7 @@ bool ASICCD::updateProperties()
 
 bool ASICCD::Connect()
 {
-    LOGF_DEBUG("Attempting to open %s...", name);
+    LOGF_DEBUG("Attempting to open %s...", cameraName.c_str());
 
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
 
@@ -360,7 +359,7 @@ bool ASICCD::Disconnect()
     // Save all config before shutdown
     saveConfig(true);
 
-    LOGF_DEBUG("Closing %s...", name);
+    LOGF_DEBUG("Closing %s...", cameraName.c_str());
 
     stopTimerNS();
     stopTimerWE();
