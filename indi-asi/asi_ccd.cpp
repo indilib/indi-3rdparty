@@ -110,11 +110,6 @@ ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     m_camInfo    = camInfo;
 
-    WEPulseRequest = NSPulseRequest = 0;
-    genTimerID = WEtimerID = NStimerID = -1;
-    NSDir = ASI_GUIDE_NORTH;
-    WEDir = ASI_GUIDE_WEST;
-
     strncpy(this->name, cameraName.c_str(), MAXINDIDEVICE);
     setDeviceName(this->name);
 }

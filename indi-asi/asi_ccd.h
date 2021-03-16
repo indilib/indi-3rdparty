@@ -179,7 +179,7 @@ private:
     ASI_CAMERA_INFO *m_camInfo;
     std::vector<ASI_CONTROL_CAPS> m_controlCaps;
 
-    int genTimerID;
+    int genTimerID {-1};
 
     // Imaging thread
     ImageState threadRequest;
@@ -194,16 +194,16 @@ private:
     std::condition_variable cv;
 
     // ST4
-    float WEPulseRequest;
+    float WEPulseRequest {0};
     struct timeval WEPulseStart;
-    int WEtimerID;
-    ASI_GUIDE_DIRECTION WEDir;
+    int WEtimerID {-1};
+    ASI_GUIDE_DIRECTION WEDir {ASI_GUIDE_WEST};
     const char *WEDirName;
 
-    float NSPulseRequest;
+    float NSPulseRequest {0};
     struct timeval NSPulseStart;
-    int NStimerID;
-    ASI_GUIDE_DIRECTION NSDir;
+    int NStimerID {-1};
+    ASI_GUIDE_DIRECTION NSDir {ASI_GUIDE_NORTH};
     const char *NSDirName;
 
     // Camera ROI
