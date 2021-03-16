@@ -105,7 +105,7 @@ public:
     std::vector<ASI_CAMERA_INFO> camerasInfo;
 } loader;
 
-ASICCD::ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName)
+ASICCD::ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName)
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     m_camInfo    = camInfo;
@@ -492,7 +492,7 @@ void ASICCD::setupParams()
                 continue;
         }
 
-        oneVF->aux = &m_camInfo->SupportedVideoFormat[i];
+        oneVF->aux = const_cast<ASI_IMG_TYPE*>(&m_camInfo->SupportedVideoFormat[i]);
         oneVF++;
         VideoFormatSP.nsp++;
     }

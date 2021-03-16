@@ -32,7 +32,7 @@
 class ASICCD : public INDI::CCD
 {
 public:
-    explicit ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName);
+    explicit ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName);
     ~ASICCD() override;
 
     virtual const char *getDefaultName() override;
@@ -176,7 +176,7 @@ private:
     double TemperatureRequest;
     uint8_t m_ExposureRetry {0};
 
-    ASI_CAMERA_INFO *m_camInfo;
+    const ASI_CAMERA_INFO *m_camInfo;
     std::vector<ASI_CONTROL_CAPS> m_controlCaps;
 
     int genTimerID {-1};
