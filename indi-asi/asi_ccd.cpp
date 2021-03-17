@@ -179,12 +179,12 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
         setVideoFormat(ASI_IMG_RAW8);
     }
 
-    long blinks = BlinkN[BLINK_COUNT].value;
+    long blinks = BlinkNP[BLINK_COUNT].getValue();
     if (blinks > 0)
     {
         LOGF_DEBUG("Blinking %ld time(s) before exposure", blinks);
 
-        const long blink_duration = BlinkN[BLINK_DURATION].value * 1000 * 1000;
+        const long blink_duration = BlinkNP[BLINK_DURATION].getValue() * 1000 * 1000;
         ret = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, blink_duration, ASI_FALSE);
         if (ret != ASI_SUCCESS)
         {
@@ -349,37 +349,30 @@ bool ASICCD::initProperties()
 {
     INDI::CCD::initProperties();
 
-    IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_OFF);
-    IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
-                       ISR_1OFMANY, 0, IPS_IDLE);
+    CoolerSP[0].fill("COOLER_ON",  "ON",  ISS_OFF);
+    CoolerSP[1].fill("COOLER_OFF", "OFF", ISS_ON);
+    CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillNumber(&CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
-    IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB,
-                       IP_RO, 60, IPS_IDLE);
+    CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
+    CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillNumberVector(&ControlNP, nullptr, 0, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
-                       IPS_IDLE);
+    ControlNP.fill(getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
-    IUFillSwitchVector(&ControlSP, nullptr, 0, getDeviceName(), "CCD_CONTROLS_MODE", "Set Auto", CONTROL_TAB, IP_RW,
-                       ISR_NOFMANY, 60, IPS_IDLE);
+    ControlSP.fill(getDeviceName(), "CCD_CONTROLS_MODE", "Set Auto", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
 
-    IUFillSwitchVector(&VideoFormatSP, nullptr, 0, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-    IUFillNumber(&BlinkN[BLINK_COUNT], "BLINK_COUNT", "Blinks before exposure", "%2.0f", 0, 100, 1, 0);
-    IUFillNumber(&BlinkN[BLINK_DURATION], "BLINK_DURATION", "Blink duration", "%2.3f", 0, 60, 0.001, 0);
-    IUFillNumberVector(&BlinkNP, BlinkN, NARRAY(BlinkN), getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    BlinkNP[BLINK_COUNT   ].fill("BLINK_COUNT",    "Blinks before exposure", "%2.0f", 0, 100, 1.000, 0);
+    BlinkNP[BLINK_DURATION].fill("BLINK_DURATION", "Blink duration",         "%2.3f", 0,  60, 0.001, 0);
+    BlinkNP.fill(getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     IUSaveText(&BayerT[2], getBayerString());
 
-    IUFillNumber(&ADCDepthN, "BITS", "Bits", "%2.0f", 0, 32, 1, 0);
-    ADCDepthN.value = m_camInfo->BitDepth;
-    IUFillNumberVector(&ADCDepthNP, &ADCDepthN, 1, getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60,
-                       IPS_IDLE);
+    ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, m_camInfo->BitDepth);
+    ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60,IPS_IDLE);
 
-    IUFillText(&SDKVersionS[0], "VERSION", "Version", ASIGetSDKVersion());
-    IUFillTextVector(&SDKVersionSP, SDKVersionS, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    SDKVersionSP[0].fill("VERSION", "Version", ASIGetSDKVersion());
+    SDKVersionSP.fill(getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     int maxBin = 1;
 
@@ -439,10 +432,10 @@ bool ASICCD::updateProperties()
 
         if (HasCooler())
         {
-            defineProperty(&CoolerNP);
-            loadConfig(true, CoolerNP.name);
-            defineProperty(&CoolerSP);
-            loadConfig(true, CoolerSP.name);
+            defineProperty(CoolerNP);
+            loadConfig(true, CoolerNP.getName());
+            defineProperty(CoolerSP);
+            loadConfig(true, CoolerSP.getName());
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
@@ -451,28 +444,28 @@ bool ASICCD::updateProperties()
             defineProperty(&TemperatureNP);
         }
 
-        if (ControlNP.nnp > 0)
+        if (!ControlNP.isEmpty())
         {
-            defineProperty(&ControlNP);
-            loadConfig(true, ControlNP.name);
+            defineProperty(ControlNP);
+            loadConfig(true, ControlNP.getName());
         }
 
-        if (ControlSP.nsp > 0)
+        if (!ControlSP.isEmpty())
         {
-            defineProperty(&ControlSP);
-            loadConfig(true, ControlSP.name);
+            defineProperty(ControlSP);
+            loadConfig(true, ControlSP.getName());
         }
 
-        if (VideoFormatSP.nsp > 0)
+        if (!VideoFormatSP.isEmpty())
         {
-            defineProperty(&VideoFormatSP);
+            defineProperty(VideoFormatSP);
 
             // Try to set 16bit RAW by default.
             // It can get be overwritten by config value.
             // If config fails, we try to set 16 if exists.
-            if (loadConfig(true, VideoFormatSP.name) == false)
+            if (loadConfig(true, VideoFormatSP.getName()) == false)
             {
-                for (int i = 0; i < VideoFormatSP.nsp; i++)
+                for (size_t i = 0; i < VideoFormatSP.size(); i++)
                 {
                     if (m_camInfo->SupportedVideoFormat[i] == ASI_IMG_RAW16)
                     {
@@ -483,33 +476,33 @@ bool ASICCD::updateProperties()
             }
         }
 
-        defineProperty(&BlinkNP);
+        defineProperty(BlinkNP);
 
-        defineProperty(&ADCDepthNP);
-        defineProperty(&SDKVersionSP);
+        defineProperty(ADCDepthNP);
+        defineProperty(SDKVersionSP);
     }
     else
     {
         if (HasCooler())
         {
-            deleteProperty(CoolerNP.name);
-            deleteProperty(CoolerSP.name);
+            deleteProperty(CoolerNP.getName());
+            deleteProperty(CoolerSP.getName());
         }
         else
             deleteProperty(TemperatureNP.name);
 
-        if (ControlNP.nnp > 0)
-            deleteProperty(ControlNP.name);
+        if (!ControlNP.isEmpty())
+            deleteProperty(ControlNP.getName());
 
-        if (ControlSP.nsp > 0)
-            deleteProperty(ControlSP.name);
+        if (!ControlSP.isEmpty())
+            deleteProperty(ControlSP.getName());
 
-        if (VideoFormatSP.nsp > 0)
-            deleteProperty(VideoFormatSP.name);
+        if (!VideoFormatSP.isEmpty())
+            deleteProperty(VideoFormatSP.getName());
 
-        deleteProperty(BlinkNP.name);
-        deleteProperty(SDKVersionSP.name);
-        deleteProperty(ADCDepthNP.name);
+        deleteProperty(BlinkNP.getName());
+        deleteProperty(SDKVersionSP.getName());
+        deleteProperty(ADCDepthNP.getName());
     }
 
     return true;
@@ -596,12 +589,12 @@ void ASICCD::setupParams()
         errCode = ASIGetControlCaps(m_camInfo->CameraID, ASI_TARGET_TEMP, &pCtrlCaps);
         if (errCode == ASI_SUCCESS)
         {
-            CoolerN[0].min = pCtrlCaps.MinValue;
-            CoolerN[0].max = pCtrlCaps.MaxValue;
-            CoolerN[0].value = pCtrlCaps.DefaultValue;
+            CoolerNP[0].setMin(pCtrlCaps.MinValue);
+            CoolerNP[0].setMax(pCtrlCaps.MaxValue);
+            CoolerNP[0].setValue(pCtrlCaps.DefaultValue);
         }
-        //defineProperty(&CoolerNP);
-        //defineProperty(&CoolerSP);
+        //defineProperty(CoolerNP);
+        //defineProperty(CoolerSP);
     }
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM
@@ -640,8 +633,6 @@ void ASICCD::setupParams()
             break;
     }
 
-    VideoFormatSP.nsp = 0;
-
     int nVideoFormats = 0;
 
     for (const auto &videoFormat : m_camInfo->SupportedVideoFormat)
@@ -651,54 +642,52 @@ void ASICCD::setupParams()
         nVideoFormats++;
     }
 
+    VideoFormatSP.resize(0);
     try {
-        VideoFormatS.resize(nVideoFormats);
-    } catch (const std::bad_alloc &e) {
+        VideoFormatSP.reserve(nVideoFormats);
+    } catch (const std::bad_alloc &) {
         LOGF_ERROR("Camera ID: %d malloc failed (setup)",  m_camInfo->CameraID);
         return;
     }
 
-    ISwitch *oneVF = VideoFormatS.data();
-
     for (int i = 0; i < nVideoFormats; i++)
     {
+        INDI::WidgetView<ISwitch> node;
         switch (m_camInfo->SupportedVideoFormat[i])
         {
-            case ASI_IMG_RAW8:
-                IUFillSwitch(oneVF, "ASI_IMG_RAW8", "Raw 8 bit", (imgType == ASI_IMG_RAW8) ? ISS_ON : ISS_OFF);
-                LOG_DEBUG("Supported Video Format: ASI_IMG_RAW8");
-                break;
+        case ASI_IMG_RAW8:
+            node.fill("ASI_IMG_RAW8", "Raw 8 bit", (imgType == ASI_IMG_RAW8) ? ISS_ON : ISS_OFF);
+            LOG_DEBUG("Supported Video Format: ASI_IMG_RAW8");
+            break;
 
-            case ASI_IMG_RGB24:
-                IUFillSwitch(oneVF, "ASI_IMG_RGB24", "RGB 24", (imgType == ASI_IMG_RGB24) ? ISS_ON : ISS_OFF);
-                LOG_DEBUG("Supported Video Format: ASI_IMG_RGB24");
-                break;
+        case ASI_IMG_RGB24:
+            node.fill("ASI_IMG_RGB24", "RGB 24", (imgType == ASI_IMG_RGB24) ? ISS_ON : ISS_OFF);
+            LOG_DEBUG("Supported Video Format: ASI_IMG_RGB24");
+            break;
 
-            case ASI_IMG_RAW16:
-                IUFillSwitch(oneVF, "ASI_IMG_RAW16", "Raw 16 bit", (imgType == ASI_IMG_RAW16) ? ISS_ON : ISS_OFF);
-                LOG_DEBUG("Supported Video Format: ASI_IMG_RAW16");
-                break;
+        case ASI_IMG_RAW16:
+            node.fill("ASI_IMG_RAW16", "Raw 16 bit", (imgType == ASI_IMG_RAW16) ? ISS_ON : ISS_OFF);
+            LOG_DEBUG("Supported Video Format: ASI_IMG_RAW16");
+            break;
 
-            case ASI_IMG_Y8:
-                IUFillSwitch(oneVF, "ASI_IMG_Y8", "Luma", (imgType == ASI_IMG_Y8) ? ISS_ON : ISS_OFF);
-                LOG_DEBUG("Supported Video Format: ASI_IMG_Y8");
-                break;
+        case ASI_IMG_Y8:
+            node.fill("ASI_IMG_Y8", "Luma", (imgType == ASI_IMG_Y8) ? ISS_ON : ISS_OFF);
+            LOG_DEBUG("Supported Video Format: ASI_IMG_Y8");
+            break;
 
-            default:
-                LOGF_DEBUG("Unknown video format (%d)", m_camInfo->SupportedVideoFormat[i]);
-                continue;
+        default:
+            LOGF_DEBUG("Unknown video format (%d)", m_camInfo->SupportedVideoFormat[i]);
+            continue;
         }
 
-        oneVF->aux = const_cast<ASI_IMG_TYPE*>(&m_camInfo->SupportedVideoFormat[i]);
-        oneVF++;
-        VideoFormatSP.nsp++;
+        node.setAux(const_cast<ASI_IMG_TYPE*>(&m_camInfo->SupportedVideoFormat[i]));
+        VideoFormatSP.push(std::move(node));
     }
 
     // Resize the buffers to free up unused space
-    VideoFormatS.resize(VideoFormatSP.nsp);
+    VideoFormatSP.shrink_to_fit();
 
-    VideoFormatSP.sp  = VideoFormatS.data();
-    rememberVideoFormat = IUFindOnSwitchIndex(&VideoFormatSP);
+    rememberVideoFormat = VideoFormatSP.findOnSwitchIndex();
 
     float x_pixel_size, y_pixel_size;
 
@@ -762,65 +751,65 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, ControlNP.name))
+        if (ControlNP.isNameMatch(name))
         {
             std::vector<double> oldValues;
-            for (const auto &num : ControlN)
+            for (const auto &num : ControlNP)
                 oldValues.push_back(num.value);
 
-            if (IUUpdateNumber(&ControlNP, values, names, n) < 0)
+            if (ControlNP.update(values, names, n) == false)
             {
-                ControlNP.s = IPS_ALERT;
-                IDSetNumber(&ControlNP, nullptr);
+                ControlNP.setState(IPS_ALERT);
+                ControlNP.apply();
                 return true;
             }
 
-            for (int i = 0; i < ControlNP.nnp; i++)
+            for (size_t i = 0; i < ControlNP.size(); i++)
             {
-                auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(ControlN[i].aux0);
+                auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(ControlNP[i].getAux());
 
-                if (fabs(ControlN[i].value - oldValues[i]) < 0.01)
+                if (fabs(ControlNP[i].getValue() - oldValues[i]) < 0.01)
                     continue;
 
-                LOGF_DEBUG("Setting %s --> %.2f", ControlN[i].label, ControlN[i].value);
-                errCode = ASISetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, static_cast<long>(ControlN[i].value), ASI_FALSE);
+                LOGF_DEBUG("Setting %s --> %.2f", ControlNP[i].getLabel(), ControlNP[i].getValue());
+                errCode = ASISetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, static_cast<long>(ControlNP[i].getValue()), ASI_FALSE);
                 if (errCode != ASI_SUCCESS)
                 {
-                    LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", ControlN[i].name,ControlN[i].value, errCode);
-                    ControlNP.s = IPS_ALERT;
-                    for (int i = 0; i < ControlNP.nnp; i++)
-                        ControlN[i].value = oldValues[i];
-                    IDSetNumber(&ControlNP, nullptr);
+                    LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", ControlNP[i].getName(), ControlNP[i].getValue(), errCode);
+                    for (size_t i = 0; i < ControlNP.size(); i++)
+                        ControlNP[i].setValue(oldValues[i]);
+                    ControlNP.setState(IPS_ALERT);
+                    ControlNP.apply();
                     return false;
                 }
 
                 // If it was set to numCtrlCap->IsAutoSupported value to turn it off
                 if (numCtrlCap->IsAutoSupported)
                 {
-                    for (auto &sw : ControlS)
+                    for (auto &sw : ControlSP)
                     {
-                        auto swCtrlCap = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
+                        auto swCtrlCap = static_cast<ASI_CONTROL_CAPS *>(sw.getAux());
 
                         if (swCtrlCap->ControlType == numCtrlCap->ControlType)
                         {
-                            sw.s = ISS_OFF;
+                            sw.setState(ISS_OFF);
                             break;
                         }
                     }
 
-                    IDSetSwitch(&ControlSP, nullptr);
+                    ControlSP.apply();
                 }
             }
 
-            ControlNP.s = IPS_OK;
-            IDSetNumber(&ControlNP, nullptr);
+            ControlNP.setState(IPS_OK);
+            ControlNP.apply();
             return true;
         }
 
-        if (!strcmp(name, BlinkNP.name))
+        if (BlinkNP.isNameMatch(name))
         {
-            BlinkNP.s = IUUpdateNumber(&BlinkNP, values, names, n) < 0 ? IPS_ALERT : IPS_OK;
-            IDSetNumber(&BlinkNP, nullptr);
+            BlinkNP.setState(BlinkNP.update(values, names, n) ? IPS_ALERT : IPS_OK);
+            BlinkNP.apply();
             return true;
         }
     }
@@ -832,21 +821,21 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, ControlSP.name))
+        if (ControlSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&ControlSP, states, names, n) < 0)
+            if (ControlSP.update(states, names, n) == false)
             {
-                ControlSP.s = IPS_ALERT;
-                IDSetSwitch(&ControlSP, nullptr);
+                ControlSP.setState(IPS_ALERT);
+                ControlSP.apply();
                 return true;
             }
 
-            for (auto &sw : ControlS)
+            for (auto &sw : ControlSP)
             {
-                auto swCtrlCap  = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
-                ASI_BOOL swAuto = (sw.s == ISS_ON) ? ASI_TRUE : ASI_FALSE;
+                auto swCtrlCap  = static_cast<ASI_CONTROL_CAPS *>(sw.getAux());
+                ASI_BOOL swAuto = (sw.getState() == ISS_ON) ? ASI_TRUE : ASI_FALSE;
 
-                for (auto &num : ControlN)
+                for (auto &num : ControlNP)
                 {
                     auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.aux0);
 
@@ -859,10 +848,10 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                     if (errCode != ASI_SUCCESS)
                     {
                         LOGF_ERROR("ASISetControlValue (%s=%g) error (%d)", num.name, num.value, errCode);
-                        ControlNP.s = IPS_ALERT;
-                        ControlSP.s = IPS_ALERT;
-                        IDSetNumber(&ControlNP, nullptr);
-                        IDSetSwitch(&ControlSP, nullptr);
+                        ControlNP.setState(IPS_ALERT);
+                        ControlSP.setState(IPS_ALERT);
+                        ControlNP.apply();
+                        ControlSP.apply();
                         return false;
                     }
                     numCtrlCap->IsAutoSupported = swAuto;
@@ -870,41 +859,41 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 }
             }
 
-            ControlSP.s = IPS_OK;
-            IDSetSwitch(&ControlSP, nullptr);
+            ControlSP.setState(IPS_OK);
+            ControlSP.apply();
             return true;
         }
 
         /* Cooler */
-        if (!strcmp(name, CoolerSP.name))
+        if (CoolerSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&CoolerSP, states, names, n) < 0)
+            if (!CoolerSP.update(states, names, n))
             {
-                CoolerSP.s = IPS_ALERT;
-                IDSetSwitch(&CoolerSP, nullptr);
+                CoolerSP.setState(IPS_ALERT);
+                CoolerSP.apply();
                 return true;
             }
 
-            activateCooler(CoolerS[0].s == ISS_ON);
+            activateCooler(CoolerSP[0].getState() == ISS_ON);
 
             return true;
         }
 
-        if (!strcmp(name, VideoFormatSP.name))
+        if (VideoFormatSP.isNameMatch(name))
         {
             if (Streamer->isBusy())
             {
-                VideoFormatSP.s = IPS_ALERT;
                 LOG_ERROR("Cannot change format while streaming/recording.");
-                IDSetSwitch(&VideoFormatSP, nullptr);
+                VideoFormatSP.setState(IPS_ALERT);
+                VideoFormatSP.apply();
                 return true;
             }
 
             const char *targetFormat = IUFindOnSwitchName(states, names, n);
             int targetIndex = -1;
-            for (int i = 0; i < VideoFormatSP.nsp; i++)
+            for (size_t i = 0; i < VideoFormatSP.size(); i++)
             {
-                if (!strcmp(targetFormat, VideoFormatS[i].name))
+                if (VideoFormatSP[i].isNameMatch(targetFormat))
                 {
                     targetIndex = i;
                     break;
@@ -913,9 +902,9 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 
             if (targetIndex == -1)
             {
-                VideoFormatSP.s = IPS_ALERT;
                 LOGF_ERROR("Unable to locate format %s.", targetFormat);
-                IDSetSwitch(&VideoFormatSP, nullptr);
+                VideoFormatSP.setState(IPS_ALERT);
+                VideoFormatSP.apply();
                 return true;
             }
 
@@ -928,23 +917,21 @@ bool ASICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 
 bool ASICCD::setVideoFormat(uint8_t index)
 {
-    if (index == IUFindOnSwitchIndex(&VideoFormatSP))
+    if (index == VideoFormatSP.findOnSwitchIndex())
         return true;
 
-    IUResetSwitch(&VideoFormatSP);
-    VideoFormatS[index].s = ISS_ON;
+    VideoFormatSP.reset();
+    VideoFormatSP[index].setState(ISS_ON);
 
-    ASI_IMG_TYPE type = getImageType();
-
-    switch (type)
+    switch (getImageType())
     {
-        case ASI_IMG_RAW16:
-            PrimaryCCD.setBPP(16);
-            break;
+    case ASI_IMG_RAW16:
+        PrimaryCCD.setBPP(16);
+        break;
 
-        default:
-            PrimaryCCD.setBPP(8);
-            break;
+    default:
+        PrimaryCCD.setBPP(8);
+        break;
     }
 
     // When changing video format, reset frame
@@ -952,8 +939,8 @@ bool ASICCD::setVideoFormat(uint8_t index)
 
     updateRecorderFormat();
 
-    VideoFormatSP.s = IPS_OK;
-    IDSetSwitch(&VideoFormatSP, nullptr);
+    VideoFormatSP.setState(IPS_OK);
+    VideoFormatSP.apply();
     return true;
 }
 
@@ -962,22 +949,22 @@ bool ASICCD::StartStreaming()
 #if 0
     ASI_IMG_TYPE type = getImageType();
 
-    rememberVideoFormat = IUFindOnSwitchIndex(&VideoFormatSP);
+    rememberVideoFormat = VideoFormatSP.findOnSwitchIndex();
 
     if (type != ASI_IMG_Y8 && type != ASI_IMG_RGB24)
     {
-        IUResetSwitch(&VideoFormatSP);
-        ISwitch *vf = IUFindSwitch(&VideoFormatSP, "ASI_IMG_Y8");
+        VideoFormatSP.reset();
+        auto vf = VideoFormatSP.findWidgetByName("ASI_IMG_Y8");
         if (vf == nullptr)
-            vf = IUFindSwitch(&VideoFormatSP, "ASI_IMG_RAW8");
+            vf = VideoFormatSP.findWidgetByName("ASI_IMG_RAW8");
 
-        if (vf)
+        if (vf != nullptr)
         {
-            vf->s = ISS_ON;
-            LOGF_DEBUG("Switching to %s video format.", vf->label);
+            LOGF_DEBUG("Switching to %s video format.", vf->getLabel());
             PrimaryCCD.setBPP(8);
             UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
-            IDSetSwitch(&VideoFormatSP, nullptr);
+            vf->setState(ISS_ON);
+            VideoFormatSP.apply();
         }
         else
         {
@@ -1037,14 +1024,14 @@ bool ASICCD::activateCooler(bool enable)
     bool rc = (ASISetControlValue(m_camInfo->CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE) ==
                ASI_SUCCESS);
     if (rc == false)
-        CoolerSP.s = IPS_ALERT;
+        CoolerSP.setState(IPS_ALERT);
     else
     {
-        CoolerS[0].s = enable ? ISS_ON : ISS_OFF;
-        CoolerS[1].s = enable ? ISS_OFF : ISS_ON;
-        CoolerSP.s   = enable ? IPS_BUSY : IPS_IDLE;
+        CoolerSP[0].setState(enable ? ISS_ON  : ISS_OFF);
+        CoolerSP[1].setState(enable ? ISS_OFF : ISS_ON);
+        CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
     }
-    IDSetSwitch(&CoolerSP, nullptr);
+    CoolerSP.apply();
 
     return rc;
 }
@@ -1069,7 +1056,6 @@ bool ASICCD::AbortExposure()
 
 bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-
     uint32_t binX = PrimaryCCD.getBinX();
     uint32_t binY = PrimaryCCD.getBinY();
     uint32_t subX = x / binX;
@@ -1300,17 +1286,16 @@ void ASICCD::temperatureTimerTimeout()
         if (errCode != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIGetControlValue ASI_COOLER_POWER_PERC error (%d)", errCode);
-            CoolerNP.s = IPS_ALERT;
+            CoolerNP.setState(IPS_ALERT);
         }
         else
         {
-            CoolerN[0].value = ASIControlValue;
-            CoolerNP.s = ASIControlValue > 0 ? IPS_BUSY : IPS_IDLE;
+            CoolerNP[0].setValue(ASIControlValue);
+            CoolerNP.setState(ASIControlValue > 0 ? IPS_BUSY : IPS_IDLE);
         }
-        IDSetNumber(&CoolerNP, nullptr);
+        CoolerNP.apply();
     }
 }
-
 
 IPState ASICCD::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir)
 {
@@ -1372,20 +1357,17 @@ IPState ASICCD::GuideWest(uint32_t ms)
 
 void ASICCD::createControls(int piNumberOfControls)
 {
-    ControlNP.nnp = 0;
-    ControlSP.nsp = 0;
+    ControlNP.resize(0);
+    ControlSP.resize(0);
 
     try {
         m_controlCaps.resize(piNumberOfControls);
-        ControlN.resize(piNumberOfControls);
-        ControlS.resize(piNumberOfControls);
-    } catch(const std::bad_alloc& e) {
+        ControlNP.reserve(piNumberOfControls);
+        ControlSP.reserve(piNumberOfControls);
+    } catch(const std::bad_alloc&) {
         IDLog("Failed to allocate memory.");
         return;
     }
-
-    INumber *control_np = ControlN.data();
-    ISwitch *auto_sp    = ControlS.data();
 
     int i = 0;
     for(auto &cap : m_controlCaps)
@@ -1434,7 +1416,7 @@ void ASICCD::createControls(int piNumberOfControls)
 
         if (cap.IsWritable)
         {
-            LOGF_DEBUG("Adding above control as writable control number %d", ControlNP.nnp);
+            LOGF_DEBUG("Adding above control as writable control number %d", ControlNP.size());
 
             // JM 2018-07-04: If Max-Min == 1 then it's boolean value
             // So no need to set a custom step value.
@@ -1442,54 +1424,41 @@ void ASICCD::createControls(int piNumberOfControls)
             if (cap.MaxValue - cap.MinValue > 1)
                 step = (cap.MaxValue - cap.MinValue) / 10.0;
 
-            IUFillNumber(control_np,
-                         cap.Name,
-                         cap.Name,
-                         "%g",
-                         cap.MinValue,
-                         cap.MaxValue,
-                         step,
-                         pValue);
-
-            control_np->aux0 = &cap;
-            control_np++;
-            ControlNP.nnp++;
+            INDI::WidgetView<INumber> node;
+            node.fill(cap.Name, cap.Name, "%g", cap.MinValue, cap.MaxValue, step, pValue);
+            node.setAux(&cap);
+            ControlNP.push(std::move(node));
         }
 
         if (cap.IsAutoSupported)
         {
-            LOGF_DEBUG("Adding above control as auto control number %d", ControlSP.nsp);
+            LOGF_DEBUG("Adding above control as auto control number %d", ControlSP.size());
 
             char autoName[MAXINDINAME];
             snprintf(autoName, MAXINDINAME, "AUTO_%s", cap.Name);
-            IUFillSwitch(auto_sp, autoName, cap.Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
 
-            auto_sp->aux = &cap;
-            auto_sp++;
-            ControlSP.nsp++;
+            INDI::WidgetView<ISwitch> node;
+            node.fill(autoName, cap.Name, isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
+            node.setAux(&cap);
+            ControlSP.push(std::move(node));
         }
     }
 
     // Resize the buffers to free up unused space
-    ControlN.resize(ControlNP.nnp);
-    ControlS.resize(ControlSP.nsp);
-
-    ControlNP.np  = ControlN.data();
-    ControlSP.sp  = ControlS.data();
+    ControlNP.shrink_to_fit();
+    ControlSP.shrink_to_fit();
 }
 
 ASI_IMG_TYPE ASICCD::getImageType()
 {
-    ASI_IMG_TYPE type = ASI_IMG_END;
-
-    if (VideoFormatSP.nsp > 0)
+    if (!VideoFormatSP.isEmpty())
     {
-        ISwitch *sp = IUFindOnSwitch(&VideoFormatSP);
-        if (sp)
-            type = *(static_cast<ASI_IMG_TYPE *>(sp->aux));
+        auto sp = VideoFormatSP.findOnSwitch();
+        if (sp != nullptr)
+            return *(static_cast<ASI_IMG_TYPE *>(sp->getAux()));
     }
 
-    return type;
+    return ASI_IMG_END;
 }
 
 void ASICCD::updateControls()
@@ -1497,28 +1466,28 @@ void ASICCD::updateControls()
     long pValue     = 0;
     ASI_BOOL isAuto = ASI_FALSE;
 
-    for (auto &num : ControlN)
+    for (auto &num : ControlNP)
     {
-        auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.aux0);
+        auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.getAux());
 
         ASIGetControlValue(m_camInfo->CameraID, numCtrlCap->ControlType, &pValue, &isAuto);
 
-        num.value = pValue;
+        num.setValue(pValue);
 
-        for (auto &sw : ControlS)
+        for (auto &sw : ControlSP)
         {
             auto swCtrlCap = static_cast<ASI_CONTROL_CAPS *>(sw.aux);
 
             if (numCtrlCap->ControlType == swCtrlCap->ControlType)
             {
-                sw.s = (isAuto == ASI_TRUE) ? ISS_ON : ISS_OFF;
+                sw.setState(isAuto == ASI_TRUE ? ISS_ON : ISS_OFF);
                 break;
             }
         }
     }
 
-    IDSetNumber(&ControlNP, nullptr);
-    IDSetSwitch(&ControlSP, nullptr);
+    ControlNP.apply();
+    ControlSP.apply();
 }
 
 void ASICCD::updateRecorderFormat()
@@ -1569,14 +1538,14 @@ void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     INDI::CCD::addFITSKeywords(fptr, targetChip);
 
     // e-/ADU
-    INumber *np = IUFindNumber(&ControlNP, "Gain");
+    auto np = ControlNP.findWidgetByName("Gain");
     if (np)
     {
         int status = 0;
         fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
     }
 
-    np = IUFindNumber(&ControlNP, "Offset");
+    np = ControlNP.findWidgetByName("Offset");
     if (np)
     {
         int status = 0;
@@ -1589,18 +1558,18 @@ bool ASICCD::saveConfigItems(FILE *fp)
     INDI::CCD::saveConfigItems(fp);
 
     if (HasCooler())
-        IUSaveConfigSwitch(fp, &CoolerSP);
+        CoolerSP.save(fp);
 
-    if (ControlNP.nnp > 0)
-        IUSaveConfigNumber(fp, &ControlNP);
+    if (!ControlNP.isEmpty())
+        ControlNP.save(fp);
 
-    if (ControlSP.nsp > 0)
-        IUSaveConfigSwitch(fp, &ControlSP);
+    if (!ControlSP.isEmpty())
+        ControlSP.save(fp);
 
-    if (VideoFormatSP.nsp > 0)
-        IUSaveConfigSwitch(fp, &VideoFormatSP);
+    if (!VideoFormatSP.isEmpty())
+        VideoFormatSP.save(fp);
 
-    IUSaveConfigNumber(fp, &BlinkNP);
+    BlinkNP.save(fp);
 
     return true;
 }

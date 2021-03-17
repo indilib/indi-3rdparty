@@ -23,6 +23,9 @@
 
 #include <ASICamera2.h>
 
+#include "indipropertyswitch.h"
+#include "indipropertynumber.h"
+#include "indipropertytext.h"
 #include "singleworker_tmp.h"
 
 #include <vector>
@@ -118,36 +121,24 @@ private:
     std::string cameraName;
 
     /** Additional Properties to INDI::CCD */
-    INumber CoolerN[1];
-    INumberVectorProperty CoolerNP;
+    INDI::PropertyNumber CoolerNP {1};
+    INDI::PropertySwitch CoolerSP {2};
 
-    ISwitch CoolerS[2];
-    ISwitchVectorProperty CoolerSP;
+    INDI::PropertyNumber  ControlNP {0};
+    INDI::PropertySwitch  ControlSP {0};
+    INDI::PropertySwitch  VideoFormatSP {0};
 
-    std::vector<INumber>  ControlN;
-    INumberVectorProperty ControlNP;
-
-    std::vector<ISwitch>  ControlS;
-    ISwitchVectorProperty ControlSP;
-
-    std::vector<ISwitch>  VideoFormatS;
-    ISwitchVectorProperty VideoFormatSP;
     uint8_t rememberVideoFormat = { 0 };
     ASI_IMG_TYPE currentVideoFormat;
 
+    INDI::PropertyNumber BlinkNP {2};
     enum {
-            BLINK_COUNT,
-            BLINK_DURATION
+        BLINK_COUNT,
+        BLINK_DURATION
     };
 
-    INumber BlinkN[2];
-    INumberVectorProperty BlinkNP;
-
-    INumber ADCDepthN;
-    INumberVectorProperty ADCDepthNP;
-
-    IText SDKVersionS[1] = {};
-    ITextVectorProperty SDKVersionSP;
+    INDI::PropertyNumber ADCDepthNP {1};
+    INDI::PropertyText   SDKVersionSP {1};
 
     double TemperatureRequest;
     uint8_t m_ExposureRetry {0};
