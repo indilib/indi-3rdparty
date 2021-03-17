@@ -32,6 +32,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include "indielapsedtimer.h"
+
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
@@ -117,12 +119,269 @@ static const char *asiGuideDirectionAsString(ASI_GUIDE_DIRECTION dir)
     return "Unknown";
 }
 
+// #PS: TODO move to INDI Library
+#include <functional>
+class SingleWorker
+{
+public:
+    SingleWorker()
+    { }
+
+    ~SingleWorker()
+    { quit(); }
+
+public:
+    void run(const std::function<void(const std::atomic_bool &isAboutToQuit)> &function)
+    {
+        std::lock_guard<std::mutex> lock(runLock);
+        mIsAboutToQuit = true;
+        if (thread.joinable())
+            thread.join();
+        mIsAboutToQuit = false;
+        mIsRunning = true;
+        thread = std::thread([function, this]{
+            function(this->mIsAboutToQuit);
+            mIsRunning = false;
+        });
+    }
+public:
+    bool isAboutToQuit() const
+    {
+        return mIsAboutToQuit;
+    }
+
+    bool isRunning() const
+    {
+        return mIsRunning;
+    }
+
+public:
+    void quit()
+    {
+        std::lock_guard<std::mutex> lock(runLock);
+        mIsAboutToQuit = true;
+    }
+
+    void wait()
+    {
+        std::lock_guard<std::mutex> lock(runLock);
+        if (thread.joinable())
+            thread.join();
+    }
+
+private:
+    std::atomic_bool mIsAboutToQuit {true};
+    std::atomic_bool mIsRunning {false};
+    std::mutex  runLock;
+    std::thread thread;
+};
+
+//static SingleWorker worker;
+
+void ASICCD::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
+{
+    double ExposureRequest = 1.0 / Streamer->getTargetFPS();
+    long uSecs = static_cast<long>(ExposureRequest * 950000.0);
+    ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, uSecs, ASI_FALSE);
+    ASIStartVideoCapture(m_camInfo->CameraID);
+
+    while (!isAboutToQuit)
+    {
+        uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
+        uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
+        int waitMS           = static_cast<int>((ExposureRequest * 2000.0) + 500);
+
+        int ret = ASIGetVideoData(m_camInfo->CameraID, targetFrame, totalBytes, waitMS);
+        if (ret != ASI_SUCCESS)
+        {
+            if (ret != ASI_ERROR_TIMEOUT)
+            {
+                Streamer->setStream(false);
+                LOGF_ERROR("Error reading video data (%d)", ret);
+                break;
+            }
+
+            usleep(100);
+            continue;
+        }
+
+        if (currentVideoFormat == ASI_IMG_RGB24)
+            for (uint32_t i = 0; i < totalBytes; i += 3)
+                std::swap(targetFrame[i], targetFrame[i + 2]);
+
+        Streamer->newFrame(targetFrame, totalBytes);
+    }
+
+    ASIStopVideoCapture(m_camInfo->CameraID);
+}
+
+void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
+{
+    ASI_ERROR_CODE ret;
+
+    // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
+    // images.
+    if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
+    {
+        LOG_INFO("Switching to 8-bit video.");
+        setVideoFormat(ASI_IMG_RAW8);
+    }
+
+    long blinks = BlinkN[BLINK_COUNT].value;
+    if (blinks > 0)
+    {
+        LOGF_DEBUG("Blinking %ld time(s) before exposure", blinks);
+
+        const long blink_duration = BlinkN[BLINK_DURATION].value * 1000 * 1000;
+        ret = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, blink_duration, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+        {
+            LOGF_ERROR("Failed to set blink exposure to %ldus, error %d", blink_duration, ret);
+        }
+        else
+        {
+            do
+            {
+                ret = ASIStartExposure(m_camInfo->CameraID, ASI_TRUE);
+                if (ret != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to start blink exposure, error %d", ret);
+                    break;
+                }
+
+                ASI_EXPOSURE_STATUS status = ASI_EXP_IDLE;
+                do
+                {
+                    usleep(100 * 1000);
+                    ret = ASIGetExpStatus(m_camInfo->CameraID, &status);
+                }
+                while (ret == ASI_SUCCESS && status == ASI_EXP_WORKING);
+
+                if (ret != ASI_SUCCESS || status != ASI_EXP_SUCCESS)
+                {
+                    LOGF_ERROR("Blink exposure failed, error %d, status %d", ret, status);
+                    break;
+                }
+            }
+            while (--blinks > 0);
+        }
+
+        if (blinks > 0)
+        {
+            LOGF_WARN("%ld blink exposure(s) NOT done", blinks);
+        }
+    }
+
+    PrimaryCCD.setExposureDuration(duration);
+
+    LOGF_DEBUG("StartExposure->setexp : %.3fs", duration);
+    ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, duration * 1000 * 1000, ASI_FALSE);
+
+    // Try exposure for 3 times
+    ASI_BOOL isDark = (PrimaryCCD.getFrameType() == INDI::CCDChip::DARK_FRAME) ? ASI_TRUE : ASI_FALSE;
+
+    for (int i = 0; i < 3; i++)
+    {
+        ret = ASIStartExposure(m_camInfo->CameraID, isDark);
+        if (ret == ASI_SUCCESS)
+            break;
+
+        LOGF_ERROR("ASIStartExposure error (%d)", ret);
+        // Wait 100ms before trying again
+        usleep(100 * 1000);
+    }
+
+    if (ret != ASI_SUCCESS)
+    {
+        LOG_WARN("ASI firmware might require an update to *compatible mode. Check http://www.indilib.org/devices/ccds/zwo-optics-asi-cameras.html for details.");
+        return;
+    }
+
+    int statRetry = 0;
+    ASI_EXPOSURE_STATUS status = ASI_EXP_IDLE;
+    INDI::ElapsedTimer exposureTimer;
+
+    if (duration > VERBOSE_EXPOSURE)
+        LOGF_INFO("Taking a %g seconds frame...", duration);
+
+    while (!isAboutToQuit)
+    {
+        int ret = ASIGetExpStatus(m_camInfo->CameraID, &status);
+        if (ret != ASI_SUCCESS)
+        {
+            LOGF_DEBUG("ASIGetExpStatus error (%d)", ret);
+            if (++statRetry < 10)
+            {
+                usleep(100);
+                continue;
+            }
+
+            LOGF_ERROR("Exposure status timed out (%d)", ret);
+            PrimaryCCD.setExposureFailed();
+            return;
+        }
+
+        if (status == ASI_EXP_FAILED)
+        {
+            if (++m_ExposureRetry < MAX_EXP_RETRIES)
+            {
+                LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
+                ASIStopExposure(m_camInfo->CameraID);
+                workerExposure(isAboutToQuit, duration);
+                return;
+            }
+
+            LOGF_ERROR("Exposure failed after %d attempts.", m_ExposureRetry);
+            m_ExposureRetry = 0;
+            ASIStopExposure(m_camInfo->CameraID);
+            PrimaryCCD.setExposureFailed();
+            return;
+        }
+
+        if (status == ASI_EXP_SUCCESS)
+        {
+            m_ExposureRetry = 0;
+            PrimaryCCD.setExposureLeft(0.0);
+            if (PrimaryCCD.getExposureDuration() > 3)
+                LOG_INFO("Exposure done, downloading image...");
+
+            grabImage(duration);
+            return;
+        }
+
+        double delay = 0.1;
+        double timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
+
+        /*
+         * Check the status every second until the time left is
+         * about one second, after which decrease the poll interval
+         *
+         * For expsoures with more than a second left try
+         * to keep the displayed "exposure left" value at
+         * a full second boundary, which keeps the
+         * count down neat
+         */
+        if (timeLeft > 1.1)
+            delay = std::max(timeLeft - static_cast<int>(timeLeft), 0.005);
+
+        PrimaryCCD.setExposureLeft(timeLeft);
+        usleep(delay * 1000 * 1000);
+    }
+}
+
 ASICCD::ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName)
-    : cameraName(cameraName)
+#warning DEBUG MODE - REMOVE
+// #PS: move to private data
+    : worker(*new SingleWorker)
+
+    , cameraName(cameraName)
     , m_camInfo(camInfo)
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     setDeviceName(cameraName.c_str());
+
+    timerWE.setSingleShot(true);
+    timerNS.setSingleShot(true);
 }
 
 ASICCD::~ASICCD()
@@ -334,26 +593,6 @@ bool ASICCD::Connect()
 
     timerTemperature.start(TEMP_TIMER_MS);
     timerTemperature.callOnTimeout(std::bind(&ASICCD::temperatureTimerTimeout, this));
-    /*
-     * Create the imaging thread and wait for it to start
-     */
-    threadRequest = StateIdle;
-    threadState = StateNone;
-    //int stat = pthread_create(&imagingThread, nullptr, &imagingHelper, this);
-    //    if (stat != 0)
-    //    {
-    //        LOGF_ERROR("Error creating imaging thread (%d)",
-    //                   stat);
-    //        return false;
-    //    }
-    imagingThread = std::thread(&ASICCD::imagingThreadEntry, this);
-    waitUntil(StateIdle);
-    //pthread_mutex_lock(&condMutex);
-    //    while (threadState == StateNone)
-    //    {
-    //        pthread_cond_wait(&cv, &condMutex);
-    //    }
-    //    pthread_mutex_unlock(&condMutex);
 
     LOG_INFO("Setting intital bandwidth to AUTO on connection.");
     if ((errCode = ASISetControlValue(m_camInfo->CameraID, ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE)) != ASI_SUCCESS)
@@ -377,8 +616,8 @@ bool ASICCD::Disconnect()
     stopTimerWE();
     timerTemperature.stop();
 
-    setThreadRequest(StateTerminate);
-    imagingThread.join();
+    worker.quit();
+    worker.wait();
 
     if (isSimulation() == false)
     {
@@ -799,50 +1038,14 @@ bool ASICCD::StartStreaming()
         }
     }
 #endif
-
-    ExposureRequest = 1.0 / Streamer->getTargetFPS();
-    long uSecs = static_cast<long>(ExposureRequest * 950000.0);
-    ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, uSecs, ASI_FALSE);
-    ASIStartVideoCapture(m_camInfo->CameraID);
-
-    //    {
-    //        std::lock_guard<std::mutex> lock(condMutex);
-    //        threadRequest = StateStream;
-    //    }
-    //    cv.notify_one();
-
-    setThreadRequest(StateStream);
-
-    //    pthread_cond_signal(&cv);
-    //    pthread_mutex_unlock(&condMutex);
-
+    worker.run(std::bind(&ASICCD::workerStreamVideo, this, std::placeholders::_1));
     return true;
 }
 
 bool ASICCD::StopStreaming()
 {
-    // Wait until ccd lock is acquired
-
-    //    {
-    //        std::lock_guard<std::mutex> lock(condMutex);
-    //        threadRequest = StateAbort;
-    //    }
-    //    cv.notify_one();
-
-    setThreadRequest(StateAbort);
-
-    waitUntil(StateIdle);
-
-    //    pthread_mutex_lock(&condMutex);
-    //    threadRequest = StateAbort;
-    //    pthread_cond_signal(&cv);
-
-    //    while (threadState == StateStream)
-    //    {
-    //        pthread_cond_wait(&cv, &condMutex);
-    //    }
-    //    pthread_mutex_unlock(&condMutex);
-    ASIStopVideoCapture(m_camInfo->CameraID);
+    worker.quit();
+    worker.wait();
 
     //if (IUFindOnSwitchIndex(&VideoFormatSP) != rememberVideoFormat)
     //setVideoFormat(rememberVideoFormat);
@@ -900,119 +1103,19 @@ bool ASICCD::activateCooler(bool enable)
 
 bool ASICCD::StartExposure(float duration)
 {
-    ASI_ERROR_CODE errCode = ASI_SUCCESS;
-
-    long blinks = BlinkN[BLINK_COUNT].value;
-    if (blinks > 0)
-    {
-        LOGF_DEBUG("Blinking %ld time(s) before exposure", blinks);
-
-        const long blink_duration = BlinkN[BLINK_DURATION].value * 1000000.0;
-        errCode = ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, blink_duration, ASI_FALSE);
-        if (errCode != ASI_SUCCESS)
-        {
-            LOGF_ERROR("Failed to set blink exposure to %ldus, error %d", blink_duration, errCode);
-        }
-        else
-        {
-            do
-            {
-                errCode = ASIStartExposure(m_camInfo->CameraID, ASI_TRUE);
-                if (errCode != ASI_SUCCESS)
-                {
-                    LOGF_ERROR("Failed to start blink exposure, error %d", errCode);
-                    break;
-                }
-
-                ASI_EXPOSURE_STATUS expStatus;
-                do
-                {
-                    usleep(100000);
-                    errCode = ASIGetExpStatus(m_camInfo->CameraID, &expStatus);
-                }
-                while (errCode == ASI_SUCCESS && expStatus == ASI_EXP_WORKING);
-
-                if (errCode != ASI_SUCCESS || expStatus != ASI_EXP_SUCCESS)
-                {
-                    LOGF_ERROR("Blink exposure failed, error %d, status %d", errCode, expStatus);
-                    break;
-                }
-            }
-            while (--blinks > 0);
-        }
-
-        if (blinks > 0)
-        {
-            LOGF_WARN("%ld blink exposure(s) NOT done", blinks);
-        }
-    }
-
-    PrimaryCCD.setExposureDuration(duration);
-    ExposureRequest = duration;
-
-    LOGF_DEBUG("StartExposure->setexp : %.3fs", duration);
-    long uSecs = duration * 1000000.0;
-    ASISetControlValue(m_camInfo->CameraID, ASI_EXPOSURE, uSecs, ASI_FALSE);
-
-    // Try exposure for 3 times
-    ASI_BOOL isDark = ASI_FALSE;
-    if (PrimaryCCD.getFrameType() == INDI::CCDChip::DARK_FRAME)
-    {
-        isDark = ASI_TRUE;
-    }
-    for (int i = 0; i < 3; i++)
-    {
-        if ((errCode = ASIStartExposure(m_camInfo->CameraID, isDark)) != ASI_SUCCESS)
-        {
-            LOGF_ERROR("ASIStartExposure error (%d)", errCode);
-            // Wait 100ms before trying again
-            usleep(100000);
-            continue;
-        }
-        break;
-    }
-
-    if (errCode != ASI_SUCCESS)
-    {
-        LOG_WARN("ASI firmware might require an update to *compatible mode. Check http://www.indilib.org/devices/ccds/zwo-optics-asi-cameras.html for details.");
-        return false;
-    }
-
-    ExposureElapsedTimer.start();
-    if (ExposureRequest > VERBOSE_EXPOSURE)
-        LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
-
-    InExposure = true;
-
-    //    pthread_mutex_lock(&condMutex);
-    //    threadRequest = StateExposure;
-    //    pthread_cond_signal(&cv);
-    //    pthread_mutex_unlock(&condMutex);
-
-    setThreadRequest(StateExposure);
-
+    worker.run(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
     //updateControls();
-
     return true;
 }
 
 bool ASICCD::AbortExposure()
 {
     LOG_DEBUG("Aborting camera exposure...");
-    //    pthread_mutex_lock(&condMutex);
-    //    threadRequest = StateAbort;
-    //    pthread_cond_signal(&cv);
-    //    while (threadState == StateExposure)
-    //    {
-    //        pthread_cond_wait(&cv, &condMutex);
-    //    }
-    //    pthread_mutex_unlock(&condMutex);
 
-    setThreadRequest(StateAbort);
-    waitUntil(StateIdle);
+    worker.quit();
+    worker.wait();
 
     ASIStopExposure(m_camInfo->CameraID);
-    InExposure = false;
     return true;
 }
 
@@ -1102,29 +1205,9 @@ bool ASICCD::UpdateCCDBin(int binx, int biny)
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 }
 
-float ASICCD::calcTimeLeft(float duration, timeval *start_time)
-{
-    double timesince;
-    double timeleft;
-    struct timeval now;
-
-    gettimeofday(&now, nullptr);
-    timesince = ((double)now.tv_sec + (double)now.tv_usec / 1000000.0) -
-                ((double)start_time->tv_sec + (double)start_time->tv_usec / 1000000.0);
-    if (duration > timesince)
-    {
-        timeleft = duration - timesince;
-    }
-    else
-    {
-        timeleft = 0.0;
-    }
-    return timeleft;
-}
-
 /* Downloads the image from the CCD.
  N.B. No processing is done on the image */
-int ASICCD::grabImage()
+int ASICCD::grabImage(float duration)
 {
     ASI_ERROR_CODE errCode = ASI_SUCCESS;
 
@@ -1187,7 +1270,7 @@ int ASICCD::grabImage()
     else
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
 
-    if (ExposureRequest > VERBOSE_EXPOSURE)
+    if (duration > VERBOSE_EXPOSURE)
         LOG_INFO("Download complete.");
 
     ExposureComplete(&PrimaryCCD);
@@ -1576,294 +1659,6 @@ void ASICCD::updateRecorderFormat()
 
         case ASI_IMG_END:
             break;
-    }
-}
-
-void *ASICCD::imagingHelper(void *context)
-{
-    return static_cast<ASICCD *>(context)->imagingThreadEntry();
-}
-
-/*
- * A dedicated thread is used for handling streaming video and image
- * exposures because the operations take too much time to be done
- * as part of a timer call-back: there is one timer for the entire
- * process, which must handle events for all ASI cameras
- */
-void *ASICCD::imagingThreadEntry()
-{
-    {
-        std::lock_guard<std::mutex> lock(condMutex);
-        threadState = StateIdle;
-    }
-    cv.notify_one();
-
-    while (true)
-    {
-        std::unique_lock<std::mutex> lock(condMutex);
-        cv.wait(lock, [this] {return threadRequest != StateIdle;});
-
-        threadState = threadRequest;
-        if (threadRequest == StateExposure)
-        {
-            lock.unlock();
-            getExposure();
-            lock.lock();
-        }
-        else if (threadRequest == StateStream)
-        {
-            lock.unlock();
-            streamVideo();
-            lock.lock();
-        }
-        else if (threadRequest == StateRestartExposure)
-        {
-            threadRequest = StateIdle;
-            lock.unlock();
-            StartExposure(ExposureRequest);
-            lock.lock();
-        }
-        else if (threadRequest == StateTerminate)
-        {
-            break;
-        }
-        else
-        {
-            threadRequest = StateIdle;
-            cv.notify_one();
-        }
-        threadState = StateIdle;
-
-        //lock.unlock();
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(condMutex);
-        threadState = StateTerminated;
-    }
-    cv.notify_one();
-
-    return nullptr;
-}
-
-void ASICCD::setThreadRequest(ImageState request)
-{
-    std::lock_guard<std::mutex> lock(condMutex);
-
-    threadRequest = request;
-
-    cv.notify_one();
-}
-
-void ASICCD::waitUntil(ImageState request)
-{
-    std::unique_lock<std::mutex> lock(condMutex);
-    cv.wait(lock, [this, request] {return threadState == request;});
-}
-
-void ASICCD::streamVideo()
-{
-    //int ret;
-    //int frames = 0;
-
-    std::unique_lock<std::mutex> lock(condMutex);
-
-    while (threadRequest == StateStream)
-    {
-        lock.unlock();
-
-        std::unique_lock<std::mutex> guard(ccdBufferLock);
-        uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
-        uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
-        int waitMS           = static_cast<int>((ExposureRequest * 2000.0) + 500);
-
-        int ret = ASIGetVideoData(m_camInfo->CameraID, targetFrame, totalBytes, waitMS);
-        if (ret != ASI_SUCCESS)
-        {
-            if (ret != ASI_ERROR_TIMEOUT)
-            {
-                Streamer->setStream(false);
-                lock.lock();
-                if (threadRequest == StateStream)
-                {
-                    LOGF_ERROR("Error reading video data (%d)", ret);
-                    exposureSetRequest(StateIdle);
-                }
-                break;
-            }
-            else
-            {
-                //frames = 0;
-                usleep(100);
-            }
-        }
-        else
-        {
-            if (currentVideoFormat == ASI_IMG_RGB24)
-                for (uint32_t i = 0; i < totalBytes; i += 3)
-                    std::swap(targetFrame[i], targetFrame[i + 2]);
-
-            guard.unlock();
-
-            Streamer->newFrame(targetFrame, totalBytes);
-
-            //            /*
-            //             * Release the CPU every 30 frames
-            //             */
-            //            frames++;
-            //            if (frames == 30)
-            //            {
-            //                frames = 0;
-            //                usleep(10);
-            //            }
-        }
-
-        lock.lock();
-    }
-}
-
-void ASICCD::getExposure()
-{
-    int statRetry = 0;
-    int uSecs = 1000000;
-    ASI_EXPOSURE_STATUS status = ASI_EXP_IDLE;
-    ASI_ERROR_CODE errCode;
-
-    //    pthread_mutex_unlock(&condMutex);
-    //    usleep(10000);
-    //    pthread_mutex_lock(&condMutex);
-
-    std::unique_lock<std::mutex> lock(condMutex);
-
-    while (threadRequest == StateExposure)
-    {
-        lock.unlock();
-
-        errCode = ASIGetExpStatus(m_camInfo->CameraID, &status);
-        if (errCode == ASI_SUCCESS)
-        {
-            if (status == ASI_EXP_SUCCESS)
-            {
-                InExposure = false;
-                m_ExposureRetry = 0;
-                PrimaryCCD.setExposureLeft(0.0);
-                if (PrimaryCCD.getExposureDuration() > 3)
-                    LOG_INFO("Exposure done, downloading image...");
-
-                lock.lock();
-                exposureSetRequest(StateIdle);
-                lock.unlock();
-
-                grabImage();
-
-                lock.lock();
-                break;
-            }
-            else if (status == ASI_EXP_FAILED)
-            {
-                if (++m_ExposureRetry < MAX_EXP_RETRIES)
-                {
-                    if (threadRequest == StateExposure)
-                    {
-                        LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
-
-                        // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
-                        // images.
-                        if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
-                        {
-                            LOG_INFO("Switching to 8-bit video.");
-                            setVideoFormat(ASI_IMG_RAW8);
-                        }
-                    }
-                    InExposure = false;
-                    ASIStopExposure(m_camInfo->CameraID);
-                    usleep(100000);
-
-                    lock.lock();
-                    exposureSetRequest(StateRestartExposure);
-                    break;
-                }
-                else
-                {
-                    if (threadRequest == StateExposure)
-                    {
-                        LOGF_ERROR(
-                            "Exposure failed after %d attempts.", m_ExposureRetry);
-                    }
-                    m_ExposureRetry = 0;
-                    ASIStopExposure(m_camInfo->CameraID);
-                    PrimaryCCD.setExposureFailed();
-                    usleep(100000);
-
-                    lock.lock();
-                    exposureSetRequest(StateIdle);
-                    break;
-                }
-            }
-        }
-        else
-        {
-            LOGF_DEBUG("ASIGetExpStatus error (%d)",
-                       errCode);
-            if (++statRetry >= 10)
-            {
-                if (threadRequest == StateExposure)
-                {
-                    LOGF_ERROR(
-                        "Exposure status timed out (%d)", errCode);
-                }
-                PrimaryCCD.setExposureFailed();
-                InExposure = false;
-
-                lock.lock();
-                exposureSetRequest(StateIdle);
-                break;
-            }
-        }
-
-        /*
-         * Check the status every second until the time left is
-         * about one second, after which decrease the poll interval
-         */
-        double timeLeft = ExposureRequest - ExposureElapsedTimer.elapsed() / 1000.0;
-        if (timeLeft > 1.1)
-        {
-            /*
-             * For expsoures with more than a second left try
-             * to keep the displayed "exposure left" value at
-             * a full second boundary, which keeps the
-             * count down neat
-             */
-            double fraction = timeLeft - static_cast<int>(timeLeft);
-            if (fraction >= 0.005)
-            {
-                uSecs = (fraction * 1000000.0f);
-            }
-            else
-            {
-                uSecs = 1000000;
-            }
-        }
-        else
-        {
-            uSecs = 100000;
-        }
-        if (timeLeft >= 0.0049)
-        {
-            PrimaryCCD.setExposureLeft(timeLeft);
-        }
-        usleep(uSecs);
-
-        lock.lock();
-    }
-}
-
-/* Caller must hold the mutex */
-void ASICCD::exposureSetRequest(ImageState request)
-{
-    if (threadRequest == StateExposure)
-    {
-        threadRequest = request;
     }
 }
 

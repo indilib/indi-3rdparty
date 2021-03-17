@@ -27,10 +27,11 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <atomic>
 #include <indiccd.h>
 #include <inditimer.h>
-#include <indielapsedtimer.h>
 
+class SingleWorker;
 class ASICCD : public INDI::CCD
 {
 public:
@@ -73,38 +74,14 @@ protected:
     virtual bool saveConfigItems(FILE *fp) override;
 
 private:
-    typedef enum ImageState
-    {
-        StateNone = 0,
-        StateIdle,
-        StateStream,
-        StateExposure,
-        StateRestartExposure,
-        StateAbort,
-        StateTerminate,
-        StateTerminated
-    } ImageState;
+    SingleWorker &worker;
+    void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+    void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-    /* Imaging functions */
-    static void *imagingHelper(void *context);
-    void *imagingThreadEntry();
-    void streamVideo();
-    void getExposure();
-    void exposureSetRequest(ImageState request);
+    /** Get image from CCD and send it to client */
+    int grabImage(float duration);
 
-    /**
-     * @brief setThreadRequest Set the thread request
-     * @param request Desired thread state
-     * @warning condMutex must be UNLOCKED before calling this or the function will deadlock.
-     */
-    void setThreadRequest(ImageState request);
-
-    /**
-     * @brief waitUntil Block thread until CURRENT image state matches requested state
-     * @param request state to match
-     */
-    void waitUntil(ImageState request);
-
+private:
     /* Timer for temperature */
     INDI::Timer timerTemperature;
     void temperatureTimerTimeout();
@@ -119,12 +96,9 @@ private:
     IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir);
     void stopTimerWE();
 
-    /** Get image from CCD and send it to client */
-    int grabImage();
     /** Get initial parameters from camera */
     void setupParams();
-    /** Calculate time left in seconds after start_time */
-    float calcTimeLeft(float duration, timeval *start_time);
+
     /** Create number and switch controls for camera by querying the API */
     void createControls(int piNumberOfControls);
     /** Get the current Bayer string used */
@@ -176,25 +150,11 @@ private:
     IText SDKVersionS[1] = {};
     ITextVectorProperty SDKVersionSP;
 
-    INDI::ElapsedTimer ExposureElapsedTimer;
-    double ExposureRequest;
     double TemperatureRequest;
     uint8_t m_ExposureRetry {0};
 
     const ASI_CAMERA_INFO *m_camInfo;
     std::vector<ASI_CONTROL_CAPS> m_controlCaps;
-
-    // Imaging thread
-    ImageState threadRequest;
-    ImageState threadState;
-
-    //        pthread_t imagingThread;
-    //        pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
-    //        pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
-
-    std::thread imagingThread;
-    std::mutex condMutex;
-    std::condition_variable cv;
 
     // Camera ROI
     uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
