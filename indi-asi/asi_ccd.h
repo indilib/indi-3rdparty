@@ -86,15 +86,12 @@ private:
     INDI::Timer timerTemperature;
     void temperatureTimerTimeout();
 
-    /* Timer for NS guiding */
+    /* Timers for NS/WE guiding */
     INDI::Timer timerNS;
-    IPState guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir);
-    void stopTimerNS();
-
-    /* Timer for WE guiding */
     INDI::Timer timerWE;
-    IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir);
-    void stopTimerWE();
+
+    IPState guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir);
+    void stopGuidePulse(INDI::Timer &timer);
 
     /** Get initial parameters from camera */
     void setupParams();

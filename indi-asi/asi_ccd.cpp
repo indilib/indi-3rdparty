@@ -612,8 +612,8 @@ bool ASICCD::Disconnect()
 
     LOGF_DEBUG("Closing %s...", cameraName.c_str());
 
-    stopTimerNS();
-    stopTimerWE();
+    stopGuidePulse(timerNS);
+    stopGuidePulse(timerWE);
     timerTemperature.stop();
 
     worker.quit();
@@ -1369,88 +1369,62 @@ void ASICCD::temperatureTimerTimeout()
 }
 
 
-IPState ASICCD::guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir)
+IPState ASICCD::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir)
 {
-    timerNS.stop();
+    timer.stop();
     ASIPulseGuideOn(m_camInfo->CameraID, dir);
 
     LOGF_DEBUG("Starting %s guide for %f ms", asiGuideDirectionAsString(dir), ms);
 
-    timerNS.callOnTimeout([this, dir]{
+    timer.callOnTimeout([this, dir]{
         LOGF_DEBUG("Stopped %s guide.", asiGuideDirectionAsString(dir));
         ASIPulseGuideOff(m_camInfo->CameraID, dir);
-        GuideComplete(AXIS_DE);
+
+        if (dir == ASI_GUIDE_NORTH || dir == ASI_GUIDE_SOUTH)
+            GuideComplete(AXIS_DE);
+        else
+        if (dir == ASI_GUIDE_EAST || dir == ASI_GUIDE_WEST)
+            GuideComplete(AXIS_RA);
     });
 
     if (ms < 1)
     {
-        timerNS.timeout();
+        timer.timeout();
         return IPS_OK;
     }
 
-    timerNS.start(ms);
+    timer.start(ms);
     return IPS_BUSY;
 }
 
-void ASICCD::stopTimerNS()
+
+void ASICCD::stopGuidePulse(INDI::Timer &timer)
 {
-    if (timerNS.isActive())
+    if (timer.isActive())
     {
-        timerNS.stop();
-        timerNS.timeout();
-    }
-}
-
-IPState ASICCD::guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir)
-{
-    timerWE.stop();
-    ASIPulseGuideOn(m_camInfo->CameraID, dir);
-
-    LOGF_DEBUG("Starting %s guide for %f ms", asiGuideDirectionAsString(dir), ms);
-
-    timerWE.callOnTimeout([this, dir]{
-        LOGF_DEBUG("Stopped %s guide.", asiGuideDirectionAsString(dir));
-        ASIPulseGuideOff(m_camInfo->CameraID, dir);
-        GuideComplete(AXIS_RA);
-    });
-
-    if (ms < 1)
-    {
-        timerWE.timeout();
-        return IPS_OK;
-    }
-
-    timerWE.start(ms);
-    return IPS_BUSY;
-}
-
-void ASICCD::stopTimerWE()
-{
-    if (timerWE.isActive())
-    {
-        timerWE.stop();
-        timerWE.timeout();
+        timer.stop();
+        timer.timeout();
     }
 }
 
 IPState ASICCD::GuideNorth(uint32_t ms)
 {
-    return guidePulseNS(ms, ASI_GUIDE_NORTH);
+    return guidePulse(timerNS, ms, ASI_GUIDE_NORTH);
 }
 
 IPState ASICCD::GuideSouth(uint32_t ms)
 {
-    return guidePulseNS(ms, ASI_GUIDE_SOUTH);
+    return guidePulse(timerNS, ms, ASI_GUIDE_SOUTH);
 }
 
 IPState ASICCD::GuideEast(uint32_t ms)
 {
-    return guidePulseWE(ms, ASI_GUIDE_EAST);
+    return guidePulse(timerWE, ms, ASI_GUIDE_EAST);
 }
 
 IPState ASICCD::GuideWest(uint32_t ms)
 {
-    return guidePulseWE(ms, ASI_GUIDE_WEST);
+    return guidePulse(timerWE, ms, ASI_GUIDE_WEST);
 }
 
 void ASICCD::createControls(int piNumberOfControls)
