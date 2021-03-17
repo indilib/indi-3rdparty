@@ -29,6 +29,8 @@
 #include <mutex>
 #include <indiccd.h>
 #include <inditimer.h>
+#include <indielapsedtimer.h>
+
 class ASICCD : public INDI::CCD
 {
 public:
@@ -174,7 +176,7 @@ private:
     IText SDKVersionS[1] = {};
     ITextVectorProperty SDKVersionSP;
 
-    struct timeval ExpStart;
+    INDI::ElapsedTimer ExposureElapsedTimer;
     double ExposureRequest;
     double TemperatureRequest;
     uint8_t m_ExposureRetry {0};

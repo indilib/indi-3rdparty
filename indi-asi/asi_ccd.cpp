@@ -978,7 +978,7 @@ bool ASICCD::StartExposure(float duration)
         return false;
     }
 
-    gettimeofday(&ExpStart, nullptr);
+    ExposureElapsedTimer.start();
     if (ExposureRequest > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", ExposureRequest);
 
@@ -1825,7 +1825,7 @@ void ASICCD::getExposure()
          * Check the status every second until the time left is
          * about one second, after which decrease the poll interval
          */
-        double timeLeft = calcTimeLeft(ExposureRequest, &ExpStart);
+        double timeLeft = ExposureRequest - ExposureElapsedTimer.elapsed() / 1000.0;
         if (timeLeft > 1.1)
         {
             /*
