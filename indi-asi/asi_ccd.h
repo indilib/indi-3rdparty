@@ -74,7 +74,7 @@ protected:
 
 private:
     /** Get the current Bayer string used */
-    const char *getBayerString();
+    const char *getBayerString() const;
 
 private:
     Temporary::SingleWorker worker;

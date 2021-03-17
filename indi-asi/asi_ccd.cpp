@@ -119,7 +119,7 @@ static const char *asiGuideDirectionAsString(ASI_GUIDE_DIRECTION dir)
     }
 }
 
-const char *ASICCD::getBayerString()
+const char *ASICCD::getBayerString() const
 {
     switch (m_camInfo->BayerPattern)
     {
