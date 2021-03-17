@@ -23,11 +23,10 @@
 
 #include <ASICamera2.h>
 
+#include "singleworker_tmp.h"
+
 #include <vector>
 
-#include <condition_variable>
-#include <mutex>
-#include <atomic>
 #include <indiccd.h>
 #include <inditimer.h>
 
@@ -74,7 +73,11 @@ protected:
     virtual bool saveConfigItems(FILE *fp) override;
 
 private:
-    SingleWorker &worker;
+    /** Get the current Bayer string used */
+    const char *getBayerString();
+
+private:
+    Temporary::SingleWorker worker;
     void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
     void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
@@ -98,8 +101,7 @@ private:
 
     /** Create number and switch controls for camera by querying the API */
     void createControls(int piNumberOfControls);
-    /** Get the current Bayer string used */
-    const char *getBayerString();
+
     /** Update control values from camera */
     void updateControls();
     /** Return user selected image type */
@@ -152,7 +154,4 @@ private:
 
     const ASI_CAMERA_INFO *m_camInfo;
     std::vector<ASI_CONTROL_CAPS> m_controlCaps;
-
-    // Camera ROI
-    uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
 };

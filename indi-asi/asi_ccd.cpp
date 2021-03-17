@@ -112,71 +112,23 @@ static const char *asiGuideDirectionAsString(ASI_GUIDE_DIRECTION dir)
     switch (dir)
     {
     case ASI_GUIDE_NORTH: return "North";
-	case ASI_GUIDE_SOUTH: return "South";
-	case ASI_GUIDE_EAST:  return "East";
-	case ASI_GUIDE_WEST:  return "West";
+    case ASI_GUIDE_SOUTH: return "South";
+    case ASI_GUIDE_EAST:  return "East";
+    case ASI_GUIDE_WEST:  return "West";
+    default:              return "Unknown";
     }
-    return "Unknown";
 }
 
-// #PS: TODO move to INDI Library
-#include <functional>
-class SingleWorker
+const char *ASICCD::getBayerString()
 {
-public:
-    SingleWorker()
-    { }
-
-    ~SingleWorker()
-    { quit(); }
-
-public:
-    void run(const std::function<void(const std::atomic_bool &isAboutToQuit)> &function)
+    switch (m_camInfo->BayerPattern)
     {
-        std::lock_guard<std::mutex> lock(runLock);
-        mIsAboutToQuit = true;
-        if (thread.joinable())
-            thread.join();
-        mIsAboutToQuit = false;
-        mIsRunning = true;
-        thread = std::thread([function, this]{
-            function(this->mIsAboutToQuit);
-            mIsRunning = false;
-        });
+    case ASI_BAYER_BG: return "BGGR";
+    case ASI_BAYER_GR: return "GRBG";
+    case ASI_BAYER_GB: return "GBRG";
+    default:           return "RGGB";
     }
-public:
-    bool isAboutToQuit() const
-    {
-        return mIsAboutToQuit;
-    }
-
-    bool isRunning() const
-    {
-        return mIsRunning;
-    }
-
-public:
-    void quit()
-    {
-        std::lock_guard<std::mutex> lock(runLock);
-        mIsAboutToQuit = true;
-    }
-
-    void wait()
-    {
-        std::lock_guard<std::mutex> lock(runLock);
-        if (thread.joinable())
-            thread.join();
-    }
-
-private:
-    std::atomic_bool mIsAboutToQuit {true};
-    std::atomic_bool mIsRunning {false};
-    std::mutex  runLock;
-    std::thread thread;
-};
-
-//static SingleWorker worker;
+}
 
 void ASICCD::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 {
@@ -370,11 +322,7 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 }
 
 ASICCD::ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName)
-#warning DEBUG MODE - REMOVE
-// #PS: move to private data
-    : worker(*new SingleWorker)
-
-    , cameraName(cameraName)
+    : cameraName(cameraName)
     , m_camInfo(camInfo)
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
@@ -1140,11 +1088,6 @@ bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
-    m_SubX = subX;
-    m_SubY = subY;
-    m_SubW = subW;
-    m_SubH = subH;
-
     // ZWO rules are this: width%8 = 0, height%2 = 0
     // if this condition is not met, we set it internally to slightly smaller values
 
@@ -1533,21 +1476,6 @@ void ASICCD::createControls(int piNumberOfControls)
 
     ControlNP.np  = ControlN.data();
     ControlSP.sp  = ControlS.data();
-}
-
-const char *ASICCD::getBayerString()
-{
-    switch (m_camInfo->BayerPattern)
-    {
-        case ASI_BAYER_BG:
-            return "BGGR";
-        case ASI_BAYER_GR:
-            return "GRBG";
-        case ASI_BAYER_GB:
-            return "GBRG";
-        default:
-            return "RGGB";
-    }
 }
 
 ASI_IMG_TYPE ASICCD::getImageType()
