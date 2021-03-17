@@ -105,6 +105,18 @@ public:
     std::vector<ASI_CAMERA_INFO> camerasInfo;
 } loader;
 
+static const char *asiGuideDirectionAsString(ASI_GUIDE_DIRECTION dir)
+{
+    switch (dir)
+    {
+    case ASI_GUIDE_NORTH: return "North";
+	case ASI_GUIDE_SOUTH: return "South";
+	case ASI_GUIDE_EAST:  return "East";
+	case ASI_GUIDE_WEST:  return "West";
+    }
+    return "Unknown";
+}
+
 ASICCD::ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName)
     : cameraName(cameraName)
     , m_camInfo(camInfo)
@@ -320,8 +332,8 @@ bool ASICCD::Connect()
         return false;
     }
 
-    genTimerID = SetTimer(TEMP_TIMER_MS);
-
+    timerTemperature.start(TEMP_TIMER_MS);
+    timerTemperature.callOnTimeout(std::bind(&ASICCD::temperatureTimerTimeout, this));
     /*
      * Create the imaging thread and wait for it to start
      */
@@ -363,8 +375,7 @@ bool ASICCD::Disconnect()
 
     stopTimerNS();
     stopTimerWE();
-    RemoveTimer(genTimerID);
-    genTimerID = -1;
+    timerTemperature.stop();
 
     setThreadRequest(StateTerminate);
     imagingThread.join();
@@ -1214,8 +1225,8 @@ bool ASICCD::isMonoBinActive()
     return (imgType == ASI_IMG_RAW8 || imgType == ASI_IMG_RAW16) && bin > 1;
 }
 
-/* The generic timer call back is used for temperature monitoring */
-void ASICCD::TimerHit()
+/* The timer call back is used for temperature monitoring */
+void ASICCD::temperatureTimerTimeout()
 {
     long ASIControlValue = 0;
     ASI_BOOL ASIControlAuto = ASI_FALSE;
@@ -1272,194 +1283,91 @@ void ASICCD::TimerHit()
         }
         IDSetNumber(&CoolerNP, nullptr);
     }
-    genTimerID = SetTimer(TEMP_TIMER_MS);
 }
 
-/* Helper function for NS timer call back */
-void ASICCD::TimerHelperNS(void *context)
-{
-    static_cast<ASICCD *>(context)->TimerNS();
-}
 
-/* The timer call back for NS guiding */
-void ASICCD::TimerNS()
+IPState ASICCD::guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir)
 {
-    NStimerID = -1;
-    float timeleft = calcTimeLeft(NSPulseRequest, &NSPulseStart);
-    if (timeleft >= 0.000001)
-    {
-        if (timeleft < 0.001)
-        {
-            int uSecs = (int)(timeleft * 1000000.0);
-            usleep(uSecs);
-        }
-        else
-        {
-            int mSecs = (int)(timeleft * 1000.0);
-            NStimerID = IEAddTimer(mSecs, ASICCD::TimerHelperNS, this);
-            return;
-        }
-    }
-    ASIPulseGuideOff(m_camInfo->CameraID, NSDir);
-    LOGF_DEBUG("Stopping %s guide.", NSDirName);
-    GuideComplete(AXIS_DE);
-}
+    timerNS.stop();
+    ASIPulseGuideOn(m_camInfo->CameraID, dir);
 
-/* Stop the timer for NS guiding */
-void ASICCD::stopTimerNS()
-{
-    if (NStimerID != -1)
-    {
-        ASIPulseGuideOff(m_camInfo->CameraID, NSDir);
+    LOGF_DEBUG("Starting %s guide for %f ms", asiGuideDirectionAsString(dir), ms);
+
+    timerNS.callOnTimeout([this, dir]{
+        LOGF_DEBUG("Stopped %s guide.", asiGuideDirectionAsString(dir));
+        ASIPulseGuideOff(m_camInfo->CameraID, dir);
         GuideComplete(AXIS_DE);
-        IERmTimer(NStimerID);
-        NStimerID = -1;
-    }
-}
+    });
 
-IPState ASICCD::guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir,
-                             const char *dirName)
-{
-    stopTimerNS();
-    NSDir = dir;
-    NSDirName = dirName;
-
-    LOGF_DEBUG("Starting %s guide for %f ms",
-               NSDirName, ms);
-
-    /*
-     * If the pulse is for a ms or longer then schedule a timer callback
-     * to turn off the pulse, otherwise wait here to turn it off
-     */
-    int mSecs = 0;
-    int uSecs = 0;
-    if (ms >= 1.0)
+    if (ms < 1)
     {
-        mSecs = (int)ms;
-        NSPulseRequest = ms / 1000.0;
-        gettimeofday(&NSPulseStart, nullptr);
-    }
-    else
-    {
-        uSecs = (int)(ms * 1000.0);
-    }
-
-    ASIPulseGuideOn(m_camInfo->CameraID, NSDir);
-    if (uSecs != 0)
-    {
-        usleep(uSecs);
-        ASIPulseGuideOff(m_camInfo->CameraID, NSDir);
-        LOGF_DEBUG("Stopped %s guide.", dirName);
+        timerNS.timeout();
         return IPS_OK;
     }
-    else
+
+    timerNS.start(ms);
+    return IPS_BUSY;
+}
+
+void ASICCD::stopTimerNS()
+{
+    if (timerNS.isActive())
     {
-        NStimerID = IEAddTimer(mSecs, ASICCD::TimerHelperNS, this);
-        return IPS_BUSY;
+        timerNS.stop();
+        timerNS.timeout();
+    }
+}
+
+IPState ASICCD::guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir)
+{
+    timerWE.stop();
+    ASIPulseGuideOn(m_camInfo->CameraID, dir);
+
+    LOGF_DEBUG("Starting %s guide for %f ms", asiGuideDirectionAsString(dir), ms);
+
+    timerWE.callOnTimeout([this, dir]{
+        LOGF_DEBUG("Stopped %s guide.", asiGuideDirectionAsString(dir));
+        ASIPulseGuideOff(m_camInfo->CameraID, dir);
+        GuideComplete(AXIS_RA);
+    });
+
+    if (ms < 1)
+    {
+        timerWE.timeout();
+        return IPS_OK;
+    }
+
+    timerWE.start(ms);
+    return IPS_BUSY;
+}
+
+void ASICCD::stopTimerWE()
+{
+    if (timerWE.isActive())
+    {
+        timerWE.stop();
+        timerWE.timeout();
     }
 }
 
 IPState ASICCD::GuideNorth(uint32_t ms)
 {
-    return guidePulseNS(ms, ASI_GUIDE_NORTH, "North");
+    return guidePulseNS(ms, ASI_GUIDE_NORTH);
 }
 
 IPState ASICCD::GuideSouth(uint32_t ms)
 {
-    return guidePulseNS(ms, ASI_GUIDE_SOUTH, "South");
-}
-
-/* Helper function for WE timer call back */
-void ASICCD::TimerHelperWE(void *context)
-{
-    static_cast<ASICCD *>(context)->TimerWE();
-}
-
-/* The timer call back for WE guiding */
-void ASICCD::TimerWE()
-{
-    WEtimerID = -1;
-    float timeleft = calcTimeLeft(WEPulseRequest, &WEPulseStart);
-    if (timeleft >= 0.000001)
-    {
-        if (timeleft < 0.001)
-        {
-            int uSecs = (int)(timeleft * 1000000.0);
-            usleep(uSecs);
-        }
-        else
-        {
-            int mSecs = (int)(timeleft * 1000.0);
-            WEtimerID = IEAddTimer(mSecs, ASICCD::TimerHelperWE, this);
-            return;
-        }
-    }
-    ASIPulseGuideOff(m_camInfo->CameraID, WEDir);
-    LOGF_DEBUG("Stopping %s guide.", WEDirName);
-    GuideComplete(AXIS_RA);
-}
-
-void ASICCD::stopTimerWE()
-{
-    if (WEtimerID != -1)
-    {
-        ASIPulseGuideOff(m_camInfo->CameraID, WEDir);
-        GuideComplete(AXIS_RA);
-        IERmTimer(WEtimerID);
-        WEtimerID = -1;
-    }
-}
-
-IPState ASICCD::guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir,
-                             const char *dirName)
-{
-    stopTimerWE();
-    WEDir = dir;
-    WEDirName = dirName;
-
-    LOGF_DEBUG("Starting %s guide for %f ms",
-               WEDirName, ms);
-
-    /*
-     * If the pulse is for a ms or longer then schedule a timer callback
-     * to turn off the pulse, otherwise wait here to turn it off
-     */
-    int mSecs = 0;
-    int uSecs = 0;
-    if (ms >= 1.0)
-    {
-        mSecs = (int)ms;
-        WEPulseRequest = ms / 1000.0;
-        gettimeofday(&WEPulseStart, nullptr);
-    }
-    else
-    {
-        uSecs = (int)(ms * 1000.0);
-    }
-
-    ASIPulseGuideOn(m_camInfo->CameraID, WEDir);
-    if (uSecs != 0)
-    {
-        usleep(uSecs);
-        ASIPulseGuideOff(m_camInfo->CameraID, WEDir);
-        LOGF_DEBUG("Stopped %s guide.", dirName);
-        return IPS_OK;
-    }
-    else
-    {
-        WEtimerID = IEAddTimer(mSecs, ASICCD::TimerHelperWE, this);
-        return IPS_BUSY;
-    }
+    return guidePulseNS(ms, ASI_GUIDE_SOUTH);
 }
 
 IPState ASICCD::GuideEast(uint32_t ms)
 {
-    return guidePulseWE(ms, ASI_GUIDE_EAST, "East");
+    return guidePulseWE(ms, ASI_GUIDE_EAST);
 }
 
 IPState ASICCD::GuideWest(uint32_t ms)
 {
-    return guidePulseWE(ms, ASI_GUIDE_WEST, "West");
+    return guidePulseWE(ms, ASI_GUIDE_WEST);
 }
 
 void ASICCD::createControls(int piNumberOfControls)

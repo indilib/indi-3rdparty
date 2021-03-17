@@ -28,7 +28,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <indiccd.h>
-
+#include <inditimer.h>
 class ASICCD : public INDI::CCD
 {
 public:
@@ -55,7 +55,6 @@ protected:
     virtual bool StartStreaming() override;
     virtual bool StopStreaming() override;
 
-    virtual void TimerHit() override;
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
     virtual bool UpdateCCDBin(int binx, int biny) override;
 
@@ -104,16 +103,20 @@ private:
      */
     void waitUntil(ImageState request);
 
-    /* Timer functions for NS guiding */
-    static void TimerHelperNS(void *context);
-    void TimerNS();
+    /* Timer for temperature */
+    INDI::Timer timerTemperature;
+    void temperatureTimerTimeout();
+
+    /* Timer for NS guiding */
+    INDI::Timer timerNS;
+    IPState guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir);
     void stopTimerNS();
-    IPState guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
-    /* Timer functions for WE guiding */
-    static void TimerHelperWE(void *context);
-    void TimerWE();
+
+    /* Timer for WE guiding */
+    INDI::Timer timerWE;
+    IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir);
     void stopTimerWE();
-    IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
+
     /** Get image from CCD and send it to client */
     int grabImage();
     /** Get initial parameters from camera */
@@ -179,8 +182,6 @@ private:
     const ASI_CAMERA_INFO *m_camInfo;
     std::vector<ASI_CONTROL_CAPS> m_controlCaps;
 
-    int genTimerID {-1};
-
     // Imaging thread
     ImageState threadRequest;
     ImageState threadState;
@@ -192,19 +193,6 @@ private:
     std::thread imagingThread;
     std::mutex condMutex;
     std::condition_variable cv;
-
-    // ST4
-    float WEPulseRequest {0};
-    struct timeval WEPulseStart;
-    int WEtimerID {-1};
-    ASI_GUIDE_DIRECTION WEDir {ASI_GUIDE_WEST};
-    const char *WEDirName;
-
-    float NSPulseRequest {0};
-    struct timeval NSPulseStart;
-    int NStimerID {-1};
-    ASI_GUIDE_DIRECTION NSDir {ASI_GUIDE_NORTH};
-    const char *NSDirName;
 
     // Camera ROI
     uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
