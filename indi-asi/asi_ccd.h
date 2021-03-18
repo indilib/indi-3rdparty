@@ -90,6 +90,7 @@ private:
 private:
     /* Timer for temperature */
     INDI::Timer timerTemperature;
+    double TemperatureRequest;
     void temperatureTimerTimeout();
 
     /* Timers for NS/WE guiding */
@@ -120,6 +121,7 @@ private:
 
     std::string cameraName;
 
+private:
     /** Additional Properties to INDI::CCD */
     INDI::PropertyNumber CoolerNP {1};
     INDI::PropertySwitch CoolerSP {2};
@@ -128,7 +130,6 @@ private:
     INDI::PropertySwitch  ControlSP {0};
     INDI::PropertySwitch  VideoFormatSP {0};
 
-    uint8_t rememberVideoFormat = { 0 };
     ASI_IMG_TYPE currentVideoFormat;
 
     INDI::PropertyNumber BlinkNP {2};
@@ -140,7 +141,7 @@ private:
     INDI::PropertyNumber ADCDepthNP {1};
     INDI::PropertyText   SDKVersionSP {1};
 
-    double TemperatureRequest;
+private:
     uint8_t m_ExposureRetry {0};
 
     const ASI_CAMERA_INFO *m_camInfo;

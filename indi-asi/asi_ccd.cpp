@@ -21,6 +21,7 @@
 */
 
 #include "asi_ccd.h"
+#include "asi_helpers.h"
 
 #include "config.h"
 
@@ -107,27 +108,9 @@ public:
     std::vector<ASI_CAMERA_INFO> camerasInfo;
 } loader;
 
-static const char *asiGuideDirectionAsString(ASI_GUIDE_DIRECTION dir)
-{
-    switch (dir)
-    {
-    case ASI_GUIDE_NORTH: return "North";
-    case ASI_GUIDE_SOUTH: return "South";
-    case ASI_GUIDE_EAST:  return "East";
-    case ASI_GUIDE_WEST:  return "West";
-    default:              return "Unknown";
-    }
-}
-
 const char *ASICCD::getBayerString() const
 {
-    switch (m_camInfo->BayerPattern)
-    {
-    case ASI_BAYER_BG: return "BGGR";
-    case ASI_BAYER_GR: return "GRBG";
-    case ASI_BAYER_GB: return "GBRG";
-    default:           return "RGGB";
-    }
+    return Helpers::toString(m_camInfo->BayerPattern);
 }
 
 void ASICCD::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
@@ -356,8 +339,7 @@ bool ASICCD::initProperties()
     CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
     CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    ControlNP.fill(getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-
+    ControlNP.fill(getDeviceName(), "CCD_CONTROLS",      "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     ControlSP.fill(getDeviceName(), "CCD_CONTROLS_MODE", "Set Auto", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
 
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
@@ -390,11 +372,8 @@ bool ASICCD::initProperties()
 
     uint32_t cap = 0;
 
-    cap |= CCD_CAN_ABORT;
     if (maxBin > 1)
         cap |= CCD_CAN_BIN;
-
-    cap |= CCD_CAN_SUBFRAME;
 
     if (m_camInfo->IsCoolerCam)
         cap |= CCD_HAS_COOLER;
@@ -408,6 +387,8 @@ bool ASICCD::initProperties()
     if (m_camInfo->IsColorCam)
         cap |= CCD_HAS_BAYER;
 
+    cap |= CCD_CAN_ABORT;
+    cap |= CCD_CAN_SUBFRAME;
     cap |= CCD_HAS_STREAMING;
 
 #ifdef HAVE_WEBSOCKET
@@ -477,7 +458,6 @@ bool ASICCD::updateProperties()
         }
 
         defineProperty(BlinkNP);
-
         defineProperty(ADCDepthNP);
         defineProperty(SDKVersionSP);
     }
@@ -532,8 +512,8 @@ bool ASICCD::Connect()
         return false;
     }
 
-    timerTemperature.start(TEMP_TIMER_MS);
     timerTemperature.callOnTimeout(std::bind(&ASICCD::temperatureTimerTimeout, this));
+    timerTemperature.start(TEMP_TIMER_MS);
 
     LOG_INFO("Setting intital bandwidth to AUTO on connection.");
     if ((errCode = ASISetControlValue(m_camInfo->CameraID, ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE)) != ASI_SUCCESS)
@@ -580,7 +560,6 @@ void ASICCD::setupParams()
     if (errCode != ASI_SUCCESS)
         LOGF_DEBUG("ASIGetNumOfControls error (%d)", errCode);
 
-
     createControls(piNumberOfControls);
 
     if (HasCooler())
@@ -589,12 +568,9 @@ void ASICCD::setupParams()
         errCode = ASIGetControlCaps(m_camInfo->CameraID, ASI_TARGET_TEMP, &pCtrlCaps);
         if (errCode == ASI_SUCCESS)
         {
-            CoolerNP[0].setMin(pCtrlCaps.MinValue);
-            CoolerNP[0].setMax(pCtrlCaps.MaxValue);
+            CoolerNP[0].setMinMax(pCtrlCaps.MinValue, pCtrlCaps.MaxValue);
             CoolerNP[0].setValue(pCtrlCaps.DefaultValue);
         }
-        //defineProperty(CoolerNP);
-        //defineProperty(CoolerSP);
     }
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM
@@ -686,8 +662,6 @@ void ASICCD::setupParams()
 
     // Resize the buffers to free up unused space
     VideoFormatSP.shrink_to_fit();
-
-    rememberVideoFormat = VideoFormatSP.findOnSwitchIndex();
 
     float x_pixel_size, y_pixel_size;
 
@@ -949,8 +923,6 @@ bool ASICCD::StartStreaming()
 #if 0
     ASI_IMG_TYPE type = getImageType();
 
-    rememberVideoFormat = VideoFormatSP.findOnSwitchIndex();
-
     if (type != ASI_IMG_Y8 && type != ASI_IMG_RGB24)
     {
         VideoFormatSP.reset();
@@ -981,10 +953,6 @@ bool ASICCD::StopStreaming()
 {
     worker.quit();
     worker.wait();
-
-    //if (IUFindOnSwitchIndex(&VideoFormatSP) != rememberVideoFormat)
-    //setVideoFormat(rememberVideoFormat);
-
     return true;
 }
 
@@ -1079,12 +1047,12 @@ bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
 
     if (warn_roi_width && subW % 8 > 0)
     {
-        LOGF_INFO ("Incompatible frame width %dpx. Reducing by %dpx.", subW, subW % 8);
+        LOGF_INFO("Incompatible frame width %dpx. Reducing by %dpx.", subW, subW % 8);
         warn_roi_width = false;
     }
     if (warn_roi_height && subH % 2 > 0)
     {
-        LOGF_INFO ("Incompatible frame height %dpx. Reducing by %dpx.", subH, subH % 2);
+        LOGF_INFO("Incompatible frame height %dpx. Reducing by %dpx.", subH, subH % 2);
         warn_roi_height = false;
     }
 
@@ -1188,10 +1156,7 @@ int ASICCD::grabImage(float duration)
     }
     guard.unlock();
 
-    if (type == ASI_IMG_RGB24)
-        PrimaryCCD.setNAxis(3);
-    else
-        PrimaryCCD.setNAxis(2);
+    PrimaryCCD.setNAxis(type == ASI_IMG_RGB24 ? 3 : 2);
 
     // If mono camera or we're sending Luma or RGB, turn off bayering
     if (m_camInfo->IsColorCam == false || type == ASI_IMG_Y8 || type == ASI_IMG_RGB24 || isMonoBinActive())
@@ -1302,10 +1267,10 @@ IPState ASICCD::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir
     timer.stop();
     ASIPulseGuideOn(m_camInfo->CameraID, dir);
 
-    LOGF_DEBUG("Starting %s guide for %f ms", asiGuideDirectionAsString(dir), ms);
+    LOGF_DEBUG("Starting %s guide for %f ms", Helpers::toString(dir), ms);
 
     timer.callOnTimeout([this, dir]{
-        LOGF_DEBUG("Stopped %s guide.", asiGuideDirectionAsString(dir));
+        LOGF_DEBUG("Stopped %s guide.", Helpers::toString(dir));
         ASIPulseGuideOff(m_camInfo->CameraID, dir);
 
         if (dir == ASI_GUIDE_NORTH || dir == ASI_GUIDE_SOUTH)
@@ -1493,44 +1458,17 @@ void ASICCD::updateControls()
 void ASICCD::updateRecorderFormat()
 {
     currentVideoFormat = getImageType();
+    if (currentVideoFormat == ASI_IMG_END)
+        return;
 
-    switch (currentVideoFormat)
-    {
-        case ASI_IMG_Y8:
-            Streamer->setPixelFormat(INDI_MONO);
-            break;
-
-        case ASI_IMG_RAW8:
-            if (m_camInfo->BayerPattern == ASI_BAYER_RG)
-                Streamer->setPixelFormat(INDI_BAYER_RGGB);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_BG)
-                Streamer->setPixelFormat(INDI_BAYER_BGGR);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_GR)
-                Streamer->setPixelFormat(INDI_BAYER_GRBG);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_GB)
-                Streamer->setPixelFormat(INDI_BAYER_GBRG);
-            break;
-
-        case ASI_IMG_RAW16:
-            if (m_camInfo->IsColorCam == ASI_FALSE)
-                Streamer->setPixelFormat(INDI_MONO, 16);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_RG)
-                Streamer->setPixelFormat(INDI_BAYER_RGGB, 16);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_BG)
-                Streamer->setPixelFormat(INDI_BAYER_BGGR, 16);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_GR)
-                Streamer->setPixelFormat(INDI_BAYER_GRBG, 16);
-            else if (m_camInfo->BayerPattern == ASI_BAYER_GB)
-                Streamer->setPixelFormat(INDI_BAYER_GBRG, 16);
-            break;
-
-        case ASI_IMG_RGB24:
-            Streamer->setPixelFormat(INDI_RGB);
-            break;
-
-        case ASI_IMG_END:
-            break;
-    }
+    Streamer->setPixelFormat(
+        Helpers::pixelFormat(
+            currentVideoFormat,
+            m_camInfo->BayerPattern,
+            m_camInfo->IsColorCam
+        ),
+        currentVideoFormat == ASI_IMG_RAW16 ? 16 : 8
+    );
 }
 
 void ASICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
