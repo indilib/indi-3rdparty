@@ -90,7 +90,8 @@ private:
 private:
     /* Timer for temperature */
     INDI::Timer timerTemperature;
-    double TemperatureRequest;
+    double targetTemperature;
+    double currentTemperature;
     void temperatureTimerTimeout();
 
     /* Timers for NS/WE guiding */

@@ -982,16 +982,15 @@ int ASICCD::SetTemperature(double temperature)
     }
 
     // Otherwise, we set the temperature request and we update the status in TimerHit() function.
-    TemperatureRequest = temperature;
+    targetTemperature = temperature;
     LOGF_INFO("Setting CCD temperature to %+06.2f C", temperature);
     return 0;
 }
 
 bool ASICCD::activateCooler(bool enable)
 {
-    bool rc = (ASISetControlValue(m_camInfo->CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE) ==
-               ASI_SUCCESS);
-    if (rc == false)
+    int ret = ASISetControlValue(m_camInfo->CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE);
+    if (rc != ASI_SUCCESS)
         CoolerSP.setState(IPS_ALERT);
     else
     {
@@ -1205,50 +1204,43 @@ bool ASICCD::isMonoBinActive()
 /* The timer call back is used for temperature monitoring */
 void ASICCD::temperatureTimerTimeout()
 {
-    long ASIControlValue = 0;
-    ASI_BOOL ASIControlAuto = ASI_FALSE;
-    double currentTemperature = TemperatureN[0].value;
+    ASI_ERROR_CODE ret;
+    ASI_BOOL isAuto = ASI_FALSE;
+    long value = 0;
+    IPState newState = TemperatureN[0].s;
 
-    ASI_ERROR_CODE errCode = ASIGetControlValue(m_camInfo->CameraID,
-                             ASI_TEMPERATURE, &ASIControlValue, &ASIControlAuto);
-    if (errCode != ASI_SUCCESS)
+    ret = ASIGetControlValue(m_camInfo->CameraID, ASI_TEMPERATURE, &value, &isAuto);
+
+    if (ret != ASI_SUCCESS)
     {
-        LOGF_ERROR("ASIGetControlValue ASI_TEMPERATURE error (%d)", errCode);
-        TemperatureNP.s = IPS_ALERT;
+        LOGF_ERROR("ASIGetControlValue ASI_TEMPERATURE error (%d)", ret);
+        newState = IPS_ALERT;
     }
     else
     {
-        TemperatureN[0].value = ASIControlValue / 10.0;
+        currentTemperature = ASIControlValue / 10.0;
+        // If cooling is active, show status
+        if (CoolerSP[0].getState() == ISS_ON)
+            newState = fabs(targetTemperature - currentTemperature) <= TEMP_THRESHOLD
+                     ? IPS_OK;
+                     : IPS_BUSY;
     }
 
-    switch (TemperatureNP.s)
+    // Update if there is a change
+    if (
+        fabs(currentTemperature - TemperatureN[0].value) > 0.05 ||
+        TemperatureN[0].s != newState
+    )
     {
-        case IPS_IDLE:
-        case IPS_OK:
-            if (fabs(currentTemperature - TemperatureN[0].value) > TEMP_THRESHOLD / 10.0)
-            {
-                IDSetNumber(&TemperatureNP, nullptr);
-            }
-            break;
-
-        case IPS_ALERT:
-            break;
-
-        case IPS_BUSY:
-            // If we're within threshold, let's make it BUSY ---> OK
-            if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
-            {
-                TemperatureNP.s = IPS_OK;
-            }
-            IDSetNumber(&TemperatureNP, nullptr);
-            break;
+        TemperatureN[0].s = newState;
+        TemperatureN[0].value = currentTemperature;
+        IDSetNumber(&TemperatureNP, nullptr);
     }
 
     if (HasCooler())
     {
-        errCode = ASIGetControlValue(m_camInfo->CameraID,
-                                     ASI_COOLER_POWER_PERC, &ASIControlValue, &ASIControlAuto);
-        if (errCode != ASI_SUCCESS)
+        ret = ASIGetControlValue(m_camInfo->CameraID, ASI_COOLER_POWER_PERC, &value, &isAuto);
+        if (ret != ASI_SUCCESS)
         {
             LOGF_ERROR("ASIGetControlValue ASI_COOLER_POWER_PERC error (%d)", errCode);
             CoolerNP.setState(IPS_ALERT);
