@@ -1274,6 +1274,7 @@ IPState ASICCD::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir
 
     if (ms < 1)
     {
+        usleep(ms * 1000);
         timer.timeout();
         return IPS_OK;
     }
