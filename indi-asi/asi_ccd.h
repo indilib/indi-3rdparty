@@ -3,6 +3,7 @@
 
     Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
+    Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -37,7 +38,7 @@ class SingleWorker;
 class ASICCD : public INDI::CCD
 {
 public:
-    explicit ASICCD(const ASI_CAMERA_INFO *camInfo, const std::string &cameraName);
+    explicit ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName);
     ~ASICCD() override;
 
     virtual const char *getDefaultName() override;
@@ -82,19 +83,19 @@ private:
 private:
     Temporary::SingleWorker worker;
     void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+    void workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration);
     void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
     /** Get image from CCD and send it to client */
     int grabImage(float duration);
 
 private:
-    /* Timer for temperature */
-    INDI::Timer timerTemperature;
     double targetTemperature;
     double currentTemperature;
+    INDI::Timer timerTemperature;
     void temperatureTimerTimeout();
 
-    /* Timers for NS/WE guiding */
+    /** Timers for NS/WE guiding */
     INDI::Timer timerNS;
     INDI::Timer timerWE;
 
@@ -109,42 +110,45 @@ private:
 
     /** Update control values from camera */
     void updateControls();
+
     /** Return user selected image type */
-    ASI_IMG_TYPE getImageType();
+    ASI_IMG_TYPE getImageType() const;
+
     /** Update SER recorder video format */
     void updateRecorderFormat();
+
     /** Control cooler */
     bool activateCooler(bool enable);
+
     /** Set Video Format */
     bool setVideoFormat(uint8_t index);
+
     /** Get if MonoBin is active, thus Bayer is irrelevant */
     bool isMonoBinActive();
 
-    std::string cameraName;
-
 private:
     /** Additional Properties to INDI::CCD */
-    INDI::PropertyNumber CoolerNP {1};
-    INDI::PropertySwitch CoolerSP {2};
+    INDI::PropertyNumber  CoolerNP {1};
+    INDI::PropertySwitch  CoolerSP {2};
 
     INDI::PropertyNumber  ControlNP {0};
     INDI::PropertySwitch  ControlSP {0};
     INDI::PropertySwitch  VideoFormatSP {0};
 
-    ASI_IMG_TYPE currentVideoFormat;
+    INDI::PropertyNumber  ADCDepthNP   {1};
+    INDI::PropertyText    SDKVersionSP {1};
 
-    INDI::PropertyNumber BlinkNP {2};
+    INDI::PropertyNumber  BlinkNP {2};
     enum {
         BLINK_COUNT,
         BLINK_DURATION
     };
 
-    INDI::PropertyNumber ADCDepthNP {1};
-    INDI::PropertyText   SDKVersionSP {1};
-
 private:
-    uint8_t m_ExposureRetry {0};
+    std::string mCameraName;
+    uint8_t mExposureRetry {0};
 
-    const ASI_CAMERA_INFO *m_camInfo;
-    std::vector<ASI_CONTROL_CAPS> m_controlCaps;
+    ASI_IMG_TYPE                  mCurrentVideoFormat;
+    std::vector<ASI_CONTROL_CAPS> mControlCaps;
+    ASI_CAMERA_INFO               mCameraInfo;
 };
