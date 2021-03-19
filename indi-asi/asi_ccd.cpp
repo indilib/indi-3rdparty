@@ -380,8 +380,8 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName)
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     setDeviceName(cameraName.c_str());
 
-    timerWE.setSingleShot(true);
-    timerNS.setSingleShot(true);
+    mTimerWE.setSingleShot(true);
+    mTimerNS.setSingleShot(true);
 }
 
 ASICCD::~ASICCD()
@@ -582,8 +582,8 @@ bool ASICCD::Connect()
         return false;
     }
 
-    timerTemperature.callOnTimeout(std::bind(&ASICCD::temperatureTimerTimeout, this));
-    timerTemperature.start(TEMP_TIMER_MS);
+    mTimerTemperature.callOnTimeout(std::bind(&ASICCD::temperatureTimerTimeout, this));
+    mTimerTemperature.start(TEMP_TIMER_MS);
 
     LOG_INFO("Setting intital bandwidth to AUTO on connection.");
     if ((ret = ASISetControlValue(mCameraInfo.CameraID, ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE)) != ASI_SUCCESS)
@@ -603,11 +603,11 @@ bool ASICCD::Disconnect()
 
     LOGF_DEBUG("Closing %s...", mCameraName.c_str());
 
-    stopGuidePulse(timerNS);
-    stopGuidePulse(timerWE);
-    timerTemperature.stop();
+    stopGuidePulse(mTimerNS);
+    stopGuidePulse(mTimerWE);
+    mTimerTemperature.stop();
 
-    worker.quit();
+    mWorker.quit();
 
     if (isSimulation() == false)
     {
@@ -948,7 +948,7 @@ int ASICCD::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
     // #PS: how will it warm up?
-    if (std::abs(temperature - currentTemperature) < TEMP_THRESHOLD)
+    if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
     if (activateCooler(true) == false)
@@ -967,7 +967,7 @@ int ASICCD::SetTemperature(double temperature)
     }
 
     // Otherwise, we set the temperature request and we update the status in TimerHit() function.
-    targetTemperature = temperature;
+    mTargetTemperature = temperature;
     LOGF_INFO("Setting CCD temperature to %+06.2f C.", temperature);
     return 0;
 }
@@ -993,7 +993,7 @@ bool ASICCD::activateCooler(bool enable)
 
 bool ASICCD::StartExposure(float duration)
 {
-    worker.run(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
+    mWorker.run(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
 
@@ -1001,7 +1001,7 @@ bool ASICCD::AbortExposure()
 {
     LOG_DEBUG("Aborting camera exposure...");
 
-    worker.quit();
+    mWorker.quit();
 
     ASIStopExposure(mCameraInfo.CameraID);
     return true;
@@ -1034,13 +1034,13 @@ bool ASICCD::StartStreaming()
         }
     }
 #endif
-    worker.run(std::bind(&ASICCD::workerStreamVideo, this, std::placeholders::_1));
+    mWorker.run(std::bind(&ASICCD::workerStreamVideo, this, std::placeholders::_1));
     return true;
 }
 
 bool ASICCD::StopStreaming()
 {
-    worker.quit();
+    mWorker.quit();
     return true;
 }
 
@@ -1247,11 +1247,11 @@ void ASICCD::temperatureTimerTimeout()
     }
     else
     {
-        currentTemperature = value / 10.0;
+        mCurrentTemperature = value / 10.0;
         // If cooling is active, show goal status
         if (CoolerSP[0].getState() == ISS_ON)
         {
-            newState = std::abs(currentTemperature - targetTemperature) <= TEMP_THRESHOLD
+            newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
                      ? IPS_OK
                      : IPS_BUSY;
         }
@@ -1259,12 +1259,12 @@ void ASICCD::temperatureTimerTimeout()
 
     // Update if there is a change
     if (
-        std::abs(currentTemperature - TemperatureN[0].value) > 0.05 ||
+        std::abs(mCurrentTemperature - TemperatureN[0].value) > 0.05 ||
         TemperatureNP.s != newState
     )
     {
         TemperatureNP.s = newState;
-        TemperatureN[0].value = currentTemperature;
+        TemperatureN[0].value = mCurrentTemperature;
         IDSetNumber(&TemperatureNP, nullptr);
     }
 
@@ -1326,22 +1326,22 @@ void ASICCD::stopGuidePulse(INDI::Timer &timer)
 
 IPState ASICCD::GuideNorth(uint32_t ms)
 {
-    return guidePulse(timerNS, ms, ASI_GUIDE_NORTH);
+    return guidePulse(mTimerNS, ms, ASI_GUIDE_NORTH);
 }
 
 IPState ASICCD::GuideSouth(uint32_t ms)
 {
-    return guidePulse(timerNS, ms, ASI_GUIDE_SOUTH);
+    return guidePulse(mTimerNS, ms, ASI_GUIDE_SOUTH);
 }
 
 IPState ASICCD::GuideEast(uint32_t ms)
 {
-    return guidePulse(timerWE, ms, ASI_GUIDE_EAST);
+    return guidePulse(mTimerWE, ms, ASI_GUIDE_EAST);
 }
 
 IPState ASICCD::GuideWest(uint32_t ms)
 {
-    return guidePulse(timerWE, ms, ASI_GUIDE_WEST);
+    return guidePulse(mTimerWE, ms, ASI_GUIDE_WEST);
 }
 
 void ASICCD::createControls(int piNumberOfControls)

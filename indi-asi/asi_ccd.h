@@ -81,7 +81,7 @@ private:
     const char *getBayerString() const;
 
 private:
-    Temporary::SingleWorker worker;
+    Temporary::SingleWorker mWorker;
     void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
     void workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration);
     void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
@@ -90,14 +90,14 @@ private:
     int grabImage(float duration);
 
 private:
-    double targetTemperature;
-    double currentTemperature;
-    INDI::Timer timerTemperature;
+    double mTargetTemperature;
+    double mCurrentTemperature;
+    INDI::Timer mTimerTemperature;
     void temperatureTimerTimeout();
 
     /** Timers for NS/WE guiding */
-    INDI::Timer timerNS;
-    INDI::Timer timerWE;
+    INDI::Timer mTimerNS;
+    INDI::Timer mTimerWE;
 
     IPState guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir);
     void stopGuidePulse(INDI::Timer &timer);
