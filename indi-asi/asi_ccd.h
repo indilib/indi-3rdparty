@@ -3,6 +3,7 @@
 
     Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
+    Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -23,16 +24,21 @@
 
 #include <ASICamera2.h>
 
+#include "indipropertyswitch.h"
+#include "indipropertynumber.h"
+#include "indipropertytext.h"
+#include "singleworker_tmp.h"
+
 #include <vector>
 
-#include <condition_variable>
-#include <mutex>
 #include <indiccd.h>
+#include <inditimer.h>
 
+class SingleWorker;
 class ASICCD : public INDI::CCD
 {
 public:
-    explicit ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName);
+    explicit ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName);
     ~ASICCD() override;
 
     virtual const char *getDefaultName() override;
@@ -55,7 +61,6 @@ protected:
     virtual bool StartStreaming() override;
     virtual bool StopStreaming() override;
 
-    virtual void TimerHit() override;
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
     virtual bool UpdateCCDBin(int binx, int biny) override;
 
@@ -72,140 +77,78 @@ protected:
     virtual bool saveConfigItems(FILE *fp) override;
 
 private:
-    typedef enum ImageState
-    {
-        StateNone = 0,
-        StateIdle,
-        StateStream,
-        StateExposure,
-        StateRestartExposure,
-        StateAbort,
-        StateTerminate,
-        StateTerminated
-    } ImageState;
+    /** Get the current Bayer string used */
+    const char *getBayerString() const;
 
-    /* Imaging functions */
-    static void *imagingHelper(void *context);
-    void *imagingThreadEntry();
-    void streamVideo();
-    void getExposure();
-    void exposureSetRequest(ImageState request);
+private:
+    Temporary::SingleWorker mWorker;
+    void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+    void workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration);
+    void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-    /**
-     * @brief setThreadRequest Set the thread request
-     * @param request Desired thread state
-     * @warning condMutex must be UNLOCKED before calling this or the function will deadlock.
-     */
-    void setThreadRequest(ImageState request);
-
-    /**
-     * @brief waitUntil Block thread until CURRENT image state matches requested state
-     * @param request state to match
-     */
-    void waitUntil(ImageState request);
-
-    /* Timer functions for NS guiding */
-    static void TimerHelperNS(void *context);
-    void TimerNS();
-    void stopTimerNS();
-    IPState guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
-    /* Timer functions for WE guiding */
-    static void TimerHelperWE(void *context);
-    void TimerWE();
-    void stopTimerWE();
-    IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
     /** Get image from CCD and send it to client */
-    int grabImage();
+    int grabImage(float duration);
+
+private:
+    double mTargetTemperature;
+    double mCurrentTemperature;
+    INDI::Timer mTimerTemperature;
+    void temperatureTimerTimeout();
+
+    /** Timers for NS/WE guiding */
+    INDI::Timer mTimerNS;
+    INDI::Timer mTimerWE;
+
+    IPState guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir);
+    void stopGuidePulse(INDI::Timer &timer);
+
     /** Get initial parameters from camera */
     void setupParams();
-    /** Calculate time left in seconds after start_time */
-    float calcTimeLeft(float duration, timeval *start_time);
+
     /** Create number and switch controls for camera by querying the API */
     void createControls(int piNumberOfControls);
-    /** Get the current Bayer string used */
-    const char *getBayerString();
+
     /** Update control values from camera */
     void updateControls();
+
     /** Return user selected image type */
-    ASI_IMG_TYPE getImageType();
+    ASI_IMG_TYPE getImageType() const;
+
     /** Update SER recorder video format */
     void updateRecorderFormat();
+
     /** Control cooler */
     bool activateCooler(bool enable);
+
     /** Set Video Format */
     bool setVideoFormat(uint8_t index);
+
     /** Get if MonoBin is active, thus Bayer is irrelevant */
     bool isMonoBinActive();
 
-    char name[MAXINDIDEVICE];
-
+private:
     /** Additional Properties to INDI::CCD */
-    INumber CoolerN[1];
-    INumberVectorProperty CoolerNP;
+    INDI::PropertyNumber  CoolerNP {1};
+    INDI::PropertySwitch  CoolerSP {2};
 
-    ISwitch CoolerS[2];
-    ISwitchVectorProperty CoolerSP;
+    INDI::PropertyNumber  ControlNP {0};
+    INDI::PropertySwitch  ControlSP {0};
+    INDI::PropertySwitch  VideoFormatSP {0};
 
-    std::vector<INumber>  ControlN;
-    INumberVectorProperty ControlNP;
+    INDI::PropertyNumber  ADCDepthNP   {1};
+    INDI::PropertyText    SDKVersionSP {1};
 
-    std::vector<ISwitch>  ControlS;
-    ISwitchVectorProperty ControlSP;
-
-    std::vector<ISwitch>  VideoFormatS;
-    ISwitchVectorProperty VideoFormatSP;
-    uint8_t rememberVideoFormat = { 0 };
-    ASI_IMG_TYPE currentVideoFormat;
-
+    INDI::PropertyNumber  BlinkNP {2};
     enum {
-            BLINK_COUNT,
-            BLINK_DURATION
+        BLINK_COUNT,
+        BLINK_DURATION
     };
 
-    INumber BlinkN[2];
-    INumberVectorProperty BlinkNP;
+private:
+    std::string mCameraName;
+    uint8_t mExposureRetry {0};
 
-    INumber ADCDepthN;
-    INumberVectorProperty ADCDepthNP;
-
-    IText SDKVersionS[1] = {};
-    ITextVectorProperty SDKVersionSP;
-
-    struct timeval ExpStart;
-    double ExposureRequest;
-    double TemperatureRequest;
-    uint8_t m_ExposureRetry {0};
-
-    ASI_CAMERA_INFO *m_camInfo;
-    std::vector<ASI_CONTROL_CAPS> m_controlCaps;
-
-    int genTimerID;
-
-    // Imaging thread
-    ImageState threadRequest;
-    ImageState threadState;
-
-    //        pthread_t imagingThread;
-    //        pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
-    //        pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
-
-    std::thread imagingThread;
-    std::mutex condMutex;
-    std::condition_variable cv;
-
-    // ST4
-    float WEPulseRequest;
-    struct timeval WEPulseStart;
-    int WEtimerID;
-    ASI_GUIDE_DIRECTION WEDir;
-    const char *WEDirName;
-
-    float NSPulseRequest;
-    struct timeval NSPulseStart;
-    int NStimerID;
-    ASI_GUIDE_DIRECTION NSDir;
-    const char *NSDirName;
-
-    // Camera ROI
-    uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
+    ASI_IMG_TYPE                  mCurrentVideoFormat;
+    std::vector<ASI_CONTROL_CAPS> mControlCaps;
+    ASI_CAMERA_INFO               mCameraInfo;
 };
