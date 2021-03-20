@@ -224,7 +224,8 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
         else if (!strcmp(name, ST4StatusSP.name))
         {
-            bool enabled = (states[0] == ISS_OFF);
+
+            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), ST4StatusS[0].name);
             bool result = setST4Enabled(enabled);
 
             if(result)
