@@ -27,7 +27,7 @@ function createWeatherChart(category, unit, align, min, max, precision) {
         decimalsInFloat: 0,
 	min: min,
         max: max,
-	tickAmount: 6,
+	// tickAmount: 6,
     };
 
     return {chart: chart,
@@ -229,6 +229,10 @@ function init() {
 };
 
 function updateSeries() {
+    // update image
+    var weather_image = document.getElementById('current_weather');
+    weather_image.src = 'media/current_weather.jpg?ts=' + Date.now();
+
     // update last values
     $.get("data/RTdata_lastupdate.json", function(data) {
 
