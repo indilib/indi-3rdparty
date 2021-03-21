@@ -993,7 +993,7 @@ bool ASICCD::activateCooler(bool enable)
 
 bool ASICCD::StartExposure(float duration)
 {
-    mWorker.run(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
+    mWorker.start(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
 
@@ -1034,7 +1034,7 @@ bool ASICCD::StartStreaming()
         }
     }
 #endif
-    mWorker.run(std::bind(&ASICCD::workerStreamVideo, this, std::placeholders::_1));
+    mWorker.start(std::bind(&ASICCD::workerStreamVideo, this, std::placeholders::_1));
     return true;
 }
 
