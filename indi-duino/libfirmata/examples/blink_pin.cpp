@@ -17,7 +17,6 @@
 
 int main(int argc, char **argv)
 {
-    int rv = 0;
     if (argc < 2)
     {
         fprintf(stderr, "Usage: blink_pin <serial port path> [pin]\n");
