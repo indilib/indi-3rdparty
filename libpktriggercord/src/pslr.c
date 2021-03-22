@@ -50,17 +50,14 @@
 #include "pslr.h"
 #include "pslr_scsi.h"
 #include "pslr_lens.h"
+#include "indimacros.h"
+
 
 #define POLL_INTERVAL 50000 /* Number of us to wait when polling */
 #define BLKSZ 65536 /* Block size for downloads; if too big, we get
                      * memory allocation error from sg driver */
 #define BLOCK_RETRY 3 /* Number of retries, since we can occasionally
                        * get SCSI errors when downloading data */
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 void sleep_sec(double sec) {
     int i;

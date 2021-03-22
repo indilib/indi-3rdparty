@@ -1,11 +1,8 @@
 #include "HostIO_TCP.h"
 #include "QSI_Registry.h"
 #include "QSI_Global.h"
+#include "indimacros.h"
 
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 HostIO_TCP::HostIO_TCP(void)
 {

@@ -34,11 +34,6 @@
 #include "indi_shelyakspox_spectrograph.h"
 #include "config.h"
 
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-#define INDI_UNUSED(x) (void)x
-#endif
-
 //const char *SPECTROGRAPH_SETTINGS_TAB = "Spectrograph Settings";
 const char *CALIBRATION_UNIT_TAB = "Calibration Module";
 

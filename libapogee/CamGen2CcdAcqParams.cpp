@@ -15,12 +15,8 @@
 #include "CameraIo.h" 
 #include "CamHelpers.h" 
 #include "ApgLogger.h" 
+#include "indimacros.h"
 #include <sstream>
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 namespace
 {

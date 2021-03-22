@@ -51,11 +51,7 @@
 #include "libfli-sys.h"
 #include "libfli-mem.h"
 #include "libfli-usb.h"
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
+#include "indimacros.h"
 
 #define FLIUSB_MIN_TIMEOUT (5000)
 

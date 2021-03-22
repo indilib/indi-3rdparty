@@ -9,6 +9,8 @@
 #include "QSI_Registry.h"
 #include "QSI_Global.h"
 #include "QSILog.h"
+#include "indimacros.h"
+
 
 #if defined(USELIBFTD2XX) && defined(USELIBFTDIZERO)
 	#error "Multiple FTDI stacks defined.  Use only one of libftdi and libftd2xx"
@@ -22,11 +24,6 @@
 	#pragma message "libftd2xx selected."
 #else
 	#error "No ftdi library selected."
-#endif
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
 #endif
 
 const ULONG QSI_FSVIDPID = 0x0403eb48;

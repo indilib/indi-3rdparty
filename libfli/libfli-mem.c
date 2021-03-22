@@ -53,13 +53,9 @@
 
 #include "libfli-libfli.h"
 #include "libfli-mem.h"
+#include "indimacros.h"
 
 #define DEFAULT_NUM_POINTERS (1024)
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 static struct _mem_ptrs {
   void **pointers;
