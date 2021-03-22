@@ -27,7 +27,7 @@
 #include "indipropertyswitch.h"
 #include "indipropertynumber.h"
 #include "indipropertytext.h"
-#include "singleworker_tmp.h"
+#include "indisinglethreadpool.h"
 
 #include <vector>
 
@@ -81,7 +81,7 @@ private:
     const char *getBayerString() const;
 
 private:
-    Temporary::SingleWorker mWorker;
+    INDI::SingleThreadPool mWorker;
     void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
     void workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration);
     void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
