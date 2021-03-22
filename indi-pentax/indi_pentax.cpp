@@ -60,15 +60,15 @@ void ISInit()
 
 #ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
-        int detectedCameraCount = detectedCameraDevices.size();
+        size_t detectedCameraCount = detectedCameraDevices.size();
         // int registeredSDKCameraCount = registeredSDKCams.size();
 
         // look for SDK supported cameras (PTP mode) first
 		IDLog("Looking for Pentax camera in  PTP mode.\n");
         if (detectedCameraCount > 0) {
-            for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
+            for (size_t i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
                 bool camalreadyregistered = false;
-                for (int j=0; j<registeredSDKCams.size(); j++) {
+                for (size_t j=0; j<registeredSDKCams.size(); j++) {
                     if (detectedCameraDevices[i] == registeredSDKCams[j]) camalreadyregistered = true;
                 }
                 if (!camalreadyregistered) {
