@@ -21,19 +21,4 @@
 #ifndef INDI_PENTAX_H
 #define INDI_PENTAX_H
 
-#define MAX_DEVICES    20   /* Max device cameraCount */
-
-#include "pktriggercord_ccd.h"
-
-#ifndef __aarch64__
-#include "pentax_ccd.h"
-#include "pentax_event_handler.h"
-
-std::vector<std::shared_ptr<CameraDevice>> registeredSDKCams;
-#endif
-
-static int cameraCount = 0;
-static INDI::CCD *cameras[MAX_DEVICES];
-static char logdevicename[14]= "Pentax Driver";
-
 #endif // INDI_PENTAX_H
