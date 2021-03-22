@@ -82,13 +82,10 @@ ShelyakEshel::ShelyakEshel()
 {
     PortFD = -1;
 
-
     setVersion(SHELYAK_ESHEL_VERSION_MAJOR, SHELYAK_ESHEL_VERSION_MINOR);
 }
 
-ShelyakEshel::~ShelyakEshel()
-{
-}
+ShelyakEshel::~ShelyakEshel() {}
 
 /* Returns the name of the device. */
 const char *ShelyakEshel::getDefaultName()
@@ -209,7 +206,7 @@ bool ShelyakEshel::ISNewSwitch(const char *dev, const char *name, ISState *state
                 }
             }
             IUUpdateSwitch(&LampSP, states, names, n); // update lamps
-            IDSetSwitch(&LampSP, nullptr);                // tell clients to update
+            IDSetSwitch(&LampSP, nullptr);             // tell clients to update
             return true;
         }
         else
@@ -242,7 +239,7 @@ bool ShelyakEshel::ISNewText(const char *dev, const char *name, char *texts[], c
         {
             IUUpdateText(&PortTP, texts, names, n); // update port
             PortTP.s = IPS_OK;                      // set state to ok
-            IDSetText(&PortTP, nullptr);               // tell clients to update the port
+            IDSetText(&PortTP, nullptr);            // tell clients to update the port
             return true;
         }
     }
