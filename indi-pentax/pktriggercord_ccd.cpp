@@ -217,12 +217,12 @@ bool PkTriggerCordCCD::Connect()
         LOG_ERROR("Cannot connect to Pentax camera.");
         return false;
     }
-    int r;
-    if (r=pslr_connect(device)) {
-        if ( r != -1 ) {
-            LOG_ERROR("Cannot connect to Pentax camera.");
-        } else {
+    int r = pslr_connect(device);
+    if (r != 0) {
+        if ( r == -1 ) {
             LOG_ERROR("Unknown Pentax camera found.");
+        } else {
+            LOG_ERROR("Cannot connect to Pentax camera.");
         }
         return false;
     }
