@@ -20,6 +20,7 @@
 
 #include "pktriggercord_ccd.h"
 #include "pslr.h"
+#include <indimacros.h>
 
 #define MINISO 100
 #define MAXISO 102400
@@ -496,6 +497,7 @@ void PkTriggerCordCCD::TimerHit()
         std::chrono::milliseconds span (100);
         if ( shutter_result.wait_for(span)!=std::future_status::timeout) {
             bool result = shutter_result.get();
+            INDI_UNUSED(result);
             InDownload = false;
             InExposure = false;
 
