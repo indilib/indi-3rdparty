@@ -44,18 +44,18 @@ public:
     ShelyakEshel();
     ~ShelyakEshel();
 
-    void ISGetProperties(const char *dev);
-    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
+    void ISGetProperties(const char *dev) override;
+    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
 protected:
-    const char *getDefaultName();
+    const char *getDefaultName() override;
 
-    bool initProperties();
-    bool updateProperties();
+    bool initProperties() override;
+    bool updateProperties() override;
 
-    bool Connect();
-    bool Disconnect();
+    bool Connect() override;
+    bool Disconnect() override;
 
 private:
     int PortFD; // file descriptor for serial port
