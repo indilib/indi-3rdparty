@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <map>
 
 #include "indicom.h"
 #include "indi_shelyakeshel_spectrograph.h"
@@ -33,6 +34,18 @@
 
 const char *SPECTROGRAPH_SETTINGS_TAB = "Spectrograph Settings";
 const char *CALIBRATION_UNIT_TAB      = "Calibration Unit";
+
+static std::map<ISState, char> COMMANDS = {
+    { ISS_ON, 0x53 },
+    { ISS_OFF, 0x43 }
+};
+
+static std::map<std::string, char> PARAMETERS = {
+    { "MIRROR", 0x31 },
+    { "LED", 0x32 },
+    { "THAR", 0x33 },
+    { "TUNGSTEN", 0x34 }
+};
 
 std::unique_ptr<ShelyakEshel>
     shelyakEshel(new ShelyakEshel()); // create std:unique_ptr (smart pointer) to  our spectrograph object

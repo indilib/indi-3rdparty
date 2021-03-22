@@ -23,21 +23,9 @@
 #ifndef SHELYAKESHEL_SPECTROGRAPH_H
 #define SHELYAKESHEL_SPECTROGRAPH_H
 
-#include <map>
 
 #include "defaultdevice.h"
 
-std::map<ISState, char> COMMANDS = {
-    { ISS_ON, 0x53 },
-    { ISS_OFF, 0x43 }
-};
-
-std::map<std::string, char> PARAMETERS = {
-    { "MIRROR", 0x31 },
-    { "LED", 0x32 },
-    { "THAR", 0x33 },
-    { "TUNGSTEN", 0x34 }
-};
 class ShelyakEshel : public INDI::DefaultDevice
 {
 public:
