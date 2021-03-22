@@ -32,7 +32,7 @@ static std::vector<std::shared_ptr<CameraDevice>> registeredSDKCams;
 
 static int cameraCount = 0;
 static INDI::CCD *cameras[MAX_DEVICES];
-static char logdevicename[14]= "Pentax Driver";
+// static char logdevicename[14]= "Pentax Driver";
 
 static void cleanup()
 {
@@ -61,7 +61,7 @@ void ISInit()
 #ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
         int detectedCameraCount = detectedCameraDevices.size();
-        int registeredSDKCameraCount = registeredSDKCams.size();
+        // int registeredSDKCameraCount = registeredSDKCams.size();
 
         // look for SDK supported cameras (PTP mode) first
 		IDLog("Looking for Pentax camera in  PTP mode.\n");
@@ -87,7 +87,7 @@ void ISInit()
         pslr_handle_t camhandle = pslr_init(model,device);
         if (camhandle) {
             if (!pslr_connect(camhandle)) {
-                pslr_status status;
+                // pslr_status status;
                 const char *camname = pslr_camera_name(camhandle);
                 bool camalreadyregistered = false;
                 for (int j=0; j<cameraCount; j++) {
