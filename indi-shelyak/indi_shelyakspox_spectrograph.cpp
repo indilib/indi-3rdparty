@@ -30,6 +30,7 @@
 #include <map>
 
 #include "indicom.h"
+#include "indimacros.h"
 #include "indi_shelyakspox_spectrograph.h"
 #include "config.h"
 
@@ -396,6 +397,7 @@ bool ShelyakSpox::calibrationUnitCommand(char command, char parameter)
                 sleep(1); // wait for the calibration unit to actually flip the switch
                 return true;
             }
+            INDI_FALLTHROUGH;
         }
 
         case 0x30:
