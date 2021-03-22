@@ -66,7 +66,7 @@ int Arduino::sendUchar(const unsigned char data)
 int Arduino::sendString(const string datastr)
 {
     int rv = 0;
-    for (int i = 0; i < datastr.size(); i++)
+    for (size_t i = 0; i < datastr.size(); i++)
     {
         unsigned char data = (unsigned char)datastr[i];
 #ifdef DEBUG
