@@ -81,6 +81,8 @@ private:
     ISwitchVectorProperty DeviceSP[n_gpio_pin];
     ISwitch OnOffS[n_gpio_pin][2];
     ISwitchVectorProperty OnOffSP[n_gpio_pin];
+    ISwitch ActiveS[n_gpio_pin][2];
+    ISwitchVectorProperty ActiveSP[n_gpio_pin];
     INumber DutyCycleN[n_gpio_pin][1];
     INumberVectorProperty DutyCycleNP[n_gpio_pin];
 

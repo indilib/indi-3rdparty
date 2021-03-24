@@ -6,6 +6,7 @@ Features:
   - Select device type to determine whether it is On/Off or PWM controlled
   - PWM control in increments of 1%
   - Support for a sequence of timed pulses any pin to control e.g. DSLR shutter and focus/half-shutter
+  - Support for Active Low operation
 
 # Source
 * https://github.com/indilib/indi-3rdparty.git
