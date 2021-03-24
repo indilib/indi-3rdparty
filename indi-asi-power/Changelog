@@ -1,3 +1,9 @@
+v0.94
+* Minor fix to return codes
+
+v0.93
+* Split from pigpiod servce/library
+
 v0.92
 * Fix install for Raspbian - clash with pigpiod
 * Minor fix to messages

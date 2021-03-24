@@ -249,8 +249,6 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                     return false;
                 }
                 IUUpdateNumber(&DutyCycleNP[i],values,names,n);
-                DutyCycleNP[i].s = IPS_OK;
-                IDSetNumber(&DutyCycleNP[i], nullptr);
                 DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to duty cycle %0.0f", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
 
                 // If the device is ON and it is a PWM device then apply the duty cycle
@@ -259,6 +257,8 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                     DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
                     set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                 }
+                DutyCycleNP[i].s = IPS_OK;
+                IDSetNumber(&DutyCycleNP[i], nullptr);
                 return true;
             }
         }
@@ -274,7 +274,6 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
             }
             double intpart;
             IUUpdateNumber(&DslrExpNP,values,names,n);
-            DslrExpNP.s = IPS_OK;
             if(DslrExpN[0].value > 5 && modf(DslrExpN[0].value, &intpart) > 0)
             {
                 DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Duration %0.2f > 5.0 s rounded to nearest integer", DslrExpN[0].value);
@@ -289,8 +288,10 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Delay %0.2f > 5.0 rounded to nearest integer", DslrExpN[2].value);
                 DslrExpN[2].value = round(DslrExpN[2].value);
             }
-            IDSetNumber(&DslrExpNP, nullptr);
             DEBUGF(INDI::Logger::DBG_SESSION, "DSLR Duration %0.2f s Count %0.0f Delay %0.2f s", DslrExpN[0].value, DslrExpN[1].value, DslrExpN[2].value);
+            DslrExpNP.s = IPS_OK;
+            IDSetNumber(&DslrExpNP, nullptr);
+            return true;
         }
     }
     return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
@@ -307,8 +308,6 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
             {
                 IUUpdateSwitch(&DeviceSP[i], states, names, n);
                 m_type[i] = IUFindOnSwitchIndex(&DeviceSP[i]);
-                DeviceSP[i].s = IPS_OK;
-                IDSetSwitch(&DeviceSP[i], NULL);
                 DEBUGF(INDI::Logger::DBG_SESSION, "%s New Type %s", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                 if(dev_pwm[m_type[i]])
                 {
@@ -334,6 +333,9 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     }
                     DEBUGF(INDI::Logger::DBG_SESSION, "%d%% duty cycle set on %s %s", max_pwm_duty, DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
+                DeviceSP[i].s = IPS_OK;
+                IDSetSwitch(&DeviceSP[i], NULL);
+                return true;
             }
             // handle on/off for device i
             if (!strcmp(name, OnOffSP[i].name))
@@ -381,6 +383,9 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     IDSetSwitch(&OnOffSP[i], NULL);
                     return true;
                 }
+                OnOffSP[i].s = IPS_ALERT;
+                IDSetSwitch(&OnOffSP[i], nullptr);
+                return false;
             }
         }
         // Start and stop exposures
