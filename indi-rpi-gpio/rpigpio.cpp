@@ -93,6 +93,7 @@ IndiRpiGpio::IndiRpiGpio()
     std::fill_n(timer_isexp, n_gpio_pin, 0);
     std::fill_n(timer_end, n_gpio_pin, 0);
     std::fill_n(timer_cb, n_gpio_pin, -1);
+
 }
 
 IndiRpiGpio::~IndiRpiGpio()
@@ -103,6 +104,7 @@ IndiRpiGpio::~IndiRpiGpio()
         deleteProperty(LabelTP[i].name);
         deleteProperty(DeviceSP[i].name);
         deleteProperty(OnOffSP[i].name);
+        deleteProperty(ActiveSP[i].name);
         deleteProperty(DutyCycleNP[i].name);
         deleteProperty(TimerOnNP[i].name);
     }
@@ -114,6 +116,7 @@ IndiRpiGpio::~IndiRpiGpio()
             timer_cb[i] = -1;
         }
     }
+    pigpio_stop(m_piId);
 }
 
 int IndiRpiGpio::InitPiModel()
@@ -231,7 +234,6 @@ bool IndiRpiGpio::Disconnect()
             timer_cb[i] = -1;
         }
     }
-    pigpio_stop(m_piId);
     DEBUG(INDI::Logger::DBG_SESSION, "RPi GPIO disconnected successfully.");
     return true;
 }
@@ -258,6 +260,7 @@ bool IndiRpiGpio::initProperties()
     const std::string gpio = "GPIO#";
 
     const std::string onoff = "ONOFF";
+    const std::string active = "ACTIVE";
     const std::string dutyc = "DUTYCYCLE";
     const std::string duration = "DURATION";
     const std::string timedpulse = "TIMEDPULSE";
@@ -278,8 +281,9 @@ bool IndiRpiGpio::initProperties()
         // Label ports 1-4 using i+1 rather than 0-3
         IUFillSwitchVector(&DeviceSP[i], DeviceS[i], n_dev_type, getDeviceName(), (dev +std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), PIN_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-        IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle %", "%0.0f", 0, max_pwm_duty, 1, 0);
-        IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), PIN_TAB, IP_RW, 0, IPS_IDLE);
+        IUFillSwitch(&ActiveS[i][0], (active + std::to_string(i) +"HI").c_str(), "Active High", ISS_ON);
+        IUFillSwitch(&ActiveS[i][1], (active + std::to_string(i) +"LO").c_str(), "Active Low", ISS_OFF);
+        IUFillSwitchVector(&ActiveSP[i], ActiveS[i], 2, getDeviceName(), (active + std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), PIN_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
         IUFillText(&LabelT[i][0], (label + std::to_string(i)).c_str(), "Label", "Device name");
         IUFillTextVector(&LabelTP[i], LabelT[i], 1, getDeviceName(), (label + std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
@@ -287,6 +291,9 @@ bool IndiRpiGpio::initProperties()
         IUFillSwitch(&OnOffS[i][0], (onoff + std::to_string(i) +"OFF").c_str(), "Off", ISS_ON);
         IUFillSwitch(&OnOffS[i][1], (onoff + std::to_string(i) +"ON").c_str(), "On", ISS_OFF);
         IUFillSwitchVector(&OnOffSP[i], OnOffS[i], 2, getDeviceName(), (onoff + std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+        IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle %", "%0.0f", 0, max_pwm_duty, 1, 0);
+        IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), (port +std::to_string(i+1)).c_str(), MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
 
         IUFillNumber(&TimerOnN[i][0], (duration + std::to_string(i)).c_str(), "Duration (s)", "%1.1f", 0, 3600, 1, 1);
         IUFillNumber(&TimerOnN[i][1], (count + std::to_string(i)).c_str(), "Count", "%0.0f", 1, 500, 1, 1);
@@ -312,6 +319,7 @@ bool IndiRpiGpio::updateProperties()
             defineProperty(&DeviceSP[i]);
             defineProperty(&OnOffSP[i]);
             defineProperty(&DutyCycleNP[i]);
+            defineProperty(&ActiveSP[i]);
             defineProperty(&TimerOnNP[i]);
         }
     }
@@ -324,6 +332,7 @@ bool IndiRpiGpio::updateProperties()
             deleteProperty(LabelTP[i].name);
             deleteProperty(DeviceSP[i].name);
             deleteProperty(OnOffSP[i].name);
+            deleteProperty(ActiveSP[i].name);
             deleteProperty(DutyCycleNP[i].name);
             deleteProperty(TimerOnNP[i].name);
         }
@@ -406,7 +415,8 @@ bool IndiRpiGpio::ISNewNumber (const char *dev, const char *name, double values[
                 if(OnOffS[i][1].s == ISS_ON && dev_pwm[m_type[i]])
                 {
                     DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d PWM ON with duty cycle %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i], DutyCycleN[i][0].value);
-                    set_PWM_dutycycle(m_piId, m_gpio_pin[i], DutyCycleN[i][0].value);
+                    // If Active LOW then the duty cycle is the complement of the Active HIGH 
+                    set_PWM_dutycycle(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? DutyCycleN[i][0].value: max_pwm_duty - DutyCycleN[i][0].value);
                 }
                 DutyCycleNP[i].s = IPS_OK;
                 IDSetNumber(&DutyCycleNP[i], nullptr);
@@ -424,7 +434,8 @@ bool IndiRpiGpio::ISNewNumber (const char *dev, const char *name, double values[
                     return false;
                 }
                 // cannot alter exposure on a non-timer device -except to maximum
-                if(!dev_timer[m_type[i]])
+                //FIXME error only of exposure changes
+                if(!dev_timer[m_type[i]] && TimerOnN[i][0].value != values[0])
                 {
                     TimerOnNP[i].s = IPS_ALERT;
                     IDSetNumber(&TimerOnNP[i], nullptr);
@@ -492,7 +503,7 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
 
 // Look for the selected GPIO amongst the assigned GPIOs
                 int found = FindPinIndex(l_gpio_pin);
-                if (found >= 0 && l_gpio_pin >= 0)
+                if (found >= 0 && found != i && l_gpio_pin >= 0)
                 {
                     GpioPinSP[i].s = IPS_ALERT;
                     IDSetSwitch(&GpioPinSP[i], nullptr);
@@ -510,18 +521,20 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                         timer_cb[i] = -1;
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d timer cancelled", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
                     }
-                    if(dev_pwm[m_type[i]])     // Cancel the PWM on the old pin (not really needed if turned off)
+                    if(dev_pwm[m_type[i]])     // Cancel the PWM on the old pin (not really needed if switched off)
                     {
-                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], 0);
+                    // If Active LOW then the duty cycle is the complement of the Active HIGH 
+                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? 0: max_pwm_duty);
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d PWM disabled", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
                     }
-                    if(m_type[i] > 0)          // Turn off the old pin (not really needed if turned off)
+                    if(m_type[i] > 0)          // Switch off the old pin (not really needed if switched off)
                     {
-                        gpio_write(m_piId, m_gpio_pin[i], PI_LOW);
+                        gpio_write(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH);
                     }
 
                     m_gpio_pin[i] = l_gpio_pin;
-                    set_pull_up_down(m_piId, m_gpio_pin[i], PI_PUD_DOWN);
+                    set_pull_up_down(m_piId, m_gpio_pin[i], PI_PUD_DOWN);  // Ensure Pull Up/Down set to Pull Down
+                    gpio_write(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH);  // Assume OFF
                     if(dev_timer[m_type[i]])   // Create a timer on the new pin
                     {
                         if(m_gpio_pin[i] >= 0 && timer_cb[i] < 0)
@@ -573,7 +586,8 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                     }
                     if(dev_pwm[m_type[i]] && !dev_pwm[l_type])         // Cancel the PWM
                     {
-                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], 0);
+                    // If Active LOW then the duty cycle is the complement of the Active HIGH 
+                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? 0: max_pwm_duty);
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d PWM disabled", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
                     }
                     m_type[i] = l_type;
@@ -601,7 +615,7 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                             OnOffS[i][0].s = ISS_ON;          // Switch off if type None
                             OnOffS[i][1].s = ISS_OFF;         // Switch off if type None
                             IDSetSwitch(&OnOffSP[i], NULL);
-                            gpio_write(m_piId, m_gpio_pin[i], PI_LOW);
+                            gpio_write(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH);
                             DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d set", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
                         }
                     }
@@ -618,7 +632,7 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                 {
                     OnOffSP[i].s = IPS_ALERT;
                     IDSetSwitch(&OnOffSP[i], NULL);
-                    DEBUGF(INDI::Logger::DBG_ERROR, "%s type %s GPIO# %d cannot turn on when not in use", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "%s type %s GPIO# %d cannot switch on when not in use", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
                     return false;
                 }
                 IUUpdateSwitch(&OnOffSP[i], states, names, n);
@@ -629,8 +643,8 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                     {
                         if(!dev_timer[m_type[i]])
                         {
-                            DEBUGF(INDI::Logger::DBG_SESSION, "%s %s GPIO# %d set to OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
-                            gpio_write(m_piId, m_gpio_pin[i], PI_LOW);
+                            DEBUGF(INDI::Logger::DBG_SESSION, "%s %s GPIO# %d set to OFF (%s)", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? "LO": "HI");
+                            gpio_write(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH );
                         }
                         else
                         {
@@ -643,7 +657,8 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                     else
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d PWM OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
-                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], 0);
+                    // If Active LOW then the duty cycle is the complement of the Active HIGH 
+                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? 0: max_pwm_duty);
                     }
                     OnOffSP[i].s = IPS_IDLE;
                     IDSetSwitch(&OnOffSP[i], NULL);
@@ -656,8 +671,8 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                     {
                         if(!dev_timer[m_type[i]])
                         {
-                            DEBUGF(INDI::Logger::DBG_SESSION, "%s %s GPIO# %d set to ON", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
-                            gpio_write(m_piId, m_gpio_pin[i], PI_HIGH);
+                            DEBUGF(INDI::Logger::DBG_SESSION, "%s %s GPIO# %d set to ON (%s)", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? "HI": "LO");
+                            gpio_write(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? PI_HIGH: PI_LOW);
                         }
                         else
                         {
@@ -670,10 +685,53 @@ bool IndiRpiGpio::ISNewSwitch (const char *dev, const char *name, ISState *state
                     else
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s GPIO# %d PWM ON with duty cycle %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i], DutyCycleN[i][0].value);
-                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], DutyCycleN[i][0].value);
+                    // If Active LOW then the duty cycle is the complement of the Active HIGH 
+                        set_PWM_dutycycle(m_piId, m_gpio_pin[i], (ActiveS[i][0].s == ISS_ON)? DutyCycleN[i][0].value: max_pwm_duty - DutyCycleN[i][0].value);
                     }
                     OnOffSP[i].s = IPS_OK;
                     IDSetSwitch(&OnOffSP[i], NULL);
+                    return true;
+                }
+            }
+            // handle active Hi/Lo for device i
+            if (!strcmp(name, ActiveSP[i].name))
+            {
+                // If the device is ON do not allow changes
+                if(OnOffS[i][1].s == ISS_ON)
+                {
+                    ActiveSP[i].s = IPS_ALERT;
+                    IDSetSwitch(&ActiveSP[i], nullptr);
+                    DEBUGF(INDI::Logger::DBG_ERROR, "%s type %s GPIO# %d Parity cannot be changed while device is ON", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i] );
+                    return false;
+                }
+//                // verify a valid device - not of type None
+//                if(m_type[i] == 0)
+//                {
+//                    ActiveSP[i].s = IPS_ALERT;
+//                    IDSetSwitch(&ActiveSP[i], NULL);
+//                    DEBUGF(INDI::Logger::DBG_ERROR, "%s type %s GPIO# %d cannot set active parity when not in use", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
+//                    return false;
+//                }
+                IUUpdateSwitch(&ActiveSP[i], states, names, n);
+                
+                // Set Active High
+                if ( ActiveS[i][0].s == ISS_ON )
+                {
+//                    set_pull_up_down(m_piId, m_gpio_pin[i], PI_PUD_DOWN);
+                    gpio_write(m_piId, m_gpio_pin[i], PI_LOW );    // Assumed in OFF state
+                    ActiveSP[i].s = IPS_OK;
+                    IDSetSwitch(&ActiveSP[i], NULL);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d parity is active HIGH", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
+                    return true;
+                }
+                // Seet Active Low
+                if ( ActiveS[i][1].s == ISS_ON )
+                {
+//                    set_pull_up_down(m_piId, m_gpio_pin[i], PI_PUD_UP);
+                    gpio_write(m_piId, m_gpio_pin[i], PI_HIGH );   // Assumed in OFF state
+                    ActiveSP[i].s = IPS_OK;
+                    IDSetSwitch(&ActiveSP[i], NULL);
+                    DEBUGF(INDI::Logger::DBG_SESSION, "%s type %s GPIO# %d parity is active LOW", DeviceSP[i].label, dev_type[m_type[i]].c_str(), m_gpio_pin[i]);
                     return true;
                 }
             }
@@ -697,6 +755,7 @@ bool IndiRpiGpio::saveConfigItems(FILE *fp)
         IUSaveConfigText(fp, &LabelTP[i]);
         IUSaveConfigSwitch(fp, &DeviceSP[i]);
         IUSaveConfigSwitch(fp, &OnOffSP[i]);
+        IUSaveConfigSwitch(fp, &ActiveSP[i]);
         IUSaveConfigNumber(fp, &DutyCycleNP[i]);
         IUSaveConfigNumber(fp, &TimerOnNP[i]);
     }
@@ -705,9 +764,9 @@ bool IndiRpiGpio::saveConfigItems(FILE *fp)
 
 void IndiRpiGpio::TimerChange(unsigned user_gpio, bool isInit, bool abort)
 {
-    gpio_write(m_piId, user_gpio, PI_LOW);
-    set_watchdog(m_piId, user_gpio, 0);
     int i = FindPinIndex(user_gpio);
+    gpio_write(m_piId, user_gpio, (ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH);
+    set_watchdog(m_piId, user_gpio, 0);
     if(i < 0 || !dev_timer[m_type[i]])
     {
         DEBUGF(INDI::Logger::DBG_ERROR, "TimerChange: Invalid GPIO or not timed %lu", user_gpio);
@@ -752,7 +811,7 @@ void IndiRpiGpio::TimerChange(unsigned user_gpio, bool isInit, bool abort)
     if (l_duration > 0) // non-zero duration
     {
         if(l_duration > max_timer_ms) l_duration = max_timer_ms;
-        gpio_write(m_piId, user_gpio, timer_isexp[i] ? PI_HIGH: PI_LOW);
+        gpio_write(m_piId, user_gpio, timer_isexp[i] ? ((ActiveS[i][0].s == ISS_ON)? PI_HIGH: PI_LOW): ((ActiveS[i][0].s == ISS_ON)? PI_LOW: PI_HIGH));
         set_watchdog(m_piId, user_gpio, l_duration);
         DEBUGF(INDI::Logger::DBG_DEBUG, "Timer START %s timer: Last tick %lu ms End tick %lu ms", timer_isexp[i] ? "Expose":"Delay", timer_last[i]/1000, timer_end[i]/1000);
         DEBUGF(INDI::Logger::DBG_SESSION, "Timer START %s timer: Duration %d ms", timer_isexp[i] ? "Expose":"Delay", l_duration);
