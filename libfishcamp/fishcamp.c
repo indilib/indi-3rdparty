@@ -1970,7 +1970,7 @@ void fcUsb_init(void)
 #if LIBUSB_API_VERSION >= 0x01000106
     libusb_set_option(gCtx, LIBUSB_OPTION_LOG_LEVEL, 3);
 #else
-    libusb_set_debug(ctx, loglevel);
+    libusb_set_debug(gCtx, 3);
 #endif
 
     if (!gFWInitialized)
