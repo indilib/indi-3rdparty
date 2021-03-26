@@ -979,6 +979,8 @@ bool ASICCD::activateCooler(bool enable)
     {
         CoolerSP.setState(IPS_ALERT);
         LOGF_ERROR("Failed to activate cooler (%s).", Helpers::toString(ret));
+        CoolerSP.apply();
+        return false;
     }
     else
     {
@@ -988,7 +990,7 @@ bool ASICCD::activateCooler(bool enable)
     }
     CoolerSP.apply();
 
-    return ret;
+    return true;
 }
 
 bool ASICCD::StartExposure(float duration)
