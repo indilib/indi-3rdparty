@@ -975,13 +975,15 @@ bool EQMod::ReadScopeStatus()
             fs_sexa(AlignedDEString, alignedDEC, 2, 3600);
             fs_sexa(AZString, horizvalues[0], 2, 3600);
             fs_sexa(ALString, horizvalues[1], 2, 3600);
-            LOGF_DEBUG("Scope RA (%s) DE (%s) Aligned RA (%s) DE (%s) AZ (%s) ALT (%s)",
+
+            LOGF_DEBUG("Scope RA (%s) DE (%s) Aligned RA (%s) DE (%s) AZ (%s) ALT (%s), PierSide (%s)",
                        CurrentRAString,
                        CurrentDEString,
                        AlignedRAString,
                        AlignedDEString,
                        AZString,
-                       ALString);
+                       ALString,
+                       pierSide == PIER_EAST ? "East" : (pierSide == PIER_WEST ? "West" : "Uknown"));
         }
 
         if (mount->HasAuxEncoders())
