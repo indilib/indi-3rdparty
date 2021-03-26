@@ -65,86 +65,87 @@ static ASI_ERROR_CODE _ASIGetCameraProperty(ASI_CAMERA_INFO *pASICameraInfo, int
 
 static class Loader
 {
-    INDI::Timer hotPlugTimer;
-    std::map<int, std::shared_ptr<ASICCD>> cameras;
-public:
-    Loader()
-    {
-        load(false);
-
-        hotPlugTimer.start(1000);
-        hotPlugTimer.callOnTimeout([&]{
-            if (getCountOfConnectedCameras() != cameras.size())
-            {
-                load(true);
-            }
-        });
-    }
-
-public:
-    static size_t getCountOfConnectedCameras()
-    {
-        return size_t(std::max(_ASIGetNumOfConnectedCameras(), 0));
-    }
-
-    static std::vector<ASI_CAMERA_INFO> getConnectedCameras()
-    {
-        std::vector<ASI_CAMERA_INFO> result(getCountOfConnectedCameras());
-        int i = 0;
-        for(auto &cameraInfo: result)
-            _ASIGetCameraProperty(&cameraInfo, i++);
-        return result;
-    }
-
-public:
-    void load(bool isHotPlug)
-    {
-        auto usedCameras = std::move(cameras);
-
-        UniqueName uniqueName(usedCameras);
-
-        for(const auto &cameraInfo: getConnectedCameras())
-        {
-            int id = cameraInfo.CameraID;
-
-            // camera already created
-            if (usedCameras.find(id) != usedCameras.end())
-            {
-                std::swap(cameras[id], usedCameras[id]);
-                continue;
-            }
-
-            ASICCD *asiCcd = new ASICCD(cameraInfo, uniqueName.make(cameraInfo));
-            cameras[id] = std::shared_ptr<ASICCD>(asiCcd);
-            if (isHotPlug)
-                asiCcd->ISGetProperties(nullptr);
-        }
-    }
-
-public:
-    class UniqueName
-    {
-        std::map<std::string, bool> used;
+        INDI::Timer hotPlugTimer;
+        std::map<int, std::shared_ptr<ASICCD>> cameras;
     public:
-        UniqueName() = default;
-        UniqueName(const std::map<int, std::shared_ptr<ASICCD>> &usedCameras)
+        Loader()
         {
-            for (const auto &camera: usedCameras)
-                used[camera.second->getDeviceName()] = true;
+            load(false);
+
+            hotPlugTimer.start(1000);
+            hotPlugTimer.callOnTimeout([&]
+            {
+                if (getCountOfConnectedCameras() != cameras.size())
+                {
+                    load(true);
+                }
+            });
         }
 
-        std::string make(const ASI_CAMERA_INFO &cameraInfo)
+    public:
+        static size_t getCountOfConnectedCameras()
         {
-            std::string cameraName = "ZWO CCD " + std::string(cameraInfo.Name + 4);
-            std::string uniqueName = cameraName;
-
-            for (int index = 0; used[uniqueName] == true; )
-                uniqueName = cameraName + " " + std::to_string(++index);
-
-            used[uniqueName] = true;
-            return uniqueName;
+            return size_t(std::max(_ASIGetNumOfConnectedCameras(), 0));
         }
-    };
+
+        static std::vector<ASI_CAMERA_INFO> getConnectedCameras()
+        {
+            std::vector<ASI_CAMERA_INFO> result(getCountOfConnectedCameras());
+            int i = 0;
+            for(auto &cameraInfo : result)
+                _ASIGetCameraProperty(&cameraInfo, i++);
+            return result;
+        }
+
+    public:
+        void load(bool isHotPlug)
+        {
+            auto usedCameras = std::move(cameras);
+
+            UniqueName uniqueName(usedCameras);
+
+            for(const auto &cameraInfo : getConnectedCameras())
+            {
+                int id = cameraInfo.CameraID;
+
+                // camera already created
+                if (usedCameras.find(id) != usedCameras.end())
+                {
+                    std::swap(cameras[id], usedCameras[id]);
+                    continue;
+                }
+
+                ASICCD *asiCcd = new ASICCD(cameraInfo, uniqueName.make(cameraInfo));
+                cameras[id] = std::shared_ptr<ASICCD>(asiCcd);
+                if (isHotPlug)
+                    asiCcd->ISGetProperties(nullptr);
+            }
+        }
+
+    public:
+        class UniqueName
+        {
+                std::map<std::string, bool> used;
+            public:
+                UniqueName() = default;
+                UniqueName(const std::map<int, std::shared_ptr<ASICCD>> &usedCameras)
+                {
+                    for (const auto &camera : usedCameras)
+                        used[camera.second->getDeviceName()] = true;
+                }
+
+                std::string make(const ASI_CAMERA_INFO &cameraInfo)
+                {
+                    std::string cameraName = "ZWO CCD " + std::string(cameraInfo.Name + 4);
+                    std::string uniqueName = cameraName;
+
+                    for (int index = 0; used[uniqueName] == true; )
+                        uniqueName = cameraName + " " + std::to_string(++index);
+
+                    used[uniqueName] = true;
+                    return uniqueName;
+                }
+        };
 } loader;
 
 const char *ASICCD::getBayerString() const
@@ -364,7 +365,8 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
             PrimaryCCD.setExposureFailed();
             return;
         }
-    } while (status != ASI_EXP_SUCCESS);
+    }
+    while (status != ASI_EXP_SUCCESS);
 
     PrimaryCCD.setExposureLeft(0.0);
     if (PrimaryCCD.getExposureDuration() > 3)
@@ -421,14 +423,14 @@ bool ASICCD::initProperties()
     IUSaveText(&BayerT[2], getBayerString());
 
     ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, mCameraInfo.BitDepth);
-    ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60,IPS_IDLE);
+    ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     SDKVersionSP[0].fill("VERSION", "Version", ASIGetSDKVersion());
     SDKVersionSP.fill(getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     int maxBin = 1;
 
-    for (const auto &supportedBin: mCameraInfo.SupportedBins)
+    for (const auto &supportedBin : mCameraInfo.SupportedBins)
     {
         if (supportedBin != 0)
             maxBin = supportedBin;
@@ -784,7 +786,8 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                     continue;
 
                 LOGF_DEBUG("Setting %s=%.2f...", ControlNP[i].getLabel(), ControlNP[i].getValue());
-                ret = ASISetControlValue(mCameraInfo.CameraID, numCtrlCap->ControlType, static_cast<long>(ControlNP[i].getValue()), ASI_FALSE);
+                ret = ASISetControlValue(mCameraInfo.CameraID, numCtrlCap->ControlType, static_cast<long>(ControlNP[i].getValue()),
+                                         ASI_FALSE);
                 if (ret != ASI_SUCCESS)
                 {
                     LOGF_ERROR("Failed to set %s=%g (%s).", ControlNP[i].getName(), ControlNP[i].getValue(), Helpers::toString(ret));
@@ -798,7 +801,8 @@ bool ASICCD::ISNewNumber(const char *dev, const char *name, double values[], cha
                 // If it was set to numCtrlCap->IsAutoSupported value to turn it off
                 if (numCtrlCap->IsAutoSupported)
                 {
-                    auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch &it) -> bool {
+                    auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch & it) -> bool
+                    {
                         return static_cast<const ASI_CONTROL_CAPS *>(it.getAux())->ControlType == numCtrlCap->ControlType;
                     });
 
@@ -925,13 +929,13 @@ bool ASICCD::setVideoFormat(uint8_t index)
 
     switch (getImageType())
     {
-    case ASI_IMG_RAW16:
-        PrimaryCCD.setBPP(16);
-        break;
+        case ASI_IMG_RAW16:
+            PrimaryCCD.setBPP(16);
+            break;
 
-    default:
-        PrimaryCCD.setBPP(8);
-        break;
+        default:
+            PrimaryCCD.setBPP(8);
+            break;
     }
 
     // When changing video format, reset frame
@@ -968,7 +972,7 @@ int ASICCD::SetTemperature(double temperature)
 
     // Otherwise, we set the temperature request and we update the status in TimerHit() function.
     mTargetTemperature = temperature;
-    LOGF_INFO("Setting CCD temperature to %+06.2f C.", temperature);
+    LOGF_INFO("Setting temperature to %.2f C.", temperature);
     return 0;
 }
 
@@ -988,7 +992,7 @@ bool ASICCD::activateCooler(bool enable)
     }
     CoolerSP.apply();
 
-    return ret;
+    return (ret == ASI_SUCCESS);
 }
 
 bool ASICCD::StartExposure(float duration)
@@ -999,7 +1003,7 @@ bool ASICCD::StartExposure(float duration)
 
 bool ASICCD::AbortExposure()
 {
-    LOG_DEBUG("Aborting camera exposure...");
+    LOG_DEBUG("Aborting exposure...");
 
     mWorker.quit();
 
@@ -1081,7 +1085,7 @@ bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
     subW -= subW % 8;
     subH -= subH % 2;
 
-    LOGF_DEBUG("CCD Frame ROI x:%d y:%d w:%d h:%d", subX, subY, subW, subH);
+    LOGF_DEBUG("Frame ROI x:%d y:%d w:%d h:%d", subX, subY, subW, subH);
 
     ASI_ERROR_CODE ret;
 
@@ -1252,8 +1256,8 @@ void ASICCD::temperatureTimerTimeout()
         if (CoolerSP[0].getState() == ISS_ON)
         {
             newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
-                     ? IPS_OK
-                     : IPS_BUSY;
+                       ? IPS_OK
+                       : IPS_BUSY;
         }
     }
 
@@ -1292,14 +1296,14 @@ IPState ASICCD::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir
 
     LOGF_DEBUG("Starting %s guide for %f ms.", Helpers::toString(dir), ms);
 
-    timer.callOnTimeout([this, dir]{
+    timer.callOnTimeout([this, dir]
+    {
         ASIPulseGuideOff(mCameraInfo.CameraID, dir);
         LOGF_DEBUG("Stopped %s guide.", Helpers::toString(dir));
 
         if (dir == ASI_GUIDE_NORTH || dir == ASI_GUIDE_SOUTH)
             GuideComplete(AXIS_DE);
-        else
-        if (dir == ASI_GUIDE_EAST || dir == ASI_GUIDE_WEST)
+        else if (dir == ASI_GUIDE_EAST || dir == ASI_GUIDE_WEST)
             GuideComplete(AXIS_RA);
     });
 
@@ -1349,11 +1353,14 @@ void ASICCD::createControls(int piNumberOfControls)
     ControlNP.resize(0);
     ControlSP.resize(0);
 
-    try {
+    try
+    {
         mControlCaps.resize(piNumberOfControls);
         ControlNP.reserve(piNumberOfControls);
         ControlSP.reserve(piNumberOfControls);
-    } catch(const std::bad_alloc&) {
+    }
+    catch(const std::bad_alloc &)
+    {
         IDLog("Failed to allocate memory.");
         return;
     }
@@ -1455,7 +1462,8 @@ void ASICCD::updateControls()
 
         num.setValue(value);
 
-        auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch &it) -> bool {
+        auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch & it) -> bool
+        {
             return static_cast<const ASI_CONTROL_CAPS *>(it.getAux())->ControlType == numCtrlCap->ControlType;
         });
 
