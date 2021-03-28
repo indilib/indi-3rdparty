@@ -1,5 +1,5 @@
 # INDI 3rd Party Drivers
-[![CircleCI](https://circleci.com/gh/indilib/indi.svg?style=svg)](https://circleci.com/gh/indilib/indi)
+[![INDI 3rd Party](https://github.com/indilib/indi-3rdparty/actions/workflows/default.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
 
 INDI 3rd party drivers include all the drivers not included by default in the INDI Core Library.
 
