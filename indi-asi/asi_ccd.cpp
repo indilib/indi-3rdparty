@@ -368,6 +368,8 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
     }
     while (status != ASI_EXP_SUCCESS);
 
+    // Reset exposure retry
+    mExposureRetry = 0;
     PrimaryCCD.setExposureLeft(0.0);
     if (PrimaryCCD.getExposureDuration() > 3)
         LOG_INFO("Exposure done, downloading image...");
@@ -997,6 +999,7 @@ bool ASICCD::activateCooler(bool enable)
 
 bool ASICCD::StartExposure(float duration)
 {
+    mExposureRetry = 0;
     mWorker.start(std::bind(&ASICCD::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
