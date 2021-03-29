@@ -251,8 +251,8 @@ bool PentaxCCD::StartExposure(float duration)
                 return false;
             }
         }
-        catch (std::runtime_error e){
-            LOGF_ERROR("runtime_error: %s",e.what());
+        catch (const std::runtime_error &e){
+            LOGF_ERROR("runtime_error: %s", e.what());
             InExposure = false;
             return false;
         }

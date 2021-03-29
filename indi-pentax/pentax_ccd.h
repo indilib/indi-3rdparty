@@ -22,7 +22,12 @@
 #define PENTAX_CCD_H
 
 #include <indiccd.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <ricoh_camera_sdk.hpp>
+#pragma GCC diagnostic pop
+
 #include <stream/streammanager.h>
 
 #include "config.h"

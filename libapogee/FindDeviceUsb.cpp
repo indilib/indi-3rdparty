@@ -20,17 +20,13 @@
 #include "helpers.h"
 #include "CameraInfo.h" 
 #include "CamHelpers.h"  // for vids and pids
+#include "indimacros.h"
 
 
 #if defined (WIN_OS)
     #include "windozeHelpers.h" 
 #else
     #include "linux/linuxHelpers.h"
-#endif
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
 #endif
 
 //////////////////////////// 

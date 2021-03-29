@@ -49,11 +49,7 @@
 #include "libfli-debug.h"
 #include "libfli-mem.h"
 #include "libfli-raw.h"
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
+#include "indimacros.h"
 
 long fli_raw_open(flidev_t dev)
 {

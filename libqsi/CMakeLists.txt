@@ -9,7 +9,8 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 SET(CMAKE_CXX_STANDARD 11)
 
-FIND_PACKAGE(FTDI1 REQUIRED)
+find_package(FTDI1 REQUIRED)
+find_package(INDI REQUIRED)
 
 SET(PACKAGE_VERSION "7.6.1")
 
@@ -20,6 +21,7 @@ ADD_DEFINITIONS(-DUSELIBFTDIONE -DNO_CYUSB -Wall -O2 -fPIC -g -fpermissive)
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${FTDI1_INCLUDE_DIR})
+include_directories( ${INDI_INCLUDE_DIR})
 
 set(qsi_LIB_SRCS
     CCDCamera.cpp CameraID.cpp ConvertUTF.c Filter.cpp FilterWheel.cpp HotPixelMap.cpp QSI_PacketWrapper.cpp QSI_USBWrapper.cpp qsiapi.cpp qsicopyright.txt QSIFeatures.cpp

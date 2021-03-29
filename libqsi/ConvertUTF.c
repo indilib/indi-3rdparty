@@ -40,6 +40,8 @@
 /*@suppress("No break at end of case")*/
 
 #include "ConvertUTF.h"
+#include "indimacros.h"
+
 #ifdef CVTUTF_DEBUG
 #include <stdio.h>
 #endif
@@ -55,41 +57,6 @@ static const UTF32 halfMask = 0x3FFUL;
 #define UNI_SUR_LOW_END     (UTF32)0xDFFF
 #define false	   0
 #define true	    1
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_HAS_CPP_ATTRIBUTE
-# ifdef __has_cpp_attribute
-#   define INDI_HAS_CPP_ATTRIBUTE(x)  __has_cpp_attribute(x)
-# else
-#   define INDI_HAS_CPP_ATTRIBUTE(x)  0
-# endif
-#endif
-
-#ifndef INDI_HAS_ATTRIBUTE
-# ifdef __has_attribute
-#   define INDI_HAS_ATTRIBUTE(x)      __has_attribute(x)
-# else
-#   define INDI_HAS_CPP_ATTRIBUTE(x)   0
-# endif
-#endif
-
-#ifndef INDI_FALLTHROUGH
-# if defined(__cplusplus)
-#  if INDI_HAS_CPP_ATTRIBUTE(clang::fallthrough)
-#   define INDI_FALLTHROUGH [[clang::fallthrough]]
-#  elif INDI_HAS_CPP_ATTRIBUTE(gnu::fallthrough)
-#   define INDI_FALLTHROUGH [[gnu::fallthrough]]
-#  elif INDI_HAS_CPP_ATTRIBUTE(fallthrough)
-#   define INDI_FALLTHROUGH [[fallthrough]]
-#  endif
-# else
-#  if INDI_HAS_ATTRIBUTE(fallthrough)
-#   define INDI_FALLTHROUGH __attribute__((fallthrough))
-#  else
-#   define INDI_FALLTHROUGH do {} while (0)
-#  endif
-# endif
-#endif
 
 /* --------------------------------------------------------------------- */
 

@@ -48,11 +48,7 @@
 #include "libfli-libfli.h"
 #include "libfli-mem.h"
 #include "libfli-debug.h"
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
+#include "indimacros.h"
 
 static long devalloc(flidev_t *dev);
 static long devfree(flidev_t dev);

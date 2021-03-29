@@ -20,6 +20,7 @@
 
 #include "pktriggercord_ccd.h"
 #include "pslr.h"
+#include <indimacros.h>
 
 #define MINISO 100
 #define MAXISO 102400
@@ -217,12 +218,12 @@ bool PkTriggerCordCCD::Connect()
         LOG_ERROR("Cannot connect to Pentax camera.");
         return false;
     }
-    int r;
-    if (r=pslr_connect(device)) {
-        if ( r != -1 ) {
-            LOG_ERROR("Cannot connect to Pentax camera.");
-        } else {
+    int r = pslr_connect(device);
+    if (r != 0) {
+        if ( r == -1 ) {
             LOG_ERROR("Unknown Pentax camera found.");
+        } else {
+            LOG_ERROR("Cannot connect to Pentax camera.");
         }
         return false;
     }
@@ -496,6 +497,7 @@ void PkTriggerCordCCD::TimerHit()
         std::chrono::milliseconds span (100);
         if ( shutter_result.wait_for(span)!=std::future_status::timeout) {
             bool result = shutter_result.get();
+            INDI_UNUSED(result);
             InDownload = false;
             InExposure = false;
 

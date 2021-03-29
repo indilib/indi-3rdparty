@@ -64,15 +64,11 @@
 #include "libfli-parport.h"
 #include "libfli-usb.h"
 #include "libfli-serial.h"
+#include "indimacros.h"
 
 static long unix_fli_list_parport(flidomain_t domain, char ***names);
 static long unix_fli_list_usb(flidomain_t domain, char ***names);
 static long unix_fli_list_serial(flidomain_t domain, char ***names);
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 long unix_fli_connect(flidev_t dev, char *name, long domain)
 {

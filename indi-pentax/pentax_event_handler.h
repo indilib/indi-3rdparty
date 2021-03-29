@@ -21,7 +21,11 @@
 #ifndef PENTAXEVENTLISTENER_H
 #define PENTAXEVENTLISTENER_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <ricoh_camera_sdk.hpp>
+#pragma GCC diagnostic pop
+
 #include <stream/streammanager.h>
 #include <regex>
 

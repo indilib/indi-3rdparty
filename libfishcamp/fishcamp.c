@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "fishcamp.h"
+#include "indimacros.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -46,11 +47,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <libusb-1.0/libusb.h>
 
 #define MAXRBUF 512
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 // globals
 struct libusb_context *gCtx;

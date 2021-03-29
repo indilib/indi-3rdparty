@@ -31,53 +31,46 @@
 //00\n : shut off all
 
 //
-#include <map>
+
 #include <indiapi.h>
 #include "defaultdevice.h"
-
-std::map<ISState, char> COMMANDS = {
-  {ISS_ON, 0x31}, {ISS_OFF, 0x30}    //"1" and "0"
-};
-std::map<std::string, char> PARAMETERS = {
-  {"SKY", 0x30}, {"CALIBRATION", 0x31}, {"FLAT", 0x32}, {"DARK", 0x33} //"0","1", "2", "3"
-};
 
 class ShelyakSpox : public INDI::DefaultDevice
 {
 public:
-  ShelyakSpox();
-  ~ShelyakSpox();
+    ShelyakSpox();
+    ~ShelyakSpox();
 
-  void ISGetProperties (const char *dev);
-  bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
-  bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
+    void ISGetProperties(const char *dev) override;
+    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
 protected:
-  const char *getDefaultName();
+    const char *getDefaultName() override;
 
-  bool initProperties();
-  bool updateProperties();
+    bool initProperties() override;
+    bool updateProperties() override;
 
-  bool Connect();
-  bool Disconnect();
+    bool Connect() override;
+    bool Disconnect() override;
 
 private:
-  int PortFD; // file descriptor for serial port
+    int PortFD; // file descriptor for serial port
 
-  // Main Control
-  ISwitchVectorProperty LampSP;
-  ISwitch LampS[4];
+    // Main Control
+    ISwitchVectorProperty LampSP;
+    ISwitch LampS[4];
 
-  // Options
-  ITextVectorProperty PortTP;
-  IText PortT[1] {};
+    // Options
+    ITextVectorProperty PortTP;
+    IText PortT[1]{};
 
-  // Spectrograph Settings
-  INumberVectorProperty SettingsNP;
-  INumber SettingsN[2];
+    // Spectrograph Settings
+    INumberVectorProperty SettingsNP;
+    INumber SettingsN[2];
 
-  bool calibrationUnitCommand(char command, char parameter);
-  bool resetLamps();
+    bool calibrationUnitCommand(char command, char parameter);
+    bool resetLamps();
 };
 
 #endif // SHELYAKSPOX_SPECTROGRAPH_H
