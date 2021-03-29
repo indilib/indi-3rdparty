@@ -17,7 +17,7 @@ jobs:
         container: ["ubuntu", "debian", "fedora"]
 
     container:
-      image: ghcr.io/${{ github.repository_owner }}/${{ matrix.container }}
+      image: ghcr.io/indilib/${{ matrix.container }}
 
     steps:
       - name: Get INDI 3rd Party Sources
@@ -28,7 +28,7 @@ jobs:
       - name: Get INDI Core Package
         uses: dawidd6/action-download-artifact@v2
         with:
-          repo: ${{ github.repository_owner }}/indi
+          repo: indilib/indi
           branch: master
           workflow: default.yml
           name: indi-core-package-${{ matrix.container }}
