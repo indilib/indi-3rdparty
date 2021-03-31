@@ -1,3 +1,11 @@
+libasi (1.14) buster; urgency=medium
+
+  * ASI Camera SDK 1.17 release. Changelog from ZWO:
+    V1.17
+    Fix some bugs.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Wed, 31 Mar 2021 20:56:18 +0300
+
 libasi (1.13) buster; urgency=medium
 
   * Updates to ZWO EAF and EFW SDKs. Changelogs from ZWO:
