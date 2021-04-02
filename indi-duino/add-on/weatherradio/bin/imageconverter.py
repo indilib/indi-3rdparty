@@ -50,12 +50,12 @@ while True:
         output    = outputdir + "/" + filename
         if args.verbose:
             print("Converting \"%s\" to %s" % (filename, outputdir))
-        
+
         # ensure that the image directory exists
         if not Path(outputdir).exists():
             Path(outputdir).mkdir(parents=True)
         # convert to target width
-        os.system("convert %s -resize %s %s" % (input, args.width, output))
+        os.system("convert %s -font helvetica -fill white -pointsize 60 -annotate +40+100 \'%s\' -resize %s %s" % (input, now.strftime("%Y-%m-%d %H:%M:%S"), args.width, output))
 
         # remove original file
         os.remove(input)
