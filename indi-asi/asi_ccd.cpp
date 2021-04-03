@@ -72,14 +72,16 @@ static class Loader
         {
             load(false);
 
-            hotPlugTimer.start(1000);
-            hotPlugTimer.callOnTimeout([&]
-            {
-                if (getCountOfConnectedCameras() != cameras.size())
-                {
-                    load(true);
-                }
-            });
+            // JM 2021-04-03: Some users reported camera dropping out since hotplug was introduced.
+            // Disabling it for now until more investigation is conduced.
+            //            hotPlugTimer.start(1000);
+            //            hotPlugTimer.callOnTimeout([&]
+            //            {
+            //                if (getCountOfConnectedCameras() != cameras.size())
+            //                {
+            //                    load(true);
+            //                }
+            //            });
         }
 
     public:
