@@ -317,7 +317,7 @@ String getCurrentConfig() {
     wifidata["IP"]        = "";
 #endif
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   serializeDewheater(doc);
 #endif
 
@@ -432,9 +432,9 @@ void setup() {
   initOTA();
 #endif // USE_OTA
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   initDewheater();
-#endif // USE_DEW_HEATER
+#endif // USE_DEWHEATER
 
   // initial readout all sensors
   updateSensorData();
@@ -529,9 +529,9 @@ void loop() {
   updateAnemometer();
 #endif //USE_DAVIS_SENSOR
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   updateDewheater();
-#endif // USE_DEW_HEATER
+#endif // USE_DEWHEATER
 
 #ifdef USE_RG11_RAIN_SENSOR
   rg11_updateRainSensor();
