@@ -26,6 +26,7 @@ class TimelapseService:
     config       = None
     inifile_name = None
     stopfile     = None
+    oldname      = None
     rates        = {}
     
     def __init__(self):
@@ -44,6 +45,11 @@ class TimelapseService:
         self.config.set('Camera', 'Brightness', '50')
         self.config.set('Camera', 'Saturation', '0')
         self.config.set('Camera', 'interval', '60')
+        self.config.set('Camera', 'zoomX0', '0.0')
+        self.config.set('Camera', 'zoomY0', '0.0')
+        self.config.set('Camera', 'zoomX1', '1.0')
+        self.config.set('Camera', 'zoomY1', '1.0')
+
         # night default settings
         self.config.add_section('Night')
         self.config.set('Night', 'Contrast', '100')
@@ -76,7 +82,10 @@ class TimelapseService:
         camera.contrast      = self.config.getint('Camera', 'Contrast')
         camera.brightness    = self.config.getint('Camera', 'Brightness')
         camera.saturation    = self.config.getint('Camera', 'Saturation')
-        camera.zoom          = (0.1, 0.1, 0.8, 0.75)
+        camera.zoom          = (self.config.getfloat('Camera', 'zoomX0'),
+                                self.config.getfloat('Camera', 'zoomY0'),
+                                self.config.getfloat('Camera', 'zoomX1'),
+                                self.config.getfloat('Camera', 'zoomY1'))
 
     def get_capture_dir(self):
         dir = self.config.get('Camera', 'BaseDirectory')
@@ -106,6 +115,29 @@ class TimelapseService:
         else:
             return self.rates['long']
 
+    def convert_image(self, now, fullname):
+        if not self.stopfile.is_file():
+            fifo = self.config.get('Camera', 'ConverterFIFO')
+            if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
+                with open(fifo, 'w') as pipeout:
+                    pipeout.write("%s\n" % self.get_image_name(now))
+            else:
+                # otherwise move image to target directory
+                target = self.get_image_name(now, dir=self.get_target_dir(now))
+                # mv to target directory
+                os.rename(fullname, target)
+            # remember the current name
+            self.oldname = fullname
+
+
+    def wait_for_converter(self, fullname):
+        # wait only if there exists a pipe to the converter
+        fifo = self.config.get('Camera', 'ConverterFIFO')
+        if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
+            # wait until old image has disappeared
+            while self.oldname is not None and Path(self.oldname).is_file() and not self.stopfile.is_file():
+                print("Waiting for image converter ...")
+                sleep(1)
 
     def single_shot(self, interval, camera):
         # set base parameters that cannot be changed
@@ -121,28 +153,22 @@ class TimelapseService:
         now = datetime.fromtimestamp(start+diff)
         fullname = self.get_image_name(now, dir=self.get_capture_dir())
         camera.capture(fullname)
+
+        # wait for the conversion of the previous image to be completed
+        self.wait_for_converter(fullname)
         # calculate the optimal exposure time
         (imgExpTime, imgBrightness) = calibrateExpTime(fullname, self.config)
+
         # store new configuration
         configfile = open(self.inifile_name, 'w')
         self.config.write(configfile)
         configfile.close()
+
         print("date=%s; time=%s; file=%s ex=%d iso=%d br=%s sat=%d co=%d img_brightness=%d sleep=%0.1f" % (now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S"), fullname, imgExpTime, camera.iso, camera.brightness, camera.saturation, camera.contrast, imgBrightness, diff))
 
         # start converter process
-        fifo = self.config.get('Camera', 'ConverterFIFO')
-        if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
-            with open(fifo, 'w') as pipeout:
-                pipeout.write("%s\n" % self.get_image_name(now))
-            # wait until original image has disappeared
-            while os.path.exists(fullname) and not self.stopfile.is_file():
-                print("Waiting for image converter ...")
-                sleep(1)
-        else:
-            # otherwise move to target directory
-            target = self.get_image_name(now, dir=self.get_target_dir(now))
-            # mv to target directory
-            os.rename(fullname, target)
+        self.convert_image(now, fullname)
+
 
 
 
@@ -164,6 +190,7 @@ class TimelapseService:
                 while True:
                     # abort if stop file exists
                     if self.stopfile.is_file() or framerate != self.calculate_framerate():
+                        print ("Stopping timelapse")
                         break
                     else:
                         # single shot
