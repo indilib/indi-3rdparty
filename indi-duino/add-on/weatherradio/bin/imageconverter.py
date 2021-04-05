@@ -43,7 +43,7 @@ while True:
     filename = pipein.readline().strip()
     # convert file
 
-    if os.path.exists(args.inputdir + "/" + filename):
+    if Path(args.inputdir + "/" + filename).is_file():
         now       = datetime.now()
         input     = args.inputdir + "/" + filename
         outputdir = args.mediadir + '/' +  now.strftime("%Y-%m-%d")
@@ -59,5 +59,8 @@ while True:
 
         # remove original file
         os.remove(input)
-       
+        if args.verbose:
+            print("Converting \"%s\" to %s (finished)" % (filename, outputdir))
+    else:
+        print("%s does not exist in %s" % (filename, args.inputdir))
     

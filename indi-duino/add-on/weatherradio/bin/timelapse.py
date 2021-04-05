@@ -134,6 +134,10 @@ class TimelapseService:
         if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
             with open(fifo, 'w') as pipeout:
                 pipeout.write("%s\n" % self.get_image_name(now))
+            # wait until original image has disappeared
+            while os.path.exists(fullname) and not self.stopfile.is_file():
+                print("Waiting for image converter ...")
+                sleep(1)
         else:
             # otherwise move to target directory
             target = self.get_image_name(now, dir=self.get_target_dir(now))
