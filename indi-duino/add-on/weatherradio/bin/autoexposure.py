@@ -101,7 +101,15 @@ def calibrateExpTime(filename, config):
     image = Image.open(filename)
     exif = image._getexif()
 
-    realExpTime    = 1000000 * get_field(exif, 'ExposureTime')[0] / get_field(exif, 'ExposureTime')[1]
+    exifexptime    =  get_field(exif, 'ExposureTime')
+    print("exif:ExposureTime = %d/%d" % exifexptime)
+
+    realExpTime    = 1000000 * exifexptime[0] / exifexptime[1]
+    expTime        = config.getint('Camera', 'ExposureTime')
+    # long exposure times seem to cause trouble
+    if expTime > 1000000:
+        realExpTime = expTime
+
     realISO        = config.getint('Camera', 'ISOSpeedRatings')
     bright         = brightness(image)
     realBrightness = config.getint('Camera', 'Brightness')
