@@ -19,6 +19,21 @@
 
 #include "indi_pentax.h"
 
+#define MAX_DEVICES    20   /* Max device cameraCount */
+
+#include "pktriggercord_ccd.h"
+
+#ifndef __aarch64__
+#include "pentax_ccd.h"
+#include "pentax_event_handler.h"
+
+static std::vector<std::shared_ptr<CameraDevice>> registeredSDKCams;
+#endif
+
+static int cameraCount = 0;
+static INDI::CCD *cameras[MAX_DEVICES];
+// static char logdevicename[14]= "Pentax Driver";
+
 static void cleanup()
 {
     for (int i = 0; i < cameraCount; i++)
@@ -45,15 +60,15 @@ void ISInit()
 
 #ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
-        int detectedCameraCount = detectedCameraDevices.size();
-        int registeredSDKCameraCount = registeredSDKCams.size();
+        size_t detectedCameraCount = detectedCameraDevices.size();
+        // int registeredSDKCameraCount = registeredSDKCams.size();
 
         // look for SDK supported cameras (PTP mode) first
 		IDLog("Looking for Pentax camera in  PTP mode.\n");
         if (detectedCameraCount > 0) {
-            for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
+            for (size_t i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
                 bool camalreadyregistered = false;
-                for (int j=0; j<registeredSDKCams.size(); j++) {
+                for (size_t j=0; j<registeredSDKCams.size(); j++) {
                     if (detectedCameraDevices[i] == registeredSDKCams[j]) camalreadyregistered = true;
                 }
                 if (!camalreadyregistered) {
@@ -72,7 +87,7 @@ void ISInit()
         pslr_handle_t camhandle = pslr_init(model,device);
         if (camhandle) {
             if (!pslr_connect(camhandle)) {
-                pslr_status status;
+                // pslr_status status;
                 const char *camname = pslr_camera_name(camhandle);
                 bool camalreadyregistered = false;
                 for (int j=0; j<cameraCount; j++) {

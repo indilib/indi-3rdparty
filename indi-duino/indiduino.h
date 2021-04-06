@@ -29,6 +29,7 @@
 namespace Connection
 {
 class Serial;
+class TCP;
 }
 
 class Firmata;
@@ -64,8 +65,6 @@ class indiduino : public INDI::DefaultDevice
     ~indiduino();
 
     virtual bool initProperties() override;
-    virtual bool Connect() override;
-    virtual bool Disconnect() override;
     virtual void TimerHit() override;
     /** \brief Called when connected state changes, to add/remove properties */
     virtual bool updateProperties() override;
@@ -105,4 +104,5 @@ class indiduino : public INDI::DefaultDevice
     INDI::Controller *controller;
 
     Connection::Serial *serialConnection { nullptr };
+    Connection::TCP *tcpConnection       { nullptr };
 };

@@ -15,6 +15,7 @@
 #include "CameraIo.h" 
 #include "CamHelpers.h" 
 #include "ApgLogger.h" 
+#include "indimacros.h"
 #include <sstream>
 
 namespace
@@ -309,7 +310,7 @@ void CamGen2CcdAcqParams::Write2AdcReg(  const uint16_t value2Write )
 void CamGen2CcdAcqParams::SetResolution( 
             const Apg::Resolution res )
 {
-    NO_OP_PARAMETER( res );
+    INDI_UNUSED( res );
     std::string errStr("cannot set CCD adc resolution on ascent/Aspencameras");
     apgHelper::throwRuntimeException( m_fileName, errStr, 
         __LINE__, Apg::ErrorType_InvalidOperation );

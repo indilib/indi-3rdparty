@@ -1,0 +1,14 @@
+[Unit]
+Description=Image converter daemon
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/share/weatherradio/bin/imageconverter.py -d /home/wolfgang/Bilder -i /home/wolfgang/Bilder -v -f /tmp/imageconverter.fifo
+ExecStopPost=rm -f /tmp/imageconverter.fifo
+
+[Install]
+WantedBy=multi-user.target
+

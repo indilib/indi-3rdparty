@@ -9,6 +9,8 @@
 #include "QSI_Registry.h"
 #include "QSI_Global.h"
 #include "QSILog.h"
+#include "indimacros.h"
+
 
 #if defined(USELIBFTD2XX) && defined(USELIBFTDIZERO)
 	#error "Multiple FTDI stacks defined.  Use only one of libftdi and libftd2xx"
@@ -555,6 +557,7 @@ int HostIO_USB::WritePacket(UCHAR * pBuff, int iBuffLen, int * iBytesWritten)
 
 int HostIO_USB::ReadPacket(UCHAR * pBuff, int iBuffLen, int * iBytesRead)
 {
+	INDI_UNUSED(iBuffLen);
 	int iStatus;
 	int dwBytesToRead;
 	int dwBytesReturned;

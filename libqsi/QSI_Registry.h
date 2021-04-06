@@ -19,6 +19,8 @@
 #pragma once
 
 #include "QSI_Global.h"
+#include "indimacros.h"
+
 #include <string>
 #include <stdlib.h>
 #include <unistd.h>
@@ -372,6 +374,9 @@ public:
 
 	int RegQueryValueEx(std::string strKeyPath, std::string strSubKeyName, int n0, int n1, int * piData, int dSize)
 	{
+		INDI_UNUSED(n0);
+		INDI_UNUSED(n1);
+		INDI_UNUSED(dSize);
 		m_rc = m_ini.LoadFile(m_szPath);
 		if (m_rc < 0)
 			return -1;

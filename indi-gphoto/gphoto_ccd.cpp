@@ -467,7 +467,7 @@ void GPhotoCCD::ISGetProperties(const char * dev)
     char configPort[MAXINDINAME] = {0};
     if (IUGetConfigText(getDeviceName(), PortTP.name, mPortT[0].name, configPort, MAXINDINAME) == 0 && configPort[0])
         IUSaveText(&mPortT[0], configPort);
-    defineText(&PortTP);
+    defineProperty(&PortTP);
 
     if (isConnected())
         return;
@@ -502,25 +502,25 @@ bool GPhotoCCD::updateProperties()
     if (isConnected())
     {
         if (mExposurePresetSP.nsp > 0)
-            defineSwitch(&mExposurePresetSP);
+            defineProperty(&mExposurePresetSP);
         if (mIsoSP.nsp > 0)
-            defineSwitch(&mIsoSP);
+            defineProperty(&mIsoSP);
         if (mFormatSP.nsp > 0)
-            defineSwitch(&mFormatSP);
+            defineProperty(&mFormatSP);
 
-        defineSwitch(&livePreviewSP);
-        defineSwitch(&TransferFormatSP);
-        defineSwitch(&autoFocusSP);
+        defineProperty(&livePreviewSP);
+        defineProperty(&TransferFormatSP);
+        defineProperty(&autoFocusSP);
 
         if (m_CanFocus)
             FI::updateProperties();
 
         if (captureTargetSP.s == IPS_OK)
         {
-            defineSwitch(&captureTargetSP);
+            defineProperty(&captureTargetSP);
         }
 
-        defineSwitch(&SDCardImageSP);
+        defineProperty(&SDCardImageSP);
 
         imageBP = getBLOB("CCD1");
         imageB  = imageBP->bp;
@@ -533,7 +533,7 @@ bool GPhotoCCD::updateProperties()
             ShowExtendedOptions();
 
             if (strstr(gphoto_get_manufacturer(gphotodrv), "Canon"))
-                defineNumber(&mMirrorLockNP);
+                defineProperty(&mMirrorLockNP);
         }
 
         if (isSimulation())
@@ -544,12 +544,12 @@ bool GPhotoCCD::updateProperties()
         if (isTemperatureSupported)
         {
             TemperatureNP.p = IP_RO;
-            defineNumber(&TemperatureNP);
+            defineProperty(&TemperatureNP);
         }
 
-        defineSwitch(&forceBULBSP);
+        defineProperty(&forceBULBSP);
 
-        //timerID = SetTimer(POLLMS);
+        //timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -719,8 +719,13 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                     duration = (static_cast<double>(num)) / (static_cast<double>(denom));
                     StartExposure(duration);
                 }
-                else if (sscanf(currentSwitch->label, "%g", &duration) == 1)
+                else if ((duration = strtod(currentSwitch->label, nullptr)))
                 {
+                    // Fuji returns long exposure values ( > 60s) with m postfix
+                    if (currentSwitch->label[strlen(currentSwitch->label) - 1] == 'm')
+                    {
+                        duration *= 60;
+                    }
                     StartExposure(duration);
                 }
             }
@@ -1200,7 +1205,7 @@ bool GPhotoCCD::StartExposure(float duration)
     gettimeofday(&ExpStart, nullptr);
     InExposure = true;
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     return true;
 }
@@ -1351,7 +1356,7 @@ void GPhotoCCD::TimerHit()
         {
             //LOGF_DEBUG("Capture in progress. Time left %.2f seconds", timeleft);
             if (timerID == -1)
-                SetTimer(POLLMS);
+                SetTimer(getCurrentPollingPeriod());
         }
     }
 }
@@ -1493,7 +1498,6 @@ bool GPhotoCCD::grabImage()
 
             int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
             int oneFrameSize     = subW * subH * bpp / 8;
-            //uint8_t * subframeBuf = new uint8_t[subFrameSize];
 
             int lineW  = subW * bpp / 8;
 
@@ -1503,15 +1507,13 @@ bool GPhotoCCD::grabImage()
 
             if (naxis == 2)
             {
+                // JM 2020-08-29: Using memmove since regions are overlaping
+                // as proposed by Camiel Severijns on INDI forums.
                 for (int i = subY; i < subY + subH; i++)
-                    memcpy(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
-                //memcpy(subframeBuf + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
+                    memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
             }
             else
             {
-                //                uint8_t * subR = subframeBuf;
-                //                uint8_t * subG = subframeBuf + oneFrameSize;
-                //                uint8_t * subB = subframeBuf + oneFrameSize * 2;
                 uint8_t * subR = memptr;
                 uint8_t * subG = memptr + oneFrameSize;
                 uint8_t * subB = memptr + oneFrameSize * 2;
@@ -1732,26 +1734,26 @@ void GPhotoCCD::AddWidget(gphoto_widget * widget)
             opt->item.sw = create_switch(widget->name, widget->choices, widget->choice_cnt, widget->value.index);
             IUFillSwitchVector(&opt->prop.sw, opt->item.sw, widget->choice_cnt, getDeviceName(), widget->name,
                                widget->name, widget->parent, perm, ISR_1OFMANY, 60, IPS_IDLE);
-            defineSwitch(&opt->prop.sw);
+            defineProperty(&opt->prop.sw);
             break;
         case GP_WIDGET_TEXT:
             IUFillText(&opt->item.text, widget->name, widget->name, widget->value.text);
             IUFillTextVector(&opt->prop.text, &opt->item.text, 1, getDeviceName(), widget->name, widget->name,
                              widget->parent, perm, 60, IPS_IDLE);
-            defineText(&opt->prop.text);
+            defineProperty(&opt->prop.text);
             break;
         case GP_WIDGET_TOGGLE:
             opt->item.sw = create_switch(widget->name, static_cast<char **>(on_off), 2, widget->value.toggle ? 0 : 1);
             IUFillSwitchVector(&opt->prop.sw, opt->item.sw, 2, getDeviceName(), widget->name, widget->name,
                                widget->parent, perm, ISR_1OFMANY, 60, IPS_IDLE);
-            defineSwitch(&opt->prop.sw);
+            defineProperty(&opt->prop.sw);
             break;
         case GP_WIDGET_RANGE:
             IUFillNumber(&opt->item.num, widget->name, widget->name, "%5.2f", widget->min, widget->max, widget->step,
                          widget->value.num);
             IUFillNumberVector(&opt->prop.num, &opt->item.num, 1, getDeviceName(), widget->name, widget->name,
                                widget->parent, perm, 60, IPS_IDLE);
-            defineNumber(&opt->prop.num);
+            defineProperty(&opt->prop.num);
             break;
         case GP_WIDGET_DATE:
         {
@@ -1762,7 +1764,7 @@ void GPhotoCCD::AddWidget(gphoto_widget * widget)
             IUFillText(&opt->item.text, widget->name, widget->name, ts);
             IUFillTextVector(&opt->prop.text, &opt->item.text, 1, getDeviceName(), widget->name, widget->name,
                              widget->parent, perm, 60, IPS_IDLE);
-            defineText(&opt->prop.text);
+            defineProperty(&opt->prop.text);
         }
         break;
         default:
@@ -2235,7 +2237,7 @@ bool GPhotoCCD::UpdateCCDUploadMode(CCD_UPLOAD_MODE mode)
 void GPhotoCCD::simulationTriggered(bool enabled)
 {
     if (enabled)
-        defineText(&UploadFileTP);
+        defineProperty(&UploadFileTP);
     else
         deleteProperty(UploadFileTP.name);
 }

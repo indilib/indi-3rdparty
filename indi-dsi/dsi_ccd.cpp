@@ -102,6 +102,7 @@ bool DSICCD::Connect()
         LOG_INFO("Unable to find DSI. Has the firmware been loaded?");
         return false;
     }
+
     ccd = dsi->getCcdChipName();
     if (ccd == "ICX254AL")
     {
@@ -122,6 +123,10 @@ bool DSICCD::Connect()
     else if (ccd == "ICX285AL")
     {
         LOG_INFO("Found a DSI Pro III!");
+    }
+    else if (ccd == "ICX285AQ")
+    {
+        LOG_INFO("Found a DSI Color III!");
     }
     else
     {
@@ -237,11 +242,11 @@ bool DSICCD::updateProperties()
         setupParams();
 
         // Start the timer
-        SetTimer(POLLMS);
-        defineNumber(&GainNP);
-        defineNumber(&OffsetNP);
-        defineNumber(&CCDTempNP);
-        defineSwitch(&VddExpSP);
+        SetTimer(getCurrentPollingPeriod());
+        defineProperty(&GainNP);
+        defineProperty(&OffsetNP);
+        defineProperty(&CCDTempNP);
+        defineProperty(&VddExpSP);
     }
     else
     {
@@ -264,6 +269,8 @@ void DSICCD::setupParams()
 
     /* calculate how much memory we need for the primary CCD buffer */
     PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8);
+
+    UpdateCCDBin(PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
 }
 
 /*******************************************************************************
@@ -276,12 +283,18 @@ bool DSICCD::UpdateCCDBin(int hor, int ver)
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set1x1Binning();
+        // DSI III 1x1 binning results in a GBRG frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "GBRG");
         return true;
     }
     else if ((hor == 2) && (ver == 2)) // ... and 2x2 binning is supported
     {
         PrimaryCCD.setBin(hor, ver);
         dsi->set2x2Binning();
+        // DSI III 1x1 binning results in a consolidated mono frame
+        if (dsi->getCcdChipName() == "ICX285AQ")
+            IUSaveText(&BayerT[2], "");
         return true;
     }
     else
@@ -470,7 +483,7 @@ void DSICCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

@@ -61,6 +61,7 @@
 #include "libfli-camera.h"
 #include "libfli-camera-usb.h"
 #include "libfli-usb.h"
+#include "indimacros.h"
 
 double dconvert(void *buf)
 {
@@ -2245,6 +2246,7 @@ long fli_camera_usb_flush_rows(flidev_t dev, long rows, long repeat)
 
 long fli_camera_usb_set_bit_depth(flidev_t dev, flibitdepth_t bitdepth)
 {
+	INDI_UNUSED(bitdepth);
 //	flicamdata_t *cam = DEVICE->device_data;
 //	iobuf_t buf[IOBUF_MAX_SIZ];
 //	long rlen = 0, wlen = 0;
@@ -3116,6 +3118,7 @@ long fli_camera_usb_get_vertical_table_entry(flidev_t dev, long index, long *hei
 
 long fli_camera_usb_enable_vertical_table(flidev_t dev, long width, long offset, long flags)
 {
+	INDI_UNUSED(flags);
 	flicamdata_t *cam = DEVICE->device_data;
 	long r = 0;
 

@@ -23,7 +23,7 @@
 //////////////////////////// 
 // CTOR 
 HiC::HiC() : Quad(),
-                    m_fileName( __FILE__ )
+                    m_fileName( __BASE_FILE__ )
 
 {
     SetPixelReorder( false );

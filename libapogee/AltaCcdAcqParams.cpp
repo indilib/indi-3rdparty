@@ -17,6 +17,7 @@
 #include "CamHelpers.h" 
 #include "ApnCamData.h"
 #include "CamCfgMatrix.h"
+#include "indimacros.h"
 
 #include <sstream>
 
@@ -276,6 +277,7 @@ bool AltaCcdAcqParams::IsAdsSimModeOn()
 //      SET     ADC        GAIN 
 void AltaCcdAcqParams::SetAdcGain( uint16_t gain, int32_t ad, int32_t channel )
 {
+    INDI_UNUSED(channel);
     //channel is a no op on altas
     switch( ad )
     {
@@ -298,6 +300,7 @@ void AltaCcdAcqParams::SetAdcGain( uint16_t gain, int32_t ad, int32_t channel )
 //      GET     ADC        GAIN 
 uint16_t AltaCcdAcqParams::GetAdcGain( const int32_t ad, const  int32_t channel )
 {
+    INDI_UNUSED(channel);
     //channel is a no op on altas
     switch( ad )
     {
@@ -327,6 +330,7 @@ uint16_t AltaCcdAcqParams::GetAdcGain( const int32_t ad, const  int32_t channel 
 //      SET     ADC        OFFSET
 void AltaCcdAcqParams::SetAdcOffset( uint16_t offset, int32_t ad, int32_t channel )
 {
+    INDI_UNUSED(channel);
     //channel is a no op on altas
     switch( ad )
     {
@@ -349,6 +353,7 @@ void AltaCcdAcqParams::SetAdcOffset( uint16_t offset, int32_t ad, int32_t channe
 //      GET     ADC        OFFSET
 uint16_t AltaCcdAcqParams::GetAdcOffset( int32_t ad, int32_t channel )
 {
+    INDI_UNUSED(channel);
     //channel is a no op on altas
     switch( ad )
     {

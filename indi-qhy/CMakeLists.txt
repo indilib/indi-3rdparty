@@ -9,11 +9,12 @@ find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(QHY REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(INDI_QHY_VERSION_MAJOR 2)
-set(INDI_QHY_VERSION_MINOR 7)
+set(INDI_QHY_VERSION_MINOR 8)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_qhy.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml )
@@ -24,6 +25,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${QHY_INCLUDE_DIR})
 include_directories( ${USB1_INCLUDE_DIRS})
+include_directories( ${NOVA_INCLUDE_DIRS})
 
 add_definitions(-DCALLBACK_MODE_SUPPORT)
 
@@ -46,7 +48,7 @@ ENDIF ()
 
 add_executable(indi_qhy_ccd ${indiqhy_SRCS})
 
-target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_qhy_ccd rt)

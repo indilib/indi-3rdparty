@@ -1,46 +1,157 @@
+/*
+    Celestron Aux Command
+
+    Copyright (C) 2020 Paweł T. Jochym
+    Copyright (C) 2020 Fabrizio Pollastri
+    Copyright (C) 2021 Jasem Mutlaq
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+*/
+
 #include "auxproto.h"
 
-#include <algorithm>
+#include <indilogger.h>
 #include <math.h>
-#include <queue>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
 #include <stdio.h>
 
 #define READ_TIMEOUT 1 		// s
 #define CTS_TIMEOUT 100		// ms
 #define RTS_DELAY 50		// ms
 
-#define BUFFER_SIZE 10240
+#define BUFFER_SIZE 512
 int MAX_CMD_LEN = 32;
-bool DEBUG      = true;
 
+uint8_t AUXCommand::DEBUG_LEVEL = 0;
+char AUXCommand::DEVICE_NAME[64] = {0};
 //////////////////////////////////////////////////
 /////// Utility functions
 //////////////////////////////////////////////////
 
 
-void prnBytes(unsigned char *b, int n)
+void logBytes(unsigned char *buf, int n, const char *deviceName, uint32_t debugLevel)
 {
-    fprintf(stderr, "[");
+    char hex_buffer[BUFFER_SIZE] = {0};
     for (int i = 0; i < n; i++)
-        fprintf(stderr, "%02x ", b[i]);
-    fprintf(stderr, "]\n");
+        sprintf(hex_buffer + 3 * i, "%02X ", buf[i]);
+
+    if (n > 0)
+        hex_buffer[3 * n - 1] = '\0';
+
+    DEBUGFDEVICE(deviceName, debugLevel, "[%s]", hex_buffer);
 }
 
-void dumpMsg(buffer buf)
+//void AUXCommand::logResponse(AUXBuffer buf)
+//{
+//    char hex_buffer[BUFFER_SIZE] = {0};
+//    for (size_t i = 0; i < buf.size(); i++)
+//        sprintf(hex_buffer + 3 * i, "%02X ", buf[i]);
+
+//    if (buf.size() > 0)
+//        hex_buffer[3 * buf.size() - 1] = '\0';
+
+//    DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "MSG: %s", hex_buffer);
+//}
+
+//void AUXCommand::logCommand()
+//{
+//    char hex_buffer[BUFFER_SIZE] = {0};
+//    for (size_t i = 0; i < data.size(); i++)
+//        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
+
+//    if (data.size() > 0)
+//        hex_buffer[3 * data.size() - 1] = '\0';
+
+//    DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "<%02x> %02x -> %02x: %s", cmd, src, dst, hex_buffer);
+//}
+
+void AUXCommand::logResponse()
 {
-    fprintf(stderr, "MSG: ");
-    for (unsigned int i = 0; i < buf.size(); i++)
-    {
-        fprintf(stderr, "%02x ", buf[i]);
-    }
-    fprintf(stderr, "\n");
+    char hex_buffer[BUFFER_SIZE] = {0}, part1[BUFFER_SIZE] = {0}, part2[BUFFER_SIZE] = {0}, part3[BUFFER_SIZE] = {0};
+    for (size_t i = 0; i < data.size(); i++)
+        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
+
+    if (data.size() > 0)
+        hex_buffer[3 * data.size() - 1] = '\0';
+
+    const char * c = cmd_name(cmd);
+    const char * s = node_name(src);
+    const char * d = node_name(dst);
+
+    if (c != nullptr)
+        snprintf(part1, BUFFER_SIZE, "<%12s>", c);
+    else
+        snprintf(part1, BUFFER_SIZE, "<%02x>", cmd);
+
+    if (s != nullptr)
+        snprintf(part2, BUFFER_SIZE, "%5s ->", s);
+    else
+        snprintf(part2, BUFFER_SIZE, "%02x ->", src);
+
+    if (s != nullptr)
+        snprintf(part3, BUFFER_SIZE, "%5s", d);
+    else
+        snprintf(part3, BUFFER_SIZE, "%02x", dst);
+
+    if (data.size() > 0)
+        DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "RES %s%s%s [%s]", part1, part2, part3, hex_buffer);
+    else
+        DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "RES %s%s%s", part1, part2, part3);
 }
 
+void AUXCommand::logCommand()
+{
+    char hex_buffer[BUFFER_SIZE] = {0}, part1[BUFFER_SIZE] = {0}, part2[BUFFER_SIZE] = {0}, part3[BUFFER_SIZE] = {0};
+    for (size_t i = 0; i < data.size(); i++)
+        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
+
+    if (data.size() > 0)
+        hex_buffer[3 * data.size() - 1] = '\0';
+
+    const char * c = cmd_name(cmd);
+    const char * s = node_name(src);
+    const char * d = node_name(dst);
+
+    if (c != nullptr)
+        snprintf(part1, BUFFER_SIZE, "<%12s>", c);
+    else
+        snprintf(part1, BUFFER_SIZE, "<%02x>", cmd);
+
+    if (s != nullptr)
+        snprintf(part2, BUFFER_SIZE, "%5s ->", s);
+    else
+        snprintf(part2, BUFFER_SIZE, "%02x ->", src);
+
+    if (s != nullptr)
+        snprintf(part3, BUFFER_SIZE, "%5s", d);
+    else
+        snprintf(part3, BUFFER_SIZE, "%02x", dst);
+
+    if (data.size() > 0)
+        DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "CMD %s%s%s [%s]", part1, part2, part3, hex_buffer);
+    else
+        DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "CMD %s%s%s", part1, part2, part3);
+}
+
+void AUXCommand::setDebugInfo(const char *deviceName, uint8_t debugLevel)
+{
+    strncpy(DEVICE_NAME, deviceName, 64);
+    DEBUG_LEVEL = debugLevel;
+}
 ////////////////////////////////////////////////
 //////  AUXCommand class
 ////////////////////////////////////////////////
@@ -50,13 +161,13 @@ AUXCommand::AUXCommand()
     data.reserve(MAX_CMD_LEN);
 }
 
-AUXCommand::AUXCommand(buffer buf)
+AUXCommand::AUXCommand(const AUXBuffer &buf)
 {
     data.reserve(MAX_CMD_LEN);
     parseBuf(buf);
 }
 
-AUXCommand::AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d, buffer dat)
+AUXCommand::AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d, const AUXBuffer &dat)
 {
     cmd = c;
     src = s;
@@ -66,7 +177,7 @@ AUXCommand::AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d, buffer dat)
     len  = 3 + data.size();
 }
 
-AUXCommand::AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d)
+AUXCommand::AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d)
 {
     cmd = c;
     src = s;
@@ -75,56 +186,74 @@ AUXCommand::AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d)
     len = 3 + data.size();
 }
 
-void AUXCommand::dumpCmd()
-{
-    if (DEBUG)
-    {
-        fprintf(stderr, "(%02x) %02x -> %02x: ", cmd, src, dst);
-        for (unsigned int i = 0; i < data.size(); i++)
-        {
-            fprintf(stderr, "%02x ", data[i]);
-        }
-        fprintf(stderr, "\n");
-    }
-}
-
 const char * AUXCommand::cmd_name(AUXCommands c)
 {
     if (src == GPS || dst == GPS)
+    {
         switch (c)
         {
-            case GPS_GET_LAT: return "GPS_GET_LAT";
-            case GPS_GET_LONG: return "GPS_GET_LONG";
-            case GPS_GET_DATE: return "GPS_GET_DATE";
-            case GPS_GET_YEAR: return "GPS_GET_YEAR";
-            case GPS_GET_TIME: return "GPS_GET_TIME";
-            case GPS_TIME_VALID: return "GPS_TIME_VALID";
-            case GPS_LINKED: return "GPS_LINKED";
-            case GET_VER: return "GET_VER";
-            default : return nullptr;
+            case GPS_GET_LAT:
+                return "GPS_GET_LAT";
+            case GPS_GET_LONG:
+                return "GPS_GET_LONG";
+            case GPS_GET_DATE:
+                return "GPS_GET_DATE";
+            case GPS_GET_YEAR:
+                return "GPS_GET_YEAR";
+            case GPS_GET_TIME:
+                return "GPS_GET_TIME";
+            case GPS_TIME_VALID:
+                return "GPS_TIME_VALID";
+            case GPS_LINKED:
+                return "GPS_LINKED";
+            case GET_VER:
+                return "GET_VER";
+            default :
+                return nullptr;
         }
-    else 
+    }
+    else
+    {
         switch (c)
         {
-            case MC_GET_POSITION: return "MC_GET_POSITION";
-            case MC_GOTO_FAST: return "MC_GOTO_FAST";
-            case MC_SET_POSITION: return "MC_SET_POSITION";
-            case MC_SET_POS_GUIDERATE: return "MC_SET_POS_GUIDERATE";
-            case MC_SET_NEG_GUIDERATE: return "MC_SET_NEG_GUIDERATE";
-            case MC_LEVEL_START: return "MC_LEVEL_START";
-            case MC_SLEW_DONE: return "MC_SLEW_DONE";
-            case MC_GOTO_SLOW: return "MC_GOTO_SLOW";
-            case MC_SEEK_INDEX: return "MC_SEEK_INDEX";
-            case MC_MOVE_POS: return "MC_MOVE_POS";
-            case MC_MOVE_NEG: return "MC_MOVE_NEG";
-            case MC_ENABLE_CORDWRAP: return "MC_ENABLE_CORDWRAP";
-            case MC_DISABLE_CORDWRAP: return "MC_DISABLE_CORDWRAP";
-            case MC_SET_CORDWRAP_POS: return "MC_SET_CORDWRAP_POS";
-            case MC_POLL_CORDWRAP: return "MC_POLL_CORDWRAP";
-            case MC_GET_CORDWRAP_POS: return "MC_GET_CORDWRAP_POS";
-            case GET_VER: return "GET_VER";
-            default : return nullptr;
+            case MC_GET_POSITION:
+                return "MC_GET_POSITION";
+            case MC_GOTO_FAST:
+                return "MC_GOTO_FAST";
+            case MC_SET_POSITION:
+                return "MC_SET_POSITION";
+            case MC_SET_POS_GUIDERATE:
+                return "MC_SET_POS_GUIDERATE";
+            case MC_SET_NEG_GUIDERATE:
+                return "MC_SET_NEG_GUIDERATE";
+            case MC_LEVEL_START:
+                return "MC_LEVEL_START";
+            case MC_SLEW_DONE:
+                return "MC_SLEW_DONE";
+            case MC_GOTO_SLOW:
+                return "MC_GOTO_SLOW";
+            case MC_SEEK_INDEX:
+                return "MC_SEEK_INDEX";
+            case MC_MOVE_POS:
+                return "MC_MOVE_POS";
+            case MC_MOVE_NEG:
+                return "MC_MOVE_NEG";
+            case MC_ENABLE_CORDWRAP:
+                return "MC_ENABLE_CORDWRAP";
+            case MC_DISABLE_CORDWRAP:
+                return "MC_DISABLE_CORDWRAP";
+            case MC_SET_CORDWRAP_POS:
+                return "MC_SET_CORDWRAP_POS";
+            case MC_POLL_CORDWRAP:
+                return "MC_POLL_CORDWRAP";
+            case MC_GET_CORDWRAP_POS:
+                return "MC_GET_CORDWRAP_POS";
+            case GET_VER:
+                return "GET_VER";
+            default :
+                return nullptr;
         }
+    }
 }
 
 int AUXCommand::response_data_size()
@@ -134,22 +263,29 @@ int AUXCommand::response_data_size()
         {
             case GPS_GET_LAT:
             case GPS_GET_LONG:
-            case GPS_GET_TIME: return 3;
-            case GPS_GET_DATE: 
+            case GPS_GET_TIME:
+                return 3;
+            case GPS_GET_DATE:
             case GPS_GET_YEAR:
-            case GET_VER: return 2;
+            case GET_VER:
+                return 2;
             case GPS_TIME_VALID:
-            case GPS_LINKED: return 1;
-            default : return -1;
+            case GPS_LINKED:
+                return 1;
+            default :
+                return -1;
         }
-    else 
+    else
         switch (cmd)
         {
             case MC_GET_POSITION:
-            case MC_GET_CORDWRAP_POS: return 3;
-            case GET_VER: return 4;
+            case MC_GET_CORDWRAP_POS:
+                return 3;
+            case GET_VER:
+                return 4;
             case MC_SLEW_DONE:
-            case MC_POLL_CORDWRAP: return 1;
+            case MC_POLL_CORDWRAP:
+                return 1;
             case MC_GOTO_FAST:
             case MC_SET_POSITION:
             case MC_SET_POS_GUIDERATE:
@@ -160,61 +296,50 @@ int AUXCommand::response_data_size()
             case MC_MOVE_NEG:
             case MC_ENABLE_CORDWRAP:
             case MC_DISABLE_CORDWRAP:
-            case MC_SET_CORDWRAP_POS: return 0;
-            case MC_SEEK_INDEX: return -1;
-            default : return -1;
+            case MC_SET_CORDWRAP_POS:
+                return 0;
+            case MC_SEEK_INDEX:
+                return -1;
+            default :
+                return -1;
         }
 }
 
 
-const char * AUXCommand::node_name(AUXtargets n)
+const char * AUXCommand::node_name(AUXTargets n)
 {
     switch (n)
     {
-        case ANY : return "ANY";
-        case MB : return "MB";
-        case HC : return "HC";
-        case HCP : return "HC+";
-        case AZM : return "AZM";
-        case ALT : return "ALT";
-        case APP : return "APP";
-        case GPS : return "GPS";
-        case WiFi: return "WiFi";
-        case BAT : return "BAT";
-        case CHG : return "CHG";
-        case LIGHT : return "LIGHT";
-        default : return nullptr;
+        case ANY :
+            return "ANY";
+        case MB :
+            return "MB";
+        case HC :
+            return "HC";
+        case HCP :
+            return "HC+";
+        case AZM :
+            return "AZM";
+        case ALT :
+            return "ALT";
+        case APP :
+            return "APP";
+        case GPS :
+            return "GPS";
+        case WiFi:
+            return "WiFi";
+        case BAT :
+            return "BAT";
+        case CHG :
+            return "CHG";
+        case LIGHT :
+            return "LIGHT";
+        default :
+            return nullptr;
     }
 }
 
-void AUXCommand::pprint()
-{
-    const char * c = cmd_name(cmd);
-    const char * s = node_name(src);
-    const char * d = node_name(dst);
-
-    if (c != nullptr)
-        fprintf(stderr, "(%12s) ", c);
-    else 
-        fprintf(stderr, "(CMD_[%02x]) ", cmd);
-
-    if (s != nullptr)
-        fprintf(stderr, "%5s ->", s);
-    else
-        fprintf(stderr, "%02x ->", src);
-
-    if (s != nullptr)
-        fprintf(stderr, "%5s [", d);
-    else
-        fprintf(stderr, "%02x [", dst);
-    
-    for (unsigned int i = 0; i < data.size(); i++)
-        fprintf(stderr, "%02x ", data[i]);
-
-    fprintf(stderr, "]\n");    
-}
-
-void AUXCommand::fillBuf(buffer &buf)
+void AUXCommand::fillBuf(AUXBuffer &buf)
 {
     buf.resize(len + 3);
     buf[0] = 0x3b;
@@ -227,38 +352,38 @@ void AUXCommand::fillBuf(buffer &buf)
         buf[i + 5] = data[i];
     }
     buf.back() = checksum(buf);
-    //dumpMsg(buf);
 }
 
-void AUXCommand::parseBuf(buffer buf)
+void AUXCommand::parseBuf(AUXBuffer buf)
 {
     len   = buf[1];
-    src   = (AUXtargets)buf[2];
-    dst   = (AUXtargets)buf[3];
+    src   = (AUXTargets)buf[2];
+    dst   = (AUXTargets)buf[3];
     cmd   = (AUXCommands)buf[4];
-    data  = buffer(buf.begin() + 5, buf.end() - 1);
+    data  = AUXBuffer(buf.begin() + 5, buf.end() - 1);
     valid = (checksum(buf) == buf.back());
-    if (not valid)
+    if (valid == false)
     {
-        fprintf(stderr, "Checksum error: %02x vs. %02x", checksum(buf), buf.back());
-        dumpMsg(buf);
+        DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "Checksum error: %02x vs. %02x", checksum(buf), buf.back());
+        //logResponse(buf);
+        //logCommand();
     };
 }
 
-void AUXCommand::parseBuf(buffer buf, bool do_checksum)
+void AUXCommand::parseBuf(AUXBuffer buf, bool do_checksum)
 {
     (void)do_checksum;
 
     len   = buf[1];
-    src   = (AUXtargets)buf[2];
-    dst   = (AUXtargets)buf[3];
+    src   = (AUXTargets)buf[2];
+    dst   = (AUXTargets)buf[3];
     cmd   = (AUXCommands)buf[4];
     if (buf.size() > 5)
-        data  = buffer(buf.begin() + 5, buf.end());
+        data  = AUXBuffer(buf.begin() + 5, buf.end());
 }
 
 
-unsigned char AUXCommand::checksum(buffer buf)
+unsigned char AUXCommand::checksum(AUXBuffer buf)
 {
     int l  = buf[1];
     int cs = 0;

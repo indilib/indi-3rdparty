@@ -1,0 +1,11 @@
+libahp-xc (1.0.10) xenial; urgency=low
+
+  * Updated code, mayor bugfix.
+
+ -- Ilia Platone <info@iliaplatone.com>  Sun, 27 Sep 2020 20:00:00 +0200
+
+libahp-xc (1.0.9) xenial; urgency=low
+
+   * Initial Release.
+
+  -- Ilia Platone <info@iliaplatone.com>  Sun, 27 Sep 2020 20:00:00 +0200

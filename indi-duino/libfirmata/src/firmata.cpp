@@ -302,9 +302,9 @@ int Firmata::handshake()
 {
     firmata_name[0] = 0;
 
-    for (int i = 0; i < 500; i++) // 5s
+    for (int i = 0; i < 3000; i++) // 30s
     {
-        if (i % 20 == 0) askFirmwareVersion(); // try again every 0.2s
+        if (i % 50 == 0) askFirmwareVersion(); // try again every 0.5s
         OnIdle(); // wait 10ms
         if (strlen(firmata_name) > 0) break;
     }

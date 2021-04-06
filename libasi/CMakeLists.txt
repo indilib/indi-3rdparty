@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 2.8)
 PROJECT(libasi CXX C)
 
-# Using ASI Camera SDK Version 1.15.0430 updated on 2020-05-20
-# Using ASI EFW SDK Version 1.5.0615 updated on 2020-06-22
+# Using ASI Camera SDK Version 1.17 updated on 2021-03-31
+# Using ASI EFW SDK Version 1.6 updated on 2021-03-19
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
-# Using ASI EAF SDK Version 0.2.0605 updated on 2020-07-20
+# Using ASI EAF SDK Version 1.3 updated on 2021-03-19
 
-set(ASICAM_VERSION "1.15.0430")
+set(ASICAM_VERSION "1.17")
 set(ASICAM_SOVERSION "1")
 
-set(ASIEFW_VERSION "1.5.0615")
+set(ASIEFW_VERSION "1.6")
 set(ASIEFW_SOVERSION "1")
 
 set(ASIST4_VERSION "1.0")
 set(ASIST4_SOVERSION "1")
 
-set(ASIEAF_VERSION "0.2.0605")
-set(ASIEAF_SOVERSION "0")
+set(ASIEAF_VERSION "1.3")
+set(ASIEAF_SOVERSION "1")
 
 include(GNUInstallDirs)
 

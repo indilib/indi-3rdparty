@@ -140,7 +140,7 @@ void FLICCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
-    defineSwitch(&PortSP);
+    defineProperty(&PortSP);
 }
 
 bool FLICCD::updateProperties()
@@ -149,17 +149,17 @@ bool FLICCD::updateProperties()
 
     if (isConnected())
     {
-        defineText(&CamInfoTP);
-        defineNumber(&CoolerNP);
-        defineNumber(&FlushNP);
-        defineSwitch(&BackgroundFlushSP);
+        defineProperty(&CamInfoTP);
+        defineProperty(&CoolerNP);
+        defineProperty(&FlushNP);
+        defineProperty(&BackgroundFlushSP);
 
         setupParams();
 
         if (CameraModeS != nullptr)
-            defineSwitch(&CameraModeSP);
+            defineProperty(&CameraModeSP);
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -743,7 +743,7 @@ void FLICCD::TimerHit()
             if ((err = FLIGetDeviceStatus(fli_dev, &camera_status)))
             {
                 LOGF_ERROR("FLIGetDeviceStatus() failed. %s.", strerror(-err));
-                SetTimer(POLLMS);
+                SetTimer(getCurrentPollingPeriod());
                 return;
             }
             LOGF_DEBUG("FLIGetDeviceStatus() succeed -> %ld", camera_status);
@@ -751,7 +751,7 @@ void FLICCD::TimerHit()
             if ((err = FLIGetExposureStatus(fli_dev, &timeleft)))
             {
                 LOGF_ERROR("FLIGetExposureStatus() failed. %s.", strerror(-err));
-                SetTimer(POLLMS);
+                SetTimer(getCurrentPollingPeriod());
                 return;
             }
             LOGF_DEBUG("FLIGetExposureStatus() succeed -> %ld", timeleft);
@@ -858,7 +858,7 @@ void FLICCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 

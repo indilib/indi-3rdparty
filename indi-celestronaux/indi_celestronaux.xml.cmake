@@ -5,5 +5,13 @@
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
+   <device label="Celestron WiFi" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="Nexstar Evolution" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
 </devGroup>
 </driversList>

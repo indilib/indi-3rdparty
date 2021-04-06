@@ -382,7 +382,7 @@ void inditess::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 /**************************************************************************************
@@ -640,7 +640,7 @@ bool inditess::Connect()
         nvp                        = getNumber("Filter");
         filter                     = nvp->np[0].value;
 
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
     {

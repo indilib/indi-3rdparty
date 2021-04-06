@@ -307,7 +307,7 @@ bool RTLSDR::updateProperties()
         setupParams(1000000, 1420000000, 10);
 
         // Start the timer
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
 
     return true;
@@ -473,7 +473,7 @@ void RTLSDR::TimerHit()
         setIntegrationLeft(timeleft);
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -545,7 +545,7 @@ bool RTLSDR::Handshake()
     LOG_INFO("RTL-SDR Spectrograph connected successfully!");
     // Let's set a timer that checks teleSpectrographs status every POLLMS milliseconds.
     // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
-    //SetTimer(POLLMS);
+    //SetTimer(getCurrentPollingPeriod());
 
     return true;
 }

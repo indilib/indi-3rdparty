@@ -1,8 +1,32 @@
+/*
+    Celestron Aux Command
+
+    Copyright (C) 2020 Paweł T. Jochym
+    Copyright (C) 2020 Fabrizio Pollastri
+    Copyright (C) 2021 Jasem Mutlaq
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+*/
+
 #pragma once
 
 #include <vector>
+#include <stdint.h>
 
-typedef std::vector<unsigned char> buffer;
+typedef std::vector<unsigned char> AUXBuffer;
 
 enum AUXCommands
 {
@@ -17,11 +41,15 @@ enum AUXCommands
     MC_SEEK_INDEX        = 0x19,
     MC_MOVE_POS          = 0x24,
     MC_MOVE_NEG          = 0x25,
+    MC_AUX_GUIDE         = 0x26,
+    MC_AUX_GUIDE_ACTIVE  = 0x27,
     MC_ENABLE_CORDWRAP   = 0x38,
     MC_DISABLE_CORDWRAP  = 0x39,
     MC_SET_CORDWRAP_POS  = 0x3a,
     MC_POLL_CORDWRAP     = 0x3b,
     MC_GET_CORDWRAP_POS  = 0x3c,
+    MC_SET_AUTOGUIDE_RATE= 0x46,
+    MC_GET_AUTOGUIDE_RATE= 0x47,
     GET_VER              = 0xfe,
     GPS_GET_LAT          = 0x01,
     GPS_GET_LONG         = 0x02,
@@ -32,7 +60,7 @@ enum AUXCommands
     GPS_LINKED           = 0x37
 };
 
-enum AUXtargets
+enum AUXTargets
 {
     ANY   = 0x00,
     MB    = 0x01,
@@ -51,34 +79,64 @@ enum AUXtargets
 #define CAUX_DEFAULT_IP   "1.2.3.4"
 #define CAUX_DEFAULT_PORT 2000
 
-void prnBytes(unsigned char *b, int n);
-void dumpMsg(buffer buf);
+void logBytes(unsigned char *buf, int n, const char *deviceName, uint32_t debugLevel);
 
 class AUXCommand
 {
-  public:
-    AUXCommand();
-    AUXCommand(buffer buf);
-    AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d, buffer dat);
-    AUXCommand(AUXCommands c, AUXtargets s, AUXtargets d);
+    public:
+        AUXCommand();
+        AUXCommand(const AUXBuffer &buf);
+        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d, const AUXBuffer &dat);
+        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d);
 
-    void fillBuf(buffer &buf);
-    void parseBuf(buffer buf);
-    void parseBuf(buffer buf, bool do_checksum);
-    long getPosition();
-    void setPosition(long p);
-    void setPosition(double p);
-    void setRate(unsigned char r);
-    unsigned char checksum(buffer buf);
-    void dumpCmd();
-    const char * cmd_name(AUXCommands c);
-    int response_data_size();
-    const char * node_name(AUXtargets n);
-    void pprint();
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Buffer Management
+        ///////////////////////////////////////////////////////////////////////////////
+        void fillBuf(AUXBuffer &buf);
+        void parseBuf(AUXBuffer buf);
+        void parseBuf(AUXBuffer buf, bool do_checksum);
 
-    AUXCommands cmd;
-    AUXtargets src, dst;
-    int len;
-    buffer data;
-    bool valid;
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Position
+        ///////////////////////////////////////////////////////////////////////////////
+        long getPosition();
+        void setPosition(long p);
+        void setPosition(double p);
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Rates
+        ///////////////////////////////////////////////////////////////////////////////
+        void setRate(unsigned char r);
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Check sum
+        ///////////////////////////////////////////////////////////////////////////////
+        unsigned char checksum(AUXBuffer buf);
+
+        ///////////////////////////////////////////////////////////////////////////////
+        /// Logging
+        ///////////////////////////////////////////////////////////////////////////////
+        //void logCommand();
+        const char * cmd_name(AUXCommands c);
+        int response_data_size();
+        const char * node_name(AUXTargets n);
+        void logResponse();
+        void logCommand();
+        //void logResponse(AUXBuffer buf);
+        static void setDebugInfo(const char *deviceName, uint8_t debugLevel);
+
+        // TODO these should be private
+        AUXCommands cmd;
+        AUXTargets src, dst;
+        AUXBuffer data;
+
+        static uint8_t DEBUG_LEVEL;
+        static char DEVICE_NAME[64];
+
+    private:
+        int len {0};
+        bool valid {false};
+
+
+
 };

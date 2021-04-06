@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 46.16627.2020.0224 */
+/* Version: 48.18421.20210202 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -11,12 +11,12 @@
               (d) arm64: Win10 or above
        (2) WinRT: x86, x64, arm, arm64; Win10 or above
        (3) macOS: universal (x64 + x86); macOS 10.10 or above
-       (4) Linux: kernel 2.6.27 or above
-              (a) x86: CPU supports SSE3 instruction set or above; GLIBC 2.8 or above
-              (b) x64: GLIBC 2.14 or above
-              (c) armel: GLIBC 2.17 or above; built by toolchain arm-linux-gnueabi (version 4.9.2)
-              (d) armhf: GLIBC 2.17 or above; built by toolchain arm-linux-gnueabihf (version 4.9.2)
-              (e) arm64: GLIBC 2.17 or above; built by toolchain aarch64-linux-gnu (version 4.9.2)
+       (4) Linux: kernel 2.6.27 or above; GLIBC 2.17 or above
+              (a) x86: CPU supports SSE3 instruction set or above; built by gcc 5.4.0
+              (b) x64: built by gcc 5.4.0
+              (c) armel: built by toolchain arm-linux-gnueabi (version 4.9.2)
+              (d) armhf: built by toolchain arm-linux-gnueabihf (version 4.9.2)
+              (e) arm64: built by toolchain aarch64-linux-gnu (version 4.9.2)
        (5) Android: arm, arm64, x86, x64; built by android-ndk-r18b; __ANDROID_API__ = 23
 */
 /*
@@ -106,26 +106,37 @@ typedef struct {
 #define TDIBWIDTHBYTES(bits)  ((unsigned)(((bits) + 31) & (~31)) / 8)
 #endif
 
-/********************************************************************************/
-/* HRESULT                                                                      */
-/*    |----------------|---------------------------------------|------------|   */
-/*    | S_OK           |   Operation successful                | 0x00000000 |   */
-/*    | S_FALSE        |   Operation successful                | 0x00000001 |   */
-/*    | E_FAIL         |   Unspecified failure                 | 0x80004005 |   */
-/*    | E_ACCESSDENIED |   General access denied error         | 0x80070005 |   */
-/*    | E_INVALIDARG   |   One or more arguments are not valid | 0x80070057 |   */
-/*    | E_NOTIMPL      |   Not supported or not implemented    | 0x80004001 |   */
-/*    | E_NOINTERFACE  |   Interface not supported             | 0x80004002 |   */
-/*    | E_POINTER      |   Pointer that is not valid           | 0x80004003 |   */
-/*    | E_UNEXPECTED   |   Unexpected failure                  | 0x8000FFFF |   */
-/*    | E_OUTOFMEMORY  |   Out of memory                       | 0x8007000E |   */
-/*    | E_WRONG_THREAD |   call function in the wrong thread   | 0x8001010E |   */
-/*    | E_GEN_FAILURE  |   device not functioning              | 0x8007001F |   */
-/*    |----------------|---------------------------------------|------------|   */
+/*****************************************************************************************************************/
+/* HRESULT                                                                                                       */
+/*    |----------------|------------------------------------------------------------------------|------------|   */
+/*    | S_OK           |   Operation successful                                                 | 0x00000000 |   */
+/*    | S_FALSE        |   Operation successful                                                 | 0x00000001 |   */
+/*    | E_FAIL         |   Unspecified failure                                                  | 0x80004005 |   */
+/*    | E_ACCESSDENIED |   General access denied error                                          | 0x80070005 |   */
+/*    | E_INVALIDARG   |   One or more arguments are not valid                                  | 0x80070057 |   */
+/*    | E_NOTIMPL      |   Not supported or not implemented                                     | 0x80004001 |   */
+/*    | E_NOINTERFACE  |   Interface not supported                                              | 0x80004002 |   */
+/*    | E_POINTER      |   Pointer that is not valid                                            | 0x80004003 |   */
+/*    | E_UNEXPECTED   |   Unexpected failure                                                   | 0x8000FFFF |   */
+/*    | E_OUTOFMEMORY  |   Out of memory                                                        | 0x8007000E |   */
+/*    | E_WRONG_THREAD |   call function in the wrong thread                                    | 0x8001010E |   */
+/*    | E_GEN_FAILURE  |   device not functioning                                               | 0x8007001F |   */
+/*    | E_PENDING      |   The data necessary to complete this operation is not yet available   | 0x8000000A |   */
+/*    |----------------|------------------------------------------------------------------------|------------|   */
+/*****************************************************************************************************************/
+/*                                                                              */
+/* Please note that the return value >= 0 means success                         */
+/* (especially S_FALSE is also successful, indicating that the internal value and the value set by the user is equivalent, which means "no operation"). */
+/* Therefore, the SUCCEEDEDand FAILED macros should generally be used to determine whether the return value is successful or failed. */
+/* (Unless there are special needs, do not use "==S_OK" or "==0" to judge the return value) */
+/*                                                                              */
+/* #define SUCCEEDED(hr)   (((HRESULT)(hr)) >= 0)                               */
+/* #define FAILED(hr)      (((HRESULT)(hr)) < 0)                                */
+/*                                                                              */
 /********************************************************************************/
 
 /* handle */
-typedef struct StarshootgT { int unused; } *HStarshootg, *HToupCam;
+typedef struct StarshootgT { int unused; } *HStarshootg, *HStarshootG;
 
 #define STARSHOOTG_MAX                      16
                                          
@@ -140,7 +151,6 @@ typedef struct StarshootgT { int unused; } *HStarshootg, *HToupCam;
 #define STARSHOOTG_FLAG_USB30_OVER_USB20    0x00000100  /* usb3.0 camera connected to usb2.0 port */
 #define STARSHOOTG_FLAG_ST4                 0x00000200  /* ST4 port */
 #define STARSHOOTG_FLAG_GETTEMPERATURE      0x00000400  /* support to get the temperature of the sensor */
-#define STARSHOOTG_FLAG_PUTTEMPERATURE      0x00000800  /* support to put the target temperature of the sensor */
 #define STARSHOOTG_FLAG_RAW10               0x00001000  /* pixel format, RAW 10bits */
 #define STARSHOOTG_FLAG_RAW12               0x00002000  /* pixel format, RAW 12bits */
 #define STARSHOOTG_FLAG_RAW14               0x00004000  /* pixel format, RAW 14bits */
@@ -168,10 +178,14 @@ typedef struct StarshootgT { int unused; } *HStarshootg, *HToupCam;
 #define STARSHOOTG_FLAG_GLOBALSHUTTER       0x0000001000000000  /* global shutter */
 #define STARSHOOTG_FLAG_FOCUSMOTOR          0x0000002000000000  /* support focus motor */
 #define STARSHOOTG_FLAG_PRECISE_FRAMERATE   0x0000004000000000  /* support precise framerate & bandwidth, see STARSHOOTG_OPTION_PRECISE_FRAMERATE & STARSHOOTG_OPTION_BANDWIDTH */
+#define STARSHOOTG_FLAG_HEAT                0x0000008000000000  /* heat to prevent fogging up */
+#define STARSHOOTG_FLAG_LOW_NOISE           0x0000010000000000  /* low noise mode */
+#define STARSHOOTG_FLAG_LEVELRANGE_HARDWARE 0x0000020000000000  /* hardware level range, put(get)_LevelRangeV2 */
+#define STARSHOOTG_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 
-#define STARSHOOTG_TEMP_DEF                 6503    /* temp */
-#define STARSHOOTG_TEMP_MIN                 2000    /* temp */
-#define STARSHOOTG_TEMP_MAX                 15000   /* temp */
+#define STARSHOOTG_TEMP_DEF                 6503    /* temp, default */
+#define STARSHOOTG_TEMP_MIN                 2000    /* temp, minimum */
+#define STARSHOOTG_TEMP_MAX                 15000   /* temp, maximum */
 #define STARSHOOTG_TINT_DEF                 1000    /* tint */
 #define STARSHOOTG_TINT_MIN                 200     /* tint */
 #define STARSHOOTG_TINT_MAX                 2500    /* tint */
@@ -214,7 +228,7 @@ typedef struct StarshootgT { int unused; } *HStarshootg, *HToupCam;
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
-#define STARSHOOTG_BANDWIDTH_DEF            85      /* bandwidth */
+#define STARSHOOTG_BANDWIDTH_DEF            90      /* bandwidth */
 #define STARSHOOTG_BANDWIDTH_MIN            1       /* bandwidth */
 #define STARSHOOTG_BANDWIDTH_MAX            100     /* bandwidth */
 #define STARSHOOTG_DENOISE_DEF              0       /* denoise */
@@ -255,10 +269,10 @@ typedef struct {
     char                  id[64];             /* unique and opaque id of a connected camera, for Starshootg_Open */
 #endif
     const StarshootgModelV2* model;
-}StarshootgDeviceV2, StarshootgInstV2; /* camera instance for enumerating */
+}StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 46.16627.2020.0224
+    get the version of this dll/so/dylib, which is: 48.18421.20210202
 */
 #ifdef _WIN32
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -296,9 +310,9 @@ STARSHOOTG_API(HStarshootg) Starshootg_Open(const char* id);
 */
 STARSHOOTG_API(HStarshootg) Starshootg_OpenByIndex(unsigned index);
 
-STARSHOOTG_API(void)     Starshootg_Close(HStarshootg h); /* close the handle */
+STARSHOOTG_API(void)     Starshootg_Close(HStarshootg h);  /* close the handle */
 
-#define STARSHOOTG_EVENT_EXPOSURE          0x0001    /* exposure time changed */
+#define STARSHOOTG_EVENT_EXPOSURE          0x0001    /* exposure time or gain changed */
 #define STARSHOOTG_EVENT_TEMPTINT          0x0002    /* white balance changed, Temp/Tint mode */
 #define STARSHOOTG_EVENT_IMAGE             0x0004    /* live image arrived, use Starshootg_PullImage to get this image */
 #define STARSHOOTG_EVENT_STILLIMAGE        0x0005    /* snap (still) frame arrived, use Starshootg_PullStillImage to get this frame */
@@ -308,12 +322,16 @@ STARSHOOTG_API(void)     Starshootg_Close(HStarshootg h); /* close the handle */
 #define STARSHOOTG_EVENT_FFC               0x0009    /* flat field correction status changed */
 #define STARSHOOTG_EVENT_DFC               0x000a    /* dark field correction status changed */
 #define STARSHOOTG_EVENT_ROI               0x000b    /* roi changed */
+#define STARSHOOTG_EVENT_LEVELRANGE        0x000c    /* level range changed */
 #define STARSHOOTG_EVENT_ERROR             0x0080    /* generic error */
 #define STARSHOOTG_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define STARSHOOTG_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
 #define STARSHOOTG_EVENT_AFFEEDBACK        0x0083    /* auto focus feedback information */
 #define STARSHOOTG_EVENT_AFPOSITION        0x0084    /* auto focus sensor board positon */
 #define STARSHOOTG_EVENT_NOPACKETTIMEOUT   0x0085    /* no packet timeout */
+#define STARSHOOTG_EVENT_EXPO_START        0x4000    /* exposure start */
+#define STARSHOOTG_EVENT_EXPO_STOP         0x4001    /* exposure stop */
+#define STARSHOOTG_EVENT_TRIGGER_ALLOW     0x4002    /* next trigger allow */
 #define STARSHOOTG_EVENT_FACTORY           0x8001    /* restore factory settings */
 
 #ifdef _WIN32
@@ -336,21 +354,22 @@ typedef struct {
 }StarshootgFrameInfoV2;
 
 /*
-    bits: 24 (RGB24), 32 (RGB32), 8 (Gray) or 16 (Gray). In RAW mode, this parameter is ignored.
+    bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Gray) or 16 (Gray). In RAW mode, this parameter is ignored.
     pnWidth, pnHeight: OUT parameter
-    rowPitch: The distance from one row to the next row. rowPitch = 0 means using the default row pitch.
+    rowPitch: The distance from one row to the next row. rowPitch = 0 means using the default row pitch. rowPitch = -1 means zero padding
     
-    -------------------------------------------------------------------------------------
-    | format                                            | default row pitch             |
-    |---------------------------------------------------|-------------------------------|
-    | RGB       | RGB24                                 | TDIBWIDTHBYTES(24 * Width)    |
-    |           | RGB32                                 | Width * 4                     |
-    |           | RGB48                                 | TDIBWIDTHBYTES(48 * Width)    |
-    |           | RGB8 grey image                       | TDIBWIDTHBYTES(8 * Width)     |
-    |-----------|---------------------------------------|-------------------------------|
-    | RAW       | 8bits Mode                            | Width                         |
-    |           | 10bits, 12bits, 14bits, 16bits Mode   | Width * 2                     |
-    |-----------|---------------------------------------|-------------------------------|
+    -------------------------------------------------------------------------------------------------------------
+    | format                                            | 0 means default row pitch     | -1 means zero padding |
+    |---------------------------------------------------|-------------------------------|-----------------------|
+    | RGB       | RGB24                                 | TDIBWIDTHBYTES(24 * Width)    | Width * 3             |
+    |           | RGB32                                 | Width * 4                     | Width * 4             |
+    |           | RGB48                                 | TDIBWIDTHBYTES(48 * Width)    | Width * 6             |
+    |           | GREY8                                 | TDIBWIDTHBYTES(8 * Width)     | Width                 |
+    |           | GREY16                                | TDIBWIDTHBYTES(16 * Width)    | Width * 2             |
+    |-----------|---------------------------------------|-------------------------------|-----------------------|
+    | RAW       | 8bits Mode                            | Width                         | Width                 |
+    |           | 10bits, 12bits, 14bits, 16bits Mode   | Width * 2                     | Width * 2             |
+    |-----------|---------------------------------------|-------------------------------|-----------------------|
 */
 STARSHOOTG_API(HRESULT)  Starshootg_PullImageV2(HStarshootg h, void* pImageData, int bits, StarshootgFrameInfoV2* pInfo);
 STARSHOOTG_API(HRESULT)  Starshootg_PullStillImageV2(HStarshootg h, void* pImageData, int bits, StarshootgFrameInfoV2* pInfo);
@@ -390,7 +409,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_SnapN(HStarshootg h, unsigned nResolutionInd
 STARSHOOTG_API(HRESULT)  Starshootg_Trigger(HStarshootg h, unsigned short nNumber);
 
 /*
-    put_Size, put_eSize, can be used to set the video output resolution BEFORE Starshootg_Start.
+    put_Size, put_eSize, can be used to set the video output resolution BEFORE Starshootg_StartXXXX.
     put_Size use width and height parameters, put_eSize use the index parameter.
     for example, UCMOS03100KPA support the following resolutions:
             index 0:    2048,   1536
@@ -456,9 +475,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_RawFormat(HStarshootg h, unsigned* nFour
 #ifndef __STARSHOOTG_CALLBACK_DEFINED__
 #define __STARSHOOTG_CALLBACK_DEFINED__
 typedef void (__stdcall* PISTARSHOOTG_EXPOSURE_CALLBACK)(void* pCtx);                                     /* auto exposure */
-typedef void (__stdcall* PISTARSHOOTG_WHITEBALANCE_CALLBACK)(const int aGain[3], void* pCtx);             /* one push white balance, RGB Gain mode */
-typedef void (__stdcall* PISTARSHOOTG_BLACKBALANCE_CALLBACK)(const unsigned short aSub[3], void* pCtx);   /* one push black balance */
-typedef void (__stdcall* PISTARSHOOTG_TEMPTINT_CALLBACK)(const int nTemp, const int nTint, void* pCtx);   /* one push white balance, Temp/Tint Mode */
+typedef void (__stdcall* PISTARSHOOTG_WHITEBALANCE_CALLBACK)(const int aGain[3], void* pCtx);             /* once white balance, RGB Gain mode */
+typedef void (__stdcall* PISTARSHOOTG_BLACKBALANCE_CALLBACK)(const unsigned short aSub[3], void* pCtx);   /* once black balance */
+typedef void (__stdcall* PISTARSHOOTG_TEMPTINT_CALLBACK)(const int nTemp, const int nTint, void* pCtx);   /* once white balance, Temp/Tint Mode */
 typedef void (__stdcall* PISTARSHOOTG_HISTOGRAM_CALLBACK)(const float aHistY[256], const float aHistR[256], const float aHistG[256], const float aHistB[256], void* pCtx);
 typedef void (__stdcall* PISTARSHOOTG_CHROME_CALLBACK)(void* pCtx);
 #endif
@@ -483,8 +502,8 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_ExpoAGain(HStarshootg h, unsigned short*
 STARSHOOTG_API(HRESULT)  Starshootg_put_ExpoAGain(HStarshootg h, unsigned short AGain); /* percent */
 STARSHOOTG_API(HRESULT)  Starshootg_get_ExpoAGainRange(HStarshootg h, unsigned short* nMin, unsigned short* nMax, unsigned short* nDef);
 
-/* Auto White Balance, Temp/Tint Mode */
-STARSHOOTG_API(HRESULT)  Starshootg_AwbOnePush(HStarshootg h, PISTARSHOOTG_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx); /* auto white balance "one push". This function must be called AFTER Starshootg_StartXXXX */
+/* Auto White Balance "Once", Temp/Tint Mode */
+STARSHOOTG_API(HRESULT)  Starshootg_AwbOnce(HStarshootg h, PISTARSHOOTG_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx); /* auto white balance "once". This function must be called AFTER Starshootg_StartXXXX */
 
 /* Auto White Balance, RGB Gain Mode */
 STARSHOOTG_API(HRESULT)  Starshootg_AwbInit(HStarshootg h, PISTARSHOOTG_WHITEBALANCE_CALLBACK fnWBProc, void* pWBCtx);
@@ -498,12 +517,12 @@ STARSHOOTG_API(HRESULT)  Starshootg_put_WhiteBalanceGain(HStarshootg h, int aGai
 STARSHOOTG_API(HRESULT)  Starshootg_get_WhiteBalanceGain(HStarshootg h, int aGain[3]);
 
 /* Black Balance */
-STARSHOOTG_API(HRESULT)  Starshootg_AbbOnePush(HStarshootg h, PISTARSHOOTG_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx); /* auto black balance "one push". This function must be called AFTER Starshootg_StartXXXX */
+STARSHOOTG_API(HRESULT)  Starshootg_AbbOnce(HStarshootg h, PISTARSHOOTG_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx); /* auto black balance "once". This function must be called AFTER Starshootg_StartXXXX */
 STARSHOOTG_API(HRESULT)  Starshootg_put_BlackBalance(HStarshootg h, unsigned short aSub[3]);
 STARSHOOTG_API(HRESULT)  Starshootg_get_BlackBalance(HStarshootg h, unsigned short aSub[3]);
 
 /* Flat Field Correction */
-STARSHOOTG_API(HRESULT)  Starshootg_FfcOnePush(HStarshootg h);
+STARSHOOTG_API(HRESULT)  Starshootg_FfcOnce(HStarshootg h);
 #ifdef _WIN32
 STARSHOOTG_API(HRESULT)  Starshootg_FfcExport(HStarshootg h, const wchar_t* filepath);
 STARSHOOTG_API(HRESULT)  Starshootg_FfcImport(HStarshootg h, const wchar_t* filepath);
@@ -513,7 +532,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_FfcImport(HStarshootg h, const char* filepat
 #endif
 
 /* Dark Field Correction */
-STARSHOOTG_API(HRESULT)  Starshootg_DfcOnePush(HStarshootg h);
+STARSHOOTG_API(HRESULT)  Starshootg_DfcOnce(HStarshootg h);
 
 #ifdef _WIN32
 STARSHOOTG_API(HRESULT)  Starshootg_DfcExport(HStarshootg h, const wchar_t* filepath);
@@ -594,7 +613,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_RealTime(HStarshootg h, int* val);
 
 /* discard the current internal frame cache.
     If DDR present, also discard the frames in the DDR.
+    Starshootg_Flush is obsolete, it's a synonyms for Starshootg_Flush(h, STARSHOOTG_OPTION_FLUSH, 3)
 */
+STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_Flush(HStarshootg h);
 
 /* get the temperature of the sensor, in 0.1 degrees Celsius (32 means 3.2 degrees Celsius, -35 means -3.5 degree Celsius)
@@ -642,13 +663,22 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_FpgaVersion(HStarshootg h, char fpgaver[
 */
 STARSHOOTG_API(HRESULT)  Starshootg_get_PixelSize(HStarshootg h, unsigned nResolutionIndex, float* x, float* y);
 
+/* software level range */
 STARSHOOTG_API(HRESULT)  Starshootg_put_LevelRange(HStarshootg h, unsigned short aLow[4], unsigned short aHigh[4]);
 STARSHOOTG_API(HRESULT)  Starshootg_get_LevelRange(HStarshootg h, unsigned short aLow[4], unsigned short aHigh[4]);
+
+/* hardware level range mode */
+#define STARSHOOTG_LEVELRANGE_MANUAL       0x0000  /* manual */
+#define STARSHOOTG_LEVELRANGE_ONCE         0x0001  /* once */
+#define STARSHOOTG_LEVELRANGE_CONTINUE     0x0002  /* continue */
+#define STARSHOOTG_LEVELRANGE_ROI          0xffff  /* update roi rect only */
+STARSHOOTG_API(HRESULT)  Starshootg_put_LevelRangeV2(HStarshootg h, unsigned short mode, const RECT* pRoiRect, unsigned short aLow[4], unsigned short aHigh[4]);
+STARSHOOTG_API(HRESULT)  Starshootg_get_LevelRangeV2(HStarshootg h, unsigned short* pMode, RECT* pRoiRect, unsigned short aLow[4], unsigned short aHigh[4]);
 
 /*
     The following functions must be called AFTER Starshootg_StartPushMode or Starshootg_StartPullModeWithWndMsg or Starshootg_StartPullModeWithCallback
 */
-STARSHOOTG_API(HRESULT)  Starshootg_LevelRangeAuto(HStarshootg h);
+STARSHOOTG_API(HRESULT)  Starshootg_LevelRangeAuto(HStarshootg h);  /* software level range */
 STARSHOOTG_API(HRESULT)  Starshootg_GetHistogram(HStarshootg h, PISTARSHOOTG_HISTOGRAM_CALLBACK fnHistogramProc, void* pHistogramCtx);
 
 /* led state:
@@ -747,7 +777,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeNum);
                                                             default: 1 (win), 0 (linux/macos)
                                                         */
 #define STARSHOOTG_OPTION_AFPOSITION            0x24       /* auto focus sensor board positon */
-#define STARSHOOTG_OPTION_AFMODE                0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:onepush focus; 3:conjugate calibration) */
+#define STARSHOOTG_OPTION_AFMODE                0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:once focus; 3:conjugate calibration) */
 #define STARSHOOTG_OPTION_AFZONE                0x26       /* auto focus zone */
 #define STARSHOOTG_OPTION_AFFEEDBACK            0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
 #define STARSHOOTG_OPTION_TESTPATTERN           0x28       /* test pattern:
@@ -770,11 +800,30 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeNum);
 #define STARSHOOTG_OPTION_SEQUENCER_ONOFF       0x33       /* sequencer trigger: on/off */
 #define STARSHOOTG_OPTION_SEQUENCER_NUMBER      0x34       /* sequencer trigger: number, range = [1, 255] */
 #define STARSHOOTG_OPTION_SEQUENCER_EXPOTIME    0x01000000 /* sequencer trigger: exposure time, iOption = STARSHOOTG_OPTION_SEQUENCER_EXPOTIME | index, iValue = exposure time
-                                                             For example, to set the exposure time of the third group to 50ms, call:
-                                                                Starshootg_put_Option(STARSHOOTG_OPTION_SEQUENCER_EXPOTIME | 3, 50000)
+                                                            For example, to set the exposure time of the third group to 50ms, call:
+                                                               Starshootg_put_Option(STARSHOOTG_OPTION_SEQUENCER_EXPOTIME | 3, 50000)
                                                         */
 #define STARSHOOTG_OPTION_SEQUENCER_EXPOGAIN    0x02000000 /* sequencer trigger: exposure gain, iOption = STARSHOOTG_OPTION_SEQUENCER_EXPOGAIN | index, iValue = gain */
 #define STARSHOOTG_OPTION_DENOISE               0x35       /* denoise, strength range: [0, 100], 0 means disable */
+#define STARSHOOTG_OPTION_HEAT_MAX              0x36       /* maximum level: heat to prevent fogging up */
+#define STARSHOOTG_OPTION_HEAT                  0x37       /* heat to prevent fogging up */
+#define STARSHOOTG_OPTION_LOW_NOISE             0x38       /* low noise mode: 1 => enable */
+#define STARSHOOTG_OPTION_POWER                 0x39       /* get power consumption, unit: milliwatt */
+#define STARSHOOTG_OPTION_GLOBAL_RESET_MODE     0x3a       /* global reset mode */
+#define STARSHOOTG_OPTION_OPEN_USB_ERRORCODE    0x3b       /* open usb error code */
+#define STARSHOOTG_OPTION_LINUX_USB_ZEROCOPY    0x3c       /* global option for linux platform:
+                                                             enable or disable usb zerocopy (helps to reduce memory copy and improve efficiency. Requires kernel version >= 4.6 and hardware platform support)
+                                                             if the image is wrong, this indicates that the hardware platform does not support this feature, please disable it when the program starts:
+                                                               Starshootg_put_Option((this is a global option, the camera handle parameter is not required, use nullptr), STARSHOOTG_OPTION_LINUX_USB_ZEROCOPY, 0)
+                                                             default value:
+                                                               disable(0): android or arm32
+                                                               enable(1):  others
+                                                        */
+#define STARSHOOTG_OPTION_FLUSH                 0x3d       /* 1 = hard flush, discard frames cached by camera DDR (if any)
+                                                           2 = soft flush, discard frames cached by starshootg.dll (if any)
+                                                           3 = both flush
+                                                           Starshootg_Flush means 'both flush'
+                                                        */
 
 /* pixel format */
 #define STARSHOOTG_PIXELFORMAT_RAW8             0x00
@@ -998,6 +1047,22 @@ STARSHOOTG_API(HRESULT)  Starshootg_put_ExpoCallback(HStarshootg h, PISTARSHOOTG
 STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_put_ChromeCallback(HStarshootg h, PISTARSHOOTG_CHROME_CALLBACK fnChromeProc, void* pChromeCtx);
 
+/* Starshootg_FfcOnePush is obsolete, it's a synonyms for Starshootg_FfcOnce. */
+STARSHOOTG_DEPRECATED
+STARSHOOTG_API(HRESULT)  Starshootg_FfcOnePush(HStarshootg h);
+
+/* Starshootg_DfcOnePush is obsolete, it's a synonyms for Starshootg_DfcOnce. */
+STARSHOOTG_DEPRECATED
+STARSHOOTG_API(HRESULT)  Starshootg_DfcOnePush(HStarshootg h);
+
+/* Starshootg_AwbOnePush is obsolete, it's a synonyms for Starshootg_AwbOnce. */
+STARSHOOTG_DEPRECATED
+STARSHOOTG_API(HRESULT)  Starshootg_AwbOnePush(HStarshootg h, PISTARSHOOTG_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx);
+
+/* Starshootg_AbbOnePush is obsolete, it's a synonyms for Starshootg_AbbOnce. */
+STARSHOOTG_DEPRECATED
+STARSHOOTG_API(HRESULT)  Starshootg_AbbOnePush(HStarshootg h, PISTARSHOOTG_BLACKBALANCE_CALLBACK fnBBProc, void* pBBCtx);
+
 #ifndef _WIN32
 
 /*
@@ -1018,7 +1083,7 @@ STARSHOOTG_API(void)   Starshootg_HotPlug(PSTARSHOOTG_HOTPLUG pHotPlugCallback, 
 STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_Start(HStarshootg h, PSTARSHOOTG_DATA_CALLBACK pDataCallback, void* pCallbackCtx);
 
-/* Starshootg_put_TempTintInit is obsolete, it's a synonyms for Starshootg_AwbOnePush. */
+/* Starshootg_put_TempTintInit is obsolete, it's a synonyms for Starshootg_AwbOnce. */
 STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_put_TempTintInit(HStarshootg h, PISTARSHOOTG_TEMPTINT_CALLBACK fnTTProc, void* pTTCtx);
 
@@ -1065,6 +1130,15 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_VignetMidPointInt(HStarshootg h, int* nM
 #define STARSHOOTG_FLAG_BITDEPTH12    STARSHOOTG_FLAG_RAW12  /* pixel format, RAW 12bits */
 #define STARSHOOTG_FLAG_BITDEPTH14    STARSHOOTG_FLAG_RAW14  /* pixel format, RAW 14bits */
 #define STARSHOOTG_FLAG_BITDEPTH16    STARSHOOTG_FLAG_RAW16  /* pixel format, RAW 16bits */
+
+#ifdef _WIN32
+STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const wchar_t* id, const char* name);
+STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const wchar_t* id, char name[64]);
+#else
+STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const char* id, const char* name);
+STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const char* id, char name[64]);
+#endif
+STARSHOOTG_API(unsigned) Starshootg_EnumWithName(StarshootgDeviceV2 pti[STARSHOOTG_MAX]);
 
 #ifdef _WIN32
 #pragma pack(pop)

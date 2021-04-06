@@ -35,7 +35,7 @@
 // CTOR 
 CamUsbIo::CamUsbIo( const std::string & DeviceEnum, const uint32_t MaxBufSize,
                                        const bool ApplyPad ) : 
-                                                   m_fileName( __FILE__ ),
+                                                   m_fileName( __BASE_FILE__ ),
                                                    m_ApplyPadding( ApplyPad ),
                                                    m_MaxBufSize( MaxBufSize )
 

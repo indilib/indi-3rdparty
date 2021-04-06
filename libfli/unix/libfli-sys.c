@@ -64,6 +64,7 @@
 #include "libfli-parport.h"
 #include "libfli-usb.h"
 #include "libfli-serial.h"
+#include "indimacros.h"
 
 static long unix_fli_list_parport(flidomain_t domain, char ***names);
 static long unix_fli_list_usb(flidomain_t domain, char ***names);
@@ -574,7 +575,8 @@ long unix_fli_list(flidomain_t domain, char ***names)
 long unix_fli_list_glob(char *pattern, flidomain_t domain,
 			       char ***names)
 {
-  int retval, i, found = 0;
+  int retval, found = 0;
+  size_t i;
   char **list;
   glob_t g;
 
@@ -639,6 +641,8 @@ long unix_fli_list_glob(char *pattern, flidomain_t domain,
 
 static long unix_fli_list_parport(flidomain_t domain, char ***names)
 {
+  INDI_UNUSED(domain);
+  INDI_UNUSED(names);
   return -EINVAL;
 //  return unix_fli_list_glob(PARPORT_GLOB, domain, names);
 /* If you still have a parallel port FLI camera, buy a new one or use the older SDK. Functionality didn't

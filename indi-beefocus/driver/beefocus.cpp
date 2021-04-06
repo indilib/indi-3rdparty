@@ -317,7 +317,7 @@ bool Driver::initProperties()
     //
     tcpConnection->setDefaultPort(4999);
 
-    // Sets the desired polling period in the DefaultDevice (POLLMS)
+    // Sets the desired polling period in the DefaultDevice getCurrentPollingPeriod()
     setDefaultPollingPeriod(AdvanceOnTimerHit);
 
     return true;
@@ -354,14 +354,14 @@ bool Driver::SyncFocuser( uint32_t ticks )
 
 void Driver::TimerHit()
 {
-    simFirmware->advanceTime( POLLMS );
+    simFirmware->advanceTime( getCurrentPollingPeriod() );
     timerTicks++;
 
     if ( !isConnected())
     {
         HardwareState nullState;
         UpdateStatusInfo( nullState );
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
         return;
     }
 
@@ -397,7 +397,7 @@ void Driver::TimerHit()
     }
     ignoreNextStatusUpdate=false;
 
-    SetTimer( POLLMS );
+    SetTimer( getCurrentPollingPeriod() );
 }
 
 void Driver::UpdateStatusInfo( const HardwareState& hwState )
@@ -477,12 +477,12 @@ void Driver::UpdateStatusInfo( const HardwareState& hwState )
 ************************************************************************************/
 bool Driver::updateProperties()
 {
-    defineText( &CStatusInfoTP );
+    defineProperty( &CStatusInfoTP );
     INDI::Focuser::updateProperties();
 
     if (isConnected())
     {
-        defineText( &FStatusInfoTP );
+        defineProperty( &FStatusInfoTP );
     }
     else
     {

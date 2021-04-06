@@ -86,7 +86,7 @@ bool IndiAstrolink4::Handshake()
         }
         else
         {
-            SetTimer(POLLMS);
+            SetTimer(getCurrentPollingPeriod());
             return true;
         }
     }
@@ -99,7 +99,7 @@ void IndiAstrolink4::TimerHit()
         return;
 
     sensorRead();
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -280,29 +280,29 @@ bool IndiAstrolink4::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&FocusPosMMNP);
+        defineProperty(&FocusPosMMNP);
         FI::updateProperties();
         WI::updateProperties();
-        defineSwitch(&Power1SP);
-        defineSwitch(&Power2SP);
-        defineSwitch(&Power3SP);
-        defineSwitch(&AutoPWMSP);
-        defineNumber(&Sensor2NP);
-        defineNumber(&PWMNP);
-        defineNumber(&PowerDataNP);
-        defineNumber(&FocuserSettingsNP);
-        defineSwitch(&FocuserModeSP);
-        defineSwitch(&FocuserCompModeSP);
-        defineSwitch(&FocuserManualSP);
-        defineNumber(&CompensationValueNP);
-        defineSwitch(&CompensateNowSP);
-        defineSwitch(&PowerDefaultOnSP);
-        defineNumber(&OtherSettingsNP);
-        defineSwitch(&DCFocDirSP);
-        defineNumber(&DCFocTimeNP);
-        defineSwitch(&DCFocAbortSP);
-        defineText(&PowerControlsLabelsTP);
-        defineSwitch(&BuzzerSP);
+        defineProperty(&Power1SP);
+        defineProperty(&Power2SP);
+        defineProperty(&Power3SP);
+        defineProperty(&AutoPWMSP);
+        defineProperty(&Sensor2NP);
+        defineProperty(&PWMNP);
+        defineProperty(&PowerDataNP);
+        defineProperty(&FocuserSettingsNP);
+        defineProperty(&FocuserModeSP);
+        defineProperty(&FocuserCompModeSP);
+        defineProperty(&FocuserManualSP);
+        defineProperty(&CompensationValueNP);
+        defineProperty(&CompensateNowSP);
+        defineProperty(&PowerDefaultOnSP);
+        defineProperty(&OtherSettingsNP);
+        defineProperty(&DCFocDirSP);
+        defineProperty(&DCFocTimeNP);
+        defineProperty(&DCFocAbortSP);
+        defineProperty(&PowerControlsLabelsTP);
+        defineProperty(&BuzzerSP);
     }
     else
     {
@@ -691,7 +691,7 @@ IPState IndiAstrolink4::MoveAbsFocuser(uint32_t targetTicks)
     {
         if((targetTicks > FocusAbsPosN[0].value) == (backlashSteps > 0))
         {
-            if((targetTicks + backlash) < 0 || (targetTicks + backlash) > FocusMaxPosN[0].value)
+            if(((int32_t)targetTicks + backlash) < 0 || (targetTicks + backlash) > FocusMaxPosN[0].value)
             {
                 backlash = 0;
             }

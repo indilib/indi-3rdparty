@@ -112,7 +112,7 @@ void FLICFW::ISGetProperties(const char *dev)
 {
     INDI::FilterWheel::ISGetProperties(dev);
 
-    defineSwitch(&PortSP);
+    defineProperty(&PortSP);
 
     addAuxControls();
 }
@@ -123,8 +123,8 @@ bool FLICFW::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&TurnWheelSP);
-        defineText(&FilterInfoTP);
+        defineProperty(&TurnWheelSP);
+        defineProperty(&FilterInfoTP);
     }
     else
     {

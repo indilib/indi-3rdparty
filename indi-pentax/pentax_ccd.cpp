@@ -102,13 +102,13 @@ bool PentaxCCD::updateProperties()
 
         buildCaptureSwitches();
 
-        defineSwitch(&transferFormatSP);
-        defineSwitch(&autoFocusSP);
+        defineProperty(&transferFormatSP);
+        defineProperty(&autoFocusSP);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         }
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -251,8 +251,8 @@ bool PentaxCCD::StartExposure(float duration)
                 return false;
             }
         }
-        catch (std::runtime_error e){
-            LOGF_ERROR("runtime_error: %s",e.what());
+        catch (const std::runtime_error &e){
+            LOGF_ERROR("runtime_error: %s", e.what());
             InExposure = false;
             return false;
         }
@@ -417,7 +417,7 @@ void PentaxCCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -529,7 +529,7 @@ void PentaxCCD::updateCaptureSetting(CaptureSetting *setting, string newval) {
             return;
         }
     }
-    LOGF_ERROR("Error setting %S to %s: not supported in current camera mode", setting->getName(), newval.c_str());
+    LOGF_ERROR("Error setting %S to %s: not supported in current camera mode", setting->getName().c_str(), newval.c_str());
 }
 
 bool PentaxCCD::ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n)
@@ -545,7 +545,7 @@ bool PentaxCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
         transferFormatSP.s = IPS_OK;
         IDSetSwitch(&transferFormatSP, nullptr);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         } else {
             deleteProperty(preserveOriginalSP.name);
         }
@@ -635,7 +635,7 @@ void PentaxCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control, Captur
                            name ? name : setting->getName().c_str(),
                            label ? label : setting->getName().c_str(),
                            IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        defineSwitch(control);
+        defineProperty(control);
     }
 }
 

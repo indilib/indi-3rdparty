@@ -1,7 +1,7 @@
 /*  Measuring functions for the TSL 237 light sensor.
 
     Copyright (C) 2020 Allesandro Pensato,
-                       Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+                       Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This application is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public
@@ -69,4 +69,10 @@ void serializeTSL237(JsonDocument &doc) {
     data["SQM"]       = tsl237Data.sqm;
     data["Frequency"] = tsl237Data.frequency;
   }
+}
+
+String displayTSL237Parameters() {
+  if (tsl237Data.status == false) return "";
+  
+  return " SQM: " + String(tsl237Data.sqm, 1) + "\n Frequency: " + String(tsl237Data.frequency, 1) + "\n";
 }

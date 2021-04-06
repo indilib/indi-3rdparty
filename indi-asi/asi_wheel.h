@@ -28,26 +28,45 @@
 
 #include <indifilterwheel.h>
 
+#define EFW_IS_MOVING -1
+
 class ASIWHEEL : public INDI::FilterWheel
 {
-  public:
-    ASIWHEEL(int id, EFW_INFO info, bool enumerate);
-    ~ASIWHEEL();
+    public:
+        ASIWHEEL(int id, EFW_INFO info, bool enumerate);
+        ~ASIWHEEL();
 
-    char name[MAXINDIDEVICE];
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-  protected:
+        char name[MAXINDIDEVICE];
 
-    virtual bool Connect() override;
-    virtual bool Disconnect() override;
-    virtual const char *getDefaultName() override;
+    protected:
+        virtual bool Connect() override;
+        virtual bool Disconnect() override;
+        virtual const char *getDefaultName() override;
 
-    virtual bool initProperties() override;    
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
 
-    virtual int QueryFilter() override;
-    virtual bool SelectFilter(int) override;
-    virtual void TimerHit() override;
+        virtual int QueryFilter() override;
+        virtual bool SelectFilter(int) override;
+        virtual void TimerHit() override;
 
-private:
-    int fw_id = -1;
+        // Save config
+        virtual bool saveConfigItems(FILE *fp) override;
+
+    private:
+
+        // Unidirectional
+        ISwitchVectorProperty UniDirectionalSP;
+        ISwitch UniDirectionalS[2];
+
+        // Calibrate
+        static void TimerHelperCalibrate(void *context);
+        void TimerCalibrate();
+        ISwitchVectorProperty CalibrateSP;
+        ISwitch CalibrateS[1];
+
+    private:
+        int fw_id = -1;
 };

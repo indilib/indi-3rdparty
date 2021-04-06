@@ -45,9 +45,11 @@ jobs:
       - run:
           name: Build all
           command: |
+            apt-get update
+            apt-get -y install apt-utils software-properties-common
             apt-add-repository -y ppa:mutlaqja/indinightly
             apt-get update
-            apt-get -y install libindi
+            apt-get -y install libindi1 libindi-dev libcurl4-gnutls-dev libtiff-dev libraw-dev
             .circleci/build-core.sh
       - run:
           name: Run tests

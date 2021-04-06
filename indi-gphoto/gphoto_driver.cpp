@@ -23,9 +23,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/ioctl.h> /* ioctl()*/
-#include <tiffio.h>
-#include <tiffio.hxx>
+#include <sys/ioctl.h>
 #include <cstdlib>
 
 #include <config.h>
@@ -483,6 +481,11 @@ static double *parse_shutterspeed(gphoto_driver *gphoto, gphoto_widget *widget)
         }
         else if ((val = strtod(widget->choices[i], nullptr)))
         {
+            // Fuji returns long exposure values ( > 60s) with m postfix
+            if (widget->choices[i][strlen(widget->choices[i]) - 1] == 'm')
+            {
+                val = val * 60;
+            }
             exposure[i] = val;
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "exposure[%d]=%g seconds", i, exposure[i]);
         }
@@ -910,77 +913,78 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
             imgData = nullptr;
         }
     }
-#else
-    if(strstr(gphoto->manufacturer, "Canon"))
-    {
-        // Try to pull the camera temperature out of the EXIF data
-        const char *imgData;
-        unsigned long imgSize;
-        result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
-        if (result == GP_OK)
+#endif
+    /*
+        if(strstr(gphoto->manufacturer, "Canon"))
         {
-            membuf sbuf((char *)imgData, (char *)imgData + imgSize);
-            std::istream is(&sbuf);
-            auto tiff = TIFFStreamOpen(fn->name, &is);
-            if (tiff)
+            // Try to pull the camera temperature out of the EXIF data
+            const char *imgData;
+            unsigned long imgSize;
+            result = gp_file_get_data_and_size(gphoto->camerafile, &imgData, &imgSize);
+            if (result == GP_OK)
             {
-                toff_t exifoffset;
-                if (TIFFGetField (tiff, TIFFTAG_EXIFIFD, &exifoffset) && TIFFReadEXIFDirectory (tiff, exifoffset))
+                membuf sbuf((char *)imgData, (char *)imgData + imgSize);
+                std::istream is(&sbuf);
+                auto tiff = TIFFStreamOpen(fn->name, &is);
+                if (tiff)
                 {
-                    uint32_t count;
-                    uint8_t* data;
-                    int ret = TIFFGetField(tiff, EXIFTAG_MAKERNOTE, &count, &data);
-                    if(ret != 0)
+                    toff_t exifoffset;
+                    if (TIFFGetField (tiff, TIFFTAG_EXIFIFD, &exifoffset) && TIFFReadEXIFDirectory (tiff, exifoffset))
                     {
-                        // Got the MakerNote EXIF data, now parse it out.  It's been reverse-engineered and documented at
-                        // https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Canon.html
-                        struct IFDEntry
+                        uint32_t count;
+                        uint8_t* data;
+                        int ret = TIFFGetField(tiff, EXIFTAG_MAKERNOTE, &count, &data);
+                        if(ret != 0)
                         {
-                            uint16_t	tag;
-                            uint16_t	type;
-                            uint32_t	count;
-                            uint32_t	offset;
-                        };
-
-                        // The TIFF library took care of handling byte-ordering for us until now.  But now that we're parsing
-                        // binary data directly, we need to remember to swap bytes when necessary.
-                        uint16_t numEntries = *(uint16_t*)data;
-                        if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&numEntries);
-                        IFDEntry* entries = (IFDEntry*) (data + sizeof(uint16_t));
-                        for (int i = 0; i < numEntries; i++)
-                        {
-                            IFDEntry* entry = &entries[i];
-                            uint16_t tag = entry->tag;
-                            if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&tag);
-                            if (tag == 4)
+                            // Got the MakerNote EXIF data, now parse it out.  It's been reverse-engineered and documented at
+                            // https://sno.phy.queensu.ca/~phil/exiftool/TagNames/Canon.html
+                            struct IFDEntry
                             {
-                                // Found the ShotInfo tag. Extract the CameraTemperature field
-                                uint32_t offset = entry->offset;
-                                if (TIFFIsByteSwapped(tiff)) TIFFSwabLong(&offset);
-                                uint16_t* shotInfo = (uint16_t*)(imgData + offset);
-                                uint16_t temperature = shotInfo[12];
-                                if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&temperature);
+                                uint16_t	tag;
+                                uint16_t	type;
+                                uint32_t	count;
+                                uint32_t	offset;
+                            };
 
-                                // The temperature is offset by 0x80, so correct that
-                                gphoto->last_sensor_temp = (int)(temperature - 0x80);
+                            // The TIFF library took care of handling byte-ordering for us until now.  But now that we're parsing
+                            // binary data directly, we need to remember to swap bytes when necessary.
+                            uint16_t numEntries = *(uint16_t*)data;
+                            if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&numEntries);
+                            IFDEntry* entries = (IFDEntry*) (data + sizeof(uint16_t));
+                            for (int i = 0; i < numEntries; i++)
+                            {
+                                IFDEntry* entry = &entries[i];
+                                uint16_t tag = entry->tag;
+                                if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&tag);
+                                if (tag == 4)
+                                {
+                                    // Found the ShotInfo tag. Extract the CameraTemperature field
+                                    uint32_t offset = entry->offset;
+                                    if (TIFFIsByteSwapped(tiff)) TIFFSwabLong(&offset);
+                                    uint16_t* shotInfo = (uint16_t*)(imgData + offset);
+                                    uint16_t temperature = shotInfo[12];
+                                    if (TIFFIsByteSwapped(tiff)) TIFFSwabShort(&temperature);
 
-                                break;
+                                    // The temperature is offset by 0x80, so correct that
+                                    gphoto->last_sensor_temp = (int)(temperature - 0x80);
+
+                                    break;
+                                }
                             }
                         }
                     }
+                    TIFFClose(tiff);
                 }
-                TIFFClose(tiff);
-            }
-            if (fd >= 0)
-            {
-                // The gphoto documentation says I don't need to do this,
-                // but reading the source of gp_file_get_data_and_size says otherwise. :(
-                free((void *)imgData);
-                imgData = nullptr;
+                if (fd >= 0)
+                {
+                    // The gphoto documentation says I don't need to do this,
+                    // but reading the source of gp_file_get_data_and_size says otherwise. :(
+                    free((void *)imgData);
+                    imgData = nullptr;
+                }
             }
         }
-    }
-#endif
+    */
     // For some reason Canon 20D fails when deleting here
     // so this hack is a workaround until a permement fix is found
     // JM 2017-05-17

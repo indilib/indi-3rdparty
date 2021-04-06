@@ -788,7 +788,8 @@ char *read_json_file(int *jsonsize) {
     *jsonsize = lseek(jsonfd, 0, SEEK_END);
     lseek(jsonfd, 0, SEEK_SET);
     char *jsontext=malloc(*jsonsize);
-    read(jsonfd, jsontext, *jsonsize);
+    if (read(jsonfd, jsontext, *jsonsize) < 0)
+        fprintf(stderr, "Cannot read pentax_settings.json file\n");
     DPRINT("json text:\n%.*s\n", *jsonsize, jsontext);
     return jsontext;
 }
@@ -984,7 +985,7 @@ ipslr_model_info_t camera_models[] = {
 };
 
 ipslr_model_info_t *find_model_by_id( uint32_t id ) {
-    int i;
+    size_t i;
     for ( i = 0; i<sizeof (camera_models) / sizeof (camera_models[0]); i++) {
         if ( camera_models[i].id == id ) {
             //    DPRINT("found %d\n",i);

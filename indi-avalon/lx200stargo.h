@@ -218,7 +218,7 @@ class LX200StarGo : public LX200Telescope
 
         // meridian flip
         virtual bool syncSideOfPier();
-        bool checkLX200Format();
+        bool checkLX200EquatorialFormat();
 
         // Guide Commands
         virtual IPState GuideNorth(uint32_t ms) override;

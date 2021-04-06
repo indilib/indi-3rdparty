@@ -168,14 +168,14 @@ bool Talon6::updateProperties()
     {
         getDeviceStatus();
         getFirmwareVersion();
-        defineNumber(&GoToNP);
-        defineSwitch(&StatusSP);
-        defineSwitch(&SafetySP);
-        defineText(&StatusValueTP);
-        defineText(&FirmwareVersionTP);
-        defineNumber(&EncoderTicksNP);
-        defineLight(&SensorsLP);
-        defineLight(&SwitchesLP);
+        defineProperty(&GoToNP);
+        defineProperty(&StatusSP);
+        defineProperty(&SafetySP);
+        defineProperty(&StatusValueTP);
+        defineProperty(&FirmwareVersionTP);
+        defineProperty(&EncoderTicksNP);
+        defineProperty(&SensorsLP);
+        defineProperty(&SwitchesLP);
     }
     else
     {
@@ -199,11 +199,11 @@ void Talon6::ISGetProperties(const char *dev)
     INDI::Dome::ISGetProperties(dev);
 
     // Load Sync position
-    defineNumber(&EncoderTicksNP);
+    defineProperty(&EncoderTicksNP);
     loadConfig(true, "ENCODER_TICKS");
 
     // Load Safety configuration
-    defineSwitch(&SafetySP);
+    defineProperty(&SafetySP);
     loadConfig(true, "SAFETY");
 }
 

@@ -23,10 +23,13 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/src/pktriggercord-cli.c PK_CLI)
 string(REGEX REPLACE "int main.*$" "" PK_CLI "${PK_CLI}")
 file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/libpktriggercord.c "${PK_CLI}")
 
+find_package(INDI REQUIRED)
+
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/src/external/js0n)
+include_directories( ${INDI_INCLUDE_DIR})
 
 set(libpktriggercord_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr.c

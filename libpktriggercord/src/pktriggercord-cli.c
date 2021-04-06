@@ -61,6 +61,7 @@ bool astrotracer_before=false;
 bool need_bulb_new_cleanup=false;
 bool need_one_push_bracketing_cleanup=false;
 
+#if 0 // UNUSED
 static struct option const longopts[] = {
     {"exposure_mode", required_argument, NULL, 'm'},
     {"resolution", required_argument, NULL, 'r'},
@@ -109,6 +110,7 @@ static struct option const longopts[] = {
     {"settings", no_argument, NULL, 'S'},
     { NULL, 0, NULL, 0}
 };
+#endif
 
 int save_buffer(pslr_handle_t camhandle, int bufno, int fd, pslr_status *status, user_file_format filefmt, int jpeg_stars) {
     pslr_buffer_type imagetype;
@@ -143,9 +145,9 @@ int save_buffer(pslr_handle_t camhandle, int bufno, int fd, pslr_status *status,
         ssize_t r = write(fd, buf, bytes);
         if (r == 0) {
             DPRINT("write(buf): Nothing has been written to buf.\n");
-        } else if (r == -1) {
+        } else if (r < 0) {
             perror("write(buf)");
-        } else if (r < bytes) {
+        } else if ((uint32_t)r < bytes) {
             DPRINT("write(buf): only write %zu bytes, should be %d bytes.\n", r, bytes);
         }
         current += bytes;
@@ -172,9 +174,9 @@ void save_memory(pslr_handle_t camhandle, int fd, uint32_t length) {
         ssize_t r = write(fd, buf, bytes);
         if (r == 0) {
             DPRINT("write(buf): Nothing has been written to buf.\n");
-        } else if (r == -1) {
+        } else if (r < 0) {
             perror("write(buf)");
-        } else if (r < bytes) {
+        } else if ((uint32_t)r < bytes) {
             DPRINT("write(buf): only write %zu bytes, should be %d bytes.\n", r, bytes);
         }
         current += bytes;

@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <driversList>
 <devGroup group="CCDs">
-        <device label="Canon DSLR" mdpd="true">
+        <device label="Canon DSLR" mdpd="true" manufacturer="DSLRs">
                 <driver name="Canon DSLR">indi_canon_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="Nikon DSLR" mdpd="true">
+        <device label="Nikon DSLR" mdpd="true" manufacturer="DSLRs">
                 <driver name="Nikon DSLR">indi_nikon_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="Pentax DSLR Legacy" mdpd="true">
+        <device label="Pentax DSLR Legacy" mdpd="true" manufacturer="DSLRs">
                 <driver name="Pentax DSLR">indi_pentax_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="Sony DSLR" mdpd="true">
+        <device label="Sony DSLR" mdpd="true" manufacturer="DSLRs">
                 <driver name="Sony DSLR">indi_sony_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="Fuji DSLR" mdpd="true">
+        <device label="Fuji DSLR" mdpd="true" manufacturer="DSLRs">
                 <driver name="Fuji DSLR">indi_fuji_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>
-        <device label="GPhoto CCD">
+        <device label="GPhoto CCD" manufacturer="DSLRs">
                 <driver name="GPhoto CCD">indi_gphoto_ccd</driver>
                 <version>@INDI_GPHOTO_VERSION_MAJOR@.@INDI_GPHOTO_VERSION_MINOR@</version>
         </device>

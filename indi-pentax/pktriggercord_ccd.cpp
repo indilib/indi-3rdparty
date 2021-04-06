@@ -20,6 +20,7 @@
 
 #include "pktriggercord_ccd.h"
 #include "pslr.h"
+#include <indimacros.h>
 
 #define MINISO 100
 #define MAXISO 102400
@@ -76,7 +77,7 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
     IUFillSwitchVector(&preserveOriginalSP, preserveOriginalS, 2, getDeviceName(), "PRESERVE_ORIGINAL", "Copy Option", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 7200, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
     IUSaveText(&BayerT[2], "RGGB");
 
@@ -105,13 +106,13 @@ bool PkTriggerCordCCD::updateProperties()
 
         buildCaptureSwitches();
 
-        defineSwitch(&transferFormatSP);
-        defineSwitch(&autoFocusSP);
+        defineProperty(&transferFormatSP);
+        defineProperty(&autoFocusSP);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         }
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -205,7 +206,7 @@ void PkTriggerCordCCD::buildCaptureSettingSwitch(ISwitchVectorProperty *control,
         IUFillSwitchVector(control, create_switch(name, optionList, numOptions, set_idx),
                            numOptions, getDeviceName(), name, label,
                            IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-        defineSwitch(control);
+        defineProperty(control);
     }
 }
 
@@ -217,12 +218,12 @@ bool PkTriggerCordCCD::Connect()
         LOG_ERROR("Cannot connect to Pentax camera.");
         return false;
     }
-    int r;
-    if (r=pslr_connect(device)) {
-        if ( r != -1 ) {
-            LOG_ERROR("Cannot connect to Pentax camera.");
-        } else {
+    int r = pslr_connect(device);
+    if (r != 0) {
+        if ( r == -1 ) {
             LOG_ERROR("Unknown Pentax camera found.");
+        } else {
+            LOG_ERROR("Cannot connect to Pentax camera.");
         }
         return false;
     }
@@ -301,13 +302,21 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         return false;
     }
     else {
+        //just need to check if we changed exposure modes and are still connected before proceeding here
+        if (!getCaptureSettingsState()) {
+            LOG_INFO("Could not get camera state.  Are we still connected?");
+            return false;
+        }
+
+        //check if duration is valid
         if (!duration) {
             LOG_INFO("Shutter speed must be greater than 0.");
             return false;
         }
-
-        //just need to check if we changed exposure modes and are still connected before proceeding here
-        if (!getCaptureSettingsState()) return false;
+        else if (( status.exposure_mode ==  PSLR_GUI_EXPOSURE_MODE_B ) && (duration<1)) {
+            LOG_INFO("Shutter speed must be at least 1 in bulb mode.");
+            return false;
+        }
 
         InExposure = true;
 
@@ -315,7 +324,7 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         if ( status.exposure_mode !=  PSLR_GUI_EXPOSURE_MODE_B ) {
             if (duration>30) {
                 duration = 30;
-                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer expsoures.");
+                LOG_INFO("Exposures longer than 30 seconds not supported in current mode.  Setting exposure time to 30 seconds.  Change camera to bulb mode for longer exposures.");
             }
             else {
                 LOGF_INFO("Only pre-defined shutter speeds are supported in current mode.  The camera will select the pre-defined shutter speed that most closely matches %f.",duration);
@@ -325,12 +334,15 @@ bool PkTriggerCordCCD::StartExposure(float duration)
         ExposureRequest = duration;
         float F = duration;
         pslr_rational_t shutter_speed;
-		if (F < 5) {
-			F = F * 10;
-			shutter_speed.denom = 10;
+        shutter_speed.denom = 1;
+        int i = 0;
+        if (F < 5) {
+            while ((rintf(F)!=F)&& (i++<4)) {
+                F = F * 10;
+                shutter_speed.denom *= 10;
+            }
 			shutter_speed.nom = F;
 		} else {
-			shutter_speed.denom = 1;
 			shutter_speed.nom = F;
 		}
         //pslr_rational_t shutter_speed = {(int)(duration*100),100};
@@ -485,6 +497,7 @@ void PkTriggerCordCCD::TimerHit()
         std::chrono::milliseconds span (100);
         if ( shutter_result.wait_for(span)!=std::future_status::timeout) {
             bool result = shutter_result.get();
+            INDI_UNUSED(result);
             InDownload = false;
             InExposure = false;
 
@@ -496,7 +509,7 @@ void PkTriggerCordCCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -649,7 +662,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         transferFormatSP.s = IPS_OK;
         IDSetSwitch(&transferFormatSP, nullptr);
         if (transferFormatS[0].s == ISS_ON) {
-            defineSwitch(&preserveOriginalSP);
+            defineProperty(&preserveOriginalSP);
         } else {
             deleteProperty(preserveOriginalSP.name);
         }

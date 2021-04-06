@@ -10,6 +10,7 @@
 
 
 
+
 #if defined (_WIN32)
 #include "cyapi.h"
 #endif
@@ -20,7 +21,7 @@
 typedef void qhyccd_handle;
 
 
-EXPORTFUNC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
+EXPORTC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
@@ -228,6 +229,7 @@ EXPORTC uint32_t STDCALL GetQHYCCDSingleFrame(qhyccd_handle *handle,uint32_t *w,
 
 /**
   @fn uint32_t CancelQHYCCDExposing(qhyccd_handle *handle)
+  @brief force stop the camera long exposure. But host software must readout the image data. Please note not all camera can use this method.
   @param handle camera control handle
   @return
   on success,return QHYCCD_SUCCESS \n
@@ -237,7 +239,7 @@ EXPORTC uint32_t STDCALL CancelQHYCCDExposing(qhyccd_handle *handle);
 
 /**
   @fn uint32_t CancelQHYCCDExposingAndReadout(qhyccd_handle *handle)
-  @brief stop the camera exposing and readout
+  @brief force stop the camera long exposure. And also camera does not send back the image data. Host software must not readout the data. All camera support this mode. 
   @param handle camera control handle
   @return
   on success,return QHYCCD_SUCCESS \n
@@ -245,24 +247,25 @@ EXPORTC uint32_t STDCALL CancelQHYCCDExposing(qhyccd_handle *handle);
   */
 EXPORTC uint32_t STDCALL CancelQHYCCDExposingAndReadout(qhyccd_handle *handle);
 
-/** \fn uint32_t BeginQHYCCDLive(qhyccd_handle *handle)
-      \brief start continue exposing
-	  \param handle camera control handle
-	  \return
-	  on success,return QHYCCD_SUCCESS \n
-	  another QHYCCD_ERROR code on other failures
+/** 
+  @fn uint32_t BeginQHYCCDLive(qhyccd_handle *handle)
+  @brief in live video mode, start continue exposing. Only need to start once before StopQHYCCDLive.
+	@param handle camera control handle
+  @return
+	on success,return QHYCCD_SUCCESS \n
+	another QHYCCD_ERROR code on other failures
   */
 EXPORTC uint32_t STDCALL BeginQHYCCDLive(qhyccd_handle *handle);
 
 /**
-      @fn uint32_t GetQHYCCDLiveFrame(qhyccd_handle *handle,uint32_t *w,uint32_t *h,uint32_t *bpp,uint32_t *channels,uint8_t *imgdata)
-      @brief get live frame data from camera
+    @fn uint32_t GetQHYCCDLiveFrame(qhyccd_handle *handle,uint32_t *w,uint32_t *h,uint32_t *bpp,uint32_t *channels,uint8_t *imgdata)
+    @brief get live frame data from camera
 	  @param handle camera control handle
 	  @param *w pointer to width of ouput image
 	  @param *h pointer to height of ouput image
-      @param *bpp pointer to depth of ouput image
-      @param *channels pointer to channels of ouput image
-      @param *imgdata image data buffer
+    @param *bpp pointer to depth of ouput image
+    @param *channels pointer to channels of ouput image
+    @param *imgdata image data buffer
 	  @return
 	  on success,return QHYCCD_SUCCESS \n
 	  QHYCCD_ERROR_GETTINGFAILED,if get data failed \n
@@ -713,7 +716,7 @@ EXPORTC uint32_t STDCALL SetQHYCCDGPSMasterSlave(qhyccd_handle *handle,uint8_t i
 
 EXPORTC void STDCALL SetQHYCCDGPSSlaveModeParameter(qhyccd_handle *handle,uint32_t target_sec,uint32_t target_us,uint32_t deltaT_sec,uint32_t deltaT_us,uint32_t expTime);
 
-EXPORTFUNC void STDCALL SetQHYCCDQuit();
+EXPORTC void STDCALL SetQHYCCDQuit();
 
 EXPORTC uint32_t STDCALL QHYCCDVendRequestWrite(qhyccd_handle *h,uint8_t req,uint16_t value,uint16_t index1,uint32_t length,uint8_t *data);
 
@@ -780,7 +783,7 @@ EXPORTC uint32_t STDCALL SetQHYCCDWriteCMOS(qhyccd_handle *h,uint8_t number,uint
 */
 
 
-EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
+EXPORTC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
 /**
   @fn uint32_t SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *handle, double x,double ah,double bh,double al,double bl);
   @brief For the camera with high gain low gain two channel combine to 16bit function, this API can set the combination parameters
@@ -794,6 +797,16 @@ EXPORTFUNC uint32_t STDCALL SetQHYCCDTwoChannelCombineParameter(qhyccd_handle *h
 */
 
 EXPORTC uint32_t STDCALL EnableQHYCCDImageOSD(qhyccd_handle *h,uint32_t i);
+
+EXPORTC uint32_t STDCALL GetQHYCCDPreciseExposureInfo(qhyccd_handle *h,
+                                                         uint32_t *PixelPeriod_ps,
+                                                         uint32_t *LinePeriod_ns,
+                                                         uint32_t *FramePeriod_us,
+                                                         uint32_t *ClocksPerLine,
+                                                         uint32_t *LinesPerFrame,
+                                                         uint32_t *ActualExposureTime,
+                                                         uint8_t  *isLongExposureMode);
+
 
 EXPORTC void STDCALL QHYCCDQuit();
 
@@ -866,3 +879,9 @@ EXPORTC void STDCALL QHYCCD_fpga_reset();
 #endif
 
 #endif
+
+/// ----------------------------------
+
+void call_pnp_event();
+void call_data_event_live(char *id, uint8_t *imgdata);
+void call_transfer_event_error();

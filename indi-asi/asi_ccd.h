@@ -1,207 +1,154 @@
 /*
- ASI CCD Driver
+    ASI CCD Driver
 
- Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
- Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
+    Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
+    Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
- This library is free software; you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public
- License as published by the Free Software Foundation; either
- version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
- This library is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
- You should have received a copy of the GNU Lesser General Public
- License along with this library; if not, write to the Free Software
- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #pragma once
 
 #include <ASICamera2.h>
 
-#include <condition_variable>
-#include <mutex>
-#include <indiccd.h>
+#include "indipropertyswitch.h"
+#include "indipropertynumber.h"
+#include "indipropertytext.h"
+#include "indisinglethreadpool.h"
 
+#include <vector>
+
+#include <indiccd.h>
+#include <inditimer.h>
+
+class SingleWorker;
 class ASICCD : public INDI::CCD
 {
-    public:
-        explicit ASICCD(ASI_CAMERA_INFO *camInfo, std::string cameraName);
-        ~ASICCD() override;
+public:
+    explicit ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName);
+    ~ASICCD() override;
 
-        virtual const char *getDefaultName() override;
+    virtual const char *getDefaultName() override;
 
-        virtual bool initProperties() override;
-        virtual bool updateProperties() override;
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
 
-        virtual bool Connect() override;
-        virtual bool Disconnect() override;
+    virtual bool Connect() override;
+    virtual bool Disconnect() override;
 
-        virtual int SetTemperature(double temperature) override;
-        virtual bool StartExposure(float duration) override;
-        virtual bool AbortExposure() override;
+    virtual int SetTemperature(double temperature) override;
+    virtual bool StartExposure(float duration) override;
+    virtual bool AbortExposure() override;
 
-    protected:
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+protected:
+    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-        // Streaming
-        virtual bool StartStreaming() override;
-        virtual bool StopStreaming() override;
+    // Streaming
+    virtual bool StartStreaming() override;
+    virtual bool StopStreaming() override;
 
-        virtual void TimerHit() override;
-        virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
-        virtual bool UpdateCCDBin(int binx, int biny) override;
+    virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
+    virtual bool UpdateCCDBin(int binx, int biny) override;
 
-        // Guide Port
-        virtual IPState GuideNorth(uint32_t ms) override;
-        virtual IPState GuideSouth(uint32_t ms) override;
-        virtual IPState GuideEast(uint32_t ms) override;
-        virtual IPState GuideWest(uint32_t ms) override;
+    // Guide Port
+    virtual IPState GuideNorth(uint32_t ms) override;
+    virtual IPState GuideSouth(uint32_t ms) override;
+    virtual IPState GuideEast(uint32_t ms) override;
+    virtual IPState GuideWest(uint32_t ms) override;
 
-        // ASI specific keywords
-        virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+    // ASI specific keywords
+    virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
 
-        // Save config
-        virtual bool saveConfigItems(FILE *fp) override;
+    // Save config
+    virtual bool saveConfigItems(FILE *fp) override;
 
-    private:
-        typedef enum ImageState
-        {
-            StateNone = 0,
-            StateIdle,
-            StateStream,
-            StateExposure,
-            StateRestartExposure,
-            StateAbort,
-            StateTerminate,
-            StateTerminated
-        } ImageState;
+private:
+    /** Get the current Bayer string used */
+    const char *getBayerString() const;
 
-        /* Imaging functions */
-        static void *imagingHelper(void *context);
-        void *imagingThreadEntry();
-        void streamVideo();
-        void getExposure();
-        void exposureSetRequest(ImageState request);
+private:
+    INDI::SingleThreadPool mWorker;
+    void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+    void workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration);
+    void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-        /**
-         * @brief setThreadRequest Set the thread request
-         * @param request Desired thread state
-         * @warning condMutex must be UNLOCKED before calling this or the function will deadlock.
-         */
-        void setThreadRequest(ImageState request);
+    /** Get image from CCD and send it to client */
+    int grabImage(float duration);
 
-        /**
-         * @brief waitUntil Block thread until CURRENT image state matches requested state
-         * @param request state to match
-         */
-        void waitUntil(ImageState request);
+private:
+    double mTargetTemperature;
+    double mCurrentTemperature;
+    INDI::Timer mTimerTemperature;
+    void temperatureTimerTimeout();
 
-        /* Timer functions for NS guiding */
-        static void TimerHelperNS(void *context);
-        void TimerNS();
-        void stopTimerNS();
-        IPState guidePulseNS(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
-        /* Timer functions for WE guiding */
-        static void TimerHelperWE(void *context);
-        void TimerWE();
-        void stopTimerWE();
-        IPState guidePulseWE(float ms, ASI_GUIDE_DIRECTION dir, const char *dirName);
-        /** Get image from CCD and send it to client */
-        int grabImage();
-        /** Get initial parameters from camera */
-        void setupParams();
-        /** Calculate time left in seconds after start_time */
-        float calcTimeLeft(float duration, timeval *start_time);
-        /** Create number and switch controls for camera by querying the API */
-        void createControls(int piNumberOfControls);
-        /** Get the current Bayer string used */
-        const char *getBayerString();
-        /** Update control values from camera */
-        void updateControls();
-        /** Return user selected image type */
-        ASI_IMG_TYPE getImageType();
-        /** Update SER recorder video format */
-        void updateRecorderFormat();
-        /** Control cooler */
-        bool activateCooler(bool enable);
-        /** Set Video Format */
-        bool setVideoFormat(uint8_t index);
+    /** Timers for NS/WE guiding */
+    INDI::Timer mTimerNS;
+    INDI::Timer mTimerWE;
 
-        char name[MAXINDIDEVICE];
+    IPState guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir);
+    void stopGuidePulse(INDI::Timer &timer);
 
-        /** Additional Properties to INDI::CCD */
-        INumber CoolerN[1];
-        INumberVectorProperty CoolerNP;
+    /** Get initial parameters from camera */
+    void setupParams();
 
-        ISwitch CoolerS[2];
-        ISwitchVectorProperty CoolerSP;
+    /** Create number and switch controls for camera by querying the API */
+    void createControls(int piNumberOfControls);
 
-        INumber *ControlN = nullptr;
-        INumberVectorProperty ControlNP;
+    /** Update control values from camera */
+    void updateControls();
 
-        ISwitch *ControlS = nullptr;
-        ISwitchVectorProperty ControlSP;
+    /** Return user selected image type */
+    ASI_IMG_TYPE getImageType() const;
 
-        ISwitch *VideoFormatS;
-        ISwitchVectorProperty VideoFormatSP;
-        uint8_t rememberVideoFormat = { 0 };
-        ASI_IMG_TYPE currentVideoFormat;
+    /** Update SER recorder video format */
+    void updateRecorderFormat();
 
-        INumber ADCDepthN;
-        INumberVectorProperty ADCDepthNP;
+    /** Control cooler */
+    bool activateCooler(bool enable);
 
-        IText SDKVersionS[1] = {};
-        ITextVectorProperty SDKVersionSP;
+    /** Set Video Format */
+    bool setVideoFormat(uint8_t index);
 
-        struct timeval ExpStart;
-        double ExposureRequest;
-        double TemperatureRequest;
-        uint8_t m_ExposureRetry {0};
+    /** Get if MonoBin is active, thus Bayer is irrelevant */
+    bool isMonoBinActive();
 
-        ASI_CAMERA_INFO *m_camInfo;
-        ASI_CONTROL_CAPS *pControlCaps;
+private:
+    /** Additional Properties to INDI::CCD */
+    INDI::PropertyNumber  CoolerNP {1};
+    INDI::PropertySwitch  CoolerSP {2};
 
-        int genTimerID;
+    INDI::PropertyNumber  ControlNP {0};
+    INDI::PropertySwitch  ControlSP {0};
+    INDI::PropertySwitch  VideoFormatSP {0};
 
-        // Imaging thread
-        ImageState threadRequest;
-        ImageState threadState;
+    INDI::PropertyNumber  ADCDepthNP   {1};
+    INDI::PropertyText    SDKVersionSP {1};
 
-        //        pthread_t imagingThread;
-        //        pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
-        //        pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
+    INDI::PropertyNumber  BlinkNP {2};
+    enum {
+        BLINK_COUNT,
+        BLINK_DURATION
+    };
 
-        std::thread imagingThread;
-        std::mutex condMutex;
-        std::condition_variable cv;
+private:
+    std::string mCameraName;
+    uint8_t mExposureRetry {0};
 
-        // ST4
-        float WEPulseRequest;
-        struct timeval WEPulseStart;
-        int WEtimerID;
-        ASI_GUIDE_DIRECTION WEDir;
-        const char *WEDirName;
-
-        float NSPulseRequest;
-        struct timeval NSPulseStart;
-        int NStimerID;
-        ASI_GUIDE_DIRECTION NSDir;
-        const char *NSDirName;
-
-        // Camera ROI
-        uint32_t m_SubX = 0, m_SubY = 0, m_SubW = 0, m_SubH = 0;
-
-        friend void ::ISGetProperties(const char *dev);
-        friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-        friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-        friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                                char *formats[], char *names[], int n);
+    ASI_IMG_TYPE                  mCurrentVideoFormat;
+    std::vector<ASI_CONTROL_CAPS> mControlCaps;
+    ASI_CAMERA_INFO               mCameraInfo;
 };

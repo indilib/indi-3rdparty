@@ -46,10 +46,12 @@ typedef enum
 typedef enum
 {
     ACCELERATION_RAMP,
+    BATTERY_VOLTAGE,
     DEAD_ZONE,
     SEMANTIC_VERSION,
     GOTO_AZ,
     GOTO_HOME,
+    GOTO_STEP,
     HOME_POSITION,
     POSITION,
     RANGE,
@@ -65,10 +67,12 @@ typedef enum
 static const std::map<Commands, std::string> CommandsMap =
 {
     {ACCELERATION_RAMP, "A"},
+    {BATTERY_VOLTAGE,   "B"},  // Added in firmware V3.4.0
     {DEAD_ZONE,         "D"},
     {SEMANTIC_VERSION,  "F"},
     {GOTO_AZ,           "GA"},
     {GOTO_HOME,         "GH"},
+    {GOTO_STEP,         "GS"},
     {HOME_POSITION,     "H"},
     {POSITION,          "P"},
     {RANGE,             "R"},
@@ -113,6 +117,7 @@ typedef enum
     ROTATOR_STOPPED,
     ROTATOR_POSITION,
     SHUTTER_POSITION,
+    BATTERY_LOW,
 } Events;
 
 static const std::map<Events, std::string> EventsMap =
@@ -130,6 +135,7 @@ static const std::map<Events, std::string> EventsMap =
     {ROTATOR_STOPPED,   "STOP"},
     {ROTATOR_POSITION,  "P"},
     {SHUTTER_POSITION,  "S"},
+    {BATTERY_LOW,       "Volts"},
 };
 
 // # is the stop char
@@ -141,9 +147,7 @@ const uint8_t DRIVER_TIMEOUT {3};
 // Wait up to a maximum of 1 for event input
 const uint8_t DRIVER_EVENT_TIMEOUT {1};
 // Maximum buffer for sending/receving.
-const uint8_t DRIVER_LEN {64};
-// Rotator Steps per Degree
-const double STEPS_PER_DEGREE {153.0};
+const uint16_t DRIVER_LEN {512};
 // ADU to VRef
 const double ADU_TO_VREF { 5.0 / 1023 * 3.0 };
 // Minimim supported version

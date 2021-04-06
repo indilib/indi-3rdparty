@@ -1,0 +1,3 @@
+
+# SVBONY
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="f266", MODE="0666", TAG="ckusb_dev"

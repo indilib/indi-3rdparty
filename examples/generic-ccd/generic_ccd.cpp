@@ -229,7 +229,7 @@ bool GenericCCD::updateProperties()
         // Let's get parameters now from CCD
         setupParams();
 
-        timerID = SetTimer(POLLMS);
+        timerID = SetTimer(getCurrentPollingPeriod());
     }
     else
     {
@@ -710,7 +710,7 @@ void GenericCCD::TimerHit()
     }
 
     if (timerID == -1)
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     return;
 }
 

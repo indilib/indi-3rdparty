@@ -1,0 +1,22 @@
+Source: libahp-xc
+Section: libs
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 6), cdbs, cmake
+Standards-Version: 3.9.2
+
+Package: libahp-xc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: AHP XC cross-correlator series driver library.
+ .
+ This package contains the library.
+
+Package: libahp-xc-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: libahp-xc (= ${binary:Version}), ${misc:Depends}
+Description: AHP XC cross-correlator series driver library.
+ .
+ This package contains debug symbols.

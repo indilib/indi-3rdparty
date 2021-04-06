@@ -114,7 +114,7 @@ bool SSAGCCD::updateProperties()
     INDI::CCD::updateProperties();
     if (isConnected())
     {
-        defineNumber(&GainNP);
+        defineProperty(&GainNP);
         PrimaryCCD.setInterlaced(false);
         PrimaryCCD.setFrame(0, 0, WIDTH, HEIGHT);
         PrimaryCCD.setFrameBufferSize(WIDTH * HEIGHT + 512);

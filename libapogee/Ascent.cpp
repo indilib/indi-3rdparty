@@ -20,6 +20,8 @@
 #include "ImgFix.h"
 #include "ApgTimer.h"
 #include "ApgLogger.h" 
+#include "indimacros.h"
+
 #include <sstream>
 
 namespace
@@ -107,7 +109,7 @@ namespace
 // CTOR 
 Ascent::Ascent() : 
                 CamGen2Base(CamModel::ASCENT),
-                m_fileName( __FILE__ ),
+                m_fileName( __BASE_FILE__ ),
                 m_filterWheelType( Ascent::FW_UNKNOWN_TYPE ),
                 m_FwDiffTime( 0.0 ),
 				m_FwTimer( new ApgTimer )
@@ -770,6 +772,9 @@ void Ascent::SetFanMode( const Apg::FanMode mode, const bool PreCondCheck )
 #ifdef DEBUGGING_CAMERA
     apgHelper::DebugMsg( "Ascent::SetFanMode -> mode = %d, PreCondCheck =%d ", 
         mode, PreCondCheck );
+#else
+    INDI_UNUSED(mode);
+    INDI_UNUSED(PreCondCheck);
 #endif
     // no op on purpose, no fan control for ascent based cameras
     // just ignore request...

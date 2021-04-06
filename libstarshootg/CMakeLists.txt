@@ -8,8 +8,8 @@ include(GNUInstallDirs)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-# Using Starshoot G SDK Version: 46.16627.2020.0224
-set(LIBSTARSHOOTG_VERSION "1.46.1")
+# Using Starshoot G SDK Version: 48.18421.20210202
+set(LIBSTARSHOOTG_VERSION "1.48.1")
 set(LIBSTARSHOOTG_SOVERSION "1")
 
 IF(APPLE)
@@ -34,8 +34,6 @@ IF(UNIX AND NOT WIN32)
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/arm64/libstarshootg.bin ${CMAKE_BINARY_DIR}/libstarshootg.so.${LIBSTARSHOOTG_VERSION})
   ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
     exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libstarshootg.bin ${CMAKE_BINARY_DIR}/libstarshootg.so.${LIBSTARSHOOTG_VERSION})
-  ELSE()
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libstarshootg.bin ${CMAKE_BINARY_DIR}/libstarshootg.so.${LIBSTARSHOOTG_VERSION})
   ENDIF ()
 ENDIF(UNIX AND NOT WIN32)
 

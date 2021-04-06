@@ -237,7 +237,7 @@ int scsi_read(int sg_fd, uint8_t *cmd, uint32_t cmdLen,
 
         /* Older Pentax DSLR will report all bytes remaining, so make
          * a special case for this (treat it as all bytes read). */
-        if (io.resid == bufLen) {
+        if ((uint32_t)io.resid == bufLen) {
             return bufLen;
         } else {
             return bufLen - io.resid;

@@ -5,5 +5,9 @@
       <driver name="GPSD">indi_gpsd</driver>
       <version>@GPSD_VERSION_MAJOR@.@GPSD_VERSION_MINOR@</version>
    </device>
+   <device label="GPS Dongle">
+      <driver name="GPSD">indi_gpsd</driver>
+      <version>@GPSD_VERSION_MAJOR@.@GPSD_VERSION_MINOR@</version>
+   </device>
 </devGroup>
 </driversList>

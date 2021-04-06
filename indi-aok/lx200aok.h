@@ -133,8 +133,8 @@ class LX200Skywalker : public LX200Telescope
         bool SavePark();
         bool getSystemSlewSpeed (int *xx);
         bool setSystemSlewSpeed (int xx);
-        bool getJSONData_Y(int jindex, char *jstr);
-        bool getJSONData_gp(int jindex, char *jstr);
+        bool getJSONData_Y(int jindex, char *jstr, int jstrlen);
+        bool getJSONData_gp(int jindex, char *jstr, int jstrlen);
         bool notifyPierSide();
         void notifyMountLock(bool locked);
         void notifyTrackState(INDI::Telescope::TelescopeStatus state);
@@ -156,7 +156,7 @@ class LX200Skywalker : public LX200Telescope
         virtual bool setSiteLatitude(double Lat);
         virtual bool setSiteLongitude(double Long);
 
-        bool checkLX200Format();
+        bool checkLX200EquatorialFormat();
         // Guide Commands
         virtual IPState GuideNorth(uint32_t ms) override;
         virtual IPState GuideSouth(uint32_t ms) override;

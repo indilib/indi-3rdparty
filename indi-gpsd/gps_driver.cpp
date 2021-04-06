@@ -108,6 +108,30 @@ bool GPSD::Disconnect()
     return true;
 }
 
+void GPSD::ISGetProperties(const char *dev)
+{
+    // If not for us, return.
+    if (dev && strcmp(dev, getDeviceName()))
+        return;
+
+    // JM 2021-02-27: In case GPS driver is CONNECTED, and
+    // Location or Time properties are OK (i.e. they were updated from GPS successfully already)
+    // then reset their status to IDLE first. The reason for this is that snooping drivers could
+    // possible receive again the Location and Time properties and Time property would be most likely
+    // already out of date which could lead to issues as reported in #334
+    // Therefore, we reset their status to IDLE as not to cause any abnormal behavior in downstream drivers
+    // and clients alike. Next time refresh is used, they can be set to IPS_OK again.
+    if (isConnected() && (LocationNP.s == IPS_OK || TimeTP.s == IPS_OK))
+    {
+        LocationNP.s = IPS_IDLE;
+        TimeTP.s = IPS_IDLE;
+        IDSetNumber(&LocationNP, nullptr);
+        IDSetText(&TimeTP, nullptr);
+    }
+
+    INDI::GPS::ISGetProperties(dev);
+}
+
 bool GPSD::initProperties()
 {
     // We init parent properties first
@@ -127,6 +151,16 @@ bool GPSD::initProperties()
     IUFillSwitchVector(&TimeSourceSP, TimeSourceS, 2, getDeviceName(), "GPS_TIME_SOURCE", "Time Source",
                        OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Location to be used if no GPS is available
+    IUFillNumber(&SimLocationN[LOCATION_LATITUDE], "SIM_LAT", "Lat (dd:mm:ss)", "%010.6m", -90, 90, 0, 29.1);
+    IUFillNumber(&SimLocationN[LOCATION_LONGITUDE], "SIM_LONG", "Lon (dd:mm:ss)", "%010.6m", 0, 360, 0, 48.5);
+    IUFillNumber(&SimLocationN[LOCATION_ELEVATION], "SIM_ELEV", "Elevation (m)", "%g", -200, 10000, 0, 12);
+    IUFillNumberVector(&SimLocationNP, SimLocationN, 3, getDeviceName(), "SIM_GEOGRAPHIC_COORD", "Simulated Location",
+                       OPTIONS_TAB,
+                       IP_RW, 60, IPS_IDLE);
+
+    addAuxControls();
+
     setDriverInterface(GPS_INTERFACE | AUX_INTERFACE);
 
     return true;
@@ -139,9 +173,10 @@ bool GPSD::updateProperties()
 
     if (isConnected())
     {
-        defineText(&GPSstatusTP);
-        defineNumber(&PolarisNP);
-        defineSwitch(&TimeSourceSP);
+        defineProperty(&GPSstatusTP);
+        defineProperty(&PolarisNP);
+        defineProperty(&TimeSourceSP);
+        defineProperty(&SimLocationNP);
     }
     else
     {
@@ -149,24 +184,25 @@ bool GPSD::updateProperties()
         deleteProperty(GPSstatusTP.name);
         deleteProperty(PolarisNP.name);
         deleteProperty(TimeSourceSP.name);
+        deleteProperty(SimLocationNP.name);
     }
     return true;
 }
-bool GPSD::setSystemTime(time_t& raw_time)
+bool GPSD::setSystemTime(time_t &raw_time)
 {
-    #ifdef __linux__
-        #if defined(__GNU_LIBRARY__)
-            #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-                timespec sTime = {};
-                sTime.tv_sec = raw_time;
-                clock_settime(CLOCK_REALTIME, &sTime);
-            #else
-                stime(&raw_time);
-            #endif
-        #else
-            stime(&raw_time);
-        #endif
-    #endif
+#ifdef __linux__
+#if defined(__GNU_LIBRARY__)
+#if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
+    timespec sTime = {};
+    sTime.tv_sec = raw_time;
+    clock_settime(CLOCK_REALTIME, &sTime);
+#else
+    stime(&raw_time);
+#endif
+#else
+    stime(&raw_time);
+#endif
+#endif
     return true;
 }
 
@@ -206,7 +242,7 @@ IPState GPSD::updateGPS()
     struct gps_data_t *gpsData;
     time_t raw_time;
 
-    if (IUFindOnSwitchIndex(&TimeSourceSP) == TS_SYSTEM)
+    if (isSimulation() || IUFindOnSwitchIndex(&TimeSourceSP) == TS_SYSTEM)
     {
         // Update time regardless having gps fix.
         // We are using system time assuming the system is synced with the gps
@@ -232,7 +268,19 @@ IPState GPSD::updateGPS()
         TimeTP.s = IPS_OK;
     }
 
-    if (!gps->waiting(100000))
+    if (isSimulation())
+    {
+        LocationNP.s                        = IPS_OK;
+        LocationN[LOCATION_LATITUDE].value  = SimLocationN[LOCATION_LATITUDE].value;
+        LocationN[LOCATION_LONGITUDE].value = SimLocationN[LOCATION_LONGITUDE].value;
+        LocationN[LOCATION_ELEVATION].value = SimLocationN[LOCATION_ELEVATION].value;
+
+        IDSetNumber(&LocationNP, nullptr);
+
+        return IPS_OK;
+    }
+
+    if (!gps->waiting(1000))
     {
         if (GPSstatusTP.s != IPS_BUSY)
         {
@@ -242,14 +290,29 @@ IPState GPSD::updateGPS()
         return IPS_BUSY;
     }
 
-    if ((gpsData = gps->read()) == nullptr)
+    // Empty the buffer and keep only the last data block
+    while (1)
     {
-        LOG_ERROR("GPSD read error.");
-        IDSetText(&GPSstatusTP, nullptr);
-        return IPS_ALERT;
+        if ((gpsData = gps->read()) == nullptr)
+        {
+            LOG_ERROR("GPSD read error.");
+            IDSetText(&GPSstatusTP, nullptr);
+            return IPS_ALERT;
+        }
+        // Exit the loop if there is no more data in the buffer
+        if (!gps->waiting(0))
+            break;
     }
 
-    if (gpsData->status == STATUS_NO_FIX)
+#if GPSD_API_MAJOR_VERSION >= 11
+    // From gpsd v3.22 STATUS_NO_FIX may also mean unknown fix state, can
+    // only tell from the mode value
+    if (gpsData->fix.mode < MODE_2D)
+#elif GPSD_API_MAJOR_VERSION >= 10
+    if (gpsData->fix.status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D)
+#else
+    if (gpsData->status == STATUS_NO_FIX || gpsData->fix.mode < MODE_2D )
+#endif
     {
         // We have no fix and there is no point in further processing.
         IUSaveText(&GPSstatusT[0], "NO FIX");
@@ -260,24 +323,6 @@ IPState GPSD::updateGPS()
         GPSstatusTP.s = IPS_BUSY;
         IDSetText(&GPSstatusTP, nullptr);
         return IPS_BUSY;
-    }
-    else
-    {
-        // We may have a fix. Check if fix structure contains proper fix.
-        // We require at least 2D fix - the altitude is not so crucial (?)
-        if (gpsData->fix.mode < MODE_2D)
-        {
-            // The position is not realy measured yet - we have no valid data
-            // Keep looking
-            IUSaveText(&GPSstatusT[0], "NO FIX");
-            if (GPSstatusTP.s == IPS_OK)
-            {
-                LOG_WARN("GPS fix lost.");
-            }
-            GPSstatusTP.s = IPS_BUSY;
-            IDSetText(&GPSstatusTP, nullptr);
-            return IPS_BUSY;
-        }
     }
 
     // detect gps fix showing up after not being avaliable
@@ -335,7 +380,7 @@ IPState GPSD::updateGPS()
 #else
         raw_time = gpsData->fix.time.tv_sec;
 #endif
-    
+
         setSystemTime(raw_time);
 
 #if GPSD_API_MAJOR_VERSION < 9
@@ -389,11 +434,49 @@ bool GPSD::ISNewSwitch(const char *dev, const char *name, ISState *states, char 
     return INDI::GPS::ISNewSwitch(dev, name, states, names, n);
 }
 
+bool GPSD::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        ///////////////////////////////////
+        // Geographic Coords
+        ///////////////////////////////////
+        if (strcmp(name, "SIM_GEOGRAPHIC_COORD") == 0)
+        {
+            int latindex       = IUFindIndex("SIM_LAT",  names, n);
+            int longindex      = IUFindIndex("SIM_LONG", names, n);
+            int elevationindex = IUFindIndex("SIM_ELEV", names, n);
+
+            if (latindex == -1 || longindex == -1 || elevationindex == -1)
+            {
+                SimLocationNP.s = IPS_ALERT;
+                IDSetNumber(&SimLocationNP, "Location data missing or corrupted.");
+            }
+
+            double latitude  = values[latindex];
+            double longitude = values[longindex];
+            double elevation = values[elevationindex];
+
+            SimLocationNP.s                        = IPS_OK;
+            SimLocationN[LOCATION_LATITUDE].value  = latitude;
+            SimLocationN[LOCATION_LONGITUDE].value = longitude;
+            SimLocationN[LOCATION_ELEVATION].value = elevation;
+
+            //  Update client display
+            IDSetNumber(&SimLocationNP, nullptr);
+        }
+    }
+
+    return INDI::GPS::ISNewNumber(dev, name, values, names, n);
+}
+
+
 bool GPSD::saveConfigItems(FILE *fp)
 {
     INDI::GPS::saveConfigItems(fp);
 
     IUSaveConfigSwitch(fp, &TimeSourceSP);
+    IUSaveConfigNumber(fp, &SimLocationNP);
 
     return true;
 }

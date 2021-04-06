@@ -49,9 +49,11 @@
 #include "libfli-debug.h"
 #include "libfli-mem.h"
 #include "libfli-raw.h"
+#include "indimacros.h"
 
 long fli_raw_open(flidev_t dev)
 {
+  INDI_UNUSED(dev);
 	return 0;
 }
 
@@ -80,5 +82,8 @@ long fli_raw_close(flidev_t dev)
 
 long fli_raw_command(flidev_t dev, int cmd, int argc, ...)
 {
+  INDI_UNUSED(dev);
+  INDI_UNUSED(cmd);
+  INDI_UNUSED(argc);
 	return -EINVAL;		
 }

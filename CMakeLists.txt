@@ -43,9 +43,10 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} fxload DIR7_FOUND)
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsv305 DIR9_FOUND)
+            STRING(FIND ${SOURCE_FILE} libahp-xc DIR10_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
-                NOT ${DIR9_FOUND} EQUAL -1)
+                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND})
                 LIST(REMOVE_ITEM ALL_SOURCE_FILES ${SOURCE_FILE})
             ENDIF ()
         ENDFOREACH ()
@@ -65,7 +66,6 @@ option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 # Define standard set of drivers to build (default linux target)
 option(WITH_EQMOD "Install EQMod Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
-option(WITH_NSE "Install Nexstar Evo Driver" On)
 option(WITH_CAUX "Install Celestron AUX Driver" On)
 option(WITH_SX "Install StarLight Xpress Driver" On)
 option(WITH_MAXDOME "Install MaxDomeII Driver" On)
@@ -107,14 +107,8 @@ option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
-option(WITH_AHP_INTERFEROMETER "Install AHP Interferometer Driver" On)
-
-# Limit SVBONY to x86 architecture now
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
+option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
-else()
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" Off)
-endif()
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -146,6 +140,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_SV305 Off)
+    set(WITH_AHP_CORRELATOR Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -215,6 +210,11 @@ add_subdirectory(libricohcamerasdk)
 endif()
 add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
+
+# libahp-xc
+if (WITH_AHP_CORRELATOR)
+add_subdirectory(libahp-xc)
+endif(WITH_AHP_CORRELATOR)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
@@ -288,11 +288,6 @@ if (WITH_CLOUDWATCHER)
 add_subdirectory(indi-aagcloudwatcher)
 add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
-
-## Nexstar Evo
-if (WITH_NSE)
-add_subdirectory(indi-nexstarevo)
-endif (WITH_NSE)
 
 ## Celestron AUX
 if (WITH_CAUX)
@@ -553,9 +548,15 @@ SET(LIBRARIES_FOUND FALSE)
 endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
-if (WITH_AHP_INTERFEROMETER)
-add_subdirectory(indi-ahp-interferometer)
-endif(WITH_AHP_INTERFEROMETER)
+# AHP
+if (WITH_AHP_CORRELATOR)
+find_package(AHPXC)
+if(AHPXC_FOUND)
+add_subdirectory(indi-ahp-correlator)
+else(AHPXC_FOUND)
+add_subdirectory(libahp-xc)
+endif(AHPXC_FOUND)
+endif(WITH_AHP_CORRELATOR)
 
 # sv305
 if (WITH_SV305)

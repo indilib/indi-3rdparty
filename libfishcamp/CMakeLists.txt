@@ -3,9 +3,14 @@ PROJECT(libfishcamp C CXX)
 
 include(GNUInstallDirs)
 
+find_package(INDI REQUIRED)
+
 #***********************************************************
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+
+include_directories( ${INDI_INCLUDE_DIR})
+
 IF(APPLE)
 set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/fishcamp")
     ##This one is needed for homebrew

@@ -65,7 +65,8 @@ protected:
     void updateConfigData();
 
     ISwitchVectorProperty temperatureSensorSP, ambientTemperatureSensorSP, objectTemperatureSensorSP, pressureSensorSP,
-        humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP;
+        humiditySensorSP, luminositySensorSP, sqmSensorSP, windSpeedSensorSP, windGustSensorSP, windDirectionSensorSP,
+        rainDropsSensorSP, rainVolumeSensorSP, wetnessSensorSP;
 
     /**
      * @brief get the interface version from the Arduino device.
@@ -89,7 +90,9 @@ protected:
     /**
       * Device specific configurations
       */
-    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR, LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR, INTERNAL_SENSOR};
+    enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR,
+                      LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR,
+                      RAIN_DROPS_SENSOR, RAIN_VOLUME_SENSOR, WETNESS_SENSOR, INTERNAL_SENSOR};
 
     struct sensor_config
     {
@@ -177,6 +180,10 @@ protected:
     INumberVectorProperty sqmCalibrationNP;
     INumber sqmCalibrationN[2];
 
+    // calibration for wetness measurement
+    INumberVectorProperty wetnessCalibrationNP;
+    INumber wetnessCalibrationN[2];
+
     /**
      * @brief Create a canonical name as <device> (<sensor>)
      * @param sensor weather sensor
@@ -200,6 +207,9 @@ protected:
         sensor_name wind_speed;
         sensor_name wind_gust;
         sensor_name wind_direction;
+        sensor_name rain_drops;
+        sensor_name rain_volume;
+        sensor_name wetness;
     } currentSensors;
 
     struct
@@ -213,6 +223,9 @@ protected:
         std::vector<sensor_name> wind_speed;
         std::vector<sensor_name> wind_gust;
         std::vector<sensor_name> wind_direction;
+        std::vector<sensor_name> rain_drops;
+        std::vector<sensor_name> rain_volume;
+        std::vector<sensor_name> wetness;
     } sensorRegistry;
 
     /**

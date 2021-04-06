@@ -193,13 +193,13 @@ bool SXAO::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&GuideNSNP);
-        defineNumber(&GuideWENP);
-        defineNumber(&AONSNP);
-        defineNumber(&AOWENP);
-        defineSwitch(&CenterP);
-        defineText(&FWTP);
-        defineLight(&AtLimitLP);
+        defineProperty(&GuideNSNP);
+        defineProperty(&GuideWENP);
+        defineProperty(&AONSNP);
+        defineProperty(&AOWENP);
+        defineProperty(&CenterP);
+        defineProperty(&FWTP);
+        defineProperty(&AtLimitLP);
     }
     else
     {

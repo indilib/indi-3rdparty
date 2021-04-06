@@ -8,8 +8,8 @@ include(GNUInstallDirs)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-# Using ToupCamera SDK Version: 46.17118.2020.0518
-set(LIBTOUPCAM_VERSION "1.46.0")
+# Using ToupCamera SDK Version: 48.18042.2020.1128
+set(LIBTOUPCAM_VERSION "1.48.0")
 set(LIBTOUPCAM_SOVERSION "1")
 
 IF(APPLE)

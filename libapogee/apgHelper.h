@@ -23,14 +23,6 @@
 //#define DEBUGGING_CAMERA
 //#define DEBUGGING_CAMERA_STATUS
 
-//----------------------------------------------------------------
-
-//trying to make a cross platform way to get rid of
-//vc compiler warning C4100
-//http://msdn.microsoft.com/en-us/magazine/cc163805.aspx
-#define NO_OP_PARAMETER(x) { (x); }
-
-//----------------------------------------------------------------
 namespace apgHelper 
 { 
 

@@ -182,8 +182,8 @@ void INovaCCD::ISGetProperties(const char *dev)
     if (isConnected())
     {
         // Define our properties
-        defineText(&iNovaInformationTP);
-        defineNumber(&CameraPropertiesNP);
+        defineProperty(&iNovaInformationTP);
+        defineProperty(&CameraPropertiesNP);
     }
 }
 
@@ -204,14 +204,14 @@ bool INovaCCD::updateProperties()
         IUSaveText(&iNovaInformationT[2], iNovaSDK_SerialNumber());
         IUSaveText(&iNovaInformationT[3], (iNovaSDK_HasST4() ? "Yes" : "No"));
         IUSaveText(&iNovaInformationT[4], (iNovaSDK_HasColorSensor() ? "Yes" : "No"));
-        defineText(&iNovaInformationTP);
-        defineNumber(&CameraPropertiesNP);
+        defineProperty(&iNovaInformationTP);
+        defineProperty(&CameraPropertiesNP);
 
         // Let's get parameters now from CCD
         setupParams();
 
         // Start the timer
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
     }
     else
         // We're disconnected
@@ -360,7 +360,7 @@ void INovaCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 

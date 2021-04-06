@@ -1,3 +1,15 @@
+indi-asi (1.9) bionic; urgency=medium
+
+  * Added EFW Unidirection settings.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 9 Sep 2020 03:00:00 +0300
+
+indi-asi (1.8) bionic; urgency=low
+
+  * Fix configuration save issue.
+
+ -- Konstantin Baranov <const@mimas.ru>  Fri, 14 Aug 2020 11:00:00 -0700
+
 indi-asi (1.7) bionic; urgency=medium
 
   * Fix configuration save issue.

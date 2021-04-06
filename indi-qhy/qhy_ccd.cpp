@@ -24,7 +24,9 @@
 #include "config.h"
 #include <stream/streammanager.h>
 
+#include <libnova/julian_day.h>
 #include <algorithm>
+#include <map>
 #include <math.h>
 
 #define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
@@ -52,7 +54,6 @@ static void QhyCCDCleanup()
 std::vector<std::string> GetDevicesIDs()
 {
     char camid[MAXINDIDEVICE];
-    int ret         = QHYCCD_ERROR;
     int deviceCount = 0;
     std::vector<std::string> devices;
 
@@ -74,10 +75,10 @@ std::vector<std::string> GetDevicesIDs()
         memset(camid, '\0', MAXINDIDEVICE);
 
 #if defined(USE_SIMULATION)
-        ret = QHYCCD_SUCCESS;
+        int ret = QHYCCD_SUCCESS;
         snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
 #else
-        ret = GetQHYCCDId(i, camid);
+        int ret = GetQHYCCDId(i, camid);
 #endif
         if (ret == QHYCCD_SUCCESS)
         {
@@ -327,6 +328,22 @@ bool QHYCCD::initProperties()
     IUFillSwitchVector(&CoolerModeSP, CoolerModeS, 2, getDeviceName(), "CCD_COOLER_MODE", "Cooler Mode", MAIN_CONTROL_TAB,
                        IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
 
+
+    //NEW CODE - Add support for overscan/calibration area
+    IUFillSwitch(&OverscanAreaS[0], "INDI_ENABLED", "Include", ISS_OFF);
+    IUFillSwitch(&OverscanAreaS[1], "INDI_DISABLED", "Ignore", ISS_ON);
+    IUFillSwitchVector(&OverscanAreaSP, OverscanAreaS, 2, getDeviceName(), "OVERSCAN_MODE", "Overscan Area", MAIN_CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    /////////////////////////////////////////////////////////////////////////////
+    /// Properties: Utility Controls
+    /////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&AMPGlowS[AMP_AUTO], "AMP_AUTO", "Auto", ISS_ON);
+    IUFillSwitch(&AMPGlowS[AMP_ON], "AMP_ON", "On", ISS_OFF);
+    IUFillSwitch(&AMPGlowS[AMP_OFF], "AMP_OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&AMPGlowSP, AMPGlowS, 3, getDeviceName(), "CCD_AMP_GLOW", "Amp Glow", MAIN_CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
     /////////////////////////////////////////////////////////////////////////////
     /// Properties: GPS Controls
     /////////////////////////////////////////////////////////////////////////////
@@ -334,8 +351,8 @@ bool QHYCCD::initProperties()
     // Slaving Mode
     IUFillSwitch(&GPSSlavingS[SLAVING_MASTER], "SLAVING_MASTER", "Master", ISS_ON);
     IUFillSwitch(&GPSSlavingS[SLAVING_SLAVE], "SLAVING_SLAVE", "Slave", ISS_OFF);
-    IUFillSwitchVector(&GPSSlavingSP, GPSSlavingS, 2, getDeviceName(), "SLAVING_MODE", "Slaving", GPS_TAB, IP_RW, ISR_1OFMANY,
-                       0, IPS_IDLE);
+    IUFillSwitchVector(&GPSSlavingSP, GPSSlavingS, 2, getDeviceName(), "SLAVING_MODE", "Slaving", GPS_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Slaving Params (for slaves only)
     IUFillNumber(&GPSSlavingParamN[PARAM_TARGET_SEC], "PARAM_TARGET_SEC", "Target sec", "%.f", 0, 1e9, 0, 0);
@@ -343,34 +360,79 @@ bool QHYCCD::initProperties()
     IUFillNumber(&GPSSlavingParamN[PARAM_DELTAT_SEC], "PARAM_DELTAT_SEC", "Delta sec", "%.f", 0, 1e9, 0, 0);
     IUFillNumber(&GPSSlavingParamN[PARAM_DELTAT_USEC], "PARAM_DELTAT_USEC", "Delta us", "%.f", 0, 1e9, 0, 0);
     IUFillNumber(&GPSSlavingParamN[PARAM_EXP_TIME], "PARAM_EXP_TIME", "Exp sec", "%.6f", 0.000001, 3600, 0, 0);
-    IUFillNumberVector(&GPSSlavingParamNP, GPSSlavingParamN, 5, getDeviceName(), "GPS_SLAVING_PARAMS", "Params", GPS_TAB, IP_RW,
-                       60, IPS_IDLE);
+    IUFillNumberVector(&GPSSlavingParamNP, GPSSlavingParamN, 5, getDeviceName(), "GPS_SLAVING_PARAMS", "Params",
+                       GPS_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // VCOX Frequency
     IUFillNumber(&VCOXFreqN[0], "FREQUENCY", "Freq", "%.f", 0, 4095, 100, 0);
-    IUFillNumberVector(&VCOXFreqNP, VCOXFreqN, 1, getDeviceName(), "VCOX_FREQUENCY", "VCOX", GPS_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&VCOXFreqNP, VCOXFreqN, 1, getDeviceName(), "VCOX_FREQUENCY", "VCOX", GPS_CONTROL_TAB, IP_RW, 60,
+                       IPS_IDLE);
 
     // LED Calibration
     IUFillSwitch(&GPSLEDCalibrationS[INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
     IUFillSwitch(&GPSLEDCalibrationS[INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
     IUFillSwitchVector(&GPSLEDCalibrationSP, GPSLEDCalibrationS, 2, getDeviceName(), "LED_CALIBRATION", "Calibration LED",
-                       GPS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                       GPS_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // LED Pulse Position for Starting/Stopping Exposure
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDStartPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
-    IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_TAB, IP_RW, 60,
-                       IPS_IDLE);
+    IUFillNumberVector(&GPSLEDStartPosNP, GPSLEDStartPosN, 2, getDeviceName(), "LED_START_POS", "LED Start", GPS_CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_POSITION], "LED_PULSE_POSITION", "Pos", "%.f", 2850, 999999, 1000, 0);
     IUFillNumber(&GPSLEDEndPosN[LED_PULSE_WIDTH], "LED_PULSE_WIDTH", "DT", "%.f", 10, 255, 10, 100);
-    IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_TAB, IP_RW, 60,
+    IUFillNumberVector(&GPSLEDEndPosNP, GPSLEDEndPosN, 2, getDeviceName(), "LED_END_POS", "LED End", GPS_CONTROL_TAB, IP_RW, 60,
                        IPS_IDLE);
 
     // GPS header On/Off
     IUFillSwitch(&GPSControlS[INDI_ENABLED], "INDI_ENABLED", "Enable", ISS_OFF);
     IUFillSwitch(&GPSControlS[INDI_DISABLED], "INDI_DISABLED", "Disable", ISS_ON);
-    IUFillSwitchVector(&GPSControlSP, GPSControlS, 2, getDeviceName(), "GPS_CONTROL", "GPS Header", GPS_TAB,
+    IUFillSwitchVector(&GPSControlSP, GPSControlS, 2, getDeviceName(), "GPS_CONTROL", "GPS Header", GPS_CONTROL_TAB,
                        IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    /////////////////////////////////////////////////////////////////////////////
+    /// Properties: GPS Data
+    /////////////////////////////////////////////////////////////////////////////
+
+    // GPS State
+    IUFillLight(&GPSStateL[GPS_ON], "GPS_ON", "Powered", IPS_OK);
+    IUFillLight(&GPSStateL[GPS_SEARCHING], "GPS_SEARCHING", "Searching", IPS_IDLE);
+    IUFillLight(&GPSStateL[GPS_LOCKING], "GPS_LOCKING", "Locking", IPS_IDLE);
+    IUFillLight(&GPSStateL[GPS_LOCKED], "GPS_LOCKED", "Locked", IPS_IDLE);
+    IUFillLightVector(&GPSStateLP, GPSStateL, 4, getDeviceName(), "GPS_STATE", "GPS", GPS_DATA_TAB, IPS_IDLE);
+
+    // RAW Data Header
+    IUFillText(&GPSDataHeaderT[GPS_DATA_SEQ_NUMBER], "GPS_DATA_SEQ_NUMBER", "Seq #", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_WIDTH], "GPS_DATA_WIDTH", "Width", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_HEIGHT], "GPS_DATA_HEIGHT", "Height", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_LONGITUDE], "GPS_DATA_LONGITUDE", "Longitude", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_LATITUDE], "GPS_DATA_LATITUDE", "Latitude", "NA");
+    IUFillText(&GPSDataHeaderT[GPS_DATA_MAX_CLOCK], "GPS_DATA_MAX_CLOCK", "Max Clock", "NA");
+    IUFillTextVector(&GPSDataHeaderTP, GPSDataHeaderT, 6, getDeviceName(), "GPS_DATA_HEADER", "Header", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data Start
+    IUFillText(&GPSDataStartT[GPS_DATA_START_FLAG], "GPS_DATA_START_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_SEC], "GPS_DATA_START_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_USEC], "GPS_DATA_START_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataStartT[GPS_DATA_START_TS], "GPS_DATA_START_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataStartTP, GPSDataStartT, 4, getDeviceName(), "GPS_DATA_START", "Start", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data End
+    IUFillText(&GPSDataEndT[GPS_DATA_END_FLAG], "GPS_DATA_END_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_SEC], "GPS_DATA_END_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_USEC], "GPS_DATA_END_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataEndT[GPS_DATA_END_TS], "GPS_DATA_END_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataEndTP, GPSDataEndT, 4, getDeviceName(), "GPS_DATA_END", "End", GPS_DATA_TAB, IP_RO, 60,
+                     IPS_IDLE);
+
+    // RAW Data Now
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_FLAG], "GPS_DATA_NOW_FLAG", "Flag", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_SEC], "GPS_DATA_NOW_SEC", "Seconds", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_USEC], "GPS_DATA_NOW_USEC", "Microseconds", "NA");
+    IUFillText(&GPSDataNowT[GPS_DATA_NOW_TS], "GPS_DATA_NOW_TS", "TS", "NA");
+    IUFillTextVector(&GPSDataNowTP, GPSDataNowT, 4, getDeviceName(), "GPS_DATA_NOW", "Now", GPS_DATA_TAB, IP_RO, 60, IPS_IDLE);
 
     addAuxControls();
     setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
@@ -386,55 +448,68 @@ void QHYCCD::ISGetProperties(const char *dev)
     {
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
 
             if (HasCoolerManualMode)
             {
-                defineSwitch(&CoolerModeSP);
+                defineProperty(&CoolerModeSP);
             }
 
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
         }
 
         if (HasUSBSpeed)
-            defineNumber(&SpeedNP);
+            defineProperty(&SpeedNP);
 
         if (HasReadMode)
-            defineNumber(&ReadModeNP);
+            defineProperty(&ReadModeNP);
 
         if (HasGain)
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
 
         if (HasOffset)
-            defineNumber(&OffsetNP);
+            defineProperty(&OffsetNP);
 
         if (HasFilters)
         {
             //Define the Filter Slot and name properties
-            defineNumber(&FilterSlotNP);
+            defineProperty(&FilterSlotNP);
             if (FilterNameT != nullptr)
-                defineText(FilterNameTP);
+                defineProperty(FilterNameTP);
         }
 
         if (HasUSBTraffic)
-            defineNumber(&USBTrafficNP);
+            defineProperty(&USBTrafficNP);
 
-        defineNumber(&USBBufferNP);
+        defineProperty(&USBBufferNP);
 
-        defineText(&SDKVersionTP);
+        defineProperty(&SDKVersionTP);
+
+        if (HasAmpGlow)
+            defineProperty(&AMPGlowSP);
 
         if (HasGPS)
         {
-            defineSwitch(&GPSSlavingSP);
-            defineNumber(&GPSSlavingParamNP);
+            defineProperty(&GPSSlavingSP);
+            defineProperty(&GPSSlavingParamNP);
 
-            defineNumber(&VCOXFreqNP);
-            defineSwitch(&GPSLEDCalibrationSP);
-            defineNumber(&GPSLEDStartPosNP);
-            defineNumber(&GPSLEDEndPosNP);
+            defineProperty(&VCOXFreqNP);
+            defineProperty(&GPSLEDCalibrationSP);
+            defineProperty(&GPSLEDStartPosNP);
+            defineProperty(&GPSLEDEndPosNP);
 
-            defineSwitch(&GPSControlSP);
+            defineProperty(&GPSControlSP);
+
+            defineProperty(&GPSStateLP);
+            defineProperty(&GPSDataHeaderTP);
+            defineProperty(&GPSDataStartTP);
+            defineProperty(&GPSDataEndTP);
+            defineProperty(&GPSDataNowTP);
         }
+
+        //NEW CODE - Add support for overscan/calibration area
+        if(HasOverscanArea)
+            defineProperty(&OverscanAreaSP);
     }
 }
 
@@ -447,16 +522,16 @@ bool QHYCCD::updateProperties()
     {
         if (HasCooler())
         {
-            defineSwitch(&CoolerSP);
+            defineProperty(&CoolerSP);
             if (HasCoolerManualMode)
             {
-                defineSwitch(&CoolerModeSP);
+                defineProperty(&CoolerModeSP);
             }
 
             CoolerNP.p = HasCoolerManualMode ? IP_RW : IP_RO;
-            defineNumber(&CoolerNP);
+            defineProperty(&CoolerNP);
 
-            m_TemperatureTimerID = IEAddTimer(POLLMS, QHYCCD::updateTemperatureHelper, this);
+            m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
         }
 
         double min = 0, max = 0, step = 0;
@@ -485,7 +560,7 @@ bool QHYCCD::updateProperties()
                           SpeedN[0].min, SpeedN[0].max, SpeedN[0].step);
             }
 
-            defineNumber(&SpeedNP);
+            defineProperty(&SpeedNP);
         }
 
         // Read mode support
@@ -500,43 +575,13 @@ bool QHYCCD::updateProperties()
             }
             else
             {
-
                 ReadModeN[0].min  = 0;
-
-                ////////////////////////////////////////////////////////////////////
-                /// Read Modes
-                ////////////////////////////////////////////////////////////////////
-                int ret;
-                uint32_t maxNumOfReadModes = 0;
-                ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &maxNumOfReadModes);
-                if (ret == QHYCCD_SUCCESS && maxNumOfReadModes > 0)
-                {
-                    ReadModeN[0].max  = maxNumOfReadModes - 1;
-                }
-                else
-                {
-                    ReadModeN[0].max = 0;
-                }
-
+                ReadModeN[0].max = (numReadModes > 0 ? numReadModes - 1 : 0);
                 ReadModeN[0].step = 1;
-
-                uint32_t currentReadMode = 0;
-
-                ret = GetQHYCCDReadMode(m_CameraHandle, &currentReadMode);
-                if (ret == QHYCCD_SUCCESS)
-                {
-                    ReadModeN[0].value = currentReadMode;
-                    LOGF_INFO("Current read mode: %zu", currentReadMode);
-                }
-                else
-                {
-                    LOGF_INFO("Using default read mode (error reading it): %zu", currentReadMode);
-                }
-
-
+                ReadModeN[0].value = currentQHYReadMode;
             }
+            defineProperty(&ReadModeNP);
         }
-        // ---
 
         if (HasGain)
         {
@@ -562,7 +607,7 @@ bool QHYCCD::updateProperties()
                           GainN[0].max, GainN[0].step);
             }
 
-            defineNumber(&GainNP);
+            defineProperty(&GainNP);
         }
 
         if (HasOffset)
@@ -590,7 +635,7 @@ bool QHYCCD::updateProperties()
             }
 
             //Define the Offset
-            defineNumber(&OffsetNP);
+            defineProperty(&OffsetNP);
         }
 
         if (HasFilters)
@@ -621,25 +666,41 @@ bool QHYCCD::updateProperties()
                 LOGF_INFO("USB Traffic Settings: Value: %.f Min: %.f Max: %.f Step %.f", USBTrafficN[0].value,
                           USBTrafficN[0].min, USBTrafficN[0].max, USBTrafficN[0].step);
             }
-            defineNumber(&USBTrafficNP);
+            defineProperty(&USBTrafficNP);
         }
 
-        defineNumber(&USBBufferNP);
+        defineProperty(&USBBufferNP);
 
-        defineText(&SDKVersionTP);
+        defineProperty(&SDKVersionTP);
+
+        if (HasAmpGlow)
+        {
+            int index = GetQHYCCDParam(m_CameraHandle, CONTROL_AMPV);
+            IUResetSwitch(&AMPGlowSP);
+            AMPGlowS[index].s = ISS_ON;
+            defineProperty(&AMPGlowSP);
+        }
 
         if (HasGPS)
         {
-            defineSwitch(&GPSSlavingSP);
-            defineNumber(&GPSSlavingParamNP);
+            defineProperty(&GPSSlavingSP);
+            defineProperty(&GPSSlavingParamNP);
+            defineProperty(&VCOXFreqNP);
+            defineProperty(&GPSLEDCalibrationSP);
+            defineProperty(&GPSLEDStartPosNP);
+            defineProperty(&GPSLEDEndPosNP);
+            defineProperty(&GPSControlSP);
 
-            defineNumber(&VCOXFreqNP);
-            defineSwitch(&GPSLEDCalibrationSP);
-            defineNumber(&GPSLEDStartPosNP);
-            defineNumber(&GPSLEDEndPosNP);
-
-            defineSwitch(&GPSControlSP);
+            defineProperty(&GPSStateLP);
+            defineProperty(&GPSDataHeaderTP);
+            defineProperty(&GPSDataStartTP);
+            defineProperty(&GPSDataEndTP);
+            defineProperty(&GPSDataNowTP);
         }
+
+        //NEW CODE - Add support for overscan/calibration area
+        if (HasOverscanArea)
+            defineProperty(&OverscanAreaSP);
 
         // Let's get parameters now from CCD
         setupParams();
@@ -690,6 +751,9 @@ bool QHYCCD::updateProperties()
 
         deleteProperty(SDKVersionTP.name);
 
+        if (HasAmpGlow)
+            deleteProperty(AMPGlowSP.name);
+
         if (HasGPS)
         {
             deleteProperty(GPSSlavingSP.name);
@@ -699,7 +763,17 @@ bool QHYCCD::updateProperties()
             deleteProperty(GPSLEDStartPosNP.name);
             deleteProperty(GPSLEDEndPosNP.name);
             deleteProperty(GPSControlSP.name);
+
+            deleteProperty(GPSStateLP.name);
+            deleteProperty(GPSDataHeaderTP.name);
+            deleteProperty(GPSDataStartTP.name);
+            deleteProperty(GPSDataEndTP.name);
+            deleteProperty(GPSDataNowTP.name);
         }
+
+        //NEW CODE - Add support for overscan/calibration area
+        if (HasOverscanArea)
+            deleteProperty(OverscanAreaSP.name);
     }
 
     return true;
@@ -708,7 +782,6 @@ bool QHYCCD::updateProperties()
 bool QHYCCD::Connect()
 {
     uint32_t cap;
-    uint32_t readModes = 0;
 
 
     if (isSimulation())
@@ -748,7 +821,8 @@ bool QHYCCD::Connect()
         cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME;
 
         // Disable the stream mode before connecting
-        uint32_t ret = SetQHYCCDStreamMode(m_CameraHandle, 0);
+        currentQHYStreamMode = 0;
+        uint32_t ret = SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
         if (ret != QHYCCD_SUCCESS)
         {
             LOGF_ERROR("Can not disable stream mode (%d)", ret);
@@ -773,11 +847,49 @@ bool QHYCCD::Connect()
         ////////////////////////////////////////////////////////////////////
         /// Read Modes
         ////////////////////////////////////////////////////////////////////
-        ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &readModes);
-        if (ret == QHYCCD_SUCCESS && readModes > 1)
+        ret = GetQHYCCDNumberOfReadModes(m_CameraHandle, &numReadModes);
+        if (ret == QHYCCD_SUCCESS && numReadModes > 1)
         {
             HasReadMode = true;
-            LOGF_INFO("Number of read modes: %zu", readModes);
+            //NEW CODE - format modifier %zu --> %u
+            LOGF_INFO("Number of read modes: %u", numReadModes);
+        }
+
+        readModeInfo = new QHYReadModeInfo[numReadModes];
+
+        for (uint32_t rm = 0; rm < numReadModes; rm++)
+        {
+            readModeInfo[rm].id = rm;
+            ret = GetQHYCCDReadModeName(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].label[0]);
+            if (ret == QHYCCD_SUCCESS)
+            {
+                LOGF_INFO("Mode %d: %s", readModeInfo[rm].id, readModeInfo[rm].label);
+            }
+            else
+            {
+                LOGF_INFO("Failed to obtain read mode name for modeNumber: %d", readModeInfo[rm].id);
+                strcpy(readModeInfo[rm].label, "UNKNOWN");
+            }
+            ret = GetQHYCCDReadModeResolution(m_CameraHandle, readModeInfo[rm].id, &readModeInfo[rm].subW,
+                                              &readModeInfo[rm].subH);
+            if (ret == QHYCCD_SUCCESS)
+            {
+                LOGF_INFO("Sensor resolution for mode %s: %dx%d px", readModeInfo[rm].label,
+                          readModeInfo[rm].subW, readModeInfo[rm].subH);
+            }
+            else
+            {
+                LOGF_WARN("Failed to read mode resolution name for modeNumber: %d", readModeInfo[rm].id);
+                readModeInfo[rm].subW = readModeInfo[rm].subH = 0;
+            }
+        }
+
+        //Correctly initialize current read mode
+        ret = GetQHYCCDReadMode(m_CameraHandle, &currentQHYReadMode);
+        if (ret == QHYCCD_SUCCESS && numReadModes > 1)
+        {
+            LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
+                      readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -982,6 +1094,17 @@ bool QHYCCD::Connect()
         LOGF_INFO("Camera exposure limits: Min: %.6fs Max: %.fs Step %.fs", min / 1e6, max / 1e6, step / 1e6);
 
         ////////////////////////////////////////////////////////////////////
+        /// Amp glow Support
+        ////////////////////////////////////////////////////////////////////
+        ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_AMPV);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasAmpGlow = true;
+        }
+
+        LOGF_DEBUG("Ampglow Control: %s", HasAmpGlow ? "True" : "False");
+
+        ////////////////////////////////////////////////////////////////////
         /// GPS Support
         ////////////////////////////////////////////////////////////////////
         ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_GPS);
@@ -991,6 +1114,19 @@ bool QHYCCD::Connect()
         }
 
         LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
+
+        ////////////////////////////////////////////////////////////////////
+        /// Overscan Area Support
+        ////////////////////////////////////////////////////////////////////
+        //NEW CODE - Add support for overscan/calibration area
+        uint32_t overscanSubX, overscanSubY, overscanSubW, overscanSubH;
+        ret = GetQHYCCDOverScanArea(m_CameraHandle, &overscanSubX, &overscanSubY, &overscanSubW, &overscanSubH);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasOverscanArea = (overscanSubW + overscanSubH > 0);
+        }
+
+        LOGF_DEBUG("Overscan Area Support: %s", HasOverscanArea ? "True" : "False");
 
         // Set Camera Capability
         SetCCDCapability(cap);
@@ -1013,7 +1149,7 @@ bool QHYCCD::Connect()
         }
         pthread_mutex_unlock(&condMutex);
 
-        SetTimer(POLLMS);
+        SetTimer(getCurrentPollingPeriod());
 
         return true;
     }
@@ -1034,18 +1170,20 @@ bool QHYCCD::Disconnect()
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
     pthread_join(m_ImagingThread, nullptr);
-    tState = StateNone;
+    //tState = StateNone;
     if (isSimulation() == false)
     {
         if (tState == StateStream)
         {
-            SetQHYCCDStreamMode(m_CameraHandle, 0x0);
             StopQHYCCDLive(m_CameraHandle);
+            SetQHYCCDStreamMode(m_CameraHandle, 0x0);
         }
         else if (tState == StateExposure)
             CancelQHYCCDExposingAndReadout(m_CameraHandle);
         CloseQHYCCD(m_CameraHandle);
     }
+
+    tState = StateNone;
 
     LOG_INFO("Camera is offline.");
 
@@ -1054,20 +1192,27 @@ bool QHYCCD::Disconnect()
 
 bool QHYCCD::setupParams()
 {
-    uint32_t nbuf, imagew, imageh, bpp;
+
+    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+    uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
+
+    //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+    //raw frame origin is always at (0,0)
+    sensorROI.subX = sensorROI.subY = 0;
 
     if (isSimulation())
     {
-        chipw = imagew = 1280;
-        chiph = imageh = 1024;
+        //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
+        sensorROI.subW  = 1280;
+        sensorROI.subH = 1024;
         pixelh = pixelw = 5.4;
         bpp             = 8;
     }
     else
     {
-        int rc = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
 
+        int rc = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &sensorROI.subW, &sensorROI.subH, &pixelw, &pixelh, &bpp);
         /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
         if (rc != QHYCCD_SUCCESS)
         {
@@ -1076,7 +1221,7 @@ bool QHYCCD::setupParams()
         }
 
         LOGF_DEBUG("GetQHYCCDChipInfo: chipW :%g chipH: %g imageW: %d imageH: %d pixelW: %g pixelH: %g bbp %d", chipw,
-                   chiph, imagew, imageh, pixelw, pixelh, bpp);
+                   chiph, sensorROI.subW, sensorROI.subH, pixelw, pixelh, bpp);
 
         rc = GetQHYCCDEffectiveArea(m_CameraHandle, &effectiveROI.subX, &effectiveROI.subY, &effectiveROI.subW, &effectiveROI.subH);
         if (rc == QHYCCD_SUCCESS)
@@ -1085,21 +1230,29 @@ bool QHYCCD::setupParams()
                        effectiveROI.subW, effectiveROI.subH);
         }
 
-        if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
-        {
-            imagew = effectiveROI.subW;
-            imageh = effectiveROI.subH;
-        }
+        //NEW CODE - Add support for overscan/calibration area, we want to allow also pixels outside of effectiveROI
+        //if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
+        //{
+        //    imagew = effectiveROI.subW;
+        //    imageh = effectiveROI.subH;
+        //}
 
-        rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
-        if (rc == QHYCCD_SUCCESS)
-        {
-            LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
-                       overscanROI.subW, overscanROI.subH);
-        }
+        //NEW CODE - Overscan Area not needed here, deprecated variable overscanROI
+        //rc = GetQHYCCDOverScanArea(m_CameraHandle, &overscanROI.subX, &overscanROI.subY, &overscanROI.subW, &overscanROI.subH);
+        //if (rc == QHYCCD_SUCCESS)
+        //{
+        //    LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
+        //               overscanROI.subW, overscanROI.subH);
+        //}
     }
 
-    SetCCDParams(imagew, imageh, bpp, pixelw, pixelh);
+    //NEW CODE - Add support for overscan/calibration area
+    if (IgnoreOverscanArea)
+        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw,
+                     pixelh);    //Overscan area is ignored, exposure frame to be within effectiveROI
+    else
+        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw,
+                     pixelh);          //Overscan area is not ignored, exposure frame to be within full sensor frame
 
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -1107,7 +1260,10 @@ bool QHYCCD::setupParams()
     if (HasStreaming())
     {
         Streamer->setPixelFormat(INDI_MONO);
-        Streamer->setSize(imagew, imageh);
+        //NEW CODE - Add support for overscan/calibration area
+        //TODO - should overscan area be allowd in streaming mode, too?
+        //Streamer->setSize(IgnoreOverscanArea ? effectiveROI.subW : sensorROI.subW, IgnoreOverscanArea ? effectiveROI.subH : sensorROI.subH);
+        Streamer->setSize(effectiveROI.subW, effectiveROI.subH);
     }
 
     return true;
@@ -1135,8 +1291,9 @@ bool QHYCCD::StartExposure(float duration)
 {
     unsigned int ret = QHYCCD_ERROR;
 
-    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
-    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    //NEW CODE - Add support for overscan/calibration area, add frame offset to be modular based on overscan area settings
+    uint32_t subX = (PrimaryCCD.getSubX() + (IgnoreOverscanArea ? effectiveROI.subX : 0)) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + (IgnoreOverscanArea ? effectiveROI.subY : 0)) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
@@ -1144,6 +1301,33 @@ bool QHYCCD::StartExposure(float duration)
     {
         LOG_ERROR("Cannot take exposure while streaming/recording is active.");
         return false;
+    }
+
+    // Set streaming mode and re-initialize camera
+    if (currentQHYStreamMode == 1 && !isSimulation())
+    {
+
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+        //    return false;
+        //}
+
+        currentQHYStreamMode = 0;
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+            return false;
+        }
+
+        // Try to set 16bit mode if supported back.
+        SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     }
 
     m_ImageFrameType = PrimaryCCD.getFrameType();
@@ -1391,7 +1575,7 @@ int QHYCCD::grabImage()
     //if (useSoftBin)
     //    PrimaryCCD.binFrame();
 
-    if (m_ExposureRequest > POLLMS * 5)
+    if (m_ExposureRequest > getCurrentPollingPeriod() * 5)
         LOG_INFO("Download complete.");
     else
         LOG_DEBUG("Download complete.");
@@ -1421,7 +1605,7 @@ void QHYCCD::TimerHit()
     //            {
     //                deleteProperty("FILTER_NAME");
     //                IUUpdateMinMax(&FilterSlotNP);
-    //                defineText(FilterNameTP);
+    //                defineProperty(FilterNameTP);
     //            }
     //        }
     //    }
@@ -1453,7 +1637,7 @@ void QHYCCD::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 IPState QHYCCD::GuideNorth(uint32_t ms)
@@ -1657,6 +1841,82 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IDSetSwitch(&GPSLEDCalibrationSP, nullptr);
             return true;
         }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Amp Glow
+        //////////////////////////////////////////////////////////////////////
+        else if (!strcmp(AMPGlowSP.name, name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&AMPGlowSP);
+            IUUpdateSwitch(&AMPGlowSP, states, names, n);
+            double targetIndex = IUFindOnSwitchIndex(&AMPGlowSP);
+            int rc = SetQHYCCDParam(m_CameraHandle, CONTROL_AMPV, targetIndex);
+            if (rc == QHYCCD_SUCCESS)
+            {
+                AMPGlowSP.s = IPS_OK;
+            }
+            else
+            {
+                IUResetSwitch(&AMPGlowSP);
+                AMPGlowS[prevIndex].s = ISS_ON;
+                AMPGlowSP.s = IPS_ALERT;
+            }
+
+            IDSetSwitch(&AMPGlowSP, nullptr);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        /// Overscan Area
+        //////////////////////////////////////////////////////////////////////
+        //NEW CODE - Add support for overscan/calibration area
+        else if (!strcmp(OverscanAreaSP.name, name))
+        {
+
+            IUUpdateSwitch(&OverscanAreaSP, states, names, n);
+            bool isIgnored = (OverscanAreaS[INDI_ENABLED].s == ISS_OFF); //Overscan Area included switch is 'off', thus excluded
+
+            if (isIgnored == IgnoreOverscanArea)
+            {
+                OverscanAreaSP.s = IPS_OK;
+                IDSetSwitch(&OverscanAreaSP, nullptr);
+                return true;
+            }
+
+            IgnoreOverscanArea = isIgnored;
+
+            OverscanAreaS[INDI_DISABLED].s = IgnoreOverscanArea ? ISS_ON : ISS_OFF;
+            OverscanAreaS[INDI_ENABLED].s = IgnoreOverscanArea ? ISS_OFF : ISS_ON;
+
+            OverscanAreaSP.s = IgnoreOverscanArea ? IPS_IDLE : IPS_OK;
+
+            if (IgnoreOverscanArea)
+            {
+                //Image Info
+                SetCCDParams(effectiveROI.subW, effectiveROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(),
+                             PrimaryCCD.getPixelSizeX());
+
+                // Image Settings
+                // The true frame origin is at (effectiveROI.subX ,effectiveROI.subY).
+                // This vector that needs to be used for offset-correction when taking exposures or streaming while ignoring overscan areas.
+                UpdateCCDFrame(0, 0, effectiveROI.subW, effectiveROI.subH);
+
+            }
+            else
+            {
+                //Image Info
+                SetCCDParams(sensorROI.subW, sensorROI.subH, PrimaryCCD.getBPP(), PrimaryCCD.getPixelSizeX(), PrimaryCCD.getPixelSizeX());
+                //Image Settings
+                UpdateCCDFrame(sensorROI.subX, sensorROI.subY, sensorROI.subW, sensorROI.subH);
+            }
+
+            LOGF_INFO("The overscan area is %s now. The effective frame starts at coordinates (%u, %u) ",
+                      IgnoreOverscanArea ? "ignored" : "included", IgnoreOverscanArea ? effectiveROI.subX : 0,
+                      IgnoreOverscanArea ? effectiveROI.subY : 0);
+
+            IDSetSwitch(&OverscanAreaSP, nullptr);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -1816,58 +2076,51 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         //////////////////////////////////////////////////////////////////////
         else if (!strcmp(name, ReadModeNP.name))
         {
-            uint32_t imageRMw, imageRMh, ret;
-            double newReadMode = ReadModeN[0].value;
-            uint32_t nbuf, imagew, imageh, bpp;
-            double chipw, chiph, pixelw, pixelh;
+            //NEW CODE - Fix read mode handling
             IUUpdateNumber(&ReadModeNP, values, names, n);
-            int rc = SetQHYCCDReadMode(m_CameraHandle, ReadModeN[0].value);
-            if (rc == QHYCCD_SUCCESS)
+            uint32_t newReadMode = static_cast<uint32_t>(ReadModeN[0].value);
+
+            // Set readout mode
+            if (newReadMode != currentQHYReadMode)
             {
-                LOGF_INFO("Read mode updated to %.f", ReadModeN[0].value);
-                // Get resolution
-                ret = GetQHYCCDReadModeResolution(m_CameraHandle, ReadModeN[0].value, &imageRMw, &imageRMh);
-                LOGF_INFO("GetQHYCCDReadModeResolution in this ReadMode: imageW: %d imageH: %d \n", imageRMw, imageRMh);
-
-                ReadModeNP.s = IPS_OK;
-                saveConfig(true, ReadModeNP.name);
-                if (isSimulation())
+                /* change readout mode */
+                int rc = SetQHYCCDReadMode(m_CameraHandle, newReadMode); // [NEW CODE] declaration int rc removed
+                if (rc == QHYCCD_SUCCESS)
                 {
-                    chipw = imagew = 1280;
-                    chiph = imageh = 1024;
-                    pixelh = pixelw = 5.4;
-                    bpp             = 8;
-                }
-                else
-                {
-                    ret = GetQHYCCDChipInfo(m_CameraHandle, &chipw, &chiph, &imagew, &imageh, &pixelw, &pixelh, &bpp);
-
-                    /* JM: We need GetQHYCCDErrorString(ret) to get the string description of the error, please implement this in the SDK */
-                    if (ret != QHYCCD_SUCCESS)
+                    /* re-initialize the camera */
+                    rc = InitQHYCCD(m_CameraHandle);
+                    if (rc != QHYCCD_SUCCESS)
                     {
-                        LOGF_ERROR("Error: GetQHYCCDChipInfo() (%d)", ret);
+                        LOGF_ERROR("Init Camera failed (%d)", rc);
+                        SetQHYCCDReadMode(m_CameraHandle, currentQHYReadMode);
+                        IDSetNumber(&ReadModeNP, nullptr);
                         return false;
                     }
 
+                    currentQHYReadMode = newReadMode;
+
+                    LOGF_INFO("Current read mode: %s (%dx%d)", readModeInfo[currentQHYReadMode].label,
+                              readModeInfo[currentQHYReadMode].subW, readModeInfo[currentQHYReadMode].subH);
+
+                    /* re-initialize the camera parameters */
+                    QHYCCD::setupParams();
+                    saveConfig(true, ReadModeNP.name);
+                    ReadModeNP.s = IPS_OK;
                 }
-
-                SetCCDParams(imageRMw, imageRMh, bpp, pixelw, pixelh);
-                nbuf = imageRMw * imageRMh * PrimaryCCD.getBPP() / 8;
-                PrimaryCCD.setFrameBufferSize(nbuf);
-
-                if (HasStreaming())
+                else
                 {
-                    Streamer->setPixelFormat(INDI_MONO);
-                    Streamer->setSize(imageRMw, imageRMh);
+                    ReadModeNP.s = IPS_ALERT;
+                    /* assume the camera did not switch read modes and thus is still in the former read mode */
+                    ReadModeN[0].value = currentQHYReadMode;
+                    LOGF_ERROR("Failed to update read mode: %d", rc);
                 }
-
-
             }
             else
             {
-                ReadModeNP.s = IPS_ALERT;
-                ReadModeN[0].value = newReadMode;
-                LOGF_ERROR("Failed to update read mode: %d", rc);
+                /* re-initialize the camera parameters */
+                QHYCCD::setupParams();
+                saveConfig(true, ReadModeNP.name);
+                ReadModeNP.s = IPS_OK;
             }
 
             IDSetNumber(&ReadModeNP, nullptr);
@@ -2071,7 +2324,7 @@ void QHYCCD::updateTemperature()
     IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&CoolerNP, nullptr);
 
-    m_TemperatureTimerID = IEAddTimer(POLLMS, QHYCCD::updateTemperatureHelper, this);
+    m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
 }
 
 bool QHYCCD::saveConfigItems(FILE *fp)
@@ -2098,6 +2351,9 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
 
+    if (HasAmpGlow)
+        IUSaveConfigSwitch(fp, &AMPGlowSP);
+
     if (HasGPS)
     {
         IUSaveConfigSwitch(fp, &GPSControlSP);
@@ -2120,8 +2376,9 @@ bool QHYCCD::StartStreaming()
     int ret = 0;
     m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-    uint32_t subX = (PrimaryCCD.getSubX() + effectiveROI.subX) / PrimaryCCD.getBinX();
-    uint32_t subY = (PrimaryCCD.getSubY() + effectiveROI.subY) / PrimaryCCD.getBinY();
+    //NEW CODE - Add support for overscan/calibration area
+    uint32_t subX = (PrimaryCCD.getSubX() + (IgnoreOverscanArea ? effectiveROI.subX : 0)) / PrimaryCCD.getBinX();
+    uint32_t subY = (PrimaryCCD.getSubY() + (IgnoreOverscanArea ? effectiveROI.subY : 0)) / PrimaryCCD.getBinY();
     uint32_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint32_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
 
@@ -2132,8 +2389,33 @@ bool QHYCCD::StartStreaming()
         { "RGGB", INDI_BAYER_RGGB }
     };
 
-    // Set Stream Mode
-    SetQHYCCDStreamMode(m_CameraHandle, 1);
+    // Set Stream Mode and re-initialize camera
+    //SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+    if (currentQHYStreamMode == 0  && !isSimulation())
+    {
+
+        /* NR - Closing the camera will reset the connection in ECOS, I recommend to omit here. */
+        //CloseQHYCCD(m_CameraHandle);
+        //ret = InitQHYCCD(m_CameraHandle);
+        //if(ret != QHYCCD_SUCCESS)
+        //{
+        //    currentQHYStreamMode = 0;
+        //    LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+        //    return false;
+        //}
+
+        /* switch camera to streaming mode */
+        currentQHYStreamMode = 1;
+        SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+        /* re-initialize camera */
+        ret = InitQHYCCD(m_CameraHandle);
+        if(ret != QHYCCD_SUCCESS)
+        {
+            currentQHYStreamMode = 0;
+            LOGF_INFO("Init QHYCCD for streaming mode failed, code:%d", ret);
+            return false;
+        }
+    }
 
     // Set binning mode
     if (isSimulation())
@@ -2168,8 +2450,6 @@ bool QHYCCD::StartStreaming()
 
     double uSecs = static_cast<long>(m_ExposureRequest * 950000.0);
 
-    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS)", m_ExposureRequest, Streamer->getTargetFPS());
-
     SetQHYCCDParam(m_CameraHandle, CONTROL_EXPOSURE, uSecs);
 
     if (HasUSBSpeed)
@@ -2195,8 +2475,11 @@ bool QHYCCD::StartStreaming()
         Streamer->setPixelFormat(qhyFormat, PrimaryCCD.getBPP());
     }
 
-    BeginQHYCCDLive(m_CameraHandle);
+    //LOG_INFO("start live mode"); //DEBUG
 
+    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS), w=%d h=%d", m_ExposureRequest,
+              Streamer->getTargetFPS(), subW, subH);
+    BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
     m_ThreadRequest = StateStream;
     pthread_cond_signal(&cv);
@@ -2215,14 +2498,24 @@ bool QHYCCD::StopStreaming()
         pthread_cond_wait(&cv, &condMutex);
     }
     pthread_mutex_unlock(&condMutex);
-
-    if (HasUSBSpeed)
-        SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
-    if (HasUSBTraffic)
-        SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
-    SetQHYCCDStreamMode(m_CameraHandle, 0);
     StopQHYCCDLive(m_CameraHandle);
 
+    //LOG_INFO("stopped live mode"); //DEBUG
+
+    //if (HasUSBSpeed)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, SpeedN[0].value);
+    //if (HasUSBTraffic)
+    //    SetQHYCCDParam(m_CameraHandle, CONTROL_USBTRAFFIC, USBTrafficN[0].value);
+
+    currentQHYStreamMode = 0;
+    SetQHYCCDStreamMode(m_CameraHandle, currentQHYStreamMode);
+
+    // FIX: Helps for cleaner teardown and prevents camera from staling
+    InitQHYCCD(m_CameraHandle);
+
+    // Try to set 16bit mode if supported back. Use PrimaryCCD.getBPP as this is what we use to allocate the image buffer.
+    // Instead of doing this here, set the new bitmode when we go into exposure mode out of streaming mode.
+    //SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
     return true;
 }
 
@@ -2285,16 +2578,16 @@ void *QHYCCD::imagingThreadEntry()
 void QHYCCD::streamVideo()
 {
     uint32_t ret = 0, w, h, bpp, channels;
-
+    //uint32_t t_start = time(NULL), frames = 0;
     while (m_ThreadRequest == StateStream)
     {
         pthread_mutex_unlock(&condMutex);
         uint32_t retries = 0;
         std::unique_lock<std::mutex> guard(ccdBufferLock);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-        uint32_t size = PrimaryCCD.getFrameBufferSize();
         while (retries++ < 10)
         {
+
             ret = GetQHYCCDLiveFrame(m_CameraHandle, &w, &h, &bpp, &channels, buffer);
             if (ret == QHYCCD_ERROR)
                 usleep(1000);
@@ -2303,8 +2596,18 @@ void QHYCCD::streamVideo()
         }
         guard.unlock();
         if (ret == QHYCCD_SUCCESS)
-            Streamer->newFrame(buffer, size);
+        {
+            Streamer->newFrame(buffer, w * h * bpp / 8 * channels);
 
+            if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
+                decodeGPSHeader();
+
+            //DEBUG
+            //if(!frames)
+            //    LOGF_DEBUG("Receiving frames ...");
+            //if(!(++frames % 30))
+            //    LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
+        }
         pthread_mutex_lock(&condMutex);
     }
 }
@@ -2355,7 +2658,7 @@ void QHYCCD::getExposure()
         {
             InExposure = false;
             PrimaryCCD.setExposureLeft(0.0);
-            if (m_ExposureRequest * 1000 > 5 * POLLMS)
+            if (m_ExposureRequest * 1000 > 5 * getCurrentPollingPeriod())
                 DEBUG(INDI::Logger::DBG_SESSION, "Exposure done, downloading image...");
             pthread_mutex_lock(&condMutex);
             exposureSetRequest(StateIdle);
@@ -2431,30 +2734,82 @@ bool QHYCCD::updateFilterProperties()
 void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 {
     INDI::CCD::addFITSKeywords(fptr, targetChip);
+    int status = 0;
 
     if (HasGain)
     {
-        int status = 0;
         fits_update_key_dbl(fptr, "Gain", GainN[0].value, 3, "Gain", &status);
+    }
+
+    if (HasOffset)
+    {
+        fits_update_key_dbl(fptr, "Offset", OffsetN[0].value, 3, "Offset", &status);
+    }
+
+    if (HasAmpGlow)
+    {
+        fits_update_key_str(fptr, "Ampglow", IUFindOnSwitch(&AMPGlowSP)->label, "Mode", &status);
+    }
+
+    if (HasReadMode)
+    {
+        fits_update_key_dbl(fptr, "ReadMode", ReadModeN[0].value, 1, "Read Mode", &status);
     }
 
     if (HasGPS)
     {
-        int status = 0;
-
-
-        // Start
+        // #1 Start
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_SFlg", GPSHeader.start_flag, 0, "StartFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_SS", GPSHeader.start_sec, "StartShutterSeconds", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_SU", GPSHeader.start_us, 3, "StartShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_ST", GPSDataStartT[GPS_DATA_START_TS].text, "StartShutterTime", &status);
 
-        // End
+        // #2 End
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_EFlg", GPSHeader.end_flag, 0, "EndFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_ES", GPSHeader.end_sec, "EndShutterSeconds", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_EU", GPSHeader.end_us, 3, "EndShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_ET", GPSDataStartT[GPS_DATA_END_TS].text, "EndShutterTime", &status);
 
-        // Now
+        // #3 Now
+        // ## Flag
         fits_update_key_dbl(fptr, "GPS_NFlg", GPSHeader.now_flag, 0, "NowFlag", &status);
+        // ## Seconds
+        fits_update_key_lng(fptr, "GPS_NS", GPSHeader.now_sec, "NowShutterSeconds", &status);
+        // ## Microseconds
         fits_update_key_dbl(fptr, "GPS_NU", GPSHeader.now_us, 3, "NowShutterMicroSeconds", &status);
+        // ## Time
+        fits_update_key_str(fptr, "GPS_NT", GPSDataStartT[GPS_DATA_NOW_TS].text, "NowShutterTime", &status);
 
+        // PPS Counter
+        fits_update_key_lng(fptr, "GPS_PPSC", GPSHeader.max_clock, "PPSCounter", &status);
+
+        // GPS Status
+
+        // System Clock Offset
+        //fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
+
+        // Time Offset Stable for
+        //fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
+
+        // Longitude
+        fits_update_key_dbl(fptr, "GPS_LONG", GPSHeader.longitude, 3, "GPS Longitude", &status);
+
+        // Latitude
+        fits_update_key_dbl(fptr, "GPS_LAT", GPSHeader.latitude, 3, "GPS Latitude", &status);
+
+        // Sequence Number
+        fits_update_key_lng(fptr, "GPS_Seq", GPSHeader.seqNumber, "Sequence Number", &status);
+
+        // Temperorary Sequence Number
+        fits_update_key_lng(fptr, "GPS_Tmp", GPSHeader.tempNumber, "Temporary Sequence Number", &status);
     }
 
 }
@@ -2471,36 +2826,147 @@ void QHYCCD::setLEDStartPosNP(const INumberVectorProperty &value)
 
 void QHYCCD::decodeGPSHeader()
 {
+    char ts[64] = {0}, iso8601[64] = {0}, data[64] = {0};
+
     uint8_t gpsarray[64] = {0};
     memcpy(gpsarray, PrimaryCCD.getFrameBuffer(), 64);
 
+    // Sequence Number
     GPSHeader.seqNumber = gpsarray[0] << 24 | gpsarray[1] << 16 | gpsarray[2] << 8 | gpsarray[3];
+    snprintf(data, 64, "%u", GPSHeader.seqNumber);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_SEQ_NUMBER], data);
+
     GPSHeader.tempNumber = gpsarray[4];
+
+    // Width
     GPSHeader.width = gpsarray[5] << 8 | gpsarray[6];
+    snprintf(data, 64, "%u", GPSHeader.width);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_WIDTH], data);
+
+    // Height
     GPSHeader.height = gpsarray[7] << 8 | gpsarray[8];
+    snprintf(data, 64, "%u", GPSHeader.height);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_HEIGHT], data);
+
+    // Latitude
     GPSHeader.latitude = gpsarray[9] << 24 | gpsarray[10] << 16 | gpsarray[11] << 8 | gpsarray[12];
+    snprintf(data, 64, "%u", GPSHeader.latitude);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_LATITUDE], data);
+
+    // Longitude
     GPSHeader.longitude = gpsarray[13] << 24 | gpsarray[14] << 16 | gpsarray[15] << 8 | gpsarray[16];
-    // Start
+    snprintf(data, 64, "%u", GPSHeader.longitude);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_LONGITUDE], data);
+
+    // Start Flag
     GPSHeader.start_flag = gpsarray[17];
+    snprintf(data, 64, "%u", GPSHeader.start_flag);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_FLAG], data);
+
+    // Start Seconds
     GPSHeader.start_sec = gpsarray[18] << 24 | gpsarray[19] << 16 | gpsarray[20] << 8 | gpsarray[21];
-    GPSHeader.start_us = gpsarray[22] << 16 | gpsarray[23] << 8 | gpsarray[24];
+    snprintf(data, 64, "%u", GPSHeader.start_sec);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_SEC], data);
+
+    // Start microseconds
+    // It's a 10Mhz crystal so we divide by 10 to get microseconds
+    GPSHeader.start_us = (gpsarray[22] << 16 | gpsarray[23] << 8 | gpsarray[24]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.start_us);
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_USEC], data);
+
+    // Start JD
     GPSHeader.start_jd = JStoJD(GPSHeader.start_sec, GPSHeader.start_us);
-    // End
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.start_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.start_us / 1000.0));
+    IUSaveText(&GPSDataStartT[GPS_DATA_START_TS], ts);
+
+    // End Flag
     GPSHeader.end_flag = gpsarray[25];
+    snprintf(data, 64, "%u", GPSHeader.end_flag);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_FLAG], data);
+
+    // End Seconds
     GPSHeader.end_sec = gpsarray[26] << 24 | gpsarray[27] << 16 | gpsarray[28] << 8 | gpsarray[29];
-    GPSHeader.end_us = gpsarray[30] << 16 | gpsarray[31] << 8 | gpsarray[32];
+    snprintf(data, 64, "%u", GPSHeader.end_sec);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_SEC], data);
+
+    // End Microseconds
+    GPSHeader.end_us = (gpsarray[30] << 16 | gpsarray[31] << 8 | gpsarray[32]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.end_us);
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_USEC], data);
+
+    // End JD
     GPSHeader.end_jd = JStoJD(GPSHeader.end_sec, GPSHeader.end_us);
-    // Now
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.end_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.end_us / 1000.0));
+    IUSaveText(&GPSDataEndT[GPS_DATA_END_TS], ts);
+
+    // Now Flag
     GPSHeader.now_flag = gpsarray[33];
+    snprintf(data, 64, "%u", GPSHeader.now_flag);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_FLAG], data);
+
+    // Now Seconds
     GPSHeader.now_sec = gpsarray[34] << 24 | gpsarray[35] << 16 | gpsarray[36] << 8 | gpsarray[37];
-    GPSHeader.now_us = gpsarray[38] << 16 | gpsarray[39] << 8 | gpsarray[40];
-    GPSHeader.end_jd = JStoJD(GPSHeader.now_sec, GPSHeader.now_us);
+    snprintf(data, 64, "%u", GPSHeader.now_sec);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_SEC], data);
+
+    // Now microseconds
+    GPSHeader.now_us = (gpsarray[38] << 16 | gpsarray[39] << 8 | gpsarray[40]) / 10.0;
+    snprintf(data, 64, "%.1f", GPSHeader.now_us);
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_USEC], data);
+
+    // Now JD
+    GPSHeader.now_jd = JStoJD(GPSHeader.now_sec, GPSHeader.now_us);
+    // Get ISO8601
+    JDtoISO8601(GPSHeader.now_jd, iso8601);
+    // Add millisecond
+    snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(GPSHeader.now_us / 1000.0));
+    IUSaveText(&GPSDataNowT[GPS_DATA_NOW_TS], ts);
+
     // PPS
     GPSHeader.max_clock = gpsarray[41] << 16 | gpsarray[42] << 8 | gpsarray[43];
+    snprintf(data, 64, "%u", GPSHeader.max_clock);
+    IUSaveText(&GPSDataHeaderT[GPS_DATA_MAX_CLOCK], data);
+
+    IDSetText(&GPSDataHeaderTP, nullptr);
+    IDSetText(&GPSDataStartTP, nullptr);
+    IDSetText(&GPSDataEndTP, nullptr);
+    IDSetText(&GPSDataNowTP, nullptr);
+
+    GPSState newGPState = static_cast<GPSState>((GPSHeader.now_flag & 0xF0) >> 4);
+    if (GPSStateL[newGPState].s == IPS_IDLE)
+    {
+        GPSStateL[GPS_ON].s = IPS_IDLE;
+        GPSStateL[GPS_SEARCHING].s = IPS_IDLE;
+        GPSStateL[GPS_LOCKING].s = IPS_IDLE;
+        GPSStateL[GPS_LOCKED].s = IPS_IDLE;
+
+        GPSStateL[newGPState].s = IPS_BUSY;
+        GPSStateLP.s = IPS_OK;
+        IDSetLight(&GPSStateLP, nullptr);
+    }
 }
 
-double QHYCCD::JStoJD(uint32_t JS, uint32_t uus)
+double QHYCCD::JStoJD(uint32_t JS, double us)
 {
-    const double secs_in_day = 3600 * 24;
-    return (JS + uus / 10000000.0) / secs_in_day + 2450000.5;
+    // Convert Julian seconds (plus microsecond) to Julian Days since epoch 2450000
+    // Since this is why QHY apparently uses as the basis.
+    // The 0.5 is added there since JD starts from MID day of the previous day
+    return (JS + us / 1e6) / (3600 * 24) + 2450000.5;
+}
+
+void QHYCCD::JDtoISO8601(double JD, char *iso8601)
+{
+    struct tm *tp = nullptr;
+    time_t gpstime;
+    ln_get_timet_from_julian(JD, &gpstime);
+    // Get UTC timestamp
+    tp = gmtime(&gpstime);
+    // Format it in ISO8601 format
+    strftime(iso8601, MAXINDIDEVICE, "%Y-%m-%dT%H:%M:%S", tp);
 }

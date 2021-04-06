@@ -219,7 +219,7 @@ bool ATIKWHEEL::Connect()
         return false;
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 
     return setupParams();
 }
@@ -272,7 +272,7 @@ void ATIKWHEEL::TimerHit()
         }
     }
 
-    SetTimer(POLLMS);
+    SetTimer(getCurrentPollingPeriod());
 }
 
 bool ATIKWHEEL::SelectFilter(int targetFilter)

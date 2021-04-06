@@ -20,6 +20,7 @@
 #include "helpers.h"
 #include "CameraInfo.h" 
 #include "CamHelpers.h"  // for vids and pids
+#include "indimacros.h"
 
 
 #if defined (WIN_OS)
@@ -27,7 +28,6 @@
 #else
     #include "linux/linuxHelpers.h"
 #endif
-
 
 //////////////////////////// 
 // DTOR 
@@ -195,8 +195,9 @@ std::vector< std::vector<uint16_t> > FindDeviceUsb::GetApgDevices()
 bool FindDeviceUsb::IsDeviceAlreadyOpen( const uint16_t deviceNum )
 {
 #ifdef WIN_OS
-         return windozeHelpers::IsDeviceAlreadyOpen( deviceNum );
+    return windozeHelpers::IsDeviceAlreadyOpen( deviceNum );
 #else
+    INDI_UNUSED(deviceNum);
     return false;
 #endif
 

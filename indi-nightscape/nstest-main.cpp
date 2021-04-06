@@ -32,7 +32,7 @@ static volatile int interrupted = 0;
 //static volatile int readdone = 0;
 
 
-void siginthandler(int s) {
+void siginthandler(int) {
 	interrupted = 1;
 }
 

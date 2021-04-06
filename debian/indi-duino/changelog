@@ -1,3 +1,72 @@
+indi-duino (1.12) buster; urgency=medium
+
+  * rain volume and rain drops counting features added to INDI service
+  * robustness of wr_rrd_update.py improved using PID file to avoid
+    multiple concurrent occurences
+  * several bug fixes
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 06 Feb 2021 14:05:14 +0100
+
+indi-duino (1.11) buster; urgency=medium
+
+  * Multiple rain sensors may be used in parallel
+  * Rain sensors and wetness service integrated into INDI service
+  * Auto exposure for time lapse optimized
+  * Time lapse service created making faster image frequencies of 30-45 sec possible
+  * Image conversion service added to convert full scale images into appropriate
+    sizes for time lapse
+  * Bug fixes
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 31 Jan 2021 21:01:14 +0100
+
+indi-duino (1.10) buster; urgency=medium
+
+  * Bucket tipping rain sensor support added
+  * Resistor based water sensor support added
+  * Button handling reworked based upon OneButton
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 03 Jan 2021 19:56:09 +0100
+
+indi-duino (1.9.1) buster; urgency=medium
+
+  * Bug fix ensuring that OTA is started after WiFi connection is established
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 01 Jan 2021 19:49:43 +0100
+
+indi-duino (1.9) buster; urgency=medium
+
+  * Over the air updating option added
+  * I2C speed made configurable since MLX90614 seems to have problems with 400kHz speed
+  * WiFi handling reworked asynchronously speeding up startup
+  * Several bug fixes and documentation updates
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Thu, 31 Dec 2020 21:44:28 +0100
+
+indi-duino (1.8) buster; urgency=medium
+
+  * Added support for a OLED display
+  * Button for turning display on added
+  * display string handling reworked to fix memory leak
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 18 Dec 2020 21:22:38 +0100
+
+indi-duino (1.7) buster; urgency=medium
+
+  * Script support for WiFi connection to the Arduino 
+  * Support for multiple weather devices added
+  * Setting of geo location added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 30 Aug 2020 21:36:04 +0200
+
+indi-duino (1.6) buster; urgency=medium
+
+  * Web cam view reworked with time series light bar and modal view for details
+  * Luminosity data added to sensors view
+  * Bug fix: timeout for RRD update script extended to 7 seconds
+  * Bug fix: Remove child nodes in Javascript corrected
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 08 Aug 2020 17:11:42 +0200
+
 indi-duino (1.5) buster; urgency=medium
 
   * Caching of sensor data instead of Json strings
