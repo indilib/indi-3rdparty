@@ -1229,6 +1229,12 @@ bool QHYCCD::setupParams()
             LOGF_DEBUG("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effectiveROI.subX, effectiveROI.subY,
                        effectiveROI.subW, effectiveROI.subH);
         }
+        // JM 2021-04-07: If effective ROI fails, we shouldn't IgnoreOverscanArea
+        else
+        {
+            LOG_DEBUG("Querying effective area failed. Setting IgnoreOverscanArea to false and resorting to sensor ROI.");
+            IgnoreOverscanArea = false;
+        }
 
         //NEW CODE - Add support for overscan/calibration area, we want to allow also pixels outside of effectiveROI
         //if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
@@ -1247,12 +1253,12 @@ bool QHYCCD::setupParams()
     }
 
     //NEW CODE - Add support for overscan/calibration area
+    //Overscan area is ignored, exposure frame to be within effectiveROI
     if (IgnoreOverscanArea)
-        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw,
-                     pixelh);    //Overscan area is ignored, exposure frame to be within effectiveROI
+        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw, pixelh);
     else
-        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw,
-                     pixelh);          //Overscan area is not ignored, exposure frame to be within full sensor frame
+        //Overscan area is not ignored, exposure frame to be within full sensor frame
+        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw, pixelh);
 
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
