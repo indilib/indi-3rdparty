@@ -1,3 +1,9 @@
+indi-avalon (1.11) bionic; urgency=medium
+
+  * Use INDI_ENABLED and INDI_DISABLED.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 10 Apr 2032 20:00:00 +0300
+
 indi-avalon (1.10) buster; urgency=medium
 
   * Tracking adjustment made permanent in StarGO

@@ -224,14 +224,13 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
         else if (!strcmp(name, ST4StatusSP.name))
         {
-
-            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), ST4StatusS[0].name);
+            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), ST4StatusS[INDI_ENABLED].name);
             bool result = setST4Enabled(enabled);
 
             if(result)
             {
-                ST4StatusS[0].s = enabled ? ISS_OFF : ISS_ON;
-                ST4StatusS[1].s = enabled ? ISS_ON : ISS_OFF;
+                ST4StatusS[INDI_ENABLED].s = enabled ? ISS_ON : ISS_OFF;
+                ST4StatusS[INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
                 ST4StatusSP.s = IPS_OK;
             }
             else
@@ -243,13 +242,13 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
         else if (!strcmp(name, KeypadStatusSP.name))
         {
-            bool enabled = (states[0] == ISS_OFF);
+            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), KeypadStatusS[INDI_ENABLED].name);
             bool result = setKeyPadEnabled(enabled);
 
             if(result)
             {
-                KeypadStatusS[0].s = enabled ? ISS_OFF : ISS_ON;
-                KeypadStatusS[1].s = enabled ? ISS_ON : ISS_OFF;
+                KeypadStatusS[INDI_ENABLED].s = enabled ? ISS_ON : ISS_OFF;
+                KeypadStatusS[INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
                 KeypadStatusSP.s = IPS_OK;
             }
             else
@@ -426,14 +425,14 @@ bool LX200StarGo::initProperties()
     IUFillNumberVector(&GuidingSpeedNP, GuidingSpeedP, 2, getDeviceName(), "GUIDE_RATE", "Autoguiding", RA_DEC_TAB, IP_RW, 60,
                        IPS_IDLE);
 
-    IUFillSwitch(&ST4StatusS[0], "ST4_DISABLED", "disabled", ISS_OFF);
-    IUFillSwitch(&ST4StatusS[1], "ST4_ENABLED", "enabled", ISS_ON);
+    IUFillSwitch(&ST4StatusS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
+    IUFillSwitch(&ST4StatusS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
     IUFillSwitchVector(&ST4StatusSP, ST4StatusS, 2, getDeviceName(), "ST4", "ST4", RA_DEC_TAB, IP_RW, ISR_1OFMANY, 60,
                        IPS_IDLE);
 
     // keypad enabled / disabled
-    IUFillSwitch(&KeypadStatusS[0], "KEYPAD_DISABLED", "disabled", ISS_OFF);
-    IUFillSwitch(&KeypadStatusS[1], "KEYPAD_ENABLED", "enabled", ISS_ON);
+    IUFillSwitch(&KeypadStatusS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
+    IUFillSwitch(&KeypadStatusS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
     IUFillSwitchVector(&KeypadStatusSP, KeypadStatusS, 2, getDeviceName(), "Keypad", "Keypad", RA_DEC_TAB, IP_RW, ISR_1OFMANY,
                        60, IPS_IDLE);
 
@@ -756,8 +755,8 @@ void LX200StarGo::getBasicData()
         bool isEnabled;
         if (getST4Status(&isEnabled))
         {
-            ST4StatusS[0].s = isEnabled ? ISS_OFF : ISS_ON;
-            ST4StatusS[1].s = isEnabled ? ISS_ON : ISS_OFF;
+            ST4StatusS[INDI_ENABLED].s = isEnabled ? ISS_ON : ISS_OFF;
+            ST4StatusS[INDI_DISABLED].s = isEnabled ? ISS_OFF : ISS_ON;
             ST4StatusSP.s = IPS_OK;
         }
         else
@@ -779,8 +778,8 @@ void LX200StarGo::getBasicData()
 
         if (getKeypadStatus(&isEnabled))
         {
-            KeypadStatusS[0].s = isEnabled ? ISS_OFF : ISS_ON;
-            KeypadStatusS[1].s = isEnabled ? ISS_ON : ISS_OFF;
+            KeypadStatusS[INDI_ENABLED].s = isEnabled ? ISS_ON : ISS_OFF;
+            KeypadStatusS[INDI_DISABLED].s = isEnabled ? ISS_OFF : ISS_ON;
             KeypadStatusSP.s = IPS_OK;
         }
         else
