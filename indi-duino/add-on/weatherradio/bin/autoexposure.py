@@ -102,11 +102,11 @@ def calibrateExpTime(filename, config):
     exif = image._getexif()
 
     exifexptime    =  get_field(exif, 'ExposureTime')
-    print("exif:ExposureTime = %d/%d" % exifexptime)
+    #print("exif:ExposureTime = %d/%d" % exifexptime)
 
     realExpTime    = 1000000 * exifexptime[0] / exifexptime[1]
     expTime        = config.getint('Camera', 'ExposureTime')
-    # long exposure times seem to cause trouble
+    # long exposure times cause trouble
     if expTime > 1000000:
         realExpTime = expTime
 
