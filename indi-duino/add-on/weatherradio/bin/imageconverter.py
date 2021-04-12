@@ -16,6 +16,7 @@
 from datetime import datetime
 import argparse
 from pathlib import Path
+import os, sys, stat, re
 
 parser = argparse.ArgumentParser(description="Transform raw images to smaller size for timelapse creation")
 parser.add_argument("-v", "--verbose", action='store_true',
@@ -30,8 +31,8 @@ parser.add_argument("-f", "--fifo", default="/tmp/imageconverter.fifo",
                     help="Named pipe where new image creation will be signalled")
 
 args = parser.parse_args()
+regex = re.compile("(.*)_([0-9]{2})([0-9]{2})([0-9]{2})\.jpg")
 
-import os, sys, stat
 
 # ensure that FIFO exists
 if not os.path.exists(args.fifo):
@@ -44,9 +45,11 @@ while True:
     # convert file
 
     if Path(args.inputdir + "/" + filename).is_file():
-        now       = datetime.now()
+        # extract date and time from the filename
+        date = regex.sub(r"\1", filename)
+        time = regex.sub(r"\2:\3:\4", filename)
         input     = args.inputdir + "/" + filename
-        outputdir = args.mediadir + '/' +  now.strftime("%Y-%m-%d")
+        outputdir = args.mediadir + '/' +  date
         output    = outputdir + "/" + filename
         if args.verbose:
             print("Converting \"%s\" to %s" % (filename, outputdir))
@@ -54,8 +57,15 @@ while True:
         # ensure that the image directory exists
         if not Path(outputdir).exists():
             Path(outputdir).mkdir(parents=True)
+
+        # sleep for testing purposes
+        # dur = 60
+        # print("Sleeping %ds" % dur)
+        # sleep(dur)
+        # print("Sleeping %ds (finished)" % dur)
+
         # convert to target width
-        os.system("convert %s -font helvetica -fill white -pointsize 60 -annotate +40+100 \'%s\' -resize %s %s" % (input, now.strftime("%Y-%m-%d %H:%M:%S"), args.width, output))
+        os.system("convert %s -font helvetica -fill white -pointsize 60 -annotate +40+100 \'%s %s\' -resize %s %s" % (input, date, time, args.width, output))
 
         # remove original file
         os.remove(input)
