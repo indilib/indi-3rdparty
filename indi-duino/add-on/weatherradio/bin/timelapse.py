@@ -28,6 +28,7 @@ class TimelapseService:
     stopfile     = None
     oldname      = None
     rates        = []
+    last_shot    = 0
 
     def __init__(self):
         # setup configuration
@@ -42,7 +43,7 @@ class TimelapseService:
         self.config.set('Camera', 'BaseDirectory', ".")
         self.config.set('Camera', 'ConverterFIFO', "/tmp/imageconverter.fifo")
         self.config.set('Camera', 'ISOSpeedRatings', '50')
-        self.config.set('Camera', 'FrameRates', '1, 1.2, 1.4, 2, 2.8, 4, 5.6, 8, 12')
+        self.config.set('Camera', 'FrameRates', '1, 1.2, 1.4, 2, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4, 5.6, 8, 12')
         self.config.set('Camera', 'Contrast', '0')
         self.config.set('Camera', 'Brightness', '50')
         self.config.set('Camera', 'Saturation', '0')
@@ -137,23 +138,32 @@ class TimelapseService:
         if os.path.exists(fifo) and stat.S_ISFIFO(os.stat(fifo).st_mode):
             # wait until old image has disappeared
             while self.oldname is not None and Path(self.oldname).is_file() and not self.stopfile.is_file():
-                print("Waiting for image converter ...")
+                print("%s waiting for image converter ..." % fullname)
                 sleep(1)
 
     def single_shot(self, interval, camera):
         # set base parameters that cannot be changed
         self.config_camera(camera)
-        # start measuring total capture time
         # calculate wait time in seconds
-        start = time()
-        diff = (int(start / interval)+1)*interval - start
+        ts_now = time()
+        # ensure that diff > interval and or on a 5 secs edge
+        diff = ts_now - self.last_shot
+        if diff > interval:
+            # next 5 secs interval
+            diff = (int(ts_now / 5)+1)*5-ts_now
+        else:
+            # fill up until interval
+            diff = interval - diff
         sleep(diff)
+        # current capture time
+        ts_now = time()
         # start capturing
         start_capture = perf_counter()
         #print("Start capturing...")
-        now = datetime.fromtimestamp(start+diff)
+        now = datetime.fromtimestamp(ts_now)
         fullname = self.get_image_name(now, dir=self.get_capture_dir())
         camera.capture(fullname)
+        self.last_shot = ts_now
 
         # wait for the conversion of the previous image to be completed
         self.wait_for_converter(fullname)
