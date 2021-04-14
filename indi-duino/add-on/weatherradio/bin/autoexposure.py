@@ -63,8 +63,8 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
         newExpTime = newExpTime / 1.4
     else:
         # adapt only if no ISO change happened to avoid miscorrections
-        # target brightness depends upon ISO value
-        newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
+        # target brightness depends upon ISO value, 50 for daytime as target
+        newBrightness = 50 + int((config.getint('Night', 'Brightness') - 50) * (newISO - 50) / 750)
         # change brightness and contrast slowly
         # brightness + 10 equals exptime * 2
         if newBrightness > brightness:
