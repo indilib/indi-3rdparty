@@ -375,6 +375,14 @@
 #define DEVICETYPE_QHY268M      	4090
 #define DEVICETYPE_QHY4040PRO_FN 	4091
 #define DEVICETYPE_QHY4040PRO_BN 	4092
+
+#define DEVICETYPE_QHY990        	4093
+
+
+/**
+ * Type define for QHY5III178C*/
+#define DEVICETYPE_QHY5III178C_Celestron      4094
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -539,6 +547,7 @@
 #define DEVICETYPE_QHY411ERISPCIE  		0X6618c414
 #define DEVICETYPE_QHY600PCIE      		0X6618c603
 #define DEVICETYPE_QHY268PCIE      		0X6618c269
+#define DEVICETYPE_QHY461PCIE      		0X6618c462
 
 
 
@@ -958,8 +967,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH        3864	//8432  	
-#define QHY5IIICOMMON_MAX_HEIGHT       2180    //5648	  
+#define QHY5IIICOMMON_MAX_WIDTH        1408    //8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT       1052    //5648	  
 
 /**
  * Type define for QHY247*/
@@ -1024,6 +1033,9 @@
 
 #define QHY550_MAX_WIDTH        	2496
 #define QHY550_MAX_HEIGHT        	2080
+
+#define QHY990_MAX_WIDTH        	1408
+#define QHY990_MAX_HEIGHT        	1052
 
 #define QHY42PRO_MAX_WIDTH        	4096
 #define QHY42PRO_MAX_HEIGHT        	2048
@@ -1256,7 +1268,7 @@
 #define REMAINING_MIN_EXPOSURETIMES	(3000)//ms
 
 #define		MAX_CAMERA_NUMBER		200
-#define		CAMERA_ID_LENGTH		64
+#define		CAMERA_ID_LENGTH		64   //(CAMERA_ID_LENGTH and ID_STR_LEN) more like a full ID length: QHY178-xxxxx(Mode included)
 #define   	MAXDEVICES 				10
 
 
