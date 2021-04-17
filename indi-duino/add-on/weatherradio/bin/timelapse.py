@@ -43,7 +43,6 @@ class TimelapseService:
         self.config.set('Camera', 'BaseDirectory', ".")
         self.config.set('Camera', 'ConverterFIFO', "/tmp/imageconverter.fifo")
         self.config.set('Camera', 'ISOSpeedRatings', '50')
-        self.config.set('Camera', 'FrameRates', '1, 1.2, 1.4, 2, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4, 5.6, 8, 12')
         self.config.set('Camera', 'Contrast', '0')
         self.config.set('Camera', 'Brightness', '50')
         self.config.set('Camera', 'Saturation', '0')
@@ -52,13 +51,14 @@ class TimelapseService:
         self.config.set('Camera', 'zoomY0', '0.0')
         self.config.set('Camera', 'zoomX1', '1.0')
         self.config.set('Camera', 'zoomY1', '1.0')
+        self.config.set('Camera', 'ExposureTimeout', '120')
 
         # night default settings
         self.config.add_section('Night')
         self.config.set('Night', 'Contrast', '100')
-        self.config.set('Night', 'Brightness', '20')
+        self.config.set('Night', 'Brightness', '78')
         self.config.set('Night', 'Saturation', '-80')
-        self.config.set('Night', 'MaxExposure', '10000000')
+        self.config.set('Night', 'MaxExposure', '20000000') # 20 sec
         self.config.set('Night', 'MaxISO', '800')
 
         # read ini file
@@ -66,12 +66,6 @@ class TimelapseService:
         self.config.read(self.inifile_name)
 
         self.stopfile = Path('/tmp/timelapse.stop')
-
-        # define frame rates
-        ratesstr = self.config.get('Camera', 'FrameRates')
-        self.rates = []
-        for rs in ratesstr.split(", "):
-            self.rates.append(float(rs))
 
 
     def config_camera(self, camera):
@@ -110,12 +104,6 @@ class TimelapseService:
             filename = dir + '/' + filename
         return filename
 
-    def calculate_framerate(self):
-        ex = self.config.getint('Camera', 'ExposureTime') / 1000000
-        for r in self.rates:
-            if ex <= r:
-                return Fraction(10, int(10*r))
-        return Fraction(10, int(10*self.rates[-1]))
 
     def convert_image(self, now, fullname):
         if not self.stopfile.is_file():
@@ -181,10 +169,9 @@ class TimelapseService:
         self.convert_image(now, fullname)
 
 
-    def settle(self, framerate):
-        duration = 1.5*float(1/framerate)
-        print("Settle capturing... waiting for %0.1fs" % (duration))
-        sleep (duration)
+    def settle(self, duration):
+        print("Settle capturing... waiting for %0.1fs" % (duration / 1000000))
+        sleep (int(duration / 1000000))
 
 
     def start(self, interval):
@@ -193,31 +180,29 @@ class TimelapseService:
         resolution = (self.config.getint('Camera', 'resX'),
                       self.config.getint('Camera', 'resY'))
 
-        while True:
-            framerate = self.calculate_framerate()
-            # shoot images
-            with PiCamera(framerate=framerate, resolution=resolution, sensor_mode=sensor_mode) as camera:
-                while True:
-                    # abort if stop file exists
-                    if self.stopfile.is_file():
-                        print ("Stopping timelapse")
-                        break
-                    else:
-                        # single shot
-                        self.single_shot(interval, camera)
-                        if framerate != self.calculate_framerate():
-                            break
+        # manually set the timeout, necessary for long exposures
+        PiCamera.CAPTURE_TIMEOUT = self.config.getint('Camera', 'ExposureTimeout')
+        # derive the frame rate range from longest exposure
+        fr = (Fraction(1, int(self.config.getint('Night', 'MaxExposure')/1000000)), Fraction(1, 1))
 
-                # sleeping a while until everything is settled
-                self.settle(framerate)
+        # shoot images
+        with PiCamera(framerate_range=fr, resolution=resolution,
+                      sensor_mode=sensor_mode) as camera:
+            while True:
+                # abort if stop file exists
+                if self.stopfile.is_file():
+                    print ("Stopping timelapse")
+                    break
+                else:
+                    # single shot
+                    self.single_shot(interval, camera)
 
-            if self.stopfile.is_file():
-                # we are finished
-                os.remove(self.stopfile)
-                break
-            else:
-                # select new frame rate and continue
-                framerate = self.calculate_framerate()
+            # sleeping a while until everything is settled
+            self.settle(1.5*camera.exposure_speed)
+
+        if self.stopfile.is_file():
+            # we are finished
+            os.remove(self.stopfile)
 
 
 if __name__ == "__main__":
