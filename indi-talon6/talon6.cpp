@@ -885,7 +885,7 @@ char Talon6::ShiftChar(char shiftChar)
 
     switch (shiftChar)
     {
-        case NULL:
+        case '\0':
             shiftedChar = '0';
             break;
         case 'a':
