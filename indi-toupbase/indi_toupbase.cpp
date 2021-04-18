@@ -19,6 +19,14 @@
 
 */
 
+#define Nncam_AwbOnce   Nncam_AwbOnePush
+#define Nncam_AbbOnce   Nncam_AbbOnePush
+
+#ifdef BUILD_MALLINCAM
+#define Toupcam_AwbOnce Toupcam_AwbOnePush
+#define Toupcam_AbbOnce Toupcam_AbbOnePush
+#endif
+
 #include "indi_toupbase.h"
 
 #include "config.h"
@@ -1683,7 +1691,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             switch (IUFindOnSwitchIndex(&AutoControlSP))
             {
                 case TC_AUTO_TINT:
-                    rc = FP(AwbOnePush(m_CameraHandle, &ToupBase::TempTintCB, this));
+                    rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
                     autoOperation = "Auto White Balance Tint/Temp";
                     break;
                 case TC_AUTO_WB:
@@ -1691,7 +1699,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                     autoOperation = "Auto White Balance RGB";
                     break;
                 case TC_AUTO_BB:
-                    rc = FP(AbbOnePush(m_CameraHandle, &ToupBase::BlackBalanceCB, this));
+                    rc = FP(AbbOnce(m_CameraHandle, &ToupBase::BlackBalanceCB, this));
                     autoOperation = "Auto Black Balance";
                     break;
                 default:
@@ -1771,7 +1779,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             IUUpdateSwitch(&WBAutoSP, states, names, n);
             HRESULT rc = 0;
             if (IUFindOnSwitchIndex(&WBAutoSP) == TC_AUTO_WB_TT)
-                rc = FP(AwbOnePush(m_CameraHandle, &ToupBase::TempTintCB, this));
+                rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
             else
                 rc = FP(AwbInit(m_CameraHandle, &ToupBase::WhiteBalanceCB, this));
 
@@ -2591,7 +2599,12 @@ void ToupBase::eventPullCallBack(unsigned event)
                 {
                     // Fix proposed by Seven Watt
                     // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    //
+                    // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
                     HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
                     LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
                     if (FAILED(rc))
                     {
