@@ -5,7 +5,12 @@
 
 #include <jpeglib.h>
 #include <fitsio.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+// the older libraw uses auto_ptr
 #include <libraw.h>
+#pragma GCC diagnostic pop
 
 #include <unistd.h>
 #include <arpa/inet.h>
