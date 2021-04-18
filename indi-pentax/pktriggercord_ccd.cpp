@@ -614,7 +614,11 @@ bool PkTriggerCordCCD::grabImage()
 
         PrimaryCCD.setFrameBufferSize(size);
         char * memptr = (char *)PrimaryCCD.getFrameBuffer();
-        fread(memptr, sizeof(char), size, f);
+        size_t readSize = fread(memptr, sizeof(char), size, f);
+        if (readSize != size)
+        {
+            LOGF_ERROR("Error, %u bytes of data read instead of %u.", readSize, size);
+        }
         PrimaryCCD.setFrameBuffer((unsigned char *)memptr);
         fclose(f);
 		LOG_DEBUG("Copied to frame buffer.  Leaving temp file for debug purposes.");
