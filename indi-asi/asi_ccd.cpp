@@ -614,6 +614,7 @@ bool ASICCD::Disconnect()
     mTimerTemperature.stop();
 
     mWorker.quit();
+    Streamer->setStream(false);
 
     if (isSimulation() == false)
     {
