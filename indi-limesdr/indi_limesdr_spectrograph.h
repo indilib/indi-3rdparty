@@ -34,21 +34,21 @@ class LIMESDR : public INDI::Spectrograph
   public:
     LIMESDR(uint32_t index);
 
-    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
   protected:
 	// General device functions
-	bool Connect();
-	bool Disconnect();
-	const char *getDefaultName();
-	bool initProperties();
-	bool updateProperties();
+	bool Connect() override;
+	bool Disconnect() override;
+	const char *getDefaultName() override;
+	bool initProperties() override;
+	bool updateProperties() override;
 
     // Spectrograph specific functions
-    bool StartIntegration(float duration);
+    bool StartIntegration(double duration) override;
     bool paramsUpdated(float sr, float freq, float bps, float bw, float gain);
-    bool AbortIntegration();
-    void TimerHit();
+    bool AbortIntegration() override;
+    void TimerHit() override;
 
     void grabData();
 

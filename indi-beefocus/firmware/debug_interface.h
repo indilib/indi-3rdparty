@@ -6,7 +6,7 @@
 class DebugInterface
 {
 	public:
-
+  virtual ~DebugInterface() = default;
   virtual void rawWrite( const char *bytes, std::size_t numBytes ) = 0;
 };
 
