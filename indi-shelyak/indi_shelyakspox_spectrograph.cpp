@@ -140,7 +140,7 @@ void ShelyakSpox::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
     defineProperty(&PortTP);
-    defineProperty(&SettingsNP);
+    // defineProperty(&SettingsNP); // unused
     loadConfig(true, PortTP.name);
 }
 
