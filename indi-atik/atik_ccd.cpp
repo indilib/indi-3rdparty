@@ -351,8 +351,9 @@ bool ATIKCCD::updateProperties()
             loadConfig(true, "CCD_EVEN_ILLUMINATION");
             defineProperty(&FastModeSP);
             loadConfig(true, "CCD_FAST_MODE");
-            defineProperty(&BitSendSP);
-            loadConfig(true, "CCD_BIT_SEND");
+            // unused
+            //defineProperty(&BitSendSP);
+            //loadConfig(true, "CCD_BIT_SEND");
 }
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
@@ -379,7 +380,7 @@ bool ATIKCCD::updateProperties()
             deleteProperty(PadDataSP.name);
             deleteProperty(EvenIlluminationSP.name);
             deleteProperty(FastModeSP.name);
-            deleteProperty(BitSendSP.name);
+            // deleteProperty(BitSendSP.name); // unused
         }
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
@@ -1654,7 +1655,7 @@ bool ATIKCCD::saveConfigItems(FILE *fp)
         IUSaveConfigSwitch(fp, &EvenIlluminationSP);
         IUSaveConfigSwitch(fp, &PadDataSP);
         IUSaveConfigSwitch(fp, &FastModeSP);
-        IUSaveConfigSwitch(fp, &BitSendSP);
+        // IUSaveConfigSwitch(fp, &BitSendSP); // unused
     }
 
     if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
