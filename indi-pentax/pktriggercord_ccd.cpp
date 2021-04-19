@@ -695,7 +695,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
     else if (!strcmp(name, mWhiteBalanceSP.name)) {
         updateCaptureSettingSwitch(&mWhiteBalanceSP,states,names,n);
         pslr_white_balance_mode_t white_balance_mode = get_pslr_white_balance_mode(IUFindOnSwitch(&mWhiteBalanceSP)->label);
-        if ( white_balance_mode == -1 ) {
+        if ( int(white_balance_mode) == -1 ) {
             LOG_WARN("Could not set desired white balance: Invalid setting for current camera mode.");
         }
         else {
