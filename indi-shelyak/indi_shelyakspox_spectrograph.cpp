@@ -140,7 +140,7 @@ void ShelyakSpox::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
     defineProperty(&PortTP);
-    defineProperty(&SettingsNP);
+    // defineProperty(&SettingsNP); // unused
     loadConfig(true, PortTP.name);
 }
 
@@ -171,7 +171,7 @@ bool ShelyakSpox::Connect()
         return false;
     }
     DEBUGF(INDI::Logger::DBG_SESSION, "%s is online.", getDeviceName());
-    sleep(0.5);
+    usleep(500 * 1000);
     //read the serial to flush welcome message of SPOX.
     char line[80];
 
@@ -362,7 +362,7 @@ bool ShelyakSpox::resetLamps()
 bool ShelyakSpox::calibrationUnitCommand(char command, char parameter)
 {
     resetLamps(); //clear all states
-    sleep(0.5);   // wait for the calibration unit to actually flip the switch
+    usleep(500 * 1000);   // wait for the calibration unit to actually flip the switch
     int rc, nbytes_written;
 
     switch (parameter)

@@ -34,6 +34,7 @@ public:
     LX200StarGoFocuser(LX200StarGo* defaultDevice, const char* name);
     virtual ~LX200StarGoFocuser() override = default;
 
+    using INDI::DefaultDevice::initProperties;
     void initProperties(const char *groupName);
     bool updateProperties() override;
     bool ReadFocuserStatus();

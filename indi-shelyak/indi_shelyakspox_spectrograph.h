@@ -65,9 +65,11 @@ private:
     ITextVectorProperty PortTP;
     IText PortT[1]{};
 
+#if 0 // unused
     // Spectrograph Settings
     INumberVectorProperty SettingsNP;
     INumber SettingsN[2];
+#endif
 
     bool calibrationUnitCommand(char command, char parameter);
     bool resetLamps();

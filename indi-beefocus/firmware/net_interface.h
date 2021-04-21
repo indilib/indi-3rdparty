@@ -18,7 +18,7 @@ class NetInterface {
   NetInterface()
   {
   }
-  ~NetInterface()
+  virtual ~NetInterface()
   {
   }
 

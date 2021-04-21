@@ -288,7 +288,7 @@ bool LIMESDR::updateProperties()
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool LIMESDR::StartIntegration(float duration)
+bool LIMESDR::StartIntegration(double duration)
 {
     IntegrationRequest = duration;
 
