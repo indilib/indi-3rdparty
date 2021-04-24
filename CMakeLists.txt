@@ -109,6 +109,7 @@ option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
+option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -573,6 +574,11 @@ endif(WITH_SV305)
 if (WITH_RPICAM)
 add_subdirectory(indi-rpicam)
 endif(WITH_RPICAM)
+
+# Bresser Exos 2 GoTo
+if (WITH_BRESSEREXOS2)
+add_subdirectory(indi-bresserexos2)
+endif(WITH_BRESSEREXOS2)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
