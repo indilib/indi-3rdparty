@@ -43,7 +43,9 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_maxdomeii.xml DESTINATION ${INDI_
 
 if (INDI_BUILD_UNITTESTS)
     # Workaround for fixing a linking error caused by "-pie" flag in CMakeCommon
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nodump -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now")
+    if (NOT APPLE)
+        set(CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nodump -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now")
+    endif ()
 
     enable_testing()
 
