@@ -953,7 +953,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 		}
 
 		dir = steps;
-		steps = abs(steps);
+		steps = labs(steps);
 		while (steps > 0)
 		{
 			if ((steps > 4095) && (fdata->extent < 10000))
@@ -1057,7 +1057,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 	{
 		unsigned short cmd;
 		dir = steps;
-		steps = abs(steps);
+		steps = labs(steps);
 
 		if (dir < 0)
 		{
