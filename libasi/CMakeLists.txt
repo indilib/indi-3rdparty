@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
-PROJECT(libasi CXX C)
+cmake_minimum_required (VERSION 3.0)
+project (libasi NONE)
 
 # Using ASI Camera SDK Version 1.17 updated on 2021-03-31
 # Reverted to 1.16 2021-04-15 due to numerous user reported bugs.
@@ -8,114 +8,78 @@ PROJECT(libasi CXX C)
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
 # Using ASI EAF SDK Version 1.3 updated on 2021-03-19
 
-set(ASICAM_VERSION "1.16")
-set(ASICAM_SOVERSION "1")
+set (ASICAM_VERSION "1.16")
+set (ASICAM_SOVERSION "1")
 
-set(ASIEFW_VERSION "1.6")
-set(ASIEFW_SOVERSION "1")
+set (ASIEFW_VERSION "1.6")
+set (ASIEFW_SOVERSION "1")
 
-set(ASIST4_VERSION "1.0")
-set(ASIST4_SOVERSION "1")
+set (ASIST4_VERSION "1.0")
+set (ASIST4_SOVERSION "1")
 
-set(ASIEAF_VERSION "1.3")
-set(ASIEAF_SOVERSION "1")
+set (ASIEAF_VERSION "1.3")
+set (ASIEAF_SOVERSION "1")
 
-include(GNUInstallDirs)
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
 
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+add_library (ASICamera2  SHARED IMPORTED)
+add_library (EFWFilter   SHARED IMPORTED)
+add_library (USB2ST4Conv SHARED IMPORTED)
+add_library (EAFFocuser  SHARED IMPORTED)
 
-IF (APPLE)
+set_target_properties (ASICamera2  PROPERTIES VERSION ${ASICAM_VERSION} SOVERSION ${ASICAM_SOVERSION})
+set_target_properties (EFWFilter   PROPERTIES VERSION ${ASIEFW_VERSION} SOVERSION ${ASIEFW_SOVERSION})
+set_target_properties (USB2ST4Conv PROPERTIES VERSION ${ASIST4_VERSION} SOVERSION ${ASIST4_SOVERSION})
+set_target_properties (EAFFocuser  PROPERTIES VERSION ${ASIEAF_VERSION} SOVERSION ${ASIEAF_SOVERSION})
 
-# ASI CAM
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.${ASICAM_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libASICamera2.${ASICAM_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_VERSION}.dylib ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libASICamera2.${ASICAM_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libASICamera2.dylib)
+if (APPLE)
 
-# ASI EFW
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_VERSION}.dylib ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEFWFilter.${ASIEFW_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libEFWFilter.dylib)
+  set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "mac/libASICamera2.bin")
+  set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "mac/libEFWFilter.bin")
+  set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "mac/libUSB2ST4Conv.bin")
+  set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "mac/libEAFFocuser.bin")
 
-# ASI ST4
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_VERSION}.dylib ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libUSB2ST4Conv.${ASIST4_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libUSB2ST4Conv.dylib)
+elseif (UNIX AND NOT WIN32)
 
-# ASI EAF
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_VERSION}.dylib ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libEAFFocuser.${ASIEAF_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libEAFFocuser.dylib)
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "armv6/libASICamera2.bin")
+    set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "armv6/libEFWFilter.bin")
+    set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "armv6/libUSB2ST4Conv.bin")
+    set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "armv6/libEAFFocuser.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "armv8/libASICamera2.bin")
+    set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "armv8/libEFWFilter.bin")
+    set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "armv8/libUSB2ST4Conv.bin")
+    set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "armv8/libEAFFocuser.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "x64/libASICamera2.bin")
+    set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "x64/libEFWFilter.bin")
+    set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "x64/libUSB2ST4Conv.bin")
+    set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "x64/libEAFFocuser.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
+    set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "x86/libASICamera2.bin")
+    set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "x86/libEFWFilter.bin")
+    set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "x86/libUSB2ST4Conv.bin")
+    set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "x86/libEAFFocuser.bin")
+  endif ()
 
-ELSE(APPLE)
+  # Install udev rules
+  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-asi.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+endif ()
 
-IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv6/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armv8/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-  ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-  ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libASICamera2.bin ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libEFWFilter.bin ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libUSB2ST4Conv.bin ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libEAFFocuser.bin ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION})
-  ENDIF ()
-ENDIF(UNIX AND NOT WIN32)
+# Install header files
+install (
+  FILES ASICamera2.h EFW_filter.h USB2ST4_Conv.h EAF_focuser.h
+  DESTINATION include/libasi
+)
 
-install( FILES ${CMAKE_BINARY_DIR}/libASICamera2.so.${ASICAM_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ${CMAKE_BINARY_DIR}/libEFWFilter.so.${ASIEFW_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ${CMAKE_BINARY_DIR}/libUSB2ST4Conv.so.${ASIST4_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ${CMAKE_BINARY_DIR}/libEAFFocuser.so.${ASIEAF_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-
-# Make sure symbolic links are installed
-
-## ASI CAM
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libASICamera2.so.${ASICAM_VERSION}\" \"libASICamera2.so.${ASICAM_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libASICamera2.so.${ASICAM_SOVERSION}\" \"libASICamera2.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-## ASI EFW
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libEFWFilter.so.${ASIEFW_VERSION}\" \"libEFWFilter.so.${ASIEFW_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libEFWFilter.so.${ASIEFW_SOVERSION}\" \"libEFWFilter.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-## ASI ST4
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libUSB2ST4Conv.so.${ASIST4_VERSION}\" \"libUSB2ST4Conv.so.${ASIST4_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libUSB2ST4Conv.so.${ASIST4_SOVERSION}\" \"libUSB2ST4Conv.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-## ASI EAF
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libEAFFocuser.so.${ASIEAF_VERSION}\" \"libEAFFocuser.so.${ASIEAF_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libEAFFocuser.so.${ASIEAF_SOVERSION}\" \"libEAFFocuser.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-asi.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-endif()
-
-ENDIF(APPLE)
-
-install( FILES ASICamera2.h DESTINATION include/libasi)
-install( FILES EFW_filter.h DESTINATION include/libasi)
-install( FILES USB2ST4_Conv.h DESTINATION include/libasi)
-install( FILES EAF_focuser.h DESTINATION include/libasi)
+# Install library
+install_imported (
+  TARGETS ASICamera2 EFWFilter USB2ST4Conv EAFFocuser
+  DESTINATION lib
+)
