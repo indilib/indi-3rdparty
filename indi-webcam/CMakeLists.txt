@@ -51,7 +51,7 @@ set(webcam_SRCS
 
 add_executable(indi_webcam_ccd ${webcam_SRCS})
 
-target_link_libraries(indi_webcam_ccd  ${INDI_LIBRARIES} ${INDI_DRIVER_LIBRARIES} ${FFMPEG_LIBRARIES} -lavdevice -lswscale ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_webcam_ccd ${INDI_LIBRARIES} ${INDI_DRIVER_LIBRARIES} ${FFMPEG_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_webcam_ccd RUNTIME DESTINATION bin )
 
