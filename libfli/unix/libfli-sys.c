@@ -403,6 +403,7 @@ long unix_fli_unlock(flidev_t dev)
 
 long unix_fli_trylock(flidev_t dev)
 {
+  (void)dev;
   return -ENODEV;
 }
 
@@ -539,6 +540,7 @@ long unix_fli_unlock(flidev_t dev)
 
 long unix_fli_trylock(flidev_t dev)
 {
+  (void)dev;
   return -ENODEV;
 }
 
