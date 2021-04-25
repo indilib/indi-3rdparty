@@ -1,5 +1,5 @@
 PROJECT(indi_webcam C CXX)
-cmake_minimum_required(VERSION 2.4.7)
+cmake_minimum_required(VERSION 3.0)
 
 set (WEBCAM_VERSION_MAJOR 0)
 set (WEBCAM_VERSION_MINOR 2)

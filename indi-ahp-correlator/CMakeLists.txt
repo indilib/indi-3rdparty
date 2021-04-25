@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_ahp_correlator CXX C)
 
 set (AHP_CORRELATOR_VERSION_MAJOR 1)
