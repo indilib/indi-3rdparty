@@ -185,8 +185,11 @@ bool GPSNMEA::setSystemTime(time_t& raw_time)
         #else
             stime(&raw_time);
         #endif
+        return true;
+    #else
+        (void)raw_time;
+        return false;
     #endif
-    return true;
 }
 
 void* GPSNMEA::parseNMEAHelper(void *obj)
