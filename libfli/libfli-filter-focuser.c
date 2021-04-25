@@ -1045,7 +1045,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 				IO(dev, buf, &wlen, &rlen);
 				stepsleft = ntohs(buf[0]);
 
-				if (((clock() - begin) / CLOCKS_PER_SEC) > timeout)
+				if (((clock() - begin) / CLOCKS_PER_SEC) > (clock_t)timeout)
 				{
 					debug(FLIDEBUG_WARN, "A device timeout has occurred.");
 					return -EIO;
