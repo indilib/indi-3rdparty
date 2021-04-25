@@ -55,14 +55,14 @@ class NamedEnum
 
     const std::string &name(void) const { return m_name; }
 
-    static const TValue &min(void) { return (*s_instances.begin())->m_value; }
+    static const TValue &min(void) { return (*getInstances().begin())->m_value; }
 
-    static const TValue &max(void) { return (*s_instances.rbegin())->m_value; }
+    static const TValue &max(void) { return (*getInstances().rbegin())->m_value; }
 
     static const T *find(const TValue &Value)
     {
-        const_iterator it = find_if(s_instances.begin(), s_instances.end(), Enum_Predicate_Corresponds(Value));
-        return (it != s_instances.end()) ? (T *)*it : NULL;
+        const_iterator it = find_if(begin(), end(), Enum_Predicate_Corresponds(Value));
+        return (it != end()) ? (T *)*it : NULL;
     }
 
     static bool isValidValue(const TValue &Value) { return find(Value) != NULL; }
@@ -72,21 +72,28 @@ class NamedEnum
     bool operator!=(const NamedEnum<TValue, T> &x) const { return !(this == &x); }
 
     // Number of elements
-    static typename instances_list::size_type size(void) { return s_instances.size(); }
+    static typename instances_list::size_type size(void) { return getInstances().size(); }
 
     // Iteration
-    static const_iterator begin(void) { return s_instances.begin(); }
-    static const_iterator end(void) { return s_instances.end(); }
+    static const_iterator begin(void) { return getInstances().begin(); }
+    static const_iterator end(void) { return getInstances().end(); }
+
+  private:
+    static instances_list &getInstances()
+    {
+      static instances_list instances;
+      return instances;
+    }
 
   private:
     TValue m_value;
     std::string m_name;
-    static instances_list s_instances;
+    //static instances_list s_instances;
 };
 
 template <class TValue, class T>
 inline NamedEnum<TValue, T>::NamedEnum(std::string name, const TValue &value) : m_value(value), m_name(name)
 {
-    s_instances.insert(this);
+    getInstances().insert(this);
 }
 }

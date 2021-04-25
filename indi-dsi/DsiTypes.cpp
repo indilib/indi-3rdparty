@@ -8,9 +8,9 @@
 namespace DSI
 {
 /* */
-template <>
-NamedEnum<int, DSI::DeviceCommand>::instances_list NamedEnum<int, DSI::DeviceCommand>::s_instances =
-    std::set<const NamedEnum<int, DSI::DeviceCommand> *, DSI::DeviceCommand::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, DSI::DeviceCommand>::instances_list NamedEnum<int, DSI::DeviceCommand>::s_instances =
+//     std::set<const NamedEnum<int, DSI::DeviceCommand> *, DSI::DeviceCommand::NamedEnum_Ptr_LessThan>();
 
 const DeviceCommand DeviceCommand::PING("PING", 0x00);
 const DeviceCommand DeviceCommand::RESET("RESET", 0x01);
@@ -62,31 +62,31 @@ const DeviceCommand DeviceCommand::SET_EEPROM_VIDPID("SET_EEPROM_VIDPID", 0x6d);
 const DeviceCommand DeviceCommand::ERASE_EEPROM("ERASE_EEPROM", 0x6e);
 
 /* XXX: I am not sure that we need this*/
-template <>
-NamedEnum<int, DevicePipeId>::instances_list NamedEnum<int, DSI::DevicePipeId>::s_instances =
-    std::set<const NamedEnum<int, DSI::DevicePipeId> *, DSI::DevicePipeId::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, DevicePipeId>::instances_list NamedEnum<int, DSI::DevicePipeId>::s_instances =
+//     std::set<const NamedEnum<int, DSI::DevicePipeId> *, DSI::DevicePipeId::NamedEnum_Ptr_LessThan>();
 const DevicePipeId DevicePipeId::REQUEST("REQUEST", 0);
 const DevicePipeId DevicePipeId::RESPONSE("RESPONSE", 1);
 const DevicePipeId DevicePipeId::IMAGE("IMAGE", 2);
 
 /* */
-template <>
-NamedEnum<int, DeviceResponse>::instances_list NamedEnum<int, DSI::DeviceResponse>::s_instances =
-    std::set<const NamedEnum<int, DSI::DeviceResponse> *, DSI::DeviceResponse::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, DeviceResponse>::instances_list NamedEnum<int, DSI::DeviceResponse>::s_instances =
+//     std::set<const NamedEnum<int, DSI::DeviceResponse> *, DSI::DeviceResponse::NamedEnum_Ptr_LessThan>();
 const DeviceResponse DeviceResponse::ACK("ACK", 0x06);
 const DeviceResponse DeviceResponse::NACK("NACK", 0x15);
 
 /* */
-template <>
-NamedEnum<int, DSI::UsbSpeed>::instances_list NamedEnum<int, DSI::UsbSpeed>::s_instances =
-    std::set<const NamedEnum<int, DSI::UsbSpeed> *, DSI::UsbSpeed::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, DSI::UsbSpeed>::instances_list NamedEnum<int, DSI::UsbSpeed>::s_instances =
+//     std::set<const NamedEnum<int, DSI::UsbSpeed> *, DSI::UsbSpeed::NamedEnum_Ptr_LessThan>();
 const UsbSpeed UsbSpeed::FULL("FULL", 0);
 const UsbSpeed UsbSpeed::HIGH("HIGH", 1);
 
 /* DSI A-D Register */
-template <>
-NamedEnum<int, AdRegister>::instances_list NamedEnum<int, DSI::AdRegister>::s_instances =
-    std::set<const NamedEnum<int, DSI::AdRegister> *, DSI::AdRegister::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, AdRegister>::instances_list NamedEnum<int, DSI::AdRegister>::s_instances =
+//     std::set<const NamedEnum<int, DSI::AdRegister> *, DSI::AdRegister::NamedEnum_Ptr_LessThan>();
 const AdRegister AdRegister::CONFIGURATION("CONFIGURATION", 0);
 const AdRegister AdRegister::MUX_CONFIG("MUX_CONFIG", 1);
 const AdRegister AdRegister::RED_PGA("RED_PGA", 2);
@@ -97,62 +97,62 @@ const AdRegister AdRegister::GREEN_OFFSET("GREEN_OFFSET", 6);
 const AdRegister AdRegister::BLUE_OFFSET("BLUE_OFFSET", 7);
 
 /*  */
-template <>
-NamedEnum<int, CleanMode>::instances_list NamedEnum<int, DSI::CleanMode>::s_instances =
-    std::set<const NamedEnum<int, DSI::CleanMode> *, DSI::CleanMode::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, CleanMode>::instances_list NamedEnum<int, DSI::CleanMode>::s_instances =
+//     std::set<const NamedEnum<int, DSI::CleanMode> *, DSI::CleanMode::NamedEnum_Ptr_LessThan>();
 const CleanMode CleanMode::ENABLED("ENABLED", 0);
 const CleanMode CleanMode::DISABLED("DISABLED", 1);
 
 /* */
-template <>
-NamedEnum<int, DesampleMethod>::instances_list NamedEnum<int, DSI::DesampleMethod>::s_instances =
-    std::set<const NamedEnum<int, DSI::DesampleMethod> *, DSI::DesampleMethod::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, DesampleMethod>::instances_list NamedEnum<int, DSI::DesampleMethod>::s_instances =
+//     std::set<const NamedEnum<int, DSI::DesampleMethod> *, DSI::DesampleMethod::NamedEnum_Ptr_LessThan>();
 const DesampleMethod DesampleMethod::HIGH_BYTE("HIGH_BYTE", 0);
 const DesampleMethod DesampleMethod::LOW_BYTE("LOW_BYTE", 1);
 
 /* */
-template <>
-NamedEnum<int, CopyRasters>::instances_list NamedEnum<int, DSI::CopyRasters>::s_instances =
-    std::set<const NamedEnum<int, DSI::CopyRasters> *, DSI::CopyRasters::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, CopyRasters>::instances_list NamedEnum<int, DSI::CopyRasters>::s_instances =
+//     std::set<const NamedEnum<int, DSI::CopyRasters> *, DSI::CopyRasters::NamedEnum_Ptr_LessThan>();
 const CopyRasters CopyRasters::ALL("ALL", 0);
 const CopyRasters CopyRasters::EVEN("EVEN", 1);
 const CopyRasters CopyRasters::ODD("ODD", 2);
 
 /* */
-template <>
-NamedEnum<int, ExposureMode>::instances_list NamedEnum<int, DSI::ExposureMode>::s_instances =
-    std::set<const NamedEnum<int, DSI::ExposureMode> *, DSI::ExposureMode::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, ExposureMode>::instances_list NamedEnum<int, DSI::ExposureMode>::s_instances =
+//     std::set<const NamedEnum<int, DSI::ExposureMode> *, DSI::ExposureMode::NamedEnum_Ptr_LessThan>();
 const ExposureMode ExposureMode::NORMAL("NORMAL", 1);
 const ExposureMode ExposureMode::BIN2X2("BIN2X2", 2);
 
 /* */
-template <>
-NamedEnum<int, FlushMode>::instances_list NamedEnum<int, DSI::FlushMode>::s_instances =
-    std::set<const NamedEnum<int, DSI::FlushMode> *, DSI::FlushMode::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, FlushMode>::instances_list NamedEnum<int, DSI::FlushMode>::s_instances =
+//     std::set<const NamedEnum<int, DSI::FlushMode> *, DSI::FlushMode::NamedEnum_Ptr_LessThan>();
 const FlushMode FlushMode::CONTINUOUS("CONTINUOUS", 0);
 const FlushMode FlushMode::BEFORE_EXPOSURE("BEFORE_EXPOSURE", 1);
 const FlushMode FlushMode::NEVER("NEVER", 2);
 
 /* */
-template <>
-NamedEnum<int, ReadoutMode>::instances_list NamedEnum<int, DSI::ReadoutMode>::s_instances =
-    std::set<const NamedEnum<int, DSI::ReadoutMode> *, DSI::ReadoutMode::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, ReadoutMode>::instances_list NamedEnum<int, DSI::ReadoutMode>::s_instances =
+//     std::set<const NamedEnum<int, DSI::ReadoutMode> *, DSI::ReadoutMode::NamedEnum_Ptr_LessThan>();
 const ReadoutMode ReadoutMode::DUAL("DUAL", 0);
 const ReadoutMode ReadoutMode::SINGLE("SINGLE", 1);
 const ReadoutMode ReadoutMode::ODD("ODD", 2);
 const ReadoutMode ReadoutMode::EVEN("EVEN", 3);
 
 /* */
-template <>
-NamedEnum<int, ReadoutSpeed>::instances_list NamedEnum<int, DSI::ReadoutSpeed>::s_instances =
-    std::set<const NamedEnum<int, DSI::ReadoutSpeed> *, DSI::ReadoutSpeed::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, ReadoutSpeed>::instances_list NamedEnum<int, DSI::ReadoutSpeed>::s_instances =
+//     std::set<const NamedEnum<int, DSI::ReadoutSpeed> *, DSI::ReadoutSpeed::NamedEnum_Ptr_LessThan>();
 const ReadoutSpeed ReadoutSpeed::NORMAL("NORMAL", 0);
 const ReadoutSpeed ReadoutSpeed::HIGH("HIGH", 1);
 
 /* */
-template <>
-NamedEnum<int, VddMode>::instances_list NamedEnum<int, DSI::VddMode>::s_instances =
-    std::set<const NamedEnum<int, DSI::VddMode> *, DSI::VddMode::NamedEnum_Ptr_LessThan>();
+// template <>
+// NamedEnum<int, VddMode>::instances_list NamedEnum<int, DSI::VddMode>::s_instances =
+//     std::set<const NamedEnum<int, DSI::VddMode> *, DSI::VddMode::NamedEnum_Ptr_LessThan>();
 const VddMode VddMode::AUTO("AUTO", 0);
 const VddMode VddMode::ON("ON", 1);
 const VddMode VddMode::OFF("OFF", 2);
