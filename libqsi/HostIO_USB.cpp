@@ -22,12 +22,12 @@
 	#pragma message "libftdi-1.0 selected."
 #elif defined (USELIBFTD2XX)
 	#pragma message "libftd2xx selected."
+	static const ULONG QSI_FSVIDPID = 0x0403eb48;
+	static const ULONG QSI_HSVIDPID = 0x0403eb49;
 #else
 	#error "No ftdi library selected."
 #endif
 
-const ULONG QSI_FSVIDPID = 0x0403eb48;
-const ULONG QSI_HSVIDPID = 0x0403eb49;
 
 //****************************************************************************************
 // CLASS FUNCTION DEFINITIONS
