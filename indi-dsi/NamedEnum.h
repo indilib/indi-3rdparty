@@ -24,7 +24,7 @@ class NamedEnum
     struct Enum_Predicate_Corresponds : public std::unary_function<const NamedEnum<TValue, T> *, bool>
     {
         Enum_Predicate_Corresponds(const TValue &Value) : m_value(Value) {}
-        bool operator()(const NamedEnum<TValue, T> *E) { return E->value() == m_value; }
+        bool operator()(const NamedEnum<TValue, T> *E) const { return E->value() == m_value; }
 
       private:
         const TValue &m_value;
@@ -34,7 +34,7 @@ class NamedEnum
     struct NamedEnum_Ptr_LessThan
         : public std::binary_function<const NamedEnum<TValue, T> *, const NamedEnum<TValue, T> *, bool>
     {
-        bool operator()(const NamedEnum<TValue, T> *E_1, const NamedEnum<TValue, T> *E_2)
+        bool operator()(const NamedEnum<TValue, T> *E_1, const NamedEnum<TValue, T> *E_2) const
         {
             return E_1->value() < E_2->value();
         }
@@ -46,9 +46,9 @@ class NamedEnum
     typedef std::set<const NamedEnum<TValue, T> *, NamedEnum_Ptr_LessThan> instances_list;
     typedef typename instances_list::const_iterator const_iterator;
 
-    bool operator==(const TValue _value) { return this->value() == _value; }
-    bool operator!=(const TValue _value) { return !(this->value() == _value); }
-    bool operator==(const T &d) { return this->value() == d.value(); }
+    bool operator==(const TValue _value) const { return this->value() == _value; }
+    bool operator!=(const TValue _value) const { return !(this->value() == _value); }
+    bool operator==(const T &d) const { return this->value() == d.value(); }
 
     // Access to TValue value
     const TValue &value(void) const { return m_value; }
@@ -67,9 +67,9 @@ class NamedEnum
 
     static bool isValidValue(const TValue &Value) { return find(Value) != NULL; }
 
-    bool operator==(const NamedEnum<TValue, T> &x) { return (this == &x); }
+    bool operator==(const NamedEnum<TValue, T> &x) const { return (this == &x); }
 
-    bool operator!=(const NamedEnum<TValue, T> &x) { return !(this == &x); }
+    bool operator!=(const NamedEnum<TValue, T> &x) const { return !(this == &x); }
 
     // Number of elements
     static typename instances_list::size_type size(void) { return s_instances.size(); }
