@@ -14,17 +14,19 @@ include (GNUInstallDirs)
 include (InstallImported)
 
 add_library (atikcameras SHARED IMPORTED)
-add_library (flycapture  SHARED IMPORTED)
 
-# Built October 19th, 2021 - SDK API 2020.10.19
-set_target_properties (atikcameras PROPERTIES VERSION ${ATIK_VERSION}       SOVERSION ${ATIK_SOVERSION})
-set_target_properties (flycapture  PROPERTIES VERSION ${FLYCAPTURE_VERSION} SOVERSION ${FLYCAPTURE_SOVERSION})
+set_target_properties (atikcameras PROPERTIES VERSION ${ATIK_VERSION} SOVERSION ${ATIK_SOVERSION})
 
 if (APPLE)
 
   set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "mac/libatikcameras.bin")
   
+  # Install library
+  install_imported (TARGETS atikcameras DESTINATION lib)
+
 elseif (UNIX AND NOT WIN32)
+  add_library (flycapture  SHARED IMPORTED)
+  set_target_properties (flycapture  PROPERTIES VERSION ${FLYCAPTURE_VERSION} SOVERSION ${FLYCAPTURE_SOVERSION})
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET atikcameras PROPERTY IMPORTED_LOCATION "armhf/libatikcameras.bin")
@@ -44,10 +46,10 @@ elseif (UNIX AND NOT WIN32)
   set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
   install (FILES 99-atik.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
+  # Install library
+  install_imported (TARGETS atikcameras flycapture DESTINATION lib)
+
 endif ()
 
 # Install header files
 install (FILES AtikCameras.h DESTINATION include/libatik)
-
-# Install library
-install_imported (TARGETS atikcameras flycapture DESTINATION lib)
