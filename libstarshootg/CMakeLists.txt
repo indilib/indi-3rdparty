@@ -16,8 +16,7 @@ set_target_properties (starshootg PROPERTIES VERSION ${LIBSTARSHOOTG_VERSION} SO
 
 if (APPLE)
 
-  set (LIBRARY_DST_NAME "libstarshootg.${LIBSTARSHOOTG_VERSION}.dylib")
-  set (LIBRARY_SRC_NAME "mac/libstarshootg.bin")
+  set_property (TARGET starshootg PROPERTY IMPORTED_LOCATION "mac/libstarshootg.bin")
 
 elseif (UNIX AND NOT WIN32)
 
