@@ -34,7 +34,7 @@ option(USE_CERR_LOGGING "log error messages using std::cerr for debugging" ON)
 add_subdirectory(SerialDeviceControl)
 
 add_executable(indi_bresserexos2 BresserExosIIGoToDriver.cpp IndiSerialWrapper.cpp)
-target_link_libraries(indi_bresserexos2 indidriver SerialDeviceControl ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_bresserexos2 ${INDI_LIBRARIES} SerialDeviceControl ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(indi_bresserexos2 PUBLIC
 						  "${PROJECT_BINARY_DIR}"
 						  "${PROJECT_SOURCE_DIR}/SerialDeviceControl"
