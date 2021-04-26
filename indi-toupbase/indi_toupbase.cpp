@@ -19,8 +19,8 @@
 
 */
 
-#define Nncam_AwbOnce   Nncam_AwbOnePush
-#define Nncam_AbbOnce   Nncam_AbbOnePush
+// #define Nncam_AwbOnce   Nncam_AwbOnePush
+// #define Nncam_AbbOnce   Nncam_AbbOnePush
 
 #ifdef BUILD_MALLINCAM
 #define Toupcam_AwbOnce Toupcam_AwbOnePush
