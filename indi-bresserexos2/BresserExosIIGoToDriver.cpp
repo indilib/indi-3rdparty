@@ -9,6 +9,7 @@ using namespace SerialDeviceControl;
 
 static std::unique_ptr<BresserExosIIDriver> driver_instance(new BresserExosIIDriver());
 
+#if 0 // No needed, see https://github.com/indilib/indi/pull/1375
 void ISGetProperties(const char* dev)
 {
     driver_instance->ISGetProperties(dev);
@@ -51,6 +52,7 @@ void ISSnoopDevice(XMLEle* root)
 {
     driver_instance->ISSnoopDevice(root);
 }
+#endif
 
 //default constructor.
 //sets the scope abilities, and default settings.
