@@ -5,16 +5,18 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 set(CMAKE_DEBUG_POSTFIX d)
 
 if (APPLE)
 	set(CMAKE_CXX_STANDARD 14)
 	set(CMAKE_CXX_STANDARD_REQUIRED True)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 else ()
 	set(CMAKE_CXX_STANDARD 11)
 	set(CMAKE_CXX_STANDARD_REQUIRED True)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif ()
 
 if (NOT XML_INSTALL_DIR)
@@ -34,7 +36,7 @@ option(USE_CERR_LOGGING "log error messages using std::cerr for debugging" ON)
 add_subdirectory(SerialDeviceControl)
 
 add_executable(indi_bresserexos2 BresserExosIIGoToDriver.cpp IndiSerialWrapper.cpp)
-target_link_libraries(indi_bresserexos2 ${INDI_LIBRARIES} SerialDeviceControl ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_bresserexos2 ${INDI_LIBRARIES} SerialDeviceControl ${CMAKE_THREAD_LIBS_INIT} Threads::Threads)
 target_include_directories(indi_bresserexos2 PUBLIC
 						  "${PROJECT_BINARY_DIR}"
 						  "${PROJECT_SOURCE_DIR}/SerialDeviceControl"
