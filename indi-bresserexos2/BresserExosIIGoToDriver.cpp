@@ -105,7 +105,7 @@ bool BresserExosIIDriver::updateProperties()
 {
     bool rc = INDI::Telescope::updateProperties();
 
-    return true;
+    return rc;
 }
 
 //Connect to the scope, and ready everything for serial data exchange.
@@ -120,7 +120,7 @@ bool BresserExosIIDriver::Connect()
 
     IEAddTimer(DRIVER_WATCHDOG_TIMEOUT, DriverWatchDog, this);
 
-    return true;
+    return rc;
 }
 
 //Start the serial receiver thread, so the mount can report its pointing coordinates.
@@ -134,7 +134,7 @@ bool BresserExosIIDriver::Handshake()
 
     bool rc = INDI::Telescope::Handshake();
 
-    return true;
+    return rc;
 }
 
 //Disconnect from the mount, and disable serial transmission.
@@ -146,7 +146,7 @@ bool BresserExosIIDriver::Disconnect()
 
     bool rc = INDI::Telescope::Disconnect();
 
-    return true;
+    return rc;
 }
 
 //Return the name of the device, displayed in the e.g. EKOS dialogs
@@ -213,7 +213,7 @@ bool BresserExosIIDriver::ISNewNumber(const char *dev, const char *name, double 
 
 bool BresserExosIIDriver::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    return false;
+    return INDI::Telescope::ISNewText(dev, name, texts, names, n);
 }
 
 //Park the telescope. This will slew the telescope to the parking position == home position.

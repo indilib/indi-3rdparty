@@ -65,7 +65,7 @@ void SerialCommand::push_bytes(std::vector<uint8_t> &buffer, uint8_t byte, size_
         return;
     }
 
-    for(int i = 0; i < count; i++)
+    for(size_t i = 0; i < count; i++)
     {
         buffer.push_back(byte);
     }

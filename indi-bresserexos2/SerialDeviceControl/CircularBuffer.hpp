@@ -177,11 +177,12 @@ class CircularBuffer
         }
 
     private:
-        T mBuffer[max_size];
-        T mZeroElement;
         size_t mStart;
         size_t mEnd;
         size_t mSize;
+        
+        T mZeroElement;
+        T mBuffer[max_size];
 
         size_t ActualIndex(size_t logicalIndex)
         {

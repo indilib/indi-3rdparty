@@ -50,8 +50,8 @@ class SerialCommandTransceiver
     public:
         //Create the serial transceiver according to provided template parameters. Requires references of the data received interface implementation and the serial interface implementation.
         SerialCommandTransceiver(InterfaceType &interfaceImplementation, CallbackType &dataReceivedCallback) :
-            mDataReceivedCallback(dataReceivedCallback),
             mInterfaceImplementation(interfaceImplementation),
+            mDataReceivedCallback(dataReceivedCallback),
             mThreadRunning(false),
             mSerialReceiverBuffer(0x00),
             mSerialReaderThread()

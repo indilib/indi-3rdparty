@@ -2,6 +2,8 @@
 
 using namespace GoToDriver;
 
+#define UNUSED(x) (void)(x)
+
 IndiSerialWrapper::IndiSerialWrapper() :
     mTtyFd(-1)
 {
@@ -93,6 +95,8 @@ int16_t IndiSerialWrapper::ReadByte()
 //this function should handle all the quirks of various serial interfaces.
 bool IndiSerialWrapper::Write(uint8_t* buffer, size_t offset, size_t length)
 {
+    UNUSED(offset);
+    
     {
         std::lock_guard<std::mutex> guard(mMutex);
 
