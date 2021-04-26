@@ -387,7 +387,7 @@ bool SerialCommand::GetSetDateTimeCommandMessage(std::vector<uint8_t> &buffer, u
 //move the telescope in a certain direction. Use the first 4 command IDs for a particular direction.
 bool SerialCommand::GetMoveWhileTrackingCommandMessage(std::vector<uint8_t> &buffer, SerialCommandID direction)
 {
-    if(direction < SerialCommandID::MOVE_EAST_COMMAND_ID && direction > SerialCommandID::MOVE_SOUTH_COMMAND_ID)
+    if(direction < SerialCommandID::MOVE_EAST_COMMAND_ID || direction > SerialCommandID::MOVE_SOUTH_COMMAND_ID)
     {
 #ifdef USE_CERR_LOGGING
         std::cerr << ERROR_INVALID_DIRECTION << std::endl;
