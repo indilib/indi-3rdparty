@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.0)
 project (libnncam NONE)
 
-# Using Version: 46.16709.2020.0304
-set (LIBNNCAM_VERSION "1.46.1")
-set (LIBNNCAM_SOVERSION "1")
+# Using Version: 48.18332.20210120
+set(LIBNNCAM_VERSION "1.48.1")
+set(LIBNNCAM_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -12,7 +12,6 @@ include (InstallImported)
 
 add_library (nncam SHARED IMPORTED)
 
-# Using Version: 46.16709.2020.0304
 set_target_properties (nncam PROPERTIES VERSION ${LIBNNCAM_VERSION} SOVERSION ${LIBNNCAM_SOVERSION})
 
 if (APPLE)
