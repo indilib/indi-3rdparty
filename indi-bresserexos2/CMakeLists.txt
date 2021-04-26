@@ -16,8 +16,10 @@ else ()
 	set(CMAKE_CXX_STANDARD_REQUIRED True)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
 endif ()
-set(XML_INSTALL_DIR /usr/share/indi)
-set(CMAKE_INSTALL_PREFIX /usr/bin)
+
+if (NOT XML_INSTALL_DIR)
+	set(XML_INSTALL_DIR "share/indi")
+endif ()
 
 configure_file(Config.hpp.in Config.hpp)
 configure_file(indi_bresserexos2.xml.in indi_bresserexos2.xml)
@@ -40,5 +42,5 @@ target_include_directories(indi_bresserexos2 PUBLIC
 						  )
 						  
 include(GNUInstallDirs)
-install(TARGETS indi_bresserexos2 DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(TARGETS indi_bresserexos2 DESTINATION bin)
 install(FILES ${PROJECT_BINARY_DIR}/indi_bresserexos2.xml DESTINATION ${XML_INSTALL_DIR})
