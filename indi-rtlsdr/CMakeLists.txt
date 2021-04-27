@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_rtlsdr CXX C)
 
 set (RTLSDR_VERSION_MAJOR 1)

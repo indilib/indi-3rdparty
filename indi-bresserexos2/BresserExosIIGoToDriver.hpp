@@ -56,55 +56,55 @@ class BresserExosIIDriver : public INDI::Telescope
         virtual ~BresserExosIIDriver();
 
         //initialize the properties of the scope.
-        virtual bool initProperties();
+        virtual bool initProperties() override;
 
         //update the properties of the scope visible in the EKOS dialogs for instance.
-        virtual bool updateProperties();
+        virtual bool updateProperties() override;
 
         //Connect to the scope, and ready everything for serial data exchange.
-        virtual bool Connect();
+        virtual bool Connect() override;
 
         //Start the serial receiver thread, so the mount can report its pointing coordinates.
-        virtual bool Handshake();
+        virtual bool Handshake() override;
 
         //Disconnect from the mount, and disable serial transmission.
-        virtual bool Disconnect();
+        virtual bool Disconnect() override;
 
         //Return the name of the device, displayed in the e.g. EKOS dialogs
-        virtual const char* getDefaultName();
+        virtual const char* getDefaultName() override;
 
         //Periodically polled function to update the state of the driver, and synchronize it with the mount.
-        virtual bool ReadScopeStatus();
+        virtual bool ReadScopeStatus() override;
 
         //update properties from the application -> number
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
         //update properties from the application -> text
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
         //Park the telescope. This will slew the telescope to the parking position == home position.
-        virtual bool Park();
+        virtual bool Park() override;
 
         //Set the state of the driver to unpark allowing the scope to be manipulated again.
-        virtual bool UnPark();
+        virtual bool UnPark() override;
 
         //Sync the astro software and mount coordinates.
-        virtual bool Sync(double ra, double dec);
+        virtual bool Sync(double ra, double dec) override;
 
         //Go to the coordinates in the sky, This automatically tracks the selected coordinates.
-        virtual bool Goto(double ra, double dec);
+        virtual bool Goto(double ra, double dec) override;
 
         //Abort any motion of the telescope. This is state indipendent, and always possible when connected.
-        virtual bool Abort();
+        virtual bool Abort() override;
 
         //Set the tracking state of the scope, it either goes to the current coordinates or stops the scope motion.
         virtual bool SetTrackingEnabled(bool enabled);
 
         //update the time of the scope.
-        virtual bool updateTime(ln_date *utc, double utc_offset);
+        virtual bool updateTime(ln_date *utc, double utc_offset) override;
 
         //update the location of the scope.
-        virtual bool updateLocation(double latitude, double longitude, double elevation);
+        virtual bool updateLocation(double latitude, double longitude, double elevation) override;
 
         //commance motion in north or south direction.
         virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command) override;

@@ -16,7 +16,9 @@ SET(PACKAGE_VERSION "7.6.1")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
-ADD_DEFINITIONS(-DUSELIBFTDIONE -DNO_CYUSB -Wall -O2 -fPIC -g -fpermissive)
+ADD_DEFINITIONS(-DUSELIBFTDIONE -DNO_CYUSB -Wall -O2 -fPIC -g)
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})

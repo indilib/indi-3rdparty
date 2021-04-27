@@ -1,54 +1,47 @@
-cmake_minimum_required(VERSION 3.0)
-PROJECT(libsbig C CXX)
+cmake_minimum_required (VERSION 3.0)
+project (libsbig)
 
-set(SBIG_VERSION "4.9.9")
-set(SBIG_SOVERSION "4")
+set (SBIG_VERSION "4.9.9")
+set (SBIG_SOVERSION "4")
 
-include(GNUInstallDirs)
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
 
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+add_library (sbig SHARED IMPORTED)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
+set_target_properties (sbig PROPERTIES VERSION ${SBIG_VERSION} SOVERSION ${SBIG_SOVERSION})
 
-IF(APPLE)
+if (APPLE)
 
-set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/sbig")
+  set (FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/sbig")
 
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/SBIGUDrvOSX.bin ${CMAKE_BINARY_DIR}/libsbig.${SBIG_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libsbig.${SBIG_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+  set_property (TARGET sbig PROPERTY IMPORTED_LOCATION "SBIGUDrvOSX.bin")
 
-# This is a temporary work-around until a better linking solution is found for MacOS
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libsbig.${SBIG_VERSION}.dylib ${LIB_INSTALL_DIR}/libsbig.${SBIG_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libsbig.${SBIG_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libsbig.dylib)
+elseif (UNIX AND NOT WIN32)
 
-ELSE(APPLE)
+  set (FIRMWARE_INSTALL_DIR "/lib/firmware")
 
-set(FIRMWARE_INSTALL_DIR "/lib/firmware")
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property (TARGET sbig PROPERTY IMPORTED_LOCATION "libsbig_armhf.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property (TARGET sbig PROPERTY IMPORTED_LOCATION "libsbig_arm64.bin")
+  elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    set_property (TARGET sbig PROPERTY IMPORTED_LOCATION "libsbig_x64.bin")
+  endif ()
 
-IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libsbig_armhf.bin ${CMAKE_BINARY_DIR}/libsbig.so.${SBIG_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libsbig_arm64.bin ${CMAKE_BINARY_DIR}/libsbig.so.${SBIG_VERSION})
-  ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libsbig_x64.bin ${CMAKE_BINARY_DIR}/libsbig.so.${SBIG_VERSION})
-  ENDIF ()
-ENDIF(UNIX AND NOT WIN32)
+  # Install udev rules
+  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  install (FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
-install( FILES ${CMAKE_BINARY_DIR}/libsbig.so.${SBIG_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-# Make sure symbolic links are installed
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libsbig.so.${SBIG_VERSION}\" \"libsbig.so.${SBIG_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libsbig.so.${SBIG_SOVERSION}\" \"libsbig.so\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+endif ()
 
-IF(UNIX AND NOT WIN32)
-install( FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-ENDIF(UNIX AND NOT WIN32)
+# Install header files
+install (FILES sbigudrv.h DESTINATION include/libsbig)
 
-ENDIF(APPLE)
+# Install firmware
+install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
 
-install( FILES sbigudrv.h DESTINATION include/libsbig)
-install( FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
+# Install library
+install_imported (TARGETS sbig DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -272,7 +272,7 @@ void fc_timestamp(FILE *out)
     *(unsigned long *)&t = tv.tv_sec;
     strftime(timestamp, sizeof timestamp, "%e %b %G %T", localtime(&t));
 
-    fprintf(out, "%s.%02ld ", timestamp, tv.tv_usec / 10000);
+    fprintf(out, "%s.%02ld ", timestamp, (long)(tv.tv_usec / 10000));
 }
 
 //

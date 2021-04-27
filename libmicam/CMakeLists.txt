@@ -1,48 +1,45 @@
-cmake_minimum_required(VERSION 2.8)
-PROJECT(libmicam CXX C)
+cmake_minimum_required (VERSION 3.0)
+project (libmicam)
 
-set(MICAM_VERSION "0.5.6")
-set(MICAM_VERSION_MAC "0.4.6")
-set(MICAM_SOVERSION "0")
+set (MICAM_VERSION "0.5.6")
+set (MICAM_VERSION_MAC "0.4.6")
+set (MICAM_SOVERSION "0")
 
-include(GNUInstallDirs)
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
 
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+add_library (gxccd SHARED IMPORTED)
 
-IF (APPLE)
+set_target_properties (gxccd PROPERTIES VERSION ${MICAM_VERSION} SOVERSION ${MICAM_SOVERSION})
 
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libgxccdmac.bin ${CMAKE_BINARY_DIR}/libgxccd.${MICAM_VERSION_MAC}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libgxccd.${MICAM_VERSION_MAC}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libgxccd.${MICAM_VERSION_MAC}.dylib ${LIB_INSTALL_DIR}/libgxccd.${MICAM_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libgxccd.${MICAM_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libgxccd.dylib)
+if (APPLE)
 
-ELSE (APPLE)
+  set_target_properties (gxccd PROPERTIES VERSION ${MICAM_VERSION_MAC})
 
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdmac.bin")
 
-IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libgxccdarmv7.bin ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libgxccdarmv8.bin ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libgxccd64.bin ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/libgxccd32.bin ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION})
-  ENDIF ()
-ENDIF(UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32)
 
-install( FILES ${CMAKE_BINARY_DIR}/libgxccd.so.${MICAM_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdarmv7.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdarmv8.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccd64.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
+    set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccd32.bin")
+  endif ()
 
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libgxccd.so.${MICAM_VERSION}\" \"libgxccd.so.${MICAM_SOVERSION}\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libgxccd.so.${MICAM_SOVERSION}\" \"libgxccd.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+  # Install udev rules
+  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  install (FILES 99-miccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-miccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-endif()
+endif ()
 
-ENDIF(APPLE)
+# Install header files
+install (FILES gxccd.h DESTINATION include/libmicam)
 
-install( FILES gxccd.h DESTINATION include/libmicam)
+# Install library
+install_imported (TARGETS gxccd DESTINATION ${CMAKE_INSTALL_LIBDIR})

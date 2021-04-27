@@ -1,56 +1,43 @@
-cmake_minimum_required(VERSION 3.0)
-PROJECT(libtoupcam CXX C)
-
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-include(GNUInstallDirs)
-
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+cmake_minimum_required (VERSION 3.0)
+project (libtoupcam)
 
 # Using ToupCamera SDK Version: 48.18042.2020.1128
-set(LIBTOUPCAM_VERSION "1.48.0")
-set(LIBTOUPCAM_SOVERSION "1")
+set (LIBTOUPCAM_VERSION "1.48.0")
+set (LIBTOUPCAM_SOVERSION "1")
 
-IF(APPLE)
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
 
-set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/libtoupcam")
+add_library (toupcam SHARED IMPORTED)
 
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libtoupcam.bin ${CMAKE_BINARY_DIR}/libtoupcam.${LIBTOUPCAM_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libtoupcam.${LIBTOUPCAM_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+set_target_properties (toupcam PROPERTIES VERSION ${LIBTOUPCAM_VERSION} SOVERSION ${LIBTOUPCAM_SOVERSION})
 
-# This is a temporary work-around until a better linking solution is found for MacOS
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libtoupcam.${LIBTOUPCAM_VERSION}.dylib ${LIB_INSTALL_DIR}/libtoupcam.${LIBTOUPCAM_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libtoupcam.${LIBTOUPCAM_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libtoupcam.dylib)
+if (APPLE)
 
-ELSE(APPLE)
+  set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "mac/libtoupcam.bin")
 
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+elseif (UNIX AND NOT WIN32)
 
-IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armhf/libtoupcam.bin ${CMAKE_BINARY_DIR}/libtoupcam.so.${LIBTOUPCAM_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/arm64/libtoupcam.bin ${CMAKE_BINARY_DIR}/libtoupcam.so.${LIBTOUPCAM_VERSION})
-  ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libtoupcam.bin ${CMAKE_BINARY_DIR}/libtoupcam.so.${LIBTOUPCAM_VERSION})
-  ELSE()
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libtoupcam.bin ${CMAKE_BINARY_DIR}/libtoupcam.so.${LIBTOUPCAM_VERSION})
-  ENDIF ()
-ENDIF(UNIX AND NOT WIN32)
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "armhf/libtoupcam.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "arm64/libtoupcam.bin")
+  elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "x64/libtoupcam.bin")
+  else ()
+    set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "x86/libtoupcam.bin")
+  endif ()
 
-install( FILES ${CMAKE_BINARY_DIR}/libtoupcam.so.${LIBTOUPCAM_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-# Make sure symbolic links are installed
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libtoupcam.so.${LIBTOUPCAM_VERSION}\" \"libtoupcam.so.${LIBTOUPCAM_SOVERSION}\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libtoupcam.so.${LIBTOUPCAM_SOVERSION}\" \"libtoupcam.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
+  # Install udev rules
+  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  install (FILES 99-toupcam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
-ENDIF(APPLE)
+endif ()
 
-install( FILES toupcam.h DESTINATION include/libtoupcam)
+# Install header files
+install (FILES toupcam.h DESTINATION include/libtoupcam)
 
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-toupcam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-endif()
+# Install library
+install_imported (TARGETS toupcam DESTINATION ${CMAKE_INSTALL_LIBDIR})
