@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libaltaircam NONE)
+project (libaltaircam)
 
 # Using AltairCamera SDK Version: 47.17497.2020.0722
 set (LIBALTAIRCAM_VERSION "1.47.0")

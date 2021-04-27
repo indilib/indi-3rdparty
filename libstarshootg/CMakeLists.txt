@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libstarshootg NONE)
+project (libstarshootg)
 
 # Using Starshoot G SDK Version: 48.18421.20210202
 set (LIBSTARSHOOTG_VERSION "1.48.1")

@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libatik NONE)
+project (libatik)
 
 # Built October 19th, 2021 - SDK API 2020.10.19
 set (ATIK_VERSION "2.2.9")

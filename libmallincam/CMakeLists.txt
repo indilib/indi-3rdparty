@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libmallincam NONE)
+project (libmallincam)
 
 # Using Version: 43
 set (LIBMALLINCAM_VERSION "1.43.0")

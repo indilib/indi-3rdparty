@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libinovasdk NONE)
+project (libinovasdk)
 
 set (INOVASDK_VERSION "1.3.6")
 set (INOVASDK_SOVERSION "1")

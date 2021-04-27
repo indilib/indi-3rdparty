@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libahp_xc NONE)
+project (libahp_xc)
 
 set (AHPXC_VERSION "1.0.12")
 set (AHPXC_SOVERSION "1")

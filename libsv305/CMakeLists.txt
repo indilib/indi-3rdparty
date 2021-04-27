@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libsv305 NONE)
+project (libsv305)
 
 set (SVBCAMERASDK_VERSION "1.6.5")
 set (SVBCAMERASDK_SOVERSION "1")

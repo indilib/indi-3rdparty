@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libqhy NONE)
+project (libqhy)
 
 # QHY SDK 21.4.15
 set (LIBQHY_VERSION "21.4.15")

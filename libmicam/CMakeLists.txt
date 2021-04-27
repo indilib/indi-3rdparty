@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libmicam NONE)
+project (libmicam)
 
 set (MICAM_VERSION "0.5.6")
 set (MICAM_VERSION_MAC "0.4.6")

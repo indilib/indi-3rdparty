@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libnncam NONE)
+project (libnncam)
 
 # Using Version: 48.18332.20210120
 set(LIBNNCAM_VERSION "1.48.1")
