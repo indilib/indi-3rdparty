@@ -1,3 +1,9 @@
+libasi (1.16) buster; urgency=medium
+
+  * Correcting version.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 28 Apr 2021 01:00:00 +0300
+
 libasi (1.15) buster; urgency=medium
 
   * Reverted ASI camera SDK to 1.16 due to reported bugs.
