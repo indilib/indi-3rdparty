@@ -40,4 +40,4 @@ endif ()
 install (FILES toupcam.h DESTINATION include/libtoupcam)
 
 # Install library
-install_imported (TARGETS toupcam DESTINATION lib)
+install_imported (TARGETS toupcam DESTINATION ${CMAKE_INSTALL_LIBDIR})

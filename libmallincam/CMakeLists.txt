@@ -40,5 +40,5 @@ endif ()
 install (FILES mallincam.h DESTINATION include/libmallincam)
 
 # Install library
-install_imported (TARGETS mallincam DESTINATION lib)
+install_imported (TARGETS mallincam DESTINATION ${CMAKE_INSTALL_LIBDIR})
 

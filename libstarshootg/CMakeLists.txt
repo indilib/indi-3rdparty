@@ -38,4 +38,4 @@ endif ()
 install (FILES starshootg.h DESTINATION include/libstarshootg)
 
 # Install library
-install_imported (TARGETS starshootg DESTINATION lib)
+install_imported (TARGETS starshootg DESTINATION ${CMAKE_INSTALL_LIBDIR})

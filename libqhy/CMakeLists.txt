@@ -65,4 +65,4 @@ install (
 )
 
 # Install library
-install_imported (TARGETS qhyccd DESTINATION lib)
+install_imported (TARGETS qhyccd DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -22,7 +22,7 @@ if (APPLE)
   set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "mac/libatikcameras.bin")
   
   # Install library
-  install_imported (TARGETS atikcameras DESTINATION lib)
+  install_imported (TARGETS atikcameras DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 elseif (UNIX AND NOT WIN32)
   add_library (flycapture  SHARED IMPORTED)
@@ -47,7 +47,7 @@ elseif (UNIX AND NOT WIN32)
   install (FILES 99-atik.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
   # Install library
-  install_imported (TARGETS atikcameras flycapture DESTINATION lib)
+  install_imported (TARGETS atikcameras flycapture DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 endif ()
 

@@ -37,4 +37,4 @@ endif ()
 install (FILES inovasdk.h DESTINATION include/inovasdk)
 
 # Install library
-install_imported (TARGETS inovasdk DESTINATION lib)
+install_imported (TARGETS inovasdk DESTINATION ${CMAKE_INSTALL_LIBDIR})

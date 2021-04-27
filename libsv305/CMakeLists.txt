@@ -38,5 +38,5 @@ if (UNIX AND NOT WIN32)
     install (FILES SVBCameraSDK.h DESTINATION include/libsv305)
 
     # Install library
-    install_imported (TARGETS SVBCameraSDK DESTINATION lib)
+    install_imported (TARGETS SVBCameraSDK DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif ()

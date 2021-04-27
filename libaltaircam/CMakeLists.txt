@@ -40,4 +40,4 @@ endif ()
 install (FILES altaircam.h DESTINATION include/libaltaircam)
 
 # Install library
-install_imported (TARGETS altaircam DESTINATION lib)
+install_imported (TARGETS altaircam DESTINATION ${CMAKE_INSTALL_LIBDIR})

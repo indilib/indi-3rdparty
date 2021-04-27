@@ -42,4 +42,4 @@ endif ()
 install (FILES gxccd.h DESTINATION include/libmicam)
 
 # Install library
-install_imported (TARGETS gxccd DESTINATION lib)
+install_imported (TARGETS gxccd DESTINATION ${CMAKE_INSTALL_LIBDIR})

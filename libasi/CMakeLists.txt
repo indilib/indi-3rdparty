@@ -81,5 +81,5 @@ install (
 # Install library
 install_imported (
   TARGETS ASICamera2 EFWFilter USB2ST4Conv EAFFocuser
-  DESTINATION lib
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

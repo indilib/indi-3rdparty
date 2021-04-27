@@ -44,4 +44,4 @@ install (FILES sbigudrv.h DESTINATION include/libsbig)
 install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
 
 # Install library
-install_imported (TARGETS sbig DESTINATION lib)
+install_imported (TARGETS sbig DESTINATION ${CMAKE_INSTALL_LIBDIR})

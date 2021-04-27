@@ -31,4 +31,4 @@ endif ()
 install (FILES ahp_xc.h DESTINATION include/ahp)
 
 # Install library
-install_imported (TARGETS ahp_xc DESTINATION lib)
+install_imported (TARGETS ahp_xc DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -40,4 +40,4 @@ endif ()
 install (FILES nncam.h DESTINATION include/libnncam)
 
 # Install library
-install_imported (TARGETS nncam DESTINATION lib)
+install_imported (TARGETS nncam DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -43,4 +43,4 @@ install (FILES include/ricoh_camera_sdk.hpp DESTINATION include/libricohcamerasd
 install (DIRECTORY include/ricoh_camera_sdk DESTINATION include/libricohcamerasdk)
 
 # Install library
-install_imported (TARGETS RicohCameraSDKCpp mtpricoh DESTINATION lib)
+install_imported (TARGETS RicohCameraSDKCpp mtpricoh DESTINATION ${CMAKE_INSTALL_LIBDIR})
