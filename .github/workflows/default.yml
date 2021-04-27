@@ -1,4 +1,4 @@
-name: INDI 3rd-Party
+name: Linux
 on:
   push:
     branches: [ master ]
