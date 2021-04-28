@@ -32,7 +32,11 @@ case "$OS" in
                     git \
                     cmake build-essential zlib1g-dev \
                     libcfitsio-dev libnova-dev libusb-1.0-0-dev libcurl4-gnutls-dev \
-                    libgsl-dev libjpeg-dev libfftw3-dev
+                    libgsl-dev libjpeg-dev libfftw3-dev \
+                    \
+                    libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
+                    libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev \
+                    libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
@@ -40,7 +44,17 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel
+                    gsl-devel libjpeg-devel fftw-devel \
+                    \
+                    https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+                    https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+                $(command -v sudo) dnf install -y \
+                    ffmpeg-devel \
+                    libftdi-devel \
+                    gpsd-devel LibRaw-devel libdc1394-devel libgphoto2-devel \
+                    boost-devel rtl-sdr-devel
+
                 ;;
             centos)
                 # CentOS 8 dont have libnova-devel package
