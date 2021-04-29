@@ -118,97 +118,10 @@ void ISInit()
     }
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ISInit();
-    if (iNumofConnectedSpectrographs == 0)
-    {
-        IDMessage(nullptr, "No RTLSDR receivers detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        RTLSDR *receiver = receivers[i];
-        receiver->ISSnoopDevice(root);
-    }
-}
+    Loader() { ISInit(); }
+} loader;
 
 RTLSDR::RTLSDR(int32_t index)
 {

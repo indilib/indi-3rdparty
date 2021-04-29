@@ -103,84 +103,6 @@ struct Loader
     Loader() { ASI_EFW_ISInit(); }
 } loader;
 
-void ISGetProperties(const char *dev)
-{
-    for (int i = 0; i < num_wheels; i++)
-    {
-        ASIWHEEL *wheel = wheels[i];
-        if (dev == nullptr || !strcmp(dev, wheel->name))
-        {
-            wheel->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    for (int i = 0; i < num_wheels; i++)
-    {
-        ASIWHEEL *wheel = wheels[i];
-        if (dev == nullptr || !strcmp(dev, wheel->name))
-        {
-            wheel->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    for (int i = 0; i < num_wheels; i++)
-    {
-        ASIWHEEL *wheel = wheels[i];
-        if (dev == nullptr || !strcmp(dev, wheel->name))
-        {
-            wheel->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    for (int i = 0; i < num_wheels; i++)
-    {
-        ASIWHEEL *wheel = wheels[i];
-        if (dev == nullptr || !strcmp(dev, wheel->name))
-        {
-            wheel->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    for (int i = 0; i < num_wheels; i++)
-    {
-        ASIWHEEL *wheel = wheels[i];
-        wheel->ISSnoopDevice(root);
-    }
-}
-
 ASIWHEEL::ASIWHEEL(int id, EFW_INFO info, bool enumerate)
 {
     char str[MAXINDIDEVICE];
@@ -330,6 +252,7 @@ bool ASIWHEEL::updateProperties()
 
 bool ASIWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    fprintf(stderr, "%s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
         if (!strcmp(name, UniDirectionalSP.name))

@@ -95,96 +95,10 @@ void ATIK_WHEEL_ISInit()
     }
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ATIK_WHEEL_ISInit();
-
-    if (iAvailablefilterWheelsCount == 0)
-    {
-        IDMessage(nullptr, "No Atik filter wheels detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < iAvailablefilterWheelsCount; i++)
-    {
-        ATIKWHEEL *filterWheel = filterWheels[i];
-        if (dev == nullptr || !strcmp(dev, filterWheel->name))
-        {
-            filterWheel->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ATIK_WHEEL_ISInit();
-    for (int i = 0; i < iAvailablefilterWheelsCount; i++)
-    {
-        ATIKWHEEL *filterWheel = filterWheels[i];
-        if (dev == nullptr || !strcmp(dev, filterWheel->name))
-        {
-            filterWheel->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ATIK_WHEEL_ISInit();
-    for (int i = 0; i < iAvailablefilterWheelsCount; i++)
-    {
-        ATIKWHEEL *filterWheel = filterWheels[i];
-        if (dev == nullptr || !strcmp(dev, filterWheel->name))
-        {
-            filterWheel->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ATIK_WHEEL_ISInit();
-    for (int i = 0; i < iAvailablefilterWheelsCount; i++)
-    {
-        ATIKWHEEL *filterWheel = filterWheels[i];
-        if (dev == nullptr || !strcmp(dev, filterWheel->name))
-        {
-            filterWheel->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ATIK_WHEEL_ISInit();
-
-    for (int i = 0; i < iAvailablefilterWheelsCount; i++)
-    {
-        ATIKWHEEL *filterWheel = filterWheels[i];
-        filterWheel->ISSnoopDevice(root);
-    }
-}
+    Loader() { ATIK_WHEEL_ISInit(); }
+} loader;
 
 ATIKWHEEL::ATIKWHEEL(std::string filterWheelName, int id) : FilterWheel(), m_iDevice(id)
 {

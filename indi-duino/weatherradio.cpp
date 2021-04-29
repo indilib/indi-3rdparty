@@ -69,54 +69,6 @@ std::unique_ptr<WeatherRadio> station_ptr(new WeatherRadio());
 /**************************************************************************************
 **
 ***************************************************************************************/
-void ISGetProperties(const char *dev)
-{
-    station_ptr->ISGetProperties(dev);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    station_ptr->ISNewSwitch(dev, name, states, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    station_ptr->ISNewText(dev, name, texts, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    station_ptr->ISNewNumber(dev, name, values, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    station_ptr->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISSnoopDevice(XMLEle *root)
-{
-    INDI_UNUSED(root);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     strcpy(static_cast<char *>(userp), static_cast<char *>(contents));

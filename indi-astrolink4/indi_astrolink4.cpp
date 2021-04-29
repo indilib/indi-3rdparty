@@ -30,32 +30,6 @@
 //////////////////////////////////////////////////////////////////////
 static std::unique_ptr<IndiAstrolink4> indiAstrolink4(new IndiAstrolink4());
 
-void ISGetProperties(const char *dev)
-{
-    indiAstrolink4->ISGetProperties(dev);
-}
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    indiAstrolink4->ISNewSwitch(dev, name, states, names, num);
-}
-void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    indiAstrolink4->ISNewText (dev, name, texts, names, num);
-}
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    indiAstrolink4->ISNewNumber(dev, name, values, names, num);
-}
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-                char *names[], int num)
-{
-    indiAstrolink4->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, num);
-}
-void ISSnoopDevice (XMLEle *root)
-{
-    indiAstrolink4->ISSnoopDevice(root);
-}
-
 //////////////////////////////////////////////////////////////////////
 ///Constructor
 //////////////////////////////////////////////////////////////////////

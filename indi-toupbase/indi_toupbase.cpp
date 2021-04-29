@@ -129,96 +129,10 @@ void ToupBase_Init()
     }
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ToupBase_Init();
-
-    if (iConnectedCamerasCount == 0)
-    {
-        IDMessage(nullptr, "No Toupcam detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ToupBase_Init();
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+    Loader() { ToupBase_Init(); }
+} loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {

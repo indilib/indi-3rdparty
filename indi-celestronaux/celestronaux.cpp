@@ -56,34 +56,7 @@ double anglediff(double a, double b)
     return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
 }
 
-void ISGetProperties(const char *dev)
-{
-    telescope_caux->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    telescope_caux->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    telescope_caux->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    telescope_caux->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    telescope_caux->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-
-void ISSnoopDevice(XMLEle *root)
+bool CelestronAUX::ISSnoopDevice(XMLEle *root)
 {
     const char *propName = findXMLAttValu(root, "name");
 
@@ -99,10 +72,8 @@ void ISSnoopDevice(XMLEle *root)
         telescope_caux->getCordwrapPos();
     }
 
-    telescope_caux->ISSnoopDevice(root);
+    return Telescope::ISSnoopDevice(root);
 }
-
-
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////

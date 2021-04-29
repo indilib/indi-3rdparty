@@ -82,104 +82,10 @@ void ISInit()
     }
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ISInit();
-
-    if (cameraCount == 0)
-    {
-        IDLog("Unable to find Fishcamp CCD. Power OK? Please check the log file under ~/.indi for more details.\n");
-        return;
-    }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        FishCampCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        FishCampCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-    //This turns the LibFishcamp fcusb logging on and off along with the INDI Fishcamp file logging.
-    if (!strcmp(name, "LOG_OUTPUT"))
-    {
-        if(INDI::Logger::ConfigurationS[1].s == ISS_ON)
-        {
-            fcUsb_setLogging(true);
-            IDLog("Setting Starfish Driver File Log On\n");
-        }
-        else
-        {
-            fcUsb_setLogging(false);
-            IDLog("Setting Starfish Driver File Log Off\n");
-        }
-
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        FishCampCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        FishCampCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    INDI_UNUSED(root);
-}
+    Loader() { ISInit(); }
+} loader;
 
 FishCampCCD::FishCampCCD(int CamNum)
 {

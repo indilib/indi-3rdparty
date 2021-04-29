@@ -71,24 +71,6 @@ const MGIO_INSERT_BUTTON::Button MGIO_Buttons[] = { MGIO_INSERT_BUTTON::IOB_ESC,
                                                     MGIO_INSERT_BUTTON::IOB_RIGHT, MGIO_INSERT_BUTTON::IOB_DOWN
                                                   };
 
-/**************************************************************************************
-** Return properties of device->
-***************************************************************************************/
-void ISGetProperties(const char *dev)
-{
-    //IDLog("%s: get properties.", __FUNCTION__);
-    mgenAutoguider->ISGetProperties(dev);
-}
-
-/**************************************************************************************
-** Process new switch from client
-***************************************************************************************/
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    //IDLog("%s: new switch '%s'.", __FUNCTION__, name);
-    mgenAutoguider->ISNewSwitch(dev, name, states, names, n);
-}
-
 bool MGenAutoguider::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (device && device->isConnected())

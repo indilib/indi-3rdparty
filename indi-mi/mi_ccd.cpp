@@ -83,95 +83,10 @@ void ISInit()
     atexit(cleanup);
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ISInit();
-
-    if (cameraCount == 0)
-    {
-        IDMessage(nullptr, "No Moravian cameras detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+    Loader() { ISInit(); }
+} loader;
 
 MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
 {
