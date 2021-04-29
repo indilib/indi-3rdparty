@@ -20,6 +20,8 @@
 #include <time.h>
 #include <list>
 #include <sys/time.h>
+#include <deque>
+#include <memory>
 
 #include "indidevapi.h"
 #include "eventloop.h"
@@ -43,36 +45,15 @@
 #define TIMER_TICK_MS  (100)
 #define CAPS           (CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME)
 
-#define FOR_EVERY_CAMERA                       \
-    {                                          \
-        std::list<GigECCD *>::iterator camera; \
-        for (camera = cameras.begin(); camera != cameras.end(); ++camera)
-
-static std::list<GigECCD *> cameras;
-
-static void cleanup()
+static class Loader
 {
-    FOR_EVERY_CAMERA { delete (*camera); }
-}
-}
-
-void ISInit()
-{
-    static bool has_init = false;
-    if (!has_init)
+    std::deque<std::unique_ptr<GigECCD>> cameras;
+public:
+    Loader()
     {
-        has_init = true;
-
         arv::ArvCamera *camera = arv::ArvFactory::find_first_available();
-        GigECCD *indi_camera   = new GigECCD(camera);
-        cameras.push_back(indi_camera);
+        cameras.push_back(std::unique_ptr<GigECCD>(new GigECCD(camera)));
     }
-    atexit(cleanup);
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 const char *GigECCD::getDefaultName()

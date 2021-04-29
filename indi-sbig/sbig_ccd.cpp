@@ -38,6 +38,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include <memory>
+#include <deque>
+
 #ifdef __APPLE__
 #include <sys/stat.h>
 #include "ezusb.h"
@@ -49,32 +52,14 @@
 #define MAX_THREAD_RETRIES  3
 #define MAX_THREAD_WAIT     300000
 
-static int cameraCount;
-static SBIGCCD *cameras[MAX_DEVICES];
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < cameraCount; i++)
+    std::deque<std::unique_ptr<SBIGCCD>> cameras;
+public:
+    Loader()
     {
-        delete cameras[i];
+        cameras.push_back(std::unique_ptr<SBIGCCD>(new SBIGCCD()));
     }
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        cameraCount = 1;
-        cameras[0]  = new SBIGCCD();
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 //==========================================================================

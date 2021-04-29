@@ -26,6 +26,8 @@
 #include "config.h"
 
 #include <math.h>
+#include <deque>
+#include <memory>
 
 #define TEMP_THRESHOLD  0.2  /* Differential temperature threshold (°C) */
 #define TEMP_COOLER_OFF 100  /* High enough temperature for the camera cooler to turn off (°C) */
@@ -38,55 +40,32 @@
 // driver afterwards.
 extern char *me;
 
-static int cameraCount;
-static int cameraIds[MAX_DEVICES];
-static MICCD *cameras[MAX_DEVICES];
-
-// Enumeration callback
-static void enumCallback(int cameraId)
+static class Loader
 {
-    cameraIds[cameraCount++] = cameraId;
-}
+public:
+    std::deque<std::unique_ptr<MICCD>> cameras;
+public:
+    Loader();
+} loader;
 
-static void cleanup()
+Loader::Loader()
 {
-    for (int i = 0; i < cameraCount; i++)
-        delete cameras[i];
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (isInit)
-        return;
-
-    isInit      = true;
-    cameraCount = 0;
-    bool eth    = false;
-
     if (strstr(me, "indi_mi_ccd_eth"))
     {
-        eth = true;
-        gxccd_enumerate_eth(enumCallback);
+        gxccd_enumerate_eth([](int id)
+        {
+            loader.cameras.push_back(std::unique_ptr<MICCD>(new MICCD(id, true)));
+        });
     }
     else
     {
         // "me" shoud be indi_mi_ccd_usb, however accept all names as USB
-        gxccd_enumerate_usb(enumCallback);
+        gxccd_enumerate_usb([](int id)
+        {
+            loader.cameras.push_back(std::unique_ptr<MICCD>(new MICCD(id, false)));
+        });
     }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        cameras[i] = new MICCD(cameraIds[i], eth);
-    }
-
-    atexit(cleanup);
 }
-
-struct Loader
-{
-    Loader() { ISInit(); }
-} loader;
 
 MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
 {

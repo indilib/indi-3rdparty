@@ -28,6 +28,7 @@
 #include <termios.h>
 #include <indilogger.h>
 #include <memory>
+#include <deque>
 #include <indicom.h>
 
 #define min(a, b)               \
@@ -42,21 +43,8 @@
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
 #define SPECTRUM_SIZE  (256)
 
-static int iNumofConnectedSpectrographs;
-static RTLSDR **receivers;
-
-static bool isInit = false;
-
 static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
-
-static void cleanup()
-{
-    for (int i = 0; i < fabs(iNumofConnectedSpectrographs); i++)
-    {
-        delete receivers[i];
-    }
-}
 
 void RTLSDR::Callback()
 {
@@ -88,39 +76,28 @@ void RTLSDR::Callback()
     }
 }
 
-void ISInit()
+static class Loader
 {
-    if (!isInit)
+    std::deque<std::unique_ptr<RTLSDR>> receivers;
+public:
+    Loader()
     {
-        iNumofConnectedSpectrographs = 0;
-
-        iNumofConnectedSpectrographs = static_cast<int>(rtlsdr_get_device_count());
-        if (iNumofConnectedSpectrographs == 0)
+        size_t numofConnectedSpectrographs = rtlsdr_get_device_count();
+        if (numofConnectedSpectrographs == 0)
         {
             //Try sending IDMessage as well?
             IDLog("No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
             IDMessage(nullptr, "No USB RTLSDR receivers detected. Power on?");// Trying with TCP..");
-            //iNumofConnectedSpectrographs = -1;
-            //receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
-            //receivers[0] = new RTLSDR(-1);
+            // receivers.push_back(std::unique_ptr<RTLSDR>(new RTLSDR(-1)));
+            return;
         }
-        else
+
+        for (size_t i = 0; i < numofConnectedSpectrographs; i++)
         {
-            receivers = static_cast<RTLSDR**>(malloc(fabs(iNumofConnectedSpectrographs)*sizeof(RTLSDR*)));
-            for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-            {
-                receivers[i] = new RTLSDR(i);
-            }
+            receivers.push_back(std::unique_ptr<RTLSDR>(new RTLSDR(i)));
         }
 
-        atexit(cleanup);
-        isInit = true;
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 RTLSDR::RTLSDR(int32_t index)

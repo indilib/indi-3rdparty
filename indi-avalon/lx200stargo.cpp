@@ -35,31 +35,21 @@
 
 #include "config.h"
 
-// Unique pointers
-static std::unique_ptr<LX200StarGo> telescope;
-static std::unique_ptr<LX200StarGoFocuser> focuserAux1;
-
 const char *RA_DEC_TAB = "RA / DEC";
 
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
+public:
+    std::unique_ptr<LX200StarGo> telescope;
+    std::unique_ptr<LX200StarGoFocuser> focuserAux1;
 
-    if (isInit)
-        return;
-
-    isInit = 1;
-    if (telescope.get() == nullptr)
+public:
+    Loader()
     {
         LX200StarGo* myScope = new LX200StarGo();
         telescope.reset(myScope);
         focuserAux1.reset(new LX200StarGoFocuser(myScope, "AUX1 Focuser"));
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 /**************************************************
@@ -270,7 +260,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
             if (IUUpdateSwitch(&Aux1FocuserSP, states, names, n) < 0)
                 return false;
             bool enabled = (IUFindOnSwitchIndex(&Aux1FocuserSP) == 0);
-            if (focuserAux1->activate(enabled))
+            if (loader.focuserAux1->activate(enabled))
             {
                 Aux1FocuserSP.s = enabled ? IPS_OK : IPS_IDLE;
                 IDSetSwitch(&Aux1FocuserSP, nullptr);
@@ -420,7 +410,7 @@ bool LX200StarGo::initProperties()
                        IP_RW, 60, IPS_OK);
 
     // focuser on AUX1 port
-    focuserAux1->initProperties("AUX1 Focuser");
+    loader.focuserAux1->initProperties("AUX1 Focuser");
 
     return true;
 }
@@ -474,12 +464,12 @@ bool LX200StarGo::Connect()
         return false;
 
     // activate focuser AUX1 if the switch is set to "activated"
-    return focuserAux1->activate((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
+    return loader.focuserAux1->activate((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
 }
 
 bool LX200StarGo::Disconnect()
 {
-    focuserAux1->activate(false);
+    loader.focuserAux1->activate(false);
     return DefaultDevice::Disconnect();
 }
 
@@ -574,8 +564,8 @@ bool LX200StarGo::ReadScopeStatus()
 
     LOG_DEBUG("################################ ReadScopeStatus (finish) ###############################");
 
-    if (focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
-        return focuserAux1.get()->ReadFocuserStatus();
+    if (loader.focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
+        return loader.focuserAux1.get()->ReadFocuserStatus();
     else
         return true;
 }
@@ -1089,7 +1079,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
 
-    focuserAux1->saveConfigItems(fp);
+    loader.focuserAux1->saveConfigItems(fp);
 
     return LX200Telescope::saveConfigItems(fp);
 }

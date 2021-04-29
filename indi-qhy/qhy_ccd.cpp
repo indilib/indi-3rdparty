@@ -28,128 +28,94 @@
 #include <algorithm>
 #include <map>
 #include <math.h>
+#include <memory>
+#include <deque>
 
 #define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
-#define MAX_DEVICES          4     /* Max device cameraCount */
 
 //NB Disable for real driver
 //#define USE_SIMULATION
 
-static int cameraCount = 0;
-static QHYCCD *cameras[MAX_DEVICES];
-
-namespace
+static class Loader
 {
-static void QhyCCDCleanup()
-{
-    for (int i = 0; i < cameraCount; i++)
+    std::deque<std::unique_ptr<QHYCCD>> cameras;
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-
-    ReleaseQHYCCDResource();
-}
-
-// Scan for the available devices
-std::vector<std::string> GetDevicesIDs()
-{
-    char camid[MAXINDIDEVICE];
-    int deviceCount = 0;
-    std::vector<std::string> devices;
-
-#if defined(USE_SIMULATION)
-    deviceCount = 2;
-#else
-    deviceCount = ScanQHYCCD();
-#endif
-
-    if (deviceCount > MAX_DEVICES)
-    {
-        deviceCount = MAX_DEVICES;
-        IDLog("Devicescan found %d devices. The driver is compiled to support only up to %d devices.",
-              deviceCount, MAX_DEVICES);
-    }
-
-    for (int i = 0; i < deviceCount; i++)
-    {
-        memset(camid, '\0', MAXINDIDEVICE);
-
-#if defined(USE_SIMULATION)
-        int ret = QHYCCD_SUCCESS;
-        snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
-#else
-        int ret = GetQHYCCDId(i, camid);
-#endif
-        if (ret == QHYCCD_SUCCESS)
-        {
-            devices.push_back(std::string(camid));
-        }
-        else
-        {
-            IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
-        }
-    }
-
-    return devices;
-}
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-
-    if (isInit)
-        return;
-
-    for (int i = 0; i < MAX_DEVICES; ++i)
-        cameras[i] = nullptr;
-
 #if !defined(USE_SIMULATION)
-    int ret = InitQHYCCDResource();
+        int ret = InitQHYCCDResource();
 
-    if (ret != QHYCCD_SUCCESS)
-    {
-        IDLog("Init QHYCCD SDK failed (%d)\n", ret);
-        isInit = true;
-        return;
-    }
+        if (ret != QHYCCD_SUCCESS)
+        {
+            IDLog("Init QHYCCD SDK failed (%d)\n", ret);
+            return;
+        }
 #endif
 
-    //#if defined(__APPLE__)
-    //    char driverSupportPath[128];
-    //    if (getenv("INDIPREFIX") != nullptr)
-    //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
-    //    else
-    //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
-    //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
-    //    IDLog("QHY firmware path: %s\n", driverSupportPath);
-    //    OSXInitQHYCCDFirmware(driverSupportPath);
-    //#endif
+        //#if defined(__APPLE__)
+        //    char driverSupportPath[128];
+        //    if (getenv("INDIPREFIX") != nullptr)
+        //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
+        //    else
+        //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
+        //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
+        //    IDLog("QHY firmware path: %s\n", driverSupportPath);
+        //    OSXInitQHYCCDFirmware(driverSupportPath);
+        //#endif
 
-    // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
+        // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
 #if defined(__APPLE__)
-    OSXInitQHYCCDFirmwareArray();
-    // Wait a bit before calling GetDeviceIDs on MacOS
-    usleep(2000000);
+        OSXInitQHYCCDFirmwareArray();
+        // Wait a bit before calling GetDeviceIDs on MacOS
+        usleep(2000000);
 #endif
 
-    std::vector<std::string> devices = GetDevicesIDs();
-
-    cameraCount = static_cast<int>(devices.size());
-    for (int i = 0; i < cameraCount; i++)
-    {
-        cameras[i] = new QHYCCD(devices[i].c_str());
+        for (const auto &deviceId: GetDevicesIDs())
+        {
+            cameras.push_back(std::unique_ptr<QHYCCD>(new QHYCCD(deviceId.c_str())));
+        }
     }
-    if (cameraCount > 0)
-    {
-        atexit(QhyCCDCleanup);
-        isInit = true;
-    }
-}
 
-struct Loader
-{
-    Loader() { ISInit(); }
+    ~Loader()
+    {
+        ReleaseQHYCCDResource();
+    }
+
+public:
+
+    // Scan for the available devices
+    std::vector<std::string> GetDevicesIDs()
+    {
+        char camid[MAXINDIDEVICE];
+        int deviceCount = 0;
+        std::vector<std::string> devices;
+
+    #if defined(USE_SIMULATION)
+        deviceCount = 2;
+    #else
+        deviceCount = ScanQHYCCD();
+    #endif
+
+        for (int i = 0; i < deviceCount; i++)
+        {
+    #if defined(USE_SIMULATION)
+            int ret = QHYCCD_SUCCESS;
+            snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
+    #else
+            int ret = GetQHYCCDId(i, camid);
+    #endif
+            if (ret == QHYCCD_SUCCESS)
+            {
+                devices.push_back(std::string(camid));
+            }
+            else
+            {
+                IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
+            }
+        }
+
+        return devices;
+    }
 } loader;
 
 QHYCCD::QHYCCD(const char *name) : FilterInterface(this)

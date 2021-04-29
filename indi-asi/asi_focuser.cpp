@@ -24,77 +24,71 @@
 
 #include <cmath>
 #include <cstring>
+#include <deque>
 #include <memory>
 
 #include <termios.h>
 #include <unistd.h>
 
-#define MAX_DEVICES 4
 #define FOCUS_SETTINGS_TAB "Settings"
 
-static int iAvailableFocusersCount;
-static ASIEAF * focusers[MAX_DEVICES];
-
-void ASI_EAF_ISInit()
+static class Loader
 {
-    static bool isInit = false;
-    if (!isInit)
+    std::deque<std::unique_ptr<ASIEAF>> focusers;
+public:
+    Loader()
     {
-        iAvailableFocusersCount = 0;
-
-        iAvailableFocusersCount = EAFGetNum();
-        if (iAvailableFocusersCount > MAX_DEVICES)
-            iAvailableFocusersCount = MAX_DEVICES;
+        int iAvailableFocusersCount = EAFGetNum();
 
         if (iAvailableFocusersCount <= 0)
         {
             IDLog("No ASI EAF detected.");
+            return;
         }
-        else
+
+        int iAvailableFocusersCount_ok = 0;
+        for (int i = 0; i < iAvailableFocusersCount; i++)
         {
-            int iAvailableFocusersCount_ok = 0;
-            for (int i = 0; i < iAvailableFocusersCount; i++)
+            int id;
+            EAF_ERROR_CODE result = EAFGetID(i, &id);
+            if (result != EAF_SUCCESS)
             {
-                int id;
-                EAF_ERROR_CODE result = EAFGetID(i, &id);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
-                    continue;
-                }
-
-                // Open device
-                result = EAFOpen(id);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
-                    continue;
-                }
-
-                EAF_INFO info;
-                result = EAFGetProperty(id, &info);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
-                    continue;
-                }
-                EAFClose(id);
-                focusers[i] = new ASIEAF(id, info.MaxStep);
-                iAvailableFocusersCount_ok++;
+                IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
+                continue;
             }
-            IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
-            if (iAvailableFocusersCount == iAvailableFocusersCount_ok)
-                isInit = true;
-        }
-    }
-}
 
-struct Loader
-{
-    Loader() { ASI_EAF_ISInit(); }
+            // Open device
+            result = EAFOpen(id);
+            if (result != EAF_SUCCESS)
+            {
+                IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
+                continue;
+            }
+
+            EAF_INFO info;
+            result = EAFGetProperty(id, &info);
+            if (result != EAF_SUCCESS)
+            {
+                IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
+                continue;
+            }
+            EAFClose(id);
+
+            std::string name = "ASI EAF";
+
+            if (iAvailableFocusersCount > 1)
+                name += " " + std::to_string(id);
+
+            focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
+            iAvailableFocusersCount_ok++;
+        }
+        IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
+    }
 } loader;
 
-ASIEAF::ASIEAF(int id, const int maxSteps) : m_ID(id), m_MaxSteps(maxSteps)
+ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
+    : m_ID(info.ID)
+    , m_MaxSteps(info.MaxStep)
 {
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
@@ -107,20 +101,13 @@ ASIEAF::ASIEAF(int id, const int maxSteps) : m_ID(id), m_MaxSteps(maxSteps)
     // Just USB
     setSupportedConnections(CONNECTION_NONE);
 
-    strncpy(m_Name, getDefaultName(), MAXINDIDEVICE);
+    setDeviceName(name);
 
-    FocusAbsPosN[0].max = maxSteps;
+    FocusAbsPosN[0].max = m_MaxSteps;
 }
 
 bool ASIEAF::initProperties()
 {
-    if (iAvailableFocusersCount > 1)
-        snprintf(m_Name, MAXINDIDEVICE, "%s %d", getDeviceName(), m_ID + 1);
-    else
-        snprintf(m_Name, MAXINDIDEVICE, "%s", getDeviceName());
-
-    setDeviceName(m_Name);
-
     INDI::Focuser::initProperties();
 
     // Focuser temperature

@@ -33,29 +33,20 @@
 
 #include "config.h"
 
-// Unique pointers
-static std::unique_ptr<LX200Skywalker> telescope;
-
 const char *INFO_TAB = "Info";
 
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
-
-    if (isInit)
-        return;
-
-    isInit = 1;
-    if (telescope.get() == nullptr)
+    std::unique_ptr<LX200Skywalker> telescope;
+public:
+    Loader()
     {
-        LX200Skywalker* myScope = new LX200Skywalker();
-        telescope.reset(myScope);
+        if (telescope.get() == nullptr)
+        {
+            LX200Skywalker* myScope = new LX200Skywalker();
+            telescope.reset(myScope);
+        }
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 /**************************************************

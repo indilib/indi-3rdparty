@@ -25,48 +25,30 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
-#define MAX_DEVICES             4    /* Max device cameraCount */
-
-static int iConnectedST4Count;
-static ASIST4 *st4s[MAX_DEVICES];
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iConnectedST4Count; i++)
+    std::deque<std::unique_ptr<ASIST4>> st4s;
+public:
+    Loader()
     {
-        delete st4s[i];
-    }   
-}
+        int iConnectedST4Count = USB2ST4GetNum();
 
-void ASI_ST4_ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iConnectedST4Count = USB2ST4GetNum();
-        if (iConnectedST4Count > MAX_DEVICES)
-            iConnectedST4Count = MAX_DEVICES;
         if (iConnectedST4Count <= 0)
-            IDLog("No ASI ST4 detected. Power on?");
-        else
         {
-            for (int i = 0; i < iConnectedST4Count; i++)
-            {
-                int id=0;
-                USB2ST4GetID(i, &id);
-                st4s[i] = new ASIST4(id);
-            }
+            IDLog("No ASI ST4 detected. Power on?");
+            return;
         }
 
-        atexit(cleanup);
-        isInit = true;
+        for (int i = 0; i < iConnectedST4Count; i++)
+        {
+            int id=0;
+            USB2ST4GetID(i, &id);
+            st4s.push_back(std::unique_ptr<ASIST4>(new ASIST4(id)));
+        }
     }
-}
-
-struct Loader
-{
-    Loader() { ASI_ST4_ISInit(); }
 } loader;
 
 ASIST4::ASIST4(int id)

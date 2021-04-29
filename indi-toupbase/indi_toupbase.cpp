@@ -35,6 +35,8 @@
 
 #include <math.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
@@ -62,10 +64,6 @@
 #define FMT_YUV422  MAKEFOURCC('V', 'U', 'Y', 'Y')
 #define FMT_YUV444  MAKEFOURCC('Y', '4', '4', '4')
 #define FMT_RGB888  MAKEFOURCC('R', 'G', 'B', '8')
-
-static int iConnectedCamerasCount;
-static XP(DeviceV2) pCameraInfo[CP(MAX)];
-static ToupBase *cameras[CP(MAX)];
 
 /********************************************************************************/
 /* HRESULT                                                                      */
@@ -100,38 +98,25 @@ std::map<int, std::string> ToupBase::errorCodes =
     {0x8007001F, "device not functioning"}
 };
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iConnectedCamerasCount; i++)
+    std::deque<std::unique_ptr<ToupBase>> cameras;
+    XP(DeviceV2) pCameraInfo[CP(MAX)];
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-}
-
-void ToupBase_Init()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+        int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
         if (iConnectedCamerasCount <= 0)
-            IDLog("No Toupcam detected. Power on?");
-        else
         {
-            for (int i = 0; i < iConnectedCamerasCount; i++)
-            {
-                cameras[i] = new ToupBase(&pCameraInfo[i]);
-            }
+            IDLog("No Toupcam detected. Power on?");
+            return;
         }
 
-        atexit(cleanup);
-        isInit = true;
+        for (int i = 0; i < iConnectedCamerasCount; i++)
+        {
+            cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+        }
     }
-}
-
-struct Loader
-{
-    Loader() { ToupBase_Init(); }
 } loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)

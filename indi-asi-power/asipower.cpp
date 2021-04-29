@@ -24,27 +24,14 @@
 #include <pigpiod_if2.h>
 #include <asipower.h>
 
-// We declare an auto pointer to IndiAsiPower
-std::unique_ptr<IndiAsiPower> device;
-
-void ISPoll(void *p);
-
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
-
-    if (isInit == 1)
-        return;
-    if(device.get() == 0)
+    std::unique_ptr<IndiAsiPower> device;
+public:
+    Loader()
     {
-        isInit = 1;
         device.reset(new IndiAsiPower());
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 static void DslrTimer(int pi, unsigned user_gpio, unsigned level, uint32_t tick)

@@ -36,91 +36,67 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
 //#define SIMULATION
-#define MAX_DEVICES 16  /* Max device cameraCount */
 
-static int num_wheels;
-static ASIWHEEL *wheels[MAX_DEVICES];
-
-void ASI_EFW_ISInit()
+static class Loader
 {
-    static bool isInit = false;
-    if (!isInit)
+    std::deque<std::unique_ptr<ASIWHEEL>> wheels;
+public:
+    Loader()
     {
 #ifdef SIMULATION
-        num_wheels = 1;
         EFW_INFO info;
         info.ID = 1;
         strncpy(info.Name, "Simulated EFW8", 64);
         info.slotNum = 0;
-        wheels[0] = new ASIWHEEL(1, info, false);
-        isInit = true;
+        wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, info.Name)));
 #else
-        num_wheels = 0;
-
-        num_wheels = EFWGetNum();
-        if (num_wheels > MAX_DEVICES)
-            num_wheels = MAX_DEVICES;
+        int num_wheels = EFWGetNum();
 
         if (num_wheels <= 0)
         {
             IDLog("No ASI EFW detected.");
+            return;
         }
-        else
+        int num_wheels_ok = 0;
+        for (int i = 0; i < num_wheels; i++)
         {
-            int num_wheels_ok = 0;
-            for (int i = 0; i < num_wheels; i++)
+            int id;
+            EFW_ERROR_CODE result = EFWGetID(i, &id);
+            if (result != EFW_SUCCESS)
             {
-                int id;
-                EFW_ERROR_CODE result = EFWGetID(i, &id);
-                if (result != EFW_SUCCESS)
-                {
-                    IDLog("ERROR: ASI EFW %d EFWGetID error %d.", i + 1, result);
-                    continue;
-                }
-                EFW_INFO info;
-                result = EFWGetProperty(id, &info);
-                if (result != EFW_SUCCESS && result != EFW_ERROR_CLOSED)   // TODO: remove the ERROR_CLOSED hack
-                {
-                    IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
-                    continue;
-                }
-                /* Enumerate FWs if more than one ASI EFW is connected */
-                wheels[i] = new ASIWHEEL(id, info, (bool)(num_wheels - 1));
-                num_wheels_ok++;
+                IDLog("ERROR: ASI EFW %d EFWGetID error %d.", i + 1, result);
+                continue;
             }
-            IDLog("%d ASI EFW attached out of %d detected.", num_wheels_ok, num_wheels);
-            if (num_wheels == num_wheels_ok)
-                isInit = true;
+            EFW_INFO info;
+            result = EFWGetProperty(id, &info);
+            if (result != EFW_SUCCESS && result != EFW_ERROR_CLOSED)   // TODO: remove the ERROR_CLOSED hack
+            {
+                IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
+                continue;
+            }
+            std::string name = "ASI " + std::string(info.Name);
+            if (num_wheels > 1)
+                name += " " + std::to_string(i);
+            wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
+            num_wheels_ok++;
         }
+        IDLog("%d ASI EFW attached out of %d detected.", num_wheels_ok, num_wheels);
 #endif
     }
-}
-
-struct Loader
-{
-    Loader() { ASI_EFW_ISInit(); }
 } loader;
 
-ASIWHEEL::ASIWHEEL(int id, EFW_INFO info, bool enumerate)
+ASIWHEEL::ASIWHEEL(const EFW_INFO &info, const char *name)
 {
-    char str[MAXINDIDEVICE];
-
-    if (enumerate)
-        snprintf(str, MAXINDIDEVICE, "ASI %s %d", info.Name, id);
-    else
-        snprintf(str, MAXINDIDEVICE, "ASI %s", info.Name);
-
-    fw_id              = id;
+    fw_id              = info.ID;
     CurrentFilter      = 0;
     FilterSlotN[0].min = 0;
     FilterSlotN[0].max = 0;
-    strncpy(name, str, MAXINDIDEVICE);
-    setDeviceName(str);
+    setDeviceName(name);
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
-
-    LOGF_DEBUG("FW ID: %d FW Name: %s enumerate? %s", id, info.Name, enumerate ? "true" : "false");
 }
 
 ASIWHEEL::~ASIWHEEL()

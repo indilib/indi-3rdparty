@@ -29,33 +29,24 @@
 #include <algorithm>
 #include <math.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
 #define MAX_CONNECTION_RETRIES  5
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
 #define TEMP_THRESHOLD          .25  /* Differential temperature threshold (C)*/
-#define MAX_DEVICES             4    /* Max device cameraCount */
 
 #define CONTROL_TAB "Controls"
 
-static int iAvailableDevicesCount;
-static ATIKCCD *cameras[MAX_DEVICES] = {nullptr};
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iAvailableDevicesCount; i++)
+    std::deque<std::unique_ptr<ATIKCCD>> cameras;
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-}
-
-void ATIK_CCD_ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iAvailableDevicesCount = 0;
+        int iAvailableDevicesCount = 0;
         std::vector<std::string> cameraNames;
 
         IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
@@ -78,12 +69,7 @@ void ATIK_CCD_ISInit()
         if (iAvailableDevicesCount <= 0)
         {
             IDLog("No Atik devices were enumerated.");
-            iAvailableDevicesCount = 0;
-        }
-        else if (iAvailableDevicesCount > MAX_DEVICES)
-        {
-            IDLog("This driver only supports %d Atik devices.", MAX_DEVICES);
-            iAvailableDevicesCount = MAX_DEVICES;
+            return;
         }
 
         for (int i = 0; i < iAvailableDevicesCount; i++)
@@ -104,25 +90,10 @@ void ATIK_CCD_ISInit()
                 cameraName = std::string(pName) + " " +
                         std::to_string(static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), pName)) + 1);
 
-            cameras[i] = new ATIKCCD(cameraName, i);
+            cameras.push_back(std::unique_ptr<ATIKCCD>(new ATIKCCD(cameraName, i)));
             cameraNames.push_back(pName);
         }
-
-        if (cameraNames.empty())
-        {
-            iAvailableDevicesCount = 0;
-        }
-        else
-        {
-            atexit(cleanup);
-            isInit = true;
-        }
     }
-}
-
-struct Loader
-{
-    Loader() { ATIK_CCD_ISInit(); }
 } loader;
 
 ATIKCCD::ATIKCCD(std::string filterName, int id) : FilterInterface(this), m_iDevice(id)

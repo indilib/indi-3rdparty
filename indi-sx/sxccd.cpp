@@ -34,7 +34,8 @@
 #include "sxconfig.h"
 
 #include <cmath>
-
+#include <deque>
+#include <memory>
 #include <unistd.h>
 
 #define SX_GUIDE_EAST  0x08 /* RA+ */
@@ -44,39 +45,22 @@
 #define SX_CLEAR_NS    0x09
 #define SX_CLEAR_WE    0x06
 
-static int count = 0;
-static SXCCD *cameras[20];
-
 #define TIMER 1000
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < count; i++)
-    {
-        delete cameras[i];
-    }
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
+    std::deque<std::unique_ptr<SXCCD>> cameras;
+public:
+    Loader()
     {
         DEVICE devices[20];
         const char *names[20];
-        count = sxList(devices, names, 20);
+        int count = sxList(devices, names, 20);
         for (int i = 0; i < count; i++)
         {
-            cameras[i] = new SXCCD(devices[i], names[i]);
+            cameras.push_back(std::unique_ptr<SXCCD>(new SXCCD(devices[i], names[i])));
         }
-        atexit(cleanup);
-        isInit = true;
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 void ExposureTimerCallback(void *p)

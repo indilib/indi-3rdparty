@@ -23,6 +23,7 @@
  */
 
 #include <memory>
+#include <deque>
 #include <time.h>
 #include <math.h>
 #include <unistd.h>
@@ -41,37 +42,14 @@
 static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// cameras storage
-static int cameraCount;
-static Sv305CCD *cameras[SVBCAMERA_ID_MAX];
-
-
-
-////////////////////////////////////////////////////////////
-// GLOBAL INDI DRIVER API
-//
-
-
-// clear all cameras
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < cameraCount; i++)
+    std::deque<std::unique_ptr<Sv305CCD>> cameras;
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-}
-
-
-// driver init
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        cameraCount = 0;
-
         // enumerate cameras
-        cameraCount=SVBGetNumOfConnectedCameras();
+        int cameraCount = SVBGetNumOfConnectedCameras();
         if(cameraCount < 1)
         {
             IDLog("Error, no camera found\n");
@@ -83,17 +61,9 @@ void ISInit()
         // create Sv305CCD object for each camera
         for(int i = 0; i < cameraCount; i++)
         {
-            cameras[i] = new Sv305CCD(i);
+            cameras.push_back(std::unique_ptr<Sv305CCD>(new Sv305CCD(i)));
         }
-
-        atexit(cleanup);
-        isInit = true;
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 //////////////////////////////////////////////////

@@ -24,6 +24,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <deque>
 
 #include <indidevapi.h>
 #include <eventloop.h>
@@ -37,23 +38,12 @@
 #define MAX_Y_BIN      16   /* Max Vertical binning */
 #define MAX_PIXELS     4096 /* Max number of pixels in one dimension */
 #define TEMP_THRESHOLD .25  /* Differential temperature threshold (C)*/
-#define MAX_DEVICES    20   /* Max device cameraCount */
 
-static int cameraCount;
-static FishCampCCD *cameras[MAX_DEVICES];
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < cameraCount; i++)
-    {
-        delete cameras[i];
-    }
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
+    std::deque<std::unique_ptr<FishCampCCD>> cameras;
+public:
+    Loader()
     {
         // initialize the driver framework
         IDLog("About to call fcUsb_init()\n");
@@ -63,8 +53,7 @@ void ISInit()
         fcUsb_setLogging(false);
 
         IDLog("About to call find Cameras\n");
-        cameraCount = -1;
-        cameraCount = fcUsb_FindCameras();
+        int cameraCount = fcUsb_FindCameras();
 
         if(cameraCount == -1)
         {
@@ -75,16 +64,8 @@ void ISInit()
         IDLog("Found %d fishcamp cameras.\n", cameraCount);
 
         for (int i = 0; i < cameraCount; i++)
-            cameras[i] = new FishCampCCD(i + 1);
-
-        atexit(cleanup);
-        isInit = true;
+            cameras.push_back(std::unique_ptr<FishCampCCD>(new FishCampCCD(i + 1)));
     }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
 } loader;
 
 FishCampCCD::FishCampCCD(int CamNum)
