@@ -38,7 +38,7 @@
 // to its variant (indi_mi_ccd_usb and indi_mi_ccd_eth). The main function will
 // fetch from std args the binary name and ISInit will create the appropriate
 // driver afterwards.
-extern char *me;
+extern char *__progname;
 
 static class Loader
 {
@@ -50,7 +50,7 @@ public:
 
 Loader::Loader()
 {
-    if (strstr(me, "indi_mi_ccd_eth"))
+    if (strstr(__progname, "indi_mi_ccd_eth"))
     {
         gxccd_enumerate_eth([](int id)
         {
@@ -59,7 +59,7 @@ Loader::Loader()
     }
     else
     {
-        // "me" shoud be indi_mi_ccd_usb, however accept all names as USB
+        // "__progname" shoud be indi_mi_ccd_usb, however accept all names as USB
         gxccd_enumerate_usb([](int id)
         {
             loader.cameras.push_back(std::unique_ptr<MICCD>(new MICCD(id, false)));
