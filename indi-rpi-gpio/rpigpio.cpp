@@ -25,27 +25,7 @@
 #include <rpigpio.h>
 
 // We declare an auto pointer to IndiRpiGpio
-std::unique_ptr<IndiRpiGpio> device;
-
-void ISPoll(void *p);
-
-void ISInit()
-{
-    static int isInit = 0;
-
-    if (isInit == 1)
-        return;
-    if(device.get() == 0)
-    {
-        isInit = 1;
-        device.reset(new IndiRpiGpio());
-    }
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
-} loader;
+static std::unique_ptr<IndiRpiGpio> device(new IndiRpiGpio());
 
 static void TimerCallback(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
 {
