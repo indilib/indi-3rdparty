@@ -39,21 +39,7 @@ extern "C" {
 
 #include "config.h"
 
-std::unique_ptr<indi_webcam> webcam(new indi_webcam());
-
-void ISInit()
-{
-    static int isInit =0;
-    if (isInit == 1)
-        return;
-     isInit = 1;
-     if(webcam.get() == 0) webcam.reset(new indi_webcam());
-}
-
-struct Loader
-{
-    Loader() { ISInit(); }
-} loader;
+static std::unique_ptr<indi_webcam> webcam(new indi_webcam());
 
 //Note this is how we get information about AVFoundation Devices
 //FFMpeg does not provide a way to programmatically get them, but there is a way to log them.
