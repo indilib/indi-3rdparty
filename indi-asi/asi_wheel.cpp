@@ -98,9 +98,13 @@ void ASI_EFW_ISInit()
     }
 }
 
+struct Loader
+{
+    Loader() { ASI_EFW_ISInit(); }
+} loader;
+
 void ISGetProperties(const char *dev)
 {
-    ASI_EFW_ISInit();
     for (int i = 0; i < num_wheels; i++)
     {
         ASIWHEEL *wheel = wheels[i];
@@ -115,7 +119,6 @@ void ISGetProperties(const char *dev)
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
-    ASI_EFW_ISInit();
     for (int i = 0; i < num_wheels; i++)
     {
         ASIWHEEL *wheel = wheels[i];
@@ -130,7 +133,6 @@ void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names
 
 void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
 {
-    ASI_EFW_ISInit();
     for (int i = 0; i < num_wheels; i++)
     {
         ASIWHEEL *wheel = wheels[i];
@@ -145,7 +147,6 @@ void ISNewText(const char *dev, const char *name, char *texts[], char *names[], 
 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
-    ASI_EFW_ISInit();
     for (int i = 0; i < num_wheels; i++)
     {
         ASIWHEEL *wheel = wheels[i];
@@ -173,7 +174,6 @@ void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], 
 
 void ISSnoopDevice(XMLEle *root)
 {
-    ASI_EFW_ISInit();
     for (int i = 0; i < num_wheels; i++)
     {
         ASIWHEEL *wheel = wheels[i];
