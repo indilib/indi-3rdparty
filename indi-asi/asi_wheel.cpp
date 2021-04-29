@@ -228,7 +228,6 @@ bool ASIWHEEL::updateProperties()
 
 bool ASIWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    fprintf(stderr, "%s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
         if (!strcmp(name, UniDirectionalSP.name))
