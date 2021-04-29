@@ -42,7 +42,7 @@
 #define FOCUS_TIMER  50
 #define MAX_RETRIES  3
 
-extern char * me;
+extern char * __progname;
 
 
 typedef struct
@@ -72,7 +72,7 @@ public:
         : context(gp_context_new())
     {
         // Let's just create one camera for now
-        if (!strcmp(me, "indi_gphoto_ccd"))
+        if (!strcmp(__progname, "indi_gphoto_ccd"))
         {
             cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD()));
             return;
@@ -122,7 +122,7 @@ public:
 
             // If we're NOT using the Generic INDI GPhoto drievr
             // then let's search for multiple cameras
-            if (strcmp(me, "indi_gphoto_ccd"))
+            if (strcmp(__progname, "indi_gphoto_ccd"))
             {
                 char prefix[MAXINDINAME];
                 char name[MAXINDINAME];
@@ -231,7 +231,7 @@ const char * GPhotoCCD::getDefaultName()
 
 bool GPhotoCCD::initProperties()
 {
-    /*if (strcmp(me, "indi_gphoto_ccd"))
+    /*if (strcmp(__progname, "indi_gphoto_ccd"))
     {
         char prefix[MAXINDINAME];
         modelFound = false;
