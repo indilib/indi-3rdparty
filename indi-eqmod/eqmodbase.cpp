@@ -52,9 +52,6 @@ using namespace INDI::AlignmentSubsystem;
 #include <libnova/transform.h>
 #include <libnova/utility.h>
 
-// We declare an auto pointer to EQMod.
-static std::unique_ptr<EQMod> eqmod(new EQMod());
-
 #define GOTO_RATE      2        /* slew rate, degrees/s */
 #define SLEW_RATE      0.5      /* slew rate, degrees/s */
 #define FINE_SLEW_RATE 0.1      /* slew rate, degrees/s */
