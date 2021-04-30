@@ -38,36 +38,6 @@
 static int nplots = 1;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
 
-void ISGetProperties(const char *dev)
-{
-    array->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    array->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(    const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    array->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    array->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-    array->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-void ISSnoopDevice (XMLEle *root)
-{
-    array->ISSnoopDevice(root);
-}
-
 std::string regex_replace_compat(const std::string &input, const std::string &pattern, const std::string &replace)
 {
     std::stringstream s;

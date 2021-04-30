@@ -16,37 +16,6 @@ using namespace INDI::AlignmentSubsystem;
 // We declare an auto pointer to NexStarEvo.
 std::unique_ptr<NexStarEvo> telescope_nse(new NexStarEvo());
 
-void ISGetProperties(const char *dev)
-{
-    telescope_nse->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    telescope_nse->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    telescope_nse->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    telescope_nse->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    telescope_nse->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    telescope_nse->ISSnoopDevice(root);
-}
-
 // One definition rule (ODR) constants
 // AUX commands use 24bit integer as a representation of angle in units of
 // fractional revolutions. Thus 2^24 steps makes full revolution.

@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <indilogger.h>
 #include <memory>
+#include <deque>
 
 #define min(a, b)               \
     ({                          \
@@ -37,140 +38,30 @@
 #define MAX_FRAME_SIZE (SUBFRAME_SIZE * 16)
 #define SPECTRUM_SIZE  (256)
 
-static int iNumofConnectedSpectrographs;
-static LIMESDR *receivers[MAX_DEVICES];
-static lms_info_str_t *lime_dev_list;
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+public:
+    std::deque<std::unique_ptr<LIMESDR>> receivers;
+    lms_info_str_t *lime_dev_list;
+public:
+    Loader()
     {
-        delete receivers[i];
-    }
-}
+        int iNumofConnectedSpectrographs = LMS_GetDeviceList(lime_dev_list);
 
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iNumofConnectedSpectrographs = 0;
-
-        iNumofConnectedSpectrographs = LMS_GetDeviceList(lime_dev_list);
-        if (iNumofConnectedSpectrographs > MAX_DEVICES)
-            iNumofConnectedSpectrographs = MAX_DEVICES;
         if (iNumofConnectedSpectrographs <= 0)
         {
             //Try sending IDMessage as well?
             IDLog("No LIMESDR receivers detected. Power on?");
             IDMessage(nullptr, "No LIMESDR receivers detected. Power on?");
+            return;
         }
-        else
+
+        for (int i = 0; i < iNumofConnectedSpectrographs; i++)
         {
-            for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-            {
-                receivers[i] = new LIMESDR(i);
-            }
-        }
-
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-
-    if (iNumofConnectedSpectrographs == 0)
-    {
-        IDMessage(nullptr, "No LIMESDR receivers detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
+            receivers.push_back(std::unique_ptr<LIMESDR>(new LIMESDR(i)));
         }
     }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        if (dev == nullptr || !strcmp(dev, receiver->getDeviceName()))
-        {
-            receiver->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    for (int i = 0; i < iNumofConnectedSpectrographs; i++)
-    {
-        LIMESDR *receiver = receivers[i];
-        receiver->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 LIMESDR::LIMESDR(uint32_t index)
 {
@@ -187,7 +78,7 @@ LIMESDR::LIMESDR(uint32_t index)
 ***************************************************************************************/
 bool LIMESDR::Connect()
 {
-    int r = LMS_Open(&lime_dev, lime_dev_list[spectrographIndex], NULL);
+    int r = LMS_Open(&lime_dev, loader.lime_dev_list[spectrographIndex], NULL);
     if (r < 0)
     {
         LOGF_ERROR("Failed to open limesdr device index %d.", spectrographIndex);

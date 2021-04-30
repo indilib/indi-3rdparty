@@ -25,135 +25,31 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
-#define MAX_DEVICES             4    /* Max device cameraCount */
-
-static int iConnectedST4Count;
-static ASIST4 *st4s[MAX_DEVICES];
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iConnectedST4Count; i++)
+    std::deque<std::unique_ptr<ASIST4>> st4s;
+public:
+    Loader()
     {
-        delete st4s[i];
-    }   
-}
+        int iConnectedST4Count = USB2ST4GetNum();
 
-void ASI_ST4_ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iConnectedST4Count = USB2ST4GetNum();
-        if (iConnectedST4Count > MAX_DEVICES)
-            iConnectedST4Count = MAX_DEVICES;
         if (iConnectedST4Count <= 0)
+        {
             IDLog("No ASI ST4 detected. Power on?");
-        else
-        {
-            for (int i = 0; i < iConnectedST4Count; i++)
-            {
-                int id=0;
-                USB2ST4GetID(i, &id);
-                st4s[i] = new ASIST4(id);
-            }
+            return;
         }
 
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ASI_ST4_ISInit();
-
-    if (iConnectedST4Count == 0)
-    {
-        IDMessage(nullptr, "No ASI ST4 detected.");
-        return;
-    }
-
-    for (int i = 0; i < iConnectedST4Count; i++)
-    {
-        ASIST4 *st4 = st4s[i];
-        if (dev == nullptr || !strcmp(dev, st4->name))
+        for (int i = 0; i < iConnectedST4Count; i++)
         {
-            st4->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
+            int id=0;
+            USB2ST4GetID(i, &id);
+            st4s.push_back(std::unique_ptr<ASIST4>(new ASIST4(id)));
         }
     }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ASI_ST4_ISInit();
-    for (int i = 0; i < iConnectedST4Count; i++)
-    {
-        ASIST4 *st4 = st4s[i];
-        if (dev == nullptr || !strcmp(dev, st4->name))
-        {
-            st4->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ASI_ST4_ISInit();
-    for (int i = 0; i < iConnectedST4Count; i++)
-    {
-        ASIST4 *st4 = st4s[i];
-        if (dev == nullptr || !strcmp(dev, st4->name))
-        {
-            st4->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ASI_ST4_ISInit();
-    for (int i = 0; i < iConnectedST4Count; i++)
-    {
-        ASIST4 *st4 = st4s[i];
-        if (dev == nullptr || !strcmp(dev, st4->name))
-        {
-            st4->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ASI_ST4_ISInit();
-
-    for (int i = 0; i < iConnectedST4Count; i++)
-    {
-        ASIST4 *st4 = st4s[i];
-        st4->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 ASIST4::ASIST4(int id)
 {

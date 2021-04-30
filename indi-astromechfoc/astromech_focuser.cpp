@@ -37,39 +37,6 @@ static std::unique_ptr<astromechanics_foc> Astromechanics_foc(new astromechanics
 #define FOC_POSMAX_HARDWARE 9999
 #define FOC_POSMIN_HARDWARE 0
 
-void ISGetProperties(const char *dev)
-{
-    Astromechanics_foc->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    Astromechanics_foc->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    Astromechanics_foc->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    Astromechanics_foc->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
 bool astromechanics_foc::Disconnect()
 {
     SetApperture(0);

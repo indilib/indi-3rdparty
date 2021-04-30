@@ -29,6 +29,8 @@
 #include <algorithm>
 #include <stream/streammanager.h>
 
+#include <deque>
+#include <memory>
 #include <math.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -40,11 +42,8 @@
 #define FOCUS_TIMER  50
 #define MAX_RETRIES  3
 
-extern char * me;
+extern char * __progname;
 
-static int cameraCount = 0;
-static GPhotoCCD * cameras[MAX_DEVICES];
-static GPContext * context = gp_context_new();
 
 typedef struct
 {
@@ -62,236 +61,133 @@ static CamDriverInfo camInfos[] = { { "indi_gphoto_ccd", "GPhoto CCD", "GPhoto" 
     { nullptr, nullptr, nullptr }
 };
 
-/**********************************************************
- *
- *  IMPORRANT: List supported camera models in initializer of deviceTypes structure
- *
- **********************************************************/
-
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < cameraCount; i++)
-    {
-        delete cameras[i];
-    }
-}
+public:
+    std::deque<std::unique_ptr<GPhotoCCD>> cameras;
+    GPContext *context;
 
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
+public:
+    Loader()
+        : context(gp_context_new())
     {
         // Let's just create one camera for now
-        if (!strcmp(me, "indi_gphoto_ccd"))
+        if (!strcmp(__progname, "indi_gphoto_ccd"))
         {
-            isInit      = true;
-            cameraCount = 1;
-            cameras[0]  = new GPhotoCCD();
-            atexit(cleanup);
+            cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD()));
+            return;
         }
-        else
+
+        CameraList * list;
+        /* Detect all the cameras that can be autodetected... */
+        int ret = gp_list_new(&list);
+        if (ret < GP_OK)
         {
-            CameraList * list;
-            /* Detect all the cameras that can be autodetected... */
-            int ret = gp_list_new(&list);
-            if (ret < GP_OK)
-            {
-                // Use Legacy Mode
-                IDLog("Failed to initilize list in libgphoto2\n");
-                return;
-            }
+            // Use Legacy Mode
+            IDLog("Failed to initilize list in libgphoto2\n");
+            return;
+        }
 
-            const char * model, *port;
-            gp_list_reset(list);
-            cameraCount = gp_camera_autodetect(list, context);
-            /* Now open all cameras we autodected for usage */
-            IDLog("Number of cameras detected: %d.\n", cameraCount);
+        const char * model, *port;
+        gp_list_reset(list);
+        int availableCameras = gp_camera_autodetect(list, context);
+        /* Now open all cameras we autodected for usage */
+        IDLog("Number of cameras detected: %d.\n", availableCameras);
 
-            if (cameraCount == 0)
-            {
-                IDLog("Failed to detect any cameras. Check power and make sure camera is not mounted by other programs "
-                      "and try again.\n");
-                // Use Legacy Mode
+        if (availableCameras == 0)
+        {
+            IDLog("Failed to detect any cameras. Check power and make sure camera is not mounted by other programs "
+                    "and try again.\n");
+            // Use Legacy Mode
 #if 0
-                IDLog("No cameras detected. Using legacy mode...");
-                cameraCount = 1;
-                cameras[0] = new GPhotoCCD();
-                atexit(cleanup);
-                isInit = true;
+            IDLog("No cameras detected. Using legacy mode...");
+            cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD()));
 #endif
-                return;
-            }
+            return;
+        }
 
-            int availableCameras = cameraCount;
-            int cameraIndex = 0;
-            cameraCount = 0;
+        int cameraIndex = 0;
 
-            std::vector<std::string> cameraNames;
+        std::vector<std::string> cameraNames;
 
-            while (availableCameras > 0)
+        while (availableCameras > 0)
+        {
+            gp_list_get_name(list, cameraIndex, &model);
+            gp_list_get_value(list, cameraIndex, &port);
+
+            IDLog("Detected camera model %s on port %s\n", model, port);
+
+            cameraIndex++;
+            availableCameras--;
+
+            // If we're NOT using the Generic INDI GPhoto drievr
+            // then let's search for multiple cameras
+            if (strcmp(__progname, "indi_gphoto_ccd"))
             {
-                gp_list_get_name(list, cameraIndex, &model);
-                gp_list_get_value(list, cameraIndex, &port);
+                char prefix[MAXINDINAME];
+                char name[MAXINDINAME];
+                bool modelFound = false;
 
-                IDLog("Detected camera model %s on port %s\n", model, port);
-
-                cameraIndex++;
-                availableCameras--;
-
-                // If we're NOT using the Generic INDI GPhoto drievr
-                // then let's search for multiple cameras
-                if (strcmp(me, "indi_gphoto_ccd"))
+                for (int j = 0; camInfos[j].exec != nullptr; j++)
                 {
-                    char prefix[MAXINDINAME];
-                    char name[MAXINDINAME];
-                    bool modelFound = false;
-
-                    for (int j = 0; camInfos[j].exec != nullptr; j++)
+                    if (strstr(model, camInfos[j].model))
                     {
-                        if (strstr(model, camInfos[j].model))
-                        {
-                            strncpy(prefix, camInfos[j].driver, MAXINDINAME);
+                        strncpy(prefix, camInfos[j].driver, MAXINDINAME);
 
-                            // If if the model was already registered for a prior camera in case we are using
-                            // two identical models
-                            if (std::find(cameraNames.begin(), cameraNames.end(), camInfos[j].model) == cameraNames.end())
-                                snprintf(name, MAXINDIDEVICE, "%s %s", prefix, model + strlen(camInfos[j].model) + 1);
-                            else
-                                snprintf(name, MAXINDIDEVICE, "%s %s %d", prefix, model + strlen(camInfos[j].model) + 1,
-                                         static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), camInfos[j].model)) + 1);
-                            cameras[cameraCount] = new GPhotoCCD(model, port);
-                            cameras[cameraCount]->setDeviceName(name);
-                            cameraCount++;
-                            modelFound = true;
-                            // Store camera model in list to check for duplicates
-                            cameraNames.push_back(camInfos[j].model);
-                            break;
-                        }
+                        // If if the model was already registered for a prior camera in case we are using
+                        // two identical models
+                        if (std::find(cameraNames.begin(), cameraNames.end(), camInfos[j].model) == cameraNames.end())
+                            snprintf(name, MAXINDIDEVICE, "%s %s", prefix, model + strlen(camInfos[j].model) + 1);
+                        else
+                            snprintf(name, MAXINDIDEVICE, "%s %s %d", prefix, model + strlen(camInfos[j].model) + 1,
+                                        static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), camInfos[j].model)) + 1);
+
+                        std::unique_ptr<GPhotoCCD> camera(new GPhotoCCD(model, port));
+                        camera->setDeviceName(name);
+                        cameras.push_back(std::move(camera));
+
+                        modelFound = true;
+                        // Store camera model in list to check for duplicates
+                        cameraNames.push_back(camInfos[j].model);
+                        break;
                     }
+                }
 
-                    if (modelFound == false)
+                if (modelFound == false)
+                {
+                    IDLog("Failed to find model %s in supported cameras.\n", model);
+                    // If we are no cameras left
+                    // Let us use the generic model name
+                    // This is a libgphoto2 bug for some cameras which model does not correspond
+                    // to the actual make of the camera but rather a generic class designation is given (e.g. PTP USB Camera)
+                    if (availableCameras == 0)
                     {
-                        IDLog("Failed to find model %s in supported cameras.\n", model);
-                        // If we are no cameras left
-                        // Let us use the generic model name
-                        // This is a libgphoto2 bug for some cameras which model does not correspond
-                        // to the actual make of the camera but rather a generic class designation is given (e.g. PTP USB Camera)
-                        if (availableCameras == 0)
+                        IDLog("Falling back to generic name.\n");
+                        for (int j = 0; camInfos[j].exec != nullptr; j++)
                         {
-                            IDLog("Falling back to generic name.\n");
-                            for (int j = 0; camInfos[j].exec != nullptr; j++)
+                            if (!strcmp(camInfos[j].exec, me))
                             {
-                                if (!strcmp(camInfos[j].exec, me))
-                                {
-                                    snprintf(name, MAXINDIDEVICE, "%s", camInfos[j].model);
-                                    cameras[cameraCount] = new GPhotoCCD(model, port);
-                                    cameras[cameraCount]->setDeviceName(name);
-                                    cameraCount++;
-                                }
+                                snprintf(name, MAXINDIDEVICE, "%s", camInfos[j].model);
+                                std::unique_ptr<GPhotoCCD> camera(new GPhotoCCD(model, port));
+                                camera->setDeviceName(name);
+                                cameras.push_back(std::move(camera));
                             }
                         }
                     }
                 }
-                else
-                {
-                    cameras[cameraCount++] = new GPhotoCCD(model, port);
-                }
             }
-            atexit(cleanup);
-            isInit = true;
+            else
+            {
+                cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD(model, port)));
+            }
         }
     }
-}
 
-void ISGetProperties(const char * dev)
-{
-    ISInit();
-
-    if (cameraCount == 0)
+    ~Loader()
     {
-        IDMessage(nullptr, "No cameras detected.Check power and make sure camera is not mounted by other programs and try again.");
-        return;
+        // TODO free GPContext
     }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GPhotoCCD * camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GPhotoCCD * camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char * dev, const char * name, char * texts[], char * names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GPhotoCCD * camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char * dev, const char * name, double values[], char * names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GPhotoCCD * camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char * dev, const char * name, int sizes[], int blobsizes[], char * blobs[], char * formats[],
-               char * names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle * root)
-{
-    ISInit();
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GPhotoCCD * camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 //==========================================================================
 GPhotoCCD::GPhotoCCD() : FI(this)
@@ -335,7 +231,7 @@ const char * GPhotoCCD::getDefaultName()
 
 bool GPhotoCCD::initProperties()
 {
-    /*if (strcmp(me, "indi_gphoto_ccd"))
+    /*if (strcmp(__progname, "indi_gphoto_ccd"))
     {
         char prefix[MAXINDINAME];
         modelFound = false;
@@ -983,9 +879,9 @@ bool GPhotoCCD::Connect()
     {
         // Regular detect
         if (port[0] == '\0')
-            gphotodrv = gphoto_open(camera, context, nullptr, nullptr, shutter_release_port);
+            gphotodrv = gphoto_open(camera, loader.context, nullptr, nullptr, shutter_release_port);
         else
-            gphotodrv = gphoto_open(camera, context, model, port, shutter_release_port);
+            gphotodrv = gphoto_open(camera, loader.context, model, port, shutter_release_port);
         if (gphotodrv == nullptr)
         {
             LOG_ERROR("Can not open camera: Power OK? If camera is auto-mounted as external disk "

@@ -35,6 +35,8 @@
 
 #include <math.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
@@ -62,10 +64,6 @@
 #define FMT_YUV422  MAKEFOURCC('V', 'U', 'Y', 'Y')
 #define FMT_YUV444  MAKEFOURCC('Y', '4', '4', '4')
 #define FMT_RGB888  MAKEFOURCC('R', 'G', 'B', '8')
-
-static int iConnectedCamerasCount;
-static XP(DeviceV2) pCameraInfo[CP(MAX)];
-static ToupBase *cameras[CP(MAX)];
 
 /********************************************************************************/
 /* HRESULT                                                                      */
@@ -100,125 +98,26 @@ std::map<int, std::string> ToupBase::errorCodes =
     {0x8007001F, "device not functioning"}
 };
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iConnectedCamerasCount; i++)
+    std::deque<std::unique_ptr<ToupBase>> cameras;
+    XP(DeviceV2) pCameraInfo[CP(MAX)];
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-}
-
-void ToupBase_Init()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+        int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
         if (iConnectedCamerasCount <= 0)
+        {
             IDLog("No Toupcam detected. Power on?");
-        else
-        {
-            for (int i = 0; i < iConnectedCamerasCount; i++)
-            {
-                cameras[i] = new ToupBase(&pCameraInfo[i]);
-            }
+            return;
         }
 
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ToupBase_Init();
-
-    if (iConnectedCamerasCount == 0)
-    {
-        IDMessage(nullptr, "No Toupcam detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
+        for (int i = 0; i < iConnectedCamerasCount; i++)
         {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
+            cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
         }
     }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ToupBase_Init();
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {

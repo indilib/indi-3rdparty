@@ -52,47 +52,6 @@ static std::map<std::string, char> PARAMETERS = {
 std::unique_ptr<ShelyakSpox>
     shelyakSpox(new ShelyakSpox()); // create std:unique_ptr (smart pointer) to  our spectrograph object
 
-void ISGetProperties(const char *dev)
-{
-    shelyakSpox->ISGetProperties(dev);
-}
-
-/* The next 4 functions are executed when the indiserver requests a change of
- * one of the properties. We pass the request on to our spectrograph object.
- */
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    shelyakSpox->ISNewSwitch(dev, name, states, names, num);
-}
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    shelyakSpox->ISNewText(dev, name, texts, names, num);
-}
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    shelyakSpox->ISNewNumber(dev, name, values, names, num);
-}
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-/* This function is fired when a property we are snooping on is changed. We
- * pass it on to our spectrograph object.
- */
-void ISSnoopDevice(XMLEle *root)
-{
-    shelyakSpox->ISSnoopDevice(root);
-}
-
 ShelyakSpox::ShelyakSpox()
 {
     PortFD = -1;

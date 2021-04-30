@@ -29,15 +29,13 @@
 class ASIEAF : public INDI::Focuser
 {
     public:
-        ASIEAF(int id, const int maxSteps);
+        ASIEAF(const EAF_INFO &info, const char *name);
         virtual ~ASIEAF() override = default;
 
         const char * getDefaultName() override;
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
-
-        char m_Name[MAXINDINAME];
 
     protected:
         virtual bool Connect() override;

@@ -35,74 +35,22 @@
 
 #include "config.h"
 
-// Unique pointers
-static std::unique_ptr<LX200StarGo> telescope;
-static std::unique_ptr<LX200StarGoFocuser> focuserAux1;
-
 const char *RA_DEC_TAB = "RA / DEC";
 
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
+public:
+    std::unique_ptr<LX200StarGo> telescope;
+    std::unique_ptr<LX200StarGoFocuser> focuserAux1;
 
-    if (isInit)
-        return;
-
-    isInit = 1;
-    if (telescope.get() == nullptr)
+public:
+    Loader()
     {
         LX200StarGo* myScope = new LX200StarGo();
         telescope.reset(myScope);
         focuserAux1.reset(new LX200StarGoFocuser(myScope, "AUX1 Focuser"));
     }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    telescope->ISGetProperties(dev);
-    //    focuser->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewSwitch(dev, name, states, names, n);
-    focuserAux1->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewText(dev, name, texts, names, n);
-    //    focuser->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewNumber(dev, name, values, names, n);
-    focuserAux1->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-    telescope->ISSnoopDevice(root);
-    //    focuser->ISSnoopDevice(root);
-}
+} loader;
 
 /**************************************************
 *** LX200 Generic Implementation
@@ -312,7 +260,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
             if (IUUpdateSwitch(&Aux1FocuserSP, states, names, n) < 0)
                 return false;
             bool enabled = (IUFindOnSwitchIndex(&Aux1FocuserSP) == 0);
-            if (focuserAux1->activate(enabled))
+            if (loader.focuserAux1->activate(enabled))
             {
                 Aux1FocuserSP.s = enabled ? IPS_OK : IPS_IDLE;
                 IDSetSwitch(&Aux1FocuserSP, nullptr);
@@ -462,7 +410,7 @@ bool LX200StarGo::initProperties()
                        IP_RW, 60, IPS_OK);
 
     // focuser on AUX1 port
-    focuserAux1->initProperties("AUX1 Focuser");
+    loader.focuserAux1->initProperties("AUX1 Focuser");
 
     return true;
 }
@@ -516,12 +464,12 @@ bool LX200StarGo::Connect()
         return false;
 
     // activate focuser AUX1 if the switch is set to "activated"
-    return focuserAux1->activate((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
+    return loader.focuserAux1->activate((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
 }
 
 bool LX200StarGo::Disconnect()
 {
-    focuserAux1->activate(false);
+    loader.focuserAux1->activate(false);
     return DefaultDevice::Disconnect();
 }
 
@@ -616,8 +564,8 @@ bool LX200StarGo::ReadScopeStatus()
 
     LOG_DEBUG("################################ ReadScopeStatus (finish) ###############################");
 
-    if (focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
-        return focuserAux1.get()->ReadFocuserStatus();
+    if (loader.focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
+        return loader.focuserAux1.get()->ReadFocuserStatus();
     else
         return true;
 }
@@ -1131,7 +1079,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
 
-    focuserAux1->saveConfigItems(fp);
+    loader.focuserAux1->saveConfigItems(fp);
 
     return LX200Telescope::saveConfigItems(fp);
 }
