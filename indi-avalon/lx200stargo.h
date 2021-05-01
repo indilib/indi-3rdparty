@@ -146,8 +146,6 @@ class LX200StarGo : public LX200Telescope
         ISwitchVectorProperty MeridianFlipModeSP;
         ISwitch MeridianFlipModeS[3];
 
-        ISwitchVectorProperty MeridianFlipEnabledSP;
-        ISwitch MeridianFlipEnabledS[2];
         ISwitchVectorProperty MeridianFlipForcedSP;
         ISwitch MeridianFlipForcedS[2];
 
@@ -169,6 +167,7 @@ class LX200StarGo : public LX200Telescope
         virtual bool Disconnect() override;
 
         // StarGo stuff
+        virtual void getStarGoBasicData();
         virtual bool syncHomePosition();
         bool slewToHome(ISState *states, char *names[], int n);
         bool setParkPosition(ISState *states, char *names[], int n);
@@ -252,6 +251,9 @@ class LX200StarGo : public LX200Telescope
         // tracking adjustment
         bool setTrackingAdjustment(double adjustRA);
         bool getTrackingAdjustment(double *valueRA);
+
+        // AUX1 focuser
+        bool activateFocuserAux1(bool activate);
 
 };
 inline bool LX200StarGo::sendQuery(const char* cmd, char* response, int wait)
