@@ -47,7 +47,7 @@ public:
 
     bool isConnected();
 
-    bool activate(bool enabled);
+    bool activate(bool activate);
 
     bool saveConfigItems(FILE *fp) override;
 
@@ -69,9 +69,6 @@ protected:
     IPState moveFocuserRelative(int relativePosition);
     bool AbortFocuser() override;
     IPState syncFocuser(int absolutePosition);
-
-    INumberVectorProperty FocusSyncPosNP;
-    INumber FocusSyncPosN[1];
 
     uint32_t targetFocuserPosition;
     bool startMovingFocuserInward;
