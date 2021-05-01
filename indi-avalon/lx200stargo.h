@@ -146,9 +146,6 @@ class LX200StarGo : public LX200Telescope
         ISwitchVectorProperty MeridianFlipModeSP;
         ISwitch MeridianFlipModeS[3];
 
-        ISwitchVectorProperty MeridianFlipForcedSP;
-        ISwitch MeridianFlipForcedS[2];
-
         // configurable delay between two commands to avoid flooding StarGO
         INumberVectorProperty MountRequestDelayNP;
         INumber MountRequestDelayN[1];

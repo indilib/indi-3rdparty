@@ -278,7 +278,7 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         {
             if (IUUpdateSwitch(&Aux1FocuserSP, states, names, n) < 0)
                 return false;
-            bool activated = (IUFindOnSwitchIndex(&Aux1FocuserSP) == 0);
+            bool activated = (IUFindOnSwitchIndex(&Aux1FocuserSP) == DefaultDevice::INDI_ENABLED);
             if (activateFocuserAux1(activated))
             {
                 Aux1FocuserSP.s = activated ? IPS_OK : IPS_IDLE;
@@ -377,8 +377,8 @@ bool LX200StarGo::initProperties()
     /* Make sure to init parent properties first */
     if (!LX200Telescope::initProperties()) return false;
 
-    IUFillSwitch(&Aux1FocuserS[0], "AUX1_FOCUSER_ON", "On", ISS_OFF);
-    IUFillSwitch(&Aux1FocuserS[1], "AUX1_FOCUSER_OFF", "Off", ISS_ON);
+    IUFillSwitch(&Aux1FocuserS[DefaultDevice::INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&Aux1FocuserS[DefaultDevice::INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&Aux1FocuserSP, Aux1FocuserS, 2, getDeviceName(), "AUX1_FOCUSER_CONTROL", "AUX1 Focuser",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
@@ -493,7 +493,7 @@ bool LX200StarGo::Connect()
         return false;
 
     // activate focuser AUX1 if the switch is set to "activated"
-    return activateFocuserAux1((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
+    return activateFocuserAux1((IUFindOnSwitchIndex(&Aux1FocuserSP) == DefaultDevice::INDI_ENABLED));
 }
 
 bool LX200StarGo::Disconnect()
