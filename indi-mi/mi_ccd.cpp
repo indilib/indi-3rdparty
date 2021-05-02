@@ -28,6 +28,7 @@
 #include <math.h>
 #include <deque>
 #include <memory>
+#include <utility>
 
 #define TEMP_THRESHOLD  0.2  /* Differential temperature threshold (°C) */
 #define TEMP_COOLER_OFF 100  /* High enough temperature for the camera cooler to turn off (°C) */
@@ -42,10 +43,14 @@ extern char *__progname;
 
 static class Loader
 {
-public:
     std::deque<std::unique_ptr<MICCD>> cameras;
+
 public:
     Loader();
+
+public:
+    std::deque<std::pair<int /* id */, bool /* eth */>> initCameras;
+
 } loader;
 
 Loader::Loader()
@@ -54,7 +59,7 @@ Loader::Loader()
     {
         gxccd_enumerate_eth([](int id)
         {
-            loader.cameras.push_back(std::unique_ptr<MICCD>(new MICCD(id, true)));
+            loader.initCameras.emplace_back(id, true);
         });
     }
     else
@@ -62,9 +67,16 @@ Loader::Loader()
         // "__progname" shoud be indi_mi_ccd_usb, however accept all names as USB
         gxccd_enumerate_usb([](int id)
         {
-            loader.cameras.push_back(std::unique_ptr<MICCD>(new MICCD(id, false)));
+            loader.initCameras.emplace_back(id, false);
         });
     }
+
+    for (const auto &args: initCameras)
+    {
+        cameras.push_back(std::unique_ptr<MICCD>(new MICCD(args.first, args.second)));
+    }
+
+    initCameras.clear();
 }
 
 MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
