@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (libahp_xc)
 
-set (AHPXC_VERSION "1.0.12")
+set (AHPXC_VERSION "1.1.0")
 set (AHPXC_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
