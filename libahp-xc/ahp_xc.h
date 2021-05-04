@@ -63,7 +63,7 @@ extern "C" {
  /**@{*/
 
  ///AHP_XC_VERSION This library version
-#define AHP_XC_VERSION 0x110
+#define AHP_XC_VERSION 0x111
 ///XC_BASE_RATE is the base baud rate of the XC cross-correlators
 #define XC_BASE_RATE ((int)57600)
 ///XC_HIGH_RATE is the base baud rate for big packet XC cross-correlators
