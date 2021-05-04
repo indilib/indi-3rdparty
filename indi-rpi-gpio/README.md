@@ -34,8 +34,8 @@ cd indi-3rdparty
 ```
 Compile and install the driver
 ```
-cd ~/Projects/indi-3rd-party
-mkdir -p ~/projects/build/indi-rpi-gpio
+mkdir -p ~/Projects/build/indi-rpi-gpio
+cd ~/Projects/build/indi-rpi-gpio
 cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-rpi-gpio
 make
 sudo make install

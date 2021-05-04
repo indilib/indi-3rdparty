@@ -1,3 +1,9 @@
+indi-asi-power (0.95) buster; urgency=medium
+
+  * Replace pigpio timer with INDI timer
+
+ -- Ken Self <ken.kgself@gmail.com>  Mon, 3 May 2021 20:45:00 +1000
+
 indi-asi-power (0.94) buster; urgency=medium
 
   * Minor fix to return codes
@@ -35,7 +41,7 @@ indi-asi-power (0.9) buster; urgency=medium
 indi-asi-power (0.8) buster; urgency=medium
 
   * Label ports 1-4
- * Force type None to OFF
+  * Force type None to OFF
 
  -- Ken Self <ken.kgself@gmail.com>  Tue, 02 Mar 2021 13:50:00 +1100
 
@@ -65,7 +71,7 @@ indi-asi-power (0.5) buster; urgency=medium
 
 indi-asi-power (0.4) buster; urgency=medium
 
- * tested on ASIAir Pro
+  * tested on ASIAir Pro
 
  -- Ken Self <ken.kgself@gmail.com>  Mon, 15 Feb 2021 12:19:00 +1100
 
@@ -77,18 +83,18 @@ indi-asi-power (0.3) buster; urgency=medium
 
 indi-asi-power (0.2) buster; urgency=medium
 
- * Expand to 4 outputs
+  * Expand to 4 outputs
 
  -- Ken Self <ken.kgself@gmail.com>  Mon, 15 Feb 2021 09:37:00 +1100
 
 indi-asi-power (0.1) buster; urgency=medium
 
- * indi_asi_power - Moved under indi-3rdparty. Works with one port: GPIO 12
+  * indi_asi_power - Moved under indi-3rdparty. Works with one port: GPIO 12
 
  -- Ken Self <ken.kgself@gmail.com>  Sun, 14 Feb 2021 12:11:00 +1100
 
 indi-asi-power (0.0) buster; urgency=medium
 
- * all - Initial prototype of asi power driver
+  * all - Initial prototype of asi power driver
 
  -- Ken Self <ken.kgself@gmail.com>  Sun, 14 Feb 2021 11:40:00 +1100

@@ -1,3 +1,9 @@
+indi-rpi-gpio (0.4) buster; urgency=medium
+
+  * Replace pigpio timer with INDI timer
+
+ -- Ken Self <ken.kgself@gmail.com>  Mon, 3 May 2021 20:45:00 +1000
+
 indi-rpi-gpio (0.3) buster; urgency=medium
 
   * Add Active Low option

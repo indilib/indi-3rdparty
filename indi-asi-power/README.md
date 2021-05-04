@@ -33,10 +33,10 @@ cd ~/Projects
 git clone https://github.com/indilib/indi-3rdparty.git
 cd indi-3rdparty
 ```
-Compile and install the driver and pigpiod
+Compile and install the driver
 ```
-cd ~/Projects/indi-3rd-party
-mkdir -p ~/projects/build/indi-asi-power
+mkdir -p ~/Projects/build/indi-asi-power
+cd ~/Projects/build/indi-asi-power
 cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
 make
 sudo make install
