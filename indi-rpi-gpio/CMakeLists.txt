@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (VERSION_MAJOR 0)
-set (VERSION_MINOR 3)
+set (VERSION_MINOR 4)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)

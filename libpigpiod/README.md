@@ -37,8 +37,8 @@ cd indi-3rdparty
 ```
 Compile and install the driver and pigpiod
 ```
-cd ~/Projects/indi-3rd-party
-mkdir -p ~/projects/build/libpigpiod
+mkdir -p ~/Projects/build/libpigpiod
+cd ~/Projects/build/libpigpiod
 cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/libpigpiod
 make
 sudo make install
