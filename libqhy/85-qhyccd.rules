@@ -14,21 +14,15 @@
 # Kept original rules at the end of rule's file.
 # Jan Soldan, 2017-07-11
 #
-# Update 3
-# Add usbfs memory limit
-# Jasem Mutlaq 2019-09-21
-
 #===============================================================================
-# 1. Increase usbfs memory limit
-#===============================================================================
-#===============================================================================
-# 2. Pre-enumerated device IDs:
+# 1. Pre-enumerated device IDs:
 #===============================================================================
 #Van Ooijen Technische Informatica
 
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="081a", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY5.HEX -D $env{DEVNAME} -s /lib/firmware/qhy/QHY5LOADER.HEX"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0818", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY5.HEX -D $env{DEVNAME} -s /lib/firmware/qhy/QHY5LOADER.HEX"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="2972", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY8.HEX -D $env{DEVNAME}"
+ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="29a2", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY5.HEX -D $env{DEVNAME} -s /lib/firmware/qhy/QHY5LOADER.HEX"
 
 # Orion SSAG
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1856", ATTRS{idProduct}=="0011", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY5.HEX -D $env{DEVNAME} -s /lib/firmware/qhy/QHY5LOADER.HEX"
@@ -146,7 +140,7 @@ ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c53
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0432", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY432.img -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0342", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY342.img -D $env{DEVNAME}"
 #===============================================================================
-# 3. Post-enumeration device IDs:
+# 2. Post-enumeration device IDs:
 #===============================================================================
 # QHY-Based camera by other vendors
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="16c0", MODE="0666"
