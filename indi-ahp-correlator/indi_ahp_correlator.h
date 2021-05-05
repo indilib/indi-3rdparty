@@ -41,10 +41,10 @@ class AHP_XC : public INDI::CCD
 public:
     AHP_XC();
     ~AHP_XC() {
-        for(int x = 0; x < ahp_xc_get_nbaselines(); x++)
+        for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
-        for(int x = 0; x < ahp_xc_get_nlines(); x++)
+        for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
             ahp_xc_set_leds(x, 0);
 
         ahp_xc_set_baudrate(R_57600);
@@ -189,10 +189,10 @@ private:
     void  setupParams();
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
-    void ActiveLine(int, bool, bool, bool, bool);
+    void ActiveLine(unsigned int, bool, bool, bool, bool);
     void SetFrequencyDivider(unsigned char divider);
     void EnableCapture(bool start);
-    void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, int len);
+    void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len);
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;
