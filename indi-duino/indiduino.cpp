@@ -94,12 +94,10 @@ void indiduino::TimerHit()
 
     sf->OnIdle();
 
-    std::vector<INDI::Property *> *pAll = getProperties();
-
-    for (unsigned int i = 0; i < pAll->size(); i++)
+    for (const auto &it: *getProperties())
     {
-        const char *name = pAll->at(i)->getName();
-        INDI_PROPERTY_TYPE type = pAll->at(i)->getType();
+        const char *name = it->getName();
+        INDI_PROPERTY_TYPE type = it->getType();
 
         //DIGITAL INPUT
         if (type == INDI_LIGHT)
@@ -744,12 +742,11 @@ bool indiduino::setPinModesFromSKEL()
     }
 
     LOG_INFO("Setting pins behaviour from <indiduino> tags");
-    std::vector<INDI::Property *> *pAll = getProperties();
 
-    for (unsigned int i = 0; i < pAll->size(); i++)
+    for (const auto &it: *getProperties())
     {
-        const char *name = pAll->at(i)->getName();
-        INDI_PROPERTY_TYPE type = pAll->at(i)->getType();
+        const char *name = it->getName();
+        INDI_PROPERTY_TYPE type = it->getType();
 
         if (ep == nullptr)
         {
