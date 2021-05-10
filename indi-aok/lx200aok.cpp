@@ -343,6 +343,8 @@ bool LX200Skywalker::updateProperties()
         defineProperty(&MountStateSP);
         defineProperty(&SystemSlewSpeedNP);
         defineProperty(&FirmwareVersionTP);
+        // Switch is obsolete: NOT using pulse commands makes no sense with TC
+        deleteProperty(UsePulseCmdSP.name);
     }
     else
     {
@@ -487,7 +489,7 @@ void LX200Skywalker::getBasicData()
             LOG_INFO("Parkdata load failed");
     }
 
-    //ToDo: collect other fixed data here like Manufacturer, version etc...
+    /* NOT using pulse commands makes no sense with skywalker controller
     if (genericCapability & LX200_HAS_PULSE_GUIDING)
     {
         UsePulseCmdS[0].s = ISS_ON;
@@ -495,7 +497,7 @@ void LX200Skywalker::getBasicData()
         UsePulseCmdSP.s = IPS_OK;
         usePulseCommand = false; // ALWAYS set status! (cf. ISNewSwitch())
         IDSetSwitch(&UsePulseCmdSP, nullptr);
-    }
+    }*/
 
 }
 
@@ -1144,197 +1146,49 @@ bool LX200Skywalker::setSlewMode(int slewMode)
 
 IPState LX200Skywalker::GuideNorth(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
-
-        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
-    }
-
-    if (GuideNSTID)
-    {
-        IERmTimer(GuideNSTID);
-        GuideNSTID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_NORTH, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementNSS[DIRECTION_NORTH].s = ISS_ON;
-        MoveNS(DIRECTION_NORTH, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_ns = LX200_NORTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    SendPulseCmd(LX200_NORTH, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideSouth(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
-
-        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
-    }
-
-    if (GuideNSTID)
-    {
-        IERmTimer(GuideNSTID);
-        GuideNSTID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_SOUTH, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementNSS[DIRECTION_SOUTH].s = ISS_ON;
-        MoveNS(DIRECTION_SOUTH, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_ns = LX200_SOUTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    SendPulseCmd(LX200_SOUTH, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideEast(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
-
-        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
-    }
-
-    if (GuideWETID)
-    {
-        IERmTimer(GuideWETID);
-        GuideWETID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_EAST, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementWES[DIRECTION_EAST].s = ISS_ON;
-        MoveWE(DIRECTION_EAST, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_we = LX200_EAST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    SendPulseCmd(LX200_EAST, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideWest(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
-
-        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
-    }
-
-    if (GuideWETID)
-    {
-        IERmTimer(GuideWETID);
-        GuideWETID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_WEST, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementWES[DIRECTION_WEST].s = ISS_ON;
-        MoveWE(DIRECTION_WEST, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_we = LX200_WEST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    SendPulseCmd(LX200_WEST, ms);
     return IPS_BUSY;
 }
 
