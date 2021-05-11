@@ -1,3 +1,15 @@
+indi-duino (1.13) buster; urgency=medium
+
+  * Rain sensor integrated
+  * Better handling of long exposure times for timelapse
+  * Improvements for auto exposure during dawn/dusk
+  * Pan tilt controller support added
+  * Redesign of the HTML page
+  * Firmware optimization and bug fixes
+  * Bug fixes for the INDI weather radio service
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Tue, 11 May 2021 17:44:25 +0200
+
 indi-duino (1.12) buster; urgency=medium
 
   * rain volume and rain drops counting features added to INDI service
