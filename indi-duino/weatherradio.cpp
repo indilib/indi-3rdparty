@@ -1347,7 +1347,11 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
         char tmp_response[MAX_WEATHERBUFFER] = {0};
         int tmp_bytes = 0;
         while (receiveSerial(tmp_response, &tmp_bytes, '\n', 0))
+        {
+            if (tmp_response[0] == '\0') // nothing received
+                break;
             tmp_response[0] = '\0';
+        }
         // send query
         char cmdstring[20] = {0};
         sprintf(cmdstring, "%s\n", cmd);
