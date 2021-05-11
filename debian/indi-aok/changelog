@@ -1,3 +1,8 @@
+indi-aok (1.1) bionic; urgency=low
+  * removed obsolete "Use PulsCmd"-switch and corresponding programming code
+  
+-- T. Schriber <escribana@bluewin.ch> Tue, 11 May 2021 08:56:32 +0200 
+
 indi-aok (1.0) bionic; urgency=low
   * cleared up the handling of notification of mountlock & trackstate
   * added query of mount when connecting, so mountlock and trackstate is reflected correctly
