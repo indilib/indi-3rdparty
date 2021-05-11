@@ -12,7 +12,7 @@
 
 #include "rainsensor.h"
 
-#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for drop counts (ms)
+#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for drop count updates (ms)
 
 rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0, 0};
 

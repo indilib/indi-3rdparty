@@ -80,7 +80,7 @@ void isr_rotation () {
 #endif
 
   volatile unsigned long now = millis();
-  if ((now - lastInterrupt) > 15 ) { // debounce the switch contact.
+  if ((now - lastInterrupt) > 5 ) { // debounce the switch contact.
     rotations++;
     sliceRotations++;
     lastInterrupt = now;

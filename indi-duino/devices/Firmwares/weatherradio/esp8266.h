@@ -37,8 +37,20 @@ struct {
 
 ESP8266WebServer server(80);
 
-void reset() {
+// Translate a message into JSON representation
+String JsonMessage(String message) {
+  StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
+  doc["message"] = message.c_str();
+
+  String result = "";
+  serializeJson(doc, result);
+
+  return result;
+}
+
+String reset() {
   ESP.restart();
+  return JsonMessage("Arduino restarted successfully");
 }
 
 void refreshDisplay() {
@@ -48,13 +60,14 @@ void refreshDisplay() {
 #endif // USE_OLED
 }
 
+
 // turn wifi on and connect to the access point
-void initWiFi() {
+String initWiFi() {
   // set wifi to station mode
   WiFi.mode(WIFI_STA);
   // start trying to connect
   esp8266Data.status = WIFI_CONNECTING;
-  Serial.print("Connecting WiFi ");
+  return JsonMessage("Connecting WiFi...");
   // connection attempts inside of wifiServerLoop
 }
 
@@ -66,7 +79,7 @@ void connectWiFi() {
     esp8266Data.status = WIFI_CONNECTED;
     esp8266Data.retry_count = 0;
     refreshDisplay();
-    Serial.println(" succeeded.");
+    // Serial.println(" succeeded.");
   } else {
     WiFi.begin(esp8266Data.ssid, esp8266Data.password);
     if (WiFi.status() == WL_CONNECTED) {
@@ -74,28 +87,28 @@ void connectWiFi() {
       // reset retry counter
       esp8266Data.retry_count = 0;
       refreshDisplay();
-      Serial.println(" succeeded.");
+      // Serial.println(" succeeded.");
     } else {
       // increase retry counter
       esp8266Data.retry_count++;
       // check if reconnect limit has been reached
       if (esp8266Data.retry_count <= WIFI_MAX_RECONNECT) {
         esp8266Data.status = WIFI_CONNECTING;
-        Serial.print(".");
+        // Serial.print(".");
       } else {
         esp8266Data.status =  WIFI_CONNECTION_FAILED;
         refreshDisplay();
-        Serial.println(" failed!");
+        // Serial.println(" failed!");
       }
     }
   }
 }
 
 
-void stopWiFi() {
+String stopWiFi() {
   esp8266Data.retry_count = 0;
   esp8266Data.status = WIFI_DISCONNECTING;
-  Serial.print("Disconnecting WiFi ");
+  return JsonMessage("Disconnecting WiFi ...");
 }
 
 void disconnectWiFi() {
@@ -108,18 +121,18 @@ void disconnectWiFi() {
     // check if reconnect limit has been reached
     if (esp8266Data.retry_count <= WIFI_MAX_RECONNECT) {
       esp8266Data.status = WIFI_DISCONNECTING;
-      Serial.print(".");
+      // Serial.print(".");
     } else {
       esp8266Data.status =  WIFI_CONNECTED;
       refreshDisplay();
-      Serial.println("failed!");
+      // Serial.println("failed!");
     }
   } else {
     esp8266Data.status = WIFI_IDLE;
     // reset retry counter
     esp8266Data.retry_count = 0;
     refreshDisplay();
-    Serial.println("succeeded.");
+    // Serial.println("succeeded.");
   }
 }
 
@@ -145,7 +158,7 @@ void wifiServerLoop() {
       if (WiFi.status() != WL_CONNECTED) {
         esp8266Data.status = WIFI_CONNECTING;
         esp8266Data.retry_count = 0;
-        Serial.print("WiFi lost, reconnecting ");
+        // Serial.print("WiFi lost, reconnecting ");
         connectWiFi();
       }
       break;
@@ -155,7 +168,7 @@ void wifiServerLoop() {
       if (millis() - esp8266Data.last_retry > WIFI_SLEEP_RECONNECT) {
         esp8266Data.status = WIFI_CONNECTING;
         esp8266Data.retry_count = 0;
-        Serial.print("Retry connecting WiFi ");
+        // Serial.print("Retry connecting WiFi ");
         connectWiFi();
       }
       break;
