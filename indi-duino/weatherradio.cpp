@@ -739,6 +739,15 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             return wetnessCalibrationNP.s;
             LOG_DEBUG("Wetness value calibration updated.");
         }
+        else if (strcmp(name, "GEOGRAPHIC_COORD") == 0)
+        {
+            // update the weather if location (and especially the elevation) changes
+            if (INDI::Weather::ISNewNumber(dev, name, values, names, n))
+                return (updateWeather() == IPS_OK);
+            else
+                return false;
+        }
+
     }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
