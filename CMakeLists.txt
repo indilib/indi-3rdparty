@@ -135,9 +135,16 @@ ENDIF(MMAL_FOUND)
 
 # ASIPOWER and RPIGPIO only for Raspberry PI
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+find_package(PIGPIOD)
+endif()
+
+IF (PIGPIOD_FOUND)
 option(WITH_ASIPOWER "Install ASI Air Power Driver" On)
 option(WITH_RPI "Install Raspberry PI GPIO Driver" On)
-endif()
+else()
+option(WITH_ASIPOWER "Install ASI Air Power Driver" Off)
+option(WITH_RPI "Install Raspberry PI GPIO Driver" Off)
+ENDIF(PIGPIOD_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -695,7 +702,7 @@ if (WITH_ASIPOWER AND NOT PIGPIOD_FOUND)
 message(STATUS "libpigpiod was not found and will now be built. Please install this libpigpiod first before running cmake again to install indi-asi-power.")
 endif (WITH_ASIPOWER AND NOT PIGPIOD_FOUND)
 
-if (WITH_RPIGPIOD AND NOT PIGPIOD_FOUND)
+if (WITH_RPIGPIO AND NOT PIGPIOD_FOUND)
 message(STATUS "libpigpiod was not found and will now be built. Please install this libpigpiod first before running cmake again to install indi-rpi-gpio.")
 endif (WITH_RPIGPIOD AND NOT PIGPIOD_FOUND)
 
