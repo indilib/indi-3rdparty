@@ -739,6 +739,15 @@ bool WeatherRadio::ISNewNumber(const char *dev, const char *name, double values[
             return wetnessCalibrationNP.s;
             LOG_DEBUG("Wetness value calibration updated.");
         }
+        else if (strcmp(name, "GEOGRAPHIC_COORD") == 0)
+        {
+            // update the weather if location (and especially the elevation) changes
+            if (INDI::Weather::ISNewNumber(dev, name, values, names, n))
+                return (updateWeather() == IPS_OK);
+            else
+                return false;
+        }
+
     }
     return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
@@ -1334,6 +1343,16 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
     // communication through a serial (USB) interface
     if (getActiveConnection()->type() == Connection::Interface::CONNECTION_SERIAL)
     {
+        // first clear the read buffer for unexpected data
+        char tmp_response[MAX_WEATHERBUFFER] = {0};
+        int tmp_bytes = 0;
+        while (receiveSerial(tmp_response, &tmp_bytes, '\n', 0))
+        {
+            if (tmp_response[0] == '\0') // nothing received
+                break;
+            tmp_response[0] = '\0';
+        }
+        // send query
         char cmdstring[20] = {0};
         sprintf(cmdstring, "%s\n", cmd);
         LOGF_DEBUG("Sending query: %s", cmdstring);

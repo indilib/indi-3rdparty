@@ -1,0 +1,11 @@
+[Unit]
+Description=Pan-Tilt unit controller
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/share/weatherradio/bin/pan_tilt_controller.py
+ExecStop=/bin/sh -c "echo stop > /var/spool/FIFO_pantilt"
+
+[Install]
+WantedBy=multi-user.target

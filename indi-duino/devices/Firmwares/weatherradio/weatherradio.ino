@@ -317,7 +317,7 @@ String getCurrentConfig() {
     wifidata["IP"]        = "";
 #endif
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   serializeDewheater(doc);
 #endif
 
@@ -359,7 +359,7 @@ void setup() {
 
   String init_text = "Weather Radio V ";
   init_text += WEATHERRADIO_VERSION;
-  Serial.println(" \n" + init_text);
+  // Serial.println(" \n" + init_text);
 
   // sensors never read
   lastSensorRead = 0;
@@ -412,8 +412,7 @@ void setup() {
   });
 
   server.on("/r", []() {
-    reset();
-    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+    server.send(200, "application/json; charset=utf-8", reset());
   });
 
   server.on("/t", []() {
@@ -432,9 +431,9 @@ void setup() {
   initOTA();
 #endif // USE_OTA
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   initDewheater();
-#endif // USE_DEW_HEATER
+#endif // USE_DEWHEATER
 
   // initial readout all sensors
   updateSensorData();
@@ -451,40 +450,40 @@ void setup() {
 
 String input = "";
 
-void parseInput() {
+String  parseInput() {
   // ignore empty input
   if (input.length() == 0)
-    return;
+    return "";
 
   switch (input.charAt(0)) {
     case 'v':
-      Serial.println(getCurrentVersion());
+      return(getCurrentVersion());
       break;
     case 'w':
-      Serial.println(getSensorData(false));
+      return(getSensorData(false));
 
       break;
     case 'c':
-      Serial.println(getCurrentConfig());
+      return(getCurrentConfig());
       break;
     case 'p':
-      Serial.println(getSensorData(true));
+      return(getSensorData(true));
 
       break;
     case 't':
-      Serial.println(getReadDurations());
+      return(getReadDurations());
       break;
 #ifdef USE_WIFI
     case 's':
       if (input.length() > 2 && input.charAt(1) == '?')
         parseCredentials(input.substring(2));
-      initWiFi();
+      return(initWiFi());
       break;
     case 'd':
-      stopWiFi();
+      return(stopWiFi());
       break;
     case 'r':
-      reset();
+      return(reset());
       break;
 #endif
   }
@@ -529,9 +528,9 @@ void loop() {
   updateAnemometer();
 #endif //USE_DAVIS_SENSOR
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
   updateDewheater();
-#endif // USE_DEW_HEATER
+#endif // USE_DEWHEATER
 
 #ifdef USE_RG11_RAIN_SENSOR
   rg11_updateRainSensor();
@@ -545,7 +544,7 @@ void loop() {
     ch = Serial.read();
 
     if (ch == '\r' || ch == '\n') { // Command received and ready.
-      parseInput();
+      Serial.println(parseInput());
       input = "";
     }
     else

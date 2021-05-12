@@ -13,6 +13,7 @@ body {
 
 .shadow {
   box-shadow: 0px 1px 15px 1px rgba(69, 65, 78, 0.08);
+  padding-top: 20px
 }
 
 

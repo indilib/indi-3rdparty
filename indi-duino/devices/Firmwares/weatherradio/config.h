@@ -110,9 +110,9 @@
 #include "water.h"
 #endif //USE_WATER_SENSOR
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
 #include "dewheater.h"
-#endif //USE_DEW_HEATER
+#endif //USE_DEWHEATER
 
 #ifdef USE_RG11_RAIN_SENSOR
 #include "rg11.h"

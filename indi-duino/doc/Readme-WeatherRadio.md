@@ -254,6 +254,7 @@ Finally, it's time to automate by creating crontab entries:
  0 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d
  0 0 * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 30d
 
+ */5 * * * *   <userid> /usr/share/weatherradio/bin/wr_rrd_lastupdate.py -o /usr/share/weatherradio/html/data/RTsensors_lastupdate.json /usr/share/weatherradio//sensors.rrd
 */5 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 6h -o /usr/share/weatherradio/html/data/RTsensors_6h.json /usr/share/weatherradio/sensors.rrd
 */15 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 1d -o /usr/share/weatherradio/html/data/RTsensors_1d.json /usr/share/weatherradio/sensors.rrd
 0 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d -o /usr/share/weatherradio/html/data/RTsensors_7d.json /usr/share/weatherradio/sensors.rrd

@@ -18,19 +18,19 @@
   </head>
   <body onload=init()>
     <div class="navigation">
-        Home | <a href="./sensordata.html">Sensor Data</a> | <a href="./webcam.html">Webcam</a>
+        Home | <a href="./sensordata.html">Sensors</a> | <a href="./webcam.html">Webcam</a> | <a href="./forecast.html">Forecast</a>
     </div>
     <div class="container-fluid">
       <div class="row">
         <div class="col-sm-12" align="center">
-	  <div style="font-weight: bold; font-size: xx-large; padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">
+	  <div style="font-weight: bold; font-size: xx-large; padding-top: 30px; padding-bottom: 0px; margin-bottom: 0px">
 	    Weather Radio
 	  </div>
 	  <div style="font-size: x-small; padding: 0px;">Last update: <span id="lastupdate">--</span></div>
         </div>
       </div> <!-- Last update row end -->
       <div class="row">
-        <div class="col-sm-12" align="center">
+        <div class="col-md-12" align="center">
           <div class="toolbar">
             <button id="timeline_6h">6h</button>
             <button id="timeline_1d">1d</button>
@@ -40,35 +40,20 @@
         </div>
       </div> <!-- button row end -->
       <div class="row">
-        <div class="col-sm-4" align="center">
-          <div id="temperature"></div>
-          <div class="parameter-title">Humidity</div>
-          <div id="humidity" style="padding-top: 0px; margin-top: 0px"></div>
-          <div id="humidityValue" class="parameter-value"></div>
-        </div>
-        <div class="col-sm-4" align="center">
-          <div id="pressure"></div>
-          <div class="parameter-title">Wind Speed</div>
-          <div id="windSpeed" style="padding-top: 0px; margin-top: 0px"></div>
-          <div id="windSpeedValue" class="parameter-value"></div>
-        </div>
-        <div class="col-sm-4" align="center">
-          <div id="clouds"></div>
-          <div class="parameter-title">SQM</div>
-          <div id="sqm" style="padding-top: 0px; margin-top: 0px"></div>
-          <div id="sqmValue" class="parameter-value"></div>
-        </div>
-      </div> <!-- row with current weather data end -->
-      <div class="row">
-        <div class="col-sm-4" id="temperature_series"></div>
-        <div class="col-sm-4" id="pressure_series"></div>
-        <div class="col-sm-4" id="clouds_series"></div>
+        <div class="col-lg-4 shadow" align="center"><img src="media/current_weather.jpg" height="250px" id="current_weather"></div>
+        <div class="col-lg-4 shadow" id="temperature_series"></div>
+        <div class="col-lg-4 shadow" id="pressure_series"></div>
       </div> <!-- first time series row end -->
       <div class="row">
-        <div class="col-sm-4" id="humidity_series"></div>
-        <div class="col-sm-4" id="windSpeed_series"></div>
-        <div class="col-sm-4" id="sqm_series"></div>
+        <div class="col-lg-4 shadow" id="windSpeed_series"></div>
+        <div class="col-lg-4 shadow" id="sqm_series"></div>
+        <div class="col-lg-4 shadow" id="clouds_series"></div>
       </div> <!-- second time series row end -->
+      <div class="row">
+        <div class="col-lg-4 shadow" id="humidity_series"></div>
+        <div class="col-lg-4 shadow" id="rain_volume_series"></div>
+        <div class="col-lg-4 shadow" id="rain_intensity_series"></div>
+      </div> <!-- third time series row end -->
     </div>
     <script src="js/charts.js"></script>
   </body>
