@@ -22,10 +22,9 @@ else (PIGPIOD_INCLUDE_DIR AND PIGPIOD_LIBRARIES)
     ${GNUWIN32_DIR}/include
   )
 
-  find_library(PIGPIOD_LIBRARIES NAMES pigpiod
+  find_program(PIGPIOD_LIBRARIES NAMES pigpiod
     PATHS
-    ${_obLinkDir}
-    ${GNUWIN32_DIR}/lib
+    ${GNUWIN32_DIR}/bin
   )
 
   if(PIGPIOD_INCLUDE_DIR AND PIGPIOD_LIBRARIES)
