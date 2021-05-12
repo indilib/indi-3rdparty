@@ -133,6 +133,12 @@ ELSE ()
 option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" Off)
 ENDIF(MMAL_FOUND)
 
+# ASIPOWER and RPIGPIO only for Raspberry PI
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+option(WITH_ASIPOWER "Install ASI Air Power Driver" On)
+option(WITH_RPI "Install Raspberry PI GPIO Driver" On)
+endif()
+
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_INOVAPLX Off)
@@ -230,6 +236,11 @@ endif (WITH_TOUPBASE)
 if (WITH_SV305)
 add_subdirectory(libsv305)
 endif (WITH_SV305)
+
+#libpigpiod
+if (WITH_ASIPOWER OR WITH_RPIGPIO)
+add_subdirectory(libpigpiod)
+endif (WITH_ASIPOWER OR WITH_RPIGPIO)
 
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
@@ -580,6 +591,29 @@ if (WITH_BRESSEREXOS2)
 add_subdirectory(indi-bresserexos2)
 endif(WITH_BRESSEREXOS2)
 
+# ASI Air Power
+if (WITH_ASIPOWER)
+find_package(PIGPIOD)
+if(PIGPIOD_FOUND)
+add_subdirectory(indi-asi-power)
+else(PIGPIOD_FOUND)
+add_subdirectory(libpigpiod)
+SET(LIBRARIES_FOUND FALSE)
+endif(PIGPIOD_FOUND)
+endif(WITH_ASIPOWER)
+
+# rpi_gpio
+if (WITH_RPIGPIO)
+find_package(PIGPIOD)
+if(PIGPIOD_FOUND)
+add_subdirectory(indi-rpi-gpio)
+else(PIGPIOD_FOUND)
+add_subdirectory(libpigpiod)
+SET(LIBRARIES_FOUND FALSE)
+endif(PIGPIOD_FOUND)
+endif(WITH_RPIGPIO)
+
+
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
 message(STATUS "############################################################################")
@@ -656,6 +690,14 @@ endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 if (WITH_SV305 AND NOT SV305_FOUND)
 message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
 endif (WITH_SV305 AND NOT SV305_FOUND)
+
+if (WITH_ASIPOWER AND NOT PIGPIOD_FOUND)
+message(STATUS "libpigpiod was not found and will now be built. Please install this libpigpiod first before running cmake again to install indi-asi-power.")
+endif (WITH_ASIPOWER AND NOT PIGPIOD_FOUND)
+
+if (WITH_RPIGPIOD AND NOT PIGPIOD_FOUND)
+message(STATUS "libpigpiod was not found and will now be built. Please install this libpigpiod first before running cmake again to install indi-rpi-gpio.")
+endif (WITH_RPIGPIOD AND NOT PIGPIOD_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)
