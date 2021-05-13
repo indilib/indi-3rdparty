@@ -50,8 +50,8 @@ def update(args, indi=None):
 
                 if (args.verbose):
                     print ("Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
-                else:
-                    print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+        else:
+            print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
 
 
         indi.quit()
