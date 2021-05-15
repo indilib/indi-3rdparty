@@ -1,0 +1,15 @@
+Vixen Starbook Ten INDI Driver
+==================
+
+This package provides the INDI driver for Vixen Starbook Ten (Firmware >= 5.10)
+
+Requirements
+============
+
++ libindi
++ libnova
+
+Installation
+============
+
+        See INSTALL
