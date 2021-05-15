@@ -66,6 +66,7 @@ option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 # Define standard set of drivers to build (default linux target)
 option(WITH_EQMOD "Install EQMod Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
+option(WITH_STARBOOK_TEN "Install Starbook Ten Driver" On)
 option(WITH_CAUX "Install Celestron AUX Driver" On)
 option(WITH_SX "Install StarLight Xpress Driver" On)
 option(WITH_MAXDOME "Install MaxDomeII Driver" On)
@@ -253,6 +254,11 @@ endif(WITH_SKYWALKER)
 if (WITH_STARBOOK)
 add_subdirectory(indi-starbook)
 endif(WITH_STARBOOK)
+
+## Starbook Ten
+if (WITH_STARBOOK_TEN)
+add_subdirectory(indi-starbook-ten)
+endif(WITH_STARBOOK_TEN)
 
 ## Stalight Xpress
 if (WITH_SX)
