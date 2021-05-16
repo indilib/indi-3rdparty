@@ -1,3 +1,14 @@
+libasi (1.17) buster; urgency=medium
+
+  * Updates to ZWO SDKs:
+    ASI Camera SDK 1.18
+    EAF SDK 1.4
+    EFW SDK 1.7
+
+    Unfortunately changelogs are just "Fix some bugs"
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 17 May 2021 00:15:19 +0300
+
 libasi (1.16) buster; urgency=medium
 
   * Correcting version.
