@@ -84,7 +84,8 @@ def vector_exists(indi, device, name):
 
 def readWeather(indi, device, verbose=False):
     result  = {}
-    # ensure that all information is up to date
+    # Push the "Refresh" button to ensure that all information is up to date
+    indi.set_and_send_switchvector_by_elementlabel(device,"WEATHER_REFRESH","Refresh")
     indi.process_events()
     # read weather data from device
     weather = indi.get_vector(device, config.get('WeatherRadio', 'WEATHER'))
