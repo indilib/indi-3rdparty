@@ -65,8 +65,15 @@ def update(args, indiserver, indiport):
         # update RRD files with all retrieved data
         if path.exists(args.rrdfile):
             updateRRD(args.rrdfile, weatherData)
+        else:
+            print ("Cannot store weather data, file %s not found." %
+                   (args.rrdfile))
+
         if path.exists(args.rrdsensorsfile):
             updateRRD(args.rrdsensorsfile, sensorData)
+        else:
+            print ("Cannot store sensor data, file %s not found." %
+                   (args.rrdsensorsfile))
 
         # finished
         indi.quit()
