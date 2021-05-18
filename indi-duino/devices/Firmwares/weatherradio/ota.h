@@ -59,7 +59,7 @@ void initOTA() {
   });
 }
 
-void serializeOTA(JsonDocument &doc) {
+void serializeOTA(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("OTA");
   data["init"] = otaData.init;

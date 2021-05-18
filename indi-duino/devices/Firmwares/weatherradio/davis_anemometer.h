@@ -164,7 +164,7 @@ void readAnemometer() {
   reset(millis());
 }
 
-void serializeAnemometer(JsonDocument &doc) {
+void serializeAnemometer(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("Davis Anemometer");
   data["init"] = anemometerData.status;

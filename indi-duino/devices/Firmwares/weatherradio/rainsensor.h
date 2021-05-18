@@ -62,7 +62,7 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
 
 
 
-void serializeRainSensor(JsonDocument &doc, rainsensor_data &data, String name) {
+void serializeRainSensor(JsonObject &doc, rainsensor_data &data, String name) {
 
   JsonObject json = doc.createNestedObject(name);
   json["init"] = data.status;

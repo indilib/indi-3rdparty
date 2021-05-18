@@ -35,7 +35,7 @@ void updateMLX() {
   }
 }
 
-void serializeMLX(JsonDocument & doc) {
+void serializeMLX(JsonObject & doc) {
 
   JsonObject data = doc.createNestedObject("MLX90614");
   data["init"] = mlxData.status;

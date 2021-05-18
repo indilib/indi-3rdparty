@@ -152,7 +152,7 @@ void updateTSL2591() {
   }
 }
 
-void serializeTSL2591(JsonDocument &doc) {
+void serializeTSL2591(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("TSL2591");
   data["init"] = tsl2591Data.status;

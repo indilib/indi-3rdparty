@@ -155,8 +155,9 @@ String getSensorData(bool pretty) {
                       JSON_OBJECT_SIZE(7) + // TSL2591 sensor
                       JSON_OBJECT_SIZE(6) + // Davis Anemometer
                       JSON_OBJECT_SIZE(2) + // Water sensor
-                  2 * JSON_OBJECT_SIZE(4);  // Rain sensors
-  StaticJsonDocument < docSize > weatherDoc;
+                      2 * JSON_OBJECT_SIZE(4);  // Rain sensors
+  StaticJsonDocument <docSize> root;
+  JsonObject weatherDoc = root.createNestedObject("weather");
 
   unsigned long start = 0;
 
@@ -198,9 +199,9 @@ String getSensorData(bool pretty) {
 
   String result = "";
   if (pretty)
-    serializeJsonPretty(weatherDoc, result);
+    serializeJsonPretty(root, result);
   else
-    serializeJson(weatherDoc, result);
+    serializeJson(root, result);
 
   return result;
 }
@@ -217,7 +218,10 @@ String getCurrentVersion() {
 }
 
 String getReadDurations() {
-  StaticJsonDocument <JSON_OBJECT_SIZE(9)> doc;
+  const int docSize = JSON_OBJECT_SIZE(1) + // top level
+                      JSON_OBJECT_SIZE(9);  // max 9 sensors
+  StaticJsonDocument <docSize> root;
+  JsonObject doc = root.createNestedObject("durations");
 #ifdef USE_BME_SENSOR
   if (bmeData.status)        doc["BME"]              = sensor_read.bme_read;
 #endif //USE_BME_SENSOR
@@ -247,7 +251,7 @@ String getReadDurations() {
 #endif //USE_W174_RAIN_SENSOR
 
   String result = "";
-  serializeJson(doc, result);
+  serializeJson(root, result);
 
   return result;
 }
@@ -255,17 +259,19 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(7) + // max 7 configurations
+  const int docSize = JSON_OBJECT_SIZE(1) + // top level
+                      JSON_OBJECT_SIZE(7) + // max 7 configurations
                       JSON_OBJECT_SIZE(2) + // DHT sensors
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(1) + // Water sensor
-                  2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
+                      2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
                       JSON_OBJECT_SIZE(4) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(4) + // OTA
                       JSON_OBJECT_SIZE(5) + // Dew heater
                       JSON_OBJECT_SIZE(2);  // buffer
-  StaticJsonDocument <docSize> doc;
+  StaticJsonDocument <docSize> root;
+  JsonObject doc = root.createNestedObject("config");
 
 #ifdef USE_WIFI
   // currently, we have memory info only available for ESP8266
@@ -326,9 +332,9 @@ String getCurrentConfig() {
 #endif // USE_OTA
 
   String result = "";
-  serializeJson(doc, result);
+  serializeJson(root, result);
 
-  if (doc.isNull())
+  if (root.isNull())
     return "{}";
   else {
     return result;
@@ -359,7 +365,7 @@ void setup() {
 
   String init_text = "Weather Radio V ";
   init_text += WEATHERRADIO_VERSION;
-  // Serial.println(" \n" + init_text);
+  addJsonLine(init_text, MESSAGE_INFO);
 
   // sensors never read
   lastSensorRead = 0;
@@ -392,31 +398,38 @@ void setup() {
   initWiFi();
 
   server.on("/", []() {
-    server.send(200, "application/json; charset=utf-8", getSensorData(false));
+    addJsonLine(getSensorData(false));
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/w", []() {
-    server.send(200, "application/json; charset=utf-8", getSensorData(false));
+    addJsonLine(getSensorData(false));
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/p", []() {
-    server.send(200, "application/json; charset=utf-8", getSensorData(true));
+    addJsonLine(getSensorData(true));
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/c", []() {
-    server.send(200, "application/json; charset=utf-8", getCurrentConfig());
+    addJsonLine(getCurrentConfig());
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/v", []() {
-    server.send(200, "application/json; charset=utf-8", getCurrentVersion());
+    addJsonLine(getCurrentVersion());
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/r", []() {
-    server.send(200, "application/json; charset=utf-8", reset());
+    reset();
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.on("/t", []() {
-    server.send(200, "application/json; charset=utf-8", getReadDurations());
+    addJsonLine(getReadDurations());
+    server.send(200, "application/json; charset=utf-8", processJsonLines());
   });
 
   server.onNotFound([]() {
@@ -450,40 +463,38 @@ void setup() {
 
 String input = "";
 
-String  parseInput() {
+void  parseInput() {
   // ignore empty input
   if (input.length() == 0)
-    return "";
+    return;
 
   switch (input.charAt(0)) {
     case 'v':
-      return(getCurrentVersion());
+      addJsonLine(getCurrentVersion());
       break;
     case 'w':
-      return(getSensorData(false));
-
+      addJsonLine(getSensorData(false));
       break;
     case 'c':
-      return(getCurrentConfig());
+      addJsonLine(getCurrentConfig());
       break;
     case 'p':
-      return(getSensorData(true));
-
+      addJsonLine(getSensorData(true));
       break;
     case 't':
-      return(getReadDurations());
+      addJsonLine(getReadDurations());
       break;
 #ifdef USE_WIFI
     case 's':
       if (input.length() > 2 && input.charAt(1) == '?')
         parseCredentials(input.substring(2));
-      return(initWiFi());
+      initWiFi();
       break;
     case 'd':
-      return(stopWiFi());
+      stopWiFi();
       break;
     case 'r':
-      return(reset());
+      reset();
       break;
 #endif
   }
@@ -544,7 +555,8 @@ void loop() {
     ch = Serial.read();
 
     if (ch == '\r' || ch == '\n') { // Command received and ready.
-      Serial.println(parseInput());
+      parseInput();
+      Serial.println(processJsonLines());
       input = "";
     }
     else

@@ -49,7 +49,7 @@ void rg11_updateRainSensor() {
 
 
 
-void rg11_serializeRainSensor(JsonDocument &doc) {
+void rg11_serializeRainSensor(JsonObject &doc) {
   serializeRainSensor(doc, rg11_rainsensor_status, "RG11 Rain Sensor");
 }
 

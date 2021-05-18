@@ -45,7 +45,7 @@ void w174_updateRainSensor() {
 
 
 
-void w174_serializeRainSensor(JsonDocument &doc) {
+void w174_serializeRainSensor(JsonObject &doc) {
   serializeRainSensor(doc, w174_rainsensor_status, "W174 Rain Sensor");
 }
 
