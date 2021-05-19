@@ -191,12 +191,12 @@ bool WeatherRadio::updateProperties()
 {
     bool result = true;
 
-    // read the weather parameters for the first time so that #updateProperties() knows all sensors
-    updateWeather();
-
     // dynamically add weather parameters
     if (isConnected())
     {
+        // read the weather parameters for the first time so that #updateProperties() knows all sensors
+        updateWeather();
+
         if (sensorRegistry.temperature.size() > 0)
         {
             addParameter(WEATHER_TEMPERATURE, "Temperature (°C)", -10, 30, 15);
@@ -363,6 +363,11 @@ bool WeatherRadio::updateProperties()
         WeatherInterface::critialParametersL = nullptr;
         WeatherInterface::critialParametersLP.nlp = 0;
 
+        // clear firmware configuration so that #handleFirmwareVersion() recongnizes an initialisation
+        FirmwareConfigTP.tp = nullptr;
+        free(FirmwareConfigT);
+        FirmwareConfigT = nullptr;
+
         LOG_DEBUG("Weather Radio properties removal completed.");
 
     }
@@ -379,7 +384,9 @@ IPState WeatherRadio::getBasicData()
 {
 
     FirmwareInfoT[0].text = new char[64];
-    FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
+    FirmwareInfoTP.s = updateFirmwareVersion();
+    IDSetText(&FirmwareInfoTP, nullptr);
+
     if (FirmwareInfoTP.s != IPS_OK)
     {
         LOG_ERROR("Failed to get firmware from device.");
@@ -401,37 +408,9 @@ IPState WeatherRadio::getBasicData()
     }
 
     defineProperty(&FirmwareInfoTP);
-    IDSetText(&FirmwareInfoTP, nullptr);
 
-    FirmwareConfig config;
-    IPState result = getFirmwareConfig(&config);
-    if (result != IPS_OK)
-    {
-        LOG_ERROR("Failed to get firmware configuration from device.");
-        return result;
-    }
-
-    FirmwareConfigT = new IText[config.size()];
-    std::map<std::string, std::string>::iterator it;
-    size_t pos = 0;
-
-    for (it = config.begin(); it != config.end(); ++it)
-    {
-        FirmwareConfigT[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
-        IUFillText(&FirmwareConfigT[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
-        LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
-    }
-
-    IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
-    defineProperty(&FirmwareConfigTP);
-
-    // refresh button
-    defineProperty(&refreshConfigSP);
-
-    if (hasWiFi)
-        defineProperty(&wifiConnectionSP);
-
-    return IPS_OK;
+    IPState result = updateFirmwareConfig();
+    return result;
 }
 
 /**************************************************************************************
@@ -439,25 +418,12 @@ IPState WeatherRadio::getBasicData()
 ***************************************************************************************/
 void WeatherRadio::updateConfigData()
 {
-    FirmwareInfoTP.s = getFirmwareVersion(FirmwareInfoT[0].text);
+    FirmwareInfoTP.s = updateFirmwareVersion();
     if (FirmwareInfoTP.s != IPS_OK)
         LOG_ERROR("Failed to get firmware from device.");
 
-    FirmwareConfig config;
-    getFirmwareConfig(&config);
-    std::map<std::string, std::string>::iterator it;
+    FirmwareConfigTP.s = updateFirmwareConfig();
 
-    for (it = config.begin(); it != config.end(); ++it)
-    {
-        // find the matching text property
-        for (int i = 0; i < FirmwareConfigTP.ntp; i++)
-            if (strcmp(FirmwareConfigT[i].name, it->first.c_str()) == 0)
-            {
-                IUSaveText(&FirmwareConfigT[i], it->second.c_str());
-                LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
-            }
-    }
-    FirmwareConfigTP.s = IPS_OK;
     IDSetText(&FirmwareInfoTP, nullptr);
     IDSetText(&FirmwareConfigTP, nullptr);
 }
@@ -465,77 +431,48 @@ void WeatherRadio::updateConfigData()
 /**************************************************************************************
 ** Version of the Arduino firmware
 ***************************************************************************************/
-IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
+IPState WeatherRadio::updateFirmwareVersion()
 {
-    char data[MAX_WEATHERBUFFER] = {0};
-    int n_bytes = 0;
-    bool result = sendQuery("v", data, &n_bytes);
+    bool result = executeCommand(CMD_VERSION);
 
-    if (result == true)
-    {
-        char *srcBuffer{new char[n_bytes+1] {0}};
-        // duplicate the buffer since the parser will modify it
-        strncpy(srcBuffer, data, static_cast<size_t>(n_bytes));
-        char *source = srcBuffer;
-        char *endptr;
-        JsonValue value;
-        JsonAllocator allocator;
-        int status = jsonParse(source, &endptr, &value, allocator);
-        if (status != JSON_OK)
-        {
-            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return IPS_ALERT;
-        }
-
-        JsonIterator docIter;
-        for (docIter = begin(value); docIter != end(value); ++docIter)
-        {
-            if (strcmp(docIter->key, "version") == 0)
-                strcpy(versionInfo, docIter->value.toString());
-        }
-        return IPS_OK;
-        LOG_DEBUG("Firmware retrieved successfully.");
-    }
-    LOG_DEBUG("Request for firmware version failed!");
-    return IPS_ALERT;
+    LOG_DEBUG(result ? "Firmware retrieved successfully." : "Request for firmware version failed!");
+    return (result ? IPS_OK : IPS_ALERT);
 }
+
+void WeatherRadio::handleFirmwareVersion(JsonValue value)
+{
+    FirmwareInfoTP.s = IPS_IDLE;
+    JsonIterator docIter;
+    for (docIter = begin(value); docIter != end(value); ++docIter)
+    {
+        if (strcmp(docIter->key, "version") == 0)
+        {
+            strcpy(FirmwareInfoT[0].text, docIter->value.toString());
+            FirmwareInfoTP.s = IPS_OK;
+        }
+    }
+}
+
 
 /**************************************************************************************
 ** Retrieve the configuration parameters from the firmware
 ***************************************************************************************/
-IPState WeatherRadio::getFirmwareConfig(FirmwareConfig *config)
+IPState WeatherRadio::updateFirmwareConfig()
 {
-    char data[MAX_WEATHERBUFFER] = {0};
-    int n_bytes = 0;
-    bool result = sendQuery("c", data, &n_bytes);
+    bool result = executeCommand(CMD_CONFIG);
 
-    if (result)
-    {
-        // LOGF_DEBUG("Firmware configuration response: %s", data);
-        char *source = data;
-        char *endptr;
-        JsonValue value;
-        JsonAllocator allocator;
-        int status = jsonParse(source, &endptr, &value, allocator);
-        if (status != JSON_OK)
-        {
-            LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-            return IPS_ALERT;
-        }
-
-        return readFirmwareConfig(config, &value);
-    }
-    else
-    {
-        LOG_WARN("Retrieving firmware config failed.");
-        return IPS_ALERT;
-    }
+    LOG_DEBUG(result ? "Firmware configuration retrieved successfully." : "Request for firmware configuration failed!");
+    return (result ? IPS_OK : IPS_ALERT);
 }
 
-IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config, JsonValue *jvalue)
+IPState WeatherRadio::handleFirmwareConfig(JsonValue jvalue)
 {
+    FirmwareConfig config;
+    // are the INDI properties already initialized?
+    bool init = FirmwareConfigT == nullptr;
+
     JsonIterator deviceIter;
-    for (deviceIter = begin(*jvalue); deviceIter != end(*jvalue); ++deviceIter)
+    for (deviceIter = begin(jvalue); deviceIter != end(jvalue); ++deviceIter)
     {
         char *device {new char[strlen(deviceIter->key)+1] {0}};
         strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
@@ -574,15 +511,56 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config, JsonValue *jval
                 break;
             }
             // add it to the configuration
-            (*config)[std::string(device) + "::" + std::string(name)] = value;
+            config[std::string(device) + "::" + std::string(name)] = value;
         }
+    }
 
+    // define the properties vector
+    if (init)
+    {
+        FirmwareConfigT = new IText[config.size()];
+        IUFillTextVector(&FirmwareConfigTP, FirmwareConfigT, static_cast<int>(config.size()), getDeviceName(), "FIRMWARE_CONFIGS", "Firmware config", INFO_TAB, IP_RO, 60, IPS_OK);
+    }
+
+    // fill device cofigurations into INDI properties
+    size_t pos = 0;
+    for (std::map<std::string, std::string>::iterator it = config.begin(); it != config.end(); ++it)
+    {
+        if (init)
+        {
+            FirmwareConfigT[pos].text = nullptr; // seems like a bug in IUFillText that this is necessary
+            IUFillText(&FirmwareConfigT[pos++], it->first.c_str(), it->first.c_str(), it->second.c_str());
+            LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
+        }
+        else
+        {
+            // find the matching text property
+            for (int i = 0; i < FirmwareConfigTP.ntp; i++)
+            {
+                if (strcmp(FirmwareConfigT[i].name, it->first.c_str()) == 0)
+                {
+                    IUSaveText(&FirmwareConfigT[i], it->second.c_str());
+                    LOGF_INFO("Firmware config: %s = %s", it->first.c_str(), it->second.c_str());
+                }
+            }
+        }
+    }
+
+
+    if (init)
+    {
+        // firmware configuration properties
+        defineProperty(&FirmwareConfigTP);
+        // refresh button
+        defineProperty(&refreshConfigSP);
+        if (hasWiFi)
+            defineProperty(&wifiConnectionSP);
     }
     // update WiFi status
     if (hasWiFi)
     {
-        FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
-        bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
+        FirmwareConfig::iterator configIt = config.find(std::string(WIFI_DEVICE) + "::" + "connected");
+        bool connected = (configIt != config.end() && strcmp(configIt->second.c_str(), "true") == 0);
 
         LOG_DEBUG("WiFi device detected.");
         updateWiFiStatus(connected);
@@ -599,12 +577,12 @@ bool WeatherRadio::connectWiFi(bool connect)
     bool result;
     if (connect)
     {
-        result = transmitSerial("s\n");
+        result = executeCommand(CMD_WIFI_ON);
         LOGF_INFO("Connecting WiFi %", result ? "succeeded." : "failed!");
     }
     else
     {
-        result = transmitSerial("d\n");
+        result = executeCommand(CMD_WIFI_OFF);
         LOGF_INFO("Disonnecting WiFi %", result ? "succeeded." : "failed!");
     }
     return result;
@@ -625,8 +603,7 @@ void WeatherRadio::updateWiFiStatus(bool connected)
 ***************************************************************************************/
 bool WeatherRadio::resetArduino()
 {
-    bool result = transmitSerial("r\n");
-    LOGF_INFO("Resetting Arduino %", result ? "succeeded." : "failed!");
+    bool result = executeCommand(CMD_RESET);
     return result;
 }
 
@@ -1081,6 +1058,7 @@ void WeatherRadio::handleWeatherData(JsonValue value)
             }
         }
         else {
+            deviceProp->s = IPS_IDLE;
             // read all sensor data
             for (sensorIter = begin(deviceIter->value); sensorIter != end(deviceIter->value); ++sensorIter)
             {
@@ -1092,6 +1070,7 @@ void WeatherRadio::handleWeatherData(JsonValue value)
                     sensor->value = sensorIter->value.toNumber();
                     // update the weather parameter {name, sensorIter->key} to sensorIter->value.toNumber()
                     updateWeatherParameter({name, sensorIter->key}, sensorIter->value.toNumber());
+                    deviceProp->s = IPS_OK;
                 }
             }
             // update device values
@@ -1334,70 +1313,6 @@ bool WeatherRadio::parseCanonicalName(sensor_name *sensor, std::string name)
 /**************************************************************************************
 ** Communicate with serial device or HTTP server
 ***************************************************************************************/
-bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
-{
-    // communication through a serial (USB) interface
-    if (getActiveConnection()->type() == Connection::Interface::CONNECTION_SERIAL)
-    {
-        // first clear the read buffer for unexpected data
-        char tmp_response[MAX_WEATHERBUFFER] = {0};
-        int tmp_bytes = 0;
-        while (receiveSerial(tmp_response, &tmp_bytes, '\n', 0))
-        {
-            if (tmp_response[0] == '\0') // nothing received
-                break;
-            tmp_response[0] = '\0';
-        }
-        // send query
-        char cmdstring[20] = {0};
-        sprintf(cmdstring, "%s\n", cmd);
-        LOGF_DEBUG("Sending query: %s", cmdstring);
-
-        if(!transmitSerial(cmdstring))
-        {
-            LOGF_ERROR("Command <%s> failed.", cmdstring);
-            return false;
-        }
-        return receiveSerial(response, length, '\n', getTTYTimeout());
-    }
-    // communication through HTTP, e.g. with a ESP8266 Arduino chip
-    else if (getActiveConnection()->type() == Connection::Interface::CONNECTION_TCP)
-    {
-        CURL *curl;
-        CURLcode res;
-        char requestURL[MAXRBUF];
-
-        snprintf(requestURL, MAXRBUF, "http://%s:%s/%s", hostname, port, cmd);
-
-        curl = curl_easy_init();
-        if (curl)
-        {
-            curl_easy_setopt(curl, CURLOPT_URL, requestURL);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
-            res = curl_easy_perform(curl);
-            curl_easy_cleanup(curl);
-            if (res == CURLcode::CURLE_OK)
-            {
-                *length = strlen(response);
-                return true;
-            }
-            else
-            {
-                LOGF_ERROR("HTTP request to %s failed.", hostname);
-                return false;
-            }
-        }
-        else {
-            LOGF_ERROR("Cannot initialize CURL, connection to HTTP server %s failed.", hostname);
-            return false;
-        }
-    }
-    // this should not happen
-    LOGF_ERROR("Unsupported active connection type: %d", getActiveConnection()->type());
-    return false;
-}
-
 bool WeatherRadio::executeCommand(wr_command cmd)
 {
     std::string cmdstring = commands[cmd];
@@ -1467,6 +1382,10 @@ bool WeatherRadio::executeCommand(wr_command cmd)
 
                 return true;
             }
+            else if (cmd == CMD_RESET && res == CURLcode::CURLE_RECV_ERROR) {
+               // when resetting, there will be no response.
+                return true;
+            }
             else
             {
                 LOGF_ERROR("HTTP request to %s failed.", hostname);
@@ -1485,6 +1404,10 @@ bool WeatherRadio::executeCommand(wr_command cmd)
 
 void WeatherRadio::handleResponse(wr_command cmd, const char *response, int length)
 {
+    // ignore empty response and non JSON
+    if (length == 0 || strcmp(response, "\r\n") == 0 || (response[0] != '[' && response[0] != '{'))
+        return;
+
     char *source{new char[length+1] {0}};
     // duplicate the buffer since the parser will modify it
     strncpy(source, response, static_cast<size_t>(length));
@@ -1512,7 +1435,19 @@ void WeatherRadio::handleResponse(wr_command cmd, const char *response, int leng
         case CMD_WEATHER:
             handleWeatherData(value);
             break;
-        default:
+        case CMD_VERSION:
+            handleFirmwareVersion(value);
+            break;
+        case CMD_CONFIG:
+            handleFirmwareConfig(value);
+            break;
+        case CMD_RESET:
+            // no response expected
+            break;
+        case CMD_DURATION:
+        case CMD_WIFI_ON:
+        case CMD_WIFI_OFF:
+            // not implemented
             break;
         }
     }

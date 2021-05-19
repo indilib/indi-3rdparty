@@ -73,7 +73,9 @@ protected:
     /**
      * @brief get the interface version from the Arduino device.
      */
-    IPState getFirmwareVersion(char *versionInfo);
+    IPState updateFirmwareVersion();
+    void handleFirmwareVersion(JsonValue value);
+
     // firmware info
     ITextVectorProperty FirmwareInfoTP;
     IText FirmwareInfoT[1] = {};
@@ -265,16 +267,14 @@ protected:
 
     /**
      * @brief Read the firmware configuration
-     * @param config configuration to be updated
      */
-    IPState getFirmwareConfig(FirmwareConfig *config);
+    IPState updateFirmwareConfig();
 
     /**
      * @brief Read the firmware configuration
-     * @param config configuration to be updated
      * @param value parsed JSON document
      */
-    IPState readFirmwareConfig(FirmwareConfig *config, JsonValue *jvalue);
+    IPState handleFirmwareConfig(JsonValue jvalue);
 
     /**
      * @brief Connect to WiFi
@@ -297,7 +297,6 @@ protected:
     // Serial communication
     bool receiveSerial(char* buffer, int* bytes, char end, int wait);
     bool transmitSerial(std::string buffer);
-    bool sendQuery(const char* cmd, char* response, int *length);
 
     // send a command to the serial device or by HTTP
     bool executeCommand(wr_command cmd);
