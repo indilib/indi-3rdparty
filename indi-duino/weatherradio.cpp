@@ -191,6 +191,9 @@ bool WeatherRadio::updateProperties()
 {
     bool result = true;
 
+    // read the weather parameters for the first time so that #updateProperties() knows all sensors
+    updateWeather();
+
     // dynamically add weather parameters
     if (isConnected())
     {
@@ -298,14 +301,9 @@ bool WeatherRadio::updateProperties()
             defineProperty(&rawDevices[i]);
         LOG_INFO("Raw sensors added.");
 
-        result = getBasicData();
-
-        // Load the configuration if everything was fine
-        if (result == true)
-        {
-            loadConfig();
-            result = INDI::Weather::updateProperties();
-        }
+        // Load the configuration
+        loadConfig();
+        result = INDI::Weather::updateProperties();
 
         defineProperty(&resetArduinoSP);
     }
@@ -390,20 +388,15 @@ IPState WeatherRadio::getBasicData()
     else
     {
         LOGF_INFO("Firmware version: %s", FirmwareInfoT[0].text);
-        std::string version(FirmwareInfoT[0].text);
-        size_t dotpos = version.find (".");
-        if (dotpos > 0)
+        char* dotpos = strchr(FirmwareInfoT[0].text, '.');
+        if (dotpos != nullptr)
         {
-            try {
-                major_version = std::stoi(version.substr(0, dotpos-1));
-                minor_version = std::stoi(version.substr(dotpos));
-            } catch (std::invalid_argument *ex) {
-                LOGF_ERROR("Failed to determine major and minor version from %s.", version);
-            }
+            major_version = atoi(FirmwareInfoT[0].text);
+            minor_version = atoi(dotpos+1);
         }
         else
         {
-            LOGF_ERROR("Version not in dot notabion: %s", version);
+            LOGF_ERROR("Version not in dot notation: %s", FirmwareInfoT[0].text);
         }
     }
 
@@ -1008,8 +1001,8 @@ bool WeatherRadio::Handshake()
 
     nanosleep(&request_delay, nullptr);
 
-    // read the weather parameters for the first time so that #updateProperties() knows all sensors
-    IPState result = updateWeather();
+    // retrieve basic data to initialize the weather station
+    IPState result = getBasicData();
     return result == IPS_OK;
 }
 
@@ -1019,17 +1012,7 @@ bool WeatherRadio::Handshake()
 ***************************************************************************************/
 IPState WeatherRadio::updateWeather()
 {
-    char data[MAX_WEATHERBUFFER] = {0};
-    int n_bytes = 0;
-    bool result = sendQuery("w", data, &n_bytes);
-
-    if (result == false)
-        return IPS_ALERT;
-
-    char *src{new char[n_bytes+1] {0}};
-    // duplicate the buffer since the parser will modify it
-    strncpy(src, data, static_cast<size_t>(n_bytes));
-    result = parseWeatherData(src);
+    bool result = executeCommand(CMD_WEATHER);
 
     // result recieved
     LOGF_DEBUG("Reading weather data from Arduino %s", result ? "succeeded." : "failed!");
@@ -1039,25 +1022,6 @@ IPState WeatherRadio::updateWeather()
 /**************************************************************************************
 ** Handle JSON weather document.
 ***************************************************************************************/
-bool WeatherRadio::parseWeatherData(char *data)
-{
-    char *source = data;
-    char *endptr;
-    JsonValue value;
-    JsonAllocator allocator;
-    int status = jsonParse(source, &endptr, &value, allocator);
-    if (status != JSON_OK)
-    {
-        LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
-        return false;
-    }
-
-    handleWeatherData(value);
-    LOG_DEBUG("Parsing weather data succeeded.");
-    return true;
-
-}
-
 void WeatherRadio::handleWeatherData(JsonValue value)
 {
     JsonIterator deviceIter;

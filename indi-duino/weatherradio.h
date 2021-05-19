@@ -261,7 +261,6 @@ protected:
      */
     IPState updateWeather() override;
 
-    bool parseWeatherData(char *data);
     void handleWeatherData(JsonValue value);
 
     /**
