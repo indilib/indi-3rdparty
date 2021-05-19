@@ -258,14 +258,6 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 {
     ASI_ERROR_CODE ret;
 
-    // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
-    // images.
-    if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
-    {
-        LOG_INFO("Switching to 8-bit video.");
-        setVideoFormat(ASI_IMG_RAW8);
-    }
-
     workerBlinkExposure(
         isAboutToQuit,
         BlinkNP[BLINK_COUNT   ].getValue(),
@@ -293,6 +285,14 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
         LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
+
+        // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
+        // images.
+        if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
+        {
+            LOG_INFO("Switching to 8-bit video.");
+            setVideoFormat(ASI_IMG_RAW8);
+        }
     }
 
     if (ret != ASI_SUCCESS)
