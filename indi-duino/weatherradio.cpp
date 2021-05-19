@@ -36,7 +36,6 @@
 #include "connectionplugins/connectionserial.h"
 #include "indicom.h"
 
-#include "gason/gason.h"
 #include "curl/curl.h"
 
 #include "config.h"
@@ -82,6 +81,14 @@ WeatherRadio::WeatherRadio()
 {
     setVersion(WEATHERRADIO_VERSION_MAJOR, WEATHERRADIO_VERSION_MINOR);
     weatherCalculator = new WeatherCalculator();
+    // define weather radio commands
+    commands[CMD_VERSION]  = "v";
+    commands[CMD_WEATHER]  = "w";
+    commands[CMD_CONFIG]   = "c";
+    commands[CMD_DURATION] = "t";
+    commands[CMD_WIFI_ON]  = "s";
+    commands[CMD_WIFI_OFF] = "d";
+    commands[CMD_RESET]    = "r";
 }
 
 /**************************************************************************************
@@ -381,13 +388,30 @@ IPState WeatherRadio::getBasicData()
         return FirmwareInfoTP.s;
     }
     else
+    {
         LOGF_INFO("Firmware version: %s", FirmwareInfoT[0].text);
+        std::string version(FirmwareInfoT[0].text);
+        size_t dotpos = version.find (".");
+        if (dotpos > 0)
+        {
+            try {
+                major_version = std::stoi(version.substr(0, dotpos-1));
+                minor_version = std::stoi(version.substr(dotpos));
+            } catch (std::invalid_argument *ex) {
+                LOGF_ERROR("Failed to determine major and minor version from %s.", version);
+            }
+        }
+        else
+        {
+            LOGF_ERROR("Version not in dot notabion: %s", version);
+        }
+    }
 
     defineProperty(&FirmwareInfoTP);
     IDSetText(&FirmwareInfoTP, nullptr);
 
     FirmwareConfig config;
-    IPState result = readFirmwareConfig(&config);
+    IPState result = getFirmwareConfig(&config);
     if (result != IPS_OK)
     {
         LOG_ERROR("Failed to get firmware configuration from device.");
@@ -427,7 +451,7 @@ void WeatherRadio::updateConfigData()
         LOG_ERROR("Failed to get firmware from device.");
 
     FirmwareConfig config;
-    readFirmwareConfig(&config);
+    getFirmwareConfig(&config);
     std::map<std::string, std::string>::iterator it;
 
     for (it = config.begin(); it != config.end(); ++it)
@@ -484,9 +508,9 @@ IPState WeatherRadio::getFirmwareVersion(char *versionInfo)
 }
 
 /**************************************************************************************
-** Read the configuration parameters from the firmware
+** Retrieve the configuration parameters from the firmware
 ***************************************************************************************/
-IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
+IPState WeatherRadio::getFirmwareConfig(FirmwareConfig *config)
 {
     char data[MAX_WEATHERBUFFER] = {0};
     int n_bytes = 0;
@@ -506,63 +530,7 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
             return IPS_ALERT;
         }
 
-        JsonIterator deviceIter;
-        for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
-        {
-            char *device {new char[strlen(deviceIter->key)+1] {0}};
-            strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
-
-            if (strcmp(device, WIFI_DEVICE) == 0)
-                hasWiFi = true;
-
-            JsonIterator configIter;
-
-            // read settings for the single device
-            for (configIter = begin(deviceIter->value); configIter != end(deviceIter->value); ++configIter)
-            {
-                char *name {new char[strlen(configIter->key)+1] {0}};
-
-                // copy single setting
-                strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
-                std::string value;
-                double number;
-
-                switch (configIter->value.getTag()) {
-                case JSON_NUMBER:
-                    number = configIter->value.toNumber();
-                    if (trunc(number) == number)
-                        value = std::to_string(int(number));
-                    else
-                        value = std::to_string(number);
-                    break;
-                case JSON_TRUE:
-                    value = "true";
-                    break;
-                case JSON_FALSE:
-                    value = "false";
-                    break;
-                default:
-                    value = strdup(configIter->value.toString());
-                    break;
-                }
-                // add it to the configuration
-                (*config)[std::string(device) + "::" + std::string(name)] = value;
-            }
-
-        }
-        // update WiFi status
-        if (hasWiFi)
-        {
-            FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
-            bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
-
-            LOG_DEBUG("WiFi device detected.");
-            updateWiFiStatus(connected);
-        }
-
-        LOG_DEBUG("Firmware parsed successfully.");
-        return IPS_OK;
-
+        return readFirmwareConfig(config, &value);
     }
     else
     {
@@ -571,6 +539,65 @@ IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config)
     }
 }
 
+IPState WeatherRadio::readFirmwareConfig(FirmwareConfig *config, JsonValue *jvalue)
+{
+    JsonIterator deviceIter;
+    for (deviceIter = begin(*jvalue); deviceIter != end(*jvalue); ++deviceIter)
+    {
+        char *device {new char[strlen(deviceIter->key)+1] {0}};
+        strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+
+        if (strcmp(device, WIFI_DEVICE) == 0)
+            hasWiFi = true;
+
+        JsonIterator configIter;
+
+        // read settings for the single device
+        for (configIter = begin(deviceIter->value); configIter != end(deviceIter->value); ++configIter)
+        {
+            char *name {new char[strlen(configIter->key)+1] {0}};
+
+            // copy single setting
+            strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+            std::string value;
+            double number;
+
+            switch (configIter->value.getTag()) {
+            case JSON_NUMBER:
+                number = configIter->value.toNumber();
+                if (trunc(number) == number)
+                    value = std::to_string(int(number));
+                else
+                    value = std::to_string(number);
+                break;
+            case JSON_TRUE:
+                value = "true";
+                break;
+            case JSON_FALSE:
+                value = "false";
+                break;
+            default:
+                value = strdup(configIter->value.toString());
+                break;
+            }
+            // add it to the configuration
+            (*config)[std::string(device) + "::" + std::string(name)] = value;
+        }
+
+    }
+    // update WiFi status
+    if (hasWiFi)
+    {
+        FirmwareConfig::iterator configIt = config->find(std::string(WIFI_DEVICE) + "::" + "connected");
+        bool connected = (configIt != config->end() && strcmp(configIt->second.c_str(), "true") == 0);
+
+        LOG_DEBUG("WiFi device detected.");
+        updateWiFiStatus(connected);
+    }
+
+    LOG_DEBUG("Firmware parsed successfully.");
+    return IPS_OK;
+}
 /**************************************************************************************
 ** Connect / disconnect the Arduino to WiFi.
 ***************************************************************************************/
@@ -1010,7 +1037,7 @@ IPState WeatherRadio::updateWeather()
 }
 
 /**************************************************************************************
-** Parse JSON weather document.
+** Handle JSON weather document.
 ***************************************************************************************/
 bool WeatherRadio::parseWeatherData(char *data)
 {
@@ -1025,6 +1052,14 @@ bool WeatherRadio::parseWeatherData(char *data)
         return false;
     }
 
+    handleWeatherData(value);
+    LOG_DEBUG("Parsing weather data succeeded.");
+    return true;
+
+}
+
+void WeatherRadio::handleWeatherData(JsonValue value)
+{
     JsonIterator deviceIter;
     for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
     {
@@ -1100,9 +1135,6 @@ bool WeatherRadio::parseWeatherData(char *data)
         }
 
     }
-    LOG_DEBUG("Parsing weather data succeeded.");
-    return true;
-
 }
 
 /**************************************************************************************
@@ -1402,6 +1434,127 @@ bool WeatherRadio::sendQuery(const char* cmd, char* response, int *length)
     return false;
 }
 
+bool WeatherRadio::executeCommand(wr_command cmd)
+{
+    std::string cmdstring = commands[cmd];
+    char response[MAX_WEATHERBUFFER] = {0};
+    int length = 0;
+    // communication through a serial (USB) interface
+    if (getActiveConnection()->type() == Connection::Interface::CONNECTION_SERIAL)
+    {
+        // first clear the read buffer for unexpected data
+        while (receiveSerial(response, &length, '\n', 0))
+        {
+            if (response[0] == '\0') // nothing received
+                break;
+            response[0] = '\0';
+        }
+        // send query
+        LOGF_DEBUG("Sending query: %s", cmdstring);
+
+        if(!transmitSerial(cmdstring + "\n"))
+        {
+            LOGF_ERROR("Command <%s> failed.", cmdstring);
+            return false;
+        }
+        // read the response lines
+        bool result = receiveSerial(response, &length, '\n', getTTYTimeout());
+        if (result)
+            handleResponse(cmd, response, length);
+        else
+        {
+            LOG_ERROR("Receiving response failed.");
+            return false;
+        }
+        // read subsequent lines
+        while (receiveSerial(response, &length, '\n', 0))
+        {
+            if (response[0] == '\0') // nothing received
+                break;
+            handleResponse(cmd, response, length);
+        }
+        return true;
+    }
+    // communication through HTTP, e.g. with a ESP8266 Arduino chip
+    else if (getActiveConnection()->type() == Connection::Interface::CONNECTION_TCP)
+    {
+        CURL *curl;
+        CURLcode res;
+        char requestURL[MAXRBUF];
+
+        snprintf(requestURL, MAXRBUF, "http://%s:%s/%s", hostname, port, cmdstring.c_str());
+
+        curl = curl_easy_init();
+        if (curl)
+        {
+            curl_easy_setopt(curl, CURLOPT_URL, requestURL);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+            res = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
+            if (res == CURLcode::CURLE_OK && response != NULL)
+            {
+                std::stringstream rs (response);
+                std::string line;
+
+                // handle each line separately
+                while(std::getline(rs, line, '\n'))
+                    handleResponse(cmd, line.c_str(), line.length());
+
+                return true;
+            }
+            else
+            {
+                LOGF_ERROR("HTTP request to %s failed.", hostname);
+                return false;
+            }
+        }
+        else {
+            LOGF_ERROR("Cannot initialize CURL, connection to HTTP server %s failed.", hostname);
+            return false;
+        }
+    }
+    // this should not happen
+    LOGF_ERROR("Unsupported active connection type: %d", getActiveConnection()->type());
+    return false;
+}
+
+void WeatherRadio::handleResponse(wr_command cmd, const char *response, int length)
+{
+    char *source{new char[length+1] {0}};
+    // duplicate the buffer since the parser will modify it
+    strncpy(source, response, static_cast<size_t>(length));
+
+    // parse JSON string
+    char *endptr;
+    JsonValue value;
+    JsonAllocator allocator;
+    int status = jsonParse(source, &endptr, &value, allocator);
+    if (status != JSON_OK)
+    {
+        LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - source);
+        return;
+    }
+
+    // starting from version 1.14, the responses are typed, before that it was
+    // necessary to know which command has triggered the response.
+    if (major_version > 1 || (major_version == 1 && minor_version > 13))
+    {
+    }
+    else
+    {
+        // old protocol
+        switch (cmd) {
+        case CMD_WEATHER:
+            handleWeatherData(value);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+
 /**************************************************************************************
 ** Helper functions for serial communication
 ***************************************************************************************/
@@ -1432,10 +1585,10 @@ bool WeatherRadio::receiveSerial(char* buffer, int* bytes, char end, int wait)
 }
 
 
-bool WeatherRadio::transmitSerial(const char* buffer)
+bool WeatherRadio::transmitSerial(std::string buffer)
 {
     int bytesWritten = 0;
-    int returnCode = tty_write_string(PortFD, buffer, &bytesWritten);
+    int returnCode = tty_write_string(PortFD, buffer.c_str(), &bytesWritten);
 
     if (returnCode != TTY_OK)
     {
