@@ -367,6 +367,9 @@ bool WeatherRadio::updateProperties()
         FirmwareConfigTP.tp = nullptr;
         free(FirmwareConfigT);
         FirmwareConfigT = nullptr;
+        // clear version information
+        major_version = 0;
+        minor_version = 0;
 
         LOG_DEBUG("Weather Radio properties removal completed.");
 
@@ -1427,6 +1430,24 @@ void WeatherRadio::handleResponse(wr_command cmd, const char *response, int leng
     // necessary to know which command has triggered the response.
     if (major_version > 1 || (major_version == 1 && minor_version > 13))
     {
+        JsonIterator typeIter;
+        for (typeIter = begin(value); typeIter != end(value); ++typeIter)
+        {
+            if (strcmp(typeIter->key, "version") == 0)
+            {
+                // version info directly contained, not in a sub document
+                strcpy(FirmwareInfoT[0].text, typeIter->value.toString());
+                FirmwareInfoTP.s = IPS_OK;
+            }
+            else if (strcmp(typeIter->key, "config") == 0)
+                handleFirmwareConfig(typeIter->value);
+            else if (strcmp(typeIter->key, "weather") == 0)
+                handleWeatherData(typeIter->value);
+            else if (strcmp(typeIter->key, "message") == 0)
+                handleMessage(typeIter->value);
+            else
+                LOGF_WARN("Unknown response type: %s", typeIter->key);
+        }
     }
     else
     {
@@ -1451,6 +1472,36 @@ void WeatherRadio::handleResponse(wr_command cmd, const char *response, int leng
             break;
         }
     }
+}
+
+void WeatherRadio::handleMessage(JsonValue value)
+{
+    JsonIterator typeIter;
+    char* text = nullptr;
+    char* messagetype = nullptr;
+
+    for (typeIter = begin(value); typeIter != end(value); ++typeIter)
+    {
+        if (strcmp(typeIter->key, "text") == 0)
+            text = strdup(typeIter->value.toString());
+        else if (strcmp(typeIter->key, "type") == 0)
+            messagetype = strdup(typeIter->value.toString());
+    }
+    // log the message
+    if (text != nullptr)
+    {
+        if (messagetype == nullptr || strcmp(messagetype, "debug") == 0)
+            LOG_DEBUG(text);
+        else if (strcmp(messagetype, "alert") == 0)
+            LOG_ERROR(text);
+        else if (strcmp(messagetype, "warning") == 0)
+            LOG_WARN(text);
+        else
+            LOG_INFO(text);
+    }
+    // clean up
+    if (text != nullptr) free(text);
+    if (messagetype != nullptr) free(messagetype);
 }
 
 

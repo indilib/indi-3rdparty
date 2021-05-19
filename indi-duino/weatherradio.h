@@ -302,6 +302,8 @@ protected:
     bool executeCommand(wr_command cmd);
     // handle one single response line
     void handleResponse(wr_command cmd, const char *response, int length);
+    // handle a message from the weather station
+    void handleMessage(JsonValue value);
 
     // override default INDI methods
     const char *getDefaultName() override;

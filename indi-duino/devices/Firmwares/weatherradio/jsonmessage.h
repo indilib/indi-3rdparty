@@ -58,7 +58,9 @@ void addJsonLine(String message, message_type code) {
 
 // add an existing JSON message line
 void addJsonLine(String json_message) {
-  if (bufferedJsonLines.length() + json_message.length() < MAX_JSON_BUFFER_SIZE)
+  if (bufferedJsonLines.length() == 0)
+    bufferedJsonLines = json_message;
+  else if (bufferedJsonLines.length() + json_message.length() < MAX_JSON_BUFFER_SIZE)
     bufferedJsonLines += "\n" + json_message;
   else
     bufferedJsonLines = json_message;
