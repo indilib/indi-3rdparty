@@ -1332,11 +1332,11 @@ bool WeatherRadio::executeCommand(wr_command cmd)
             response[0] = '\0';
         }
         // send query
-        LOGF_DEBUG("Sending query: %s", cmdstring);
+        LOGF_DEBUG("Sending query: %s", cmdstring.c_str());
 
         if(!transmitSerial(cmdstring + "\n"))
         {
-            LOGF_ERROR("Command <%s> failed.", cmdstring);
+            LOGF_ERROR("Command <%s> failed.", cmdstring.c_str());
             return false;
         }
         // read the response lines
@@ -1374,7 +1374,7 @@ bool WeatherRadio::executeCommand(wr_command cmd)
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
             res = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
-            if (res == CURLcode::CURLE_OK && response != NULL)
+            if (res == CURLcode::CURLE_OK)
             {
                 std::stringstream rs (response);
                 std::string line;
@@ -1544,7 +1544,8 @@ bool WeatherRadio::transmitSerial(std::string buffer)
     {
         char errorString[MAXRBUF];
         tty_error_msg(returnCode, errorString, MAXRBUF);
-        LOGF_WARN("Failed to transmit %s. Wrote %d bytes and got error %s.", buffer, bytesWritten, errorString);
+        LOGF_WARN("Failed to transmit %s. Wrote %d bytes and got error %s.",
+                  buffer.c_str(), bytesWritten, errorString);
         return false;
     }
     return true;
