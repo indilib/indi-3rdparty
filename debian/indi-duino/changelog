@@ -1,3 +1,12 @@
+indi-duino (1.14) buster; urgency=medium
+
+  * Configuration based on an ini file replacing wr_config.py
+  * JSON protocol changed so that each JSON response contains the response
+    type.
+  * RRD update now forces a weather parameter refresh of the INDI service
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 21 May 2021 08:41:41 +0200
+
 indi-duino (1.13) buster; urgency=medium
 
   * Rain sensor integrated
