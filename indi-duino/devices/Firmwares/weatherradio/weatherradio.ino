@@ -565,7 +565,7 @@ void loop() {
 
   // regularly update sensor data
   unsigned long now = millis();
-  if (abs(now - lastSensorRead) > MAX_CACHE_AGE) {
+  if (abs((long) (now - lastSensorRead)) > MAX_CACHE_AGE) {
     updateSensorData();
     lastSensorRead = now;
   }

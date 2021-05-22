@@ -74,7 +74,7 @@ int winddirection() {
 
 // This is the function that the interrupt calls to increment the rotation count
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_rotation () {
+void IRAM_ATTR isr_rotation () {
 #else
 void isr_rotation () {
 #endif
