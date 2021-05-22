@@ -34,6 +34,9 @@
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 30000
 
+// maximal size of buffered JSON messages
+#define MAX_JSON_BUFFER_SIZE 16000
+
 // ============== device configurations (begin) ============
 
 // DHT sensor family

@@ -20,12 +20,17 @@ from wr_config import *
 import argparse
 import simplejson as json
 
+# initialize the configuration
+config = WeatherRadioConfig().config
+
 parser = argparse.ArgumentParser(description="List all media files and store the information as JSON document")
 parser.add_argument("-v", "--verbose", action='store_true',
                     help="Display progress information")
-parser.add_argument("-d", "--mediadir", default=MEDIADIR,
+parser.add_argument("-d", "--mediadir",
+                    default=config.get('WeatherRadio', 'MEDIADIR'),
                     help="Directory holding the media files")
-parser.add_argument("-o", "--output", default=DATAPATH+"/images.json",
+parser.add_argument("-o", "--output",
+                    default=config.get('WeatherRadio', 'DATAPATH')+"/images.json",
                     help="JSON file to be written")
 
 args = parser.parse_args()

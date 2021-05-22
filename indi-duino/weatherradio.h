@@ -26,6 +26,8 @@
 #include <math.h>
 #include <memory>
 
+#include "gason/gason.h"
+
 #include "indiweather.h"
 #include "weathercalculator.h"
 
@@ -71,7 +73,9 @@ protected:
     /**
      * @brief get the interface version from the Arduino device.
      */
-    IPState getFirmwareVersion(char *versionInfo);
+    IPState updateFirmwareVersion();
+    void handleFirmwareVersion(JsonValue value);
+
     // firmware info
     ITextVectorProperty FirmwareInfoTP;
     IText FirmwareInfoT[1] = {};
@@ -79,13 +83,8 @@ protected:
     IText *FirmwareConfigT;
     ITextVectorProperty FirmwareConfigTP;
 
-    /**
-     * @brief Read the weather data from the JSON document
-     * @return parse success
-     */
-    IPState updateWeather() override;
-
-    bool parseWeatherData(char *data);
+    int major_version = 0;
+    int minor_version = 0;
 
     /**
       * Device specific configurations
@@ -93,6 +92,10 @@ protected:
     enum SENSOR_TYPE {TEMPERATURE_SENSOR, OBJECT_TEMPERATURE_SENSOR, PRESSURE_SENSOR, HUMIDITY_SENSOR,
                       LUMINOSITY_SENSOR, SQM_SENSOR, WIND_SPEED_SENSOR, WIND_GUST_SENSOR, WIND_DIRECTION_SENSOR,
                       RAIN_DROPS_SENSOR, RAIN_VOLUME_SENSOR, WETNESS_SENSOR, INTERNAL_SENSOR};
+
+    enum wr_command {CMD_VERSION, CMD_WEATHER, CMD_CONFIG, CMD_DURATION, CMD_WIFI_ON, CMD_WIFI_OFF, CMD_RESET};
+    typedef std::map<wr_command, std::string> wr_command_map;
+    wr_command_map commands;
 
     struct sensor_config
     {
@@ -255,10 +258,23 @@ protected:
     void updateWeatherParameter(sensor_name sensor, double value);
 
     /**
-     * @brief Read the firmware configuration
-     * @param config configuration to be updated
+     * @brief Read the weather data from the JSON document
+     * @return parse success
      */
-    IPState readFirmwareConfig(FirmwareConfig *config);
+    IPState updateWeather() override;
+
+    void handleWeatherData(JsonValue value);
+
+    /**
+     * @brief Read the firmware configuration
+     */
+    IPState updateFirmwareConfig();
+
+    /**
+     * @brief Read the firmware configuration
+     * @param value parsed JSON document
+     */
+    IPState handleFirmwareConfig(JsonValue jvalue);
 
     /**
      * @brief Connect to WiFi
@@ -280,8 +296,14 @@ protected:
 
     // Serial communication
     bool receiveSerial(char* buffer, int* bytes, char end, int wait);
-    bool transmitSerial(const char* buffer);
-    bool sendQuery(const char* cmd, char* response, int *length);
+    bool transmitSerial(std::string buffer);
+
+    // send a command to the serial device or by HTTP
+    bool executeCommand(wr_command cmd);
+    // handle one single response line
+    void handleResponse(wr_command cmd, const char *response, int length);
+    // handle a message from the weather station
+    void handleMessage(JsonValue value);
 
     // override default INDI methods
     const char *getDefaultName() override;

@@ -53,7 +53,7 @@ void updateDewheater() {
 #endif // USE_BME_SENSOR
 }
 
-void serializeDewheater(JsonDocument &doc) {
+void serializeDewheater(JsonObject &doc) {
   JsonObject data = doc.createNestedObject("Dew Heater");
   
   data["pin"] = DEWHEATER_PIN;
