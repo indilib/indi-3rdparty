@@ -52,7 +52,9 @@ void addJsonLine(String message, message_type code) {
   if (code <= MESSAGE_VERBOSITY) {
     // add only those messages according to the configured verbosity
     String doc = JsonMessage(message, code);
-    if (bufferedJsonLines.length() + doc.length() < MAX_JSON_BUFFER_SIZE)
+    if (bufferedJsonLines == "")
+      bufferedJsonLines = doc;
+    else if (bufferedJsonLines.length() + doc.length() < MAX_JSON_BUFFER_SIZE)
       bufferedJsonLines += "\n" + doc;
     else
       bufferedJsonLines = doc;

@@ -276,6 +276,17 @@ String getCurrentConfig() {
   // currently, we have memory info only available for ESP8266
   JsonObject arduinodata = doc.createNestedObject("Arduino");
   arduinodata["free memory"] = freeMemory();
+
+  JsonObject wifidata = doc.createNestedObject("WiFi");
+  if (getWiFiStatus() == WIFI_CONNECTED) {
+    wifidata["SSID"] = WiFi.SSID();
+    wifidata["connected"] = true;
+    wifidata["IP"]        = WiFi.localIP();
+    wifidata["rssi"]      = WiFi.RSSI();
+    wifidata["ping (ms)"] = networkData.avg_response_time;
+    wifidata["loss"]      = networkData.loss;
+  } else
+    wifidata["IP"]        = "";
 #endif
 
 #ifdef USE_DHT_SENSOR
@@ -310,19 +321,6 @@ String getCurrentConfig() {
   w174_rainsensordata["rain sensor pin"]  = W174_RAINSENSOR_PIN;
   w174_rainsensordata["bucket size"]      = W174_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_W174_RAIN_SENSOR
-
-#ifdef USE_WIFI
-  JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"] = WiFi.SSID();
-  wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-  if (WiFi.status() == WL_CONNECTED) {
-    wifidata["IP"]        = WiFi.localIP();
-    wifidata["rssi"]      = WiFi.RSSI();
-    wifidata["ping (ms)"] = networkData.avg_response_time;
-    wifidata["loss"]      = networkData.loss;
-  } else
-    wifidata["IP"]        = "";
-#endif
 
 #ifdef USE_DEWHEATER
   serializeDewheater(doc);

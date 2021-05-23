@@ -38,7 +38,6 @@
 #define MESSAGE_VERBOSITY MESSAGE_INFO
 // maximal size of buffered JSON messages
 #define MAX_JSON_BUFFER_SIZE 16000
-#include "jsonmessage.h"
 
 // ============== device configurations (begin) ============
 
@@ -83,6 +82,8 @@
 #define OLED_WIRE_CLOCK_SPEED 100000L // set to 100kHz if using in combination with MLX90614
 
 // ============== device configurations (end) ==============
+
+#include "jsonmessage.h"
 
 #ifdef USE_OLED
 #include "oled.h"
