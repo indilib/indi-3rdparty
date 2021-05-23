@@ -9,12 +9,12 @@
 */
 
 #ifdef ESP8266
+#include <Pinger.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <uri/UriRegex.h>
 #include "memory.h"
-#include "jsonmessage.h"
 
 #define WIFI_MAX_RECONNECT      10  // try 10 times to connect until giving up
 #define WIFI_SLEEP_CONNECT    1000  // wait 1 second until next connection retry
@@ -38,6 +38,14 @@ struct {
 
 ESP8266WebServer server(80);
 
+Pinger pinger;
+struct {
+  String dest_ip_address;
+  u32_t loss;
+  u32_t avg_response_time;
+  unsigned long last_retry;
+} networkData {"", 0, 0, 0};
+
 void reset() {
   ESP.restart();
   addJsonLine("Arduino restarted successfully", MESSAGE_INFO);
@@ -59,6 +67,18 @@ void initWiFi() {
   esp8266Data.status = WIFI_CONNECTING;
   // Serial.print("Connecting WiFi ");
   addJsonLine("Connecting WiFi ...", MESSAGE_INFO);
+
+  pinger.OnEnd([](const PingerResponse & response)
+  {
+    networkData.dest_ip_address   = response.DestIPAddress.toString();
+    networkData.avg_response_time = response.AvgResponseTime;
+    networkData.loss              = response.TotalSentRequests - response.TotalReceivedResponses;
+    networkData.last_retry        = millis();
+
+    addJsonLine("Ping " + networkData.dest_ip_address + ", avg time=" + String(networkData.avg_response_time) + " ms, loss=" +
+                String(networkData.loss), MESSAGE_DEBUG);
+    return true;
+  });
 }
 
 
@@ -66,19 +86,19 @@ void initWiFi() {
 void connectWiFi() {
   esp8266Data.last_retry = millis();
   if (WiFi.status() == WL_CONNECTED) {
+    addJsonLine("Connecting WiFi ... (succeeded, retry=" + String(esp8266Data.retry_count) + ")", MESSAGE_INFO);
     esp8266Data.status = WIFI_CONNECTED;
     esp8266Data.retry_count = 0;
     refreshDisplay();
-    addJsonLine("Connecting WiFi ... (succeeded)", MESSAGE_INFO);
     // Serial.println(" succeeded.");
   } else {
     WiFi.begin(esp8266Data.ssid, esp8266Data.password);
     if (WiFi.status() == WL_CONNECTED) {
+      addJsonLine("Connecting WiFi ... (succeeded, retry=" + String(esp8266Data.retry_count) + ")", MESSAGE_INFO);
       esp8266Data.status = WIFI_CONNECTED;
       // reset retry counter
       esp8266Data.retry_count = 0;
       refreshDisplay();
-      addJsonLine("Connecting WiFi ... (succeeded)", MESSAGE_INFO);
     } else {
       // increase retry counter
       esp8266Data.retry_count++;
@@ -126,6 +146,8 @@ void disconnectWiFi() {
 }
 
 void wifiServerLoop() {
+  uint32_t now = millis();
+
   // act depending upon the current connection status
   switch (esp8266Data.status) {
     case WIFI_IDLE:
@@ -134,12 +156,17 @@ void wifiServerLoop() {
 
     case WIFI_CONNECTING:
       // retry if connect delay has passed
-      if (millis() - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) connectWiFi();
+      if (WiFi.status() == WL_CONNECTED) {
+        esp8266Data.status = WIFI_CONNECTED;
+        addJsonLine("Connecting WiFi ... (succeeded)", MESSAGE_INFO);
+      } else {
+        if (now - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) connectWiFi();
+      }
       break;
 
     case WIFI_DISCONNECTING:
       // retry if disconnect delay has passed
-      if (millis() - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) disconnectWiFi();
+      if (now - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) disconnectWiFi();
       break;
 
     case WIFI_CONNECTED:
@@ -149,6 +176,13 @@ void wifiServerLoop() {
         esp8266Data.retry_count = 0;
         addJsonLine("WiFi lost, reconnecting ...", MESSAGE_WARN);
         connectWiFi();
+      } else if (now - networkData.last_retry > WIFI_SLEEP_RECONNECT) {
+        // check if gateway is reachable
+        if (pinger.Ping(WiFi.gatewayIP(), 4) == false || networkData.loss > 3) {
+          addJsonLine("Cannot reach gateway, try to reconnect WiFi ...", MESSAGE_WARN);
+          connectWiFi();
+        }
+        networkData.last_retry = now;
       }
       break;
 
@@ -194,7 +228,7 @@ void parseCredentials(String input) {
       end = input.indexOf('=', begin);
     }
 
-    if (name == String("ssid"))     esp8266Data.ssid = value;
+    if (name == String("ssid"))     esp8266Data.ssid     = value;
     if (name == String("password")) esp8266Data.password = value;
   }
 }
@@ -202,7 +236,10 @@ void parseCredentials(String input) {
 String displayWiFiParameters() {
   String result = "WiFi: " + WiFi.SSID();
   if (WiFi.status() == WL_CONNECTED) {
-    result += "\n IP: " + WiFi.localIP().toString() + "\n";
+    if (networkData.loss < 3)
+      result += "\n IP: " + WiFi.localIP().toString() + "\n";
+    else
+      result += "\ngateway not reachable";
   } else {
     result += "\n status: disconnected\n";
   }

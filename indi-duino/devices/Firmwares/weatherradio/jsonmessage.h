@@ -49,11 +49,14 @@ String JsonMessage(String message, message_type code) {
 
 // add a single JSON line to the buffer
 void addJsonLine(String message, message_type code) {
-  String doc = JsonMessage(message, code);
-  if (bufferedJsonLines.length() + doc.length() < MAX_JSON_BUFFER_SIZE)
-    bufferedJsonLines += "\n" + doc;
-  else
-    bufferedJsonLines = doc;
+  if (code <= MESSAGE_VERBOSITY) {
+    // add only those messages according to the configured verbosity
+    String doc = JsonMessage(message, code);
+    if (bufferedJsonLines.length() + doc.length() < MAX_JSON_BUFFER_SIZE)
+      bufferedJsonLines += "\n" + doc;
+    else
+      bufferedJsonLines = doc;
+  }
 }
 
 // add an existing JSON message line
