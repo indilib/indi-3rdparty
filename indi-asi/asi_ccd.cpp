@@ -1260,12 +1260,12 @@ void ASICCD::temperatureTimerTimeout()
     {
         mCurrentTemperature = value / 10.0;
         // If cooling is active, show goal status
-        if (CoolerSP[0].getState() == ISS_ON)
-        {
-            newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
-                       ? IPS_OK
-                       : IPS_BUSY;
-        }
+        //        if (CoolerSP[0].getState() == ISS_ON)
+        //        {
+        //            newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
+        //                       ? IPS_OK
+        //                       : IPS_BUSY;
+        //        }
     }
 
     // Update if there is a change

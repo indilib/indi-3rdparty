@@ -42,58 +42,58 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ATIKCCD>> cameras;
-public:
-    Loader()
-    {
-        int iAvailableDevicesCount = 0;
-        std::vector<std::string> cameraNames;
-
-        IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
-
-        for (int loop = 0; loop < MAX_CONNECTION_RETRIES; loop++)
+        std::deque<std::unique_ptr<ATIKCCD>> cameras;
+    public:
+        Loader()
         {
-            iAvailableDevicesCount = ArtemisDeviceCount();
+            int iAvailableDevicesCount = 0;
+            std::vector<std::string> cameraNames;
 
-            if (0 < iAvailableDevicesCount)
-                break;
+            IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
 
-            if (loop+1 < MAX_CONNECTION_RETRIES)
+            for (int loop = 0; loop < MAX_CONNECTION_RETRIES; loop++)
             {
-                if (0 < loop)
-                    IDMessage(nullptr, "No Atik devices detected on attempt %d/%d, retrying...", loop+1, MAX_CONNECTION_RETRIES);
-                usleep(1000000);
+                iAvailableDevicesCount = ArtemisDeviceCount();
+
+                if (0 < iAvailableDevicesCount)
+                    break;
+
+                if (loop + 1 < MAX_CONNECTION_RETRIES)
+                {
+                    if (0 < loop)
+                        IDMessage(nullptr, "No Atik devices detected on attempt %d/%d, retrying...", loop + 1, MAX_CONNECTION_RETRIES);
+                    usleep(1000000);
+                }
+            }
+
+            if (iAvailableDevicesCount <= 0)
+            {
+                IDLog("No Atik devices were enumerated.");
+                return;
+            }
+
+            for (int i = 0; i < iAvailableDevicesCount; i++)
+            {
+                // We only do cameras in this driver.
+                if (ArtemisDeviceIsPresent(i) == false || ArtemisDeviceIsCamera(i) == false)
+                    continue;
+
+                char pName[MAXINDILABEL] = {0};
+                std::string cameraName;
+
+                if (ArtemisDeviceName(i, pName) == false)
+                    continue;
+
+                if (std::find(cameraNames.begin(), cameraNames.end(), pName) == cameraNames.end())
+                    cameraName = std::string(pName);
+                else
+                    cameraName = std::string(pName) + " " +
+                                 std::to_string(static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), pName)) + 1);
+
+                cameras.push_back(std::unique_ptr<ATIKCCD>(new ATIKCCD(cameraName, i)));
+                cameraNames.push_back(pName);
             }
         }
-
-        if (iAvailableDevicesCount <= 0)
-        {
-            IDLog("No Atik devices were enumerated.");
-            return;
-        }
-
-        for (int i = 0; i < iAvailableDevicesCount; i++)
-        {
-            // We only do cameras in this driver.
-            if (ArtemisDeviceIsPresent(i) == false || ArtemisDeviceIsCamera(i) == false)
-                continue;
-
-            char pName[MAXINDILABEL] = {0};
-            std::string cameraName;
-
-            if (ArtemisDeviceName(i, pName) == false)
-                continue;
-
-            if (std::find(cameraNames.begin(), cameraNames.end(), pName) == cameraNames.end())
-                cameraName = std::string(pName);
-            else
-                cameraName = std::string(pName) + " " +
-                        std::to_string(static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), pName)) + 1);
-
-            cameras.push_back(std::unique_ptr<ATIKCCD>(new ATIKCCD(cameraName, i)));
-            cameraNames.push_back(pName);
-        }
-    }
 } loader;
 
 ATIKCCD::ATIKCCD(std::string filterName, int id) : FilterInterface(this), m_iDevice(id)
@@ -138,7 +138,8 @@ bool ATIKCCD::initProperties()
     IUFillSwitch(&ControlPresetsS[PRESET_LOW], "PRESET_LOW", "Low", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_MEDIUM], "PRESET_MEDIUM", "Medium", ISS_OFF);
     IUFillSwitch(&ControlPresetsS[PRESET_HIGH], "PRESET_HIGH", "High", ISS_OFF);
-    IUFillSwitchVector(&ControlPresetsSP, ControlPresetsS, 4, getDeviceName(), "CCD_CONTROL_PRESETS", "GO Presets", CONTROLS_TAB, IP_RW,
+    IUFillSwitchVector(&ControlPresetsSP, ControlPresetsS, 4, getDeviceName(), "CCD_CONTROL_PRESETS", "GO Presets",
+                       CONTROLS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     // Gain/Offset Controls
@@ -156,7 +157,8 @@ bool ATIKCCD::initProperties()
     // Even illumination
     IUFillSwitch(&EvenIlluminationS[PADDATA_OFF], "CONTROL_EVEN_ILLUMINATION_OFF", "OFF", ISS_OFF);
     IUFillSwitch(&EvenIlluminationS[PADDATA_ON], "CONTROL_EVEN_ILLUMINATION_ON", "ON", ISS_OFF);
-    IUFillSwitchVector(&EvenIlluminationSP, EvenIlluminationS, 2, getDeviceName(), "CCD_EVEN_ILLUMINATION", "Even Illumination", CONTROLS_TAB,
+    IUFillSwitchVector(&EvenIlluminationSP, EvenIlluminationS, 2, getDeviceName(), "CCD_EVEN_ILLUMINATION", "Even Illumination",
+                       CONTROLS_TAB,
                        IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Exposure Speed
@@ -221,7 +223,7 @@ bool ATIKCCD::updateProperties()
             // unused
             //defineProperty(&BitSendSP);
             //loadConfig(true, "CCD_BIT_SEND");
-}
+        }
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
         {
@@ -422,9 +424,9 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonEvenIllumination, data, 1, &len))
         {
             bool const enabled = data[0] ? true : false;
-            LOGF_DEBUG("Horizon currrent even illumination: data[0] %d value %s", data[0], enabled?"true":"false");
+            LOGF_DEBUG("Horizon currrent even illumination: data[0] %d value %s", data[0], enabled ? "true" : "false");
             IUResetSwitch(&EvenIlluminationSP);
-            EvenIlluminationS[enabled?1:0].s = ISS_ON;
+            EvenIlluminationS[enabled ? 1 : 0].s = ISS_ON;
             EvenIlluminationSP.s = IPS_OK;
         }
         else EvenIlluminationSP.s = IPS_ALERT;
@@ -434,9 +436,9 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonPadData, data, 2, &len))
         {
             bool const enabled = data[0] ? true : false;
-            LOGF_INFO ("Horizon currrent pad data: data[0] %d value %s", data[0], enabled?"true":"false");
+            LOGF_INFO ("Horizon currrent pad data: data[0] %d value %s", data[0], enabled ? "true" : "false");
             IUResetSwitch(&PadDataSP);
-            PadDataS[enabled?1:0].s = ISS_ON;
+            PadDataS[enabled ? 1 : 0].s = ISS_ON;
             PadDataSP.s = IPS_OK;
         }
         else PadDataSP.s = IPS_ALERT;
@@ -446,9 +448,10 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonExposureSpeed, data, 2, &len))
         {
             int const index = *(reinterpret_cast<uint16_t*>(&data));
-            LOGF_DEBUG("Horizon current exposure speed: data[0] %d value %s", data[0], index==0?"Power Save":index==1?"Normal":index==2?"Fast":"Unknown");
+            LOGF_DEBUG("Horizon current exposure speed: data[0] %d value %s", data[0],
+                       index == 0 ? "Power Save" : index == 1 ? "Normal" : index == 2 ? "Fast" : "Unknown");
             IUResetSwitch(&FastModeSP);
-            if (0 <= index && index < (int)(sizeof(FastModeS)/sizeof(FastModeS[0])))
+            if (0 <= index && index < (int)(sizeof(FastModeS) / sizeof(FastModeS[0])))
             {
                 if (index == FASTMODE_FAST)
                     LOG_WARN("Warning: fast mode exposure speed is not implemented, please choose another mode.");
@@ -465,9 +468,9 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonBitSendMode, data, 1, &len))
         {
             bool const _12bits = *(reinterpret_cast<bool*>(&data));
-            LOGF_DEBUG("Horizon currrent bit send: data[0] %d value %s", data[0], _12bits?"16-bit":"12-bit");
+            LOGF_DEBUG("Horizon currrent bit send: data[0] %d value %s", data[0], _12bits ? "16-bit" : "12-bit");
             IUResetSwitch(&BitSendSP);
-            BitSendS[_12bits?0:1].s = ISS_ON;
+            BitSendS[_12bits ? 0 : 1].s = ISS_ON;
             BitSendSP.s = IPS_OK;
         }
         else BitSendSP.s = IPS_ALERT;
@@ -478,9 +481,10 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonFX3Version, data, 6, &len))
         {
             uint16_t const major = *(reinterpret_cast<uint16_t*>(&data));
-            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)));
-            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)*2));
-            LOGF_DEBUG("Horizon FX3 version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
+            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t)));
+            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t) * 2));
+            LOGF_DEBUG("Horizon FX3 version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2],
+                       data[3], data[4], data[5], major, minor, patch);
             LOGF_INFO("Horizon FX3 v%d.%d.%d", major, minor, patch);
         }
 
@@ -488,15 +492,16 @@ bool ATIKCCD::setupParams()
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonFPGAVersion, data, 6, &len))
         {
             uint16_t const major = *(reinterpret_cast<uint16_t*>(&data));
-            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)));
-            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data+sizeof(uint16_t)*2));
-            LOGF_DEBUG("Horizon currrent FPGA version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2], data[3], data[4], data[5], major, minor, patch);
+            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t)));
+            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t) * 2));
+            LOGF_DEBUG("Horizon currrent FPGA version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0],
+                       data[2], data[3], data[4], data[5], major, minor, patch);
             LOGF_INFO("Horizon FPGA v%d.%d.%d", major, minor, patch);
         }
 
         // Horizon and Horizon2 cameras have exposure in [18us, unlimited[
         // FIXME: Not sure how to distinguish cameras programmatically, so we apply the same exposure interval - will fail if unsupported
-        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 18.0e-6f, 3600*24, 1, false);
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 18.0e-6f, 3600 * 24, 1, false);
     }
     else
     {
@@ -505,7 +510,7 @@ bool ATIKCCD::setupParams()
         // Infinity has exposure in [0.001s, 120s]
         // 383L+ and 16200 have exposure in [0.2s, unlimited[
         // FIXME: Not sure how to distinguish cameras programmatically, so we apply the same exposure interval - will fail if unsupported
-        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600*24, 1, false);
+        PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600 * 24, 1, false);
     }
 
     // Create imaging thread
@@ -576,18 +581,20 @@ void ATIKCCD::updateGainOffset()
     {
         // Else one Preset is configured
         int const preset_index = IUFindOnSwitchIndex(&ControlPresetsSP) - 1;
-        if (0 <= preset_index && preset_index < (int)(sizeof(ControlPresetsS)/sizeof(ControlPresetsS[0])))
+        if (0 <= preset_index && preset_index < (int)(sizeof(ControlPresetsS) / sizeof(ControlPresetsS[0])))
         {
             if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOPresetLow + preset_index, data, 5, &len))
             {
                 // Gain and Offset are at offset 1 and 3 in the reply - can't convert odd address directly, and must cope with arch alignment
                 uint8_t valRaw[2];
-                valRaw[0] = data[1]; valRaw[1] = data[2];
+                valRaw[0] = data[1];
+                valRaw[1] = data[2];
                 uint16_t const valGain   = *reinterpret_cast <uint16_t*> (valRaw);
-                valRaw[0] = data[3]; valRaw[1] = data[4];
+                valRaw[0] = data[3];
+                valRaw[1] = data[4];
                 uint16_t const valOffset = *reinterpret_cast <uint16_t*> (valRaw);
                 LOGF_DEBUG("Horizon gain/offset for preset #%d: data[0] 0x%02X data[1:2] 0x%02X%02X data[3:4] 0x%02X%02X values gain %u offset %u",
-                          preset_index, data[0], data[1], data[2], data[3], data[4], data[5], valGain, valOffset);
+                           preset_index, data[0], data[1], data[2], data[3], data[4], data[5], valGain, valOffset);
                 ControlN[0].value = static_cast <double> (valGain);
                 ControlN[1].value = static_cast <double> (valOffset);
             }
@@ -681,7 +688,8 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             if (ControlN[0].value != oldValues[0])
             {
                 uint16_t value = static_cast<uint16_t>(ControlN[0].value);
-                if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain, reinterpret_cast<uint8_t*>(&value), 2))
+                if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain, reinterpret_cast<uint8_t*>(&value),
+                        2))
                 {
                     IDLog("Failed setting custom gain at %d", value);
                     ControlNP.s = IPS_ALERT;
@@ -693,7 +701,8 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             if (ControlN[1].value != oldValues[1])
             {
                 uint16_t value = static_cast<uint16_t>(ControlN[1].value);
-                if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset, reinterpret_cast<uint8_t*>(&value), 2))
+                if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset, reinterpret_cast<uint8_t*>(&value),
+                        2))
                 {
                     IDLog("Failed setting custom offset at %d", value);
                     ControlNP.s = IPS_ALERT;
@@ -788,7 +797,8 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                     CoolerS[COOLER_ON].s = ISS_OFF;
                     CoolerS[COOLER_OFF].s = ISS_OFF;
                     CoolerSP.s = IPS_ALERT;
-                    LOGF_WARN("Cannot manually activate cooler since current temperature is %.2f. To activate cooler, request a lower temperature.", TemperatureN[0].value);
+                    LOGF_WARN("Cannot manually activate cooler since current temperature is %.2f. To activate cooler, request a lower temperature.",
+                              TemperatureN[0].value);
                     IDSetSwitch(&CoolerSP, nullptr);
                     return true;
                 }
@@ -1051,7 +1061,8 @@ bool ATIKCCD::UpdateCCDFrame(int x, int y, int w, int h)
     int rc = ArtemisSubframe(hCam, x, y, w, h);
     if (rc != ARTEMIS_OK)
     {
-        LOGF_ERROR("Error settings subframe: (%d,%d,%d,%d) with binning (%d,%d).", x, y, w, h, PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
+        LOGF_ERROR("Error settings subframe: (%d,%d,%d,%d) with binning (%d,%d).", x, y, w, h, PrimaryCCD.getBinX(),
+                   PrimaryCCD.getBinY());
         return false;
     }
 
@@ -1093,7 +1104,8 @@ bool ATIKCCD::grabImage()
     int bufferSize = w * binx * h * biny * PrimaryCCD.getBPP() / 8;
     if ( bufferSize < PrimaryCCD.getFrameBufferSize())
     {
-        LOGF_WARN("Image size is unexpected. Expecting %d bytes but received %d bytes.", PrimaryCCD.getFrameBufferSize(), bufferSize);
+        LOGF_WARN("Image size is unexpected. Expecting %d bytes but received %d bytes.", PrimaryCCD.getFrameBufferSize(),
+                  bufferSize);
         PrimaryCCD.setFrameBufferSize(bufferSize, false);
     }
 
@@ -1128,7 +1140,8 @@ void ATIKCCD::TimerHit()
         return;
     }
 
-    LOGF_DEBUG("Cooling: flags (%d) level (%d), minlvl (%d), maxlvl (%d), setpoint (%d)", flags, level, minlvl, maxlvl, setpoint);
+    LOGF_DEBUG("Cooling: flags (%d) level (%d), minlvl (%d), maxlvl (%d), setpoint (%d)", flags, level, minlvl, maxlvl,
+               setpoint);
 
     int temperature = 0;
     pthread_mutex_lock(&accessMutex);
@@ -1151,10 +1164,10 @@ void ATIKCCD::TimerHit()
 
         case IPS_BUSY:
             // If we're within threshold, let's make it BUSY ---> OK
-            if (fabs(TemperatureRequest - TemperatureN[0].value)  <= TEMP_THRESHOLD)
-            {
-                TemperatureNP.s = IPS_OK;
-            }
+            //            if (fabs(TemperatureRequest - TemperatureN[0].value)  <= TEMP_THRESHOLD)
+            //            {
+            //                TemperatureNP.s = IPS_OK;
+            //            }
             IDSetNumber(&TemperatureNP, nullptr);
             break;
     }

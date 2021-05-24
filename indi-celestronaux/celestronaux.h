@@ -60,7 +60,7 @@ class CelestronAUX :
         virtual bool Disconnect() override;
 
         virtual const char *getDefaultName() override;
-        ln_hrz_posn AltAzFromRaDec(double ra, double dec, double ts);
+        INDI::IHorizontalCoordinates AltAzFromRaDec(double ra, double dec, double ts);
 
         virtual bool Sync(double ra, double dec) override;
         virtual bool Goto(double ra, double dec) override;
@@ -168,12 +168,12 @@ class CelestronAUX :
         } PreviousWEMotion_t;
 
         // GoTo
-        ln_equ_posn GoToTarget;
+        INDI::IEquatorialCoordinates GoToTarget;
         int slewTicks, maxSlewTicks;
 
         // Tracking
-        ln_equ_posn CurrentTrackingTarget;
-        ln_equ_posn NewTrackingTarget;
+        INDI::IEquatorialCoordinates CurrentTrackingTarget;
+        INDI::IEquatorialCoordinates NewTrackingTarget;
 
         // Tracing in timer tick
         int TraceThisTickCount;

@@ -43,13 +43,13 @@ extern char *__progname;
 
 static class Loader
 {
-    std::deque<std::unique_ptr<MICCD>> cameras;
+        std::deque<std::unique_ptr<MICCD>> cameras;
 
-public:
-    Loader();
+    public:
+        Loader();
 
-public:
-    std::deque<std::pair<int /* id */, bool /* eth */>> initCameras;
+    public:
+        std::deque<std::pair<int /* id */, bool /* eth */>> initCameras;
 
 } loader;
 
@@ -71,7 +71,7 @@ Loader::Loader()
         });
     }
 
-    for (const auto &args: initCameras)
+    for (const auto &args : initCameras)
     {
         cameras.push_back(std::unique_ptr<MICCD>(new MICCD(args.first, args.second)));
     }
@@ -780,7 +780,7 @@ bool MICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 double temp = on ? TemperatureRequest : TEMP_COOLER_OFF;
 
                 if (gxccd_set_temperature_ramp(cameraHandle, TemperatureRampN[0].value) < 0 ||
-                    gxccd_set_temperature(cameraHandle, temp) < 0)
+                        gxccd_set_temperature(cameraHandle, temp) < 0)
                 {
                     char errorStr[MAX_ERROR_LEN];
                     gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
@@ -972,12 +972,12 @@ void MICCD::updateTemperature()
     TemperatureN[0].value = ccdtemp;
     CoolerN[0].value      = ccdpower * 100.0;
 
-    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
-    {
-        // end of temperature ramp
-        TemperatureN[0].value = TemperatureRequest;
-        TemperatureNP.s       = IPS_OK;
-    }
+    //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
+    //    {
+    //        // end of temperature ramp
+    //        TemperatureN[0].value = TemperatureRequest;
+    //        TemperatureNP.s       = IPS_OK;
+    //    }
 
     if (err)
     {

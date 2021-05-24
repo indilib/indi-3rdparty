@@ -54,12 +54,12 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<SBIGCCD>> cameras;
-public:
-    Loader()
-    {
-        cameras.push_back(std::unique_ptr<SBIGCCD>(new SBIGCCD()));
-    }
+        std::deque<std::unique_ptr<SBIGCCD>> cameras;
+    public:
+        Loader()
+        {
+            cameras.push_back(std::unique_ptr<SBIGCCD>(new SBIGCCD()));
+        }
 } loader;
 
 //==========================================================================
@@ -2378,11 +2378,11 @@ void SBIGCCD::updateTemperature()
     {
         power = 100.0 * percentTE;
         // Compare the current temperature against the setpoint value:
-        if (fabs(setpointTemp - ccdTemp) <= TEMP_DIFF)
-        {
-            TemperatureNP.s = IPS_OK;
-        }
-        else if (power == 0)
+        //        if (fabs(setpointTemp - ccdTemp) <= TEMP_DIFF)
+        //        {
+        //            TemperatureNP.s = IPS_OK;
+        //        }
+        if (power == 0)
         {
             TemperatureNP.s = IPS_IDLE;
         }

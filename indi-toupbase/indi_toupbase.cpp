@@ -100,23 +100,23 @@ std::map<int, std::string> ToupBase::errorCodes =
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ToupBase>> cameras;
-    XP(DeviceV2) pCameraInfo[CP(MAX)];
-public:
-    Loader()
-    {
-        int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
-        if (iConnectedCamerasCount <= 0)
+        std::deque<std::unique_ptr<ToupBase>> cameras;
+        XP(DeviceV2) pCameraInfo[CP(MAX)];
+    public:
+        Loader()
         {
-            IDLog("No Toupcam detected. Power on?");
-            return;
-        }
+            int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+            if (iConnectedCamerasCount <= 0)
+            {
+                IDLog("No Toupcam detected. Power on?");
+                return;
+            }
 
-        for (int i = 0; i < iConnectedCamerasCount; i++)
-        {
-            cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+            for (int i = 0; i < iConnectedCamerasCount; i++)
+            {
+                cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+            }
         }
-    }
 } loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
@@ -2065,10 +2065,10 @@ void ToupBase::TimerHit()
 
             case IPS_BUSY:
                 // If we're within threshold, let's make it BUSY ---> OK
-                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
-                {
-                    TemperatureNP.s = IPS_OK;
-                }
+                //                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
+                //                {
+                //                    TemperatureNP.s = IPS_OK;
+                //                }
                 IDSetNumber(&TemperatureNP, nullptr);
                 break;
         }
