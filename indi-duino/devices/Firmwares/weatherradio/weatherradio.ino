@@ -278,15 +278,30 @@ String getCurrentConfig() {
   arduinodata["free memory"] = freeMemory();
 
   JsonObject wifidata = doc.createNestedObject("WiFi");
-  if (getWiFiStatus() == WIFI_CONNECTED) {
-    wifidata["SSID"] = WiFi.SSID();
-    wifidata["connected"] = true;
-    wifidata["IP"]        = WiFi.localIP();
-    wifidata["rssi"]      = WiFi.RSSI();
-    wifidata["ping (ms)"] = networkData.avg_response_time;
-    wifidata["loss"]      = networkData.loss;
-  } else
-    wifidata["IP"]        = "";
+  wifidata["SSID"]      = WiFi.SSID();
+  switch (getWiFiStatus()) {
+    case WIFI_CONNECTED:
+      wifidata["status"]    = "connected";
+      wifidata["IP"]        = WiFi.localIP();
+      wifidata["rssi"]      = WiFi.RSSI();
+      wifidata["ping (ms)"] = networkData.avg_response_time;
+      wifidata["loss"]      = networkData.loss;
+      break;
+    case WIFI_IDLE:
+      wifidata["status"]    = "disconnected";
+      break;
+    case WIFI_CONNECTING:
+      wifidata["status"]    = "connecting";
+      wifidata["retry"]     = esp8266Data.retry_count;
+      break;
+    case WIFI_DISCONNECTING:
+      wifidata["status"]    = "disconnecting";
+      wifidata["retry"]     = esp8266Data.retry_count;
+      break;
+    case WIFI_CONNECTION_FAILED:
+      wifidata["status"]    = "connection failed";
+      break;
+  }
 #endif
 
 #ifdef USE_DHT_SENSOR
