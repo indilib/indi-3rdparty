@@ -12,13 +12,13 @@
 
 
 #include <ArduinoJson.h>
+#include "config.h"
 
 /* ********************************************************************
 
   Edit config.h to configure the attached sensors
 
 *********************************************************************** */
-#include "config.h"
 
 // sensor measuring duration
 struct {
@@ -265,9 +265,8 @@ String getCurrentConfig() {
                       JSON_OBJECT_SIZE(3) + // Davis Anemometer
                       JSON_OBJECT_SIZE(1) + // Water sensor
                       2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
-                      JSON_OBJECT_SIZE(4) + // WiFi parameters
+                      JSON_OBJECT_SIZE(6) + // WiFi parameters
                       JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(4) + // OTA
                       JSON_OBJECT_SIZE(5) + // Dew heater
                       JSON_OBJECT_SIZE(2);  // buffer
   StaticJsonDocument <docSize> root;
@@ -277,6 +276,32 @@ String getCurrentConfig() {
   // currently, we have memory info only available for ESP8266
   JsonObject arduinodata = doc.createNestedObject("Arduino");
   arduinodata["free memory"] = freeMemory();
+
+  JsonObject wifidata = doc.createNestedObject("WiFi");
+  wifidata["SSID"]      = WiFi.SSID();
+  switch (getWiFiStatus()) {
+    case WIFI_CONNECTED:
+      wifidata["status"]    = "connected";
+      wifidata["IP"]        = WiFi.localIP();
+      wifidata["rssi"]      = WiFi.RSSI();
+      wifidata["ping (ms)"] = networkData.avg_response_time;
+      wifidata["loss"]      = networkData.loss;
+      break;
+    case WIFI_IDLE:
+      wifidata["status"]    = "disconnected";
+      break;
+    case WIFI_CONNECTING:
+      wifidata["status"]    = "connecting";
+      wifidata["retry"]     = esp8266Data.retry_count;
+      break;
+    case WIFI_DISCONNECTING:
+      wifidata["status"]    = "disconnecting";
+      wifidata["retry"]     = esp8266Data.retry_count;
+      break;
+    case WIFI_CONNECTION_FAILED:
+      wifidata["status"]    = "connection failed";
+      break;
+  }
 #endif
 
 #ifdef USE_DHT_SENSOR
@@ -312,24 +337,9 @@ String getCurrentConfig() {
   w174_rainsensordata["bucket size"]      = W174_RAINSENSOR_BUCKET_SIZE;
 #endif //USE_W174_RAIN_SENSOR
 
-#ifdef USE_WIFI
-  JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"] = WiFi.SSID();
-  wifidata["connected"] = WiFi.status() == WL_CONNECTED;
-  if (WiFi.status() == WL_CONNECTED) {
-    wifidata["IP"]        = WiFi.localIP().toString();
-    wifidata["rssi"]      = WiFi.RSSI();
-  } else
-    wifidata["IP"]        = "";
-#endif
-
 #ifdef USE_DEWHEATER
   serializeDewheater(doc);
 #endif
-
-#ifdef USE_OTA
-  serializeOTA(doc);
-#endif // USE_OTA
 
   String result = "";
   serializeJson(root, result);

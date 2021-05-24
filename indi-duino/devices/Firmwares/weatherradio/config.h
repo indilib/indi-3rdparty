@@ -34,13 +34,15 @@
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 30000
 
+// verbosity level
+#define MESSAGE_VERBOSITY MESSAGE_INFO
 // maximal size of buffered JSON messages
 #define MAX_JSON_BUFFER_SIZE 16000
 
 // ============== device configurations (begin) ============
 
 // DHT sensor family
-#define DHTPIN 3          // Digital pin connected to the DHT sensor
+#define DHTPIN 13          // Digital pin connected to the DHT sensor
 //#define DHTTYPE DHT11   // DHT 11               - Uncomment whatever type you're using!
 #define DHTTYPE DHT22     // DHT 22  (AM2302), AM2321 - Uncomment whatever type you're using!
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)      - Uncomment whatever type you're using!
@@ -80,6 +82,8 @@
 #define OLED_WIRE_CLOCK_SPEED 100000L // set to 100kHz if using in combination with MLX90614
 
 // ============== device configurations (end) ==============
+
+#include "jsonmessage.h"
 
 #ifdef USE_OLED
 #include "oled.h"
