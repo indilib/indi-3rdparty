@@ -1,3 +1,9 @@
+indi-duino (1.15) buster; urgency=medium
+
+  * WiFi connection checks and recovery of connection losses added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Mon, 24 May 2021 18:06:25 +0200
+
 indi-duino (1.14) buster; urgency=medium
 
   * Configuration based on an ini file replacing wr_config.py
