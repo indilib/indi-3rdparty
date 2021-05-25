@@ -1,5 +1,5 @@
 ﻿/*
-    indi_LMS_spectrograph - a software defined radio driver for INDI
+    indi_LMS_receiver - a software defined radio driver for INDI
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "indi_limesdr_spectrograph.h"
+#include "indi_limesdr_receiver.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -46,9 +46,9 @@ public:
 public:
     Loader()
     {
-        int iNumofConnectedSpectrographs = LMS_GetDeviceList(lime_dev_list);
+        int iNumofConnectedReceivers = LMS_GetDeviceList(lime_dev_list);
 
-        if (iNumofConnectedSpectrographs <= 0)
+        if (iNumofConnectedReceivers <= 0)
         {
             //Try sending IDMessage as well?
             IDLog("No LIMESDR receivers detected. Power on?");
@@ -56,7 +56,7 @@ public:
             return;
         }
 
-        for (int i = 0; i < iNumofConnectedSpectrographs; i++)
+        for (int i = 0; i < iNumofConnectedReceivers; i++)
         {
             receivers.push_back(std::unique_ptr<LIMESDR>(new LIMESDR(i)));
         }
@@ -66,7 +66,7 @@ public:
 LIMESDR::LIMESDR(uint32_t index)
 {
     InIntegration = false;
-    spectrographIndex = index;
+    receiverIndex = index;
 
     char name[MAXINDIDEVICE];
     snprintf(name, MAXINDIDEVICE, "%s %d", getDefaultName(), index);
@@ -78,16 +78,16 @@ LIMESDR::LIMESDR(uint32_t index)
 ***************************************************************************************/
 bool LIMESDR::Connect()
 {
-    int r = LMS_Open(&lime_dev, loader.lime_dev_list[spectrographIndex], NULL);
+    int r = LMS_Open(&lime_dev, loader.lime_dev_list[receiverIndex], NULL);
     if (r < 0)
     {
-        LOGF_ERROR("Failed to open limesdr device index %d.", spectrographIndex);
+        LOGF_ERROR("Failed to open limesdr device index %d.", receiverIndex);
         return false;
     }
     LMS_Init(lime_dev);
     LMS_EnableChannel(lime_dev, LMS_CH_RX, 0, true);
-    LOG_INFO("LIME-SDR Spectrograph connected successfully!");
-    // Let's set a timer that checks teleSpectrographs status every POLLMS milliseconds.
+    LOG_INFO("LIME-SDR Receiver connected successfully!");
+    // Let's set a timer that checks teleReceivers status every POLLMS milliseconds.
     // JM 2017-07-31 SetTimer already called in updateProperties(). Just call it once
     //SetTimer(getCurrentPollingPeriod());
 
@@ -102,7 +102,7 @@ bool LIMESDR::Disconnect()
     InIntegration = false;
     LMS_Close(lime_dev);
     setBufferSize(1);
-    LOG_INFO("LIME-SDR Spectrograph disconnected successfully!");
+    LOG_INFO("LIME-SDR Receiver disconnected successfully!");
     return true;
 }
 
@@ -119,22 +119,22 @@ const char *LIMESDR::getDefaultName()
 ***************************************************************************************/
 bool LIMESDR::initProperties()
 {
-    // We set the Spectrograph capabilities
+    // We set the Receiver capabilities
     uint32_t cap = SENSOR_CAN_ABORT | SENSOR_HAS_STREAMING | SENSOR_HAS_DSP;
-    SetSpectrographCapability(cap);
+    SetReceiverCapability(cap);
 
     // Must init parent properties first!
-    INDI::Spectrograph::initProperties();
+    INDI::Receiver::initProperties();
 
     setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 0.001, 86164.092, 0.001, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_FREQUENCY", 400.0e+6, 3.8e+9, 1, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_SAMPLERATE", 2.0e+6, 28.0e+6, 1, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_GAIN", 0.0, 1.0, 0.01, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BANDWIDTH", 400.0e+6, 3.8e+9, 1, false);
-    setMinMaxStep("SPECTROGRAPH_SETTINGS", "SPECTROGRAPH_BITSPERSAMPLE", -32, -32, 0, false);
+    setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_FREQUENCY", 400.0e+6, 3.8e+9, 1, false);
+    setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_SAMPLERATE", 2.0e+6, 28.0e+6, 1, false);
+    setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_GAIN", 0.0, 1.0, 0.01, false);
+    setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_BANDWIDTH", 400.0e+6, 3.8e+9, 1, false);
+    setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_BITSPERSAMPLE", -32, -32, 0, false);
     setIntegrationFileExtension("fits");
     /*
-    // PrimarySpectrograph Device Continuum Blob
+    // PrimaryReceiver Device Continuum Blob
     IUFillBLOB(&TFitsB[0], "TRMT", "Transmit1", "");
     IUFillBLOB(&TFitsB[1], "TRMT", "Transmit2", "");
     IUFillBLOB(&TFitsB[2], "TRMT", "Transmit3", "");
@@ -157,7 +157,7 @@ bool LIMESDR::initProperties()
 bool LIMESDR::updateProperties()
 {
     // Call parent update properties first
-    INDI::Spectrograph::updateProperties();
+    INDI::Receiver::updateProperties();
 
     if (isConnected())
     {
@@ -183,7 +183,7 @@ bool LIMESDR::StartIntegration(double duration)
 {
     IntegrationRequest = duration;
 
-    // Since we have only have one Spectrograph with one chip, we set the exposure duration of the primary Spectrograph
+    // Since we have only have one Receiver with one chip, we set the exposure duration of the primary Receiver
     setIntegrationTime(duration);
     b_read  = 0;
     to_read = getSampleRate() * getIntegrationTime();
@@ -231,19 +231,19 @@ void LIMESDR::setupParams(float sr, float freq, float bw, float gain)
 bool LIMESDR::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     bool r = false;
-    if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, SpectrographSettingsNP.name)) {
+    if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, ReceiverSettingsNP.name)) {
         for(int i = 0; i < n; i++) {
-            if (!strcmp(names[i], "SPECTROGRAPH_GAIN")) {
+            if (!strcmp(names[i], "RECEIVER_GAIN")) {
                 setupParams(getSampleRate(), getFrequency(), getBandwidth(), values[i]);
-            } else if (!strcmp(names[i], "SPECTROGRAPH_BANDWIDTH")) {
+            } else if (!strcmp(names[i], "RECEIVER_BANDWIDTH")) {
                 setupParams(getSampleRate(), getFrequency(), values[i], getGain());
-            } else if (!strcmp(names[i], "SPECTROGRAPH_FREQUENCY")) {
+            } else if (!strcmp(names[i], "RECEIVER_FREQUENCY")) {
                 setupParams(getSampleRate(), values[i], getBandwidth(), getGain());
-            } else if (!strcmp(names[i], "SPECTROGRAPH_SAMPLERATE")) {
+            } else if (!strcmp(names[i], "RECEIVER_SAMPLERATE")) {
                 setupParams(values[i], getFrequency(), getBandwidth(), getGain());
             }
         }
-        IDSetNumber(&SpectrographSettingsNP, nullptr);
+        IDSetNumber(&ReceiverSettingsNP, nullptr);
     }
     return processNumber(dev, name, values, names, n) & !r;
 }
@@ -315,7 +315,7 @@ void LIMESDR::TimerHit()
             timeleft = 0.0;
         }
 
-        // This is an over simplified timing method, check SpectrographSimulator and limesdrSpectrograph for better timing checks
+        // This is an over simplified timing method, check ReceiverSimulator and limesdrReceiver for better timing checks
         setIntegrationLeft(timeleft);
     }
 
