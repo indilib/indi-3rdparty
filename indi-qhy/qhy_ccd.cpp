@@ -2611,6 +2611,14 @@ bool QHYCCD::updateFilterProperties()
         IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
                          FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
 
+        // Try to load config filter labels
+        for (int i = 0; i < m_MaxFilterCount; i++)
+        {
+            char oneFilter[MAXINDINAME] = {0};
+            if (IUGetConfigText(getDeviceName(), FilterNameTP->name, FilterNameT[i].name, oneFilter, MAXINDINAME) == 0)
+                IUSaveText(&FilterNameT[i], oneFilter);
+        }
+
         return true;
     }
 
