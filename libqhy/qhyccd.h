@@ -20,6 +20,7 @@
 
 typedef void qhyccd_handle;
 
+EXPORTC void STDCALL OutputQHYCCDDebug(char *strOutput);
 
 EXPORTC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
 
@@ -292,6 +293,15 @@ EXPORTC uint32_t STDCALL StopQHYCCDLive(qhyccd_handle *handle);
   on success,return QHYCCD_SUCCESS \n
   another QHYCCD_ERROR code on other failures
 */
+
+
+
+
+EXPORTFUNC uint32_t STDCALL QHYCCDPcieRecv(qhyccd_handle *handle, void * data, int len,uint64_t timeout);
+EXPORTFUNC uint32_t STDCALL GetQHYCCDPcieDDRNum(qhyccd_handle *handle);
+
+
+
 EXPORTC uint32_t STDCALL SetQHYCCDBinMode(qhyccd_handle *handle,uint32_t wbin,uint32_t hbin);
 
 /**

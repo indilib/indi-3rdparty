@@ -383,6 +383,16 @@
  * Type define for QHY5III178C*/
 #define DEVICETYPE_QHY5III178C_Celestron      4094
 
+#define DEVICETYPE_QHY5LII_C_OrionAllInOne      4095
+#define DEVICETYPE_QHY5LII_M_Orion_StarShoot      4096
+
+#define DEVICETYPE_QHY550_PM        4097
+#define DEVICETYPE_QHY550_PC        4098
+#define DEVICETYPE_QHY550_M        4099
+#define DEVICETYPE_QHY550_C        4100
+
+#define DEVICETYPE_QHY5III482C        4101
+#define DEVICETYPE_QHY5III464         4102
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -967,8 +977,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH        1408    //8432  	
-#define QHY5IIICOMMON_MAX_HEIGHT       1052    //5648	  
+#define QHY5IIICOMMON_MAX_WIDTH      2712//3864// 2712// 1408    //8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT     1538//2180// 1538// 1052    //5648	  
 
 /**
  * Type define for QHY247*/

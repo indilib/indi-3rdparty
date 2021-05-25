@@ -36,6 +36,7 @@ ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="100
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="1002", RUN+="/bin/sleep 5"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="1002", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY5.HEX -D $env{DEVNAME}"
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="2970", RUN+="/sbin/fxload -t fx2 -I /lib/firmware/qhy/QHY2PRO.HEX -D $env{DEVNAME}"
+ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0482", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III482.img -D $env{DEVNAME}"
 
 # QHY CLASSIC COOLED CCD (16:QHY2,QHY6,IMG2P,QHY7,QHY8,QHY8L,QHY8PRO,QHY9S,QHY10,QHY11,QHY12,QHY15,QHY16,QHY21,QHY22,QHY23)
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0412", RUN+="/sbin/fxload -t fx2lp -I /lib/firmware/qhy/QHY2.HEX -D $env{DEVNAME}"
