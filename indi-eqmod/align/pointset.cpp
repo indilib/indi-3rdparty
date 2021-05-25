@@ -46,7 +46,7 @@ void PointSet::AltAzFromRaDec(double ra, double dec, double jd, double *alt, dou
         lnpos.latitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
     }
 
-    INDI::EquatorialToHorizontal(&lnradec, pos, jd, &lnaltaz);
+    INDI::EquatorialToHorizontal(&lnradec, &lnpos, jd, &lnaltaz);
     *alt = lnaltaz.altitude;
     *az  = lnaltaz.azimuth;
 }
