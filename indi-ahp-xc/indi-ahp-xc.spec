@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: indi-ahp-correlator
+Name: indi_ahp_xc
 Version:1.9.1.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -60,12 +60,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi-ahp-correlator
+cd indi_ahp_xc
 %cmake -DINDI_DATA_DIR=/usr/share/indi .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi-ahp-correlator
+cd indi_ahp_xc
 make DESTDIR=%{buildroot} install
 
 %files

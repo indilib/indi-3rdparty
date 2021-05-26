@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-PROJECT(indi_ahp_spectrograph CXX C)
+PROJECT(indi_ahp_xc CXX C)
 
 set (AHP_XC_VERSION_MAJOR 1)
 set (AHP_XC_VERSION_MINOR 0)
@@ -16,7 +16,7 @@ find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_spectrograph.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_spectrograph.xml)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_xc.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_xc.xml)
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
@@ -31,15 +31,15 @@ include(CMakeCommon)
 if (CFITSIO_FOUND)
 
 set(AHP_XC_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_spectrograph.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_xc.cpp
 )
 
-add_executable(indi_ahp_spectrograph ${AHP_XC_SRCS})
+add_executable(indi_ahp_xc ${AHP_XC_SRCS})
 
-target_link_libraries(indi_ahp_spectrograph ${INDI_LIBRARIES} ${AHPXC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_ahp_xc ${INDI_LIBRARIES} ${AHPXC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS indi_ahp_spectrograph RUNTIME DESTINATION bin)
+install(TARGETS indi_ahp_xc RUNTIME DESTINATION bin)
 
 endif (CFITSIO_FOUND)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_spectrograph.xml DESTINATION ${INDI_DATA_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_xc.xml DESTINATION ${INDI_DATA_DIR})
