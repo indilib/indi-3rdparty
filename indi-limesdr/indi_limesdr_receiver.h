@@ -1,5 +1,5 @@
 /*
-    indi_limesdr_spectrograph - a software defined radio driver for INDI
+    indi_limesdr_receiver - a software defined radio driver for INDI
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 #pragma once
 
 #include <lime/LimeSuite.h>
-#include "indispectrograph.h"
+#include "indireceiver.h"
 
 enum Settings
 {
@@ -29,7 +29,7 @@ enum Settings
 	BANDWIDTH_N,
 	NUM_SETTINGS
 };
-class LIMESDR : public INDI::Spectrograph
+class LIMESDR : public INDI::Receiver
 {
   public:
     LIMESDR(uint32_t index);
@@ -44,7 +44,7 @@ class LIMESDR : public INDI::Spectrograph
 	bool initProperties() override;
 	bool updateProperties() override;
 
-    // Spectrograph specific functions
+    // Receiver specific functions
     bool StartIntegration(double duration) override;
     bool paramsUpdated(float sr, float freq, float bps, float bw, float gain);
     bool AbortIntegration() override;
@@ -69,7 +69,7 @@ class LIMESDR : public INDI::Spectrograph
 	uint8_t* continuum;
     uint8_t *spectrum;
 
-    uint32_t spectrographIndex = { 0 };
+    uint32_t receiverIndex = { 0 };
 
     IBLOB TFitsB[5];
     IBLOBVectorProperty TFitsBP;

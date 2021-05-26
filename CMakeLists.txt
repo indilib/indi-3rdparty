@@ -107,7 +107,7 @@ option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
-option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
+option(WITH_AHP_XC "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 
@@ -141,7 +141,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_SV305 Off)
-    set(WITH_AHP_CORRELATOR Off)
+    set(WITH_AHP_XC Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -213,9 +213,9 @@ add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
 
 # libahp-xc
-if (WITH_AHP_CORRELATOR)
+if (WITH_AHP_XC)
 add_subdirectory(libahp-xc)
-endif(WITH_AHP_CORRELATOR)
+endif(WITH_AHP_XC)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
@@ -545,14 +545,14 @@ endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
 # AHP
-if (WITH_AHP_CORRELATOR)
+if (WITH_AHP_XC)
 find_package(AHPXC)
 if(AHPXC_FOUND)
-add_subdirectory(indi-ahp-correlator)
+add_subdirectory(indi-ahp-xc)
 else(AHPXC_FOUND)
 add_subdirectory(libahp-xc)
 endif(AHPXC_FOUND)
-endif(WITH_AHP_CORRELATOR)
+endif(WITH_AHP_XC)
 
 # sv305
 if (WITH_SV305)

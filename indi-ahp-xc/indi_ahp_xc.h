@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "indiccd.h"
+#include "indispectrograph.h"
 #include "indicorrelator.h"
 #include <ahp/ahp_xc.h>
 
@@ -28,26 +28,25 @@ class baseline : public INDI::Correlator
 {
 public:
     baseline() : Correlator() { }
-    ~baseline() { }
 
-    const char *getDefaultName() { return "baseline"; }
-    inline bool StartIntegration(double duration) { INDI_UNUSED(duration); return true; }
-    inline double getCorrelationDegree() { return 0.0; }
-    inline bool Handshake() { return true; }
+    virtual const char *getDefaultName() override { return "baseline"; }
+    virtual inline bool StartIntegration(double duration) override { INDI_UNUSED(duration); return true; }
+    virtual inline double getCorrelationDegree() override { return 0.0; }
+    virtual inline bool Handshake() override { return true; }
 };
 
-class AHP_XC : public INDI::CCD
+class AHP_XC : public INDI::Spectrograph
 {
 public:
     AHP_XC();
-    ~AHP_XC() {
+    virtual ~AHP_XC() override {
         for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
             baselines[x]->~baseline();
 
         for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
             ahp_xc_set_leds(x, 0);
 
-        ahp_xc_set_baudrate(R_57600);
+        ahp_xc_set_baudrate(R_BASE);
         ahp_xc_disconnect();
 
         free(correlationsN);
@@ -87,32 +86,30 @@ public:
         free(baselines);
     }
 
-    void ISGetProperties(const char *dev);
-    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
-    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
-    bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
-    bool ISSnoopDevice(XMLEle *root);
+    virtual void ISGetProperties(const char *dev) override;
+    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
+    virtual bool ISSnoopDevice(XMLEle *root) override;
 
 protected:
 
     // General device functions
-    bool Disconnect();
+    virtual bool Disconnect() override;
     const char *getDeviceName();
-    bool saveConfigItems(FILE *fp);
-    const char *getDefaultName();
-    bool initProperties();
-    bool updateProperties();
+    virtual bool saveConfigItems(FILE *fp) override;
+    virtual const char *getDefaultName() override;
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
 
     // CCD specific functions
-    bool StartExposure(float duration);
-    bool AbortExposure();
-    void TimerHit();
-    void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip);
+    virtual bool StartIntegration(double duration) override;
+    virtual bool AbortIntegration() override;
+    virtual void TimerHit() override;
+    virtual void addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len) override;
 
-    bool Connect();
-
-    Connection::Serial *serialConnection;
+    virtual bool Connect() override;
 
 private:
 
@@ -196,8 +193,8 @@ private:
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;
-    double ExposureRequest;
-    double ExposureStart;
+    double IntegrationRequest;
+    double IntegrationStart;
     bool threadsRunning;
 
     inline double getCurrentTime()
