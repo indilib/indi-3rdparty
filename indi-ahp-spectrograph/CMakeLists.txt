@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
-PROJECT(indi_ahp_correlator CXX C)
+PROJECT(indi_ahp_spectrograph CXX C)
 
-set (AHP_CORRELATOR_VERSION_MAJOR 1)
-set (AHP_CORRELATOR_VERSION_MINOR 0)
+set (AHP_XC_VERSION_MAJOR 1)
+set (AHP_XC_VERSION_MINOR 0)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -16,7 +16,7 @@ find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_correlator.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_correlator.xml)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_spectrograph.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_spectrograph.xml)
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
@@ -27,19 +27,19 @@ include_directories( ${AHPXC_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-############# AHP_CORRELATOR CCD ###############
+############# AHP_XC CCD ###############
 if (CFITSIO_FOUND)
 
-set(AHP_CORRELATOR_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_correlator.cpp
+set(AHP_XC_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_ahp_spectrograph.cpp
 )
 
-add_executable(indi_ahp_correlator ${AHP_CORRELATOR_SRCS})
+add_executable(indi_ahp_spectrograph ${AHP_XC_SRCS})
 
-target_link_libraries(indi_ahp_correlator ${INDI_LIBRARIES} ${AHPXC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_ahp_spectrograph ${INDI_LIBRARIES} ${AHPXC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS indi_ahp_correlator RUNTIME DESTINATION bin)
+install(TARGETS indi_ahp_spectrograph RUNTIME DESTINATION bin)
 
 endif (CFITSIO_FOUND)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_correlator.xml DESTINATION ${INDI_DATA_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_ahp_spectrograph.xml DESTINATION ${INDI_DATA_DIR})
