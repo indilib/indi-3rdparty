@@ -736,13 +736,13 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             }
             IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
             if (states[3] == ISS_ON) {
-                ahp_xc_set_baudrate(R_57600);
+                ahp_xc_set_baudrate(R_BASE);
             }
             if (states[4] == ISS_ON) {
-                ahp_xc_set_baudrate(R_115200);
+                ahp_xc_set_baudrate(R_BASEX2);
             }
             if (states[5] == ISS_ON) {
-                ahp_xc_set_baudrate(R_230400);
+                ahp_xc_set_baudrate(R_BASEX4);
             }
             IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
         }
@@ -912,7 +912,7 @@ bool AHP_XC::Connect()
     if(serialConnection->port() == nullptr)
         return false;
 
-    if(0 != ahp_xc_connect(serialConnection->port())) {
+    if(0 != ahp_xc_connect(serialConnection->port(), false)) {
             ahp_xc_disconnect();
             return false;
     }

@@ -47,7 +47,7 @@ public:
         for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
             ahp_xc_set_leds(x, 0);
 
-        ahp_xc_set_baudrate(R_57600);
+        ahp_xc_set_baudrate(R_BASE);
         ahp_xc_disconnect();
 
         free(correlationsN);
