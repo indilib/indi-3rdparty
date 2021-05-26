@@ -33,7 +33,7 @@
 #include <libnova/julian_day.h>
 
 #include <connectionplugins/connectionserial.h>
-#include "indi_ahp_spectrograph.h"
+#include "indi_ahp_correlator.h"
 
 static unsigned int nplots = 1;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
