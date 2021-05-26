@@ -33,7 +33,7 @@
 #include <libnova/julian_day.h>
 
 #include <connectionplugins/connectionserial.h>
-#include "indi_ahp_correlator.h"
+#include "indi_ahp_spectrograph.h"
 
 static unsigned int nplots = 1;
 static std::unique_ptr<AHP_XC> array(new AHP_XC());
@@ -116,7 +116,7 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len)
     for(unsigned int x = 0; x < len; x++) {
         if (saveImage)
         {
-            snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
+            snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", getIntegrationFileExtension());
 
             FILE * fp = nullptr;
             char imageFileName[MAXRBUF];
@@ -173,7 +173,7 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len)
             IDSetText(&FileNameTP, nullptr);
         }
 
-        snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", PrimaryCCD.getImageExtension());
+        snprintf(Blobs[x].format, MAXINDIBLOBFMT, ".%s", getIntegrationFileExtension());
     }
     BlobP.s   = IPS_OK;
 
@@ -283,11 +283,11 @@ void AHP_XC::Callback()
                 idx++;
             }
         }
-        if(InExposure) {
+        if(InIntegration) {
             timeleft = CalcTimeLeft();
             if(timeleft <= 0.0) {
                 // We're no longer exposing...
-                InExposure = false;
+                InIntegration = false;
                 timeleft = 0;
                 // We're done exposing
                 LOG_INFO("Integration complete, downloading plots...");
@@ -431,8 +431,8 @@ AHP_XC::AHP_XC()
 {
     clock_divider = 0;
 
-    ExposureRequest = 0.0;
-    InExposure = false;
+    IntegrationRequest = 0.0;
+    InIntegration = false;
 
     autocorrelationsB = static_cast<IBLOB*>(malloc(1));
     crosscorrelationsB = static_cast<IBLOB*>(malloc(1));
@@ -527,7 +527,7 @@ bool AHP_XC::saveConfigItems(FILE *fp)
     }
     IUSaveConfigNumber(fp, &settingsNP);
 
-    INDI::CCD::saveConfigItems(fp);
+    INDI::Spectrograph::saveConfigItems(fp);
     return true;
 }
 
@@ -538,9 +538,9 @@ bool AHP_XC::initProperties()
 {
 
     // Must init parent properties first!
-    INDI::CCD::initProperties();
+    INDI::Spectrograph::initProperties();
 
-    SetCCDCapability(CCD_CAN_ABORT|CCD_HAS_DSP);
+    SetSpectrographCapability(SENSOR_CAN_ABORT|SENSOR_HAS_DSP);
 
     IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9, 1199.169832);
@@ -548,7 +548,7 @@ bool AHP_XC::initProperties()
     IUFillNumberVector(&settingsNP, settingsN, 3, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 1.0, STELLAR_DAY, 1, false);
+    setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 1.0, STELLAR_DAY, 1, false);
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
@@ -564,7 +564,7 @@ bool AHP_XC::initProperties()
 ***************************************************************************************/
 void AHP_XC::ISGetProperties(const char *dev)
 {
-    INDI::CCD::ISGetProperties(dev);
+    INDI::Spectrograph::ISGetProperties(dev);
 
     if (isConnected())
     {
@@ -589,7 +589,7 @@ void AHP_XC::ISGetProperties(const char *dev)
 bool AHP_XC::updateProperties()
 {
     // Call parent update properties
-    INDI::CCD::updateProperties();
+    INDI::Spectrograph::updateProperties();
 
     if (isConnected())
     {
@@ -639,7 +639,6 @@ bool AHP_XC::updateProperties()
 void AHP_XC::setupParams()
 {
     int size = (float)ahp_xc_get_delaysize()*2;
-    SetCCDParams(size, size, 16, 1, 1);
 
     if(nplots > 0) {
         plot_str[0]->sizes[0] = size;
@@ -652,15 +651,14 @@ void AHP_XC::setupParams()
 /**************************************************************************************
 ** Client is asking us to start an exposure
 ***************************************************************************************/
-bool AHP_XC::StartExposure(float duration)
+bool AHP_XC::StartIntegration(double duration)
 {
-    if(InExposure)
+    if(InIntegration)
         return false;
 
-    ExposureRequest = static_cast<double>(duration);
-    PrimaryCCD.setExposureDuration(ExposureRequest);
+    IntegrationRequest = static_cast<double>(duration);
     gettimeofday(&ExpStart, nullptr);
-    InExposure = true;
+    InIntegration = true;
     // We're done
     return true;
 }
@@ -668,9 +666,9 @@ bool AHP_XC::StartExposure(float duration)
 /**************************************************************************************
 ** Client is asking us to abort an exposure
 ***************************************************************************************/
-bool AHP_XC::AbortExposure()
+bool AHP_XC::AbortIntegration()
 {
-    InExposure = false;
+    InIntegration = false;
     return true;
 }
 
@@ -682,7 +680,7 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
     if (strcmp (dev, getDeviceName()))
         return false;
 
-    INDI::CCD::ISNewNumber(dev, name, values, names, n);
+    INDI::Spectrograph::ISNewNumber(dev, name, values, names, n);
 
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
@@ -789,7 +787,7 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IDSetSwitch(&lineEdgeTriggerSP[x], nullptr);
         }
     }
-    return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+    return INDI::Spectrograph::ISNewSwitch(dev, name, states, names, n);
 }
 
 /**************************************************************************************
@@ -803,7 +801,7 @@ bool AHP_XC::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobs
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 
-    return INDI::CCD::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    return INDI::Spectrograph::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 /**************************************************************************************
@@ -817,7 +815,7 @@ bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *n
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
 
-    return INDI::CCD::ISNewText(dev, name, texts, names, n);
+    return INDI::Spectrograph::ISNewText(dev, name, texts, names, n);
 }
 
 /**************************************************************************************
@@ -828,7 +826,7 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISSnoopDevice(root);
 
-    INDI::CCD::ISSnoopDevice(root);
+    INDI::Spectrograph::ISSnoopDevice(root);
 
     return true;
 }
@@ -836,10 +834,10 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
 /**************************************************************************************
 ** INDI is asking us to add any FITS keywords to the FITS header
 ***************************************************************************************/
-void AHP_XC::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void AHP_XC::addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len)
 {
     // Let's first add parent keywords
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::Spectrograph::addFITSKeywords(fptr, buf, len);
 
     // Add temperature to FITS header
     int status = 0;
@@ -857,7 +855,7 @@ double AHP_XC::CalcTimeLeft()
     timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(ExpStart.tv_sec * 1000.0 + ExpStart.tv_usec / 1000);
     timesince = timesince / 1000.0;
 
-    timeleft = ExposureRequest - timesince;
+    timeleft = IntegrationRequest - timesince;
     return timeleft;
 }
 
@@ -897,9 +895,9 @@ void AHP_XC::TimerHit()
     }
     IDSetNumber(&correlationsNP, nullptr);
 
-    if(InExposure) {
+    if(InIntegration) {
         // Just update time left in client
-        PrimaryCCD.setExposureLeft((double)timeleft);
+        setIntegrationLeft((double)timeleft);
     }
 
     SetTimer(getCurrentPollingPeriod());
