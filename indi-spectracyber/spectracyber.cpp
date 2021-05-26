@@ -41,12 +41,12 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <fitsio.h>
 
 #define mydev         "SpectraCyber"
 #define BASIC_GROUP   "Main Control"
 #define OPTIONS_GROUP "Options"
 
-#define current_freq FreqNP->np[0].value
 #define CONT_CHANNEL 0
 #define SPEC_CHANNEL 1
 
@@ -100,7 +100,8 @@ void SpectraCyber::ISGetProperties(const char *dev)
 {
     static int propInit = 0;
 
-    INDI::DefaultDevice::ISGetProperties(dev);
+    INDI::Spectrograph::ISGetProperties(dev);
+    INDI::Receiver::ISGetProperties(dev);
 
     if (propInit == 0)
     {
@@ -147,30 +148,15 @@ bool SpectraCyber::ISSnoopDevice(XMLEle *root)
 bool SpectraCyber::initProperties()
 {
 
-    INDI::DefaultDevice::initProperties();
-
-    FreqNP = getNumber("Freq (Mhz)");
-    if (FreqNP == nullptr)
-        LOG_ERROR("Error: Frequency property is missing. Spectrometer cannot be operated.");
-
-    ScanNP = getNumber("Scan Parameters");
-    if (ScanNP == nullptr)
-        LOG_ERROR("Error: Scan parameters property is missing. Spectrometer cannot be operated.");
+    INDI::Spectrograph::initProperties();
+    INDI::Receiver::initProperties();
+    SetCapability(SENSOR_CAN_ABORT|SENSOR_HAS_DSP);
 
     ChannelSP = getSwitch("Channels");
     if (ChannelSP == nullptr)
         LOG_ERROR("Error: Channel property is missing. Spectrometer cannot be operated.");
 
-    ScanSP = getSwitch("Scan");
-    if (ScanSP == nullptr)
-        LOG_ERROR("Error: Channel property is missing. Spectrometer cannot be operated.");
-
-    DataStreamBP = getBLOB("Data");
-    if (DataStreamBP == nullptr)
-        LOG_ERROR("Error: BLOB data property is missing. Spectrometer cannot be operated.");
-
-    if (DataStreamBP)
-        DataStreamBP->bp[0].blob = (char *)malloc(MAXBLEN * sizeof(char));
+    setBufferSize(MAXBLEN * sizeof(char));
 
     /**************************************************************************/
     // Equatorial Coords - SET
@@ -341,10 +327,6 @@ bool SpectraCyber::ISNewNumber(const char *dev, const char *name, double values[
         return true;
     }
 
-    // Freq Change
-    if (!strcmp(nProp->name, "Freq (Mhz)"))
-        return update_freq(values[0]);
-
     // Scan Options
     if (!strcmp(nProp->name, "Scan Parameters"))
     {
@@ -418,8 +400,10 @@ bool SpectraCyber::ISNewSwitch(const char *dev, const char *name, ISState *state
     if (strcmp(dev, getDeviceName()) != 0)
         return false;
 
-    // First process parent!
-    if (INDI::DefaultDevice::ISNewSwitch(getDeviceName(), name, states, names, n) == true)
+    // First process parents!
+    if (INDI::Spectrograph::ISNewSwitch(getDeviceName(), name, states, names, n) == true)
+        return true;
+    if (INDI::Receiver::ISNewSwitch(getDeviceName(), name, states, names, n) == true)
         return true;
 
     ISwitchVectorProperty *sProp = getSwitch(name);
@@ -432,55 +416,6 @@ bool SpectraCyber::ISNewSwitch(const char *dev, const char *name, ISState *state
         resetProperties();
         LOG_ERROR("Spectrometer is offline. Connect before issuing any commands.");
         return false;
-    }
-
-    // Scan
-    if (!strcmp(sProp->name, "Scan"))
-    {
-        if (!FreqNP || !DataStreamBP)
-            return false;
-
-        if (IUUpdateSwitch(sProp, states, names, n) < 0)
-            return false;
-
-        if (sProp->sp[1].s == ISS_ON)
-        {
-            if (sProp->s == IPS_BUSY)
-            {
-                sProp->s        = IPS_IDLE;
-                FreqNP->s       = IPS_IDLE;
-                DataStreamBP->s = IPS_IDLE;
-
-                IDSetNumber(FreqNP, nullptr);
-                IDSetBLOB(DataStreamBP, nullptr);
-                IDSetSwitch(sProp, "Scan stopped.");
-                return false;
-            }
-
-            sProp->s = IPS_OK;
-            IDSetSwitch(sProp, nullptr);
-            return true;
-        }
-
-        sProp->s        = IPS_BUSY;
-        DataStreamBP->s = IPS_BUSY;
-
-        // Compute starting freq  = base_freq - low
-        if (sProp->sp[SPEC_CHANNEL].s == ISS_ON)
-        {
-            start_freq  = (SPECTROMETER_RF_FREQ + SPECTROMETER_REST_FREQ) - abs((int)ScanNP->np[0].value) / 1000.;
-            target_freq = (SPECTROMETER_RF_FREQ + SPECTROMETER_REST_FREQ) + abs((int)ScanNP->np[1].value) / 1000.;
-            sample_rate = ScanNP->np[2].value * 5;
-            FreqNP->np[0].value = start_freq;
-            FreqNP->s           = IPS_BUSY;
-            IDSetNumber(FreqNP, nullptr);
-            IDSetSwitch(sProp, "Starting spectral scan from %g MHz to %g MHz in steps of %g KHz...", start_freq,
-                        target_freq, sample_rate);
-        }
-        else
-            IDSetSwitch(sProp, "Starting continuum scan @ %g MHz...", FreqNP->np[0].value);
-
-        return true;
     }
 
     // Continuum Gain Control
@@ -609,7 +544,7 @@ bool SpectraCyber::ISNewSwitch(const char *dev, const char *name, ISState *state
             return false;
 
         sProp->s = IPS_OK;
-        if (ScanSP->s == IPS_BUSY && lastChannel != get_on_switch(sProp))
+        if (InIntegration && lastChannel != get_on_switch(sProp))
         {
             abort_scan();
             IDSetSwitch(sProp, "Scan aborted due to change of channel selection.");
@@ -637,6 +572,71 @@ bool SpectraCyber::ISNewSwitch(const char *dev, const char *name, ISState *state
         return true;
     }
 
+    return true;
+}
+
+bool SpectraCyber::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
+{
+    if (strcmp(dev, getDeviceName()) != 0)
+        return false;
+    // First process parent!
+    if (INDI::SensorInterface::ISNewBLOB(getDeviceName(), name, sizes, blobsizes, blobs, formats, names, n) == true)
+        return true;
+    return false;
+}
+
+void SpectraCyber::addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len)
+{
+    // Let's first add parent keywords
+    INDI::SensorInterface::addFITSKeywords(fptr, buf, len);
+
+    // Add temperature to FITS header
+    int status = 0;
+    fits_write_date(fptr, &status);
+
+}
+
+bool SpectraCyber::StartIntegration(double duration)
+{
+    if(InIntegration)
+        return false;
+
+    IntegrationRequest = static_cast<double>(duration);
+    gettimeofday(&IntegrationStart, nullptr);
+
+    // Compute starting freq  = base_freq - low
+    if (ChannelSP->sp[SPEC_CHANNEL].s == ISS_ON)
+    {
+        setLowCutFrequency((SPECTROMETER_RF_FREQ + SPECTROMETER_REST_FREQ) - abs((int)SpectrographSettingsNP.np[SPECTROGRAPH_LOWFREQ].value) / 1000.);
+        setHighCutFrequency((SPECTROMETER_RF_FREQ + SPECTROMETER_REST_FREQ) + abs((int)SpectrographSettingsNP.np[SPECTROGRAPH_HIGHFREQ].value) / 1000.);
+        setSampleRate(SpectrographSettingsNP.np[RECEIVER_SAMPLERATE].value * 5);
+        ReceiverSettingsNP.np[RECEIVER_FREQUENCY].value = start_freq;
+        ReceiverSettingsNP.s           = IPS_BUSY;
+        IDSetNumber(&ReceiverSettingsNP, nullptr);
+        IDSetSwitch(ChannelSP, "Starting spectral scan from %g MHz to %g MHz in steps of %g KHz...", start_freq,
+                    target_freq, sample_rate);
+    }
+    else
+        IDSetSwitch(ChannelSP, "Starting continuum scan @ %g MHz...", getFrequency());
+
+    return true;
+    InIntegration = true;
+    // We're done
+    return true;
+}
+
+bool SpectraCyber::AbortIntegration()
+{
+    InIntegration = false;
+    abort_scan();
+    return true;
+}
+
+bool SpectraCyber::updateProperties()
+{
+    // Call parent update properties
+    INDI::Receiver::updateProperties();
+    INDI::Spectrograph::updateProperties();
     return true;
 }
 
@@ -740,7 +740,7 @@ bool SpectraCyber::dispatch_command(SpectrometerCommand command_type)
             if (nProp == nullptr)
                 return false;
             command[1]  = 'J';
-            final_value = (int)nProp->np[SPECTRAL_CHANNEL].value / 0.001;
+            final_value = (int)nProp->np[SPEC_CHANNEL].value / 0.001;
             sprintf(hex, "%03X", (uint32_t)final_value);
             command[2] = hex[0];
             command[3] = hex[1];
@@ -758,13 +758,13 @@ bool SpectraCyber::dispatch_command(SpectrometerCommand command_type)
             // e.g. To set 50.00 Mhz, diff = 50 - 46.4 = 3.6 / 0.005 = 800 = 320h
             //      Freq = 320h + 050h (or 800 + 80) = 370h = 880 decimal
 
-            final_value = (int)((FreqNP->np[0].value + SPECTROMETER_REST_CORRECTION - FreqNP->np[0].min) / 0.005 +
+            final_value = (int)((getFrequency() + SPECTROMETER_REST_CORRECTION - ReceiverSettingsNP.np[RECEIVER_FREQUENCY].min) / 0.005 +
                                 SPECTROMETER_OFFSET);
             sprintf(hex, "%03X", (uint32_t)final_value);
             if (isDebug())
                 IDLog("Required Freq is: %.3f --- Min Freq is: %.3f --- Spec Offset is: %d -- Final Value (Dec): %d "
                       "--- Final Value (Hex): %s\n",
-                      FreqNP->np[0].value, FreqNP->np[0].min, SPECTROMETER_OFFSET, final_value, hex);
+                      getFrequency(), ReceiverSettingsNP.np[RECEIVER_FREQUENCY].min, SPECTROMETER_OFFSET, final_value, hex);
             command[2] = hex[0];
             command[3] = hex[1];
             command[4] = hex[2];
@@ -834,25 +834,18 @@ int SpectraCyber::get_on_switch(ISwitchVectorProperty *sp)
 
 bool SpectraCyber::update_freq(double nFreq)
 {
-    double last_value = FreqNP->np[0].value;
+    double last_value = getFrequency();
 
-    if (nFreq < FreqNP->np[0].min || nFreq > FreqNP->np[0].max)
+    if (nFreq < getLowCutFrequency() || nFreq > getHighCutFrequency())
         return false;
 
-    FreqNP->np[0].value = nFreq;
+    Receiver::setFrequency(nFreq);
 
     if (dispatch_command(RECV_FREQ) == false)
     {
-        FreqNP->np[0].value = last_value;
-        FreqNP->s           = IPS_ALERT;
-        IDSetNumber(FreqNP, "Error dispatching RECV FREQ command to spectrometer. Check logs.");
+        Receiver::setFrequency(last_value);
         return false;
     }
-
-    if (ScanSP->s != IPS_BUSY)
-        FreqNP->s = IPS_OK;
-
-    IDSetNumber(FreqNP, nullptr);
 
     // Delay 0.5s for INT
     usleep(500000);
@@ -907,84 +900,55 @@ void SpectraCyber::TimerHit()
 
     char RAStr[16], DecStr[16];
 
-    switch (ScanSP->s)
+    if (InIntegration && ChannelSP->sp[SPECTRAL_CHANNEL].s == ISS_ON)
     {
-        case IPS_BUSY:
-            if (ChannelSP->sp[CONT_CHANNEL].s == ISS_ON)
-                break;
-
-            if (current_freq >= target_freq)
-            {
-                ScanSP->s = IPS_OK;
-                FreqNP->s = IPS_OK;
-
-                IDSetNumber(FreqNP, nullptr);
-                IDSetSwitch(ScanSP, "Scan complete.");
-                SetTimer(getCurrentPollingPeriod());
-                return;
-            }
-
-            if (update_freq(current_freq) == false)
-            {
-                abort_scan();
-                SetTimer(getCurrentPollingPeriod());
-                return;
-            }
-
-            current_freq += sample_rate / 1000.;
-            break;
-
-        default:
-            break;
-    }
-
-    switch (DataStreamBP->s)
-    {
-        case IPS_BUSY:
-            if (ScanSP->s != IPS_BUSY)
-            {
-                DataStreamBP->s = IPS_IDLE;
-                IDSetBLOB(DataStreamBP, nullptr);
-                break;
-            }
-
+        if (getFrequency() >= target_freq)
+        {
+            InIntegration = false;
+            SpectrographSettingsNP.s = IPS_OK;
             if (read_channel() == false)
             {
-                DataStreamBP->s = IPS_ALERT;
-
-                if (ScanSP->s == IPS_BUSY)
-                    abort_scan();
-
-                IDSetBLOB(DataStreamBP, nullptr);
+                AbortIntegration();
+                setBufferSize(0);
             }
 
             JD = ln_get_julian_from_sys();
 
             // Continuum
             if (ChannelSP->sp[0].s == ISS_ON)
-                strncpy(DataStreamBP->bp[0].format, contFMT, MAXINDIBLOBFMT);
+                setIntegrationFileExtension(contFMT);
             else
-                strncpy(DataStreamBP->bp[0].format, specFMT, MAXINDIBLOBFMT);
+                setIntegrationFileExtension(specFMT);
 
             fs_sexa(RAStr, EquatorialCoordsRN[0].value, 2, 3600);
             fs_sexa(DecStr, EquatorialCoordsRN[1].value, 2, 3600);
 
             if (telescopeID && strlen(telescopeID->text) > 0)
-                snprintf(bLine, MAXBLEN, "%.8f %.3f %.3f %s %s", JD, chanValue, current_freq, RAStr, DecStr);
+                snprintf(bLine, MAXBLEN, "%.8f %.3f %.3f %s %s", JD, chanValue, getFrequency(), RAStr, DecStr);
             else
-                snprintf(bLine, MAXBLEN, "%.8f %.3f %.3f", JD, chanValue, current_freq);
+                snprintf(bLine, MAXBLEN, "%.8f %.3f %.3f", JD, chanValue, getFrequency());
 
-            DataStreamBP->bp[0].bloblen = DataStreamBP->bp[0].size = strlen(bLine);
-            memcpy(DataStreamBP->bp[0].blob, bLine, DataStreamBP->bp[0].bloblen);
+            unsigned char* data = getBuffer();
+            memcpy(data, bLine, strlen(bLine));
 
-            //IDLog("\nSTRLEN: %d -- BLOB:'%s'\n", strlen(bLine), (char *) DataStreamBP->bp[0].blob);
+            //IDLog("\nSTRLEN: %d -- BLOB:'%s'\n", strlen(bLine), (char *) data);
 
-            IDSetBLOB(DataStreamBP, nullptr);
+            IntegrationComplete();
+            setBufferSize(0);
 
-            break;
+            IDSetNumber(&SpectrographSettingsNP, nullptr);
+            SetTimer(getCurrentPollingPeriod());
+            return;
+        }
 
-        default:
-            break;
+        if (update_freq(getFrequency()) == false)
+        {
+            abort_scan();
+            SetTimer(getCurrentPollingPeriod());
+            return;
+        }
+
+        setFrequency(getFrequency() + sample_rate / 1000.);
     }
 
     SetTimer(getCurrentPollingPeriod());
@@ -992,14 +956,10 @@ void SpectraCyber::TimerHit()
 
 void SpectraCyber::abort_scan()
 {
-    FreqNP->s = IPS_IDLE;
-    ScanSP->s = IPS_ALERT;
-
-    IUResetSwitch(ScanSP);
-    ScanSP->sp[1].s = ISS_ON;
-
-    IDSetNumber(FreqNP, nullptr);
-    IDSetSwitch(ScanSP, "Scan aborted due to errors.");
+    ReceiverSettingsNP.s = IPS_IDLE;
+    IDSetNumber(&ReceiverSettingsNP, nullptr);
+    SpectrographSettingsNP.s = IPS_IDLE;
+    IDSetNumber(&ReceiverSettingsNP, nullptr);
 }
 
 bool SpectraCyber::read_channel()
