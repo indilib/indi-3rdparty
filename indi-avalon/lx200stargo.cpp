@@ -1103,7 +1103,7 @@ bool LX200StarGo::getLST_String(char* input)
         return false;
     }
     // determine local sidereal time
-    double lst = LocalSiderealTime(siteLong);
+    double lst = get_local_sidereal_time(siteLong);
     int h = 0, m = 0, s = 0;
     LOGF_DEBUG("Current local sidereal time = %.8lf", lst);
     // translate into hh:mm:ss
