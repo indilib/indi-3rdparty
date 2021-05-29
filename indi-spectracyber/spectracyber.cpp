@@ -160,10 +160,6 @@ bool SpectraCyber::initProperties()
 
     /**************************************************************************/
     // Equatorial Coords - SET
-    IUFillNumber(&EquatorialCoordsRN[0], "RA", "RA  H:M:S", "%10.6m", 0., 24., 0., 0.);
-    IUFillNumber(&EquatorialCoordsRN[1], "DEC", "Dec D:M:S", "%10.6m", -90., 90., 0., 0.);
-    IUFillNumberVector(&EquatorialCoordsRNP, EquatorialCoordsRN, NARRAY(EquatorialCoordsRN), "", "EQUATORIAL_EOD_COORD",
-                       "Equatorial AutoSet", "", IP_RW, 0, IPS_IDLE);
     /**************************************************************************/
 
     setDriverInterface(SPECTROGRAPH_INTERFACE);
@@ -274,6 +270,9 @@ bool SpectraCyber::ISNewNumber(const char *dev, const char *name, double values[
         if (IUUpdateNumber(nProp, values, names, n) < 0)
             return false;
 
+        Spectrograph::setGain(last_value);
+        Receiver::setGain(last_value);
+
         if (dispatch_command(IF_GAIN) == false)
         {
             nProp->np[0].value = last_value;
@@ -325,6 +324,12 @@ bool SpectraCyber::ISNewNumber(const char *dev, const char *name, double values[
         nProp->s = IPS_OK;
         IDSetNumber(nProp, nullptr);
         return true;
+    }
+
+    // Freq Change
+    if (!strcmp(nProp->name, "Freq (Mhz)")) {
+        setFrequency(values[0]);
+        return update_freq(values[0]);
     }
 
     // Scan Options
@@ -572,6 +577,30 @@ bool SpectraCyber::ISNewSwitch(const char *dev, const char *name, ISState *state
         return true;
     }
 
+    // Reset
+    if (!strcmp(sProp->name, "Scan"))
+    {
+        static int off;
+        static int integration;
+        static double integrationtime;
+
+        off = get_on_switch(sProp);
+        if(off == 1) {
+            ISwitchVectorProperty *_sProp = nullptr;
+            if (ChannelSP->sp[CONT_CHANNEL].s == ISS_ON) {
+                integration = get_on_switch(_sProp);
+                sProp = getSwitch("Continuum Integration (s)");
+                integrationtime = atof(_sProp->sp[integration].name);
+            } else if (ChannelSP->sp[SPEC_CHANNEL].s == ISS_ON) {
+                integration = get_on_switch(_sProp);
+                sProp = getSwitch("Spectral Integration (s)");
+                integrationtime = atof(_sProp->sp[integration].name);
+            }
+            StartIntegration(integrationtime);
+        }
+        return true;
+    }
+
     return true;
 }
 
@@ -637,6 +666,17 @@ bool SpectraCyber::updateProperties()
     // Call parent update properties
     INDI::Receiver::updateProperties();
     INDI::Spectrograph::updateProperties();
+    if (isConnected())
+    {
+        defineProperty(ChannelSP);
+        defineProperty(&EquatorialCoordsRNP);
+    }
+    else
+        // We're disconnected
+    {
+        deleteProperty(ChannelSP->name);
+        deleteProperty(EquatorialCoordsRNP.name);
+    }
     return true;
 }
 

@@ -21,6 +21,7 @@
 #pragma once
 
 #include "indispectrograph.h"
+#include "indireceiver.h"
 #include "indicorrelator.h"
 #include <ahp/ahp_xc.h>
 
@@ -35,7 +36,7 @@ public:
     virtual inline bool Handshake() override { return true; }
 };
 
-class AHP_XC : public INDI::Spectrograph
+class AHP_XC : public virtual INDI::Spectrograph, public virtual INDI::Receiver
 {
 public:
     AHP_XC();
@@ -86,30 +87,30 @@ public:
         free(baselines);
     }
 
-    virtual void ISGetProperties(const char *dev) override;
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-    virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
-    virtual bool ISSnoopDevice(XMLEle *root) override;
+    void ISGetProperties(const char *dev) override;
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
+    bool ISSnoopDevice(XMLEle *root) override;
 
 protected:
 
     // General device functions
-    virtual bool Disconnect() override;
+    bool Disconnect() override;
     const char *getDeviceName();
-    virtual bool saveConfigItems(FILE *fp) override;
-    virtual const char *getDefaultName() override;
-    virtual bool initProperties() override;
-    virtual bool updateProperties() override;
+    bool saveConfigItems(FILE *fp) override;
+    const char *getDefaultName() override;
+    bool initProperties() override;
+    bool updateProperties() override;
 
     // CCD specific functions
-    virtual bool StartIntegration(double duration) override;
-    virtual bool AbortIntegration() override;
-    virtual void TimerHit() override;
-    virtual void addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len) override;
+    bool StartIntegration(double duration) override;
+    bool AbortIntegration() override;
+    void TimerHit() override;
+    void addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len) override;
 
-    virtual bool Connect() override;
+    bool Connect() override;
 
 private:
 
