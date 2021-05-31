@@ -21,24 +21,21 @@
  *
  */
 
-#ifndef _BRESSEREXOSIIGOTODRIVER_H_INCLUDED_
-#define _BRESSEREXOSIIGOTODRIVER_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <cmath>
 #include <memory>
 #include <string>
 
-#include <libindi/indicom.h>
-#include <libindi/inditelescope.h>
-#include <libindi/indiguiderinterface.h>
-#include <libindi/indilogger.h>
+#include <inditelescope.h>
+#include <indiguiderinterface.h>
 
 #include "IndiSerialWrapper.hpp"
 #include "ExosIIMountControl.hpp"
 #include "SerialDeviceControl/SerialCommand.hpp"
 
-#include "Config.hpp"
+#include "config.h"
 
 namespace GoToDriver
 {
@@ -98,7 +95,7 @@ class BresserExosIIDriver : public INDI::Telescope
         virtual bool Abort() override;
 
         //Set the tracking state of the scope, it either goes to the current coordinates or stops the scope motion.
-        virtual bool SetTrackingEnabled(bool enabled);
+        virtual bool SetTrackEnabled(bool enabled) override;
 
         //update the time of the scope.
         virtual bool updateTime(ln_date *utc, double utc_offset) override;
@@ -124,10 +121,6 @@ class BresserExosIIDriver : public INDI::Telescope
         void LogError(const char* mesage);
 
         void LogInfo(const char* mesage);
-        
-        IText SourceCodeRepositoryURLT[1] = {};
-        ITextVectorProperty SourceCodeRepositoryURLTP;
 };
 }
 
-#endif

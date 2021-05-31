@@ -315,7 +315,7 @@ class ExosIIMountControl :
 
             if(mMountStateMachine.CurrentState() != TelescopeMountState::MoveWhileTracking)
             {
-                std::cerr << "INFO: motion already disabled." << std::endl;
+                std::cerr << "motion already disabled." << std::endl;
                 return true;
             }
             else
