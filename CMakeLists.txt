@@ -136,7 +136,7 @@ ENDIF(MMAL_FOUND)
 # ASIPOWER and RPIGPIO only for Raspberry PI
 IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 option(WITH_ASIPOWER "Install ASI Air Power Driver" On)
-option(WITH_RPI "Install Raspberry PI GPIO Driver" On)
+option(WITH_RPIGPIO "Install Raspberry PI GPIO Driver" On)
 ENDIF()
 
 # Add/remove cases for OSX
