@@ -453,7 +453,7 @@ void LX200Skywalker::getBasicData()
         {
             int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
             //int modes = sizeof(TelescopeTrackMode); (enum Sidereal, Solar, Lunar, Custom)
-            int modes = TRACK_SOLAR; // ToDo: Lunar and Custom tracking
+            int modes = TRACK_LUNAR; // ToDo: Custom tracking
             TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
             IDSetSwitch(&TrackModeSP, nullptr);
         }
