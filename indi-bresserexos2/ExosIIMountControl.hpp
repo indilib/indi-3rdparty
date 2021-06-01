@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _EXOSIIMOUNTCONTROL_H_INCLUDED_
-#define _EXOSIIMOUNTCONTROL_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <vector>
@@ -31,7 +30,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
-#include "Config.hpp"
+#include "config.h"
 
 #include "StateMachine.hpp"
 #include "SerialDeviceControl/CriticalData.hpp"
@@ -892,4 +891,3 @@ class ExosIIMountControl :
         }
 };
 }
-#endif

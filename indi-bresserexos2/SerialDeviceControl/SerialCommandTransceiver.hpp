@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _SERIALCOMMANDTRANSCEIVER_H_INCLUDED_
-#define _SERIALCOMMANDTRANSCEIVER_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -32,7 +31,7 @@
 #include <thread>
 
 #include <algorithm>
-#include "Config.hpp"
+#include "config.h"
 #include "INotifyPointingCoordinatesReceived.hpp"
 #include "ISerialInterface.hpp"
 #include "CriticalData.hpp"
@@ -226,4 +225,3 @@ class SerialCommandTransceiver
         }
 };
 }
-#endif

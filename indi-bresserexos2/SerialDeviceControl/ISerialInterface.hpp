@@ -21,11 +21,10 @@
  *
  */
 
-#ifndef _ISERIALINTERFACE_H_INCLUDED_
-#define _ISERIALINTERFACE_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
@@ -56,4 +55,4 @@ class ISerialInterface
         virtual bool Flush() = 0;
 };
 }
-#endif
+

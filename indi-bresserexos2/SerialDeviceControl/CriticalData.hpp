@@ -21,12 +21,11 @@
  *
  */
 
-#ifndef _CRITICALDATA_H_INCLUDED_
-#define _CRITICALDATA_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <mutex>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
@@ -84,5 +83,3 @@ class CriticalData
         std::mutex mMutex;
 };
 }
-
-#endif

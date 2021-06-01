@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _STATEMACHINE_H_INCLUDED_
-#define _STATEMACHINE_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -30,7 +29,7 @@
 #include <tuple>
 #include <limits>
 #include <mutex>
-#include "Config.hpp"
+#include "config.h"
 
 namespace TelescopeMountControl
 {
@@ -187,6 +186,3 @@ class StateMachine
         }
 };
 }
-
-
-#endif
