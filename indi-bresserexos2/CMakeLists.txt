@@ -11,6 +11,7 @@ set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_bresserexos2.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_bresserexos2.xml )
 
+include(CMakeCommon)
 
 find_package(Threads REQUIRED)
 find_package(INDI REQUIRED)
