@@ -21,12 +21,11 @@
  *
  */
 
-#ifndef _INOTIFYPOINTINGCOORDINATESRECEIVED_H_INCLUDED_
-#define _INOTIFYPOINTINGCOORDINATESRECEIVED_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <vector>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
@@ -42,4 +41,3 @@ class INotifyPointingCoordinatesReceived
         virtual void OnSiteLocationCoordinatesReceived(float latitude, float longitude) = 0;
 };
 }
-#endif

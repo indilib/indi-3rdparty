@@ -1,3 +1,26 @@
+/*
+ * BresserExosIIGoToDriver.cpp
+ *
+ * Copyright 2020 Kevin Krüger <kkevin@gmx.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ *
+ *
+ */
+
 #include "BresserExosIIGoToDriver.hpp"
 
 #define COMMANDS_PER_SECOND (10)
@@ -8,51 +31,6 @@ using namespace GoToDriver;
 using namespace SerialDeviceControl;
 
 static std::unique_ptr<BresserExosIIDriver> driver_instance(new BresserExosIIDriver());
-
-#if 0 // No needed, see https://github.com/indilib/indi/pull/1375
-void ISGetProperties(const char* dev)
-{
-    driver_instance->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char* dev, const char* name, ISState * states, char* names[], int n)
-{
-    driver_instance->ISNewSwitch(dev, name, states, names, n);
-}
-
-//TODO: this seems to have changed in indi 1.8.8
-//void ISNewText(const char* dev, const char* name, ISState * states, char* names[], int n)
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    driver_instance->ISNewText(dev, name, texts, names, n);
-}
-
-//TODO: this seems to have changed in indi 1.8.8
-//void ISNewNumber(const char* dev, const char* name, ISState * states, char* names[], int n)
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    driver_instance->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char* dev, const char* name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    //driver_instance->ISNewBLOB(dev,name,sizes,blobs,formats,names,n);
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle* root)
-{
-    driver_instance->ISSnoopDevice(root);
-}
-#endif
 
 //default constructor.
 //sets the scope abilities, and default settings.
@@ -84,12 +62,6 @@ bool BresserExosIIDriver::initProperties()
     setTelescopeConnection(CONNECTION_SERIAL);
 
     addDebugControl();
-    
-	IUFillText(&SourceCodeRepositoryURLT[0], "REPOSITORY_URL", "Code Repository", "https://github.com/kneo/indi-bresserexos2");
-	
-    IUFillTextVector(&SourceCodeRepositoryURLTP, SourceCodeRepositoryURLT, 1, getDeviceName(), "REPOSITORY_URL", "Source Code", CONNECTION_TAB, IP_RO, 0, IPS_IDLE);
-	
-	defineProperty(&SourceCodeRepositoryURLTP);
     
     SetParkDataType(PARK_NONE);
 
@@ -266,7 +238,7 @@ bool BresserExosIIDriver::Abort()
 }
 
 //Set the tracking state of the scope, it either goes to the current coordinates or stops the scope motion.
-bool BresserExosIIDriver::SetTrackingEnabled(bool enabled)
+bool BresserExosIIDriver::SetTrackEnabled(bool enabled)
 {
     if(enabled)
     {
@@ -317,7 +289,7 @@ bool BresserExosIIDriver::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command
 {
     if (TrackState != SCOPE_TRACKING)
     {
-        LOG_ERROR("Error: this command only works while tracking.");
+        LOG_ERROR("this command only works while tracking.");
         return false;
     }
 
@@ -334,7 +306,7 @@ bool BresserExosIIDriver::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command
             break;
 
         default:
-            LOG_ERROR("Error: invalid direction value!");
+            LOG_ERROR("invalid direction value!");
             return false;
     }
 
@@ -360,7 +332,7 @@ bool BresserExosIIDriver::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command
 {
     if (TrackState != SCOPE_TRACKING)
     {
-        LOG_ERROR("Error: this command only works while tracking.");
+        LOG_ERROR("this command only works while tracking.");
         return false;
     }
 
@@ -377,7 +349,7 @@ bool BresserExosIIDriver::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command
             break;
 
         default:
-            LOG_ERROR("Error: invalid direction value!");
+            LOG_ERROR("invalid direction value!");
             return false;
     }
 
@@ -412,11 +384,11 @@ void BresserExosIIDriver::DriverWatchDog(void *p)
 
     if(currentState == TelescopeMountControl::TelescopeMountState::Unknown)
     {
-        driverInstance->LogError("Error: Watchdog Timeout without communication!");
+        driverInstance->LogError("Watchdog Timeout without communication!");
         driverInstance->LogError("Please make sure your serial device is correct, and communication is possible.");
         return;
     }
-    driverInstance->LogInfo("INFO: Communication seems to be established!");
+    driverInstance->LogInfo("Communication seems to be established!");
 }
 
 void BresserExosIIDriver::LogError(const char* message)

@@ -21,14 +21,13 @@
  *
  */
 
-#ifndef _CIRCULARBUFFER_H_INCLUDED_
-#define _CIRCULARBUFFER_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <cstring>
 #include <vector>
 #include <iostream>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
@@ -180,7 +179,7 @@ class CircularBuffer
         size_t mStart;
         size_t mEnd;
         size_t mSize;
-        
+
         T mZeroElement;
         T mBuffer[max_size];
 
@@ -215,4 +214,3 @@ class CircularBuffer
 };
 }
 
-#endif

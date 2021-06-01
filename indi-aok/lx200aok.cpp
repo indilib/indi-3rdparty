@@ -339,12 +339,14 @@ bool LX200Skywalker::updateProperties()
     if (! LX200Telescope::updateProperties()) return false;
     if (isConnected())
     {
-        // registering here results in display at bottom of tab
+        // Switch is obsolete: NOT using pulse commands makes no sense with TCS
+        deleteProperty(UsePulseCmdSP.name);
+        // FIRST delete property, THEN define new ones!
+        // Otherwise we break the list of buttons defined beforehand and lose their
+        // responsiveness in the INDI Control Panel when called from EKOS
         defineProperty(&MountStateSP);
         defineProperty(&SystemSlewSpeedNP);
         defineProperty(&FirmwareVersionTP);
-        // Switch is obsolete: NOT using pulse commands makes no sense with TC
-        deleteProperty(UsePulseCmdSP.name);
     }
     else
     {
