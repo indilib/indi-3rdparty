@@ -43,7 +43,7 @@
 #define FP(x) Altaircam_##x
 #define CP(x) ALTAIRCAM_##x
 #define XP(x) Altaircam##x
-#define THAND HAltairCam
+#define THAND HAltaircam
 #define DNAME "Altair"
 #elif BUILD_STARSHOOTG
 #include <starshootg.h>
