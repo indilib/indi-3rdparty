@@ -393,6 +393,15 @@
 
 #define DEVICETYPE_QHY5III482C        4101
 #define DEVICETYPE_QHY5III464         4102
+
+#define DEVICETYPE_QHY183A              4105
+#define DEVICETYPE_QHY183A_M            4106
+#define DEVICETYPE_QHY183A_C            4107
+
+#define DEVICETYPE_QHY5III334            4108
+#define DEVICETYPE_QHY5III334M           4109
+#define DEVICETYPE_QHY5III334C           4110
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -977,8 +986,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH      2712//3864// 2712// 1408    //8432  	
-#define QHY5IIICOMMON_MAX_HEIGHT     1538//2180// 1538// 1052    //5648	  
+#define QHY5IIICOMMON_MAX_WIDTH      3864//5680//2712//3864// 2712// 1408    //8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT     2180//3710//1538//2180// 1538// 1052    //5648	  
 
 /**
  * Type define for QHY247*/

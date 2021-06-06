@@ -858,6 +858,10 @@ EXPORTC void STDCALL QHYCCDQuit();
 EXPORTC QHYDWORD STDCALL SetQHYCCDCallBack(QHYCCDProcCallBack ProcCallBack,
     int32_t Flag);
 
+EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
+
+EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
+
 #if 0//PCIE_MODE_TEST
 
 #include "riffa.h"
