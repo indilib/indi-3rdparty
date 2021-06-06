@@ -30,8 +30,6 @@
 using namespace GoToDriver;
 using namespace SerialDeviceControl;
 
-static std::unique_ptr<BresserExosIIDriver> driver_instance(new BresserExosIIDriver());
-
 //default constructor.
 //sets the scope abilities, and default settings.
 BresserExosIIDriver::BresserExosIIDriver() :
