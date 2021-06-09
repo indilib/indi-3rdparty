@@ -78,6 +78,8 @@ struct CloudWatcherData
     int commandByteErrors; ///< Command byte errors count
     int switchStatus;      ///< The status of the internal switch
     int windSpeed;         ///< The wind speed measured by the anemometer
+    int humidity;          ///< The relative humidity
+    int pressure;          ///< atmospheric pressure
 };
 
 /**
@@ -431,4 +433,18 @@ class CloudWatcherController
         * @return true if succesfully read. false otherwise.
         */
         bool getWindSpeed(int *windSpeed);
+
+        /**
+        * Reads the humidity from external sensor
+        * @param humidity where the humidity will be stored
+        * @return true if succesfully read. false otherwise.
+        */
+        bool getHumidity(int *humidity);
+
+        /**
+        * Reads the pressure from external sensor
+        * @param pressure where the pressure will be stored. Unit is Pa
+        * @return true if succesfully read. false otherwise.
+        */
+        bool getPressure(int *pressure);
 };

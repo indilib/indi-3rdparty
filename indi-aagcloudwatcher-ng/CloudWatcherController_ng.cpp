@@ -4,6 +4,7 @@ A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
 Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
 Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+Copyright (C) 2021 Jasem Mutlaq
 
 AAG Cloud Watcher INDI Driver is free software : you can redistribute it
 and / or modify it under the terms of the GNU General Public License as
@@ -136,6 +137,8 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
     int ldrValue[NUMBER_OF_READS];
     int rainSensorTemperature[NUMBER_OF_READS];
     int windSpeed[NUMBER_OF_READS];
+    int humidity[NUMBER_OF_READS];
+    int pressure[NUMBER_OF_READS];
 
     int check = 0;
 
@@ -180,6 +183,20 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
         {
             return false;
         }
+
+        check = getHumidity(&humidity[i]);
+
+        if (!check)
+        {
+            return false;
+        }
+
+        check = getPressure(&pressure[i]);
+
+        if (!check)
+        {
+            return false;
+        }
     }
 
     timeval end;
@@ -197,6 +214,8 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
     cwd->ldr             = aggregateInts(ldrValue, NUMBER_OF_READS);
     cwd->rainTemperature = aggregateInts(rainSensorTemperature, NUMBER_OF_READS);
     cwd->windSpeed       = aggregateInts(windSpeed, NUMBER_OF_READS);
+    cwd->humidity        = aggregateInts(humidity, NUMBER_OF_READS);
+    cwd->pressure        = aggregateInts(pressure, NUMBER_OF_READS);
     cwd->totalReadings   = totalReadings;
 
     check = getIRErrors(&cwd->firstByteErrors, &cwd->commandByteErrors, &cwd->secondByteErrors, &cwd->pecByteErrors);
@@ -621,6 +640,96 @@ bool CloudWatcherController::getWindSpeed(int *windSpeed)
     else
     {
         *windSpeed = 0;
+    }
+
+    return true;
+}
+
+bool CloudWatcherController::getHumidity(int *humidity)
+{
+    getFirmwareVersion();
+
+    if (firmwareVersion[0] >= '5')
+    {
+        sendCloudwatcherCommand("h!");
+
+        char inputBuffer[BLOCK_SIZE * 2];
+
+        int r = getCloudWatcherAnswer(inputBuffer, 2);
+
+        if (!r)
+        {
+            return false;
+        }
+
+        int h = 0;
+        int res = sscanf(inputBuffer, "!h       %d", &h);
+
+        if (res == 1)
+        {
+            // Sensor error
+            if (h == 100)
+                return false;
+
+            *humidity = h * 120 / 100 - 6;
+
+            return true;
+        }
+
+        // Try high resolution version
+        res = sscanf(inputBuffer, "!hh       %d", &h);
+
+        if (res == 1)
+        {
+            // Sensor error
+            if (h == 100)
+                return false;
+
+            *humidity = h * 125 / 65536 - 6;
+
+            return true;
+        }
+
+        return false;
+    }
+    else
+    {
+        *humidity = 0;
+    }
+
+    return true;
+}
+
+bool CloudWatcherController::getPressure(int *pressure)
+{
+    getFirmwareVersion();
+
+    if (firmwareVersion[0] >= '5')
+    {
+        sendCloudwatcherCommand("p!");
+
+        char inputBuffer[BLOCK_SIZE * 2];
+
+        int r = getCloudWatcherAnswer(inputBuffer, 2);
+
+        if (!r)
+        {
+            return false;
+        }
+
+        int p = 0;
+        int res = sscanf(inputBuffer, "!p       %d", &p);
+
+        *pressure = p / 16;
+
+        if (res != 1)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        *pressure = 0;
     }
 
     return true;

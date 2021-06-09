@@ -42,9 +42,7 @@ class AAGCloudWatcher : public INDI::Weather
         AAGCloudWatcher();
         virtual ~AAGCloudWatcher() override;
 
-        virtual void ISGetProperties(const char *dev) override;
         virtual bool initProperties() override;
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
