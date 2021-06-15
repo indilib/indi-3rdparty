@@ -66,6 +66,7 @@ option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 # Define standard set of drivers to build (default linux target)
 option(WITH_EQMOD "Install EQMod Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
+option(WITH_STARBOOK_TEN "Install Starbook Ten Driver" On)
 option(WITH_CAUX "Install Celestron AUX Driver" On)
 option(WITH_SX "Install StarLight Xpress Driver" On)
 option(WITH_MAXDOME "Install MaxDomeII Driver" On)
@@ -90,7 +91,6 @@ option(WITH_ASICAM "Install ZWO Optics ASI Driver" On)
 option(WITH_MGEN "Install MGen Autoguider" On)
 option(WITH_ASTROMECHFOC "Install Astromechanics Focuser" On)
 option(WITH_LIMESDR "Install LIME-SDR Receiver" On)
-option(WITH_RTLSDR "Install RTL-SDR Receiver" On)
 option(WITH_RADIOSIM "Install RadioSim Receiver" On)
 option(WITH_GPSNMEA "Install GPS NMEA Driver" On)
 option(WITH_RTKLIB "Install RTKLIB Driver" On)
@@ -107,8 +107,9 @@ option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
 option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
-option(WITH_AHP_CORRELATOR "Install AHP XC Correlators Driver" On)
+option(WITH_AHP_XC "Install AHP XC Correlators Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
+option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -140,7 +141,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_SV305 Off)
-    set(WITH_AHP_CORRELATOR Off)
+    set(WITH_AHP_XC Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -212,9 +213,9 @@ add_subdirectory(libpktriggercord)
 endif (WITH_PENTAX)
 
 # libahp-xc
-if (WITH_AHP_CORRELATOR)
+if (WITH_AHP_XC)
 add_subdirectory(libahp-xc)
-endif(WITH_AHP_CORRELATOR)
+endif(WITH_AHP_XC)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
@@ -252,6 +253,11 @@ endif(WITH_SKYWALKER)
 if (WITH_STARBOOK)
 add_subdirectory(indi-starbook)
 endif(WITH_STARBOOK)
+
+## Starbook Ten
+if (WITH_STARBOOK_TEN)
+add_subdirectory(indi-starbook-ten)
+endif(WITH_STARBOOK_TEN)
 
 ## Stalight Xpress
 if (WITH_SX)
@@ -489,16 +495,6 @@ if (WITH_ASTROMECHFOC)
 add_subdirectory(indi-astromechfoc)
 endif(WITH_ASTROMECHFOC)
 
-## RTL-SDR
-if (WITH_RTLSDR)
-find_package(RTLSDR)
-if (RTLSDR_FOUND)
-add_subdirectory(indi-rtlsdr)
-else (RTLSDR_FOUND)
-SET(LIBRARIES_FOUND FALSE)
-endif (RTLSDR_FOUND)
-endif (WITH_RTLSDR)
-
 ## LIME-SDR
 if (WITH_LIMESDR)
 find_package(LIMESUITE)
@@ -549,14 +545,14 @@ endif (PENTAX_FOUND)
 endif(WITH_PENTAX)
 
 # AHP
-if (WITH_AHP_CORRELATOR)
+if (WITH_AHP_XC)
 find_package(AHPXC)
 if(AHPXC_FOUND)
-add_subdirectory(indi-ahp-correlator)
+add_subdirectory(indi-ahp-xc)
 else(AHPXC_FOUND)
 add_subdirectory(libahp-xc)
 endif(AHPXC_FOUND)
-endif(WITH_AHP_CORRELATOR)
+endif(WITH_AHP_XC)
 
 # sv305
 if (WITH_SV305)
@@ -573,6 +569,11 @@ endif(WITH_SV305)
 if (WITH_RPICAM)
 add_subdirectory(indi-rpicam)
 endif(WITH_RPICAM)
+
+# Bresser Exos 2 GoTo
+if (WITH_BRESSEREXOS2)
+add_subdirectory(indi-bresserexos2)
+endif(WITH_BRESSEREXOS2)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
@@ -638,10 +639,6 @@ endif (WITH_FISHCAMP AND NOT FISHCAMP_FOUND)
 if (WITH_LIMESDR AND NOT LIMESDR_FOUND)
 message(STATUS "liblimesuite was not found. Please install liblimesuite first before running cmake again to install indi-limesdr.")
 endif (WITH_LIMESDR AND NOT LIMESDR_FOUND)
-
-if (WITH_RTLSDR AND NOT RTLSDR)
-message(STATUS "librtlsdr was not found. Please install librtlsdr first before running cmake again to install indi-rtlsdr.")
-endif (WITH_RTLSDR AND NOT RTLSDR)
 
 if (WITH_PENTAX AND NOT PENTAX_FOUND)
 message(STATUS "libpktriggercord and/or libricohcamerasdk were not found and will now be built. Please install these libraries first before running cmake again to install indi-pentax.")

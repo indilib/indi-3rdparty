@@ -26,6 +26,9 @@
 #include "config.h"
 
 #include <math.h>
+#include <deque>
+#include <memory>
+#include <utility>
 
 #define TEMP_THRESHOLD  0.2  /* Differential temperature threshold (°C) */
 #define TEMP_COOLER_OFF 100  /* High enough temperature for the camera cooler to turn off (°C) */
@@ -36,141 +39,44 @@
 // to its variant (indi_mi_ccd_usb and indi_mi_ccd_eth). The main function will
 // fetch from std args the binary name and ISInit will create the appropriate
 // driver afterwards.
-extern char *me;
+extern char *__progname;
 
-static int cameraCount;
-static int cameraIds[MAX_DEVICES];
-static MICCD *cameras[MAX_DEVICES];
-
-// Enumeration callback
-static void enumCallback(int cameraId)
+static class Loader
 {
-    cameraIds[cameraCount++] = cameraId;
-}
+        std::deque<std::unique_ptr<MICCD>> cameras;
 
-static void cleanup()
+    public:
+        Loader();
+
+    public:
+        std::deque<std::pair<int /* id */, bool /* eth */>> initCameras;
+
+} loader;
+
+Loader::Loader()
 {
-    for (int i = 0; i < cameraCount; i++)
-        delete cameras[i];
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (isInit)
-        return;
-
-    isInit      = true;
-    cameraCount = 0;
-    bool eth    = false;
-
-    if (strstr(me, "indi_mi_ccd_eth"))
+    if (strstr(__progname, "indi_mi_ccd_eth"))
     {
-        eth = true;
-        gxccd_enumerate_eth(enumCallback);
+        gxccd_enumerate_eth([](int id)
+        {
+            loader.initCameras.emplace_back(id, true);
+        });
     }
     else
     {
-        // "me" shoud be indi_mi_ccd_usb, however accept all names as USB
-        gxccd_enumerate_usb(enumCallback);
-    }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        cameras[i] = new MICCD(cameraIds[i], eth);
-    }
-
-    atexit(cleanup);
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-
-    if (cameraCount == 0)
-    {
-        IDMessage(nullptr, "No Moravian cameras detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
+        // "__progname" shoud be indi_mi_ccd_usb, however accept all names as USB
+        gxccd_enumerate_usb([](int id)
         {
-            camera->ISGetProperties(dev);
-            if (dev)
-                break;
-        }
+            loader.initCameras.emplace_back(id, false);
+        });
     }
-}
 
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
+    for (const auto &args : initCameras)
     {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev)
-                break;
-        }
+        cameras.push_back(std::unique_ptr<MICCD>(new MICCD(args.first, args.second)));
     }
-}
 
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        if (!dev || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        MICCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
+    initCameras.clear();
 }
 
 MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
@@ -874,7 +780,7 @@ bool MICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 double temp = on ? TemperatureRequest : TEMP_COOLER_OFF;
 
                 if (gxccd_set_temperature_ramp(cameraHandle, TemperatureRampN[0].value) < 0 ||
-                    gxccd_set_temperature(cameraHandle, temp) < 0)
+                        gxccd_set_temperature(cameraHandle, temp) < 0)
                 {
                     char errorStr[MAX_ERROR_LEN];
                     gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
@@ -1066,12 +972,12 @@ void MICCD::updateTemperature()
     TemperatureN[0].value = ccdtemp;
     CoolerN[0].value      = ccdpower * 100.0;
 
-    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
-    {
-        // end of temperature ramp
-        TemperatureN[0].value = TemperatureRequest;
-        TemperatureNP.s       = IPS_OK;
-    }
+    //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
+    //    {
+    //        // end of temperature ramp
+    //        TemperatureN[0].value = TemperatureRequest;
+    //        TemperatureNP.s       = IPS_OK;
+    //    }
 
     if (err)
     {

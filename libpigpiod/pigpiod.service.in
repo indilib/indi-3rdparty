@@ -3,7 +3,7 @@ Description=pigpiod daemon to control Raspberry Pi GPIO
 
 [Service]
 Type=simple
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/pigpiod -g
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/pigpiod -g -m
 
 [Install]
 WantedBy=multi-user.target

@@ -20,8 +20,12 @@ import argparse
 import rrdtool
 from wr_config import *
 
+# initialize the configuration
+config = WeatherRadioConfig().config
+
 parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio raw sensors time series")
-parser.add_argument("rrdfile", nargs='?', default=RRDSENSORSFILE,
+parser.add_argument("rrdfile", nargs='?',
+                    default=config.get('WeatherRadio', 'RRDSENSORSFILE'),
                     help="RRD file holding all time series of the raw sensor data")
 parser.add_argument("-s", "--source",
                     help="Source file holding already captured data")

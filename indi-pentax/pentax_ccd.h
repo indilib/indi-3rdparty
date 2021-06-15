@@ -45,24 +45,24 @@ class PentaxCCD : public INDI::CCD
     PentaxCCD(std::shared_ptr<CameraDevice> camera);
     virtual ~PentaxCCD();
 
-    const char *getDefaultName();
+    const char *getDefaultName() override;
 
-    bool initProperties();
-    void ISGetProperties(const char *dev);
-    bool updateProperties();
+    bool initProperties() override;
+    void ISGetProperties(const char *dev) override;
+    bool updateProperties() override;
 
-    bool Connect();
-    bool Disconnect();
+    bool Connect() override;
+    bool Disconnect() override;
 
-    bool StartExposure(float duration);
-    bool AbortExposure();
+    bool StartExposure(float duration) override;
+    bool AbortExposure() override;
 
 
 protected:
     friend class PentaxEventHandler;
-    void TimerHit();
+    void TimerHit() override;
 
-    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType);
+    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType) override;
 
     bool StartStreaming() override;
     bool StopStreaming() override;
@@ -126,10 +126,10 @@ protected:
     IText DeviceInfoT[7] {};
     ITextVectorProperty DeviceInfoTP;
 
-    bool saveConfigItems(FILE * fp);
+    bool saveConfigItems(FILE * fp) override;
 
-    bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n);
-    void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip);
+    bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
+    void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip) override;
 
     void buildCaptureSettingSwitch(ISwitchVectorProperty *control, CaptureSetting *setting, const char *label = nullptr, const char *name = nullptr);
     void updateCaptureSettingSwitch(CaptureSetting *setting, ISwitchVectorProperty *sw, ISState *states, char *names[], int n);

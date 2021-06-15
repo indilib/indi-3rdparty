@@ -1,3 +1,9 @@
+libpigpiod (0.2) buster; urgency=medium
+
+  * Add -m option to service to reduce CPU load
+
+ -- Ken Self <ken.kgself@gmail.com>  Sun, 25 Apr 2021 15:10:00 +1000
+
 libpigpiod (0.1) buster; urgency=medium
 
   * Initial build of pigpiod services under INDI

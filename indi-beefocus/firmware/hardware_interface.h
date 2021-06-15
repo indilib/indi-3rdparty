@@ -18,7 +18,7 @@ struct EnumHash
 class HWI
 {
   public:
-
+  virtual ~HWI() = default;
   enum class Pin {
     START_OF_PINS = 0,
     STEP = 0,

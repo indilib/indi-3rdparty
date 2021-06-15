@@ -25,6 +25,8 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <memory>
+#include <deque>
 
 #include "config.h"
 #include "indidevapi.h"
@@ -40,9 +42,6 @@
 #define TEMP_THRESHOLD .25  /* Differential temperature threshold (C)*/
 #define MAX_DEVICES    20   /* Max device cameraCount */
 
-static int cameraCount;
-static GenericCCD *cameras[MAX_DEVICES];
-
 /**********************************************************
  *
  *  IMPORRANT: List supported camera models in initializer of deviceTypes structure
@@ -56,133 +55,37 @@ static struct
     const char *name;
 } deviceTypes[] = { { 0x0001, 0x0001, "Model 1" }, { 0x0001, 0x0002, "Model 2" }, { 0, 0, nullptr } };
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < cameraCount; i++)
+    std::deque<std::unique_ptr<GenericCCD>> cameras;
+public:
+    Loader()
     {
-        delete cameras[i];
-    }
-}
+         /**********************************************************
+         *
+         *  IMPORRANT: If available use CCD API function for enumeration available CCD's otherwise use code like this:
+         *
+         **********************************************************
 
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        /**********************************************************
-     *
-     *  IMPORRANT: If available use CCD API function for enumeration available CCD's otherwise use code like this:
-     *
-     **********************************************************
-
-     cameraCount = 0;
-     for (struct usb_bus *bus = usb_get_busses(); bus && cameraCount < MAX_DEVICES; bus = bus->next) {
-       for (struct usb_device *dev = bus->devices; dev && cameraCount < MAX_DEVICES; dev = dev->next) {
-         int vid = dev->descriptor.idVendor;
-         int pid = dev->descriptor.idProduct;
-         for (int i = 0; deviceTypes[i].pid; i++) {
-           if (vid == deviceTypes[i].vid && pid == deviceTypes[i].pid) {
-             cameras[i] = new GenericCCD(dev, deviceTypes[i].name);
-             break;
-           }
-         }
-       }
-     }
-     */
-
+        for (struct usb_bus *bus = usb_get_busses(); bus && cameraCount < MAX_DEVICES; bus = bus->next) {
+            for (struct usb_device *dev = bus->devices; dev && cameraCount < MAX_DEVICES; dev = dev->next) {
+                int vid = dev->descriptor.idVendor;
+                int pid = dev->descriptor.idProduct;
+                for (int i = 0; deviceTypes[i].pid; i++) {
+                    if (vid == deviceTypes[i].vid && pid == deviceTypes[i].pid) {
+                        cameras.push_back(new GenericCCD(dev, deviceTypes[i].name));
+                        break;
+                    }
+                }
+            }
+        }
+        */
         /* For demo purposes we are creating two test devices */
-        cameraCount            = 2;
         struct usb_device *dev = nullptr;
-        cameras[0]             = new GenericCCD(dev, deviceTypes[0].name);
-        cameras[1]             = new GenericCCD(dev, deviceTypes[1].name);
-
-        atexit(cleanup);
-        isInit = true;
+        cameras.push_back(std::unique_ptr<GenericCCD>(new GenericCCD(dev, deviceTypes[0].name)));
+        cameras.push_back(std::unique_ptr<GenericCCD>(new GenericCCD(dev, deviceTypes[1].name)));
     }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GenericCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GenericCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GenericCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GenericCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        GenericCCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 GenericCCD::GenericCCD(DEVICE device, const char *name)
 {

@@ -4,6 +4,7 @@ A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
 Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
 Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+Copyright (C) 2021 Jasem Mutlaq
 
 AAG Cloud Watcher INDI Driver is free software : you can redistribute it
 and / or modify it under the terms of the GNU General Public License as
@@ -92,6 +93,7 @@ bool AAGCloudWatcher::initProperties()
     addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
     addParameter("WEATHER_RAIN", "Rain (cycles)", 2000, 10000, 10);
     addParameter("WEATHER_CLOUD", "Cloud (corrected infrared sky temperature °C)", -5, 10, 10);
+    addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
 
     setCriticalParameter("WEATHER_BRIGHTNESS");
     setCriticalParameter("WEATHER_WIND_SPEED");
@@ -116,31 +118,9 @@ IPState AAGCloudWatcher::updateWeather()
     return IPS_OK;
 }
 
-/*************************************************************************
-** Define Basic properties to clients.
-*************************************************************************/
-void AAGCloudWatcher::ISGetProperties(const char *dev)
-{
-    static int configLoaded = 0;
-    // Ask the default driver first to send properties.
-    INDI::Weather::ISGetProperties(dev);
-
-    // If no configuration is load before, then load it now.
-    if (configLoaded == 0)
-    {
-        loadConfig();
-        configLoaded = 1;
-    }
-}
-
-/*****************************************************************************
-** Process Text properties
-*****************************************************************************/
-bool AAGCloudWatcher::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    return INDI::Weather::ISNewText(dev, name, texts, names, n);
-}
-
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     INDI::Weather::ISNewNumber(dev, name, values, names, n);
@@ -615,7 +595,7 @@ bool AAGCloudWatcher::sendData()
         return false;
     }
 
-    const int N_DATA = 11;
+    const int N_DATA = 13;
     double values[N_DATA];
     char *names[N_DATA];
 
@@ -650,8 +630,14 @@ bool AAGCloudWatcher::sendData()
     names[9]  = const_cast<char *>("windSpeed");
     values[9] = data.windSpeed;
 
-    names[10]  = const_cast<char *>("totalReadings");
-    values[10] = data.totalReadings;
+    names[10]  = const_cast<char *>("humidity");
+    values[10] = data.humidity;
+
+    names[11]  = const_cast<char *>("pressure");
+    values[11] = data.pressure;
+
+    names[12]  = const_cast<char *>("totalReadings");
+    values[12] = data.totalReadings;
 
     INumberVectorProperty *nvp = getNumber("readings");
     IUUpdateNumber(nvp, values, names, N_DATA);
@@ -682,7 +668,7 @@ bool AAGCloudWatcher::sendData()
     nvpE->s = IPS_OK;
     IDSetNumber(nvpE, nullptr);
 
-    const int N_SENS = 9;
+    const int N_SENS = 11;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -775,6 +761,12 @@ bool AAGCloudWatcher::sendData()
     namesS[8]  = const_cast<char *>("windSpeed");
     valuesS[8] = data.windSpeed;
 
+    namesS[9]  = const_cast<char *>("humidity");
+    valuesS[9] = data.humidity;
+
+    namesS[10]  = const_cast<char *>("pressure");
+    valuesS[10] = data.pressure;
+
     INumberVectorProperty *nvpS = getNumber("sensors");
     IUUpdateNumber(nvpS, valuesS, namesS, N_SENS);
     nvpS->s = IPS_OK;
@@ -819,6 +811,10 @@ bool AAGCloudWatcher::sendData()
     {
         setParameterValue("WEATHER_WIND_SPEED", 0);
     }
+
+    if (data.humidity > 0)
+        setParameterValue("WEATHER_HUMIDITY", data.humidity);
+
     return true;
 }
 
@@ -1100,42 +1096,4 @@ bool AAGCloudWatcher::resetConstants()
 const char *AAGCloudWatcher::getDefaultName()
 {
     return "AAG Cloud Watcher NG";
-}
-
-void ISGetProperties(const char *dev)
-{
-    cloudWatcher->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    cloudWatcher->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    cloudWatcher->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    cloudWatcher->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    INDI_UNUSED(root);
 }

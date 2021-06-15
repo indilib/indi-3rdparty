@@ -232,7 +232,7 @@ enum CONTROL_ID
 /*62*/  CAM_HUMIDITY,			//!<check if camera has	 humidity sensor  20191021 LYL Unified humidity function
 /*63*/  CAM_PRESSURE,             //check if camera has pressure sensor
 /*64*/  CONTROL_VACUUM_PUMP,        /// if camera has VACUUM PUMP
-/*65*/  CONTROL_SensorChamberCycle_PUMP,
+/*65*/  CONTROL_SensorChamberCycle_PUMP, ///air cycle pump for sensor drying
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */

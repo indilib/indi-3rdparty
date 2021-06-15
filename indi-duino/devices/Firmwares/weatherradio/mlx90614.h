@@ -22,19 +22,20 @@ struct {
 bool isMLX90614Present() {
   Wire.beginTransmission(MLX90614_I2CADDR);
   byte error = Wire.endTransmission();
+  mlx.begin();
 
-  return (error == 0);
+  mlxData.status = (error == 0);
+  return (mlxData.status);
 }
 
 void updateMLX() {
   if (mlxData.status || (mlxData.status = isMLX90614Present())) {
-    mlx.begin();
     mlxData.ambient_t = mlx.readAmbientTempC();
     mlxData.object_t  = mlx.readObjectTempC();
   }
 }
 
-void serializeMLX(JsonDocument & doc) {
+void serializeMLX(JsonObject & doc) {
 
   JsonObject data = doc.createNestedObject("MLX90614");
   data["init"] = mlxData.status;
@@ -47,6 +48,6 @@ void serializeMLX(JsonDocument & doc) {
 
 String displayMLXParameters() {
   if (mlxData.status == false) return "";
-  
+
   return " T amb: " + String(mlxData.ambient_t, 1) + "\n T obj: " + String(mlxData.object_t, 1) + "\n";
 }

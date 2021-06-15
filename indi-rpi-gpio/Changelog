@@ -1,10 +1,13 @@
-v0.1
-* Initial version of Raspberry Pi GPIO driver
-
-v0.2
-* Split from pigpiod service/library
+v0.4
+* Replace pigpio timer with INDI timer
 
 v0.3
 * Add Active Low option
 * Fix disconnect stopping functionality
 * Move duty cycle to main tab as an operational control
+
+v0.2
+* Split from pigpiod service/library
+
+v0.1
+* Initial version of Raspberry Pi GPIO driver

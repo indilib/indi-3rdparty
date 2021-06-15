@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_inovaplx CXX C)
 
 set (INOVAPLX_VERSION_MAJOR 1)

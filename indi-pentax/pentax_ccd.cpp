@@ -492,7 +492,7 @@ float PentaxCCD::updateShutterSpeed(float requestedSpeed) {
 
     double lowestdiff = 7200;
     const CaptureSetting *targetSpeed = nullptr;
-    float targetSpeed_f;
+    float targetSpeed_f = 0;
     for (const auto ss : shutter.getAvailableSettings()) {
         float ss_f = convertShutterSpeedString(ss->getValue().toString());
         double currentdiff = abs(ss_f - requestedSpeed);

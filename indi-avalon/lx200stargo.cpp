@@ -35,74 +35,41 @@
 
 #include "config.h"
 
-// Unique pointers
-static std::unique_ptr<LX200StarGo> telescope;
-static std::unique_ptr<LX200StarGoFocuser> focuserAux1;
-
 const char *RA_DEC_TAB = "RA / DEC";
 
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
+    private:
+        std::unique_ptr<LX200StarGo> telescope;
+        std::unique_ptr<LX200StarGoFocuser> focuserAux1;
 
-    if (isInit)
-        return;
+    public:
+        Loader()
+        {
+            telescope.reset(new LX200StarGo());
+            // Hint: focuserAux1 is intentionally NOT initialized, since it is a sub device
+            //       of LX200StarGo and can be activated and deactivated from the mount controls.
+        }
 
-    isInit = 1;
-    if (telescope.get() == nullptr)
-    {
-        LX200StarGo* myScope = new LX200StarGo();
-        telescope.reset(myScope);
-        focuserAux1.reset(new LX200StarGoFocuser(myScope, "AUX1 Focuser"));
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    telescope->ISGetProperties(dev);
-    //    focuser->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewSwitch(dev, name, states, names, n);
-    focuserAux1->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewText(dev, name, texts, names, n);
-    //    focuser->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewNumber(dev, name, values, names, n);
-    focuserAux1->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-    telescope->ISSnoopDevice(root);
-    //    focuser->ISSnoopDevice(root);
-}
+        LX200StarGoFocuser *getFocuserAux1()
+        {
+            activateFocuserAux1(true);
+            return focuserAux1.get();
+        }
+        // we need to clear it if the AUX1 focuser is disabled in order to remove the device being visible
+        void activateFocuserAux1(bool activate)
+        {
+            if (activate == true && focuserAux1.get() == nullptr)
+                focuserAux1.reset(new LX200StarGoFocuser(telescope.get(), "AUX1 Focuser"));
+            else if (activate == false)
+                focuserAux1.reset();
+        }
+        // is the AUX1 focuser activated?
+        bool isFocuserAux1Activated()
+        {
+            return (focuserAux1.get() != nullptr);
+        }
+} loader;
 
 /**************************************************
 *** LX200 Generic Implementation
@@ -224,14 +191,13 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
         else if (!strcmp(name, ST4StatusSP.name))
         {
-
-            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), ST4StatusS[0].name);
+            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), ST4StatusS[INDI_ENABLED].name);
             bool result = setST4Enabled(enabled);
 
             if(result)
             {
-                ST4StatusS[0].s = enabled ? ISS_OFF : ISS_ON;
-                ST4StatusS[1].s = enabled ? ISS_ON : ISS_OFF;
+                ST4StatusS[INDI_ENABLED].s = enabled ? ISS_ON : ISS_OFF;
+                ST4StatusS[INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
                 ST4StatusSP.s = IPS_OK;
             }
             else
@@ -243,13 +209,13 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
         else if (!strcmp(name, KeypadStatusSP.name))
         {
-            bool enabled = (states[0] == ISS_OFF);
+            bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), KeypadStatusS[INDI_ENABLED].name);
             bool result = setKeyPadEnabled(enabled);
 
             if(result)
             {
-                KeypadStatusS[0].s = enabled ? ISS_OFF : ISS_ON;
-                KeypadStatusS[1].s = enabled ? ISS_ON : ISS_OFF;
+                KeypadStatusS[INDI_ENABLED].s = enabled ? ISS_ON : ISS_OFF;
+                KeypadStatusS[INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
                 KeypadStatusSP.s = IPS_OK;
             }
             else
@@ -312,10 +278,10 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         {
             if (IUUpdateSwitch(&Aux1FocuserSP, states, names, n) < 0)
                 return false;
-            bool enabled = (IUFindOnSwitchIndex(&Aux1FocuserSP) == 0);
-            if (focuserAux1->activate(enabled))
+            bool activated = (IUFindOnSwitchIndex(&Aux1FocuserSP) == DefaultDevice::INDI_ENABLED);
+            if (activateFocuserAux1(activated))
             {
-                Aux1FocuserSP.s = enabled ? IPS_OK : IPS_IDLE;
+                Aux1FocuserSP.s = activated ? IPS_OK : IPS_IDLE;
                 IDSetSwitch(&Aux1FocuserSP, nullptr);
                 return true;
             }
@@ -328,8 +294,14 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
         }
     }
 
-    //  Nobody has claimed this, so pass it to the parent
-    return LX200Telescope::ISNewSwitch(dev, name, states, names, n);
+    bool result = true;
+    // check if the focuser can process the switch
+    if (loader.isFocuserAux1Activated())
+        result = loader.getFocuserAux1()->ISNewSwitch(dev, name, states, names, n);
+
+    //  Pass it to the parent
+    result &= LX200Telescope::ISNewSwitch(dev, name, states, names, n);
+    return result;
 }
 
 bool LX200StarGo::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -385,8 +357,14 @@ bool LX200StarGo::ISNewNumber(const char *dev, const char *name, double values[]
         }
     }
 
-    //  Nobody has claimed this, so pass it to the parent
-    return LX200Telescope::ISNewNumber(dev, name, values, names, n);
+    bool result = true;
+    // check if the focuser can process the switch
+    if (loader.isFocuserAux1Activated())
+        result = loader.getFocuserAux1()->ISNewNumber(dev, name, values, names, n);
+
+    //  Pass it to the parent
+    result &= LX200Telescope::ISNewNumber(dev, name, values, names, n);
+    return result;
 }
 
 
@@ -399,8 +377,8 @@ bool LX200StarGo::initProperties()
     /* Make sure to init parent properties first */
     if (!LX200Telescope::initProperties()) return false;
 
-    IUFillSwitch(&Aux1FocuserS[0], "AUX1_FOCUSER_ON", "On", ISS_OFF);
-    IUFillSwitch(&Aux1FocuserS[1], "AUX1_FOCUSER_OFF", "Off", ISS_ON);
+    IUFillSwitch(&Aux1FocuserS[DefaultDevice::INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&Aux1FocuserS[DefaultDevice::INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&Aux1FocuserSP, Aux1FocuserS, 2, getDeviceName(), "AUX1_FOCUSER_CONTROL", "AUX1 Focuser",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
@@ -426,14 +404,14 @@ bool LX200StarGo::initProperties()
     IUFillNumberVector(&GuidingSpeedNP, GuidingSpeedP, 2, getDeviceName(), "GUIDE_RATE", "Autoguiding", RA_DEC_TAB, IP_RW, 60,
                        IPS_IDLE);
 
-    IUFillSwitch(&ST4StatusS[0], "ST4_DISABLED", "disabled", ISS_OFF);
-    IUFillSwitch(&ST4StatusS[1], "ST4_ENABLED", "enabled", ISS_ON);
+    IUFillSwitch(&ST4StatusS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
+    IUFillSwitch(&ST4StatusS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
     IUFillSwitchVector(&ST4StatusSP, ST4StatusS, 2, getDeviceName(), "ST4", "ST4", RA_DEC_TAB, IP_RW, ISR_1OFMANY, 60,
                        IPS_IDLE);
 
     // keypad enabled / disabled
-    IUFillSwitch(&KeypadStatusS[0], "KEYPAD_DISABLED", "disabled", ISS_OFF);
-    IUFillSwitch(&KeypadStatusS[1], "KEYPAD_ENABLED", "enabled", ISS_ON);
+    IUFillSwitch(&KeypadStatusS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
+    IUFillSwitch(&KeypadStatusS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
     IUFillSwitchVector(&KeypadStatusSP, KeypadStatusS, 2, getDeviceName(), "Keypad", "Keypad", RA_DEC_TAB, IP_RW, ISR_1OFMANY,
                        60, IPS_IDLE);
 
@@ -462,9 +440,6 @@ bool LX200StarGo::initProperties()
     IUFillNumberVector(&MountRequestDelayNP, MountRequestDelayN, 1, getDeviceName(), "REQUEST_DELAY", "StarGO", RA_DEC_TAB,
                        IP_RW, 60, IPS_OK);
 
-    // focuser on AUX1 port
-    focuserAux1->initProperties("AUX1 Focuser");
-
     return true;
 }
 
@@ -488,6 +463,7 @@ bool LX200StarGo::updateProperties()
         defineProperty(&MeridianFlipModeSP);
         defineProperty(&MountRequestDelayNP);
         defineProperty(&MountFirmwareInfoTP);
+        getStarGoBasicData();
     }
     else
     {
@@ -517,13 +493,14 @@ bool LX200StarGo::Connect()
         return false;
 
     // activate focuser AUX1 if the switch is set to "activated"
-    return focuserAux1->activate((IUFindOnSwitchIndex(&Aux1FocuserSP) == 0));
+    return activateFocuserAux1((IUFindOnSwitchIndex(&Aux1FocuserSP) == DefaultDevice::INDI_ENABLED));
 }
 
 bool LX200StarGo::Disconnect()
 {
-    focuserAux1->activate(false);
-    return DefaultDevice::Disconnect();
+    bool result = DefaultDevice::Disconnect();
+    result &= activateFocuserAux1(false);
+    return result;
 }
 
 /**************************************************************************************
@@ -617,8 +594,8 @@ bool LX200StarGo::ReadScopeStatus()
 
     LOG_DEBUG("################################ ReadScopeStatus (finish) ###############################");
 
-    if (focuserAux1.get() != nullptr && TrackState != SCOPE_SLEWING)
-        return focuserAux1.get()->ReadFocuserStatus();
+    if (loader.isFocuserAux1Activated() && TrackState != SCOPE_SLEWING)
+        return loader.getFocuserAux1()->ReadFocuserStatus();
     else
         return true;
 }
@@ -736,6 +713,14 @@ void LX200StarGo::getBasicData()
             else
                 IDSetNumber(&TrackFreqNP, nullptr);
         }
+    }
+}
+
+void LX200StarGo::getStarGoBasicData()
+{
+    LOG_DEBUG(__FUNCTION__);
+    if (!isSimulation())
+    {
         MountFirmwareInfoT[0].text = new char[64];
         if (!getFirmwareInfo(MountFirmwareInfoT[0].text))
             LOG_ERROR("Failed to get firmware from device.");
@@ -756,8 +741,8 @@ void LX200StarGo::getBasicData()
         bool isEnabled;
         if (getST4Status(&isEnabled))
         {
-            ST4StatusS[0].s = isEnabled ? ISS_OFF : ISS_ON;
-            ST4StatusS[1].s = isEnabled ? ISS_ON : ISS_OFF;
+            ST4StatusS[INDI_ENABLED].s = isEnabled ? ISS_ON : ISS_OFF;
+            ST4StatusS[INDI_DISABLED].s = isEnabled ? ISS_OFF : ISS_ON;
             ST4StatusSP.s = IPS_OK;
         }
         else
@@ -779,8 +764,8 @@ void LX200StarGo::getBasicData()
 
         if (getKeypadStatus(&isEnabled))
         {
-            KeypadStatusS[0].s = isEnabled ? ISS_OFF : ISS_ON;
-            KeypadStatusS[1].s = isEnabled ? ISS_ON : ISS_OFF;
+            KeypadStatusS[INDI_ENABLED].s = isEnabled ? ISS_ON : ISS_OFF;
+            KeypadStatusS[INDI_DISABLED].s = isEnabled ? ISS_OFF : ISS_ON;
             KeypadStatusSP.s = IPS_OK;
         }
         else
@@ -795,13 +780,12 @@ void LX200StarGo::getBasicData()
             IUResetSwitch(&MeridianFlipModeSP);
             MeridianFlipModeS[index].s = ISS_ON;
             MeridianFlipModeSP.s   = IPS_OK;
-            IDSetSwitch(&MeridianFlipModeSP, nullptr);
         }
         else
         {
-            MeridianFlipEnabledSP.s = IPS_ALERT;
+            MeridianFlipModeSP.s = IPS_ALERT;
         }
-        IDSetSwitch(&MeridianFlipEnabledSP, nullptr);
+        IDSetSwitch(&MeridianFlipModeSP, nullptr);
 
         if (getSystemSlewSpeedMode(&index))
         {
@@ -814,7 +798,7 @@ void LX200StarGo::getBasicData()
         {
             SystemSpeedSlewSP.s = IPS_ALERT;
         }
-        IDSetSwitch(&MeridianFlipEnabledSP, nullptr);
+        IDSetSwitch(&SystemSpeedSlewSP, nullptr);
 
         int raSpeed, decSpeed;
         if (getGuidingSpeeds(&raSpeed, &decSpeed))
@@ -843,7 +827,23 @@ void LX200StarGo::getBasicData()
     //FIXME collect othr fixed data here like Manufacturer, version etc...
     if (genericCapability & LX200_HAS_PULSE_GUIDING)
         usePulseCommand = true;
+}
 
+bool LX200StarGo::activateFocuserAux1(bool activate)
+{
+    if (activate == true)
+    {
+        loader.activateFocuserAux1(true);
+        return loader.getFocuserAux1()->activate(true);
+    }
+    else
+    {
+        bool result = true;
+        if (loader.isFocuserAux1Activated())
+            result = loader.getFocuserAux1()->activate(false);
+        loader.activateFocuserAux1(false);
+        return result;
+    }
 }
 
 /**************************************************************************************
@@ -948,16 +948,9 @@ bool LX200StarGo::updateLocation(double latitude, double longitude, double eleva
     return true;
 }
 
-double LX200StarGo::LocalSiderealTime(double longitude)
-{
-    double lst = get_local_sidereal_time(longitude);
-    //    double SD = ln_get_apparent_sidereal_time(ln_get_julian_from_sys()) - (360.0 - longitude) / 15.0;
-    //    double lst =  range24(SD);
-    return lst;
-}
 bool LX200StarGo::setLocalSiderealTime(double longitude)
 {
-    double lst = LocalSiderealTime(longitude);
+    double lst = get_local_sidereal_time(longitude);
     LOGF_DEBUG("Current local sidereal time = %lf", lst);
     int h = 0, m = 0, s = 0;
     getSexComponents(lst, &h, &m, &s);
@@ -1110,7 +1103,7 @@ bool LX200StarGo::getLST_String(char* input)
         return false;
     }
     // determine local sidereal time
-    double lst = LocalSiderealTime(siteLong);
+    double lst = get_local_sidereal_time(siteLong);
     int h = 0, m = 0, s = 0;
     LOGF_DEBUG("Current local sidereal time = %.8lf", lst);
     // translate into hh:mm:ss
@@ -1132,7 +1125,8 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
 
-    focuserAux1->saveConfigItems(fp);
+    if (loader.isFocuserAux1Activated())
+        loader.getFocuserAux1()->saveConfigItems(fp);
 
     return LX200Telescope::saveConfigItems(fp);
 }

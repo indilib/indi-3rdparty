@@ -614,7 +614,11 @@ bool PkTriggerCordCCD::grabImage()
 
         PrimaryCCD.setFrameBufferSize(size);
         char * memptr = (char *)PrimaryCCD.getFrameBuffer();
-        fread(memptr, sizeof(char), size, f);
+        size_t readSize = fread(memptr, sizeof(char), size, f);
+        if (readSize != size)
+        {
+            LOGF_ERROR("Error, %u bytes of data read instead of %u.", readSize, size);
+        }
         PrimaryCCD.setFrameBuffer((unsigned char *)memptr);
         fclose(f);
 		LOG_DEBUG("Copied to frame buffer.  Leaving temp file for debug purposes.");
@@ -691,7 +695,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
     else if (!strcmp(name, mWhiteBalanceSP.name)) {
         updateCaptureSettingSwitch(&mWhiteBalanceSP,states,names,n);
         pslr_white_balance_mode_t white_balance_mode = get_pslr_white_balance_mode(IUFindOnSwitch(&mWhiteBalanceSP)->label);
-        if ( white_balance_mode == -1 ) {
+        if ( int(white_balance_mode) == -1 ) {
             LOG_WARN("Could not set desired white balance: Invalid setting for current camera mode.");
         }
         else {

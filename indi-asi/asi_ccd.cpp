@@ -258,14 +258,6 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 {
     ASI_ERROR_CODE ret;
 
-    // JM 2020-02-17 Special hack for older ASI120 cameras that fail on 16bit
-    // images.
-    if (getImageType() == ASI_IMG_RAW16 && strstr(getDeviceName(), "ASI120"))
-    {
-        LOG_INFO("Switching to 8-bit video.");
-        setVideoFormat(ASI_IMG_RAW8);
-    }
-
     workerBlinkExposure(
         isAboutToQuit,
         BlinkNP[BLINK_COUNT   ].getValue(),
@@ -293,6 +285,15 @@ void ASICCD::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
         LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
+
+        // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
+        // that fail on 16bit images.
+        if (getImageType() == ASI_IMG_RAW16 &&
+            (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
+        {
+            LOG_INFO("Switching to 8-bit video.");
+            setVideoFormat(ASI_IMG_RAW8);
+        }
     }
 
     if (ret != ASI_SUCCESS)
@@ -614,6 +615,7 @@ bool ASICCD::Disconnect()
     mTimerTemperature.stop();
 
     mWorker.quit();
+    Streamer->setStream(false);
 
     if (isSimulation() == false)
     {
@@ -1258,12 +1260,12 @@ void ASICCD::temperatureTimerTimeout()
     {
         mCurrentTemperature = value / 10.0;
         // If cooling is active, show goal status
-        if (CoolerSP[0].getState() == ISS_ON)
-        {
-            newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
-                       ? IPS_OK
-                       : IPS_BUSY;
-        }
+        //        if (CoolerSP[0].getState() == ISS_ON)
+        //        {
+        //            newState = std::abs(mCurrentTemperature - mTargetTemperature) <= TEMP_THRESHOLD
+        //                       ? IPS_OK
+        //                       : IPS_BUSY;
+        //        }
     }
 
     // Update if there is a change

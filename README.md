@@ -1,5 +1,6 @@
 # INDI 3rd Party Drivers
-[![INDI 3rd Party](https://github.com/indilib/indi-3rdparty/actions/workflows/default.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
+[![Linux](https://github.com/indilib/indi-3rdparty/actions/workflows/default.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
+[![MacOS](https://github.com/indilib/indi-3rdparty/actions/workflows/macos.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
 
 INDI 3rd party drivers include all the drivers not included by default in the INDI Core Library.
 

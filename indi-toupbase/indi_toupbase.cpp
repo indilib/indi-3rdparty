@@ -19,6 +19,14 @@
 
 */
 
+// #define Nncam_AwbOnce   Nncam_AwbOnePush
+// #define Nncam_AbbOnce   Nncam_AbbOnePush
+
+#ifdef BUILD_MALLINCAM
+#define Toupcam_AwbOnce Toupcam_AwbOnePush
+#define Toupcam_AbbOnce Toupcam_AbbOnePush
+#endif
+
 #include "indi_toupbase.h"
 
 #include "config.h"
@@ -27,6 +35,8 @@
 
 #include <math.h>
 #include <unistd.h>
+#include <deque>
+#include <memory>
 
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
@@ -54,10 +64,6 @@
 #define FMT_YUV422  MAKEFOURCC('V', 'U', 'Y', 'Y')
 #define FMT_YUV444  MAKEFOURCC('Y', '4', '4', '4')
 #define FMT_RGB888  MAKEFOURCC('R', 'G', 'B', '8')
-
-static int iConnectedCamerasCount;
-static XP(DeviceV2) pCameraInfo[CP(MAX)];
-static ToupBase *cameras[CP(MAX)];
 
 /********************************************************************************/
 /* HRESULT                                                                      */
@@ -92,125 +98,26 @@ std::map<int, std::string> ToupBase::errorCodes =
     {0x8007001F, "device not functioning"}
 };
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        delete cameras[i];
-    }
-}
-
-void ToupBase_Init()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
-        if (iConnectedCamerasCount <= 0)
-            IDLog("No Toupcam detected. Power on?");
-        else
+        std::deque<std::unique_ptr<ToupBase>> cameras;
+        XP(DeviceV2) pCameraInfo[CP(MAX)];
+    public:
+        Loader()
         {
+            int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+            if (iConnectedCamerasCount <= 0)
+            {
+                IDLog("No Toupcam detected. Power on?");
+                return;
+            }
+
             for (int i = 0; i < iConnectedCamerasCount; i++)
             {
-                cameras[i] = new ToupBase(&pCameraInfo[i]);
+                cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
             }
         }
-
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ToupBase_Init();
-
-    if (iConnectedCamerasCount == 0)
-    {
-        IDMessage(nullptr, "No Toupcam detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ToupBase_Init();
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ToupBase_Init();
-
-    for (int i = 0; i < iConnectedCamerasCount; i++)
-    {
-        ToupBase *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {
@@ -1683,7 +1590,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             switch (IUFindOnSwitchIndex(&AutoControlSP))
             {
                 case TC_AUTO_TINT:
-                    rc = FP(AwbOnePush(m_CameraHandle, &ToupBase::TempTintCB, this));
+                    rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
                     autoOperation = "Auto White Balance Tint/Temp";
                     break;
                 case TC_AUTO_WB:
@@ -1691,7 +1598,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                     autoOperation = "Auto White Balance RGB";
                     break;
                 case TC_AUTO_BB:
-                    rc = FP(AbbOnePush(m_CameraHandle, &ToupBase::BlackBalanceCB, this));
+                    rc = FP(AbbOnce(m_CameraHandle, &ToupBase::BlackBalanceCB, this));
                     autoOperation = "Auto Black Balance";
                     break;
                 default:
@@ -1771,7 +1678,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             IUUpdateSwitch(&WBAutoSP, states, names, n);
             HRESULT rc = 0;
             if (IUFindOnSwitchIndex(&WBAutoSP) == TC_AUTO_WB_TT)
-                rc = FP(AwbOnePush(m_CameraHandle, &ToupBase::TempTintCB, this));
+                rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
             else
                 rc = FP(AwbInit(m_CameraHandle, &ToupBase::WhiteBalanceCB, this));
 
@@ -2158,10 +2065,10 @@ void ToupBase::TimerHit()
 
             case IPS_BUSY:
                 // If we're within threshold, let's make it BUSY ---> OK
-                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
-                {
-                    TemperatureNP.s = IPS_OK;
-                }
+                //                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
+                //                {
+                //                    TemperatureNP.s = IPS_OK;
+                //                }
                 IDSetNumber(&TemperatureNP, nullptr);
                 break;
         }
@@ -2591,7 +2498,12 @@ void ToupBase::eventPullCallBack(unsigned event)
                 {
                     // Fix proposed by Seven Watt
                     // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    //
+                    // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
                     HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
                     LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
                     if (FAILED(rc))
                     {

@@ -726,9 +726,14 @@ int DSI::Device::startExposure(int howlong, int gain, int offs)
         {
             status = command(DeviceCommand::SET_VDD_MODE, VddMode::AUTO.value());
         }
-        status = command(DeviceCommand::SET_GAIN, 0);
+        if (log_commands)
+            std::cerr << "Gain  = " << gain << " Offset = " << offs << std::endl;
+
+        // status = command(DeviceCommand::SET_GAIN, 0);
+        status = command(DeviceCommand::SET_GAIN, gain);
         // status = command(DeviceCommand::GET_READOUT_MODE);
-        status = command(DeviceCommand::SET_OFFSET, 0x0ff);
+        //status = command(DeviceCommand::SET_OFFSET, 0x0ff);
+        status = command(DeviceCommand::SET_OFFSET, offs);
         status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
         status = command(DeviceCommand::GET_READOUT_MODE);
         status = command(DeviceCommand::GET_EXP_TIME);

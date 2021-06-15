@@ -1,3 +1,15 @@
+indi-avalon (1.12) bionic; urgency=medium
+
+  * Adaptions to INDI 1.9 release
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 01 May 2021 17:44:43 +0200
+
+indi-avalon (1.11) bionic; urgency=medium
+
+  * Use INDI_ENABLED and INDI_DISABLED.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 10 Apr 2032 20:00:00 +0300
+
 indi-avalon (1.10) buster; urgency=medium
 
   * Tracking adjustment made permanent in StarGO

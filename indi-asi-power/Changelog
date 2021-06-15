@@ -1,3 +1,6 @@
+v0.95
+* Replace pigpio timer with INDI timer
+
 v0.94
 * Minor fix to return codes
 

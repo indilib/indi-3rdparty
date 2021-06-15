@@ -65,7 +65,7 @@ ADD_LIBRARY(fli SHARED ${fli_LIB_SRCS})
 set_target_properties(fli PROPERTIES VERSION 2.0 SOVERSION 2)
 
 #need to link to some other libraries ? just add them here
-TARGET_LINK_LIBRARIES(fli ${USB1_LIBRARIES} -lm)
+TARGET_LINK_LIBRARIES(fli ${USB1_LIBRARIES} -lm -lpthread)
 
 #add an install target here
 INSTALL(FILES libfli.h DESTINATION include)

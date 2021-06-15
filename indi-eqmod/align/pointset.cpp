@@ -19,6 +19,7 @@
 
 #include "triangulate.h"
 #include "triangulate_chull.h"
+#include "indicom.h"
 
 #include <libnova/sidereal_time.h>
 #include <libnova/transform.h>
@@ -27,51 +28,31 @@
 #include <string.h>
 #include <wordexp.h>
 
-double PointSet::range24(double r)
+void PointSet::AltAzFromRaDec(double ra, double dec, double jd, double *alt, double *az, INDI::IGeographicCoordinates *pos)
 {
-    double res = r;
-    while (res < 0.0)
-        res += 24.0;
-    while (res > 24.0)
-        res -= 24.0;
-    return res;
-}
-
-double PointSet::range360(double r)
-{
-    double res = r;
-    while (res < 0.0)
-        res += 360.0;
-    while (res > 360.0)
-        res -= 360.0;
-    return res;
-}
-
-void PointSet::AltAzFromRaDec(double ra, double dec, double jd, double *alt, double *az, struct ln_lnlat_posn *pos)
-{
-    struct ln_equ_posn lnradec;
-    struct ln_lnlat_posn lnpos;
-    struct ln_hrz_posn lnaltaz;
-    lnradec.ra  = (ra * 360.0) / 24.0;
-    lnradec.dec = dec;
+    INDI::IEquatorialCoordinates lnradec;
+    INDI::IGeographicCoordinates lnpos;
+    INDI::IHorizontalCoordinates lnaltaz;
+    lnradec.rightascension  = ra;
+    lnradec.declination = dec;
     if (pos)
     {
-        lnpos.lng = pos->lng;
-        lnpos.lat = pos->lat;
+        lnpos.longitude = pos->longitude;
+        lnpos.latitude = pos->latitude;
     }
     else
     {
-        lnpos.lng = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
-        lnpos.lat = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
+        lnpos.longitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
+        lnpos.latitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
     }
 
-    ln_get_hrz_from_equ(&lnradec, &lnpos, jd, &lnaltaz);
-    *alt = lnaltaz.alt;
-    *az  = range360(lnaltaz.az + 180.0);
+    INDI::EquatorialToHorizontal(&lnradec, &lnpos, jd, &lnaltaz);
+    *alt = lnaltaz.altitude;
+    *az  = lnaltaz.azimuth;
 }
 
 void PointSet::AltAzFromRaDecSidereal(double ra, double dec, double lst, double *alt, double *az,
-                                      struct ln_lnlat_posn *pos)
+                                      INDI::IGeographicCoordinates *pos)
 {
     struct ln_equ_posn lnradec;
     struct ln_lnlat_posn lnpos;
@@ -80,39 +61,44 @@ void PointSet::AltAzFromRaDecSidereal(double ra, double dec, double lst, double 
     lnradec.dec = dec;
     if (pos)
     {
-        lnpos.lng = pos->lng;
-        lnpos.lat = pos->lat;
+        lnpos.lng = pos->longitude;
+        lnpos.lat = pos->latitude;
     }
     else
     {
         lnpos.lng = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
         lnpos.lat = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
     }
+
+    if (lnpos.lng > 180)
+        lnpos.lng -= 360;
 
     ln_get_hrz_from_equ_sidereal_time(&lnradec, &lnpos, lst, &lnaltaz);
     *alt = lnaltaz.alt;
     *az  = range360(lnaltaz.az + 180.0);
 }
-void PointSet::RaDecFromAltAz(double alt, double az, double jd, double *ra, double *dec, struct ln_lnlat_posn *pos)
+
+void PointSet::RaDecFromAltAz(double alt, double az, double jd, double *ra, double *dec, INDI::IGeographicCoordinates *pos)
 {
-    struct ln_equ_posn lnradec;
-    struct ln_lnlat_posn lnpos;
-    struct ln_hrz_posn lnaltaz;
-    lnaltaz.alt = alt;
-    lnaltaz.az  = range360(az + 180.0);
+    INDI::IEquatorialCoordinates lnradec;
+    INDI::IGeographicCoordinates lnpos;
+    INDI::IHorizontalCoordinates lnaltaz;
+    lnaltaz.altitude = alt;
+    lnaltaz.azimuth  = az;
     if (pos)
     {
-        lnpos.lng = pos->lng;
-        lnpos.lat = pos->lat;
+        lnpos.longitude = pos->longitude;
+        lnpos.latitude = pos->latitude;
     }
     else
     {
-        lnpos.lng = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
-        lnpos.lat = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
+        lnpos.longitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
+        lnpos.latitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
     }
-    ln_get_equ_from_hrz(&lnaltaz, &lnpos, jd, &lnradec);
-    *ra  = (lnradec.ra * 24.0) / 360.0;
-    *dec = lnradec.dec;
+
+    INDI::HorizontalToEquatorial(&lnaltaz, &lnpos, jd, &lnradec);
+    *ra  = lnradec.rightascension;
+    *dec = lnradec.declination;
 }
 
 /* Using haversine: http://en.wikipedia.org/wiki/Haversine_formula */
@@ -122,7 +108,7 @@ double sphere_unit_distance(double theta1, double theta2, double phi1, double ph
     double sqrt_haversin_long = sin(((theta2 - theta1) / 2) * (M_PI / 180));
     return (2 *
             asin(sqrt((sqrt_haversin_lat * sqrt_haversin_lat) + cos(phi1 * (M_PI / 180)) * cos(phi2 * (M_PI / 180)) *
-                                                                    (sqrt_haversin_long * sqrt_haversin_long))));
+                      (sqrt_haversin_long * sqrt_haversin_long))));
 }
 
 bool compelt(PointSet::Distance d1, PointSet::Distance d2)
@@ -166,15 +152,15 @@ PointSet::ComputeDistances(double alt, double az, PointFilter filter, bool ingot
         /*IDLog("  Point %lld (alt=%f az=%f): distance %f \n",  elt.htmID, (*it).second.celestialALT, (*it).second.celestialAZ, elt.value);*/
     }
     /*
-  IDLog("  Ordered distances for point alt=%f az=%f\n", alt, az);
-  for ( distit=distances->begin() ; distit != distances->end(); distit++ ) {
+    IDLog("  Ordered distances for point alt=%f az=%f\n", alt, az);
+    for ( distit=distances->begin() ; distit != distances->end(); distit++ ) {
     IDLog("  Point %lld: distance %f \n",  distit->htmID, distit->value);
-  }
-  */
+    }
+    */
     return distances;
 }
 
-void PointSet::AddPoint(AlignData aligndata, struct ln_lnlat_posn *pos)
+void PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
 {
     Point point;
     point.aligndata = aligndata;
@@ -210,20 +196,10 @@ void PointSet::AddPoint(AlignData aligndata, struct ln_lnlat_posn *pos)
     point.htmID = cc_radec2ID(point.celestialAZ, point.celestialALT, 19);
     cc_ID2name(point.htmname, point.htmID);
     point.index = getNbPoints();
-    //IDLog("Adding sync point index = %d htm id = %lld htm name = %s\n ", point.index, point.htmID, point.htmname);
     PointSetMap->insert(std::pair<HtmID, Point>(point.htmID, point));
-    //IDLog("       sync point celestial alt = %g az = %g\n ", point.celestialALT, point.celestialAZ);
-    //IDLog("       sync point telescope alt = %g az = %g\n ", point.telescopeALT, point.telescopeAZ);
-    // compute new Delaunay triangulation of the points on the unit sphere
-    //  http://objectmix.com/graphics/242663-delaunay-triangulation-sphere-minimal-code.html
-    // DT is equivalent to convex hull in this case, simply remove triangles/faces that are visible from origin
-    //std::map<HtmID, Point>::iterator it;
-    //for ( it=PointSetMap->begin() ; it != PointSetMap->end(); it++ ) {
-    //IDLog("%f %f %f\n", it->second.cx, it->second.cy, it->second.cz);
-    //}
     Triangulation->AddPoint(point.htmID);
     LOGF_INFO("Align Pointset: added point %d alt = %g az = %g\n", point.index,
-           point.celestialALT, point.celestialAZ);
+              point.celestialALT, point.celestialAZ);
     LOGF_INFO("Align Triangulate: number of faces is %d\n", Triangulation->getFaces().size());
 }
 
@@ -253,7 +229,7 @@ void PointSet::Init()
     PointSetMap     = new std::map<HtmID, Point>();
     Triangulation   = new TriangulateCHull(PointSetMap);
     PointSetXmlRoot = nullptr;
-    PointSetInitialized=true;
+    PointSetInitialized = true;
 }
 
 void PointSet::Reset()
@@ -335,9 +311,9 @@ char *PointSet::LoadDataFile(const char *filename)
     //  PointSetMap = new std::map<HtmID, Point>();
     if (lnalignpos)
         free(lnalignpos);
-    lnalignpos      = (struct ln_lnlat_posn *)malloc(sizeof(struct ln_lnlat_posn));
-    lnalignpos->lng = lon;
-    lnalignpos->lat = lat;
+    lnalignpos      = (INDI::IGeographicCoordinates *)malloc(sizeof(INDI::IGeographicCoordinates));
+    lnalignpos->longitude = lon;
+    lnalignpos->latitude = lat;
     PointSetMap->clear();
     alignxml     = nextXMLEle(sitexml, 1);
     aligndata.jd = -1.0;
@@ -357,11 +333,11 @@ char *PointSet::LoadDataFile(const char *filename)
         alignxml = nextXMLEle(sitexml, 0);
     }
     /*
-  IDLog("Resulting Alignment map;\n");
-  for ( it=PointSetMap->begin() ; it != PointSetMap->end(); it++ )
-    IDLog("  Point htmID= %lld, htm name = %s,  telescope alt = %f az = %f\n",  (*it).first, (*it).second.htmname, 
-	  (*it).second.telescopeALT,  (*it).second.telescopeAZ);
-  */
+    IDLog("Resulting Alignment map;\n");
+    for ( it=PointSetMap->begin() ; it != PointSetMap->end(); it++ )
+    IDLog("  Point htmID= %lld, htm name = %s,  telescope alt = %f az = %f\n",  (*it).first, (*it).second.htmname,
+      (*it).second.telescopeALT,  (*it).second.telescopeAZ);
+    */
     return nullptr;
 }
 
@@ -377,9 +353,10 @@ char *PointSet::WriteDataFile(const char *filename)
         return (char *)("Badly formed filename");
     }
     if (lnalignpos)
-    { // Why this ?
-        if ((fabs(lnalignpos->lng - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value)>1E-4) ||
-            (fabs(lnalignpos->lat - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value)>1E-4))
+    {
+        // Why this ?
+        if ((fabs(lnalignpos->longitude - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value) > 1E-4) ||
+                (fabs(lnalignpos->latitude - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value) > 1E-4))
             return (char *)("Can not mix alignment data from different sites (lng. and/or lat. differs)");
     }
     //if (filename == nullptr) return;
@@ -415,12 +392,12 @@ XMLEle *PointSet::toXML()
 
     snprintf(sitedata, sizeof(sitedata), "%g",
              ((lnalignpos == nullptr) ? IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value :
-                                     lnalignpos->lng));
+              lnalignpos->longitude));
     addXMLAtt(sitexml, "lon", sitedata);
 
     snprintf(sitedata, sizeof(sitedata), "%g",
              ((lnalignpos == nullptr) ? IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value :
-                                     lnalignpos->lat));
+              lnalignpos->latitude));
     addXMLAtt(sitexml, "lat", sitedata);
 
     //mountxml=addXMLEle(sitexml,"mount");
@@ -537,7 +514,7 @@ bool PointSet::isPointInside(Point *p, std::vector<HtmID> f, bool ingoto)
 }
 
 std::vector<HtmID> PointSet::findFace(double currentRA, double currentDEC, double jd, double pointalt, double pointaz,
-                                      ln_lnlat_posn *position, bool ingoto)
+                                      INDI::IGeographicCoordinates *position, bool ingoto)
 {
     INDI_UNUSED(pointalt);
     INDI_UNUSED(pointaz);
@@ -569,7 +546,7 @@ std::vector<HtmID> PointSet::findFace(double currentRA, double currentDEC, doubl
             currentFace = *it;
             current     = (*it)->v;
             LOGF_INFO("Align: current face is {%d, %d, %d}", PointSetMap->at(current[0]).index,
-                   PointSetMap->at(current[1]).index, PointSetMap->at(current[2]).index);
+                      PointSetMap->at(current[1]).index, PointSetMap->at(current[2]).index);
             return current;
         }
         it++;

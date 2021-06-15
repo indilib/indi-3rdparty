@@ -5,29 +5,3 @@ include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=libasi
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
-
-# ASICAM version
-ASICAM_VERSION=1.17
-ASICAM_SO_VERSION=1
-
-# ASIEFW Version
-ASIEFW_VERSION=1.6
-ASIEFW_SO_VERSION=1
-
-# ASIST4 Version
-ASIST4_VERSION=1.0
-ASIST4_SO_VERSION=1
-
-# ASIEAF Version
-ASIEAF_VERSION=1.3
-ASIEAF_SO_VERSION=1
-
-# Links
-DEB_DH_LINK_ARGS := usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_SO_VERSION} \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so.${ASICAM_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libASICamera2.so \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libEFWFilter.so.${ASIEFW_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEFWFilter.so.${ASIEFW_SO_VERSION} \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libEFWFilter.so.${ASIEFW_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEFWFilter.so \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_SO_VERSION} \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so.${ASIST4_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libUSB2ST4Conv.so \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_SO_VERSION} \
-                    usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so.${ASIEAF_SO_VERSION} usr/lib/${DEB_HOST_MULTIARCH}/libEAFFocuser.so

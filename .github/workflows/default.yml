@@ -1,11 +1,6 @@
-name: INDI 3rd-Party
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+name: Linux
 
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:

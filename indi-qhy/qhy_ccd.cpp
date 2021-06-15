@@ -28,215 +28,95 @@
 #include <algorithm>
 #include <map>
 #include <math.h>
+#include <memory>
+#include <deque>
 
 #define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
-#define MAX_DEVICES          4     /* Max device cameraCount */
 
 //NB Disable for real driver
 //#define USE_SIMULATION
 
-static int cameraCount = 0;
-static QHYCCD *cameras[MAX_DEVICES];
-
-namespace
+static class Loader
 {
-static void QhyCCDCleanup()
-{
-    for (int i = 0; i < cameraCount; i++)
-    {
-        delete cameras[i];
-    }
-
-    ReleaseQHYCCDResource();
-}
-
-// Scan for the available devices
-std::vector<std::string> GetDevicesIDs()
-{
-    char camid[MAXINDIDEVICE];
-    int deviceCount = 0;
-    std::vector<std::string> devices;
-
-#if defined(USE_SIMULATION)
-    deviceCount = 2;
-#else
-    deviceCount = ScanQHYCCD();
-#endif
-
-    if (deviceCount > MAX_DEVICES)
-    {
-        deviceCount = MAX_DEVICES;
-        IDLog("Devicescan found %d devices. The driver is compiled to support only up to %d devices.",
-              deviceCount, MAX_DEVICES);
-    }
-
-    for (int i = 0; i < deviceCount; i++)
-    {
-        memset(camid, '\0', MAXINDIDEVICE);
-
-#if defined(USE_SIMULATION)
-        int ret = QHYCCD_SUCCESS;
-        snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
-#else
-        int ret = GetQHYCCDId(i, camid);
-#endif
-        if (ret == QHYCCD_SUCCESS)
+        std::deque<std::unique_ptr<QHYCCD>> cameras;
+    public:
+        Loader()
         {
-            devices.push_back(std::string(camid));
-        }
-        else
-        {
-            IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
-        }
-    }
-
-    return devices;
-}
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-
-    if (isInit)
-        return;
-
-    for (int i = 0; i < MAX_DEVICES; ++i)
-        cameras[i] = nullptr;
-
 #if !defined(USE_SIMULATION)
-    int ret = InitQHYCCDResource();
+            int ret = InitQHYCCDResource();
 
-    if (ret != QHYCCD_SUCCESS)
-    {
-        IDLog("Init QHYCCD SDK failed (%d)\n", ret);
-        isInit = true;
-        return;
-    }
+            if (ret != QHYCCD_SUCCESS)
+            {
+                IDLog("Init QHYCCD SDK failed (%d)\n", ret);
+                return;
+            }
 #endif
 
-    //#if defined(__APPLE__)
-    //    char driverSupportPath[128];
-    //    if (getenv("INDIPREFIX") != nullptr)
-    //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
-    //    else
-    //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
-    //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
-    //    IDLog("QHY firmware path: %s\n", driverSupportPath);
-    //    OSXInitQHYCCDFirmware(driverSupportPath);
-    //#endif
+            //#if defined(__APPLE__)
+            //    char driverSupportPath[128];
+            //    if (getenv("INDIPREFIX") != nullptr)
+            //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
+            //    else
+            //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
+            //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
+            //    IDLog("QHY firmware path: %s\n", driverSupportPath);
+            //    OSXInitQHYCCDFirmware(driverSupportPath);
+            //#endif
 
-    // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
+            // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
 #if defined(__APPLE__)
-    OSXInitQHYCCDFirmwareArray();
-    // Wait a bit before calling GetDeviceIDs on MacOS
-    usleep(2000000);
+            OSXInitQHYCCDFirmwareArray();
+            // Wait a bit before calling GetDeviceIDs on MacOS
+            usleep(2000000);
 #endif
 
-    std::vector<std::string> devices = GetDevicesIDs();
-
-    cameraCount = static_cast<int>(devices.size());
-    for (int i = 0; i < cameraCount; i++)
-    {
-        cameras[i] = new QHYCCD(devices[i].c_str());
-    }
-    if (cameraCount > 0)
-    {
-        atexit(QhyCCDCleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-
-    if (cameraCount == 0)
-    {
-        IDMessage(nullptr, "No QHY cameras detected. Power on?");
-        return;
-    }
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        QHYCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name()))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
+            for (const auto &deviceId : GetDevicesIDs())
+            {
+                cameras.push_back(std::unique_ptr<QHYCCD>(new QHYCCD(deviceId.c_str())));
+            }
         }
-    }
-}
 
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        QHYCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name()))
+        ~Loader()
         {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
+            ReleaseQHYCCDResource();
         }
-    }
-}
 
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        QHYCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name()))
+    public:
+
+        // Scan for the available devices
+        std::vector<std::string> GetDevicesIDs()
         {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
+            char camid[MAXINDIDEVICE];
+            int deviceCount = 0;
+            std::vector<std::string> devices;
+
+#if defined(USE_SIMULATION)
+            deviceCount = 2;
+#else
+            deviceCount = ScanQHYCCD();
+#endif
+
+            for (int i = 0; i < deviceCount; i++)
+            {
+#if defined(USE_SIMULATION)
+                int ret = QHYCCD_SUCCESS;
+                snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
+#else
+                int ret = GetQHYCCDId(i, camid);
+#endif
+                if (ret == QHYCCD_SUCCESS)
+                {
+                    devices.push_back(std::string(camid));
+                }
+                else
+                {
+                    IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
+                }
+            }
+
+            return devices;
         }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        QHYCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name()))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        QHYCCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 QHYCCD::QHYCCD(const char *name) : FilterInterface(this)
 {
@@ -1229,6 +1109,12 @@ bool QHYCCD::setupParams()
             LOGF_DEBUG("GetQHYCCDEffectiveArea: subX :%d subY: %d subW: %d subH: %d", effectiveROI.subX, effectiveROI.subY,
                        effectiveROI.subW, effectiveROI.subH);
         }
+        // JM 2021-04-07: If effective ROI fails, we shouldn't IgnoreOverscanArea
+        else
+        {
+            LOG_DEBUG("Querying effective area failed. Setting IgnoreOverscanArea to false and resorting to sensor ROI.");
+            IgnoreOverscanArea = false;
+        }
 
         //NEW CODE - Add support for overscan/calibration area, we want to allow also pixels outside of effectiveROI
         //if (effectiveROI.subX > 0 || effectiveROI.subY > 0)
@@ -1247,12 +1133,12 @@ bool QHYCCD::setupParams()
     }
 
     //NEW CODE - Add support for overscan/calibration area
+    //Overscan area is ignored, exposure frame to be within effectiveROI
     if (IgnoreOverscanArea)
-        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw,
-                     pixelh);    //Overscan area is ignored, exposure frame to be within effectiveROI
+        SetCCDParams(effectiveROI.subW, effectiveROI.subH, bpp, pixelw, pixelh);
     else
-        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw,
-                     pixelh);          //Overscan area is not ignored, exposure frame to be within full sensor frame
+        //Overscan area is not ignored, exposure frame to be within full sensor frame
+        SetCCDParams(sensorROI.subW, sensorROI.subH, bpp, pixelw, pixelh);
 
     nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -2307,11 +2193,11 @@ void QHYCCD::updateTemperature()
         IDSetSwitch(&CoolerSP, nullptr);
     }
 
-    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - m_TemperatureRequest) <= TEMP_THRESHOLD)
-    {
-        TemperatureN[0].value = ccdtemp;
-        TemperatureNP.s       = IPS_OK;
-    }
+    //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - m_TemperatureRequest) <= TEMP_THRESHOLD)
+    //    {
+    //        TemperatureN[0].value = ccdtemp;
+    //        TemperatureNP.s       = IPS_OK;
+    //    }
 
     // Restart regulation if needed.
     else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > TEMP_THRESHOLD)
@@ -2724,6 +2610,14 @@ bool QHYCCD::updateFilterProperties()
         }
         IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
                          FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
+
+        // Try to load config filter labels
+        for (int i = 0; i < m_MaxFilterCount; i++)
+        {
+            char oneFilter[MAXINDINAME] = {0};
+            if (IUGetConfigText(getDeviceName(), FilterNameTP->name, FilterNameT[i].name, oneFilter, MAXINDINAME) == 0)
+                IUSaveText(&FilterNameT[i], oneFilter);
+        }
 
         return true;
     }

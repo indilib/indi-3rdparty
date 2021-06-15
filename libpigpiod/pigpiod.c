@@ -289,6 +289,7 @@ static void initOpts(int argc, char *argv[])
 void terminate(int signum)
 {
    /* only registered for SIGHUP/SIGTERM */
+   (void)signum;
 
    gpioTerminate();
 
