@@ -17,6 +17,9 @@ find_package(ALTAIRCAM REQUIRED)
 find_package(STARSHOOTG REQUIRED)
 find_package(NNCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86")
+find_package(MEADECAM REQUIRED)
+endif()
 
 set(TOUPBASE_VERSION_MAJOR 0)
 set(TOUPBASE_VERSION_MINOR 5)
@@ -33,6 +36,9 @@ include_directories( ${ALTAIRCAM_INCLUDE_DIR})
 include_directories( ${STARSHOOTG_INCLUDE_DIR})
 include_directories( ${NNCAM_INCLUDE_DIR})
 include_directories( ${MALLINCAM_INCLUDE_DIR})
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86")
+include_directories( ${MEADECAM_INCLUDE_DIR})
+endif()
 
 include(CMakeCommon)
 
@@ -63,6 +69,13 @@ add_executable(indi_mallincam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_mallincam_ccd PRIVATE "-DBUILD_MALLINCAM")
 target_link_libraries(indi_mallincam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
+########### indi_meadecam_ccd ###########
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86")
+add_executable(indi_meadecam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_meadecam_ccd PRIVATE "-DBUILD_MEADECAM")
+target_link_libraries(indi_meadecam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
 #####################################
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
@@ -80,5 +93,10 @@ install(TARGETS
     indi_nncam_ccd
     indi_mallincam_ccd
     RUNTIME DESTINATION bin)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86")
+install(TARGETS
+    indi_meadecam_ccd
+    RUNTIME DESTINATION bin)
+endif()
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml DESTINATION ${INDI_DATA_DIR})

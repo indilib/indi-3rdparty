@@ -38,6 +38,13 @@
 #define XP(x) Toupcam##x
 #define THAND HToupCam
 #define DNAME "Mallincam"
+#elif BUILD_MEADECAM
+#include <meadecam.h>
+#define FP(x) Toupcam_##x
+#define CP(x) TOUPCAM_##x
+#define XP(x) Toupcam##x
+#define THAND HToupCam
+#define DNAME "Meadecam"
 #elif BUILD_ALTAIRCAM
 #include <altaircam.h>
 #define FP(x) Altaircam_##x

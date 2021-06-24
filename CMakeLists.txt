@@ -224,6 +224,9 @@ add_subdirectory(libaltaircam)
 add_subdirectory(libstarshootg)
 add_subdirectory(libnncam)
 add_subdirectory(libmallincam)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)" OR CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-6]86")
+add_subdirectory(libmeadecam)
+endif()
 endif (WITH_TOUPBASE)
 
 #libsv305
@@ -363,8 +366,11 @@ endif()
 if (NOT MALLINCAM_FOUND)
 add_subdirectory(libmallincam)
 endif()
+if (NOT MEADECAM_FOUND)
+add_subdirectory(libmeadecam)
+endif()
 SET(LIBRARIES_FOUND FALSE)
-endif (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND)
+endif (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND MEADECAM_FOUND)
 endif (WITH_TOUPBASE)
 
 ## Bee Focuser
@@ -619,6 +625,10 @@ endif (WITH_TOUPBASE AND NOT NNCAM_FOUND)
 if (WITH_TOUPBASE AND NOT MALLINCAM_FOUND)
 message(STATUS "libmallincam was not found and will now be built. Please install libmallincam first before running cmake again to install indi-toupbase.")
 endif (WITH_TOUPBASE AND NOT MALLINCAM_FOUND)
+
+if (WITH_TOUPBASE AND NOT MEADECAM_FOUND)
+message(STATUS "libmeadecam was not found and will now be built. Please install libmeadecam first before running cmake again to install indi-toupbase.")
+endif (WITH_TOUPBASE AND NOT MEADECAM_FOUND)
 
 if (WITH_INOVAPLX AND NOT INOVASDK_FOUND)
 message(STATUS "libinovasdk was not found and will now be built. Please install libinovasdk first before running cmake again to install indi-inovaplx.")
