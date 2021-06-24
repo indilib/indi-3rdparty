@@ -202,7 +202,7 @@ bool QHYCCD::initProperties()
     IUFillNumberVector(&USBBufferNP, USBBufferN, 1, getDeviceName(), "USB_BUFFER", "USB Buffer", MAIN_CONTROL_TAB,
                        IP_RW, 60, IPS_IDLE);
 
-    // USB Buffer
+    // Humidity
     IUFillNumber(&HumidityN[0], "HUMIDITY", "%", "%.2f", -100, 1000, 0.1, 0);
     IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "CCD_HUMIDITY", "Humidity", MAIN_CONTROL_TAB,
                        IP_RO, 60, IPS_IDLE);
@@ -1028,7 +1028,7 @@ bool QHYCCD::Connect()
         LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
-        /// GPS Support
+        /// Humidity Support
         ////////////////////////////////////////////////////////////////////
         double humidity = 0;
         ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
