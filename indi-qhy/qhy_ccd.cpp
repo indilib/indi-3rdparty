@@ -434,7 +434,7 @@ bool QHYCCD::updateProperties()
                 uint32_t ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
                 if (ret == QHYCCD_SUCCESS)
                 {
-                    HumidityN[0].step = humidity;
+                    HumidityN[0].value = humidity;
                 }
 
                 LOGF_INFO("Humidity Sensor: %s", ret == QHYCCD_SUCCESS ? "true" :
