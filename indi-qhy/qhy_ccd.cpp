@@ -2181,8 +2181,7 @@ void QHYCCD::updateTemperatureHelper(void *p)
 
 void QHYCCD::updateTemperature()
 {
-    double ccdtemp = 0, coolpower = 0, humidity = 0.;
-    uint32_t hret;
+    double ccdtemp = 0, coolpower = 0;
 
     if (isSimulation())
     {
@@ -2193,7 +2192,6 @@ void QHYCCD::updateTemperature()
             ccdtemp -= TEMP_THRESHOLD;
 
         coolpower = 128;
-        humidity = 99.9;
     }
     else
     {
@@ -2218,8 +2216,6 @@ void QHYCCD::updateTemperature()
 
         ccdtemp   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
         coolpower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
-        if (HasHumidity)
-          hret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
     }
 
     // No need to spam to log
@@ -2232,14 +2228,20 @@ void QHYCCD::updateTemperature()
 
     CoolerN[0].value      = coolpower / 255.0 * 100;
     CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
-    if (hret == QHYCCD_SUCCESS)
+
+    if (HasHumidity)
     {
-        HumidityN[0].value = humidity;
-        HumidityNP.s = IPS_OK;
-    }
-    else
-    {
-        HumidityNP.s = IPS_ALERT;
+        double humidity;
+        if (GetQHYCCDHumidity(m_CameraHandle, &humidity) == QHYCCD_SUCCESS)
+        {
+            HumidityN[0].value = humidity;
+            HumidityNP.s = IPS_OK;
+        }
+        else
+        {
+            HumidityNP.s = IPS_ALERT;
+        }
+        IDSetNumber(&HumidityNP, nullptr);
     }
 
     IPState coolerSwitchState = CoolerN[0].value > 0 ? IPS_BUSY : IPS_OK;
@@ -2265,7 +2267,6 @@ void QHYCCD::updateTemperature()
 
     IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&CoolerNP, nullptr);
-    IDSetNumber(&HumidityNP, nullptr);
 
     m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
 }
