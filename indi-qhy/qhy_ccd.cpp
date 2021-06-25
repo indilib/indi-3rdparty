@@ -202,6 +202,11 @@ bool QHYCCD::initProperties()
     IUFillNumberVector(&USBBufferNP, USBBufferN, 1, getDeviceName(), "USB_BUFFER", "USB Buffer", MAIN_CONTROL_TAB,
                        IP_RW, 60, IPS_IDLE);
 
+    // Humidity
+    IUFillNumber(&HumidityN[0], "HUMIDITY", "%", "%.2f", -100, 1000, 0.1, 0);
+    IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "CCD_HUMIDITY", "Humidity", MAIN_CONTROL_TAB,
+                       IP_RO, 60, IPS_IDLE);
+
     // Cooler Mode
     IUFillSwitch(&CoolerModeS[COOLER_AUTOMATIC], "COOLER_AUTOMATIC", "Auto", ISS_ON);
     IUFillSwitch(&CoolerModeS[COOLER_MANUAL], "COOLER_MANUAL", "Manual", ISS_OFF);
@@ -338,6 +343,9 @@ void QHYCCD::ISGetProperties(const char *dev)
             defineProperty(&CoolerNP);
         }
 
+        if (HasHumidity)
+            defineProperty(&HumidityNP);
+
         if (HasUSBSpeed)
             defineProperty(&SpeedNP);
 
@@ -414,6 +422,27 @@ bool QHYCCD::updateProperties()
             m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
         }
 
+        if (HasHumidity)
+        {
+            if (isSimulation())
+            {
+                HumidityN[0].value = 99.9;
+            }
+            else
+            {
+                double humidity = 0.;
+                uint32_t ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
+                if (ret == QHYCCD_SUCCESS)
+                {
+                    HumidityN[0].value = humidity;
+                }
+
+                LOGF_INFO("Humidity Sensor: %s", ret == QHYCCD_SUCCESS ? "true" :
+                          "false");
+            }
+
+            defineProperty(&HumidityNP);
+        }
         double min = 0, max = 0, step = 0;
         if (HasUSBSpeed)
         {
@@ -598,6 +627,9 @@ bool QHYCCD::updateProperties()
 
             RemoveTimer(m_TemperatureTimerID);
         }
+
+        if (HasHumidity)
+            deleteProperty(HumidityNP.name);
 
         if (HasUSBSpeed)
         {
@@ -995,6 +1027,17 @@ bool QHYCCD::Connect()
 
         LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
 
+        ////////////////////////////////////////////////////////////////////
+        /// Humidity Support
+        ////////////////////////////////////////////////////////////////////
+        double humidity = 0;
+        ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasHumidity = true;
+        }
+
+        LOGF_INFO("Humidity Support: %s", HasHumidity ? "True" : "False");
         ////////////////////////////////////////////////////////////////////
         /// Overscan Area Support
         ////////////////////////////////////////////////////////////////////
@@ -2185,6 +2228,21 @@ void QHYCCD::updateTemperature()
 
     CoolerN[0].value      = coolpower / 255.0 * 100;
     CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
+
+    if (HasHumidity)
+    {
+        double humidity;
+        if (GetQHYCCDHumidity(m_CameraHandle, &humidity) == QHYCCD_SUCCESS)
+        {
+            HumidityN[0].value = humidity;
+            HumidityNP.s = IPS_OK;
+        }
+        else
+        {
+            HumidityNP.s = IPS_ALERT;
+        }
+        IDSetNumber(&HumidityNP, nullptr);
+    }
 
     IPState coolerSwitchState = CoolerN[0].value > 0 ? IPS_BUSY : IPS_OK;
     if (coolerSwitchState != CoolerSP.s)
