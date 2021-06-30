@@ -129,6 +129,14 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 
     snprintf(this->name, MAXINDIDEVICE, "%s %s", getDefaultName(), instance->displayname);
     setDeviceName(this->name);
+
+    m_CaptureTimeout.callOnTimeout(std::bind(&ToupBase::captureTimeoutHandler, this));
+    m_CaptureTimeout.setSingleShot(true);
+}
+
+ToupBase::~ToupBase()
+{
+    m_CaptureTimeout.stop();
 }
 
 const char *ToupBase::getDefaultName()
@@ -912,28 +920,28 @@ void ToupBase::setupParams()
     SetTimer(getCurrentPollingPeriod());
 
     //Start pull callback
-    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-    if (FAILED(rc))
-    {
-        LOGF_ERROR("Failed to start camera pull mode. %s", errorCodes[rc].c_str());
-        if (Disconnect())
-            setConnected(false);
-        updateProperties();
-        return;
-    }
-
-    LOG_DEBUG("Starting event callback in pull mode.");
-
-    // Start push callback
-    //    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &TOUPCAM::pushCB, this, &TOUPCAM::eventCB, this)) != 0))
+    //    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+    //    if (FAILED(rc))
     //    {
-    //        LOGF_ERROR("Failed to start camera push mode. %s", errorCodes[rc].c_str());
-    //        Disconnect();
+    //        LOGF_ERROR("Failed to start camera pull mode. %s", errorCodes[rc].c_str());
+    //        if (Disconnect())
+    //            setConnected(false);
     //        updateProperties();
     //        return;
     //    }
 
-    //    LOG_DEBUG("Starting event callback in push mode.");
+    //    LOG_DEBUG("Starting event callback in pull mode.");
+
+    // Start push callback
+    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &ToupBase::pushCB, this, &ToupBase::eventCB, this)) != 0))
+    {
+        LOGF_ERROR("Failed to start camera push mode. %s", errorCodes[rc].c_str());
+        Disconnect();
+        updateProperties();
+        return;
+    }
+
+    LOG_DEBUG("Starting event callback in push mode.");
 }
 
 void ToupBase::allocateFrameBuffer()
@@ -1938,12 +1946,24 @@ bool ToupBase::StartExposure(float duration)
     //    else if (static_cast<uint32_t>(timeMS) < getCurrentPollingPeriod())
     //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
 
-    // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+    // Snap still image
+    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
     {
-        LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
+        LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes[rc].c_str());
         return false;
     }
+    else
+    {
+        // Trigger an exposure
+        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+        {
+            LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
+            return false;
+        }
+    }
+
+    // Timeout 500ms after expected duration
+    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * 1.2);
 
     return true;
 }
@@ -1953,7 +1973,46 @@ bool ToupBase::AbortExposure()
     FP(Trigger(m_CameraHandle, 0));
     InExposure = false;
     m_TimeoutRetries = 0;
+    m_CaptureTimeoutCounter = 0;
+    m_CaptureTimeout.stop();
     return true;
+}
+
+void ToupBase::captureTimeoutHandler()
+{
+    HRESULT rc = 0;
+
+    if (!isConnected())
+        return;
+
+    m_CaptureTimeoutCounter++;
+
+    if (m_CaptureTimeoutCounter >= 3)
+    {
+        m_CaptureTimeoutCounter = 0;
+        LOG_ERROR("Camera timed out multiple times. Exposure failed.");
+        PrimaryCCD.setExposureFailed();
+        return;
+    }
+
+    // Snap still image
+    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+    {
+        LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes[rc].c_str());
+        return;
+    }
+    else
+    {
+        // Trigger an exposure
+        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+        {
+            LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
+            return;
+        }
+    }
+
+    LOG_DEBUG("Capture timed out, restarting exposure...");
+    m_CaptureTimeout.start(ExposureRequest * 1000 + m_DownloadEstimation * 1.2);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -2338,20 +2397,24 @@ void ToupBase::pushCB(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap
 
 void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap)
 {
-    //int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
-
     INDI_UNUSED(bSnap);
 
     if (Streamer->isStreaming() || Streamer->isRecording())
     {
-        //std::unique_lock<std::mutex> guard(ccdBufferLock);
-        //HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
-        //guard.unlock();
-        //if (rc >= 0)
         Streamer->newFrame(reinterpret_cast<const uint8_t*>(pData), PrimaryCCD.getFrameBufferSize());
     }
     else if (InExposure)
     {
+        m_CaptureTimeoutCounter = 0;
+        m_CaptureTimeout.stop();
+
+        // Estimate download time
+        struct timeval curtime, diff;
+        gettimeofday(&curtime, nullptr);
+        timersub(&curtime, &ExposureEnd, &diff);
+        m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+        LOGF_DEBUG("New download estimate %.f ms", m_DownloadEstimation);
+
         InExposure  = false;
         PrimaryCCD.setExposureLeft(0);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
@@ -2363,9 +2426,6 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
             buffer = static_cast<uint8_t*>(malloc(size));
         }
 
-        //        std::unique_lock<std::mutex> guard(ccdBufferLock);
-        //        HRESULT rc = FP(PullImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
-        //        guard.unlock();
         if (pData == nullptr)
         {
             LOG_ERROR("Failed to push image.");
@@ -2419,17 +2479,25 @@ void ToupBase::eventCB(unsigned event, void* pCtx)
 void ToupBase::eventPullCallBack(unsigned event)
 {
     LOGF_DEBUG("Event %#04X", event);
-
-    //m_lastEventID = event;
-
     switch (event)
     {
         case CP(EVENT_EXPOSURE: )
-                break;
+                m_CaptureTimeoutCounter = 0;
+            m_CaptureTimeout.stop();
+            break;
         case CP(EVENT_TEMPTINT: )
                 break;
         case CP(EVENT_IMAGE: )
             {
+                m_CaptureTimeoutCounter = 0;
+                m_CaptureTimeout.stop();
+
+                // Estimate download time
+                struct timeval curtime, diff;
+                gettimeofday(&curtime, nullptr);
+                timersub(&curtime, &ExposureEnd, &diff);
+                m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+
                 m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;
                 memset(&info, 0, sizeof(XP(FrameInfoV2)));
@@ -2514,25 +2582,110 @@ void ToupBase::eventPullCallBack(unsigned event)
             break;
         case CP(EVENT_STILLIMAGE: )
             {
+                m_CaptureTimeoutCounter = 0;
+                m_CaptureTimeout.stop();
+                m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;
                 memset(&info, 0, sizeof(XP(FrameInfoV2)));
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), 24, &info));
-                guard.unlock();
-                if (FAILED(rc))
+
+                int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+
+                if (Streamer->isStreaming() || Streamer->isRecording())
                 {
-                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
-                    PrimaryCCD.setExposureFailed();
+                    std::unique_lock<std::mutex> guard(ccdBufferLock);
+                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                    guard.unlock();
+                    if (SUCCEEDED(rc))
+                        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
+                }
+                else if (InExposure)
+                {
+                    InExposure = false;
+                    PrimaryCCD.setExposureLeft(0);
+                    uint8_t *buffer = PrimaryCCD.getFrameBuffer();
+
+                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+
+                    std::unique_lock<std::mutex> guard(ccdBufferLock);
+                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                    guard.unlock();
+                    if (FAILED(rc))
+                    {
+                        LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+                        PrimaryCCD.setExposureFailed();
+                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                            free(buffer);
+                    }
+                    else
+                    {
+                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        {
+                            std::unique_lock<std::mutex> guard(ccdBufferLock);
+                            uint8_t *image  = PrimaryCCD.getFrameBuffer();
+                            uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
+                            uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
+
+                            uint8_t *subR = image;
+                            uint8_t *subG = image + width * height;
+                            uint8_t *subB = image + width * height * 2;
+                            int size      = width * height * 3 - 3;
+
+                            // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
+                            for (int i = 0; i <= size; i += 3)
+                            {
+                                *subR++ = buffer[i];
+                                *subG++ = buffer[i + 1];
+                                *subB++ = buffer[i + 2];
+                            }
+
+                            guard.unlock();
+                            free(buffer);
+                        }
+
+                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                                   info.timestamp);
+                        ExposureComplete(&PrimaryCCD);
+                    }
                 }
                 else
                 {
-                    PrimaryCCD.setExposureLeft(0);
-                    InExposure  = false;
-                    ExposureComplete(&PrimaryCCD);
-                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
-                               info.timestamp);
+                    // Fix proposed by Seven Watt
+                    // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    //
+                    // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+                    HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
+                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                    if (FAILED(rc))
+                    {
+                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
+                    }
                 }
             }
+            break;
+            //    {
+            //                XP(FrameInfoV2) info;
+            //                memset(&info, 0, sizeof(XP(FrameInfoV2)));
+            //                std::unique_lock<std::mutex> guard(ccdBufferLock);
+            //                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), 24, &info));
+            //                guard.unlock();
+            //                if (FAILED(rc))
+            //                {
+            //                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+            //                    PrimaryCCD.setExposureFailed();
+            //                }
+            //                else
+            //                {
+            //                    PrimaryCCD.setExposureLeft(0);
+            //                    InExposure  = false;
+            //                    ExposureComplete(&PrimaryCCD);
+            //                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+            //                               info.timestamp);
+            //                }
+            //            }
             break;
         case CP(EVENT_WBGAIN: )
                 LOG_DEBUG("White Balance Gain changed.");

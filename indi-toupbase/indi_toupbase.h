@@ -23,6 +23,7 @@
 
 #include <map>
 #include <indiccd.h>
+#include <inditimer.h>
 
 #ifdef BUILD_TOUPCAM
 #include <toupcam.h>
@@ -69,7 +70,7 @@ class ToupBase : public INDI::CCD
 {
     public:
         explicit ToupBase(const XP(DeviceV2) *instance);
-        ~ToupBase() override = default;
+        ~ToupBase() override;
 
         virtual const char *getDefaultName() override;
 
@@ -435,6 +436,9 @@ class ToupBase : public INDI::CCD
         static void AutoExposureCB(void* pCtx);
         void AutoExposureChanged();
 
+        // Handle capture timeout
+        void captureTimeoutHandler();
+
         //#############################################################################
         // Camera Handle & Instance
         //#############################################################################
@@ -636,6 +640,11 @@ class ToupBase : public INDI::CCD
         bool m_hasDualGain { false };
         bool m_HasLowNoise { false };
         bool m_HasHeatUp { false };
+
+        INDI::Timer m_CaptureTimeout;
+        uint32_t m_CaptureTimeoutCounter {0};
+        // Download estimation in ms after exposure duration finished.
+        double m_DownloadEstimation {5000};
 
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };
