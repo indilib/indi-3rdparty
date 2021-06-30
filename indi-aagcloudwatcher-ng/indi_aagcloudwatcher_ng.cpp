@@ -67,9 +67,10 @@ bool AAGCloudWatcher::Handshake()
     if (check)
     {
         LOG_INFO("Connected to AAG Cloud Watcher");
-
         sendConstants();
 
+        if (m_FirmwareVersion >= 5.6)
+            addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
         return true;
     }
     else
@@ -93,7 +94,6 @@ bool AAGCloudWatcher::initProperties()
     addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
     addParameter("WEATHER_RAIN", "Rain (cycles)", 2000, 10000, 10);
     addParameter("WEATHER_CLOUD", "Cloud (corrected infrared sky temperature °C)", -5, 10, 10);
-    addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
 
     setCriticalParameter("WEATHER_BRIGHTNESS");
     setCriticalParameter("WEATHER_WIND_SPEED");
@@ -962,7 +962,6 @@ bool AAGCloudWatcher::resetData()
 bool AAGCloudWatcher::sendConstants()
 {
     INumberVectorProperty *nvp = getNumber("constants");
-
     ITextVectorProperty *tvp = getText("FW");
 
     int r = cwc->getConstants(&constants);
@@ -971,6 +970,8 @@ bool AAGCloudWatcher::sendConstants()
     {
         return false;
     }
+
+    m_FirmwareVersion = constants.firmwareVersion;
 
     const int N_CONSTANTS = 11;
     double values[N_CONSTANTS];
@@ -1013,13 +1014,9 @@ bool AAGCloudWatcher::sendConstants()
     nvp->s = IPS_OK;
     IDSetNumber(nvp, nullptr);
 
-    char *valuesT[1];
-    char *namesT[1];
-
-    namesT[0]  = const_cast<char *>("firmwareVersion");
-    valuesT[0] = constants.firmwareVersion;
-
-    IUUpdateText(tvp, valuesT, namesT, 1);
+    char version[8] = {0};
+    snprintf(version, 8, "%.2f", m_FirmwareVersion);
+    IUSaveText(&tvp->tp[0], version);
     tvp->s = IPS_OK;
     IDSetText(tvp, nullptr);
     return true;

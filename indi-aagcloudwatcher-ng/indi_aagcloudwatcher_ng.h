@@ -75,4 +75,6 @@ class AAGCloudWatcher : public INDI::Weather
 
         float desiredSensorTemperature;
         float globalRainSensorHeater;
+
+        double m_FirmwareVersion {5};
 };
