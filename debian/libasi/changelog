@@ -1,3 +1,11 @@
+libasi (1.19) buster; urgency=medium
+
+  * ASI Camera SDK 1.19.1 release. Changelog again:
+    V1.19.1 2021.6.28
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Wed, 30 Jun 2021 22:55:54 +0300
+
 libasi (1.18) buster; urgency=medium
 
   * ASI Camera SDK 1.19 release. Changelog familiar:
