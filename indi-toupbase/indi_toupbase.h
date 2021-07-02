@@ -35,7 +35,7 @@
 #elif BUILD_MALLINCAM
 #include <mallincam.h>
 #define FP(x) Toupcam_##x
-#define CP(x) TOUPCAM_##x
+#define CP(x) MALLINCAM_##x
 #define XP(x) Toupcam##x
 #define THAND HToupCam
 #define DNAME "Mallincam"
