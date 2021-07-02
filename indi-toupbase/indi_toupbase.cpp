@@ -22,7 +22,7 @@
 // #define Nncam_AwbOnce   Nncam_AwbOnePush
 // #define Nncam_AbbOnce   Nncam_AbbOnePush
 
-#ifdef BUILD_MALLINCAM
+#if defined(BUILD_MALLINCAM) || defined(BUILD_MEADECAM)
 #define Toupcam_AwbOnce Toupcam_AwbOnePush
 #define Toupcam_AbbOnce Toupcam_AbbOnePush
 #endif

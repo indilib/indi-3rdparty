@@ -25,5 +25,9 @@
                 <driver name="Mallincam">indi_mallincam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Meadecam" mdpd="true" manufacturer="Meade">
+                <driver name="Meadecam">indi_meadecam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>
