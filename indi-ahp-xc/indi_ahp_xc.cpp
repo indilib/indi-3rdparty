@@ -585,6 +585,7 @@ bool AHP_XC::saveConfigItems(FILE *fp)
     IUSaveConfigNumber(fp, &settingsNP);
 
     INDI::Spectrograph::saveConfigItems(fp);
+    INDI::Receiver::saveConfigItems(fp);
     return true;
 }
 
@@ -596,19 +597,16 @@ bool AHP_XC::initProperties()
 
     // Must init parent properties first!
     INDI::Spectrograph::initProperties();
+    INDI::Receiver::initProperties();
 
     SetSpectrographCapability(SENSOR_CAN_ABORT | SENSOR_HAS_DSP);
 
-    IUFillNumber(&settingsN[0], "INTERFEROMETER_WAVELENGTH_VALUE", "Filter wavelength (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9,
-                 0.211121449);
-    IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9,
-                 1199.169832);
-    IUFillNumber(&settingsN[2], "INTERFEROMETER_RESOLUTION_VALUE", "Clock divider", "%g", 0, 15, 1, 0);
-    IUFillNumberVector(&settingsNP, settingsN, 3, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings",
+    IUFillNumber(&settingsN[0], "CORRELATOR_RESOLUTION_VALUE", "Clock divider", "%g", 0, 15, 1, 0);
+    IUFillNumberVector(&settingsNP, settingsN, 1, getDeviceName(), "CORRELATOR_SETTINGS", "AHP XC Settings",
                        MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
-    setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 1.0, STELLAR_DAY, 1, false);
+    INDI::SensorInterface::setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 1.0, STELLAR_DAY, 1, false);
     setDefaultPollingPeriod(500);
 
     serialConnection = new Connection::Serial(this);
@@ -625,6 +623,7 @@ bool AHP_XC::initProperties()
 void AHP_XC::ISGetProperties(const char *dev)
 {
     INDI::Spectrograph::ISGetProperties(dev);
+    INDI::Receiver::ISGetProperties(dev);
 
     if (isConnected())
     {
@@ -651,6 +650,7 @@ bool AHP_XC::updateProperties()
 {
     // Call parent update properties
     INDI::Spectrograph::updateProperties();
+    INDI::Receiver::updateProperties();
 
     if (isConnected())
     {
@@ -745,6 +745,7 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         return false;
 
     INDI::Spectrograph::ISNewNumber(dev, name, values, names, n);
+    INDI::Receiver::ISNewNumber(dev, name, values, names, n);
 
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewNumber(dev, name, values, names, n);
@@ -779,9 +780,9 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         IUUpdateNumber(&settingsNP, values, names, n);
         for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         {
-            baselines[x]->setWavelength(settingsN[0].value);
+            baselines[x]->setWavelength(LIGHTSPEED/ReceiverSettingsNP.np[RECEIVER_FREQUENCY].value);
         }
-        ahp_xc_set_frequency_divider(settingsN[2].value);
+        ahp_xc_set_frequency_divider(settingsN[0].value);
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
@@ -876,7 +877,9 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IDSetSwitch(&lineEdgeTriggerSP[x], nullptr);
         }
     }
-    return INDI::Spectrograph::ISNewSwitch(dev, name, states, names, n);
+    INDI::Spectrograph::ISNewSwitch(dev, name, states, names, n);
+    INDI::Receiver::ISNewSwitch(dev, name, states, names, n);
+    return true;
 }
 
 /**************************************************************************************
@@ -891,7 +894,7 @@ bool AHP_XC::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobs
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 
-    return INDI::Spectrograph::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    return INDI::SensorInterface::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 /**************************************************************************************
@@ -905,7 +908,9 @@ bool AHP_XC::ISNewText(const char *dev, const char *name, char *texts[], char *n
     for(unsigned int x = 0; x < ahp_xc_get_nbaselines(); x++)
         baselines[x]->ISNewText(dev, name, texts, names, n);
 
-    return INDI::Spectrograph::ISNewText(dev, name, texts, names, n);
+    INDI::Spectrograph::ISNewText(dev, name, texts, names, n);
+    INDI::Receiver::ISNewText(dev, name, texts, names, n);
+    return true;
 }
 
 /**************************************************************************************
@@ -917,6 +922,7 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
         baselines[x]->ISSnoopDevice(root);
 
     INDI::Spectrograph::ISSnoopDevice(root);
+    INDI::Receiver::ISSnoopDevice(root);
 
     return true;
 }
@@ -927,7 +933,7 @@ bool AHP_XC::ISSnoopDevice(XMLEle *root)
 void AHP_XC::addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len)
 {
     // Let's first add parent keywords
-    INDI::Spectrograph::addFITSKeywords(fptr, buf, len);
+    INDI::SensorInterface::addFITSKeywords(fptr, buf, len);
 
     // Add temperature to FITS header
     int status = 0;

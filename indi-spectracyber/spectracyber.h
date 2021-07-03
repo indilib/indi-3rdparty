@@ -26,13 +26,13 @@
 
 #pragma once
 
-#include <defaultdevice.h>
-
+#include "indispectrograph.h"
+#include "indireceiver.h"
 #include <string>
 
 #define MAXBLEN 64
 
-class SpectraCyber : public INDI::DefaultDevice
+class SpectraCyber : public virtual INDI::Spectrograph, public virtual INDI::Receiver
 {
   public:
     enum SpectrometerCommand
@@ -69,28 +69,29 @@ class SpectraCyber : public INDI::DefaultDevice
     SpectraCyber();
 
     // Standard INDI interface functions
-    virtual void ISGetProperties(const char *dev) override;
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-    virtual bool ISSnoopDevice(XMLEle *root) override;
+    void ISGetProperties(const char *dev) override;
+    bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+    bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
+    bool ISSnoopDevice(XMLEle *root) override;
 
   protected:
-    virtual const char *getDefaultName() override;
+    const char *getDefaultName() override;
 
-    virtual bool Connect() override;
-    virtual bool Disconnect() override;
-    virtual void TimerHit() override;
+    bool updateProperties() override;
+    bool Connect() override;
+    bool Disconnect() override;
+    void TimerHit() override;
+    bool StartIntegration(double duration) override;
+    bool AbortIntegration() override;
+    void addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len) override;
 
     //void reset_all_properties(bool reset_to_idle=false);
     bool update_freq(double nFreq);
 
   private:
-    INumberVectorProperty *FreqNP;
-    INumberVectorProperty *ScanNP;
-    ISwitchVectorProperty *ScanSP;
     ISwitchVectorProperty *ChannelSP;
-    IBLOBVectorProperty *DataStreamBP;
     IText *telescopeID;
 
     // Snooping On
@@ -109,6 +110,9 @@ class SpectraCyber : public INDI::DefaultDevice
     // Variables
     std::string type_name;
     std::string default_port;
+
+    double IntegrationRequest;
+    struct timeval IntegrationStart;
 
     int fd;
     char bLine[MAXBLEN];
