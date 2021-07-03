@@ -19,14 +19,6 @@
 
 */
 
-// #define Nncam_AwbOnce   Nncam_AwbOnePush
-// #define Nncam_AbbOnce   Nncam_AbbOnePush
-
-#ifdef BUILD_MALLINCAM
-#define Toupcam_AwbOnce Toupcam_AwbOnePush
-#define Toupcam_AbbOnce Toupcam_AbbOnePush
-#endif
-
 #include "indi_toupbase.h"
 
 #include "config.h"
