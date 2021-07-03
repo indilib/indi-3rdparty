@@ -233,6 +233,7 @@ enum CONTROL_ID
 /*63*/  CAM_PRESSURE,             //check if camera has pressure sensor
 /*64*/  CONTROL_VACUUM_PUMP,        /// if camera has VACUUM PUMP
 /*65*/  CONTROL_SensorChamberCycle_PUMP, ///air cycle pump for sensor drying
+/*66*/  CAM_32BITS,
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
