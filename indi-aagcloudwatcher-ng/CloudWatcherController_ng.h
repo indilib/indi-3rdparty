@@ -30,7 +30,7 @@ Anemometer code contributed by Joao Bento.
 
 struct CloudWatcherConstants
 {
-    char firmwareVersion[5];
+    double firmwareVersion;
     int internalSerialNumber;
     float zenerVoltage;
     float ldrMaxResistance;
@@ -106,7 +106,7 @@ class CloudWatcherController
         /**
         * A destructor
         */
-        virtual ~CloudWatcherController();
+        virtual ~CloudWatcherController() = default;
 
         const char *getDeviceName();
 
@@ -190,6 +190,11 @@ class CloudWatcherController
         int PortFD = -1;
 
         /**
+         *  Firmware Version
+         */
+        double m_FirmwareVersion = 0;
+
+        /**
         *  Anemometer type
         */
         enum ANEMOMETER_TYPE anemometerType = BLACK;
@@ -256,13 +261,6 @@ class CloudWatcherController
         float rainBeta = 3450;
 
         /**
-        * Firmware version. Just read once.
-        * @see getFirmwareVersion()
-        * @see getFirmwareVersion(char *version)
-        */
-        char *firmwareVersion;
-
-        /**
         * The total number of readings performed by the controller
         */
         int totalReadings = 0;
@@ -313,22 +311,13 @@ class CloudWatcherController
         bool getCloudWatcherAnswer(char *buffer, int nBlocks);
 
         /**
-        * Reads the firmware version of the AAG Cloud Watcher and stores it in
-        * firmwareVersion attribute.
-        * @return true if successfully read. false otherwise
-        * @see getFirmwareVersion(char *version)
-        * @see firmwareVersion
-        */
-        bool getFirmwareVersion();
-
-        /**
         * Reads the firmware version of the AAG Cloud Watcher (if not previously
         * read).
-        * @param version a buffer where the version will be stored (at least 5 chars)
+        * @param version
         * @return true if succesfully read. false otherwise.
         * @see getFirmwareVersion()
         */
-        bool getFirmwareVersion(char *version);
+        bool getFirmwareVersion(double &version);
 
         /**
         * Reads the serial number of the AAG Cloud Watcher

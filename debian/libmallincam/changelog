@@ -1,3 +1,9 @@
+libmallincam (1.49.1) focal; urgency=medium
+
+  * Updated SDK.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 2 Jul 2021 18:00:00 +0300
+
 libmallincam (1.43.0) bionic; urgency=medium
 
   * Initial release

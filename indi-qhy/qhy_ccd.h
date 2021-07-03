@@ -163,6 +163,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumber USBBufferN[1];
         INumberVectorProperty USBBufferNP;
 
+        // Humidity Readout
+        INumber HumidityN[1];
+        INumberVectorProperty HumidityNP;
         /////////////////////////////////////////////////////////////////////////////
         /// Properties: Utility Controls
         /////////////////////////////////////////////////////////////////////////////
@@ -422,6 +425,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasCoolerManualMode { false };
         bool HasReadMode { false };
         bool HasGPS { false };
+        bool HasHumidity { false };
         bool HasAmpGlow { false };
         //NEW CODE - Add support for overscan/calibration area
         bool HasOverscanArea { false };
