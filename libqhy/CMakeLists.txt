@@ -3,7 +3,7 @@ project (libqhy)
 
 # QHY SDK 21.7.3
 set (LIBQHY_VERSION "21.7.3")
-set (LIBQHY_SOVERSION "21")
+set (LIBQHY_SOVERSION "20")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
