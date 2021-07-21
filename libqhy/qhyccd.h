@@ -862,6 +862,19 @@ EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
 
 EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
 
+
+EXPORTFUNC uint32_t STDCALL resetDev(char *deviceID, uint32_t readModeIndex, uint8_t streamMode,qhyccd_handle* devHandle, uint32_t* imageWidth, uint32_t* imageHigh, uint32_t bitDepth);
+
+EXPORTFUNC void RegisterDataEventSingle( void (*in_data_event_single_func)(char *id, uint8_t *imgdata));
+
+EXPORTFUNC void RegisterDataEventLive( void (*in_data_event_live_func)(char *id, uint8_t *imgdata));
+
+EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
+
+EXPORTFUNC uint32_t STDCALL GetReadModesNumber(char* deviceID,uint32_t* numModes);
+
+EXPORTFUNC uint32_t STDCALL GetReadModeName(char* deviceID, uint32_t modeIndex, char* modeName);
+
 #if 0//PCIE_MODE_TEST
 
 #include "riffa.h"

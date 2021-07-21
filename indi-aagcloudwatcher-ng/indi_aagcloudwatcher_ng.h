@@ -75,4 +75,24 @@ class AAGCloudWatcher : public INDI::Weather
 
         float desiredSensorTemperature;
         float globalRainSensorHeater;
+
+        double m_FirmwareVersion {5};
+
+        enum
+        {
+            SENSOR_SUPPLY,
+            SENSOR_SKY,
+            SENSOR_SENSOR,
+            SENSOR_AMBIENT,
+            SENSOR_RAIN,
+            SENSOR_RAIN_HEATER,
+            SENSOR_RAIN_TEMPERATURE,
+            SENSOR_LDR,
+            SENSOR_READ_CYCLES,
+            SENSOR_WIND_SPEED,
+            SENSOR_RELATIVE_HUMIDITY,
+            SENSOR_PRESSURE,
+            SENSOR_TOTAL_READINGS
+        };
+
 };

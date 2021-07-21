@@ -28,114 +28,103 @@
 
 class MICCD : public INDI::CCD, public INDI::FilterInterface
 {
-  public:
-    MICCD(int cameraId, bool eth = false);
-    virtual ~MICCD();
+    public:
+        MICCD(int cameraId, bool eth = false);
+        virtual ~MICCD();
 
-    virtual const char *getDefaultName() override;
+        virtual const char *getDefaultName() override;
 
-    virtual bool initProperties() override;
-    virtual void ISGetProperties(const char *dev) override;
-    virtual bool updateProperties() override;
+        virtual bool initProperties() override;
+        virtual void ISGetProperties(const char *dev) override;
+        virtual bool updateProperties() override;
 
-    virtual bool Connect() override;
-    virtual bool Disconnect() override;
+        virtual bool Connect() override;
+        virtual bool Disconnect() override;
 
-    virtual int SetTemperature(double temperature) override;
-    virtual bool StartExposure(float duration) override;
-    virtual bool AbortExposure() override;
+        virtual int SetTemperature(double temperature) override;
+        virtual bool StartExposure(float duration) override;
+        virtual bool AbortExposure() override;
 
-    virtual IPState GuideNorth(uint32_t ms) override;
-    virtual IPState GuideSouth(uint32_t ms) override;
-    virtual IPState GuideEast(uint32_t ms) override;
-    virtual IPState GuideWest(uint32_t ms) override;
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
 
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-  protected:
-    // Misc.
-    virtual void TimerHit() override;
-    virtual bool saveConfigItems(FILE *fp) override;
+    protected:
+        // Misc.
+        virtual void TimerHit() override;
+        virtual bool saveConfigItems(FILE *fp) override;
 
-    // CCD
-    virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
-    virtual bool UpdateCCDBin(int binx, int biny) override;
+        // CCD
+        virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
+        virtual bool UpdateCCDBin(int binx, int biny) override;
 
-    // Filter Wheel CFW
-    virtual int QueryFilter() override;
-    virtual bool SelectFilter(int position) override;
+        // Filter Wheel CFW
+        virtual int QueryFilter() override;
+        virtual bool SelectFilter(int position) override;
 
-    INumber FanN[1];
-    INumberVectorProperty FanNP;
+        INumber FanN[1];
+        INumberVectorProperty FanNP;
 
-    INumber WindowHeatingN[1];
-    INumberVectorProperty WindowHeatingNP;
+        INumber WindowHeatingN[1];
+        INumberVectorProperty WindowHeatingNP;
 
-    ISwitch CoolerS[2];
-    ISwitchVectorProperty CoolerSP;
+        ISwitch CoolerS[2];
+        ISwitchVectorProperty CoolerSP;
 
-    INumber CoolerN[1];
-    INumberVectorProperty CoolerNP;
+        INumber CoolerN[1];
+        INumberVectorProperty CoolerNP;
 
-    INumber TemperatureRampN[1];
-    INumberVectorProperty TemperatureRampNP;
+        INumber GainN[1];
+        INumberVectorProperty GainNP;
 
-    INumber GainN[1];
-    INumberVectorProperty GainNP;
+        ISwitch ReadModeS[4];
+        ISwitchVectorProperty ReadModeSP;
 
-    ISwitch ReadModeS[4];
-    ISwitchVectorProperty ReadModeSP;
+        INumber PreflashN[2];
+        INumberVectorProperty PreflashNP;
 
-    INumber PreflashN[2];
-    INumberVectorProperty PreflashNP;
+    private:
+        char name[MAXINDIDEVICE];
 
-  private:
-    char name[MAXINDIDEVICE];
+        int cameraId;
+        camera_t *cameraHandle;
+        bool isEth;
 
-    int cameraId;
-    camera_t *cameraHandle;
-    bool isEth;
+        bool hasGain;
+        bool useShutter;
 
-    bool hasGain;
-    bool useShutter;
+        int numReadModes;
+        int numFilters;
+        float minExpTime;
+        int maxFanValue;
+        int maxHeatingValue;
+        int maxBinX;
+        int maxBinY;
+        int maxGainValue;
 
-    int numReadModes;
-    int numFilters;
-    float minExpTime;
-    int maxFanValue;
-    int maxHeatingValue;
-    int maxBinX;
-    int maxBinY;
-    int maxGainValue;
+        int temperatureID;
+        int timerID;
 
-    int temperatureID;
-    int timerID;
+        bool downloading;
 
-    bool downloading;
+        bool canDoPreflash;
 
-    bool canDoPreflash;
+        INDI::CCDChip::CCD_FRAME imageFrameType;
 
-    INDI::CCDChip::CCD_FRAME imageFrameType;
+        float TemperatureRequest;
+        float ExposureRequest;
+        struct timeval ExpStart;
 
-    float TemperatureRequest;
-    float ExposureRequest;
-    struct timeval ExpStart;
+        bool setupParams();
 
-    bool setupParams();
+        float calcTimeLeft();
+        int grabImage();
 
-    float calcTimeLeft();
-    int grabImage();
-
-    void updateTemperature();
-    static void updateTemperatureHelper(void *);
-
-    friend void ::ISGetProperties(const char *dev);
-    friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-    friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-    friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-    friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                            char *formats[], char *names[], int n);
-    friend void ::ISSnoopDevice(XMLEle *root);
+        void updateTemperature();
+        static void updateTemperatureHelper(void *);
 };

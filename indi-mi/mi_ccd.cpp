@@ -149,11 +149,6 @@ bool MICCD::initProperties()
     FilterSlotN[0].min = 1;
     FilterSlotN[0].max = numFilters;
 
-    // Temp ram
-    IUFillNumber(&TemperatureRampN[0], "TEMP_RAMP", "Max. dT (C/min)", "%2.0f", 0, 30, 1, 2);
-    IUFillNumberVector(&TemperatureRampNP, TemperatureRampN, 1, getDeviceName(), "CCD_TEMP_RAMP", "Temp. Ramp",
-                       MAIN_CONTROL_TAB, IP_WO, 60, IPS_IDLE);
-
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_ON);
     IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
     IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
@@ -214,7 +209,6 @@ void MICCD::ISGetProperties(const char *dev)
     {
         if (HasCooler())
         {
-            defineProperty(&TemperatureRampNP);
             defineProperty(&CoolerSP);
             defineProperty(&CoolerNP);
         }
@@ -249,7 +243,6 @@ bool MICCD::updateProperties()
     {
         if (HasCooler())
         {
-            defineProperty(&TemperatureRampNP);
             defineProperty(&CoolerSP);
             defineProperty(&CoolerNP);
             temperatureID = IEAddTimer(getCurrentPollingPeriod(), MICCD::updateTemperatureHelper, this);
@@ -284,7 +277,6 @@ bool MICCD::updateProperties()
     {
         if (HasCooler())
         {
-            deleteProperty(TemperatureRampNP.name);
             deleteProperty(CoolerSP.name);
             deleteProperty(CoolerNP.name);
             RemoveTimer(temperatureID);
@@ -779,8 +771,7 @@ bool MICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 bool on = !IUFindOnSwitchIndex(&CoolerSP);
                 double temp = on ? TemperatureRequest : TEMP_COOLER_OFF;
 
-                if (gxccd_set_temperature_ramp(cameraHandle, TemperatureRampN[0].value) < 0 ||
-                        gxccd_set_temperature(cameraHandle, temp) < 0)
+                if (gxccd_set_temperature(cameraHandle, temp) < 0)
                 {
                     char errorStr[MAX_ERROR_LEN];
                     gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
@@ -858,26 +849,6 @@ bool MICCD::ISNewNumber(const char *dev, const char *name, double values[], char
             }
 
             IDSetNumber(&WindowHeatingNP, nullptr);
-            return true;
-        }
-
-        if (!strcmp(name, TemperatureRampNP.name))
-        {
-            IUUpdateNumber(&TemperatureRampNP, values, names, n);
-
-            if (!isSimulation() && gxccd_set_temperature_ramp(cameraHandle, TemperatureRampN[0].value) < 0)
-            {
-                char errorStr[MAX_ERROR_LEN];
-                gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
-                LOGF_ERROR("Setting temp. ramp failed: %s.", errorStr);
-                TemperatureRampNP.s = IPS_ALERT;
-            }
-            else
-            {
-                TemperatureRampNP.s = IPS_OK;
-            }
-
-            IDSetNumber(&TemperatureRampNP, nullptr);
             return true;
         }
 
@@ -1000,7 +971,6 @@ bool MICCD::saveConfigItems(FILE *fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    IUSaveConfigNumber(fp, &TemperatureRampNP);
     IUSaveConfigSwitch(fp, &ReadModeSP);
 
     if (numFilters > 0)
