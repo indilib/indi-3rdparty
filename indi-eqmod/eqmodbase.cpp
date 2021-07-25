@@ -68,7 +68,6 @@ using namespace INDI::AlignmentSubsystem;
 /* Preset Slew Speeds */
 #define SLEWMODES 11
 double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
-double defaultspeed              = 800.0;
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
@@ -270,13 +269,15 @@ bool EQMod::initProperties()
 
     for (int i = 0; i < SlewRateSP.nsp - 1; i++)
     {
+        SlewRateSP.sp[i].s = ISS_OFF;
         sprintf(SlewRateSP.sp[i].label, "%.fx", slewspeeds[i]);
         SlewRateSP.sp[i].aux = (void *)&slewspeeds[i];
     }
 
     // Since last item is NOT maximum (but custom), let's set item before custom to SLEWMAX
+    SlewRateSP.sp[SlewRateSP.nsp - 2].s = ISS_ON;
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 2].name, "SLEW_MAX", MAXINDINAME);
-
+    // Last is custom
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].name, "SLEWCUSTOM", MAXINDINAME);
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].label, "Custom", MAXINDILABEL);
 
