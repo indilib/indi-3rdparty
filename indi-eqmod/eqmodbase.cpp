@@ -68,7 +68,7 @@ using namespace INDI::AlignmentSubsystem;
 /* Preset Slew Speeds */
 #define SLEWMODES 11
 double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
-double defaultspeed              = 64.0;
+double defaultspeed              = 800.0;
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
