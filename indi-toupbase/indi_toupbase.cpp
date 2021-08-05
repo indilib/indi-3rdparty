@@ -788,7 +788,6 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
@@ -800,7 +799,6 @@ void ToupBase::setupParams()
     {
         m_HasHeatUp = true;
     }
-#endif
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
