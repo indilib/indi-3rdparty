@@ -1814,9 +1814,10 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
                      (gphoto->viewfinder_widget->value.toggle == 0) ? "Off" : "On");
     }
 
-    if ((gphoto->focus_widget = find_widget(gphoto, "manualfocusdrive")) != nullptr)
+    if ((gphoto->focus_widget = find_widget(gphoto, "manualfocusdrive")) != nullptr ||
+            (gphoto->focus_widget = find_widget(gphoto, "manualfocus")) != nullptr)
     {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "ManualFocusDrive Widget: %s", gphoto->focus_widget->name);
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Focus Widget: %s", gphoto->focus_widget->name);
     }
 
     // Check customfuncex widget to enable/disable mirror lockup.
