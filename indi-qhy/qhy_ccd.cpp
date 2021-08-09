@@ -1886,13 +1886,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             double currentGain = GainN[0].value;
             IUUpdateNumber(&GainNP, values, names, n);
-            m_GainRequest = GainN[0].value;
-            if (fabs(m_LastGainRequest - m_GainRequest) > 0.001)
+            if (fabs(m_LastGainRequest - GainN[0].value) > UPDATE_THRESHOLD)
             {
                 int rc = SetQHYCCDParam(m_CameraHandle, CONTROL_GAIN, GainN[0].value);
                 if (rc == QHYCCD_SUCCESS)
                 {
-                    m_LastGainRequest = m_GainRequest;
+                    m_LastGainRequest = GainN[0].value;
                     GainNP.s = IPS_OK;
                     saveConfig(true, GainNP.name);
                     LOGF_INFO("Gain updated to %.f", GainN[0].value);
@@ -1923,8 +1922,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             if (rc == QHYCCD_SUCCESS)
             {
                 OffsetNP.s = IPS_OK;
-                LOGF_INFO("Offset updated to %.f", OffsetN[0].value);
-                saveConfig(true, OffsetNP.name);
+
+                if (std::abs(currentOffset - OffsetN[0].value) > UPDATE_THRESHOLD)
+                {
+                    LOGF_INFO("Offset updated to %.f", OffsetN[0].value);
+                    saveConfig(true, OffsetNP.name);
+                }
             }
             else
             {
@@ -1948,9 +1951,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
             if (rc == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("Speed updated to %.f", SpeedN[0].value);
                 SpeedNP.s = IPS_OK;
-                saveConfig(true, SpeedNP.name);
+                if (std::abs(currentSpeed - SpeedN[0].value) > UPDATE_THRESHOLD)
+                {
+                    LOGF_INFO("Speed updated to %.f", SpeedN[0].value);
+                    saveConfig(true, SpeedNP.name);
+                }
             }
             else
             {
