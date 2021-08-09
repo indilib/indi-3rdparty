@@ -2229,7 +2229,10 @@ void QHYCCD::updateTemperature()
     // Only update if above update threshold
     if (std::abs(currentTemperature - TemperatureN[0].value) > UPDATE_THRESHOLD)
     {
-        TemperatureN[0].value = currentTemperature;
+        if (currentTemperature > 100)
+            TemperatureNP.s = IPS_ALERT;
+        else
+            TemperatureN[0].value = currentTemperature;
         IDSetNumber(&TemperatureNP, nullptr);
 
         LOGF_DEBUG("CCD T.: %.f (C)", currentTemperature);
@@ -2237,16 +2240,26 @@ void QHYCCD::updateTemperature()
     // Restart temperature regulation if needed.
     else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > UPDATE_THRESHOLD)
     {
-        TemperatureN[0].value = currentTemperature;
-        TemperatureNP.s       = IPS_BUSY;
+        if (currentTemperature > 100)
+            TemperatureNP.s       = IPS_ALERT;
+        else
+        {
+            TemperatureN[0].value = currentTemperature;
+            TemperatureNP.s       = IPS_BUSY;
+        }
         IDSetNumber(&TemperatureNP, nullptr);
     }
 
     // Update cooling power if needed.
     if (std::abs(currentCoolingPower - CoolerN[0].value) > UPDATE_THRESHOLD)
     {
-        CoolerN[0].value      = currentCoolingPower / 255.0 * 100;
-        CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
+        if (currentCoolingPower > 255)
+            CoolerNP.s = IPS_ALERT;
+        else
+        {
+            CoolerN[0].value      = currentCoolingPower / 255.0 * 100;
+            CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
+        }
         IDSetNumber(&CoolerNP, nullptr);
         LOGF_DEBUG("Cooling Power: %.f (%.2f%%)", currentCoolingPower, currentCoolingPower / 255.0 * 100);
     }
