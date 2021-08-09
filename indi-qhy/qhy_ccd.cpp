@@ -2242,6 +2242,7 @@ void QHYCCD::updateTemperature()
         CoolerN[0].value      = currentCoolingPower / 255.0 * 100;
         CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
         IDSetNumber(&CoolerNP, nullptr);
+        LOGF_DEBUG("Cooling Power: %.f (%.2f%%)", currentCoolingPower, currentCoolingPower / 255.0 * 100);
     }
 
     // Synchronize state of cooling power and cooling switch
