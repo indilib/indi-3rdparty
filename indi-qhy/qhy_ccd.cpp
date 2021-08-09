@@ -31,7 +31,7 @@
 #include <memory>
 #include <deque>
 
-#define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
+#define UPDATE_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
 
 //NB Disable for real driver
 //#define USE_SIMULATION
@@ -1203,7 +1203,7 @@ bool QHYCCD::setupParams()
 int QHYCCD::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD)
+    if (fabs(temperature - TemperatureN[0].value) < UPDATE_THRESHOLD)
         return 1;
 
     LOGF_DEBUG("Requested temperature is %.f, current temperature is %.f", temperature, TemperatureN[0].value);
@@ -2183,17 +2183,17 @@ void QHYCCD::updateTemperatureHelper(void *p)
 
 void QHYCCD::updateTemperature()
 {
-    double ccdtemp = 0, coolpower = 0;
+    double currentTemperature = 0, currentCoolingPower = 0, currentHumidity = 0;
 
     if (isSimulation())
     {
-        ccdtemp = TemperatureN[0].value;
+        currentTemperature = TemperatureN[0].value;
         if (TemperatureN[0].value < m_TemperatureRequest)
-            ccdtemp += TEMP_THRESHOLD;
+            currentTemperature += UPDATE_THRESHOLD * 10;
         else if (TemperatureN[0].value > m_TemperatureRequest)
-            ccdtemp -= TEMP_THRESHOLD;
+            currentTemperature -= UPDATE_THRESHOLD * 10;
 
-        coolpower = 128;
+        currentCoolingPower = 128;
     }
     else
     {
@@ -2216,36 +2216,35 @@ void QHYCCD::updateTemperature()
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 / 100 );
         }
 
-        ccdtemp   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
-        coolpower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
+        currentTemperature   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
+        currentCoolingPower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
     }
 
-    // No need to spam to log
-    if (fabs(ccdtemp - TemperatureN[0].value) > 0.001 || fabs(CoolerN[0].value - (coolpower / 255.0 * 100)) > 0.001)
+    // Only update if above update threshold
+    if (std::abs(currentTemperature - TemperatureN[0].value) > UPDATE_THRESHOLD)
     {
-        LOGF_DEBUG("CCD T.: %.f (C) Power: %.f (%.2f%%)", ccdtemp, coolpower, coolpower / 255.0 * 100);
+        TemperatureN[0].value = currentTemperature;
+        IDSetNumber(&TemperatureNP, nullptr);
+
+        LOGF_DEBUG("CCD T.: %.f (C)", currentTemperature);
     }
-
-    TemperatureN[0].value = ccdtemp;
-
-    CoolerN[0].value      = coolpower / 255.0 * 100;
-    CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
-
-    if (HasHumidity)
+    // Restart temperature regulation if needed.
+    else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > UPDATE_THRESHOLD)
     {
-        double humidity;
-        if (GetQHYCCDHumidity(m_CameraHandle, &humidity) == QHYCCD_SUCCESS)
-        {
-            HumidityN[0].value = humidity;
-            HumidityNP.s = IPS_OK;
-        }
-        else
-        {
-            HumidityNP.s = IPS_ALERT;
-        }
-        IDSetNumber(&HumidityNP, nullptr);
+        TemperatureN[0].value = currentTemperature;
+        TemperatureNP.s       = IPS_BUSY;
+        IDSetNumber(&TemperatureNP, nullptr);
     }
 
+    // Update cooling power if needed.
+    if (std::abs(currentCoolingPower - CoolerN[0].value) > UPDATE_THRESHOLD)
+    {
+        CoolerN[0].value      = currentCoolingPower / 255.0 * 100;
+        CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
+        IDSetNumber(&CoolerNP, nullptr);
+    }
+
+    // Synchronize state of cooling power and cooling switch
     IPState coolerSwitchState = CoolerN[0].value > 0 ? IPS_BUSY : IPS_OK;
     if (coolerSwitchState != CoolerSP.s)
     {
@@ -2253,22 +2252,17 @@ void QHYCCD::updateTemperature()
         IDSetSwitch(&CoolerSP, nullptr);
     }
 
-    //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - m_TemperatureRequest) <= TEMP_THRESHOLD)
-    //    {
-    //        TemperatureN[0].value = ccdtemp;
-    //        TemperatureNP.s       = IPS_OK;
-    //    }
-
-    // Restart regulation if needed.
-    else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > TEMP_THRESHOLD)
+    // Check humidity and update if necessary
+    if (HasHumidity)
     {
-        TemperatureN[0].value = ccdtemp;
-        TemperatureNP.s       = IPS_BUSY;
+        IPState currentState = (GetQHYCCDHumidity(m_CameraHandle, &currentHumidity) == QHYCCD_SUCCESS) ? IPS_OK : IPS_ALERT;
+        if (currentState != HumidityNP.s || std::abs(currentHumidity - HumidityN[0].value) > UPDATE_THRESHOLD)
+        {
+            HumidityN[0].value = currentHumidity;
+            HumidityNP.s = currentState;
+            IDSetNumber(&HumidityNP, nullptr);
+        }
     }
-
-
-    IDSetNumber(&TemperatureNP, nullptr);
-    IDSetNumber(&CoolerNP, nullptr);
 
     m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
 }
