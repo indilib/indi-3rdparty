@@ -409,6 +409,9 @@ bool ASICCD::initProperties()
 {
     INDI::CCD::initProperties();
 
+    // Add Debug Control.
+    addDebugControl();
+
     CoolerSP[0].fill("COOLER_ON",  "ON",  ISS_OFF);
     CoolerSP[1].fill("COOLER_OFF", "OFF", ISS_ON);
     CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
