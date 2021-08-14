@@ -1,0 +1,1231 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L MCU_Microchip_PIC16:PIC16F690-ISO U1
+U 1 1 60F18402
+P 2750 1700
+F 0 "U1" H 2000 2400 50  0000 C CNN
+F 1 "PIC16F690-ISO" V 2550 1700 50  0000 C CNN
+F 2 "" H 2750 1700 50  0001 C CIN
+F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/41262E.pdf" H 2750 1700 50  0001 C CNN
+	1    2750 1700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x04_Male U2_PD
+U 1 1 60F1ACD3
+P 5050 4400
+F 0 "U2_PD" H 5200 4100 50  0000 C CNN
+F 1 "Motor Encoder Photodiodes" V 4950 4550 50  0000 C CNN
+F 2 "" H 5050 4400 50  0001 C CNN
+F 3 "~" H 5050 4400 50  0001 C CNN
+	1    5050 4400
+	1    0    0    -1  
+$EndComp
+$Comp
+L Regulator_Linear:AZ1117-5.0 U3
+U 1 1 60F1C21B
+P 8750 1700
+F 0 "U3" H 8750 1700 50  0000 C CNN
+F 1 "AZ1117-5.0 (GH15E)" H 8750 1851 50  0000 C CNN
+F 2 "" H 8750 1950 50  0001 C CIN
+F 3 "https://www.diodes.com/assets/Datasheets/AZ1117.pdf" H 8750 1700 50  0001 C CNN
+	1    8750 1700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x04_Counter_Clockwise Q1
+U 1 1 60F1E6F1
+P 7200 1100
+F 0 "Q1" H 7250 1417 50  0000 C CNN
+F 1 "4947A Dual P-Channel Mosfet" H 7250 1326 50  0000 C CNN
+F 2 "" H 7200 1100 50  0001 C CNN
+F 3 "~" H 7200 1100 50  0001 C CNN
+	1    7200 1100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x04_Counter_Clockwise Q2
+U 1 1 60F1F8CC
+P 5600 1100
+F 0 "Q2" H 5650 1417 50  0000 C CNN
+F 1 "4936A Dual N-Channel Mosfet" H 5650 1326 50  0000 C CNN
+F 2 "" H 5600 1100 50  0001 C CNN
+F 3 "~" H 5600 1100 50  0001 C CNN
+	1    5600 1100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:L L1
+U 1 1 60F21251
+P 2050 5700
+F 0 "L1" V 2000 5700 50  0000 C CNN
+F 1 "L" V 1960 5700 50  0001 C CNN
+F 2 "" H 2050 5700 50  0001 C CNN
+F 3 "~" H 2050 5700 50  0001 C CNN
+	1    2050 5700
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:RJ45 J1
+U 1 1 60F22E0B
+P 1150 4700
+F 0 "J1" H 1207 5367 50  0000 C CNN
+F 1 "RJ45" H 1207 5276 50  0000 C CNN
+F 2 "" V 1150 4725 50  0001 C CNN
+F 3 "~" V 1150 4725 50  0001 C CNN
+	1    1150 4700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:RJ45 J2
+U 1 1 60F24A81
+P 2600 4700
+F 0 "J2" H 2657 5367 50  0000 C CNN
+F 1 "RJ45" H 2657 5276 50  0000 C CNN
+F 2 "" V 2600 4725 50  0001 C CNN
+F 3 "~" V 2600 4725 50  0001 C CNN
+	1    2600 4700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Barrel_Jack J3
+U 1 1 60F2651B
+P 8550 950
+F 0 "J3" H 8550 950 50  0000 C CNN
+F 1 "Unknown_Barrel_Connector" H 8600 1150 50  0000 C CNN
+F 2 "" H 8600 910 50  0001 C CNN
+F 3 "~" H 8600 910 50  0001 C CNN
+	1    8550 950 
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x02_Male MOTOR
+U 1 1 60F2777C
+P 7000 2750
+F 0 "MOTOR" H 7108 2931 50  0000 C CNN
+F 1 "Motor Connector" H 7108 2840 50  0000 C CNN
+F 2 "" H 7000 2750 50  0001 C CNN
+F 3 "~" H 7000 2750 50  0001 C CNN
+	1    7000 2750
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C1
+U 1 1 60F2DDD3
+P 3550 3250
+F 0 "C1" V 3500 3400 50  0000 C CNN
+F 1 "C" H 3665 3205 50  0001 L CNN
+F 2 "" H 3588 3100 50  0001 C CNN
+F 3 "~" H 3550 3250 50  0001 C CNN
+	1    3550 3250
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:D D4
+U 1 1 60F2F21B
+P 2050 5450
+F 0 "D4" H 2150 5400 50  0000 C CNN
+F 1 "D" H 2050 5576 50  0001 C CNN
+F 2 "" H 2050 5450 50  0001 C CNN
+F 3 "~" H 2050 5450 50  0001 C CNN
+	1    2050 5450
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R1
+U 1 1 60F30F16
+P 4000 3250
+F 0 "R1" V 4000 3250 50  0000 C CNN
+F 1 "R" V 3884 3250 50  0001 C CNN
+F 2 "" V 3930 3250 50  0001 C CNN
+F 3 "~" H 4000 3250 50  0001 C CNN
+	1    4000 3250
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:Crystal X1
+U 1 1 60F32C9F
+P 1500 3100
+F 0 "X1" V 1500 3100 50  0000 C CNN
+F 1 "20 MHz Crystal" H 1500 3277 50  0000 C CNN
+F 2 "" H 1500 3100 50  0001 C CNN
+F 3 "~" H 1500 3100 50  0001 C CNN
+	1    1500 3100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R2
+U 1 1 60F38A4C
+P 5650 2450
+F 0 "R2" V 5650 2450 50  0000 C CNN
+F 1 "R" V 5534 2450 50  0001 C CNN
+F 2 "" V 5580 2450 50  0001 C CNN
+F 3 "~" H 5650 2450 50  0001 C CNN
+	1    5650 2450
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R3
+U 1 1 60F39383
+P 5650 2200
+F 0 "R3" V 5650 2200 50  0000 C CNN
+F 1 "R" V 5534 2200 50  0001 C CNN
+F 2 "" V 5580 2200 50  0001 C CNN
+F 3 "~" H 5650 2200 50  0001 C CNN
+	1    5650 2200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R4
+U 1 1 60F397D4
+P 5650 2350
+F 0 "R4" V 5650 2350 50  0000 C CNN
+F 1 "R" V 5534 2350 50  0001 C CNN
+F 2 "" V 5580 2350 50  0001 C CNN
+F 3 "~" H 5650 2350 50  0001 C CNN
+	1    5650 2350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R5
+U 1 1 60F39AA3
+P 7250 2000
+F 0 "R5" V 7250 2000 50  0000 C CNN
+F 1 "R" V 7134 2000 50  0001 C CNN
+F 2 "" V 7180 2000 50  0001 C CNN
+F 3 "~" H 7250 2000 50  0001 C CNN
+	1    7250 2000
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R6
+U 1 1 60F39D77
+P 7250 1700
+F 0 "R6" V 7250 1700 50  0000 C CNN
+F 1 "R" V 7134 1700 50  0001 C CNN
+F 2 "" V 7180 1700 50  0001 C CNN
+F 3 "~" H 7250 1700 50  0001 C CNN
+	1    7250 1700
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R7
+U 1 1 60F3A3EA
+P 5650 2100
+F 0 "R7" V 5650 2100 50  0000 C CNN
+F 1 "R" V 5534 2100 50  0001 C CNN
+F 2 "" V 5580 2100 50  0001 C CNN
+F 3 "~" H 5650 2100 50  0001 C CNN
+	1    5650 2100
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R8
+U 1 1 60F3A78C
+P 7000 2350
+F 0 "R8" V 7000 2350 50  0000 C CNN
+F 1 "R" V 6884 2350 50  0001 C CNN
+F 2 "" V 6930 2350 50  0001 C CNN
+F 3 "~" H 7000 2350 50  0001 C CNN
+	1    7000 2350
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R9
+U 1 1 60F3AB23
+P 2450 5550
+F 0 "R9" V 2450 5550 50  0000 C CNN
+F 1 "R" V 2334 5550 50  0001 C CNN
+F 2 "" V 2380 5550 50  0001 C CNN
+F 3 "~" H 2450 5550 50  0001 C CNN
+	1    2450 5550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R10
+U 1 1 60F3ADFD
+P 5500 4100
+F 0 "R10" V 5500 4100 50  0000 C CNN
+F 1 "R" V 5384 4100 50  0001 C CNN
+F 2 "" V 5430 4100 50  0001 C CNN
+F 3 "~" H 5500 4100 50  0001 C CNN
+	1    5500 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R11
+U 1 1 60F445C3
+P 2450 5450
+F 0 "R11" V 2450 5450 50  0000 C CNN
+F 1 "R" V 2334 5450 50  0001 C CNN
+F 2 "" V 2380 5450 50  0001 C CNN
+F 3 "~" H 2450 5450 50  0001 C CNN
+	1    2450 5450
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R12
+U 1 1 60F44D23
+P 900 7000
+F 0 "R12" V 900 7000 50  0000 C CNN
+F 1 "R" V 784 7000 50  0001 C CNN
+F 2 "" V 830 7000 50  0001 C CNN
+F 3 "~" H 900 7000 50  0001 C CNN
+	1    900  7000
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R13
+U 1 1 60F4552B
+P 900 7100
+F 0 "R13" V 900 7100 50  0000 C CNN
+F 1 "R" V 784 7100 50  0001 C CNN
+F 2 "" V 830 7100 50  0001 C CNN
+F 3 "~" H 900 7100 50  0001 C CNN
+	1    900  7100
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R14
+U 1 1 60F45910
+P 900 7200
+F 0 "R14" V 900 7200 50  0000 C CNN
+F 1 "R" V 784 7200 50  0001 C CNN
+F 2 "" V 830 7200 50  0001 C CNN
+F 3 "~" H 900 7200 50  0001 C CNN
+	1    900  7200
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R15
+U 1 1 60F45DA8
+P 900 7300
+F 0 "R15" V 900 7300 50  0000 C CNN
+F 1 "R" V 784 7300 50  0001 C CNN
+F 2 "" V 830 7300 50  0001 C CNN
+F 3 "~" H 900 7300 50  0001 C CNN
+	1    900  7300
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R16
+U 1 1 60F46184
+P 5800 4100
+F 0 "R16" V 5800 4100 50  0000 C CNN
+F 1 "R" V 5684 4100 50  0001 C CNN
+F 2 "" V 5730 4100 50  0001 C CNN
+F 3 "~" H 5800 4100 50  0001 C CNN
+	1    5800 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R17
+U 1 1 60F46511
+P 2450 5350
+F 0 "R17" V 2450 5350 50  0000 C CNN
+F 1 "R" V 2334 5350 50  0001 C CNN
+F 2 "" V 2380 5350 50  0001 C CNN
+F 3 "~" H 2450 5350 50  0001 C CNN
+	1    2450 5350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R18
+U 1 1 60F4696E
+P 5500 3400
+F 0 "R18" V 5500 3400 50  0000 C CNN
+F 1 "R" V 5384 3400 50  0001 C CNN
+F 2 "" V 5430 3400 50  0001 C CNN
+F 3 "~" H 5500 3400 50  0001 C CNN
+	1    5500 3400
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R19
+U 1 1 60F46DCE
+P 5650 4100
+F 0 "R19" V 5650 4100 50  0000 C CNN
+F 1 "R" V 5534 4100 50  0001 C CNN
+F 2 "" V 5580 4100 50  0001 C CNN
+F 3 "~" H 5650 4100 50  0001 C CNN
+	1    5650 4100
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R20
+U 1 1 60F47257
+P 5650 2700
+F 0 "R20" V 5650 2700 50  0000 C CNN
+F 1 "R" V 5534 2700 50  0001 C CNN
+F 2 "" V 5580 2700 50  0001 C CNN
+F 3 "~" H 5650 2700 50  0001 C CNN
+	1    5650 2700
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R21
+U 1 1 60F475AE
+P 3600 2900
+F 0 "R21" V 3600 2900 50  0000 C CNN
+F 1 "R" V 3484 2900 50  0001 C CNN
+F 2 "" V 3530 2900 50  0001 C CNN
+F 3 "~" H 3600 2900 50  0001 C CNN
+	1    3600 2900
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R22
+U 1 1 60F47BD5
+P 5650 2600
+F 0 "R22" V 5650 2600 50  0000 C CNN
+F 1 "R" V 5534 2600 50  0001 C CNN
+F 2 "" V 5580 2600 50  0001 C CNN
+F 3 "~" H 5650 2600 50  0001 C CNN
+	1    5650 2600
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R23
+U 1 1 60F47EFF
+P 3600 3000
+F 0 "R23" V 3600 3000 50  0000 C CNN
+F 1 "R" V 3484 3000 50  0001 C CNN
+F 2 "" V 3530 3000 50  0001 C CNN
+F 3 "~" H 3600 3000 50  0001 C CNN
+	1    3600 3000
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R24
+U 1 1 60F481D4
+P 8600 1200
+F 0 "R24" V 8600 1200 50  0000 C CNN
+F 1 "R" V 8484 1200 50  0001 C CNN
+F 2 "" V 8530 1200 50  0001 C CNN
+F 3 "~" H 8600 1200 50  0001 C CNN
+	1    8600 1200
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R25
+U 1 1 60F48374
+P 900 7400
+F 0 "R25" V 900 7400 50  0000 C CNN
+F 1 "R" V 784 7400 50  0001 C CNN
+F 2 "" V 830 7400 50  0001 C CNN
+F 3 "~" H 900 7400 50  0001 C CNN
+	1    900  7400
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R26
+U 1 1 60F48540
+P 4100 3000
+F 0 "R26" V 4100 3000 50  0000 C CNN
+F 1 "R" V 3984 3000 50  0001 C CNN
+F 2 "" V 4030 3000 50  0001 C CNN
+F 3 "~" H 4100 3000 50  0001 C CNN
+	1    4100 3000
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C2
+U 1 1 60F69D63
+P 1650 3400
+F 0 "C2" V 1600 3550 50  0000 C CNN
+F 1 "C" H 1765 3355 50  0001 L CNN
+F 2 "" H 1688 3250 50  0001 C CNN
+F 3 "~" H 1650 3400 50  0001 C CNN
+	1    1650 3400
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C C3
+U 1 1 60F6A0AC
+P 1350 3400
+F 0 "C3" V 1300 3550 50  0000 C CNN
+F 1 "C" H 1465 3355 50  0001 L CNN
+F 2 "" H 1388 3250 50  0001 C CNN
+F 3 "~" H 1350 3400 50  0001 C CNN
+	1    1350 3400
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C C4
+U 1 1 60F6A5AF
+P 7400 2350
+F 0 "C4" V 7350 2500 50  0000 C CNN
+F 1 "C" H 7515 2305 50  0001 L CNN
+F 2 "" H 7438 2200 50  0001 C CNN
+F 3 "~" H 7400 2350 50  0001 C CNN
+	1    7400 2350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C5
+U 1 1 60F6AD5F
+P 1400 7250
+F 0 "C5" V 1350 7400 50  0000 C CNN
+F 1 "C" H 1515 7205 50  0001 L CNN
+F 2 "" H 1438 7100 50  0001 C CNN
+F 3 "~" H 1400 7250 50  0001 C CNN
+	1    1400 7250
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C6
+U 1 1 60F6B19E
+P 8750 2500
+F 0 "C6" V 8800 2600 50  0000 C CNN
+F 1 "C" H 8865 2455 50  0001 L CNN
+F 2 "" H 8788 2350 50  0001 C CNN
+F 3 "~" H 8750 2500 50  0001 C CNN
+	1    8750 2500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C7
+U 1 1 60F6B57B
+P 8750 2150
+F 0 "C7" V 8700 2300 50  0000 C CNN
+F 1 "C" H 8865 2105 50  0001 L CNN
+F 2 "" H 8788 2000 50  0001 C CNN
+F 3 "~" H 8750 2150 50  0001 C CNN
+	1    8750 2150
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C8
+U 1 1 60F6B91C
+P 3550 3450
+F 0 "C8" V 3500 3600 50  0000 C CNN
+F 1 "C" H 3665 3405 50  0001 L CNN
+F 2 "" H 3588 3300 50  0001 C CNN
+F 3 "~" H 3550 3450 50  0001 C CNN
+	1    3550 3450
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C9
+U 1 1 60F6BD46
+P 5650 2850
+F 0 "C9" V 5600 3000 50  0000 C CNN
+F 1 "C" H 5765 2805 50  0001 L CNN
+F 2 "" H 5688 2700 50  0001 C CNN
+F 3 "~" H 5650 2850 50  0001 C CNN
+	1    5650 2850
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C10
+U 1 1 60F6C0E2
+P 7250 1850
+F 0 "C10" V 7200 2000 50  0000 C CNN
+F 1 "C" H 7365 1805 50  0001 L CNN
+F 2 "" H 7288 1700 50  0001 C CNN
+F 3 "~" H 7250 1850 50  0001 C CNN
+	1    7250 1850
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C11
+U 1 1 60F6C4AE
+P 7250 1550
+F 0 "C11" V 7200 1700 50  0000 C CNN
+F 1 "C" H 7365 1505 50  0001 L CNN
+F 2 "" H 7288 1400 50  0001 C CNN
+F 3 "~" H 7250 1550 50  0001 C CNN
+	1    7250 1550
+	0    -1   -1   0   
+$EndComp
+Text Label 1750 4300 0    50   ~ 0
+GND
+Text Label 1750 4400 0    50   ~ 0
+GND
+Text Label 3200 4300 0    50   ~ 0
+GND
+Text Label 3200 4400 0    50   ~ 0
+GND
+Wire Wire Line
+	1550 4300 1750 4300
+Wire Wire Line
+	1550 4400 1750 4400
+Wire Wire Line
+	3000 4300 3200 4300
+Wire Wire Line
+	3000 4400 3200 4400
+Text Label 9150 2000 0    50   ~ 0
+GND
+Wire Wire Line
+	9150 2000 8750 2000
+Text Label 9150 1700 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	9050 1700 9150 1700
+Wire Wire Line
+	1550 4900 1750 4900
+Wire Wire Line
+	1550 5000 1750 5000
+Wire Wire Line
+	3000 4900 3200 4900
+Wire Wire Line
+	3000 5000 3200 5000
+Text Label 8350 1700 2    50   ~ 0
+VCC_12V
+Wire Wire Line
+	8350 1700 8450 1700
+Text Label 8900 850  0    50   ~ 0
+J3_PIN1
+Text Label 8900 1050 0    50   ~ 0
+J3_PIN2
+Text Label 8350 1200 2    50   ~ 0
+J3_PIN1
+Wire Wire Line
+	8350 1200 8450 1200
+Text Label 8850 1200 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	8750 1200 8850 1200
+Text Label 9150 2150 0    50   ~ 0
+GND
+Text Label 8350 2150 2    50   ~ 0
+VCC_5V
+Wire Wire Line
+	8350 2150 8600 2150
+Wire Wire Line
+	8900 2150 9150 2150
+Text Label 2750 800  0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	2750 800  2750 900 
+Text Label 2750 2600 0    50   ~ 0
+GND
+Wire Wire Line
+	2750 2500 2750 2600
+Wire Wire Line
+	1650 3100 1650 3250
+Wire Wire Line
+	1350 3100 1350 3250
+Text Label 1800 3650 0    50   ~ 0
+GND
+Wire Wire Line
+	1350 3550 1350 3650
+Wire Wire Line
+	1650 3650 1650 3550
+Text Label 1250 3100 2    50   ~ 0
+OSC1
+Text Label 1750 3100 0    50   ~ 0
+OSC2
+Wire Wire Line
+	1650 3100 1750 3100
+Connection ~ 1650 3100
+Wire Wire Line
+	1350 3100 1250 3100
+Connection ~ 1350 3100
+Wire Wire Line
+	8850 850  8900 850 
+Wire Wire Line
+	8850 1050 8900 1050
+Text Label 4400 1700 0    50   ~ 0
+OSC1
+Text Label 4400 1600 0    50   ~ 0
+OSC2
+Wire Wire Line
+	4250 1600 4400 1600
+Wire Wire Line
+	4250 1700 4400 1700
+$Comp
+L Connector:Conn_01x02_Male U2_LED
+U 1 1 60FA25D4
+P 5050 3400
+F 0 "U2_LED" H 5150 3200 50  0000 C CNN
+F 1 "Motor Encoder LED" H 5450 3550 50  0000 C CNN
+F 2 "" H 5050 3400 50  0001 C CNN
+F 3 "~" H 5050 3400 50  0001 C CNN
+	1    5050 3400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 3400 5350 3400
+Text Label 5800 3500 0    50   ~ 0
+GND
+Text Label 5800 3400 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	5650 3400 5800 3400
+Wire Wire Line
+	5800 3500 5250 3500
+Text Label 5800 3750 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	5800 3850 5800 3950
+Wire Wire Line
+	5800 3850 5650 3850
+Wire Wire Line
+	5650 3850 5650 3950
+Wire Wire Line
+	5650 3850 5500 3850
+Wire Wire Line
+	5500 3850 5500 3950
+Connection ~ 5650 3850
+Wire Wire Line
+	5250 4400 5650 4400
+Wire Wire Line
+	5650 4400 5650 4250
+Wire Wire Line
+	5250 4300 5400 4300
+Wire Wire Line
+	5500 4300 5500 4250
+Wire Wire Line
+	5250 4600 5800 4600
+Wire Wire Line
+	5800 4600 5800 4250
+Text Label 5450 4500 0    50   ~ 0
+GND
+Wire Wire Line
+	5250 4500 5450 4500
+Text Label 5400 4200 1    50   ~ 0
+Enc1
+Text Label 5900 4600 0    50   ~ 0
+Enc2
+Wire Wire Line
+	5800 4600 5900 4600
+Connection ~ 5800 4600
+Wire Wire Line
+	5400 4200 5400 4300
+Connection ~ 5400 4300
+Wire Wire Line
+	5400 4300 5500 4300
+Wire Wire Line
+	5800 3850 5800 3750
+Connection ~ 5800 3850
+Text Label 4400 1900 0    50   ~ 0
+Enc2
+Text Label 4400 2100 0    50   ~ 0
+Enc1
+Wire Wire Line
+	4250 1900 4400 1900
+Wire Wire Line
+	4250 2100 4400 2100
+$Comp
+L Connector_Generic:Conn_02x04_Counter_Clockwise U4
+U 1 1 60FEC1C1
+P 5600 1750
+F 0 "U4" H 5650 2067 50  0000 C CNN
+F 1 "TC4426A" H 5650 1976 50  0000 C CNN
+F 2 "" H 5600 1750 50  0001 C CNN
+F 3 "~" H 5600 1750 50  0001 C CNN
+	1    5600 1750
+	1    0    0    -1  
+$EndComp
+Text Label 7250 2750 0    50   ~ 0
+M+
+Text Label 7250 2850 0    50   ~ 0
+M-
+Wire Wire Line
+	7200 2750 7250 2750
+Wire Wire Line
+	7200 2850 7250 2850
+Text Label 6050 1100 0    50   ~ 0
+M+
+Text Label 7600 1300 0    50   ~ 0
+M+
+Text Label 6050 1300 0    50   ~ 0
+M-
+Text Label 7600 1100 0    50   ~ 0
+M-
+Wire Wire Line
+	7500 1000 7550 1000
+Wire Wire Line
+	7550 1000 7550 1100
+Wire Wire Line
+	7550 1100 7600 1100
+Wire Wire Line
+	7500 1100 7550 1100
+Connection ~ 7550 1100
+Wire Wire Line
+	7500 1200 7550 1200
+Wire Wire Line
+	7550 1200 7550 1300
+Wire Wire Line
+	7550 1300 7600 1300
+Wire Wire Line
+	7500 1300 7550 1300
+Connection ~ 7550 1300
+Wire Wire Line
+	5900 1000 5950 1000
+Wire Wire Line
+	5950 1000 5950 1100
+Wire Wire Line
+	5950 1100 5900 1100
+Wire Wire Line
+	5950 1100 6050 1100
+Connection ~ 5950 1100
+Wire Wire Line
+	5900 1200 5950 1200
+Wire Wire Line
+	5950 1200 5950 1300
+Wire Wire Line
+	5900 1300 5950 1300
+Connection ~ 5950 1300
+Wire Wire Line
+	5950 1300 6050 1300
+Text Label 5400 2600 2    50   ~ 0
+GND
+Wire Wire Line
+	5400 2600 5500 2600
+NoConn ~ 5400 1650
+NoConn ~ 5900 1650
+Text Label 5300 1850 2    50   ~ 0
+GND
+Text Label 5350 1100 2    50   ~ 0
+MCU_RC5
+Text Label 5350 1300 2    50   ~ 0
+MCU_RC4
+Text Label 1150 1700 2    50   ~ 0
+MCU_RC5
+Text Label 1150 1600 2    50   ~ 0
+MCU_RC4
+Wire Wire Line
+	1150 1600 1250 1600
+Wire Wire Line
+	1150 1700 1250 1700
+Text Label 1150 1500 2    50   ~ 0
+MCU_RC3
+Wire Wire Line
+	1150 1500 1250 1500
+Text Label 5400 2700 2    50   ~ 0
+MCU_RC3
+Wire Wire Line
+	5450 2850 5500 2850
+Text Label 6000 1850 0    50   ~ 0
+VCC_12V
+Wire Wire Line
+	5900 1850 6000 1850
+Wire Wire Line
+	5300 1850 5400 1850
+Text Label 6000 1750 0    50   ~ 0
+~U4_OUT1
+Wire Wire Line
+	5900 1750 6000 1750
+Wire Wire Line
+	5900 1950 6000 1950
+Text Label 6850 1000 2    50   ~ 0
+VCC_12V
+Text Label 6850 1200 2    50   ~ 0
+VCC_12V
+Wire Wire Line
+	6850 1000 7000 1000
+Wire Wire Line
+	6850 1200 7000 1200
+Text Label 6850 1100 2    50   ~ 0
+~U4_OUT1
+Text Label 6000 1950 0    50   ~ 0
+~U4_OUT2
+Text Label 6850 1300 2    50   ~ 0
+~U4_OUT2
+Wire Wire Line
+	6850 1300 7000 1300
+Text Label 6850 1700 2    50   ~ 0
+VCC_12V
+Wire Wire Line
+	6850 1700 6950 1700
+Wire Wire Line
+	6950 1700 6950 1550
+Wire Wire Line
+	6950 1550 7100 1550
+Wire Wire Line
+	6950 1700 7100 1700
+Connection ~ 6950 1700
+Wire Wire Line
+	7400 1550 7500 1550
+Wire Wire Line
+	7500 1550 7500 1700
+Wire Wire Line
+	7500 1700 7400 1700
+Text Label 7600 1700 0    50   ~ 0
+~U4_OUT2
+Wire Wire Line
+	7500 1700 7600 1700
+Connection ~ 7500 1700
+Wire Wire Line
+	7400 2000 7500 2000
+Wire Wire Line
+	7400 1850 7500 1850
+Wire Wire Line
+	7500 1850 7500 2000
+Connection ~ 7500 2000
+Wire Wire Line
+	7500 2000 7600 2000
+Wire Wire Line
+	7100 2000 7000 2000
+Wire Wire Line
+	7100 1850 7000 1850
+Wire Wire Line
+	7000 1850 7000 2000
+Connection ~ 7000 2000
+Wire Wire Line
+	7000 2000 6850 2000
+Text Label 6850 2000 2    50   ~ 0
+VCC_12V
+Text Label 7600 2000 0    50   ~ 0
+~U4_OUT1
+Wire Wire Line
+	6850 1100 7000 1100
+Text Label 5300 1750 2    50   ~ 0
+U4_IN1
+Text Label 5300 1950 2    50   ~ 0
+U4_IN2
+Wire Wire Line
+	5300 1750 5400 1750
+Wire Wire Line
+	5300 1950 5400 1950
+Text Label 5800 2100 0    50   ~ 0
+GND
+Text Label 5800 2200 0    50   ~ 0
+U4_IN1
+Wire Wire Line
+	5500 2200 5450 2200
+Wire Wire Line
+	5450 2200 5450 2100
+Wire Wire Line
+	5450 2100 5500 2100
+Text Label 5800 2450 0    50   ~ 0
+GND
+Wire Wire Line
+	5500 2350 5450 2350
+Wire Wire Line
+	5450 2350 5450 2450
+Wire Wire Line
+	5450 2450 5500 2450
+Text Label 5800 2350 0    50   ~ 0
+U4_IN2
+Text Label 5300 2100 2    50   ~ 0
+MCU_RC5
+Text Label 5300 2350 2    50   ~ 0
+MCU_RC4
+Wire Wire Line
+	5300 2350 5450 2350
+Connection ~ 5450 2350
+Wire Wire Line
+	5300 2100 5450 2100
+Connection ~ 5450 2100
+Text Label 5900 2850 0    50   ~ 0
+GND
+Wire Wire Line
+	5800 2850 5900 2850
+Wire Wire Line
+	5450 2700 5500 2700
+Wire Wire Line
+	5400 2700 5450 2700
+Connection ~ 5450 2700
+Wire Wire Line
+	5450 2700 5450 2850
+Text Label 2700 5700 0    50   ~ 0
+VCC_12V
+Text Label 1750 5700 2    50   ~ 0
+INPUT_12V
+Wire Wire Line
+	1750 5700 1900 5700
+Text Label 1750 4900 0    50   ~ 0
+INPUT_12V
+Text Label 1750 5000 0    50   ~ 0
+INPUT_12V
+Text Label 3200 4900 0    50   ~ 0
+INPUT_12V
+Text Label 3200 5000 0    50   ~ 0
+INPUT_12V
+Text Label 8500 2500 2    50   ~ 0
+GND
+Wire Wire Line
+	8500 2500 8600 2500
+Wire Wire Line
+	2200 5450 2300 5450
+Text Label 4400 2200 0    50   ~ 0
+TX
+Wire Wire Line
+	4250 2200 4400 2200
+Text Label 4400 2000 0    50   ~ 0
+RX
+Wire Wire Line
+	4250 2000 4400 2000
+Text Label 2700 5450 0    50   ~ 0
+TX
+Wire Wire Line
+	2600 5450 2700 5450
+Text Label 2700 5350 0    50   ~ 0
+RX
+Wire Wire Line
+	2600 5350 2700 5350
+Text Label 3200 4600 0    50   ~ 0
+IN_TX
+Text Label 3200 4700 0    50   ~ 0
+IN_RX
+Wire Wire Line
+	3000 4600 3200 4600
+Wire Wire Line
+	3000 4700 3200 4700
+Text Label 1750 4600 0    50   ~ 0
+IN_TX
+Text Label 1750 4700 0    50   ~ 0
+IN_RX
+Wire Wire Line
+	1550 4600 1750 4600
+Wire Wire Line
+	1550 4700 1750 4700
+Text Label 1750 5450 2    50   ~ 0
+IN_TX
+Wire Wire Line
+	1750 5450 1900 5450
+Text Label 1750 5350 2    50   ~ 0
+IN_RX
+Wire Wire Line
+	1750 5350 2300 5350
+Text Label 7700 2350 0    50   ~ 0
+M+
+Text Label 6750 2350 2    50   ~ 0
+M-
+Wire Wire Line
+	6750 2350 6850 2350
+Wire Wire Line
+	7150 2350 7250 2350
+Wire Wire Line
+	7550 2350 7700 2350
+Text Label 3300 3250 2    50   ~ 0
+GND
+Text Label 3300 3450 2    50   ~ 0
+GND
+Text Label 4400 3450 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	3300 3250 3400 3250
+Wire Wire Line
+	3300 3450 3400 3450
+Wire Wire Line
+	3700 3450 4200 3450
+Wire Wire Line
+	4150 3250 4200 3250
+Wire Wire Line
+	4200 3250 4200 3450
+Connection ~ 4200 3450
+Wire Wire Line
+	4200 3450 4400 3450
+Text Label 4400 1500 0    50   ~ 0
+Vpp
+Wire Wire Line
+	4250 1500 4400 1500
+Text Label 4400 3150 0    50   ~ 0
+Vpp
+Wire Wire Line
+	3850 3150 3850 3250
+Text Label 3200 4800 0    50   ~ 0
+DEC_SEL
+Text Label 3200 4500 0    50   ~ 0
+RA_SEL
+Wire Wire Line
+	3000 4500 3200 4500
+Wire Wire Line
+	3000 4800 3200 4800
+Text Label 1750 4800 0    50   ~ 0
+DEC_SEL
+Text Label 1750 4500 0    50   ~ 0
+RA_SEL
+Wire Wire Line
+	1550 4500 1750 4500
+Wire Wire Line
+	1550 4800 1750 4800
+Text Label 1750 5550 2    50   ~ 0
+DEC_SEL
+Wire Wire Line
+	1750 5550 2300 5550
+Text Label 4400 1400 0    50   ~ 0
+MCU_RA2
+Wire Wire Line
+	4250 1400 4400 1400
+Text Label 2700 5550 0    50   ~ 0
+MCU_RA2
+Wire Wire Line
+	2700 5550 2600 5550
+Text Label 1150 1800 2    50   ~ 0
+MCU_RC6
+Wire Wire Line
+	1150 1800 1250 1800
+Text Label 3350 2900 2    50   ~ 0
+MCU_RC6
+Wire Wire Line
+	3350 2900 3450 2900
+Text Label 3350 3000 2    50   ~ 0
+GND
+Wire Wire Line
+	3350 3000 3450 3000
+Text Label 4400 3000 0    50   ~ 0
+VCC_12V
+Wire Wire Line
+	4250 3000 4400 3000
+Wire Wire Line
+	3750 3000 3850 3000
+Wire Wire Line
+	3850 3000 3850 2900
+Wire Wire Line
+	3850 2900 3750 2900
+Connection ~ 3850 3000
+Wire Wire Line
+	3850 3000 3950 3000
+Connection ~ 3850 3250
+Wire Wire Line
+	3700 3250 3850 3250
+Text Notes 7000 6700 0    79   ~ 0
+Bresser EXOS2 GoTo DEC Axis Motor Rev.1.03 (2016-06)
+Text Notes 7000 6850 0    79   ~ 0
+Reverse Engineered Schematics
+Wire Wire Line
+	5800 2700 5900 2700
+Wire Wire Line
+	5900 2700 5900 2600
+Wire Wire Line
+	5900 2600 5800 2600
+Text Label 6000 2600 0    50   ~ 0
+Q2_SRC
+Text Label 5350 1000 2    50   ~ 0
+Q2_SRC
+Text Label 5350 1200 2    50   ~ 0
+Q2_SRC
+Wire Notes Line
+	4900 700  4900 3000
+Wire Notes Line
+	4900 3000 7950 3000
+Wire Notes Line
+	7950 3000 7950 700 
+Wire Notes Line
+	7950 700  4900 700 
+Text Notes 4900 700  0    50   ~ 0
+Motor Driver Assembly
+Wire Wire Line
+	1350 3650 1650 3650
+Wire Wire Line
+	1650 3650 1800 3650
+Connection ~ 1650 3650
+Wire Notes Line
+	1000 2850 1000 3700
+Wire Notes Line
+	1000 3700 2000 3700
+Wire Notes Line
+	2000 3700 2000 2850
+Wire Notes Line
+	2000 2850 1000 2850
+Text Notes 1000 2850 0    50   ~ 0
+MCU Quartz Assembly
+Wire Notes Line
+	8000 1450 8000 2650
+Wire Notes Line
+	8000 2650 9450 2650
+Wire Notes Line
+	9450 2650 9450 1450
+Wire Notes Line
+	9450 1450 8000 1450
+Text Notes 8000 1450 0    50   ~ 0
+5V Voltage Regulator Assembly
+Wire Notes Line
+	750  3950 750  5800
+Wire Notes Line
+	750  5800 3650 5800
+Wire Notes Line
+	3650 5800 3650 3950
+Wire Notes Line
+	3650 3950 750  3950
+Text Notes 750  3950 0    50   ~ 0
+System Power and Communication Port Assembly
+Wire Notes Line
+	4900 3100 4900 4800
+Wire Notes Line
+	4900 4800 6200 4800
+Wire Notes Line
+	6200 4800 6200 3100
+Wire Notes Line
+	6200 3100 4900 3100
+Text Notes 4900 3100 0    50   ~ 0
+U2 Motor Encoder
+Wire Wire Line
+	2200 5700 2700 5700
+Text Label 9000 2500 0    50   ~ 0
+VCC_12V
+Wire Wire Line
+	8900 2500 9000 2500
+Wire Wire Line
+	3850 3150 4400 3150
+Wire Notes Line
+	750  700  750  3850
+Wire Notes Line
+	750  3850 4850 3850
+Wire Notes Line
+	4850 3850 4850 700 
+Wire Notes Line
+	4850 700  750  700 
+Text Notes 750  700  0    50   ~ 0
+MCU Assembly
+Wire Notes Line
+	550  6900 550  7750
+Wire Notes Line
+	550  7750 1950 7750
+Wire Notes Line
+	1950 7750 1950 6900
+Wire Notes Line
+	1950 6900 550  6900
+Text Notes 550  6900 0    50   ~ 0
+Unused Components
+Wire Wire Line
+	5350 1000 5400 1000
+Wire Wire Line
+	5350 1100 5400 1100
+Wire Wire Line
+	5350 1200 5400 1200
+Wire Wire Line
+	5350 1300 5400 1300
+Wire Wire Line
+	5900 2600 6000 2600
+Connection ~ 5900 2600
+Text Label 8850 1300 0    50   ~ 0
+RA_SEL
+Text Label 8350 1300 2    50   ~ 0
+J3_PIN2
+Wire Wire Line
+	8350 1300 8850 1300
+Text Label 4400 1200 0    50   ~ 0
+MCU_PGD
+Text Label 4400 1300 0    50   ~ 0
+MCU_PGC
+Wire Wire Line
+	4250 1200 4400 1200
+Wire Wire Line
+	4250 1300 4400 1300
+NoConn ~ 1250 1900
+NoConn ~ 1250 1400
+NoConn ~ 1250 1300
+NoConn ~ 1250 1200
+Wire Notes Line
+	8000 700  8000 1350
+Wire Notes Line
+	8000 1350 9250 1350
+Wire Notes Line
+	9250 1350 9250 700 
+Wire Notes Line
+	9250 700  8000 700 
+Text Notes 8000 700  0    50   ~ 0
+Ext. Port Undocumented Purpose
+Text Notes 600  7700 0    50   ~ 0
+These enumerated Components\nwere not found and may not exist\non the Board!
+$EndSCHEMATC
