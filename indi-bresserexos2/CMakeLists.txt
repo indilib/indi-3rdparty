@@ -8,12 +8,6 @@ include(GNUInstallDirs)
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 
-if(INDI_VERSION VERSION_LESS "1.9.0")
-	set(INDI_LEGACY_ENABLED "1")
-else ()
-	set(INDI_LEGACY_ENABLED "0")
-endif ()
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_bresserexos2.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_bresserexos2.xml )
 
@@ -21,8 +15,6 @@ include(CMakeCommon)
 
 find_package(Threads REQUIRED)
 find_package(INDI REQUIRED)
-
-
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
