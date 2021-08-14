@@ -27,7 +27,6 @@
 
 #define BresserExosIIGoToDriverForIndi_VERSION_MAJOR @indi-bresserexos2_VERSION_MAJOR@
 #define BresserExosIIGoToDriverForIndi_VERSION_MINOR @indi-bresserexos2_VERSION_MINOR@
-#define INDI_LEGACY_ENABLED (@INDI_LEGACY_ENABLED@)
 
 #cmakedefine USE_CERR_LOGGING
 
