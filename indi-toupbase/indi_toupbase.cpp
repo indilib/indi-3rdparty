@@ -1930,19 +1930,21 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-    //    int timeMS = uSecs / 1000 - 50;
-    //    if (timeMS <= 0)
-    //        sendImageCallBack();
-    //    else if (static_cast<uint32_t>(timeMS) < getCurrentPollingPeriod())
-    //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
+    bool capturedStarted = false;
 
     // Snap still image
-    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+    if (m_CanSnap)
     {
-        LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes[rc].c_str());
-        return false;
+        if (SUCCEEDED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+            capturedStarted = true;
+        else
+        {
+            LOGF_WARN("Failed to snap exposure. Error: %s. Switching to regular exposure...", errorCodes[rc].c_str());
+            m_CanSnap = false;
+        }
     }
-    else
+
+    if (!capturedStarted)
     {
         // Trigger an exposure
         if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
