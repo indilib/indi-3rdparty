@@ -26,7 +26,7 @@
 
 #include <cstdint>
 #include <vector>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {

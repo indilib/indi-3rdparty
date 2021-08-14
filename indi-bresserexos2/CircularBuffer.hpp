@@ -28,7 +28,7 @@
 #include <cstring>
 #include <vector>
 #include <iostream>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
