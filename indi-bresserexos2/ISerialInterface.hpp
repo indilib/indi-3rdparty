@@ -25,7 +25,7 @@
 #define _ISERIALINTERFACE_H_INCLUDED_
 
 #include <cstdint>
-#include "Config.hpp"
+#include "config.h"
 
 namespace SerialDeviceControl
 {
