@@ -32,26 +32,15 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-extern bool debug;
-extern void write_debug( const char* message, ... );
-
-#ifdef ANDROID
-#include <android/log.h>
-#define DPRINT(...) __android_log_print(ANDROID_LOG_DEBUG, "PkTriggerCord", __VA_ARGS__)
-#else
-#ifdef LIBGPHOTO
-#include <gphoto2/gphoto2-log.h>
-#define DPRINT(x...) gp_log (GP_LOG_DEBUG, "pentax", x)
-#else
-#define DPRINT(x...) write_debug(x)
-#endif
+#ifdef RAD10
+#include <windows.h>
 #endif
 
 #define CHECK(x) do {                           \
         int __r;                                \
         __r = (x);                                                      \
         if (__r != PSLR_OK) {                                           \
-            fprintf(stderr, "%s:%d:%s failed: %d\n", __FILE__, __LINE__, #x, __r); \
+            pslr_write_log(PSLR_ERROR, "%s:%d:%s failed: %d\n", __FILE__, __LINE__, #x, __r); \
             return __r;                                                 \
         }                                                               \
     } while (0)

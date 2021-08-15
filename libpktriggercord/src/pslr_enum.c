@@ -242,107 +242,111 @@ const char *get_pslr_str( const char** array, int length, int value ) {
 }
 
 
-pslr_color_space_t get_pslr_color_space( char *str ) {
+pslr_color_space_t pslr_get_color_space( char *str ) {
     return find_in_array( pslr_color_space_str, sizeof(pslr_color_space_str)/sizeof(pslr_color_space_str[0]),str);
 }
 
-const char *get_pslr_color_space_str( pslr_color_space_t value ) {
+const char *pslr_get_color_space_str( pslr_color_space_t value ) {
     return get_pslr_str( pslr_color_space_str, sizeof(pslr_color_space_str)/sizeof(pslr_color_space_str[0]),value);
 }
 
-pslr_af_mode_t get_pslr_af_mode( char *str ) {
+pslr_af_mode_t pslr_get_af_mode( char *str ) {
     return find_in_array( pslr_af_mode_str, sizeof(pslr_af_mode_str)/sizeof(pslr_af_mode_str[0]),str);
 }
 
-const char *get_pslr_af_mode_str( pslr_af_mode_t value ) {
+const char *pslr_get_af_mode_str( pslr_af_mode_t value ) {
     return get_pslr_str( pslr_af_mode_str, sizeof(pslr_af_mode_str)/sizeof(pslr_af_mode_str[0]),value);
 }
 
-pslr_ae_metering_t get_pslr_ae_metering( char *str ) {
+pslr_ae_metering_t pslr_get_ae_metering( char *str ) {
     return find_in_array( pslr_ae_metering_str, sizeof(pslr_ae_metering_str)/sizeof(pslr_ae_metering_str[0]),str);
 }
 
-const char *get_pslr_ae_metering_str( pslr_ae_metering_t value ) {
+const char *pslr_get_ae_metering_str( pslr_ae_metering_t value ) {
     return get_pslr_str( pslr_ae_metering_str, sizeof(pslr_ae_metering_str)/sizeof(pslr_ae_metering_str[0]),value);
 }
 
-pslr_flash_mode_t get_pslr_flash_mode( char *str ) {
+pslr_flash_mode_t pslr_get_flash_mode( char *str ) {
     return find_in_array( pslr_flash_mode_str, sizeof(pslr_flash_mode_str)/sizeof(pslr_flash_mode_str[0]),str);
 }
 
-const char *get_pslr_flash_mode_str( pslr_flash_mode_t value ) {
+const char *pslr_get_flash_mode_str( pslr_flash_mode_t value ) {
     return get_pslr_str( pslr_flash_mode_str, sizeof(pslr_flash_mode_str)/sizeof(pslr_flash_mode_str[0]),value);
 }
 
-pslr_drive_mode_t get_pslr_drive_mode( char *str ) {
+pslr_drive_mode_t pslr_get_drive_mode( char *str ) {
     return find_in_array( pslr_drive_mode_str, sizeof(pslr_drive_mode_str)/sizeof(pslr_drive_mode_str[0]),str);
 }
 
-const char *get_pslr_drive_mode_str( pslr_drive_mode_t value ) {
+const char *pslr_get_drive_mode_str( pslr_drive_mode_t value ) {
     return get_pslr_str( pslr_drive_mode_str, sizeof(pslr_drive_mode_str)/sizeof(pslr_drive_mode_str[0]),value);
 }
 
-pslr_af_point_sel_t get_pslr_af_point_sel( char *str ) {
+pslr_af_point_sel_t pslr_get_af_point_sel( char *str ) {
     return find_in_array( pslr_af_point_sel_str, sizeof(pslr_af_point_sel_str)/sizeof(pslr_af_point_sel_str[0]),str);
 }
 
-const char *get_pslr_af_point_sel_str( pslr_af_point_sel_t value ) {
+const char *pslr_get_af_point_sel_str( pslr_af_point_sel_t value ) {
     return get_pslr_str( pslr_af_point_sel_str, sizeof(pslr_af_point_sel_str)/sizeof(pslr_af_point_sel_str[0]),value);
 }
 
-char *get_pslr_af11_point_str( uint32_t value ) {
+char *pslr_get_af11_point_str( uint32_t value ) {
     if (value==0) {
         return "none";
     }
-    int bitidx = 0;
-    char *ret = (char *)malloc(1024);
-    char *ptr = ret;
-    *ptr = '\0';
-
-    for (bitidx=0; value>0 && bitidx<11; ++bitidx, value >>= 1) {
+    int bitidx=0;
+    char *ret = malloc(1024);
+    int pos = sprintf(ret, "%s", "");
+    while (value>0 && bitidx<11) {
         if ((value & 0x01) == 1) {
-            ptr += sprintf(ptr, "%s%s", ptr == ret ? "" : ",", pslr_af11_point_str[bitidx]);
+            int written = sprintf(ret + pos, "%s%s", pos == 0 ? "" : ",", pslr_af11_point_str[bitidx]);
+            if (written < 0) {
+                return ret;
+            }
+            pos += written;
         }
+        value >>= 1;
+        ++bitidx;
     }
-
     if (value>0) {
-        sprintf(ret, "invalid");
+        sprintf(ret, "%s", "invalid");
     }
     return ret;
 }
 
-pslr_jpeg_image_tone_t get_pslr_jpeg_image_tone( char *str ) {
+
+pslr_jpeg_image_tone_t pslr_get_jpeg_image_tone( char *str ) {
     return find_in_array( pslr_jpeg_image_tone_str, sizeof(pslr_jpeg_image_tone_str)/sizeof(pslr_jpeg_image_tone_str[0]),str);
 }
 
-const char *get_pslr_jpeg_image_tone_str( pslr_jpeg_image_tone_t value ) {
+const char *pslr_get_jpeg_image_tone_str( pslr_jpeg_image_tone_t value ) {
     return get_pslr_str( pslr_jpeg_image_tone_str, sizeof(pslr_jpeg_image_tone_str)/sizeof(pslr_jpeg_image_tone_str[0]),value);
 }
 
-pslr_white_balance_mode_t get_pslr_white_balance_mode( char *str ) {
+pslr_white_balance_mode_t pslr_get_white_balance_mode( char *str ) {
     return find_in_array( pslr_white_balance_mode_str, sizeof(pslr_white_balance_mode_str)/sizeof(pslr_white_balance_mode_str[0]),str);
 }
 
-const char *get_pslr_white_balance_mode_str( pslr_white_balance_mode_t value ) {
+const char *pslr_get_white_balance_mode_str( pslr_white_balance_mode_t value ) {
     return get_pslr_str( pslr_white_balance_mode_str, sizeof(pslr_white_balance_mode_str)/sizeof(pslr_white_balance_mode_str[0]),value);
 }
 
-const char *get_pslr_custom_ev_steps_str( pslr_custom_ev_steps_t value ) {
+const char *pslr_get_custom_ev_steps_str( pslr_custom_ev_steps_t value ) {
     return get_pslr_str( pslr_custom_ev_steps_str, sizeof(pslr_custom_ev_steps_str)/sizeof(pslr_custom_ev_steps_str[0]),value);
 }
 
-const char *get_pslr_custom_sensitivity_steps_str( pslr_custom_sensitivity_steps_t value ) {
+const char *pslr_get_custom_sensitivity_steps_str( pslr_custom_sensitivity_steps_t value ) {
     return get_pslr_str( pslr_custom_sensitivity_steps_str, sizeof(pslr_custom_sensitivity_steps_str)/sizeof(pslr_custom_sensitivity_steps_str[0]),value);
 }
 
-const char *get_pslr_image_format_str( pslr_image_format_t value ) {
+const char *pslr_get_image_format_str( pslr_image_format_t value ) {
     return get_pslr_str( pslr_image_format_str, sizeof(pslr_image_format_str)/sizeof(pslr_image_format_str[0]),value);
 }
 
-const char *get_pslr_raw_format_str( pslr_raw_format_t value ) {
+const char *pslr_get_raw_format_str( pslr_raw_format_t value ) {
     return get_pslr_str( pslr_raw_format_str, sizeof(pslr_raw_format_str)/sizeof(pslr_raw_format_str[0]),value);
 }
 
-const char *get_pslr_scene_mode_str( pslr_scene_mode_t value ) {
+const char *pslr_get_scene_mode_str( pslr_scene_mode_t value ) {
     return get_pslr_str( pslr_scene_mode_str, sizeof(pslr_scene_mode_str)/sizeof(pslr_scene_mode_str[0]),value);
 }
