@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _CIRCULARBUFFER_H_INCLUDED_
+#define _CIRCULARBUFFER_H_INCLUDED_
 
 #include <cstdint>
 #include <cstring>
@@ -179,7 +180,7 @@ class CircularBuffer
         size_t mStart;
         size_t mEnd;
         size_t mSize;
-
+        
         T mZeroElement;
         T mBuffer[max_size];
 
@@ -214,3 +215,4 @@ class CircularBuffer
 };
 }
 
+#endif
