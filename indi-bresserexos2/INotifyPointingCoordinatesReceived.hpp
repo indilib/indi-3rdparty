@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _INOTIFYPOINTINGCOORDINATESRECEIVED_H_INCLUDED_
+#define _INOTIFYPOINTINGCOORDINATESRECEIVED_H_INCLUDED_
 
 #include <cstdint>
 #include <vector>
@@ -41,3 +42,4 @@ class INotifyPointingCoordinatesReceived
         virtual void OnSiteLocationCoordinatesReceived(float latitude, float longitude) = 0;
 };
 }
+#endif

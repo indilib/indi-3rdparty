@@ -7,7 +7,7 @@ Run a software update to get the latest version of any package for your distribu
 
 > `sudo apt-get update`
 
-and 
+and
 
 > `sudo apt-get dist-upgrade`
 

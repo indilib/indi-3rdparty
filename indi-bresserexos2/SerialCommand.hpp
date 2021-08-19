@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _SERIALCOMMAND_H_INCLUDED_
+#define _SERIALCOMMAND_H_INCLUDED_
 
 #include <cstdint>
 #include <vector>
@@ -82,6 +83,9 @@ enum SerialCommandID
 
     //If the GET_SITE_LOCATION message was sent, the controller responds with this message, along side the Geo-Coordinates.
     TELESCOPE_SITE_LOCATION_REPORT_COMMAND_ID = (uint8_t)0xfe,
+    
+    //This id is used when the telescope is in an untracked state. Found in the C# implementation but apparently not used.
+    TELESCOPE_POSITION_REPORT_UNTRACKED_COMMAND_ID = (uint8_t)0xf0,
 
     //This id is used by the telescope controller to announce its pointing coordinates.
     TELESCOPE_POSITION_REPORT_COMMAND_ID = (uint8_t)0xff
@@ -197,7 +201,7 @@ class SerialCommand
         //put the date time message corresponding to the time/date provided into the buffer provided.
         //returns false if an error occurs.
         static bool GetSetDateTimeCommandMessage(std::vector<uint8_t> &buffer, uint16_t year, uint8_t month, uint8_t day,
-                uint8_t hour, uint8_t minute, uint8_t second);
+                uint8_t hour, uint8_t minute, uint8_t second, int8_t utc_offset);
 
         //move the telescope in a certain direction. Use the first 4 command IDs for a particular direction.
         static bool GetMoveWhileTrackingCommandMessage(std::vector<uint8_t> &buffer, SerialCommandID direction);
@@ -208,3 +212,5 @@ class SerialCommand
 
 };
 }
+
+#endif

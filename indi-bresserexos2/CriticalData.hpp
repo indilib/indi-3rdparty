@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _CRITICALDATA_H_INCLUDED_
+#define _CRITICALDATA_H_INCLUDED_
 
 #include <cstdint>
 #include <mutex>
@@ -83,3 +84,5 @@ class CriticalData
         std::mutex mMutex;
 };
 }
+
+#endif

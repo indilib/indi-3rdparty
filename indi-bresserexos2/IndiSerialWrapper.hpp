@@ -36,7 +36,7 @@
 #include <indicom.h>
 #include <inditelescope.h>
 
-#include "SerialDeviceControl/ISerialInterface.hpp"
+#include "ISerialInterface.hpp"
 #include "config.h"
 
 namespace GoToDriver

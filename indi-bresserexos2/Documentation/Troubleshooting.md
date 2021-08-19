@@ -84,7 +84,7 @@ You may redact your location information, these should not matter. However you c
 There were reported cases where, after updating the software packages of you linux distribution, you encounter crashes of the driver. 
 If you set up a debug set up in the manner mentioned above, you can look through the output lines of the terminal. If encounter lines with something like:
 
-> 1970-01-00T03:13:37: Driver ./indi_bresserexos2: : **symbol lookup undefined symbol**: _ZN4INDI10BaseDevice13getDeviceNameEv
+> 1970-01-01T03:13:37: Driver ./indi_bresserexos2: : **symbol lookup error: undefined symbol**: _ZN4INDI10BaseDevice13getDeviceNameEv
 
 it is likely you have this exact problem.
 You can resolve this by simply recompiling the driver. 

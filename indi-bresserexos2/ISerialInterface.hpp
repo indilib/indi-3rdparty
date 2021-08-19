@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _ISERIALINTERFACE_H_INCLUDED_
+#define _ISERIALINTERFACE_H_INCLUDED_
 
 #include <cstdint>
 #include "config.h"
@@ -55,4 +56,4 @@ class ISerialInterface
         virtual bool Flush() = 0;
 };
 }
-
+#endif

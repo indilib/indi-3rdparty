@@ -21,7 +21,8 @@
  *
  */
 
-#pragma once
+#ifndef _SERIALCOMMANDTRANSCEIVER_H_INCLUDED_
+#define _SERIALCOMMANDTRANSCEIVER_H_INCLUDED_
 
 #include <cstdint>
 #include <iostream>
@@ -48,7 +49,10 @@ class SerialCommandTransceiver
 {
     public:
         //Create the serial transceiver according to provided template parameters. Requires references of the data received interface implementation and the serial interface implementation.
-        SerialCommandTransceiver(InterfaceType &interfaceImplementation, CallbackType &dataReceivedCallback) :
+        SerialCommandTransceiver(
+            InterfaceType &interfaceImplementation,
+            CallbackType &dataReceivedCallback
+            ) :
             mInterfaceImplementation(interfaceImplementation),
             mDataReceivedCallback(dataReceivedCallback),
             mThreadRunning(false),
@@ -93,7 +97,11 @@ class SerialCommandTransceiver
 
     protected:
         //Send a message using the provided serial interface implementation.
-        bool SendMessageBuffer(uint8_t* buffer, size_t offset, size_t length)
+        bool SendMessageBuffer(
+            uint8_t* buffer,
+            size_t offset,
+            size_t length
+            )
         {
             return mInterfaceImplementation.Write(buffer, offset, length);
         }
@@ -138,8 +146,6 @@ class SerialCommandTransceiver
 
                 if(startPosition != mParseBuffer.end() && endPosition != mParseBuffer.end())
                 {
-                    //std::cout << "found sequence!" << std::endl;
-
                     FloatByteConverter ra_bytes;
                     FloatByteConverter dec_bytes;
 
@@ -157,6 +163,8 @@ class SerialCommandTransceiver
                     float ra = ra_bytes.decimal_number;
                     float dec = dec_bytes.decimal_number;
 
+                    //std::cerr << "COMMAND RECEIVED:" << std::hex << (int)cid << std::endl;
+
                     //handle specific response.
                     switch(cid)
                     {
@@ -164,6 +172,11 @@ class SerialCommandTransceiver
                             //std::cout << "new location received!" << std::endl;
                             mDataReceivedCallback.OnSiteLocationCoordinatesReceived(ra, dec);
                             break;
+                            
+                        /* The handbox unfortunately does not report "untracked" coordinates, -> reason for this big state machine.
+                         * case SerialCommandID::TELESCOPE_POSITION_REPORT_UNTRACKED_COMMAND_ID:
+                            std::cerr << "untracked pointing report:" << "RA:" << ra << " DEC:" << dec << std::endl;
+                            break;*/
 
                         case SerialCommandID::TELESCOPE_POSITION_REPORT_COMMAND_ID:
                             mDataReceivedCallback.OnPointingCoordinatesReceived(ra, dec);
@@ -225,3 +238,4 @@ class SerialCommandTransceiver
         }
 };
 }
+#endif
