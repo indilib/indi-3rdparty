@@ -302,8 +302,6 @@ bool BresserExosIIDriver::SetTrackingEnabled(bool enabled)
 //update the time of the scope.
 bool BresserExosIIDriver::updateTime(ln_date *utc, double utc_offset)
 {
-    INDI::Telescope::updateTime(utc, utc_offset);
-    
     // Bresser takes local time and DST but ln_zonedate doesn't have DST
     struct ln_zonedate local_date;
     ln_date_to_zonedate(utc, &local_date, static_cast<int>(utc_offset * 3600));
@@ -337,7 +335,7 @@ bool BresserExosIIDriver::updateLocation(double latitude, double longitude, doub
     
     if(realLongitude>180)
     {
-        realLongitude = -(360-realLongitude);
+	realLongitude -= 360;
     }
 
     LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", realLongitude, latitude);
