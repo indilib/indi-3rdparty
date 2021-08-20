@@ -25,27 +25,31 @@
 
 using SerialDeviceControl::SerialCommand;
 
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 //TODO: change logging,
 #ifdef USE_CERR_LOGGING
 #include <iostream>
 #endif
 
-#define ERROR_NULL_BUFFER ("error: buffer is null pointer.")
-#define ERROR_INVALID_RA_RANGE ("error: invalid range for right ascension.")
-#define ERROR_INVALID_DEC_RANGE ("error: invalid range for declination.")
-#define ERROR_INVALID_LAT_RANGE ("error: invalid range for latitude.")
-#define ERROR_INVALID_LON_RANGE ("error: invalid range for longitude.")
-#define ERROR_INVALID_YEAR_RANGE ("error: invalid range for year.")
-#define ERROR_INVALID_MONTH_RANGE ("error: invalid range for month.")
-#define ERROR_INVALID_DAY_RANGE ("error: invalid range for day.")
-#define ERROR_INVALID_HOUR_RANGE ("error: invalid range for hour.")
-#define ERROR_INVALID_MINUTE_RANGE ("error: invalid range for minute.")
-#define ERROR_INVALID_SECOND_RANGE ("error: invalid range for second.")
-#define ERROR_INVALID_RANGE_FEBURARY ("error: the february can only have 29 days at maximum!")
-#define ERROR_INVALID_RANGE_THIRTYONE ("error: the provided month can only have 31 days!")
-#define ERROR_INVALID_RANGE_THIRTY ("error: the provided month can only have 30 days!")
-#define ERROR_INVALID_RANGE_NO_LEAP_YEAR ("error: the provided date is invalid, februry can only have 29 days in leap years!")
-#define ERROR_INVALID_DIRECTION ("error: the direction provided is invalid!")
+#define ERROR_NULL_BUFFER ("buffer is null pointer.")
+#define ERROR_INVALID_RA_RANGE ("invalid range for right ascension.")
+#define ERROR_INVALID_DEC_RANGE ("invalid range for declination.")
+#define ERROR_INVALID_LAT_RANGE ("invalid range for latitude.")
+#define ERROR_INVALID_LON_RANGE ("invalid range for longitude.")
+#define ERROR_INVALID_YEAR_RANGE ("invalid range for year.")
+#define ERROR_INVALID_MONTH_RANGE ("invalid range for month.")
+#define ERROR_INVALID_DAY_RANGE ("invalid range for day.")
+#define ERROR_INVALID_HOUR_RANGE ("invalid range for hour.")
+#define ERROR_INVALID_MINUTE_RANGE ("invalid range for minute.")
+#define ERROR_INVALID_SECOND_RANGE ("invalid range for second.")
+#define ERROR_INVALID_RANGE_FEBURARY ("the february can only have 29 days at maximum!")
+#define ERROR_INVALID_RANGE_THIRTYONE ("the provided month can only have 31 days!")
+#define ERROR_INVALID_RANGE_THIRTY ("the provided month can only have 30 days!")
+#define ERROR_INVALID_RANGE_NO_LEAP_YEAR ("the provided date is invalid, februry can only have 29 days in leap years!")
+#define ERROR_INVALID_DIRECTION ("the direction provided is invalid!")
 
 
 uint8_t SerialCommand::MessageHeader[4] = {0x55, 0xaa, 0x01, 0x09};
@@ -402,21 +406,28 @@ bool SerialCommand::GetSetDateTimeCommandMessage(
 
     buffer.push_back(SerialCommandID::SET_DATE_TIME_COMMAND_ID);
 
-    uint8_t hiYear = (uint8_t)(year / 100);
-    uint8_t loYear = (uint8_t)(year % 100);
-
     //when received the incomming byte is offset by -12 for some reason, so adjust for this. probably offset sign handling.
-    int8_t utc_shift = utc_offset + 12;
-
+   
+    
+    uint8_t local_hiYear = (uint8_t)(year / 100);
+    uint8_t local_loYear = (uint8_t)(year % 100);
+    uint8_t local_month = (uint8_t)month;
+    uint8_t local_day = (uint8_t)day;
+    
     //TODO: Be aware, the firmware only supports dates prior to 10000-01-01, please fix this at the appropriate time!
-    buffer.push_back(hiYear);
-    buffer.push_back(loYear);
-    buffer.push_back(month);
-    buffer.push_back(day);
+    buffer.push_back(local_hiYear);
+    buffer.push_back(local_loYear);
+    buffer.push_back(local_month);
+    buffer.push_back(local_day);
 
-    buffer.push_back(hour+utc_offset); //handbox uses local time as your clock shows, and calculates back to the UTC from that.
-    buffer.push_back(minute);
-    buffer.push_back(second);
+    uint8_t local_hour   = (uint8_t)hour;
+    uint8_t local_minute = (uint8_t)minute;
+    uint8_t local_second = (uint8_t)second;
+    uint8_t utc_shift    = (uint8_t)(utc_offset + 12);
+    
+    buffer.push_back(local_hour); //handbox uses local time as your clock shows, and calculates back to the UTC from that.
+    buffer.push_back(local_minute);
+    buffer.push_back(local_second);
     buffer.push_back(utc_shift); //TODO: offset range limiting...
 
     return true;
