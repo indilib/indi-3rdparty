@@ -25,6 +25,10 @@
 
 using SerialDeviceControl::SerialCommand;
 
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 //TODO: change logging,
 #ifdef USE_CERR_LOGGING
 #include <iostream>
@@ -402,21 +406,28 @@ bool SerialCommand::GetSetDateTimeCommandMessage(
 
     buffer.push_back(SerialCommandID::SET_DATE_TIME_COMMAND_ID);
 
-    uint8_t hiYear = (uint8_t)(year / 100);
-    uint8_t loYear = (uint8_t)(year % 100);
-
     //when received the incomming byte is offset by -12 for some reason, so adjust for this. probably offset sign handling.
-    int8_t utc_shift = utc_offset + 12;
-
+   
+    
+    uint8_t local_hiYear = (uint8_t)(year / 100);
+    uint8_t local_loYear = (uint8_t)(year % 100);
+    uint8_t local_month = (uint8_t)month;
+    uint8_t local_day = (uint8_t)day;
+    
     //TODO: Be aware, the firmware only supports dates prior to 10000-01-01, please fix this at the appropriate time!
-    buffer.push_back(hiYear);
-    buffer.push_back(loYear);
-    buffer.push_back(month);
-    buffer.push_back(day);
+    buffer.push_back(local_hiYear);
+    buffer.push_back(local_loYear);
+    buffer.push_back(local_month);
+    buffer.push_back(local_day);
 
-    buffer.push_back(hour+utc_offset); //handbox uses local time as your clock shows, and calculates back to the UTC from that.
-    buffer.push_back(minute);
-    buffer.push_back(second);
+    uint8_t local_hour   = (uint8_t)hour;
+    uint8_t local_minute = (uint8_t)minute;
+    uint8_t local_second = (uint8_t)second;
+    uint8_t utc_shift    = (uint8_t)(utc_offset + 12);
+    
+    buffer.push_back(local_hour); //handbox uses local time as your clock shows, and calculates back to the UTC from that.
+    buffer.push_back(local_minute);
+    buffer.push_back(local_second);
     buffer.push_back(utc_shift); //TODO: offset range limiting...
 
     return true;

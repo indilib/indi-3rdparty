@@ -303,17 +303,22 @@ bool BresserExosIIDriver::SetTrackingEnabled(bool enabled)
 bool BresserExosIIDriver::updateTime(ln_date *utc, double utc_offset)
 {
     INDI::Telescope::updateTime(utc, utc_offset);
+    
+    // Bresser takes local time and DST but ln_zonedate doesn't have DST
+    struct ln_zonedate local_date;
+    ln_date_to_zonedate(utc, &local_date, static_cast<int>(utc_offset * 3600));
+    
+    uint16_t years = (uint16_t)local_date.years;
+    uint8_t months = (uint8_t)local_date.months;
+    uint8_t days =   (uint8_t)local_date.days;
 
-    uint16_t years = (uint16_t)utc->years;
-    uint8_t months = (uint8_t)utc->months;
-    uint8_t days =   (uint8_t)utc->days;
-
-    uint8_t hours =   (uint8_t) utc->hours;
-    uint8_t minutes = (uint8_t) utc->minutes;
-    uint8_t seconds = (uint8_t) utc->seconds;
+    uint8_t hours =   (uint8_t) local_date.hours;
+    uint8_t minutes = (uint8_t) local_date.minutes;
+    uint8_t seconds = (uint8_t) local_date.seconds;
     int8_t utc_off = (int8_t) utc_offset;
 
-    LOGF_INFO("Date/Time updated: %d:%d:%d %d-%d-%d (%d)", hours, minutes, seconds, years, months, days, utc_off);
+    LOGF_INFO("Date/Time updated (UTC Time): %d:%d:%d %d-%d-%d (%d)", utc->hours, utc->minutes, utc->seconds, utc->years, utc->months, utc->days, utc_off);
+    LOGF_INFO("Date/Time updated (Local Time): %d:%d:%d %d-%d-%d (%d)", hours, minutes, seconds, years, months, days, utc_off);
 
     return mMountControl.SetDateTime(years, months, days, hours, minutes, seconds,utc_off);
 }
@@ -321,12 +326,23 @@ bool BresserExosIIDriver::updateTime(ln_date *utc, double utc_offset)
 //update the location of the scope.
 bool BresserExosIIDriver::updateLocation(double latitude, double longitude, double elevation)
 {
-
     INDI_UNUSED(elevation);
+    
+    //orientation of the handbox is: 
+    //negative longitude is west of greenich
+    //positive longitude is east of greenich
+    //kstars sends 360 complements for negatives
+    //this sole case needs to be corrected:
+    double realLongitude = longitude;
+    
+    if(realLongitude>180)
+    {
+        realLongitude = -(360-realLongitude);
+    }
 
-    LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", longitude, latitude);
+    LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", realLongitude, latitude);
 
-    return mMountControl.SetSiteLocation((float)latitude, (float) longitude);
+    return mMountControl.SetSiteLocation((float)latitude, (float) realLongitude);
 }
 
 

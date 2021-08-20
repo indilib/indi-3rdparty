@@ -40,8 +40,8 @@ The mount is quite autonomous, in terms motion controls, when initialized proper
 On the serial protocol side however, this device is quite primitive. 
 The data exchange is established using a 13 Byte message frame, with a 4 Byte preamble, leaving 1 byte for a command and 8 bytes for command parameter data.
 The protocol only accepts, a few commands for goto, sync, parking, motion stop and Location/Time/Date setting.
-The Device is not very talkative, it only sends responses to location command, and only reports back the its current pointing coordinates.
-This makes it difficult to assess the state of the mount.
+The Device is not very talkative, it only sends responses to location command, and only reports back the its current pointing coordinates, without the tracking status information.
+This makes it difficult to determine the state of the mount.
 Also this introduces some limitations which competative products may not have.
 
 The serial protocol was reverse engineered using serial port sniffing tools, developping this driver as a result. 
@@ -84,7 +84,7 @@ It is **important** that you put the scope in the Home position, Polar and Star 
 
 **Its vital in order to avoid damage to your Equipment. This Driver can not handle this for your!**
 
-**Also do not point your Telescope directly to the sun, using this driver. It only handles coordinates not objects, and will there for no prevent you from doing so!**
+**Also do not point your Telescope directly to the sun, without recommended protective equipment, using this driver. It only handles coordinates not objects, and will therefore no prevent you from looking directly in to the sun!**
 
 ---
 
