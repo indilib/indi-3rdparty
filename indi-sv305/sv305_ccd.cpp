@@ -1,7 +1,7 @@
 /*
  SV305 CCD
  SVBONY SV305 Camera driver
- Copyright (C) 2020 Blaise-Florentin Collin (thx8411@yahoo.fr)
+ Copyright (C) 2020-2021 Blaise-Florentin Collin (thx8411@yahoo.fr)
 
  Generic CCD skeleton Copyright (C) 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
@@ -121,10 +121,23 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_HAS_BAYER | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
-    // SV305 Pro has an ST4 port
+    // SV305 is a color camera
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305")==0)
+    {
+        cap|= CCD_HAS_BAYER;
+    }
+
+    // SV305 Pro is a color camera and has an ST4 port
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO")==0)
+    {
+	cap|= CCD_HAS_BAYER;
+        cap|= CCD_HAS_ST4_PORT;
+    }
+
+    // SV305M Pro is a mono camera and has an ST4 port
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0)
     {
         cap|= CCD_HAS_ST4_PORT;
     }
