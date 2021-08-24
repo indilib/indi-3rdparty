@@ -12,8 +12,8 @@ find_package(ZLIB REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
-set(ASI_VERSION_MAJOR 1)
-set(ASI_VERSION_MINOR 9)
+set(ASI_VERSION_MAJOR 2)
+set(ASI_VERSION_MINOR 0)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_asi.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml)
@@ -43,6 +43,17 @@ add_executable(indi_asi_ccd ${indi_asi_SRCS})
 target_link_libraries(indi_asi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 if (HAVE_WEBSOCKET)
     target_link_libraries(indi_asi_ccd ${Boost_LIBRARIES})
+endif()
+
+########### indi_asi_single_ccd ###########
+set(indi_asi_single_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_single_ccd.cpp
+   )
+
+add_executable(indi_asi_single_ccd ${indi_asi_single_SRCS})
+target_link_libraries(indi_asi_single_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+if (HAVE_WEBSOCKET)
+    target_link_libraries(indi_asi_single_ccd ${Boost_LIBRARIES})
 endif()
 
 ########### indi_asi_wheel ###########
