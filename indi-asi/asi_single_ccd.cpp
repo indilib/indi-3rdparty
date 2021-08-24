@@ -314,9 +314,6 @@ ASISingleCamera::ASISingleCamera() : CamerasListFile(GetHomeDirectory() + "/.ind
 {
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
 
-    if (initCameraFromConfig())
-        setDeviceName(mCameraName.c_str());
-
     mTimerWE.setSingleShot(true);
     mTimerNS.setSingleShot(true);
 }
@@ -359,10 +356,13 @@ bool ASISingleCamera::loadCamerasList()
 {
     LilXML *XmlHandle = newLilXML();
     FILE *file = fopen(CamerasListFile.c_str(), "r");
-    XMLEle *CurrentXmlNode = nullptr;
+    XMLEle *RootXmlNode = nullptr, *CurrentXmlNode = nullptr;
     char errorMessage[512] = {0};
-    XMLEle *RootXmlNode = readXMLFile(file, XmlHandle, errorMessage);
-    fclose(file);
+    if (file)
+    {
+        RootXmlNode = readXMLFile(file, XmlHandle, errorMessage);
+        fclose(file);
+    }
     delLilXML(XmlHandle);
 
     // No file detected, let's create one.
@@ -371,6 +371,8 @@ bool ASISingleCamera::loadCamerasList()
         delXMLEle(RootXmlNode);
         XMLEle *oneElement = nullptr;
         file = fopen(CamerasListFile.c_str(), "w");
+        if (!file)
+            return false;
 
         RootXmlNode = addXMLEle(nullptr, "ZWOCameras");
 
@@ -436,8 +438,13 @@ bool ASISingleCamera::initCameraFromConfig()
 
     // Now get a list of all connected cameras.
     std::vector<ASI_CAMERA_INFO> connectedCameras = getConnectedCameras();
+    CamerasSP.reserve(connectedCameras.size());
     for (size_t i = 0; i < connectedCameras.size(); i++)
-        CamerasSP[i].fill(connectedCameras[i].Name, connectedCameras[i].Name, ISS_OFF);
+    {
+        INDI::WidgetSwitch node;
+        node.fill(connectedCameras[i].Name, connectedCameras[i].Name, ISS_OFF);
+        CamerasSP.push(std::move(node));
+    }
 
     if (loadCamerasList())
     {
@@ -467,6 +474,8 @@ bool ASISingleCamera::initCameraFromConfig()
             }
         }
     }
+
+    CamerasSP.fill(getDeviceName(), "CAMERAS_LIST", "Cameras", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     return false;
 }
 
@@ -483,6 +492,9 @@ void ASISingleCamera::ISGetProperties(const char *dev)
 
 bool ASISingleCamera::initProperties()
 {
+    if (initCameraFromConfig())
+        setDeviceName(mCameraName.c_str());
+
     INDI::CCD::initProperties();
 
     // Add Debug Control.
