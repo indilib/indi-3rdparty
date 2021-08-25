@@ -57,5 +57,4 @@ class ASISingleCamera : public ASIBase
     private:
         const std::string CamerasListFile;
         std::map<std::string, std::string> m_ConfigCameras;
-        bool m_ConfigCameraLoaded {false};
 };

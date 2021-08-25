@@ -148,6 +148,6 @@ class ASIBase : public INDI::CCD
         std::string mCameraName, mCameraID;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};
-        ASI_IMG_TYPE                  mCurrentVideoFormat;
+        ASI_IMG_TYPE mCurrentVideoFormat;
         std::vector<ASI_CONTROL_CAPS> mControlCaps;
 };
