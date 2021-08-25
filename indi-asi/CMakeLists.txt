@@ -36,6 +36,7 @@ endif()
 
 ########### indi_asi_ccd ###########
 set(indi_asi_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_ccd.cpp
    )
 
@@ -47,6 +48,7 @@ endif()
 
 ########### indi_asi_single_ccd ###########
 set(indi_asi_single_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_single_ccd.cpp
    )
 
