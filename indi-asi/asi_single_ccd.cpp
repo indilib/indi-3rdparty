@@ -189,15 +189,33 @@ bool ASISingleCamera::initCameraFromConfig()
 
     if (loadCamerasList())
     {
+        // If INDIDEV was not set and we just have a generic camera "ZWO Camera"
+        // then we use the first camera detected if available.
+        if (!strcmp(getDeviceName(), "ZWO Camera") && connectedCameras.size() > 0)
+        {
+            mCameraInfo = connectedCameras[0];
+            mCameraName = mCameraInfo.Name;
+
+            CamerasSP.fill(mCameraName.c_str(), "CAMERAS_LIST", "Cameras", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_OK);
+            CamerasSP[0].setState(ISS_ON);
+            return true;
+        }
+
+        // Otherwise, check the config file (~/.indi/ZWOCameras.xml) entries
+        // For each camera (ZWO Camera 1, ZWO Camera 2, ZWO Camera 3)
+        // we can have a specific camera assigned to them. If a specific camera is set, let's try
+        // to connect to this particular camera. Otherwise, take them in order as detected by connectedCameras
         for (const auto &kv : m_ConfigCameras)
         {
-            // Match ID
+            // Match ID (ZWO Camera 1, ZWO Camera 2..etc)
             if (kv.first == getDeviceName())
             {
                 mCameraID = kv.first;
+                // Get index. i.e. ZWO Camera 1 --> index = 0
                 const uint32_t index = static_cast<uint32_t>(mCameraID.back()) - 0x31;
                 // Now find out which camera we're supposed to connect to?
                 std::string configCamera = kv.second;
+                // Do we have a specific camera selected?
                 if (!configCamera.empty())
                 {
                     for (size_t i = 0; i < connectedCameras.size(); i++)
