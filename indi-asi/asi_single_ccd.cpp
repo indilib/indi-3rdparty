@@ -264,9 +264,24 @@ void ASISingleCamera::ISGetProperties(const char *dev)
 bool ASISingleCamera::initProperties()
 {
     if (initCameraFromConfig())
+    {
+        m_ConfigCameraFound = true;
         setDeviceName(mCameraName.c_str());
+    }
 
     return ASIBase::initProperties();
+}
+
+bool ASISingleCamera::Connect()
+{
+    if (!m_ConfigCameraFound)
+    {
+        LOG_WARN("Failed to find camera. Please check USB and power connections.");
+        return false;
+    }
+
+    return ASIBase::Connect();
+
 }
 
 bool ASISingleCamera::ISNewSwitch(const char *dev, const char *name, ISState * states, char *names[], int n)

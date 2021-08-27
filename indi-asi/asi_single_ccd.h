@@ -34,6 +34,7 @@ class ASISingleCamera : public ASIBase
 
         virtual const char *getDefaultName() override;
 
+        virtual bool Connect() override;
         virtual void ISGetProperties(const char *dev) override;
         virtual bool initProperties() override;
 
@@ -57,4 +58,5 @@ class ASISingleCamera : public ASIBase
     private:
         const std::string CamerasListFile;
         std::map<std::string, std::string> m_ConfigCameras;
+        bool m_ConfigCameraFound {false};
 };
