@@ -29,7 +29,8 @@ elseif (UNIX AND NOT WIN32)
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "x64/libPlayerOneCamera.bin")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
-    set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "x86/libPlayerOneCamera.bin")
+    #x86 library is not provided from manufacturer
+    set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "")
   endif ()
 
   # Install udev rules
