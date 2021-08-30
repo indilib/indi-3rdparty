@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0.2)
 project (libpktriggercord C)
 
-set (PK_VERSION 0.85.01)
+set (PK_VERSION 0.85.02)
 set (PK_SOVERSION 0)
 set (PK_DATADIR /usr/share/pktriggercord)
 set (PK_DEBUG true)
@@ -30,12 +30,14 @@ string (REGEX REPLACE "int main.*$" "" PK_CLI "${PK_CLI}")
 file (WRITE ${CMAKE_CURRENT_BINARY_DIR}/libpktriggercord.c "${PK_CLI}")
 
 set (libpktriggercord_SRCS
-  ${CMAKE_CURRENT_BINARY_DIR}/libpktriggercord.c # striped
+  ${CMAKE_CURRENT_BINARY_DIR}/libpktriggercord.c # stripped
 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_model.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_lens.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_enum.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_utils.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_log.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pslr_scsi.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/src/external/js0n/js0n.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/pktriggercord-servermode.c
