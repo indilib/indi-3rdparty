@@ -381,12 +381,12 @@ bool CelestronAUX::UnPark()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
+INDI::IHorizontalCoordinates CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
 {
     // Call the alignment subsystem to translate the celestial reference frame coordinate
     // into a telescope reference frame coordinate
     TelescopeDirectionVector TDV;
-    ln_hrz_posn AltAz;
+    INDI::IHorizontalCoordinates AltAz;
 
     if (TransformCelestialToTelescope(ra, dec, ts, TDV))
         // The alignment subsystem has successfully transformed my coordinate
@@ -396,8 +396,8 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
         LOG_ERROR("AltAzFromRaDec - TransformCelestialToTelescope failed");
         LOG_WARN("Activate the Alignment Subsystem.");
         // the best I can do
-        AltAz.az = ra;
-        AltAz.alt = dec;
+        AltAz.azimuth = ra;
+        AltAz.altitude = dec;
     }
 
     return AltAz;
@@ -409,12 +409,12 @@ ln_hrz_posn CelestronAUX::AltAzFromRaDec(double ra, double dec, double ts)
 /////////////////////////////////////////////////////////////////////////////////////
 double CelestronAUX::getNorthAz()
 {
-    ln_lnlat_posn location;
+    INDI::IGeographicCoordinates location;
     double northAz;
     if (!GetDatabaseReferencePosition(location))
         northAz = 0.;
     else
-        northAz = AltAzFromRaDec(get_local_sidereal_time(location.lng), 0., 0.).az;
+        northAz = AltAzFromRaDec(get_local_sidereal_time(location.longitude), 0., 0.).azimuth;
     LOGF_DEBUG("North Azimuth = %lf", northAz);
     return northAz;
 }
@@ -435,14 +435,14 @@ bool CelestronAUX::Goto(double ra, double dec)
         char RAStr[32], DecStr[32];
         fs_sexa(RAStr, ra, 2, 3600);
         fs_sexa(DecStr, dec, 2, 3600);
-        CurrentTrackingTarget.ra  = ra;
-        CurrentTrackingTarget.dec = dec;
+        CurrentTrackingTarget.rightascension  = ra;
+        CurrentTrackingTarget.declination = dec;
         NewTrackingTarget         = CurrentTrackingTarget;
         LOGF_INFO("Slewing to RA: %s DE: %s with Tracking.", RAStr, DecStr);
     }
 
-    GoToTarget.ra  = ra;
-    GoToTarget.dec = dec;
+    GoToTarget.rightascension  = ra;
+    GoToTarget.declination = dec;
 
     double timeshift = 0.0;
     if (ScopeStatus != APPROACH)
@@ -460,7 +460,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     // Call the alignment subsystem to translate the celestial reference frame coordinate
     // into a telescope reference frame coordinate
     TelescopeDirectionVector TDV;
-    ln_hrz_posn AltAz;
+    INDI::IHorizontalCoordinates AltAz;
 
     AltAz = AltAzFromRaDec(ra, dec, -timeshift);
 
@@ -468,35 +468,35 @@ bool CelestronAUX::Goto(double ra, double dec)
     // Let us limit azimuth approach to maxApproach degrees
     if (ScopeStatus != APPROACH)
     {
-        ln_hrz_posn trgAltAz = AltAzFromRaDec(ra, dec, 0);
+        INDI::IHorizontalCoordinates trgAltAz = AltAzFromRaDec(ra, dec, 0);
         double d;
 
-        d = anglediff(AltAz.az, trgAltAz.az);
+        d = anglediff(AltAz.azimuth, trgAltAz.azimuth);
         LOGF_DEBUG("Azimuth approach:  %lf (%lf)", d, Approach);
-        AltAz.az = trgAltAz.az + ((d > 0) ? Approach : -Approach);
+        AltAz.azimuth = trgAltAz.azimuth + ((d > 0) ? Approach : -Approach);
 
-        d = anglediff(AltAz.alt, trgAltAz.alt);
+        d = anglediff(AltAz.altitude, trgAltAz.altitude);
         LOGF_DEBUG("Altitude approach:  %lf (%lf)", d, Approach);
-        AltAz.alt = trgAltAz.alt + ((d > 0) ? Approach : -Approach);
+        AltAz.altitude = trgAltAz.altitude + ((d > 0) ? Approach : -Approach);
     }
 
     // Fold Azimuth into 0-360
-    AltAz.az = range360(AltAz.az);
+    AltAz.azimuth = range360(AltAz.azimuth);
     // Altitude encoder runs -90 to +90 there is no point going outside.
-    if (AltAz.alt > 90.0)
-        AltAz.alt = 90.0;
-    if (AltAz.alt < -90.0)
-        AltAz.alt = -90.0;
+    if (AltAz.altitude > 90.0)
+        AltAz.altitude = 90.0;
+    if (AltAz.altitude < -90.0)
+        AltAz.altitude = -90.0;
 
-    LOGF_DEBUG("Goto: Scope reference frame target altitude %lf azimuth %lf", AltAz.alt, AltAz.az);
+    LOGF_DEBUG("Goto: Scope reference frame target altitude %lf azimuth %lf", AltAz.altitude, AltAz.azimuth);
 
     TrackState = SCOPE_SLEWING;
     if (ScopeStatus == APPROACH)
     {
         // We need to make a slow slew to approach the final position
         ScopeStatus = SLEWING_SLOW;
-        GoToSlow(long(AltAz.alt * STEPS_PER_DEGREE),
-                 long(AltAz.az * STEPS_PER_DEGREE),
+        GoToSlow(long(AltAz.altitude * STEPS_PER_DEGREE),
+                 long(AltAz.azimuth * STEPS_PER_DEGREE),
                  ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
     }
     else
@@ -504,8 +504,8 @@ bool CelestronAUX::Goto(double ra, double dec)
         // Just make a standard fast slew
         slewTicks   = 0;
         ScopeStatus = SLEWING_FAST;
-        GoToFast(long(AltAz.alt * STEPS_PER_DEGREE),
-                 long(AltAz.az * STEPS_PER_DEGREE),
+        GoToFast(long(AltAz.altitude * STEPS_PER_DEGREE),
+                 long(AltAz.azimuth * STEPS_PER_DEGREE),
                  ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
     }
 
@@ -1141,18 +1141,18 @@ bool CelestronAUX::ReadScopeStatus()
         return false;
 
     TelescopeDirectionVector TDV;
-    struct ln_equ_posn RaDec;
-    struct ln_hrz_posn AltAz;
+    INDI::IEquatorialCoordinates RaDec;
+    INDI::IHorizontalCoordinates AltAz;
     double RightAscension, Declination;
 
     if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
     {
-        RaDec.ra   = double(GetAZ()) / STEPS_PER_DEGREE;
-        RaDec.dec  = double(GetALT()) / STEPS_PER_DEGREE;
+        RaDec.rightascension   = double(GetAZ()) / STEPS_PER_DEGREE;
+        RaDec.declination  = double(GetALT()) / STEPS_PER_DEGREE;
         TDV = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
 
         if (TraceThisTick)
-            LOGF_DEBUG("ReadScopeStatus - HA %lf deg ; Dec %lf deg", RaDec.ra, RaDec.dec);
+            LOGF_DEBUG("ReadScopeStatus - HA %lf deg ; Dec %lf deg", RaDec.rightascension, RaDec.declination);
     }
     else
     {
@@ -1164,12 +1164,12 @@ bool CelestronAUX::ReadScopeStatus()
         // controller (That would involve adding 180deg here to the azimuth -
         // this way the celestron nexstar driver and this would agree in some
         // situations but not in other - better not to attepmpt impossible!).
-        AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
-        AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
+        AltAz.azimuth  = double(GetAZ()) / STEPS_PER_DEGREE;
+        AltAz.altitude = double(GetALT()) / STEPS_PER_DEGREE;
         TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
 
         if (TraceThisTick)
-            LOGF_DEBUG("ReadScopeStatus - Alt %lf deg ; Az %lf deg", AltAz.alt, AltAz.az);
+            LOGF_DEBUG("ReadScopeStatus - Alt %lf deg ; Az %lf deg", AltAz.altitude, AltAz.azimuth);
     }
 
     if (TransformTelescopeToCelestial(TDV, RightAscension, Declination))
@@ -1178,8 +1178,8 @@ bool CelestronAUX::ReadScopeStatus()
             LOGF_DEBUG("ReadScopeStatus - RA %lf hours DEC %lf degrees", RightAscension, Declination);
 
         // In case we are slewing while tracking update the potential target
-        NewTrackingTarget.ra  = RightAscension;
-        NewTrackingTarget.dec = Declination;
+        NewTrackingTarget.rightascension  = RightAscension;
+        NewTrackingTarget.declination = Declination;
         NewRaDec(RightAscension, Declination);
 
         return true;
@@ -1197,24 +1197,24 @@ bool CelestronAUX::ReadScopeStatus()
 bool CelestronAUX::Sync(double ra, double dec)
 {
     AlignmentDatabaseEntry NewEntry;
-    struct ln_equ_posn RaDec
+    INDI::IEquatorialCoordinates RaDec
     {
         0, 0
     };
-    struct ln_hrz_posn AltAz
+    INDI::IHorizontalCoordinates AltAz
     {
         0, 0
     };
 
     if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
     {
-        RaDec.ra   = double(GetAZ()) / STEPS_PER_DEGREE;
-        RaDec.dec  = double(GetALT()) / STEPS_PER_DEGREE;
+        RaDec.rightascension   = double(GetAZ()) / STEPS_PER_DEGREE;
+        RaDec.declination  = double(GetALT()) / STEPS_PER_DEGREE;
     }
     else
     {
-        AltAz.az  = double(GetAZ()) / STEPS_PER_DEGREE;
-        AltAz.alt = double(GetALT()) / STEPS_PER_DEGREE;
+        AltAz.azimuth  = double(GetAZ()) / STEPS_PER_DEGREE;
+        AltAz.altitude = double(GetALT()) / STEPS_PER_DEGREE;
     }
 
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
@@ -1323,7 +1323,7 @@ void CelestronAUX::TimerHit()
                 if ((ScopeStatus == SLEWING_FAST) && (slewTicks > maxSlewTicks))
                 {
                     // Slewing too long, reissue GoTo to update target position
-                    Goto(GoToTarget.ra, GoToTarget.dec);
+                    Goto(GoToTarget.rightascension, GoToTarget.declination);
                     slewTicks = 0;
                 }
                 break;
@@ -1336,7 +1336,7 @@ void CelestronAUX::TimerHit()
                 {
                     // This was coarse slew. Execute precise approach.
                     ScopeStatus = APPROACH;
-                    Goto(GoToTarget.ra, GoToTarget.dec);
+                    Goto(GoToTarget.rightascension, GoToTarget.declination);
                     break;
                 }
                 else if (trackingRequested())
@@ -1350,7 +1350,7 @@ void CelestronAUX::TimerHit()
                         CurrentTrackingTarget = NewTrackingTarget;
                     }
                     LOGF_DEBUG("Goto finished start tracking TargetRA: %f TargetDEC: %f",
-                               CurrentTrackingTarget.ra, CurrentTrackingTarget.dec);
+                               CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination);
                     TrackState = SCOPE_TRACKING;
                     // Fall through to tracking case
                 }
@@ -1380,16 +1380,16 @@ void CelestronAUX::TimerHit()
             // Calculate where the mount needs to be in a minute (+/- 30s)
             double JulianOffset = 30.0 / (24.0 * 60 * 60);
             TelescopeDirectionVector TDV;
-            ln_hrz_posn AAplus, AAzero, AAminus;
+            INDI::IHorizontalCoordinates AAplus, AAzero, AAminus;
 
-            AAplus  = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, JulianOffset);
-            AAzero = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, 0);
-            AAminus  = AltAzFromRaDec(CurrentTrackingTarget.ra, CurrentTrackingTarget.dec, -JulianOffset);
+            AAplus  = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, JulianOffset);
+            AAzero = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, 0);
+            AAminus  = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, -JulianOffset);
 
             // Fold Azimuth into 0-360
-            AAminus.az = range360(AAminus.az);
-            AAzero.az = range360(AAzero.az);
-            AAplus.az = range360(AAplus.az);
+            AAminus.azimuth = range360(AAminus.azimuth);
+            AAzero.azimuth = range360(AAzero.azimuth);
+            AAplus.azimuth = range360(AAplus.azimuth);
             {
                 double altRate, azRate;
                 double altError, azError;
@@ -1400,14 +1400,14 @@ void CelestronAUX::TimerHit()
                 double Kp {0.0};
 
                 // This is in steps per minute
-                altError = AAzero.alt * STEPS_PER_DEGREE - GetALT();
-                azError  = range360(AAzero.az) * STEPS_PER_DEGREE - GetAZ();
+                altError = AAzero.altitude * STEPS_PER_DEGREE - GetALT();
+                azError  = range360(AAzero.azimuth) * STEPS_PER_DEGREE - GetAZ();
 
-                altRate =  STEPS_PER_DEGREE * (AAplus.alt - AAminus.alt);
-                azRate = STEPS_PER_DEGREE * anglediff(AAplus.az, AAminus.az);
+                altRate =  STEPS_PER_DEGREE * (AAplus.altitude - AAminus.altitude);
+                azRate = STEPS_PER_DEGREE * anglediff(AAplus.azimuth, AAminus.azimuth);
 
                 if (TraceThisTick)
-                    LOGF_DEBUG("Target (AltAz): %f  %f  Scope  (AltAz)  %f  %f", AAzero.alt, AAzero.az,
+                    LOGF_DEBUG("Target (AltAz): %f  %f  Scope  (AltAz)  %f  %f", AAzero.altitude, AAzero.azimuth,
                                GetALT() / STEPS_PER_DEGREE, GetAZ() / STEPS_PER_DEGREE);
 
                 // Fold the Az difference to +/- STEPS_PER_REVOLUTION / 2
