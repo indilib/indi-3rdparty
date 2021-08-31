@@ -20,6 +20,7 @@
 */
 
 #include "indi_toupbase.h"
+#include "oem_cameras.h"
 
 #include "config.h"
 
@@ -98,6 +99,17 @@ static class Loader
         Loader()
         {
             int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+            if (iConnectedCamerasCount >= 0)
+            {
+                int iCamInfosLeft = CP(MAX) - iConnectedCamerasCount;
+                int iConnectedOemCamerasCount;
+
+                iConnectedOemCamerasCount = OEMCamEnum(&pCameraInfo[iConnectedCamerasCount], iCamInfosLeft);
+                if (iConnectedOemCamerasCount > 0)
+                {
+                    iConnectedCamerasCount += iConnectedOemCamerasCount;
+                }
+            }
             if (iConnectedCamerasCount <= 0)
             {
                 IDLog("No Toupcam detected. Power on?");

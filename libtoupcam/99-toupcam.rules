@@ -1,2 +1,4 @@
 # All ToupCam devices
 SUBSYSTEMS=="usb", ATTR{idVendor}=="0547", MODE="0666"
+# Some Meade ToupTek OEM cameras use a vendor ID of 0x549
+SUBSYSTEMS=="usb", ATTR{idVendor}=="0549", MODE="0666"
