@@ -1356,6 +1356,12 @@ static const struct oem_camera oem_cameras[] = {
         .vid = 0x549,
         .pid = 0xe004,
         .toupcam = &toupcam_models[TOUPCAM_MODEL_GPCMOS01200KMB],
+    },
+    {
+        .name = "Meade LPI-GC",
+        .vid = 0x549,
+        .pid = 0xe003,
+        .toupcam = &toupcam_models[TOUPCAM_MODEL_GPCMOS01200KPB],
     }
 };
 
