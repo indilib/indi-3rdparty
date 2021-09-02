@@ -88,7 +88,7 @@ void ISInit()
         if (camhandle) {
             if (!pslr_connect(camhandle)) {
                 // pslr_status status;
-                const char *camname = pslr_camera_name(camhandle);
+                const char *camname = pslr_get_camera_name(camhandle);
                 bool camalreadyregistered = false;
                 for (int j=0; j<cameraCount; j++) {
                     if (typeid(*cameras[j])==typeid(PkTriggerCordCCD) && !strncmp(camname,cameras[j]->getDeviceName(),strlen(camname))) camalreadyregistered = true;

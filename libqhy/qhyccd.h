@@ -875,6 +875,16 @@ EXPORTFUNC uint32_t STDCALL GetReadModesNumber(char* deviceID,uint32_t* numModes
 
 EXPORTFUNC uint32_t STDCALL GetReadModeName(char* deviceID, uint32_t modeIndex, char* modeName);
 
+
+
+EXPORTFUNC int STDCALL QHYCCD_fpga_list(struct fpga_info_list &list);
+EXPORTFUNC uint32_t STDCALL QHYCCD_fpga_open(int id);
+EXPORTFUNC void STDCALL QHYCCD_fpga_close();
+EXPORTFUNC int STDCALL QHYCCD_fpga_send(int chnl, void * data, int len, int destoff, int last, uint64_t timeout);
+EXPORTFUNC int STDCALL QHYCCD_fpga_recv(int chnl, void * data, int len, uint64_t timeout);
+EXPORTFUNC void STDCALL QHYCCD_fpga_reset();
+
+
 #if 0//PCIE_MODE_TEST
 
 #include "riffa.h"

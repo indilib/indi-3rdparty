@@ -50,6 +50,12 @@ On Debian/Ubuntu:
 sudo apt-get -y install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libavcodec-dev libavdevice-dev
 ```
 
+You may also add libindi-dev if needed :
+
+```
+sudo apt-get -y install libindi-dev
+```
+
 ## Create Project Directory
 ```
 mkdir -p ~/Projects
@@ -89,7 +95,13 @@ sudo make install
 The complete list of system dependancies for all drivers on Debian / Ubuntu
 
 ```
-sudo apt-get install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev
+sudo apt-get install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libftdi-dev libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libgps-dev libavcodec-dev libavdevice-dev
+```
+
+You may also add libindi-dev if needed :
+
+```
+sudo apt-get -y install libindi-dev
 ```
 
 ## Building all the 3rd Party Libraries

@@ -9,6 +9,10 @@
                 <driver name="ToupCam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Meade ToupCam" mdpd="true" manufacturer="Meade">
+                <driver name="ToupCam">indi_toupcam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
         <device label="Altair" mdpd="true" manufacturer="Altair">
                 <driver name="Altair">indi_altair_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>

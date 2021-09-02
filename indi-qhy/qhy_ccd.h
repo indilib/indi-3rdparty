@@ -454,7 +454,6 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         uint32_t m_LastExposureRequestuS;
         struct timeval ExpStart;
         // Gain
-        double m_GainRequest = 1e6;
         double m_LastGainRequest = 1e6;
         // Filter Wheel Timeout
         uint16_t m_FilterCheckCounter = 0;

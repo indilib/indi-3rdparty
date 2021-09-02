@@ -20,6 +20,7 @@
 */
 
 #include "indi_toupbase.h"
+#include "oem_cameras.h"
 
 #include "config.h"
 
@@ -98,6 +99,17 @@ static class Loader
         Loader()
         {
             int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+            if (iConnectedCamerasCount >= 0)
+            {
+                int iCamInfosLeft = CP(MAX) - iConnectedCamerasCount;
+                int iConnectedOemCamerasCount;
+
+                iConnectedOemCamerasCount = OEMCamEnum(&pCameraInfo[iConnectedCamerasCount], iCamInfosLeft);
+                if (iConnectedOemCamerasCount > 0)
+                {
+                    iConnectedCamerasCount += iConnectedOemCamerasCount;
+                }
+            }
             if (iConnectedCamerasCount <= 0)
             {
                 IDLog("No Toupcam detected. Power on?");
@@ -788,7 +800,6 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
@@ -800,7 +811,6 @@ void ToupBase::setupParams()
     {
         m_HasHeatUp = true;
     }
-#endif
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
@@ -1932,19 +1942,21 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-    //    int timeMS = uSecs / 1000 - 50;
-    //    if (timeMS <= 0)
-    //        sendImageCallBack();
-    //    else if (static_cast<uint32_t>(timeMS) < getCurrentPollingPeriod())
-    //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
+    bool capturedStarted = false;
 
     // Snap still image
-    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+    if (m_CanSnap)
     {
-        LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes[rc].c_str());
-        return false;
+        if (SUCCEEDED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+            capturedStarted = true;
+        else
+        {
+            LOGF_WARN("Failed to snap exposure. Error: %s. Switching to regular exposure...", errorCodes[rc].c_str());
+            m_CanSnap = false;
+        }
     }
-    else
+
+    if (!capturedStarted)
     {
         // Trigger an exposure
         if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))

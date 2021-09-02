@@ -108,8 +108,10 @@ option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_XC "Install AHP XC Correlators Driver" On)
+option(WITH_ORION_SSG3 "Install Orion StarShoot G3 Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
+option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -574,6 +576,22 @@ endif(WITH_RPICAM)
 if (WITH_BRESSEREXOS2)
 add_subdirectory(indi-bresserexos2)
 endif(WITH_BRESSEREXOS2)
+
+# Orion SSG3
+if (WITH_ORION_SSG3)
+add_subdirectory(indi-orion-ssg3)
+endif(WITH_ORION_SSG3)
+
+# PLAYERONE
+if (WITH_PLAYERONE)
+find_package(PLAYER-ONE)
+if (POA_FOUND)
+add_subdirectory(indi-playerone)
+else (POA_FOUND)
+add_subdirectory(libplayerone)
+SET(LIBRARIES_FOUND FALSE)
+endif(POA_FOUND)
+endif(WITH_PLAYERONE)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)

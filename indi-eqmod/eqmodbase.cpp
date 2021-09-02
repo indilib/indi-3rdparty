@@ -68,7 +68,6 @@ using namespace INDI::AlignmentSubsystem;
 /* Preset Slew Speeds */
 #define SLEWMODES 11
 double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
-double defaultspeed              = 64.0;
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
@@ -270,13 +269,15 @@ bool EQMod::initProperties()
 
     for (int i = 0; i < SlewRateSP.nsp - 1; i++)
     {
+        SlewRateSP.sp[i].s = ISS_OFF;
         sprintf(SlewRateSP.sp[i].label, "%.fx", slewspeeds[i]);
         SlewRateSP.sp[i].aux = (void *)&slewspeeds[i];
     }
 
     // Since last item is NOT maximum (but custom), let's set item before custom to SLEWMAX
+    SlewRateSP.sp[SlewRateSP.nsp - 2].s = ISS_ON;
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 2].name, "SLEW_MAX", MAXINDINAME);
-
+    // Last is custom
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].name, "SLEWCUSTOM", MAXINDINAME);
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].label, "Custom", MAXINDILABEL);
 
@@ -880,9 +881,9 @@ bool EQMod::ReadScopeStatus()
             const char *maligns[3] = { "ZENITH", "NORTH", "SOUTH" };
             INDI::IEquatorialCoordinates RaDec;
             // Use HA/Dec as  telescope coordinate system
-            RaDec.rightascension = range24(lst - currentRA);
+            RaDec.rightascension = currentRA;
             RaDec.declination = currentDEC;
-            TelescopeDirectionVector TDV = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+            TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(RaDec);
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Status: Mnt. Algnt. %s Date %lf encoders RA=%ld DE=%ld Telescope RA %lf DEC %lf",
                    maligns[GetApproximateMountAlignment()], juliandate,
@@ -891,9 +892,8 @@ bool EQMod::ReadScopeStatus()
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, " Direction RA(deg.)  %lf DEC %lf TDV(x %lf y %lf z %lf)",
                    RaDec.rightascension, RaDec.declination, TDV.x, TDV.y, TDV.z);
             aligned = true;
-            if ((GetAlignmentDatabase().size() < 2) || (!TransformTelescopeToCelestial(TDV, alignedRA, alignedDEC)))
+            if (!TransformTelescopeToCelestial(TDV, alignedRA, alignedDEC))
             {
-                //if (!TransformTelescopeToCelestial( TDV, alignedRA, alignedDEC)) {
                 aligned = false;
                 DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                        "Failed TransformTelescopeToCelestial: Scope RA=%g Scope DE=%f, Aligned RA=%f DE=%f", currentRA,
@@ -1865,6 +1865,8 @@ bool EQMod::Goto(double r, double d)
     bool aligned         = false;
 #ifdef WITH_ALIGN_GEEHALEL
     double ghratarget = r, ghdetarget = d;
+    if (AlignMethodSP.sp[0].s == ISS_ON)
+    {
     aligned = true;
     if (align)
     {
@@ -1882,15 +1884,15 @@ bool EQMod::Goto(double r, double d)
                       ghdetarget, r, d);
         }
     }
+    }
 #endif
 #ifdef WITH_ALIGN
     if (AlignMethodSP.sp[1].s == ISS_ON)
     {
         TelescopeDirectionVector TDV;
         aligned = true;
-        if ((GetAlignmentDatabase().size() < 2) || (!TransformCelestialToTelescope(r, d, 0.0, TDV)))
-        {
-            //if (!TransformCelestialToTelescope(r, d, 0.0, TDV)) {
+        if (!TransformCelestialToTelescope(r, d, 0.0, TDV))
+        {            
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Failed TransformCelestialToTelescope:  RA=%lf DE=%lf, Goto RA=%lf DE=%lf", r, d, gotoparams.ratarget,
                    gotoparams.detarget);
@@ -1903,12 +1905,10 @@ bool EQMod::Goto(double r, double d)
         else
         {
             INDI::IEquatorialCoordinates RaDec;
-            LocalHourAngleDeclinationFromTelescopeDirectionVector(TDV, RaDec);
+            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, RaDec);
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "TransformCelestialToTelescope: RA=%lf DE=%lf, TDV (x :%lf, y: %lf, z: %lf), local hour RA %lf DEC %lf",
                    r, d, TDV.x, TDV.y, TDV.z, RaDec.rightascension, RaDec.declination);
-            RaDec.rightascension = range24(lst - RaDec.rightascension);
-
             gotoparams.ratarget = RaDec.rightascension;
             gotoparams.detarget = RaDec.declination;
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
@@ -2136,18 +2136,18 @@ bool EQMod::Sync(double ra, double dec)
     {
         AlignmentDatabaseEntry NewEntry;
         INDI::IEquatorialCoordinates RaDec;
-        RaDec.rightascension  = range24(lst - tmpsyncdata.telescopeRA);
+        RaDec.rightascension  = tmpsyncdata.telescopeRA;
         RaDec.declination = tmpsyncdata.telescopeDEC;
         //NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
         NewEntry.ObservationJulianDate = juliandate;
         NewEntry.RightAscension        = ra;
         NewEntry.Declination           = dec;
-        NewEntry.TelescopeDirection    = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+        NewEntry.TelescopeDirection    = TelescopeDirectionVectorFromEquatorialCoordinates(RaDec);
         NewEntry.PrivateDataSize       = 0;
         DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
                NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination,
                NewEntry.TelescopeDirection.x, NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
-        if (!CheckForDuplicateSyncPoint(NewEntry))
+        if (!CheckForDuplicateSyncPoint(NewEntry, 0.01))
         {
             GetAlignmentDatabase().push_back(NewEntry);
 
@@ -2157,9 +2157,7 @@ bool EQMod::Sync(double ra, double dec)
             // Tell the math plugin to reinitialise
             Initialise(this);
 
-            //if (GetAlignmentDatabase().size() >= 2)  return true;
-        }
-        //if (GetAlignmentDatabase().size() >= 2) return false;
+        }        
     }
 #endif
 #if defined WITH_ALIGN_GEEHALEL || defined WITH_ALIGN
