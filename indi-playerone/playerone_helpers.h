@@ -23,8 +23,7 @@
 
 namespace Helpers
 {
-/*
-const char *toString(POAGuideDirection dir)
+const char *toString(POAConfig dir)
 {
     switch (dir)
     {
@@ -35,7 +34,7 @@ const char *toString(POAGuideDirection dir)
     default:              return "Unknown";
     }
 }
-*/
+
 const char *toString(POABayerPattern pattern)
 {
     switch (pattern)

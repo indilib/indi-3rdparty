@@ -1421,15 +1421,24 @@ IPState POACCD::guidePulse(INDI::Timer &timer, float ms, POAConfig dir)
     timer.stop();
 #ifdef ASI_LEGACY
     ASIPulseGuideOn(mCameraInfo.cameraID, dir);
-    LOGF_DEBUG("Starting %s guide for %f ms.", Helpers::toString(dir), ms);
+#else
+    POAConfigValue confVal;
+    confVal.boolValue = POA_TRUE;
+    POASetConfig(mCameraInfo.cameraID, dir, confVal, POA_FALSE); // start to guide
 #endif
+    LOGF_DEBUG("Starting %s guide for %f ms.", Helpers::toString(dir), ms);
     
     timer.callOnTimeout([this, dir]
     {
 #ifdef ASI_LEGACY
         ASIPulseGuideOff(mCameraInfo.cameraID, dir);
-        LOGF_DEBUG("Stopped %s guide.", Helpers::toString(dir));
+#else
+        POAConfigValue confVal;
+        confVal.boolValue = POA_FALSE;
+        POASetConfig(mCameraInfo.cameraID, dir, confVal, POA_FALSE); // stop to guide
 #endif
+        LOGF_DEBUG("Stopped %s guide.", Helpers::toString(dir));
+        
         if (dir == POA_GUIDE_NORTH || dir == POA_GUIDE_SOUTH)
             GuideComplete(AXIS_DE);
         else if (dir == POA_GUIDE_EAST || dir == POA_GUIDE_WEST)
@@ -1510,7 +1519,11 @@ void POACCD::createControls(int piNumberOfControls)
                    cap.defaultValue.intValue, cap.isSupportAuto ? "True" : "False",
                    cap.isWritable ? "True" : "False");
 
-        if (cap.isWritable == POA_FALSE || cap.configID == POA_TARGET_TEMP || cap.configID == POA_COOLER)
+        if (cap.isWritable == POA_FALSE || cap.configID == POA_TARGET_TEMP || cap.configID == POA_COOLER ||
+            cap.configID == POA_GUIDE_NORTH || cap.configID == POA_GUIDE_SOUTH ||
+            cap.configID == POA_GUIDE_EAST || cap.configID == POA_GUIDE_WEST ||
+            cap.configID == POA_FLIP_NONE || cap.configID == POA_FLIP_HORI ||
+            cap.configID == POA_FLIP_VERT || cap.configID == POA_FLIP_BOTH)
             continue;
 
         // Update Min/Max exposure as supported by the camera
