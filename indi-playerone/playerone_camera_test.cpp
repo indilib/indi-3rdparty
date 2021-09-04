@@ -90,7 +90,7 @@ int  main()
     POAConfigValue ltemp;
     POABool bAuto = POA_FALSE;
     POAGetConfig(CamNum, POA_TEMPERATURE, &ltemp, &bAuto);
-    printf("sensor temperature:%02f\n", (float)ltemp.floatValue / 10.0);
+    printf("sensor temperature:%02f\n", (float)ltemp.floatValue);
 
     printf("\nImage Formats:\n\n");
     for (int i = 0; i < 8; i++)
