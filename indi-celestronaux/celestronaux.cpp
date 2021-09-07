@@ -56,6 +56,7 @@ double anglediff(double a, double b)
     return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
 }
 
+
 bool CelestronAUX::ISSnoopDevice(XMLEle *root)
 {
     const char *propName = findXMLAttValu(root, "name");
@@ -79,7 +80,7 @@ bool CelestronAUX::ISSnoopDevice(XMLEle *root)
 /////////////////////////////////////////////////////////////////////////////////////
 CelestronAUX::CelestronAUX()
     : ScopeStatus(IDLE), AxisStatusALT(STOPPED), AxisDirectionALT(FORWARD), AxisStatusAZ(STOPPED),
-      AxisDirectionAZ(FORWARD), TraceThisTickCount(0), TraceThisTick(false),
+      AxisDirectionAZ(FORWARD), TraceThisTickCount(0), TraceThisTick(false), 
       DBG_CAUX(INDI::Logger::getInstance().addDebugLevel("AUX", "CAUX")),
       DBG_SERIAL(INDI::Logger::getInstance().addDebugLevel("Serial", "CSER"))
 {
@@ -255,7 +256,7 @@ bool CelestronAUX::Handshake()
                 // detect if connectd to HC port or to mount USB port
                 // ask for HC version
                 char version[10];
-                if ((isHC = detectHC(version, (size_t)10)))
+                if ((isHC = detectHC(version, (size_t)10))) 
                     LOGF_INFO("Detected Hand Controller (v%s) serial connection.", version);
                 else
                     LOG_INFO("Detected Mount USB serial connection.");
@@ -624,6 +625,10 @@ bool CelestronAUX::updateProperties()
         LOGF_INFO("Set CordwrapPos index %d", (int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90));
         CWPosS[(int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90)].s = ISS_ON;
         defineProperty(&CWPosSP);
+        
+        loadConfig(true, CWBaseSP.name);
+        LOGF_INFO("Park Base %d", cw_base_sky);
+        defineProperty(&CWBaseSP);
 
         loadConfig(true, CWBaseSP.name);
         LOGF_INFO("Park Base %d", cw_base_sky);
