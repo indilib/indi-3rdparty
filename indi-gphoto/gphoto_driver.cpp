@@ -29,7 +29,12 @@
 #include <config.h>
 #include <indilogger.h>
 #include <gphoto2/gphoto2-version.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+// the older libraw uses auto_ptr
 #include <libraw/libraw.h>
+#pragma GCC diagnostic pop
+
 
 #include "gphoto_driver.h"
 #include "dsusbdriver.h"
@@ -1809,9 +1814,10 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
                      (gphoto->viewfinder_widget->value.toggle == 0) ? "Off" : "On");
     }
 
-    if ((gphoto->focus_widget = find_widget(gphoto, "manualfocusdrive")) != nullptr)
+    if ((gphoto->focus_widget = find_widget(gphoto, "manualfocusdrive")) != nullptr ||
+            (gphoto->focus_widget = find_widget(gphoto, "manualfocus")) != nullptr)
     {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "ManualFocusDrive Widget: %s", gphoto->focus_widget->name);
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Focus Widget: %s", gphoto->focus_widget->name);
     }
 
     // Check customfuncex widget to enable/disable mirror lockup.
@@ -2280,31 +2286,35 @@ int gphoto_manual_focus(gphoto_driver *gphoto, int speed, char *errMsg)
         }
         case GP_WIDGET_RANGE:
         {
-            int rval = 0;
-            switch (speed)
+            int rval = speed;
+
+            /* Range is on Nikon from -32768 <-> 32768 */
+            if (strstr(device, "Nikon"))
             {
-                /* Range is on Nikon from -32768 <-> 32768 */
-                case -3:
-                    rval = -1024;
-                    break;
-                case -2:
-                    rval = -512;
-                    break;
-                case -1:
-                    rval = -128;
-                    break;
-                case 1:
-                    rval = 128;
-                    break;
-                case 2:
-                    rval = 512;
-                    break;
-                case 3:
-                    rval = 1024;
-                    break;
-                default:
-                    rval = 0;
-                    break;
+                switch (speed)
+                {
+                    case -3:
+                        rval = -1024;
+                        break;
+                    case -2:
+                        rval = -512;
+                        break;
+                    case -1:
+                        rval = -128;
+                        break;
+                    case 1:
+                        rval = 128;
+                        break;
+                    case 2:
+                        rval = 512;
+                        break;
+                    case 3:
+                        rval = 1024;
+                        break;
+                    default:
+                        rval = 0;
+                        break;
+                }
             }
 
             rc = gp_widget_set_value(gphoto->focus_widget->widget, &rval);

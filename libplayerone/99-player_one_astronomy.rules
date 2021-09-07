@@ -1,0 +1,2 @@
+# All Player One Astronomy's Cameras
+SUBSYSTEM=="usb", ATTRS{idVendor}=="a0a0", MODE="0666"

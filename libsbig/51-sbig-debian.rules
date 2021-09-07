@@ -1,5 +1,4 @@
 # Increase USBFS memory
-ACTION=="add", ATTR{idVendor}=="0d97", RUN+="/bin/sh -c '/bin/echo 256 >/sys/module/usbcore/parameters/usbfs_memory_mb'"
 
 # SBIG ST-7/8/9/10/2K cameras
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", ATTR{idProduct}=="0001", \

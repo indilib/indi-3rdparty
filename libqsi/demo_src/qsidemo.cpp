@@ -13,6 +13,8 @@ REVISION HISTORY
  *****************************************************************************************/
 
 #include "qsiapi.h"
+#include "indimacros.h"
+
 #include <cstdio>
 #include <unistd.h>
 #include <iostream>
@@ -32,11 +34,6 @@ int WriteTIFF(unsigned short * buffer, int cols, int rows, char * filename);
 #include <fitsio.h>
 #endif /* HAVE_FITSIO_H */
 int WriteFITS(unsigned short * buffer, int cols, int rows, char * filename);
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 void	usage() {
 	std::cerr << "usage: qsidemo [ -ft ] [ -d directory ]" << std::endl;

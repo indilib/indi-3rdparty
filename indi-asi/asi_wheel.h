@@ -33,12 +33,10 @@
 class ASIWHEEL : public INDI::FilterWheel
 {
     public:
-        ASIWHEEL(int id, EFW_INFO info, bool enumerate);
+        ASIWHEEL(const EFW_INFO &info, const char *name);
         ~ASIWHEEL();
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-
-        char name[MAXINDIDEVICE];
 
     protected:
         virtual bool Connect() override;

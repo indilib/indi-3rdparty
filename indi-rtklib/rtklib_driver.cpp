@@ -45,44 +45,6 @@
 // We declare an auto pointer to GPSD.
 static std::unique_ptr<RTKLIB> rtkrcv(new RTKLIB());
 
-void ISGetProperties(const char *dev)
-{
-    rtkrcv->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    rtkrcv->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    rtkrcv->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    rtkrcv->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    INDI_UNUSED(root);
-}
-
 RTKLIB::RTKLIB()
 {
     setVersion(RTKLIB_VERSION_MAJOR, RTKLIB_VERSION_MINOR);
@@ -185,8 +147,11 @@ bool RTKLIB::setSystemTime(time_t& raw_time)
         #else
             stime(&raw_time);
         #endif
+        return true;
+    #else
+        (void)raw_time;
+        return false;
     #endif
-    return true;
 }
 
 void* RTKLIB::parse_rtkrcv_helper(void *obj)

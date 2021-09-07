@@ -402,13 +402,16 @@ unsigned char AUXCommand::checksum(AUXBuffer buf)
 const long STEPS_PER_REVOLUTION = 16777216;
 const double STEPS_PER_DEGREE   = STEPS_PER_REVOLUTION / 360.0;
 
-long AUXCommand::getPosition()
+int32_t AUXCommand::getPosition()
 {
     if (data.size() == 3)
     {
-        unsigned int a = (unsigned int)data[0] << 16 | (unsigned int)data[1] << 8 | (unsigned int)data[2];
+        int32_t a = static_cast<int8_t>(data[0]); 
+        a <<= 16;
+        a |= static_cast<uint32_t>(data[1]) << 8; 
+        a |= static_cast<uint32_t>(data[2]);
         //fprintf(stderr,"Angle: %d %08x = %d => %f\n", sizeof(a), a, a, a/pow(2,24));
-        return (long)a % STEPS_PER_REVOLUTION;
+        return (int32_t)a % STEPS_PER_REVOLUTION;
     }
     else
     {
@@ -418,10 +421,10 @@ long AUXCommand::getPosition()
 
 void AUXCommand::setPosition(double p)
 {
-    setPosition(long(p * STEPS_PER_DEGREE));
+    setPosition(static_cast<int32_t>(p * STEPS_PER_DEGREE));
 }
 
-void AUXCommand::setPosition(long p)
+void AUXCommand::setPosition(int32_t p)
 {
     //int a=(int)p; fprintf(stderr,"Angle: %08x = %d => %f\n", a, a, a/pow(2,24));
     data.resize(3);
@@ -433,7 +436,7 @@ void AUXCommand::setPosition(long p)
     p = p % STEPS_PER_REVOLUTION;
     for (int i = 2; i > -1; i--)
     {
-        data[i] = (unsigned char)(p & 0xff);
+        data[i] = static_cast<uint8_t>(p & 0xff);
         p >>= 8;
     }
     len = 6;

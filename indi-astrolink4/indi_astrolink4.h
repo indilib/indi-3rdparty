@@ -98,17 +98,17 @@ class IndiAstrolink4 : public INDI::DefaultDevice, public INDI::FocuserInterface
 
 public:
     IndiAstrolink4();
-    virtual bool initProperties();
-    virtual bool updateProperties();
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
 	
-    virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
-    virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
-    virtual bool ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n);
+    virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n) override;
+    virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    virtual bool ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n) override;
 	
 protected:
-    virtual const char *getDefaultName();
-    virtual void TimerHit();
-    virtual bool saveConfigItems(FILE *fp);
+    virtual const char *getDefaultName() override;
+    virtual void TimerHit() override;
+    virtual bool saveConfigItems(FILE *fp) override;
     virtual bool sendCommand(const char * cmd, char * res);
 
     // Focuser Overrides

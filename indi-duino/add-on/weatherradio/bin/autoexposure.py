@@ -63,8 +63,8 @@ def calculateExpTime(config, exptime, iso, brightness, contrast, saturation, img
         newExpTime = newExpTime / 1.4
     else:
         # adapt only if no ISO change happened to avoid miscorrections
-        # target brightness depends upon ISO value
-        newBrightness = 50 + int(config.getint('Night', 'Brightness') * (newISO - 50) / 750)
+        # target brightness depends upon ISO value, 50 for daytime as target
+        newBrightness = 50 + int((config.getint('Night', 'Brightness') - 50) * (newISO - 50) / 750)
         # change brightness and contrast slowly
         # brightness + 10 equals exptime * 2
         if newBrightness > brightness:
@@ -101,7 +101,15 @@ def calibrateExpTime(filename, config):
     image = Image.open(filename)
     exif = image._getexif()
 
-    realExpTime    = 1000000 * get_field(exif, 'ExposureTime')[0] / get_field(exif, 'ExposureTime')[1]
+    exifexptime    =  get_field(exif, 'ExposureTime')
+    #print("exif:ExposureTime = %d/%d" % exifexptime)
+
+    realExpTime    = 1000000 * exifexptime[0] / exifexptime[1]
+    expTime        = config.getint('Camera', 'ExposureTime')
+    # long exposure times cause trouble
+    if expTime > 1000000:
+        realExpTime = expTime
+
     realISO        = config.getint('Camera', 'ISOSpeedRatings')
     bright         = brightness(image)
     realBrightness = config.getint('Camera', 'Brightness')

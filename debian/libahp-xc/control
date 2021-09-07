@@ -11,12 +11,3 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: AHP XC cross-correlator series driver library.
  .
  This package contains the library.
-
-Package: libahp-xc-dbg
-Priority: extra
-Section: debug
-Architecture: any
-Depends: libahp-xc (= ${binary:Version}), ${misc:Depends}
-Description: AHP XC cross-correlator series driver library.
- .
- This package contains debug symbols.

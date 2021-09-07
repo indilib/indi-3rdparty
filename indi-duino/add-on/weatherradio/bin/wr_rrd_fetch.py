@@ -21,6 +21,9 @@ import rrdtool
 import time
 from wr_config import *
 
+# initialize the configuration
+config   = WeatherRadioConfig().config
+
 # calculate UTC offset considering DST
 is_dst = time.daylight and time.localtime().tm_isdst > 0
 utc_offset = - (time.altzone if is_dst else time.timezone) / 3600
@@ -34,7 +37,7 @@ default['steps']['7d'] = '1h'
 default['steps']['30d'] = '1d'
 
 parser = argparse.ArgumentParser(description="Fetch time series from the RRD file as JSON document")
-parser.add_argument("-s", "--start",
+parser.add_argument("-s", "--start", default='6h',
                     help="interval starting time relative to now()")
 parser.add_argument("-r", "--steps",
                     help="distance between to data steps")
@@ -42,7 +45,8 @@ parser.add_argument("-t", "--timezone", default=utc_offset, type=int,
                     help="Timezone for which the data series has been collected")
 parser.add_argument("-o", "--output",
                     help="JSON file to be written")
-parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+parser.add_argument("rrdfile", nargs='?',
+                    default=config.get('WeatherRadio', 'RRDFILE'),
                     help="RRD file holding all time series")
 
 args=parser.parse_args()
@@ -56,7 +60,7 @@ if not args.steps:
 
 # if not set, use default output file
 if not args.output:
-    args.output = DATAPATH + "/RTdata_" + args.start + ".json"
+    args.output = config.get('WeatherRadio', 'DATAPATH') + "/RTdata_" + args.start + ".json"
 
 rrdextract = rrdtool.fetch (args.rrdfile, "AVERAGE", "-s", "-" + args.start,
                             "-r", args.steps)

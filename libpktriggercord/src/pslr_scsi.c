@@ -23,8 +23,7 @@
     and GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifdef WIN32
+#if defined(WIN32) || defined(RAD10)
 #include "pslr_scsi_win.c"
 #else
 /* Ugly hack. More generic ifs required */

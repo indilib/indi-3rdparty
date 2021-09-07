@@ -127,6 +127,8 @@ static int ezusb_write(libusb_device_handle *device, const char *label,
 {
 	int status;
 
+	(void)label; // UNUSED
+
 	//if (verbose > 1)
 	//	logerror("%s, addr 0x%08x len %4u (0x%04x)\n", label, addr, (unsigned)len, (unsigned)len);
 	status = libusb_control_transfer(device,
@@ -150,6 +152,7 @@ static int ezusb_read(libusb_device_handle *device, const char *label,
 {
 	int status;
 
+	(void)label; // UNUSED
 	//if (verbose > 1)
 	//	logerror("%s, addr 0x%08x len %4u (0x%04x)\n", label, addr, (unsigned)len, (unsigned)len);
 	status = libusb_control_transfer(device,

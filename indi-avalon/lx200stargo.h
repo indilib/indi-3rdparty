@@ -146,11 +146,6 @@ class LX200StarGo : public LX200Telescope
         ISwitchVectorProperty MeridianFlipModeSP;
         ISwitch MeridianFlipModeS[3];
 
-        ISwitchVectorProperty MeridianFlipEnabledSP;
-        ISwitch MeridianFlipEnabledS[2];
-        ISwitchVectorProperty MeridianFlipForcedSP;
-        ISwitch MeridianFlipForcedS[2];
-
         // configurable delay between two commands to avoid flooding StarGO
         INumberVectorProperty MountRequestDelayNP;
         INumber MountRequestDelayN[1];
@@ -169,6 +164,7 @@ class LX200StarGo : public LX200Telescope
         virtual bool Disconnect() override;
 
         // StarGo stuff
+        virtual void getStarGoBasicData();
         virtual bool syncHomePosition();
         bool slewToHome(ISState *states, char *names[], int n);
         bool setParkPosition(ISState *states, char *names[], int n);
@@ -178,7 +174,11 @@ class LX200StarGo : public LX200Telescope
         bool setSystemSlewSpeedMode(int index);
 
         struct timespec mount_request_delay = {0, 50000000L};
-        void setMountRequestDelay(int secs, long nanosecs) {mount_request_delay.tv_sec = secs; mount_request_delay.tv_nsec = nanosecs; };
+        void setMountRequestDelay(int secs, long nanosecs)
+        {
+            mount_request_delay.tv_sec = secs;
+            mount_request_delay.tv_nsec = nanosecs;
+        };
 
         // autoguiding
         virtual bool setGuidingSpeeds(int raSpeed, int decSpeed);
@@ -187,8 +187,7 @@ class LX200StarGo : public LX200Telescope
         virtual bool ParseMotionState(char* state);
 
         // location
-        virtual bool sendScopeLocation();
-        double LocalSiderealTime(double longitude);
+        virtual bool sendScopeLocation() override;
         bool setLocalSiderealTime(double longitude);
         virtual bool updateLocation(double latitude, double longitude, double elevation) override;
         virtual bool getSiteLatitude(double *siteLat);
@@ -252,6 +251,9 @@ class LX200StarGo : public LX200Telescope
         // tracking adjustment
         bool setTrackingAdjustment(double adjustRA);
         bool getTrackingAdjustment(double *valueRA);
+
+        // AUX1 focuser
+        bool activateFocuserAux1(bool activate);
 
 };
 inline bool LX200StarGo::sendQuery(const char* cmd, char* response, int wait)

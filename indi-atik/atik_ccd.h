@@ -212,6 +212,7 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             FASTMODE_FAST,
         };
 
+#if 0 // unused
         // Bit send
         ISwitch BitSendS[2];
         ISwitchVectorProperty BitSendSP;
@@ -220,6 +221,7 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             BITSEND_16BITS = 0,
             BITSEND_12BITS
         };
+#endif
 
         // API & Firmware Version
         IText VersionInfoS[2] = {};

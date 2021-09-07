@@ -5,4 +5,3 @@ include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=indi-asi-power
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
-DEB_DH_SYSTEMD_ENABLE_ARGS=--name=pigpiod

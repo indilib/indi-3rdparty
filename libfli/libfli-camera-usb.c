@@ -61,11 +61,7 @@
 #include "libfli-camera.h"
 #include "libfli-camera-usb.h"
 #include "libfli-usb.h"
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
+#include "indimacros.h"
 
 double dconvert(void *buf)
 {

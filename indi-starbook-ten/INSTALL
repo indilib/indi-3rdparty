@@ -1,0 +1,13 @@
+Compile & Install
+=============
+
+Compile & Install from within the indi-3rdparty repository:
+
+    mkdir build-starbook-ten
+    cd build-starbook-ten
+
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr . ../indi-starbook-ten
+
+    make
+
+    sudo make install

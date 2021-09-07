@@ -11,12 +11,3 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: i.Nova Technologies Camera SDK.
  .
  This package contains the library.
-
-Package: libinovasdk-dbg
-Priority: extra
-Section: debug
-Architecture: any
-Depends: libinovasdk (= ${binary:Version}), ${misc:Depends}
-Description: i.Nova Technologies Camera SDK.
- .
- This package contains debug symbols.

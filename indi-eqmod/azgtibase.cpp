@@ -36,33 +36,9 @@ bool AZGTIBase::initProperties()
     tcpConnection->setDefaultHost("192.168.4.1");
     tcpConnection->setDefaultPort(11880);
     tcpConnection->setConnectionType(Connection::TCP::TYPE_UDP);
-
     for (auto oneProperty : *getProperties())
     {
-        switch(oneProperty->getType())
-        {
-            case INDI_NUMBER:
-                strncpy(static_cast<INumberVectorProperty*>(oneProperty->getProperty())->device, getDeviceName(), MAXINDIDEVICE);
-                break;
-            case INDI_TEXT:
-                strncpy(static_cast<ITextVectorProperty*>(oneProperty->getProperty())->device, getDeviceName(), MAXINDIDEVICE);
-                break;
-
-            case INDI_SWITCH:
-                strncpy(static_cast<ISwitchVectorProperty*>(oneProperty->getProperty())->device, getDeviceName(), MAXINDIDEVICE);
-                break;
-
-            case INDI_LIGHT:
-                strncpy(static_cast<ILightVectorProperty*>(oneProperty->getProperty())->device, getDeviceName(), MAXINDIDEVICE);
-                break;
-
-            case INDI_BLOB:
-                strncpy(static_cast<IBLOBVectorProperty*>(oneProperty->getProperty())->device, getDeviceName(), MAXINDIDEVICE);
-                break;
-
-            case INDI_UNKNOWN:
-                break;
-        }
+        oneProperty->setDeviceName(getDeviceName());
     }
 
     return true;

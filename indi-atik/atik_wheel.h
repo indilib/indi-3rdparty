@@ -28,7 +28,7 @@
 class ATIKWHEEL : public INDI::FilterWheel
 {
     public:
-        explicit ATIKWHEEL(std::string filterName, int id);
+        explicit ATIKWHEEL(const std::string &filterName, int id);
         ~ATIKWHEEL() override = default;
 
         virtual const char *getDefaultName() override;
@@ -47,9 +47,6 @@ class ATIKWHEEL : public INDI::FilterWheel
     private:
         // Setup initial params
         bool setupParams();
-
-        // Device name
-        char name[MAXINDIDEVICE];
 
         // FW info
         ArtemisHandle hWheel { nullptr };

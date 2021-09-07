@@ -10,8 +10,8 @@
 */ 
 
 
-#ifndef ALTAETHERNETIO_INCLUDE_H__ 
-#define ALTAEETHERNETIO_INCLUDE_H__ 
+#ifndef ALTAETHERNETIO_INCLUDE_H__
+#define ALTAETHERNETIO_INCLUDE_H__
 
 #include <string>
 #include <vector>

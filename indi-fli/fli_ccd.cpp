@@ -44,43 +44,6 @@ static std::unique_ptr<FLICCD> fliCCD(new FLICCD());
 
 const flidomain_t Domains[] = { FLIDOMAIN_USB, FLIDOMAIN_SERIAL, FLIDOMAIN_PARALLEL_PORT, FLIDOMAIN_INET };
 
-void ISGetProperties(const char *dev)
-{
-    fliCCD->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    fliCCD->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    fliCCD->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    fliCCD->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    fliCCD->ISSnoopDevice(root);
-}
-
 FLICCD::FLICCD()
 {
     setVersion(FLI_CCD_VERSION_MAJOR, FLI_CCD_VERSION_MINOR);
@@ -125,7 +88,8 @@ bool FLICCD::initProperties()
     // Background Flushing
     IUFillSwitch(&BackgroundFlushS[0], "ENABLED", "Enabled", ISS_ON);
     IUFillSwitch(&BackgroundFlushS[1], "DISABLED", "Disabled", ISS_OFF);
-    IUFillSwitchVector(&BackgroundFlushSP, BackgroundFlushS, 2, getDeviceName(), "CCD_BACKGROUND_FLUSH", "BKG. Flush", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&BackgroundFlushSP, BackgroundFlushS, 2, getDeviceName(), "CCD_BACKGROUND_FLUSH", "BKG. Flush",
+                       OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     SetCCDCapability(CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_COOLER | CCD_HAS_SHUTTER);
 
@@ -513,7 +477,8 @@ bool FLICCD::setupParams()
         for (int i = 0; i < index; i++)
             IUFillSwitch(CameraModeS + i, cameraModeValues.at(i).c_str(), cameraModeValues.at(i).c_str(), ISS_OFF);
 
-        IUFillSwitchVector(&CameraModeSP, CameraModeS, index, getDeviceName(), "CAMERA_MODES", "Modes", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        IUFillSwitchVector(&CameraModeSP, CameraModeS, index, getDeviceName(), "CAMERA_MODES", "Modes", OPTIONS_TAB, IP_RW,
+                           ISR_1OFMANY, 0, IPS_IDLE);
         FLIGetCameraMode(fli_dev, &index);
         CameraModeS[index].s = ISS_ON;
     }
@@ -633,7 +598,8 @@ bool FLICCD::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
-    LOGF_DEBUG("Binning (%dx%d). Final FLI image area is (%d, %d), (%ld, %ld). Size (%dx%d)", PrimaryCCD.getBinX(), PrimaryCCD.getBinY(),
+    LOGF_DEBUG("Binning (%dx%d). Final FLI image area is (%d, %d), (%ld, %ld). Size (%dx%d)", PrimaryCCD.getBinX(),
+               PrimaryCCD.getBinY(),
                x, y, bin_right, bin_bottom, w / PrimaryCCD.getBinX(), h / PrimaryCCD.getBinY());
 
     if (!sim && (err = FLISetImageArea(fli_dev, x, y, bin_right, bin_bottom)))
@@ -836,11 +802,11 @@ void FLICCD::TimerHit()
                 }
             }
 
-            if (fabs(FLICam.temperature - ccdTemp) <= TEMP_THRESHOLD)
-            {
-                TemperatureNP.s = IPS_OK;
-                IDSetNumber(&TemperatureNP, nullptr);
-            }
+            //            if (fabs(FLICam.temperature - ccdTemp) <= TEMP_THRESHOLD)
+            //            {
+            //                TemperatureNP.s = IPS_OK;
+            //                IDSetNumber(&TemperatureNP, nullptr);
+            //            }
 
             if (fabs(CoolerN[0].value - ccdPower) >= TEMP_THRESHOLD)
             {

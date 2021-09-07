@@ -19,6 +19,21 @@
 
 #include "indi_pentax.h"
 
+#define MAX_DEVICES    20   /* Max device cameraCount */
+
+#include "pktriggercord_ccd.h"
+
+#ifndef __aarch64__
+#include "pentax_ccd.h"
+#include "pentax_event_handler.h"
+
+static std::vector<std::shared_ptr<CameraDevice>> registeredSDKCams;
+#endif
+
+static int cameraCount = 0;
+static INDI::CCD *cameras[MAX_DEVICES];
+// static char logdevicename[14]= "Pentax Driver";
+
 static void cleanup()
 {
     for (int i = 0; i < cameraCount; i++)
@@ -45,15 +60,15 @@ void ISInit()
 
 #ifndef __aarch64__
         std::vector<std::shared_ptr<CameraDevice>> detectedCameraDevices = CameraDeviceDetector::detect(DeviceInterface::USB);
-        int detectedCameraCount = detectedCameraDevices.size();
-        int registeredSDKCameraCount = registeredSDKCams.size();
+        size_t detectedCameraCount = detectedCameraDevices.size();
+        // int registeredSDKCameraCount = registeredSDKCams.size();
 
         // look for SDK supported cameras (PTP mode) first
 		IDLog("Looking for Pentax camera in  PTP mode.\n");
         if (detectedCameraCount > 0) {
-            for (int i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
+            for (size_t i = 0; (i < detectedCameraCount) && (i < MAX_DEVICES); i++) {
                 bool camalreadyregistered = false;
-                for (int j=0; j<registeredSDKCams.size(); j++) {
+                for (size_t j=0; j<registeredSDKCams.size(); j++) {
                     if (detectedCameraDevices[i] == registeredSDKCams[j]) camalreadyregistered = true;
                 }
                 if (!camalreadyregistered) {
@@ -72,8 +87,8 @@ void ISInit()
         pslr_handle_t camhandle = pslr_init(model,device);
         if (camhandle) {
             if (!pslr_connect(camhandle)) {
-                pslr_status status;
-                const char *camname = pslr_camera_name(camhandle);
+                // pslr_status status;
+                const char *camname = pslr_get_camera_name(camhandle);
                 bool camalreadyregistered = false;
                 for (int j=0; j<cameraCount; j++) {
                     if (typeid(*cameras[j])==typeid(PkTriggerCordCCD) && !strncmp(camname,cameras[j]->getDeviceName(),strlen(camname))) camalreadyregistered = true;
@@ -93,95 +108,7 @@ void ISInit()
     }
 }
 
-void ISGetProperties(const char *dev)
+struct Loader
 {
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        INDI::CCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
-        {
-            camera->ISGetProperties(dev);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    for (int i = 0; i < cameraCount; i++)
-    {
-        INDI::CCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
-        {
-            camera->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-
-    //also check for new cameras and add them
-    if (!strcmp(name, "CONNECTION")) {
-        int oldCameraCount = cameraCount;
-        if (cameraCount == 0 || !cameraIsConnected()) isInit = false;
-        ISInit();
-        for (int i=oldCameraCount; i<cameraCount; i++) {
-            cameras[i]->ISGetProperties(cameras[i]->getDeviceName());
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        INDI::CCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
-        {
-            camera->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < cameraCount; i++)
-    {
-        INDI::CCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->getDeviceName()))
-        {
-            camera->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    for (int i = 0; i < cameraCount; i++)
-    {
-        INDI::CCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+    Loader() { ISInit(); }
+} loader;

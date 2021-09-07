@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <map>
 
 #include "indicom.h"
 #include "indi_shelyakeshel_spectrograph.h"
@@ -34,61 +35,29 @@
 const char *SPECTROGRAPH_SETTINGS_TAB = "Spectrograph Settings";
 const char *CALIBRATION_UNIT_TAB      = "Calibration Unit";
 
+static std::map<ISState, char> COMMANDS = {
+    { ISS_ON, 0x53 },
+    { ISS_OFF, 0x43 }
+};
+
+static std::map<std::string, char> PARAMETERS = {
+    { "MIRROR", 0x31 },
+    { "LED", 0x32 },
+    { "THAR", 0x33 },
+    { "TUNGSTEN", 0x34 }
+};
+
 std::unique_ptr<ShelyakEshel>
     shelyakEshel(new ShelyakEshel()); // create std:unique_ptr (smart pointer) to  our spectrograph object
-
-void ISGetProperties(const char *dev)
-{
-    shelyakEshel->ISGetProperties(dev);
-}
-
-/* The next 4 functions are executed when the indiserver requests a change of
- * one of the properties. We pass the request on to our spectrograph object.
- */
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    shelyakEshel->ISNewSwitch(dev, name, states, names, num);
-}
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    shelyakEshel->ISNewText(dev, name, texts, names, num);
-}
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    shelyakEshel->ISNewNumber(dev, name, values, names, num);
-}
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-/* This function is fired when a property we are snooping on is changed. We
- * pass it on to our spectrograph object.
- */
-void ISSnoopDevice(XMLEle *root)
-{
-    shelyakEshel->ISSnoopDevice(root);
-}
 
 ShelyakEshel::ShelyakEshel()
 {
     PortFD = -1;
 
-
     setVersion(SHELYAK_ESHEL_VERSION_MAJOR, SHELYAK_ESHEL_VERSION_MINOR);
 }
 
-ShelyakEshel::~ShelyakEshel()
-{
-}
+ShelyakEshel::~ShelyakEshel() {}
 
 /* Returns the name of the device. */
 const char *ShelyakEshel::getDefaultName()
@@ -209,7 +178,7 @@ bool ShelyakEshel::ISNewSwitch(const char *dev, const char *name, ISState *state
                 }
             }
             IUUpdateSwitch(&LampSP, states, names, n); // update lamps
-            IDSetSwitch(&LampSP, nullptr);                // tell clients to update
+            IDSetSwitch(&LampSP, nullptr);             // tell clients to update
             return true;
         }
         else
@@ -242,7 +211,7 @@ bool ShelyakEshel::ISNewText(const char *dev, const char *name, char *texts[], c
         {
             IUUpdateText(&PortTP, texts, names, n); // update port
             PortTP.s = IPS_OK;                      // set state to ok
-            IDSetText(&PortTP, nullptr);               // tell clients to update the port
+            IDSetText(&PortTP, nullptr);            // tell clients to update the port
             return true;
         }
     }

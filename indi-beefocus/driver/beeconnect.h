@@ -82,6 +82,8 @@ class Interface
   {
   }
 
+  virtual ~Interface() = default;
+
   /// @brief Has the connection errored out?
   bool Failed( void ) const { return isFailed; }
 
