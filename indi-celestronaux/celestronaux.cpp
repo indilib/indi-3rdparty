@@ -624,7 +624,7 @@ bool CelestronAUX::updateProperties()
         LOGF_INFO("Set CordwrapPos index %d", (int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90));
         CWPosS[(int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90)].s = ISS_ON;
         defineProperty(&CWPosSP);
-        
+
         loadConfig(true, CWBaseSP.name);
         LOGF_INFO("Park Base %d", cw_base_sky);
         defineProperty(&CWBaseSP);
