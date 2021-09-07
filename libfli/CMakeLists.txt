@@ -13,12 +13,14 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
 find_package(USB1 REQUIRED)
+find_package(INDI REQUIRED)
 
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(unix)
+include_directories( ${INDI_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(unix)
 
 ## Some files like libnova.h and libusb.h are in in subdirectories of the include directory
 ## For the CMAKE Modules, they find the subdirectory, so then something like ln_types.h should be #include ln_types.h
@@ -63,7 +65,7 @@ ADD_LIBRARY(fli SHARED ${fli_LIB_SRCS})
 set_target_properties(fli PROPERTIES VERSION 2.0 SOVERSION 2)
 
 #need to link to some other libraries ? just add them here
-TARGET_LINK_LIBRARIES(fli ${USB1_LIBRARIES} -lm)
+TARGET_LINK_LIBRARIES(fli ${USB1_LIBRARIES} -lm -lpthread)
 
 #add an install target here
 INSTALL(FILES libfli.h DESTINATION include)

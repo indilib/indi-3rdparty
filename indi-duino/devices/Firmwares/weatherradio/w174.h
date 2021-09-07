@@ -12,13 +12,13 @@
 
 #include "rainsensor.h"
 
-#define W174_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single speed mesure (ms)
+#define W174_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for a single volume measure report (ms)
 
-rainsensor_data w174_rainsensor_status = {false, 0, 0, 0, 0, 0, 0.0, 0.0};
+rainsensor_data w174_rainsensor_status = {false, 0, 0, 0, 0, 0, 0.0, 0};
 
 // function that the interrupt calls to increment the rain bucket counter
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_w174_rain_event () {
+void IRAM_ATTR isr_w174_rain_event () {
 #else
 void isr_w174_rain_event () {
 #endif
@@ -45,7 +45,7 @@ void w174_updateRainSensor() {
 
 
 
-void w174_serializeRainSensor(JsonDocument &doc) {
+void w174_serializeRainSensor(JsonObject &doc) {
   serializeRainSensor(doc, w174_rainsensor_status, "W174 Rain Sensor");
 }
 

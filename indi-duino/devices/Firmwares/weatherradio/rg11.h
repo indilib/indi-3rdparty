@@ -12,13 +12,13 @@
 
 #include "rainsensor.h"
 
-#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for drop counts (ms)
+#define RG11_RAINSENSOR_INTERVAL_LENGTH 60000 // interval for drop count updates (ms)
 
-rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0, 0.0};
+rainsensor_data rg11_rainsensor_status = {false, RG11_MODE, 0, 0, 0, 0, 0.0, 0};
 
 // function that the interrupt calls to increment the rain event counter
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_rg11_rain_event () {
+void IRAM_ATTR isr_rg11_rain_event () {
 #else
 void isr_rg11_rain_event () {
 #endif
@@ -49,7 +49,7 @@ void rg11_updateRainSensor() {
 
 
 
-void rg11_serializeRainSensor(JsonDocument &doc) {
+void rg11_serializeRainSensor(JsonObject &doc) {
   serializeRainSensor(doc, rg11_rainsensor_status, "RG11 Rain Sensor");
 }
 

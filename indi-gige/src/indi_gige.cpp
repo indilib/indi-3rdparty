@@ -20,6 +20,8 @@
 #include <time.h>
 #include <list>
 #include <sys/time.h>
+#include <deque>
+#include <memory>
 
 #include "indidevapi.h"
 #include "eventloop.h"
@@ -43,114 +45,16 @@
 #define TIMER_TICK_MS  (100)
 #define CAPS           (CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME)
 
-#define FOR_EVERY_CAMERA                       \
-    {                                          \
-        std::list<GigECCD *>::iterator camera; \
-        for (camera = cameras.begin(); camera != cameras.end(); ++camera)
-
-static std::list<GigECCD *> cameras;
-
-static void cleanup()
+static class Loader
 {
-    FOR_EVERY_CAMERA { delete (*camera); }
-}
-}
-
-void ISInit()
-{
-    static bool has_init = false;
-    if (!has_init)
+    std::deque<std::unique_ptr<GigECCD>> cameras;
+public:
+    Loader()
     {
-        has_init = true;
-
         arv::ArvCamera *camera = arv::ArvFactory::find_first_available();
-        GigECCD *indi_camera   = new GigECCD(camera);
-        cameras.push_back(indi_camera);
+        cameras.push_back(std::unique_ptr<GigECCD>(new GigECCD(camera)));
     }
-    atexit(cleanup);
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    FOR_EVERY_CAMERA
-    {
-        if (dev == nullptr || !strcmp(dev, (*camera)->name))
-        {
-            (*camera)->ISGetProperties(dev);
-            //??????????????????
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    FOR_EVERY_CAMERA
-    {
-        if (dev == nullptr || !strcmp(dev, (*camera)->name))
-        {
-            (*camera)->ISNewSwitch(dev, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    FOR_EVERY_CAMERA
-    {
-        if (dev == nullptr || !strcmp(dev, (*camera)->name))
-        {
-            (*camera)->ISNewText(dev, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    FOR_EVERY_CAMERA
-    {
-        if (dev == nullptr || !strcmp(dev, (*camera)->name))
-        {
-            (*camera)->ISNewNumber(dev, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    FOR_EVERY_CAMERA { (*camera)->ISSnoopDevice(root); }
-}
-}
+} loader;
 
 const char *GigECCD::getDefaultName()
 {

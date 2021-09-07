@@ -9,6 +9,7 @@
 */
 
 #ifdef ESP8266
+#include <Pinger.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -16,7 +17,7 @@
 #include "memory.h"
 
 #define WIFI_MAX_RECONNECT      10  // try 10 times to connect until giving up
-#define WIFI_SLEEP_CONNECT    1000  // wait 1 second until next connection retry
+#define WIFI_SLEEP_CONNECT    5000  // wait 1 second until next connection retry
 #define WIFI_SLEEP_RECONNECT 60000  // wait 1 minute before retry to connect
 
 enum wifi_status {
@@ -37,8 +38,17 @@ struct {
 
 ESP8266WebServer server(80);
 
+Pinger pinger;
+struct {
+  String dest_ip_address;
+  u32_t loss;
+  u32_t avg_response_time;
+  unsigned long last_retry;
+} networkData {"", 0, 0, 0};
+
 void reset() {
   ESP.restart();
+  addJsonLine("Arduino restarted successfully", MESSAGE_INFO);
 }
 
 void refreshDisplay() {
@@ -48,105 +58,200 @@ void refreshDisplay() {
 #endif // USE_OLED
 }
 
+// Retrieve the current status. It has the following side effects
+// WIFI_CONNECTING --> WIFI_CONNECTED
+// WIFI_CONNECTED --> WIFI_CONNECTING
+// WIFI_DISCONNECTING --> WIFI_IDLE
+wifi_status getWiFiStatus() {
+  wl_status_t status = WiFi.status();
+  switch (status) {
+
+    case WL_CONNECTED:
+      if (esp8266Data.status == WIFI_CONNECTING) {
+        if (esp8266Data.retry_count > 0)
+          addJsonLine("Connecting WiFi ... (succeeded, retry=" + String(esp8266Data.retry_count) + ")", MESSAGE_INFO);
+        else
+          addJsonLine("Connecting WiFi ... (succeeded)", MESSAGE_INFO);
+        esp8266Data.status = WIFI_CONNECTED;
+      }
+      break;
+
+    case WL_IDLE_STATUS:
+    case WL_CONNECTION_LOST:
+    case WL_DISCONNECTED:
+      switch (esp8266Data.status) {
+        case WIFI_CONNECTED:
+          addJsonLine("WiFi disconnected, reconnecting...", MESSAGE_INFO);
+          esp8266Data.status = WIFI_CONNECTING;
+          break;
+        case WIFI_DISCONNECTING:
+          addJsonLine("Disconnecting WiFi ... (succeeded)", MESSAGE_INFO);
+          esp8266Data.status = WIFI_IDLE;
+        default: // do nothing
+          break;
+      }
+      break;
+
+    case WL_CONNECT_FAILED:
+      switch (esp8266Data.status) {
+        case WIFI_CONNECTED:
+        case WIFI_CONNECTING:
+          addJsonLine("WiFi connection failed.", MESSAGE_INFO);
+          esp8266Data.status = WIFI_CONNECTION_FAILED;
+          break;
+        case WIFI_DISCONNECTING:
+          addJsonLine("Disconnecting WiFi ... (succeeded)", MESSAGE_INFO);
+          esp8266Data.status = WIFI_IDLE;
+        default: // do nothing
+          break;
+      }
+      break;
+    case WL_WRONG_PASSWORD:
+      if (esp8266Data.status == WIFI_CONNECTING) {
+        addJsonLine("WiFi connection failed, wrong password.", MESSAGE_INFO);
+        esp8266Data.status = WIFI_CONNECTION_FAILED;
+      }
+      break;
+
+    case WL_NO_SHIELD:
+    case WL_NO_SSID_AVAIL:
+    case WL_SCAN_COMPLETED:
+    default:
+      break;
+  }
+  return esp8266Data.status;
+}
+
 // turn wifi on and connect to the access point
 void initWiFi() {
   // set wifi to station mode
   WiFi.mode(WIFI_STA);
   // start trying to connect
   esp8266Data.status = WIFI_CONNECTING;
-  Serial.print("Connecting WiFi ");
-  // connection attempts inside of wifiServerLoop
+  esp8266Data.retry_count = 0;
+  esp8266Data.last_retry = millis();
+
+  addJsonLine("Connecting WiFi ...", MESSAGE_INFO);
+
+  pinger.OnEnd([](const PingerResponse & response)
+  {
+    networkData.dest_ip_address   = response.DestIPAddress.toString();
+    networkData.avg_response_time = response.AvgResponseTime;
+    networkData.loss              = response.TotalSentRequests - response.TotalReceivedResponses;
+    networkData.last_retry        = millis();
+
+    addJsonLine("Ping " + networkData.dest_ip_address + ", avg time=" + String(networkData.avg_response_time) + " ms, loss=" +
+                String(networkData.loss), MESSAGE_DEBUG);
+    return true;
+  });
 }
 
 
 // try to connect to WiFi
 void connectWiFi() {
   esp8266Data.last_retry = millis();
-  if (WiFi.status() == WL_CONNECTED) {
-    esp8266Data.status = WIFI_CONNECTED;
-    esp8266Data.retry_count = 0;
-    refreshDisplay();
-    Serial.println(" succeeded.");
-  } else {
-    WiFi.begin(esp8266Data.ssid, esp8266Data.password);
-    if (WiFi.status() == WL_CONNECTED) {
-      esp8266Data.status = WIFI_CONNECTED;
-      // reset retry counter
+  wifi_status status = getWiFiStatus();
+  switch (status) {
+    case WIFI_CONNECTED:
+      addJsonLine("WiFi already connected.", MESSAGE_DEBUG);
       esp8266Data.retry_count = 0;
       refreshDisplay();
-      Serial.println(" succeeded.");
-    } else {
-      // increase retry counter
-      esp8266Data.retry_count++;
+      break;
+    case WIFI_DISCONNECTING:
+      addJsonLine("Disconnect stopped, connecting...", MESSAGE_INFO);
+    // fallthrough
+    default:
       // check if reconnect limit has been reached
-      if (esp8266Data.retry_count <= WIFI_MAX_RECONNECT) {
+      if (esp8266Data.retry_count < WIFI_MAX_RECONNECT) {
         esp8266Data.status = WIFI_CONNECTING;
-        Serial.print(".");
+        // increase retry counter
+        esp8266Data.retry_count++;
+        // try to connect
+        addJsonLine("WiFi.begin(..., ...)", MESSAGE_DEBUG);
+        WiFi.begin(esp8266Data.ssid, esp8266Data.password);
       } else {
         esp8266Data.status =  WIFI_CONNECTION_FAILED;
+        esp8266Data.retry_count = 0;
         refreshDisplay();
-        Serial.println(" failed!");
+        addJsonLine("Connecting WiFi ... FAILED!", MESSAGE_WARN);
       }
-    }
+      break;
   }
-}
-
-
-void stopWiFi() {
-  esp8266Data.retry_count = 0;
-  esp8266Data.status = WIFI_DISCONNECTING;
-  Serial.print("Disconnecting WiFi ");
 }
 
 void disconnectWiFi() {
   esp8266Data.last_retry = millis();
-  if (WiFi.status() == WL_CONNECTED) WiFi.disconnect();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    // increase retry counter
-    esp8266Data.retry_count++;
-    // check if reconnect limit has been reached
-    if (esp8266Data.retry_count <= WIFI_MAX_RECONNECT) {
+  wifi_status status = getWiFiStatus();
+  switch (status) {
+    case WIFI_CONNECTING:
+      addJsonLine("Connecting stopped, disconnecting...", MESSAGE_INFO);
+    // fallthrough
+    case WIFI_CONNECTION_FAILED:
       esp8266Data.status = WIFI_DISCONNECTING;
-      Serial.print(".");
-    } else {
-      esp8266Data.status =  WIFI_CONNECTED;
+    // fallthrough
+    case WIFI_CONNECTED:
+      esp8266Data.retry_count = 0;
+      WiFi.disconnect();
+      break;
+    case WIFI_DISCONNECTING:
+      // check if reconnect limit has been reached
+      if (esp8266Data.retry_count <= WIFI_MAX_RECONNECT) {
+        // increase retry counter
+        esp8266Data.retry_count++;
+        WiFi.disconnect();
+      } else {
+        esp8266Data.status =  WIFI_CONNECTED;
+        refreshDisplay();
+        addJsonLine("Disconnecting WiFi ... FAILED!", MESSAGE_WARN);
+      }
+      break;
+    case WIFI_IDLE:
+      esp8266Data.status = WIFI_IDLE;
+      // reset retry counter
+      esp8266Data.retry_count = 0;
       refreshDisplay();
-      Serial.println("failed!");
-    }
-  } else {
-    esp8266Data.status = WIFI_IDLE;
-    // reset retry counter
-    esp8266Data.retry_count = 0;
-    refreshDisplay();
-    Serial.println("succeeded.");
+      addJsonLine("Disconnecting WiFi ... (succeeded)", MESSAGE_INFO);
+      break;
   }
 }
 
+// initialize stopping the WiFi
+void stopWiFi() {
+  esp8266Data.retry_count = 0;
+  esp8266Data.last_retry  = millis();
+  esp8266Data.status = WIFI_DISCONNECTING;
+  addJsonLine("Disconnecting WiFi ...", MESSAGE_INFO);
+}
+
 void wifiServerLoop() {
+  uint32_t now = millis();
+
+
   // act depending upon the current connection status
-  switch (esp8266Data.status) {
+  switch (getWiFiStatus()) {
     case WIFI_IDLE:
       // do nothing
       break;
 
     case WIFI_CONNECTING:
       // retry if connect delay has passed
-      if (millis() - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) connectWiFi();
+      if (now - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) connectWiFi();
       break;
 
     case WIFI_DISCONNECTING:
       // retry if disconnect delay has passed
-      if (millis() - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) disconnectWiFi();
+      if (now - esp8266Data.last_retry > WIFI_SLEEP_CONNECT) disconnectWiFi();
       break;
 
     case WIFI_CONNECTED:
-      // check if connection is still valid
-      if (WiFi.status() != WL_CONNECTED) {
-        esp8266Data.status = WIFI_CONNECTING;
-        esp8266Data.retry_count = 0;
-        Serial.print("WiFi lost, reconnecting ");
-        connectWiFi();
+      // check if gateway is reachable
+      if (now - networkData.last_retry > WIFI_SLEEP_RECONNECT) {
+        if (pinger.Ping(WiFi.gatewayIP(), 4) == false || networkData.loss > 3) {
+          addJsonLine("Cannot reach gateway, try to reconnect WiFi ...", MESSAGE_WARN);
+          esp8266Data.retry_count = 0;
+          connectWiFi();
+        }
+        networkData.last_retry = now;
       }
       break;
 
@@ -155,7 +260,7 @@ void wifiServerLoop() {
       if (millis() - esp8266Data.last_retry > WIFI_SLEEP_RECONNECT) {
         esp8266Data.status = WIFI_CONNECTING;
         esp8266Data.retry_count = 0;
-        Serial.print("Retry connecting WiFi ");
+        addJsonLine("Retry connecting WiFi ...", MESSAGE_INFO);
         connectWiFi();
       }
       break;
@@ -192,19 +297,33 @@ void parseCredentials(String input) {
       end = input.indexOf('=', begin);
     }
 
-    if (name == String("ssid"))     esp8266Data.ssid = value;
+    if (name == String("ssid"))     esp8266Data.ssid     = value;
     if (name == String("password")) esp8266Data.password = value;
   }
 }
 
 String displayWiFiParameters() {
-  String result = "WiFi: " + WiFi.SSID();
-  if (WiFi.status() == WL_CONNECTED) {
-    result += "\n IP: " + WiFi.localIP().toString() + "\n";
-  } else {
-    result += "\n status: disconnected\n";
-  }
 
+  String result = "WiFi: " + WiFi.SSID();
+  switch (getWiFiStatus()) {
+    case WIFI_CONNECTED:
+      result += "\n IP: " + WiFi.localIP().toString() + "\n";
+      break;
+    case WIFI_IDLE:
+      result += "\n status: disconnected\n";
+      break;
+    case WIFI_CONNECTING:
+      result += "\n status: connecting\n";
+      result += "\n retry: " + String(esp8266Data.retry_count) + "\n";
+      break;
+    case WIFI_DISCONNECTING:
+      result += "\n status: disconnecting\n";
+      result += "\n retry: " + String(esp8266Data.retry_count) + "\n";
+      break;
+    case WIFI_CONNECTION_FAILED:
+      result += "\n status: conn. failed\n";
+      break;
+  }
   return result;
 }
 

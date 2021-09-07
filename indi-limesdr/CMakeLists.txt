@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_limesdr CXX C)
 
 set (LIMESDR_VERSION_MAJOR 1)
@@ -28,14 +28,14 @@ include(CMakeCommon)
 if (CFITSIO_FOUND)
 
 set(limesdr_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/indi_limesdr_spectrograph.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_limesdr_receiver.cpp
 )
 
-add_executable(indi_limesdr_spectrograph ${limesdr_SRCS})
+add_executable(indi_limesdr_receiver ${limesdr_SRCS})
 
-target_link_libraries(indi_limesdr_spectrograph ${INDI_LIBRARIES} ${LIMESUITE_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_limesdr_receiver ${INDI_LIBRARIES} ${LIMESUITE_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
-install(TARGETS indi_limesdr_spectrograph RUNTIME DESTINATION bin)
+install(TARGETS indi_limesdr_receiver RUNTIME DESTINATION bin)
 
 endif (CFITSIO_FOUND)
 

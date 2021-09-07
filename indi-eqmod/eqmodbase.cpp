@@ -52,9 +52,6 @@ using namespace INDI::AlignmentSubsystem;
 #include <libnova/transform.h>
 #include <libnova/utility.h>
 
-// We declare an auto pointer to EQMod.
-static std::unique_ptr<EQMod> eqmod(new EQMod());
-
 #define GOTO_RATE      2        /* slew rate, degrees/s */
 #define SLEW_RATE      0.5      /* slew rate, degrees/s */
 #define FINE_SLEW_RATE 0.1      /* slew rate, degrees/s */
@@ -71,7 +68,6 @@ static std::unique_ptr<EQMod> eqmod(new EQMod());
 /* Preset Slew Speeds */
 #define SLEWMODES 11
 double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
-double defaultspeed              = 64.0;
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
@@ -273,13 +269,15 @@ bool EQMod::initProperties()
 
     for (int i = 0; i < SlewRateSP.nsp - 1; i++)
     {
+        SlewRateSP.sp[i].s = ISS_OFF;
         sprintf(SlewRateSP.sp[i].label, "%.fx", slewspeeds[i]);
         SlewRateSP.sp[i].aux = (void *)&slewspeeds[i];
     }
 
     // Since last item is NOT maximum (but custom), let's set item before custom to SLEWMAX
+    SlewRateSP.sp[SlewRateSP.nsp - 2].s = ISS_ON;
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 2].name, "SLEW_MAX", MAXINDINAME);
-
+    // Last is custom
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].name, "SLEWCUSTOM", MAXINDINAME);
     strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].label, "Custom", MAXINDILABEL);
 
@@ -870,7 +868,7 @@ bool EQMod::ReadScopeStatus()
 #ifdef WITH_ALIGN_GEEHALEL
         if (align)
         {
-            align->GetAlignedCoords(syncdata, juliandate, &lnobserver, currentRA, currentDEC, &ghalignedRA,
+            align->GetAlignedCoords(syncdata, juliandate, &m_Location, currentRA, currentDEC, &ghalignedRA,
                                     &ghalignedDEC);
             aligned = true;
         }
@@ -881,22 +879,21 @@ bool EQMod::ReadScopeStatus()
         if (AlignMethodSP.sp[1].s == ISS_ON)
         {
             const char *maligns[3] = { "ZENITH", "NORTH", "SOUTH" };
-            struct ln_equ_posn RaDec;
+            INDI::IEquatorialCoordinates RaDec;
             // Use HA/Dec as  telescope coordinate system
-            RaDec.ra                     = ((lst - currentRA) * 360.0) / 24.0;
-            RaDec.dec                    = currentDEC;
-            TelescopeDirectionVector TDV = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+            RaDec.rightascension = currentRA;
+            RaDec.declination = currentDEC;
+            TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(RaDec);
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Status: Mnt. Algnt. %s Date %lf encoders RA=%ld DE=%ld Telescope RA %lf DEC %lf",
                    maligns[GetApproximateMountAlignment()], juliandate,
                    static_cast<long>(currentRAEncoder), static_cast<long>(currentDEEncoder),
                    currentRA, currentDEC);
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, " Direction RA(deg.)  %lf DEC %lf TDV(x %lf y %lf z %lf)",
-                   RaDec.ra, RaDec.dec, TDV.x, TDV.y, TDV.z);
+                   RaDec.rightascension, RaDec.declination, TDV.x, TDV.y, TDV.z);
             aligned = true;
-            if ((GetAlignmentDatabase().size() < 2) || (!TransformTelescopeToCelestial(TDV, alignedRA, alignedDEC)))
+            if (!TransformTelescopeToCelestial(TDV, alignedRA, alignedDEC))
             {
-                //if (!TransformTelescopeToCelestial( TDV, alignedRA, alignedDEC)) {
                 aligned = false;
                 DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                        "Failed TransformTelescopeToCelestial: Scope RA=%g Scope DE=%f, Aligned RA=%f DE=%f", currentRA,
@@ -939,13 +936,12 @@ bool EQMod::ReadScopeStatus()
         }
 #endif
 
-        lnradec.ra  = (alignedRA * 360.0) / 24.0;
-        lnradec.dec = alignedDEC;
+        lnradec.rightascension  = alignedRA;
+        lnradec.declination = alignedDEC;
         /* uses sidereal time, not local sidereal time */
-        ln_get_hrz_from_equ(&lnradec, &lnobserver, juliandate, &lnaltaz);
-        /* libnova measures azimuth from south towards west */
-        horizvalues[0] = range360(lnaltaz.az + 180);
-        horizvalues[1] = lnaltaz.alt;
+        INDI::EquatorialToHorizontal(&lnradec, &m_Location, juliandate, &lnaltaz);
+        horizvalues[0] = lnaltaz.azimuth;
+        horizvalues[1] = lnaltaz.altitude;
         IUUpdateNumber(HorizontalCoordNP, horizvalues, (char **)horiznames, 2);
         IDSetNumber(HorizontalCoordNP, nullptr);
 
@@ -975,13 +971,15 @@ bool EQMod::ReadScopeStatus()
             fs_sexa(AlignedDEString, alignedDEC, 2, 3600);
             fs_sexa(AZString, horizvalues[0], 2, 3600);
             fs_sexa(ALString, horizvalues[1], 2, 3600);
-            LOGF_DEBUG("Scope RA (%s) DE (%s) Aligned RA (%s) DE (%s) AZ (%s) ALT (%s)",
+
+            LOGF_DEBUG("Scope RA (%s) DE (%s) Aligned RA (%s) DE (%s) AZ (%s) ALT (%s), PierSide (%s)",
                        CurrentRAString,
                        CurrentDEString,
                        AlignedRAString,
                        AlignedDEString,
                        AZString,
-                       ALString);
+                       ALString,
+                       pierSide == PIER_EAST ? "East" : (pierSide == PIER_WEST ? "West" : "Uknown"));
         }
 
         if (mount->HasAuxEncoders())
@@ -1816,8 +1814,8 @@ bool EQMod::Goto(double r, double d)
     double juliandate;
     double lst;
 #ifdef WITH_SCOPE_LIMITS
-    struct ln_equ_posn gotoradec;
-    struct ln_hrz_posn gotoaltaz;
+    INDI::IEquatorialCoordinates gotoradec;
+    INDI::IHorizontalCoordinates gotoaltaz;
     double gotoaz;
     double gotoalt;
 #endif
@@ -1835,14 +1833,11 @@ bool EQMod::Goto(double r, double d)
     lst        = getLst(juliandate, getLongitude());
 
 #ifdef WITH_SCOPE_LIMITS
-    gotoradec.ra  = (r * 360.0) / 24.0;
-    gotoradec.dec = d;
-    /* uses sidereal time, not local sidereal time */
-    /*ln_get_hrz_from_equ_sidereal_time(&lnradec, &lnobserver, lst, &lnaltaz);*/
-    ln_get_hrz_from_equ(&gotoradec, &lnobserver, juliandate, &gotoaltaz);
-    /* libnova measures azimuth from south towards west */
-    gotoaz  = range360(gotoaltaz.az + 180);
-    gotoalt = gotoaltaz.alt;
+    gotoradec.rightascension  = r;
+    gotoradec.declination = d;
+    INDI::EquatorialToHorizontal(&gotoradec, &m_Location, juliandate, &gotoaltaz);
+    gotoaz  = gotoaltaz.azimuth;
+    gotoalt = gotoaltaz.altitude;
     if (horizon)
     {
         if (!horizon->inGotoLimits(gotoaz, gotoalt))
@@ -1870,10 +1865,12 @@ bool EQMod::Goto(double r, double d)
     bool aligned         = false;
 #ifdef WITH_ALIGN_GEEHALEL
     double ghratarget = r, ghdetarget = d;
+    if (AlignMethodSP.sp[0].s == ISS_ON)
+    {
     aligned = true;
     if (align)
     {
-        align->AlignGoto(syncdata, juliandate, &lnobserver, &ghratarget, &ghdetarget);
+        align->AlignGoto(syncdata, juliandate, &m_Location, &ghratarget, &ghdetarget);
         LOGF_INFO("Aligned Eqmod Goto RA=%g DE=%g (target RA=%g DE=%g)", ghratarget, ghdetarget,
                   r, d);
     }
@@ -1887,15 +1884,15 @@ bool EQMod::Goto(double r, double d)
                       ghdetarget, r, d);
         }
     }
+    }
 #endif
 #ifdef WITH_ALIGN
     if (AlignMethodSP.sp[1].s == ISS_ON)
     {
         TelescopeDirectionVector TDV;
         aligned = true;
-        if ((GetAlignmentDatabase().size() < 2) || (!TransformCelestialToTelescope(r, d, 0.0, TDV)))
-        {
-            //if (!TransformCelestialToTelescope(r, d, 0.0, TDV)) {
+        if (!TransformCelestialToTelescope(r, d, 0.0, TDV))
+        {            
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Failed TransformCelestialToTelescope:  RA=%lf DE=%lf, Goto RA=%lf DE=%lf", r, d, gotoparams.ratarget,
                    gotoparams.detarget);
@@ -1907,16 +1904,13 @@ bool EQMod::Goto(double r, double d)
         }
         else
         {
-            struct ln_equ_posn RaDec;
-            LocalHourAngleDeclinationFromTelescopeDirectionVector(TDV, RaDec);
+            INDI::IEquatorialCoordinates RaDec;
+            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, RaDec);
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "TransformCelestialToTelescope: RA=%lf DE=%lf, TDV (x :%lf, y: %lf, z: %lf), local hour RA %lf DEC %lf",
-                   r, d, TDV.x, TDV.y, TDV.z, RaDec.ra, RaDec.dec);
-            RaDec.ra = (RaDec.ra * 24.0) / 360.0;
-            RaDec.ra = range24(lst - RaDec.ra);
-
-            gotoparams.ratarget = RaDec.ra;
-            gotoparams.detarget = RaDec.dec;
+                   r, d, TDV.x, TDV.y, TDV.z, RaDec.rightascension, RaDec.declination);
+            gotoparams.ratarget = RaDec.rightascension;
+            gotoparams.detarget = RaDec.declination;
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "TransformCelestialToTelescope: RA=%lf DE=%lf, Goto RA=%lf DE=%lf", r, d, gotoparams.ratarget,
                    gotoparams.detarget);
@@ -2141,19 +2135,19 @@ bool EQMod::Sync(double ra, double dec)
     if (!isStandardSync())
     {
         AlignmentDatabaseEntry NewEntry;
-        struct ln_equ_posn RaDec;
-        RaDec.ra  = ((lst - tmpsyncdata.telescopeRA) * 360.0) / 24.0;
-        RaDec.dec = tmpsyncdata.telescopeDEC;
+        INDI::IEquatorialCoordinates RaDec;
+        RaDec.rightascension  = tmpsyncdata.telescopeRA;
+        RaDec.declination = tmpsyncdata.telescopeDEC;
         //NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
         NewEntry.ObservationJulianDate = juliandate;
         NewEntry.RightAscension        = ra;
         NewEntry.Declination           = dec;
-        NewEntry.TelescopeDirection    = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+        NewEntry.TelescopeDirection    = TelescopeDirectionVectorFromEquatorialCoordinates(RaDec);
         NewEntry.PrivateDataSize       = 0;
         DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
                NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination,
                NewEntry.TelescopeDirection.x, NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
-        if (!CheckForDuplicateSyncPoint(NewEntry))
+        if (!CheckForDuplicateSyncPoint(NewEntry, 0.01))
         {
             GetAlignmentDatabase().push_back(NewEntry);
 
@@ -2163,9 +2157,7 @@ bool EQMod::Sync(double ra, double dec)
             // Tell the math plugin to reinitialise
             Initialise(this);
 
-            //if (GetAlignmentDatabase().size() >= 2)  return true;
-        }
-        //if (GetAlignmentDatabase().size() >= 2) return false;
+        }        
     }
 #endif
 #if defined WITH_ALIGN_GEEHALEL || defined WITH_ALIGN
@@ -2174,7 +2166,7 @@ bool EQMod::Sync(double ra, double dec)
     {
 #ifdef WITH_ALIGN_GEEHALEL
         if (align && isStandardSync())
-            align->AlignStandardSync(syncdata, &tmpsyncdata, &lnobserver);
+            align->AlignStandardSync(syncdata, &tmpsyncdata, &m_Location);
 #endif
         syncdata2 = syncdata;
         syncdata  = tmpsyncdata;
@@ -2210,8 +2202,7 @@ IPState EQMod::GuideNorth(uint32_t ms)
         return IPS_IDLE;
     }
 
-    double rateshift = 0.0;
-    rateshift        = TRACKRATE_SIDEREAL * IUFindNumber(GuideRateNP, "GUIDE_RATE_NS")->value;
+    double rateshift = TRACKRATE_SIDEREAL * IUFindNumber(GuideRateNP, "GUIDE_RATE_NS")->value;
     LOGF_DEBUG("Timed guide North %d ms at rate %g %s", ms, rateshift, DEInverted ? "(Inverted)" : "");
 
     IPState pulseState = IPS_BUSY;
@@ -3542,14 +3533,14 @@ From // // http://www.whim.org/nebula/math/pdf/twostar.pdf
     char s2trasexa[13], s2tdecsexa[13];
     char s2rasexa[13], s2decsexa[13];
 
-    alpha1  = ln_deg_to_rad((s1.telescopeRA - s1.lst) * 360.0 / 24.0);
-    delta1  = ln_deg_to_rad(s1.telescopeDEC);
-    alpha2  = ln_deg_to_rad((s2.telescopeRA - s2.lst) * 360.0 / 24.0);
-    delta2  = ln_deg_to_rad(s2.telescopeDEC);
-    calpha1 = ln_deg_to_rad((s1.targetRA - s1.lst) * 360.0 / 24.0);
-    cdelta1 = ln_deg_to_rad(s1.targetDEC);
-    calpha2 = ln_deg_to_rad((s2.targetRA - s2.lst) * 360.0 / 24.0);
-    cdelta2 = ln_deg_to_rad(s2.targetDEC);
+    alpha1  = DEG_TO_RAD((s1.telescopeRA - s1.lst) * 360.0 / 24.0);
+    delta1  = DEG_TO_RAD(s1.telescopeDEC);
+    alpha2  = DEG_TO_RAD((s2.telescopeRA - s2.lst) * 360.0 / 24.0);
+    delta2  = DEG_TO_RAD(s2.telescopeDEC);
+    calpha1 = DEG_TO_RAD((s1.targetRA - s1.lst) * 360.0 / 24.0);
+    cdelta1 = DEG_TO_RAD(s1.targetDEC);
+    calpha2 = DEG_TO_RAD((s2.targetRA - s2.lst) * 360.0 / 24.0);
+    cdelta2 = DEG_TO_RAD(s2.targetDEC);
 
     if ((calpha2 == calpha1) || (alpha1 == alpha2))
         return;
@@ -3613,15 +3604,15 @@ From // // http://www.whim.org/nebula/math/pdf/twostar.pdf
     LOGF_DEBUG("Computed Telescope polar alignment (rad): delta(dec) = %g alpha(ha) = %g",
                tpadelta, tpaalpha);
 
-    beta    = ln_deg_to_rad(lat);
+    beta    = DEG_TO_RAD(lat);
     *tpaalt = asin(sin(tpadelta) * sin(beta) + (cos(tpadelta) * cos(beta) * cos(tpaalpha)));
     cosaz   = (sin(tpadelta) - (sin(*tpaalt) * sin(beta))) / (cos(*tpaalt) * cos(beta));
     sinaz   = (cos(tpadelta) * sin(tpaalpha)) / cos(*tpaalt);
     //*tpaaz = acos(cosaz);
     //if (sinaz < 0) *tpaaz = 2 * M_PI - *tpaaz;
     *tpaaz  = atan2(sinaz, cosaz);
-    *tpaalt = ln_rad_to_deg(*tpaalt);
-    *tpaaz  = ln_rad_to_deg(*tpaaz);
+    *tpaalt = RAD_TO_DEG(*tpaalt);
+    *tpaaz  = RAD_TO_DEG(*tpaaz);
     LOGF_DEBUG("Computed Telescope polar alignment (deg): alt = %g az = %g", *tpaalt, *tpaaz);
 
     starPolarAlign(s2.lst, s2.targetRA, s2.targetDEC, (M_PI / 2) - tpaalpha, (M_PI / 2) - tpadelta, &s2tra, &s2tdec);
@@ -3712,13 +3703,10 @@ void EQMod::starPolarAlign(double lst, double ra, double dec, double theta, doub
 
 bool EQMod::updateLocation(double latitude, double longitude, double elevation)
 {
-    INDI_UNUSED(elevation);
-    // JM: INDI Longitude is 0 to 360 increasing EAST. libnova East is Positive, West is negative
-    lnobserver.lng = longitude;
+    m_Location.longitude = longitude;
+    m_Location.latitude  = latitude;
+    m_Location.elevation = elevation;
 
-    if (lnobserver.lng > 180)
-        lnobserver.lng -= 360;
-    lnobserver.lat = latitude;
     if (latitude < 0.0)
         SetSouthernHemisphere(true);
     else
@@ -3728,7 +3716,15 @@ bool EQMod::updateLocation(double latitude, double longitude, double elevation)
     // Set this according to mount type
     SetApproximateMountAlignmentFromMountType(EQUATORIAL);
 #endif
-    LOGF_INFO("updateLocation: long = %g lat = %g", lnobserver.lng, lnobserver.lat);
+    // Make display longitude to be in the standard 0 to +180 East, and 0 to -180 West.
+    // No need to confuse new users with INDI format.
+    char lat_str[MAXINDIFORMAT] = {0}, lng_str[MAXINDIFORMAT] = {0};
+    double display_longitude = longitude > 180 ? longitude - 360 : longitude;
+    fs_sexa(lat_str, m_Location.latitude, 2, 36000);
+    fs_sexa(lng_str, display_longitude, 2, 36000);
+    // Choose WGS 84, also known as EPSG:4326 for latitude/longitude ordering
+    LOGF_INFO("Observer location updated: Latitude %.12s (%.2f) Longitude %.12s (%.2f)", lat_str, m_Location.latitude, lng_str,
+              display_longitude);
     return true;
 }
 

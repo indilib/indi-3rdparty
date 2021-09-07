@@ -34,7 +34,8 @@
 #include "sxconfig.h"
 
 #include <cmath>
-
+#include <deque>
+#include <memory>
 #include <unistd.h>
 
 #define SX_GUIDE_EAST  0x08 /* RA+ */
@@ -44,119 +45,23 @@
 #define SX_CLEAR_NS    0x09
 #define SX_CLEAR_WE    0x06
 
-static int count = 0;
-static SXCCD *cameras[20];
-
 #define TIMER 1000
 
-static void cleanup()
+static class Loader
 {
-    for (int i = 0; i < count; i++)
-    {
-        delete cameras[i];
-    }
-}
-
-void ISInit()
-{
-    static bool isInit = false;
-    if (!isInit)
-    {
-        DEVICE devices[20];
-        const char *names[20];
-        count = sxList(devices, names, 20);
-        for (int i = 0; i < count; i++)
+        std::deque<std::unique_ptr<SXCCD>> cameras;
+    public:
+        Loader()
         {
-            cameras[i] = new SXCCD(devices[i], names[i]);
+            DEVICE devices[20];
+            const char *names[20];
+            int count = sxList(devices, names, 20);
+            for (int i = 0; i < count; i++)
+            {
+                cameras.push_back(std::unique_ptr<SXCCD>(new SXCCD(devices[i], names[i])));
+            }
         }
-        atexit(cleanup);
-        isInit = true;
-    }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    for (int i = 0; i < count; i++)
-    {
-        SXCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISGetProperties(camera->name);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < count; i++)
-    {
-        SXCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewSwitch(camera->name, name, states, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < count; i++)
-    {
-        SXCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewText(camera->name, name, texts, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    ISInit();
-    for (int i = 0; i < count; i++)
-    {
-        SXCCD *camera = cameras[i];
-        if (dev == nullptr || !strcmp(dev, camera->name))
-        {
-            camera->ISNewNumber(camera->name, name, values, names, num);
-            if (dev != nullptr)
-                break;
-        }
-    }
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-
-void ISSnoopDevice(XMLEle *root)
-{
-    ISInit();
-
-    for (int i = 0; i < count; i++)
-    {
-        SXCCD *camera = cameras[i];
-        camera->ISSnoopDevice(root);
-    }
-}
+} loader;
 
 void ExposureTimerCallback(void *p)
 {
@@ -456,10 +361,10 @@ void SXCCD::TimerHit()
             if (TemperatureReported != TemperatureN[0].value)
             {
                 TemperatureReported = TemperatureN[0].value;
-                if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
-                    TemperatureNP.s = IPS_OK;
-                else
-                    TemperatureNP.s = IPS_BUSY;
+                //                if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
+                //                    TemperatureNP.s = IPS_OK;
+                //                else
+                //TemperatureNP.s = IPS_BUSY;
                 IDSetNumber(&TemperatureNP, nullptr);
             }
         }

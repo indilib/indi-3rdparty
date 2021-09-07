@@ -14,67 +14,93 @@
 #-----------------------------------------------------------------------
 
 import sys
-from indiclient import *
 from weatherradio import *
+from indiclient import *
 from os import path
 import argparse
 from pid.decorator import pidfile
 from pid import PidFileError
 
+def getWeatherData(args, indi, indiserver, indiport, device):
+    if (args.verbose):
+        print ("Reading weather data from \"%s\"@%s:%s" %
+               (device, indiserver, indiport))
+
+    data = readWeather(indi, device, verbose=args.verbose)
+    return data
+
+
+def getSensorData(args, indi, indiserver, indiport, device):
+    if (args.verbose):
+        print ("Reading sensor data from \"%s\"@%s:%s" %
+               (device, indiserver, indiport))
+
+    data = readSensors(indi, device)
+    return data
 
 @pidfile()
-def update(args, indi=None):
+def update(args, indiserver, indiport):
     try:
-        if (args.verbose):
-            print ("Updating data from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
-
         # open connection to the INDI server
-        indi=indiclient(INDISERVER,int(INDIPORT))
+        indi=indiclient(indiserver, indiport)
 
-        # ensure that the INDI driver is connected to the device
-        connected = connect(indi, verbose=args.verbose)
+        weatherData = {}
+        sensorData  = {}
 
-        if (connected):
-            if (args.verbose):
-                print ("Connection established to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+        # update data from all devices
+        for deviceID in wrConfig.getDevices():
+            device = config.get(deviceID, 'INDIDEVICE')
 
-            data = None
-            if path.exists(args.rrdfile):
-                data = readWeather(indi, verbose=args.verbose)
-                updateRRD(args.rrdfile, data)
+            # ensure that the INDI driver is connected to the device
+            connected = connect(indi, deviceID, verbose=args.verbose)
 
-                data = None
-                if path.exists(args.rrdsensorsfile):
-                    data = readSensors(indi)
-                    updateRRD(args.rrdsensorsfile, data)
+            if (connected):
+                weatherData.update(getWeatherData(args, indi, indiserver,
+                                                  indiport, device))
+                sensorData.update(getSensorData(args, indi, indiserver,
+                                                indiport, device))
+            else:
+                print ("Establishing connection FAILED to \"%s\"@%s:%s" % (deviceID, indiserver, indiport))
 
-                if (args.verbose):
-                    print ("Weather parameters read from \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
-                else:
-                    print ("Establishing connection FAILED to \"%s\"@%s:%s" % (INDIDEVICE,INDISERVER,INDIPORT))
+        # update RRD files with all retrieved data
+        if path.exists(args.rrdfile):
+            updateRRD(args.rrdfile, weatherData)
+        else:
+            print ("Cannot store weather data, file %s not found." %
+                   (args.rrdfile))
 
+        if path.exists(args.rrdsensorsfile):
+            updateRRD(args.rrdsensorsfile, sensorData)
+        else:
+            print ("Cannot store sensor data, file %s not found." %
+                   (args.rrdsensorsfile))
 
+        # finished
         indi.quit()
+        sys.exit()
 
-    except:
-        print ("Updating data from \"%s\"@%s:%s FAILED!" % (INDIDEVICE,INDISERVER,INDIPORT))
+    except PidFileError:
+        print ("RRD update still running")
         if indi != None:
             indi.quit()
-        sys.exit()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch weather data and store it into the RRD file")
     parser.add_argument("-v", "--verbose", action='store_true',
                         help="Display progress information")
-    parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+    parser.add_argument("rrdfile", nargs='?',
+                        default=config.get('WeatherRadio', 'RRDFILE'),
                         help="RRD file holding all time series")
-    parser.add_argument("rrdsensorsfile", nargs='?', default=RRDSENSORSFILE,
+    parser.add_argument("rrdsensorsfile", nargs='?',
+                        default=config.get('WeatherRadio', 'RRDSENSORSFILE'),
                         help="RRD file holding all sensor data time series")
 
     args = parser.parse_args()
 
     try:
-        update(args)
-    except PidFileError:
-        print ("RRD update still running")
+        update(args, config.get('WeatherRadio', 'INDISERVER'),
+               config.getint('WeatherRadio', 'INDIPORT'))
+    except Exception as ex:
+        print("Problem occured: {0}".format(ex))
+        sys.exit()

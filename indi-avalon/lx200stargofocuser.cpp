@@ -44,32 +44,15 @@ LX200StarGoFocuser::LX200StarGoFocuser(LX200StarGo* defaultDevice, const char *n
 void LX200StarGoFocuser::initProperties(const char *groupName)
 {
     INDI::FocuserInterface::initProperties(groupName);
-
-    IUFillNumber(&INDI::FocuserInterface::FocusSpeedN[0], "FOCUS_SPEED_VALUE", "Focus Speed", "%0.0f", 0, 10, 1, 2);
-    IUFillNumberVector(&FocusSpeedNP, INDI::FocuserInterface::FocusSpeedN, 1, getDeviceName(), "FOCUS_SPEED", "Speed", deviceName, IP_RW, 60, IPS_OK);
-
-    IUFillSwitch(&FocusMotionS[0], "FOCUS_INWARD", "Focus In", ISS_ON);
-    IUFillSwitch(&FocusMotionS[1], "FOCUS_OUTWARD", "Focus Out", ISS_OFF);
-    IUFillSwitchVector(&FocusMotionSP, FocusMotionS, 2, getDeviceName(), "FOCUS_MOTION", "Direction", deviceName, IP_RW, ISR_1OFMANY, 60, IPS_OK);
-
-    IUFillNumber(&FocusTimerN[0], "FOCUS_TIMER_VALUE", "Focus Timer (ms)", "%4.0f", 0.0, 5000.0, 50.0, 1000.0);
-    IUFillNumberVector(&FocusTimerNP, FocusTimerN, 1, getDeviceName(), "FOCUS_TIMER", "Timer", deviceName, IP_RW, 60, IPS_OK);
-
-    IUFillNumber(&FocusAbsPosN[0], "FOCUS_ABSOLUTE_POSITION", "Ticks", "%4.0f", 0.0, 100000.0, 1000.0, 0);
-    IUFillNumberVector(&FocusAbsPosNP, FocusAbsPosN, 1, getDeviceName(), "ABS_FOCUS_POSITION", "Absolute Position", deviceName, IP_RW, 60, IPS_OK);
-
-    IUFillNumber(&FocusRelPosN[0], "FOCUS_RELATIVE_POSITION", "Ticks", "%4.0f", 0.0, 100000.0, 1000.0, 0);
-    IUFillNumberVector(&FocusRelPosNP, FocusRelPosN, 1, getDeviceName(), "REL_FOCUS_POSITION", "Relative Position", deviceName, IP_RW, 60, IPS_OK);
-
-    IUFillSwitch(&FocusAbortS[0], "FOCUS_ABORT", "Focus Abort", ISS_OFF);
-    IUFillSwitchVector(&FocusAbortSP, INDI::FocuserInterface::FocusAbortS, 1, getDeviceName(), "FOCUS_ABORT_MOTION", "Abort Motion", deviceName, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-
-    IUFillNumber(&FocusSyncPosN[0], "FOCUS_SYNC_POSITION_VALUE", "Ticks", "%4.0f", 0.0, 100000.0, 1000.0, 0);
-    IUFillNumberVector(&FocusSyncPosNP, FocusSyncPosN, 1, getDeviceName(), "FOCUS_SYNC_POSITION", "Sync", deviceName, IP_WO, 0, IPS_OK);
-
-    IUFillSwitch(&FocusReverseS[0], "FOCUS_REVERSE_NO", "Normal", ISS_ON);
-    IUFillSwitch(&FocusReverseS[1], "FOCUS_REVERSE_YES", "Reversed", ISS_OFF);
-    IUFillSwitchVector(&FocusReverseSP, FocusReverseS, 2, getDeviceName(), "FOCUS_REVERSE", "Direction", deviceName, IP_RW, ISR_1OFMANY, 60, IPS_OK);
+    // set default values
+    FocusAbsPosN[0].min = 0.0;
+    FocusAbsPosN[0].max = 100000.0;
+    FocusAbsPosN[0].step = 1000.0;
+    FocusRelPosN[0].step = 1000.0;
+    FocusSyncN[0].step = 1000.0;
+    FocusSpeedN[0].min = 0.0;
+    FocusSpeedN[0].max = 10.0;
+    FocusSpeedN[0].value = 1.0;
 
 }
 
@@ -80,33 +63,28 @@ void LX200StarGoFocuser::initProperties(const char *groupName)
 
 bool LX200StarGoFocuser::updateProperties()
 {
-    if (! INDI::FocuserInterface::updateProperties())
-    {
-        return false;
-    } else {
-        if (isConnected()) {
-            baseDevice->defineProperty(&FocusSpeedNP);
-            baseDevice->defineProperty(&FocusMotionSP);
-            baseDevice->defineProperty(&FocusTimerNP);
-            baseDevice->defineProperty(&FocusAbsPosNP);
-            baseDevice->defineProperty(&FocusRelPosNP);
-            baseDevice->defineProperty(&FocusAbortSP);
-            baseDevice->defineProperty(&FocusSyncPosNP);
-            baseDevice->defineProperty(&FocusReverseSP);
-        }
-        else {
-            baseDevice->deleteProperty(FocusSpeedNP.name);
-            baseDevice->deleteProperty(FocusMotionSP.name);
-            baseDevice->deleteProperty(FocusTimerNP.name);
-            baseDevice->deleteProperty(FocusAbsPosNP.name);
-            baseDevice->deleteProperty(FocusRelPosNP.name);
-            baseDevice->deleteProperty(FocusAbortSP.name);
-            baseDevice->deleteProperty(FocusSyncPosNP.name);
-            baseDevice->deleteProperty(FocusReverseSP.name);
-        }
-        return true;
-
+    if (isConnected()) {
+        baseDevice->defineProperty(&FocusSpeedNP);
+        baseDevice->defineProperty(&FocusMotionSP);
+        baseDevice->defineProperty(&FocusTimerNP);
+        baseDevice->defineProperty(&FocusAbsPosNP);
+        baseDevice->defineProperty(&FocusRelPosNP);
+        baseDevice->defineProperty(&FocusAbortSP);
+        baseDevice->defineProperty(&FocusSyncNP);
+        baseDevice->defineProperty(&FocusReverseSP);
     }
+    else {
+        baseDevice->deleteProperty(FocusSpeedNP.name);
+        baseDevice->deleteProperty(FocusMotionSP.name);
+        baseDevice->deleteProperty(FocusTimerNP.name);
+        baseDevice->deleteProperty(FocusAbsPosNP.name);
+        baseDevice->deleteProperty(FocusRelPosNP.name);
+        baseDevice->deleteProperty(FocusAbortSP.name);
+        baseDevice->deleteProperty(FocusSyncNP.name);
+        baseDevice->deleteProperty(FocusReverseSP.name);
+    }
+    return true;
+
 }
 
 
@@ -163,7 +141,7 @@ bool LX200StarGoFocuser::ISNewNumber(const char *dev, const char *name, double v
         } else if (!strcmp(name, FocusRelPosNP.name))
         {
             return changeFocusRelPos(values, names, n);
-        } else if (!strcmp(name, FocusSyncPosNP.name))
+        } else if (!strcmp(name, FocusSyncNP.name))
         {
             return changeFocusSyncPos(values, names, n);
         }
@@ -217,6 +195,9 @@ bool LX200StarGoFocuser::changeFocusRelPos(double values[], char* names[], int n
         IUUpdateNumber(&FocusRelPosNP, values, names, n);
         FocusRelPosNP.s = moveFocuserRelative(relativePosition);
         IDSetNumber(&FocusRelPosNP, nullptr);
+        // reflect the relative position status to the absolute position
+        FocusAbsPosNP.s = FocusRelPosNP.s;
+        IDSetNumber(&FocusAbsPosNP, nullptr);
     }
     return true;
 }
@@ -237,7 +218,7 @@ bool LX200StarGoFocuser::setFocuserDirection(ISState* states, char* names[], int
     if (IUUpdateSwitch(&FocusReverseSP, states, names, n) < 0)
         return false;
 
-    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) > 0 ? INDI_ENABLED : INDI_DISABLED);
+    focuserReversed = (IUFindOnSwitchIndex(&FocusReverseSP) == 0 ? INDI_ENABLED : INDI_DISABLED);
 
     FocusReverseSP.s = IPS_OK;
     IDSetSwitch(&FocusReverseSP, nullptr);
@@ -264,9 +245,9 @@ bool LX200StarGoFocuser::changeFocusAbort(ISState* states, char* names[], int n)
 bool LX200StarGoFocuser::changeFocusSyncPos(double values[], char* names[], int n) {
     int absolutePosition = static_cast<int>(values[0]);
     if (validateFocusSyncPos(absolutePosition)) {
-        IUUpdateNumber(&FocusSyncPosNP, values, names, n);
-        FocusSyncPosNP.s = syncFocuser(absolutePosition);
-        IDSetNumber(&FocusSyncPosNP, nullptr);
+        IUUpdateNumber(&FocusSyncNP, values, names, n);
+        FocusSyncNP.s = syncFocuser(absolutePosition);
+        IDSetNumber(&FocusSyncNP, nullptr);
     }
     return true;
 }
@@ -313,8 +294,8 @@ bool LX200StarGoFocuser::validateFocusRelPos(int relativePosition) {
 }
 
 bool LX200StarGoFocuser::validateFocusSyncPos(int absolutePosition) {
-    int minPosition = static_cast<int>(FocusSyncPosN[0].min);
-    int maxPosition = static_cast<int>(FocusSyncPosN[0].max);
+    int minPosition = static_cast<int>(FocusAbsPosN[0].min);
+    int maxPosition = static_cast<int>(FocusAbsPosN[0].max);
     if (absolutePosition < minPosition || absolutePosition > maxPosition) {
         DEBUGF(INDI::Logger::DBG_ERROR, "%s: Cannot sync focuser to position %d, it is outside the valid range of [%d, %d]", getDeviceName(), absolutePosition, minPosition, maxPosition);
         return false;
@@ -427,15 +408,30 @@ const char *LX200StarGoFocuser::getDefaultName()
     return deviceName;
 }
 
-bool LX200StarGoFocuser::activate(bool enabled)
+bool LX200StarGoFocuser::activate(bool activate)
 {
-    focuserActivated = enabled;
-    return updateProperties();
+    bool result = true;
+    if (activate == true && focuserActivated == false)
+    {
+        initProperties(deviceName);
+        focuserActivated = activate;
+        result = updateProperties();
+    }
+    else if (activate == false)
+    {
+        focuserActivated = activate;
+        result = updateProperties();
+    }
+    return result;
 }
 
 bool LX200StarGoFocuser::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigSwitch(fp, &FocusReverseSP);
+    if (focuserActivated)
+    {
+        IUSaveConfigSwitch(fp, &FocusReverseSP);
+        IUSaveConfigNumber(fp, &FocusSpeedNP);
+    }
 
     return true;
 }

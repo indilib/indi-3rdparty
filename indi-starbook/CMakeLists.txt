@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_starbook CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -39,8 +39,9 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_starbook_telescope.xml DESTINATIO
 #OPTION(INDI_BUILD_UNITTESTS "manual switch" on)
 if (INDI_BUILD_UNITTESTS)
     # Workaround for fixing a linking error caused by "-pie" flag in CMakeCommon
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nodump -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now")
-
+    if (NOT APPLE)
+        set(CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nodump -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now")
+    endif ()
     enable_testing()
 
     find_package(GTest REQUIRED)

@@ -18,10 +18,17 @@
   </head>
   <body onload="loadImages();">
     <div class="navigation">
-        <a href="./weatherradio.html">Home</a> | <a href="./sensordata.html">Sensor Data</a> | Webcam
+        <a href="./weatherradio.html">Home</a> | <a href="./sensordata.html">Sensors</a> | Webcam | <a href="./forecast.html">Forecast</a>
     </div>
     <div class="container-fluid">
-      <div class="row" align="center" style="padding: 50px 0px 0px 0px; ">
+      <div class="row">
+        <div class="col-lg-12" align="center">
+	  <div style="font-weight: bold; font-size: xx-large; padding-top: 30px; padding-bottom: 0px; margin-bottom: 0px">
+	    Webcam
+	  </div>
+	</div>
+      </div>
+      <div class="row" align="center">
 	<div class="col-sm-12">
 	  <video src="./media/timelapse_current.mp4" width="640" height="480" autobuffer autoplay controls />
         </div>

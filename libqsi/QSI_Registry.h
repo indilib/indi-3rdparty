@@ -19,6 +19,8 @@
 #pragma once
 
 #include "QSI_Global.h"
+#include "indimacros.h"
+
 #include <string>
 #include <stdlib.h>
 #include <unistd.h>
@@ -59,11 +61,6 @@
 #define SUBKEY_FilterName std::string("FilterName")
 #define SUBKEY_FilterFocus std::string("FilterFocusOffset")
 #define SUBKEY_FilterTrim std::string("FilterTrim")
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 class QSI_Registry
 {

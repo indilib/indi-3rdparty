@@ -14,7 +14,7 @@ find_package(Threads REQUIRED)
 find_package(CFITSIO REQUIRED)
 
 set(INDI_MI_VERSION_MAJOR 1)
-set(INDI_MI_VERSION_MINOR 7)
+set(INDI_MI_VERSION_MINOR 8)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_miccd.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_miccd.xml)

@@ -50,6 +50,7 @@ Features
 	+ Software binning
 	+ Streaming
 	+ SV305PRO ST4 port supported
+	+ SV305M PRO supported
 
 Known issues
 ============
@@ -65,6 +66,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.4 : SV305M Pro support added
 	+ 1.2.3 : min/max exposure values fix
 	+ 1.2.2 : Fix SV305PRO detection
 	+ 1.2.1 : Camera gain issue fixed

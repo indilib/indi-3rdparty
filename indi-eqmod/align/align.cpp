@@ -180,7 +180,7 @@ bool Align::updateProperties()
     return true;
 }
 
-void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double currentRA, double currentDEC,
+void Align::AlignNStar(double jd, IGeographicCoordinates *position, double currentRA, double currentDEC,
                        double *alignedRA, double *alignedDEC, bool ingoto)
 {
     //double pointaz = (pointset->range24(lst - currentRA - 12.0) * 360.0) / 24.0;
@@ -222,11 +222,11 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
 
             celestialMatrix[0][i] =
                 cos(point->aligndata.targetDEC * M_PI / 180.0) *
-                cos(((pointset->range24(point->aligndata.targetRA - point->aligndata.lst) * 360) / 24.0) * M_PI /
+                cos(((range24(point->aligndata.targetRA - point->aligndata.lst) * 360) / 24.0) * M_PI /
                     180.0);
             celestialMatrix[1][i] =
                 cos(point->aligndata.targetDEC * M_PI / 180.0) *
-                sin(((pointset->range24(point->aligndata.targetRA - point->aligndata.lst) * 360) / 24.0) * M_PI /
+                sin(((range24(point->aligndata.targetRA - point->aligndata.lst) * 360) / 24.0) * M_PI /
                     180.0);
             celestialMatrix[2][i] = sin(point->aligndata.targetDEC * M_PI / 180.0);
 
@@ -245,9 +245,9 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
                  celestialMatrix[2][i]=sin(point->celestialALT * M_PI / 180.0);
                  */
             telescopeMatrix[0][i] = cos(point->telescopeALT * M_PI / 180.0) *
-                                    cos(pointset->range360(-180.0 - point->telescopeAZ) * M_PI / 180.0);
+                                    cos(range360(-180.0 - point->telescopeAZ) * M_PI / 180.0);
             telescopeMatrix[1][i] = cos(point->telescopeALT * M_PI / 180.0) *
-                                    sin(pointset->range360(-180.0 - point->telescopeAZ) * M_PI / 180.0);
+                                    sin(range360(-180.0 - point->telescopeAZ) * M_PI / 180.0);
             telescopeMatrix[2][i] = sin(point->telescopeALT * M_PI / 180.0);
             it++;
             //point = pointset->getPoint(it->htmID);
@@ -297,15 +297,15 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             double lst = 0;
 
             lst = ln_get_apparent_sidereal_time(jd);
-            lst += (position->lng / 15.0);
-            lst = pointset->range24(lst);
+            lst += (position->longitude / 15.0);
+            lst = range24(lst);
             /*
             l = cos(currentDEC * M_PI / 180.0) * cos(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
             m = cos(currentDEC * M_PI / 180.0) * sin(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
             n = sin(currentDEC * M_PI / 180.0);
             */
-            l = cos(pointalt * M_PI / 180.0) * cos(pointset->range360(-180.0 - pointaz) * M_PI / 180.0);
-            m = cos(pointalt * M_PI / 180.0) * sin(pointset->range360(-180.0 - pointaz) * M_PI / 180.0);
+            l = cos(pointalt * M_PI / 180.0) * cos(range360(-180.0 - pointaz) * M_PI / 180.0);
+            m = cos(pointalt * M_PI / 180.0) * sin(range360(-180.0 - pointaz) * M_PI / 180.0);
             n = sin(pointalt * M_PI / 180.0);
 
             L = invT[0][0] * l + invT[0][1] * m + invT[0][2] * n;
@@ -317,7 +317,7 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             if (L < 0.0)
                 *alignedRA += 12.0;
             //IDLog("Aligning RA = %g at LST = %g\n", *alignedRA, lst);
-            *alignedRA = pointset->range24(*alignedRA + lst);
+            *alignedRA = range24(*alignedRA + lst);
             //if (L < 0) *alignedRA += 12.0;
             //if (*alignedRA < 0) *alignedRA = 24.0 + *alignedRA;
 
@@ -339,13 +339,13 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             double alignedalt, alignedaz;
             double lst;
             lst = ln_get_apparent_sidereal_time(jd);
-            lst += (position->lng / 15.0);
-            lst = pointset->range24(lst);
+            lst += (position->longitude / 15.0);
+            lst = range24(lst);
 
             L = cos(currentDEC * M_PI / 180.0) *
-                cos(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
+                cos(((range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
             M = cos(currentDEC * M_PI / 180.0) *
-                sin(((pointset->range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
+                sin(((range24(currentRA - lst) * 360) / 24.0) * M_PI / 180.0);
             N = sin(currentDEC * M_PI / 180.0);
 
             // LMN should be RA/DEC relative to lst=0
@@ -377,7 +377,7 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
             // atan returns values between -M_PI / 2 and M_PI / 2
             //IDLog("L %f M %F N %f l %f m %f n %f, Taki alignedaz %f\n", L, M, N, l, m, n, alignedaz);
             //From Taki to kstars azimuth
-            alignedaz = pointset->range360(-180.0 - alignedaz);
+            alignedaz = range360(-180.0 - alignedaz);
 
             alignedalt = asin(n) * 180.0 / M_PI;
 
@@ -391,7 +391,7 @@ void Align::AlignNStar(double jd, struct ln_lnlat_posn *position, double current
     }
 }
 
-void Align::AlignNearest(double jd, struct ln_lnlat_posn *position, double currentRA, double currentDEC,
+void Align::AlignNearest(double jd, INDI::IGeographicCoordinates *position, double currentRA, double currentDEC,
                          double *alignedRA, double *alignedDEC, bool ingoto)
 {
     //double pointaz = (pointset->range24(lst - currentRA - 12.0) * 360.0) / 24.0;
@@ -434,7 +434,8 @@ void Align::AlignNearest(double jd, struct ln_lnlat_posn *position, double curre
     }
 }
 
-void Align::AlignGoto(SyncData globalsync, double jd, struct ln_lnlat_posn *position, double *gotoRA, double *gotoDEC)
+void Align::AlignGoto(SyncData globalsync, double jd, INDI::IGeographicCoordinates *position, double *gotoRA,
+                      double *gotoDEC)
 {
     //ISwitch *aligngotosw;
     //aligngotosw=IUFindSwitch(AlignOptionsSP,"ALIGNONGOTO");
@@ -510,7 +511,7 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
     IDSetNumber(AlignCountNP, nullptr);
 }
 
-void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, struct ln_lnlat_posn *position)
+void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, IGeographicCoordinates *position)
 {
     double sra, sdec;
     GetAlignedCoords(globalsync, thissync->jd, position, thissync->telescopeRA, thissync->telescopeDEC, &sra, &sdec);
@@ -551,7 +552,7 @@ Align::AlignmentMode Align::GetAlignmentMode()
         return NONE;
 }
 
-void Align::GetAlignedCoords(SyncData globalsync, double jd, struct ln_lnlat_posn *position, double currentRA,
+void Align::GetAlignedCoords(SyncData globalsync, double jd, INDI::IGeographicCoordinates *position, double currentRA,
                              double currentDEC, double *alignedRA, double *alignedDEC)
 {
     //double values[2] = {currentRA + globalsync.deltaRA, currentDEC + globalsync.deltaDEC };

@@ -33,37 +33,6 @@ std::unique_ptr<Talon6> talon6(new Talon6());
 
 void ISPoll(void *p);
 
-void ISGetProperties(const char *dev)
-{
-    talon6->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    talon6->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    talon6->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    talon6->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-                char *names[], int n)
-{
-    talon6->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-void ISSnoopDevice (XMLEle *root)
-{
-    talon6->ISSnoopDevice(root);
-}
-
 Talon6::Talon6()
 {
     //Talon6 is a Roll Off Roof. We implement only basic Dome functions to open / close the roof
@@ -885,7 +854,7 @@ char Talon6::ShiftChar(char shiftChar)
 
     switch (shiftChar)
     {
-        case NULL:
+        case '\0':
             shiftedChar = '0';
             break;
         case 'a':

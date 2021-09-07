@@ -33,15 +33,15 @@ class Talon6 : public INDI::Dome
         Talon6();
         virtual ~Talon6();
 
-        virtual bool ISNewSwitch(const char *dev,const char *name,ISState *states, char *names[],int n);
-        virtual bool ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n);
+        virtual bool ISNewSwitch(const char *dev,const char *name,ISState *states, char *names[],int n) override;
+        virtual bool ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n) override;
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
-        virtual bool initProperties();
+        virtual bool initProperties() override;
         virtual void ISGetProperties(const char *dev) override;
 
-        const char *getDefaultName();
-        bool updateProperties();
+        const char *getDefaultName() override;
+        bool updateProperties() override;
 
     protected:
 
@@ -74,16 +74,16 @@ class Talon6 : public INDI::Dome
 
          virtual bool saveConfigItems(FILE *fp) override;
 
-        bool Disconnect();
-        void TimerHit();
+        bool Disconnect() override;
+        void TimerHit() override;
         ISState fullOpenRoofSwitch { ISS_ON };
         ISState fullClosedRoofSwitch { ISS_OFF };
-        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation);
+        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
 
-        virtual IPState Park();
-        virtual IPState UnPark();
+        virtual IPState Park() override;
+        virtual IPState UnPark() override;
         virtual IPState DomeGoTo(int GoTo);
-        virtual bool Abort();
+        virtual bool Abort() override;
 
     private:
 

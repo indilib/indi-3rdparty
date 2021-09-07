@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_duino CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -10,7 +10,7 @@ set (DUINO_VERSION_MAJOR 0)
 set (DUINO_VERSION_MINOR 6)
  
 set (WEATHERRADIO_VERSION_MAJOR 1)
-set (WEATHERRADIO_VERSION_MINOR 12)
+set (WEATHERRADIO_VERSION_MINOR 14)
 
 find_package(INDI REQUIRED)
 find_package(CURL REQUIRED)

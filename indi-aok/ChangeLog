@@ -1,3 +1,7 @@
+Version 1.1 - 2021-05-10
+	- removed obsolete "Use PulsCmd"-switch (it makes no sense *not* to use
+	  the built-in pulse commands of the TCS)
+
 Version 1.0 - 2020-03-06
 	+ cleared up the handling of notification of mountlock & trackstate
 	+ added query of mount when connecting, so mountlock and trackstate

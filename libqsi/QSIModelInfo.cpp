@@ -215,10 +215,10 @@ std::string QSIModelInfo::GetModelNumber(std::string defaultNumber)		// Full Mar
 			hasShutter = true;
 			sb.append( "s" );
 			break;
-		case CS_NotImplemented:
-		case CS_NotSpecified:
+		case SC_NotImplemented:
+		case SC_NotSpecified:
 			break;
-		case CS_NotInitialized:
+		case SC_NotInitialized:
 		default:
 			return defaultNumber;
     }

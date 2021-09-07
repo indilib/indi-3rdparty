@@ -19,6 +19,8 @@
 #include "ApgLogger.h" 
 #include "helpers.h"
 #include "config.h"
+#include "indimacros.h"
+
 
 //CROSS-PLATFORM SLEEP
 #ifdef WIN_OS
@@ -27,11 +29,6 @@
     #include <unistd.h>
     #define Sleep(x) usleep((x)*1000)
 #endif 
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 #ifdef DEBUGGING_CAMERA
 namespace

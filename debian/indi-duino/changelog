@@ -1,3 +1,30 @@
+indi-duino (1.15) buster; urgency=medium
+
+  * WiFi connection checks and recovery of connection losses added
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Mon, 24 May 2021 18:06:25 +0200
+
+indi-duino (1.14) buster; urgency=medium
+
+  * Configuration based on an ini file replacing wr_config.py
+  * JSON protocol changed so that each JSON response contains the response
+    type.
+  * RRD update now forces a weather parameter refresh of the INDI service
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Fri, 21 May 2021 08:41:41 +0200
+
+indi-duino (1.13) buster; urgency=medium
+
+  * Rain sensor integrated
+  * Better handling of long exposure times for timelapse
+  * Improvements for auto exposure during dawn/dusk
+  * Pan tilt controller support added
+  * Redesign of the HTML page
+  * Firmware optimization and bug fixes
+  * Bug fixes for the INDI weather radio service
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Tue, 11 May 2021 17:44:25 +0200
+
 indi-duino (1.12) buster; urgency=medium
 
   * rain volume and rain drops counting features added to INDI service

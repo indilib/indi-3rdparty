@@ -43,58 +43,6 @@ std::unique_ptr<indiduino> indiduino_prt(new indiduino());
 const char *indiduino_id = "indiduino";
 
 /**************************************************************************************
-** Send client definitions of all properties.
-***************************************************************************************/
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISGetProperties(const char *dev)
-{
-    indiduino_prt->ISGetProperties(dev);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    indiduino_prt->ISNewSwitch(dev, name, states, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    indiduino_prt->ISNewText(dev, name, texts, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    indiduino_prt->ISNewNumber(dev, name, values, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    indiduino_prt->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-/**************************************************************************************
-**
-***************************************************************************************/
-void ISSnoopDevice(XMLEle *root)
-{
-    indiduino_prt->ISSnoopDevice(root);
-}
-
-/**************************************************************************************
 ** Initialize firmata debug
 ***************************************************************************************/
 
@@ -146,12 +94,10 @@ void indiduino::TimerHit()
 
     sf->OnIdle();
 
-    std::vector<INDI::Property *> *pAll = getProperties();
-
-    for (unsigned int i = 0; i < pAll->size(); i++)
+    for (const auto &it: *getProperties())
     {
-        const char *name = pAll->at(i)->getName();
-        INDI_PROPERTY_TYPE type = pAll->at(i)->getType();
+        const char *name = it->getName();
+        INDI_PROPERTY_TYPE type = it->getType();
 
         //DIGITAL INPUT
         if (type == INDI_LIGHT)
@@ -796,12 +742,11 @@ bool indiduino::setPinModesFromSKEL()
     }
 
     LOG_INFO("Setting pins behaviour from <indiduino> tags");
-    std::vector<INDI::Property *> *pAll = getProperties();
 
-    for (unsigned int i = 0; i < pAll->size(); i++)
+    for (const auto &it: *getProperties())
     {
-        const char *name = pAll->at(i)->getName();
-        INDI_PROPERTY_TYPE type = pAll->at(i)->getType();
+        const char *name = it->getName();
+        INDI_PROPERTY_TYPE type = it->getType();
 
         if (ep == nullptr)
         {

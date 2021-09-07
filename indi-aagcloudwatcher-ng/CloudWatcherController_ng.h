@@ -30,7 +30,7 @@ Anemometer code contributed by Joao Bento.
 
 struct CloudWatcherConstants
 {
-    char firmwareVersion[5];
+    double firmwareVersion;
     int internalSerialNumber;
     float zenerVoltage;
     float ldrMaxResistance;
@@ -78,6 +78,8 @@ struct CloudWatcherData
     int commandByteErrors; ///< Command byte errors count
     int switchStatus;      ///< The status of the internal switch
     int windSpeed;         ///< The wind speed measured by the anemometer
+    int humidity;          ///< The relative humidity
+    int pressure;          ///< atmospheric pressure
 };
 
 /**
@@ -104,7 +106,7 @@ class CloudWatcherController
         /**
         * A destructor
         */
-        virtual ~CloudWatcherController();
+        virtual ~CloudWatcherController() = default;
 
         const char *getDeviceName();
 
@@ -188,6 +190,11 @@ class CloudWatcherController
         int PortFD = -1;
 
         /**
+         *  Firmware Version
+         */
+        double m_FirmwareVersion = 0;
+
+        /**
         *  Anemometer type
         */
         enum ANEMOMETER_TYPE anemometerType = BLACK;
@@ -254,13 +261,6 @@ class CloudWatcherController
         float rainBeta = 3450;
 
         /**
-        * Firmware version. Just read once.
-        * @see getFirmwareVersion()
-        * @see getFirmwareVersion(char *version)
-        */
-        char *firmwareVersion;
-
-        /**
         * The total number of readings performed by the controller
         */
         int totalReadings = 0;
@@ -311,22 +311,13 @@ class CloudWatcherController
         bool getCloudWatcherAnswer(char *buffer, int nBlocks);
 
         /**
-        * Reads the firmware version of the AAG Cloud Watcher and stores it in
-        * firmwareVersion attribute.
-        * @return true if successfully read. false otherwise
-        * @see getFirmwareVersion(char *version)
-        * @see firmwareVersion
-        */
-        bool getFirmwareVersion();
-
-        /**
         * Reads the firmware version of the AAG Cloud Watcher (if not previously
         * read).
-        * @param version a buffer where the version will be stored (at least 5 chars)
+        * @param version
         * @return true if succesfully read. false otherwise.
         * @see getFirmwareVersion()
         */
-        bool getFirmwareVersion(char *version);
+        bool getFirmwareVersion(double &version);
 
         /**
         * Reads the serial number of the AAG Cloud Watcher
@@ -431,4 +422,18 @@ class CloudWatcherController
         * @return true if succesfully read. false otherwise.
         */
         bool getWindSpeed(int *windSpeed);
+
+        /**
+        * Reads the humidity from external sensor
+        * @param humidity where the humidity will be stored
+        * @return true if succesfully read. false otherwise.
+        */
+        bool getHumidity(int *humidity);
+
+        /**
+        * Reads the pressure from external sensor
+        * @param pressure where the pressure will be stored. Unit is Pa
+        * @return true if succesfully read. false otherwise.
+        */
+        bool getPressure(int *pressure);
 };

@@ -953,7 +953,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 		}
 
 		dir = steps;
-		steps = abs(steps);
+		steps = labs(steps);
 		while (steps > 0)
 		{
 			if ((steps > 4095) && (fdata->extent < 10000))
@@ -1045,7 +1045,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 				IO(dev, buf, &wlen, &rlen);
 				stepsleft = ntohs(buf[0]);
 
-				if (((clock() - begin) / CLOCKS_PER_SEC) > timeout)
+				if (((clock() - begin) / CLOCKS_PER_SEC) > (clock_t)timeout)
 				{
 					debug(FLIDEBUG_WARN, "A device timeout has occurred.");
 					return -EIO;
@@ -1057,7 +1057,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 	{
 		unsigned short cmd;
 		dir = steps;
-		steps = abs(steps);
+		steps = labs(steps);
 
 		if (dir < 0)
 		{

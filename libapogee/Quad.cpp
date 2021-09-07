@@ -19,12 +19,9 @@
 #include "ApnCamData.h"
 #include "ImgFix.h" 
 #include "ApgLogger.h" 
-#include <sstream>
+#include "indimacros.h"
 
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
+#include <sstream>
 
 //////////////////////////// 
 // CTOR 

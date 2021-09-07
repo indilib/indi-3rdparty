@@ -21,7 +21,11 @@
 #ifndef PENTAXEVENTLISTENER_H
 #define PENTAXEVENTLISTENER_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <ricoh_camera_sdk.hpp>
+#pragma GCC diagnostic pop
+
 #include <stream/streammanager.h>
 #include <regex>
 
@@ -46,9 +50,9 @@ public:
 
     void liveViewFrameUpdated(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const unsigned char>& liveViewFrame, uint64_t frameSize) override;
 
-    void deviceDisconnected (const std::shared_ptr< const CameraDevice > &sender, DeviceInterface inf);
+    void deviceDisconnected (const std::shared_ptr< const CameraDevice > &sender, DeviceInterface inf) override;
 
-    void captureSettingsChanged(const std::shared_ptr<const CameraDevice> &sender, const std::vector<std::shared_ptr<const CaptureSetting> > &newSettings);
+    void captureSettingsChanged(const std::shared_ptr<const CameraDevice> &sender, const std::vector<std::shared_ptr<const CaptureSetting> > &newSettings) override;
 };
 
 #endif // PENTAXEVENTLISTENER_H

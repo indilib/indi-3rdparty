@@ -20,8 +20,12 @@ import argparse
 import rrdtool
 from wr_config import *
 
+# initialize the configuration
+config = WeatherRadioConfig().config
+
 parser = argparse.ArgumentParser(description="Create the RRD file storage for weather radio time series")
-parser.add_argument("rrdfile", nargs='?', default=RRDFILE,
+parser.add_argument("rrdfile", nargs='?',
+                    default=config.get('WeatherRadio', 'RRDFILE'),
                     help="RRD file holding all time series")
 parser.add_argument("-s", "--source",
                     help="Source file holding already captured data")
@@ -50,17 +54,17 @@ ret = rrdtool.create(rrd_args,
 		     "DS:WindDirection:GAUGE:600:U:U",
 		     "DS:RaindropFrequency:GAUGE:600:U:U",
 		     "DS:RainVolume:GAUGE:600:U:U",
-		     "RRA:AVERAGE:0.5:1m:1h",
+		     "RRA:AVERAGE:0.5:1m:6h",
 		     "RRA:AVERAGE:0.5:5m:1d",
 		     "RRA:AVERAGE:0.5:15m:7d",
 		     "RRA:AVERAGE:0.5:1h:1y",
 		     "RRA:AVERAGE:0.5:1d:10y",
-		     "RRA:MIN:0.5:1m:1h",
+		     "RRA:MIN:0.5:1m:6h",
 		     "RRA:MIN:0.5:5m:1d",
 		     "RRA:MIN:0.5:15m:7d",
 		     "RRA:MIN:0.5:1h:1y",
 		     "RRA:MIN:0.5:1d:10y",
-		     "RRA:MAX:0.5:1m:1h",
+		     "RRA:MAX:0.5:1m:6h",
 		     "RRA:MAX:0.5:5m:1d",
 		     "RRA:MAX:0.5:15m:7d",
 		     "RRA:MAX:0.5:1h:1y",

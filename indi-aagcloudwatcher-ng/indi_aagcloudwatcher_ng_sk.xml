@@ -25,6 +25,8 @@
     <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.0f" min="0" max="1000000" step="0">0</defNumber> 
     <defNumber name="ambientTemperatureSensor" label="Ambient Temp. Sensor (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed (Km/H)" format="%.0f" min="0" max="1000" step="0">0</defNumber>
+    <defNumber name="humidity" label="Relative Humidity (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
+    <defNumber name="pressure" label="Pressure (Pa)" format="%.1f" min="100" max="2000" step="0">0</defNumber>
   </defNumberVector>
   
 
@@ -71,6 +73,8 @@
     <defNumber name="LDR" label="LDR" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
     <defNumber name="readCycle" label="Read Cycle (s)" format="%.3f" min="-200000" max="200000" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed" format="%.0f" min="0" max="20000000" step="0">0</defNumber>
+    <defNumber name="humidity" label="Relative Humidity" format="%.1f" min="0" max="100" step="0">0</defNumber>
+    <defNumber name="pressure" label="Pressure" format="%.1f" min="100" max="2000" step="0">0</defNumber>
     <defNumber name="totalReadings" label="Total Readings" format="%7.0f" min="0" max="20000000" step="0">0</defNumber>
   </defNumberVector>
   

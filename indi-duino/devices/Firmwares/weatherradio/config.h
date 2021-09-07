@@ -34,10 +34,15 @@
 // refresh cache interval (ms)
 #define MAX_CACHE_AGE 30000
 
+// verbosity level
+#define MESSAGE_VERBOSITY MESSAGE_INFO
+// maximal size of buffered JSON messages
+#define MAX_JSON_BUFFER_SIZE 16000
+
 // ============== device configurations (begin) ============
 
 // DHT sensor family
-#define DHTPIN 3          // Digital pin connected to the DHT sensor
+#define DHTPIN 13          // Digital pin connected to the DHT sensor
 //#define DHTTYPE DHT11   // DHT 11               - Uncomment whatever type you're using!
 #define DHTTYPE DHT22     // DHT 22  (AM2302), AM2321 - Uncomment whatever type you're using!
 //#define DHTTYPE DHT21   // DHT 21 (AM2301)      - Uncomment whatever type you're using!
@@ -78,6 +83,8 @@
 
 // ============== device configurations (end) ==============
 
+#include "jsonmessage.h"
+
 #ifdef USE_OLED
 #include "oled.h"
 #endif // USE_OLED
@@ -110,9 +117,9 @@
 #include "water.h"
 #endif //USE_WATER_SENSOR
 
-#ifdef USE_DEW_HEATER
+#ifdef USE_DEWHEATER
 #include "dewheater.h"
-#endif //USE_DEW_HEATER
+#endif //USE_DEWHEATER
 
 #ifdef USE_RG11_RAIN_SENSOR
 #include "rg11.h"

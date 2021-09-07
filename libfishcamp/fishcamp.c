@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "fishcamp.h"
+#include "indimacros.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -46,11 +47,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <libusb-1.0/libusb.h>
 
 #define MAXRBUF 512
-
-// #PS: move to e.g. indimacro.h
-#ifndef INDI_UNUSED
-# define INDI_UNUSED(x) (void)x
-#endif
 
 // globals
 struct libusb_context *gCtx;
@@ -276,7 +272,7 @@ void fc_timestamp(FILE *out)
     *(unsigned long *)&t = tv.tv_sec;
     strftime(timestamp, sizeof timestamp, "%e %b %G %T", localtime(&t));
 
-    fprintf(out, "%s.%02ld ", timestamp, tv.tv_usec / 10000);
+    fprintf(out, "%s.%02ld ", timestamp, (long)(tv.tv_usec / 10000));
 }
 
 //
@@ -1970,7 +1966,7 @@ void fcUsb_init(void)
 #if LIBUSB_API_VERSION >= 0x01000106
     libusb_set_option(gCtx, LIBUSB_OPTION_LOG_LEVEL, 3);
 #else
-    libusb_set_debug(ctx, loglevel);
+    libusb_set_debug(gCtx, 3);
 #endif
 
     if (!gFWInitialized)

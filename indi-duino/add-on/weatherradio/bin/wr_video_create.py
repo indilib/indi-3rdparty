@@ -40,7 +40,7 @@ def create_video(input, starttime, targetdir, mode):
         linkname = os.path.join(tmpdir, filename)
         os.symlink(file.as_posix(), linkname)
 
-    stream = ffmpeg.input(tmpdir + "/tl-%04d.jpg", f="image2", loglevel="level+error")
+    stream = ffmpeg.input(tmpdir + "/tl-%04d.jpg", framerate="12", f="image2", loglevel="level+error")
     stream = ffmpeg.output(stream, name, s=mode)
     ffmpeg.run(stream)
     # clean up

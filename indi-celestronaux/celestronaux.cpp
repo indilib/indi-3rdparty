@@ -56,34 +56,8 @@ double anglediff(double a, double b)
     return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
 }
 
-void ISGetProperties(const char *dev)
-{
-    telescope_caux->ISGetProperties(dev);
-}
 
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-    telescope_caux->ISNewSwitch(dev, name, states, names, num);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-    telescope_caux->ISNewText(dev, name, texts, names, num);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-    telescope_caux->ISNewNumber(dev, name, values, names, num);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    telescope_caux->ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-
-
-void ISSnoopDevice(XMLEle *root)
+bool CelestronAUX::ISSnoopDevice(XMLEle *root)
 {
     const char *propName = findXMLAttValu(root, "name");
 
@@ -91,18 +65,16 @@ void ISSnoopDevice(XMLEle *root)
     if (!strcmp(propName, "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE") && telescope_caux->isConnected())
     {
         long cwpos;
-        if (telescope_caux->getCWBase()) 
+        if (telescope_caux->getCWBase())
             cwpos = range360(telescope_caux->requestedCordwrapPos + telescope_caux->getNorthAz()) * CelestronAUX::STEPS_PER_DEGREE;
-        else 
-            cwpos = range360(telescope_caux->requestedCordwrapPos) * CelestronAUX::STEPS_PER_DEGREE;       
+        else
+            cwpos = range360(telescope_caux->requestedCordwrapPos) * CelestronAUX::STEPS_PER_DEGREE;
         telescope_caux->setCordwrapPos(cwpos);
         telescope_caux->getCordwrapPos();
     }
 
-    telescope_caux->ISSnoopDevice(root);
+    return Telescope::ISSnoopDevice(root);
 }
-
-
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
@@ -394,7 +366,6 @@ INDI::IHorizontalCoordinates CelestronAUX::AltAzFromRaDec(double ra, double dec,
     else
     {
         LOG_ERROR("AltAzFromRaDec - TransformCelestialToTelescope failed");
-        LOG_WARN("Activate the Alignment Subsystem.");
         // the best I can do
         AltAz.azimuth = ra;
         AltAz.altitude = dec;
@@ -414,7 +385,7 @@ double CelestronAUX::getNorthAz()
     if (!GetDatabaseReferencePosition(location))
         northAz = 0.;
     else
-        northAz = AltAzFromRaDec(get_local_sidereal_time(location.longitude), 0., 0.).azimuth;
+        northAz = AltAzFromRaDec(get_local_sidereal_time(m_Location.longitude), 0., 0.).azimuth;
     LOGF_DEBUG("North Azimuth = %lf", northAz);
     return northAz;
 }
@@ -576,14 +547,14 @@ bool CelestronAUX::initProperties()
     IUFillSwitch(&CWPosS[CORDWRAP_E], "CORDWRAP_E", "East",  ISS_OFF);
     IUFillSwitch(&CWPosS[CORDWRAP_S], "CORDWRAP_S", "South", ISS_OFF);
     IUFillSwitch(&CWPosS[CORDWRAP_W], "CORDWRAP_W", "West",  ISS_OFF);
-    IUFillSwitchVector(&CWPosSP, CWPosS, 4, getDeviceName(), "CORDWRAP_POS", "CW Position", 
-                            MOTION_TAB, IP_RW, ISR_1OFMANY, 60,  IPS_IDLE);
+    IUFillSwitchVector(&CWPosSP, CWPosS, 4, getDeviceName(), "CORDWRAP_POS", "CW Position",
+                       MOTION_TAB, IP_RW, ISR_1OFMANY, 60,  IPS_IDLE);
 
     // Cord Wrap / Park Base
     IUFillSwitch(&CWBaseS[CW_BASE_ENC], "CW_BASE_ENC", "Encoders", ISS_ON);
     IUFillSwitch(&CWBaseS[CW_BASE_SKY], "CW_BASE_SKY", "Alignment positions", ISS_OFF);
-    IUFillSwitchVector(&CWBaseSP, CWBaseS, 2, getDeviceName(), "CW_BASE", "CW Position Base", 
-                            MOTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&CWBaseSP, CWBaseS, 2, getDeviceName(), "CW_BASE", "CW Position Base",
+                       MOTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // GPS Emulation
     IUFillSwitch(&GPSEmuS[GPSEMU_OFF], "GPSEMU_OFF", "OFF", ISS_OFF);
@@ -620,10 +591,10 @@ bool CelestronAUX::initProperties()
 
 void CelestronAUX::formatVersionString(char *s, int n, uint8_t *verBuf)
 {
-    if (verBuf[0]==0 && verBuf[1]==0 && verBuf[2]==0 && verBuf[3]==0)
+    if (verBuf[0] == 0 && verBuf[1] == 0 && verBuf[2] == 0 && verBuf[3] == 0)
         snprintf(s, n, "Unknown");
     else
-        snprintf(s, n, "%d.%02d.%d", verBuf[0], verBuf[1], verBuf[2]*256+verBuf[3]);
+        snprintf(s, n, "%d.%02d.%d", verBuf[0], verBuf[1], verBuf[2] * 256 + verBuf[3]);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -655,6 +626,10 @@ bool CelestronAUX::updateProperties()
         CWPosS[(int(m_CordWrapPosition / STEPS_PER_DEGREE) / 90)].s = ISS_ON;
         defineProperty(&CWPosSP);
         
+        loadConfig(true, CWBaseSP.name);
+        LOGF_INFO("Park Base %d", cw_base_sky);
+        defineProperty(&CWBaseSP);
+
         loadConfig(true, CWBaseSP.name);
         LOGF_INFO("Park Base %d", cw_base_sky);
         defineProperty(&CWBaseSP);
@@ -880,7 +855,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             long cwpos;
             if (cw_base_sky)
                 cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-            else 
+            else
                 cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
             setCordwrapPos(cwpos);
             getCordwrapPos();
@@ -1197,14 +1172,8 @@ bool CelestronAUX::ReadScopeStatus()
 bool CelestronAUX::Sync(double ra, double dec)
 {
     AlignmentDatabaseEntry NewEntry;
-    INDI::IEquatorialCoordinates RaDec
-    {
-        0, 0
-    };
-    INDI::IHorizontalCoordinates AltAz
-    {
-        0, 0
-    };
+    INDI::IEquatorialCoordinates RaDec {0, 0};
+    INDI::IHorizontalCoordinates AltAz {0, 0};
 
     if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
     {
@@ -1251,7 +1220,7 @@ bool CelestronAUX::Sync(double ra, double dec)
         long cwpos;
         if (cw_base_sky)
             cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-        else 
+        else
             cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
         setCordwrapPos(cwpos);
         getCordwrapPos();
@@ -1415,13 +1384,13 @@ void CelestronAUX::TimerHit()
                     azError -= STEPS_PER_REVOLUTION;
                 while (azError < -(STEPS_PER_REVOLUTION / 2))
                     azError += STEPS_PER_REVOLUTION;
-                
+
                 if (TraceThisTick)
                     LOGF_DEBUG("Tracking rate: Alt %f Az %f ; Errors : Alt: %f Az: %f",
                                altRate, azRate, altError, azError);
 
-                altRate = SIDERAL_RATE * TRACK_SCALE * (altRate + altError*Kp);
-                azRate  = SIDERAL_RATE * TRACK_SCALE * (azRate + azError*Kp);
+                altRate = SIDERAL_RATE * TRACK_SCALE * (altRate + altError * Kp);
+                azRate  = SIDERAL_RATE * TRACK_SCALE * (azRate + azError * Kp);
 
                 Track(static_cast<int32_t>(altRate), static_cast<int32_t>(azRate));
 
@@ -1460,7 +1429,7 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     long cwpos;
     if (cw_base_sky)
         cwpos = range360(requestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-    else 
+    else
         cwpos = range360(requestedCordwrapPos) * STEPS_PER_DEGREE;
     setCordwrapPos(cwpos);
     getCordwrapPos();
@@ -1474,7 +1443,7 @@ int32_t CelestronAUX::range360int(int32_t steps)
         steps += STEPS_PER_REVOLUTION;
     while (steps > STEPS_PER_REVOLUTION)
         steps -= STEPS_PER_REVOLUTION;
-    
+
     return steps;
 }
 
@@ -1603,14 +1572,14 @@ bool CelestronAUX::getVersion(AUXTargets trg)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::getVersions()
 {
-    if (!isHC) 
+    if (!isHC)
     {
         // Do not ask HC/MB for the version over AUX channel
         // We got HC version from detectHC
         getVersion(MB);
         getVersion(HC);
         getVersion(HCP);
-    }   
+    }
     getVersion(AZM);
     getVersion(ALT);
     getVersion(GPS);
@@ -1850,7 +1819,7 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
         case GPS_GET_LONG:
         {
             LOGF_DEBUG("GPS: Sending LAT/LONG Lat:%f Lon:%f\n", LocationN[LOCATION_LATITUDE].value,
-                   LocationN[LOCATION_LONGITUDE].value);
+                       LocationN[LOCATION_LONGITUDE].value);
             AUXCommand cmd(m.cmd, GPS, m.src);
             if (m.cmd == GPS_GET_LAT)
                 cmd.setPosition(LocationN[LOCATION_LATITUDE].value);
@@ -2032,42 +2001,42 @@ bool CelestronAUX::processResponse(AUXCommand &m)
             case GET_VER:
                 uint8_t *verBuf;
 
-                verBuf=0;
+                verBuf = 0;
                 if (m.src != APP)
                     LOGF_INFO("Got GET_VERSION response from %s: %d.%d.%d ", m.node_name(m.src), m.data[0], m.data[1],
                               256 * m.data[2] + m.data[3]);
                 switch (m.src)
                 {
                     case MB:
-                        verBuf=m_MainBoardVersion;
+                        verBuf = m_MainBoardVersion;
                         break;
                     case ALT:
-                        verBuf=m_AltitudeVersion;
+                        verBuf = m_AltitudeVersion;
                         break;
                     case AZM:
-                        verBuf=m_AzimuthVersion;
+                        verBuf = m_AzimuthVersion;
                         break;
                     case HCP:
                     case HC:
-                        verBuf=m_HCVersion;
+                        verBuf = m_HCVersion;
                         break;
                     case BAT:
-                        verBuf=m_BATVersion;
+                        verBuf = m_BATVersion;
                         break;
                     case WiFi:
-                        verBuf=m_WiFiVersion;
+                        verBuf = m_WiFiVersion;
                         // Shift data to upper bytes
-                        m.data[0]=m.data[2];
-                        m.data[1]=m.data[3];
+                        m.data[0] = m.data[2];
+                        m.data[1] = m.data[3];
                         // Zero out uninitialized bytes
-                        m.data[2]=0;
-                        m.data[3]=0;
+                        m.data[2] = 0;
+                        m.data[3] = 0;
                         break;
                     case GPS:
-                        verBuf=m_GPSVersion;
+                        verBuf = m_GPSVersion;
                         // Zero out uninitialized bytes
-                        m.data[2]=0;
-                        m.data[3]=0;
+                        m.data[2] = 0;
+                        m.data[3] = 0;
                         break;
                     case APP:
                         LOGF_DEBUG("Got echo of GET_VERSION from %s", m.node_name(m.dst));
@@ -2075,7 +2044,8 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                     default:
                         break;
                 }
-                if (verBuf != 0) {
+                if (verBuf != 0)
+                {
                     memcpy(verBuf, m.data.data(), 4);
                 }
                 break;
@@ -2083,7 +2053,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 break;
 
         }
-    else 
+    else
     {
         DEBUGF(DBG_CAUX, "Got msg not for me (%s). Ignoring.", m.node_name(m.dst));
     }

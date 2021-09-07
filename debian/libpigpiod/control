@@ -1,0 +1,25 @@
+Source: libpigpiod
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), dh-systemd (>= 1.5), pkg-config, cdbs, cmake, libpigpiod-if-dev, libpigpiod-if2-1
+Standards-Version: 3.9.1
+
+Package: libpigpiod
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpigpiod-if2-1
+Recommends: pigpio-tools
+Replaces: pigpiod
+Description: Library to control RaspberryPi GPIO
+ Library to control RaspberryPi GPIO
+ This library  only works on Raspberry Pi devices
+
+Package: libpigpiod-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: libpigpiod (= ${binary:Version}), ${misc:Depends}
+Description: Library to control RaspberryPi GPIO
+ Library to control RaspberryPi GPIO
+ This library only works on Raspberry Pi devices
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

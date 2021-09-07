@@ -1,72 +1,55 @@
-cmake_minimum_required(VERSION 3.0)
-PROJECT(libatik C CXX)
+cmake_minimum_required (VERSION 3.0)
+project (libatik)
 
 # Built October 19th, 2021 - SDK API 2020.10.19
-set(ATIK_VERSION "2.2.9")
-set(ATIK_SOVERSION "2")
+set (ATIK_VERSION "2.2.9")
+set (ATIK_SOVERSION "2")
 
-set(FLYCAPTURE_VERSION "2.13.3.31")
-set(FLYCAPTURE_SOVERSION "2")
+set (FLYCAPTURE_VERSION "2.13.3.31")
+set (FLYCAPTURE_SOVERSION "2")
 
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
 
-include(GNUInstallDirs)
+add_library (atikcameras SHARED IMPORTED)
 
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+set_target_properties (atikcameras PROPERTIES VERSION ${ATIK_VERSION} SOVERSION ${ATIK_SOVERSION})
 
-IF(APPLE)
+if (APPLE)
 
-set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/atik")
+  set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "mac/libatikcameras.bin")
+  
+  # Install library
+  install_imported (TARGETS atikcameras DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/mac/libatikcameras.bin ${CMAKE_BINARY_DIR}/libatikcameras${ATIK_VERSION}.dylib)
-install( FILES ${CMAKE_BINARY_DIR}/libatikcameras${ATIK_VERSION}.dylib DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+elseif (UNIX AND NOT WIN32)
+  add_library (flycapture  SHARED IMPORTED)
+  set_target_properties (flycapture  PROPERTIES VERSION ${FLYCAPTURE_VERSION} SOVERSION ${FLYCAPTURE_SOVERSION})
 
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libatikcameras${ATIK_VERSION}.dylib ${LIB_INSTALL_DIR}/libatikcameras${ATIK_SOVERSION}.dylib)
-exec_program(ln ARGS -s ${LIB_INSTALL_DIR}/libatikcameras${ATIK_SOVERSION}.dylib ${LIB_INSTALL_DIR}/libatikcameras.dylib)
-	
-ELSE(APPLE)
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property (TARGET atikcameras PROPERTY IMPORTED_LOCATION "armhf/libatikcameras.bin")
+    set_property (TARGET flycapture  PROPERTY IMPORTED_LOCATION "armhf/libflycapture.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property (TARGET atikcameras PROPERTY IMPORTED_LOCATION "arm64/libatikcameras.bin")
+    set_property (TARGET flycapture  PROPERTY IMPORTED_LOCATION "arm64/libflycapture.bin")
+  elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+    set_property (TARGET atikcameras PROPERTY IMPORTED_LOCATION "x64/libatikcameras.bin")
+    set_property (TARGET flycapture  PROPERTY IMPORTED_LOCATION "x64/libflycapture.bin")
+  else ()
+    set_property (TARGET atikcameras PROPERTY IMPORTED_LOCATION "x86/libatikcameras.bin")
+    set_property (TARGET flycapture  PROPERTY IMPORTED_LOCATION "x86/libflycapture.bin")
+  endif ()
 
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  # Install udev rules
+  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  install (FILES 99-atik.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 
-IF(UNIX AND NOT WIN32)
-  IF (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armhf/libatikcameras.bin ${CMAKE_BINARY_DIR}/libatikcameras.so.${ATIK_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/armhf/libflycapture.bin ${CMAKE_BINARY_DIR}/libflycapture.so.${FLYCAPTURE_VERSION})
-  ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/arm64/libatikcameras.bin ${CMAKE_BINARY_DIR}/libatikcameras.so.${ATIK_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/arm64/libflycapture.bin ${CMAKE_BINARY_DIR}/libflycapture.so.${FLYCAPTURE_VERSION})
-  ELSEIF(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libatikcameras.bin ${CMAKE_BINARY_DIR}/libatikcameras.so.${ATIK_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x64/libflycapture.bin ${CMAKE_BINARY_DIR}/libflycapture.so.${FLYCAPTURE_VERSION})
-  ELSE()
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libatikcameras.bin ${CMAKE_BINARY_DIR}/libatikcameras.so.${ATIK_VERSION})
-    exec_program(cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/x86/libflycapture.bin ${CMAKE_BINARY_DIR}/libflycapture.so.${FLYCAPTURE_VERSION})
-  ENDIF ()
-ENDIF(UNIX AND NOT WIN32)
+  # Install library
+  install_imported (TARGETS atikcameras flycapture DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-install( FILES ${CMAKE_BINARY_DIR}/libatikcameras.so.${ATIK_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
-install( FILES ${CMAKE_BINARY_DIR}/libflycapture.so.${FLYCAPTURE_VERSION} DESTINATION ${LIB_INSTALL_DIR}${LIB_POSTFIX})
+endif ()
 
-# Make sure symbolic links are installed
-
-## Lib atik cameras
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libatikcameras.so.${ATIK_VERSION}\" \"libatikcameras.so.${ATIK_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libatikcameras.so.${ATIK_SOVERSION}\" \"libatikcameras.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-## lib fly capture
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libflycapture.so.${FLYCAPTURE_VERSION}\" \"libflycapture.so.${FLYCAPTURE_SOVERSION}\" WORKING_DIRECTORY 
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \"libflycapture.so.${ATIK_SOVERSION}\" \"libflycapture.so\" WORKING_DIRECTORY
-\"\$ENV{DESTDIR}/${BUILD_ROOT}${LIB_INSTALL_DIR}${LIB_POSTFIX}\" )" )
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-install( FILES 99-atik.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-endif()
-
-ENDIF(APPLE)
-
-install( FILES AtikCameras.h DESTINATION include/libatik)
-
-
-
+# Install header files
+install (FILES AtikCameras.h DESTINATION include/libatik)

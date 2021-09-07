@@ -39,53 +39,7 @@ extern "C" {
 
 #include "config.h"
 
-std::unique_ptr<indi_webcam> webcam(new indi_webcam());
-
-void ISInit()
-{
-    static int isInit =0;
-    if (isInit == 1)
-        return;
-     isInit = 1;
-     if(webcam.get() == 0) webcam.reset(new indi_webcam());
-}
-void ISGetProperties(const char *dev)
-{
-         ISInit();
-         webcam->ISGetProperties(dev);
-}
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
-{
-         ISInit();
-         webcam->ISNewSwitch(dev, name, states, names, num);
-}
-void ISNewText( const char *dev, const char *name, char *texts[], char *names[], int num)
-{
-         ISInit();
-         webcam->ISNewText(dev, name, texts, names, num);
-}
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
-{
-         ISInit();
-         webcam->ISNewNumber(dev, name, values, names, num);
-}
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-   INDI_UNUSED(dev);
-   INDI_UNUSED(name);
-   INDI_UNUSED(sizes);
-   INDI_UNUSED(blobsizes);
-   INDI_UNUSED(blobs);
-   INDI_UNUSED(formats);
-   INDI_UNUSED(names);
-   INDI_UNUSED(n);
-}
-void ISSnoopDevice (XMLEle *root)
-{
-     ISInit();
-     webcam->ISSnoopDevice(root);
-}
-
+static std::unique_ptr<indi_webcam> webcam(new indi_webcam());
 
 //Note this is how we get information about AVFoundation Devices
 //FFMpeg does not provide a way to programmatically get them, but there is a way to log them.

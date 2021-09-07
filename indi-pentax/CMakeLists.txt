@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_pentax CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -7,7 +7,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (INDI_PENTAX_VERSION_MAJOR 1)
-set (INDI_PENTAX_VERSION_MINOR 0)
+set (INDI_PENTAX_VERSION_MINOR 1)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)

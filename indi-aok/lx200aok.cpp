@@ -33,66 +33,21 @@
 
 #include "config.h"
 
-// Unique pointers
-static std::unique_ptr<LX200Skywalker> telescope;
-
 const char *INFO_TAB = "Info";
 
-void ISInit()
+static class Loader
 {
-    static int isInit = 0;
-
-    if (isInit)
-        return;
-
-    isInit = 1;
-    if (telescope.get() == nullptr)
+    std::unique_ptr<LX200Skywalker> telescope;
+public:
+    Loader()
     {
-        LX200Skywalker* myScope = new LX200Skywalker();
-        telescope.reset(myScope);
+        if (telescope.get() == nullptr)
+        {
+            LX200Skywalker* myScope = new LX200Skywalker();
+            telescope.reset(myScope);
+        }
     }
-}
-
-void ISGetProperties(const char *dev)
-{
-    ISInit();
-    telescope->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    ISInit();
-    telescope->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
-void ISSnoopDevice(XMLEle *root)
-{
-    telescope->ISSnoopDevice(root);
-}
+} loader;
 
 /**************************************************
 *** LX200 Generic Implementation / Constructor
@@ -351,21 +306,24 @@ bool LX200Skywalker::initProperties()
 
     // System Slewspeed
     IUFillNumber(&SystemSlewSpeedP[0], "SLEW_SPEED", "Slewspeed", "%.2f", 0.0, 30.0, 1, 0);
-    IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&SystemSlewSpeedNP, SystemSlewSpeedP, 1, getDeviceName(), "SLEW_SPEED", "Slewspeed", MAIN_CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
 
     // Motors Status
     IUFillSwitch(&MountStateS[0], "On", "", ISS_OFF);
     IUFillSwitch(&MountStateS[1], "Off", "", ISS_OFF);
-    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "Mount lock", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&MountStateSP, MountStateS, 2, getDeviceName(), "Mountlock", "Mount lock", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 0, IPS_IDLE);
 
     // Infotab
     IUFillText(&FirmwareVersionT[0], "Firmware", "Version", "123456");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "Firmware", "Firmware", INFO_TAB, IP_RO, 60,
+                     IPS_IDLE);
 
     // Setting the park position in the controller (with webinterface) evokes a restart of the very same!
     // 4th option "purge" of INDI::Telescope doesn't make any sense here, so it is not displayed
     IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Copy", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read",ISS_OFF);
+    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read", ISS_OFF);
     IUFillSwitch(&ParkOptionS[PARK_WRITE_DATA], "PARK_WRITE_DATA", "Write", ISS_OFF);
     IUFillSwitchVector(&ParkOptionSP, ParkOptionS, 3, getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options",
                        SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
@@ -381,7 +339,11 @@ bool LX200Skywalker::updateProperties()
     if (! LX200Telescope::updateProperties()) return false;
     if (isConnected())
     {
-        // registering here results in display at bottom of tab
+        // Switch is obsolete: NOT using pulse commands makes no sense with TCS
+        deleteProperty(UsePulseCmdSP.name);
+        // FIRST delete property, THEN define new ones!
+        // Otherwise we break the list of buttons defined beforehand and lose their
+        // responsiveness in the INDI Control Panel when called from EKOS
         defineProperty(&MountStateSP);
         defineProperty(&SystemSlewSpeedNP);
         defineProperty(&FirmwareVersionTP);
@@ -480,7 +442,7 @@ void LX200Skywalker::getBasicData()
             if (! getTrackFrequency(&TrackFreqN[0].value))
                 LOG_ERROR("Failed to get tracking frequency from device.");
             else
-                IDSetNumber(&TrackingFreqNP, nullptr);
+                IDSetNumber(&TrackFreqNP, nullptr);
         }
 
         int slewSpeed;
@@ -508,16 +470,16 @@ void LX200Skywalker::getBasicData()
             LOG_INFO("Parkdata loaded");
             if (!INDI::Telescope::isParked()) // Mount is unparked and working on connection of the driver!
             {
-                    if ((MountLocked()) && (MountTracking())) // default state of working mount
-                     {
-                        notifyMountLock(true);
-                        notifyTrackState(SCOPE_TRACKING);
-                        ParkSP.s = IPS_OK;
-                        IDSetSwitch(&ParkSP, nullptr);
-                        //LOG_INFO("Mount is working");
-                     }
-                     else
-                        LOG_WARN("Mount is unparked but not locked and/or not tracking!");
+                if ((MountLocked()) && (MountTracking())) // default state of working mount
+                {
+                    notifyMountLock(true);
+                    notifyTrackState(SCOPE_TRACKING);
+                    ParkSP.s = IPS_OK;
+                    IDSetSwitch(&ParkSP, nullptr);
+                    //LOG_INFO("Mount is working");
+                }
+                else
+                    LOG_WARN("Mount is unparked but not locked and/or not tracking!");
             }
             else // Mount is parked
             {
@@ -529,7 +491,7 @@ void LX200Skywalker::getBasicData()
             LOG_INFO("Parkdata load failed");
     }
 
-    //ToDo: collect other fixed data here like Manufacturer, version etc...
+    /* NOT using pulse commands makes no sense with skywalker controller
     if (genericCapability & LX200_HAS_PULSE_GUIDING)
     {
         UsePulseCmdS[0].s = ISS_ON;
@@ -537,7 +499,7 @@ void LX200Skywalker::getBasicData()
         UsePulseCmdSP.s = IPS_OK;
         usePulseCommand = false; // ALWAYS set status! (cf. ISNewSwitch())
         IDSetSwitch(&UsePulseCmdSP, nullptr);
-    }
+    }*/
 
 }
 
@@ -572,7 +534,7 @@ bool LX200Skywalker::updateLocation(double latitude, double longitude, double el
 
     // LOGF_INFO("Site location updated to Lat %.32s - Long %.32s", l, L); Info provided by "inditelescope"
 
-   return true;
+    return true;
 }
 
 /**************************************************************************************
@@ -638,7 +600,7 @@ bool LX200Skywalker::SavePark()
 bool LX200Skywalker::notifyPierSide()
 {
     char lstat[20] = {0};
-    if (getJSONData_Y(5, lstat)) // this is the model!
+    if (getJSONData_Y(5, lstat, 20)) // this is the model!
     {
         int li = std::stoi(lstat);
         li = li & (1 << 7);
@@ -785,7 +747,7 @@ bool LX200Skywalker::setSiteLatitude(double Lat)
 
 }
 
-bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardcoded  :gp-query
+bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr, int jstrlen) // preliminary hardcoded  :gp-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -811,11 +773,11 @@ bool LX200Skywalker::getJSONData_gp(int jindex, char *jstr) // preliminary hardc
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr, data[jindex]);
+    strncpy(jstr, data[jindex], jstrlen);
     return true;
 }
 
-bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardcoded query :Y#-query
+bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr, int jstrlen) // preliminary hardcoded query :Y#-query
 {
     char lresponse[128];
     lresponse [0] = '\0';
@@ -835,20 +797,21 @@ bool LX200Skywalker::getJSONData_Y(int jindex, char *jstr) // preliminary hardco
         return false;
     }
     char data[6][20] = {"", "", "", "", "", ""};
-    int returnCode = sscanf(lresponse, "%20[^,]%*[,]%20[^,]%*[,]%20[^#]%*[#\",]%20[^,]%*[,]%20[^,]%*[,]%20[^,]", data[0], data[1], data[2], data[3], data[4], data[5]);
+    int returnCode = sscanf(lresponse, "%20[^,]%*[,]%20[^,]%*[,]%20[^#]%*[#\",]%20[^,]%*[,]%20[^,]%*[,]%20[^,]", data[0],
+                            data[1], data[2], data[3], data[4], data[5]);
     if (returnCode < 1)
     {
         LOGF_ERROR("Failed to parse JSONData '%s'.", lresponse);
         return false;
     }
-    strcpy(jstr, data[jindex]);
+    strncpy(jstr, data[jindex], jstrlen);
     return true;
 }
 
 bool LX200Skywalker::MountLocked()
 {
     char lstat[20] = {0};
-    if(!getJSONData_gp(2, lstat))
+    if(!getJSONData_gp(2, lstat, 20))
         return false;
     else
     {
@@ -1021,8 +984,8 @@ bool LX200Skywalker::setSystemSlewSpeed (int xx)
  */
 bool LX200Skywalker::getFirmwareInfo(char* vstring)
 {
-    char lstat[20] = {0};
-    if(!getJSONData_gp(1, lstat))
+    char lstat[40] = {0};
+    if(!getJSONData_gp(1, lstat, 40))
         return false;
     else
     {
@@ -1185,197 +1148,49 @@ bool LX200Skywalker::setSlewMode(int slewMode)
 
 IPState LX200Skywalker::GuideNorth(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
-
-        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
-    }
-
-    if (GuideNSTID)
-    {
-        IERmTimer(GuideNSTID);
-        GuideNSTID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_NORTH, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementNSS[DIRECTION_NORTH].s = ISS_ON;
-        MoveNS(DIRECTION_NORTH, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_ns = LX200_NORTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    SendPulseCmd(LX200_NORTH, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideSouth(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
-
-        MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
-    }
-
-    if (GuideNSTID)
-    {
-        IERmTimer(GuideNSTID);
-        GuideNSTID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_SOUTH, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementNSS[DIRECTION_SOUTH].s = ISS_ON;
-        MoveNS(DIRECTION_SOUTH, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_ns = LX200_SOUTH;
-    GuideNSTID      = IEAddTimer(ms, guideTimeoutHelperNS, this);
+    SendPulseCmd(LX200_SOUTH, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideEast(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
-
-        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
-    }
-
-    if (GuideWETID)
-    {
-        IERmTimer(GuideWETID);
-        GuideWETID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_EAST, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementWES[DIRECTION_EAST].s = ISS_ON;
-        MoveWE(DIRECTION_EAST, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_we = LX200_EAST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    SendPulseCmd(LX200_EAST, ms);
     return IPS_BUSY;
 }
 
 IPState LX200Skywalker::GuideWest(uint32_t ms)
 {
-    LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
+    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
-
-    // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
-    {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
-
-        MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
-    }
-
-    if (GuideWETID)
-    {
-        IERmTimer(GuideWETID);
-        GuideWETID = 0;
-    }
-
-    if (usePulseCommand)
-    {
-        SendPulseCmd(LX200_WEST, ms);
-    }
-    else
-    {
-        if (!setSlewMode(LX200_SLEW_GUIDE))
-        {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
-            return IPS_ALERT;
-        }
-
-        MovementWES[DIRECTION_WEST].s = ISS_ON;
-        MoveWE(DIRECTION_WEST, MOTION_START);
-    }
-
-    // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
-    guide_direction_we = LX200_WEST;
-    GuideWETID      = IEAddTimer(ms, guideTimeoutHelperWE, this);
+    SendPulseCmd(LX200_WEST, ms);
     return IPS_BUSY;
 }
 
@@ -1472,7 +1287,7 @@ void LX200Skywalker::ISGetProperties(const char *dev)
         if (CanControlTrack())
             defineProperty(&TrackStateSP);
         if (HasTrackRate())
-            defineProperty(&TrackRateNP);        
+            defineProperty(&TrackRateNP);
     }
     /*
         if (isConnected())
