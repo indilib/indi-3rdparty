@@ -56,7 +56,6 @@ double anglediff(double a, double b)
     return std::abs(d) * ((a - b >= 0 && a - b <= 180) || (a - b <= -180 && a - b >= -360) ? 1 : -1);
 }
 
-
 bool CelestronAUX::ISSnoopDevice(XMLEle *root)
 {
     const char *propName = findXMLAttValu(root, "name");
