@@ -1402,7 +1402,7 @@ int OEMCamEnum(XP(DeviceV2) *cam_infos, int cam_infos_count)
 
         cam_infos[cnt].model = &cam->toupcam->model;
         strcpy(cam_infos[cnt].displayname, cam->name);
-        sprintf(cam_infos[cnt].id, "tp-%d-%d-%d-%d", libusb_get_port_number(dev),
+        sprintf(cam_infos[cnt].id, "tp-%d-%d-%d-%d", libusb_get_bus_number(dev),
             libusb_get_device_address(dev), desc.idVendor, cam->toupcam->pid);
         cnt++;
     }
