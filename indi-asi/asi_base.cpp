@@ -229,7 +229,11 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             timeLeft = std::round(timeLeft);
         }
 
-        PrimaryCCD.setExposureLeft(timeLeft);
+        if (timeLeft > 0)
+        {
+            PrimaryCCD.setExposureLeft(timeLeft);
+        }
+        
         usleep(delay * 1000 * 1000);
 
         ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
@@ -268,7 +272,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     // Reset exposure retry
     mExposureRetry = 0;
     PrimaryCCD.setExposureLeft(0.0);
-    if (PrimaryCCD.getExposureDuration() > 3)
+    if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
         LOG_INFO("Exposure done, downloading image...");
 
     grabImage(duration);
