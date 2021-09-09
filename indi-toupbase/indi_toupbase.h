@@ -611,6 +611,10 @@ class ToupBase : public INDI::CCD
         INumberVectorProperty ADCNP;
         INumber ADCN[1];
 
+        // Timeout factor
+        INumberVectorProperty TimeoutFactorNP;
+        INumber TimeoutFactorN[1];
+
         // Gain Conversion
         INumberVectorProperty GainConversionNP;
         INumber GainConversionN[2];
