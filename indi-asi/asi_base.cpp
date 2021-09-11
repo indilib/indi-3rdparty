@@ -208,9 +208,6 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     ASI_EXPOSURE_STATUS status = ASI_EXP_IDLE;
     do
     {
-        if (isAboutToQuit)
-            return;
-
         float delay = 0.1;
         float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
 
@@ -237,6 +234,13 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         usleep(delay * 1000 * 1000);
 
         ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        // 2021-09-11 <sterne-jaeger@openfuture.de>: Fix for
+        // https://www.indilib.org/forum/development/10346-asi-driver-sends-image-after-abort.html
+        // Aborting an exposure also returns ASI_SUCCESS here, therefore
+        // we need to ensure that the quit flag is not set if we want to continue.
+        if (isAboutToQuit)
+            return;
+
         if (ret != ASI_SUCCESS)
         {
             LOGF_DEBUG("Failed to get exposure status (%s)", Helpers::toString(ret));
