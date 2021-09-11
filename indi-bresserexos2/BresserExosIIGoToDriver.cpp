@@ -35,6 +35,8 @@
 using namespace GoToDriver;
 using namespace SerialDeviceControl;
 
+static std::unique_ptr<BresserExosIIDriver> mount(new BresserExosIIDriver());
+
 //default constructor.
 //sets the scope abilities, and default settings.
 BresserExosIIDriver::BresserExosIIDriver() :
@@ -48,11 +50,11 @@ BresserExosIIDriver::BresserExosIIDriver() :
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION, 0);
 
-	mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-	mGuideStateNS.remaining_messages = 0;
-	
-	mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-	mGuideStateEW.remaining_messages = 0;
+    mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+    mGuideStateNS.remaining_messages = 0;
+
+    mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+    mGuideStateEW.remaining_messages = 0;
 
     setDefaultPollingPeriod(500);
 }
@@ -73,17 +75,18 @@ bool BresserExosIIDriver::initProperties()
     setTelescopeConnection(CONNECTION_SERIAL);
 
     addDebugControl();
-    
-	IUFillText(&SourceCodeRepositoryURLT[0], "REPOSITORY_URL", "Code Repository", "https://github.com/kneo/indi-bresserexos2");
-	
-    IUFillTextVector(&SourceCodeRepositoryURLTP, SourceCodeRepositoryURLT, 1, getDeviceName(), "REPOSITORY_URL", "Source Code", CONNECTION_TAB, IP_RO, 0, IPS_IDLE);
-	
-	defineProperty(&SourceCodeRepositoryURLTP);
-    
+
+    IUFillText(&SourceCodeRepositoryURLT[0], "REPOSITORY_URL", "Code Repository", "https://github.com/kneo/indi-bresserexos2");
+
+    IUFillTextVector(&SourceCodeRepositoryURLTP, SourceCodeRepositoryURLT, 1, getDeviceName(), "REPOSITORY_URL", "Source Code",
+                     CONNECTION_TAB, IP_RO, 0, IPS_IDLE);
+
+    defineProperty(&SourceCodeRepositoryURLTP);
+
     SetParkDataType(PARK_NONE);
 
     TrackState = SCOPE_IDLE;
-     
+
     defineProperty(&GuideNSNP);
     defineProperty(&GuideWENP);
 
@@ -203,14 +206,14 @@ bool BresserExosIIDriver::ReadScopeStatus()
 bool BresserExosIIDriver::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (!strcmp(dev, getDeviceName()))
-	{
-		if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
-		{
-		    processGuiderProperties(name, values, names, n);
-		    return true;
-		}
-	}
-    
+    {
+        if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
+        {
+            processGuiderProperties(name, values, names, n);
+            return true;
+        }
+    }
+
     return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -262,8 +265,8 @@ bool BresserExosIIDriver::Goto(double ra, double dec)
 bool BresserExosIIDriver::Abort()
 {
     LOG_INFO("BresserExosIIDriver::Abort: motion stopped!");
-    
-	if (GuideNSTID)
+
+    if (GuideNSTID)
     {
         IERmTimer(GuideNSTID);
         GuideNSTID = 0;
@@ -274,10 +277,10 @@ bool BresserExosIIDriver::Abort()
         IERmTimer(GuideWETID);
         GuideNSTID = 0;
     }
-	
-	IDSetNumber(&GuideNSNP, nullptr);
+
+    IDSetNumber(&GuideNSNP, nullptr);
     IDSetNumber(&GuideWENP, nullptr);
-        
+
     return mMountControl.StopMotion();
 }
 
@@ -305,7 +308,7 @@ bool BresserExosIIDriver::updateTime(ln_date *utc, double utc_offset)
     // Bresser takes local time and DST but ln_zonedate doesn't have DST
     struct ln_zonedate local_date;
     ln_date_to_zonedate(utc, &local_date, static_cast<int>(utc_offset * 3600));
-    
+
     uint16_t years = (uint16_t)local_date.years;
     uint8_t months = (uint8_t)local_date.months;
     uint8_t days =   (uint8_t)local_date.days;
@@ -315,27 +318,28 @@ bool BresserExosIIDriver::updateTime(ln_date *utc, double utc_offset)
     uint8_t seconds = (uint8_t) local_date.seconds;
     int8_t utc_off = (int8_t) utc_offset;
 
-    LOGF_INFO("Date/Time updated (UTC Time): %d:%d:%d %d-%d-%d (%d)", utc->hours, utc->minutes, utc->seconds, utc->years, utc->months, utc->days, utc_off);
+    LOGF_INFO("Date/Time updated (UTC Time): %d:%d:%d %d-%d-%d (%d)", utc->hours, utc->minutes, utc->seconds, utc->years,
+              utc->months, utc->days, utc_off);
     LOGF_INFO("Date/Time updated (Local Time): %d:%d:%d %d-%d-%d (%d)", hours, minutes, seconds, years, months, days, utc_off);
 
-    return mMountControl.SetDateTime(years, months, days, hours, minutes, seconds,utc_off);
+    return mMountControl.SetDateTime(years, months, days, hours, minutes, seconds, utc_off);
 }
 
 //update the location of the scope.
 bool BresserExosIIDriver::updateLocation(double latitude, double longitude, double elevation)
 {
     INDI_UNUSED(elevation);
-    
-    //orientation of the handbox is: 
+
+    //orientation of the handbox is:
     //negative longitude is west of greenich
     //positive longitude is east of greenich
     //kstars sends 360 complements for negatives
     //this sole case needs to be corrected:
     double realLongitude = longitude;
-    
-    if(realLongitude>180)
+
+    if(realLongitude > 180)
     {
-	realLongitude -= 360;
+        realLongitude -= 360;
     }
 
     LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", realLongitude, latitude);
@@ -432,7 +436,7 @@ bool BresserExosIIDriver::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command
 
 //amount of degree change per "pulse command" -> tracking speeds can be set in the HBX,
 //it states 1x -> 0.125 * star speed (0.0041°/s ^= 15"/s) and goes up to 8x -> 1.00 * star speed, which would advance by on second, thus guiding speeds are user dependent.
-//amount of time necessary to transmit a message -> 12.1 ms 
+//amount of time necessary to transmit a message -> 12.1 ms
 //(9600 baud / 8 -> 1200, but deminished by the stop bit yielding a net data rate of around 1067 byte/s)
 //allows around 82 messages send to the mount per second.
 //Assume half if serial transmission is not full duplex capable.
@@ -441,147 +445,147 @@ bool BresserExosIIDriver::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command
 //double these amounts if full duplex is possible.
 IPState BresserExosIIDriver::GuideNorth(uint32_t ms)
 {
-	//LOGF_INFO("BresserExosIIDriver::GuideNorth: guiding %d ms", ms);
-	
-	if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
-	{
-		LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
-		mMountControl.StopMotionToDirection();
-	}
-	
-	uint32_t messages = ms / GUIDE_TIMEOUT;
-	
+    //LOGF_INFO("BresserExosIIDriver::GuideNorth: guiding %d ms", ms);
+
+    if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
+    {
+        LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
+        mMountControl.StopMotionToDirection();
+    }
+
+    uint32_t messages = ms / GUIDE_TIMEOUT;
+
     LOGF_INFO("BresserExosIIDriver::GuideNord: guiding %d ms (%d messages)", ms, messages);
-    
-	if (GuideNSTID) //reset timer if any.
-	{
-		IERmTimer(GuideNSTID);
-		GuideNSTID = 0;
-	}
-	
-	if(messages>0)
-	{
-		mMountControl.GuideNorth(); // send one pulse
-		messages--;
-		
-		mGuideStateNS.remaining_messages = messages;
-		mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::MOVE_NORTH_COMMAND_ID;
-		
-		GuideNSTID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperN, this); //wait for nex pulse if any.
-		
-		return IPS_BUSY;
-	}
-	
-	return IPS_IDLE;
+
+    if (GuideNSTID) //reset timer if any.
+    {
+        IERmTimer(GuideNSTID);
+        GuideNSTID = 0;
+    }
+
+    if(messages > 0)
+    {
+        mMountControl.GuideNorth(); // send one pulse
+        messages--;
+
+        mGuideStateNS.remaining_messages = messages;
+        mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::MOVE_NORTH_COMMAND_ID;
+
+        GuideNSTID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperN, this); //wait for nex pulse if any.
+
+        return IPS_BUSY;
+    }
+
+    return IPS_IDLE;
 }
 
 IPState BresserExosIIDriver::GuideSouth(uint32_t ms)
 {
-	//LOGF_INFO("BresserExosIIDriver::GuideSouth: guiding %d ms", ms);
-	
-	if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
-	{
-		LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
-		mMountControl.StopMotionToDirection();
-	}
-	
-	uint32_t messages = ms / GUIDE_TIMEOUT;
-    
+    //LOGF_INFO("BresserExosIIDriver::GuideSouth: guiding %d ms", ms);
+
+    if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
+    {
+        LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
+        mMountControl.StopMotionToDirection();
+    }
+
+    uint32_t messages = ms / GUIDE_TIMEOUT;
+
     LOGF_INFO("BresserExosIIDriver::GuideSouth: guiding %d ms (%d messages)", ms, messages);
-	
-	if (GuideNSTID) //reset timer if any.
-	{
-		IERmTimer(GuideNSTID);
-		GuideNSTID = 0;
-	}
-	
-	if(messages>0)
-	{
-		mMountControl.GuideSouth(); // send one pulse
-		messages--;
-		
-		mGuideStateNS.remaining_messages = messages;
-		mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID;
-		
-		GuideNSTID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperS, this); //wait for nex pulse if any.
-		
-		return IPS_BUSY;
-	}
-	
-	return IPS_IDLE;
+
+    if (GuideNSTID) //reset timer if any.
+    {
+        IERmTimer(GuideNSTID);
+        GuideNSTID = 0;
+    }
+
+    if(messages > 0)
+    {
+        mMountControl.GuideSouth(); // send one pulse
+        messages--;
+
+        mGuideStateNS.remaining_messages = messages;
+        mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID;
+
+        GuideNSTID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperS, this); //wait for nex pulse if any.
+
+        return IPS_BUSY;
+    }
+
+    return IPS_IDLE;
 }
 
 IPState BresserExosIIDriver::GuideEast(uint32_t ms)
 {
-	//LOGF_INFO("BresserExosIIDriver::GuideEast: guiding %d ms", ms);
-	
-	if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
-	{
-		LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
-		mMountControl.StopMotionToDirection();
-	}
-	
-	uint32_t messages = ms / GUIDE_TIMEOUT;
-    
+    //LOGF_INFO("BresserExosIIDriver::GuideEast: guiding %d ms", ms);
+
+    if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
+    {
+        LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
+        mMountControl.StopMotionToDirection();
+    }
+
+    uint32_t messages = ms / GUIDE_TIMEOUT;
+
     LOGF_INFO("BresserExosIIDriver::GuideEast: guiding %d ms (%d messages)", ms, messages);
-	
-	if (GuideWETID) //reset timer if any.
-	{
-		IERmTimer(GuideWETID);
-		GuideWETID = 0;
-	}
-	
-	if(messages>0)
-	{
-		mMountControl.GuideEast(); // send one pulse
-		
-		messages--;
-		
-		mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::MOVE_EAST_COMMAND_ID;
-		mGuideStateEW.remaining_messages = messages;
-		
-		GuideWETID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperE, this); //wait for nex pulse if any.
-		
-		return IPS_BUSY;
-	}
-	
-	return IPS_IDLE;
+
+    if (GuideWETID) //reset timer if any.
+    {
+        IERmTimer(GuideWETID);
+        GuideWETID = 0;
+    }
+
+    if(messages > 0)
+    {
+        mMountControl.GuideEast(); // send one pulse
+
+        messages--;
+
+        mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::MOVE_EAST_COMMAND_ID;
+        mGuideStateEW.remaining_messages = messages;
+
+        GuideWETID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperE, this); //wait for nex pulse if any.
+
+        return IPS_BUSY;
+    }
+
+    return IPS_IDLE;
 }
 
 IPState BresserExosIIDriver::GuideWest(uint32_t ms)
 {
-	//LOGF_INFO("BresserExosIIDriver::GuideWest: guiding %d ms", ms);
-	
-	if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
-	{
-		LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
-		mMountControl.StopMotionToDirection();
-	}
-	
-	uint32_t messages = ms / GUIDE_TIMEOUT;
-    
+    //LOGF_INFO("BresserExosIIDriver::GuideWest: guiding %d ms", ms);
+
+    if(mMountControl.GetTelescopeState() == TelescopeMountControl::TelescopeMountState::MoveWhileTracking)
+    {
+        LOG_INFO("BresserExosIIDriver::GuideNorth: motion while tracking stopped!");
+        mMountControl.StopMotionToDirection();
+    }
+
+    uint32_t messages = ms / GUIDE_TIMEOUT;
+
     LOGF_INFO("BresserExosIIDriver::GuideWest: guiding %d ms (%d messages)", ms, messages);
-	
-	if (GuideWETID) //reset timer if any.
-	{
-		IERmTimer(GuideWETID);
-		GuideWETID = 0;
-	}
-	
-	if(messages>0)
-	{
-		mMountControl.GuideWest();
-		 
-		messages--;
-		mGuideStateEW.remaining_messages = messages;
-		mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::MOVE_WEST_COMMAND_ID;
-		
-		GuideWETID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperW, this); //wait for nex pulse if any.
-		
-		return IPS_BUSY;
-	}
-	
-	return IPS_IDLE;
+
+    if (GuideWETID) //reset timer if any.
+    {
+        IERmTimer(GuideWETID);
+        GuideWETID = 0;
+    }
+
+    if(messages > 0)
+    {
+        mMountControl.GuideWest();
+
+        messages--;
+        mGuideStateEW.remaining_messages = messages;
+        mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::MOVE_WEST_COMMAND_ID;
+
+        GuideWETID = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperW, this); //wait for nex pulse if any.
+
+        return IPS_BUSY;
+    }
+
+    return IPS_IDLE;
 }
 
 void BresserExosIIDriver::DriverWatchDog(void *p)
@@ -606,99 +610,99 @@ void BresserExosIIDriver::DriverWatchDog(void *p)
 
 void BresserExosIIDriver::guideTimeout(SerialDeviceControl::SerialCommandID direction)
 {
-	bool continuePulsing = false;
-	switch(direction)
-	{
-		case SerialDeviceControl::SerialCommandID::MOVE_NORTH_COMMAND_ID:
-			continuePulsing = mGuideStateNS.remaining_messages > 0;
-			
-			if(continuePulsing)
-			{
-				mGuideStateNS.remaining_messages--;
-				mMountControl.GuideNorth();
-				GuideNSNP.s = IPS_BUSY;
-				GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperN, this); 
-			}
-			else
-			{
-				GuideNSNP.s = IPS_IDLE;
-				GuideNSTID=0;
-				mGuideStateNS.remaining_messages = 0;
-				mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-				IDSetNumber(&GuideNSNP, nullptr);
-			}
-		break;
-		
-		case SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID:
-			continuePulsing = mGuideStateNS.remaining_messages > 0;
-			
-			if(continuePulsing)
-			{
-				mGuideStateNS.remaining_messages--;
-				mMountControl.GuideSouth();
-				GuideNSNP.s = IPS_BUSY;
-				GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperS, this);
-			}
-			else
-			{
-				GuideNSNP.s = IPS_IDLE;
-				GuideNSTID=0;
-				mGuideStateNS.remaining_messages = 0;
-				mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-				IDSetNumber(&GuideNSNP, nullptr);
-			}
-		break;
-		
-		case SerialDeviceControl::SerialCommandID::MOVE_WEST_COMMAND_ID:
-			continuePulsing = mGuideStateEW.remaining_messages > 0;
-			
-			if(continuePulsing)
-			{
-				mGuideStateEW.remaining_messages--;
-				mMountControl.GuideWest();
-				GuideWENP.s = IPS_BUSY;
-				GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperW, this);
-			}
-			else
-			{
-				GuideWENP.s = IPS_IDLE;
-				GuideWETID=0;
-				mGuideStateEW.remaining_messages = 0;
-				mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-				IDSetNumber(&GuideWENP, nullptr);
-			}
-		break;
+    bool continuePulsing = false;
+    switch(direction)
+    {
+        case SerialDeviceControl::SerialCommandID::MOVE_NORTH_COMMAND_ID:
+            continuePulsing = mGuideStateNS.remaining_messages > 0;
 
-		case SerialDeviceControl::SerialCommandID::MOVE_EAST_COMMAND_ID:
-			continuePulsing = mGuideStateEW.remaining_messages > 0;
-					
-			if(continuePulsing)
-			{
-				mGuideStateEW.remaining_messages--;
-				mMountControl.GuideEast();
-				GuideWENP.s = IPS_BUSY;
-				GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperE, this); 
-			}
-			else
-			{
-				GuideWENP.s = IPS_IDLE;
-				GuideWETID=0;
-				mGuideStateEW.remaining_messages = 0;
-				mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-				IDSetNumber(&GuideWENP, nullptr);
-			}
-		break;
-		
-		default:
-			GuideWENP.s = IPS_IDLE;
-			GuideWETID=0;
-			IDSetNumber(&GuideWENP, nullptr);
-			
-			GuideNSNP.s = IPS_IDLE;
-			GuideNSTID=0;
-			IDSetNumber(&GuideNSNP, nullptr);
-		break;
-	}
+            if(continuePulsing)
+            {
+                mGuideStateNS.remaining_messages--;
+                mMountControl.GuideNorth();
+                GuideNSNP.s = IPS_BUSY;
+                GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperN, this);
+            }
+            else
+            {
+                GuideNSNP.s = IPS_IDLE;
+                GuideNSTID = 0;
+                mGuideStateNS.remaining_messages = 0;
+                mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+                IDSetNumber(&GuideNSNP, nullptr);
+            }
+            break;
+
+        case SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID:
+            continuePulsing = mGuideStateNS.remaining_messages > 0;
+
+            if(continuePulsing)
+            {
+                mGuideStateNS.remaining_messages--;
+                mMountControl.GuideSouth();
+                GuideNSNP.s = IPS_BUSY;
+                GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperS, this);
+            }
+            else
+            {
+                GuideNSNP.s = IPS_IDLE;
+                GuideNSTID = 0;
+                mGuideStateNS.remaining_messages = 0;
+                mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+                IDSetNumber(&GuideNSNP, nullptr);
+            }
+            break;
+
+        case SerialDeviceControl::SerialCommandID::MOVE_WEST_COMMAND_ID:
+            continuePulsing = mGuideStateEW.remaining_messages > 0;
+
+            if(continuePulsing)
+            {
+                mGuideStateEW.remaining_messages--;
+                mMountControl.GuideWest();
+                GuideWENP.s = IPS_BUSY;
+                GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperW, this);
+            }
+            else
+            {
+                GuideWENP.s = IPS_IDLE;
+                GuideWETID = 0;
+                mGuideStateEW.remaining_messages = 0;
+                mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+                IDSetNumber(&GuideWENP, nullptr);
+            }
+            break;
+
+        case SerialDeviceControl::SerialCommandID::MOVE_EAST_COMMAND_ID:
+            continuePulsing = mGuideStateEW.remaining_messages > 0;
+
+            if(continuePulsing)
+            {
+                mGuideStateEW.remaining_messages--;
+                mMountControl.GuideEast();
+                GuideWENP.s = IPS_BUSY;
+                GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperE, this);
+            }
+            else
+            {
+                GuideWENP.s = IPS_IDLE;
+                GuideWETID = 0;
+                mGuideStateEW.remaining_messages = 0;
+                mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
+                IDSetNumber(&GuideWENP, nullptr);
+            }
+            break;
+
+        default:
+            GuideWENP.s = IPS_IDLE;
+            GuideWETID = 0;
+            IDSetNumber(&GuideWENP, nullptr);
+
+            GuideNSNP.s = IPS_IDLE;
+            GuideNSTID = 0;
+            IDSetNumber(&GuideNSNP, nullptr);
+            break;
+    }
 }
 
 //GUIDE The timer helper functions.
@@ -709,7 +713,7 @@ void BresserExosIIDriver::guideTimeoutHelperN(void *p)
 
 void BresserExosIIDriver::guideTimeoutHelperS(void *p)
 {
-   static_cast<BresserExosIIDriver*>(p)->guideTimeout(SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID);
+    static_cast<BresserExosIIDriver*>(p)->guideTimeout(SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID);
 }
 
 void BresserExosIIDriver::guideTimeoutHelperW(void *p)
