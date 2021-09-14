@@ -453,7 +453,7 @@ POACCD::POACCD(const POACameraProperties &camInfo, const std::string &cameraName
     : mCameraName(cameraName)
     , mCameraInfo(camInfo)
 {
-    setVersion(POA_VERSION_MAJOR, POA_VERSION_MINOR);
+    setVersion(PLAYERONE_VERSION_MAJOR, PLAYERONE_VERSION_MINOR);
     setDeviceName(cameraName.c_str());
 
     mTimerWE.setSingleShot(true);
