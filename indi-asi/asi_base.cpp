@@ -179,15 +179,6 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
-
-        // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
-        // that fail on 16bit images.
-        if (getImageType() == ASI_IMG_RAW16 &&
-                (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
-        {
-            LOG_INFO("Switching to 8-bit video.");
-            setVideoFormat(ASI_IMG_RAW8);
-        }
     }
 
     if (ret != ASI_SUCCESS)
@@ -230,7 +221,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }
-        
+
         usleep(delay * 1000 * 1000);
 
         ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
@@ -257,6 +248,15 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
 
         if (status == ASI_EXP_FAILED)
         {
+            // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
+            // that fail on 16bit images.
+            if (getImageType() == ASI_IMG_RAW16 &&
+                    (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
+            {
+                LOG_INFO("Switching to 8-bit video.");
+                setVideoFormat(ASI_IMG_RAW8);
+            }
+
             if (++mExposureRetry < MAX_EXP_RETRIES)
             {
                 LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
