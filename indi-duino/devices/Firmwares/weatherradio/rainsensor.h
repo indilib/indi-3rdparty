@@ -25,7 +25,7 @@ struct rainsensor_data {
 
 
 // function that the interrupt calls to increment the rain event counter
-void rain_event (rainsensor_data &data) {
+void IRAM_ATTR rain_event (rainsensor_data &data) {
 
   unsigned long now = millis();
   if ((now - data.lastInterrupt) > 200 ) { // debounce the switch contact.

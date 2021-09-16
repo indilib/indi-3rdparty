@@ -1,3 +1,10 @@
+indi-duino (1.16) buster; urgency=medium
+
+  * Bug fix causing crashes of rain sensors
+  * Install documentation updated for required Arduino packages
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Thu, 16 Sep 2021 13:10:45 +0200
+
 indi-duino (1.15) buster; urgency=medium
 
   * WiFi connection checks and recovery of connection losses added
