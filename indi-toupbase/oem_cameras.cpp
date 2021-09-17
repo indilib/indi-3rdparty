@@ -1255,25 +1255,25 @@ static const struct oem_camera oem_cameras[] = {
         .name = "Meade DSI IV Mono",
         .vid = 0x547,
         .pid = 0xe079,
-        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KMA],
+        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KMA_2],
     },
     {
         .name = "Meade DSI IV Mono (USB2.0)",
         .vid = 0x547,
         .pid = 0xe07a,
-        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KMA_USB2],
+        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KMA_USB2_2],
     },
     {
         .name = "Meade DSI IV Color",
         .vid = 0x547,
         .pid = 0xe077,
-        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KPA],
+        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KPA_2],
     },
     {
         .name = "Meade DSI IV Color (USB2.0)",
         .vid = 0x547,
         .pid = 0xe078,
-        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KPA_USB2],
+        .toupcam = &toupcam_models[TOUPCAM_MODEL_ATR3CMOS16000KPA_USB2_2],
     },
     /* DSI IV without DDR buffer */
     {
