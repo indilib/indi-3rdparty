@@ -15,12 +15,16 @@
 from wr_config import *
 
 import os
+import sys
 import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime
 import argparse
 import ffmpeg
+
+# initialize the configuration
+config = WeatherRadioConfig().config
 
 def create_video(input, starttime, targetdir, mode):
     # create a temporary directory
@@ -50,7 +54,8 @@ def create_video(input, starttime, targetdir, mode):
 parser = argparse.ArgumentParser(description="Create video sequences from a single directory")
 parser.add_argument("-v", "--verbose", action='store_true',
                     help="Display progress information")
-parser.add_argument("-d", "--mediadir", default=MEDIADIR,
+parser.add_argument("-d", "--mediadir",
+                    default=config.get('WeatherRadio', 'MEDIADIR'),
                     help="Directory holding the media files")
 parser.add_argument("-l", "--length", default=1, type=int,
                     help="Duration of the video sequences [hours]")

@@ -374,6 +374,12 @@ EXPORTC	uint32_t STDCALL GetQHYCCDCFWStatus(qhyccd_handle *handle,char *status);
   */
 EXPORTC	uint32_t STDCALL IsQHYCCDCFWPlugged(qhyccd_handle *handle);
 
+//Get the number of triger mode for camera
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeNumber(qhyccd_handle *handle, uint32_t *modeNumber);
+//Get the name of for every triger mode 
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeName(qhyccd_handle *handle, uint32_t modeNumber, char *name);
+//Setup triger-in mode on/off
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerFunction(qhyccd_handle *h,bool value);
 /**
  \fn   uint32_t SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t trigerMode)
  \brief set camera triger mode
@@ -383,7 +389,17 @@ EXPORTC	uint32_t STDCALL IsQHYCCDCFWPlugged(qhyccd_handle *handle);
 on success,return QHYCCD_SUCCESS \n
 another QHYCCD_ERROR code on other failures
 */
+//Setup triger mode for camera
 EXPORTC uint32_t STDCALL SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t trigerMode);
+//Setup triger-out mode on/off
+EXPORTC uint32_t STDCALL EnableQHYCCDTrigerOut(qhyccd_handle *handle);
+//Send software triger-in signal to camera
+EXPORTC uint32_t STDCALL SendSoftTriger2QHYCCDCam(qhyccd_handle *handle);
+
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerFilterOnOff(qhyccd_handle *handle, bool onoff);
+
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerFilterTime(qhyccd_handle *handle, uint32_t time);
+
 
 /** \fn void Bits16ToBits8(qhyccd_handle *h,uint8_t *InputData16,uint8_t *OutputData8,uint32_t imageX,uint32_t imageY,uint16_t B,uint16_t W)
       \brief turn 16bits data into 8bits
@@ -469,6 +485,7 @@ EXPORTC uint32_t STDCALL GetQHYCCDEffectiveArea(qhyccd_handle *h,uint32_t *start
   */
 EXPORTC uint32_t STDCALL GetQHYCCDOverScanArea(qhyccd_handle *h,uint32_t *startX, uint32_t *startY, uint32_t *sizeX, uint32_t *sizeY);
 
+EXPORTC uint32_t STDCALL GetQHYCCDCurrentROI(qhyccd_handle *handle, uint32_t *startX, uint32_t *startY, uint32_t *sizeX, uint32_t *sizeY);
 
 /** @fn uint32_t SetQHYCCDFocusSetting(qhyccd_handle *h,uint32_t focusCenterX, uint32_t focusCenterY)
       @brief Set the camera on focus mode
@@ -702,8 +719,6 @@ EXPORTC double STDCALL GetQHYCCDReadingProgress(qhyccd_handle *handle);
 */
 EXPORTC uint32_t STDCALL TestQHYCCDPIDParas(qhyccd_handle *h, double p, double i, double d);
 
-EXPORTC uint32_t STDCALL SetQHYCCDTrigerFunction(qhyccd_handle *h,bool value);
-
 EXPORTC uint32_t STDCALL DownloadFX3FirmWare(uint16_t vid,uint16_t pid,char *imgpath);
 
 EXPORTC uint32_t STDCALL GetQHYCCDType(qhyccd_handle *h);
@@ -875,6 +890,13 @@ EXPORTFUNC uint32_t STDCALL GetReadModesNumber(char* deviceID,uint32_t* numModes
 
 EXPORTFUNC uint32_t STDCALL GetReadModeName(char* deviceID, uint32_t modeIndex, char* modeName);
 
+EXPORTFUNC void STDCALL QHYCCDSensorPhaseReTrain(qhyccd_handle *handle);
+EXPORTFUNC void STDCALL QHYCCDReadInitConfigFlash(qhyccd_handle *handle, char* configString_raw64);
+EXPORTFUNC void STDCALL QHYCCDEraseInitConfigFlash(qhyccd_handle *handle);
+EXPORTFUNC void STDCALL QHYCCDResetFlashULVOError(qhyccd_handle *handle);
+EXPORTFUNC void STDCALL QHYCCDTestFlashULVOError(qhyccd_handle *handle);
+EXPORTFUNC void STDCALL QHYCCDSetFlashInitPWM(qhyccd_handle *handle,uint8_t pwm);
+EXPORTFUNC void STDCALL QHYCCDGetDebugDataD3(qhyccd_handle *handle, char* debugData_raw64);
 
 
 EXPORTFUNC int STDCALL QHYCCD_fpga_list(struct fpga_info_list &list);
@@ -957,3 +979,6 @@ EXPORTC void STDCALL QHYCCD_fpga_reset();
 void call_pnp_event();
 void call_data_event_live(char *id, uint8_t *imgdata);
 void call_transfer_event_error();
+EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
+EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
+EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());

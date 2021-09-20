@@ -1340,6 +1340,8 @@
 #define   SINGLE_MODE 								0
 #define   LIVE_MODE 								1
 
+#define   FLASH_CONFIG_PAGE_INDEX					1
+
 #define   FPGA_MODE_DEFAULT 						99
 #define   FPGA_MODE_12_47M 								12     //14bit rigister= 11M  12bit rigister = 47M
 #define   FPGA_MODE_14_11M 								14         //14bit rigister= 11M  12bit rigister = 47M

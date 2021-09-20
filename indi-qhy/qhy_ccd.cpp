@@ -2586,7 +2586,7 @@ void QHYCCD::getExposure()
          * about one second, after which decrease the poll interval
          */
         double timeLeft = calcTimeLeft();
-        uint32_t uSecs = 0;
+        uint32_t uSecs = 100000;
         if (timeLeft > 1.1)
         {
             /*
@@ -2595,22 +2595,11 @@ void QHYCCD::getExposure()
              * a full second boundary, which keeps the
              * count down neat
              */
-            double fraction = timeLeft - static_cast<int>(timeLeft);
-            if (fraction >= 0.005)
-            {
-                uSecs = static_cast<uint32_t>(fraction * 1000000.0);
-            }
-            else
-            {
-                uSecs = 1000000;
-            }
-        }
-        else
-        {
-            uSecs = 10000;
+            timeLeft = round(timeLeft);
+            uSecs = 1000000;
         }
 
-        if (timeLeft >= 0.0049)
+        if (timeLeft >= 0)
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }

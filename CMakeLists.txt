@@ -233,6 +233,11 @@ if (WITH_SV305)
 add_subdirectory(libsv305)
 endif (WITH_SV305)
 
+#libplayerone
+if (WITH_PLAYERONE)
+add_subdirectory(libplayerone)
+endif(WITH_PLAYERONE)
+
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
 
@@ -584,13 +589,13 @@ endif(WITH_ORION_SSG3)
 
 # PLAYERONE
 if (WITH_PLAYERONE)
-find_package(PLAYER-ONE)
-if (POA_FOUND)
+find_package(PLAYERONE)
+if (PLAYERONE_FOUND)
 add_subdirectory(indi-playerone)
-else (POA_FOUND)
+else (PLAYERONE_FOUND)
 add_subdirectory(libplayerone)
 SET(LIBRARIES_FOUND FALSE)
-endif(POA_FOUND)
+endif(PLAYERONE_FOUND)
 endif(WITH_PLAYERONE)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
@@ -665,6 +670,10 @@ endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 if (WITH_SV305 AND NOT SV305_FOUND)
 message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
 endif (WITH_SV305 AND NOT SV305_FOUND)
+
+if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
+message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
+endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)

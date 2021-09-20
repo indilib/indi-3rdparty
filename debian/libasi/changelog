@@ -1,3 +1,12 @@
+libasi (1.20) UNRELEASED; urgency=medium
+
+  * ASI Camera SDK 1.20 release. Changelog:
+    V1.20 2021.9.6
+    Add new cameras ASI482MC,ASI485MC
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sun, 12 Sep 2021 20:56:19 +0300
+
 libasi (1.19) buster; urgency=medium
 
   * ASI Camera SDK 1.19.1 release. Changelog again:
