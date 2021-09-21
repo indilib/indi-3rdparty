@@ -66,6 +66,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.5 : Mac OS X 64 bits support added
 	+ 1.2.4 : SV305M Pro support added
 	+ 1.2.3 : min/max exposure values fix
 	+ 1.2.2 : Fix SV305PRO detection
