@@ -1,3 +1,9 @@
+indi-sv305 (1.2.5) bionic; urgency=low
+
+  * Mac OS X 64 bits support added
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Tue, 21 Sep 2021 16:00:00 +0300
+
 indi-sv305 (1.2.4) bionic; urgency=low
 
   * SV305M Pro support added
