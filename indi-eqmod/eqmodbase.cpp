@@ -808,20 +808,6 @@ void EQMod::TimerHit()
 
 bool EQMod::ReadScopeStatus()
 {
-    //static struct timeval ltv;
-    //struct timeval tv;
-    //double dt=0;
-
-    /* update elapsed time since last poll, don't presume exactly POLLMS */
-    // gettimeofday (&tv, nullptr);
-
-    //if (ltv.tv_sec == 0 && ltv.tv_usec == 0)
-    //  ltv = tv;
-
-    //dt = tv.tv_sec - ltv.tv_sec + (tv.tv_usec - ltv.tv_usec)/1e6;
-    //ltv = tv;
-    //TODO use dt to track mount desynchronisation/inactivity?
-
     // Time
     double juliandate = 0;
     double lst = 0;
@@ -938,12 +924,16 @@ bool EQMod::ReadScopeStatus()
 
         lnradec.rightascension  = alignedRA;
         lnradec.declination = alignedDEC;
-        /* uses sidereal time, not local sidereal time */
-        INDI::EquatorialToHorizontal(&lnradec, &m_Location, juliandate, &lnaltaz);
-        horizvalues[0] = lnaltaz.azimuth;
-        horizvalues[1] = lnaltaz.altitude;
-        IUUpdateNumber(HorizontalCoordNP, horizvalues, (char **)horiznames, 2);
-        IDSetNumber(HorizontalCoordNP, nullptr);
+        // Only update Alt/Az if the scope is not idle.
+        if (TrackState != SCOPE_IDLE && TrackState != SCOPE_PARKED)
+        {
+            /* uses sidereal time, not local sidereal time */
+            INDI::EquatorialToHorizontal(&lnradec, &m_Location, juliandate, &lnaltaz);
+            horizvalues[0] = lnaltaz.azimuth;
+            horizvalues[1] = lnaltaz.altitude;
+            IUUpdateNumber(HorizontalCoordNP, horizvalues, (char **)horiznames, 2);
+            IDSetNumber(HorizontalCoordNP, nullptr);
+        }
 
         steppervalues[0] = currentRAEncoder;
         steppervalues[1] = currentDEEncoder;
@@ -1867,23 +1857,23 @@ bool EQMod::Goto(double r, double d)
     double ghratarget = r, ghdetarget = d;
     if (AlignMethodSP.sp[0].s == ISS_ON)
     {
-    aligned = true;
-    if (align)
-    {
-        align->AlignGoto(syncdata, juliandate, &m_Location, &ghratarget, &ghdetarget);
-        LOGF_INFO("Aligned Eqmod Goto RA=%g DE=%g (target RA=%g DE=%g)", ghratarget, ghdetarget,
-                  r, d);
-    }
-    else
-    {
-        if (syncdata.lst != 0.0)
+        aligned = true;
+        if (align)
         {
-            ghratarget = gotoparams.ratarget - syncdata.deltaRA;
-            ghdetarget = gotoparams.detarget - syncdata.deltaDEC;
-            LOGF_INFO("Failed Eqmod Goto RA=%g DE=%g (target RA=%g DE=%g)", ghratarget,
-                      ghdetarget, r, d);
+            align->AlignGoto(syncdata, juliandate, &m_Location, &ghratarget, &ghdetarget);
+            LOGF_INFO("Aligned Eqmod Goto RA=%g DE=%g (target RA=%g DE=%g)", ghratarget, ghdetarget,
+                      r, d);
         }
-    }
+        else
+        {
+            if (syncdata.lst != 0.0)
+            {
+                ghratarget = gotoparams.ratarget - syncdata.deltaRA;
+                ghdetarget = gotoparams.detarget - syncdata.deltaDEC;
+                LOGF_INFO("Failed Eqmod Goto RA=%g DE=%g (target RA=%g DE=%g)", ghratarget,
+                          ghdetarget, r, d);
+            }
+        }
     }
 #endif
 #ifdef WITH_ALIGN
@@ -1892,7 +1882,7 @@ bool EQMod::Goto(double r, double d)
         TelescopeDirectionVector TDV;
         aligned = true;
         if (!TransformCelestialToTelescope(r, d, 0.0, TDV))
-        {            
+        {
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Failed TransformCelestialToTelescope:  RA=%lf DE=%lf, Goto RA=%lf DE=%lf", r, d, gotoparams.ratarget,
                    gotoparams.detarget);
@@ -2157,7 +2147,7 @@ bool EQMod::Sync(double ra, double dec)
             // Tell the math plugin to reinitialise
             Initialise(this);
 
-        }        
+        }
     }
 #endif
 #if defined WITH_ALIGN_GEEHALEL || defined WITH_ALIGN
