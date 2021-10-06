@@ -232,7 +232,7 @@ void Quad::FixImgFromCamera( const std::vector<uint16_t> & data,
         default:
         {
             std::stringstream msg;
-            msg << "Invaild number of ad ouputs = " << m_CamCfgData->m_MetaData.NumAdOutputs;
+            msg << "Invaild number of ad outputs = " << m_CamCfgData->m_MetaData.NumAdOutputs;
             apgHelper::throwRuntimeException( m_fileName, msg.str(), 
                 __LINE__, Apg::ErrorType_InvalidUsage );
         }
