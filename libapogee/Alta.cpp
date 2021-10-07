@@ -711,7 +711,7 @@ void Alta::StopExposureImageReady(const bool Digitize )
                 CameraRegs::CMD_B_END_EXPOSURE_BIT );
 
         // calling this again to make sure the CAMCON and BUFCON internals
-        // are ok and not mucked up if data was transfered between
+        // are ok and not mucked up if data was transferred between
         // the first hard stop and the register call
         HardStopExposure( "Hard stop 1 of an exposure of image sequences" );
      }
