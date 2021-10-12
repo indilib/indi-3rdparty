@@ -60,12 +60,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi_ahp-xc
+cd indi-ahp-xc
 %cmake -DINDI_DATA_DIR=/usr/share/indi .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi_ahp-xc
+cd indi-ahp-xc
 make DESTDIR=%{buildroot} install
 
 %files
