@@ -47,6 +47,7 @@ BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
 Provides: libahp_xc.so()(64bit)
+Provides: libahp_xc.so.1()(64bit)
 Provides: libahp_xc.so
 
 %description
