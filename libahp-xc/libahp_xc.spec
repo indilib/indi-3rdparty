@@ -46,8 +46,8 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-Provides: libahp-xc.so()(64bit)
-Provides: libahp-xc.so
+Provides: libahp_xc.so()(64bit)
+Provides: libahp_xc.so
 
 %description
 INDI is a distributed control protocol designed to operate
