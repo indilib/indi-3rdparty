@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: libahp_xc
+Name: libahp-xc
 Version:1.9.3.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -46,8 +46,8 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-Provides: libahp_xc.so()(64bit)
-Provides: libahp_xc.so
+Provides: libahp-xc.so()(64bit)
+Provides: libahp-xc.so
 
 %description
 INDI is a distributed control protocol designed to operate
@@ -65,12 +65,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libahp_xc
+cd libahp-xc
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libahp_xc
+cd libahp-xc
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
