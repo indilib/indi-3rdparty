@@ -53,18 +53,19 @@ public:
     {
         arv::ArvCamera *camera = arv::ArvFactory::find_first_available();
         cameras.push_back(std::unique_ptr<GigECCD>(new GigECCD(camera)));
+        IDLog("Found Camera: %s\n", camera->model_name());
     }
 } loader;
 
 const char *GigECCD::getDefaultName()
 {
-    return this->name;
+    return "GigE CCD";
 }
 
 GigECCD::GigECCD(arv::ArvCamera *camera)
 {
     this->camera = camera;
-    snprintf(this->name, sizeof(this->name), "%s", this->camera->model_name());
+    snprintf(this->name, sizeof(this->name), "GigE CCD%s", this->camera->model_name());
     setDeviceName(this->name);
 }
 
@@ -160,7 +161,7 @@ bool GigECCD::updateProperties()
 
 bool GigECCD::Connect()
 {
-    LOGF_INFO("%s", __PRETTY_FUNCTION__);
+    IDLog("Connect to Camera: %s\n", camera->model_name());
     return camera->connect();
 }
 

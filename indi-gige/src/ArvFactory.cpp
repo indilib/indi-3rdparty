@@ -28,8 +28,9 @@
 
 arv::ArvCamera *ArvFactory::find_first_available(void)
 {
-    ::ArvCamera *camera    = arv_camera_new(nullptr);
-    const char *model_name = arv_camera_get_model_name(camera);
+    GError *error = NULL;
+    ::ArvCamera *camera    = arv_camera_new(nullptr, &error);
+    const char *model_name = arv_camera_get_model_name(camera, &error);
 
     if ((camera == nullptr) || (model_name == nullptr))
         return nullptr;

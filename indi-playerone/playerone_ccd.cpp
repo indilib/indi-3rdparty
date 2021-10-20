@@ -1212,6 +1212,13 @@ bool POACCD::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
+    ret = POASetImageFormat(mCameraInfo.cameraID, getImageType());
+    if (ret != POA_OK)
+    {
+        LOGF_ERROR("Failed to set ROI image format (%s).", Helpers::toString(ret));
+        return false;
+    }
+    
     ret = POASetImageStartPos(mCameraInfo.cameraID, subX, subY);
     if (ret != POA_OK)
     {

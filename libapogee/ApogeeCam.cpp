@@ -3225,7 +3225,7 @@ Apg::FanMode ApogeeCam::DefaultGetFanMode()
     else
     {
         std::stringstream msg;
-        msg << "Unknow fan DAC value: " << val;
+        msg << "Unknown fan DAC value: " << val;
         apgHelper::throwRuntimeException( m_fileName, msg.str(), 
             __LINE__, Apg::ErrorType_InvalidUsage );
     }

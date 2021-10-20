@@ -5,7 +5,7 @@
 *
 * Copyright(c) 2011 Apogee Imaging Systems, Inc. 
 * \namespace ImgFix 
-* \brief namespace for dealing with removing ad latency pixels and re-ordering pixels for dual and quad ouputs 
+* \brief namespace for dealing with removing ad latency pixels and re-ordering pixels for dual and quad outputs
 * 
 */ 
 

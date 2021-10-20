@@ -44,7 +44,7 @@ The PlayerOne Cameras are very USB bandwidth hungry when running at high
 FPS. If you see "broken frames" with more that one of them running,
 keep in mind this important aspect.
 
-ASICameras continuously generate frames and they are buffered in the
+PlayerOne Cameras continuously generate frames and they are buffered in the
 driver. To avoid having frames with old parameters when these are
 changed, a flushing mechanism is employed. It looks OK, but if you
 find any problem with parameters changes not being immediately applied
