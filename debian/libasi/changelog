@@ -1,3 +1,9 @@
+libasi (1.22) buster; urgency=medium
+
+  * ASI Camera SDK 1.20.2 release. No changelog entry from ZWO.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Fri, 22 Oct 2021 20:24:07 +0300
+
 libasi (1.21) buster; urgency=medium
 
   * ASI Camera SDK 1.20.1 release. Changelog:
