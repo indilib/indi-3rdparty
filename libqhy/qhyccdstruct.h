@@ -181,7 +181,7 @@ enum CONTROL_ID
 /*17*/  CONTROL_CFWPORT,        //!< control camera color filter wheel port
 /*18*/  CONTROL_COOLER,         //!< check if camera has cooler
 /*19*/  CONTROL_ST4PORT,        //!< check if camera has st4port
-/*20*/  CAM_COLOR,
+/*20*/  CAM_COLOR,              /// FIXME!  CAM_IS_COLOR CAM_COLOR conflict
 /*21*/  CAM_BIN1X1MODE,         //!< check if camera has bin1x1 mode
 /*22*/  CAM_BIN2X2MODE,         //!< check if camera has bin2x2 mode
 /*23*/  CAM_BIN3X3MODE,         //!< check if camera has bin3x3 mode
@@ -240,6 +240,7 @@ enum CONTROL_ID
 /*70*/  CAM_TRIGER_MODE, //check if camera has multiple triger mode
 /*71*/  CAM_TRIGER_OUT, //check if camera support triger out function
 /*72*/  CAM_BURST_MODE, //check if camera support burst mode
+/*73*/  CAM_SPEAKER_LED_ALARM, // for OEM-600
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
