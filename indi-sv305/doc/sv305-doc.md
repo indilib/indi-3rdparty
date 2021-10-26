@@ -3,10 +3,9 @@
 
 ## Installation
 
-The INDI SV305 driver supports the SVBONY SV305 and SV305 PRO cameras on Intel (x86, amd64) and ARM (armv6, armv7 and armv8) Linux.
+The INDI SV305 driver supports the SVBONY SV305, SV305 PRO and SV305M PRO cameras on Intel (x86, amd64) and ARM (armv6, armv7 and armv8) Linux.
 Mac OS X 64 bits is also supported.  
 The SV105 and SV205 are UVC devices, please look at this page https://www.indilib.org/ccds/web-cameras.html  
-The SV305M PRO support is in progress.  
 
 In order to install the driver on Debian based distributions, use:  
 
@@ -33,11 +32,6 @@ The driver supports single framing and streaming.
 - Exposures can't be aborted
 - Intensive configuration changes could lead to a crash
 - Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
-- SV305M PRO should work, but not tested yet
-
-### Work in progress:
-
-- Full SV305M PRO support
 
 ## Operation
 

@@ -404,10 +404,18 @@ bool Sv305CCD::Connect()
     }
 
     // set frame format and feed UI
-    IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
-    IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
-    IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    frameFormat=FORMAT_RAW12;
+    // NOTE : SV305M PRO only supports Y8 and Y6 frame format
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+        IUFillSwitch(&FormatS[FORMAT_Y8], "FORMAT_Y8", "Luminance 8 bits", ISS_OFF);
+        IUFillSwitch(&FormatS[FORMAT_Y16], "FORMAT_Y16", "Luminance 16 bits", ISS_ON);
+        IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        frameFormat=FORMAT_Y16;
+    } else {
+        IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
+        IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
+        IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        frameFormat=FORMAT_RAW12;
+    }
     bitDepth=16;
     status = SVBSetOutputImageType(cameraID, frameFormatMapping[frameFormat]);
     if(status != SVB_SUCCESS)
@@ -1067,9 +1075,11 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             switch(frameFormat)
             {
                 case FORMAT_RAW8 :
+                case FORMAT_Y8 :
                     bitDepth = 8;
                     break;
                 case FORMAT_RAW12 :
+                case FORMAT_Y16 :
                     bitDepth = 16;
                     break;
                 default :
