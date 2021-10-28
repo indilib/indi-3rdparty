@@ -30,6 +30,11 @@
  file called LICENSE.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // for program_invocation_short_name used in Loader()
+#endif//_GNU_SOURCE
+
+
 #include "asi_wheel.h"
 
 #include "config.h"
@@ -38,6 +43,11 @@
 #include <unistd.h>
 #include <deque>
 #include <memory>
+
+#ifdef  _GNU_SOURCE
+#include <errno.h>
+#include <ctype.h>
+#endif//_GNU_SOURCE
 
 //#define SIMULATION
 
@@ -79,6 +89,24 @@ public:
                 continue;
             }
             std::string name = "ASI " + std::string(info.Name);
+#ifdef  _GNU_SOURCE
+	    {
+#define EFW_ASI_DFLT_DVR "indi_asi_wheel"
+
+		char *cptr;
+		if ((cptr = strstr(program_invocation_short_name, EFW_ASI_DFLT_DVR)) == program_invocation_short_name) { // i.e., startsWith
+		    cptr += strlen(EFW_ASI_DFLT_DVR);
+		    while (*cptr != '\0') {
+			if (isalnum(*cptr)) {
+			    name += (char)toupper(*cptr);
+			} else {
+			    name += " ";
+			}
+			cptr++;
+		    }
+		}
+	    }
+#endif//_GNU_SOURCE
             if (num_wheels > 1)
                 name += " " + std::to_string(i);
             wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
