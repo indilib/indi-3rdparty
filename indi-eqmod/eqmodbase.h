@@ -125,10 +125,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         ISwitchVectorProperty *ST4GuideRateNSSP = nullptr;
         ISwitchVectorProperty *ST4GuideRateWESP = nullptr;
 
-        ISwitchVectorProperty *RAPPECTrainingSP = nullptr;
-        ISwitchVectorProperty *DEPPECTrainingSP = nullptr;
-        ISwitchVectorProperty *RAPPECSP         = nullptr;
-        ISwitchVectorProperty *DEPPECSP         = nullptr;
+        ISwitchVectorProperty *PPECTrainingSP = nullptr;
+        ISwitchVectorProperty *PPECSP         = nullptr;
 
         ISwitchVectorProperty *SNAPPORT1SP      = nullptr;
         ISwitchVectorProperty *SNAPPORT2SP      = nullptr;
@@ -205,8 +203,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int ah_waitRA, ah_waitDE;
 
         // save PPEC status when guiding
-        bool restartguideRAPPEC;
-        bool restartguideDEPPEC;
+        bool restartguidePPEC;
 
         // One bit for each axis
         uint8_t pulseInProgress;
