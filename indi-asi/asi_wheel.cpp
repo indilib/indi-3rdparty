@@ -85,7 +85,7 @@ static class Loader
                 if (num_wheels == 1)
                 {
                     char *envDev = getenv("INDIDEV");
-                    if (!envDev)
+                    if (envDev && envDev[0])
                         name = envDev;
                 }
                 else
