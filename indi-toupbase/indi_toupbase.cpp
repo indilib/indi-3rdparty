@@ -746,6 +746,9 @@ void ToupBase::setupParams()
     // Get active resolution index
     uint32_t currentResolutionIndex = 0;
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
+    // If we have a config resolution index, then prefer it over the current resolution index.
+    currentResolutionIndex = (m_ConfigResolutionIndex > 0
+                              && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
