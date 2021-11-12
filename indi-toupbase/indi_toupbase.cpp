@@ -329,6 +329,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitchVector(&ResolutionSP, ResolutionS, 0, getDeviceName(), "CCD_RESOLUTION", "Resolution", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
+    IUGetConfigOnSwitchIndex(getDeviceName(), ResolutionSP.name, &m_ConfigResolutionIndex);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
@@ -745,6 +746,14 @@ void ToupBase::setupParams()
     // Get active resolution index
     uint32_t currentResolutionIndex = 0;
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
+    // In case there is NO previous resolution set
+    // then select the LOWER resolution on arm architecture
+    // since this has less chance of failure. If the user explicitly selects any resolution
+    // it would be saved in the config and this will not apply.
+#if defined(__arm__) || defined (__aarch64__)
+    if (m_ConfigResolutionIndex == -1)
+        currentResolutionIndex = ResolutionSP.nsp - 1;
+#endif
     ResolutionS[currentResolutionIndex].s = ISS_ON;
 
     SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
@@ -1689,6 +1698,11 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 ResolutionSP.s = IPS_OK;
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", ResolutionS[targetIndex].label);
+                if (m_ConfigResolutionIndex != targetIndex)
+                {
+                    saveConfig(true, ResolutionSP.name);
+                    m_ConfigResolutionIndex = targetIndex;
+                }
                 allocateFrameBuffer();
             }
 
