@@ -155,8 +155,8 @@ class Sv305CCD : public INDI::CCD
 	// NOTE : SV305M PRO d'ont support RAW8 and RAW16, only Y8 and Y16
         ISwitch FormatS[2];
         ISwitchVectorProperty FormatSP;
-        enum { FORMAT_RAW12, FORMAT_RAW8, FORMAT_Y8, FORMAT_Y16};
-        SVB_IMG_TYPE frameFormatMapping[4] = {SVB_IMG_RAW12, SVB_IMG_RAW8, SVB_IMG_Y8, SVB_IMG_Y16};
+        enum { FORMAT_RAW12, FORMAT_RAW8, FORMAT_Y16, FORMAT_Y8};
+        SVB_IMG_TYPE frameFormatMapping[4] = {SVB_IMG_RAW12, SVB_IMG_RAW8, SVB_IMG_Y16, SVB_IMG_Y8};
         int frameFormat;
         const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
 
