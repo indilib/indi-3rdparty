@@ -66,6 +66,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.7 : fix on RAW8/RAW12 formats selection on SV305M Pro
 	+ 1.2.6 : SV305M Pro frame format fix
 	+ 1.2.5 : Mac OS X 64 bits support added
 	+ 1.2.4 : SV305M Pro support added
