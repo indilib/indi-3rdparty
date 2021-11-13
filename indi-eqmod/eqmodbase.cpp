@@ -156,8 +156,7 @@ EQMod::EQMod()
     srand(time(nullptr));
     // Others
     AutohomeState      = AUTO_HOME_IDLE;
-    restartguideRAPPEC = false;
-    restartguideDEPPEC = false;
+    restartguidePPEC   = false;
 }
 
 EQMod::~EQMod()
@@ -352,10 +351,8 @@ void EQMod::ISGetProperties(const char *dev)
         }
         if (mount->HasPPEC())
         {
-            defineProperty(RAPPECTrainingSP);
-            defineProperty(RAPPECSP);
-            defineProperty(DEPPECTrainingSP);
-            defineProperty(DEPPECSP);
+            defineProperty(PPECTrainingSP);
+            defineProperty(PPECSP);
         }
         if (mount->HasSnapPort1())
         {
@@ -425,10 +422,8 @@ bool EQMod::loadProperties()
     AuxEncoderNP        = getNumber("AUXENCODERVALUES");
     ST4GuideRateNSSP    = getSwitch("ST4_GUIDE_RATE_NS");
     ST4GuideRateWESP    = getSwitch("ST4_GUIDE_RATE_WE");
-    RAPPECTrainingSP    = getSwitch("RA_PPEC_TRAINING");
-    RAPPECSP            = getSwitch("RA_PPEC");
-    DEPPECTrainingSP    = getSwitch("DE_PPEC_TRAINING");
-    DEPPECSP            = getSwitch("DE_PPEC");
+    PPECTrainingSP      = getSwitch("PPEC_TRAINING");
+    PPECSP              = getSwitch("PPEC");
     LEDBrightnessNP     = getNumber("LED_BRIGHTNESS");
     SNAPPORT1SP         = getSwitch("SNAPPORT1");
     SNAPPORT2SP         = getSwitch("SNAPPORT2");
@@ -532,40 +527,23 @@ bool EQMod::updateProperties()
             if (mount->HasPPEC())
             {
                 bool intraining, inppec;
-                defineProperty(RAPPECTrainingSP);
-                defineProperty(RAPPECSP);
-                defineProperty(DEPPECTrainingSP);
-                defineProperty(DEPPECSP);
+                defineProperty(PPECTrainingSP);
+                defineProperty(PPECSP);
                 LOG_INFO("Mount has PPEC.");
-                mount->GetRAPPECStatus(&intraining, &inppec);
+                mount->GetPPECStatus(&intraining, &inppec);
                 if (intraining)
                 {
-                    RAPPECTrainingSP->sp[0].s = ISS_OFF;
-                    RAPPECTrainingSP->sp[1].s = ISS_ON;
-                    RAPPECTrainingSP->s       = IPS_BUSY;
-                    IDSetSwitch(RAPPECTrainingSP, nullptr);
+                    PPECTrainingSP->sp[0].s = ISS_OFF;
+                    PPECTrainingSP->sp[1].s = ISS_ON;
+                    PPECTrainingSP->s       = IPS_BUSY;
+                    IDSetSwitch(PPECTrainingSP, nullptr);
                 }
                 if (inppec)
                 {
-                    RAPPECSP->sp[0].s = ISS_OFF;
-                    RAPPECSP->sp[1].s = ISS_ON;
-                    RAPPECSP->s       = IPS_BUSY;
-                    IDSetSwitch(RAPPECSP, nullptr);
-                }
-                mount->GetDEPPECStatus(&intraining, &inppec);
-                if (intraining)
-                {
-                    DEPPECTrainingSP->sp[0].s = ISS_OFF;
-                    DEPPECTrainingSP->sp[1].s = ISS_ON;
-                    DEPPECTrainingSP->s       = IPS_BUSY;
-                    IDSetSwitch(DEPPECTrainingSP, nullptr);
-                }
-                if (inppec)
-                {
-                    DEPPECSP->sp[0].s = ISS_OFF;
-                    DEPPECSP->sp[1].s = ISS_ON;
-                    DEPPECSP->s       = IPS_BUSY;
-                    IDSetSwitch(DEPPECSP, nullptr);
+                    PPECSP->sp[0].s = ISS_OFF;
+                    PPECSP->sp[1].s = ISS_ON;
+                    PPECSP->s       = IPS_BUSY;
+                    IDSetSwitch(PPECSP, nullptr);
                 }
             }
 
@@ -660,10 +638,8 @@ bool EQMod::updateProperties()
         }
         if (mount->HasPPEC())
         {
-            deleteProperty(RAPPECTrainingSP->name);
-            deleteProperty(RAPPECSP->name);
-            deleteProperty(DEPPECTrainingSP->name);
-            deleteProperty(DEPPECSP->name);
+            deleteProperty(PPECTrainingSP->name);
+            deleteProperty(PPECSP->name);
         }
         if (mount->HasSnapPort1())
         {
@@ -1094,30 +1070,17 @@ bool EQMod::ReadScopeStatus()
 
         if (mount->HasPPEC())
         {
-            if (RAPPECTrainingSP->s == IPS_BUSY)
+            if (PPECTrainingSP->s == IPS_BUSY)
             {
                 bool intraining, inppec;
-                mount->GetRAPPECStatus(&intraining, &inppec);
+                mount->GetPPECStatus(&intraining, &inppec);
                 if (!(intraining))
                 {
-                    LOG_INFO("RA PPEC Training completed.");
-                    RAPPECTrainingSP->sp[0].s = ISS_ON;
-                    RAPPECTrainingSP->sp[1].s = ISS_OFF;
-                    RAPPECTrainingSP->s       = IPS_IDLE;
-                    IDSetSwitch(RAPPECTrainingSP, nullptr);
-                }
-            }
-            if (DEPPECTrainingSP->s == IPS_BUSY)
-            {
-                bool intraining, inppec;
-                mount->GetDEPPECStatus(&intraining, &inppec);
-                if (!(intraining))
-                {
-                    LOG_INFO("DE PPEC Training completed.");
-                    DEPPECTrainingSP->sp[0].s = ISS_ON;
-                    DEPPECTrainingSP->sp[1].s = ISS_OFF;
-                    DEPPECTrainingSP->s       = IPS_IDLE;
-                    IDSetSwitch(DEPPECTrainingSP, nullptr);
+                    LOG_INFO("PPEC Training completed.");
+                    PPECTrainingSP->sp[0].s = ISS_ON;
+                    PPECTrainingSP->sp[1].s = ISS_OFF;
+                    PPECTrainingSP->s       = IPS_IDLE;
+                    IDSetSwitch(PPECTrainingSP, nullptr);
                 }
             }
         }
@@ -2201,16 +2164,6 @@ IPState EQMod::GuideNorth(uint32_t ms)
         rateshift = -rateshift;
     try
     {
-        if (mount->HasPPEC())
-        {
-            restartguideDEPPEC = false;
-            if (DEPPECSP->s == IPS_BUSY)
-            {
-                restartguideDEPPEC = true;
-                LOG_INFO("Turning DEC PPEC off while guiding.");
-                mount->TurnDEPPEC(false);
-            }
-        }
         if (ms >= MinPulseTimerN->value)
         {
             pulseInProgress |= 1;
@@ -2235,15 +2188,6 @@ IPState EQMod::GuideNorth(uint32_t ms)
             }
             try
             {
-                if (mount->HasPPEC())
-                {
-                    if (restartguideDEPPEC)
-                    {
-                        restartguideDEPPEC = false;
-                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning DEC PPEC on after guiding.");
-                        mount->TurnDEPPEC(true);
-                    }
-                }
                 mount->StartDETracking(GetDETrackRate());
             }
             catch (EQModError e)
@@ -2284,16 +2228,6 @@ IPState EQMod::GuideSouth(uint32_t ms)
         rateshift = -rateshift;
     try
     {
-        if (mount->HasPPEC())
-        {
-            restartguideDEPPEC = false;
-            if (DEPPECSP->s == IPS_BUSY)
-            {
-                restartguideDEPPEC = true;
-                LOG_INFO("Turning DEC PPEC off while guiding.");
-                mount->TurnDEPPEC(false);
-            }
-        }
         if (ms >= MinPulseTimerN->value)
         {
             pulseInProgress |= 1;
@@ -2318,15 +2252,6 @@ IPState EQMod::GuideSouth(uint32_t ms)
             }
             try
             {
-                if (mount->HasPPEC())
-                {
-                    if (restartguideDEPPEC)
-                    {
-                        restartguideDEPPEC = false;
-                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning DEC PPEC on after guiding.");
-                        mount->TurnDEPPEC(true);
-                    }
-                }
                 mount->StartDETracking(GetDETrackRate());
             }
             catch (EQModError e)
@@ -2368,12 +2293,12 @@ IPState EQMod::GuideEast(uint32_t ms)
     {
         if (mount->HasPPEC())
         {
-            restartguideRAPPEC = false;
-            if (RAPPECSP->s == IPS_BUSY)
+            restartguidePPEC = false;
+            if (PPECSP->s == IPS_BUSY)
             {
-                restartguideRAPPEC = true;
-                LOG_INFO("Turning RA PPEC off while guiding.");
-                mount->TurnRAPPEC(false);
+                restartguidePPEC = true;
+                LOG_INFO("Turning PPEC off while guiding.");
+                mount->TurnPPEC(false);
             }
         }
         if (ms >= MinPulseTimerN->value)
@@ -2402,11 +2327,11 @@ IPState EQMod::GuideEast(uint32_t ms)
             {
                 if (mount->HasPPEC())
                 {
-                    if (restartguideRAPPEC)
+                    if (restartguidePPEC)
                     {
-                        restartguideRAPPEC = false;
-                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning RA PPEC on after guiding.");
-                        mount->TurnRAPPEC(true);
+                        restartguidePPEC = false;
+                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning PPEC on after guiding.");
+                        mount->TurnPPEC(true);
                     }
                 }
                 mount->StartRATracking(GetRATrackRate());
@@ -2451,12 +2376,12 @@ IPState EQMod::GuideWest(uint32_t ms)
     {
         if (mount->HasPPEC())
         {
-            restartguideRAPPEC = false;
-            if (RAPPECSP->s == IPS_BUSY)
+            restartguidePPEC = false;
+            if (PPECSP->s == IPS_BUSY)
             {
-                restartguideRAPPEC = true;
-                LOG_INFO("Turning RA PPEC off while guiding.");
-                mount->TurnRAPPEC(false);
+                restartguidePPEC = true;
+                LOG_INFO("Turning PPEC off while guiding.");
+                mount->TurnPPEC(false);
             }
         }
         if (ms >= MinPulseTimerN->value)
@@ -2485,11 +2410,11 @@ IPState EQMod::GuideWest(uint32_t ms)
             {
                 if (mount->HasPPEC())
                 {
-                    if (restartguideRAPPEC)
+                    if (restartguidePPEC)
                     {
-                        restartguideRAPPEC = false;
-                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning RA PPEC on after guiding.");
-                        mount->TurnRAPPEC(true);
+                        restartguidePPEC = false;
+                        DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_SESSION, "Turning PPEC on after guiding.");
+                        mount->TurnPPEC(true);
                     }
                 }
                 mount->StartRATracking(GetRATrackRate());
@@ -2977,118 +2902,61 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
 
         if (mount->HasPPEC())
         {
-            if (RAPPECTrainingSP && strcmp(name, RAPPECTrainingSP->name) == 0)
+            if (PPECTrainingSP && strcmp(name, PPECTrainingSP->name) == 0)
             {
-                IUUpdateSwitch(RAPPECTrainingSP, states, names, n);
-                if (RAPPECTrainingSP->sp[1].s == ISS_ON)
+                IUUpdateSwitch(PPECTrainingSP, states, names, n);
+                if (PPECTrainingSP->sp[1].s == ISS_ON)
                 {
                     if (TrackState != SCOPE_TRACKING)
                     {
-                        RAPPECTrainingSP->s = IPS_IDLE;
-                        LOG_WARN("Can not start RA PPEC Training. Scope not tracking");
-                        IUResetSwitch(RAPPECTrainingSP);
-                        RAPPECTrainingSP->sp[0].s = ISS_ON;
-                        RAPPECTrainingSP->sp[1].s = ISS_OFF;
+                        PPECTrainingSP->s = IPS_IDLE;
+                        LOG_WARN("Can not start PPEC Training. Scope not tracking");
+                        IUResetSwitch(PPECTrainingSP);
+                        PPECTrainingSP->sp[0].s = ISS_ON;
+                        PPECTrainingSP->sp[1].s = ISS_OFF;
                     }
                     else
                     {
-                        RAPPECTrainingSP->s = IPS_BUSY;
-                        LOG_INFO("Turning RA PPEC Training on.");
+                        PPECTrainingSP->s = IPS_BUSY;
+                        LOG_INFO("Turning PPEC Training on.");
                         try
                         {
-                            mount->TurnRAPPECTraining(true);
+                            mount->TurnPPECTraining(true);
                         }
                         catch (EQModError e)
                         {
-                            LOG_WARN("Unable to start RA PPEC Training.");
-                            RAPPECTrainingSP->s       = IPS_ALERT;
-                            RAPPECTrainingSP->sp[0].s = ISS_ON;
-                            RAPPECTrainingSP->sp[1].s = ISS_OFF;
+                            LOG_WARN("Unable to start PPEC Training.");
+                            PPECTrainingSP->s       = IPS_ALERT;
+                            PPECTrainingSP->sp[0].s = ISS_ON;
+                            PPECTrainingSP->sp[1].s = ISS_OFF;
                         }
                     }
                 }
                 else
                 {
-                    RAPPECTrainingSP->s = IPS_IDLE;
-                    LOG_INFO("Turning RA PPEC Training off.");
-                    mount->TurnRAPPECTraining(false);
+                    PPECTrainingSP->s = IPS_IDLE;
+                    LOG_INFO("Turning PPEC Training off.");
+                    mount->TurnPPECTraining(false);
                 }
-                IDSetSwitch(RAPPECTrainingSP, nullptr);
+                IDSetSwitch(PPECTrainingSP, nullptr);
                 return true;
             }
-            if (RAPPECSP && strcmp(name, RAPPECSP->name) == 0)
+            if (PPECSP && strcmp(name, PPECSP->name) == 0)
             {
-                IUUpdateSwitch(RAPPECSP, states, names, n);
-                if (RAPPECSP->sp[1].s == ISS_ON)
+                IUUpdateSwitch(PPECSP, states, names, n);
+                if (PPECSP->sp[1].s == ISS_ON)
                 {
-                    RAPPECSP->s = IPS_BUSY;
-                    LOG_INFO("Turning RA PPEC on.");
-                    mount->TurnRAPPEC(true);
+                    PPECSP->s = IPS_BUSY;
+                    LOG_INFO("Turning PPEC on.");
+                    mount->TurnPPEC(true);
                 }
                 else
                 {
-                    RAPPECSP->s = IPS_IDLE;
-                    LOG_INFO("Turning RA PPEC off.");
-                    mount->TurnRAPPEC(false);
+                    PPECSP->s = IPS_IDLE;
+                    LOG_INFO("Turning PPEC off.");
+                    mount->TurnPPEC(false);
                 }
-                IDSetSwitch(RAPPECSP, nullptr);
-                return true;
-            }
-            if (DEPPECTrainingSP && strcmp(name, DEPPECTrainingSP->name) == 0)
-            {
-                IUUpdateSwitch(DEPPECTrainingSP, states, names, n);
-                if (DEPPECTrainingSP->sp[1].s == ISS_ON)
-                {
-                    if (TrackState != SCOPE_TRACKING)
-                    {
-                        DEPPECTrainingSP->s = IPS_IDLE;
-                        LOG_WARN("Can not start DEC PPEC Training. Scope not tracking");
-                        IUResetSwitch(DEPPECTrainingSP);
-                        DEPPECTrainingSP->sp[0].s = ISS_ON;
-                        DEPPECTrainingSP->sp[1].s = ISS_OFF;
-                    }
-                    else
-                    {
-                        DEPPECTrainingSP->s = IPS_BUSY;
-                        LOG_INFO("Turning DEC PPEC Training on.");
-                        try
-                        {
-                            mount->TurnDEPPECTraining(true);
-                        }
-                        catch (EQModError e)
-                        {
-                            LOG_WARN("Unable to start DEC PPEC Training.");
-                            DEPPECTrainingSP->s       = IPS_ALERT;
-                            DEPPECTrainingSP->sp[0].s = ISS_ON;
-                            DEPPECTrainingSP->sp[1].s = ISS_OFF;
-                        }
-                    }
-                }
-                else
-                {
-                    DEPPECTrainingSP->s = IPS_IDLE;
-                    LOG_INFO("Turning DEC PPEC Training off.");
-                    mount->TurnDEPPECTraining(false);
-                }
-                IDSetSwitch(DEPPECTrainingSP, nullptr);
-                return true;
-            }
-            if (DEPPECSP && strcmp(name, DEPPECSP->name) == 0)
-            {
-                IUUpdateSwitch(DEPPECSP, states, names, n);
-                if (DEPPECSP->sp[1].s == ISS_ON)
-                {
-                    DEPPECSP->s = IPS_BUSY;
-                    LOG_INFO("Turning DEC PPEC on.");
-                    mount->TurnDEPPEC(true);
-                }
-                else
-                {
-                    DEPPECSP->s = IPS_IDLE;
-                    LOG_INFO("Turning DEC PPEC off.");
-                    mount->TurnDEPPEC(false);
-                }
-                IDSetSwitch(DEPPECSP, nullptr);
+                IDSetSwitch(PPECSP, nullptr);
                 return true;
             }
         }
@@ -3446,15 +3314,6 @@ void EQMod::timedguideNSCallback(void *userpointer)
 
     try
     {
-        if (p->mount->HasPPEC())
-        {
-            if (p->restartguideDEPPEC)
-            {
-                p->restartguideDEPPEC = false;
-                DEBUGDEVICE(p->getDeviceName(), INDI::Logger::DBG_SESSION, "Turning DEC PPEC on after guiding.");
-                p->mount->TurnDEPPEC(true);
-            }
-        }
         p->mount->StartDETracking(p->GetDETrackRate());
     }
     catch (EQModError e)
@@ -3479,11 +3338,11 @@ void EQMod::timedguideWECallback(void *userpointer)
     {
         if (p->mount->HasPPEC())
         {
-            if (p->restartguideRAPPEC)
+            if (p->restartguidePPEC)
             {
-                p->restartguideRAPPEC = false;
-                DEBUGDEVICE(p->getDeviceName(), INDI::Logger::DBG_SESSION, "Turning RA PPEC on after guiding.");
-                p->mount->TurnRAPPEC(true);
+                p->restartguidePPEC = false;
+                DEBUGDEVICE(p->getDeviceName(), INDI::Logger::DBG_SESSION, "Turning PPEC on after guiding.");
+                p->mount->TurnPPEC(true);
             }
         }
         p->mount->StartRATracking(p->GetRATrackRate());
@@ -3769,10 +3628,7 @@ bool EQMod::saveConfigItems(FILE *fp)
     if (LEDBrightnessNP)
         IUSaveConfigNumber(fp, LEDBrightnessNP);
     if (HasPECState())
-    {
-        IUSaveConfigSwitch(fp, RAPPECSP);
-        IUSaveConfigSwitch(fp, DEPPECSP);
-    }
+        IUSaveConfigSwitch(fp, PPECSP);
 
 #ifdef WITH_ALIGN_GEEHALEL
     if (align)

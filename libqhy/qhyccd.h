@@ -36,6 +36,16 @@ EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
 
+
+/** \fn uint32_t SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time)
+      \brief set single frame time out 
+      \param time Timeout . unit is ms. In SDK default is 60,000ms. 0 is unlimit time. Must add some spare value in order to consider the readout time
+      \return
+	  on success,return QHYCCD_SUCCESS \n
+	  QHYCCD_ERROR_INITRESOURCE if the initialize failed \n
+	  another QHYCCD_ERROR code on other failures
+  */
+
 EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time);  
 
 
@@ -45,7 +55,6 @@ EXPORTC const char* STDCALL GetTimeStamp();
       \brief initialize QHYCCD SDK resource
       \return
 	  on success,return QHYCCD_SUCCESS \n
-	  QHYCCD_ERROR_INITRESOURCE if the initialize failed \n
 	  another QHYCCD_ERROR code on other failures
   */
 EXPORTC uint32_t STDCALL InitQHYCCDResource(void);
@@ -886,6 +895,7 @@ EXPORTFUNC void RegisterDataEventLive( void (*in_data_event_live_func)(char *id,
 
 EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
 
+EXPORTFUNC uint32_t STDCALL PCIEClearDDR(qhyccd_handle *handle);
 EXPORTFUNC uint32_t STDCALL GetReadModesNumber(char* deviceID,uint32_t* numModes);
 
 EXPORTFUNC uint32_t STDCALL GetReadModeName(char* deviceID, uint32_t modeIndex, char* modeName);
@@ -897,6 +907,7 @@ EXPORTFUNC void STDCALL QHYCCDResetFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDTestFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDSetFlashInitPWM(qhyccd_handle *handle,uint8_t pwm);
 EXPORTFUNC void STDCALL QHYCCDGetDebugDataD3(qhyccd_handle *handle, char* debugData_raw64);
+void  QHYCCDGetDebugControlID(CONTROL_ID controlId, bool hasValue, bool isSetValue, double value);
 
 
 EXPORTFUNC int STDCALL QHYCCD_fpga_list(struct fpga_info_list &list);

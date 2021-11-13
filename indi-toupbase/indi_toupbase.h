@@ -660,6 +660,8 @@ class ToupBase : public INDI::CCD
         uint32_t m_MaxGainHCG { 0 };
         uint32_t m_NativeGain { 0 };
 
+        int m_ConfigResolutionIndex {-1};
+
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
         friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
