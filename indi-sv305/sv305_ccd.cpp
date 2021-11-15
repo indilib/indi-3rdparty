@@ -412,6 +412,9 @@ bool Sv305CCD::Connect()
         frameFormat=FORMAT_Y16;
     } else {
         frameFormat=FORMAT_RAW12;
+        IUSaveText(&BayerT[0], "0");
+        IUSaveText(&BayerT[1], "0");
+        IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
     }
     bitDepth=16;
     status = SVBSetOutputImageType(cameraID, frameFormatMapping[frameFormat]);
@@ -421,9 +424,6 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    IUSaveText(&BayerT[0], "0");
-    IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
     LOG_INFO("Camera set frame format mode\n");
 
     // set bit stretching and feed UI
@@ -624,7 +624,12 @@ bool Sv305CCD::StartStreaming()
     LOG_INFO("framing\n");
 
     // stream init
-    Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
+    // NOTE : SV305M is MONO
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+        Streamer->setPixelFormat(INDI_MONO, bitDepth);
+    } else {
+        Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
+    }
     Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
 
     // streaming exposure time
@@ -645,11 +650,11 @@ bool Sv305CCD::StartStreaming()
     status = SVBSetCameraMode(cameraID, SVB_MODE_NORMAL);
     if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
+        LOG_ERROR("Error, camera normal mode failed\n");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera soft trigger mode\n");
+    LOG_INFO("Camera normal mode\n");
 
     pthread_mutex_unlock(&cameraID_mutex);
 
@@ -1209,10 +1214,15 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Gain", ControlsN[CCD_GAIN_N].value, 3, "Gain", &_status);
     fits_update_key_dbl(fptr, "Contrast", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast", &_status);
     fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
-    fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
-    fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
-    fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
-    fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+
+    // NOTE : SV305M PRO is mono
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")!=0) {
+        fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
+        fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
+        fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
+        fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+    }
+
     fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
     fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
     fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);
