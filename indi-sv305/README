@@ -66,6 +66,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.8 : fix broken .ser file record with SV305M Pro. Cleaned some FITS entries
 	+ 1.2.7 : fix on RAW8/RAW12 formats selection on SV305M Pro
 	+ 1.2.6 : SV305M Pro frame format fix
 	+ 1.2.5 : Mac OS X 64 bits support added

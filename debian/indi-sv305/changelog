@@ -1,3 +1,10 @@
+indi-sv305 (1.2.8) bionic; urgency=low
+
+  * SV305M Pro .ser file recording fix
+  * Color related FITS entries cleaned for SV305M Pro
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Mon, 15 Nov 2021 16:00:00 +0300
+
 indi-sv305 (1.2.7) bionic; urgency=low
 
   * SV305M Pro UI frame format selection fix
