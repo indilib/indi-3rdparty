@@ -118,6 +118,10 @@ class Sv305CCD : public INDI::CCD
         ISwitchVectorProperty StretchSP;
         enum { STRETCH_OFF, STRETCH_X2, STRETCH_X4, STRETCH_X8, STRETCH_X16 };
 
+        // ROI offsets
+        int x_offset;
+	int y_offset;
+
         // streaming ?
         bool streaming;
         // streaming mutex and thread control
