@@ -20,8 +20,8 @@ The driver supports single framing and streaming.
 ### Supported features:
 
 - ST4 guiding on SV305 PRO
-- ROI (software)
-- Binning (software)
+- ROI (snapshot and liveview)
+- Binning (software, snapshot and liveview)
 - Slow, medium and fast framing
 - RAW8 and RAW12 frame format
 - Dynamic stretching in RAW12 mode
@@ -76,7 +76,7 @@ Family :		CCDs
 Manufacturer :		SVBONY  
 Platforms :		Linux (Intel, ARM),Mac OS X 64 bits  
 Author :		Blaise-Florentin Collin  
-Version :		1.2.4  
+Version :		1.2.9  
 
 ![SV305 camera](./SV305.jpg)
 
