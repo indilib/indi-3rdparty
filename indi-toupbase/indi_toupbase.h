@@ -611,6 +611,10 @@ class ToupBase : public INDI::CCD
         INumberVectorProperty ADCNP;
         INumber ADCN[1];
 
+        // Timeout factor
+        INumberVectorProperty TimeoutFactorNP;
+        INumber TimeoutFactorN[1];
+
         // Gain Conversion
         INumberVectorProperty GainConversionNP;
         INumber GainConversionN[2];
@@ -655,6 +659,8 @@ class ToupBase : public INDI::CCD
         uint32_t m_MaxGainNative { 0 };
         uint32_t m_MaxGainHCG { 0 };
         uint32_t m_NativeGain { 0 };
+
+        int m_ConfigResolutionIndex {-1};
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);

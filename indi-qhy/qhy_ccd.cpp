@@ -978,18 +978,26 @@ bool QHYCCD::Connect()
         //if(ret != QHYCCD_ERROR && ret != QHYCCD_ERROR_NOTSUPPORT)
         if (ret != QHYCCD_ERROR)
         {
-            if (ret == BAYER_GB)
+            if (ret == BAYER_GB){
                 IUSaveText(&BayerT[2], "GBRG");
-            else if (ret == BAYER_GR)
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_GR){
                 IUSaveText(&BayerT[2], "GRBG");
-            else if (ret == BAYER_BG)
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_BG){
                 IUSaveText(&BayerT[2], "BGGR");
-            else
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_RG){
                 IUSaveText(&BayerT[2], "RGGB");
+                cap |= CCD_HAS_BAYER;
+            }
 
             LOGF_DEBUG("Color camera: %s", BayerT[2].text);
 
-            cap |= CCD_HAS_BAYER;
+            
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -2586,7 +2594,7 @@ void QHYCCD::getExposure()
          * about one second, after which decrease the poll interval
          */
         double timeLeft = calcTimeLeft();
-        uint32_t uSecs = 0;
+        uint32_t uSecs = 100000;
         if (timeLeft > 1.1)
         {
             /*
@@ -2595,22 +2603,11 @@ void QHYCCD::getExposure()
              * a full second boundary, which keeps the
              * count down neat
              */
-            double fraction = timeLeft - static_cast<int>(timeLeft);
-            if (fraction >= 0.005)
-            {
-                uSecs = static_cast<uint32_t>(fraction * 1000000.0);
-            }
-            else
-            {
-                uSecs = 1000000;
-            }
-        }
-        else
-        {
-            uSecs = 10000;
+            timeLeft = round(timeLeft);
+            uSecs = 1000000;
         }
 
-        if (timeLeft >= 0.0049)
+        if (timeLeft >= 0)
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }

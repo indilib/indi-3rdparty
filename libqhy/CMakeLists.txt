@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libqhy)
 
-# QHY SDK 21.8.3
-set (LIBQHY_VERSION "21.8.3")
+# QHY SDK 21.10.26
+set (LIBQHY_VERSION "21.10.26")
 set (LIBQHY_SOVERSION "21")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

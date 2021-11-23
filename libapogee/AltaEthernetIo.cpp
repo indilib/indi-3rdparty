@@ -341,7 +341,7 @@ void AltaEthernetIo::GetImageData(std::vector<uint16_t> & ImageData)
         requested << NumBytesExpected;
 
         std::string errMsg = fullUrl + " error - " + requested.str() \
-            + " bytes requsted " + received.str() + " bytes received.";
+            + " bytes requested " + received.str() + " bytes received.";
         apgHelper::throwRuntimeException( m_fileName, errMsg, 
             __LINE__, Apg::ErrorType_Critical );
     }

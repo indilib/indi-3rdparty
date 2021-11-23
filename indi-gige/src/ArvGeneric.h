@@ -19,11 +19,11 @@
 #ifndef CPP_ARV_GENERIC_H
 #define CPP_ARV_GENERIC_H
 
-extern "C" {
+//#extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 #include <arv.h>
-}
+//}
 
 #include "ArvInterface.h"
 
@@ -71,9 +71,9 @@ class ArvGeneric : public arv::ArvCamera
     bool _configure(void);
     void _test_exposure_and_abort(void);
     template <typename T>
-    bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max), min_max_property<T> *prop);
+    bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop);
     template <typename T>
-    void _set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T), min_max_property<T> *prop, T const new_val);
+    void _set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**), min_max_property<T> *prop, T const new_val);
 
     const char *_str_val(const char *s);
     bool _get_initial_config();
@@ -85,6 +85,7 @@ class ArvGeneric : public arv::ArvCamera
     ::ArvDevice *dev;
     ::ArvStream *stream;
     ::ArvBuffer *buffer;
+    ::GError *error;
 
     /* streaming, capturing functions */
     ::ArvStream *_stream_create(void);

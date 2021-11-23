@@ -1,3 +1,26 @@
+libasi (1.22) buster; urgency=medium
+
+  * ASI Camera SDK 1.20.2 release. No changelog entry from ZWO.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Fri, 22 Oct 2021 20:24:07 +0300
+
+libasi (1.21) buster; urgency=medium
+
+  * ASI Camera SDK 1.20.1 release. Changelog:
+    V1.20.1 2021.9.28
+    Fix bugs of ASI485MC
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Thu, 30 Sep 2021 00:56:06 +0300
+
+libasi (1.20) buster; urgency=medium
+
+  * ASI Camera SDK 1.20 release. Changelog:
+    V1.20 2021.9.6
+    Add new cameras ASI482MC,ASI485MC
+    Fix some bugs
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sun, 12 Sep 2021 20:56:19 +0300
+
 libasi (1.19) buster; urgency=medium
 
   * ASI Camera SDK 1.19.1 release. Changelog again:

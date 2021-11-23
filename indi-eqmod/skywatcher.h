@@ -112,12 +112,9 @@ class Skywatcher
         uint32_t GetDEAuxEncoder();
         void TurnRAEncoder(bool on);
         void TurnDEEncoder(bool on);
-        void TurnRAPPECTraining(bool on);
-        void TurnDEPPECTraining(bool on);
-        void TurnRAPPEC(bool on);
-        void TurnDEPPEC(bool on);
-        void GetRAPPECStatus(bool *intraining, bool *inppec);
-        void GetDEPPECStatus(bool *intraining, bool *inppec);
+        void TurnPPECTraining(bool on);
+        void TurnPPEC(bool on);
+        void GetPPECStatus(bool *intraining, bool *inppec);
         void ResetRAIndexer();
         void ResetDEIndexer();
         void GetRAIndexer();
@@ -270,9 +267,6 @@ class Skywatcher
         void GetIndexer(SkywatcherAxis axis);
         void SetST4GuideRate(SkywatcherAxis axis, unsigned char r);
         void SetAxisPosition(SkywatcherAxis axis, uint32_t step);
-        void TurnPPECTraining(SkywatcherAxis axis, bool on);
-        void TurnPPEC(SkywatcherAxis axis, bool on);
-        void GetPPECStatus(SkywatcherAxis axis, bool *intraining, bool *inppec);
         void TurnSnapPort(SkywatcherAxis axis, bool on);
 
         bool read_eqmod();

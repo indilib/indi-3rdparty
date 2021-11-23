@@ -39,8 +39,7 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} libfli DIR3_FOUND)
             STRING(FIND ${SOURCE_FILE} libqhy DIR4_FOUND)
             STRING(FIND ${SOURCE_FILE} libqsi DIR5_FOUND)
-            STRING(FIND ${SOURCE_FILE} libsbig DIR6_FOUND)
-            STRING(FIND ${SOURCE_FILE} fxload DIR7_FOUND)
+            STRING(FIND ${SOURCE_FILE} libsbig DIR6_FOUND)            
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsv305 DIR9_FOUND)
             STRING(FIND ${SOURCE_FILE} libahp-xc DIR10_FOUND)
@@ -95,7 +94,6 @@ option(WITH_RADIOSIM "Install RadioSim Receiver" On)
 option(WITH_GPSNMEA "Install GPS NMEA Driver" On)
 option(WITH_RTKLIB "Install RTKLIB Driver" On)
 option(WITH_ARMADILLO "Install Armadillo & Platypus Driver" On)
-option(WITH_FXLOAD "Install FX3 compatible fxload tool" Off)
 option(WITH_NIGHTSCAPE "Install Nightscape 8300 Driver" On)
 option(WITH_ATIK "Install Atik Driver" On)
 option(WITH_TOUPBASE "Install Toupbase Driver" On)
@@ -138,8 +136,7 @@ ENDIF(MMAL_FOUND)
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_INOVAPLX Off)
-    set(WITH_GIGE Off)
-    set(WITH_FXLOAD Off)
+    set(WITH_GIGE Off)    
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_SV305 Off)
@@ -233,6 +230,11 @@ if (WITH_SV305)
 add_subdirectory(libsv305)
 endif (WITH_SV305)
 
+#libplayerone
+if (WITH_PLAYERONE)
+add_subdirectory(libplayerone)
+endif(WITH_PLAYERONE)
+
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
 
@@ -293,7 +295,6 @@ endif(WITH_SHELYAK)
 
 ## Cloud Watcher
 if (WITH_CLOUDWATCHER)
-add_subdirectory(indi-aagcloudwatcher)
 add_subdirectory(indi-aagcloudwatcher-ng)
 endif (WITH_CLOUDWATCHER)
 
@@ -511,10 +512,6 @@ if (WITH_ARMADILLO)
 add_subdirectory(indi-armadillo-platypus)
 endif(WITH_ARMADILLO)
 
-if (WITH_FXLOAD)
-add_subdirectory(fxload)
-endif()
-
 if (WITH_WEBCAM)
 add_subdirectory(indi-webcam)
 endif()
@@ -584,13 +581,13 @@ endif(WITH_ORION_SSG3)
 
 # PLAYERONE
 if (WITH_PLAYERONE)
-find_package(PLAYER-ONE)
-if (POA_FOUND)
+find_package(PLAYERONE)
+if (PLAYERONE_FOUND)
 add_subdirectory(indi-playerone)
-else (POA_FOUND)
+else (PLAYERONE_FOUND)
 add_subdirectory(libplayerone)
 SET(LIBRARIES_FOUND FALSE)
-endif(POA_FOUND)
+endif(PLAYERONE_FOUND)
 endif(WITH_PLAYERONE)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
@@ -665,6 +662,10 @@ endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 if (WITH_SV305 AND NOT SV305_FOUND)
 message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
 endif (WITH_SV305 AND NOT SV305_FOUND)
+
+if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
+message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
+endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)

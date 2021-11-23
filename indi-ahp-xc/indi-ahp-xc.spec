@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: indi_ahp_xc
-Version:1.9.2.git
+Name: indi-ahp-xc
+Version:1.9.4.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -31,7 +31,7 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
-BuildRequires: libahp_xc
+BuildRequires: libahp-xc
 
 BuildRequires: gmock
 
@@ -60,12 +60,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi_ahp_xc
+cd indi-ahp-xc
 %cmake -DINDI_DATA_DIR=/usr/share/indi .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi_ahp_xc
+cd indi-ahp-xc
 make DESTDIR=%{buildroot} install
 
 %files

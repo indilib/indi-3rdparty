@@ -1,3 +1,11 @@
+indi-celestronaux (0.10) focal; urgency=medium
+
+  * Rework tracking code
+  * Multiple smaller changes
+  * Adapt to 1.9 coordinate types
+
+ -- Pawel T. Jochym <jochym@wolf.ifj.edu.pl>  Mon, 30 Sep 2021 20:58:00 +0200
+
 indi-celestronaux (0.7) focal; urgency=medium
 
   * Add Celestron WiFi alias.

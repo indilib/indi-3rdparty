@@ -29,7 +29,7 @@
 int  main()
 {
     int width, height;
-    const char *formats[] = {"RAW 8-bit", "RGB 24-bit", "RAW 16-bit", "Luma 8-bit" };
+    const char *formats[] = {"RAW 8-bit", "RAW 16-bit", "RGB 24-bit", "Luma 8-bit" };
     int CamNum = 0;
 
     int numDevices = POAGetCameraCount();
@@ -90,7 +90,7 @@ int  main()
     POAConfigValue ltemp;
     POABool bAuto = POA_FALSE;
     POAGetConfig(CamNum, POA_TEMPERATURE, &ltemp, &bAuto);
-    printf("sensor temperature:%02f\n", (float)ltemp.floatValue / 10.0);
+    printf("sensor temperature:%02f\n", (float)ltemp.floatValue);
 
     printf("\nImage Formats:\n\n");
     for (int i = 0; i < 8; i++)
@@ -129,7 +129,10 @@ int  main()
     POAGetImageBin(CamNum, &bin);
     POAGetImageFormat(CamNum, (POAImgFormat*)&imageFormat);
 
-    long imgSize = width * height * (1 + (imageFormat == POA_RAW16));
+    long imgSize = width * height;
+    if (imageFormat == POA_RAW16) imgSize *= 2;
+    else if (imageFormat == POA_RGB24) imgSize *= 3;
+
     unsigned char* imgBuf = new unsigned char[imgSize];
 
     POAConfigValue confVal;

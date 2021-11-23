@@ -254,6 +254,13 @@ bool ToupBase::initProperties()
     IUFillNumberVector(&ADCNP, ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB,  IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
+    /// Timeout Factor
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&TimeoutFactorN[0], "VALUE", "Factor", "%.f", 1, 10, 1, 1.2);
+    IUFillNumberVector(&TimeoutFactorNP, TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,  IP_RW,
+                       60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
     /// Gain Conversion settings
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&GainConversionN[TC_HCG_THRESHOLD], "HCG Threshold", "HCG Threshold", "%.f", 0, 1000, 100, 900);
@@ -322,6 +329,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitchVector(&ResolutionSP, ResolutionS, 0, getDeviceName(), "CCD_RESOLUTION", "Resolution", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
+    IUGetConfigOnSwitchIndex(getDeviceName(), ResolutionSP.name, &m_ConfigResolutionIndex);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
@@ -374,6 +382,7 @@ bool ToupBase::updateProperties()
         if (m_MonoCamera == false)
             defineProperty(&WBAutoSP);
 
+        defineProperty(&TimeoutFactorNP);
         defineProperty(&ControlNP);
         defineProperty(&AutoControlSP);
         defineProperty(&AutoExposureSP);
@@ -424,6 +433,7 @@ bool ToupBase::updateProperties()
         if (m_MonoCamera == false)
             deleteProperty(WBAutoSP.name);
 
+        deleteProperty(TimeoutFactorNP.name);
         deleteProperty(ControlNP.name);
         deleteProperty(AutoControlSP.name);
         deleteProperty(AutoExposureSP.name);
@@ -736,6 +746,17 @@ void ToupBase::setupParams()
     // Get active resolution index
     uint32_t currentResolutionIndex = 0;
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
+    // If we have a config resolution index, then prefer it over the current resolution index.
+    currentResolutionIndex = (m_ConfigResolutionIndex > 0
+                              && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
+    // In case there is NO previous resolution set
+    // then select the LOWER resolution on arm architecture
+    // since this has less chance of failure. If the user explicitly selects any resolution
+    // it would be saved in the config and this will not apply.
+#if defined(__arm__) || defined (__aarch64__)
+    if (m_ConfigResolutionIndex == -1)
+        currentResolutionIndex = ResolutionSP.nsp - 1;
+#endif
     ResolutionS[currentResolutionIndex].s = ISS_ON;
 
     SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
@@ -1252,6 +1273,17 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             return true;
         }
 
+        //////////////////////////////////////////////////////////////////////
+        /// Timeout factor
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, TimeoutFactorNP.name))
+        {
+            IUUpdateNumber(&TimeoutFactorNP, values, names, n);
+            TimeoutFactorNP.s = IPS_OK;
+            IDSetNumber(&TimeoutFactorNP, nullptr);
+            return true;
+        }
+
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1669,6 +1701,11 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 ResolutionSP.s = IPS_OK;
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", ResolutionS[targetIndex].label);
+                if (m_ConfigResolutionIndex != targetIndex)
+                {
+                    saveConfig(true, ResolutionSP.name);
+                    m_ConfigResolutionIndex = targetIndex;
+                }
                 allocateFrameBuffer();
             }
 
@@ -1967,7 +2004,7 @@ bool ToupBase::StartExposure(float duration)
     }
 
     // Timeout 500ms after expected duration
-    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * 1.2);
+    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
 
     return true;
 }
@@ -2016,7 +2053,7 @@ void ToupBase::captureTimeoutHandler()
     }
 
     LOG_DEBUG("Capture timed out, restarting exposure...");
-    m_CaptureTimeout.start(ExposureRequest * 1000 + m_DownloadEstimation * 1.2);
+    m_CaptureTimeout.start(ExposureRequest * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -2330,6 +2367,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
+    IUSaveConfigNumber(fp, &TimeoutFactorNP);
     if (HasCooler())
         IUSaveConfigSwitch(fp, &CoolerSP);
     IUSaveConfigNumber(fp, &ControlNP);

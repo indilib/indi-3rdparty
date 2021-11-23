@@ -405,6 +405,12 @@
 #define DEVICETYPE_QHY991                4111
 #define DEVICETYPE_QHY1253               4112
 #define DEVICETYPE_QHY5III415            4113
+
+#define DEVICETYPE_QHY1920             4114
+#define DEVICETYPE_QHY1920M            4115
+#define DEVICETYPE_QHY1920C            4116
+
+#define DEVICETYPE_QHY9701             4117
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -1339,6 +1345,8 @@
 
 #define   SINGLE_MODE 								0
 #define   LIVE_MODE 								1
+
+#define   FLASH_CONFIG_PAGE_INDEX					1
 
 #define   FPGA_MODE_DEFAULT 						99
 #define   FPGA_MODE_12_47M 								12     //14bit rigister= 11M  12bit rigister = 47M

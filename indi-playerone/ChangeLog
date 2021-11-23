@@ -1,0 +1,10 @@
+v0.3
+* BugFix: worng pixel value except for RAW8
+  BugFix: order of image format and buffer size in playerone_camera_test.cpp
+
+v0.2
+* BugFix: pulse guide implementation and user interface in "Controls" tab
+  BugFix: temperature digit in playerone_camera_test.cpp
+
+v0.1
+* Initial version of Player One Camera driver
