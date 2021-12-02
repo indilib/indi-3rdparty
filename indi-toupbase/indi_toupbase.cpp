@@ -313,10 +313,6 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Video Format
     ///////////////////////////////////////////////////////////////////////////////////
-    /// RGB Mode but 8 bits grayscale
-    //IUFillSwitch(&VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
-    /// RGB Mode but 16 bits grayscale
-    //IUFillSwitch(&VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
     /// RGB Mode with RGB24 color
     IUFillSwitch(&VideoFormatS[TC_VIDEO_COLOR_RGB], "TC_VIDEO_COLOR_RGB", "RGB", ISS_OFF);
     /// Raw mode (8 to 16 bit)
@@ -744,20 +740,25 @@ void ToupBase::setupParams()
     }
 
     // Get active resolution index
-    uint32_t currentResolutionIndex = 0;
+    uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
+    finalResolutionIndex = currentResolutionIndex;
     // If we have a config resolution index, then prefer it over the current resolution index.
-    currentResolutionIndex = (m_ConfigResolutionIndex > 0
-                              && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
+    finalResolutionIndex = (m_ConfigResolutionIndex >= 0
+                            && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
     // it would be saved in the config and this will not apply.
 #if defined(__arm__) || defined (__aarch64__)
     if (m_ConfigResolutionIndex == -1)
-        currentResolutionIndex = ResolutionSP.nsp - 1;
+        finalResolutionIndex = ResolutionSP.nsp - 1;
 #endif
-    ResolutionS[currentResolutionIndex].s = ISS_ON;
+    ResolutionS[finalResolutionIndex].s = ISS_ON;
+
+    // If final resolution index different from current, let's set it.
+    if (finalResolutionIndex != currentResolutionIndex)
+        FP(put_eSize(m_CameraHandle, finalResolutionIndex));
 
     SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
                  m_Instance->model->ypixsz);
@@ -1455,24 +1456,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 LOG_DEBUG("Stopping camera to change video mode.");
                 FP(Stop(m_CameraHandle));
 
-                //                int rc = FP(put_Option(m_CameraHandle, CP(OPTION_RGB), currentIndex+3)));
-                //                if (rc != 0)
-                //                {
-                //                    LOGF_ERROR("Failed to set RGB mode %d: %s", currentIndex+3, errorCodes[rc].c_str());
-                //                    VideoFormatSP.s = IPS_ALERT;
-                //                    IUResetSwitch(&VideoFormatSP);
-                //                    VideoFormatS[prevIndex].s = ISS_ON;
-                //                    IDSetSwitch(&VideoFormatSP, nullptr);
-
-                //                    // Restart Capture
-                //                    FP(StartPullModeWithCallback(m_CameraHandle, &TOUPCAM::eventCB, this));
-                //                    LOG_DEBUG("Restarting event callback after video mode change failed.");
-
-                //                    return true;
-                //                }
-                //                else
-                //                    LOGF_DEBUG("Set CP(OPTION_RGB --> %d"), currentIndex+3));
-
                 rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), currentIndex));
                 if (FAILED(rc))
                 {
@@ -1544,26 +1527,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                     IDSetText(&BayerTP, nullptr);
                     m_BitsPerPixel = m_RawBitsPerPixel;
                 }
-
-                //                if (currentIndex == TC_VIDEO_COLOR_RGB)
-                //                {
-                //                    int rc = FP(put_Option(m_CameraHandle, CP(OPTION_RGB), 0)));
-                //                    if (rc != 0)
-                //                    {
-                //                        LOGF_ERROR("Failed to set RGB mode %d: %s", currentIndex+3, errorCodes[rc].c_str());
-                //                        VideoFormatSP.s = IPS_ALERT;
-                //                        IUResetSwitch(&VideoFormatSP);
-                //                        VideoFormatS[prevIndex].s = ISS_ON;
-                //                        IDSetSwitch(&VideoFormatSP, nullptr);
-
-                //                        // Restart Capture
-                //                        FP(StartPullModeWithCallback(m_CameraHandle, &TOUPCAM::eventCB, this));
-                //                        LOG_DEBUG("Restarting event callback after video mode change failed.");
-
-                //                        return true;
-                //                    }
-                //                }
-
             }
 
             m_CurrentVideoFormat = currentIndex;
@@ -1580,6 +1543,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             // Restart Capture
             FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
             LOG_DEBUG("Restarting event callback after video mode change.");
+
+            saveConfig(true, VideoFormatSP.name);
 
             return true;
         }
@@ -1681,12 +1646,18 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
 
             int preIndex = IUFindOnSwitchIndex(&ResolutionSP);
             IUUpdateSwitch(&ResolutionSP, states, names, n);
+            int targetIndex = IUFindOnSwitchIndex(&ResolutionSP);
+
+            if (m_ConfigResolutionIndex == targetIndex)
+            {
+                ResolutionSP.s = IPS_OK;
+                IDSetSwitch(&ResolutionSP, nullptr);
+                return true;
+            }
 
             // Stop capture
             LOG_DEBUG("Stopping camera to change resolution.");
             FP(Stop(m_CameraHandle));
-
-            int targetIndex = IUFindOnSwitchIndex(&ResolutionSP);
 
             HRESULT rc = FP(put_eSize(m_CameraHandle, targetIndex));
             if (FAILED(rc))
@@ -1701,12 +1672,9 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 ResolutionSP.s = IPS_OK;
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", ResolutionS[targetIndex].label);
-                if (m_ConfigResolutionIndex != targetIndex)
-                {
-                    saveConfig(true, ResolutionSP.name);
-                    m_ConfigResolutionIndex = targetIndex;
-                }
                 allocateFrameBuffer();
+                m_ConfigResolutionIndex = targetIndex;
+                saveConfig(true, ResolutionSP.name);
             }
 
             IDSetSwitch(&ResolutionSP, nullptr);
@@ -2379,6 +2347,8 @@ bool ToupBase::saveConfigItems(FILE * fp)
         IUSaveConfigSwitch(fp, &WBAutoSP);
 
     IUSaveConfigSwitch(fp, &VideoFormatSP);
+    IUSaveConfigSwitch(fp, &ResolutionSP);
+
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
     return true;

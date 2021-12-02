@@ -285,8 +285,9 @@ bool GPhotoCCD::initProperties()
     IUFillSwitchVector(&SDCardImageSP, SDCardImageS, 2, getDeviceName(), "CCD_SD_CARD_ACTION", "SD Image",
                        IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&forceBULBS[FORCE_BULB_ON], "On", "On", ISS_ON);
-    IUFillSwitch(&forceBULBS[FORCE_BULB_OFF], "Off", "Off", ISS_OFF);
+    // Nikon should have force bulb off by default.
+    IUFillSwitch(&forceBULBS[FORCE_BULB_ON], "On", "On", isNikon ? ISS_OFF : ISS_ON);
+    IUFillSwitch(&forceBULBS[FORCE_BULB_OFF], "Off", "Off", isNikon ? ISS_ON : ISS_OFF);
     IUFillSwitchVector(&forceBULBSP, forceBULBS, 2, getDeviceName(), "CCD_FORCE_BLOB", "Force BULB",
                        OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
