@@ -11,7 +11,7 @@ SET(RULES_INSTALL_DIR "/lib/udev/rules.d/")
 find_package(INDI REQUIRED)
 
 set (LUNATICO_VERSION_MAJOR 2)
-set (LUNATICO_VERSION_MINOR 0)
+set (LUNATICO_VERSION_MINOR 1)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_lunatico.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_lunatico.xml )
@@ -39,6 +39,15 @@ set(dragonfly_SRCS
 add_executable(indi_dragonfly_dome ${dragonfly_SRCS})
 target_link_libraries(indi_dragonfly_dome ${INDI_LIBRARIES} )
 install(TARGETS indi_dragonfly_dome RUNTIME DESTINATION bin )
+
+########### Beaver Dome ###########
+set(beaver_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/beaver_dome.cpp
+   )
+
+add_executable(indi_beaver_dome ${beaver_SRCS})
+target_link_libraries(indi_beaver_dome ${INDI_LIBRARIES} )
+install(TARGETS indi_beaver_dome RUNTIME DESTINATION bin )
 
 ########### Lunatico Seletek Armadillo & Platypus ###########
 set(indiarmadillofocuser_SRCS
