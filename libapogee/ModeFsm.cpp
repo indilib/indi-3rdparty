@@ -75,7 +75,7 @@ void ModeFsm::SetMode( const Apg::CameraMode newMode )
     m_mode = newMode;
 
     std::stringstream msg;
-    msg << "Succesfully transitioned from mode " << old;
+    msg << "Successfully transitioned from mode " << old;
     msg << " to mode " << m_mode;
     std::string str = apgHelper::mkMsg( m_fileName, msg.str(), __LINE__);
     ApgLogger::Instance().Write(ApgLogger::LEVEL_DEBUG,"info",str); 

@@ -407,18 +407,23 @@ bool Sv305CCD::Connect()
     IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
     IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
     IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    frameFormat=FORMAT_RAW12;
-    bitDepth=16;
-    status = SVBSetOutputImageType(cameraID, frameFormatMapping[frameFormat]);
+    // NOTE : SV305M PRO only supports Y8 and Y16 frame format
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_Y16]);
+    } else {
+        IUSaveText(&BayerT[0], "0");
+        IUSaveText(&BayerT[1], "0");
+        IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
+        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_RAW12]);
+    }
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set frame format failed\n");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    IUSaveText(&BayerT[0], "0");
-    IUSaveText(&BayerT[1], "0");
-    IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
+    bitDepth=16;
+    frameFormat=FORMAT_RAW12;
     LOG_INFO("Camera set frame format mode\n");
 
     // set bit stretching and feed UI
@@ -440,6 +445,8 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+    x_offset=0;
+    y_offset=0;
     LOG_INFO("Camera set ROI\n");
 
     // set camera soft trigger mode
@@ -619,13 +626,28 @@ bool Sv305CCD::StartStreaming()
     LOG_INFO("framing\n");
 
     // stream init
-    Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
-    Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
+    // NOTE : SV305M is MONO
+    // if binning, no more bayer
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0||binning) {
+        Streamer->setPixelFormat(INDI_MONO, bitDepth);
+    } else {
+        Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
+    }
+    Streamer->setSize(PrimaryCCD.getSubW() / PrimaryCCD.getBinX(), PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
 
     // streaming exposure time
     ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
     pthread_mutex_lock(&cameraID_mutex);
+
+    // stop camera
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
 
     // set exposure time (s -> us)
     status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(ExposureRequest * 1000000), SVB_FALSE);
@@ -640,11 +662,30 @@ bool Sv305CCD::StartStreaming()
     status = SVBSetCameraMode(cameraID, SVB_MODE_NORMAL);
     if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera soft trigger mode failed\n");
+        LOG_ERROR("Error, camera normal mode failed\n");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Camera soft trigger mode\n");
+    LOG_INFO("Camera normal mode\n");
+
+    // set ROI back
+    status = SVBSetROIFormat(cameraID, x_offset, y_offset, PrimaryCCD.getSubW(), PrimaryCCD.getSubH(), 1);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set subframe failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    LOG_INFO("Subframe set\n");
+
+    // start camera
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
 
     pthread_mutex_unlock(&cameraID_mutex);
 
@@ -667,6 +708,15 @@ bool Sv305CCD::StopStreaming()
 
     pthread_mutex_lock(&cameraID_mutex);
 
+    // stop camera
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
     // set camera back to trigger mode
     status = SVBSetCameraMode(cameraID, SVB_MODE_TRIG_SOFT);
     if(status != SVB_SUCCESS)
@@ -676,6 +726,25 @@ bool Sv305CCD::StopStreaming()
         return false;
     }
     LOG_INFO("Camera soft trigger mode\n");
+
+    // set ROI back
+    status = SVBSetROIFormat(cameraID, x_offset, y_offset, PrimaryCCD.getSubW(), PrimaryCCD.getSubH(), 1);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set subframe failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    LOG_INFO("Subframe set\n");
+
+    // start camera
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
 
     pthread_mutex_unlock(&cameraID_mutex);
 
@@ -746,7 +815,7 @@ void* Sv305CCD::streamVideo()
             PrimaryCCD.binFrame();
         }
 
-        uint32_t size = PrimaryCCD.getFrameBufferSize() / (PrimaryCCD.getBinX() * PrimaryCCD.getBinY());
+        uint32_t size = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * bitDepth / 8;
         Streamer->newFrame(PrimaryCCD.getFrameBuffer(), size);
 
         std::chrono::duration<double> elapsed = finish - start;
@@ -763,7 +832,12 @@ void* Sv305CCD::streamVideo()
 // subframing
 bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if((x + w) > cameraProperty.MaxWidth || (y + h) > cameraProperty.MaxHeight)
+
+    if((x + w) > cameraProperty.MaxWidth
+        || (y + h) > cameraProperty.MaxHeight
+        || w%8 !=0
+        || h%2 != 0
+	)
     {
         LOG_ERROR("Error : Subframe out of range");
         return false;
@@ -771,6 +845,16 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 
     pthread_mutex_lock(&cameraID_mutex);
 
+    // stop framing
+    status = SVBStopVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, stop camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
+    // change ROI
     status = SVBSetROIFormat(cameraID, x, y, w, h, 1);
     if(status != SVB_SUCCESS)
     {
@@ -780,25 +864,19 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
     }
     LOG_INFO("Subframe set\n");
 
+    // start framing
+    status = SVBStartVideoCapture(cameraID);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, start camera failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
     pthread_mutex_unlock(&cameraID_mutex);
 
-    // update streamer
-    long bin_width  = w / PrimaryCCD.getBinX();
-    long bin_height = h / PrimaryCCD.getBinY();
-
-    bin_width  = bin_width - (bin_width % 2);
-    bin_height = bin_height - (bin_height % 2);
-
-    if (Streamer->isBusy())
-    {
-        LOG_WARN("Cannot change binning while streaming/recording.\n");
-    }
-    else
-    {
-        Streamer->setSize(bin_width, bin_height);
-    }
-
-    LOG_INFO("Subframe changed\n");
+    x_offset=x;
+    y_offset=y;
 
     return INDI::CCD::UpdateCCDFrame(x, y, w, h);
 }
@@ -811,19 +889,6 @@ bool Sv305CCD::UpdateCCDBin(int hor, int ver)
         binning = false;
     else
         binning = true;
-
-    // update streamer
-    uint32_t bin_width  = PrimaryCCD.getSubW() / hor;
-    uint32_t bin_height = PrimaryCCD.getSubH() / ver;
-
-    if (Streamer->isBusy())
-    {
-        LOG_WARN("Cannot change binning while streaming/recording.\n");
-    }
-    else
-    {
-        Streamer->setSize(bin_width, bin_height);
-    }
 
     LOG_INFO("Binning changed");
 
@@ -1051,11 +1116,21 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             pthread_mutex_lock(&cameraID_mutex);
 
+            // adjust frame format for SV305M
+            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+                // offset format mapper to Y16 and Y8 modes
+                tmpFormat+=FORMAT_Y16;
+            }
+
             // set new format
             status = SVBSetOutputImageType(cameraID, frameFormatMapping[tmpFormat]);
             if(status != SVB_SUCCESS)
             {
                 LOG_ERROR("Error, camera set frame format failed\n");
+            }
+            // set frame format back for SV305M
+            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+                tmpFormat-=FORMAT_Y16;
             }
             LOGF_INFO("Frame format is now %s", FormatS[tmpFormat].label);
 
@@ -1194,10 +1269,15 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Gain", ControlsN[CCD_GAIN_N].value, 3, "Gain", &_status);
     fits_update_key_dbl(fptr, "Contrast", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast", &_status);
     fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
-    fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
-    fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
-    fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
-    fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+
+    // NOTE : SV305M PRO is mono
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")!=0) {
+        fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
+        fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
+        fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
+        fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+    }
+
     fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
     fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
     fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <driversList>
 <devGroup group="Auxiliary">
-    <device label="Lacerta MGen Autoguider">
+    <device label="Lacerta MGen Autoguider" manufacturer="Lacerta Optics">
         <driver name="MGen Autoguider">indi_mgenautoguider</driver>
         <version>0.1</version>
     </device>

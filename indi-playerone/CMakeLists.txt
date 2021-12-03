@@ -12,8 +12,8 @@ find_package(ZLIB REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
-set(POA_VERSION_MAJOR 0)
-set(POA_VERSION_MINOR 2)
+set(PLAYERONE_VERSION_MAJOR 0)
+set(PLAYERONE_VERSION_MINOR 3)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)
@@ -21,7 +21,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURR
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
-include_directories( ${POA_INCLUDE_DIR})
+include_directories( ${PLAYERONE_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
 
 include(CMakeCommon)
@@ -40,7 +40,7 @@ set(indi_playerone_SRCS
    )
 
 add_executable(indi_playerone_ccd ${indi_playerone_SRCS})
-target_link_libraries(indi_playerone_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${POA_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_playerone_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 if (HAVE_WEBSOCKET)
     target_link_libraries(indi_playerone_ccd ${Boost_LIBRARIES})
 endif()
@@ -49,9 +49,9 @@ endif()
 add_executable(playerone_camera_test ${CMAKE_CURRENT_SOURCE_DIR}/playerone_camera_test.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
-target_link_libraries(playerone_camera_test ${POA_LIBRARIES} ${LIBUSB_LIBRARIES})
+target_link_libraries(playerone_camera_test ${PLAYERONE_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(playerone_camera_test ${POA_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(playerone_camera_test ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
 #####################################

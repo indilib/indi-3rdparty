@@ -7,5 +7,5 @@ Standards-Version: 3.9.1
 
 Package: libmallincam
 Architecture: i386 amd64 armhf arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}, fxload
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Library for Mallincam Cameras.

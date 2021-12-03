@@ -179,15 +179,6 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
-
-        // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
-        // that fail on 16bit images.
-        if (getImageType() == ASI_IMG_RAW16 &&
-                (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
-        {
-            LOG_INFO("Switching to 8-bit video.");
-            setVideoFormat(ASI_IMG_RAW8);
-        }
     }
 
     if (ret != ASI_SUCCESS)
@@ -208,9 +199,6 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     ASI_EXPOSURE_STATUS status = ASI_EXP_IDLE;
     do
     {
-        if (isAboutToQuit)
-            return;
-
         float delay = 0.1;
         float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
 
@@ -229,10 +217,21 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             timeLeft = std::round(timeLeft);
         }
 
-        PrimaryCCD.setExposureLeft(timeLeft);
+        if (timeLeft > 0)
+        {
+            PrimaryCCD.setExposureLeft(timeLeft);
+        }
+
         usleep(delay * 1000 * 1000);
 
         ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        // 2021-09-11 <sterne-jaeger@openfuture.de>: Fix for
+        // https://www.indilib.org/forum/development/10346-asi-driver-sends-image-after-abort.html
+        // Aborting an exposure also returns ASI_SUCCESS here, therefore
+        // we need to ensure that the quit flag is not set if we want to continue.
+        if (isAboutToQuit)
+            return;
+
         if (ret != ASI_SUCCESS)
         {
             LOGF_DEBUG("Failed to get exposure status (%s)", Helpers::toString(ret));
@@ -249,6 +248,15 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
 
         if (status == ASI_EXP_FAILED)
         {
+            // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
+            // that fail on 16bit images.
+            if (getImageType() == ASI_IMG_RAW16 &&
+                    (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
+            {
+                LOG_INFO("Switching to 8-bit video.");
+                setVideoFormat(ASI_IMG_RAW8);
+            }
+
             if (++mExposureRetry < MAX_EXP_RETRIES)
             {
                 LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
@@ -268,7 +276,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     // Reset exposure retry
     mExposureRetry = 0;
     PrimaryCCD.setExposureLeft(0.0);
-    if (PrimaryCCD.getExposureDuration() > 3)
+    if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
         LOG_INFO("Exposure done, downloading image...");
 
     grabImage(duration);

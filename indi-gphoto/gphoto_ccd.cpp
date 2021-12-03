@@ -231,38 +231,12 @@ const char * GPhotoCCD::getDefaultName()
 
 bool GPhotoCCD::initProperties()
 {
-    /*if (strcmp(__progname, "indi_gphoto_ccd"))
-    {
-        char prefix[MAXINDINAME];
-        modelFound = false;
-
-        for (int i = 0; camInfos[i].exec != nullptr; i++)
-        {
-            if (strstr(model, camInfos[i].model))
-            {
-                strncpy(prefix, camInfos[i].driver, MAXINDINAME);
-                snprintf(this->name, MAXINDIDEVICE, "%s %s", prefix, model + strlen(camInfos[i].model) + 1);
-                setDeviceName(this->name);
-                modelFound = true;
-            }
-        }
-
-        if (modelFound == false)
-        {
-            LOGF_ERROR("Failed to find model %s in %s", model, getDeviceName());
-            return false;
-        }
-    }*/
-    //else
-    //{
     // For now let's set name to default name. In the future, we need to to support multiple devices per one driver
     if (*getDeviceName() == '\0')
         strncpy(name, getDefaultName(), MAXINDINAME);
     else
         strncpy(name, getDeviceName(), MAXINDINAME);
     setDeviceName(this->name);
-    //modelFound = true;
-    //}
 
     // Init parent properties first
     INDI::CCD::initProperties();
@@ -299,8 +273,10 @@ bool GPhotoCCD::initProperties()
     IUFillSwitchVector(&livePreviewSP, livePreviewS, 2, getDeviceName(), "AUX_VIDEO_STREAM", "Preview",
                        MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&captureTargetS[CAPTURE_INTERNAL_RAM], "RAM", "", ISS_ON);
-    IUFillSwitch(&captureTargetS[CAPTURE_SD_CARD], "SD Card", "", ISS_OFF);
+    // Nikon should use SD card by default
+    const bool isNikon = strstr(getDeviceName(), "Nikon");
+    IUFillSwitch(&captureTargetS[CAPTURE_INTERNAL_RAM], "RAM", "RAM", isNikon ? ISS_OFF : ISS_ON);
+    IUFillSwitch(&captureTargetS[CAPTURE_SD_CARD], "SD Card", "SD Card", isNikon ? ISS_ON : ISS_OFF);
     IUFillSwitchVector(&captureTargetSP, captureTargetS, 2, getDeviceName(), "CCD_CAPTURE_TARGET", "Capture Target",
                        IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
@@ -309,8 +285,9 @@ bool GPhotoCCD::initProperties()
     IUFillSwitchVector(&SDCardImageSP, SDCardImageS, 2, getDeviceName(), "CCD_SD_CARD_ACTION", "SD Image",
                        IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&forceBULBS[FORCE_BULB_ON], "On", "On", ISS_ON);
-    IUFillSwitch(&forceBULBS[FORCE_BULB_OFF], "Off", "Off", ISS_OFF);
+    // Nikon should have force bulb off by default.
+    IUFillSwitch(&forceBULBS[FORCE_BULB_ON], "On", "On", isNikon ? ISS_OFF : ISS_ON);
+    IUFillSwitch(&forceBULBS[FORCE_BULB_OFF], "Off", "Off", isNikon ? ISS_ON : ISS_OFF);
     IUFillSwitchVector(&forceBULBSP, forceBULBS, 2, getDeviceName(), "CCD_FORCE_BLOB", "Force BULB",
                        OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 

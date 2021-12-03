@@ -159,6 +159,8 @@ private:
     ISwitchVectorProperty OutputFormatSelection;
     IText TimeoutOptionsT[2] {};
     ITextVectorProperty TimeoutOptionsTP;
+    INumber VideoAdjustmentsT[3] {};
+    INumberVectorProperty VideoAdjustmentsTP;
 
 
     //Webcam setup, release, and frame capture
@@ -188,6 +190,12 @@ private:
     AVFrame         *pFrame;
     AVFrame         *pFrameOUT;
     AVDictionary *optionsDict;
+
+    //FFMpeg Video Adjustments
+    double brightness = 0.0;
+    double contrast = 1.0;
+    double saturation = 1.0;
+    void updateVideoAdjustments();
 
 };
 #endif // indi_webcam_H

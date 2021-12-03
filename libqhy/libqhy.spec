@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: libqhy
-Version:1.9.2.git
+Version:1.9.4.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -13,7 +13,7 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 %global debug_package %{nil}
 %define __find_requires %{nil}
 
-Provides: libqhyccd.so.20()(64bit)
+Provides: libqhyccd.so.21()(64bit)
 Provides: libqhyccd.so
 
 BuildRequires: cmake

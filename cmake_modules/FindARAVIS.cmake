@@ -19,15 +19,15 @@
 
 SET(ARV_FIND_REQUIRED ${Arv_FIND_REQUIRED})
 
-find_path(ARV_INCLUDE_DIR aravis-0.6/arv.h)
+find_path(ARV_INCLUDE_DIR aravis-0.8/arv.h)
 mark_as_advanced(ARV_INCLUDE_DIR)
 
-set(ARV_NAMES ${ARV_NAMES} aravis-0.6)
+set(ARV_NAMES ${ARV_NAMES} aravis-0.8)
 find_library(ARV_LIBRARY NAMES ${ARV_NAMES} )
 mark_as_advanced(ARV_LIBRARY)
 
 set(ARV_VERSION_MAJOR "0")
-set(ARV_VERSION_MINOR "6")
+set(ARV_VERSION_MINOR "8")
 set(ARV_VERSION_STRING "${ARV_VERSION_MAJOR}.${ARV_VERSION_MINOR}")
 
 # handle the QUIETLY and REQUIRED arguments and set ARV_FOUND to TRUE if
@@ -37,7 +37,7 @@ find_package_handle_standard_args(ARV DEFAULT_MSG ARV_LIBRARY ARV_INCLUDE_DIR)
 
 IF(ARV_FOUND)
     #SET(Arv_LIBRARIES ${ARV_LIBRARY})
-    SET(Arv_LIBRARIES "aravis-0.6")
-    SET(Arv_INCLUDE_DIRS "${ARV_INCLUDE_DIR}/aravis-0.6")
+    SET(Arv_LIBRARIES "aravis-0.8")
+    SET(Arv_INCLUDE_DIRS "${ARV_INCLUDE_DIR}/aravis-0.8")
     MESSAGE (STATUS "Found aravis: ${Arv_LIBRARIES} ${Arv_INCLUDE_DIRS}")
 ENDIF(ARV_FOUND)

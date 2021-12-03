@@ -374,7 +374,7 @@ void GenOneLinuxUSB::ReadImage(uint16_t * ImageData,
                                UsbFrmwr::END_POINT, 		// end point
                                reinterpret_cast<uint8_t*>(ImageData),  	// data pointer
                                InSizeInBytes,  // length
-                               reinterpret_cast<int32_t*>(&OutSizeInBytes), // number of bytes transfered
+                               reinterpret_cast<int32_t*>(&OutSizeInBytes), // number of bytes transferred
                                BULK_XFER_TIMEOUT );		// time out
 
     if( result < 0 )
@@ -392,7 +392,7 @@ void GenOneLinuxUSB::ReadImage(uint16_t * ImageData,
         // assume that timeout conditions indicate a complete lack of I/O."
         if( -7 == result )
         {
-            err << "Number bytes transfered on time out = " << OutSizeInBytes << ".";
+            err << "Number bytes transferred on time out = " << OutSizeInBytes << ".";
         }
 
         m_ReadImgError = true;

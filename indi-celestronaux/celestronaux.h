@@ -24,7 +24,7 @@
 #pragma once
 
 #include <indicom.h>
-#include <libindi/indiguiderinterface.h>
+#include <indiguiderinterface.h>
 #include <inditelescope.h>
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
@@ -48,8 +48,8 @@ class CelestronAUX :
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
         virtual bool ISSnoopDevice(XMLEle *root) override;
-	long requestedCordwrapPos;
-	double getNorthAz();
+        long requestedCordwrapPos;
+        double getNorthAz();
 
     protected:
         virtual bool initProperties() override;
@@ -73,7 +73,7 @@ class CelestronAUX :
         virtual IPState GuideEast(uint32_t ms) override;
         virtual IPState GuideWest(uint32_t ms) override;
 
-        virtual bool HandleGetAutoguideRate(INDI_EQ_AXIS axis,uint8_t rate);
+        virtual bool HandleGetAutoguideRate(INDI_EQ_AXIS axis, uint8_t rate);
         virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
         virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
         virtual bool HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done);
@@ -202,7 +202,7 @@ class CelestronAUX :
         bool sendAUXCommand(AUXCommand &c);
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
-        // Current steps from controller 
+        // Current steps from controller
         // AUX protocol uses signed 24bit integers for positions
         int32_t m_AltSteps {0};
         int32_t m_AzSteps {0};
@@ -283,7 +283,7 @@ class CelestronAUX :
         ISwitchVectorProperty GPSEmuSP;
         enum { GPSEMU_OFF, GPSEMU_ON };
         // guide
-        INumber GuideRateN[2]{};
+        INumber GuideRateN[2] {};
         INumberVectorProperty GuideRateNP;
 
         ///////////////////////////////////////////////////////////////////////////////

@@ -156,7 +156,7 @@ class LX200StarGo : public LX200Telescope
         virtual void getBasicData() override;
         virtual bool ReadScopeStatus() override;
         virtual bool Park() override;
-        virtual void SetParked(bool isparked);
+        virtual void SetParked(bool isparked) override;
         virtual bool UnPark() override;
         virtual bool saveConfigItems(FILE *fp) override;
         virtual bool Goto(double ra, double dec) override;

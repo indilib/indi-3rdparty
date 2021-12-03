@@ -1,3 +1,34 @@
+indi-sv305 (1.2.9) bionic; urgency=low
+
+  * binning and subframing enabled in liveview
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Sat, 20 Nov 2021 16:00:00 +0300
+
+indi-sv305 (1.2.8) bionic; urgency=low
+
+  * SV305M Pro .ser file recording fix
+  * Color related FITS entries cleaned for SV305M Pro
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Mon, 15 Nov 2021 16:00:00 +0300
+
+indi-sv305 (1.2.7) bionic; urgency=low
+
+  * SV305M Pro UI frame format selection fix
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Sat, 13 Nov 2021 16:00:00 +0300
+
+indi-sv305 (1.2.6) bionic; urgency=low
+
+  * SV305M Pro frame format fix
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Sat, 23 Sep 2021 16:00:00 +0300
+
+indi-sv305 (1.2.5) bionic; urgency=low
+
+  * Mac OS X 64 bits support added
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Tue, 21 Sep 2021 16:00:00 +0300
+
 indi-sv305 (1.2.4) bionic; urgency=low
 
   * SV305M Pro support added

@@ -46,8 +46,8 @@ Features
 	+ Full access to camera settings
 	+ Bayer color pattern
         + Analog gain
-	+ Subframing
-	+ Software binning
+	+ Subframing (snapshot and liveview)
+	+ Software binning (snapshot and liveview)
 	+ Streaming
 	+ SV305PRO ST4 port supported
 	+ SV305M PRO supported
@@ -55,17 +55,22 @@ Features
 Known issues
 ============
 
-	+ None
+	+ Intensive configuration changes could lead to a crash
+	+ Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
 
 Limitations
 ===========
 
-	+ Subframing and binning doesn't work in liveview
         + Can't abort long exposure yet
 
 Changelog
 =========
 
+	+ 1.2.9 : binning and subframing enabled in liveview
+	+ 1.2.8 : fix broken .ser file record with SV305M Pro. Cleaned some FITS entries
+	+ 1.2.7 : fix on RAW8/RAW12 formats selection on SV305M Pro
+	+ 1.2.6 : SV305M Pro frame format fix
+	+ 1.2.5 : Mac OS X 64 bits support added
 	+ 1.2.4 : SV305M Pro support added
 	+ 1.2.3 : min/max exposure values fix
 	+ 1.2.2 : Fix SV305PRO detection

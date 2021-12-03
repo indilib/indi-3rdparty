@@ -3,7 +3,7 @@
 <devGroup group="CCDs">
         <device label="PlayerOne CCD" mdpd="true" manufacturer="PlayerOne">
                 <driver name="PlayerOne CCD">indi_playerone_ccd</driver>
-                <version>@POA_VERSION_MAJOR@.@POA_VERSION_MINOR@</version>
+                <version>@PLAYERONE_VERSION_MAJOR@.@PLAYERONE_VERSION_MINOR@</version>
 	</device>
 </devGroup>
 </driversList>

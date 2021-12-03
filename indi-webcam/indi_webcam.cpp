@@ -169,7 +169,7 @@ indi_webcam::indi_webcam()
   videoSource = "/dev/video0";
 #elif __APPLE__
   videoDevice = "avfoundation";
-  videoSource = "0";
+  videoSource = "2";
 #else
   videoDevice = ""
   videoSource = "";
@@ -687,6 +687,14 @@ void indi_webcam::ISGetProperties(const char *dev)
     IUFillSwitchVector(&VideoSizeSelection, VideoSizes, 7, getDeviceName(), "CAPTURE_VIDEO_SIZE", "Video Size",
                        CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
+
+    IUFillNumber(&VideoAdjustmentsT[0], "BRIGHTNESS", "Brightness", "%.3f", -2.00, 2.00, 0.1, 0.00);
+    IUFillNumber(&VideoAdjustmentsT[1], "CONTRAST", "Contrast", "%.3f", 0.00, 2.00, 0.1, 1.00);
+    IUFillNumber(&VideoAdjustmentsT[2], "SATURATION", "Saturation", "%.3f", 0.00, 8.00, 0.1, 1.00);
+    IUFillNumberVector(&VideoAdjustmentsTP, VideoAdjustmentsT, NARRAY(VideoAdjustmentsT), getDeviceName(), "VIDEO_ADJUSTMENTS", "Video Adjustment Options", IMAGE_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&VideoAdjustmentsTP);
+
     refreshInputDevices();
     refreshInputSources();
 
@@ -719,8 +727,26 @@ bool indi_webcam::ISNewNumber (const char *dev, const char *name, double values[
       /* ignore if not ours */
     if (dev && strcmp (getDeviceName(), dev))
       return true;
+
     DEBUGF(INDI::Logger::DBG_SESSION, "Setting number %s", name);
-    
+
+    if (!strcmp(name, VideoAdjustmentsTP.name) )
+    {
+        IUUpdateNumber(&VideoAdjustmentsTP, values, names, n);
+
+        brightness = IUFindNumber( &VideoAdjustmentsTP, "BRIGHTNESS" )->value;
+        contrast = IUFindNumber( &VideoAdjustmentsTP, "CONTRAST" )->value;
+        saturation = IUFindNumber( &VideoAdjustmentsTP, "SATURATION" )->value;
+
+        DEBUGF(INDI::Logger::DBG_SESSION, "New Video Adjustments: brightness: %.3f, contrast: %.3f, saturation: %.3f", brightness, contrast, saturation);
+
+        IDSetNumber(&VideoAdjustmentsTP, nullptr);
+        VideoAdjustmentsTP.s = IPS_OK;
+
+        updateVideoAdjustments();
+        return true;
+    }
+
     return INDI::CCD::ISNewNumber(dev,name,values,names,n);
 }
 
@@ -1456,10 +1482,26 @@ bool indi_webcam::setupStreaming()
     if(sws_ctx==nullptr)
       return false;
 
+    updateVideoAdjustments();
+
     PrimaryCCD.setFrameBufferSize(numBytes);
     PrimaryCCD.setResolution(pCodecCtx->width, pCodecCtx->height);
 
     return true;
+}
+
+void indi_webcam::updateVideoAdjustments()
+{
+    if(sws_ctx==nullptr)
+      return;
+
+    int src_range = 1, dst_range = 1; //These are just flags 1 for Jpeg and 2 for Mpeg
+    const int* coefs = sws_getCoefficients(SWS_CS_DEFAULT);
+    //Note these last 3 values are reported in 16.16 fixed point format
+    sws_setColorspaceDetails(sws_ctx, coefs, src_range, coefs, dst_range,
+                                 (int)(brightness * 65536), (int)(contrast * 65536), (int)(saturation * 65536));
+
+    DEBUGF(INDI::Logger::DBG_SESSION, "Current Video Adjustments: brightness: %.3f, contrast: %.3f, saturation: %.3f", brightness, contrast, saturation);
 }
 
 //This gets one image from the camera.

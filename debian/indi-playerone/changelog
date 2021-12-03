@@ -1,12 +1,11 @@
-indi-playerone (0.2) bionic; urgency=medium
+indi-playerone (0.3) bionic; urgency=medium
 
-  * BugFix: pulse guide implementation and user interface in "Controls" tab
-  * BugFix: temperature digit in playerone_camera_test.cpp
+  * Fix wrong pixel value except for RAW8
 
- -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 4 Sep 2021 08:00:00 +0900
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 19 Oct 2021 12:00:00 +0900
 
-indi-playerone (0.1) bionic; urgency=low
+indi-playerone (0.2) bionic; urgency=low
 
-  * Initial release
+  * Initial Release.
 
- -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 31 Aug 2021 08:00:00 +0900
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 12 Aug 2019 09:00:00 +0300

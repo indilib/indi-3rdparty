@@ -2,7 +2,7 @@
 <driversList>
 <devGroup group="Auxiliary">
         <device label="AstroLink 4">
-                <driver name="AstroLink4">indi_astrolink4</driver>
+                <driver name="AstroLink 4">indi_astrolink4</driver>
                 <version>0.1</version>
         </device>
 </devGroup>
