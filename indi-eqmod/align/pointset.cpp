@@ -282,7 +282,7 @@ char *PointSet::LoadDataFile(const char *filename)
     if (!PointSetXmlRoot)
         return errmsg;
     if (!strcmp(tagXMLEle(nextXMLEle(PointSetXmlRoot, 1)), "aligndata"))
-        return (char *)("Not an alignement data file");
+        return (char *)("Not an alignment data file");
     sitexml = findXMLEle(PointSetXmlRoot, "site");
     if (!sitexml)
         return (char *)"No site found";
