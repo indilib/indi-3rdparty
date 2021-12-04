@@ -945,7 +945,7 @@ bool EQMod::ReadScopeStatus()
                        AlignedDEString,
                        AZString,
                        ALString,
-                       pierSide == PIER_EAST ? "East" : (pierSide == PIER_WEST ? "West" : "Uknown"));
+                       pierSide == PIER_EAST ? "East" : (pierSide == PIER_WEST ? "West" : "Unknown"));
         }
 
         if (mount->HasAuxEncoders())
