@@ -1,3 +1,6 @@
+v0.4
+* Update: PlayerOneCamera SDK to v2.0.5
+
 v0.3
 * BugFix: worng pixel value except for RAW8
   BugFix: order of image format and buffer size in playerone_camera_test.cpp
