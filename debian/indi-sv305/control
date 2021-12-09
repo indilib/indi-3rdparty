@@ -7,5 +7,5 @@ Standards-Version: 3.9.2
 
 Package: indi-sv305
 Architecture: i386 amd64 armhf arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libsv305
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsv305
 Description: INDI driver for the SVBONY SV305 Camera

@@ -7,7 +7,7 @@ Standards-Version: 3.9.1
 
 Package: indi-orion-ssg3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1
+Depends: ${shlibs:Depends}, ${misc:Depends}
 conflicts: indi-orion-ssg3cam
 replaces: indi-orion-ssg3cam
 Description: INDI Driver for Orion StarShoot G3 and G4 cameras

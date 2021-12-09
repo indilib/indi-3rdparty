@@ -21,5 +21,9 @@
             <driver name="DragonFly Dome">indi_dragonfly_dome</driver>
             <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
         </device>
+        <device label="Beaver Dome" manufacturer="Lunatico">
+            <driver name="Beaver Dome">indi_beaver_dome</driver>
+            <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
+        </device>
     </devGroup>
 </driversList>

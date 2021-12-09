@@ -69,12 +69,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libasi
+cd libplayerone
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libasi
+cd libplayerone
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
@@ -86,6 +86,8 @@ make DESTDIR=%{buildroot} install
 %license libplayerone/license.txt
 
 %changelog
+* Tue Dec 07 2021 Hiroshi Saito <hiro3110g@gmail.com>
+- update PlayerOneCamera SDK to v2.0.5
 * Sat Aug 21 2021 Hiroshi Saito <hiro3110g@gmail.com>
 - create indi driver for PlayerOne Cameras which is based on ASI Cameras
 

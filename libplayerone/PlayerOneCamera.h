@@ -198,94 +198,96 @@ typedef struct _POAConfigAttributes     ///< Camera Config Attributes Definition
  * ----POACloseCamera
 ***********************************************************************************************************/
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetCameraCount: get camera count
  *
  * @return the counts of POA cameras connected to the computer host
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  int POAGetCameraCount();
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetCameraProperties: get the property of the connected cameras, NO need to open the camera for this operation
  *
  * @param nIndex (input), the range: [0, camera count), note: index is not cameraID
  *
  * @param pProp (output), pointer to POACameraProperties structure, POACameraProperties structure needs to malloc memory first
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pProp is NULL pointer
  *          POA_ERROR_INVALID_INDEX: no camera connected or nIndex value out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetCameraProperties(int nIndex, POACameraProperties *pProp);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetCameraPropertiesByID: get the property of the connected cameras by ID, it's a convenience function to get the property of the known camera ID
  *
  * @param nCameraID (input), get from in the POACameraProperties structure
  *
  * @param pProp (output), pointer to POACameraProperties structure, POACameraProperties structure needs to malloc memory first
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pProp is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetCameraPropertiesByID(int nCameraID, POACameraProperties *pProp);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAOpenCamera: open the camera, note: the following API functions need to open the camera first
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
+ *          POA_ERROR_DEVICE_NOT_FOUND: camera may be removed
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAOpenCamera(int nCameraID);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAInitCamera: initialize the camera's hardware, parameters, and malloc memory
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_MEMORY_FAILED: malloc memory failed, may be the available memory is insufficient.
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAInitCamera(int nCameraID);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POACloseCamera: close the camera and free allocated memory
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POACloseCamera(int nCameraID);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetConfigsCount: get the count of POAConfig available for this camera
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pConfCount (output), pointer to an int to save the count
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
+ *          POA_ERROR_POINTER: pConfCount is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetConfigsCount(int nCameraID, int *pConfCount);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetConfigAttributes: get POAConfig attribute by index
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -294,16 +296,16 @@ POACAMERA_API  POAErrors POAGetConfigsCount(int nCameraID, int *pConfCount);
  *
  * @param pConfAttr (output),  pointer to POAConfigAttributes structure, POAConfigAttributes structure needs to malloc memory first
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pConfAttr is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_INDEX: no camera connected or nConfIndex value out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetConfigAttributes(int nCameraID, int nConfIndex, POAConfigAttributes *pConfAttr);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetConfigAttributesByConfigID: get POAConfig attribute by POAConfig ID, it's a convenience function to get the attribute of the known POAConfig ID
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -312,16 +314,16 @@ POACAMERA_API  POAErrors POAGetConfigAttributes(int nCameraID, int nConfIndex, P
  *
  * @param pConfAttr (output),  pointer to POAConfigAttributes structure, POAConfigAttributes structure needs to malloc memory first
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pConfAttr is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_CONFIG: the confID is not a POAConfig or this camera don't support this POAConfig
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetConfigAttributesByConfigID(int nCameraID, POAConfig confID, POAConfigAttributes *pConfAttr);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetConfig: set POAConfig value and auto value
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -332,17 +334,17 @@ POACAMERA_API  POAErrors POAGetConfigAttributesByConfigID(int nCameraID, POAConf
  *
  * @param isAuto (input), set the POAConfig auto
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_CONFIG: the confID is not a POAConfig or this camera don't support this POAConfig
  *          POA_ERROR_CONF_CANNOT_WRITE: this POAConfig does not support writing
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetConfig(int nCameraID, POAConfig confID, POAConfigValue confValue, POABool isAuto);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetConfig: get the POAConfig value and auto value
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -353,32 +355,32 @@ POACAMERA_API  POAErrors POASetConfig(int nCameraID, POAConfig confID, POAConfig
  *
  * @param pIsAuto (output), pointer to a POABool for saving the auto value get from POAConfig
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pConfValue or pIsAuto is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_CONFIG: the confID is not a POAConfig or this camera don't support this POAConfig
  *          POA_ERROR_CONF_CANNOT_READ: this POAConfig does not support reading
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetConfig(int nCameraID, POAConfig confID, POAConfigValue *pConfValue, POABool *pIsAuto);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetConfigValueType: get POAConfig value type
  *
  * @param confID (input), POAConfig ID, eg: POA_EXPOSURE, POA_USB_BANDWIDTH
  *
  * @param pConfValueType (output), pointer to a POAValueType value, like: VAL_INT
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pConfValueType is NULL pointer
  *          POA_ERROR_INVALID_CONFIG: the confID is not a POAConfig or this camera don't support this POAConfig
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetConfigValueType(POAConfig confID, POAValueType *pConfValueType);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetImageStartPos: get the start position of the ROI area.
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -387,15 +389,15 @@ POACAMERA_API  POAErrors POAGetConfigValueType(POAConfig confID, POAValueType *p
  *
  * @param pStartY (output), pointer to a int value for saving startY
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pStartX or pStartY is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetImageStartPos(int nCameraID, int *pStartX, int *pStartY);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetImageStartPos: set the start position of the ROI area.
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -404,16 +406,16 @@ POACAMERA_API  POAErrors POAGetImageStartPos(int nCameraID, int *pStartX, int *p
  *
  * @param startY (input), the starting point Y of the ROI
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_ARGU: startX or startY < 0
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetImageStartPos(int nCameraID, int startX, int startY);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetImageSize: get the image size of the ROI area
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -422,15 +424,15 @@ POACAMERA_API  POAErrors POASetImageStartPos(int nCameraID, int startX, int star
  *
  * @param pHeight (output), pointer to a int value for saving height
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pWidth or pHeight is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetImageSize(int nCameraID, int *pWidth, int *pHeight);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetImageSize: set the image size of the ROI area, note: should stop exposure first if exposing
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -443,31 +445,31 @@ POACAMERA_API  POAErrors POAGetImageSize(int nCameraID, int *pWidth, int *pHeigh
  *                note: If you set the height % 2 != 0, this function will automatically adjust the height,
  *                      please call POAGetImageSize to get the height after adjusting
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_ARGU: width or height < 0
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetImageSize(int nCameraID, int width, int height);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetImageBin: get the pixel bin method
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pBin (output), pointer to a int value for saving bin
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pBin is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetImageBin(int nCameraID, int *pBin);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetImageBin: set the pixel bin method, note: should stop exposure first if exposing,
  *                        If return successful, the image size (width & height) and start position will be changed,
  *                        Please call POAGetImageStartPos and  POAGetImageSize to get the new image size and start position after binning
@@ -476,104 +478,104 @@ POACAMERA_API  POAErrors POAGetImageBin(int nCameraID, int *pBin);
  *
  * @param bin (input), binning method, eg: 1, 2, ....
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetImageBin(int nCameraID, int bin);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetImageFormat: get image format
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pImgFormat (output), pointer to a POAImgFormat value for saving image foramt, eg: POA_RAW16
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pImgFormat is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetImageFormat(int nCameraID, POAImgFormat *pImgFormat);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetImageFormat: set image format, note: should stop exposure first if exposing
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param imgFormat (input), image (pixels) format, eg: POA_RAW8, POA_RGB24
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_ARGU: the imgFormat is not a POAImgFormat
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetImageFormat(int nCameraID, POAImgFormat imgFormat);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAStartExposure: start camera exposure
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param bSignalFrame (input), POA_TRUE: SnapMode, after the exposure, will not continue, POA_FALSE: continuous exposure
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_OPERATION_FAILED: operation failed
  *          POA_ERROR_EXPOSING: camera is exposing
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAStartExposure(int nCameraID, POABool bSignalFrame);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAStopExposure: stop camera exposure
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAStopExposure(int nCameraID);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetCameraState get the camera current state
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pCameraState (output), pointer to a POACameraState value for saving camera state
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pImgFormat is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetCameraState(int nCameraID, POACameraState *pCameraState);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAImageReady: the image data is available? if pIsReady is true, you can call POAGetImageData to get image data
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pIsReady (output), pointer to a POABool value for saving the image data is ready
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pIsReady is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAImageReady(int nCameraID, POABool *pIsReady);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetImageData: get image data after exposure, this function will block and waiting for timeout
  *                         Note: recommended to use POAImageReady function for waiting, if image data 'Is Ready', calling this function will return immediately
  *
@@ -585,52 +587,52 @@ POACAMERA_API  POAErrors POAImageReady(int nCameraID, POABool *pIsReady);
  *
  * @param nTimeoutms (input), wait time (ms), recommend set it to exposure+500ms, -1 means infinite waiting
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pBuf is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
  *          POA_ERROR_INVALID_ARGU: may be lBufSize < 0
  *          POA_ERROR_SIZE_LESS: the nBufSize is not enough to hold the data
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetImageData(int nCameraID, unsigned char *pBuf, long lBufSize, int nTimeoutms);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetDroppedImagesCount: get the dropped image count, reset it to 0 after stop capture
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
  * @param pDroppedCount (output), pointer to a int value for saving the dropped image count
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_POINTER: pDroppedCount is NULL pointer
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetDroppedImagesCount(int nCameraID, int *pDroppedCount);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POASetUserCustomID: set user custom ID into camera flash, if set successfully, reacquire the information of this camera to get the custom ID
  *                            Note: this operation will interrupt the exposure, if start a Signal Frame exposure , the exposure progress will be terminated.
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
  *
- * @param pCustomID (input), pointer to a string,like: const char* pCustomID = "MyCamera"
+ * @param pCustomID (input), pointer to a string,like: const char* pCustomID = "MyCamera"，if pCustomID is NULL, the previous Settings will be cleared
  *
- * @param len (input), len = strlen(pCustomID), max len is 16, if len > 16, the extra part will be cut off
+ * @param len (input), max len is 16, if len > 16, the extra part will be cut off, if len is 0, the previous Settings will be cleared
  *
- * @return: POA_OK: operation successful
- *          POA_ERROR_POINTER: pCustomID is NULL pointer
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
  *          POA_ERROR_NOT_OPENED: camera not opened
+ *          POA_ERROR_EXPOSING：this operation is not allowed while the camera is exposing
  *          POA_ERROR_OPERATION_FAILED: operation failed
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POASetUserCustomID(int nCameraID, const char* pCustomID, int len);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetGainOffset: get some preset values
  *
  * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
@@ -645,35 +647,35 @@ POACAMERA_API  POAErrors POASetUserCustomID(int nCameraID, const char* pCustomID
  *
  * @param pHCGain (output), gain at HCG Mode(High Conversion Gain)
  *
- * @return: POA_OK: operation successful
+ * @return  POA_OK: operation successful
  *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
- ***************************************************************************************************************************/
+ */
 POACAMERA_API  POAErrors POAGetGainOffset(int nCameraID, int *pOffsetHighestDR, int *pOffsetUnityGain, int *pGainLowestRN, int *pOffsetLowestRN, int *pHCGain);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetErrorString: convert POAErrors enum to char *, it is convenient to print or display errors
  *
  * @param err (intput), POAErrors, the value returned by the API function
  *
- * @return: point to const char* error
- ***************************************************************************************************************************/
+ * @return  point to const char* error
+ */
 POACAMERA_API const char* POAGetErrorString(POAErrors err);
 
 
-/****************************************************************************************************************************
+/**
  * @brief POAGetAPIVersion: get the API version
  *
  * @return: it's a integer value, eg: 20200202
- ***************************************************************************************************************************/
+ */
 POACAMERA_API int POAGetAPIVersion();
 
 
-/***************************************************************************************************************************
+/**
  * @brief POAGetSDKVersion: get the sdk version
  *
- * @return: point to const char* version, eg: 1.0.11.17
- ***************************************************************************************************************************/
+ * @return  point to const char* version, eg: 1.0.11.17
+ */
 POACAMERA_API const char* POAGetSDKVersion();
 
 
