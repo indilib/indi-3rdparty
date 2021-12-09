@@ -26,7 +26,7 @@
 #include <vector>
 #include <stdint.h>
 
-typedef std::vector<unsigned char> AUXBuffer;
+typedef std::vector<uint8_t> AUXBuffer;
 
 enum AUXCommands
 {
@@ -86,8 +86,8 @@ class AUXCommand
     public:
         AUXCommand();
         AUXCommand(const AUXBuffer &buf);
-        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d, const AUXBuffer &dat);
-        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d);
+        AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination, const AUXBuffer &data);
+        AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Buffer Management
@@ -97,45 +97,41 @@ class AUXCommand
         void parseBuf(AUXBuffer buf, bool do_checksum);
 
         ///////////////////////////////////////////////////////////////////////////////
-        /// Position
+        /// Set and Get data
         ///////////////////////////////////////////////////////////////////////////////
-        int32_t getPosition();
-        void setPosition(int32_t p);
-        void setPosition(double p);
-
-        ///////////////////////////////////////////////////////////////////////////////
-        /// Rates
-        ///////////////////////////////////////////////////////////////////////////////
-        void setRate(unsigned char r);
+        /**
+         * @brief getData Parses data packet and convert it to a 32bit unsigned integer
+         * @param bytes How many bytes to interpret the data.
+         * @return
+         */
+        uint32_t getData(uint8_t bytes=3);
+        void setData(uint32_t value, uint8_t bytes=3);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Check sum
         ///////////////////////////////////////////////////////////////////////////////
-        unsigned char checksum(AUXBuffer buf);
+        uint8_t checksum(AUXBuffer buf);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Logging
         ///////////////////////////////////////////////////////////////////////////////
-        //void logCommand();
-        const char * cmd_name(AUXCommands c);
-        int response_data_size();
-        const char * node_name(AUXTargets n);
+        const char * commandName(AUXCommands command) const;
+        const char * moduleName(AUXTargets n);
+        int responseDataSize();
         void logResponse();
         void logCommand();
-        //void logResponse(AUXBuffer buf);
         static void setDebugInfo(const char *deviceName, uint8_t debugLevel);
-
-        // TODO these should be private
-        AUXCommands cmd;
-        AUXTargets src, dst;
-        AUXBuffer data;
 
         static uint8_t DEBUG_LEVEL;
         static char DEVICE_NAME[64];
 
     private:
-        int len {0};
+        uint8_t len {0};
         bool valid {false};
+
+        AUXCommands m_Command;
+        AUXTargets m_Source, m_Destination;
+        AUXBuffer m_Data;
 
 
 
