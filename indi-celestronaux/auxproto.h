@@ -97,6 +97,16 @@ class AUXCommand
         void parseBuf(AUXBuffer buf, bool do_checksum);
 
         ///////////////////////////////////////////////////////////////////////////////
+        /// Getters
+        ///////////////////////////////////////////////////////////////////////////////
+        const AUXTargets &source() const {return m_Source;}
+        const AUXTargets &destination() const {return m_Destination;}
+        const AUXBuffer &data() const {return m_Data;}
+        AUXCommands command() const {return m_Command;}
+        size_t dataSize() const {return m_Data.size();}
+        const char * commandName() const {return commandName(m_Command);}
+
+        ///////////////////////////////////////////////////////////////////////////////
         /// Set and Get data
         ///////////////////////////////////////////////////////////////////////////////
         /**
@@ -104,7 +114,7 @@ class AUXCommand
          * @param bytes How many bytes to interpret the data.
          * @return
          */
-        uint32_t getData(uint8_t bytes=3);
+        uint32_t getData();
         void setData(uint32_t value, uint8_t bytes=3);
 
         ///////////////////////////////////////////////////////////////////////////////

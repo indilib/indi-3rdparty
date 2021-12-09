@@ -413,25 +413,27 @@ unsigned char AUXCommand::checksum(AUXBuffer buf)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-/// One definition rule (ODR) constants
-/// AUX commands use 24bit integer as a representation of angle in units of
-/// fractional revolutions. Thus 2^24 steps makes full revolution.
-/// Return encoder position in steps.
+/// Return 8, 16, or 24bit value as dictacted by the data response size.
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t AUXCommand::getData(uint8_t bytes)
+uint32_t AUXCommand::getData()
 {
-    if (m_Data.size() == 3)
+    uint32_t value = 0;
+    switch (m_Data.size())
     {
-        int32_t a = static_cast<int8_t>(m_Data[0]);
-        a <<= 16;
-        a |= static_cast<uint32_t>(m_Data[1]) << 8;
-        a |= static_cast<uint32_t>(m_Data[2]);
-        return a;
+        case 3:
+            value = (m_Data[0] << 16) | (m_Data[1] << 8) | m_Data[2];
+            break;
+
+        case 2:
+            value = (m_Data[0] << 8) | m_Data[1];
+            break;
+
+        case 1:
+            value = m_Data[0];
+            break;
     }
-    else
-    {
-        return 0;
-    }
+
+    return value;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

@@ -137,21 +137,54 @@ class CelestronAUX :
         bool SlewALT(int32_t rate);
         bool SlewAZ(int32_t rate);
         bool GoToFast(int32_t alt, int32_t az, bool track);
-        bool GoToSlow(int32_t alt, int32_t az, bool track);
+        bool GoToSlow(int32_t alt, int32_t az);
+
+        /**
+         * @brief GoToEncoder Go to a 24bit encoder position.
+         * @param axis AZ or ALT
+         * @param steps Encoder microsteps
+         * @param fast If true, use fast command to reach target. If false, use slow command.
+         * @return True if successful, false otherwise.
+         */
+        bool GoToEncoder(INDI_HO_AXIS axis, uint32_t steps, bool fast = true);
+
+        /**
+         * @brief SlewByRate Slew an axis using variable rate speed.
+         * @param axis AZ or ALT
+         * @param rate -9 to +9. 0 means stop.
+         * For AZ, negative means left while positive means right.
+         * For Alt, negative is down while positive is up.
+         * @return True if successful, false otherwise.
+         */
+        bool SlewByRate(INDI_HO_AXIS axis, int8_t rate);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Tracking
         /////////////////////////////////////////////////////////////////////////////////////
-        bool Track(int32_t altRate, int32_t azRate);
+        //bool (INDI_HO_AXIS axis, double rate)
         bool SetTrackEnabled(bool enabled) override;
+        bool SetTrackRate(double raRate, double deRate) override;
+
+        /**
+         * @brief TrackByRate Set axis tracking rate in arcsecs/sec.
+         * @param axis AZ or ALT
+         * @param rate arcsecs/s. Zero would stop tracking.
+         * For AZ, negative means left while positive means right.
+         * For Alt, negative is down while positive is up.
+         * @return True if successful, false otherwise.
+         */
+        bool TrackByRate(INDI_HO_AXIS axis, int32_t rate);
         bool trackingRequested();
+
+        bool GetStatus(INDI_HO_AXIS axis);
+        bool GetEncoder(INDI_HO_AXIS axis);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Coord Wrap
         /////////////////////////////////////////////////////////////////////////////////////
         bool setCordWrapEnabled(bool enable);
         bool getCordWrapEnabled();
-        bool setCordWrapPosition(int32_t pos);
+        bool setCordWrapPosition(uint32_t steps);
         uint32_t getCordWrapPosition();
 
 private:
@@ -167,16 +200,14 @@ private:
         /////////////////////////////////////////////////////////////////////////////////////
         /// Guiding
         /////////////////////////////////////////////////////////////////////////////////////
-        bool TimerTick(double dt);
         bool GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
 
 
     private:        
         // Axis Information
-        AxisStatus AxisStatusALT;
-        AxisDirection AxisDirectionALT;
-        AxisStatus AxisStatusAZ;
-        AxisDirection AxisDirectionAZ;
+        AxisStatus m_AxisStatus[2] {STOPPED, STOPPED};
+        AxisDirection m_AxisDirection[2] {FORWARD, FORWARD};
+        bool m_AxisSlewing[2] = {false, false};
 
         // Motion Control
 
@@ -191,15 +222,18 @@ private:
         INDI::ElapsedTimer m_TrackingElapsedTimer;
 
 
+        /////////////////////////////////////////////////////////////////////////////////////
+        /// Auxiliary Command Communication
+        /////////////////////////////////////////////////////////////////////////////////////
+        bool sendAUXCommand(AUXCommand &command);
         void closeConnection();
         void emulateGPS(AUXCommand &m);
         bool serialReadResponse(AUXCommand c);
         bool tcpReadResponse();
         bool readAUXResponse(AUXCommand c);
         bool processResponse(AUXCommand &cmd);
-        void queryStatus();
         int sendBuffer(int PortFD, AUXBuffer buf);
-        bool sendAUXCommand(AUXCommand &c);
+
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
         // Current steps from controller
@@ -232,6 +266,9 @@ private:
         int32_t m_CordWrapPosition {0};
         uint32_t m_RequestedCordwrapPos;
 
+        bool m_ManualMotionActive { false };
+        bool m_IterativeGOTOPending {false};
+
         // Debug
         uint32_t DBG_CAUX {0};
         uint32_t DBG_SERIAL {0};
@@ -239,7 +276,7 @@ private:
         ///////////////////////////////////////////////////////////////////////////////
         /// Communication
         ///////////////////////////////////////////////////////////////////////////////
-        int modem_ctrl;
+        int m_ModemControl {0};
         void setRTS(bool rts);
         bool waitCTS(float timeout);
         bool detectRTSCTS();
@@ -288,6 +325,11 @@ private:
         // Guide Rate
         INDI::PropertyNumber GuideRateNP {2};
 
+        // Encoders
+        INDI::PropertyNumber EncoderNP {2};
+        // Angles
+        INDI::PropertyNumber AngleNP {2};
+
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables
         ///////////////////////////////////////////////////////////////////////////////
@@ -304,13 +346,10 @@ private:
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
         static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
 
-        // The guide rate is probably (???) measured in 1024 arcmin/min
-        // This is based on experimentation and guesswork.
-        // The rate is calculated in steps/min - thus conversion is required.
-        // The best experimental value was 1.315 which is quite close
-        // to 61440/STEPS_PER_DEGREE = 1.318359375.
-        static constexpr double TRACK_SCALE {61440 / STEPS_PER_DEGREE};
-        static constexpr double SIDERAL_RATE {1.002737909350795};
+        // MC_SET_POS_GUIDERATE & MC_SET_NEG_GUIDERATE use 24bit number rate in
+        // units of 0.25 arc sec per sec. So 1 arcsec/s ==> rate = 4
+        static constexpr uint8_t RATE_PER_ARCSEC {4};
+
         static constexpr uint32_t BUFFER_SIZE {10240};
         // seconds
         static constexpr uint8_t READ_TIMEOUT {1};
