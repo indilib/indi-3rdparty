@@ -32,6 +32,7 @@
 #include <thread>
 #include <chrono>
 
+#include <alignment/DriverCommon.h>
 #include "celestronaux.h"
 #include "config.h"
 
@@ -55,8 +56,7 @@ double anglediff(double a, double b)
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 CelestronAUX::CelestronAUX()
-    : ScopeStatus(IDLE), AxisStatusALT(STOPPED), AxisDirectionALT(FORWARD), AxisStatusAZ(STOPPED),
-      AxisDirectionAZ(FORWARD),
+    : ScopeStatus(IDLE),
       DBG_CAUX(INDI::Logger::getInstance().addDebugLevel("AUX", "CAUX")),
       DBG_SERIAL(INDI::Logger::getInstance().addDebugLevel("Serial", "CSER"))
 {
@@ -86,27 +86,6 @@ CelestronAUX::~CelestronAUX()
 {
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::Abort()
-{
-    AxisStatusAZ = AxisStatusALT = STOPPED;
-    TrackState = SCOPE_IDLE;
-    Track(0, 0);
-    AUXBuffer b(1);
-    b[0] = 0;
-    AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
-    AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
-    sendAUXCommand(stopAlt);
-    readAUXResponse(stopAlt);
-    sendAUXCommand(stopAz);
-    readAUXResponse(stopAz);
-
-    LOG_INFO("Mount motion aborted.");
-    return true;
-}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -607,22 +586,12 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    if (strcmp(dev, getDeviceName()) == 0)
-    {
-        // Process alignment properties
+    if (!strcmp(dev, getDeviceName()))
         ProcessAlignmentTextProperties(this, name, texts, names, n);
-    }
-    // Pass it up the chain
+
     return INDI::Telescope::ISNewText(dev, name, texts, names, n);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::SlewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
-{
-
-}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -632,9 +601,11 @@ bool CelestronAUX::Park()
     // Park at the northern or southern horizon
     // This is a designated by celestron parking position
     Abort();
-    LOG_INFO("Mount park in progress...");
-    GoToFast(0, LocationN[LOCATION_LATITUDE].value >= 0 ? 0 : 180, false);
-    TrackState = SCOPE_PARKING;
+    // TODO implement custom parking
+    slewTo(AXIS_AZ, LocationN[LOCATION_LATITUDE].value >= 0 ? 0 : 180);
+    slewTo(AXIS_ALT, 0);
+
+    LOG_INFO("Parking in progress...");
     return true;
 }
 
@@ -723,158 +694,50 @@ void CelestronAUX::syncCoordWrapPosition()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::Goto(double ra, double dec)
-{
-    LOGF_DEBUG("Goto - Celestial reference frame target RA:%lf(%lf h) Dec:%lf", ra * 360.0 / 24.0, ra, dec);
-    if (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s)
-    {
-        char RAStr[32], DecStr[32];
-        fs_sexa(RAStr, ra, 2, 3600);
-        fs_sexa(DecStr, dec, 2, 3600);
-        CurrentTrackingTarget.rightascension  = ra;
-        CurrentTrackingTarget.declination = dec;
-        NewTrackingTarget         = CurrentTrackingTarget;
-        LOGF_INFO("Slewing to RA: %s DE: %s with tracking.", RAStr, DecStr);
-    }
-
-    GoToTarget.rightascension  = ra;
-    GoToTarget.declination = dec;
-
-    double timeshift = 0.0;
-    if (ScopeStatus != APPROACH)
-    {
-        // The scope is not in slow approach mode - target should be modified
-        // for precission approach. We go to the position from some time ago,
-        // to keep the motors going in the same direction as in tracking
-
-        // Three minutes worth of tracking
-        // 2021-02-21 JM: Shouldn't this depend on HOW FAR we are from target?
-        // Why is it constant?
-        timeshift = 3.0 / (24.0 * 60.0);
-    }
-
-    // Call the alignment subsystem to translate the celestial reference frame coordinate
-    // into a telescope reference frame coordinate
-    TelescopeDirectionVector TDV;
-    INDI::IHorizontalCoordinates AltAz;
-
-    AltAz = AltAzFromRaDec(ra, dec, -timeshift);
-
-    // For high Alt azimuth may change very fast.
-    // Let us limit azimuth approach to maxApproach degrees
-    if (ScopeStatus != APPROACH)
-    {
-        INDI::IHorizontalCoordinates trgAltAz = AltAzFromRaDec(ra, dec, 0);
-        double d;
-
-        d = anglediff(AltAz.azimuth, trgAltAz.azimuth);
-        LOGF_DEBUG("Azimuth approach:  %lf (%lf)", d, Approach);
-        AltAz.azimuth = trgAltAz.azimuth + ((d > 0) ? Approach : -Approach);
-
-        d = anglediff(AltAz.altitude, trgAltAz.altitude);
-        LOGF_DEBUG("Altitude approach:  %lf (%lf)", d, Approach);
-        AltAz.altitude = trgAltAz.altitude + ((d > 0) ? Approach : -Approach);
-    }
-
-    // Fold Azimuth into 0-360
-    AltAz.azimuth = range360(AltAz.azimuth);
-    // Altitude encoder runs -90 to +90 there is no point going outside.
-    if (AltAz.altitude > 90.0)
-        AltAz.altitude = 90.0;
-    if (AltAz.altitude < -90.0)
-        AltAz.altitude = -90.0;
-
-    LOGF_DEBUG("Goto: Scope reference frame target altitude %lf azimuth %lf", AltAz.altitude, AltAz.azimuth);
-
-    TrackState = SCOPE_SLEWING;
-    if (ScopeStatus == APPROACH)
-    {
-        // We need to make a slow slew to approach the final position
-        ScopeStatus = SLEWING_SLOW;
-        GoToSlow(long(AltAz.altitude * STEPS_PER_DEGREE),
-                 long(AltAz.azimuth * STEPS_PER_DEGREE),
-                 ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
-    }
-    else
-    {
-        // Just make a standard fast slew
-        slewTicks   = 0;
-        ScopeStatus = SLEWING_FAST;
-        GoToFast(long(AltAz.altitude * STEPS_PER_DEGREE),
-                 long(AltAz.azimuth * STEPS_PER_DEGREE),
-                 ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
-    }
-
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
     int rate = IUFindOnSwitchIndex(&SlewRateSP) + 1;
-    LOGF_DEBUG("MoveNS dir:%d, cmd:%d, rate:%d", dir, command, rate);
-    AxisDirectionALT = (dir == DIRECTION_NORTH) ? FORWARD : REVERSE;
-    AxisStatusALT    = (command == MOTION_START) ? SLEWING : STOPPED;
+    m_AxisDirection[AXIS_ALT] = (dir == DIRECTION_NORTH) ? FORWARD : REVERSE;
+    m_AxisStatus[AXIS_ALT] = (command == MOTION_START) ? SLEWING : STOPPED;
     ScopeStatus      = SLEWING_MANUAL;
     TrackState       = SCOPE_SLEWING;
     if (command == MOTION_START)
     {
-        return SlewALT(((AxisDirectionALT == FORWARD) ? 1 : -1) * rate);
+        return slewByRate(AXIS_ALT, ((m_AxisDirection[AXIS_ALT] == FORWARD) ? 1 : -1) * rate);
     }
     else
-        return SlewALT(0);
+        return stopAxis(AXIS_ALT);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-
 bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
-    int rate = IUFindOnSwitchIndex(&SlewRateSP);
-    LOGF_DEBUG("MoveWE dir:%d, cmd:%d, rate:%d", dir, command, rate);
-    AxisDirectionAZ = (dir == DIRECTION_WEST) ? FORWARD : REVERSE;
-    AxisStatusAZ    = (command == MOTION_START) ? SLEWING : STOPPED;
-    ScopeStatus     = SLEWING_MANUAL;
-    TrackState      = SCOPE_SLEWING;
+    int rate = IUFindOnSwitchIndex(&SlewRateSP) + 1;
+    m_AxisDirection[AXIS_AZ] = (dir == DIRECTION_WEST) ? FORWARD : REVERSE;
+    m_AxisStatus[AXIS_AZ] = (command == MOTION_START) ? SLEWING : STOPPED;
+    ScopeStatus      = SLEWING_MANUAL;
+    TrackState       = SCOPE_SLEWING;
     if (command == MOTION_START)
     {
-        switch (rate)
-        {
-            case SLEW_GUIDE:
-                rate = GUIDE_SLEW_RATE;
-                break;
-
-            case SLEW_CENTERING:
-                rate = CENTERING_SLEW_RATE;
-                break;
-
-            case SLEW_FIND:
-                rate = FIND_SLEW_RATE;
-                break;
-
-            default:
-                rate = MAX_SLEW_RATE;
-                break;
-        }
-        return SlewAZ(((AxisDirectionAZ == FORWARD) ? -1 : 1) * rate);
+        return slewByRate(AXIS_AZ, ((m_AxisDirection[AXIS_AZ] == FORWARD) ? 1 : -1) * rate);
     }
     else
-        return SlewAZ(0);
+        return stopAxis(AXIS_AZ);
 }
 
 
-//++++ autoguide
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 IPState CelestronAUX::GuideNorth(uint32_t ms)
 {
     LOGF_DEBUG("Guiding: N %d ms", ms);
 
-    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_ALT].value);
+    int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_ALT].getValue());
 
-    GuidePulse(AXIS_ALT, ms, rate);
+    //guidePulse(AXIS_ALT, ms, rate);
 
     return IPS_BUSY;
 }
@@ -883,9 +746,9 @@ IPState CelestronAUX::GuideSouth(uint32_t ms)
 {
     LOGF_DEBUG("Guiding: S %d ms", ms);
 
-    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_ALT].value);
+    int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_ALT].getValue());
 
-    GuidePulse(AXIS_ALT, ms, -rate);
+    //guidePulse(AXIS_ALT, ms, -rate);
 
     return IPS_BUSY;
 }
@@ -894,9 +757,9 @@ IPState CelestronAUX::GuideEast(uint32_t ms)
 {
     LOGF_DEBUG("Guiding: E %d ms", ms);
 
-    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_AZ].value);
+    int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_AZ].getValue());
 
-    GuidePulse(AXIS_AZ, ms, -rate);
+    //guidePulse(AXIS_AZ, ms, -rate);
 
     return IPS_BUSY;
 }
@@ -905,58 +768,38 @@ IPState CelestronAUX::GuideWest(uint32_t ms)
 {
     LOGF_DEBUG("Guiding: W %d ms", ms);
 
-    int8_t rate = static_cast<int8_t>(GuideRateN[AXIS_AZ].value);
+    int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_AZ].getValue());
 
-    GuidePulse(AXIS_AZ, ms, rate);
+    //guidePulse(AXIS_AZ, ms, rate);
 
     return IPS_BUSY;
 }
 
-bool CelestronAUX::GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
+bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 {
     uint8_t ticks = std::min(uint32_t(255), ms / 10);
     AUXBuffer data(2);
     data[0] = rate;
     data[1] = ticks;
-    AUXCommand cmd(MC_AUX_GUIDE, APP, axis == AXIS_ALT ? ALT : AZM, data);
+    AUXCommand cmd(MC_AUX_GUIDE, APP, axis == AXIS_DE ? ALT : AZM, data);
     return sendAUXCommand(cmd);
 }
 
-
-bool CelestronAUX::HandleGetAutoguideRate(INDI_EQ_AXIS axis, uint8_t rate)
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::resetTracking()
 {
-    switch (axis)
-    {
-        case AXIS_ALT:
-            GuideRateN[AXIS_ALT].value = rate;
-            break;
-        case AXIS_AZ:
-            GuideRateN[AXIS_AZ].value = rate;
-            break;
-    }
-
-    return true;
+    m_TrackingElapsedTimer.restart();
+    m_GuideOffset[AXIS_AZ] = m_GuideOffset[AXIS_ALT] = 0;
 }
 
-bool CelestronAUX::HandleSetAutoguideRate(INDI_EQ_AXIS axis)
-{
-    INDI_UNUSED(axis);
-    return true;
-}
+//bool CelestronAUX::HandleSetAutoguideRate(INDI_EQ_AXIS axis)
+//{
+//    INDI_UNUSED(axis);
+//    return true;
+//}
 
-bool CelestronAUX::HandleGuidePulse(INDI_EQ_AXIS axis)
-{
-    INDI_UNUSED(axis);
-    return true;
-}
-
-bool CelestronAUX::HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done)
-{
-    if (done)
-        GuideComplete(axis);
-
-    return true;
-}
 
 //---- autoguide
 
@@ -976,108 +819,210 @@ bool CelestronAUX::ReadScopeStatus()
     if (!isConnected())
         return false;
 
-    if (!GetStatus(AXIS_AZ))
+    if (!getStatus(AXIS_AZ))
         return false;
-    if (!GetStatus(AXIS_ALT))
+    if (!getStatus(AXIS_ALT))
         return false;
 
-    if (!GetEncoder(AXIS_AZ))
+    if (!getEncoder(AXIS_AZ))
         return false;
-    if (!GetEncoder(AXIS_ALT))
+    if (!getEncoder(AXIS_ALT))
         return false;
 
     // Calculate new RA DEC
     INDI::IHorizontalCoordinates AltAz { 0, 0 };
-    AltAz.azimuth = range360(MicrostepsToDegrees(AXIS1, CurrentEncoders[AXIS1] - ZeroPositionEncoders[AXIS1]));
-    AltAz.altitude = MicrostepsToDegrees(AXIS2, CurrentEncoders[AXIS2] - ZeroPositionEncoders[AXIS2]);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld (Zero %ld) -> AZ %lf°",
-           CurrentEncoders[AXIS1], ZeroPositionEncoders[AXIS1], AltAz.azimuth);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld (Zero %ld) -> AL %lf°",
-           CurrentEncoders[AXIS2], ZeroPositionEncoders[AXIS2], AltAz.altitude);
+    AltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
+    AltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld -> AZ/RA %lf°", EncoderNP[AXIS_AZ].getValue(),
+           AltAz.azimuth);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld -> AZ/RA %lf°", EncoderNP[AXIS_ALT].getValue(),
+           AltAz.altitude);
+
+    m_MountAltAz = AltAz;
 
 
-    TelescopeDirectionVector TDV;
-    INDI::IEquatorialCoordinates RaDec;
-    INDI::IHorizontalCoordinates AltAz;
-    double RightAscension, Declination;
+    // Get equatorial coords.
+    getCurrentRADE(AltAz, m_SkyCurrentRADE);
+    char RAStr[32], DecStr[32];
+    fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
+    fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky RA %s DE %s", RAStr, DecStr);
 
-    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
+
+    if (TrackState == SCOPE_SLEWING)
     {
-        RaDec.rightascension   = double(GetAZ()) / STEPS_PER_DEGREE;
-        RaDec.declination  = double(GetALT()) / STEPS_PER_DEGREE;
-        TDV = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
+        if (isSlewing() == false)
+        {
+            // Stages are GOTO --> SLEWING FAST --> APPRAOCH --> SLEWING SLOW --> TRACKING
+            if (ScopeStatus == SLEWING_FAST)
+            {
+                ScopeStatus = APPROACH;
+                return Goto(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination);
+            }
 
-        if (TraceThisTick)
-            LOGF_DEBUG("ReadScopeStatus - HA %lf deg ; Dec %lf deg", RaDec.rightascension, RaDec.declination);
+            // If tracking was engaged, start it.
+            if (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s)
+            {
+                // Goto has finished start tracking
+                TrackState = SCOPE_TRACKING;
+                resetTracking();
+                LOG_INFO("Tracking started.");
+            }
+            else
+            {
+                TrackState = SCOPE_IDLE;
+            }
+        }
+    }
+    else if (TrackState == SCOPE_PARKING)
+    {
+        if (isSlewing() == false)
+        {
+            SetTrackEnabled(false);
+            SetParked(true);
+        }
+    }
+
+    NewRaDec(m_SkyCurrentRADE.rightascension, m_SkyCurrentRADE.declination);
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::Goto(double ra, double dec)
+{
+    if (ScopeStatus == APPROACH)
+    {
+        char RAStr[32], DecStr[32];
+        fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
+        fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Iterative GOTO RA %lf DEC %lf (Current Sky RA %s DE %s)", ra, dec, RAStr,
+               DecStr);
     }
     else
     {
-        // libnova indexes Az from south while Celestron controllers index from north
-        // Never mix two controllers/drivers they will never agree perfectly.
-        // Furthermore the celestron hand controler resets the position encoders
-        // on alignment and this will mess-up all orientation in the driver.
-        // Here we are not attempting to make the driver agree with the hand
-        // controller (That would involve adding 180deg here to the azimuth -
-        // this way the celestron nexstar driver and this would agree in some
-        // situations but not in other - better not to attepmpt impossible!).
-        AltAz.azimuth  = double(GetAZ()) / STEPS_PER_DEGREE;
-        AltAz.altitude = double(GetALT()) / STEPS_PER_DEGREE;
-        TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+        if (TrackState != SCOPE_IDLE)
+            Abort();
 
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "GOTO RA %lf DEC %lf", ra, dec);
 
+        if (IUFindSwitch(&CoordSP, "TRACK")->s == ISS_ON || IUFindSwitch(&CoordSP, "SLEW")->s == ISS_ON)
+        {
+            char RAStr[32], DecStr[32];
+            fs_sexa(RAStr, ra, 2, 3600);
+            fs_sexa(DecStr, dec, 2, 3600);
+            m_SkyTrackingTarget.rightascension  = ra;
+            m_SkyTrackingTarget.declination = dec;
+            LOGF_INFO("Goto target RA %s DEC %s", RAStr, DecStr);
+        }
     }
 
-    if (TransformTelescopeToCelestial(TDV, RightAscension, Declination))
+    INDI::IHorizontalCoordinates AltAz { 0, 0 };
+    TelescopeDirectionVector TDV;
+
+    // Transform Celestial to Telescope coordinates.
+    // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
+    // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
+    if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
     {
+        INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
 
+        if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+        {
+            AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
+            INDI::HorizontalToEquatorial(&AltAz, &m_Location, ln_get_julian_from_sys(), &EquatorialCoordinates);
+        }
+        else
+        {
+            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+        }
 
-        // In case we are slewing while tracking update the potential target
-        NewTrackingTarget.rightascension  = RightAscension;
-        NewTrackingTarget.declination = Declination;
-        NewRaDec(RightAscension, Declination);
+        char RAStr[32], DecStr[32];
+        fs_sexa(RAStr, EquatorialCoordinates.rightascension, 2, 3600);
+        fs_sexa(DecStr, EquatorialCoordinates.declination, 2, 3600);
 
-        return true;
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky -> Mount RA %s DE %s (TDV x %lf y %lf z %lf)", RAStr, DecStr, TDV.x,
+               TDV.y, TDV.z);
+    }
+    else
+    {
+        // Try a conversion with the stored observatory position if any
+        INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
+        EquatorialCoordinates.rightascension  = ra;
+        EquatorialCoordinates.declination = dec;
+        INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, ln_get_julian_from_sys(), &AltAz);
+        TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+        switch (GetApproximateMountAlignment())
+        {
+            case ZENITH:
+                break;
+
+            case NORTH_CELESTIAL_POLE:
+                // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 minus
+                // the (positive)observatory latitude. The vector itself is rotated anticlockwise
+                TDV.RotateAroundY(m_Location.latitude - 90.0);
+                break;
+
+            case SOUTH_CELESTIAL_POLE:
+                // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 plus
+                // the (negative)observatory latitude. The vector itself is rotated clockwise
+                TDV.RotateAroundY(m_Location.latitude + 90.0);
+                break;
+        }
+        AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
     }
 
-    LOG_ERROR("ReadScopeStatus - TransformTelescopeToCelestial failed");
-    LOG_ERROR("Activate the Alignment Subsystem");
+    uint32_t axis1Steps = DegreesToMicrosteps(AXIS_AZ, AltAz.azimuth);
+    uint32_t axis2Steps = DegreesToMicrosteps(AXIS_ALT, AltAz.altitude);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
+           "Sky -> Mount AZ %lf° (%ld) AL %lf° (%ld)",
+           AltAz.azimuth,
+           axis1Steps,
+           AltAz.altitude,
+           axis2Steps);
 
-    return false;
+
+    slewTo(AXIS_AZ, axis1Steps, ScopeStatus != APPROACH);
+    slewTo(AXIS_ALT, axis2Steps, ScopeStatus != APPROACH);
+
+    ScopeStatus = (ScopeStatus == Approach) ? SLEWING_SLOW : SLEWING_FAST;
+    TrackState = SCOPE_SLEWING;
+    return true;
 }
+
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Sync(double ra, double dec)
 {
+    // Compute a telescope direction vector from the current encoders
+    if (!getEncoder(AXIS_AZ))
+        return false;
+    if (!getEncoder(AXIS_ALT))
+        return false;
+
+    INDI::IHorizontalCoordinates AltAz { 0, 0 };
+    AltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
+    AltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
+
     AlignmentDatabaseEntry NewEntry;
-    INDI::IEquatorialCoordinates RaDec {0, 0};
-    INDI::IHorizontalCoordinates AltAz {0, 0};
-
-    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
-    {
-        RaDec.rightascension   = double(GetAZ()) / STEPS_PER_DEGREE;
-        RaDec.declination  = double(GetALT()) / STEPS_PER_DEGREE;
-    }
-    else
-    {
-        AltAz.azimuth  = double(GetAZ()) / STEPS_PER_DEGREE;
-        AltAz.altitude = double(GetALT()) / STEPS_PER_DEGREE;
-    }
-
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
-    NewEntry.RightAscension        = ra;
-    NewEntry.Declination           = dec;
-
-    if (MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
-        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromLocalHourAngleDeclination(RaDec);
-    else
+    NewEntry.RightAscension     = ra;
+    NewEntry.Declination        = dec;
+    if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
         NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
+    else
+    {
+        INDI::IEquatorialCoordinates EquatorialCoordinates {range24(AltAz.azimuth), AltAz.altitude};
+        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
+    }
+    NewEntry.PrivateDataSize    = 0;
 
-    NewEntry.PrivateDataSize = 0;
-
-    LOGF_DEBUG("Sync - Celestial reference frame target right ascension %lf(%lf) declination %lf",
-               ra * 360.0 / 24.0, ra, dec);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "New sync point Date %lf RA %lf DEC %lf TDV(x %lf y %lf z %lf)",
+           NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination, NewEntry.TelescopeDirection.x,
+           NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
     if (!CheckForDuplicateSyncPoint(NewEntry))
     {
@@ -1086,32 +1031,102 @@ bool CelestronAUX::Sync(double ra, double dec)
         // Tell the client about size change
         UpdateSize();
 
-        // equatorial/telescope conversions needs more than 1 sync point
-        if (GetAlignmentDatabase().size() < 2 &&
-                MountTypeS[MOUNT_EQUATORIAL].s == ISS_ON)
-            LOG_WARN("Equatorial mounts need two SYNC points at least.");
-
         // Tell the math plugin to reinitialise
         Initialise(this);
-        LOGF_DEBUG("Sync - new entry added RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
 
-        // update cordwrap position at each init of the alignment subsystem
-        long cwpos;
-        if (cw_base_sky)
-            cwpos = range360(m_RequestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
-        else
-            cwpos = range360(m_RequestedCordwrapPos) * STEPS_PER_DEGREE;
-        setCordWrapPosition(cwpos);
-        getCordWrapPosition();
-
-        // update tracking target
+        // Force read before restarting
         ReadScopeStatus();
-        CurrentTrackingTarget = NewTrackingTarget;
+
+        // Sync cord wrap
+        syncCoordWrapPosition();
+
+        // The tracking seconds should be reset to restart the drift compensation
+        resetTracking();
 
         return true;
     }
-    LOGF_DEBUG("Sync - duplicate entry RA: %lf(%lf) DEC: %lf", ra * 360.0 / 24.0, ra, dec);
     return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getCurrentRADE(INDI::IHorizontalCoordinates altaz, INDI::IEquatorialCoordinates &rade)
+{
+    double RightAscension, Declination;
+
+    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    {
+        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(altaz);
+        if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
+        {
+            TelescopeDirectionVector RotatedTDV(TDV);
+            switch (GetApproximateMountAlignment())
+            {
+                case ZENITH:
+                    break;
+
+                case NORTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated clockwise
+                    RotatedTDV.RotateAroundY(90.0 - m_Location.latitude);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, altaz);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated anticlockwise
+                    RotatedTDV.RotateAroundY(-90.0 - m_Location.latitude);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, altaz);
+                    break;
+            }
+
+            INDI::IEquatorialCoordinates EquatorialCoordinates;
+            INDI::HorizontalToEquatorial(&altaz, &m_Location, ln_get_julian_from_sys(), &EquatorialCoordinates);
+            RightAscension = EquatorialCoordinates.rightascension;
+            Declination = EquatorialCoordinates.declination;
+        }
+    }
+    else
+    {
+        INDI::IEquatorialCoordinates EquatorialCoordinates;
+        EquatorialCoordinates.rightascension = range24(altaz.azimuth);
+        double homeDeclination = m_Location.latitude >= 0 ? 90 : -90;
+        // Alt-Az mount in northern hemisphere at home position would have Alt = 0
+        // On an Equatorial mount, this would be equal to Dec = +90
+        EquatorialCoordinates.declination = rangeDec(homeDeclination - altaz.altitude);
+        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
+        if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
+        {
+            TelescopeDirectionVector RotatedTDV(TDV);
+            switch (GetApproximateMountAlignment())
+            {
+                case ZENITH:
+                    break;
+
+                case NORTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
+                    // the (positive)observatory latitude. The vector itself is rotated clockwise
+                    RotatedTDV.RotateAroundY(90.0 - m_Location.latitude);
+                    EquatorialCoordinatesFromTelescopeDirectionVector(RotatedTDV, EquatorialCoordinates);
+                    break;
+
+                case SOUTH_CELESTIAL_POLE:
+                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
+                    // the (negative)observatory latitude. The vector itself is rotated anticlockwise
+                    RotatedTDV.RotateAroundY(-90.0 - m_Location.latitude);
+                    EquatorialCoordinatesFromTelescopeDirectionVector(RotatedTDV, EquatorialCoordinates);
+                    break;
+            }
+
+            RightAscension = EquatorialCoordinates.rightascension;
+            Declination = EquatorialCoordinates.declination;
+        }
+    }
+
+    rade.rightascension = RightAscension;
+    rade.declination = Declination;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1119,131 +1134,88 @@ bool CelestronAUX::Sync(double ra, double dec)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::TimerHit()
 {
-    // This will call ReadScopeStatus
     INDI::Telescope::TimerHit();
 
-    // OK I have updated the celestial reference frame RA/DEC in ReadScopeStatus
-    // Now handle the tracking state
     switch (TrackState)
     {
-        case SCOPE_PARKING:
-            if (!isSlewing())
-            {
-                SetTrackEnabled(false);
-                SetParked(true);
-                LOG_DEBUG("Telescope parked.");
-            }
-            break;
-
         case SCOPE_SLEWING:
-            if (isSlewing())
-            {
-
-                break;
-            }
-            else
-            {
-                // The slew has finished check if that was a coarse slew
-                // or precission approach
-                if (ScopeStatus == SLEWING_FAST)
-                {
-                    // This was coarse slew. Execute precise approach.
-                    ScopeStatus = APPROACH;
-                    Goto(GoToTarget.rightascension, GoToTarget.declination);
-                    break;
-                }
-                else if (trackingRequested())
-                {
-                    // Precise Goto or manual slew has finished.
-                    // Start tracking if requested.
-                    if (ScopeStatus == SLEWING_MANUAL)
-                    {
-                        // We have been slewing manually.
-                        // Update the tracking target.
-                        CurrentTrackingTarget = NewTrackingTarget;
-                    }
-                    LOGF_DEBUG("Goto finished start tracking TargetRA: %f TargetDEC: %f",
-                               CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination);
-                    TrackState = SCOPE_TRACKING;
-                    // Fall through to tracking case
-                }
-                else
-                {
-                    LOG_DEBUG("Goto finished. No tracking requested");
-                    // Precise goto or manual slew finished.
-                    // No tracking requested -> go idle.
-                    TrackState = SCOPE_IDLE;
-                    break;
-                }
-            }
             break;
 
         case SCOPE_TRACKING:
         {
-            /*
-            TODO
-            The tracking should take into account movement of the scope
-            by the hand controller (we can hear the commands)
-            and the movements made by the joystick.
-            Right now when we move the scope by HC it returns to the
-            designated target by corrective tracking.
-            */
-
-            // Continue or start tracking
-            // Calculate where the mount needs to be in a minute (+/- 30s)
-            double JulianOffset = 30.0 / (24.0 * 60 * 60);
-            TelescopeDirectionVector TDV;
-            INDI::IHorizontalCoordinates AAplus, AAzero, AAminus;
-
-            AAplus  = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, JulianOffset);
-            AAzero = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, 0);
-            AAminus  = AltAzFromRaDec(CurrentTrackingTarget.rightascension, CurrentTrackingTarget.declination, -JulianOffset);
-
-            // Fold Azimuth into 0-360
-            AAminus.azimuth = range360(AAminus.azimuth);
-            AAzero.azimuth = range360(AAzero.azimuth);
-            AAplus.azimuth = range360(AAplus.azimuth);
+            // Check if manual motion in progress but we stopped
+            if (m_ManualMotionActive && isSlewing() == false)
             {
-                double altRate, azRate;
-                double altError, azError;
+                m_ManualMotionActive = false;
+                // If we slewed manually using NSWE keys, then we need to restart tracking
+                // whatever point we are AT now. We need to update the SkyTrackingTarget accordingly.
+                m_SkyTrackingTarget.rightascension = EqN[AXIS_RA].value;
+                m_SkyTrackingTarget.declination = EqN[AXIS_DE].value;
+                resetTracking();
+            }
+            // If we're manually moving by WESN controls, update the tracking coordinates.
+            if (m_ManualMotionActive)
+            {
+                break;
+            }
+            else
+            {
 
-                // Proportional term in the control loop
-                // Weight of error in the control loop
-                // For now set at zero - no corrective tracking
-                double Kp {0.0};
+                TelescopeDirectionVector TDV;
+                INDI::IHorizontalCoordinates targetAltAz { 0, 0 };
 
-                // This is in steps per minute
-                altError = AAzero.altitude * STEPS_PER_DEGREE - GetALT();
-                azError  = range360(AAzero.azimuth) * STEPS_PER_DEGREE - GetAZ();
+                if (TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
+                                                  0, TDV))
+                {
+                    if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+                        AltitudeAzimuthFromTelescopeDirectionVector(TDV, targetAltAz);
+                    else
+                    {
+                        INDI::IEquatorialCoordinates EquatorialCoordinates {0, 0};
+                        EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
+                        targetAltAz.azimuth = EquatorialCoordinates.rightascension * 15;
+                        targetAltAz.altitude = EquatorialCoordinates.declination;
+                    }
+                }
+                else
+                {
+                    INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
+                    EquatorialCoordinates.rightascension  = m_SkyTrackingTarget.rightascension;
+                    EquatorialCoordinates.declination = m_SkyTrackingTarget.declination;
+                    if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+                        INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, ln_get_julian_from_sys(), &targetAltAz);
+                    else
+                    {
+                        targetAltAz.azimuth = EquatorialCoordinates.rightascension * 15;
+                        targetAltAz.altitude = EquatorialCoordinates.declination;
+                    }
+                }
 
-                altRate =  STEPS_PER_DEGREE * (AAplus.altitude - AAminus.altitude);
-                azRate = STEPS_PER_DEGREE * anglediff(AAplus.azimuth, AAminus.azimuth);
+                // Now add the guiding offsets.
+                targetAltAz.azimuth += m_GuideOffset[AXIS_AZ];
+                targetAltAz.altitude += m_GuideOffset[AXIS_ALT];
 
-                if (TraceThisTick)
-                    LOGF_DEBUG("Target (AltAz): %f  %f  Scope  (AltAz)  %f  %f", AAzero.altitude, AAzero.azimuth,
-                               GetALT() / STEPS_PER_DEGREE, GetAZ() / STEPS_PER_DEGREE);
+                // Next get current alt-az
+                INDI::IHorizontalCoordinates currentAltAz { 0, 0 };
+                currentAltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
+                currentAltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
 
-                // Fold the Az difference to +/- STEPS_PER_REVOLUTION / 2
-                while (azError > STEPS_PER_REVOLUTION / 2)
-                    azError -= STEPS_PER_REVOLUTION;
-                while (azError < -(STEPS_PER_REVOLUTION / 2))
-                    azError += STEPS_PER_REVOLUTION;
+                // Offset in arcsecs
+                double azOffsetAngle = range360(targetAltAz.azimuth - currentAltAz.azimuth) * 3600;
+                double alOffsetAngle = rangeDec(targetAltAz.altitude - currentAltAz.altitude) * 3600;
 
-                if (TraceThisTick)
-                    LOGF_DEBUG("Tracking rate: Alt %f Az %f ; Errors : Alt: %f Az: %f",
-                               altRate, azRate, altError, azError);
+                if (std::abs(azOffsetAngle) > 0)
+                    trackByRate(AXIS_AZ, azOffsetAngle);
+                if (std::abs(alOffsetAngle) > 0)
+                    trackByRate(AXIS_ALT, alOffsetAngle);
 
-                altRate = SIDERAL_RATE * TRACK_SCALE * (altRate + altError * Kp);
-                azRate  = SIDERAL_RATE * TRACK_SCALE * (azRate + azError * Kp);
-
-                Track(static_cast<int32_t>(altRate), static_cast<int32_t>(azRate));
-
+                break;
             }
             break;
-        }
 
-        default:
-            break;
+            default:
+                break;
+            }
     }
 }
 
@@ -1267,14 +1239,41 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     return true;
 }
 
-int32_t CelestronAUX::clampStepsPerRevolution(int32_t steps)
+/////////////////////////////////////////////////////////////////////////////////////
+/// Axis 1 is RA/AZ which has a range of 0 to 360 degrees (0 to 24 hours)
+/// Axis 1 is DE/AL which has a range of -90 to +90 degrees.
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::MicrostepsToDegrees(INDI_HO_AXIS axis, uint32_t steps)
 {
-    while (steps < 0)
-        steps += STEPS_PER_REVOLUTION;
-    while (steps > STEPS_PER_REVOLUTION)
-        steps -= STEPS_PER_REVOLUTION;
+    double value = steps * DEGREES_PER_STEP;
+    if (axis == AXIS_AZ)
+        return range360(value);
+    else
+        return rangeDec(value);
+}
 
-    return steps;
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+uint32_t CelestronAUX::DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees)
+{
+    uint32_t value = 0;
+    if (axis == AXIS_AZ)
+    {
+        value = degrees * STEPS_PER_DEGREE;
+    }
+    else
+    {
+        value = std::abs(degrees) * STEPS_PER_DEGREE;
+        // We need to wrap around?
+        if (degrees < 0)
+            value += STEPS_PER_DEGREE / 2;
+    }
+
+    if (value > STEPS_PER_DEGREE)
+        value -= STEPS_PER_DEGREE;
+
+    return value;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1282,53 +1281,37 @@ int32_t CelestronAUX::clampStepsPerRevolution(int32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::isSlewing()
 {
-    return m_SlewingAlt || m_SlewingAz;
+    return m_AxisStatus[AXIS_AZ] == SLEWING || m_AxisStatus[AXIS_ALT] == SLEWING;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::Slew(AUXTargets target, int rate)
-{
-    AUXCommand cmd((rate < 0) ? MC_MOVE_NEG : MC_MOVE_POS, APP, target);
-    cmd.setRate((unsigned char)(std::abs(rate) & 0xFF));
-
-    sendAUXCommand(cmd);
-    readAUXResponse(cmd);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::SlewALT(int rate)
-{
-    m_SlewingAlt = (rate != 0);
-    return Slew(ALT, rate);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::SlewAZ(int rate)
-{
-    m_SlewingAz = (rate != 0);
-    return Slew(AZM, rate);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::GoToEncoder(INDI_HO_AXIS axis, uint32_t steps, bool fast)
+bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
 {
     // Stop first.
-    TrackByRate(AXIS_AZ, 0);
-    TrackByRate(AXIS_ALT, 0);
+    trackByRate(AXIS_AZ, 0);
+    trackByRate(AXIS_ALT, 0);
 
     AUXCommand command(fast ? MC_GOTO_FAST : MC_GOTO_SLOW, APP, axis == AXIS_AZ ? AZM : ALT);
+    m_AxisStatus[axis] = SLEWING;
     command.setData(steps);
     sendAUXCommand(command);
     readAUXResponse(command);
+    return true;
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::slewByRate(INDI_HO_AXIS axis, int8_t rate)
+{
+    // Stop first.
+    trackByRate(AXIS_AZ, 0);
+    trackByRate(AXIS_ALT, 0);
+
+    // TODO
     return true;
 };
 
@@ -1422,43 +1405,55 @@ uint32_t CelestronAUX::getCordWrapPosition()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::TrackByRate(INDI_HO_AXIS axis, int32_t rate)
+bool CelestronAUX::stopAxis(INDI_HO_AXIS axis)
+{
+    m_AxisStatus[axis] = STOPPED;
+    trackByRate(axis, 0);
+    AUXBuffer b(1);
+    b[0] = 0;
+    AUXCommand command(MC_MOVE_POS, APP, (axis == AXIS_ALT) ? ALT : AZM, b);
+    sendAUXCommand(command);
+    readAUXResponse(command);
+    return true;
+
+}
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::Abort()
+{
+    stopAxis(AXIS_AZ);
+    stopAxis(AXIS_ALT);
+    TrackState = SCOPE_IDLE;
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 {
     AUXCommand command(rate < 0 ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     command.setData(std::abs(rate));
     sendAUXCommand(command);
     readAUXResponse(command);
+    return true;
 }
 
 bool CelestronAUX::SetTrackEnabled(bool enabled)
 {
     if (enabled)
     {
-        if (TrackState == SCOPE_IDLE)
-        {
-            LOG_INFO("Start Tracking.");
-            CurrentTrackingTarget = NewTrackingTarget;
-            TrackState = SCOPE_TRACKING;
-        }
+        TrackState = SCOPE_TRACKING;
+        resetTracking();
+        m_SkyTrackingTarget.rightascension = EqN[AXIS_RA].value;
+        m_SkyTrackingTarget.declination = EqN[AXIS_DE].value;
     }
     else
     {
-        if (TrackState == SCOPE_TRACKING || TrackState == SCOPE_PARKING)
-        {
-            LOG_WARN("Stopping Tracking.");
-            TrackState = SCOPE_IDLE;
-            AxisStatusAZ = AxisStatusALT = STOPPED;
-            ScopeStatus = IDLE;
-            Track(0, 0);
-            AUXBuffer b(1);
-            b[0] = 0;
-            AUXCommand stopAlt(MC_MOVE_POS, APP, ALT, b);
-            AUXCommand stopAz(MC_MOVE_POS, APP, AZM, b);
-            sendAUXCommand(stopAlt);
-            readAUXResponse(stopAlt);
-            sendAUXCommand(stopAz);
-            readAUXResponse(stopAz);
-        }
+        TrackState = SCOPE_IDLE;
+        stopAxis(AXIS_AZ);
+        stopAxis(AXIS_ALT);
     }
 
     return true;
@@ -1467,9 +1462,9 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::GetStatus(INDI_HO_AXIS axis)
+bool CelestronAUX::getStatus(INDI_HO_AXIS axis)
 {
-    if (m_AxisSlewing[axis] && ScopeStatus != SLEWING_MANUAL)
+    if (m_AxisStatus[axis] == SLEWING && ScopeStatus != SLEWING_MANUAL)
     {
         AUXCommand command(MC_SLEW_DONE, APP, axis == AXIS_AZ ? AZM : ALT);
         sendAUXCommand(command);
@@ -1483,7 +1478,7 @@ bool CelestronAUX::GetStatus(INDI_HO_AXIS axis)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::GetEncoder(INDI_HO_AXIS axis)
+bool CelestronAUX::getEncoder(INDI_HO_AXIS axis)
 {
     AUXCommand command(MC_GET_POSITION, APP, axis == AXIS_AZ ? AZM : ALT);
     sendAUXCommand(command);
@@ -1503,19 +1498,19 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
     if (m.destination() != GPS)
         return;
 
-    LOGF_DEBUG("GPS: Got 0x%02x", m.m_Command);
+    LOGF_DEBUG("GPS: Got 0x%02x", m.command());
     if (m_GPSEmulation == false)
         return;
 
-    switch (m.m_Command)
+    switch (m.command())
     {
         case GET_VER:
         {
-            LOGF_DEBUG("GPS: GET_VER from 0x%02x", m.m_Source);
+            LOGF_DEBUG("GPS: GET_VER from 0x%02x", m.source());
             AUXBuffer dat(2);
             dat[0] = 0x01;
             dat[1] = 0x02;
-            AUXCommand cmd(GET_VER, GPS, m.m_Source, dat);
+            AUXCommand cmd(GET_VER, GPS, m.source(), dat);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
@@ -1525,18 +1520,18 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
         {
             LOGF_DEBUG("GPS: Sending LAT/LONG Lat:%f Lon:%f\n", LocationN[LOCATION_LATITUDE].value,
                        LocationN[LOCATION_LONGITUDE].value);
-            AUXCommand cmd(m.m_Command, GPS, m.m_Source);
-            if (m.m_Command == GPS_GET_LAT)
-                cmd.set24bitValue(LocationN[LOCATION_LATITUDE].value);
+            AUXCommand cmd(m.command(), GPS, m.source());
+            if (m.command() == GPS_GET_LAT)
+                cmd.setData(LocationN[LOCATION_LATITUDE].value);
             else
-                cmd.set24bitValue(LocationN[LOCATION_LONGITUDE].value);
+                cmd.setData(LocationN[LOCATION_LONGITUDE].value);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
         }
         case GPS_GET_TIME:
         {
-            LOGF_DEBUG("GPS: GET_TIME from 0x%02x", m.m_Source);
+            LOGF_DEBUG("GPS: GET_TIME from 0x%02x", m.source());
             time_t gmt;
             struct tm *ptm;
             AUXBuffer dat(3);
@@ -1546,14 +1541,14 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[0] = unsigned(ptm->tm_hour);
             dat[1] = unsigned(ptm->tm_min);
             dat[2] = unsigned(ptm->tm_sec);
-            AUXCommand cmd(GPS_GET_TIME, GPS, m.m_Source, dat);
+            AUXCommand cmd(GPS_GET_TIME, GPS, m.source(), dat);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
         }
         case GPS_GET_DATE:
         {
-            LOGF_DEBUG("GPS: GET_DATE from 0x%02x", m.m_Source);
+            LOGF_DEBUG("GPS: GET_DATE from 0x%02x", m.source());
             time_t gmt;
             struct tm *ptm;
             AUXBuffer dat(2);
@@ -1562,14 +1557,14 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             ptm    = gmtime(&gmt);
             dat[0] = unsigned(ptm->tm_mon + 1);
             dat[1] = unsigned(ptm->tm_mday);
-            AUXCommand cmd(GPS_GET_DATE, GPS, m.m_Source, dat);
+            AUXCommand cmd(GPS_GET_DATE, GPS, m.source(), dat);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
         }
         case GPS_GET_YEAR:
         {
-            LOGF_DEBUG("GPS: GET_YEAR from 0x%02x", m.m_Source);
+            LOGF_DEBUG("GPS: GET_YEAR from 0x%02x", m.source());
             time_t gmt;
             struct tm *ptm;
             AUXBuffer dat(2);
@@ -1579,24 +1574,24 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
             dat[0] = unsigned(ptm->tm_year + 1900) >> 8;
             dat[1] = unsigned(ptm->tm_year + 1900) & 0xFF;
             LOGF_DEBUG("GPS: Sending: %d [%d,%d]", ptm->tm_year, dat[0], dat[1]);
-            AUXCommand cmd(GPS_GET_YEAR, GPS, m.m_Source, dat);
+            AUXCommand cmd(GPS_GET_YEAR, GPS, m.source(), dat);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
         }
         case GPS_LINKED:
         {
-            LOGF_DEBUG("GPS: LINKED from 0x%02x", m.m_Source);
+            LOGF_DEBUG("GPS: LINKED from 0x%02x", m.source());
             AUXBuffer dat(1);
 
             dat[0] = unsigned(1);
-            AUXCommand cmd(GPS_LINKED, GPS, m.m_Source, dat);
+            AUXCommand cmd(GPS_LINKED, GPS, m.source(), dat);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
         }
         default:
-            LOGF_DEBUG("GPS: Got 0x%02x", m.m_Command);
+            LOGF_DEBUG("GPS: Got 0x%02x", m.command());
             break;
     }
 }
@@ -1608,98 +1603,82 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 {
     m.logResponse();
 
-    if (m.m_Destination == GPS)
+    if (m.destination() == GPS)
         emulateGPS(m);
-    else if (m.m_Destination == APP)
-        switch (m.m_Command)
+    else if (m.destination() == APP)
+        switch (m.command())
         {
             case MC_GET_POSITION:
-                switch (m.m_Source)
+                switch (m.source())
                 {
                     case ALT:
                         // The Alt encoder value is signed!
-                        m_AltSteps = m.getPosition();
-                        DEBUGF(DBG_CAUX, "Got Alt: %ld", m_AltSteps);
+                        EncoderNP[AXIS_ALT].setValue(m.getData());
                         break;
                     case AZM:
-                        // Celestron uses N as zero Azimuth!
-                        m_AzSteps = clampStepsPerRevolution(m.getPosition());
-                        DEBUGF(DBG_CAUX, "Got Az: %ld", m_AzSteps);
+                        EncoderNP[AXIS_AZ].setValue(m.getData());
                         break;
                     default:
                         break;
                 }
                 break;
             case MC_SLEW_DONE:
-                switch (m.m_Source)
+                switch (m.source())
                 {
                     case ALT:
-                        m_SlewingAlt = m.m_Data[0] != 0xff;
+                        m_AxisStatus[AXIS_ALT] = (m.getData() == 0xff) ? STOPPED : SLEWING;
                         break;
                     case AZM:
-                        m_SlewingAz = m.m_Data[0] != 0xff;
+                        m_AxisStatus[AXIS_AZ] = (m.getData() == 0xff) ? STOPPED : SLEWING;
                         break;
                     default:
                         break;
                 }
                 break;
             case MC_POLL_CORDWRAP:
-                if (m.m_Source == AZM)
-                    m_CordWrapActive = m.m_Data[0] == 0xff;
+                if (m.source() == AZM)
+                    m_CordWrapActive = m.getData() == 0xff;
                 break;
             case MC_GET_CORDWRAP_POS:
-                if (m.m_Source == AZM)
-                {
-                    m_CordWrapPosition = clampStepsPerRevolution(m.getPosition());
-                    LOGF_DEBUG("Got cordwrap position %.1f", float(m_CordWrapPosition) / STEPS_PER_DEGREE);
-                }
+                if (m.source() == AZM)
+                    m_CordWrapPosition = m.getData();
                 break;
 
             case MC_GET_AUTOGUIDE_RATE:
-                switch (m.m_Source)
+                switch (m.source())
                 {
                     case ALT:
-                        return HandleGetAutoguideRate(AXIS_ALT, m.m_Data[0] * 100.0 / 255);
+                        GuideRateNP[AXIS_ALT].setValue(m.getData() * 100.0 / 255);
+                        break;
                     case AZM:
-                        return HandleGetAutoguideRate(AXIS_AZ, m.m_Data[0] * 100.0 / 255);
+                        GuideRateNP[AXIS_AZ].setValue(m.getData() * 100.0 / 255);
+                        break;
                     default:
-                        IDLog("unknown src 0x%02x\n", m.m_Source);
+                        break;
                 }
                 break;
 
             case MC_SET_AUTOGUIDE_RATE:
-                switch (m.m_Source)
-                {
-                    case ALT:
-                        return HandleSetAutoguideRate(AXIS_ALT);
-                    case AZM:
-                        return HandleSetAutoguideRate(AXIS_AZ);
-                    default:
-                        IDLog("unknown src 0x%02x\n", m.m_Source);
-                }
+                // Nothing to do.
                 break;
 
             case MC_AUX_GUIDE:
-                switch (m.m_Source)
-                {
-                    case ALT:
-                        return HandleGuidePulse(AXIS_ALT);
-                    case AZM:
-                        return HandleGuidePulse(AXIS_AZ);
-                    default:
-                        IDLog("unknown src 0x%02x\n", m.m_Source);
-                }
+                // Nothing to do
                 break;
 
             case MC_AUX_GUIDE_ACTIVE:
-                switch (m.m_Source)
+                switch (m.source())
                 {
                     case ALT:
-                        return HandleGuidePulseDone(AXIS_ALT, m.m_Data[0] == 0x00);
+                        if (m.getData() == 0x00)
+                            GuideComplete(AXIS_DE);
+                        break;
                     case AZM:
-                        return HandleGuidePulseDone(AXIS_AZ, m.m_Data[0] == 0x00);
+                        if (m.getData() == 0x00)
+                            GuideComplete(AXIS_RA);
+                        break;
                     default:
-                        IDLog("unknown src 0x%02x\n", m.m_Source);
+                        break;
                 }
                 break;
 
@@ -1707,10 +1686,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 uint8_t *verBuf;
 
                 verBuf = 0;
-                if (m.m_Source != APP)
-                    LOGF_INFO("Got GET_VERSION response from %s: %d.%d.%d ", m.moduleName(m.m_Source), m.m_Data[0], m.m_Data[1],
-                              256 * m.m_Data[2] + m.m_Data[3]);
-                switch (m.m_Source)
+                switch (m.source())
                 {
                     case MB:
                         verBuf = m_MainBoardVersion;
@@ -1730,28 +1706,20 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                         break;
                     case WiFi:
                         verBuf = m_WiFiVersion;
-                        // Shift data to upper bytes
-                        m.m_Data[0] = m.m_Data[2];
-                        m.m_Data[1] = m.m_Data[3];
-                        // Zero out uninitialized bytes
-                        m.m_Data[2] = 0;
-                        m.m_Data[3] = 0;
                         break;
                     case GPS:
                         verBuf = m_GPSVersion;
-                        // Zero out uninitialized bytes
-                        m.m_Data[2] = 0;
-                        m.m_Data[3] = 0;
                         break;
                     case APP:
-                        LOGF_DEBUG("Got echo of GET_VERSION from %s", m.moduleName(m.m_Destination));
+                        LOGF_DEBUG("Got echo of GET_VERSION from %s", m.moduleName(m.destination()));
                         break;
                     default:
                         break;
                 }
                 if (verBuf != 0)
                 {
-                    memcpy(verBuf, m.m_Data.data(), 4);
+                    for (int i = 0; i < 4; i++)
+                        verBuf[i] = m.data()[i];
                 }
                 break;
             default:
@@ -1760,7 +1728,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
         }
     else
     {
-        DEBUGF(DBG_CAUX, "Got msg not for me (%s). Ignoring.", m.moduleName(m.m_Destination));
+        DEBUGF(DBG_CAUX, "Got msg not for me (%s). Ignoring.", m.moduleName(m.destination()));
     }
     return true;
 }
@@ -1828,9 +1796,9 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
 
         buf[0] = 0x3b;
         buf[1] = response_data_size + 1;
-        buf[2] = c.m_Destination;
-        buf[3] = c.m_Source;
-        buf[4] = c.m_Command;
+        buf[2] = c.destination();
+        buf[3] = c.source();
+        buf[4] = c.command();
 
         AUXBuffer b(buf, buf + (response_data_size + 5));
         hex_dump(hexbuf, b, b.size());
@@ -2022,7 +1990,7 @@ bool CelestronAUX::waitCTS(float timeout)
     float step = timeout / 20.;
     for (; timeout >= 0; timeout -= step)
     {
-        msleep(step);
+        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(step)));
         if (ioctl(PortFD, TIOCMGET, &m_ModemControl) == -1)
         {
             LOGF_ERROR("Error getting handshake lines %s(%d).", strerror(errno), errno);
@@ -2147,7 +2115,7 @@ int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout
     if (m_IsRTSCTS)
     {
         DEBUG(DBG_SERIAL, "aux_tty_write: clear RTS");
-        msleep(RTS_DELAY);
+        std::this_thread::sleep_for(std::chrono::milliseconds(RTS_DELAY));
         setRTS(0);
 
         // ports requiring hardware flow control echo all sent characters,
