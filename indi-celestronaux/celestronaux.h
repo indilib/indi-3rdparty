@@ -116,10 +116,10 @@ class CelestronAUX :
         virtual IPState GuideEast(uint32_t ms) override;
         virtual IPState GuideWest(uint32_t ms) override;
 
-        virtual bool HandleGetAutoguideRate(INDI_EQ_AXIS axis, uint8_t rate);
-        virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
-        virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
-        virtual bool HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done);
+        //virtual bool HandleGetAutoguideRate(INDI_HO_AXIS axis, uint8_t rate);
+        //virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
+        //virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
+        //virtual bool HandleGuidePulseDone(INDI_EQ_AXIS axis, bool done);
 
         // TODO: Switch to AltAz from N-S/W-E
         virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command) override;
@@ -132,21 +132,17 @@ class CelestronAUX :
         /////////////////////////////////////////////////////////////////////////////////////
         /// Motion Control
         /////////////////////////////////////////////////////////////////////////////////////
+        bool stopAxis(INDI_HO_AXIS axis);
         bool isSlewing();
-        bool Slew(AUXTargets target, int rate);
-        bool SlewALT(int32_t rate);
-        bool SlewAZ(int32_t rate);
-        bool GoToFast(int32_t alt, int32_t az, bool track);
-        bool GoToSlow(int32_t alt, int32_t az);
 
         /**
-         * @brief GoToEncoder Go to a 24bit encoder position.
+         * @brief SlewTo Go to a 24bit encoder position.
          * @param axis AZ or ALT
          * @param steps Encoder microsteps
          * @param fast If true, use fast command to reach target. If false, use slow command.
          * @return True if successful, false otherwise.
          */
-        bool GoToEncoder(INDI_HO_AXIS axis, uint32_t steps, bool fast = true);
+        bool slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast = true);
 
         /**
          * @brief SlewByRate Slew an axis using variable rate speed.
@@ -156,7 +152,7 @@ class CelestronAUX :
          * For Alt, negative is down while positive is up.
          * @return True if successful, false otherwise.
          */
-        bool SlewByRate(INDI_HO_AXIS axis, int8_t rate);
+        bool slewByRate(INDI_HO_AXIS axis, int8_t rate);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Tracking
@@ -164,6 +160,7 @@ class CelestronAUX :
         //bool (INDI_HO_AXIS axis, double rate)
         bool SetTrackEnabled(bool enabled) override;
         bool SetTrackRate(double raRate, double deRate) override;
+        void resetTracking();
 
         /**
          * @brief TrackByRate Set axis tracking rate in arcsecs/sec.
@@ -173,11 +170,11 @@ class CelestronAUX :
          * For Alt, negative is down while positive is up.
          * @return True if successful, false otherwise.
          */
-        bool TrackByRate(INDI_HO_AXIS axis, int32_t rate);
+        bool trackByRate(INDI_HO_AXIS axis, int32_t rate);
         bool trackingRequested();
 
-        bool GetStatus(INDI_HO_AXIS axis);
-        bool GetEncoder(INDI_HO_AXIS axis);
+        bool getStatus(INDI_HO_AXIS axis);
+        bool getEncoder(INDI_HO_AXIS axis);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Coord Wrap
@@ -195,21 +192,25 @@ private:
         bool getVersion(AUXTargets target);
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
+        double MicrostepsToDegrees(INDI_HO_AXIS axis, uint32_t steps);
+        uint32_t DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees);
+        bool getCurrentRADE(INDI::IHorizontalCoordinates altaz, INDI::IEquatorialCoordinates &rade);
         int32_t clampStepsPerRevolution(int32_t);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Guiding
         /////////////////////////////////////////////////////////////////////////////////////
-        bool GuidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
+        bool guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
 
 
     private:        
         // Axis Information
         AxisStatus m_AxisStatus[2] {STOPPED, STOPPED};
         AxisDirection m_AxisDirection[2] {FORWARD, FORWARD};
-        bool m_AxisSlewing[2] = {false, false};
 
-        // Motion Control
+        // Guiding offset in steps
+        // For each pulse, we modify the offset so that we can add it to our current tracking traget
+        int32_t m_GuideOffset[2] = {0, 0};
 
         // approach distance
         double Approach;
@@ -218,7 +219,6 @@ private:
         INDI::IEquatorialCoordinates m_SkyTrackingTarget { 0, 0 };
         INDI::IEquatorialCoordinates m_SkyCurrentRADE {0, 0};
         INDI::IHorizontalCoordinates m_MountAltAz {0, 0};
-        long OldTrackingTarget[2] { 0, 0 };
         INDI::ElapsedTimer m_TrackingElapsedTimer;
 
 
@@ -233,23 +233,9 @@ private:
         bool readAUXResponse(AUXCommand c);
         bool processResponse(AUXCommand &cmd);
         int sendBuffer(int PortFD, AUXBuffer buf);
-
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
-        // Current steps from controller
-        // AUX protocol uses signed 24bit integers for positions
-        int32_t m_AltSteps {0};
-        int32_t m_AzSteps {0};
-        // FIXME: Current rate in steps per sec?
-        int32_t m_AltRate {0};
-        int32_t m_AzRate {0};
-        // Desired target steps in both axis
-        int32_t targetAlt {0};
-        int32_t targetAz {0};
-        // FIXME: Combined slew rate?
-        int32_t slewRate {0};
-
-        bool m_SlewingAlt {false}, m_SlewingAz {false};
+        // GPS Emulation
         bool m_GPSEmulation {false};
 
         // Firmware
@@ -266,8 +252,8 @@ private:
         int32_t m_CordWrapPosition {0};
         uint32_t m_RequestedCordwrapPos;
 
+        // Manual Slewing NSWE
         bool m_ManualMotionActive { false };
-        bool m_IterativeGOTOPending {false};
 
         // Debug
         uint32_t DBG_CAUX {0};
@@ -341,6 +327,7 @@ private:
         // fractional revolutions. Thus 2^24 steps makes full revolution.
         static constexpr int32_t STEPS_PER_REVOLUTION {16777216};
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
+        static constexpr double DEGREES_PER_STEP {360.0 / STEPS_PER_REVOLUTION};
 
         static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
