@@ -157,8 +157,8 @@ class CelestronAUX :
         /////////////////////////////////////////////////////////////////////////////////////
         /// Tracking
         /////////////////////////////////////////////////////////////////////////////////////
-        //bool (INDI_HO_AXIS axis, double rate)
         bool SetTrackEnabled(bool enabled) override;
+        bool SetTrackMode(uint8_t mode) override;
         bool SetTrackRate(double raRate, double deRate) override;
         void resetTracking();
 
@@ -171,6 +171,14 @@ class CelestronAUX :
          * @return True if successful, false otherwise.
          */
         bool trackByRate(INDI_HO_AXIS axis, int32_t rate);
+
+        /**
+         * @brief trackByRate Track using specific mode (sidereal, solar, or lunar)
+         * @param axis AZ or ALT
+         * @param mode sidereal, solar, or lunar
+         * @return True if successful, false otherwise.
+         */
+        bool trackByMode(INDI_HO_AXIS axis, uint8_t mode);
         bool trackingRequested();
 
         bool getStatus(INDI_HO_AXIS axis);
@@ -184,7 +192,7 @@ class CelestronAUX :
         bool setCordWrapPosition(uint32_t steps);
         uint32_t getCordWrapPosition();
 
-private:
+    private:
         /////////////////////////////////////////////////////////////////////////////////////
         /// Misc
         /////////////////////////////////////////////////////////////////////////////////////
@@ -203,7 +211,7 @@ private:
         bool guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
 
 
-    private:        
+    private:
         // Axis Information
         AxisStatus m_AxisStatus[2] {STOPPED, STOPPED};
         AxisDirection m_AxisDirection[2] {FORWARD, FORWARD};
@@ -211,6 +219,7 @@ private:
         // Guiding offset in steps
         // For each pulse, we modify the offset so that we can add it to our current tracking traget
         int32_t m_GuideOffset[2] = {0, 0};
+        double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
         // approach distance
         double Approach;
@@ -218,7 +227,7 @@ private:
         // Tracking
         INDI::IEquatorialCoordinates m_SkyTrackingTarget { 0, 0 };
         INDI::IEquatorialCoordinates m_SkyCurrentRADE {0, 0};
-        INDI::IHorizontalCoordinates m_MountAltAz {0, 0};
+        INDI::IHorizontalCoordinates m_MountCoordinates {0, 0};
         INDI::ElapsedTimer m_TrackingElapsedTimer;
 
 
@@ -232,7 +241,7 @@ private:
         bool tcpReadResponse();
         bool readAUXResponse(AUXCommand c);
         bool processResponse(AUXCommand &cmd);
-        int sendBuffer(int PortFD, AUXBuffer buf);
+        int sendBuffer(AUXBuffer buf);
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
         // GPS Emulation
@@ -268,9 +277,9 @@ private:
         bool detectRTSCTS();
         bool detectHC(char *version, size_t size);
         int response_data_size;
-        int aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n);
-        int aux_tty_write (int PortFD, char *buf, int bufsiz, float timeout, int *n);
-        bool tty_set_speed(int PortFD, speed_t speed);
+        int aux_tty_read(char *buf, int bufsiz, int timeout, int *n);
+        int aux_tty_write (char *buf, int bufsiz, float timeout, int *n);
+        bool tty_set_speed(speed_t speed);
 
         // connection
         bool m_IsRTSCTS;
@@ -342,10 +351,13 @@ private:
         static constexpr uint8_t READ_TIMEOUT {1};
         // ms
         static constexpr uint8_t CTS_TIMEOUT {100};
-        // ms
-        static constexpr uint8_t RTS_DELAY {50};
         // Coord Wrap
         static constexpr const char *CORDWRAP_TAB {"Coord Wrap"};
         static constexpr const char *MOUNTINFO_TAB {"Mount info"};
+        // Track modes
+        static constexpr uint16_t AUX_SIDEREAL {0xffff};
+        static constexpr uint16_t AUX_SOLAR {0xfffe};
+        static constexpr uint16_t AUX_LUNAR {0xfffd};
+
 
 };

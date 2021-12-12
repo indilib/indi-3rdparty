@@ -105,14 +105,14 @@ bool CelestronAUX::Handshake()
             {
                 LOG_INFO("Detected AUX or PC port connection.");
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
-                if (!tty_set_speed(PortFD, B19200))
+                if (!tty_set_speed(B19200))
                     return false;
                 LOG_INFO("Setting serial speed to 19200 baud.");
             }
             else
             {
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
-                if (!tty_set_speed(PortFD, B9600))
+                if (!tty_set_speed(B9600))
                 {
                     LOG_ERROR("Cannot set serial speed to 9600 baud.");
                     return false;
@@ -838,11 +838,10 @@ bool CelestronAUX::ReadScopeStatus()
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld -> AZ/RA %lf°", EncoderNP[AXIS_ALT].getValue(),
            AltAz.altitude);
 
-    m_MountAltAz = AltAz;
-
+    m_MountCoordinates = AltAz;
 
     // Get equatorial coords.
-    getCurrentRADE(AltAz, m_SkyCurrentRADE);
+    getCurrentRADE(m_MountCoordinates, m_SkyCurrentRADE);
     char RAStr[32], DecStr[32];
     fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
     fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
@@ -1094,6 +1093,7 @@ bool CelestronAUX::getCurrentRADE(INDI::IHorizontalCoordinates altaz, INDI::IEqu
         double homeDeclination = m_Location.latitude >= 0 ? 90 : -90;
         // Alt-Az mount in northern hemisphere at home position would have Alt = 0
         // On an Equatorial mount, this would be equal to Dec = +90
+        // TODO must check if this is true assumption or not. Maybe it would be +90 on startup level.
         EquatorialCoordinates.declination = rangeDec(homeDeclination - altaz.altitude);
         TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
         if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
@@ -1440,6 +1440,35 @@ bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
+{
+    AUXCommand command(MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
+    switch (mode)
+    {
+        case TRACK_SOLAR:
+            command.setData(AUX_SOLAR, 2);
+            break;
+        case TRACK_LUNAR:
+            command.setData(AUX_LUNAR, 2);
+            break;
+
+        case TRACK_SIDEREAL:
+        default:
+            command.setData(AUX_SIDEREAL, 2);
+            break;
+    }
+
+    sendAUXCommand(command);
+    readAUXResponse(command);
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::SetTrackEnabled(bool enabled)
 {
     if (enabled)
@@ -1448,6 +1477,11 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
         resetTracking();
         m_SkyTrackingTarget.rightascension = EqN[AXIS_RA].value;
         m_SkyTrackingTarget.declination = EqN[AXIS_DE].value;
+
+        if (IUFindOnSwitchIndex(&TrackModeSP) == TRACK_CUSTOM)
+            return SetTrackRate(TrackRateN[AXIS_AZ].value, TrackRateN[AXIS_ALT].value);
+        else
+            return SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
     }
     else
     {
@@ -1458,6 +1492,43 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
 
     return true;
 };
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::SetTrackRate(double raRate, double deRate)
+{
+    m_TrackRates[AXIS_AZ] = raRate;
+    m_TrackRates[AXIS_ALT] = deRate;
+
+    if (TrackState == SCOPE_TRACKING)
+    {
+        // FIXME this is not going to work, need to figure out exact rate
+        trackByRate(AXIS_AZ, raRate);
+        trackByRate(AXIS_ALT, deRate);
+    }
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::SetTrackMode(uint8_t mode)
+{
+    if (mode == TRACK_SIDEREAL)
+        m_TrackRates[AXIS_AZ] = TRACKRATE_SIDEREAL;
+    else if (mode == TRACK_SOLAR)
+        m_TrackRates[AXIS_AZ] = TRACKRATE_SOLAR;
+    else if (mode == TRACK_LUNAR)
+        m_TrackRates[AXIS_AZ] = TRACKRATE_LUNAR;
+    else if (mode == TRACK_CUSTOM)
+    {
+        m_TrackRates[AXIS_AZ] = TrackRateN[AXIS_RA].value;
+        m_TrackRates[AXIS_ALT] = TrackRateN[AXIS_DE].value;
+    }
+
+    return true;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -1753,17 +1824,17 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         // search for packet preamble (0x3b)
         do
         {
-            if (aux_tty_read(PortFD, (char*)buf, 1, READ_TIMEOUT, &n) != TTY_OK)
+            if (aux_tty_read((char*)buf, 1, READ_TIMEOUT, &n) != TTY_OK)
                 return false;
         }
         while (buf[0] != 0x3b);
 
         // packet preamble is found, now read packet length.
-        if (aux_tty_read(PortFD, (char*)(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_read((char*)(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
             return false;
 
         // now packet length is known, read the rest of the packet.
-        if (aux_tty_read(PortFD, (char*)(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
+        if (aux_tty_read((char*)(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
                 != TTY_OK || n != buf[1] + 1)
         {
             LOG_DEBUG("Did not got whole packet. Dropping out.");
@@ -1898,13 +1969,13 @@ bool CelestronAUX::readAUXResponse(AUXCommand c)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-int CelestronAUX::sendBuffer(int PortFD, AUXBuffer buf)
+int CelestronAUX::sendBuffer(AUXBuffer buf)
 {
     if ( PortFD > 0 )
     {
         int n;
 
-        if (aux_tty_write(PortFD, (char*)buf.data(), buf.size(), CTS_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_write((char*)buf.data(), buf.size(), CTS_TIMEOUT, &n) != TTY_OK)
             return 0;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -1956,7 +2027,7 @@ bool CelestronAUX::sendAUXCommand(AUXCommand &command)
     }
 
     tcflush(PortFD, TCIOFLUSH);
-    return (sendBuffer(PortFD, buf) == static_cast<int>(buf.size()));
+    return (sendBuffer(buf) == static_cast<int>(buf.size()));
 }
 
 
@@ -2030,12 +2101,12 @@ bool CelestronAUX::detectHC(char *version, size_t size)
         return false;
 
     // send get firmware version command
-    if (sendBuffer(PortFD, b) != (int)b.size())
+    if (sendBuffer(b) != (int)b.size())
         return false;
 
     // read response
     int n;
-    if (aux_tty_read(PortFD, (char*)buf, 3, READ_TIMEOUT, &n) != TTY_OK)
+    if (aux_tty_read((char*)buf, 3, READ_TIMEOUT, &n) != TTY_OK)
         return false;
 
     // non error response must end with '#'
@@ -2057,7 +2128,7 @@ bool CelestronAUX::detectHC(char *version, size_t size)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-int CelestronAUX::aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, int *n)
+int CelestronAUX::aux_tty_read(char *buf, int bufsiz, int timeout, int *n)
 {
     int errcode;
     DEBUGF(DBG_SERIAL, "aux_tty_read: %d", PortFD);
@@ -2080,7 +2151,7 @@ int CelestronAUX::aux_tty_read(int PortFD, char *buf, int bufsiz, int timeout, i
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout, int *n)
+int CelestronAUX::aux_tty_write(char *buf, int bufsiz, float timeout, int *n)
 {
     int errcode, ne;
     char errmsg[MAXRBUF];
@@ -2115,7 +2186,7 @@ int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout
     if (m_IsRTSCTS)
     {
         DEBUG(DBG_SERIAL, "aux_tty_write: clear RTS");
-        std::this_thread::sleep_for(std::chrono::milliseconds(RTS_DELAY));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         setRTS(0);
 
         // ports requiring hardware flow control echo all sent characters,
@@ -2142,7 +2213,7 @@ int CelestronAUX::aux_tty_write(int PortFD, char *buf, int bufsiz, float timeout
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::tty_set_speed(int PortFD, speed_t speed)
+bool CelestronAUX::tty_set_speed(speed_t speed)
 {
     struct termios tty_setting;
 
