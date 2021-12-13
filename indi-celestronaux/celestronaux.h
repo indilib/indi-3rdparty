@@ -179,7 +179,7 @@ class CelestronAUX :
          * @return True if successful, false otherwise.
          */
         bool trackByMode(INDI_HO_AXIS axis, uint8_t mode);
-        bool trackingRequested();
+        bool isTrackingRequested();
 
         bool getStatus(INDI_HO_AXIS axis);
         bool getEncoder(INDI_HO_AXIS axis);
@@ -202,7 +202,7 @@ class CelestronAUX :
         void hex_dump(char *buf, AUXBuffer data, size_t size);
         double MicrostepsToDegrees(INDI_HO_AXIS axis, uint32_t steps);
         uint32_t DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees);
-        bool getCurrentRADE(INDI::IHorizontalCoordinates altaz, INDI::IEquatorialCoordinates &rade);
+        bool getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordinates, INDI::IEquatorialCoordinates &rade);
         int32_t clampStepsPerRevolution(int32_t);
 
         /////////////////////////////////////////////////////////////////////////////////////
