@@ -131,13 +131,7 @@ bool CelestronAUX::Handshake()
                 else
                     LOG_INFO("Detected Mount USB serial connection.");
             }
-        }
-        else
-        {
-            LOG_INFO("Waiting for mount connection to settle...");
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            return true;
-        }
+        }        
 
         // read firmware version, if read ok, detected scope
         LOG_DEBUG("Communicating with mount motor controllers...");
@@ -839,6 +833,9 @@ bool CelestronAUX::ReadScopeStatus()
     if (!getStatus(AXIS_ALT))
         return false;
 
+    double axis1 = EncoderNP[AXIS_AZ].getValue();
+    double axis2 = EncoderNP[AXIS_ALT].getValue();
+
     if (!getEncoder(AXIS_AZ))
         return false;
     if (!getEncoder(AXIS_ALT))
@@ -848,10 +845,19 @@ bool CelestronAUX::ReadScopeStatus()
     INDI::IHorizontalCoordinates AltAz { 0, 0 };
     AltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
     AltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %ld -> AZ/RA %lf°", EncoderNP[AXIS_AZ].getValue(),
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ/RA %.4f°", EncoderNP[AXIS_AZ].getValue(),
            AltAz.azimuth);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %ld -> AZ/RA %lf°", EncoderNP[AXIS_ALT].getValue(),
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> AL/DE %.4f°", EncoderNP[AXIS_ALT].getValue(),
            AltAz.altitude);
+
+    // Send to client if updated
+    if (std::abs(axis1 - EncoderNP[AXIS_AZ].getValue()) > 1 || std::abs(axis2 - EncoderNP[AXIS_ALT].getValue()) > 1)
+    {
+        EncoderNP.apply();
+        AngleNP[AXIS_AZ].setValue(AltAz.azimuth);
+        AngleNP[AXIS_ALT].setValue(AltAz.altitude);
+        AngleNP.apply();
+    }
 
     m_MountCoordinates = AltAz;
 
@@ -1219,16 +1225,27 @@ void CelestronAUX::TimerHit()
                 currentAltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
 
                 // Offset in arcsecs
-                double azOffsetAngle = range360(targetMountAxisCoordinates.azimuth - currentAltAz.azimuth) * 3600;
-                double alOffsetAngle = rangeDec(targetMountAxisCoordinates.altitude - currentAltAz.altitude) * 3600;
+                double azOffsetAngle = (targetMountAxisCoordinates.azimuth - currentAltAz.azimuth) * 3600;
+                double alOffsetAngle = (targetMountAxisCoordinates.altitude - currentAltAz.altitude) * 3600;
 
+                uint32_t azOffsetSteps = azOffsetAngle/3600. * STEPS_PER_DEGREE;
+                uint32_t alOffsetSteps = alOffsetAngle/3600. * STEPS_PER_DEGREE;
+
+                LOGF_DEBUG("Tracking: AZ offset %.f arcsecs (%ld) AL offset %.f arcsecs (%ld)",
+                       azOffsetAngle,
+                       azOffsetSteps,
+                       alOffsetAngle,
+                       alOffsetSteps);
+
+                static double azFactor = 4;
+                static double alFactor = 4;
                 // FIXME: not exactly sure what units need to be used.
                 // It appears that the rate is in units of 0.25 arcsecs.
                 // Needs testing.
                 if (std::abs(azOffsetAngle) > 0)
-                    trackByRate(AXIS_AZ, azOffsetAngle * 4);
+                    trackByRate(AXIS_AZ, azOffsetAngle * azFactor);
                 if (std::abs(alOffsetAngle) > 0)
-                    trackByRate(AXIS_ALT, alOffsetAngle * 4);
+                    trackByRate(AXIS_ALT, alOffsetAngle * alFactor);
 
                 break;
             }
@@ -1376,7 +1393,7 @@ void CelestronAUX::getVersions()
     //getVersion(CHG);
     //getVersion(LIGHT);
     //getVersion(ANY);
-};
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -1706,8 +1723,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
             case MC_GET_POSITION:
                 switch (m.source())
                 {
-                    case ALT:
-                        // The Alt encoder value is signed!
+                    case ALT:                        
                         EncoderNP[AXIS_ALT].setValue(m.getData());
                         break;
                     case AZM:
@@ -1743,10 +1759,10 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 switch (m.source())
                 {
                     case ALT:
-                        GuideRateNP[AXIS_ALT].setValue(m.getData() * 100.0 / 255);
+                        GuideRateNP[AXIS_ALT].setValue(m.getData() / 255.);
                         break;
                     case AZM:
-                        GuideRateNP[AXIS_AZ].setValue(m.getData() * 100.0 / 255);
+                        GuideRateNP[AXIS_AZ].setValue(m.getData() * 255.);
                         break;
                     default:
                         break;
