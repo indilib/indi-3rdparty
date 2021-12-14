@@ -786,7 +786,7 @@ bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 /////////////////////////////////////////////////////////////////////////////////////
 IPState CelestronAUX::GuideNorth(uint32_t ms)
 {
-    LOGF_DEBUG("Guiding: N %d ms", ms);
+    // TODO FIXME  For Alt-Az setups, we must determine offset in steps
     int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_ALT].getValue() * 100);
     guidePulse(AXIS_DE, ms, rate);
     return IPS_BUSY;
@@ -794,7 +794,6 @@ IPState CelestronAUX::GuideNorth(uint32_t ms)
 
 IPState CelestronAUX::GuideSouth(uint32_t ms)
 {
-    LOGF_DEBUG("Guiding: S %d ms", ms);
     int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_ALT].getValue() * 100);
     guidePulse(AXIS_DE, ms, -rate);
     return IPS_BUSY;
@@ -802,7 +801,6 @@ IPState CelestronAUX::GuideSouth(uint32_t ms)
 
 IPState CelestronAUX::GuideEast(uint32_t ms)
 {
-    LOGF_DEBUG("Guiding: E %d ms", ms);
     int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_AZ].getValue() * 100);
     guidePulse(AXIS_RA, ms, -rate);
     return IPS_BUSY;
@@ -810,7 +808,6 @@ IPState CelestronAUX::GuideEast(uint32_t ms)
 
 IPState CelestronAUX::GuideWest(uint32_t ms)
 {
-    LOGF_DEBUG("Guiding: W %d ms", ms);
     int8_t rate = static_cast<int8_t>(GuideRateNP[AXIS_AZ].getValue() * 100);
     guidePulse(AXIS_RA, ms, rate);
     return IPS_BUSY;
