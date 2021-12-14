@@ -77,6 +77,9 @@ CelestronAUX::CelestronAUX()
 
     // Approach from no further then degs away
     Approach = 1.0;
+
+    m_Controllers[AXIS_AZ].reset(new PID(1, 50000, -50000, GAIN_STEPS, 0, 0.75));
+    m_Controllers[AXIS_ALT].reset(new PID(1, 50000, -50000, GAIN_STEPS, 0, 1.5));
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +134,9 @@ bool CelestronAUX::Handshake()
                 else
                     LOG_INFO("Detected Mount USB serial connection.");
             }
-        }        
+        }
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         // read firmware version, if read ok, detected scope
         LOG_DEBUG("Communicating with mount motor controllers...");
@@ -194,17 +199,39 @@ bool CelestronAUX::initProperties()
     /// Main Control Tab
     /////////////////////////////////////////////////////////////////////////////////////
     // Mount type
-    MountTypeSP[EQUATORIAL].fill("EQUATORIAL", "Equatorial", ISS_OFF);
-    MountTypeSP[ALTAZ].fill("ALTAZ", "AltAz", ISS_ON);
+    int configMountType = ALTAZ;
+    IUGetConfigOnSwitchIndex(getDeviceName(), "MOUNT_TYPE", &configMountType);
+
+    // Detect Equatorial Mounts
+    if (strstr(getDeviceName(), "CGX") ||
+            strstr(getDeviceName(), "CGEM") ||
+            strstr(getDeviceName(), "Wedge") ||
+            strstr(getDeviceName(), "Advanced VX"))
+    {
+        // Force equatorial for such mounts
+        configMountType = EQUATORIAL;
+    }
+
+    MountTypeSP[EQUATORIAL].fill("EQUATORIAL", "Equatorial", configMountType == EQUATORIAL ? ISS_ON : ISS_OFF);
+    MountTypeSP[ALTAZ].fill("ALTAZ", "AltAz", configMountType == ALTAZ ? ISS_ON : ISS_OFF);
     MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Track Modes for Equatorial Mount
+    if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+    {
+        AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
+        AddTrackMode("TRACK_SOLAR", "Solar");
+        AddTrackMode("TRACK_LUNAR", "Lunar");
+        AddTrackMode("TRACK_CUSTOM", "Custom");
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////
     /// Cord Wrap Tab
     /////////////////////////////////////////////////////////////////////////////////////
 
     // Cord wrap Toggle
-    CordWrapToggleSP[CORDWRAP_OFF].fill("CORDWRAP_OFF", "OFF", ISS_OFF);
-    CordWrapToggleSP[CORDWRAP_ON].fill("CORDWRAP_ON", "ON", ISS_ON);
+    CordWrapToggleSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_OFF);
+    CordWrapToggleSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
     CordWrapToggleSP.fill(getDeviceName(), "CORDWRAP", "Cord Wrap", CORDWRAP_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Cord Wrap Position
@@ -262,6 +289,10 @@ bool CelestronAUX::initProperties()
     FirmwareTP[FW_GPS].fill("GPS version", "", nullptr);
     FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
 
+    // Gain Rate
+//    GainNP[AXIS_AZ].fill("AXIS_AZ", "Axis1", "%.f", -10000, 10000, 500, 0);
+//    GainNP[AXIS_ALT].fill("AXIS_ALT", "Axis2", "%.f", -10000, 10000, 500, 0);
+//    GainNP.fill(getDeviceName(), "TRACK_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     /////////////////////////////////////////////////////////////////////////////////////
     /// Initial Configuration
     /////////////////////////////////////////////////////////////////////////////////////
@@ -283,22 +314,15 @@ bool CelestronAUX::initProperties()
     tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
     tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
 
+    SetParkDataType(PARK_AZ_ALT_ENCODER);
+
     // to update cordwrap pos at each init of alignment subsystem
     IDSnoopDevice(getDeviceName(), "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
 
     // JM 2020-09-23 Make it easier for users to connect by default via WiFi if they
     // selected the Celestron WiFi labeled driver.
     if (strstr(getDeviceName(), "WiFi"))
-        setActiveConnection(tcpConnection);
-    // Detect Equatorial Mounts
-    if (strstr(getDeviceName(), "CGX") ||
-            strstr(getDeviceName(), "CGEM") ||
-            strstr(getDeviceName(), "Wedge") ||
-            strstr(getDeviceName(), "Advanced VX"))
-    {
-        MountTypeSP[EQUATORIAL].setState(ISS_ON);
-        MountTypeSP[ALTAZ].setState(ISS_OFF);
-    }
+        setActiveConnection(tcpConnection);    
 
     return true;
 }
@@ -325,6 +349,7 @@ bool CelestronAUX::updateProperties()
     {
         // Main Control Panel
         defineProperty(&MountTypeSP);
+        //defineProperty(&GainNP);
 
         // Guide
         defineProperty(&GuideNSNP);
@@ -333,8 +358,8 @@ bool CelestronAUX::updateProperties()
 
         // Cord wrap Enabled?
         getCordWrapEnabled();
-        CordWrapToggleSP[CORDWRAP_OFF].s = m_CordWrapActive ? ISS_OFF : ISS_ON;
-        CordWrapToggleSP[CORDWRAP_ON].s  = m_CordWrapActive ? ISS_ON : ISS_OFF;
+        CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
+        CordWrapToggleSP[INDI_DISABLED].s  = m_CordWrapActive ? ISS_OFF : ISS_ON;
         defineProperty(&CordWrapToggleSP);
 
         // Cord wrap Position?
@@ -369,10 +394,26 @@ bool CelestronAUX::updateProperties()
         formatVersionString(fwText, 10, m_GPSVersion);
         FirmwareTP[FW_GPS].setText(fwText);
         defineProperty(&FirmwareTP);
+
+                if (InitPark())
+                {
+                    // If loading parking data is successful, we just set the default parking values.
+                    SetAxis1ParkDefault(0);
+                    SetAxis2ParkDefault(0);
+                }
+                else
+                {
+                    // Otherwise, we set all parking data to default in case no parking data is found.
+                    SetAxis1Park(0);
+                    SetAxis2Park(0);
+                    SetAxis1ParkDefault(0);
+                    SetAxis2ParkDefault(0);
+                }
     }
     else
     {
         deleteProperty(MountTypeSP.getName());
+        //deleteProperty(GainNP.getName());
 
         deleteProperty(GuideNSNP.name);
         deleteProperty(GuideWENP.name);
@@ -445,6 +486,15 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
+        // Gain
+//        if (GainNP.isNameMatch(name))
+//        {
+//            GainNP.update(values, names, n);
+//            GainNP.setState(IPS_OK);
+//            GainNP.apply();
+//            return true;
+//        }
+
         // Guide Rate
         if (GuideRateNP.isNameMatch(name))
         {
@@ -499,8 +549,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 
             MountTypeSP.update(states, names, n);
             MountTypeSP.setState(IPS_OK);
-            MountTypeSP.apply();
-            IDSetSwitch(&MountTypeSP, nullptr);
+            MountTypeSP.apply();            
 
             // Get target type
             MountType targetMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ : EQUATORIAL;
@@ -508,14 +557,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             // If different then update
             if (currentMountType != targetMountType)
             {
-                // set mount type to alignment subsystem
-                SetApproximateMountAlignmentFromMountType(currentMountType);
-                // tell the alignment math plugin to reinitialise
-                Initialise(this);
-
-                // update cordwrap position at each init of the alignment subsystem
-                if ( isConnected() )
-                    syncCoordWrapPosition();
+                LOG_INFO("Mount type updated. You must restart the driver for changes to take effect.");
+                saveConfig(true, MountTypeSP.getName());
             }
 
             return true;
@@ -525,11 +568,13 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         if (CordWrapToggleSP.isNameMatch(name))
         {
             CordWrapToggleSP.update(states, names, n);
-            const bool toEnable = CordWrapToggleSP[CORDWRAP_ON].s == ISS_ON;
+            const bool toEnable = CordWrapToggleSP[INDI_ENABLED].s == ISS_ON;
             LOGF_INFO("Cord Wrap is %s.", toEnable ? "enabled" : "disabled");
-            CordWrapToggleSP.setState(IPS_OK);
             setCordWrapEnabled(toEnable);
             getCordWrapEnabled();
+            CordWrapToggleSP.setState(IPS_OK);
+            CordWrapToggleSP.apply();
+
             return true;
         }
 
@@ -808,6 +853,11 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::resetTracking()
 {
+//    getEncoder(AXIS_AZ);
+//    getEncoder(AXIS_ALT);
+//    m_TrackStartSteps[AXIS_AZ] = EncoderNP[AXIS_AZ].getValue();
+//    m_TrackStartSteps[AXIS_ALT] = EncoderNP[AXIS_ALT].getValue();
+
     m_TrackingElapsedTimer.restart();
     m_GuideOffset[AXIS_AZ] = m_GuideOffset[AXIS_ALT] = 0;
 }
@@ -866,7 +916,7 @@ bool CelestronAUX::ReadScopeStatus()
     char RAStr[32], DecStr[32];
     fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
     fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky RA %s DE %s", RAStr, DecStr);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Mount -> Sky RA %s DE %s", RAStr, DecStr);
 
 
     if (TrackState == SCOPE_SLEWING)
@@ -877,20 +927,22 @@ bool CelestronAUX::ReadScopeStatus()
             if (ScopeStatus == SLEWING_FAST)
             {
                 ScopeStatus = APPROACH;
-                return Goto(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination);
+                return Goto(m_SkyGOTOTarget.rightascension, m_SkyGOTOTarget.declination);
             }
 
             // If tracking was engaged, start it.
-            if (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s)
+            if (isTrackingRequested())
             {
                 // Goto has finished start tracking
                 TrackState = SCOPE_TRACKING;
-                resetTracking();
+                ScopeStatus = TRACKING;
+                resetTracking();                
                 LOG_INFO("Tracking started.");
             }
             else
             {
                 TrackState = SCOPE_IDLE;
+                ScopeStatus = IDLE;
             }
         }
     }
@@ -912,14 +964,14 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Goto(double ra, double dec)
 {
+    char RAStr[32], DecStr[32];
+    fs_sexa(RAStr, ra, 2, 3600);
+    fs_sexa(DecStr, dec, 2, 3600);
+
     // In case we have appaoch ongoing
     if (ScopeStatus == APPROACH)
     {
-        char RAStr[32], DecStr[32];
-        fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
-        fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
-        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Iterative GOTO RA %lf DEC %lf (Current Sky RA %s DE %s)", ra, dec, RAStr,
-               DecStr);
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Slow Iterative GOTO RA %s DE %s", RAStr, DecStr);
     }
     // Fast GOTO
     else
@@ -927,16 +979,14 @@ bool CelestronAUX::Goto(double ra, double dec)
         if (TrackState != SCOPE_IDLE)
             Abort();
 
-        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "GOTO RA %lf DEC %lf", ra, dec);
+        m_SkyGOTOTarget.rightascension = ra;
+        m_SkyGOTOTarget.declination = dec;
+
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Fast GOTO RA %s DE %s", RAStr, DecStr);
 
         if (isTrackingRequested())
         {
-            char RAStr[32], DecStr[32];
-            fs_sexa(RAStr, ra, 2, 3600);
-            fs_sexa(DecStr, dec, 2, 3600);
-            m_SkyTrackingTarget.rightascension  = ra;
-            m_SkyTrackingTarget.declination = dec;
-            LOGF_INFO("Goto target RA %s DEC %s", RAStr, DecStr);
+            m_SkyTrackingTarget = m_SkyGOTOTarget;
         }
     }
 
@@ -1224,29 +1274,40 @@ void CelestronAUX::TimerHit()
                 currentAltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
                 currentAltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
 
-                // Offset in arcsecs
-                double azOffsetAngle = (targetMountAxisCoordinates.azimuth - currentAltAz.azimuth) * 3600;
-                double alOffsetAngle = (targetMountAxisCoordinates.altitude - currentAltAz.altitude) * 3600;
+                // Offset in degrees
+                double offsetAngle[2]={0, 0};
+                offsetAngle[AXIS_AZ] = (targetMountAxisCoordinates.azimuth - currentAltAz.azimuth);
+                offsetAngle[AXIS_ALT] = (targetMountAxisCoordinates.altitude - currentAltAz.altitude);
 
-                uint32_t azOffsetSteps = azOffsetAngle/3600. * STEPS_PER_DEGREE;
-                uint32_t alOffsetSteps = alOffsetAngle/3600. * STEPS_PER_DEGREE;
+                int32_t offsetSteps[2]={0,0};
+                offsetSteps[AXIS_AZ] = offsetAngle[AXIS_AZ] * STEPS_PER_DEGREE;
+                offsetSteps[AXIS_ALT] = offsetAngle[AXIS_ALT] * STEPS_PER_DEGREE;
 
-                LOGF_DEBUG("Tracking: AZ offset %.f arcsecs (%ld) AL offset %.f arcsecs (%ld)",
-                       azOffsetAngle,
-                       azOffsetSteps,
-                       alOffsetAngle,
-                       alOffsetSteps);
+//                double ms = m_TrackingElapsedTimer.elapsed();
+//                LOGF_INFO("*** Elapsed %.f ms", ms);
+//                LOGF_INFO("*** Axis1 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue(), std::abs(EncoderNP[AXIS_AZ].getValue() - m_TrackStartSteps[AXIS_AZ]) / (ms/1000.));
+//                LOGF_INFO("*** Axis2 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue(), std::abs(EncoderNP[AXIS_ALT].getValue() - m_TrackStartSteps[AXIS_ALT]) / (ms/1000.));
 
-                static double azFactor = 4;
-                static double alFactor = 4;
-                // FIXME: not exactly sure what units need to be used.
-                // It appears that the rate is in units of 0.25 arcsecs.
-                // Needs testing.
-                if (std::abs(azOffsetAngle) > 0)
-                    trackByRate(AXIS_AZ, azOffsetAngle * azFactor);
-                if (std::abs(alOffsetAngle) > 0)
-                    trackByRate(AXIS_ALT, alOffsetAngle * alFactor);
+//                LOGF_DEBUG("Tracking: AZ offset %.f arcsecs (%ld) AL offset %.f arcsecs (%ld)",
+//                       offsetAngle[AXIS_AZ],
+//                       offsetSteps[AXIS_AZ],
+//                       offsetAngle[AXIS_ALT],
+//                       offsetSteps[AXIS_AZ]);
 
+                int32_t targetSteps[2]={0, 0};
+                targetSteps[AXIS_AZ]   = targetMountAxisCoordinates.azimuth * STEPS_PER_DEGREE;
+                targetSteps[AXIS_ALT]  = targetMountAxisCoordinates.altitude * STEPS_PER_DEGREE;
+
+                double trackRates[2] = {0 ,0};
+                trackRates[AXIS_AZ] = m_Controllers[AXIS_AZ]->calculate(targetSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue());
+                trackRates[AXIS_ALT] = m_Controllers[AXIS_ALT]->calculate(targetSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue());
+
+                LOGF_DEBUG("Tracking AZ Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ], offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
+                LOGF_DEBUG("Tracking AL Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_ALT].getValue(), targetSteps[AXIS_ALT], offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
+
+                // Use PID to determine appropiate tracking rate
+                trackByRate(AXIS_AZ, trackRates[AXIS_AZ]);
+                trackByRate(AXIS_ALT, trackRates[AXIS_ALT]);
                 break;
             }
             break;
@@ -1305,11 +1366,11 @@ uint32_t CelestronAUX::DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees)
         value = std::abs(degrees) * STEPS_PER_DEGREE;
         // We need to wrap around?
         if (degrees < 0)
-            value += STEPS_PER_DEGREE / 2;
+            value += STEPS_PER_REVOLUTION / 2;
     }
 
-    if (value > STEPS_PER_DEGREE)
-        value -= STEPS_PER_DEGREE;
+    if (value > STEPS_PER_REVOLUTION)
+        value -= STEPS_PER_REVOLUTION;
 
     return value;
 }
@@ -1328,9 +1389,7 @@ bool CelestronAUX::isSlewing()
 bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
 {
     // Stop first.
-    trackByRate(AXIS_AZ, 0);
-    trackByRate(AXIS_ALT, 0);
-
+    trackByRate(axis, 0);
     AUXCommand command(fast ? MC_GOTO_FAST : MC_GOTO_SLOW, APP, axis == AXIS_AZ ? AZM : ALT);
     m_AxisStatus[axis] = SLEWING;
     command.setData(steps);
@@ -1346,9 +1405,7 @@ bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
 bool CelestronAUX::slewByRate(INDI_HO_AXIS axis, int8_t rate)
 {
     // Stop first.
-    trackByRate(AXIS_AZ, 0);
-    trackByRate(AXIS_ALT, 0);
-
+    trackByRate(axis, 0);
     AUXCommand command(rate >= 0 ? MC_MOVE_POS : MC_MOVE_NEG, APP, axis == AXIS_AZ ? AZM : ALT);
     command.setData(std::abs(rate), 1);
     sendAUXCommand(command);
@@ -1401,21 +1458,18 @@ void CelestronAUX::getVersions()
 bool CelestronAUX::setCordWrapEnabled(bool enable)
 {
 
-    AUXCommand command(enable ? MC_ENABLE_CORDWRAP : MC_DISABLE_CORDWRAP, APP, AZM);
-    LOGF_INFO("setCordWrap before %d", m_CordWrapActive);
+    AUXCommand command(enable ? MC_ENABLE_CORDWRAP : MC_DISABLE_CORDWRAP, APP, AZM);    
     sendAUXCommand(command);
-    readAUXResponse(command);
-    LOGF_INFO("setCordWrap after %d", m_CordWrapActive);
+    readAUXResponse(command);    
     return true;
 };
 
 bool CelestronAUX::getCordWrapEnabled()
 {
-    AUXCommand command(MC_POLL_CORDWRAP, APP, AZM);
-    LOGF_INFO("getCordWrap before %d", m_CordWrapActive);
+    AUXCommand command(MC_POLL_CORDWRAP, APP, AZM);    
     sendAUXCommand(command);
     readAUXResponse(command);
-    LOGF_INFO("getCordWrap after %d", m_CordWrapActive);
+    LOGF_DEBUG("getCordWrap %d", m_CordWrapActive);
     return m_CordWrapActive;
 };
 
@@ -1462,9 +1516,17 @@ bool CelestronAUX::stopAxis(INDI_HO_AXIS axis)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Abort()
 {
+//    getEncoder(AXIS_AZ);
+//    getEncoder(AXIS_ALT);
+//    double ms = m_TrackingElapsedTimer.elapsed();
+//    LOGF_INFO("*** Elapsed %.f ms", ms);
+//    LOGF_INFO("*** Axis1 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue(), std::abs(EncoderNP[AXIS_AZ].getValue() - m_TrackStartSteps[AXIS_AZ]) / (ms/1000.));
+//    LOGF_INFO("*** Axis2 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue(), std::abs(EncoderNP[AXIS_ALT].getValue() - m_TrackStartSteps[AXIS_ALT]) / (ms/1000.));
     stopAxis(AXIS_AZ);
     stopAxis(AXIS_ALT);
     TrackState = SCOPE_IDLE;
+
+
     return true;
 }
 
@@ -1473,6 +1535,10 @@ bool CelestronAUX::Abort()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 {
+    if (rate == m_LastTrackRate[axis])
+        return true;
+
+    m_LastTrackRate[axis] = rate;
     AUXCommand command(rate < 0 ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     // 24bit rate
     command.setData(std::abs(rate));

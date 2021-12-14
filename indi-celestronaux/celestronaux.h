@@ -33,6 +33,7 @@
 #include <indipropertyswitch.h>
 #include <indipropertynumber.h>
 #include <indipropertytext.h>
+#include <pid.h>
 #include <termios.h>
 
 #include "auxproto.h"
@@ -226,6 +227,7 @@ class CelestronAUX :
 
         // Tracking
         INDI::IEquatorialCoordinates m_SkyTrackingTarget { 0, 0 };
+        INDI::IEquatorialCoordinates m_SkyGOTOTarget { 0, 0 };
         INDI::IEquatorialCoordinates m_SkyCurrentRADE {0, 0};
         INDI::IHorizontalCoordinates m_MountCoordinates {0, 0};
         INDI::ElapsedTimer m_TrackingElapsedTimer;
@@ -302,7 +304,6 @@ class CelestronAUX :
 
         // Mount Cord wrap Toogle
         INDI::PropertySwitch CordWrapToggleSP {2};
-        enum { CORDWRAP_OFF, CORDWRAP_ON };
 
         // Mount Coord wrap Position
         INDI::PropertySwitch CordWrapPositionSP {4};
@@ -325,6 +326,13 @@ class CelestronAUX :
         // Angles
         INDI::PropertyNumber AngleNP {2};
 
+        int32_t m_LastTrackRate[2] = {0, 0};
+        double m_TrackStartSteps[2] = {0,0};
+
+        // PID controllers
+        std::unique_ptr<PID> m_Controllers[2];
+
+        //INDI::PropertyNumber GainNP {2};
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables
         ///////////////////////////////////////////////////////////////////////////////
@@ -337,6 +345,9 @@ class CelestronAUX :
         static constexpr int32_t STEPS_PER_REVOLUTION {16777216};
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
         static constexpr double DEGREES_PER_STEP {360.0 / STEPS_PER_REVOLUTION};
+
+        // Measured rate that would result in 1 step/sec
+        static constexpr uint32_t GAIN_STEPS {80};
 
         static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
         static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
