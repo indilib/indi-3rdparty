@@ -318,6 +318,9 @@ class CelestronAUX :
         INDI::PropertySwitch GPSEmuSP {2};
         enum { GPSEMU_OFF, GPSEMU_ON };
 
+        // Horizontal Coords
+        INDI::PropertyNumber HorizontalCoordsNP {2};
+
         // Guide Rate
         INDI::PropertyNumber GuideRateNP {2};
 
@@ -330,6 +333,15 @@ class CelestronAUX :
         double m_TrackStartSteps[2] = {0,0};
 
         // PID controllers
+        INDI::PropertyNumber Axis1PIDNP {3};
+        INDI::PropertyNumber Axis2PIDNP {3};
+        enum
+        {
+            Propotional,
+            Derivative,
+            Integral
+        };
+
         std::unique_ptr<PID> m_Controllers[2];
 
         //INDI::PropertyNumber GainNP {2};
@@ -344,17 +356,13 @@ class CelestronAUX :
         // fractional revolutions. Thus 2^24 steps makes full revolution.
         static constexpr int32_t STEPS_PER_REVOLUTION {16777216};
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
+        static constexpr double STEPS_PER_ARCSEC {STEPS_PER_DEGREE / 3600.0};
         static constexpr double DEGREES_PER_STEP {360.0 / STEPS_PER_REVOLUTION};
 
         // Measured rate that would result in 1 step/sec
         static constexpr uint32_t GAIN_STEPS {80};
 
-        static constexpr double DEFAULT_SLEW_RATE {STEPS_PER_DEGREE * 2.0};
-        static constexpr double MAX_ALT {90.0 * STEPS_PER_DEGREE};
-        static constexpr double MIN_ALT {-90.0 * STEPS_PER_DEGREE};
-
         // MC_SET_POS_GUIDERATE & MC_SET_NEG_GUIDERATE use 24bit number rate in
-        // units of 0.25 arc sec per sec. So 1 arcsec/s ==> rate = 4
         static constexpr uint8_t RATE_PER_ARCSEC {4};
 
         static constexpr uint32_t BUFFER_SIZE {10240};
@@ -364,7 +372,7 @@ class CelestronAUX :
         static constexpr uint8_t CTS_TIMEOUT {100};
         // Coord Wrap
         static constexpr const char *CORDWRAP_TAB {"Coord Wrap"};
-        static constexpr const char *MOUNTINFO_TAB {"Mount info"};
+        static constexpr const char *MOUNTINFO_TAB {"Mount Info"};
         // Track modes
         static constexpr uint16_t AUX_SIDEREAL {0xffff};
         static constexpr uint16_t AUX_SOLAR {0xfffe};
