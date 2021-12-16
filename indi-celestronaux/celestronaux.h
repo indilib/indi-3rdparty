@@ -97,6 +97,7 @@ class CelestronAUX :
         void syncCoordWrapPosition();
 
     protected:
+        virtual void ISGetProperties(const char *dev) override;
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
         virtual bool saveConfigItems(FILE *fp) override;
@@ -344,6 +345,14 @@ class CelestronAUX :
 
         std::unique_ptr<PID> m_Controllers[2];
 
+        INDI::PropertySwitch PortTypeSP {2};
+        enum
+        {
+            PORT_AUX_PC,
+            PORT_HC_USB,
+        };
+
+        int m_ConfigPortType {PORT_AUX_PC};
         //INDI::PropertyNumber GainNP {2};
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables
