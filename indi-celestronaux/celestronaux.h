@@ -285,8 +285,8 @@ class CelestronAUX :
         bool tty_set_speed(speed_t speed);
 
         // connection
-        bool m_IsRTSCTS;
-        bool m_isHandController;
+        bool m_IsRTSCTS {false};
+        bool m_isHandController {false};
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Celestron AUX Properties

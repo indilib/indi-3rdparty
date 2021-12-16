@@ -105,6 +105,7 @@ bool CelestronAUX::Handshake()
             }
             else
             {
+                m_IsRTSCTS = detectRTSCTS();
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
                 if (!tty_set_speed(B9600))
                 {
