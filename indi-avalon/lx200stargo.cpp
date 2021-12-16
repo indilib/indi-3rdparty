@@ -2012,7 +2012,7 @@ bool LX200StarGo::setTrackingAdjustment(double adjustRA)
     if (adjustRA == 0.0)
         LOG_INFO("RA tracking adjustment cleared.");
     else
-        LOGF_INFO("RA tracking adjustment to %+0.2f%% succeded.", adjustRA);
+        LOGF_INFO("RA tracking adjustment to %+0.2f%% succedeed.", adjustRA);
 
     return true;
 }
