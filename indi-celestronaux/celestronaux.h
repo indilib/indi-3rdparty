@@ -223,6 +223,9 @@ class CelestronAUX :
         int32_t m_GuideOffset[2] = {0, 0};
         double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
+        // Home declination
+        double m_HomePole {90};
+
         // approach distance
         double Approach;
 
