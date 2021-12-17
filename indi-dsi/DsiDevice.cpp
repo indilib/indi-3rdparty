@@ -879,7 +879,7 @@ unsigned char *DSI::Device::downloadImage()
                  << std::endl
                  << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
                  << " (even pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transfered << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -898,7 +898,7 @@ unsigned char *DSI::Device::downloadImage()
                  << std::endl
                  << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
                  << " (odd pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transfered << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -921,7 +921,7 @@ unsigned char *DSI::Device::downloadImage()
             std::cerr << std::dec << "read progressive data, status = (" << status << ") " << std::endl
                  << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
                  << " (pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transfered << " bytes" << std::endl;
         }
 
         if (status != 0)
