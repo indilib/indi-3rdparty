@@ -558,7 +558,7 @@ int fcUsb_cmd_setCameraOffset(int camNum, UInt16 theOffset);
 
 // here to set the filter type used for image processing
 // The specified filter will be performed on any images
-// transfered from the camera.  
+// transferred from the camera.  
 // 
 // 'theImageFilter' is one of fc_imageFilter
 //

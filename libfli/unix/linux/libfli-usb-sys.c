@@ -173,7 +173,7 @@ long linux_bulktransfer(flidev_t dev, int ep, void *buf, long *len)
     bulkxfer.timeout = DEVICE->io_timeout;
     bulkxfer.buf = buf + *len - remaining;
 
-    /* This ioctl returns the number of bytes transfered */
+    /* This ioctl returns the number of bytes transferred */
     bytes = ioctl(io->fd,
 		  (ep & USB_DIR_IN) ? FLIUSB_BULKREAD : FLIUSB_BULKWRITE,
 		  &bulkxfer);
