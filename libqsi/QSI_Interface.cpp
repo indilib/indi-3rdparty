@@ -3142,7 +3142,7 @@ int QSI_Interface::CMD_HSRExposure( QSI_ExposureSettings ExposureSettings, QSI_A
 
 	// Send/receive packets
 	// Don't check queues, as image data, and autozero data is closely following,
-	// And will be transfered by the caller of this routine.
+	// And will be transferred by the caller of this routine.
 	m_iError = m_PacketWrapper.PKT_SendPacket(m_HostCon.m_HostIO, Cmd_Pkt, Rsp_Pkt, false);
 	if( m_iError ) 
 	{
