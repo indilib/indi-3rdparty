@@ -1141,15 +1141,18 @@ bool CelestronAUX::ReadScopeStatus()
             if (isTrackingRequested())
             {
                 // Goto has finished start tracking
-                TrackState = SCOPE_TRACKING;
                 ScopeStatus = TRACKING;
-
                 if (HorizontalCoordsNP.getState() == IPS_BUSY)
                 {
                     HorizontalCoordsNP.setState(IPS_OK);
                     HorizontalCoordsNP.apply();
                 }
+                TrackState = SCOPE_TRACKING;
                 resetTracking();
+
+                // For equatorial mounts, engage tracking.
+                if (MountTypeSP[EQUATORIAL].getState())
+                    SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
                 LOG_INFO("Tracking started.");
             }
             else
@@ -1177,7 +1180,7 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::Goto(double ra, double dec)
 {
-    char RAStr[32], DecStr[32];
+    char RAStr[32] = {0}, DecStr[32] = {0};
     fs_sexa(RAStr, ra, 2, 3600);
     fs_sexa(DecStr, dec, 2, 3600);
 
