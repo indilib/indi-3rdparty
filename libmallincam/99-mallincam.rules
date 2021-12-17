@@ -1,4 +1,4 @@
-# Copy this file to /etc/udev/rules.d
+# Copy this file to /lib/udev/rules.d
 
 # Once done, unplug and re-plug your device. This is all that is
 # necessary to see the new permissions. Udev does not have to be restarted.
