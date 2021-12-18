@@ -199,11 +199,20 @@ class CelestronAUX :
         /// Misc
         /////////////////////////////////////////////////////////////////////////////////////
         double getNorthAz();
+        bool isNorthHemisphere() const {return m_Location.latitude >= 0;}
         bool getVersion(AUXTargets target);
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
-        double MicrostepsToDegrees(INDI_HO_AXIS axis, uint32_t steps);
-        uint32_t DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees);
+
+        double EncoderToDegrees(uint32_t steps);
+        uint32_t DegreesToEncoder(double degrees);
+
+        double EncoderToHours(uint32_t steps);
+        uint32_t HoursToEncoder(double hour);
+
+        uint32_t RAToEncoder(double ra);
+        double DEToEncoder(double de);
+
         bool getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordinates, INDI::IEquatorialCoordinates &rade);
         int32_t clampStepsPerRevolution(int32_t);
 
@@ -370,6 +379,9 @@ class CelestronAUX :
         static constexpr double STEPS_PER_DEGREE {STEPS_PER_REVOLUTION / 360.0};
         static constexpr double STEPS_PER_ARCSEC {STEPS_PER_DEGREE / 3600.0};
         static constexpr double DEGREES_PER_STEP {360.0 / STEPS_PER_REVOLUTION};
+
+        static constexpr double STEPS_PER_HOUR {STEPS_PER_REVOLUTION / 24.0};
+        static constexpr double HOURS_PER_STEP {24.0 / STEPS_PER_REVOLUTION};
 
         // Measured rate that would result in 1 step/sec
         static constexpr uint32_t GAIN_STEPS {80};
