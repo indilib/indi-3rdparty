@@ -1090,8 +1090,8 @@ bool CelestronAUX::ReadScopeStatus()
     }
 
     // Calculate new RA DEC
-    m_MountCoordinates.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
-    m_MountCoordinates.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
+    m_MountCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
+    m_MountCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ/RA %.4f°", EncoderNP[AXIS_AZ].getValue(),
            m_MountCoordinates.azimuth);
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> AL/DE %.4f°", EncoderNP[AXIS_ALT].getValue(),
@@ -1275,8 +1275,8 @@ bool CelestronAUX::Goto(double ra, double dec)
         }
     }
 
-    uint32_t axis1Steps = DegreesToMicrosteps(AXIS_AZ, MountAxisCoordinates.azimuth);
-    uint32_t axis2Steps = DegreesToMicrosteps(AXIS_ALT, MountAxisCoordinates.altitude);
+    uint32_t axis1Steps = DegreesToEncoder(MountAxisCoordinates.azimuth);
+    uint32_t axis2Steps = DegreesToEncoder(MountAxisCoordinates.altitude);
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
            "Sky -> Mount AZ/RA %lf° (%ld) AL/DE %lf° (%ld)",
            MountAxisCoordinates.azimuth,
@@ -1313,8 +1313,8 @@ bool CelestronAUX::Sync(double ra, double dec)
         return false;
 
     INDI::IHorizontalCoordinates MountAxisCoordinates { 0, 0 };
-    MountAxisCoordinates.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
-    MountAxisCoordinates.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
+    MountAxisCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
+    MountAxisCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
 
     AlignmentDatabaseEntry NewEntry;
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
@@ -1501,8 +1501,8 @@ void CelestronAUX::TimerHit()
 
                 // Next get current alt-az
                 INDI::IHorizontalCoordinates currentAltAz { 0, 0 };
-                currentAltAz.azimuth = MicrostepsToDegrees(AXIS_AZ, EncoderNP[AXIS_AZ].getValue());
-                currentAltAz.altitude = MicrostepsToDegrees(AXIS_ALT, EncoderNP[AXIS_ALT].getValue());
+                currentAltAz.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
+                currentAltAz.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
 
                 // Offset in degrees
                 double offsetAngle[2] = {0, 0};
@@ -1572,40 +1572,76 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-/// Axis 1 is RA/AZ which has a range of 0 to 360 degrees (0 to 24 hours)
-/// Axis 1 is DE/AL which has a range of -90 to +90 degrees.
+/// 0 to 360 degrees
 /////////////////////////////////////////////////////////////////////////////////////
-double CelestronAUX::MicrostepsToDegrees(INDI_HO_AXIS axis, uint32_t steps)
+double CelestronAUX::EncoderToDegrees(uint32_t steps)
 {
     double value = steps * DEGREES_PER_STEP;
-    if (axis == AXIS_AZ)
+    // North hemisphere
+    if (isNorthHemisphere())
         return range360(value);
     else
-        return rangeDec(value);
+        return range360(360 - value);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::DegreesToMicrosteps(INDI_HO_AXIS axis, double degrees)
+uint32_t CelestronAUX::DegreesToEncoder(double degree)
 {
-    uint32_t value = 0;
-    if (axis == AXIS_AZ)
-    {
-        value = degrees * STEPS_PER_DEGREE;
-    }
+    double target = range360(degree);
+    if (isNorthHemisphere() == false)
+        target = 360.0 - target;
+    if (target > 270.0)
+        target -= 360.0;
+    return round(target * STEPS_PER_DEGREE);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// 0 to 24 hours
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::EncoderToHours(uint32_t steps)
+{
+    double value = steps * HOURS_PER_STEP;
+    // North hemisphere
+    if (isNorthHemisphere())
+        return range24(value + 6.0);
     else
-    {
-        value = std::abs(degrees) * STEPS_PER_DEGREE;
-        // We need to wrap around?
-        if (degrees < 0)
-            value += STEPS_PER_REVOLUTION / 2;
-    }
+        return range24( (24.0 - value) + 6.0);
+}
 
-    if (value > STEPS_PER_REVOLUTION)
-        value -= STEPS_PER_REVOLUTION;
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+uint32_t CelestronAUX::HoursToEncoder(double hour)
+{
+    double shifthour = range24(hour - 6);
+    if (isNorthHemisphere())
+        return round(((shifthour / 24.0) * STEPS_PER_REVOLUTION));
+    else
+        return round((((24.0 - shifthour) / 24.0) * STEPS_PER_REVOLUTION));
+}
 
-    return value;
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+uint32_t CelestronAUX::RAToEncoder(double ra)
+{
+    double ha = ra - ln_get_julian_from_sys();
+    if (getPierSide() == PIER_EAST)
+        ha = ha + 12.0;
+    ha = range24(ha);
+    return HoursToEncoder(ha);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::DEToEncoder(double de)
+{
+    if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
+        de = 180.0 - de;
+    return DegreesToEncoder(de);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1630,7 +1666,6 @@ bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
     readAUXResponse(command);
     return true;
 };
-
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
