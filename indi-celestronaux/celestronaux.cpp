@@ -36,6 +36,8 @@
 #include "celestronaux.h"
 #include "config.h"
 
+#define DEBUG_PID
+
 using namespace INDI::AlignmentSubsystem;
 
 static std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
@@ -380,8 +382,8 @@ bool CelestronAUX::initProperties()
     Axis1PIDNP.fill(getDeviceName(), "AXIS1_PID", "Axis1 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     Axis2PIDNP[Propotional].fill("Propotional", "Propotional", "%.2f", 0, 500, 10, GAIN_STEPS);
-    Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 500, 10, 5);
-    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 500, 10, 0.5);
+    Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 500, 10, 0);
+    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 500, 10, 0.25);
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Firmware Info
@@ -1581,8 +1583,20 @@ void CelestronAUX::TimerHit()
 
                 LOGF_DEBUG("Tracking AZ Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ],
                            offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
+#ifdef DEBUG_PID
+                LOGF_DEBUG("Tracking AZ P: %f I: %f D: %f",
+                           m_Controllers[AXIS_AZ]->propotionalTerm(),
+                           m_Controllers[AXIS_AZ]->integralTerm(),
+                           m_Controllers[AXIS_AZ]->derivativeTerm());
+#endif
                 LOGF_DEBUG("Tracking AL Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_ALT].getValue(), targetSteps[AXIS_ALT],
                            offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
+#ifdef DEBUG_PID
+                LOGF_DEBUG("Tracking AL P: %f I: %f D: %f",
+                           m_Controllers[AXIS_ALT]->propotionalTerm(),
+                           m_Controllers[AXIS_ALT]->integralTerm(),
+                           m_Controllers[AXIS_ALT]->derivativeTerm());
+#endif
 
                 // Use PID to determine appropiate tracking rate
                 trackByRate(AXIS_AZ, trackRates[AXIS_AZ]);
