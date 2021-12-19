@@ -1040,8 +1040,10 @@ void CelestronAUX::resetTracking()
 
     m_Controllers[AXIS_AZ].reset(new PID(1, 100000, -100000, Axis1PIDNP[Propotional].getValue(),
                                          Axis1PIDNP[Derivative].getValue(), Axis1PIDNP[Integral].getValue()));
+    m_Controllers[AXIS_AZ]->setIntegratorLimits(-2000, 2000);
     m_Controllers[AXIS_ALT].reset(new PID(1, 100000, -100000, Axis2PIDNP[Propotional].getValue(),
                                           Axis2PIDNP[Derivative].getValue(), Axis2PIDNP[Integral].getValue()));
+    m_Controllers[AXIS_ALT]->setIntegratorLimits(-2000, 2000);
     m_TrackingElapsedTimer.restart();
     m_GuideOffset[AXIS_AZ] = m_GuideOffset[AXIS_ALT] = 0;
 }
