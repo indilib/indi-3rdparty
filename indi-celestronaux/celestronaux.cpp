@@ -301,6 +301,8 @@ bool CelestronAUX::initProperties()
         AddTrackMode("TRACK_SOLAR", "Solar");
         AddTrackMode("TRACK_LUNAR", "Lunar");
         AddTrackMode("TRACK_CUSTOM", "Custom");
+
+        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_PIER_SIDE);
     }
 
     // Horizontal Coords
@@ -1090,12 +1092,7 @@ bool CelestronAUX::ReadScopeStatus()
     }
 
     // Calculate new RA DEC
-    m_MountCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
-    m_MountCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ/RA %.4f°", EncoderNP[AXIS_AZ].getValue(),
-           m_MountCoordinates.azimuth);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> AL/DE %.4f°", EncoderNP[AXIS_ALT].getValue(),
-           m_MountCoordinates.altitude);
+    EncoderToRADE();
 
     // Send to client if updated
     if (std::abs(axis1 - EncoderNP[AXIS_AZ].getValue()) > 1 || std::abs(axis2 - EncoderNP[AXIS_ALT].getValue()) > 1)
@@ -1173,6 +1170,28 @@ bool CelestronAUX::ReadScopeStatus()
 
     NewRaDec(m_SkyCurrentRADE.rightascension, m_SkyCurrentRADE.declination);
     return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::EncoderToRADE()
+{
+    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    {
+        m_MountCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
+        m_MountCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ %.4f°", EncoderNP[AXIS_AZ].getValue(),
+               m_MountCoordinates.azimuth);
+        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> ALE %.4f°", EncoderNP[AXIS_ALT].getValue(),
+               m_MountCoordinates.altitude);
+    }
+    else
+    {
+        double HACurrent = EncoderToHours(EncoderNP[AXIS_RA].getValue());
+        double RACurrent = HACurrent + ln_get_julian_from_sys();
+        double DECurrent = EncoderToDegrees(EncoderNP[AXIS_DE].getValue());
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1592,8 +1611,8 @@ uint32_t CelestronAUX::DegreesToEncoder(double degree)
     double target = range360(degree);
     if (isNorthHemisphere() == false)
         target = 360.0 - target;
-    if (target > 270.0)
-        target -= 360.0;
+    //    if (target > 270.0)
+    //        target -= 360.0;
     return round(target * STEPS_PER_DEGREE);
 }
 

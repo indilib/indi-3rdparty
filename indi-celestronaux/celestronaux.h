@@ -199,7 +199,10 @@ class CelestronAUX :
         /// Misc
         /////////////////////////////////////////////////////////////////////////////////////
         double getNorthAz();
-        bool isNorthHemisphere() const {return m_Location.latitude >= 0;}
+        bool isNorthHemisphere() const
+        {
+            return m_Location.latitude >= 0;
+        }
         bool getVersion(AUXTargets target);
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
@@ -212,6 +215,8 @@ class CelestronAUX :
 
         uint32_t RAToEncoder(double ra);
         double DEToEncoder(double de);
+
+        void EncoderToRADE();
 
         bool getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordinates, INDI::IEquatorialCoordinates &rade);
         int32_t clampStepsPerRevolution(int32_t);
@@ -343,7 +348,7 @@ class CelestronAUX :
         INDI::PropertyNumber AngleNP {2};
 
         int32_t m_LastTrackRate[2] = {0, 0};
-        double m_TrackStartSteps[2] = {0,0};
+        double m_TrackStartSteps[2] = {0, 0};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};
