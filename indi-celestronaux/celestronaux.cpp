@@ -1121,10 +1121,23 @@ bool CelestronAUX::ReadScopeStatus()
     char RAStr[32] = {0}, DecStr[32] = {0};
     fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
     fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Mount -> Sky RA %s DE %s", RAStr, DecStr);
 
     INDI::IHorizontalCoordinates celestialAzAlt;
     INDI::EquatorialToHorizontal(&m_SkyCurrentRADE, &m_Location, ln_get_julian_from_sys(), &celestialAzAlt);
+
+    char AzStr[32] = {0}, AltStr[32] = {0}, HAStr[32] = {0};
+    fs_sexa(AzStr, celestialAzAlt.azimuth, 2, 3600);
+    fs_sexa(AltStr, celestialAzAlt.altitude, 2, 3600);
+    double HA = rangeHA(ln_get_julian_from_sys() - m_SkyCurrentRADE.rightascension);
+    fs_sexa(HAStr, HA, 2, 3600);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Mount -> Sky RA: %s DE: %s AZ: %s AL: %s HA: %s Pier: %s",
+           RAStr,
+           DecStr,
+           AzStr,
+           AltStr,
+           HAStr,
+           MountTypeSP[ALTAZ].getState() == ISS_ON ? "NA" : getPierSideStr(currentPierSide));
+
     if (std::abs(celestialAzAlt.azimuth - HorizontalCoordsNP[AXIS_AZ].getValue()) > 0.1 ||
             std::abs(celestialAzAlt.altitude - HorizontalCoordsNP[AXIS_ALT].getValue()) > 0.1)
     {
@@ -1332,7 +1345,7 @@ bool CelestronAUX::Goto(double ra, double dec)
 
     fs_sexa(RAStr, MountRADE.rightascension, 2, 3600);
     fs_sexa(DecStr, MountRADE.declination, 2, 3600);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky -> Mount RA (%ld) %s DE %s (%ld)", RAStr, axis1Steps, DecStr,
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky -> Mount RA %s (%ld) DE %s (%ld)", RAStr, axis1Steps, DecStr,
            axis2Steps);
 
     // Slew to physical steps.
