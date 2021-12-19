@@ -207,20 +207,24 @@ class CelestronAUX :
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
 
-        double EncoderToDegrees(uint32_t steps);
-        uint32_t DegreesToEncoder(double degrees);
+        double EncodersToDegrees(uint32_t steps);
+        uint32_t DegreesToEncoders(double degrees);
 
-        double EncoderToHours(uint32_t steps);
-        uint32_t HoursToEncoder(double hour);
+        double EncodersToHours(uint32_t steps);
+        uint32_t HoursToEncoders(double hour);
 
-        uint32_t RAToEncoder(double ra);
-        double DEToEncoder(double de);
+        uint32_t RAToEncoders(double ra);
+        double DEToEncoders(double de);
 
-        void EncoderToRADE();
+        void EncodersToAltAz(INDI::IHorizontalCoordinates &coords);
+        void EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide);
 
-        bool getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordinates, INDI::IEquatorialCoordinates &rade);
-        int32_t clampStepsPerRevolution(int32_t);
-
+        /**
+         * @brief mountToSkyCoords Convert mount coordinates to equatorial sky coordinates
+         * @return True if successful, false otherwise.
+         * @note This works for both Alt-Az and Equatorial Mounts.
+         */
+        bool mountToSkyCoords();
         /////////////////////////////////////////////////////////////////////////////////////
         /// Guiding
         /////////////////////////////////////////////////////////////////////////////////////
@@ -237,17 +241,20 @@ class CelestronAUX :
         int32_t m_GuideOffset[2] = {0, 0};
         double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
-        // Home declination
-        double m_HomePole {90};
-
         // approach distance
-        double Approach;
+        double Approach {1};
 
-        // Tracking
+        // Tracking targets
         INDI::IEquatorialCoordinates m_SkyTrackingTarget { 0, 0 };
         INDI::IEquatorialCoordinates m_SkyGOTOTarget { 0, 0 };
+
+        // Actual Sky Equatorial Coordinates
         INDI::IEquatorialCoordinates m_SkyCurrentRADE {0, 0};
-        INDI::IHorizontalCoordinates m_MountCoordinates {0, 0};
+
+        // Current Mount Alt/Az or RA/DE
+        INDI::IEquatorialCoordinates m_MountCurrentRADE {0, 0};
+        INDI::IHorizontalCoordinates m_MountCurrentAltAz {0, 0};
+
         INDI::ElapsedTimer m_TrackingElapsedTimer;
 
 
