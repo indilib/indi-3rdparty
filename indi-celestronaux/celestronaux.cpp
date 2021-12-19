@@ -74,9 +74,6 @@ CelestronAUX::CelestronAUX()
 
     //Both communication available, Serial and network (tcp/ip).
     setTelescopeConnection(CONNECTION_TCP | CONNECTION_SERIAL);
-
-    // Approach from no further then degs away
-    Approach = 1.0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -146,7 +143,7 @@ bool CelestronAUX::Handshake()
         LOG_DEBUG("Connection ready. Starting Processing.");
 
         // set mount type to alignment subsystem
-        SetApproximateMountAlignmentFromMountType(static_cast<MountType>(MountTypeSP.findOnSwitchIndex()));
+        //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(MountTypeSP.findOnSwitchIndex()));
         // tell the alignment math plugin to reinitialise
         Initialise(this);
 
@@ -283,11 +280,14 @@ bool CelestronAUX::initProperties()
     // Detect Equatorial Mounts
     if (strstr(getDeviceName(), "CGX") ||
             strstr(getDeviceName(), "CGEM") ||
-            strstr(getDeviceName(), "Wedge") ||
             strstr(getDeviceName(), "Advanced VX"))
     {
         // Force equatorial for such mounts
         configMountType = EQUATORIAL;
+    }
+    else if (strstr(getDeviceName(), "Wedge"))
+    {
+        SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
     }
 
     MountTypeSP[EQUATORIAL].fill("EQUATORIAL", "Equatorial", configMountType == EQUATORIAL ? ISS_ON : ISS_OFF);
@@ -1091,22 +1091,33 @@ bool CelestronAUX::ReadScopeStatus()
         return false;
     }
 
-    // Calculate new RA DEC
-    EncoderToRADE();
+    // Mount Alt-Az Coords
+    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    {
+        EncodersToAltAz(m_MountCurrentAltAz);
+    }
+    // Mount RA/DE Coords.
+    else
+    {
+        TelescopePierSide pierSide = currentPierSide;
+        EncodersToRADE(m_MountCurrentRADE, pierSide);
+        if (pierSide != currentPierSide)
+            setPierSide(pierSide);
+    }
 
     // Send to client if updated
     if (std::abs(axis1 - EncoderNP[AXIS_AZ].getValue()) > 1 || std::abs(axis2 - EncoderNP[AXIS_ALT].getValue()) > 1)
     {
         EncoderNP.setState(IPS_OK);
         EncoderNP.apply();
-        AngleNP[AXIS_AZ].setValue(m_MountCoordinates.azimuth);
-        AngleNP[AXIS_ALT].setValue(m_MountCoordinates.altitude);
+        AngleNP[AXIS_AZ].setValue(m_MountCurrentAltAz.azimuth);
+        AngleNP[AXIS_ALT].setValue(m_MountCurrentAltAz.altitude);
         AngleNP.setState(IPS_OK);
         AngleNP.apply();
     }
 
-    // Get equatorial coords.
-    getCurrentRADE(m_MountCoordinates, m_SkyCurrentRADE);
+    // Get sky coordinates
+    mountToSkyCoords();
     char RAStr[32] = {0}, DecStr[32] = {0};
     fs_sexa(RAStr, m_SkyCurrentRADE.rightascension, 2, 3600);
     fs_sexa(DecStr, m_SkyCurrentRADE.declination, 2, 3600);
@@ -1121,7 +1132,6 @@ bool CelestronAUX::ReadScopeStatus()
         HorizontalCoordsNP[AXIS_ALT].setValue(celestialAzAlt.altitude);
         HorizontalCoordsNP.apply();
     }
-
 
     if (TrackState == SCOPE_SLEWING)
     {
@@ -1175,23 +1185,48 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-void CelestronAUX::EncoderToRADE()
+void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
 {
-    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    coords.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+    coords.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ %.4f°", EncoderNP[AXIS_AZ].getValue(),
+           coords.azimuth);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> AL %.4f°", EncoderNP[AXIS_ALT].getValue(),
+           coords.altitude);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
+{
+    double HACurrent = EncodersToHours(EncoderNP[AXIS_RA].getValue());
+    double RACurrent = HACurrent + ln_get_julian_from_sys();
+    double DECurrent = EncodersToDegrees(EncoderNP[AXIS_DE].getValue());
+    if (isNorthHemisphere())
     {
-        m_MountCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
-        m_MountCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
-        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ %.4f°", EncoderNP[AXIS_AZ].getValue(),
-               m_MountCoordinates.azimuth);
-        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis2 encoder %10.f -> ALE %.4f°", EncoderNP[AXIS_ALT].getValue(),
-               m_MountCoordinates.altitude);
+        if ((DECurrent > 90.0) && (DECurrent <= 270.0))
+        {
+            RACurrent = RACurrent - 12.0;
+            pierSide = PIER_EAST;
+        }
+        else
+            pierSide = PIER_WEST;
+    }
+    else if ((DECurrent <= 90.0) || (DECurrent > 270.0))
+    {
+        RACurrent = RACurrent + 12.0;
+        pierSide = PIER_EAST;
     }
     else
-    {
-        double HACurrent = EncoderToHours(EncoderNP[AXIS_RA].getValue());
-        double RACurrent = HACurrent + ln_get_julian_from_sys();
-        double DECurrent = EncoderToDegrees(EncoderNP[AXIS_DE].getValue());
-    }
+        pierSide = PIER_WEST;
+
+    HACurrent = rangeHA(HACurrent);
+    RACurrent = range24(RACurrent);
+    DECurrent = rangeDec(DECurrent);
+
+    coords.rightascension = RACurrent;
+    coords.declination = DECurrent;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1226,53 +1261,50 @@ bool CelestronAUX::Goto(double ra, double dec)
         }
     }
 
-    INDI::IHorizontalCoordinates MountAxisCoordinates { 0, 0 };
+    uint32_t axis1Steps {0}, axis2Steps {0};
+
     TelescopeDirectionVector TDV;
+    INDI::IEquatorialCoordinates MountRADE { ra, dec };
 
     // Transform Celestial to Telescope coordinates.
     // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
     // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
     if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
     {
-        INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
-
-        // For Alt-Az mounts, we obtain the Mount's Alt-Az coords and convert them to Mount RA/DE coords.
+        // For Alt-Az Mounts, we get the Mount AltAz coords
         if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
         {
-            AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAxisCoordinates);
-            INDI::HorizontalToEquatorial(&MountAxisCoordinates, &m_Location, ln_get_julian_from_sys(), &EquatorialCoordinates);
+            INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
+            AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAltAz);
+            // Converts to steps and we're done.
+            axis1Steps = DegreesToEncoders(MountAltAz.azimuth);
+            axis2Steps = DegreesToEncoders(MountAltAz.altitude);
+
+            // For logging purposes
+            INDI::HorizontalToEquatorial(&MountAltAz, &m_Location, ln_get_julian_from_sys(), &MountRADE);
         }
-        // For Equatorial mount, just obtain the coords as is.
+        // For Equatorial mounts
         else
         {
-            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, EquatorialCoordinates);
-            MountAxisCoordinates.azimuth = range360(15 * EquatorialCoordinates.rightascension);
-            MountAxisCoordinates.altitude = rangeDec(EquatorialCoordinates.declination - m_HomePole);
+            EquatorialCoordinatesFromTelescopeDirectionVector(TDV, MountRADE);
+            // Converts to steps and we're done.
+            axis1Steps = RAToEncoders(MountRADE.rightascension);
+            axis2Steps = DEToEncoders(MountRADE.declination);
         }
-
-        char RAStr[32], DecStr[32];
-        fs_sexa(RAStr, EquatorialCoordinates.rightascension, 2, 3600);
-        fs_sexa(DecStr, EquatorialCoordinates.declination, 2, 3600);
-
-        DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky -> Mount RA %s DE %s (TDV x %lf y %lf z %lf)", RAStr, DecStr, TDV.x,
-               TDV.y, TDV.z);
     }
+    // Conversion failed, use values as is
     else
     {
-        // Try a conversion with the stored observatory position if any
-        INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
-        EquatorialCoordinates.rightascension  = ra;
-        EquatorialCoordinates.declination = dec;
-
         if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
         {
-            MountAxisCoordinates.azimuth = range360(15 * EquatorialCoordinates.rightascension);
-            MountAxisCoordinates.altitude = rangeDec(EquatorialCoordinates.declination - m_HomePole);
+            axis1Steps = RAToEncoders(MountRADE.rightascension);
+            axis2Steps = DEToEncoders(MountRADE.declination);
         }
         else
         {
-            INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, ln_get_julian_from_sys(), &MountAxisCoordinates);
-            TDV = TelescopeDirectionVectorFromAltitudeAzimuth(MountAxisCoordinates);
+            INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
+            INDI::EquatorialToHorizontal(&MountRADE, &m_Location, ln_get_julian_from_sys(), &MountAltAz);
+            TDV = TelescopeDirectionVectorFromAltitudeAzimuth(MountAltAz);
             switch (GetApproximateMountAlignment())
             {
                 case ZENITH:
@@ -1290,20 +1322,20 @@ bool CelestronAUX::Goto(double ra, double dec)
                     TDV.RotateAroundY(m_Location.latitude + 90.0);
                     break;
             }
-            AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAxisCoordinates);
+            AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAltAz);
+
+            // Converts to steps and we're done.
+            axis1Steps = DegreesToEncoders(MountAltAz.azimuth);
+            axis2Steps = DegreesToEncoders(MountAltAz.altitude);
         }
     }
 
-    uint32_t axis1Steps = DegreesToEncoder(MountAxisCoordinates.azimuth);
-    uint32_t axis2Steps = DegreesToEncoder(MountAxisCoordinates.altitude);
-    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
-           "Sky -> Mount AZ/RA %lf° (%ld) AL/DE %lf° (%ld)",
-           MountAxisCoordinates.azimuth,
-           axis1Steps,
-           MountAxisCoordinates.altitude,
+    fs_sexa(RAStr, MountRADE.rightascension, 2, 3600);
+    fs_sexa(DecStr, MountRADE.declination, 2, 3600);
+    DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Sky -> Mount RA (%ld) %s DE %s (%ld)", RAStr, axis1Steps, DecStr,
            axis2Steps);
 
-
+    // Slew to physical steps.
     slewTo(AXIS_AZ, axis1Steps, ScopeStatus != APPROACH);
     slewTo(AXIS_ALT, axis2Steps, ScopeStatus != APPROACH);
 
@@ -1331,9 +1363,6 @@ bool CelestronAUX::Sync(double ra, double dec)
     if (!getEncoder(AXIS_ALT))
         return false;
 
-    INDI::IHorizontalCoordinates MountAxisCoordinates { 0, 0 };
-    MountAxisCoordinates.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
-    MountAxisCoordinates.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
 
     AlignmentDatabaseEntry NewEntry;
     NewEntry.ObservationJulianDate = ln_get_julian_from_sys();
@@ -1342,11 +1371,18 @@ bool CelestronAUX::Sync(double ra, double dec)
 
 
     if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
-        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(MountAxisCoordinates);
+    {
+        INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
+        MountAltAz.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+        MountAltAz.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
+        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(MountAltAz);
+    }
     else
     {
-        INDI::IEquatorialCoordinates EquatorialCoordinates {range24(MountAxisCoordinates.azimuth), rangeDec(m_HomePole - MountAxisCoordinates.altitude)};
-        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
+        INDI::IEquatorialCoordinates MountRADE {0, 0};
+        TelescopePierSide pierSide;
+        EncodersToRADE(MountRADE, pierSide);
+        NewEntry.TelescopeDirection = TelescopeDirectionVectorFromEquatorialCoordinates(MountRADE);
     }
     NewEntry.PrivateDataSize    = 0;
 
@@ -1381,13 +1417,15 @@ bool CelestronAUX::Sync(double ra, double dec)
 //////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordinates, INDI::IEquatorialCoordinates &rade)
+bool CelestronAUX::mountToSkyCoords()
 {
     double RightAscension, Declination;
 
+    // TODO for Alt-Az Mounts on a Wedge, we need a watch to set this.
     if (MountTypeSP[ALTAZ].getState() == ISS_ON)
     {
-        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(mountAxisCoordinates);
+        INDI::IHorizontalCoordinates AltAz = m_MountCurrentAltAz;
+        TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
         if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
         {
             TelescopeDirectionVector RotatedTDV(TDV);
@@ -1400,59 +1438,36 @@ bool CelestronAUX::getCurrentRADE(INDI::IHorizontalCoordinates mountAxisCoordina
                     // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
                     // the (positive)observatory latitude. The vector itself is rotated clockwise
                     RotatedTDV.RotateAroundY(90.0 - m_Location.latitude);
-                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, mountAxisCoordinates);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, AltAz);
                     break;
 
                 case SOUTH_CELESTIAL_POLE:
                     // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
                     // the (negative)observatory latitude. The vector itself is rotated anticlockwise
                     RotatedTDV.RotateAroundY(-90.0 - m_Location.latitude);
-                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, mountAxisCoordinates);
+                    AltitudeAzimuthFromTelescopeDirectionVector(RotatedTDV, AltAz);
                     break;
             }
 
             INDI::IEquatorialCoordinates EquatorialCoordinates;
-            INDI::HorizontalToEquatorial(&mountAxisCoordinates, &m_Location, ln_get_julian_from_sys(), &EquatorialCoordinates);
+            INDI::HorizontalToEquatorial(&AltAz, &m_Location, ln_get_julian_from_sys(), &EquatorialCoordinates);
             RightAscension = EquatorialCoordinates.rightascension;
             Declination = EquatorialCoordinates.declination;
         }
     }
     else
     {
-        INDI::IEquatorialCoordinates EquatorialCoordinates;
-        EquatorialCoordinates.rightascension = range24(mountAxisCoordinates.azimuth);
-        EquatorialCoordinates.declination = rangeDec(m_HomePole - mountAxisCoordinates.altitude);
+        INDI::IEquatorialCoordinates EquatorialCoordinates = m_MountCurrentRADE;
         TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
         if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
         {
-            TelescopeDirectionVector RotatedTDV(TDV);
-            switch (GetApproximateMountAlignment())
-            {
-                case ZENITH:
-                    break;
-
-                case NORTH_CELESTIAL_POLE:
-                    // Rotate the TDV coordinate system anticlockwise (positive) around the y axis by 90 minus
-                    // the (positive)observatory latitude. The vector itself is rotated clockwise
-                    RotatedTDV.RotateAroundY(90.0 - m_Location.latitude);
-                    EquatorialCoordinatesFromTelescopeDirectionVector(RotatedTDV, EquatorialCoordinates);
-                    break;
-
-                case SOUTH_CELESTIAL_POLE:
-                    // Rotate the TDV coordinate system clockwise (negative) around the y axis by 90 plus
-                    // the (negative)observatory latitude. The vector itself is rotated anticlockwise
-                    RotatedTDV.RotateAroundY(-90.0 - m_Location.latitude);
-                    EquatorialCoordinatesFromTelescopeDirectionVector(RotatedTDV, EquatorialCoordinates);
-                    break;
-            }
-
             RightAscension = EquatorialCoordinates.rightascension;
             Declination = EquatorialCoordinates.declination;
         }
     }
 
-    rade.rightascension = RightAscension;
-    rade.declination = Declination;
+    m_SkyCurrentRADE.rightascension = RightAscension;
+    m_SkyCurrentRADE.declination = Declination;
     return true;
 }
 
@@ -1520,8 +1535,8 @@ void CelestronAUX::TimerHit()
 
                 // Next get current alt-az
                 INDI::IHorizontalCoordinates currentAltAz { 0, 0 };
-                currentAltAz.azimuth = EncoderToDegrees(EncoderNP[AXIS_AZ].getValue());
-                currentAltAz.altitude = EncoderToDegrees(EncoderNP[AXIS_ALT].getValue());
+                currentAltAz.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+                currentAltAz.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
 
                 // Offset in degrees
                 double offsetAngle[2] = {0, 0};
@@ -1577,7 +1592,6 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
     // Update INDI Alignment Subsystem Location
     UpdateLocation(latitude, longitude, elevation);
 
-    m_HomePole = latitude >= 0 ? 90 : -90;
     // Do we really need this in update Location??
     // take care of latitude for north or south emisphere
     //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(IUFindOnSwitchIndex(&MountTypeSP)));
@@ -1593,7 +1607,7 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 /////////////////////////////////////////////////////////////////////////////////////
 /// 0 to 360 degrees
 /////////////////////////////////////////////////////////////////////////////////////
-double CelestronAUX::EncoderToDegrees(uint32_t steps)
+double CelestronAUX::EncodersToDegrees(uint32_t steps)
 {
     double value = steps * DEGREES_PER_STEP;
     // North hemisphere
@@ -1606,7 +1620,7 @@ double CelestronAUX::EncoderToDegrees(uint32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::DegreesToEncoder(double degree)
+uint32_t CelestronAUX::DegreesToEncoders(double degree)
 {
     double target = range360(degree);
     if (isNorthHemisphere() == false)
@@ -1619,7 +1633,7 @@ uint32_t CelestronAUX::DegreesToEncoder(double degree)
 /////////////////////////////////////////////////////////////////////////////////////
 /// 0 to 24 hours
 /////////////////////////////////////////////////////////////////////////////////////
-double CelestronAUX::EncoderToHours(uint32_t steps)
+double CelestronAUX::EncodersToHours(uint32_t steps)
 {
     double value = steps * HOURS_PER_STEP;
     // North hemisphere
@@ -1632,7 +1646,7 @@ double CelestronAUX::EncoderToHours(uint32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::HoursToEncoder(double hour)
+uint32_t CelestronAUX::HoursToEncoders(double hour)
 {
     double shifthour = range24(hour - 6);
     if (isNorthHemisphere())
@@ -1644,23 +1658,23 @@ uint32_t CelestronAUX::HoursToEncoder(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::RAToEncoder(double ra)
+uint32_t CelestronAUX::RAToEncoders(double ra)
 {
     double ha = ra - ln_get_julian_from_sys();
     if (getPierSide() == PIER_EAST)
         ha = ha + 12.0;
     ha = range24(ha);
-    return HoursToEncoder(ha);
+    return HoursToEncoders(ha);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-double CelestronAUX::DEToEncoder(double de)
+double CelestronAUX::DEToEncoders(double de)
 {
     if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
         de = 180.0 - de;
-    return DegreesToEncoder(de);
+    return DegreesToEncoders(de);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1756,7 +1770,6 @@ bool CelestronAUX::getCordWrapEnabled()
     AUXCommand command(MC_POLL_CORDWRAP, APP, AZM);
     sendAUXCommand(command);
     readAUXResponse(command);
-    LOGF_DEBUG("getCordWrap %d", m_CordWrapActive);
     return m_CordWrapActive;
 };
 
