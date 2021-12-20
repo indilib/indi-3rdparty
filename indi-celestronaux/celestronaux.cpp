@@ -1218,7 +1218,7 @@ void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
 void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
 {
     double HACurrent = EncodersToHours(EncoderNP[AXIS_RA].getValue());
-    double RACurrent = HACurrent + ln_get_julian_from_sys();
+    double RACurrent = HACurrent + get_local_sidereal_time(m_Location.longitude);
     double DECurrent = EncodersToDegrees(EncoderNP[AXIS_DE].getValue());
     if (isNorthHemisphere())
     {
@@ -1689,7 +1689,7 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 uint32_t CelestronAUX::RAToEncoders(double ra)
 {
-    double ha = ra - ln_get_julian_from_sys();
+    double ha = ra - get_local_sidereal_time(m_Location.longitude);
     if (getPierSide() == PIER_EAST)
         ha = ha + 12.0;
     ha = range24(ha);
