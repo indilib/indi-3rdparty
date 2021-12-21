@@ -286,6 +286,7 @@ bool CelestronAUX::initProperties()
     {
         // Force equatorial for such mounts
         configMountType = EQUATORIAL;
+        SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
     }
     else if (strstr(getDeviceName(), "Wedge"))
     {
@@ -1219,7 +1220,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 {
     double HACurrent = EncodersToHours(EncoderNP[AXIS_RA].getValue());
     double RACurrent = HACurrent + get_local_sidereal_time(m_Location.longitude);
-    double DECurrent = EncodersToDegrees(EncoderNP[AXIS_DE].getValue());
+    double DECurrent = range360(EncodersToDegrees(EncoderNP[AXIS_DE].getValue()) + ((m_Location.latitude >= 0) ? 90 : -90));
     if (isNorthHemisphere())
     {
         if ((DECurrent > 90.0) && (DECurrent <= 270.0))
