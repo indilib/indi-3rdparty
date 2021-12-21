@@ -282,16 +282,17 @@ bool CelestronAUX::initProperties()
     // Detect Equatorial Mounts
     if (strstr(getDeviceName(), "CGX") ||
             strstr(getDeviceName(), "CGEM") ||
-            strstr(getDeviceName(), "Advanced VX"))
+            strstr(getDeviceName(), "Advanced VX") ||
+            strstr(getDeviceName(), "Wedge"))
     {
         // Force equatorial for such mounts
         configMountType = EQUATORIAL;
-        SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
     }
-    else if (strstr(getDeviceName(), "Wedge"))
-    {
+
+    if (configMountType == EQUATORIAL)
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
-    }
+    else
+        SetApproximateMountAlignment(ZENITH);
 
     MountTypeSP[EQUATORIAL].fill("EQUATORIAL", "Equatorial", configMountType == EQUATORIAL ? ISS_ON : ISS_OFF);
     MountTypeSP[ALTAZ].fill("ALTAZ", "AltAz", configMountType == ALTAZ ? ISS_ON : ISS_OFF);
