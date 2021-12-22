@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 IF(APPLE)
 ELSE(APPLE)
-set(RULES_INSTALL_DIR "/etc/udev/rules.d")
+set(RULES_INSTALL_DIR "/lib/udev/rules.d")
 ENDIF()
 set (ORION_SSG3_VERSION_MAJOR 0)
 set (ORION_SSG3_VERSION_MINOR 1)

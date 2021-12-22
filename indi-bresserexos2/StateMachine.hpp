@@ -127,7 +127,7 @@ class StateMachine
         }
 
         //submit a signal to the state machine and do a transistion.
-        //the notify interface gets called when a transition or indefined transition occured.
+        //the notify interface gets called when a transition or indefined transition occurred.
         bool DoTransition(SignalType signal)
         {
             std::lock_guard<std::mutex> guard(mMutex); //lock this function call to avoid concurrent modification.

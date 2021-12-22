@@ -728,7 +728,7 @@ class ExosIIMountControl :
             TelescopeSignals signal
             )
         {
-            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occured!" << std::endl;
+            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occurred!" << std::endl;
             std::cerr << "Transition : (" << StateToString(fromState) << "," << SignalToString(signal) << ") -> ??? tripped this error!"
                       << std::endl;
         }

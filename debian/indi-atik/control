@@ -7,7 +7,7 @@ Standards-Version: 3.9.1
 
 Package: indi-atik
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libatik
+Depends: ${shlibs:Depends}, ${misc:Depends}, libatik
 Description: INDI Driver for Atik cameras and filter wheels.
  Driver for Atik cameras and filter wheels.
  .

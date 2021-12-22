@@ -260,7 +260,7 @@ long libusb_bulktransfer(flidev_t dev, int ep, void *buf, long *len)
       break;
   }
 
-  /* Set *len to the number of bytes actually transfered */
+  /* Set *len to the number of bytes actually transferred */
   if (remaining)
     err = -errno;
   *len -= remaining;

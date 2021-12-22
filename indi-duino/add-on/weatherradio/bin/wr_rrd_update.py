@@ -102,5 +102,5 @@ if __name__ == "__main__":
         update(args, config.get('WeatherRadio', 'INDISERVER'),
                config.getint('WeatherRadio', 'INDIPORT'))
     except Exception as ex:
-        print("Problem occured: {0}".format(ex))
+        print("Problem occurred: {0}".format(ex))
         sys.exit()

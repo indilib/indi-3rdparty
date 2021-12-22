@@ -20,7 +20,7 @@ Standards-Version: 3.9.1
 
 Package: indi-webcam
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: INDI Driver for FFMPEG based web cameras.
  Driver for FFMPEG Cameras.
  .

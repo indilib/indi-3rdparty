@@ -190,7 +190,7 @@ udev changes:
 
 For example, to give rw access rights to all users for all QSI USB cameras in Fedora 24:
 
-Create a file in /etc/udev/rules.d called 99-qsi.rules with the following contents:
+Create a file in /lib/udev/rules.d called 99-qsi.rules with the following contents:
 
 KERNEL=="*", SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="eb48", MODE="0666"
 KERNEL=="*", SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="eb49", MODE="0666"
@@ -202,7 +202,7 @@ sudo udevadm trigger
 
 In Ubuntu 6:
 
-In the file /etc/udev/rules.d/40-permisssions.rules
+In the file /lib/udev/rules.d/40-permisssions.rules
 
 after:
 #USB devices (usbfs replacement)

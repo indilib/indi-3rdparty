@@ -7,7 +7,7 @@ Standards-Version: 3.9.2
 
 Package: indi-rtklib
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, rtklib, libindi1
+Depends: ${shlibs:Depends}, ${misc:Depends}, rtklib
 Description: Precise positioning for INDI
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
