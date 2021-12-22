@@ -1676,9 +1676,9 @@ double CelestronAUX::EncodersToHours(uint32_t steps)
     double value = steps * HOURS_PER_STEP;
     // North hemisphere
     if (isNorthHemisphere())
-        return range24(value + 6.0);
+        return range24(value);
     else
-        return range24( (24.0 - value) + 6.0);
+        return range24(24.0 - value);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1686,11 +1686,7 @@ double CelestronAUX::EncodersToHours(uint32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 uint32_t CelestronAUX::HoursToEncoders(double hour)
 {
-    double shifthour = range24(hour - 6);
-    if (isNorthHemisphere())
-        return round(((shifthour / 24.0) * STEPS_PER_REVOLUTION));
-    else
-        return round((((24.0 - shifthour) / 24.0) * STEPS_PER_REVOLUTION));
+    return DegreesToEncoders(hour * 15);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1698,9 +1694,7 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 uint32_t CelestronAUX::RAToEncoders(double ra)
 {
-    double ha = ra - get_local_sidereal_time(m_Location.longitude);
-    if (getPierSide() == PIER_EAST)
-        ha = ha + 12.0;
+    double ha = get_local_sidereal_time(m_Location.longitude) - ra;
     ha = range24(ha);
     return HoursToEncoders(ha);
 }
