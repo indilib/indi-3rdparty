@@ -1710,9 +1710,12 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 /////////////////////////////////////////////////////////////////////////////////////
 double CelestronAUX::DEToEncoders(double de)
 {
-    if (!isNorthHemisphere())
-        de = rangeDec(180.0 - de);
-    return DegreesToEncoders(de);
+    double degrees = 0;
+    if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
+        degrees = 270 + de;
+    else
+        degrees = 90 - de;
+    return DegreesToEncoders(degrees);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
