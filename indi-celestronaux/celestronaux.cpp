@@ -1116,8 +1116,16 @@ bool CelestronAUX::ReadScopeStatus()
     {
         EncoderNP.setState(IPS_OK);
         EncoderNP.apply();
-        AngleNP[AXIS_AZ].setValue(m_MountCurrentAltAz.azimuth);
-        AngleNP[AXIS_ALT].setValue(m_MountCurrentAltAz.altitude);
+        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        {
+            AngleNP[AXIS_AZ].setValue(m_MountCurrentAltAz.azimuth);
+            AngleNP[AXIS_ALT].setValue(m_MountCurrentAltAz.altitude);
+        }
+        else
+        {
+            AngleNP[AXIS_RA].setValue(range360(m_MountCurrentRADE.rightascension * 15));
+            AngleNP[AXIS_DE].setValue(rangeDec(m_MountCurrentRADE.declination));
+        }
         AngleNP.setState(IPS_OK);
         AngleNP.apply();
     }
@@ -1704,7 +1712,7 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 double CelestronAUX::DEToEncoders(double de)
 {
     if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
-        de = 180.0 - de;
+        de = rangeDec(180.0 - de);
     return DegreesToEncoders(de);
 }
 
