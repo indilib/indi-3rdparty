@@ -1200,8 +1200,8 @@ bool CelestronAUX::ReadScopeStatus()
     {
         if (isSlewing() == false)
         {
-            SetTrackEnabled(false);
             SetParked(true);
+            SetTrackEnabled(false);
         }
     }
 
