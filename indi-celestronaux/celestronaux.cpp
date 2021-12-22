@@ -1185,7 +1185,7 @@ bool CelestronAUX::ReadScopeStatus()
                 resetTracking();
 
                 // For equatorial mounts, engage tracking.
-                if (MountTypeSP[EQUATORIAL].getState())
+                if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
                     SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
                 LOG_INFO("Tracking started.");
             }
@@ -1712,7 +1712,13 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 double CelestronAUX::DEToEncoders(double de)
 {
     if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
-        de = rangeDec(180.0 - de);
+    {
+        de = 180.0 - de;
+        while (de > 90)
+            de -= 90;
+        while (de < -90)
+            de += 90;
+    }
     return DegreesToEncoders(de);
 }
 
@@ -1899,7 +1905,8 @@ bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
 {
-    AUXCommand command(MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
+    // N.B. MC_SET_NEG_GUIDERATE should be used for NORTH hemisphere.
+    AUXCommand command(isNorthHemisphere() ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     switch (mode)
     {
         case TRACK_SOLAR:
