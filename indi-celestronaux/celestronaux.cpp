@@ -1247,7 +1247,6 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
     else
         pierSide = PIER_WEST;
 
-    HACurrent = rangeHA(HACurrent);
     RACurrent = range24(RACurrent);
     DECurrent = rangeDec(DECurrent);
 
@@ -1694,7 +1693,16 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 uint32_t CelestronAUX::RAToEncoders(double ra)
 {
-    double ha = get_local_sidereal_time(m_Location.longitude) - ra;
+    double ha = rangeHA(get_local_sidereal_time(m_Location.longitude) - ra);
+    if (ha < 0)
+        m_TargetPierSide = PIER_EAST;
+    else
+        m_TargetPierSide = PIER_WEST;
+    // Flip in southerin hemisphere
+    if (!isNorthHemisphere())
+        ha *= -1;
+
+    // Range to 0 to 24 hours.
     ha = range24(ha);
     return HoursToEncoders(ha);
 }
@@ -1705,7 +1713,7 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 double CelestronAUX::DEToEncoders(double de)
 {
     double degrees = 0;
-    if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
+    if ((isNorthHemisphere() && m_TargetPierSide == PIER_EAST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_WEST))
         degrees = 270 + de;
     else
         degrees = 90 - de;

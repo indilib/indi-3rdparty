@@ -243,6 +243,7 @@ class CelestronAUX :
 
         // approach distance
         double Approach {1};
+        TelescopePierSide m_TargetPierSide {PIER_UNKNOWN};
 
         // Tracking targets
         INDI::IEquatorialCoordinates m_SkyTrackingTarget { 0, 0 };
