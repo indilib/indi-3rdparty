@@ -1678,9 +1678,9 @@ double CelestronAUX::EncodersToHours(uint32_t steps)
     double value = steps * HOURS_PER_STEP;
     // North hemisphere
     if (isNorthHemisphere())
-        return range24(24  - value);
-    else
         return range24(value);
+    else
+        return range24(24 - value);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
