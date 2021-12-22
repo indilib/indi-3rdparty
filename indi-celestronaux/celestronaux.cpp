@@ -1226,29 +1226,32 @@ void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
 {
-    double HACurrent = EncodersToHours(EncoderNP[AXIS_RA].getValue());
-    double RACurrent = HACurrent + get_local_sidereal_time(m_Location.longitude);
-    double DECurrent = range360(EncodersToDegrees(EncoderNP[AXIS_DE].getValue()) + ((m_Location.latitude >= 0) ? 90 : -90));
+    // HA = LST - RA
+    double HACurrent = rangeHA(EncodersToHours(EncoderNP[AXIS_RA].getValue()));
+    double RACurrent = get_local_sidereal_time(m_Location.longitude) - HACurrent;
+
+    // Mechanical declination
+    double DECurrent = range360(EncodersToDegrees(EncoderNP[AXIS_DE].getValue()));
     if (isNorthHemisphere())
     {
-        if ((DECurrent > 90.0) && (DECurrent <= 270.0))
+        if ((DECurrent > 180.0) && (DECurrent <= 360.0))
         {
-            RACurrent = RACurrent - 12.0;
-            pierSide = PIER_EAST;
+            //RACurrent = RACurrent - 12.0;
+            pierSide = PIER_WEST;
         }
         else
-            pierSide = PIER_WEST;
+            pierSide = PIER_EAST;
     }
-    else if ((DECurrent <= 90.0) || (DECurrent > 270.0))
+    else if (DECurrent > 180.0)
     {
-        RACurrent = RACurrent + 12.0;
-        pierSide = PIER_EAST;
+        //RACurrent = RACurrent + 12.0;
+        pierSide = PIER_WEST;
     }
     else
-        pierSide = PIER_WEST;
+        pierSide = PIER_EAST;
 
     RACurrent = range24(RACurrent);
-    DECurrent = rangeDec(DECurrent);
+    DECurrent = EncodersToDE(EncoderNP[AXIS_DE].getValue(), pierSide);
 
     coords.rightascension = RACurrent;
     coords.declination = DECurrent;
@@ -1675,9 +1678,9 @@ double CelestronAUX::EncodersToHours(uint32_t steps)
     double value = steps * HOURS_PER_STEP;
     // North hemisphere
     if (isNorthHemisphere())
-        return range24(value);
+        return range24(24  - value);
     else
-        return range24(24.0 - value);
+        return range24(value);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1694,7 +1697,7 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 uint32_t CelestronAUX::RAToEncoders(double ra)
 {
     double ha = rangeHA(get_local_sidereal_time(m_Location.longitude) - ra);
-    if (ha < 0)
+    if (ha > 0)
         m_TargetPierSide = PIER_EAST;
     else
         m_TargetPierSide = PIER_WEST;
@@ -1708,12 +1711,27 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
+/// -90 to +90
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::EncodersToDE(uint32_t steps, TelescopePierSide pierSide)
+{
+    double degrees = EncodersToDegrees(steps);
+    double de = 0;
+    if ((isNorthHemisphere() && pierSide == PIER_WEST) || (!isNorthHemisphere() && pierSide == PIER_EAST))
+        de = degrees - 270;
+    else
+        de = 90 - degrees;
+
+    return rangeDec(de);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 double CelestronAUX::DEToEncoders(double de)
 {
     double degrees = 0;
-    if ((isNorthHemisphere() && m_TargetPierSide == PIER_EAST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_WEST))
+    if ((isNorthHemisphere() && m_TargetPierSide == PIER_WEST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_EAST))
         degrees = 270 + de;
     else
         degrees = 90 - de;
