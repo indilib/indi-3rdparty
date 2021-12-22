@@ -1107,8 +1107,7 @@ bool CelestronAUX::ReadScopeStatus()
     {
         TelescopePierSide pierSide = currentPierSide;
         EncodersToRADE(m_MountCurrentRADE, pierSide);
-        if (pierSide != currentPierSide)
-            setPierSide(pierSide);
+        setPierSide(pierSide);
     }
 
     // Send to client if updated
@@ -1711,14 +1710,8 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
 /////////////////////////////////////////////////////////////////////////////////////
 double CelestronAUX::DEToEncoders(double de)
 {
-    if ((isNorthHemisphere() && getPierSide() == PIER_EAST) || (!isNorthHemisphere() && getPierSide() == PIER_WEST))
-    {
-        de = 180.0 - de;
-        while (de > 90)
-            de -= 90;
-        while (de < -90)
-            de += 90;
-    }
+    if (!isNorthHemisphere())
+        de = rangeDec(180.0 - de);
     return DegreesToEncoders(de);
 }
 
