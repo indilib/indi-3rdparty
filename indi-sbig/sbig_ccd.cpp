@@ -2113,7 +2113,7 @@ void SBIGCCD::GetExtendedCCDInfo()
     CFWp.cfwParam1  = CFWG_FIRMWARE_VERSION;
     if (SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr) == CE_NO_ERROR)
     {
-        LOGF_DEBUG("Fitler wheel detected (firmware %ld).", CFWr.cfwResult1);
+        LOGF_DEBUG("Filter wheel detected (firmware %ld).", CFWr.cfwResult1);
         m_hasFilterWheel = true;
     }
     else
