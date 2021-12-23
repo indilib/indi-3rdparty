@@ -44,7 +44,7 @@ public:
     virtual void data_received(uint8_t  *data,  uint32_t length) = 0;
 
     /**
-     * Reset this pipeline object to its intial state. 
+     * Reset this pipeline object to its initial state. 
      * 
      * Nothing about the image to be received can be changed after calling this and 
      * until all buffers has been received.
