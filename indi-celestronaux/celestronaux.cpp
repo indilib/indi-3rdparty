@@ -306,7 +306,7 @@ bool CelestronAUX::initProperties()
         AddTrackMode("TRACK_LUNAR", "Lunar");
         AddTrackMode("TRACK_CUSTOM", "Custom");
 
-        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_PIER_SIDE);
+        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_PIER_SIDE, 8);
     }
 
     // Horizontal Coords
@@ -475,18 +475,21 @@ bool CelestronAUX::updateProperties()
         defineProperty(&GuideRateNP);
 
         // Cord wrap Enabled?
-        getCordWrapEnabled();
-        CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
-        CordWrapToggleSP[INDI_DISABLED].s  = m_CordWrapActive ? ISS_OFF : ISS_ON;
-        defineProperty(&CordWrapToggleSP);
+        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        {
+            getCordWrapEnabled();
+            CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
+            CordWrapToggleSP[INDI_DISABLED].s  = m_CordWrapActive ? ISS_OFF : ISS_ON;
+            defineProperty(&CordWrapToggleSP);
 
-        // Cord wrap Position?
-        getCordWrapPosition();
-        double cordWrapAngle = range360(m_CordWrapPosition / STEPS_PER_DEGREE);
-        LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
-        CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 90))].s = ISS_ON;
-        defineProperty(&CordWrapPositionSP);
-        defineProperty(&CordWrapBaseSP);
+            // Cord wrap Position?
+            getCordWrapPosition();
+            double cordWrapAngle = range360(m_CordWrapPosition / STEPS_PER_DEGREE);
+            LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
+            CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 90))].s = ISS_ON;
+            defineProperty(&CordWrapPositionSP);
+            defineProperty(&CordWrapBaseSP);
+        }
 
         defineProperty(&GPSEmuSP);
 
@@ -545,9 +548,12 @@ bool CelestronAUX::updateProperties()
         deleteProperty(GuideWENP.name);
         deleteProperty(GuideRateNP.getName());
 
-        deleteProperty(CordWrapToggleSP.getName());
-        deleteProperty(CordWrapPositionSP.getName());
-        deleteProperty(CordWrapBaseSP.getName());
+        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        {
+            deleteProperty(CordWrapToggleSP.getName());
+            deleteProperty(CordWrapPositionSP.getName());
+            deleteProperty(CordWrapBaseSP.getName());
+        }
 
         deleteProperty(GPSEmuSP.getName());
 
@@ -972,6 +978,10 @@ double CelestronAUX::getNorthAz()
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::syncCoordWrapPosition()
 {
+    // No coord wrap for equatorial mounts.
+    if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+        return;
+
     uint32_t coordWrapPosition = 0;
     if (CordWrapBaseSP[CW_BASE_SKY].s == ISS_ON)
         coordWrapPosition = range360(m_RequestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
@@ -1164,7 +1174,7 @@ bool CelestronAUX::ReadScopeStatus()
         }
         else
         {
-            AngleNP[AXIS_RA].setValue(range360(m_MountCurrentRADE.rightascension * 15));
+            AngleNP[AXIS_RA].setValue(range360(range24(get_local_sidereal_time(m_Location.longitude) - m_MountCurrentRADE.rightascension) * 15));
             AngleNP[AXIS_DE].setValue(rangeDec(m_MountCurrentRADE.declination));
         }
         AngleNP.setState(IPS_OK);
