@@ -574,6 +574,17 @@ bool LX200StarGo::ReadScopeStatus()
         }
     }
 
+    double raCorrection;
+    if (getTrackingAdjustment(&raCorrection))
+    {
+        TrackingAdjustment[0].value = raCorrection;
+        TrackingAdjustmentNP.s      = IPS_OK;
+    }
+    else
+        TrackingAdjustmentNP.s = IPS_ALERT;
+
+    IDSetNumber(&TrackingAdjustmentNP, nullptr);
+
     double r, d;
     if(!getEqCoordinates(&r, &d))
     {
