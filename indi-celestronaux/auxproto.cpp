@@ -289,6 +289,8 @@ int AUXCommand::responseDataSize()
             case GET_VER:
                 return 4;
             case MC_SLEW_DONE:
+            case MC_SEEK_DONE:
+            case MC_LEVEL_DONE:
             case MC_POLL_CORDWRAP:
                 return 1;
             case MC_GOTO_FAST:

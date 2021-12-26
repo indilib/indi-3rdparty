@@ -45,7 +45,7 @@ class CelestronAUX :
 {
     public:
         CelestronAUX();
-        ~CelestronAUX();
+        ~CelestronAUX() override;
 
         virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
                                char *formats[], char *names[], int n) override;
@@ -155,6 +155,11 @@ class CelestronAUX :
          * @return True if successful, false otherwise.
          */
         bool slewByRate(INDI_HO_AXIS axis, int8_t rate);
+
+        // Go to index position or level
+        bool goHome(INDI_HO_AXIS axis);
+        bool isHomingDone(INDI_HO_AXIS axis);
+        bool m_HomingProgress[2] = {false, false};
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Tracking
@@ -379,6 +384,15 @@ class CelestronAUX :
         };
 
         int m_ConfigPortType {PORT_AUX_PC};
+
+        // Home/Level
+        INDI::PropertySwitch HomeSP {3};
+        enum
+        {
+            HOME_AXIS1,
+            HOME_AXIS2,
+            HOME_ALL
+        };
         //INDI::PropertyNumber GainNP {2};
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables

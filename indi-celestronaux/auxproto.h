@@ -36,8 +36,10 @@ enum AUXCommands
     MC_SET_POS_GUIDERATE = 0x06,
     MC_SET_NEG_GUIDERATE = 0x07,
     MC_LEVEL_START       = 0x0b,
+    MC_LEVEL_DONE        = 0x12,
     MC_SLEW_DONE         = 0x13,
     MC_GOTO_SLOW         = 0x17,
+    MC_SEEK_DONE         = 0x18,
     MC_SEEK_INDEX        = 0x19,
     MC_MOVE_POS          = 0x24,
     MC_MOVE_NEG          = 0x25,
@@ -48,8 +50,8 @@ enum AUXCommands
     MC_SET_CORDWRAP_POS  = 0x3a,
     MC_POLL_CORDWRAP     = 0x3b,
     MC_GET_CORDWRAP_POS  = 0x3c,
-    MC_SET_AUTOGUIDE_RATE= 0x46,
-    MC_GET_AUTOGUIDE_RATE= 0x47,
+    MC_SET_AUTOGUIDE_RATE = 0x46,
+    MC_GET_AUTOGUIDE_RATE = 0x47,
     GET_VER              = 0xfe,
     GPS_GET_LAT          = 0x01,
     GPS_GET_LONG         = 0x02,
@@ -99,12 +101,30 @@ class AUXCommand
         ///////////////////////////////////////////////////////////////////////////////
         /// Getters
         ///////////////////////////////////////////////////////////////////////////////
-        const AUXTargets &source() const {return m_Source;}
-        const AUXTargets &destination() const {return m_Destination;}
-        const AUXBuffer &data() const {return m_Data;}
-        AUXCommands command() const {return m_Command;}
-        size_t dataSize() const {return m_Data.size();}
-        const char * commandName() const {return commandName(m_Command);}
+        const AUXTargets &source() const
+        {
+            return m_Source;
+        }
+        const AUXTargets &destination() const
+        {
+            return m_Destination;
+        }
+        const AUXBuffer &data() const
+        {
+            return m_Data;
+        }
+        AUXCommands command() const
+        {
+            return m_Command;
+        }
+        size_t dataSize() const
+        {
+            return m_Data.size();
+        }
+        const char * commandName() const
+        {
+            return commandName(m_Command);
+        }
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Set and Get data
@@ -115,7 +135,7 @@ class AUXCommand
          * @return
          */
         uint32_t getData();
-        void setData(uint32_t value, uint8_t bytes=3);
+        void setData(uint32_t value, uint8_t bytes = 3);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Check sum
