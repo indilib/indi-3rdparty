@@ -2010,8 +2010,7 @@ bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
 {
-    // N.B. MC_SET_NEG_GUIDERATE should be used for NORTH hemisphere.
-    AUXCommand command(isNorthHemisphere() ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
+    AUXCommand command(isNorthHemisphere() ? MC_SET_POS_GUIDERATE : MC_SET_NEG_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     switch (mode)
     {
         case TRACK_SOLAR:
@@ -2052,8 +2051,8 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
     else
     {
         TrackState = SCOPE_IDLE;
-        stopAxis(AXIS_AZ);
-        stopAxis(AXIS_ALT);
+        trackByRate(AXIS_AZ, 0);
+        trackByRate(AXIS_ALT, 0);
 
         if (HorizontalCoordsNP.getState() != IPS_IDLE)
         {
