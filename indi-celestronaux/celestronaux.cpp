@@ -314,6 +314,12 @@ bool CelestronAUX::initProperties()
     HorizontalCoordsNP[AXIS_ALT].fill("ALT", "Alt  D:M:S", "%10.6m", -90., 90.0, 0.0, 0);
     HorizontalCoordsNP.fill(getDeviceName(), "HORIZONTAL_COORD", "Horizontal Coord", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
 
+    // Homing
+    HomeSP[HOME_AXIS1].fill("AXIS1", "AZ/RA", ISS_OFF);
+    HomeSP[HOME_AXIS2].fill("AXIS2", "AL/DE", ISS_OFF);
+    HomeSP[HOME_ALL].fill("ALL", "All", ISS_OFF);
+    HomeSP.fill(getDeviceName(), "HOME", "Home", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
     /////////////////////////////////////////////////////////////////////////////////////
     /// Cord Wrap Tab
     /////////////////////////////////////////////////////////////////////////////////////
@@ -461,6 +467,7 @@ bool CelestronAUX::updateProperties()
         //defineProperty(&GainNP);
         if (MountTypeSP[ALTAZ].getState() == ISS_ON)
             defineProperty(&HorizontalCoordsNP);
+        defineProperty(&HomeSP);
 
         // Guide
         defineProperty(&GuideNSNP);
@@ -532,6 +539,7 @@ bool CelestronAUX::updateProperties()
         //deleteProperty(GainNP.getName());
         if (MountTypeSP[ALTAZ].getState() == ISS_ON)
             deleteProperty(HorizontalCoordsNP.getName());
+        deleteProperty(HomeSP.getName());
 
         deleteProperty(GuideNSNP.name);
         deleteProperty(GuideWENP.name);
@@ -824,6 +832,40 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             GPSEmuSP.setState(IPS_OK);
             GPSEmuSP.apply();
             m_GPSEmulation = GPSEmuSP[GPSEMU_ON].s == ISS_ON;
+            return true;
+        }
+
+        // Homing/Leveling
+        if (HomeSP.isNameMatch(name))
+        {
+            HomeSP.update(states, names, n);
+            bool rc = false;
+            switch (HomeSP.findOnSwitchIndex())
+            {
+                case HOME_AXIS1:
+                    rc = goHome(AXIS_AZ);
+                    break;
+                case HOME_AXIS2:
+                    rc = goHome(AXIS_ALT);
+                    break;
+                case HOME_ALL:
+                    rc = goHome(AXIS_AZ) && goHome(AXIS_ALT);
+                    break;
+            }
+
+            if (rc)
+            {
+                HomeSP.setState(IPS_BUSY);
+                LOG_INFO("Homing in progress...");
+            }
+            else
+            {
+                HomeSP.reset();
+                HomeSP.setState(IPS_ALERT);
+                LOG_ERROR("Failed to start homing.");
+            }
+
+            HomeSP.apply();
             return true;
         }
 
@@ -1622,6 +1664,21 @@ void CelestronAUX::TimerHit()
                 break;
             }
     }
+
+    // Check if seeking index or leveling is done
+    if (HomeSP.getState() == IPS_BUSY)
+    {
+        isHomingDone(AXIS_AZ);
+        isHomingDone(AXIS_ALT);
+
+        if (!m_HomingProgress[AXIS_AZ] && !m_HomingProgress[AXIS_ALT])
+        {
+            LOG_INFO("Homing complete.");
+            HomeSP.reset();
+            HomeSP.setState(IPS_OK);
+            HomeSP.apply();
+        }
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1774,6 +1831,28 @@ bool CelestronAUX::slewByRate(INDI_HO_AXIS axis, int8_t rate)
     readAUXResponse(command);
     return true;
 };
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::goHome(INDI_HO_AXIS axis)
+{
+    AUXCommand command(axis == AXIS_AZ ? MC_SEEK_INDEX : MC_LEVEL_START, APP, axis == AXIS_AZ ? AZM : ALT);
+    sendAUXCommand(command);
+    readAUXResponse(command);
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::isHomingDone(INDI_HO_AXIS axis)
+{
+    AUXCommand command(axis == AXIS_AZ ? MC_SEEK_DONE : MC_LEVEL_DONE, APP, axis == AXIS_AZ ? AZM : ALT);
+    sendAUXCommand(command);
+    readAUXResponse(command);
+    return true;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -2238,6 +2317,14 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 // Nothing to do
                 break;
 
+            case MC_LEVEL_DONE:
+                m_HomingProgress[AXIS_ALT] = m.getData() == 0x00;
+                break;
+
+            case MC_SEEK_DONE:
+                m_HomingProgress[AXIS_AZ] = m.getData() == 0x00;
+                break;
+
             case MC_AUX_GUIDE_ACTIVE:
                 switch (m.source())
                 {
@@ -2255,9 +2342,8 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 break;
 
             case GET_VER:
-                uint8_t *verBuf;
-
-                verBuf = 0;
+            {
+                uint8_t *verBuf = nullptr;
                 switch (m.source())
                 {
                     case MB:
@@ -2288,12 +2374,13 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                     default:
                         break;
                 }
-                if (verBuf != 0)
+                if (verBuf != nullptr)
                 {
                     for (int i = 0; i < 4; i++)
                         verBuf[i] = m.data()[i];
                 }
-                break;
+            }
+            break;
             default:
                 break;
 
