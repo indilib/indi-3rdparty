@@ -2015,8 +2015,7 @@ bool LX200StarGo::setTrackingAdjustment(double adjustRA)
     int parameter = static_cast<int>(adjustRA * 100);
     sprintf(cmd, ":X41%+04i#", parameter);
 
-//    if(!transmit(cmd))
-    char response[AVALON_RESPONSE_BUFFER_LENGTH];
+    char response[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
     if(!sendQuery(cmd, response, 0))  // No response
     {
         LOGF_ERROR("Cannot adjust tracking by %d%%", adjustRA);
