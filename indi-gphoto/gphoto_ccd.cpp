@@ -84,7 +84,7 @@ static class Loader
             if (ret < GP_OK)
             {
                 // Use Legacy Mode
-                IDLog("Failed to initilize list in libgphoto2\n");
+                IDLog("Failed to initialize list in libgphoto2\n");
                 return;
             }
 
