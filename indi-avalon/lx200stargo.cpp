@@ -2013,7 +2013,7 @@ bool LX200StarGo::setTrackingAdjustment(double adjustRA)
     }
 
     int parameter = static_cast<int>(adjustRA * 100);
-    sprintf(cmd, ":X41%+03i#", parameter);
+    sprintf(cmd, ":X41%+04i#", parameter);
 
 //    if(!transmit(cmd))
     char response[AVALON_RESPONSE_BUFFER_LENGTH];
