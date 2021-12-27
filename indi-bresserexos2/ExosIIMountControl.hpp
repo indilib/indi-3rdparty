@@ -49,9 +49,9 @@ namespace TelescopeMountControl
 //enum representing the telescope mount state
 enum TelescopeMountState
 {
-    //intial state, no serial connection established
+    //initial state, no serial connection established
     Disconnected = 0,
-    //intial state if the serial connection was established,
+    //initial state if the serial connection was established,
     //the mount did not report any pointing coordinates yet.
     //if an error occurs, the telescope also will be in this state.
     Unknown = 1,
@@ -728,7 +728,7 @@ class ExosIIMountControl :
             TelescopeSignals signal
             )
         {
-            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occured!" << std::endl;
+            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occurred!" << std::endl;
             std::cerr << "Transition : (" << StateToString(fromState) << "," << SignalToString(signal) << ") -> ??? tripped this error!"
                       << std::endl;
         }

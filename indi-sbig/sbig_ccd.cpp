@@ -168,7 +168,7 @@ int SBIGCCD::OpenDriver()
     int res = ::SBIGUnivDrvCommand(CC_OPEN_DRIVER, nullptr, nullptr);
     if (res == CE_NO_ERROR)
     {
-        LOGF_DEBUG("%s: CC_OPEN_DRIVER successfull", __FUNCTION__);
+        LOGF_DEBUG("%s: CC_OPEN_DRIVER successful", __FUNCTION__);
         res = ::SBIGUnivDrvCommand(CC_GET_DRIVER_HANDLE, nullptr, &gdhr);
     }
     else if (res == CE_DRIVER_NOT_CLOSED)
@@ -206,7 +206,7 @@ int SBIGCCD::CloseDriver()
     int res = ::SBIGUnivDrvCommand(CC_CLOSE_DRIVER, nullptr, nullptr);
     if (res == CE_NO_ERROR)
     {
-        LOGF_DEBUG("%s: CC_CLOSE_DRIVER successfull", __FUNCTION__);
+        LOGF_DEBUG("%s: CC_CLOSE_DRIVER successful", __FUNCTION__);
         SetDriverHandle();
     }
     else
@@ -2113,7 +2113,7 @@ void SBIGCCD::GetExtendedCCDInfo()
     CFWp.cfwParam1  = CFWG_FIRMWARE_VERSION;
     if (SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr) == CE_NO_ERROR)
     {
-        LOGF_DEBUG("Fitler wheel detected (firmware %ld).", CFWr.cfwResult1);
+        LOGF_DEBUG("Filter wheel detected (firmware %ld).", CFWr.cfwResult1);
         m_hasFilterWheel = true;
     }
     else

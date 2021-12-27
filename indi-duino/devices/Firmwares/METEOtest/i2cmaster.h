@@ -136,7 +136,7 @@ extern void i2c_start_wait(unsigned char addr);
 
 /**
  @brief Send one byte to I2C device
- @param    data  byte to be transfered
+ @param    data  byte to be transferred
  @retval   0 write successful
  @retval   1 write failed
  */

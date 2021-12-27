@@ -26,27 +26,16 @@
 #include <algorithm> // std::sort
 #include <wordexp.h>
 
-// Modulate azimuth inside [0,360[ and clamp altitude to [-90,90]
-horizonpoint::horizonpoint(double _az, double _alt):
-    az(std::fmod(std::fmod(_az, 360.0) + 360.0,360.0)),
-    alt((90.0 < std::abs(_alt)) ? std::copysign(90.0, _alt) : _alt)
-{}
-
 // Predicate ordering horizon points per increasing azimuth
-bool horizonpoint::cmp(horizonpoint const &h1, horizonpoint const &h2)
+bool HorizonLimits::cmp(INDI::IHorizontalCoordinates const &h1, INDI::IHorizontalCoordinates const &h2)
 {
-    return (h1.az < h2.az);
-}
-
-horizonpoint horizonpoint::operator =(horizonpoint const &hp)
-{
-    return horizonpoint(hp.az, hp.alt);
+    return (h1.azimuth < h2.azimuth);
 }
 
 HorizonLimits::HorizonLimits(INDI::Telescope *t)
 {
     telescope    = t;
-    horizon      = new std::vector<horizonpoint>;
+    horizon      = new std::vector<INDI::IHorizontalCoordinates>;
     horizonindex = -1;
     strcpy(errorline, "Bad number format line     ");
     sline = errorline + 23;
@@ -158,7 +147,7 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
     {
         if (HorizonLimitsPointNP && strcmp(name, HorizonLimitsPointNP->name) == 0)
         {
-            std::vector<horizonpoint>::iterator low;
+            std::vector<INDI::IHorizontalCoordinates>::iterator low;
             HorizonLimitsPointNP->s = IPS_OK;
             if (IUUpdateNumber(HorizonLimitsPointNP, values, names, n) != 0)
             {
@@ -166,21 +155,21 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
                 IDSetNumber(HorizonLimitsPointNP, nullptr);
                 return false;
             }
-            horizonpoint hp(values[0], values[1]);
-            if (binary_search(horizon->begin(), horizon->end(), hp, horizonpoint::cmp))
+            INDI::IHorizontalCoordinates hp{values[0], values[1]};
+            if (binary_search(horizon->begin(), horizon->end(), hp, HorizonLimits::cmp))
             {
                 DEBUGF(INDI::Logger::DBG_WARNING,
-                       "Horizon Limits: point with Az = %f already present. Delete it first.", hp.az);
+                       "Horizon Limits: point with Az = %f already present. Delete it first.", hp.azimuth);
                 HorizonLimitsPointNP->s = IPS_ALERT;
                 IDSetNumber(HorizonLimitsPointNP, nullptr);
                 return false;
             }
             horizon->push_back(hp);
-            std::sort(horizon->begin(), horizon->end(), horizonpoint::cmp);
-            low          = std::lower_bound(horizon->begin(), horizon->end(), hp, horizonpoint::cmp);
+            std::sort(horizon->begin(), horizon->end(), HorizonLimits::cmp);
+            low          = std::lower_bound(horizon->begin(), horizon->end(), hp, HorizonLimits::cmp);
             horizonindex = std::distance(horizon->begin(), low);
             DEBUGF(INDI::Logger::DBG_SESSION,
-                   "Horizon Limits: Added point Az = %lf, Alt  = %lf, Rank=%d (Total %d points)", hp.az, hp.alt,
+                   "Horizon Limits: Added point Az = %lf, Alt  = %lf, Rank=%d (Total %d points)", hp.azimuth, hp.altitude,
                    horizonindex, horizon->size());
             IDSetNumber(HorizonLimitsPointNP, nullptr);
             return true;
@@ -227,8 +216,8 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
             {
                 horizonindex = horizon->size() - 1;
             }
-            az->value               = horizon->at(horizonindex).az;
-            alt->value              = horizon->at(horizonindex).alt;
+            az->value               = horizon->at(horizonindex).azimuth;
+            alt->value              = horizon->at(horizonindex).altitude;
             HorizonLimitsPointNP->s = IPS_OK;
             IDSetNumber(HorizonLimitsPointNP, nullptr);
             HorizonLimitsTraverseSP->s = IPS_OK;
@@ -245,7 +234,7 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
             INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
             if (!strcmp(sw->name, "HORIZONLIMITSLISTADDCURRENT"))
             {
-                std::vector<horizonpoint>::iterator low;
+                std::vector<INDI::IHorizontalCoordinates>::iterator low;
                 double values[2];
                 const char *names[]                     = { "HORIZONLIMITS_POINT_AZ", "HORIZONLIMITS_POINT_ALT" };
                 INumberVectorProperty *horizontalcoords = telescope->getNumber("HORIZONTAL_COORD");
@@ -266,21 +255,21 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                     IDSetSwitch(HorizonLimitsManageSP, nullptr);
                     return false;
                 }
-                horizonpoint hp(values[0], values[1]);
-                if (binary_search(horizon->begin(), horizon->end(), hp, horizonpoint::cmp))
+                INDI::IHorizontalCoordinates hp{values[0], values[1]};
+                if (binary_search(horizon->begin(), horizon->end(), hp, HorizonLimits::cmp))
                 {
                     DEBUGF(INDI::Logger::DBG_WARNING,
-                           "Horizon Limits: point with Az = %f already present. Delete it first.", hp.az);
+                           "Horizon Limits: point with Az = %f already present. Delete it first.", hp.azimuth);
                     HorizonLimitsManageSP->s = IPS_ALERT;
                     IDSetSwitch(HorizonLimitsManageSP, nullptr);
                     return false;
                 }
                 horizon->push_back(hp);
-                std::sort(horizon->begin(), horizon->end(), horizonpoint::cmp);
-                low          = std::lower_bound(horizon->begin(), horizon->end(), hp, horizonpoint::cmp);
+                std::sort(horizon->begin(), horizon->end(), HorizonLimits::cmp);
+                low          = std::lower_bound(horizon->begin(), horizon->end(), hp, HorizonLimits::cmp);
                 horizonindex = std::distance(horizon->begin(), low);
                 DEBUGF(INDI::Logger::DBG_SESSION,
-                       "Horizon Limits: Added point Az = %f, Alt  = %f, Rank=%d (Total %d points)", hp.az, hp.alt,
+                       "Horizon Limits: Added point Az = %f, Alt  = %f, Rank=%d (Total %d points)", hp.azimuth, hp.altitude,
                        horizonindex, horizon->size());
                 HorizonLimitsPointNP->s = IPS_OK;
                 IDSetNumber(HorizonLimitsPointNP, nullptr);
@@ -298,12 +287,12 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                     return true;
                 }
                 LOGF_INFO("Horizon Limits: Deleted point Az = %f, Alt  = %f, Rank=%d",
-                          horizon->at(horizonindex).az, horizon->at(horizonindex).alt, horizonindex);
+                          horizon->at(horizonindex).azimuth, horizon->at(horizonindex).altitude, horizonindex);
                 horizon->erase(horizon->begin() + horizonindex);
                 if (horizonindex >= (int)horizon->size())
                     horizonindex = horizon->size() - 1;
-                az->value               = horizon->at(horizonindex).az;
-                alt->value              = horizon->at(horizonindex).alt;
+                az->value               = horizon->at(horizonindex).azimuth;
+                alt->value              = horizon->at(horizonindex).altitude;
                 HorizonLimitsPointNP->s = IPS_OK;
                 IDSetNumber(HorizonLimitsPointNP, nullptr);
                 HorizonLimitsManageSP->s = IPS_OK;
@@ -450,8 +439,8 @@ char *HorizonLimits::WriteDataFile(const char *filename)
     fprintf(fp, "# Horizon Data for device %s\n", getDeviceName());
     fprintf(fp, "# Location: longitude=%s latitude=%s\n", lon, lat);
     fprintf(fp, "# Created on %s by %s\n", timestamp(), telescope->getDriverName());
-    for (std::vector<horizonpoint>::iterator it = horizon->begin(); it != horizon->end(); ++it)
-        fprintf(fp, "%g %g\n", it->az, it->alt);
+    for (std::vector<INDI::IHorizontalCoordinates>::iterator it = horizon->begin(); it != horizon->end(); ++it)
+        fprintf(fp, "%g %g\n", it->azimuth, it->altitude);
 
     fclose(fp);
     setlocale(LC_NUMERIC, "");
@@ -509,7 +498,8 @@ char *HorizonLimits::LoadDataFile(const char *filename)
             setlocale(LC_NUMERIC, "");
             return (char *)errorline;
         }
-        horizon->push_back(horizonpoint(az, alt));
+        INDI::IHorizontalCoordinates one{az, alt};
+        horizon->push_back(one);
         nline++;
         pos = 0;
     }
@@ -530,43 +520,44 @@ char *HorizonLimits::LoadDataFile(const char *filename)
 
 bool HorizonLimits::inLimits(double raw_az, double raw_alt)
 {
-    horizonpoint const scope(raw_az, raw_alt);
+    INDI::IHorizontalCoordinates const scope{raw_az, raw_alt};
 
     // Minimal altitude is zero if there is no horizon - arguable
     if (horizon == nullptr || horizon->size() == 0)
-        return scope.alt >= 0.0;
+        return scope.altitude >= 0.0;
 
     // If there is a single horizon point, test altitude directly
     if (horizon->size() == 1)
-        return scope.alt >= horizon->begin()->alt;
+        return scope.altitude >= horizon->begin()->altitude;
 
     // Search for the horizon point just after which the tested point may be inserted - see std::lower_bound documentation
-    std::vector<horizonpoint>::iterator next = std::lower_bound(horizon->begin(), horizon->end(), scope, horizonpoint::cmp);
+    std::vector<INDI::IHorizontalCoordinates>::iterator next = std::lower_bound(horizon->begin(), horizon->end(), scope,
+            HorizonLimits::cmp);
 
     // If the tested point would be inserted at the end of the horizon list, loop next point back to first
     if (next == horizon->end())
         next = horizon->begin();
 
     // If the tested azimuth is identical to the next point, test altitude directly
-    if (next->az == scope.az)
-        return (scope.alt >= next->alt);
+    if (next->azimuth == scope.azimuth)
+        return (scope.altitude >= next->altitude);
 
     // Grab the previous horizon point - the one after which inserting the tested point does not alter horizon ordering
-    std::vector<horizonpoint>::iterator const prev = ((next == horizon->begin()) ? horizon->end() : next) - 1;
+    std::vector<INDI::IHorizontalCoordinates>::iterator const prev = ((next == horizon->begin()) ? horizon->end() : next) - 1;
 
     // If the altitude is identical between the two horizon siblings, test altitude directly
-    if (prev->alt == next->alt)
-        return (scope.alt >= next->alt);
+    if (prev->altitude == next->altitude)
+        return (scope.altitude >= next->altitude);
 
     // Compute azimuth distances for horizon point and scope point from reference point
-    double const delta_horizon_az = (next->az - prev->az) + ((next->az >= prev->az) ? 0.0 : 360.0);
-    double const delta_scope_az = (scope.az - prev->az) + ((scope.az >= prev->az) ? 0.0 : 360.0);
+    double const delta_horizon_az = (next->azimuth - prev->azimuth) + ((next->azimuth >= prev->azimuth) ? 0.0 : 360.0);
+    double const delta_scope_az = (scope.azimuth - prev->azimuth) + ((scope.azimuth >= prev->azimuth) ? 0.0 : 360.0);
 
     // Compute a linear interpolation coefficient between the two horizontal points and test against interpolated altitude
-    double const delta_horizon_alt = next->alt - prev->alt;
-    double const h = prev->alt + delta_horizon_alt * delta_scope_az / delta_horizon_az;
+    double const delta_horizon_alt = next->altitude - prev->altitude;
+    double const h = prev->altitude + delta_horizon_alt * delta_scope_az / delta_horizon_az;
 
-    return (scope.alt >= h);
+    return (scope.altitude >= h);
 }
 
 bool HorizonLimits::inGotoLimits(double az, double alt)

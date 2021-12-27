@@ -244,11 +244,11 @@ bool BresserExosIIDriver::Sync(double ra, double dec)
 {
     if(TrackState != SCOPE_TRACKING)
     {
-        LOG_INFO("BresserExosIIDriver::Sync: Unable to Syncronize! This function only works when tracking a sky object!");
+        LOG_INFO("BresserExosIIDriver::Sync: Unable to Synchronize! This function only works when tracking a sky object!");
         return false;
     }
 
-    LOGF_INFO("BresserExosIIDriver::Sync: Syncronizing to Right Ascension: %f Declination :%f...", ra, dec);
+    LOGF_INFO("BresserExosIIDriver::Sync: Synchronizing to Right Ascension: %f Declination :%f...", ra, dec);
 
     return mMountControl.Sync((float)ra, (float)dec);
 }

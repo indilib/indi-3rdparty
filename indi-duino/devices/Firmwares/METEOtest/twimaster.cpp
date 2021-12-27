@@ -150,7 +150,7 @@ void i2c_stop(void)
 /*************************************************************************
   Send one byte to I2C device
   
-  Input:    byte to be transfered
+  Input:    byte to be transferred
   Return:   0 write successful 
             1 write failed
 *************************************************************************/

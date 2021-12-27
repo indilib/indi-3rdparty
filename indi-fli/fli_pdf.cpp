@@ -264,7 +264,7 @@ bool FLIPDF::setupParams()
     FocusAbsPosN[0].value = FLIFocus.current_pos;
 
     IUUpdateMinMax(&FocusAbsPosNP);
-    IDSetNumber(&FocusAbsPosNP, "Setting intial absolute position");
+    IDSetNumber(&FocusAbsPosNP, "Setting initial absolute position");
 
     FocusRelPosN[0].min   = 1.;
     FocusRelPosN[0].max   = FLIFocus.max_pos;

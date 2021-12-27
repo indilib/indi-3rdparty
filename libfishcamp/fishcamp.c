@@ -2328,10 +2328,10 @@ int fcUsb_FindCameras(void)
 
                 //This is to initialize the Raw cameras that haven't been seen before.  Find Cameras must be run again afterwards.
                 int rc = fcUsb_OpenCamera(i + 1);
-                Starfish_LogFmt("fcUsb_OpenCamera to intialize it: opening cam #%d, returns %d\n", i + 1, rc);
+                Starfish_LogFmt("fcUsb_OpenCamera to initialize it: opening cam #%d, returns %d\n", i + 1, rc);
                 
                 rc = fcUsb_CloseCamera(i + 1);
-                Starfish_LogFmt("fcUsb_CloseCamera to intialize it: opening cam #%d, returns %d\n", i + 1, rc);
+                Starfish_LogFmt("fcUsb_CloseCamera to initialize it: opening cam #%d, returns %d\n", i + 1, rc);
                 
                 return -1;
             }
@@ -4044,7 +4044,7 @@ void fcUsb_setStarfishDefaultRegs(int camNum)
 
 // here to set the filter type used for image processing
 // The specified filter will be performed on any images
-// transfered from the camera.
+// transferred from the camera.
 //
 // 'theImageFilter' is one of fc_imageFilter
 //

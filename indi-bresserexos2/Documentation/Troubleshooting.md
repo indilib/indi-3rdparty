@@ -16,7 +16,7 @@ Use `lsusb` do retrieve the identifier of your usb to serial adapter:
 
 ![Get product and vendor id](get-usb-product-vendor-id.png?raw=true)
 
-> sudo nano /etc/udev/rules.d/10-local.rules
+> sudo nano /lib/udev/rules.d/10-local.rules
 
 add:
 <code>ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="my_uart"</code>
