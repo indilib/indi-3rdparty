@@ -390,8 +390,8 @@ bool CelestronAUX::initProperties()
     Axis1PIDNP.fill(getDeviceName(), "AXIS1_PID", "Axis1 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     Axis2PIDNP[Propotional].fill("Propotional", "Propotional", "%.2f", 0, 500, 10, GAIN_STEPS);
-    Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 500, 10, 0);
-    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 500, 10, 0.25);
+    Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 100, 10, 0);
+    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 100, 10, 1);
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Firmware Info
