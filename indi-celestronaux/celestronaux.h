@@ -363,6 +363,8 @@ class CelestronAUX :
 
         int32_t m_LastTrackRate[2] = {0, 0};
         double m_TrackStartSteps[2] = {0, 0};
+        double m_LastOffset[2] = {0, 0};
+        uint8_t m_OffsetSwitchSettle[2] = {0, 0};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};

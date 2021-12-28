@@ -1174,7 +1174,8 @@ bool CelestronAUX::ReadScopeStatus()
         }
         else
         {
-            AngleNP[AXIS_RA].setValue(range360(range24(get_local_sidereal_time(m_Location.longitude) - m_MountCurrentRADE.rightascension) * 15));
+            AngleNP[AXIS_RA].setValue(range360(range24(get_local_sidereal_time(m_Location.longitude) -
+                                               m_MountCurrentRADE.rightascension) * 15));
             AngleNP[AXIS_DE].setValue(rangeDec(m_MountCurrentRADE.declination));
         }
         AngleNP.setState(IPS_OK);
@@ -1624,48 +1625,53 @@ void CelestronAUX::TimerHit()
                 offsetAngle[AXIS_ALT] = (targetMountAxisCoordinates.altitude - currentAltAz.altitude);
 
                 int32_t offsetSteps[2] = {0, 0};
+                int32_t targetSteps[2] = {0, 0};
+                double trackRates[2] = {0, 0};
+
                 offsetSteps[AXIS_AZ] = offsetAngle[AXIS_AZ] * STEPS_PER_DEGREE;
                 offsetSteps[AXIS_ALT] = offsetAngle[AXIS_ALT] * STEPS_PER_DEGREE;
 
-                //                double ms = m_TrackingElapsedTimer.elapsed();
-                //                LOGF_INFO("*** Elapsed %.f ms", ms);
-                //                LOGF_INFO("*** Axis1 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue(), std::abs(EncoderNP[AXIS_AZ].getValue() - m_TrackStartSteps[AXIS_AZ]) / (ms/1000.));
-                //                LOGF_INFO("*** Axis2 start: %.f finish: %.f steps/s: %.4f", m_TrackStartSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue(), std::abs(EncoderNP[AXIS_ALT].getValue() - m_TrackStartSteps[AXIS_ALT]) / (ms/1000.));
+                // Only apply trackinf IF we're still on the same side of the curve
+                // If we switch over, let's settle for a bit
+                if (m_LastOffset[AXIS_AZ] * offsetSteps[AXIS_AZ] >= 0 || m_OffsetSwitchSettle[AXIS_AZ]++ > 3)
+                {
+                    m_OffsetSwitchSettle[AXIS_AZ] = 0;
+                    m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
+                    targetSteps[AXIS_AZ] = targetMountAxisCoordinates.azimuth * STEPS_PER_DEGREE;
+                    trackRates[AXIS_AZ] = m_Controllers[AXIS_AZ]->calculate(targetSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue());
 
-                //                LOGF_DEBUG("Tracking: AZ offset %.f arcsecs (%ld) AL offset %.f arcsecs (%ld)",
-                //                       offsetAngle[AXIS_AZ],
-                //                       offsetSteps[AXIS_AZ],
-                //                       offsetAngle[AXIS_ALT],
-                //                       offsetSteps[AXIS_AZ]);
-
-                int32_t targetSteps[2] = {0, 0};
-                targetSteps[AXIS_AZ]   = targetMountAxisCoordinates.azimuth * STEPS_PER_DEGREE;
-                targetSteps[AXIS_ALT]  = targetMountAxisCoordinates.altitude * STEPS_PER_DEGREE;
-
-                double trackRates[2] = {0, 0};
-                trackRates[AXIS_AZ] = m_Controllers[AXIS_AZ]->calculate(targetSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue());
-                trackRates[AXIS_ALT] = m_Controllers[AXIS_ALT]->calculate(targetSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue());
-
-                LOGF_DEBUG("Tracking AZ Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ],
-                           offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
+                    LOGF_DEBUG("Tracking AZ Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ],
+                               offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
 #ifdef DEBUG_PID
-                LOGF_DEBUG("Tracking AZ P: %f I: %f D: %f",
-                           m_Controllers[AXIS_AZ]->propotionalTerm(),
-                           m_Controllers[AXIS_AZ]->integralTerm(),
-                           m_Controllers[AXIS_AZ]->derivativeTerm());
-#endif
-                LOGF_DEBUG("Tracking AL Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_ALT].getValue(), targetSteps[AXIS_ALT],
-                           offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
-#ifdef DEBUG_PID
-                LOGF_DEBUG("Tracking AL P: %f I: %f D: %f",
-                           m_Controllers[AXIS_ALT]->propotionalTerm(),
-                           m_Controllers[AXIS_ALT]->integralTerm(),
-                           m_Controllers[AXIS_ALT]->derivativeTerm());
+                    LOGF_DEBUG("Tracking AZ P: %f I: %f D: %f",
+                               m_Controllers[AXIS_AZ]->propotionalTerm(),
+                               m_Controllers[AXIS_AZ]->integralTerm(),
+                               m_Controllers[AXIS_AZ]->derivativeTerm());
 #endif
 
-                // Use PID to determine appropiate tracking rate
-                trackByRate(AXIS_AZ, trackRates[AXIS_AZ]);
-                trackByRate(AXIS_ALT, trackRates[AXIS_ALT]);
+                    // Use PID to determine appropiate tracking rate
+                    trackByRate(AXIS_AZ, trackRates[AXIS_AZ]);
+                }
+
+                // Only apply trackinf IF we're still on the same side of the curve
+                // If we switch over, let's settle for a bit
+                if (m_LastOffset[AXIS_ALT] * offsetSteps[AXIS_ALT] >= 0 || m_OffsetSwitchSettle[AXIS_ALT]++ > 3)
+                {
+                    m_OffsetSwitchSettle[AXIS_ALT] = 0;
+                    m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
+                    targetSteps[AXIS_ALT]  = targetMountAxisCoordinates.altitude * STEPS_PER_DEGREE;
+                    trackRates[AXIS_ALT] = m_Controllers[AXIS_ALT]->calculate(targetSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue());
+
+                    LOGF_DEBUG("Tracking AL Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_ALT].getValue(), targetSteps[AXIS_ALT],
+                               offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
+#ifdef DEBUG_PID
+                    LOGF_DEBUG("Tracking AL P: %f I: %f D: %f",
+                               m_Controllers[AXIS_ALT]->propotionalTerm(),
+                               m_Controllers[AXIS_ALT]->integralTerm(),
+                               m_Controllers[AXIS_ALT]->derivativeTerm());
+#endif
+                    trackByRate(AXIS_ALT, trackRates[AXIS_ALT]);
+                }
                 break;
             }
             break;
