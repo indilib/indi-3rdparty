@@ -192,6 +192,7 @@ class NexStarScope:
     
     __mcfw_ver=(7,11,5100//256,5100%256)
     __hcfw_ver=(5,28,5300//256,5300%256)
+    __mbfw_ver=(1,0,0,1)
     
     trg=('MB', 'HC', 'UKN1', 'HC+', 'AZM', 'ALT', 'APP', 
             'GPS', 'WiFi', 'BAT', 'CHG', 'LIGHT')
@@ -228,7 +229,7 @@ class NexStarScope:
         self._other_handlers = {
             0x10: NexStarScope.cmd_0x10,
             0x18: NexStarScope.cmd_0x18,
-            0xfe: NexStarScope.send_ack,
+            0xfe: NexStarScope.fw_version,
         }
         self._mc_handlers = {
           0x01 : NexStarScope.get_position,
@@ -517,6 +518,8 @@ class NexStarScope:
             trg = '???'
         if trg in ('ALT','AZM'):
             return bytes(NexStarScope.__mcfw_ver)
+        elif trg in ('MB', ):
+            return bytes(NexStarScope.__mbfw_ver)
         elif trg in ('HC', 'HC+'):
             return bytes(NexStarScope.__hcfw_ver)
         else :

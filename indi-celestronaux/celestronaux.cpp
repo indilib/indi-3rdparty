@@ -2189,9 +2189,9 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
                        LocationN[LOCATION_LONGITUDE].value);
             AUXCommand cmd(m.command(), GPS, m.source());
             if (m.command() == GPS_GET_LAT)
-                cmd.setData(LocationN[LOCATION_LATITUDE].value);
+                cmd.setData(STEPS_PER_DEGREE * LocationN[LOCATION_LATITUDE].value);
             else
-                cmd.setData(LocationN[LOCATION_LONGITUDE].value);
+                cmd.setData(STEPS_PER_DEGREE * LocationN[LOCATION_LONGITUDE].value);
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;
@@ -2270,8 +2270,10 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 {
     m.logResponse();
 
-    if (m.destination() == GPS)
+    if ((m.destination() == GPS) && (m.source() != APP)) {
+        // Avoid infinite loop by not responding to ourselves
         emulateGPS(m);
+    }
     else if (m.destination() == APP)
         switch (m.command())
         {
@@ -2391,7 +2393,11 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 }
                 if (verBuf != nullptr)
                 {
-                    for (int i = 0; i < 4; i++)
+                    size_t verBuflen = 4;
+                    if ( verBuflen != m.dataSize()) {
+                        LOGF_DEBUG("Data and buffer size mismatch for GET_VER: buf[%d] vs data[%d]", verBuflen, m.dataSize());
+                    }
+                    for (int i = 0; i < (int)std::min(verBuflen,m.dataSize()); i++)
                         verBuf[i] = m.data()[i];
                 }
             }
