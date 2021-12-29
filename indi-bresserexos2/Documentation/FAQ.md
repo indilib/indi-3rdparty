@@ -10,10 +10,12 @@ You will only hit the vicinity of your target and have to adjust it using your h
 Furthermore, there seems to be a minor issue with the coordinates too. It shows completely different coordinates on the display, compared to those I sent to the mount.
 I tried it with the Ascom driver from Bresser, sending the same coordinates with my driver and the mount pointed to the same direction in both cases. I concluded this seems to be a deviance which may be caused by a bug in either the mount or any driver component. I'm still observing this problem, and fix it once a solution is found.
 
-## Software Autoguiding was removed, why?
+## Software Autoguiding was removed (and reintroduced), why?
 Yes it was experimental from the start, and I decided to remove it due to fact that its simply not possible with this mount, unless the handbox firmware gets a mayor overhaul.
 However you can still use the ST-4 cable and it should work as intended by Bresser, or whoever originally created this mount.
 Since I don't want to promise functionality that is not possible I removed Autoguiding from the driver. It may be reintroduces however if I'm in the mood.
+
+The is reintroduced with version 0.900 because of user requests. However, its still buggy, and requires a firmware patch for proper operation and is therefore not recommended. If you want reliable guiding use the ST-4 cable.
 
 ## The software direction keys do not work but the Handbox keys work, why?
 From my examinations I found these motion commands only to work when an object is tracked. The answer boils down to, the manufacturer intended it to work that way.

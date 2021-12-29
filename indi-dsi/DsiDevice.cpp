@@ -811,7 +811,7 @@ int DSI::Device::startExposure(int howlong, int gain, int offs)
 unsigned char *DSI::Device::downloadImage()
 {
     int status = 0;
-    int transfered = 0;
+    int transferred = 0;
     int interlaced = 0;
     int rawtemp = 0;
     unsigned int t_read_width = 0;
@@ -870,7 +870,7 @@ unsigned char *DSI::Device::downloadImage()
     {
         /* XXX: There has to be  a way to calculate a more optimal readout
                time here. */
-        status = libusb_bulk_transfer(handle, 0x86, even_data, even_size, &transfered, 60000 * MILLISEC);
+        status = libusb_bulk_transfer(handle, 0x86, even_data, even_size, &transferred, 60000 * MILLISEC);
         if (log_commands)
         {
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
@@ -879,7 +879,7 @@ unsigned char *DSI::Device::downloadImage()
                  << std::endl
                  << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
                  << " (even pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -889,7 +889,7 @@ unsigned char *DSI::Device::downloadImage()
             throw device_read_error(ss.str());
         }
 
-        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transfered, 60000 * MILLISEC);
+        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transferred, 60000 * MILLISEC);
         if (log_commands)
         {
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)odd_data, 0);
@@ -898,7 +898,7 @@ unsigned char *DSI::Device::downloadImage()
                  << std::endl
                  << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
                  << " (odd pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -913,7 +913,7 @@ unsigned char *DSI::Device::downloadImage()
         if ((!vdd_on) && (exposure_time >= VDD_TRH))
             status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
 
-        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transfered, 60000 * MILLISEC);
+        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transferred, 60000 * MILLISEC);
         if (log_commands)
         {
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)odd_data, 0);
@@ -921,7 +921,7 @@ unsigned char *DSI::Device::downloadImage()
             std::cerr << std::dec << "read progressive data, status = (" << status << ") " << std::endl
                  << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
                  << " (pixels)" << std::endl
-                 << "Transfered: " << transfered << " bytes" << std::endl;
+                 << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -1091,7 +1091,7 @@ void DSI::Device::disable2x2Binning()
 
 unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
 {
-    int transfered = 0;
+    int transferred = 0;
 
     if (((__command == DeviceCommand::TRIGGER)) || (__command == DeviceCommand::TEST_PATTERN))
     {
@@ -1334,7 +1334,7 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
         {
             /* XXX: There has to be  a way to calculate a more optimal readout
                time here. */
-            status = libusb_bulk_transfer(handle, 0x86, even_data, even_size, &transfered, 60000 * MILLISEC);
+            status = libusb_bulk_transfer(handle, 0x86, even_data, even_size, &transferred, 60000 * MILLISEC);
             if (log_commands)
             {
                 log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
@@ -1353,7 +1353,7 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
             }
         }
 
-        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transfered, 60000 * MILLISEC);
+        status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transferred, 60000 * MILLISEC);
         if (log_commands)
         {
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
@@ -1652,7 +1652,7 @@ unsigned int DSI::Device::command(DeviceCommand __command, int __option, int __l
  */
 unsigned int DSI::Device::command(unsigned char *__buffer, int __length, int __expected)
 {
-    int transfered;
+    int transferred;
 
     const DeviceCommand *command = DeviceCommand::find((int)__buffer[2]);
     //    if (command == 0)
@@ -1682,7 +1682,7 @@ unsigned int DSI::Device::command(unsigned char *__buffer, int __length, int __e
         last_time = get_sysclock_ms();
     }
 
-    int retcode = libusb_bulk_transfer(handle, 0x01, __buffer, __buffer[0], &transfered, 100 * MILLISEC);
+    int retcode = libusb_bulk_transfer(handle, 0x01, __buffer, __buffer[0], &transferred, 100 * MILLISEC);
     if (retcode != 0)
     {
         throw device_write_error(std::string("libusb_bulk_transfer error ") + strerror(-retcode));
@@ -1693,17 +1693,17 @@ unsigned int DSI::Device::command(unsigned char *__buffer, int __length, int __e
 
     const size_t size = 0x40;
     char buffer[size];
-    retcode = libusb_bulk_transfer(handle, 0x81, (unsigned char *)buffer, size, &transfered, 100 * MILLISEC);
+    retcode = libusb_bulk_transfer(handle, 0x81, (unsigned char *)buffer, size, &transferred, 100 * MILLISEC);
 
     if (retcode != 0)
     {
         throw device_read_error(std::string("libusb_bulk_transfer error ") + strerror(-retcode));
     }
 
-    if (buffer[0] != transfered)
+    if (buffer[0] != transferred)
     {
         std::ostringstream msg;
-        msg << "response length " << std::dec << (int)buffer[0] << " does not match bytes read " << transfered << std::endl;
+        msg << "response length " << std::dec << (int)buffer[0] << " does not match bytes read " << transferred << std::endl;
         throw bad_length(msg.str());
     }
 

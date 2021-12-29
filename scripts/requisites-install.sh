@@ -19,7 +19,7 @@ case "$OS" in
             git \
             cfitsio libnova libusb curl \
             gsl jpeg fftw \
-            ffmpeg libftdi libraw libdc1394 libgphoto2 librtlsdr
+            ffmpeg libftdi libraw libdc1394 libgphoto2
         ;;
     Linux)
         . /etc/os-release
@@ -36,7 +36,7 @@ case "$OS" in
                     \
                     libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
                     libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev \
-                    libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev
+                    libboost-dev libboost-regex-dev liblimesuite-dev
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
@@ -53,7 +53,7 @@ case "$OS" in
                     ffmpeg-devel \
                     libftdi-devel \
                     gpsd-devel LibRaw-devel libdc1394-devel libgphoto2-devel \
-                    boost-devel rtl-sdr-devel
+                    boost-devel
 
                 ;;
             centos)

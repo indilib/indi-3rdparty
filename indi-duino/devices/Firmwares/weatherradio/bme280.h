@@ -26,7 +26,7 @@ void updateBME() {
   }
 }
 
-void serializeBME(JsonDocument &doc) {
+void serializeBME(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("BME280");
   data["init"] = bmeData.status;

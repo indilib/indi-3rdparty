@@ -156,6 +156,13 @@ typedef struct SVB_CAMERA_PROPERTY
 	SVB_BOOL IsTriggerCam;
 }SVB_CAMERA_PROPERTY;
 
+typedef struct SVB_CAMERA_PROPERTY_EX
+{
+	SVB_BOOL bSupportPulseGuide;
+	SVB_BOOL bSupportControlTemp;
+	int Unused[64];
+}SVB_CAMERA_PROPERTY_EX;
+
 #define SVB_BRIGHTNESS SVB_OFFSET
 #define SVB_AUTO_MAX_BRIGHTNESS SVB_AUTO_TARGET_BRIGHTNESS
 
@@ -175,6 +182,10 @@ typedef enum SVB_CONTROL_TYPE{ //Control type//
 
 	SVB_AUTO_TARGET_BRIGHTNESS,
 	SVB_BLACK_LEVEL, //black level offset
+	SVB_COOLER_ENABLE,
+	SVB_TARGET_TEMPERATURE,
+	SVB_CURRENT_TEMPERATURE,
+	SVB_COOLER_POWER,
 }SVB_CONTROL_TYPE;
 
 typedef struct _SVB_CONTROL_CAPS
@@ -277,6 +288,8 @@ SVB_ERROR_INVALID_INDEX  :no camera connected or index value out of boundary
 ***************************************************************************/
 SVBCAMERA_API SVB_ERROR_CODE SVBGetCameraProperty(int iCameraID, SVB_CAMERA_PROPERTY *pCameraProperty);
 
+
+SVBCAMERA_API SVB_ERROR_CODE SVBGetCameraPropertyEx(int iCameraID, SVB_CAMERA_PROPERTY_EX *pCameraPorpertyEx);
 
 /***************************************************************************
 Descriptions:
@@ -725,6 +738,18 @@ SVB_ERROR_INVALID_ID  :no camera of this ID is connected or ID value is out of b
 ***************************************************************************/
 SVBCAMERA_API SVB_ERROR_CODE SVBCanPulseGuide(int iCameraID, SVB_BOOL *pCanPulseGuide);
 
+/***************************************************************************
+Description:
+Whether to save the parameter file automatically
+Paras:
+int CameraID: this is get from the camera property use the API SVBGetCameraInfo.
+SVB_BOOL enable: if SVB_TRUE then save the parameter file automatically.
+
+return:
+SVB_SUCCESS : Operation is successful
+SVB_ERROR_INVALID_ID  :no camera of this ID is connected or ID value is out of boundary
+***************************************************************************/
+SVBCAMERA_API SVB_ERROR_CODE SVBSetAutoSaveParam(int iCameraID, SVB_BOOL enable);
 
 #ifdef __cplusplus
 }

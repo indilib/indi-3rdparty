@@ -1,3 +1,29 @@
+libsv305 (1.6.9) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.5.0 :
+  * SV305M PRO fixs
+  * SV405C introduced
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Wet, 20 Oct 2021 16:00:00 +0300
+
+libsv305 (1.6.8) bionic; urgency=low
+
+  * Mac OS X 64 bits support added
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Tue, 21 Sep 2021 16:00:00 +0300
+
+libsv305 (1.6.7) bionic; urgency=low
+
+  * Upgraded to the last upstream SVBONY SDK vers. 1.4.3.
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Mon, 20 Sep 2021 16:00:00 +0300
+
+libsv305 (1.6.6) bionic; urgency=low
+
+  * Upgraded to the last upstream SVBONY SDK vers. 1.4.2 provided the 20210819.
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Fri, 20 Aug 2021 16:00:00 +0300
+
 libsv305 (1.6.5) bionic; urgency=low
 
   * Upgraded to the last upstream SVBONY SDK vers. 1.2.5(?) provided the 20201130.

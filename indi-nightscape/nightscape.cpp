@@ -440,7 +440,7 @@ void NightscapeCCD::TimerHit()
 
     if (InExposure)
     {
-        
+
         if (AbortFrame)
         {
             InExposure        = false;
@@ -461,17 +461,17 @@ void NightscapeCCD::TimerHit()
             {
                 if (timeleft <= 0.001)
                 {
-                  /* We're done exposing */
-                  InExposure = false;
-                  LOG_INFO( "Exposure done, starting readout...");
+                    /* We're done exposing */
+                    InExposure = false;
+                    LOG_INFO( "Exposure done, starting readout...");
 
-                  // Set exposure left to zero
-                  PrimaryCCD.setExposureLeft(0);
+                    // Set exposure left to zero
+                    PrimaryCCD.setExposureLeft(0);
 
-                  // We're no longer exposing...
-                  InReadout = true;
-                   /* grab and save image */
-                   st->doStatus();
+                    // We're no longer exposing...
+                    InReadout = true;
+                    /* grab and save image */
+                    st->doStatus();
                 }
                 else
                 {
@@ -520,14 +520,14 @@ void NightscapeCCD::TimerHit()
             dn->setActTemp(currentCCDTemperature);
 
             /* If target temperature is higher, then increase current CCD temperature */
-            if (fabs(currentCCDTemperature - TemperatureRequest)  < 0.1)
+            //            if (fabs(currentCCDTemperature - TemperatureRequest)  < 0.1)
 
-            {
-                TemperatureNP.s = IPS_OK;
-                IDSetNumber(&TemperatureNP, "Target temperature reached.");
+            //            {
+            //                TemperatureNP.s = IPS_OK;
+            //                IDSetNumber(&TemperatureNP, "Target temperature reached.");
 
-                break;
-            }
+            //                break;
+            //            }
 
             IDSetNumber(&TemperatureNP, nullptr);
 

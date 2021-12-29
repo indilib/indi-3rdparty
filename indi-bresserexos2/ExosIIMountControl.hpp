@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _EXOSIIMOUNTCONTROL_H_INCLUDED_
-#define _EXOSIIMOUNTCONTROL_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <vector>
@@ -31,15 +30,16 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
-#include "Config.hpp"
+#include "config.h"
 
 #include "StateMachine.hpp"
-#include "SerialDeviceControl/CriticalData.hpp"
-#include "SerialDeviceControl/SerialCommand.hpp"
-#include "SerialDeviceControl/SerialCommandTransceiver.hpp"
-#include "SerialDeviceControl/INotifyPointingCoordinatesReceived.hpp"
+#include "CriticalData.hpp"
+#include "SerialCommand.hpp"
+#include "SerialCommandTransceiver.hpp"
+#include "INotifyPointingCoordinatesReceived.hpp"
 
-//The manual states a tracking speed for 0.004°/s everything above is considered slewing.
+//The manual states a tracking speed for 0.004°/s everything above is 
+//considered slewing.
 #define TRACK_SLEW_THRESHOLD (0.0045)
 
 #define EXPR_TO_STRING(x) #x
@@ -49,9 +49,9 @@ namespace TelescopeMountControl
 //enum representing the telescope mount state
 enum TelescopeMountState
 {
-    //intial state, no serial connection established
+    //initial state, no serial connection established
     Disconnected = 0,
-    //intial state if the serial connection was established,
+    //initial state if the serial connection was established,
     //the mount did not report any pointing coordinates yet.
     //if an error occurs, the telescope also will be in this state.
     Unknown = 1,
@@ -83,7 +83,8 @@ enum TelescopeMountState
 enum TelescopeSignals
 {
     //connect to the telescope.
-    Connect = TelescopeMountState::FailSafe + 1, //need to be exclusive from states so there is no hazzling with communtativity of the xor operator of hashing functions.
+    //need to be exclusive from states so there is no hazzling with communtativity of the xor operator of hashing functions.
+    Connect = TelescopeMountState::FailSafe + 1,
     //disconnect from the telescope.
     Disconnect,
     //request the geolocation initially.
@@ -108,7 +109,7 @@ enum TelescopeSignals
     StartMotion,
     //stop moving in a certain direction while tracking.
     StopMotion,
-    //used as a token to represent an initialized yet invalid signal.s
+    //used as a token to represent an initialized yet invalid signal.
     INVALID,
 };
 
@@ -130,8 +131,8 @@ struct MotionState
 template<class InterfaceType>
 class ExosIIMountControl :
     public SerialDeviceControl::SerialCommandTransceiver<InterfaceType, TelescopeMountControl::ExosIIMountControl<InterfaceType>>,
-            public SerialDeviceControl::INotifyPointingCoordinatesReceived,
-            public IStateNotification<TelescopeMountState, TelescopeSignals>
+    public SerialDeviceControl::INotifyPointingCoordinatesReceived,
+    public IStateNotification<TelescopeMountState, TelescopeSignals>
 {
     public:
         //create a exos controller using a reference of a particular serial implementation.
@@ -280,7 +281,10 @@ class ExosIIMountControl :
             return rc;
         }
 
-        bool StartMotionToDirection(SerialDeviceControl::SerialCommandID direction, uint16_t commandsPerSecond)
+        bool StartMotionToDirection(
+            SerialDeviceControl::SerialCommandID direction,
+            uint16_t commandsPerSecond
+            )
         {
             //this only works while tracking a target
             {
@@ -315,7 +319,7 @@ class ExosIIMountControl :
 
             if(mMountStateMachine.CurrentState() != TelescopeMountState::MoveWhileTracking)
             {
-                std::cerr << "INFO: motion already disabled." << std::endl;
+                std::cerr << "motion already disabled." << std::endl;
                 return true;
             }
             else
@@ -381,7 +385,10 @@ class ExosIIMountControl :
         }
 
         //GoTo and track the sky position represented by the equatorial coordinates.
-        bool GoTo(float rightAscension, float declination)
+        bool GoTo(
+            float rightAscension, 
+            float declination
+            )
         {
             std::vector<uint8_t> messageBuffer;
             if(SerialDeviceControl::SerialCommand::GetGotoCommandMessage(messageBuffer, rightAscension, declination))
@@ -400,7 +407,10 @@ class ExosIIMountControl :
         }
 
         //GoTo and track the sky position represented by the equatorial coordinates.
-        bool Sync(float rightAscension, float declination)
+        bool Sync(
+            float rightAscension,
+            float declination
+            )
         {
             std::vector<uint8_t> messageBuffer;
             if(SerialDeviceControl::SerialCommand::GetSyncCommandMessage(messageBuffer, rightAscension, declination))
@@ -420,7 +430,10 @@ class ExosIIMountControl :
 
         //Set the location of the telesope, using decimal latitude and longitude parameters.
         //This does not change to state of the telescope.
-        bool SetSiteLocation(float latitude, float longitude)
+        bool SetSiteLocation(
+            float latitude,
+            float longitude
+            )
         {
             std::vector<uint8_t> messageBuffer;
             if(SerialDeviceControl::SerialCommand::GetSetSiteLocationCommandMessage(messageBuffer, latitude, longitude))
@@ -455,10 +468,18 @@ class ExosIIMountControl :
         }
 
         //issue the set time command, using date and time parameters. This does not change the state of the telescope.
-        bool SetDateTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second)
+        bool SetDateTime(
+            uint16_t year,
+            uint8_t month,
+            uint8_t day,
+            uint8_t hour,
+            uint8_t minute,
+            uint8_t second,
+            int8_t utc_offset
+            )
         {
             std::vector<uint8_t> messageBuffer;
-            if(SerialDeviceControl::SerialCommand::GetSetDateTimeCommandMessage(messageBuffer, year, month, day, hour, minute, second))
+            if(SerialDeviceControl::SerialCommand::GetSetDateTimeCommandMessage(messageBuffer, year, month, day, hour, minute, second, utc_offset))
             {
                 return SerialDeviceControl::SerialCommandTransceiver<InterfaceType, TelescopeMountControl::ExosIIMountControl<InterfaceType>>::SendMessageBuffer(
                            &messageBuffer[0], 0, messageBuffer.size());
@@ -469,6 +490,42 @@ class ExosIIMountControl :
                 std::cerr << "SetDateTime: Failed!" << std::endl;
                 return false;
             }
+        }
+
+        template<SerialDeviceControl::SerialCommandID Direction>
+        bool GuideDirection()
+        {			
+            std::vector<uint8_t> messageBuffer;
+            
+            if(SerialDeviceControl::SerialCommand::GetMoveWhileTrackingCommandMessage(messageBuffer,Direction))
+            {
+                return SerialDeviceControl::SerialCommandTransceiver<InterfaceType,TelescopeMountControl::ExosIIMountControl<InterfaceType>>::SendMessageBuffer(&messageBuffer[0],0,messageBuffer.size());
+            }
+            else
+            {
+                //TODO:error message.
+                return false;
+            }
+        }
+
+        bool GuideNorth()
+        {
+            return GuideDirection<SerialDeviceControl::SerialCommandID::MOVE_NORTH_COMMAND_ID>();
+        }
+
+        bool GuideSouth()
+        {
+            return GuideDirection<SerialDeviceControl::SerialCommandID::MOVE_SOUTH_COMMAND_ID>();
+        }
+
+        bool GuideEast()
+        {
+            return GuideDirection<SerialDeviceControl::SerialCommandID::MOVE_EAST_COMMAND_ID>();
+        }
+
+        bool GuideWest()
+        {
+            return GuideDirection<SerialDeviceControl::SerialCommandID::MOVE_WEST_COMMAND_ID>();
         }
 
         template<SerialDeviceControl::SerialCommandID Direction>
@@ -510,7 +567,10 @@ class ExosIIMountControl :
 
 
         //Called each time a pair of coordinates was received from the serial interface.
-        virtual void OnPointingCoordinatesReceived(float right_ascension, float declination)
+        virtual void OnPointingCoordinatesReceived(
+            float right_ascension,
+            float declination
+            )
         {
             //std::cerr << "Received data : RA: " << right_ascension << " DEC:" << declination << std::endl;
 
@@ -631,8 +691,13 @@ class ExosIIMountControl :
             }
         }
 
-        //Called each time a pair of geo coordinates was received from the serial inferface. This happends only by active request (GET_SITE_LOCATION_COMMAND_ID)
-        virtual void OnSiteLocationCoordinatesReceived(float latitude, float longitude)
+        //Called each time a pair of geo coordinates was received from 
+        //the serial inferface. This happends only by active request
+        //(GET_SITE_LOCATION_COMMAND_ID)
+        virtual void OnSiteLocationCoordinatesReceived(
+            float latitude,
+            float longitude
+            )
         {
             std::cerr << "Received data : LAT: " << latitude << " LON:" << longitude << std::endl;
 
@@ -645,7 +710,11 @@ class ExosIIMountControl :
             mMountStateMachine.DoTransition(TelescopeSignals::RequestedGeoLocationReceived);
         }
 
-        virtual void OnTransitionChanged(TelescopeMountState fromState, TelescopeSignals signal, TelescopeMountState toState)
+        virtual void OnTransitionChanged(
+            TelescopeMountState fromState,
+            TelescopeSignals signal,
+            TelescopeMountState toState
+            )
         {
             if(fromState != toState)
             {
@@ -654,9 +723,12 @@ class ExosIIMountControl :
             }
         }
 
-        virtual void OnErrorStateReached(TelescopeMountState fromState, TelescopeSignals signal)
+        virtual void OnErrorStateReached(
+            TelescopeMountState fromState,
+            TelescopeSignals signal
+            )
         {
-            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occured!" << std::endl;
+            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occurred!" << std::endl;
             std::cerr << "Transition : (" << StateToString(fromState) << "," << SignalToString(signal) << ") -> ??? tripped this error!"
                       << std::endl;
         }
@@ -892,4 +964,3 @@ class ExosIIMountControl :
         }
 };
 }
-#endif

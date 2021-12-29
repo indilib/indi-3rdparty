@@ -49,18 +49,18 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<SXCCD>> cameras;
-public:
-    Loader()
-    {
-        DEVICE devices[20];
-        const char *names[20];
-        int count = sxList(devices, names, 20);
-        for (int i = 0; i < count; i++)
+        std::deque<std::unique_ptr<SXCCD>> cameras;
+    public:
+        Loader()
         {
-            cameras.push_back(std::unique_ptr<SXCCD>(new SXCCD(devices[i], names[i])));
+            DEVICE devices[20];
+            const char *names[20];
+            int count = sxList(devices, names, 20);
+            for (int i = 0; i < count; i++)
+            {
+                cameras.push_back(std::unique_ptr<SXCCD>(new SXCCD(devices[i], names[i])));
+            }
         }
-    }
 } loader;
 
 void ExposureTimerCallback(void *p)
@@ -361,10 +361,10 @@ void SXCCD::TimerHit()
             if (TemperatureReported != TemperatureN[0].value)
             {
                 TemperatureReported = TemperatureN[0].value;
-                if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
-                    TemperatureNP.s = IPS_OK;
-                else
-                    TemperatureNP.s = IPS_BUSY;
+                //                if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
+                //                    TemperatureNP.s = IPS_OK;
+                //                else
+                //TemperatureNP.s = IPS_BUSY;
                 IDSetNumber(&TemperatureNP, nullptr);
             }
         }

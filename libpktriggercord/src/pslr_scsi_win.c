@@ -68,6 +68,21 @@ char **get_drives(int *driveNum) {
     int driveLetter;
     int j=0;
     for ( driveLetter = 'C'; driveLetter<='Z'; ++driveLetter ) {
+#ifdef RAD10
+// These Drive types cant be a Pentax. The RAD10 debugger breaks here.
+        TCHAR root[4];
+        snprintf(root, 4, "%c:\\", driveLetter);
+        switch (GetDriveType(root)) {
+            case  DRIVE_UNKNOWN:
+            case  DRIVE_NO_ROOT_DIR:
+            case  DRIVE_FIXED:
+            case  DRIVE_REMOTE:
+            case  DRIVE_CDROM:
+                continue;
+            default:
+                ;
+        }
+#endif
         ret[j] = malloc( 2 * sizeof (char) );
         snprintf(ret[j], 2, "%c", driveLetter);
         ++j;

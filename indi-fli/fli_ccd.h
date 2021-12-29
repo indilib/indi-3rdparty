@@ -73,7 +73,7 @@ class FLICCD : public INDI::CCD
         // Get initial CCD values upon connection
         bool setupParams();
 
-        typedef struct
+        typedef struct cam_t
         {
             flidomain_t domain;
             char *dname;

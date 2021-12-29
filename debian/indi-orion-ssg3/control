@@ -1,0 +1,29 @@
+Source: indi-orion-ssg3
+Section: science
+Priority: extra
+Maintainer: Ben Gilsrud <bgilsrud@gmail.com
+Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libcfitsio3-dev|libcfitsio-dev, libindi-dev, zlib1g-dev, libnova-dev
+Standards-Version: 3.9.1
+
+Package: indi-orion-ssg3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+conflicts: indi-orion-ssg3cam
+replaces: indi-orion-ssg3cam
+Description: INDI Driver for Orion StarShoot G3 and G4 cameras
+ Driver for Orion Starshoot G3 and G4 cameras
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-orion-ssg3-dbg
+Priority: extra
+Section: debug
+Architecture: any
+conflicts: indi-orion-ssg3cam-dbg
+replaces: indi-orion-ssg3cam-dbg
+Depends: indi-orion-ssg3 (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for Orion StarShoot G3 and G4 cameras
+ Driver for Orion StarShoot G3 and G4 cameras
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

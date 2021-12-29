@@ -21,17 +21,6 @@
 
 #include <vector>
 
-// Horizon point is an immutable alt/az coordinate
-typedef struct horizonpoint
-{
-    double const az;
-    double const alt;
-    horizonpoint(double _az, double _alt);
-    horizonpoint operator =(horizonpoint const &hp);
-    static bool cmp(horizonpoint const &h1, horizonpoint const &h2);
-} horizonpoint;
-
-
 class HorizonLimits
 {
   protected:
@@ -46,7 +35,7 @@ class HorizonLimits
     ISwitchVectorProperty *HorizonLimitsOnLimitSP;
     ISwitchVectorProperty *HorizonLimitsLimitGotoSP;
 
-    std::vector<horizonpoint> *horizon;
+    std::vector<INDI::IHorizontalCoordinates> *horizon;
     int horizonindex;
 
     char *WriteDataFile(const char *filename);
@@ -76,4 +65,6 @@ class HorizonLimits
     virtual bool inGotoLimits(double az, double alt);
     virtual bool checkLimits(double az, double alt, INDI::Telescope::TelescopeStatus status, bool ingoto);
     virtual bool saveConfigItems(FILE *fp);
+
+    static bool cmp(INDI::IHorizontalCoordinates const &h1, INDI::IHorizontalCoordinates const &h2);
 };

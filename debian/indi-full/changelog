@@ -1,3 +1,21 @@
+indi-full (1.9.3) bionic; urgency=medium
+
+  * Minor release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 11 Nov 2021 19:00:00 +0300
+
+indi-full (1.9.2) bionic; urgency=medium
+
+  * Minor release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 14 Sep 2021 19:00:00 +0300
+
+indi-full (1.9.1) bionic; urgency=medium
+
+  * Minor release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 26 Jun 2021 19:00:00 +0300
+
 indi-full (1.8.9) bionic; urgency=medium
 
   * Minor release.

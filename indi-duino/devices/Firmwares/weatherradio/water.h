@@ -26,7 +26,7 @@ void updatewater() {
   waterData.wetness = 100 - 100*float(analogRead(WATER_PIN))/1023;
 }
 
-void serializewater(JsonDocument &doc) {
+void serializewater(JsonObject &doc) {
   JsonObject data = doc.createNestedObject("Water");
   data["init"] = waterData.status;
 

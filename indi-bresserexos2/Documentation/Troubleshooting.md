@@ -16,7 +16,7 @@ Use `lsusb` do retrieve the identifier of your usb to serial adapter:
 
 ![Get product and vendor id](get-usb-product-vendor-id.png?raw=true)
 
-> sudo nano /etc/udev/rules.d/10-local.rules
+> sudo nano /lib/udev/rules.d/10-local.rules
 
 add:
 <code>ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="my_uart"</code>
@@ -84,7 +84,7 @@ You may redact your location information, these should not matter. However you c
 There were reported cases where, after updating the software packages of you linux distribution, you encounter crashes of the driver. 
 If you set up a debug set up in the manner mentioned above, you can look through the output lines of the terminal. If encounter lines with something like:
 
-> 1970-01-00T03:13:37: Driver ./indi_bresserexos2: : **symbol lookup error: undefined symbol**: _ZN4INDI10BaseDevice13getDeviceNameEv
+> 1970-01-01T03:13:37: Driver ./indi_bresserexos2: : **symbol lookup error: undefined symbol**: _ZN4INDI10BaseDevice13getDeviceNameEv
 
 it is likely you have this exact problem.
 You can resolve this by simply recompiling the driver. 
@@ -92,3 +92,32 @@ Open your build directory in a terminal, similarly to the procedure in the debug
 Go to the [Driver installation](Installation.md) documentation to the stage where you perform the `cmake --build .` command and simply rerun the process from there.
 
 However there may cases where this does not work. So if you encounter linker or compiler error in the process, create a bug ticket, with keep the "useful debug information"-paradigm in mind.
+
+### Indi Webmanager Service does not display driver
+In order to avoid users the trouble of starting the whole application stack manually, the webmanager in astroberry is used to set up everything using a browser.
+
+However since the build system may change its default install prefixes (paths) via updates, its possible the `sudo cmake make install` command may place these files in a unexpected location. Thus the driver does not appear in the web manager list.
+
+In order to ensure operation place make sure the driver files are located at:
+
+- `indi_bresserexos2` needs to reside in `/usr/bin/`
+- `indi_bresserexos2.xml` needs to reside in `/usr/share/indi/`
+
+If you can not see the entries on your distribution, make sure your first remove to current installation to tidy up your system and avoid later issues with old driver files (see: [Driver removal](Installation.md#remove-the-driver) for the procedure)
+
+1. open your driver build directory in a terminal
+2. copy the driver files manually to the correct locations by using:
+
+- `sudo cp indi_bresserexos2 /usr/bin/` to copy the driver binary to its install directory
+- `sudo cp indi_bresserexos2.xml /usr/share/indi/` to copy the driver xml file to its install directory
+
+It is also posible the distribution you are using, expects the driver files in a completelly different spot, in that case ask your distribution maintainer information about where such files should be placed, or look for existing driver files in your filesystem (eg. shipped drivers) and place the Bresser driver files accordingly.
+
+This should solve this issue.
+
+### Difference in Coordinates between Astro Software and Handbox Display
+
+The coordinates in your astro software may differ from the coordinates displayed on handbox display. The reason is yet unknown, there was a bug with missing timezones. However after fixing this issue the difference only grew larger.
+General advice here: do not use the handbox to rely on coordinates. If you are synchronized with the sky, (eg. Polar Alignment, Star Alignment OK), your Astro software should be able to point to your targets no matter what the display says.
+
+If you see a known star in your scope you pointed to manually and confirmed its position, you should be fine pointing to any other object in the sky.

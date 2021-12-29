@@ -75,10 +75,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int last_motion_ns;
         int last_motion_ew;
 
-        /* for use with libnova */
-        struct ln_equ_posn lnradec;
-        struct ln_lnlat_posn lnobserver;
-        struct ln_hrz_posn lnaltaz;
+        INDI::IEquatorialCoordinates lnradec;
+        INDI::IHorizontalCoordinates lnaltaz;
 
         /* Time variables */
         struct tm utc;
@@ -88,7 +86,6 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         double juliandate;
 
         int GuideTimerNS;
-
         int GuideTimerWE;
 
         INumber *GuideRateN                        = nullptr;
@@ -128,10 +125,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         ISwitchVectorProperty *ST4GuideRateNSSP = nullptr;
         ISwitchVectorProperty *ST4GuideRateWESP = nullptr;
 
-        ISwitchVectorProperty *RAPPECTrainingSP = nullptr;
-        ISwitchVectorProperty *DEPPECTrainingSP = nullptr;
-        ISwitchVectorProperty *RAPPECSP         = nullptr;
-        ISwitchVectorProperty *DEPPECSP         = nullptr;
+        ISwitchVectorProperty *PPECTrainingSP = nullptr;
+        ISwitchVectorProperty *PPECSP         = nullptr;
 
         ISwitchVectorProperty *SNAPPORT1SP      = nullptr;
         ISwitchVectorProperty *SNAPPORT2SP      = nullptr;
@@ -164,7 +159,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
 
         double tpa_alt, tpa_az;
 
-        void EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha, TelescopePierSide *pierSide);
+        void EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double *ra, double *de, double *ha,
+                             TelescopePierSide *pierSide);
         double EncoderToHours(uint32_t destep, uint32_t initdestep, uint32_t totalrastep, enum Hemisphere h);
         double EncoderToDegrees(uint32_t destep, uint32_t initdestep, uint32_t totalrastep,
                                 enum Hemisphere h);
@@ -207,8 +203,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int ah_waitRA, ah_waitDE;
 
         // save PPEC status when guiding
-        bool restartguideRAPPEC;
-        bool restartguideDEPPEC;
+        bool restartguidePPEC;
 
         // One bit for each axis
         uint8_t pulseInProgress;

@@ -33,8 +33,8 @@ volatile unsigned long startTime;     // overall start time for calculating the 
 volatile unsigned long startSlice;    // start time of the current time slice to measure wind speed
 volatile unsigned long lastInterrupt; // Last time a rotation has been detected
 volatile unsigned int rotations;      // total number of wind wheel rotations
-volatile unsigned int sliceRotations; // rotation occured in the current time slice
-volatile unsigned int slices;         // number of slices occured since startTime
+volatile unsigned int sliceRotations; // rotation occurred in the current time slice
+volatile unsigned int slices;         // number of slices occurred since startTime
 volatile float minSpeed;              // minimal wind speed since startTime
 volatile float maxSpeed;              // maximal wind speed since startTime
 
@@ -74,13 +74,13 @@ int winddirection() {
 
 // This is the function that the interrupt calls to increment the rotation count
 #ifdef ESP8266
-void ICACHE_RAM_ATTR isr_rotation () {
+void IRAM_ATTR isr_rotation () {
 #else
 void isr_rotation () {
 #endif
 
   volatile unsigned long now = millis();
-  if ((now - lastInterrupt) > 15 ) { // debounce the switch contact.
+  if ((now - lastInterrupt) > 5 ) { // debounce the switch contact.
     rotations++;
     sliceRotations++;
     lastInterrupt = now;
@@ -164,7 +164,7 @@ void readAnemometer() {
   reset(millis());
 }
 
-void serializeAnemometer(JsonDocument &doc) {
+void serializeAnemometer(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("Davis Anemometer");
   data["init"] = anemometerData.status;

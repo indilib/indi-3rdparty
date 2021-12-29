@@ -1,3 +1,46 @@
+libqhy (21.10.26) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 26 Oct 2021 14:00:00 +0300
+
+libqhy (21.9.10) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 9 Sep 2021 14:00:00 +0300
+
+libqhy (21.8.3) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 3 Aug 2021 14:00:00 +0300
+
+libqhy (21.7.9) focal; urgency=medium
+
+  * Upstream release.
+  * SOVERSION set to 21.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 9 Jul 2021 14:00:00 +0300
+
+libqhy (21.7.3) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 3 Jul 2021 14:00:00 +0300
+ 
+libqhy (21.6.3) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 25 May 2021 14:00:00 +0300
+
+libqhy (21.5.5) bionic; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 25 May 2021 12:00:00 +0300
+
 libqhy (21.4.15) bionic; urgency=medium
 
   * Upstream release.

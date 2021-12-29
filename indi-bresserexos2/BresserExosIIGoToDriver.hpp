@@ -21,31 +21,34 @@
  *
  */
 
-#ifndef _BRESSEREXOSIIGOTODRIVER_H_INCLUDED_
-#define _BRESSEREXOSIIGOTODRIVER_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <cmath>
 #include <memory>
 #include <string>
 
-#include <libindi/indicom.h>
-#include <libindi/inditelescope.h>
-#include <libindi/indiguiderinterface.h>
-#include <libindi/indilogger.h>
+#include <inditelescope.h>
+#include <indiguiderinterface.h>
 
 #include "IndiSerialWrapper.hpp"
 #include "ExosIIMountControl.hpp"
-#include "SerialDeviceControl/SerialCommand.hpp"
+#include "SerialCommand.hpp"
 
-#include "Config.hpp"
+#include "config.h"
 
 namespace GoToDriver
 {
+        
+        struct GuideState
+        {
+                SerialDeviceControl::SerialCommandID direction;
+                uint32_t remaining_messages;
+        };
 
 //Main wrapper class for the indi driver interface.
 //"Glues" together the independent functionallity with the driver interface from indi.
-class BresserExosIIDriver : public INDI::Telescope
+class BresserExosIIDriver : public INDI::Telescope, public INDI::GuiderInterface
 {
     public:
         //default constructor.
@@ -112,6 +115,18 @@ class BresserExosIIDriver : public INDI::Telescope
         //commance motion in east or west direction.
         virtual bool MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command) override;
 
+        // Guide
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
+
+        // Pulse Guide timeout callbacks.
+        static void guideTimeoutHelperN(void *p);
+        static void guideTimeoutHelperS(void *p);
+        static void guideTimeoutHelperE(void *p);
+        static void guideTimeoutHelperW(void *p);
+
     private:
         IndiSerialWrapper mInterfaceWrapper;
 
@@ -119,7 +134,12 @@ class BresserExosIIDriver : public INDI::Telescope
 
         unsigned int DBG_SCOPE;
 
+        int GuideNSTID;
+        int GuideWETID;
+
         static void DriverWatchDog(void *p);
+
+        void guideTimeout(SerialDeviceControl::SerialCommandID direction);
 
         void LogError(const char* mesage);
 
@@ -127,7 +147,10 @@ class BresserExosIIDriver : public INDI::Telescope
         
         IText SourceCodeRepositoryURLT[1] = {};
         ITextVectorProperty SourceCodeRepositoryURLTP;
+
+        GuideState mGuideStateNS;
+        
+        GuideState mGuideStateEW;
 };
 }
 
-#endif

@@ -36,8 +36,9 @@
 #endif
 #include <unistd.h>
 #include <dirent.h>
-#include "pslr_model.h"
 
+#include "pslr_log.h"
+#include "pslr_model.h"
 #include "pslr_scsi.h"
 
 static const int MAX_DEVICE_NUM = 256;
@@ -82,8 +83,7 @@ char **get_drives(int *drive_num) {
         if (d) {
             while ( (ent = readdir(d)) ) {
                 if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0 && strncmp(ent->d_name, "loop",4) != 0) {
-                    tmp[j] = malloc( strlen(ent->d_name)+1 );
-                    strncpy(tmp[j], ent->d_name, strlen(ent->d_name)+1);
+                    tmp[j] = strdup( ent->d_name );
                     ++j;
                 }
             }
@@ -96,9 +96,7 @@ char **get_drives(int *drive_num) {
     if (j>0) {
         ret = malloc( j * sizeof(char*) );
         for ( jj=0; jj<j; ++jj ) {
-            ret[jj] = malloc( strlen(tmp[jj])+1 );
-            strncpy( ret[jj], tmp[jj], strlen(tmp[jj]) );
-            ret[jj][strlen(tmp[jj])]='\0';
+            ret[jj] = tmp[jj];
         }
     }
     return ret;
@@ -237,7 +235,7 @@ int scsi_read(int sg_fd, uint8_t *cmd, uint32_t cmdLen,
 
         /* Older Pentax DSLR will report all bytes remaining, so make
          * a special case for this (treat it as all bytes read). */
-        if ((uint32_t)io.resid == bufLen) {
+        if ((uint32_t)io.resid == bufLen) { 
             return bufLen;
         } else {
             return bufLen - io.resid;

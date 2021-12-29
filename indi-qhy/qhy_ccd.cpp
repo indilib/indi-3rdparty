@@ -31,91 +31,91 @@
 #include <memory>
 #include <deque>
 
-#define TEMP_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
+#define UPDATE_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
 
 //NB Disable for real driver
 //#define USE_SIMULATION
 
 static class Loader
 {
-    std::deque<std::unique_ptr<QHYCCD>> cameras;
-public:
-    Loader()
-    {
+        std::deque<std::unique_ptr<QHYCCD>> cameras;
+    public:
+        Loader()
+        {
 #if !defined(USE_SIMULATION)
-        int ret = InitQHYCCDResource();
+            int ret = InitQHYCCDResource();
 
-        if (ret != QHYCCD_SUCCESS)
-        {
-            IDLog("Init QHYCCD SDK failed (%d)\n", ret);
-            return;
-        }
+            if (ret != QHYCCD_SUCCESS)
+            {
+                IDLog("Init QHYCCD SDK failed (%d)\n", ret);
+                return;
+            }
 #endif
 
-        //#if defined(__APPLE__)
-        //    char driverSupportPath[128];
-        //    if (getenv("INDIPREFIX") != nullptr)
-        //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
-        //    else
-        //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
-        //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
-        //    IDLog("QHY firmware path: %s\n", driverSupportPath);
-        //    OSXInitQHYCCDFirmware(driverSupportPath);
-        //#endif
+            //#if defined(__APPLE__)
+            //    char driverSupportPath[128];
+            //    if (getenv("INDIPREFIX") != nullptr)
+            //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
+            //    else
+            //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
+            //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
+            //    IDLog("QHY firmware path: %s\n", driverSupportPath);
+            //    OSXInitQHYCCDFirmware(driverSupportPath);
+            //#endif
 
-        // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
+            // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
 #if defined(__APPLE__)
-        OSXInitQHYCCDFirmwareArray();
-        // Wait a bit before calling GetDeviceIDs on MacOS
-        usleep(2000000);
+            OSXInitQHYCCDFirmwareArray();
+            // Wait a bit before calling GetDeviceIDs on MacOS
+            usleep(2000000);
 #endif
 
-        for (const auto &deviceId: GetDevicesIDs())
-        {
-            cameras.push_back(std::unique_ptr<QHYCCD>(new QHYCCD(deviceId.c_str())));
-        }
-    }
-
-    ~Loader()
-    {
-        ReleaseQHYCCDResource();
-    }
-
-public:
-
-    // Scan for the available devices
-    std::vector<std::string> GetDevicesIDs()
-    {
-        char camid[MAXINDIDEVICE];
-        int deviceCount = 0;
-        std::vector<std::string> devices;
-
-    #if defined(USE_SIMULATION)
-        deviceCount = 2;
-    #else
-        deviceCount = ScanQHYCCD();
-    #endif
-
-        for (int i = 0; i < deviceCount; i++)
-        {
-    #if defined(USE_SIMULATION)
-            int ret = QHYCCD_SUCCESS;
-            snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
-    #else
-            int ret = GetQHYCCDId(i, camid);
-    #endif
-            if (ret == QHYCCD_SUCCESS)
+            for (const auto &deviceId : GetDevicesIDs())
             {
-                devices.push_back(std::string(camid));
-            }
-            else
-            {
-                IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
+                cameras.push_back(std::unique_ptr<QHYCCD>(new QHYCCD(deviceId.c_str())));
             }
         }
 
-        return devices;
-    }
+        ~Loader()
+        {
+            ReleaseQHYCCDResource();
+        }
+
+    public:
+
+        // Scan for the available devices
+        std::vector<std::string> GetDevicesIDs()
+        {
+            char camid[MAXINDIDEVICE];
+            int deviceCount = 0;
+            std::vector<std::string> devices;
+
+#if defined(USE_SIMULATION)
+            deviceCount = 2;
+#else
+            deviceCount = ScanQHYCCD();
+#endif
+
+            for (int i = 0; i < deviceCount; i++)
+            {
+#if defined(USE_SIMULATION)
+                int ret = QHYCCD_SUCCESS;
+                snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
+#else
+                int ret = GetQHYCCDId(i, camid);
+#endif
+                if (ret == QHYCCD_SUCCESS)
+                {
+                    devices.push_back(std::string(camid));
+                }
+                else
+                {
+                    IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
+                }
+            }
+
+            return devices;
+        }
 } loader;
 
 QHYCCD::QHYCCD(const char *name) : FilterInterface(this)
@@ -201,6 +201,11 @@ bool QHYCCD::initProperties()
     IUFillNumber(&USBBufferN[0], "BUFFER", "Bytes", "%.f", 512, 4096, 512, 512);
     IUFillNumberVector(&USBBufferNP, USBBufferN, 1, getDeviceName(), "USB_BUFFER", "USB Buffer", MAIN_CONTROL_TAB,
                        IP_RW, 60, IPS_IDLE);
+
+    // Humidity
+    IUFillNumber(&HumidityN[0], "HUMIDITY", "%", "%.2f", -100, 1000, 0.1, 0);
+    IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "CCD_HUMIDITY", "Humidity", MAIN_CONTROL_TAB,
+                       IP_RO, 60, IPS_IDLE);
 
     // Cooler Mode
     IUFillSwitch(&CoolerModeS[COOLER_AUTOMATIC], "COOLER_AUTOMATIC", "Auto", ISS_ON);
@@ -338,6 +343,9 @@ void QHYCCD::ISGetProperties(const char *dev)
             defineProperty(&CoolerNP);
         }
 
+        if (HasHumidity)
+            defineProperty(&HumidityNP);
+
         if (HasUSBSpeed)
             defineProperty(&SpeedNP);
 
@@ -414,6 +422,27 @@ bool QHYCCD::updateProperties()
             m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
         }
 
+        if (HasHumidity)
+        {
+            if (isSimulation())
+            {
+                HumidityN[0].value = 99.9;
+            }
+            else
+            {
+                double humidity = 0.;
+                uint32_t ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
+                if (ret == QHYCCD_SUCCESS)
+                {
+                    HumidityN[0].value = humidity;
+                }
+
+                LOGF_INFO("Humidity Sensor: %s", ret == QHYCCD_SUCCESS ? "true" :
+                          "false");
+            }
+
+            defineProperty(&HumidityNP);
+        }
         double min = 0, max = 0, step = 0;
         if (HasUSBSpeed)
         {
@@ -598,6 +627,9 @@ bool QHYCCD::updateProperties()
 
             RemoveTimer(m_TemperatureTimerID);
         }
+
+        if (HasHumidity)
+            deleteProperty(HumidityNP.name);
 
         if (HasUSBSpeed)
         {
@@ -946,18 +978,26 @@ bool QHYCCD::Connect()
         //if(ret != QHYCCD_ERROR && ret != QHYCCD_ERROR_NOTSUPPORT)
         if (ret != QHYCCD_ERROR)
         {
-            if (ret == BAYER_GB)
+            if (ret == BAYER_GB){
                 IUSaveText(&BayerT[2], "GBRG");
-            else if (ret == BAYER_GR)
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_GR){
                 IUSaveText(&BayerT[2], "GRBG");
-            else if (ret == BAYER_BG)
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_BG){
                 IUSaveText(&BayerT[2], "BGGR");
-            else
+                cap |= CCD_HAS_BAYER;
+            }
+            else if (ret == BAYER_RG){
                 IUSaveText(&BayerT[2], "RGGB");
+                cap |= CCD_HAS_BAYER;
+            }
 
             LOGF_DEBUG("Color camera: %s", BayerT[2].text);
 
-            cap |= CCD_HAS_BAYER;
+            
         }
 
         ////////////////////////////////////////////////////////////////////
@@ -988,13 +1028,26 @@ bool QHYCCD::Connect()
         /// GPS Support
         ////////////////////////////////////////////////////////////////////
         ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_GPS);
-        if (ret == QHYCCD_SUCCESS)
+        // JM 2021.07.25: CAM_GPS is returned as true even when there is no GPS.
+        // This bug was reported to QHY and awaiting a fix. Currently limiting GSP to QHY174 only.
+        if (ret == QHYCCD_SUCCESS && strstr(m_CamID, "174"))
         {
             HasGPS = true;
         }
 
         LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
 
+        ////////////////////////////////////////////////////////////////////
+        /// Humidity Support
+        ////////////////////////////////////////////////////////////////////
+        double humidity = 0;
+        ret = GetQHYCCDHumidity(m_CameraHandle, &humidity);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasHumidity = true;
+        }
+
+        LOGF_INFO("Humidity Support: %s", HasHumidity ? "True" : "False");
         ////////////////////////////////////////////////////////////////////
         /// Overscan Area Support
         ////////////////////////////////////////////////////////////////////
@@ -1158,7 +1211,7 @@ bool QHYCCD::setupParams()
 int QHYCCD::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD)
+    if (fabs(temperature - TemperatureN[0].value) < UPDATE_THRESHOLD)
         return 1;
 
     LOGF_DEBUG("Requested temperature is %.f, current temperature is %.f", temperature, TemperatureN[0].value);
@@ -1841,13 +1894,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             double currentGain = GainN[0].value;
             IUUpdateNumber(&GainNP, values, names, n);
-            m_GainRequest = GainN[0].value;
-            if (fabs(m_LastGainRequest - m_GainRequest) > 0.001)
+            if (fabs(m_LastGainRequest - GainN[0].value) > UPDATE_THRESHOLD)
             {
                 int rc = SetQHYCCDParam(m_CameraHandle, CONTROL_GAIN, GainN[0].value);
                 if (rc == QHYCCD_SUCCESS)
                 {
-                    m_LastGainRequest = m_GainRequest;
+                    m_LastGainRequest = GainN[0].value;
                     GainNP.s = IPS_OK;
                     saveConfig(true, GainNP.name);
                     LOGF_INFO("Gain updated to %.f", GainN[0].value);
@@ -1878,8 +1930,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             if (rc == QHYCCD_SUCCESS)
             {
                 OffsetNP.s = IPS_OK;
-                LOGF_INFO("Offset updated to %.f", OffsetN[0].value);
-                saveConfig(true, OffsetNP.name);
+
+                if (std::abs(currentOffset - OffsetN[0].value) > UPDATE_THRESHOLD)
+                {
+                    LOGF_INFO("Offset updated to %.f", OffsetN[0].value);
+                    saveConfig(true, OffsetNP.name);
+                }
             }
             else
             {
@@ -1903,9 +1959,12 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
             if (rc == QHYCCD_SUCCESS)
             {
-                LOGF_INFO("Speed updated to %.f", SpeedN[0].value);
                 SpeedNP.s = IPS_OK;
-                saveConfig(true, SpeedNP.name);
+                if (std::abs(currentSpeed - SpeedN[0].value) > UPDATE_THRESHOLD)
+                {
+                    LOGF_INFO("Speed updated to %.f", SpeedN[0].value);
+                    saveConfig(true, SpeedNP.name);
+                }
             }
             else
             {
@@ -2138,17 +2197,17 @@ void QHYCCD::updateTemperatureHelper(void *p)
 
 void QHYCCD::updateTemperature()
 {
-    double ccdtemp = 0, coolpower = 0;
+    double currentTemperature = 0, currentCoolingPower = 0, currentHumidity = 0;
 
     if (isSimulation())
     {
-        ccdtemp = TemperatureN[0].value;
+        currentTemperature = TemperatureN[0].value;
         if (TemperatureN[0].value < m_TemperatureRequest)
-            ccdtemp += TEMP_THRESHOLD;
+            currentTemperature += UPDATE_THRESHOLD * 10;
         else if (TemperatureN[0].value > m_TemperatureRequest)
-            ccdtemp -= TEMP_THRESHOLD;
+            currentTemperature -= UPDATE_THRESHOLD * 10;
 
-        coolpower = 128;
+        currentCoolingPower = 128;
     }
     else
     {
@@ -2171,21 +2230,49 @@ void QHYCCD::updateTemperature()
             SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, CoolerN[0].value * 255.0 / 100 );
         }
 
-        ccdtemp   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
-        coolpower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
+        currentTemperature   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
+        currentCoolingPower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
     }
 
-    // No need to spam to log
-    if (fabs(ccdtemp - TemperatureN[0].value) > 0.001 || fabs(CoolerN[0].value - (coolpower / 255.0 * 100)) > 0.001)
+    // Only update if above update threshold
+    if (std::abs(currentTemperature - TemperatureN[0].value) > UPDATE_THRESHOLD)
     {
-        LOGF_DEBUG("CCD T.: %.f (C) Power: %.f (%.2f%%)", ccdtemp, coolpower, coolpower / 255.0 * 100);
+        if (currentTemperature > 100)
+            TemperatureNP.s = IPS_ALERT;
+        else
+            TemperatureN[0].value = currentTemperature;
+        IDSetNumber(&TemperatureNP, nullptr);
+
+        LOGF_DEBUG("CCD T.: %.f (C)", currentTemperature);
+    }
+    // Restart temperature regulation if needed.
+    else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > UPDATE_THRESHOLD)
+    {
+        if (currentTemperature > 100)
+            TemperatureNP.s       = IPS_ALERT;
+        else
+        {
+            TemperatureN[0].value = currentTemperature;
+            TemperatureNP.s       = IPS_BUSY;
+        }
+        IDSetNumber(&TemperatureNP, nullptr);
     }
 
-    TemperatureN[0].value = ccdtemp;
+    // Update cooling power if needed.
+    if (std::abs(currentCoolingPower - CoolerN[0].value) > UPDATE_THRESHOLD)
+    {
+        if (currentCoolingPower > 255)
+            CoolerNP.s = IPS_ALERT;
+        else
+        {
+            CoolerN[0].value      = currentCoolingPower / 255.0 * 100;
+            CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
+        }
+        IDSetNumber(&CoolerNP, nullptr);
+        LOGF_DEBUG("Cooling Power: %.f (%.2f%%)", currentCoolingPower, currentCoolingPower / 255.0 * 100);
+    }
 
-    CoolerN[0].value      = coolpower / 255.0 * 100;
-    CoolerNP.s = CoolerN[0].value > 0 ? IPS_BUSY : IPS_IDLE;
-
+    // Synchronize state of cooling power and cooling switch
     IPState coolerSwitchState = CoolerN[0].value > 0 ? IPS_BUSY : IPS_OK;
     if (coolerSwitchState != CoolerSP.s)
     {
@@ -2193,22 +2280,17 @@ void QHYCCD::updateTemperature()
         IDSetSwitch(&CoolerSP, nullptr);
     }
 
-    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - m_TemperatureRequest) <= TEMP_THRESHOLD)
+    // Check humidity and update if necessary
+    if (HasHumidity)
     {
-        TemperatureN[0].value = ccdtemp;
-        TemperatureNP.s       = IPS_OK;
+        IPState currentState = (GetQHYCCDHumidity(m_CameraHandle, &currentHumidity) == QHYCCD_SUCCESS) ? IPS_OK : IPS_ALERT;
+        if (currentState != HumidityNP.s || std::abs(currentHumidity - HumidityN[0].value) > UPDATE_THRESHOLD)
+        {
+            HumidityN[0].value = currentHumidity;
+            HumidityNP.s = currentState;
+            IDSetNumber(&HumidityNP, nullptr);
+        }
     }
-
-    // Restart regulation if needed.
-    else if (TemperatureNP.s == IPS_OK && fabs(TemperatureN[0].value - m_TemperatureRequest) > TEMP_THRESHOLD)
-    {
-        TemperatureN[0].value = ccdtemp;
-        TemperatureNP.s       = IPS_BUSY;
-    }
-
-
-    IDSetNumber(&TemperatureNP, nullptr);
-    IDSetNumber(&CoolerNP, nullptr);
 
     m_TemperatureTimerID = IEAddTimer(getCurrentPollingPeriod(), QHYCCD::updateTemperatureHelper, this);
 }
@@ -2512,7 +2594,7 @@ void QHYCCD::getExposure()
          * about one second, after which decrease the poll interval
          */
         double timeLeft = calcTimeLeft();
-        uint32_t uSecs = 0;
+        uint32_t uSecs = 100000;
         if (timeLeft > 1.1)
         {
             /*
@@ -2521,22 +2603,11 @@ void QHYCCD::getExposure()
              * a full second boundary, which keeps the
              * count down neat
              */
-            double fraction = timeLeft - static_cast<int>(timeLeft);
-            if (fraction >= 0.005)
-            {
-                uSecs = static_cast<uint32_t>(fraction * 1000000.0);
-            }
-            else
-            {
-                uSecs = 1000000;
-            }
-        }
-        else
-        {
-            uSecs = 10000;
+            timeLeft = round(timeLeft);
+            uSecs = 1000000;
         }
 
-        if (timeLeft >= 0.0049)
+        if (timeLeft >= 0)
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }
@@ -2610,6 +2681,14 @@ bool QHYCCD::updateFilterProperties()
         }
         IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
                          FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
+
+        // Try to load config filter labels
+        for (int i = 0; i < m_MaxFilterCount; i++)
+        {
+            char oneFilter[MAXINDINAME] = {0};
+            if (IUGetConfigText(getDeviceName(), FilterNameTP->name, FilterNameT[i].name, oneFilter, MAXINDINAME) == 0)
+                IUSaveText(&FilterNameT[i], oneFilter);
+        }
 
         return true;
     }

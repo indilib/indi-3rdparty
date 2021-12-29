@@ -4,6 +4,7 @@ A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
 Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
 Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+Copyright (C) 2021 Jasem Mutlaq
 
 AAG Cloud Watcher INDI Driver is free software : you can redistribute it
 and / or modify it under the terms of the GNU General Public License as
@@ -66,9 +67,10 @@ bool AAGCloudWatcher::Handshake()
     if (check)
     {
         LOG_INFO("Connected to AAG Cloud Watcher");
-
         sendConstants();
 
+        if (m_FirmwareVersion >= 5.6)
+            addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
         return true;
     }
     else
@@ -116,31 +118,9 @@ IPState AAGCloudWatcher::updateWeather()
     return IPS_OK;
 }
 
-/*************************************************************************
-** Define Basic properties to clients.
-*************************************************************************/
-void AAGCloudWatcher::ISGetProperties(const char *dev)
-{
-    static int configLoaded = 0;
-    // Ask the default driver first to send properties.
-    INDI::Weather::ISGetProperties(dev);
-
-    // If no configuration is load before, then load it now.
-    if (configLoaded == 0)
-    {
-        loadConfig();
-        configLoaded = 1;
-    }
-}
-
-/*****************************************************************************
-** Process Text properties
-*****************************************************************************/
-bool AAGCloudWatcher::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    return INDI::Weather::ISNewText(dev, name, texts, names, n);
-}
-
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     INDI::Weather::ISNewNumber(dev, name, values, names, n);
@@ -608,93 +588,42 @@ bool AAGCloudWatcher::sendData()
 {
     CloudWatcherData data;
 
-    int r = cwc->getAllData(&data);
-
-    if (!r)
-    {
+    if (cwc->getAllData(&data) == 0)
         return false;
-    }
-
-    const int N_DATA = 11;
-    double values[N_DATA];
-    char *names[N_DATA];
-
-    names[0]  = const_cast<char *>("supply");
-    values[0] = data.supply;
-
-    names[1]  = const_cast<char *>("sky");
-    values[1] = data.sky;
-
-    names[2]  = const_cast<char *>("sensor");
-    values[2] = data.sensor;
-
-    names[3]  = const_cast<char *>("ambient");
-    values[3] = data.ambient;
-
-    names[4]  = const_cast<char *>("rain");
-    values[4] = data.rain;
-
-    names[5]  = const_cast<char *>("rainHeater");
-    values[5] = data.rainHeater;
-
-    names[6]  = const_cast<char *>("rainTemp");
-    values[6] = data.rainTemperature;
-
-    names[7]  = const_cast<char *>("LDR");
-    values[7] = data.ldr;
-
-    names[8]       = const_cast<char *>("readCycle");
-    values[8]      = data.readCycle;
-    lastReadPeriod = data.readCycle;
-
-    names[9]  = const_cast<char *>("windSpeed");
-    values[9] = data.windSpeed;
-
-    names[10]  = const_cast<char *>("totalReadings");
-    values[10] = data.totalReadings;
 
     INumberVectorProperty *nvp = getNumber("readings");
-    IUUpdateNumber(nvp, values, names, N_DATA);
+    nvp->np[SENSOR_SUPPLY].value = data.supply;
+    nvp->np[SENSOR_SKY].value = data.sky;
+    nvp->np[SENSOR_SENSOR].value = data.sensor;
+    nvp->np[SENSOR_AMBIENT].value = data.ambient;
+    nvp->np[SENSOR_RAIN].value = data.rain;
+    nvp->np[SENSOR_RAIN_HEATER].value = data.rainHeater;
+    nvp->np[SENSOR_RAIN_TEMPERATURE].value = data.rainTemperature;
+    nvp->np[SENSOR_LDR].value = data.ldr;
+    nvp->np[SENSOR_READ_CYCLES].value = data.readCycle;
+    lastReadPeriod = data.readCycle;
+    nvp->np[SENSOR_WIND_SPEED].value = data.windSpeed;
+    nvp->np[SENSOR_RELATIVE_HUMIDITY].value = data.humidity;
+    nvp->np[SENSOR_PRESSURE].value = data.pressure;
+    nvp->np[SENSOR_TOTAL_READINGS].value = data.totalReadings;
     nvp->s = IPS_OK;
     IDSetNumber(nvp, nullptr);
 
-    const int N_ERRORS = 5;
-    double valuesE[N_ERRORS];
-    char *namesE[N_ERRORS];
-
-    namesE[0]  = const_cast<char *>("internalErrors");
-    valuesE[0] = data.internalErrors;
-
-    namesE[1]  = const_cast<char *>("firstAddressByteErrors");
-    valuesE[1] = data.firstByteErrors;
-
-    namesE[2]  = const_cast<char *>("commandByteErrors");
-    valuesE[2] = data.commandByteErrors;
-
-    namesE[3]  = const_cast<char *>("secondAddressByteErrors");
-    valuesE[3] = data.secondByteErrors;
-
-    namesE[4]  = const_cast<char *>("pecByteErrors");
-    valuesE[4] = data.pecByteErrors;
-
     INumberVectorProperty *nvpE = getNumber("unitErrors");
-    IUUpdateNumber(nvpE, valuesE, namesE, N_ERRORS);
+    nvpE->np[0].value = data.internalErrors;
+    nvpE->np[1].value = data.firstByteErrors;
+    nvpE->np[2].value = data.commandByteErrors;
+    nvpE->np[3].value = data.secondByteErrors;
+    nvpE->np[4].value = data.pecByteErrors;
     nvpE->s = IPS_OK;
     IDSetNumber(nvpE, nullptr);
 
-    const int N_SENS = 9;
-    double valuesS[N_SENS];
-    char *namesS[N_SENS];
+    INumberVectorProperty *nvpS = getNumber("sensors");
 
     float skyTemperature = float(data.sky) / 100.0;
-    namesS[0]            = const_cast<char *>("infraredSky");
-    valuesS[0]           = skyTemperature;
-
-    namesS[1]  = const_cast<char *>("infraredSensor");
-    valuesS[1] = float(data.sensor) / 100.0;
-
-    namesS[2]  = const_cast<char *>("rainSensor");
-    valuesS[2] = data.rain;
+    nvpS->np[0].value = skyTemperature;
+    nvpS->np[1].value = float(data.sensor) / 100.0;
+    nvpS->np[2].value = data.rain;
 
     float rainSensorTemperature = data.rainTemperature;
     if (rainSensorTemperature > 1022)
@@ -710,13 +639,11 @@ bool AAGCloudWatcher::sendData()
     rainSensorTemperature =
         1.0 / (rainSensorTemperature / constants.rainBetaFactor + 1.0 / (ABS_ZERO + 25.0)) - ABS_ZERO;
 
-    namesS[3]  = const_cast<char *>("rainSensorTemperature");
-    valuesS[3] = rainSensorTemperature;
+    nvpS->np[3].value = rainSensorTemperature;
 
     float rainSensorHeater = data.rainHeater;
     rainSensorHeater       = 100.0 * rainSensorHeater / 1023.0;
-    namesS[4]              = const_cast<char *>("rainSensorHeater");
-    valuesS[4]             = rainSensorHeater;
+    nvpS->np[4].value = rainSensorHeater;
 
     float ambientLight = float(data.ldr);
     if (ambientLight > 1022.0)
@@ -728,8 +655,7 @@ bool AAGCloudWatcher::sendData()
         ambientLight = 1.0;
     }
     ambientLight = constants.ldrPullUpResistance / ((1023.0 / ambientLight) - 1.0);
-    namesS[5]    = const_cast<char *>("brightnessSensor");
-    valuesS[5]   = ambientLight;
+    nvpS->np[5].value  = ambientLight;
 
     setParameterValue("WEATHER_BRIGHTNESS", ambientLight);
 
@@ -755,8 +681,7 @@ bool AAGCloudWatcher::sendData()
             1.0 / (ambientTemperature / constants.ambientBetaFactor + 1.0 / (ABS_ZERO + 25.0)) - ABS_ZERO;
     }
 
-    namesS[6]  = const_cast<char *>("ambientTemperatureSensor");
-    valuesS[6] = ambientTemperature;
+    nvpS->np[6].value = ambientTemperature;
 
     INumberVectorProperty *nvpSky = getNumber("skyCorrection");
     float k1                      = getNumberValueFromVector(nvpSky, "k1");
@@ -769,47 +694,24 @@ bool AAGCloudWatcher::sendData()
         skyTemperature - ((k1 / 100.0) * (ambientTemperature - k2 / 10.0) +
                           (k3 / 100.0) * pow(exp(k4 / 1000 * ambientTemperature), (k5 / 100.0)));
 
-    namesS[7]  = const_cast<char *>("correctedInfraredSky");
-    valuesS[7] = correctedTemperature;
-
-    namesS[8]  = const_cast<char *>("windSpeed");
-    valuesS[8] = data.windSpeed;
-
-    INumberVectorProperty *nvpS = getNumber("sensors");
-    IUUpdateNumber(nvpS, valuesS, namesS, N_SENS);
+    nvpS->np[7].value = correctedTemperature;
+    nvpS->np[8].value = data.windSpeed;
+    nvpS->np[9].value = data.humidity;
+    nvpS->np[10].value = data.pressure;
     nvpS->s = IPS_OK;
     IDSetNumber(nvpS, nullptr);
 
-    ISState states[2];
-    char *namesSw[2];
-    namesSw[0] = const_cast<char *>("open");
-    namesSw[1] = const_cast<char *>("close");
-    //IDLog("%d\n", data.switchStatus);
-    if (data.switchStatus == 1)
-    {
-        states[0] = ISS_OFF;
-        states[1] = ISS_ON;
-    }
-    else
-    {
-        states[0] = ISS_ON;
-        states[1] = ISS_OFF;
-    }
-
     ISwitchVectorProperty *svpSw = getSwitch("deviceSwitch");
-    IUUpdateSwitch(svpSw, states, namesSw, 2);
+    svpSw->sp[0].s = (data.switchStatus == 1) ? ISS_OFF : ISS_ON;
+    svpSw->sp[1].s = (data.switchStatus == 1) ? ISS_ON : ISS_OFF;
     svpSw->s = IPS_OK;
     IDSetSwitch(svpSw, nullptr);
-
-    //IDLog("%d\n", data.switchStatus);
 
     setParameterValue("WEATHER_CLOUD", correctedTemperature);
     setParameterValue("WEATHER_RAIN", data.rain);
 
     INumberVectorProperty *consts = getNumber("constants");
     int anemometerStatus          = getNumberValueFromVector(consts, "anemometerStatus");
-
-    //IDLog("%d\n", data.switchStatus);
 
     if (anemometerStatus)
     {
@@ -819,6 +721,10 @@ bool AAGCloudWatcher::sendData()
     {
         setParameterValue("WEATHER_WIND_SPEED", 0);
     }
+
+    if (data.humidity > 0)
+        setParameterValue("WEATHER_HUMIDITY", data.humidity);
+
     return true;
 }
 
@@ -966,7 +872,6 @@ bool AAGCloudWatcher::resetData()
 bool AAGCloudWatcher::sendConstants()
 {
     INumberVectorProperty *nvp = getNumber("constants");
-
     ITextVectorProperty *tvp = getText("FW");
 
     int r = cwc->getConstants(&constants);
@@ -975,6 +880,8 @@ bool AAGCloudWatcher::sendConstants()
     {
         return false;
     }
+
+    m_FirmwareVersion = constants.firmwareVersion;
 
     const int N_CONSTANTS = 11;
     double values[N_CONSTANTS];
@@ -1017,13 +924,9 @@ bool AAGCloudWatcher::sendConstants()
     nvp->s = IPS_OK;
     IDSetNumber(nvp, nullptr);
 
-    char *valuesT[1];
-    char *namesT[1];
-
-    namesT[0]  = const_cast<char *>("firmwareVersion");
-    valuesT[0] = constants.firmwareVersion;
-
-    IUUpdateText(tvp, valuesT, namesT, 1);
+    char version[8] = {0};
+    snprintf(version, 8, "%.2f", m_FirmwareVersion);
+    IUSaveText(&tvp->tp[0], version);
     tvp->s = IPS_OK;
     IDSetText(tvp, nullptr);
     return true;

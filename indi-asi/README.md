@@ -6,10 +6,12 @@ COMPILING
 
 Go to the directory where  you unpacked indi_asi sources and do:
 
+```
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 make
+```
 
 should build the indi_asicam executable.
 
@@ -17,7 +19,7 @@ RUNNING
 
 The Driver can run multiple devices if required, to run the driver:
 
-indiserver -v indi_asi_ccd
+`indiserver -v indi_asi_ccd`
 
 AVAILABLE CONTROLS
 

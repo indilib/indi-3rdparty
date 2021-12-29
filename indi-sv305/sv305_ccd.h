@@ -118,6 +118,10 @@ class Sv305CCD : public INDI::CCD
         ISwitchVectorProperty StretchSP;
         enum { STRETCH_OFF, STRETCH_X2, STRETCH_X4, STRETCH_X8, STRETCH_X16 };
 
+        // ROI offsets
+        int x_offset;
+	int y_offset;
+
         // streaming ?
         bool streaming;
         // streaming mutex and thread control
@@ -152,10 +156,11 @@ class Sv305CCD : public INDI::CCD
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
+	// NOTE : SV305M PRO d'ont support RAW8 and RAW16, only Y8 and Y16
         ISwitch FormatS[2];
         ISwitchVectorProperty FormatSP;
-        enum { FORMAT_RAW12, FORMAT_RAW8};
-        SVB_IMG_TYPE frameFormatMapping[2] = {SVB_IMG_RAW12, SVB_IMG_RAW8};
+        enum { FORMAT_RAW12, FORMAT_RAW8, FORMAT_Y16, FORMAT_Y8};
+        SVB_IMG_TYPE frameFormatMapping[4] = {SVB_IMG_RAW12, SVB_IMG_RAW8, SVB_IMG_Y16, SVB_IMG_Y8};
         int frameFormat;
         const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
 

@@ -449,6 +449,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
         case 0x23:
             strcpy(boardinfo[0], "EQ6-R Pro");
             break;
+        case 0x31:
+            strcpy(boardinfo[0], "EQ5 Pro");
+            break;
         case 0x80:
             strcpy(boardinfo[0], "GT");
             break;
@@ -561,12 +564,13 @@ bool Skywatcher::HasAuxEncoders()
 
 bool Skywatcher::HasPPEC()
 {
-    return (AxisFeatures[Axis1].hasPPEC) && (AxisFeatures[Axis2].hasPPEC);
+    return AxisFeatures[Axis1].hasPPEC;
 }
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x23 || MountCode == 0xA5;
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x23
+           || MountCode == 0xA5;
 }
 
 bool Skywatcher::HasSnapPort2()
@@ -1297,14 +1301,14 @@ void Skywatcher::SetST4GuideRate(SkywatcherAxis axis, unsigned char r)
     //read_eqmod();
 }
 
-void Skywatcher::TurnPPECTraining(SkywatcherAxis axis, bool on)
+void Skywatcher::TurnPPECTraining(bool on)
 {
     uint32_t command;
     if (on)
         command = START_PPEC_TRAINING_CMD;
     else
         command = STOP_PPEC_TRAINING_CMD;
-    SetFeature(axis, command);
+    SetFeature(Axis1, command);
 }
 
 void Skywatcher::SetLEDBrightness(uint8_t value)
@@ -1324,50 +1328,23 @@ void Skywatcher::SetLEDBrightness(uint8_t value)
     }
 }
 
-void Skywatcher::TurnRAPPECTraining(bool on)
-{
-    TurnPPECTraining(Axis1, on);
-}
-void Skywatcher::TurnDEPPECTraining(bool on)
-{
-    TurnPPECTraining(Axis2, on);
-}
-
-void Skywatcher::TurnPPEC(SkywatcherAxis axis, bool on)
+void Skywatcher::TurnPPEC(bool on)
 {
     uint32_t command;
     if (on)
         command = TURN_PPEC_ON_CMD;
     else
         command = TURN_PPEC_OFF_CMD;
-    SetFeature(axis, command);
+    SetFeature(Axis1, command);
 }
 
-void Skywatcher::TurnRAPPEC(bool on)
-{
-    TurnPPEC(Axis1, on);
-}
-void Skywatcher::TurnDEPPEC(bool on)
-{
-    TurnPPEC(Axis2, on);
-}
-
-void Skywatcher::GetPPECStatus(SkywatcherAxis axis, bool *intraining, bool *inppec)
+void Skywatcher::GetPPECStatus(bool *intraining, bool *inppec)
 {
     uint32_t features = 0;
-    GetFeature(axis, GET_FEATURES_CMD);
+    GetFeature(Axis1, GET_FEATURES_CMD);
     features    = Revu24str2long(response + 1);
-    *intraining = AxisFeatures[axis].inPPECTraining = features & 0x00000010;
-    *inppec = AxisFeatures[axis].inPPEC = features & 0x00000020;
-}
-void Skywatcher::GetRAPPECStatus(bool *intraining, bool *inppec)
-{
-    return GetPPECStatus(Axis1, intraining, inppec);
-}
-
-void Skywatcher::GetDEPPECStatus(bool *intraining, bool *inppec)
-{
-    return GetPPECStatus(Axis2, intraining, inppec);
+    *intraining = AxisFeatures[Axis1].inPPECTraining = features & 0x00000010;
+    *inppec = AxisFeatures[Axis1].inPPEC = features & 0x00000020;
 }
 
 void Skywatcher::TurnSnapPort(SkywatcherAxis axis, bool on)

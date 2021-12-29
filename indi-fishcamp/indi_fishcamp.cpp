@@ -41,31 +41,31 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<FishCampCCD>> cameras;
-public:
-    Loader()
-    {
-        // initialize the driver framework
-        IDLog("About to call fcUsb_init()\n");
-        fcUsb_init();
-
-        IDLog("About to call set logging\n");
-        fcUsb_setLogging(false);
-
-        IDLog("About to call find Cameras\n");
-        int cameraCount = fcUsb_FindCameras();
-
-        if(cameraCount == -1)
+        std::deque<std::unique_ptr<FishCampCCD>> cameras;
+    public:
+        Loader()
         {
-            IDLog("Calling FindCameras again because at least 1 RAW camera was found\n");
-            cameraCount = fcUsb_FindCameras();
+            // initialize the driver framework
+            IDLog("About to call fcUsb_init()\n");
+            fcUsb_init();
+
+            IDLog("About to call set logging\n");
+            fcUsb_setLogging(false);
+
+            IDLog("About to call find Cameras\n");
+            int cameraCount = fcUsb_FindCameras();
+
+            if(cameraCount == -1)
+            {
+                IDLog("Calling FindCameras again because at least 1 RAW camera was found\n");
+                cameraCount = fcUsb_FindCameras();
+            }
+
+            IDLog("Found %d fishcamp cameras.\n", cameraCount);
+
+            for (int i = 0; i < cameraCount; i++)
+                cameras.push_back(std::unique_ptr<FishCampCCD>(new FishCampCCD(i + 1)));
         }
-
-        IDLog("Found %d fishcamp cameras.\n", cameraCount);
-
-        for (int i = 0; i < cameraCount; i++)
-            cameras.push_back(std::unique_ptr<FishCampCCD>(new FishCampCCD(i + 1)));
-    }
 } loader;
 
 FishCampCCD::FishCampCCD(int CamNum)
@@ -507,8 +507,8 @@ void FishCampCCD::TimerHit()
             }
 
             // If we're within threshold, let's make it BUSY ---> OK
-            if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
-                TemperatureNP.s = IPS_OK;
+            //            if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
+            //                TemperatureNP.s = IPS_OK;
 
             IDSetNumber(&TemperatureNP, nullptr);
             break;

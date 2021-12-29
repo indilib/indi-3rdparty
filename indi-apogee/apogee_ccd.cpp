@@ -1340,8 +1340,8 @@ void ApogeeCCD::TimerHit()
                 return;
             }
 
-            if (fabs(TemperatureN[0].value - ccdTemp) <= TEMP_THRESHOLD)
-                TemperatureNP.s = IPS_OK;
+            //            if (fabs(TemperatureN[0].value - ccdTemp) <= TEMP_THRESHOLD)
+            //                TemperatureNP.s = IPS_OK;
 
             TemperatureN[0].value = ccdTemp;
             IDSetNumber(&TemperatureNP, nullptr);

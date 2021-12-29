@@ -19,15 +19,8 @@
 
 */
 
-// #define Nncam_AwbOnce   Nncam_AwbOnePush
-// #define Nncam_AbbOnce   Nncam_AbbOnePush
-
-#ifdef BUILD_MALLINCAM
-#define Toupcam_AwbOnce Toupcam_AwbOnePush
-#define Toupcam_AbbOnce Toupcam_AbbOnePush
-#endif
-
 #include "indi_toupbase.h"
+#include "oem_cameras.h"
 
 #include "config.h"
 
@@ -100,23 +93,34 @@ std::map<int, std::string> ToupBase::errorCodes =
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ToupBase>> cameras;
-    XP(DeviceV2) pCameraInfo[CP(MAX)];
-public:
-    Loader()
-    {
-        int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
-        if (iConnectedCamerasCount <= 0)
+        std::deque<std::unique_ptr<ToupBase>> cameras;
+        XP(DeviceV2) pCameraInfo[CP(MAX)];
+    public:
+        Loader()
         {
-            IDLog("No Toupcam detected. Power on?");
-            return;
-        }
+            int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
+            if (iConnectedCamerasCount >= 0)
+            {
+                int iCamInfosLeft = CP(MAX) - iConnectedCamerasCount;
+                int iConnectedOemCamerasCount;
 
-        for (int i = 0; i < iConnectedCamerasCount; i++)
-        {
-            cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+                iConnectedOemCamerasCount = OEMCamEnum(&pCameraInfo[iConnectedCamerasCount], iCamInfosLeft);
+                if (iConnectedOemCamerasCount > 0)
+                {
+                    iConnectedCamerasCount += iConnectedOemCamerasCount;
+                }
+            }
+            if (iConnectedCamerasCount <= 0)
+            {
+                IDLog("No Toupcam detected. Power on?");
+                return;
+            }
+
+            for (int i = 0; i < iConnectedCamerasCount; i++)
+            {
+                cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+            }
         }
-    }
 } loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
@@ -129,6 +133,14 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 
     snprintf(this->name, MAXINDIDEVICE, "%s %s", getDefaultName(), instance->displayname);
     setDeviceName(this->name);
+
+    m_CaptureTimeout.callOnTimeout(std::bind(&ToupBase::captureTimeoutHandler, this));
+    m_CaptureTimeout.setSingleShot(true);
+}
+
+ToupBase::~ToupBase()
+{
+    m_CaptureTimeout.stop();
 }
 
 const char *ToupBase::getDefaultName()
@@ -242,6 +254,13 @@ bool ToupBase::initProperties()
     IUFillNumberVector(&ADCNP, ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB,  IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
+    /// Timeout Factor
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillNumber(&TimeoutFactorN[0], "VALUE", "Factor", "%.f", 1, 10, 1, 1.2);
+    IUFillNumberVector(&TimeoutFactorNP, TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,  IP_RW,
+                       60, IPS_IDLE);
+
+    ///////////////////////////////////////////////////////////////////////////////////
     /// Gain Conversion settings
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&GainConversionN[TC_HCG_THRESHOLD], "HCG Threshold", "HCG Threshold", "%.f", 0, 1000, 100, 900);
@@ -294,10 +313,6 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Video Format
     ///////////////////////////////////////////////////////////////////////////////////
-    /// RGB Mode but 8 bits grayscale
-    //IUFillSwitch(&VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
-    /// RGB Mode but 16 bits grayscale
-    //IUFillSwitch(&VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
     /// RGB Mode with RGB24 color
     IUFillSwitch(&VideoFormatS[TC_VIDEO_COLOR_RGB], "TC_VIDEO_COLOR_RGB", "RGB", ISS_OFF);
     /// Raw mode (8 to 16 bit)
@@ -310,6 +325,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitchVector(&ResolutionSP, ResolutionS, 0, getDeviceName(), "CCD_RESOLUTION", "Resolution", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
+    IUGetConfigOnSwitchIndex(getDeviceName(), ResolutionSP.name, &m_ConfigResolutionIndex);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
@@ -362,6 +378,7 @@ bool ToupBase::updateProperties()
         if (m_MonoCamera == false)
             defineProperty(&WBAutoSP);
 
+        defineProperty(&TimeoutFactorNP);
         defineProperty(&ControlNP);
         defineProperty(&AutoControlSP);
         defineProperty(&AutoExposureSP);
@@ -412,6 +429,7 @@ bool ToupBase::updateProperties()
         if (m_MonoCamera == false)
             deleteProperty(WBAutoSP.name);
 
+        deleteProperty(TimeoutFactorNP.name);
         deleteProperty(ControlNP.name);
         deleteProperty(AutoControlSP.name);
         deleteProperty(AutoExposureSP.name);
@@ -722,9 +740,25 @@ void ToupBase::setupParams()
     }
 
     // Get active resolution index
-    uint32_t currentResolutionIndex = 0;
+    uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
     rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
-    ResolutionS[currentResolutionIndex].s = ISS_ON;
+    finalResolutionIndex = currentResolutionIndex;
+    // If we have a config resolution index, then prefer it over the current resolution index.
+    finalResolutionIndex = (m_ConfigResolutionIndex >= 0
+                            && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
+    // In case there is NO previous resolution set
+    // then select the LOWER resolution on arm architecture
+    // since this has less chance of failure. If the user explicitly selects any resolution
+    // it would be saved in the config and this will not apply.
+#if defined(__arm__) || defined (__aarch64__)
+    if (m_ConfigResolutionIndex == -1)
+        finalResolutionIndex = ResolutionSP.nsp - 1;
+#endif
+    ResolutionS[finalResolutionIndex].s = ISS_ON;
+
+    // If final resolution index different from current, let's set it.
+    if (finalResolutionIndex != currentResolutionIndex)
+        FP(put_eSize(m_CameraHandle, finalResolutionIndex));
 
     SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
                  m_Instance->model->ypixsz);
@@ -788,7 +822,6 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
@@ -800,7 +833,6 @@ void ToupBase::setupParams()
     {
         m_HasHeatUp = true;
     }
-#endif
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
@@ -912,28 +944,28 @@ void ToupBase::setupParams()
     SetTimer(getCurrentPollingPeriod());
 
     //Start pull callback
-    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-    if (FAILED(rc))
-    {
-        LOGF_ERROR("Failed to start camera pull mode. %s", errorCodes[rc].c_str());
-        if (Disconnect())
-            setConnected(false);
-        updateProperties();
-        return;
-    }
-
-    LOG_DEBUG("Starting event callback in pull mode.");
-
-    // Start push callback
-    //    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &TOUPCAM::pushCB, this, &TOUPCAM::eventCB, this)) != 0))
+    //    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+    //    if (FAILED(rc))
     //    {
-    //        LOGF_ERROR("Failed to start camera push mode. %s", errorCodes[rc].c_str());
-    //        Disconnect();
+    //        LOGF_ERROR("Failed to start camera pull mode. %s", errorCodes[rc].c_str());
+    //        if (Disconnect())
+    //            setConnected(false);
     //        updateProperties();
     //        return;
     //    }
 
-    //    LOG_DEBUG("Starting event callback in push mode.");
+    //    LOG_DEBUG("Starting event callback in pull mode.");
+
+    // Start push callback
+    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &ToupBase::pushCB, this, &ToupBase::eventCB, this)) != 0))
+    {
+        LOGF_ERROR("Failed to start camera push mode. %s", errorCodes[rc].c_str());
+        Disconnect();
+        updateProperties();
+        return;
+    }
+
+    LOG_DEBUG("Starting event callback in push mode.");
 }
 
 void ToupBase::allocateFrameBuffer()
@@ -1242,6 +1274,17 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             return true;
         }
 
+        //////////////////////////////////////////////////////////////////////
+        /// Timeout factor
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, TimeoutFactorNP.name))
+        {
+            IUUpdateNumber(&TimeoutFactorNP, values, names, n);
+            TimeoutFactorNP.s = IPS_OK;
+            IDSetNumber(&TimeoutFactorNP, nullptr);
+            return true;
+        }
+
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1413,24 +1456,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 LOG_DEBUG("Stopping camera to change video mode.");
                 FP(Stop(m_CameraHandle));
 
-                //                int rc = FP(put_Option(m_CameraHandle, CP(OPTION_RGB), currentIndex+3)));
-                //                if (rc != 0)
-                //                {
-                //                    LOGF_ERROR("Failed to set RGB mode %d: %s", currentIndex+3, errorCodes[rc].c_str());
-                //                    VideoFormatSP.s = IPS_ALERT;
-                //                    IUResetSwitch(&VideoFormatSP);
-                //                    VideoFormatS[prevIndex].s = ISS_ON;
-                //                    IDSetSwitch(&VideoFormatSP, nullptr);
-
-                //                    // Restart Capture
-                //                    FP(StartPullModeWithCallback(m_CameraHandle, &TOUPCAM::eventCB, this));
-                //                    LOG_DEBUG("Restarting event callback after video mode change failed.");
-
-                //                    return true;
-                //                }
-                //                else
-                //                    LOGF_DEBUG("Set CP(OPTION_RGB --> %d"), currentIndex+3));
-
                 rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), currentIndex));
                 if (FAILED(rc))
                 {
@@ -1502,26 +1527,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                     IDSetText(&BayerTP, nullptr);
                     m_BitsPerPixel = m_RawBitsPerPixel;
                 }
-
-                //                if (currentIndex == TC_VIDEO_COLOR_RGB)
-                //                {
-                //                    int rc = FP(put_Option(m_CameraHandle, CP(OPTION_RGB), 0)));
-                //                    if (rc != 0)
-                //                    {
-                //                        LOGF_ERROR("Failed to set RGB mode %d: %s", currentIndex+3, errorCodes[rc].c_str());
-                //                        VideoFormatSP.s = IPS_ALERT;
-                //                        IUResetSwitch(&VideoFormatSP);
-                //                        VideoFormatS[prevIndex].s = ISS_ON;
-                //                        IDSetSwitch(&VideoFormatSP, nullptr);
-
-                //                        // Restart Capture
-                //                        FP(StartPullModeWithCallback(m_CameraHandle, &TOUPCAM::eventCB, this));
-                //                        LOG_DEBUG("Restarting event callback after video mode change failed.");
-
-                //                        return true;
-                //                    }
-                //                }
-
             }
 
             m_CurrentVideoFormat = currentIndex;
@@ -1538,6 +1543,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             // Restart Capture
             FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
             LOG_DEBUG("Restarting event callback after video mode change.");
+
+            saveConfig(true, VideoFormatSP.name);
 
             return true;
         }
@@ -1639,12 +1646,18 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
 
             int preIndex = IUFindOnSwitchIndex(&ResolutionSP);
             IUUpdateSwitch(&ResolutionSP, states, names, n);
+            int targetIndex = IUFindOnSwitchIndex(&ResolutionSP);
+
+            if (m_ConfigResolutionIndex == targetIndex)
+            {
+                ResolutionSP.s = IPS_OK;
+                IDSetSwitch(&ResolutionSP, nullptr);
+                return true;
+            }
 
             // Stop capture
             LOG_DEBUG("Stopping camera to change resolution.");
             FP(Stop(m_CameraHandle));
-
-            int targetIndex = IUFindOnSwitchIndex(&ResolutionSP);
 
             HRESULT rc = FP(put_eSize(m_CameraHandle, targetIndex));
             if (FAILED(rc))
@@ -1660,6 +1673,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", ResolutionS[targetIndex].label);
                 allocateFrameBuffer();
+                m_ConfigResolutionIndex = targetIndex;
+                saveConfig(true, ResolutionSP.name);
             }
 
             IDSetSwitch(&ResolutionSP, nullptr);
@@ -1932,18 +1947,32 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-    //    int timeMS = uSecs / 1000 - 50;
-    //    if (timeMS <= 0)
-    //        sendImageCallBack();
-    //    else if (static_cast<uint32_t>(timeMS) < getCurrentPollingPeriod())
-    //        IEAddTimer(timeMS, &TOUPCAM::sendImageCB, this);
+    bool capturedStarted = false;
 
-    // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+    // Snap still image
+    if (m_CanSnap)
     {
-        LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
-        return false;
+        if (SUCCEEDED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+            capturedStarted = true;
+        else
+        {
+            LOGF_WARN("Failed to snap exposure. Error: %s. Switching to regular exposure...", errorCodes[rc].c_str());
+            m_CanSnap = false;
+        }
     }
+
+    if (!capturedStarted)
+    {
+        // Trigger an exposure
+        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+        {
+            LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
+            return false;
+        }
+    }
+
+    // Timeout 500ms after expected duration
+    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
 
     return true;
 }
@@ -1953,7 +1982,46 @@ bool ToupBase::AbortExposure()
     FP(Trigger(m_CameraHandle, 0));
     InExposure = false;
     m_TimeoutRetries = 0;
+    m_CaptureTimeoutCounter = 0;
+    m_CaptureTimeout.stop();
     return true;
+}
+
+void ToupBase::captureTimeoutHandler()
+{
+    HRESULT rc = 0;
+
+    if (!isConnected())
+        return;
+
+    m_CaptureTimeoutCounter++;
+
+    if (m_CaptureTimeoutCounter >= 3)
+    {
+        m_CaptureTimeoutCounter = 0;
+        LOG_ERROR("Camera timed out multiple times. Exposure failed.");
+        PrimaryCCD.setExposureFailed();
+        return;
+    }
+
+    // Snap still image
+    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&ResolutionSP)))))
+    {
+        LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes[rc].c_str());
+        return;
+    }
+    else
+    {
+        // Trigger an exposure
+        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+        {
+            LOGF_ERROR("Failed to trigger exposure. Error: %s", errorCodes[rc].c_str());
+            return;
+        }
+    }
+
+    LOG_DEBUG("Capture timed out, restarting exposure...");
+    m_CaptureTimeout.start(ExposureRequest * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -2065,10 +2133,10 @@ void ToupBase::TimerHit()
 
             case IPS_BUSY:
                 // If we're within threshold, let's make it BUSY ---> OK
-                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
-                {
-                    TemperatureNP.s = IPS_OK;
-                }
+                //                if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
+                //                {
+                //                    TemperatureNP.s = IPS_OK;
+                //                }
                 IDSetNumber(&TemperatureNP, nullptr);
                 break;
         }
@@ -2267,6 +2335,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
+    IUSaveConfigNumber(fp, &TimeoutFactorNP);
     if (HasCooler())
         IUSaveConfigSwitch(fp, &CoolerSP);
     IUSaveConfigNumber(fp, &ControlNP);
@@ -2278,6 +2347,8 @@ bool ToupBase::saveConfigItems(FILE * fp)
         IUSaveConfigSwitch(fp, &WBAutoSP);
 
     IUSaveConfigSwitch(fp, &VideoFormatSP);
+    IUSaveConfigSwitch(fp, &ResolutionSP);
+
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
     return true;
@@ -2338,20 +2409,24 @@ void ToupBase::pushCB(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap
 
 void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap)
 {
-    //int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
-
     INDI_UNUSED(bSnap);
 
     if (Streamer->isStreaming() || Streamer->isRecording())
     {
-        //std::unique_lock<std::mutex> guard(ccdBufferLock);
-        //HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
-        //guard.unlock();
-        //if (rc >= 0)
         Streamer->newFrame(reinterpret_cast<const uint8_t*>(pData), PrimaryCCD.getFrameBufferSize());
     }
     else if (InExposure)
     {
+        m_CaptureTimeoutCounter = 0;
+        m_CaptureTimeout.stop();
+
+        // Estimate download time
+        struct timeval curtime, diff;
+        gettimeofday(&curtime, nullptr);
+        timersub(&curtime, &ExposureEnd, &diff);
+        m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+        LOGF_DEBUG("New download estimate %.f ms", m_DownloadEstimation);
+
         InExposure  = false;
         PrimaryCCD.setExposureLeft(0);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
@@ -2363,9 +2438,6 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
             buffer = static_cast<uint8_t*>(malloc(size));
         }
 
-        //        std::unique_lock<std::mutex> guard(ccdBufferLock);
-        //        HRESULT rc = FP(PullImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
-        //        guard.unlock();
         if (pData == nullptr)
         {
             LOG_ERROR("Failed to push image.");
@@ -2419,17 +2491,25 @@ void ToupBase::eventCB(unsigned event, void* pCtx)
 void ToupBase::eventPullCallBack(unsigned event)
 {
     LOGF_DEBUG("Event %#04X", event);
-
-    //m_lastEventID = event;
-
     switch (event)
     {
         case CP(EVENT_EXPOSURE: )
-                break;
+                m_CaptureTimeoutCounter = 0;
+            m_CaptureTimeout.stop();
+            break;
         case CP(EVENT_TEMPTINT: )
                 break;
         case CP(EVENT_IMAGE: )
             {
+                m_CaptureTimeoutCounter = 0;
+                m_CaptureTimeout.stop();
+
+                // Estimate download time
+                struct timeval curtime, diff;
+                gettimeofday(&curtime, nullptr);
+                timersub(&curtime, &ExposureEnd, &diff);
+                m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+
                 m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;
                 memset(&info, 0, sizeof(XP(FrameInfoV2)));
@@ -2514,25 +2594,110 @@ void ToupBase::eventPullCallBack(unsigned event)
             break;
         case CP(EVENT_STILLIMAGE: )
             {
+                m_CaptureTimeoutCounter = 0;
+                m_CaptureTimeout.stop();
+                m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;
                 memset(&info, 0, sizeof(XP(FrameInfoV2)));
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), 24, &info));
-                guard.unlock();
-                if (FAILED(rc))
+
+                int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+
+                if (Streamer->isStreaming() || Streamer->isRecording())
                 {
-                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
-                    PrimaryCCD.setExposureFailed();
+                    std::unique_lock<std::mutex> guard(ccdBufferLock);
+                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                    guard.unlock();
+                    if (SUCCEEDED(rc))
+                        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
+                }
+                else if (InExposure)
+                {
+                    InExposure = false;
+                    PrimaryCCD.setExposureLeft(0);
+                    uint8_t *buffer = PrimaryCCD.getFrameBuffer();
+
+                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+
+                    std::unique_lock<std::mutex> guard(ccdBufferLock);
+                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                    guard.unlock();
+                    if (FAILED(rc))
+                    {
+                        LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+                        PrimaryCCD.setExposureFailed();
+                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                            free(buffer);
+                    }
+                    else
+                    {
+                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        {
+                            std::unique_lock<std::mutex> guard(ccdBufferLock);
+                            uint8_t *image  = PrimaryCCD.getFrameBuffer();
+                            uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
+                            uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
+
+                            uint8_t *subR = image;
+                            uint8_t *subG = image + width * height;
+                            uint8_t *subB = image + width * height * 2;
+                            int size      = width * height * 3 - 3;
+
+                            // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
+                            for (int i = 0; i <= size; i += 3)
+                            {
+                                *subR++ = buffer[i];
+                                *subG++ = buffer[i + 1];
+                                *subB++ = buffer[i + 2];
+                            }
+
+                            guard.unlock();
+                            free(buffer);
+                        }
+
+                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                                   info.timestamp);
+                        ExposureComplete(&PrimaryCCD);
+                    }
                 }
                 else
                 {
-                    PrimaryCCD.setExposureLeft(0);
-                    InExposure  = false;
-                    ExposureComplete(&PrimaryCCD);
-                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
-                               info.timestamp);
+                    // Fix proposed by Seven Watt
+                    // Check https://github.com/indilib/indi-3rdparty/issues/112
+                    //
+                    // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+                    HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
+                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                    if (FAILED(rc))
+                    {
+                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
+                    }
                 }
             }
+            break;
+            //    {
+            //                XP(FrameInfoV2) info;
+            //                memset(&info, 0, sizeof(XP(FrameInfoV2)));
+            //                std::unique_lock<std::mutex> guard(ccdBufferLock);
+            //                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), 24, &info));
+            //                guard.unlock();
+            //                if (FAILED(rc))
+            //                {
+            //                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+            //                    PrimaryCCD.setExposureFailed();
+            //                }
+            //                else
+            //                {
+            //                    PrimaryCCD.setExposureLeft(0);
+            //                    InExposure  = false;
+            //                    ExposureComplete(&PrimaryCCD);
+            //                    LOGF_DEBUG("Image captured. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+            //                               info.timestamp);
+            //                }
+            //            }
             break;
         case CP(EVENT_WBGAIN: )
                 LOG_DEBUG("White Balance Gain changed.");

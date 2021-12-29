@@ -39,36 +39,36 @@ const char *RA_DEC_TAB = "RA / DEC";
 
 static class Loader
 {
-private:
-    std::unique_ptr<LX200StarGo> telescope;
-    std::unique_ptr<LX200StarGoFocuser> focuserAux1;
+    private:
+        std::unique_ptr<LX200StarGo> telescope;
+        std::unique_ptr<LX200StarGoFocuser> focuserAux1;
 
-public:
-    Loader()
-    {
-        telescope.reset(new LX200StarGo());
-        // Hint: focuserAux1 is intentionally NOT initialized, since it is a sub device
-        //       of LX200StarGo and can be activated and deactivated from the mount controls.
-    }
+    public:
+        Loader()
+        {
+            telescope.reset(new LX200StarGo());
+            // Hint: focuserAux1 is intentionally NOT initialized, since it is a sub device
+            //       of LX200StarGo and can be activated and deactivated from the mount controls.
+        }
 
-    LX200StarGoFocuser *getFocuserAux1()
-    {
-        activateFocuserAux1(true);
-        return focuserAux1.get();
-    }
-    // we need to clear it if the AUX1 focuser is disabled in order to remove the device being visible
-    void activateFocuserAux1(bool activate)
-    {
-        if (activate == true && focuserAux1.get() == nullptr)
-            focuserAux1.reset(new LX200StarGoFocuser(telescope.get(), "AUX1 Focuser"));
-        else if (activate == false)
-            focuserAux1.reset();
-    }
-    // is the AUX1 focuser activated?
-    bool isFocuserAux1Activated()
-    {
-        return (focuserAux1.get() != nullptr);
-    }
+        LX200StarGoFocuser *getFocuserAux1()
+        {
+            activateFocuserAux1(true);
+            return focuserAux1.get();
+        }
+        // we need to clear it if the AUX1 focuser is disabled in order to remove the device being visible
+        void activateFocuserAux1(bool activate)
+        {
+            if (activate == true && focuserAux1.get() == nullptr)
+                focuserAux1.reset(new LX200StarGoFocuser(telescope.get(), "AUX1 Focuser"));
+            else if (activate == false)
+                focuserAux1.reset();
+        }
+        // is the AUX1 focuser activated?
+        bool isFocuserAux1Activated()
+        {
+            return (focuserAux1.get() != nullptr);
+        }
 } loader;
 
 /**************************************************
@@ -948,16 +948,9 @@ bool LX200StarGo::updateLocation(double latitude, double longitude, double eleva
     return true;
 }
 
-double LX200StarGo::LocalSiderealTime(double longitude)
-{
-    double lst = get_local_sidereal_time(longitude);
-    //    double SD = ln_get_apparent_sidereal_time(ln_get_julian_from_sys()) - (360.0 - longitude) / 15.0;
-    //    double lst =  range24(SD);
-    return lst;
-}
 bool LX200StarGo::setLocalSiderealTime(double longitude)
 {
-    double lst = LocalSiderealTime(longitude);
+    double lst = get_local_sidereal_time(longitude);
     LOGF_DEBUG("Current local sidereal time = %lf", lst);
     int h = 0, m = 0, s = 0;
     getSexComponents(lst, &h, &m, &s);
@@ -1110,7 +1103,7 @@ bool LX200StarGo::getLST_String(char* input)
         return false;
     }
     // determine local sidereal time
-    double lst = LocalSiderealTime(siteLong);
+    double lst = get_local_sidereal_time(siteLong);
     int h = 0, m = 0, s = 0;
     LOGF_DEBUG("Current local sidereal time = %.8lf", lst);
     // translate into hh:mm:ss
@@ -2019,7 +2012,7 @@ bool LX200StarGo::setTrackingAdjustment(double adjustRA)
     if (adjustRA == 0.0)
         LOG_INFO("RA tracking adjustment cleared.");
     else
-        LOGF_INFO("RA tracking adjustment to %+0.2f%% succeded.", adjustRA);
+        LOGF_INFO("RA tracking adjustment to %+0.2f%% succeeded.", adjustRA);
 
     return true;
 }

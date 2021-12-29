@@ -156,7 +156,7 @@ class LX200StarGo : public LX200Telescope
         virtual void getBasicData() override;
         virtual bool ReadScopeStatus() override;
         virtual bool Park() override;
-        virtual void SetParked(bool isparked);
+        virtual void SetParked(bool isparked) override;
         virtual bool UnPark() override;
         virtual bool saveConfigItems(FILE *fp) override;
         virtual bool Goto(double ra, double dec) override;
@@ -174,7 +174,11 @@ class LX200StarGo : public LX200Telescope
         bool setSystemSlewSpeedMode(int index);
 
         struct timespec mount_request_delay = {0, 50000000L};
-        void setMountRequestDelay(int secs, long nanosecs) {mount_request_delay.tv_sec = secs; mount_request_delay.tv_nsec = nanosecs; };
+        void setMountRequestDelay(int secs, long nanosecs)
+        {
+            mount_request_delay.tv_sec = secs;
+            mount_request_delay.tv_nsec = nanosecs;
+        };
 
         // autoguiding
         virtual bool setGuidingSpeeds(int raSpeed, int decSpeed);
@@ -183,8 +187,7 @@ class LX200StarGo : public LX200Telescope
         virtual bool ParseMotionState(char* state);
 
         // location
-        virtual bool sendScopeLocation();
-        double LocalSiderealTime(double longitude);
+        virtual bool sendScopeLocation() override;
         bool setLocalSiderealTime(double longitude);
         virtual bool updateLocation(double latitude, double longitude, double elevation) override;
         virtual bool getSiteLatitude(double *siteLat);

@@ -143,7 +143,7 @@ void AltaCcdAcqParams::SetSpeed( const Apg::AdcSpeed speed )
             if( GetNumCols2Bin() > GetMaxFastBinCols() )
             {
                 std::stringstream msg;
-                msg << "Reseting imaging columns to " << GetMaxFastBinCols();
+                msg << "Resetting imaging columns to " << GetMaxFastBinCols();
                 msg << " because current bin value of " << GetNumCols2Bin();
                 msg << " is not supported in fast mode.";
                 std::string vinfo = apgHelper::mkMsg( m_fileName, msg.str(), __LINE__);
@@ -171,7 +171,7 @@ void AltaCcdAcqParams::SetSpeed( const Apg::AdcSpeed speed )
             if( GetNumCols2Bin() > GetMaxNormalBinCols() )
             {
                 std::stringstream msg;
-                msg << "Reseting imaging columns to " << GetMaxNormalBinCols();
+                msg << "Resetting imaging columns to " << GetMaxNormalBinCols();
                 msg << " because current bin value of " << GetNumCols2Bin();
                 msg << " is not supported in nomral mode.";
                 std::string vinfo = apgHelper::mkMsg( m_fileName, msg.str(), __LINE__);

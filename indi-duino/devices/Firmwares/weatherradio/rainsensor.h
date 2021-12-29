@@ -25,7 +25,7 @@ struct rainsensor_data {
 
 
 // function that the interrupt calls to increment the rain event counter
-void rain_event (rainsensor_data &data) {
+void IRAM_ATTR rain_event (rainsensor_data &data) {
 
   unsigned long now = millis();
   if ((now - data.lastInterrupt) > 200 ) { // debounce the switch contact.
@@ -62,7 +62,7 @@ void updateRainSensor(rainsensor_data &data, unsigned long interval_length, floa
 
 
 
-void serializeRainSensor(JsonDocument &doc, rainsensor_data &data, String name) {
+void serializeRainSensor(JsonObject &doc, rainsensor_data &data, String name) {
 
   JsonObject json = doc.createNestedObject(name);
   json["init"] = data.status;

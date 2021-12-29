@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _STATEMACHINE_H_INCLUDED_
-#define _STATEMACHINE_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -30,7 +29,7 @@
 #include <tuple>
 #include <limits>
 #include <mutex>
-#include "Config.hpp"
+#include "config.h"
 
 namespace TelescopeMountControl
 {
@@ -128,7 +127,7 @@ class StateMachine
         }
 
         //submit a signal to the state machine and do a transistion.
-        //the notify interface gets called when a transition or indefined transition occured.
+        //the notify interface gets called when a transition or indefined transition occurred.
         bool DoTransition(SignalType signal)
         {
             std::lock_guard<std::mutex> guard(mMutex); //lock this function call to avoid concurrent modification.
@@ -187,6 +186,3 @@ class StateMachine
         }
 };
 }
-
-
-#endif

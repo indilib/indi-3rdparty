@@ -1,0 +1,34 @@
+Source: indi-playerone
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5),
+               cdbs,
+               cmake,
+               libusb-1.0-0-dev,
+               pkg-config,
+               libcfitsio3-dev|libcfitsio-dev,
+               libindi-dev,
+               zlib1g-dev,
+               libnova-dev,
+               libplayerone
+Standards-Version: 3.9.1
+
+Package: indi-playerone
+Architecture: amd64 arm64 armhf
+Depends: ${shlibs:Depends}, ${misc:Depends}, libplayerone
+Description: INDI Driver for Playerone based cameras
+ Driver for Playerone based cameras.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-playerone-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-playerone (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for Playerone based cameras
+ Driver for Playerone based cameras.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

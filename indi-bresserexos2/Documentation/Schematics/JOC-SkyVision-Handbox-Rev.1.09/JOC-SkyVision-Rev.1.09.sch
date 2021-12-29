@@ -1,0 +1,3913 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A3 16535 11693
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Connector:RJ45 JP4
+U 1 1 60CB8DF8
+P 12650 9150
+F 0 "JP4" H 12450 9700 50  0000 R CNN
+F 1 "RJ45" H 12900 9700 50  0000 R CNN
+F 2 "" V 12650 9175 50  0001 C CNN
+F 3 "~" V 12650 9175 50  0001 C CNN
+	1    12650 9150
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:RJ10 JP1
+U 1 1 60CBECFF
+P 15300 6850
+F 0 "JP1" H 14970 6854 50  0000 R CNN
+F 1 "RJ10" H 14970 6945 50  0000 R CNN
+F 2 "" V 15300 6900 50  0001 C CNN
+F 3 "~" V 15300 6900 50  0001 C CNN
+	1    15300 6850
+	-1   0    0    1   
+$EndComp
+$Comp
+L Connector:USB_B_Mini JP2
+U 1 1 60CC72B8
+P 9650 4850
+F 0 "JP2" V 9400 4500 50  0000 L CNN
+F 1 "USB_B_Mini" V 9400 4750 50  0000 L CNN
+F 2 "" H 9800 4800 50  0001 C CNN
+F 3 "~" H 9800 4800 50  0001 C CNN
+	1    9650 4850
+	0    1    1    0   
+$EndComp
+$Comp
+L Connector:Micro_SD_Card JP3
+U 1 1 60CDA807
+P 1250 6500
+F 0 "JP3" V 2150 7100 50  0000 R CNN
+F 1 "Micro_SD_Card" V 2150 6900 50  0000 R CNN
+F 2 "" H 2400 6800 50  0001 C CNN
+F 3 "http://katalog.we-online.de/em/datasheet/693072010801.pdf" H 1250 6500 50  0001 C CNN
+	1    1250 6500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L MCU_NXP_LPC:LPC2148FBD64 U6
+U 1 1 60CDEFD0
+P 5300 3700
+F 0 "U6" V 5300 3700 50  0000 C CNN
+F 1 "LPC2148FBD64" V 5300 4250 50  0000 C CNN
+F 2 "Package_QFP:LQFP-64_10x10mm_P0.5mm" H 6350 5650 50  0001 C CNN
+F 3 "http://www.nxp.com/documents/data_sheet/LPC2141_42_44_46_48.pdf" H 5300 3700 50  0001 C CNN
+	1    5300 3700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x10_Counter_Clockwise U7
+U 1 1 60CF00EC
+P 15050 5750
+F 0 "U7" H 15100 5750 50  0000 C CNN
+F 1 "GENITOP GT23L16U2W (FONT/CHARACTER ROM)" H 15100 6276 50  0000 C CNN
+F 2 "" H 15050 5750 50  0001 C CNN
+F 3 "~" H 15050 5750 50  0001 C CNN
+	1    15050 5750
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x08_Counter_Clockwise U4
+U 1 1 60CF297B
+P 13800 7250
+F 0 "U4" H 13850 7767 50  0000 C CNN
+F 1 "MaxLinear SP232E" H 13850 7676 50  0000 C CNN
+F 2 "" H 13800 7250 50  0001 C CNN
+F 3 "~" H 13800 7250 50  0001 C CNN
+	1    13800 7250
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x04_Counter_Clockwise U10
+U 1 1 60CF6C4F
+P 1950 8900
+F 0 "U10" V 2000 8850 50  0000 C CNN
+F 1 "ON MC34063A (INVERTING REGULATOR)" H 1950 8550 50  0000 C CNN
+F 2 "" H 1950 8900 50  0001 C CNN
+F 3 "~" H 1950 8900 50  0001 C CNN
+	1    1950 8900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_DIP_x10 KEYPAD1
+U 1 1 60CFA7DC
+P 10050 8050
+F 0 "KEYPAD1" H 10050 8700 50  0000 C CNN
+F 1 "SW_DIP_x10" H 10050 8726 50  0001 C CNN
+F 2 "" H 10050 8050 50  0001 C CNN
+F 3 "~" H 10050 8050 50  0001 C CNN
+	1    10050 8050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_DIP_x10 KEYPAD2
+U 1 1 60CFC65C
+P 10750 8050
+F 0 "KEYPAD2" H 10750 8700 50  0000 C CNN
+F 1 "SW_DIP_x10" H 10750 8726 50  0001 C CNN
+F 2 "" H 10750 8050 50  0001 C CNN
+F 3 "~" H 10750 8050 50  0001 C CNN
+	1    10750 8050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x10_Counter_Clockwise KEYPADLEDS1
+U 1 1 60CFFF38
+P 4200 10100
+F 0 "KEYPADLEDS1" V 4250 10050 50  0000 C CNN
+F 1 "Conn_02x10_Counter_Clockwise" H 4250 10626 50  0001 C CNN
+F 2 "" H 4200 10100 50  0001 C CNN
+F 3 "~" H 4200 10100 50  0001 C CNN
+	1    4200 10100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_02x10_Counter_Clockwise KEYPADLEDS2
+U 1 1 60D024F1
+P 4200 9050
+F 0 "KEYPADLEDS2" V 4250 9000 50  0000 C CNN
+F 1 "Conn_02x10_Counter_Clockwise" H 4250 9576 50  0001 C CNN
+F 2 "" H 4200 9050 50  0001 C CNN
+F 3 "~" H 4200 9050 50  0001 C CNN
+	1    4200 9050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x36_Male LCD1
+U 1 1 60D0D48E
+P 13000 2750
+F 0 "LCD1" V 12950 4450 50  0000 C CNN
+F 1 "Zero Force Flat Cable Connector" V 12950 2750 50  0000 C CNN
+F 2 "" H 13000 2750 50  0001 C CNN
+F 3 "~" H 13000 2750 50  0001 C CNN
+	1    13000 2750
+	1    0    0    -1  
+$EndComp
+Text Label 14800 6950 2    50   ~ 0
+PCRX
+Text Label 14800 7050 2    50   ~ 0
+PCTX
+Wire Wire Line
+	14800 6950 14900 6950
+Wire Wire Line
+	14800 7050 14900 7050
+Text Label 14200 7250 0    50   ~ 0
+PCTX
+Text Label 14200 7150 0    50   ~ 0
+PCRX
+Wire Wire Line
+	14100 7150 14200 7150
+Wire Wire Line
+	14100 7250 14200 7250
+Text Label 14800 6750 2    50   ~ 0
+GND
+Text Label 14200 7050 0    50   ~ 0
+GND
+Wire Wire Line
+	14800 6750 14900 6750
+Wire Wire Line
+	14100 7050 14200 7050
+Text Label 14800 6850 2    50   ~ 0
+PCISP
+Wire Wire Line
+	14900 6850 14800 6850
+Text Label 14200 6950 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	14100 6950 14200 6950
+Text Label 13500 6950 2    50   ~ 0
+C1+
+Text Label 13500 7050 2    50   ~ 0
+V+
+Text Label 13500 7150 2    50   ~ 0
+C1-
+Text Label 13500 7250 2    50   ~ 0
+C2+
+Text Label 13500 7350 2    50   ~ 0
+C2-
+Text Label 13500 7450 2    50   ~ 0
+V-
+Text Label 13500 7550 2    50   ~ 0
+T2OUT
+Text Label 13500 7650 2    50   ~ 0
+R2IN
+Text Label 14200 7550 0    50   ~ 0
+T2IN
+Text Label 14200 7650 0    50   ~ 0
+R2OUT
+Text Label 14200 7450 0    50   ~ 0
+T1IN
+Text Label 14200 7350 0    50   ~ 0
+R1OUT
+Wire Wire Line
+	13500 6950 13600 6950
+Wire Wire Line
+	13500 7050 13600 7050
+Wire Wire Line
+	13500 7150 13600 7150
+Wire Wire Line
+	13500 7250 13600 7250
+Wire Wire Line
+	13500 7350 13600 7350
+Wire Wire Line
+	13500 7450 13600 7450
+Wire Wire Line
+	13500 7550 13600 7550
+Wire Wire Line
+	13500 7650 13600 7650
+Wire Wire Line
+	14100 7350 14200 7350
+Wire Wire Line
+	14100 7450 14200 7450
+Wire Wire Line
+	14100 7550 14200 7550
+Wire Wire Line
+	14100 7650 14200 7650
+$Comp
+L Device:C C8
+U 1 1 60D3122F
+P 14700 7550
+F 0 "C8" H 14700 7450 50  0000 L CNN
+F 1 "C" H 14815 7505 50  0001 L CNN
+F 2 "" H 14738 7400 50  0001 C CNN
+F 3 "~" H 14700 7550 50  0001 C CNN
+	1    14700 7550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C9
+U 1 1 60D3251A
+P 14950 7550
+F 0 "C9" H 14950 7450 50  0000 L CNN
+F 1 "C" H 15065 7505 50  0001 L CNN
+F 2 "" H 14988 7400 50  0001 C CNN
+F 3 "~" H 14950 7550 50  0001 C CNN
+	1    14950 7550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C12
+U 1 1 60D32E36
+P 15200 7550
+F 0 "C12" H 15200 7450 50  0000 L CNN
+F 1 "C" H 15315 7505 50  0001 L CNN
+F 2 "" H 15238 7400 50  0001 C CNN
+F 3 "~" H 15200 7550 50  0001 C CNN
+	1    15200 7550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C13
+U 1 1 60D33B44
+P 15500 7550
+F 0 "C13" H 15500 7450 50  0000 L CNN
+F 1 "C" H 15615 7505 50  0001 L CNN
+F 2 "" H 15538 7400 50  0001 C CNN
+F 3 "~" H 15500 7550 50  0001 C CNN
+	1    15500 7550
+	1    0    0    -1  
+$EndComp
+Text Label 14700 7300 2    50   ~ 0
+C1+
+Wire Wire Line
+	14700 7300 14700 7400
+Text Label 15200 7300 2    50   ~ 0
+V+
+Wire Wire Line
+	15200 7300 15200 7400
+Text Label 14950 7300 2    50   ~ 0
+C2-
+Wire Wire Line
+	14950 7300 14950 7400
+Text Label 15500 7300 2    50   ~ 0
+V-
+Wire Wire Line
+	15500 7300 15500 7400
+$Comp
+L Device:C C14
+U 1 1 60D38B9F
+P 15800 7550
+F 0 "C14" H 15800 7450 50  0000 L CNN
+F 1 "C" H 15915 7505 50  0001 L CNN
+F 2 "" H 15838 7400 50  0001 C CNN
+F 3 "~" H 15800 7550 50  0001 C CNN
+	1    15800 7550
+	1    0    0    -1  
+$EndComp
+Text Label 15800 7300 2    50   ~ 0
+VCC_5V
+Wire Wire Line
+	15800 7300 15800 7400
+Text Label 15800 7850 0    50   ~ 0
+GND
+Wire Wire Line
+	15800 7850 15800 7700
+$Comp
+L Connector:Conn_01x04_Male U1
+U 1 1 60D4244A
+P 5100 6550
+F 0 "U1" H 5200 6900 50  0000 C CNN
+F 1 "AZ1117C-ADJ (GH15E) 5V" H 5250 6800 50  0000 C CNN
+F 2 "" H 5100 6550 50  0001 C CNN
+F 3 "~" H 5100 6550 50  0001 C CNN
+	1    5100 6550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x04_Male U3
+U 1 1 60D43B7D
+P 6250 6550
+F 0 "U3" H 6350 6900 50  0000 C CNN
+F 1 "AZ1117C-ADJ (GH16D) 3.3V" H 6350 6800 50  0000 C CNN
+F 2 "" H 6250 6550 50  0001 C CNN
+F 3 "~" H 6250 6550 50  0001 C CNN
+	1    6250 6550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5300 6450 5350 6450
+Wire Wire Line
+	6450 6450 6500 6450
+Wire Wire Line
+	6450 6550 6500 6550
+Wire Wire Line
+	6450 6650 6500 6650
+Wire Wire Line
+	6450 6750 6500 6750
+Wire Wire Line
+	5300 6550 5350 6550
+Wire Wire Line
+	5300 6650 5350 6650
+Wire Wire Line
+	5300 6750 5350 6750
+Wire Wire Line
+	4500 3700 4600 3700
+Text Label 14700 7850 0    50   ~ 0
+C1-
+Text Label 14950 7850 0    50   ~ 0
+C2+
+Text Label 15200 7850 0    50   ~ 0
+VCC_5V
+Text Label 15500 7850 0    50   ~ 0
+GND
+Wire Wire Line
+	15500 7700 15500 7850
+Wire Wire Line
+	15200 7700 15200 7850
+Wire Wire Line
+	14950 7700 14950 7850
+Wire Wire Line
+	14700 7700 14700 7850
+Wire Notes Line
+	13100 6600 16000 6600
+Text Notes 13100 6600 0    50   ~ 0
+PC Serial Interface Assembly
+Text Label 13600 8000 2    50   ~ 0
+T1IN
+Text Label 13600 8100 2    50   ~ 0
+R1OUT
+Wire Wire Line
+	4600 2300 4450 2300
+Wire Wire Line
+	4450 2400 4600 2400
+Text Label 5000 5800 2    50   ~ 0
+MCU_GND
+Wire Wire Line
+	5400 5600 5400 5700
+Wire Wire Line
+	5400 5700 5300 5700
+Wire Wire Line
+	5300 5700 5300 5600
+Wire Wire Line
+	5200 5600 5200 5700
+Wire Wire Line
+	5200 5700 5300 5700
+Connection ~ 5300 5700
+Wire Wire Line
+	5100 5600 5100 5700
+Wire Wire Line
+	5100 5700 5200 5700
+Connection ~ 5200 5700
+Wire Wire Line
+	5000 5600 5000 5700
+Wire Wire Line
+	5000 5700 5100 5700
+Connection ~ 5100 5700
+Wire Wire Line
+	5000 5800 5000 5700
+Connection ~ 5000 5700
+$Comp
+L Device:Crystal X2
+U 1 1 60DA84E7
+P 10800 4900
+F 0 "X2" V 10800 4900 50  0000 C CNN
+F 1 "Crystal (MCU)" H 10800 5077 50  0000 C CNN
+F 2 "" H 10800 4900 50  0001 C CNN
+F 3 "~" H 10800 4900 50  0001 C CNN
+	1    10800 4900
+	1    0    0    -1  
+$EndComp
+Text Label 10500 4900 2    50   ~ 0
+XTAL1
+Text Label 11150 4900 0    50   ~ 0
+XTAL2
+Wire Wire Line
+	10950 4900 11000 4900
+Wire Wire Line
+	10650 4900 10600 4900
+Text Label 6150 4500 0    50   ~ 0
+XTAL2
+Text Label 6150 4400 0    50   ~ 0
+XTAL1
+Wire Wire Line
+	6000 4400 6150 4400
+Wire Wire Line
+	6000 4500 6150 4500
+Text Label 6150 4700 0    50   ~ 0
+RTCX1
+Text Label 6150 4800 0    50   ~ 0
+RTCX2
+Wire Wire Line
+	6000 4700 6150 4700
+Wire Wire Line
+	6000 4800 6150 4800
+$Comp
+L Device:Crystal X1
+U 1 1 60DC1230
+P 10800 6350
+F 0 "X1" V 10800 6350 50  0000 C CNN
+F 1 "Crystal (RTC)" H 10800 6527 50  0000 C CNN
+F 2 "" H 10800 6350 50  0001 C CNN
+F 3 "~" H 10800 6350 50  0001 C CNN
+	1    10800 6350
+	1    0    0    -1  
+$EndComp
+Text Label 10500 6350 2    50   ~ 0
+RTCX1
+Text Label 11150 6350 0    50   ~ 0
+RTCX2
+Wire Wire Line
+	10500 6350 10600 6350
+Wire Wire Line
+	11150 6350 11000 6350
+$Comp
+L Device:Speaker_Crystal U9
+U 1 1 60DC75F9
+P 12400 4500
+F 0 "U9" H 11900 4250 50  0000 C CNN
+F 1 "Speaker_Crystal" H 12366 4174 50  0000 C CNN
+F 2 "" H 12365 4450 50  0001 C CNN
+F 3 "~" H 12365 4450 50  0001 C CNN
+	1    12400 4500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:Battery_Cell BT1
+U 1 1 60DD8EF1
+P 12450 7750
+F 0 "BT1" V 12500 7600 50  0000 L CNN
+F 1 "Battery_Cell" V 12300 7550 50  0000 L CNN
+F 2 "" V 12450 7810 50  0001 C CNN
+F 3 "~" V 12450 7810 50  0001 C CNN
+	1    12450 7750
+	1    0    0    -1  
+$EndComp
+Text Label 12450 7950 3    50   ~ 0
+MCU_GND
+Wire Wire Line
+	12450 7950 12450 7850
+$Comp
+L Diode:BAT54C D2
+U 1 1 60DE813A
+P 12450 7100
+F 0 "D2" H 12350 7000 50  0000 C CNN
+F 1 "BAT54C (L43)" H 12450 7250 50  0000 C CNN
+F 2 "Package_TO_SOT_SMD:SOT-23" H 12525 7225 50  0001 L CNN
+F 3 "http://www.diodes.com/_files/datasheets/ds11005.pdf" H 12370 7100 50  0001 C CNN
+	1    12450 7100
+	0    -1   -1   0   
+$EndComp
+Text Label 5500 1700 0    50   ~ 0
+VBAT
+Wire Wire Line
+	5500 1700 5500 1800
+Text Label 12700 7100 0    50   ~ 0
+VBAT
+Wire Wire Line
+	12700 7100 12650 7100
+Wire Wire Line
+	12450 7400 12450 7550
+Wire Notes Line
+	12000 8400 12000 6600
+Text Notes 12000 6600 0    50   ~ 0
+RTC Battery Assembly
+$Comp
+L Power_Supervisor:LM809 U2
+U 1 1 60E327F9
+P 2400 10150
+F 0 "U2" H 2300 10550 50  0000 R CNN
+F 1 "809SL (Reset Supervisor)" V 2150 10450 50  0000 R CNN
+F 2 "Package_TO_SOT_SMD:SOT-23" H 2700 10250 50  0001 C CNN
+F 3 "http://www.ti.com/lit/ds/symlink/lm809.pdf" H 2700 10250 50  0001 C CNN
+	1    2400 10150
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R5
+U 1 1 60E34158
+P 2800 10300
+F 0 "R5" V 2800 10250 50  0000 L CNN
+F 1 "R" H 2870 10255 50  0001 L CNN
+F 2 "" V 2730 10300 50  0001 C CNN
+F 3 "~" H 2800 10300 50  0001 C CNN
+	1    2800 10300
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2700 10150 2800 10150
+Wire Notes Line
+	13050 6600 13050 8400
+Wire Notes Line
+	12000 6600 13050 6600
+Wire Notes Line
+	12000 8400 13050 8400
+Text Label 2400 10700 3    50   ~ 0
+MCU_GND
+Wire Wire Line
+	2400 10700 2400 10550
+Text Label 12450 6800 0    50   ~ 0
+VRES_SV
+Text Label 2400 9650 0    50   ~ 0
+VRES_SV
+Wire Wire Line
+	2400 9650 2400 9750
+Text Label 6150 4000 0    50   ~ 0
+~RESET
+Wire Wire Line
+	6000 4000 6150 4000
+Text Label 2800 10550 3    50   ~ 0
+~RESET
+Wire Wire Line
+	2800 10450 2800 10550
+Wire Notes Line
+	1850 9450 1850 11150
+Wire Notes Line
+	1850 11150 3050 11150
+Wire Notes Line
+	3050 11150 3050 9450
+Wire Notes Line
+	3050 9450 1850 9450
+Text Notes 1850 9450 0    50   ~ 0
+Reset Supervisor Assembly
+Wire Notes Line
+	7050 6100 4700 6100
+Text Notes 4700 6100 0    50   ~ 0
+Power Regulation Assembly
+$Comp
+L Connector_Generic:Conn_02x04_Counter_Clockwise U5
+U 1 1 60ED28C9
+P 13150 5700
+F 0 "U5" H 13200 5650 50  0000 C CNN
+F 1 "AT45DB161E (16M+512K SPI Flash Memory)" H 13250 5950 50  0000 C CNN
+F 2 "" H 13150 5700 50  0001 C CNN
+F 3 "~" H 13150 5700 50  0001 C CNN
+	1    13150 5700
+	1    0    0    -1  
+$EndComp
+Text Label 13550 5600 0    50   ~ 0
+MISO
+Wire Wire Line
+	13450 5600 13550 5600
+Wire Wire Line
+	12850 5600 12950 5600
+Text Label 13550 5700 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	13450 5700 13550 5700
+Text Label 13550 5800 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	13450 5800 13550 5800
+Text Label 13550 5900 0    50   ~ 0
+~WR_PROTECT
+Wire Wire Line
+	13450 5900 13550 5900
+Text Label 12850 5700 2    50   ~ 0
+SCK
+Text Label 12850 5900 2    50   ~ 0
+~CS_FLASH
+Text Label 12850 5800 2    50   ~ 0
+~SPI_RESET
+Wire Wire Line
+	12950 5700 12850 5700
+Wire Wire Line
+	12850 5800 12950 5800
+Wire Wire Line
+	12950 5900 12850 5900
+Text Label 5100 1650 2    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	5100 1650 5100 1700
+Wire Wire Line
+	5300 1800 5300 1700
+Wire Wire Line
+	5300 1700 5200 1700
+Connection ~ 5100 1700
+Wire Wire Line
+	5100 1700 5100 1800
+Wire Wire Line
+	5200 1800 5200 1700
+Connection ~ 5200 1700
+Wire Wire Line
+	5200 1700 5100 1700
+Wire Wire Line
+	5500 5600 5500 5700
+Wire Wire Line
+	5500 5700 5400 5700
+Connection ~ 5400 5700
+Text Label 1450 7500 3    50   ~ 0
+MCU_GND
+Wire Wire Line
+	1450 7400 1450 7500
+$Comp
+L Device:R R55
+U 1 1 60CF16AA
+P 2000 6500
+F 0 "R55" V 2000 6450 50  0000 L CNN
+F 1 "R" V 1900 6550 50  0001 L CNN
+F 2 "" V 1930 6500 50  0001 C CNN
+F 3 "~" H 2000 6500 50  0001 C CNN
+	1    2000 6500
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R53
+U 1 1 60CF2653
+P 2200 6500
+F 0 "R53" V 2200 6450 50  0000 L CNN
+F 1 "R" V 2100 6550 50  0001 L CNN
+F 2 "" V 2130 6500 50  0001 C CNN
+F 3 "~" H 2200 6500 50  0001 C CNN
+	1    2200 6500
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R40
+U 1 1 60CF3F40
+P 2300 6500
+F 0 "R40" V 2300 6450 50  0000 L CNN
+F 1 "R" V 2200 6550 50  0001 L CNN
+F 2 "" V 2230 6500 50  0001 C CNN
+F 3 "~" H 2300 6500 50  0001 C CNN
+	1    2300 6500
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R54
+U 1 1 60CF4C8B
+P 2500 6500
+F 0 "R54" V 2500 6450 50  0000 L CNN
+F 1 "R" V 2400 6550 50  0001 L CNN
+F 2 "" V 2430 6500 50  0001 C CNN
+F 3 "~" H 2500 6500 50  0001 C CNN
+	1    2500 6500
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R52
+U 1 1 60CF6A99
+P 2400 6500
+F 0 "R52" V 2400 6450 50  0000 L CNN
+F 1 "R" V 2300 6550 50  0001 L CNN
+F 2 "" V 2330 6500 50  0001 C CNN
+F 3 "~" H 2400 6500 50  0001 C CNN
+	1    2400 6500
+	-1   0    0    1   
+$EndComp
+NoConn ~ 1850 5700
+Text Label 950  7500 3    50   ~ 0
+SD_DAT2
+Text Label 1050 7500 3    50   ~ 0
+SD_DAT3_CD
+Text Label 1150 7500 3    50   ~ 0
+SD_CMD
+Wire Wire Line
+	950  7400 950  7500
+Wire Wire Line
+	1050 7400 1050 7500
+Wire Wire Line
+	1150 7400 1150 7500
+Text Label 1250 7500 3    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	1250 7400 1250 7500
+Text Label 1350 7500 3    50   ~ 0
+SD_CLK
+Text Label 1550 7500 3    50   ~ 0
+SD_DAT0
+Text Label 1650 7500 3    50   ~ 0
+SD_DAT1
+Wire Wire Line
+	1350 7400 1350 7500
+Wire Wire Line
+	1550 7400 1550 7500
+Wire Wire Line
+	1650 7400 1650 7500
+Text Label 2000 6800 3    50   ~ 0
+SD_DAT2
+Text Label 2100 6800 3    50   ~ 0
+SD_DAT3_CD
+Text Label 2200 6800 3    50   ~ 0
+SD_CMD
+Text Label 2300 6800 3    50   ~ 0
+SD_CLK
+Text Label 2500 6800 3    50   ~ 0
+SD_DAT1
+Text Label 2400 6800 3    50   ~ 0
+SD_DAT0
+Wire Wire Line
+	2500 6800 2500 6650
+Wire Wire Line
+	2400 6800 2400 6650
+Wire Wire Line
+	2300 6800 2300 6650
+Wire Wire Line
+	2000 6800 2000 6650
+Wire Wire Line
+	2200 6650 2200 6800
+$Comp
+L Device:R R36
+U 1 1 60D9F563
+P 8050 3150
+F 0 "R36" V 8050 3100 50  0000 L CNN
+F 1 "R" V 7950 3200 50  0001 L CNN
+F 2 "" V 7980 3150 50  0001 C CNN
+F 3 "~" H 8050 3150 50  0001 C CNN
+	1    8050 3150
+	0    1    -1   0   
+$EndComp
+$Comp
+L Device:R R24
+U 1 1 60DA1846
+P 8050 3250
+F 0 "R24" V 8050 3200 50  0000 L CNN
+F 1 "R" V 7950 3300 50  0001 L CNN
+F 2 "" V 7980 3250 50  0001 C CNN
+F 3 "~" H 8050 3250 50  0001 C CNN
+	1    8050 3250
+	0    1    -1   0   
+$EndComp
+Text Label 6150 2700 0    50   ~ 0
+MCU_P1.20
+Wire Wire Line
+	6000 2700 6150 2700
+Text Label 7800 3250 2    50   ~ 0
+MCU_P1.20
+Wire Wire Line
+	7900 3250 7800 3250
+$Comp
+L Device:R R33
+U 1 1 60DC3049
+P 9450 6500
+F 0 "R33" V 9450 6450 50  0000 L CNN
+F 1 "R" H 9400 6200 50  0001 L CNN
+F 2 "" V 9380 6500 50  0001 C CNN
+F 3 "~" H 9450 6500 50  0001 C CNN
+	1    9450 6500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R38
+U 1 1 60DC40CE
+P 9450 6600
+F 0 "R38" V 9450 6550 50  0000 L CNN
+F 1 "R" H 9400 6300 50  0001 L CNN
+F 2 "" V 9380 6600 50  0001 C CNN
+F 3 "~" H 9450 6600 50  0001 C CNN
+	1    9450 6600
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R50
+U 1 1 60DC42DD
+P 9450 6700
+F 0 "R50" V 9450 6650 50  0000 L CNN
+F 1 "R" H 9400 6450 50  0001 L CNN
+F 2 "" V 9380 6700 50  0001 C CNN
+F 3 "~" H 9450 6700 50  0001 C CNN
+	1    9450 6700
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C16
+U 1 1 60DDD897
+P 10600 5500
+F 0 "C16" H 10350 5500 50  0000 L CNN
+F 1 "C" H 10715 5455 50  0001 L CNN
+F 2 "" H 10638 5350 50  0001 C CNN
+F 3 "~" H 10600 5500 50  0001 C CNN
+	1    10600 5500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C15
+U 1 1 60DDFB72
+P 11000 5500
+F 0 "C15" H 11100 5500 50  0000 L CNN
+F 1 "C" H 11115 5455 50  0001 L CNN
+F 2 "" H 11038 5350 50  0001 C CNN
+F 3 "~" H 11000 5500 50  0001 C CNN
+	1    11000 5500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R25
+U 1 1 60DE0D88
+P 10800 5300
+F 0 "R25" V 10800 5300 50  0000 C CNN
+F 1 "R" V 10916 5300 50  0001 C CNN
+F 2 "" V 10730 5300 50  0001 C CNN
+F 3 "~" H 10800 5300 50  0001 C CNN
+	1    10800 5300
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	10650 5300 10600 5300
+Wire Wire Line
+	10600 5300 10600 5350
+Wire Wire Line
+	10950 5300 11000 5300
+Wire Wire Line
+	11000 5300 11000 5350
+Wire Wire Line
+	10600 5300 10600 4900
+Connection ~ 10600 5300
+Connection ~ 10600 4900
+Wire Wire Line
+	10600 4900 10500 4900
+Wire Wire Line
+	11000 5300 11000 4900
+Connection ~ 11000 5300
+Connection ~ 11000 4900
+Wire Wire Line
+	11000 4900 11150 4900
+Text Label 10850 5800 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	10800 5800 10850 5800
+Wire Notes Line
+	10250 4550 11400 4550
+Text Notes 10250 4550 0    50   ~ 0
+MCU Clock Crystal Assembly
+Wire Wire Line
+	10600 5650 10800 5650
+Wire Wire Line
+	10800 5800 10800 5650
+Connection ~ 10800 5650
+Wire Wire Line
+	10800 5650 11000 5650
+Wire Notes Line
+	10250 4550 10250 5850
+Wire Notes Line
+	10250 5850 11400 5850
+Wire Notes Line
+	11400 5850 11400 4550
+$Comp
+L Device:C C4
+U 1 1 60E9DE53
+P 10600 6700
+F 0 "C4" H 10450 6700 50  0000 C CNN
+F 1 "C" H 10450 6650 50  0001 C CNN
+F 2 "" H 10638 6550 50  0001 C CNN
+F 3 "~" H 10600 6700 50  0001 C CNN
+	1    10600 6700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C28
+U 1 1 60EA4FE1
+P 11000 6700
+F 0 "C28" H 11115 6700 50  0000 L CNN
+F 1 "C" H 11115 6655 50  0001 L CNN
+F 2 "" H 11038 6550 50  0001 C CNN
+F 3 "~" H 11000 6700 50  0001 C CNN
+	1    11000 6700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	11000 6550 11000 6350
+Connection ~ 11000 6350
+Wire Wire Line
+	11000 6350 10950 6350
+Wire Wire Line
+	10600 6550 10600 6350
+Connection ~ 10600 6350
+Wire Wire Line
+	10600 6350 10650 6350
+Text Label 10800 7050 2    50   ~ 0
+MCU_GND
+Wire Wire Line
+	10600 6850 10800 6850
+Wire Wire Line
+	10800 6850 10800 7050
+Connection ~ 10800 6850
+Wire Wire Line
+	10800 6850 11000 6850
+Wire Notes Line
+	10250 6000 11400 6000
+Wire Notes Line
+	11400 6000 11400 7150
+Wire Notes Line
+	11400 7150 10250 7150
+Wire Notes Line
+	10250 7150 10250 6000
+Text Notes 10250 6000 0    50   ~ 0
+RTC Clock Crystal Assembly\n
+Text Label 13100 6050 2    50   ~ 0
+~WR_PROTECT
+Text Label 8300 6400 0    50   ~ 0
+VCC_3.3V
+Text Label 7600 7000 2    50   ~ 0
+MCU_GND
+Text Label 8300 6600 0    50   ~ 0
+U8_6Y
+Text Label 8300 6700 0    50   ~ 0
+U8_5A
+Text Label 8300 6800 0    50   ~ 0
+U8_5Y
+Text Label 8300 6900 0    50   ~ 0
+U8_4A
+$Comp
+L Connector_Generic:Conn_02x07_Counter_Clockwise U8
+U 1 1 60F306EB
+P 7900 6700
+F 0 "U8" H 7950 7217 50  0000 C CNN
+F 1 "TI (74)LVC07A (OPEN DRAIN HEX BUFFER)" H 7950 7126 50  0000 C CNN
+F 2 "" H 7900 6700 50  0001 C CNN
+F 3 "~" H 7900 6700 50  0001 C CNN
+	1    7900 6700
+	1    0    0    -1  
+$EndComp
+Text Label 8300 6500 0    50   ~ 0
+U8_6A
+Text Label 8300 7000 0    50   ~ 0
+U8_4Y
+Wire Wire Line
+	8200 6400 8300 6400
+Wire Wire Line
+	8200 6500 8300 6500
+Wire Wire Line
+	8200 6600 8300 6600
+Wire Wire Line
+	8200 6700 8300 6700
+Wire Wire Line
+	8200 6800 8300 6800
+Wire Wire Line
+	8200 6900 8300 6900
+Wire Wire Line
+	8200 7000 8300 7000
+Wire Wire Line
+	7600 7000 7700 7000
+Text Label 7600 6400 2    50   ~ 0
+U8_1A
+Text Label 7600 6500 2    50   ~ 0
+U8_1Y
+Text Label 7600 6600 2    50   ~ 0
+U8_2A
+Text Label 7600 6700 2    50   ~ 0
+U8_2Y
+Text Label 7600 6800 2    50   ~ 0
+U8_3A
+Text Label 7600 6900 2    50   ~ 0
+U8_3Y
+Wire Wire Line
+	7600 6400 7700 6400
+Wire Wire Line
+	7600 6500 7700 6500
+Wire Wire Line
+	7600 6600 7700 6600
+Wire Wire Line
+	7600 6700 7700 6700
+Wire Wire Line
+	7600 6800 7700 6800
+Wire Wire Line
+	7600 6900 7700 6900
+Text Label 9100 6500 2    50   ~ 0
+U8_6Y
+Text Label 9100 6600 2    50   ~ 0
+U8_5A
+Text Label 9100 6700 2    50   ~ 0
+U8_4A
+$Comp
+L Device:Q_NPN_BCE Q1
+U 1 1 60FEE8F8
+P 14950 4550
+F 0 "Q1" V 15050 4500 50  0000 L CNN
+F 1 "KAK (Transistor?)" H 15140 4505 50  0000 L CNN
+F 2 "" H 15150 4650 50  0001 C CNN
+F 3 "~" H 14950 4550 50  0001 C CNN
+	1    14950 4550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:Q_NPN_BCE Q3
+U 1 1 60FEF938
+P 3500 7400
+F 0 "Q3" V 3600 7350 50  0000 L CNN
+F 1 "KAK (Transistor?)" H 2900 7200 50  0000 L CNN
+F 2 "" H 3700 7500 50  0001 C CNN
+F 3 "~" H 3500 7400 50  0001 C CNN
+	1    3500 7400
+	0    1    1    0   
+$EndComp
+Text Label 15250 4750 0    50   ~ 0
+MCU_GND
+Text Label 3300 7700 3    50   ~ 0
+MCU_GND
+Wire Wire Line
+	15050 4750 15250 4750
+Wire Wire Line
+	3300 7500 3300 7700
+$Comp
+L Device:R R49
+U 1 1 61003619
+P 3500 6950
+F 0 "R49" V 3500 6950 50  0000 C CNN
+F 1 "R" V 3384 6950 50  0001 C CNN
+F 2 "" V 3430 6950 50  0001 C CNN
+F 3 "~" H 3500 6950 50  0001 C CNN
+	1    3500 6950
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R22
+U 1 1 61004765
+P 14650 4550
+F 0 "R22" V 14650 4550 50  0000 C CNN
+F 1 "R" V 14534 4550 50  0001 C CNN
+F 2 "" V 14580 4550 50  0001 C CNN
+F 3 "~" H 14650 4550 50  0001 C CNN
+	1    14650 4550
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	3500 7100 3500 7200
+Wire Wire Line
+	14800 4550 14750 4550
+$Comp
+L Device:R R20
+U 1 1 61016980
+P 15000 4200
+F 0 "R20" V 15000 4200 50  0000 C CNN
+F 1 "R" V 14900 4200 50  0001 C CNN
+F 2 "" V 14930 4200 50  0001 C CNN
+F 3 "~" H 15000 4200 50  0001 C CNN
+	1    15000 4200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R21
+U 1 1 61016FB4
+P 15000 3900
+F 0 "R21" V 15000 3900 50  0000 C CNN
+F 1 "R" V 14884 3900 50  0001 C CNN
+F 2 "" V 14930 3900 50  0001 C CNN
+F 3 "~" H 15000 3900 50  0001 C CNN
+	1    15000 3900
+	0    -1   -1   0   
+$EndComp
+Text Label 15250 4350 0    50   ~ 0
+LCD_BG_LED1
+Text Label 15250 4200 0    50   ~ 0
+LCD_BG_LED2
+Wire Wire Line
+	15050 4350 15250 4350
+Text Label 4500 3900 2    50   ~ 0
+MCU_P0.16
+Text Label 3500 6700 1    50   ~ 0
+MCU_P0.16
+Wire Wire Line
+	3500 6700 3500 6800
+Wire Wire Line
+	14850 4200 14850 4050
+Text Label 14750 4050 2    50   ~ 0
+VCC_5V
+Wire Wire Line
+	14750 4050 14850 4050
+Connection ~ 14850 4050
+Wire Wire Line
+	14850 4050 14850 3900
+Wire Wire Line
+	15150 4200 15150 3900
+Wire Wire Line
+	15250 4200 15150 4200
+Connection ~ 15150 4200
+Wire Notes Line
+	14400 3800 15850 3800
+Wire Notes Line
+	15850 3800 15850 4800
+Wire Notes Line
+	15850 4800 14400 4800
+Wire Notes Line
+	14400 4800 14400 3800
+Text Notes 14400 3800 0    50   ~ 0
+LCD BG LED Driver Assembly
+$Comp
+L Device:R R27
+U 1 1 611EC52D
+P 13250 6150
+F 0 "R27" V 13250 6150 50  0000 C CNN
+F 1 "R" V 13350 6000 50  0001 C CNN
+F 2 "" V 13180 6150 50  0001 C CNN
+F 3 "~" H 13250 6150 50  0001 C CNN
+	1    13250 6150
+	0    1    1    0   
+$EndComp
+Text Label 13100 6150 2    50   ~ 0
+~SPI_RESET
+Text Label 13450 6150 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	13400 6150 13450 6150
+Wire Wire Line
+	13400 6150 13400 6050
+Wire Wire Line
+	13100 6050 13400 6050
+Connection ~ 13400 6150
+Text Label 9800 6500 0    50   ~ 0
+VCC_3.3V
+Text Label 2500 6200 1    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	9100 6500 9300 6500
+Wire Wire Line
+	9100 6600 9300 6600
+Wire Wire Line
+	9100 6700 9300 6700
+$Comp
+L Device:R R32
+U 1 1 61340CBB
+P 9450 6800
+F 0 "R32" V 9450 6750 50  0000 L CNN
+F 1 "R" H 9400 6550 50  0001 L CNN
+F 2 "" V 9380 6800 50  0001 C CNN
+F 3 "~" H 9450 6800 50  0001 C CNN
+	1    9450 6800
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R31
+U 1 1 61341117
+P 9450 6900
+F 0 "R31" V 9450 6850 50  0000 L CNN
+F 1 "R" H 9400 6650 50  0001 L CNN
+F 2 "" V 9380 6900 50  0001 C CNN
+F 3 "~" H 9450 6900 50  0001 C CNN
+	1    9450 6900
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R34
+U 1 1 613413AB
+P 9450 7000
+F 0 "R34" V 9450 6950 50  0000 L CNN
+F 1 "R" H 9400 6750 50  0001 L CNN
+F 2 "" V 9380 7000 50  0001 C CNN
+F 3 "~" H 9450 7000 50  0001 C CNN
+	1    9450 7000
+	0    -1   -1   0   
+$EndComp
+Text Label 9100 6800 2    50   ~ 0
+U8_1A
+Text Label 9100 6900 2    50   ~ 0
+U8_2A
+Text Label 9100 7000 2    50   ~ 0
+U8_3Y
+Wire Wire Line
+	9100 6800 9300 6800
+Wire Wire Line
+	9100 6900 9300 6900
+Wire Wire Line
+	9100 7000 9300 7000
+Wire Wire Line
+	9800 6500 9650 6500
+Wire Wire Line
+	9600 6600 9650 6600
+Wire Wire Line
+	9650 6600 9650 6500
+Connection ~ 9650 6500
+Wire Wire Line
+	9650 6500 9600 6500
+Wire Wire Line
+	9600 6700 9650 6700
+Wire Wire Line
+	9650 6700 9650 6600
+Connection ~ 9650 6600
+Wire Wire Line
+	9600 6800 9650 6800
+Wire Wire Line
+	9650 6800 9650 6700
+Connection ~ 9650 6700
+Wire Wire Line
+	9600 6900 9650 6900
+Wire Wire Line
+	9650 6900 9650 6800
+Connection ~ 9650 6800
+Wire Wire Line
+	9600 7000 9650 7000
+Wire Wire Line
+	9650 7000 9650 6900
+Connection ~ 9650 6900
+$Comp
+L Device:LED LED1
+U 1 1 6143D365
+P 4000 6650
+F 0 "LED1" H 4100 6750 50  0000 R CNN
+F 1 "LED" V 3948 6532 50  0001 R CNN
+F 2 "" H 4000 6650 50  0001 C CNN
+F 3 "~" H 4000 6650 50  0001 C CNN
+	1    4000 6650
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:LED LED3
+U 1 1 6143EDE8
+P 4250 6650
+F 0 "LED3" H 4350 6750 50  0000 R CNN
+F 1 "LED" V 4198 6532 50  0001 R CNN
+F 2 "" H 4250 6650 50  0001 C CNN
+F 3 "~" H 4250 6650 50  0001 C CNN
+	1    4250 6650
+	0    -1   -1   0   
+$EndComp
+Text Label 4000 6400 2    50   ~ 0
+VCC_5V
+$Comp
+L Device:R R61
+U 1 1 614AA38F
+P 4500 7050
+F 0 "R61" V 4500 6950 50  0000 L CNN
+F 1 "R" H 4570 7005 50  0001 L CNN
+F 2 "" V 4430 7050 50  0001 C CNN
+F 3 "~" H 4500 7050 50  0001 C CNN
+	1    4500 7050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R62
+U 1 1 614AADB2
+P 4250 7050
+F 0 "R62" V 4250 6950 50  0000 L CNN
+F 1 "R" H 4320 7005 50  0001 L CNN
+F 2 "" V 4180 7050 50  0001 C CNN
+F 3 "~" H 4250 7050 50  0001 C CNN
+	1    4250 7050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R57
+U 1 1 614AB085
+P 4000 7050
+F 0 "R57" V 4000 6950 50  0000 L CNN
+F 1 "R" H 4070 7005 50  0001 L CNN
+F 2 "" V 3930 7050 50  0001 C CNN
+F 3 "~" H 4000 7050 50  0001 C CNN
+	1    4000 7050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:LED LED2
+U 1 1 6143E7BF
+P 4500 6650
+F 0 "LED2" H 4600 6750 50  0000 R CNN
+F 1 "LED" V 4448 6532 50  0001 R CNN
+F 2 "" H 4500 6650 50  0001 C CNN
+F 3 "~" H 4500 6650 50  0001 C CNN
+	1    4500 6650
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	4000 6800 4000 6900
+Wire Wire Line
+	4250 6800 4250 6900
+Wire Wire Line
+	4500 6800 4500 6900
+Wire Wire Line
+	4000 7200 4150 7200
+Wire Wire Line
+	4000 6400 4000 6500
+Wire Wire Line
+	4250 6500 4500 6500
+Wire Wire Line
+	4000 6500 4250 6500
+Connection ~ 4000 6500
+Connection ~ 4250 6500
+Text Label 4500 7250 3    50   ~ 0
+LED2_ENABLE
+Wire Wire Line
+	4500 7200 4500 7250
+Text Notes 3150 6250 0    50   ~ 0
+Night Lamp Assembly\n
+Text Label 15450 5350 0    50   ~ 0
+MOSI
+Text Label 14750 5350 2    50   ~ 0
+MISO
+Text Label 15450 6050 0    50   ~ 0
+SCK
+Text Label 15450 6150 0    50   ~ 0
+MCU_GND
+Text Label 14750 6150 2    50   ~ 0
+MCU_GND
+Text Label 14750 5950 2    50   ~ 0
+VCC_3.3V
+Text Label 14750 5450 2    50   ~ 0
+MCU_GND
+Text Label 15450 5450 0    50   ~ 0
+~CS_CHAR_ROM
+Text Label 6150 3100 0    50   ~ 0
+~CS_FLASH
+Text Label 6150 3200 0    50   ~ 0
+~CS_CHAR_ROM
+Wire Wire Line
+	6000 3100 6150 3100
+Wire Wire Line
+	6000 3200 6150 3200
+Wire Wire Line
+	14750 5350 14850 5350
+Wire Wire Line
+	14750 5450 14850 5450
+Wire Wire Line
+	15350 5350 15450 5350
+Wire Wire Line
+	15350 5450 15450 5450
+Wire Wire Line
+	15450 6050 15350 6050
+Wire Wire Line
+	15450 6150 15350 6150
+Wire Wire Line
+	14750 6150 14850 6150
+Wire Wire Line
+	14750 5950 14850 5950
+Wire Wire Line
+	14850 6050 14850 6150
+Connection ~ 14850 6150
+NoConn ~ 14850 5550
+NoConn ~ 14850 5650
+NoConn ~ 14850 5750
+NoConn ~ 14850 5850
+NoConn ~ 15350 5550
+NoConn ~ 15350 5650
+NoConn ~ 15350 5750
+NoConn ~ 15350 5850
+NoConn ~ 15350 6250
+NoConn ~ 14850 6250
+Text Label 15450 5950 0    50   ~ 0
+~SPI_HOLD
+Wire Wire Line
+	15350 5950 15450 5950
+Wire Notes Line
+	16000 5050 14200 5050
+Text Notes 14200 5050 0    50   ~ 0
+LCD Character ROM Assembly
+Text Label 4450 2800 2    50   ~ 0
+MISO
+Text Label 12850 5600 2    50   ~ 0
+MOSI
+Text Label 4450 2900 2    50   ~ 0
+MOSI
+Text Label 4450 2700 2    50   ~ 0
+SCK
+$Comp
+L Device:R R35
+U 1 1 61933AB8
+P 15100 6400
+F 0 "R35" V 15100 6400 50  0000 C CNN
+F 1 "R" V 14984 6400 50  0001 C CNN
+F 2 "" V 15030 6400 50  0001 C CNN
+F 3 "~" H 15100 6400 50  0001 C CNN
+	1    15100 6400
+	0    1    1    0   
+$EndComp
+Text Label 15450 6400 0    50   ~ 0
+~SPI_HOLD
+Text Label 14800 6400 2    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	14800 6400 14950 6400
+Wire Wire Line
+	15250 6400 15450 6400
+Wire Notes Line
+	14200 6500 16000 6500
+Wire Notes Line
+	14200 5050 14200 6500
+Wire Notes Line
+	16000 5050 16000 6500
+$Comp
+L Device:C C17
+U 1 1 619B0C5D
+P 13600 6300
+F 0 "C17" V 13550 6450 50  0000 C CNN
+F 1 "C" V 13439 6300 50  0001 C CNN
+F 2 "" H 13638 6150 50  0001 C CNN
+F 3 "~" H 13600 6300 50  0001 C CNN
+	1    13600 6300
+	0    -1   -1   0   
+$EndComp
+Text Label 13750 6300 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	13400 6150 13400 6300
+Wire Wire Line
+	13400 6300 13450 6300
+Text Label 4500 4100 2    50   ~ 0
+MCU_P0.18
+Text Label 4500 4200 2    50   ~ 0
+MCU_P0.19
+Wire Wire Line
+	4500 4100 4600 4100
+Wire Wire Line
+	4500 4200 4600 4200
+NoConn ~ 5400 1800
+Text Label 6150 4200 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	6000 4200 6150 4200
+Wire Wire Line
+	2500 6350 2500 6200
+Wire Wire Line
+	4450 2700 4600 2700
+Wire Wire Line
+	4450 2800 4600 2800
+Wire Wire Line
+	4450 2900 4600 2900
+Text Label 2400 6200 1    50   ~ 0
+MCU_P0.18
+Text Label 2200 6200 1    50   ~ 0
+MCU_P0.19
+Text Label 2000 6200 1    50   ~ 0
+VCC_3.3V
+Text Label 4500 4000 2    50   ~ 0
+MCU_P0.17
+Wire Wire Line
+	4500 4000 4600 4000
+Text Label 2300 6200 1    50   ~ 0
+MCU_P0.17
+Wire Wire Line
+	2200 6350 2200 6200
+Wire Wire Line
+	2300 6350 2300 6200
+Wire Wire Line
+	2400 6350 2400 6200
+Text Label 4500 4300 2    50   ~ 0
+MCU_P0.20
+Wire Wire Line
+	4500 4300 4600 4300
+Text Label 2100 6200 1    50   ~ 0
+MCU_P0.20
+Wire Wire Line
+	2100 6800 2100 6200
+Text Label 8400 3150 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	8400 3150 8300 3150
+Wire Wire Line
+	2000 6350 2000 6200
+Text Label 4500 5100 2    50   ~ 0
+MCU_P0.31
+Wire Wire Line
+	4500 5100 4600 5100
+$Comp
+L Device:R R26
+U 1 1 61CFB091
+P 8050 4850
+F 0 "R26" V 8050 4850 50  0000 C CNN
+F 1 "R" V 7934 4850 50  0001 C CNN
+F 2 "" V 7980 4850 50  0001 C CNN
+F 3 "~" H 8050 4850 50  0001 C CNN
+	1    8050 4850
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R23
+U 1 1 61CFE302
+P 8050 5150
+F 0 "R23" V 8050 5150 50  0000 C CNN
+F 1 "R" V 8166 5150 50  0001 C CNN
+F 2 "" V 7980 5150 50  0001 C CNN
+F 3 "~" H 8050 5150 50  0001 C CNN
+	1    8050 5150
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:Q_PNP_BCE Q2
+U 1 1 61D15C93
+P 7650 5050
+F 0 "Q2" V 7750 5000 50  0000 L CNN
+F 1 "JAJ (Transistor?)" V 7900 4750 50  0000 L CNN
+F 2 "" H 7850 5150 50  0001 C CNN
+F 3 "~" H 7650 5050 50  0001 C CNN
+	1    7650 5050
+	0    1    1    0   
+$EndComp
+Text Label 7400 5150 2    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	7850 5150 7900 5150
+Wire Wire Line
+	8200 4850 8250 4850
+Wire Wire Line
+	7650 4850 7900 4850
+Wire Wire Line
+	7400 5150 7450 5150
+Text Label 4150 7300 3    50   ~ 0
+U8_4Y
+Wire Wire Line
+	4150 7300 4150 7200
+Connection ~ 4150 7200
+Wire Wire Line
+	4150 7200 4250 7200
+Text Label 3700 7600 3    50   ~ 0
+LED2_ENABLE
+Wire Wire Line
+	3700 7500 3700 7600
+Wire Notes Line
+	12350 5300 14150 5300
+Wire Notes Line
+	14150 5300 14150 6500
+Wire Notes Line
+	14150 6500 12350 6500
+Wire Notes Line
+	12350 6500 12350 5300
+Text Notes 12350 5300 0    50   ~ 0
+Flash Memory Assembly
+Wire Notes Line
+	600  5500 2600 5500
+Wire Notes Line
+	2600 5500 2600 8000
+Wire Notes Line
+	2600 8000 600  8000
+Wire Notes Line
+	600  8000 600  5500
+Text Notes 600  5500 0    50   ~ 0
+SD Slot Assembly
+Wire Notes Line
+	3150 8300 3150 6250
+Wire Notes Line
+	3150 6250 4650 6250
+Wire Notes Line
+	4650 6250 4650 8300
+Wire Notes Line
+	3150 8300 4650 8300
+Text Label 4500 4700 2    50   ~ 0
+MCU_P0.25
+Wire Wire Line
+	4500 4700 4600 4700
+Text Label 8250 4850 0    50   ~ 0
+MCU_P0.31
+Wire Wire Line
+	4500 3900 4600 3900
+Text Label 6150 5000 0    50   ~ 0
+USB_D+
+Text Label 6150 5100 0    50   ~ 0
+USB_D-
+$Comp
+L Device:R R10
+U 1 1 62411DE1
+P 8050 4200
+F 0 "R10" V 8050 4150 50  0000 L CNN
+F 1 "R" H 8120 4155 50  0001 L CNN
+F 2 "" V 7980 4200 50  0001 C CNN
+F 3 "~" H 8050 4200 50  0001 C CNN
+	1    8050 4200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R17
+U 1 1 624134DC
+P 8050 3550
+F 0 "R17" V 8050 3500 50  0000 L CNN
+F 1 "R" H 8120 3505 50  0001 L CNN
+F 2 "" V 7980 3550 50  0001 C CNN
+F 3 "~" H 8050 3550 50  0001 C CNN
+	1    8050 3550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R18
+U 1 1 6241371E
+P 8050 3650
+F 0 "R18" V 8050 3600 50  0000 L CNN
+F 1 "R" H 8120 3605 50  0001 L CNN
+F 2 "" V 7980 3650 50  0001 C CNN
+F 3 "~" H 8050 3650 50  0001 C CNN
+	1    8050 3650
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R19
+U 1 1 62413BA6
+P 8050 3750
+F 0 "R19" V 8050 3700 50  0000 L CNN
+F 1 "R" H 8120 3705 50  0001 L CNN
+F 2 "" V 7980 3750 50  0001 C CNN
+F 3 "~" H 8050 3750 50  0001 C CNN
+	1    8050 3750
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R14
+U 1 1 62425F9A
+P 8050 4300
+F 0 "R14" V 8050 4250 50  0000 L CNN
+F 1 "R" H 8120 4255 50  0001 L CNN
+F 2 "" V 7980 4300 50  0001 C CNN
+F 3 "~" H 8050 4300 50  0001 C CNN
+	1    8050 4300
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R13
+U 1 1 624264D0
+P 8050 4500
+F 0 "R13" V 8050 4450 50  0000 L CNN
+F 1 "R" H 8120 4455 50  0001 L CNN
+F 2 "" V 7980 4500 50  0001 C CNN
+F 3 "~" H 8050 4500 50  0001 C CNN
+	1    8050 4500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R12
+U 1 1 6242A72A
+P 8050 4600
+F 0 "R12" V 8050 4550 50  0000 L CNN
+F 1 "R" H 8120 4555 50  0001 L CNN
+F 2 "" V 7980 4600 50  0001 C CNN
+F 3 "~" H 8050 4600 50  0001 C CNN
+	1    8050 4600
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R2
+U 1 1 6242AE2B
+P 8050 4100
+F 0 "R2" V 8050 4100 50  0000 L CNN
+F 1 "R" H 8120 4055 50  0001 L CNN
+F 2 "" V 7980 4100 50  0001 C CNN
+F 3 "~" H 8050 4100 50  0001 C CNN
+	1    8050 4100
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R16
+U 1 1 6242C0A1
+P 8050 3450
+F 0 "R16" V 8050 3400 50  0000 L CNN
+F 1 "R" H 8120 3405 50  0001 L CNN
+F 2 "" V 7980 3450 50  0001 C CNN
+F 3 "~" H 8050 3450 50  0001 C CNN
+	1    8050 3450
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C11
+U 1 1 62474000
+P 8000 2850
+F 0 "C11" V 7950 2700 50  0000 C CNN
+F 1 "C" H 8115 2805 50  0001 L CNN
+F 2 "" H 8038 2700 50  0001 C CNN
+F 3 "~" H 8000 2850 50  0001 C CNN
+	1    8000 2850
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R1
+U 1 1 62477CBA
+P 8050 4000
+F 0 "R1" V 8050 4000 50  0000 L CNN
+F 1 "R" H 8120 3955 50  0001 L CNN
+F 2 "" V 7980 4000 50  0001 C CNN
+F 3 "~" H 8050 4000 50  0001 C CNN
+	1    8050 4000
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:R R15
+U 1 1 62478115
+P 8050 3350
+F 0 "R15" V 8050 3300 50  0000 L CNN
+F 1 "R" H 8120 3305 50  0001 L CNN
+F 2 "" V 7980 3350 50  0001 C CNN
+F 3 "~" H 8050 3350 50  0001 C CNN
+	1    8050 3350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C6
+U 1 1 624C11E1
+P 5650 6950
+F 0 "C6" V 5700 6800 50  0000 L CNN
+F 1 "C" H 5765 6905 50  0001 L CNN
+F 2 "" H 5688 6800 50  0001 C CNN
+F 3 "~" H 5650 6950 50  0001 C CNN
+	1    5650 6950
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C10
+U 1 1 624C395E
+P 6150 6950
+F 0 "C10" V 6200 7000 50  0000 L CNN
+F 1 "C" H 6265 6905 50  0001 L CNN
+F 2 "" H 6188 6800 50  0001 C CNN
+F 3 "~" H 6150 6950 50  0001 C CNN
+	1    6150 6950
+	0    -1   -1   0   
+$EndComp
+Text Label 6300 7100 0    50   ~ 0
+MCU_GND
+Text Label 8200 2850 0    50   ~ 0
+MCU_GND
+Text Label 6150 2600 0    50   ~ 0
+MCU_P1.19
+Wire Wire Line
+	6000 2600 6150 2600
+Text Label 7800 4000 2    50   ~ 0
+MCU_P1.19
+Wire Wire Line
+	7800 4000 7900 4000
+Text Label 4500 4500 2    50   ~ 0
+MCU_P0.22
+Wire Wire Line
+	4500 4500 4600 4500
+Text Label 7800 3350 2    50   ~ 0
+MCU_P0.22
+Wire Wire Line
+	7800 3350 7900 3350
+Text Label 7800 3450 2    50   ~ 0
+MCU_P0.25
+Wire Wire Line
+	7800 3450 7900 3450
+Text Label 6150 2400 0    50   ~ 0
+MCU_P1.17
+Wire Wire Line
+	6000 2400 6150 2400
+Text Label 7800 4200 2    50   ~ 0
+MCU_P1.17
+Text Label 4500 5000 2    50   ~ 0
+MCU_P0.30
+Wire Wire Line
+	4500 5000 4600 5000
+Text Label 7800 3750 2    50   ~ 0
+MCU_P0.30
+Wire Wire Line
+	7800 3750 7900 3750
+Text Label 4500 4900 2    50   ~ 0
+MCU_P0.29
+Wire Wire Line
+	4600 4900 4500 4900
+Text Label 4500 4800 2    50   ~ 0
+MCU_P0.28
+Wire Wire Line
+	4500 4800 4600 4800
+Text Label 7800 3650 2    50   ~ 0
+MCU_P0.29
+Wire Wire Line
+	7800 3650 7900 3650
+Text Label 6150 2300 0    50   ~ 0
+MCU_P1.16
+Wire Wire Line
+	6000 2300 6150 2300
+Text Label 7800 4300 2    50   ~ 0
+MCU_P1.16
+Wire Wire Line
+	7800 4300 7900 4300
+Text Label 8250 5150 0    50   ~ 0
+USB_D+
+Text Label 7700 4600 2    50   ~ 0
+USB_D-
+$Comp
+L Device:C C5
+U 1 1 627FF905
+P 9650 5600
+F 0 "C5" H 9650 5700 50  0000 L CNN
+F 1 "C" H 9765 5555 50  0001 L CNN
+F 2 "" H 9688 5450 50  0001 C CNN
+F 3 "~" H 9650 5600 50  0001 C CNN
+	1    9650 5600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C7
+U 1 1 62800F74
+P 9450 5600
+F 0 "C7" H 9450 5700 50  0000 L CNN
+F 1 "C" H 9565 5555 50  0001 L CNN
+F 2 "" H 9488 5450 50  0001 C CNN
+F 3 "~" H 9450 5600 50  0001 C CNN
+	1    9450 5600
+	1    0    0    -1  
+$EndComp
+Text Label 9450 5900 0    50   ~ 0
+MCU_GND
+$Comp
+L Device:C C3
+U 1 1 6285BB20
+P 9150 5600
+F 0 "C3" H 9050 5700 50  0000 L CNN
+F 1 "C" H 9265 5555 50  0001 L CNN
+F 2 "" H 9188 5450 50  0001 C CNN
+F 3 "~" H 9150 5600 50  0001 C CNN
+	1    9150 5600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R4
+U 1 1 6285E8D1
+P 9850 5600
+F 0 "R4" V 9850 5500 50  0000 L CNN
+F 1 "R" H 9920 5555 50  0001 L CNN
+F 2 "" V 9780 5600 50  0001 C CNN
+F 3 "~" H 9850 5600 50  0001 C CNN
+	1    9850 5600
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9850 5450 9850 5300
+Wire Wire Line
+	9450 5750 9650 5750
+Connection ~ 9650 5750
+Wire Wire Line
+	9650 5750 9850 5750
+Wire Wire Line
+	9650 5150 9650 5450
+Wire Wire Line
+	9550 5150 9550 5350
+Wire Wire Line
+	9550 5350 9450 5350
+Wire Wire Line
+	9450 5350 9450 5450
+$Comp
+L Device:R R3
+U 1 1 62917793
+P 9000 5600
+F 0 "R3" V 9000 5700 50  0000 R CNN
+F 1 "R" H 8930 5645 50  0001 R CNN
+F 2 "" V 8930 5600 50  0001 C CNN
+F 3 "~" H 9000 5600 50  0001 C CNN
+	1    9000 5600
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	9450 5900 9450 5750
+Connection ~ 9450 5750
+Text Notes 8900 4550 0    50   ~ 0
+USB Jack Assembly
+Text Notes 11850 10250 0    79   ~ 0
+Bresser EXO2 Goto Handbox Rev. 1.09 (2012-08)\nReverse Engineered Schematics
+Text Label 7800 3550 2    50   ~ 0
+MCU_P0.28
+Wire Wire Line
+	7800 3550 7900 3550
+Wire Wire Line
+	7800 4100 7900 4100
+$Comp
+L Device:Fuse F1
+U 1 1 62D410BC
+P 13850 8300
+F 0 "F1" V 13800 8400 50  0000 L CNN
+F 1 "Fuse" H 13910 8255 50  0001 L CNN
+F 2 "" V 13780 8300 50  0001 C CNN
+F 3 "~" H 13850 8300 50  0001 C CNN
+	1    13850 8300
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	9150 5750 9250 5750
+Connection ~ 9150 5750
+Wire Wire Line
+	9000 5450 9000 4750
+Wire Wire Line
+	9000 4750 9150 4750
+Wire Wire Line
+	9450 5150 9450 5200
+Wire Notes Line
+	8900 4550 8900 5950
+Wire Wire Line
+	9000 5750 9150 5750
+Wire Wire Line
+	9150 4750 9150 5450
+Connection ~ 9150 4750
+Wire Wire Line
+	9150 4750 9250 4750
+Wire Wire Line
+	9450 5200 9250 5200
+Wire Wire Line
+	9250 5200 9250 4850
+Wire Wire Line
+	9250 5200 9250 5750
+Connection ~ 9250 5200
+Connection ~ 9250 5750
+Wire Wire Line
+	9250 5750 9450 5750
+$Comp
+L Device:C C2
+U 1 1 62FA10B3
+P 10000 5300
+F 0 "C2" V 9950 5200 50  0000 C CNN
+F 1 "C" V 9839 5300 50  0001 C CNN
+F 2 "" H 10038 5150 50  0001 C CNN
+F 3 "~" H 10000 5300 50  0001 C CNN
+	1    10000 5300
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R48
+U 1 1 62FA41DA
+P 14100 8850
+F 0 "R48" V 14100 8850 50  0000 C CNN
+F 1 "R" V 13984 8850 50  0001 C CNN
+F 2 "" V 14030 8850 50  0001 C CNN
+F 3 "~" H 14100 8850 50  0001 C CNN
+	1    14100 8850
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R46
+U 1 1 62FA6D7C
+P 14100 9050
+F 0 "R46" V 14100 9050 50  0000 C CNN
+F 1 "R" V 13984 9050 50  0001 C CNN
+F 2 "" V 14030 9050 50  0001 C CNN
+F 3 "~" H 14100 9050 50  0001 C CNN
+	1    14100 9050
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R42
+U 1 1 62FA738D
+P 14100 9450
+F 0 "R42" V 14100 9450 50  0000 C CNN
+F 1 "R" V 13984 9450 50  0001 C CNN
+F 2 "" V 14030 9450 50  0001 C CNN
+F 3 "~" H 14100 9450 50  0001 C CNN
+	1    14100 9450
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R41
+U 1 1 62FA75B6
+P 14100 9550
+F 0 "R41" V 14100 9550 50  0000 C CNN
+F 1 "R" V 13984 9550 50  0001 C CNN
+F 2 "" V 14030 9550 50  0001 C CNN
+F 3 "~" H 14100 9550 50  0001 C CNN
+	1    14100 9550
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R43
+U 1 1 62FA7843
+P 14100 9350
+F 0 "R43" V 14100 9350 50  0000 C CNN
+F 1 "R" V 13984 9350 50  0001 C CNN
+F 2 "" V 14030 9350 50  0001 C CNN
+F 3 "~" H 14100 9350 50  0001 C CNN
+	1    14100 9350
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R45
+U 1 1 62FA7CB0
+P 14100 9150
+F 0 "R45" V 14100 9150 50  0000 C CNN
+F 1 "R" V 13984 9150 50  0001 C CNN
+F 2 "" V 14030 9150 50  0001 C CNN
+F 3 "~" H 14100 9150 50  0001 C CNN
+	1    14100 9150
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R47
+U 1 1 62FA7EF3
+P 14100 8950
+F 0 "R47" V 14100 8950 50  0000 C CNN
+F 1 "R" V 13984 8950 50  0001 C CNN
+F 2 "" V 14030 8950 50  0001 C CNN
+F 3 "~" H 14100 8950 50  0001 C CNN
+	1    14100 8950
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R37
+U 1 1 62FA8192
+P 14250 8300
+F 0 "R37" V 14250 8300 50  0000 C CNN
+F 1 "R" V 14134 8300 50  0001 C CNN
+F 2 "" V 14180 8300 50  0001 C CNN
+F 3 "~" H 14250 8300 50  0001 C CNN
+	1    14250 8300
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:C C31
+U 1 1 62FAA023
+P 12900 9750
+F 0 "C31" V 12950 9900 50  0000 C CNN
+F 1 "C" V 12739 9750 50  0001 C CNN
+F 2 "" H 12938 9600 50  0001 C CNN
+F 3 "~" H 12900 9750 50  0001 C CNN
+	1    12900 9750
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Device:D D1
+U 1 1 62FAB686
+P 13150 9600
+F 0 "D1" H 13150 9500 50  0000 C CNN
+F 1 "D" H 13150 9726 50  0001 C CNN
+F 2 "" H 13150 9600 50  0001 C CNN
+F 3 "~" H 13150 9600 50  0001 C CNN
+	1    13150 9600
+	0    -1   -1   0   
+$EndComp
+Text Label 12650 9750 2    50   ~ 0
+MCU_GND
+Wire Wire Line
+	12750 9750 12650 9750
+Wire Wire Line
+	13050 9450 13150 9450
+Wire Wire Line
+	13150 9450 13150 9350
+Wire Wire Line
+	13150 9350 13050 9350
+Wire Wire Line
+	13050 8850 13150 8850
+Wire Wire Line
+	13150 8850 13150 8750
+Wire Wire Line
+	13050 8750 13150 8750
+Text Label 13150 8750 0    50   ~ 0
+MCU_GND
+$Comp
+L Device:C C1
+U 1 1 632031F7
+P 2000 8600
+F 0 "C1" V 1950 8500 50  0000 C CNN
+F 1 "C" V 1839 8600 50  0001 C CNN
+F 2 "" H 2038 8450 50  0001 C CNN
+F 3 "~" H 2000 8600 50  0001 C CNN
+	1    2000 8600
+	0    1    1    0   
+$EndComp
+Text Label 2450 8600 0    50   ~ 0
+MCU_GND
+$Comp
+L Device:R R56
+U 1 1 63220820
+P 2400 8400
+F 0 "R56" V 2400 8400 50  0000 C CNN
+F 1 "R" V 2284 8400 50  0001 C CNN
+F 2 "" V 2330 8400 50  0001 C CNN
+F 3 "~" H 2400 8400 50  0001 C CNN
+	1    2400 8400
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R39
+U 1 1 63220E27
+P 1950 8400
+F 0 "R39" V 1950 8400 50  0000 C CNN
+F 1 "R" V 1834 8400 50  0001 C CNN
+F 2 "" V 1880 8400 50  0001 C CNN
+F 3 "~" H 1950 8400 50  0001 C CNN
+	1    1950 8400
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:D D3
+U 1 1 6323D13F
+P 1150 8800
+F 0 "D3" H 1050 8850 50  0000 C CNN
+F 1 "D" H 1150 8926 50  0001 C CNN
+F 2 "" H 1150 8800 50  0001 C CNN
+F 3 "~" H 1150 8800 50  0001 C CNN
+	1    1150 8800
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:C C29
+U 1 1 6323E295
+P 1150 9000
+F 0 "C29" V 1100 8850 50  0000 C CNN
+F 1 "C" V 989 9000 50  0001 C CNN
+F 2 "" H 1188 8850 50  0001 C CNN
+F 3 "~" H 1150 9000 50  0001 C CNN
+	1    1150 9000
+	0    -1   -1   0   
+$EndComp
+Text Label 1000 9000 2    50   ~ 0
+MCU_GND
+$Comp
+L Device:L L1
+U 1 1 6325C9FC
+P 1550 8600
+F 0 "L1" V 1500 8550 50  0000 L CNN
+F 1 "L" H 1603 8555 50  0001 L CNN
+F 2 "" H 1550 8600 50  0001 C CNN
+F 3 "~" H 1550 8600 50  0001 C CNN
+	1    1550 8600
+	0    -1   -1   0   
+$EndComp
+Text Label 1000 8800 2    50   ~ 0
+MCU_GND
+Text Label 14250 8950 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	13950 8850 13950 8950
+Text Label 14250 9150 0    50   ~ 0
+VCC_5V
+$Comp
+L Device:R R44
+U 1 1 62FA7126
+P 14100 9250
+F 0 "R44" V 14100 9250 50  0000 C CNN
+F 1 "R" V 13984 9250 50  0001 C CNN
+F 2 "" V 14030 9250 50  0001 C CNN
+F 3 "~" H 14100 9250 50  0001 C CNN
+	1    14100 9250
+	0    1    1    0   
+$EndComp
+Text Label 14250 9350 0    50   ~ 0
+VCC_5V
+Text Label 14250 9550 0    50   ~ 0
+VCC_5V
+Connection ~ 13150 9450
+Wire Wire Line
+	13050 9750 13150 9750
+Text Label 14250 8850 0    50   ~ 0
+U8_1Y
+Text Label 14250 9050 0    50   ~ 0
+U8_2Y
+Text Label 14250 9250 0    50   ~ 0
+U8_3A
+Text Label 14250 9450 0    50   ~ 0
+U8_6A
+Wire Wire Line
+	13850 9150 13050 9150
+Wire Wire Line
+	13800 9250 13050 9250
+Wire Wire Line
+	13050 8950 13950 8950
+Connection ~ 13950 8950
+Wire Wire Line
+	13050 9050 13950 9050
+Wire Wire Line
+	13950 9050 13950 9150
+Connection ~ 13950 9050
+Wire Wire Line
+	13950 9350 13950 9250
+Wire Wire Line
+	13850 9250 13950 9250
+Wire Wire Line
+	13850 9250 13850 9150
+Connection ~ 13950 9250
+Wire Wire Line
+	13950 9550 13950 9450
+Wire Wire Line
+	13800 9450 13950 9450
+Wire Wire Line
+	13800 9450 13800 9250
+Connection ~ 13950 9450
+Text Label 13600 8300 2    50   ~ 0
+VCC_5V
+Text Label 15150 9050 2    50   ~ 0
+U8_2A
+Text Label 15150 8850 2    50   ~ 0
+U8_1A
+Text Label 15150 9250 2    50   ~ 0
+U8_3Y
+Text Label 4450 3100 2    50   ~ 0
+MCU_P0.8_TXD1
+Wire Wire Line
+	4600 3100 4450 3100
+Text Label 15350 9050 0    50   ~ 0
+MCU_P0.8_TXD1
+Text Label 4450 3200 2    50   ~ 0
+MCU_P0.9_RXD1
+Wire Wire Line
+	4450 3200 4600 3200
+Text Label 15350 9250 0    50   ~ 0
+MCU_P0.9_RXD1
+Wire Wire Line
+	15150 8850 15350 8850
+Wire Wire Line
+	15350 9050 15150 9050
+Wire Wire Line
+	15150 9250 15350 9250
+Wire Notes Line
+	14550 8850 14850 8850
+Wire Notes Line
+	14500 9050 14900 9050
+Wire Notes Line
+	14500 9250 14900 9250
+Text Label 15150 9450 2    50   ~ 0
+U8_6Y
+Wire Notes Line
+	14500 9450 14900 9450
+Wire Notes Line
+	14600 8800 14600 9600
+Wire Notes Line
+	14600 9600 14800 9600
+Wire Notes Line
+	14600 8800 14800 8800
+Wire Notes Line
+	14800 9600 14800 8800
+Text Notes 14650 9000 0    50   ~ 0
+U8
+Wire Notes Line
+	7100 6100 7100 7150
+Wire Notes Line
+	7100 7150 10200 7150
+Wire Notes Line
+	10200 7150 10200 6100
+Wire Notes Line
+	10200 6100 7100 6100
+Text Notes 7100 6100 0    50   ~ 0
+Hex Buffer Assembly
+Text Label 4450 2300 2    50   ~ 0
+MCU_P0.0_TXD0
+Text Label 4450 2400 2    50   ~ 0
+MCU_P0.1_RXD0
+Text Label 14200 8100 0    50   ~ 0
+MCU_P0.1_RXD0
+Text Label 14200 8000 0    50   ~ 0
+MCU_P0.0_TXD0
+Wire Wire Line
+	13600 8000 14200 8000
+Wire Wire Line
+	13600 8100 14200 8100
+Text Label 13400 9750 0    50   ~ 0
+PWR_LINE
+Wire Wire Line
+	13150 9750 13400 9750
+Connection ~ 13150 9750
+Text Label 1750 9100 2    50   ~ 0
+MCU_GND
+Wire Wire Line
+	2250 8800 2250 8900
+Wire Wire Line
+	2250 8900 2250 9000
+Connection ~ 2250 8900
+Text Label 2350 9000 0    50   ~ 0
+PWR_LINE
+Wire Wire Line
+	2250 9000 2350 9000
+Connection ~ 2250 9000
+Wire Wire Line
+	1300 9000 1750 9000
+Wire Wire Line
+	1750 8800 1750 8700
+Wire Wire Line
+	1750 8700 2250 8700
+Wire Wire Line
+	2250 8700 2250 8800
+Connection ~ 2250 8800
+Text Label 2250 9100 0    50   ~ 0
+U10_CMP_INV_IN
+Wire Wire Line
+	1300 8800 1400 8800
+Wire Wire Line
+	1400 8800 1400 8900
+Wire Wire Line
+	1400 8900 1750 8900
+Wire Notes Line
+	600  8100 3050 8100
+Wire Notes Line
+	3050 8100 3050 9350
+Wire Notes Line
+	600  8100 600  9350
+Text Notes 600  8100 0    50   ~ 0
+Inverting Regulator Assembly
+Wire Notes Line
+	12250 8500 12250 9900
+Wire Notes Line
+	12250 9900 16000 9900
+Wire Notes Line
+	16000 9900 16000 8500
+Wire Notes Line
+	16000 8500 12250 8500
+Text Notes 12250 8500 0    50   ~ 0
+RJ45 HBX to Motors Assembly
+Text Label 6300 6950 0    50   ~ 0
+VCC_3.3V
+Text Label 5500 6950 2    50   ~ 0
+VCC_5V
+Wire Wire Line
+	5800 6950 5900 6950
+Connection ~ 5900 6950
+Wire Wire Line
+	5900 6950 6000 6950
+Wire Wire Line
+	5900 7100 6300 7100
+Wire Wire Line
+	5900 6950 5900 7100
+Wire Notes Line
+	4700 7150 7050 7150
+Wire Notes Line
+	4700 6100 4700 7150
+Wire Notes Line
+	7050 6100 7050 7150
+NoConn ~ 13200 1050
+NoConn ~ 13200 1250
+NoConn ~ 13200 1550
+$Comp
+L Device:C C23
+U 1 1 611D5148
+P 14850 1100
+F 0 "C23" V 14800 950 50  0000 C CNN
+F 1 "C" V 14689 1100 50  0001 C CNN
+F 2 "" H 14888 950 50  0001 C CNN
+F 3 "~" H 14850 1100 50  0001 C CNN
+	1    14850 1100
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C26
+U 1 1 611DAD5D
+P 15150 1200
+F 0 "C26" V 15100 1350 50  0000 C CNN
+F 1 "C" V 14989 1200 50  0001 C CNN
+F 2 "" H 15188 1050 50  0001 C CNN
+F 3 "~" H 15150 1200 50  0001 C CNN
+	1    15150 1200
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C22
+U 1 1 611DB35F
+P 14850 1300
+F 0 "C22" V 14800 1150 50  0000 C CNN
+F 1 "C" V 14689 1300 50  0001 C CNN
+F 2 "" H 14888 1150 50  0001 C CNN
+F 3 "~" H 14850 1300 50  0001 C CNN
+	1    14850 1300
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C18
+U 1 1 611DC0CA
+P 14850 1500
+F 0 "C18" V 14800 1350 50  0000 C CNN
+F 1 "C" V 14689 1500 50  0001 C CNN
+F 2 "" H 14888 1350 50  0001 C CNN
+F 3 "~" H 14850 1500 50  0001 C CNN
+	1    14850 1500
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C19
+U 1 1 611DE906
+P 15700 2000
+F 0 "C19" V 15650 1850 50  0000 C CNN
+F 1 "C" V 15539 2000 50  0001 C CNN
+F 2 "" H 15738 1850 50  0001 C CNN
+F 3 "~" H 15700 2000 50  0001 C CNN
+	1    15700 2000
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C21
+U 1 1 611DF375
+P 14850 2200
+F 0 "C21" V 14800 2050 50  0000 C CNN
+F 1 "C" V 14689 2200 50  0001 C CNN
+F 2 "" H 14888 2050 50  0001 C CNN
+F 3 "~" H 14850 2200 50  0001 C CNN
+	1    14850 2200
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C25
+U 1 1 611E02F8
+P 15150 1400
+F 0 "C25" V 15100 1550 50  0000 C CNN
+F 1 "C" V 14989 1400 50  0001 C CNN
+F 2 "" H 15188 1250 50  0001 C CNN
+F 3 "~" H 15150 1400 50  0001 C CNN
+	1    15150 1400
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C27
+U 1 1 611E06FF
+P 14850 1800
+F 0 "C27" V 14800 1950 50  0000 C CNN
+F 1 "C" V 14689 1800 50  0001 C CNN
+F 2 "" H 14888 1650 50  0001 C CNN
+F 3 "~" H 14850 1800 50  0001 C CNN
+	1    14850 1800
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C20
+U 1 1 611E0F75
+P 15150 2100
+F 0 "C20" V 15100 2250 50  0000 C CNN
+F 1 "C" V 14989 2100 50  0001 C CNN
+F 2 "" H 15188 1950 50  0001 C CNN
+F 3 "~" H 15150 2100 50  0001 C CNN
+	1    15150 2100
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C24
+U 1 1 611E137F
+P 13500 4200
+F 0 "C24" V 13450 4350 50  0000 C CNN
+F 1 "C" V 13339 4200 50  0001 C CNN
+F 2 "" H 13538 4050 50  0001 C CNN
+F 3 "~" H 13500 4200 50  0001 C CNN
+	1    13500 4200
+	0    1    1    0   
+$EndComp
+Text Label 13750 3850 0    50   ~ 0
+MCU_GND
+Text Label 13750 4050 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	13200 4050 13300 4050
+NoConn ~ 13200 4550
+NoConn ~ 13200 4450
+NoConn ~ 13200 4250
+NoConn ~ 13200 4150
+Wire Wire Line
+	13200 3950 13300 3950
+Wire Wire Line
+	13300 3950 13300 4050
+Connection ~ 13300 4050
+Wire Wire Line
+	13300 4050 13750 4050
+Text Label 13750 3750 0    50   ~ 0
+MCU_GND
+Text Label 13750 3650 0    50   ~ 0
+MCU_GND
+Text Label 13750 3550 0    50   ~ 0
+MCU_GND
+Text Label 13750 3450 0    50   ~ 0
+MCU_GND
+Text Label 13750 3350 0    50   ~ 0
+MCU_GND
+Text Label 13750 3050 0    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	13200 3350 13750 3350
+Wire Wire Line
+	13200 3450 13750 3450
+Wire Wire Line
+	13200 3550 13750 3550
+Wire Wire Line
+	13200 3650 13750 3650
+Wire Wire Line
+	13200 3750 13750 3750
+Wire Wire Line
+	13200 3850 13750 3850
+Wire Wire Line
+	13200 3050 13750 3050
+Wire Wire Line
+	13300 4050 13300 4200
+Wire Wire Line
+	13300 4200 13350 4200
+Text Label 13750 4200 0    50   ~ 0
+MCU_GND
+Text Label 15500 2200 0    50   ~ 0
+MCU_GND
+Text Label 15500 1500 0    50   ~ 0
+MCU_GND
+Text Label 15500 1400 0    50   ~ 0
+MCU_GND
+Text Label 15500 1300 0    50   ~ 0
+MCU_GND
+Text Label 15500 1200 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	15300 2100 15500 2100
+Wire Wire Line
+	15000 2200 15500 2200
+Wire Wire Line
+	15000 1500 15500 1500
+Wire Wire Line
+	15000 1300 15500 1300
+Wire Wire Line
+	15300 1400 15500 1400
+Wire Wire Line
+	15300 1200 15500 1200
+Wire Wire Line
+	15000 1100 15500 1100
+Text Label 13750 1450 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	13200 1350 13400 1350
+Wire Wire Line
+	13400 1350 13400 1450
+Wire Wire Line
+	13400 1450 13200 1450
+Wire Wire Line
+	13400 1450 13750 1450
+Connection ~ 13400 1450
+Wire Wire Line
+	13650 4200 13750 4200
+Wire Wire Line
+	15500 2100 15500 2000
+Wire Wire Line
+	15500 2000 15550 2000
+Wire Wire Line
+	15900 1900 15900 2000
+Wire Wire Line
+	15900 2000 15850 2000
+Wire Wire Line
+	15200 1700 15200 1800
+Wire Wire Line
+	15200 1800 15000 1800
+NoConn ~ 13200 2250
+NoConn ~ 13200 1650
+Text Label 13750 1750 0    50   ~ 0
+LCD_8
+Text Label 13750 1850 0    50   ~ 0
+LCD_9
+Text Label 13750 2050 0    50   ~ 0
+LCD_11
+Text Label 13750 2350 0    50   ~ 0
+LCD_14
+Text Label 13750 2450 0    50   ~ 0
+LCD_15
+Text Label 13750 2550 0    50   ~ 0
+LCD_16
+Text Label 13750 2650 0    50   ~ 0
+LCD_17
+Text Label 13750 2750 0    50   ~ 0
+LCD_18
+Text Label 13750 2850 0    50   ~ 0
+LCD_19
+Wire Wire Line
+	13200 1750 13750 1750
+Wire Wire Line
+	13200 1850 13750 1850
+Wire Wire Line
+	13200 1950 13750 1950
+Wire Wire Line
+	13200 2050 13750 2050
+Wire Wire Line
+	13200 2150 13750 2150
+Wire Wire Line
+	13200 2350 13750 2350
+Wire Wire Line
+	13200 2450 13750 2450
+Wire Wire Line
+	13200 2550 13750 2550
+Wire Wire Line
+	13200 2650 13750 2650
+Wire Wire Line
+	13200 2750 13750 2750
+Wire Wire Line
+	13200 2850 13750 2850
+Text Label 14550 1100 2    50   ~ 0
+LCD_8
+Text Label 14550 1200 2    50   ~ 0
+LCD_9
+Text Label 13750 1950 0    50   ~ 0
+LCD_10
+Text Label 14600 1300 2    50   ~ 0
+LCD_10
+Text Label 14600 1400 2    50   ~ 0
+LCD_11
+Text Label 13750 2150 0    50   ~ 0
+LCD_12
+Text Label 14600 1500 2    50   ~ 0
+LCD_12
+Text Label 14600 1700 2    50   ~ 0
+LCD_14
+Text Label 14600 1800 2    50   ~ 0
+LCD_15
+Text Label 14600 1900 2    50   ~ 0
+LCD_16
+Text Label 14600 2000 2    50   ~ 0
+LCD_17
+Text Label 14600 2100 2    50   ~ 0
+LCD_18
+Text Label 14600 2200 2    50   ~ 0
+LCD_19
+Wire Wire Line
+	14550 1100 14700 1100
+Wire Wire Line
+	14550 1200 15000 1200
+Wire Wire Line
+	14600 1300 14700 1300
+Wire Wire Line
+	14600 1400 15000 1400
+Wire Wire Line
+	14600 1500 14700 1500
+Wire Wire Line
+	14600 1700 15200 1700
+Wire Wire Line
+	14600 1800 14700 1800
+Wire Wire Line
+	14600 1900 15900 1900
+Wire Wire Line
+	14600 2000 15500 2000
+Connection ~ 15500 2000
+Wire Wire Line
+	14600 2100 15000 2100
+Wire Wire Line
+	14600 2200 14700 2200
+Wire Wire Line
+	6000 5000 6150 5000
+Wire Wire Line
+	6000 5100 6150 5100
+Text Label 6150 2800 0    50   ~ 0
+MCU_P1.21
+Wire Wire Line
+	6000 2800 6150 2800
+Text Label 15350 9450 0    50   ~ 0
+MCU_P1.21
+Wire Wire Line
+	15150 9450 15350 9450
+Text Label 13600 8200 2    50   ~ 0
+PCISP
+Wire Wire Line
+	14100 8300 14050 8300
+Wire Wire Line
+	13600 8300 13700 8300
+Text Label 4500 3700 2    50   ~ 0
+MCU_P0.14_ISP
+Text Label 14500 8300 0    50   ~ 0
+MCU_P0.14_ISP
+Wire Wire Line
+	14500 8300 14400 8300
+Wire Wire Line
+	13600 8200 14050 8200
+Wire Wire Line
+	14050 8200 14050 8300
+Connection ~ 14050 8300
+Wire Wire Line
+	14050 8300 14000 8300
+Wire Notes Line
+	13100 8400 16000 8400
+Wire Notes Line
+	13100 6600 13100 8400
+Wire Notes Line
+	16000 6600 16000 8400
+Text Label 13600 7850 2    50   ~ 0
+VCC_5V
+Text Label 14200 7850 0    50   ~ 0
+PCISP
+Wire Wire Line
+	13600 7850 14200 7850
+Wire Notes Line
+	13750 7800 13950 7800
+Wire Notes Line
+	13950 7800 13950 7900
+Wire Notes Line
+	13950 7900 13750 7900
+Wire Notes Line
+	13750 7900 13750 7800
+Text Notes 13800 7900 0    50   ~ 0
+F1
+Wire Wire Line
+	1400 8600 1400 8800
+Connection ~ 1400 8800
+Text Label 2600 8400 0    50   ~ 0
+MCU_GND
+Wire Wire Line
+	2550 8400 2600 8400
+Wire Wire Line
+	1700 8600 1800 8600
+Wire Wire Line
+	2150 8600 2450 8600
+Text Label 1750 8250 2    50   ~ 0
+U10_CMP_INV_IN
+Wire Wire Line
+	1800 8600 1800 8400
+Connection ~ 1800 8600
+Wire Wire Line
+	1800 8600 1850 8600
+Wire Wire Line
+	2150 8400 2100 8400
+Wire Wire Line
+	2150 8400 2250 8400
+Connection ~ 2150 8400
+Text Label 1750 8400 2    50   ~ 0
+U10_5V_OUT
+Wire Wire Line
+	1750 8400 1800 8400
+Connection ~ 1800 8400
+Wire Wire Line
+	1750 8250 2150 8250
+Wire Wire Line
+	2150 8250 2150 8400
+Wire Notes Line
+	600  9350 3050 9350
+Text Label 5350 6650 0    50   ~ 0
+U10_5V_OUT
+Text Label 6500 6450 0    50   ~ 0
+MCU_GND
+Text Label 5350 6450 0    50   ~ 0
+MCU_GND
+Text Label 6500 6650 0    50   ~ 0
+U10_5V_OUT
+Text Label 5350 6550 0    50   ~ 0
+VCC_5V
+Text Label 5350 6750 0    50   ~ 0
+VCC_5V
+Text Label 6500 6550 0    50   ~ 0
+VCC_3.3V
+Text Label 6500 6750 0    50   ~ 0
+VCC_3.3V
+$Comp
+L Switch:SW_DIP_x10 KEYPAD3
+U 1 1 648BDE7E
+P 10050 9200
+F 0 "KEYPAD3" H 10050 8650 50  0000 C CNN
+F 1 "SW_DIP_x10" H 10050 9876 50  0001 C CNN
+F 2 "" H 10050 9200 50  0001 C CNN
+F 3 "~" H 10050 9200 50  0001 C CNN
+	1    10050 9200
+	1    0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_DIP_x10 KEYPAD4
+U 1 1 648BEFBF
+P 10750 9200
+F 0 "KEYPAD4" H 10750 8650 50  0000 C CNN
+F 1 "SW_DIP_x10" H 10750 9876 50  0001 C CNN
+F 2 "" H 10750 9200 50  0001 C CNN
+F 3 "~" H 10750 9200 50  0001 C CNN
+	1    10750 9200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	10350 7550 10450 7550
+Wire Wire Line
+	10350 7650 10450 7650
+Wire Wire Line
+	10350 7750 10450 7750
+Wire Wire Line
+	10350 7850 10450 7850
+Wire Wire Line
+	10350 7950 10450 7950
+Wire Wire Line
+	10350 8050 10450 8050
+Wire Wire Line
+	10350 8150 10450 8150
+Wire Wire Line
+	10350 8250 10450 8250
+Wire Wire Line
+	10350 8350 10450 8350
+Wire Wire Line
+	10350 8450 10450 8450
+Wire Wire Line
+	10350 8700 10450 8700
+Wire Wire Line
+	10350 8800 10450 8800
+Wire Wire Line
+	10350 8900 10450 8900
+Wire Wire Line
+	10350 9000 10450 9000
+Wire Wire Line
+	10350 9100 10450 9100
+Wire Wire Line
+	10350 9200 10450 9200
+Wire Wire Line
+	10350 9300 10450 9300
+Wire Wire Line
+	10350 9400 10450 9400
+Wire Wire Line
+	10350 9500 10450 9500
+Wire Wire Line
+	10350 9600 10450 9600
+Text Label 9750 7550 2    50   ~ 0
+KEY_PLUS_IN
+Text Label 9750 7650 2    50   ~ 0
+KEY_LIGHT_IN
+Text Label 9750 7750 2    50   ~ 0
+KEY_MINUS_IN
+Text Label 9750 7850 2    50   ~ 0
+KEY_LEFT_IN
+Text Label 9750 7950 2    50   ~ 0
+KEY_UP_IN
+Text Label 9750 8050 2    50   ~ 0
+KEY_RIGHT_IN
+Text Label 9750 8150 2    50   ~ 0
+KEY_ENTER_IN
+Text Label 9750 8250 2    50   ~ 0
+KEY_DOWN_IN
+Text Label 9750 8350 2    50   ~ 0
+KEY_ONE_IN
+Text Label 9750 8450 2    50   ~ 0
+KEY_TWO_IN
+Text Label 9750 8700 2    50   ~ 0
+KEY_THREE_IN
+Text Label 9750 8800 2    50   ~ 0
+KEY_FOUR_IN
+Text Label 9750 8900 2    50   ~ 0
+KEY_FIVE_IN
+Text Label 9750 9000 2    50   ~ 0
+KEY_SIX_IN
+Text Label 9750 9100 2    50   ~ 0
+KEY_SEVEN_IN
+Text Label 9750 9200 2    50   ~ 0
+KEY_EIGHT_IN
+Text Label 9750 9300 2    50   ~ 0
+KEY_NINE_IN
+Text Label 9750 9400 2    50   ~ 0
+KEY_HELP_IN
+Text Label 9750 9500 2    50   ~ 0
+KEY_NULL_IN
+Text Label 9750 9600 2    50   ~ 0
+KEY_F_IN
+Text Label 11050 7550 0    50   ~ 0
+KEY_PLUS_OUT
+Text Label 11050 7650 0    50   ~ 0
+KEY_LIGHT_OUT
+Text Label 11050 7750 0    50   ~ 0
+KEY_MINUS_OUT
+Text Label 11050 7850 0    50   ~ 0
+KEY_LEFT_OUT
+Text Label 11050 7950 0    50   ~ 0
+KEY_UP_OUT
+Text Label 11050 8050 0    50   ~ 0
+KEY_RIGHT_OUT
+Text Label 11050 8150 0    50   ~ 0
+KEY_ENTER_OUT
+Text Label 11050 8250 0    50   ~ 0
+KEY_DOWN_OUT
+Text Label 11050 8350 0    50   ~ 0
+KEY_ONE_OUT
+Text Label 11050 8450 0    50   ~ 0
+KEY_TWO_OUT
+Text Label 11050 8700 0    50   ~ 0
+KEY_THREE_OUT
+Text Label 11050 8800 0    50   ~ 0
+KEY_FOUR_OUT
+Text Label 11050 8900 0    50   ~ 0
+KEY_FIVE_OUT
+Text Label 11050 9000 0    50   ~ 0
+KEY_SIX_OUT
+Text Label 11050 9100 0    50   ~ 0
+KEY_SEVEN_OUT
+Text Label 11050 9200 0    50   ~ 0
+KEY_EIGHT_OUT
+Text Label 11050 9300 0    50   ~ 0
+KEY_NINE_OUT
+Text Label 11050 9400 0    50   ~ 0
+KEY_HELP_OUT
+Text Label 11050 9500 0    50   ~ 0
+KEY_NULL_OUT
+Text Label 11050 9600 0    50   ~ 0
+KEY_F_OUT
+Wire Wire Line
+	4500 8650 4600 8650
+Wire Wire Line
+	4600 8650 4600 8750
+Wire Wire Line
+	4600 8750 4500 8750
+Wire Wire Line
+	4500 8850 4600 8850
+Wire Wire Line
+	4600 8850 4600 8950
+Wire Wire Line
+	4600 8950 4500 8950
+Wire Wire Line
+	4500 9050 4600 9050
+Wire Wire Line
+	4600 9050 4600 9150
+Wire Wire Line
+	4600 9150 4500 9150
+Wire Wire Line
+	4500 9250 4600 9250
+Wire Wire Line
+	4600 9250 4600 9350
+Wire Wire Line
+	4600 9350 4500 9350
+Wire Wire Line
+	4500 9450 4600 9450
+Wire Wire Line
+	4600 9450 4600 9550
+Wire Wire Line
+	4600 9550 4500 9550
+Wire Wire Line
+	4500 9700 4600 9700
+Wire Wire Line
+	4600 9700 4600 9800
+Wire Wire Line
+	4600 9800 4500 9800
+Wire Wire Line
+	4500 9900 4600 9900
+Wire Wire Line
+	4600 9900 4600 10000
+Wire Wire Line
+	4600 10000 4500 10000
+Wire Wire Line
+	4500 10100 4600 10100
+Wire Wire Line
+	4600 10100 4600 10200
+Wire Wire Line
+	4600 10200 4500 10200
+Wire Wire Line
+	4500 10300 4600 10300
+Wire Wire Line
+	4600 10300 4600 10400
+Wire Wire Line
+	4600 10400 4500 10400
+Wire Wire Line
+	4500 10500 4600 10500
+Wire Wire Line
+	4600 10500 4600 10600
+Wire Wire Line
+	4600 10600 4500 10600
+$Comp
+L Device:R R7
+U 1 1 6518E3E4
+P 3650 8650
+F 0 "R7" V 3650 8650 50  0000 C CNN
+F 1 "R" V 3534 8650 50  0001 C CNN
+F 2 "" V 3580 8650 50  0001 C CNN
+F 3 "~" H 3650 8650 50  0001 C CNN
+	1    3650 8650
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R59
+U 1 1 6519228E
+P 3650 8850
+F 0 "R59" V 3650 8850 50  0000 C CNN
+F 1 "R" V 3534 8850 50  0001 C CNN
+F 2 "" V 3580 8850 50  0001 C CNN
+F 3 "~" H 3650 8850 50  0001 C CNN
+	1    3650 8850
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R9
+U 1 1 651925C2
+P 3650 9050
+F 0 "R9" V 3650 9050 50  0000 C CNN
+F 1 "R" V 3534 9050 50  0001 C CNN
+F 2 "" V 3580 9050 50  0001 C CNN
+F 3 "~" H 3650 9050 50  0001 C CNN
+	1    3650 9050
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R6
+U 1 1 65192A21
+P 3650 9250
+F 0 "R6" V 3650 9250 50  0000 C CNN
+F 1 "R" V 3534 9250 50  0001 C CNN
+F 2 "" V 3580 9250 50  0001 C CNN
+F 3 "~" H 3650 9250 50  0001 C CNN
+	1    3650 9250
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R28
+U 1 1 65192F4D
+P 3650 9450
+F 0 "R28" V 3650 9450 50  0000 C CNN
+F 1 "R" V 3534 9450 50  0001 C CNN
+F 2 "" V 3580 9450 50  0001 C CNN
+F 3 "~" H 3650 9450 50  0001 C CNN
+	1    3650 9450
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R8
+U 1 1 65193664
+P 3650 9700
+F 0 "R8" V 3650 9700 50  0000 C CNN
+F 1 "R" V 3534 9700 50  0001 C CNN
+F 2 "" V 3580 9700 50  0001 C CNN
+F 3 "~" H 3650 9700 50  0001 C CNN
+	1    3650 9700
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R60
+U 1 1 65193B0F
+P 3650 9900
+F 0 "R60" V 3650 9900 50  0000 C CNN
+F 1 "R" V 3534 9900 50  0001 C CNN
+F 2 "" V 3580 9900 50  0001 C CNN
+F 3 "~" H 3650 9900 50  0001 C CNN
+	1    3650 9900
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R29
+U 1 1 651940DD
+P 3650 10100
+F 0 "R29" V 3650 10100 50  0000 C CNN
+F 1 "R" V 3534 10100 50  0001 C CNN
+F 2 "" V 3580 10100 50  0001 C CNN
+F 3 "~" H 3650 10100 50  0001 C CNN
+	1    3650 10100
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R30
+U 1 1 651946DB
+P 3650 10300
+F 0 "R30" V 3650 10300 50  0000 C CNN
+F 1 "R" V 3534 10300 50  0001 C CNN
+F 2 "" V 3580 10300 50  0001 C CNN
+F 3 "~" H 3650 10300 50  0001 C CNN
+	1    3650 10300
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R51
+U 1 1 65194CAA
+P 3650 10500
+F 0 "R51" V 3650 10500 50  0000 C CNN
+F 1 "R" V 3534 10500 50  0001 C CNN
+F 2 "" V 3580 10500 50  0001 C CNN
+F 3 "~" H 3650 10500 50  0001 C CNN
+	1    3650 10500
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	3800 8650 4000 8650
+Wire Wire Line
+	3800 8850 4000 8850
+Wire Wire Line
+	3800 9050 4000 9050
+Wire Wire Line
+	3800 9250 4000 9250
+Wire Wire Line
+	3800 9450 4000 9450
+Wire Wire Line
+	3800 9700 4000 9700
+Wire Wire Line
+	3800 9900 4000 9900
+Wire Wire Line
+	3800 10100 4000 10100
+Wire Wire Line
+	3800 10300 4000 10300
+Wire Wire Line
+	3800 10500 4000 10500
+Text Label 3400 8500 0    50   ~ 0
+VCC_5V
+Wire Wire Line
+	3400 8500 3400 8650
+Wire Wire Line
+	3400 8650 3500 8650
+Wire Wire Line
+	3400 8650 3400 8850
+Wire Wire Line
+	3400 8850 3500 8850
+Connection ~ 3400 8650
+Wire Wire Line
+	3400 8850 3400 9050
+Wire Wire Line
+	3400 9050 3500 9050
+Connection ~ 3400 8850
+Wire Wire Line
+	3400 9050 3400 9250
+Wire Wire Line
+	3400 9250 3500 9250
+Connection ~ 3400 9050
+Wire Wire Line
+	3400 9250 3400 9450
+Wire Wire Line
+	3400 9450 3500 9450
+Connection ~ 3400 9250
+Wire Wire Line
+	3400 9450 3400 9700
+Wire Wire Line
+	3400 9700 3500 9700
+Connection ~ 3400 9450
+Wire Wire Line
+	3400 9700 3400 9900
+Wire Wire Line
+	3400 9900 3500 9900
+Connection ~ 3400 9700
+Wire Wire Line
+	3400 9900 3400 10100
+Wire Wire Line
+	3400 10100 3500 10100
+Connection ~ 3400 9900
+Wire Wire Line
+	3400 10100 3400 10300
+Wire Wire Line
+	3400 10300 3500 10300
+Connection ~ 3400 10100
+Wire Wire Line
+	3400 10300 3400 10500
+Wire Wire Line
+	3400 10500 3500 10500
+Connection ~ 3400 10300
+Wire Wire Line
+	3800 10750 3900 10750
+Wire Wire Line
+	3900 8750 4000 8750
+Wire Wire Line
+	4000 8950 3900 8950
+Connection ~ 3900 8950
+Wire Wire Line
+	3900 8950 3900 8750
+Wire Wire Line
+	4000 9150 3900 9150
+Connection ~ 3900 9150
+Wire Wire Line
+	3900 9150 3900 8950
+Wire Wire Line
+	4000 9350 3900 9350
+Connection ~ 3900 9350
+Wire Wire Line
+	3900 9350 3900 9150
+Wire Wire Line
+	4000 9550 3900 9550
+Connection ~ 3900 9550
+Wire Wire Line
+	3900 9550 3900 9350
+Wire Wire Line
+	4000 9800 3900 9800
+Connection ~ 3900 9800
+Wire Wire Line
+	3900 9800 3900 9550
+Wire Wire Line
+	4000 10000 3900 10000
+Connection ~ 3900 10000
+Wire Wire Line
+	3900 10000 3900 9800
+Wire Wire Line
+	4000 10200 3900 10200
+Connection ~ 3900 10200
+Wire Wire Line
+	3900 10200 3900 10000
+Wire Wire Line
+	4000 10400 3900 10400
+Connection ~ 3900 10400
+Wire Wire Line
+	3900 10400 3900 10200
+Wire Wire Line
+	4000 10600 3900 10600
+Wire Wire Line
+	3900 10400 3900 10600
+Connection ~ 3900 10600
+Wire Wire Line
+	3900 10600 3900 10750
+Wire Notes Line
+	3100 8400 3100 11150
+Wire Notes Line
+	3100 11150 4650 11150
+Wire Notes Line
+	4650 11150 4650 8400
+Wire Notes Line
+	3100 8400 4650 8400
+Text Notes 3100 8400 0    50   ~ 0
+Keypad Background LED Assembly
+Text Notes 3150 11100 0    50   ~ 0
+Two LEDs are connected in series, \nsharing one series resistor.\nNot aligned to key layout!
+Text Label 4450 2500 2    50   ~ 0
+MCU_P0.2
+Text Label 4450 2600 2    50   ~ 0
+MCU_P0.3
+Text Label 4450 3000 2    50   ~ 0
+MCU_P0.7
+Text Label 4450 3400 2    50   ~ 0
+MCU_P0.11
+Text Label 4450 3600 2    50   ~ 0
+MCU_P0.13
+Text Label 4500 4400 2    50   ~ 0
+MCU_P0.21
+Text Label 4500 4600 2    50   ~ 0
+MCU_P0.23
+Text Label 6150 2500 0    50   ~ 0
+MCU_P1.18
+Text Label 6150 3000 0    50   ~ 0
+MCU_P1.23
+Text Label 6150 3300 0    50   ~ 0
+MCU_P1.26
+Text Label 6150 3400 0    50   ~ 0
+MCU_P1.27
+Text Label 6150 3500 0    50   ~ 0
+MCU_P1.28
+Text Label 6150 3600 0    50   ~ 0
+MCU_P1.29
+Text Label 6150 3700 0    50   ~ 0
+MCU_P1.30
+Text Label 6150 3800 0    50   ~ 0
+MCU_P1.31
+Wire Wire Line
+	6000 2900 6150 2900
+Wire Wire Line
+	6000 3000 6150 3000
+Wire Wire Line
+	6000 3300 6150 3300
+Wire Wire Line
+	6000 3400 6150 3400
+Wire Wire Line
+	6000 3500 6150 3500
+Wire Wire Line
+	6000 3600 6150 3600
+Wire Wire Line
+	6000 3700 6150 3700
+Wire Wire Line
+	6000 3800 6150 3800
+Wire Wire Line
+	4450 2500 4600 2500
+Wire Wire Line
+	4450 2600 4600 2600
+Wire Wire Line
+	4450 3000 4600 3000
+Wire Wire Line
+	4450 3300 4600 3300
+Wire Wire Line
+	4450 3400 4600 3400
+Wire Wire Line
+	4450 3500 4600 3500
+Wire Wire Line
+	4450 3600 4600 3600
+Wire Wire Line
+	4500 3800 4600 3800
+Wire Wire Line
+	4500 4400 4600 4400
+Wire Wire Line
+	4500 4600 4600 4600
+Wire Wire Line
+	6000 2500 6150 2500
+Text Notes 9900 10000 0    50   ~ 0
+This is implemented\nin 5x4 key matrix configuration.
+Text Notes 5050 11050 1    79   ~ 0
+KEY_PLUS
+Text Notes 5200 11050 1    79   ~ 0
+KEY_LIGHT
+Text Notes 5350 11050 1    79   ~ 0
+KEY_MINUS
+Text Notes 5500 11050 1    79   ~ 0
+KEY_UP
+Text Notes 5650 11050 1    79   ~ 0
+KEY_ENTER
+Text Notes 5850 11050 1    79   ~ 0
+KEY COLUMNS
+Text Notes 5050 10150 1    79   ~ 0
+KEY_LEFT
+Text Notes 5050 9450 1    79   ~ 0
+KEY_DOWN
+Text Notes 5050 8750 1    79   ~ 0
+KEY_RIGHT
+Text Notes 5200 10150 1    79   ~ 0
+KEY_ONE
+Text Notes 5350 10150 1    79   ~ 0
+KEY_FOUR
+Text Notes 5500 10150 1    79   ~ 0
+KEY_SEVEN
+Text Notes 5650 10150 1    79   ~ 0
+KEY_HELP
+Text Notes 5200 9450 1    79   ~ 0
+KEY_TWO
+Text Notes 5350 9450 1    79   ~ 0
+KEY_FIVE
+Text Notes 5500 9450 1    79   ~ 0
+KEY_EIGHT
+Text Notes 5650 9450 1    79   ~ 0
+KEY_NULL
+Text Notes 5200 8750 1    79   ~ 0
+KEY_THREE
+Text Notes 5350 8750 1    79   ~ 0
+KEY_SIX
+Text Notes 5500 8750 1    79   ~ 0
+KEY_NINE
+Text Notes 5650 8750 1    79   ~ 0
+KEY_F
+Text Notes 4850 11050 1    79   ~ 0
+KEY_ROWS
+Text Notes 6050 11050 1    79   ~ 0
+KEY_PLUS
+Text Notes 6200 11050 1    79   ~ 0
+KEY_FOUR
+Text Notes 6350 11050 1    79   ~ 0
+KEY_FIVE
+Text Notes 6500 11050 1    79   ~ 0
+KEY_SIX
+Text Notes 6050 10150 1    79   ~ 0
+KEY_LIGHT
+Text Notes 6200 10150 1    79   ~ 0
+KEY_SEVEN
+Text Notes 6350 10150 1    79   ~ 0
+KEY_EIGHT
+Text Notes 6500 10150 1    79   ~ 0
+KEY_NINE
+Text Notes 6050 9450 1    79   ~ 0
+KEY_MINUS
+Text Notes 6200 9450 1    79   ~ 0
+KEY_HELP
+Text Notes 6350 9450 1    79   ~ 0
+KEY_NULL
+Text Notes 6500 9450 1    79   ~ 0
+KEY_F
+Text Notes 6050 8750 1    79   ~ 0
+KEY_UP
+Text Notes 6200 8750 1    79   ~ 0
+KEY_LEFT
+Text Notes 6350 8750 1    79   ~ 0
+KEY_DOWN
+Text Notes 6500 8750 1    79   ~ 0
+KEY_RIGHT
+Text Notes 6050 8050 1    79   ~ 0
+KEY_ENTER
+Text Notes 6200 8050 1    79   ~ 0
+KEY_ONE
+Text Notes 6350 8050 1    79   ~ 0
+KEY_TWO
+Text Notes 6500 8050 1    79   ~ 0
+KEY_THREE
+Wire Notes Line
+	5900 11050 5900 10200
+Wire Notes Line
+	4900 11050 4900 10400
+Text Label 8400 7850 1    50   ~ 0
+KEY_ROW1
+Text Label 8300 7850 1    50   ~ 0
+KEY_ROW2
+Text Label 8200 7850 1    50   ~ 0
+KEY_ROW3
+Text Label 8100 7850 1    50   ~ 0
+KEY_ROW4
+Text Label 8000 7850 1    50   ~ 0
+KEY_ROW5
+Text Label 7400 7900 1    50   ~ 0
+KEY_COLUMN1
+Text Label 7500 7900 1    50   ~ 0
+KEY_COLUMN2
+Text Label 7600 7900 1    50   ~ 0
+KEY_COLUMN3
+Text Label 7700 7900 1    50   ~ 0
+KEY_COLUMN4
+Text Label 7300 8000 2    50   ~ 0
+KEY_PLUS_IN
+Text Label 7300 8100 2    50   ~ 0
+KEY_LIGHT_IN
+Text Label 7300 8200 2    50   ~ 0
+KEY_MINUS_IN
+Text Label 7300 8400 2    50   ~ 0
+KEY_ENTER_IN
+Wire Wire Line
+	7400 7900 7400 8000
+Wire Wire Line
+	7400 8400 7300 8400
+Wire Wire Line
+	7300 8300 7400 8300
+Connection ~ 7400 8300
+Wire Wire Line
+	7400 8300 7400 8400
+Wire Wire Line
+	7300 8200 7400 8200
+Connection ~ 7400 8200
+Wire Wire Line
+	7400 8200 7400 8300
+Wire Wire Line
+	7300 8100 7400 8100
+Connection ~ 7400 8100
+Wire Wire Line
+	7400 8100 7400 8200
+Wire Wire Line
+	7300 8000 7400 8000
+Connection ~ 7400 8000
+Wire Wire Line
+	7400 8000 7400 8100
+Text Label 7300 8550 2    50   ~ 0
+KEY_FOUR_IN
+Text Label 7300 8650 2    50   ~ 0
+KEY_SEVEN_IN
+Text Label 7300 8750 2    50   ~ 0
+KEY_HELP_IN
+Text Label 7300 8850 2    50   ~ 0
+KEY_LEFT_IN
+Text Label 7300 8950 2    50   ~ 0
+KEY_ONE_IN
+Wire Wire Line
+	7500 7900 7500 8550
+Wire Wire Line
+	7500 8550 7300 8550
+Wire Wire Line
+	7500 8550 7500 8650
+Wire Wire Line
+	7500 8650 7300 8650
+Connection ~ 7500 8550
+Wire Wire Line
+	7500 8650 7500 8750
+Wire Wire Line
+	7500 8750 7300 8750
+Connection ~ 7500 8650
+Wire Wire Line
+	7500 8750 7500 8850
+Wire Wire Line
+	7500 8850 7300 8850
+Connection ~ 7500 8750
+Wire Wire Line
+	7500 8850 7500 8950
+Wire Wire Line
+	7500 8950 7300 8950
+Connection ~ 7500 8850
+Text Label 7300 9100 2    50   ~ 0
+KEY_FIVE_IN
+Text Label 7300 9200 2    50   ~ 0
+KEY_EIGHT_IN
+Text Label 7300 9300 2    50   ~ 0
+KEY_NULL_IN
+Text Label 7300 9400 2    50   ~ 0
+KEY_DOWN_IN
+Text Label 7300 9500 2    50   ~ 0
+KEY_TWO_IN
+Wire Wire Line
+	7600 7900 7600 9100
+Wire Wire Line
+	7600 9100 7300 9100
+Wire Wire Line
+	7300 9200 7600 9200
+Wire Wire Line
+	7600 9200 7600 9100
+Connection ~ 7600 9100
+Wire Wire Line
+	7300 9300 7600 9300
+Wire Wire Line
+	7600 9300 7600 9200
+Connection ~ 7600 9200
+Wire Wire Line
+	7600 9300 7600 9400
+Wire Wire Line
+	7600 9400 7300 9400
+Connection ~ 7600 9300
+Wire Wire Line
+	7300 9500 7600 9500
+Wire Wire Line
+	7600 9500 7600 9400
+Connection ~ 7600 9400
+Text Label 7300 9650 2    50   ~ 0
+KEY_SIX_IN
+Text Label 7300 9750 2    50   ~ 0
+KEY_NINE_IN
+Text Label 7300 9850 2    50   ~ 0
+KEY_F_IN
+Text Label 7300 9950 2    50   ~ 0
+KEY_RIGHT_IN
+Text Label 7300 10050 2    50   ~ 0
+KEY_THREE_IN
+Wire Wire Line
+	7700 7900 7700 9650
+Wire Wire Line
+	7700 9650 7300 9650
+Wire Wire Line
+	7300 9750 7700 9750
+Wire Wire Line
+	7700 9750 7700 9650
+Connection ~ 7700 9650
+Wire Wire Line
+	7300 9850 7700 9850
+Wire Wire Line
+	7700 9850 7700 9750
+Connection ~ 7700 9750
+Wire Wire Line
+	7300 9950 7700 9950
+Wire Wire Line
+	7700 9950 7700 9850
+Connection ~ 7700 9850
+Wire Wire Line
+	7300 10050 7700 10050
+Wire Wire Line
+	7700 10050 7700 9950
+Connection ~ 7700 9950
+Text Label 8500 7950 0    50   ~ 0
+KEY_PLUS_OUT
+Text Label 8500 8050 0    50   ~ 0
+KEY_FOUR_OUT
+Text Label 8500 8150 0    50   ~ 0
+KEY_FIVE_OUT
+Text Label 8500 8250 0    50   ~ 0
+KEY_SIX_OUT
+Wire Wire Line
+	8400 7850 8400 7950
+Wire Wire Line
+	8400 8250 8500 8250
+Wire Wire Line
+	8400 8150 8500 8150
+Connection ~ 8400 8150
+Wire Wire Line
+	8400 8150 8400 8250
+Wire Wire Line
+	8400 8050 8500 8050
+Connection ~ 8400 8050
+Wire Wire Line
+	8400 8050 8400 8150
+Wire Wire Line
+	8500 7950 8400 7950
+Connection ~ 8400 7950
+Wire Wire Line
+	8400 7950 8400 8050
+Text Label 8500 8400 0    50   ~ 0
+KEY_LIGHT_OUT
+Text Label 8500 8500 0    50   ~ 0
+KEY_SEVEN_OUT
+Text Label 8500 8600 0    50   ~ 0
+KEY_EIGHT_OUT
+Text Label 8500 8700 0    50   ~ 0
+KEY_NINE_OUT
+Wire Wire Line
+	8300 7850 8300 8400
+Wire Wire Line
+	8300 8700 8500 8700
+Wire Wire Line
+	8500 8600 8300 8600
+Connection ~ 8300 8600
+Wire Wire Line
+	8300 8600 8300 8700
+Wire Wire Line
+	8500 8500 8300 8500
+Connection ~ 8300 8500
+Wire Wire Line
+	8300 8500 8300 8600
+Wire Wire Line
+	8500 8400 8300 8400
+Connection ~ 8300 8400
+Wire Wire Line
+	8300 8400 8300 8500
+Text Label 8500 8850 0    50   ~ 0
+KEY_MINUS_OUT
+Text Label 8500 8950 0    50   ~ 0
+KEY_HELP_OUT
+Text Label 8500 9050 0    50   ~ 0
+KEY_NULL_OUT
+Text Label 8500 9150 0    50   ~ 0
+KEY_F_OUT
+Wire Wire Line
+	8200 7850 8200 8850
+Wire Wire Line
+	8200 9150 8500 9150
+Wire Wire Line
+	8500 9050 8200 9050
+Connection ~ 8200 9050
+Wire Wire Line
+	8200 9050 8200 9150
+Wire Wire Line
+	8500 8950 8200 8950
+Connection ~ 8200 8950
+Wire Wire Line
+	8200 8950 8200 9050
+Wire Wire Line
+	8500 8850 8200 8850
+Connection ~ 8200 8850
+Wire Wire Line
+	8200 8850 8200 8950
+Text Label 8500 9300 0    50   ~ 0
+KEY_UP_OUT
+Text Label 8500 9400 0    50   ~ 0
+KEY_LEFT_OUT
+Text Label 8500 9500 0    50   ~ 0
+KEY_RIGHT_OUT
+Text Label 8500 9600 0    50   ~ 0
+KEY_DOWN_OUT
+Wire Wire Line
+	8100 7850 8100 9300
+Wire Wire Line
+	8100 9600 8500 9600
+Wire Wire Line
+	8500 9500 8100 9500
+Connection ~ 8100 9500
+Wire Wire Line
+	8100 9500 8100 9600
+Wire Wire Line
+	8500 9400 8100 9400
+Connection ~ 8100 9400
+Wire Wire Line
+	8100 9400 8100 9500
+Wire Wire Line
+	8500 9300 8100 9300
+Connection ~ 8100 9300
+Wire Wire Line
+	8100 9300 8100 9400
+Text Label 8500 9750 0    50   ~ 0
+KEY_ENTER_OUT
+Text Label 8500 9850 0    50   ~ 0
+KEY_ONE_OUT
+Text Label 8500 9950 0    50   ~ 0
+KEY_TWO_OUT
+Text Label 8500 10050 0    50   ~ 0
+KEY_THREE_OUT
+Wire Wire Line
+	8000 7850 8000 9750
+Wire Wire Line
+	8000 9750 8500 9750
+Wire Wire Line
+	8000 9750 8000 9850
+Wire Wire Line
+	8000 9850 8500 9850
+Connection ~ 8000 9750
+Wire Wire Line
+	8000 9850 8000 9950
+Wire Wire Line
+	8000 9950 8500 9950
+Connection ~ 8000 9850
+Wire Wire Line
+	8000 9950 8000 10050
+Wire Wire Line
+	8000 10050 8500 10050
+Connection ~ 8000 9950
+Wire Notes Line
+	4700 7250 11750 7250
+Wire Notes Line
+	11750 7250 11750 11150
+Wire Notes Line
+	11750 11150 4700 11150
+Wire Notes Line
+	4700 11150 4700 7250
+Text Notes 4700 7250 0    50   ~ 0
+Keypad Matrix Assembly
+Text Label 7300 8300 2    50   ~ 0
+KEY_UP_IN
+Text Label 13750 1150 0    50   ~ 0
+VCC_3.3V
+Text Label 13750 2950 0    50   ~ 0
+MCU_GND
+Text Label 3800 10750 2    50   ~ 0
+LCD_BG_LED1
+Text Label 3900 7750 3    50   ~ 0
+MCU_P1.22
+Text Label 3900 7550 1    50   ~ 0
+U8_4A
+Wire Wire Line
+	3900 7750 3900 7550
+Text Notes 3950 7400 0    50   ~ 0
+U8
+Wire Notes Line
+	3900 7400 4100 7400
+Text Label 14500 4400 0    50   ~ 0
+MCU_P0.21
+Wire Wire Line
+	14500 4400 14450 4400
+Wire Wire Line
+	14450 4400 14450 4550
+Wire Wire Line
+	14450 4550 14500 4550
+Wire Wire Line
+	13200 1150 13750 1150
+Wire Wire Line
+	13200 2950 13750 2950
+Text Label 13750 4350 0    50   ~ 0
+LCD_CS
+Wire Wire Line
+	13200 4350 13750 4350
+Text Label 13750 3250 0    50   ~ 0
+LCD_SCLK
+Wire Wire Line
+	13200 3250 13750 3250
+Text Label 13750 3150 0    50   ~ 0
+LCD_DATA
+Wire Wire Line
+	13200 3150 13750 3150
+Text Label 4450 3300 2    50   ~ 0
+LCD_CS
+Text Label 4450 3500 2    50   ~ 0
+LCD_SCLK
+Text Label 4500 3800 2    50   ~ 0
+LCD_DATA
+Text Label 15500 1100 0    50   ~ 0
+MCU_GND
+Text Label 6150 2900 0    50   ~ 0
+U8_5A
+Text Label 12000 4300 2    50   ~ 0
+U8_5Y
+Text Label 12200 4500 2    50   ~ 0
+BUZZER1
+Text Label 12200 4600 2    50   ~ 0
+BUZZER2
+Text Label 12200 4300 0    50   ~ 0
+BUZZER1
+Wire Wire Line
+	12000 4300 12200 4300
+Text Label 12000 4200 2    50   ~ 0
+VCC_5V
+Text Label 12200 4200 0    50   ~ 0
+BUZZER2
+Wire Wire Line
+	12000 4200 12200 4200
+Wire Notes Line
+	11700 4950 12700 4950
+Wire Notes Line
+	12700 4950 12700 4050
+Wire Notes Line
+	12700 4050 11700 4050
+Wire Notes Line
+	11700 4050 11700 4950
+Text Notes 11700 4050 0    50   ~ 0
+Buzzer
+Text Label 7650 10250 2    50   ~ 0
+KEY_COLUMN1
+Text Label 7650 10350 2    50   ~ 0
+KEY_COLUMN2
+Text Label 7650 10450 2    50   ~ 0
+KEY_COLUMN3
+Text Label 7650 10550 2    50   ~ 0
+KEY_COLUMN4
+Text Label 9200 10650 2    50   ~ 0
+KEY_ROW5
+Text Label 9200 10550 2    50   ~ 0
+KEY_ROW4
+Text Label 9200 10450 2    50   ~ 0
+KEY_ROW3
+Text Label 9200 10350 2    50   ~ 0
+KEY_ROW2
+Text Label 9200 10250 2    50   ~ 0
+KEY_ROW1
+Text Label 9650 10250 0    50   ~ 0
+MCU_P0.22
+Text Label 9650 10350 0    50   ~ 0
+MCU_P0.25
+Text Label 9650 10450 0    50   ~ 0
+MCU_P0.28
+Text Label 9650 10550 0    50   ~ 0
+MCU_P0.29
+Text Label 9650 10650 0    50   ~ 0
+MCU_P0.30
+Text Label 8100 10250 0    50   ~ 0
+MCU_P1.16
+Text Label 8100 10350 0    50   ~ 0
+MCU_P1.17
+Text Label 8100 10450 0    50   ~ 0
+MCU_P1.18
+Text Label 8100 10550 0    50   ~ 0
+MCU_P1.19
+Wire Wire Line
+	9200 10250 9650 10250
+Wire Wire Line
+	9200 10350 9650 10350
+Wire Wire Line
+	9200 10450 9650 10450
+Wire Wire Line
+	9200 10550 9650 10550
+Wire Wire Line
+	9200 10650 9650 10650
+Wire Wire Line
+	7650 10550 8100 10550
+Wire Wire Line
+	7650 10450 8100 10450
+Wire Wire Line
+	7650 10350 8100 10350
+Wire Wire Line
+	7650 10250 8100 10250
+Connection ~ 9850 5300
+Wire Wire Line
+	9850 5300 9850 5150
+Wire Wire Line
+	9850 5750 10150 5750
+Wire Wire Line
+	10150 5750 10150 5300
+Connection ~ 9850 5750
+Wire Notes Line
+	10200 5950 10200 4550
+Wire Notes Line
+	8900 5950 10200 5950
+Wire Notes Line
+	8900 4550 10200 4550
+Wire Wire Line
+	8200 5150 8250 5150
+$Comp
+L Device:LED LCD_BG_LED1
+U 1 1 60FC3532
+P 14800 3100
+F 0 "LCD_BG_LED1" H 15000 3200 50  0000 R CNN
+F 1 "LED" V 14748 2982 50  0001 R CNN
+F 2 "" H 14800 3100 50  0001 C CNN
+F 3 "~" H 14800 3100 50  0001 C CNN
+	1    14800 3100
+	0    -1   -1   0   
+$EndComp
+Text Label 15000 2800 0    50   ~ 0
+LCD_BG_LED2
+Text Label 15000 3450 0    50   ~ 0
+LCD_BG_LED1
+Wire Wire Line
+	15000 2800 14800 2800
+Wire Wire Line
+	14800 2800 14800 2950
+Wire Wire Line
+	15000 3450 14800 3450
+Wire Wire Line
+	14800 3450 14800 3250
+Text Label 8300 4300 0    50   ~ 0
+?
+Wire Wire Line
+	8200 4300 8300 4300
+Text Label 8300 4000 0    50   ~ 0
+?
+Text Label 8300 4100 0    50   ~ 0
+?
+Wire Wire Line
+	8200 4100 8300 4100
+Wire Wire Line
+	8200 4000 8300 4000
+Wire Wire Line
+	8200 3250 8300 3250
+Wire Wire Line
+	8300 3250 8300 3150
+Connection ~ 8300 3150
+Wire Wire Line
+	8300 3150 8200 3150
+Wire Wire Line
+	8150 2850 8200 2850
+Text Label 7700 2850 2    50   ~ 0
+VCC_3.3V
+Wire Wire Line
+	7700 2850 7850 2850
+Wire Wire Line
+	8200 3350 8300 3350
+Wire Wire Line
+	8300 3350 8300 3250
+Connection ~ 8300 3250
+Wire Wire Line
+	8200 3450 8300 3450
+Wire Wire Line
+	8300 3450 8300 3350
+Connection ~ 8300 3350
+Wire Wire Line
+	8200 3550 8300 3550
+Wire Wire Line
+	8300 3550 8300 3450
+Connection ~ 8300 3450
+Wire Wire Line
+	8200 3650 8300 3650
+Wire Wire Line
+	8300 3650 8300 3550
+Connection ~ 8300 3550
+Wire Wire Line
+	8200 3750 8300 3750
+Wire Wire Line
+	8300 3750 8300 3650
+Connection ~ 8300 3650
+Wire Wire Line
+	7800 4200 7900 4200
+Text Label 8300 4200 0    50   ~ 0
+?
+Wire Wire Line
+	8200 4200 8300 4200
+Text Label 7800 4100 2    50   ~ 0
+MCU_P1.18
+Text Label 7700 4500 2    50   ~ 0
+USB_D+
+Wire Wire Line
+	7700 4600 7900 4600
+Wire Wire Line
+	7700 4500 7900 4500
+Text Label 8300 4500 0    50   ~ 0
+?
+Text Label 8300 4600 0    50   ~ 0
+?
+Wire Wire Line
+	8200 4500 8300 4500
+Wire Wire Line
+	8200 4600 8300 4600
+Text Label 7800 3150 2    50   ~ 0
+MCU_P0.14_ISP
+Wire Wire Line
+	7800 3150 7900 3150
+Wire Notes Line
+	12800 850  12800 4950
+Wire Notes Line
+	12800 4950 16000 4950
+Wire Notes Line
+	16000 4950 16000 850 
+Wire Notes Line
+	16000 850  12800 850 
+Text Notes 12800 850  0    50   ~ 0
+LC Display Assembly
+Wire Notes Line
+	3750 1450 3750 5950
+Wire Notes Line
+	3750 5950 8850 5950
+Wire Notes Line
+	8850 5950 8850 1450
+Wire Notes Line
+	8850 1450 3750 1450
+Text Notes 3750 1450 0    50   ~ 0
+MCU and Pullup Resistors
+Text Label 15350 8850 0    50   ~ 0
+MCU_P0.7
+Text Notes 13350 8950 0    50   ~ 0
+<OUT HBX
+Text Notes 13400 9350 0    50   ~ 0
+IN HBX>
+$EndSCHEMATC

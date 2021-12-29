@@ -63,7 +63,7 @@ extern "C" {
  /**@{*/
 
  ///AHP_XC_VERSION This library version
-#define AHP_XC_VERSION 0x111
+#define AHP_XC_VERSION 0x112
 ///XC_BASE_RATE is the base baud rate of the XC cross-correlators
 #define XC_BASE_RATE ((int)57600)
 ///XC_HIGH_RATE is the base baud rate for big packet XC cross-correlators
@@ -91,10 +91,10 @@ typedef enum {
 * \brief These are the baud rates supported
 */
 typedef enum {
-    R_57600 = 0,
-    R_115200 = 1,
-    R_230400 = 2,
-    R_460800 = 3,
+    R_BASE = 0,
+    R_BASEX2 = 1,
+    R_BASEX4 = 2,
+    R_BASEX8 = 3,
 } baud_rate;
 
 /**
@@ -191,7 +191,7 @@ DLL_EXPORT double* ahp_xc_get_2d_projection(double alt, double az, double *basel
 * \return Returns 0 on success, -1 if any error was encountered
 * \sa ahp_xc_disconnect
 */
-DLL_EXPORT int ahp_xc_connect(const char *port);
+DLL_EXPORT int ahp_xc_connect(const char *port, int high_rate);
 
 /**
 * \brief Connect to a serial port or other stream with the given file descriptor

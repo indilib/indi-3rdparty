@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef _INDISERIALWRAPPER_H_INCLUDED_
-#define _INDISERIALWRAPPER_H_INCLUDED_
+#pragma once
 
 #include <cstdint>
 #include <cmath>
@@ -34,12 +33,11 @@
 #include <sys/ioctl.h>
 #include <mutex>
 
-#include <libindi/indicom.h>
-#include <libindi/inditelescope.h>
-#include <libindi/indilogger.h>
+#include <indicom.h>
+#include <inditelescope.h>
 
-#include "SerialDeviceControl/ISerialInterface.hpp"
-#include "Config.hpp"
+#include "ISerialInterface.hpp"
+#include "config.h"
 
 namespace GoToDriver
 {
@@ -91,5 +89,3 @@ class IndiSerialWrapper : public SerialDeviceControl::ISerialInterface
         virtual bool Flush();
 };
 }
-
-#endif

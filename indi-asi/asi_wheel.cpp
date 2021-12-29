@@ -43,50 +43,59 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ASIWHEEL>> wheels;
-public:
-    Loader()
-    {
+        std::deque<std::unique_ptr<ASIWHEEL>> wheels;
+    public:
+        Loader()
+        {
 #ifdef SIMULATION
-        EFW_INFO info;
-        info.ID = 1;
-        strncpy(info.Name, "Simulated EFW8", 64);
-        info.slotNum = 0;
-        wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, info.Name)));
-#else
-        int num_wheels = EFWGetNum();
-
-        if (num_wheels <= 0)
-        {
-            IDLog("No ASI EFW detected.");
-            return;
-        }
-        int num_wheels_ok = 0;
-        for (int i = 0; i < num_wheels; i++)
-        {
-            int id;
-            EFW_ERROR_CODE result = EFWGetID(i, &id);
-            if (result != EFW_SUCCESS)
-            {
-                IDLog("ERROR: ASI EFW %d EFWGetID error %d.", i + 1, result);
-                continue;
-            }
             EFW_INFO info;
-            result = EFWGetProperty(id, &info);
-            if (result != EFW_SUCCESS && result != EFW_ERROR_CLOSED)   // TODO: remove the ERROR_CLOSED hack
+            info.ID = 1;
+            strncpy(info.Name, "Simulated EFW8", 64);
+            info.slotNum = 0;
+            wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, info.Name)));
+#else
+            int num_wheels = EFWGetNum();
+
+            if (num_wheels <= 0)
             {
-                IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
-                continue;
+                IDLog("No ASI EFW detected.");
+                return;
             }
-            std::string name = "ASI " + std::string(info.Name);
-            if (num_wheels > 1)
-                name += " " + std::to_string(i);
-            wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
-            num_wheels_ok++;
-        }
-        IDLog("%d ASI EFW attached out of %d detected.", num_wheels_ok, num_wheels);
+            int num_wheels_ok = 0;
+            for (int i = 0; i < num_wheels; i++)
+            {
+                int id;
+                EFW_ERROR_CODE result = EFWGetID(i, &id);
+                if (result != EFW_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EFW %d EFWGetID error %d.", i + 1, result);
+                    continue;
+                }
+                EFW_INFO info;
+                result = EFWGetProperty(id, &info);
+                if (result != EFW_SUCCESS && result != EFW_ERROR_CLOSED)   // TODO: remove the ERROR_CLOSED hack
+                {
+                    IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
+                    continue;
+                }
+                std::string name = "ASI " + std::string(info.Name);
+
+                // If we only have a single device connected
+                // then favor the INDIDEV driver label over the auto-generated name above
+                if (num_wheels == 1)
+                {
+                    char *envDev = getenv("INDIDEV");
+                    if (envDev && envDev[0])
+                        name = envDev;
+                }
+                else
+                    name += " " + std::to_string(i);
+                wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
+                num_wheels_ok++;
+            }
+            IDLog("%d ASI EFW attached out of %d detected.", num_wheels_ok, num_wheels);
 #endif
-    }
+        }
 } loader;
 
 ASIWHEEL::ASIWHEEL(const EFW_INFO &info, const char *name)

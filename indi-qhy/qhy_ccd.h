@@ -163,6 +163,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         INumber USBBufferN[1];
         INumberVectorProperty USBBufferNP;
 
+        // Humidity Readout
+        INumber HumidityN[1];
+        INumberVectorProperty HumidityNP;
         /////////////////////////////////////////////////////////////////////////////
         /// Properties: Utility Controls
         /////////////////////////////////////////////////////////////////////////////
@@ -422,6 +425,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasCoolerManualMode { false };
         bool HasReadMode { false };
         bool HasGPS { false };
+        bool HasHumidity { false };
         bool HasAmpGlow { false };
         //NEW CODE - Add support for overscan/calibration area
         bool HasOverscanArea { false };
@@ -450,7 +454,6 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         uint32_t m_LastExposureRequestuS;
         struct timeval ExpStart;
         // Gain
-        double m_GainRequest = 1e6;
         double m_LastGainRequest = 1e6;
         // Filter Wheel Timeout
         uint16_t m_FilterCheckCounter = 0;

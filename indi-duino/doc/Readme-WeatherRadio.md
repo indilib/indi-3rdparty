@@ -57,7 +57,18 @@ For installing the firmware onto a Arduino, you first need the [Arduino IDE](htt
 
 The next step is to install the board definitions for your board of choice (see instructions from the board manufacturer) and the [libraries](https://www.arduino.cc/en/Guide/Libraries) for all sensors you want to connect.
 
-In addition, you need to install the **ArduinoJSON** library, since Weather Radio communicates with JSON documents.
+###Arduino Libraries
+Depending on your selection of sensors, you need some additional libraries. Install them with the **Library Manager** of Arduino.
+
+* **ArduinoJSON** Required, Weather Radio communicates with JSON documents.
+* **SSD1306Ascii** Display ASCII text on the OLED display.
+* **OneButton** Use a simple button to active the OLED display.
+* **Adafruit_TSL2591** TSL 2591 light sensor library
+* **Adafruit_BME280** BME 280 sensor for pressure, temperature and humidity
+* **DHT** DHT 11/22 humidity sensor
+* **Adafruit_MLX90614** Melexis 90614 IR sensor (used for cloud recognition)
+* **ESP8266-ping** Library necessary if you use a ESP8266 board
+* **ArduinoOTA** Nessesary if you want to use the "over the air" feature of ESP8266 boards for updating via WiFi.
 
 ### Firmware Configuration
 There are a few configurations necessary before you upload the firmware to your arduino. Please open `weatherradio.ino` from `devices/Firmwares/weatherradio` and switch to the `config.h` tab.
@@ -254,6 +265,7 @@ Finally, it's time to automate by creating crontab entries:
  0 * * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d
  0 0 * * *     <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 30d
 
+ */5 * * * *   <userid> /usr/share/weatherradio/bin/wr_rrd_lastupdate.py -o /usr/share/weatherradio/html/data/RTsensors_lastupdate.json /usr/share/weatherradio//sensors.rrd
 */5 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 6h -o /usr/share/weatherradio/html/data/RTsensors_6h.json /usr/share/weatherradio/sensors.rrd
 */15 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 1d -o /usr/share/weatherradio/html/data/RTsensors_1d.json /usr/share/weatherradio/sensors.rrd
 0 * * * * <userid> /usr/share/weatherradio/bin/wr_rrd_fetch.py -s 7d -o /usr/share/weatherradio/html/data/RTsensors_7d.json /usr/share/weatherradio/sensors.rrd

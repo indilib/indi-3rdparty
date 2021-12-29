@@ -17,9 +17,10 @@ find_package(ALTAIRCAM REQUIRED)
 find_package(STARSHOOTG REQUIRED)
 find_package(NNCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
+find_package(USB1 REQUIRED)
 
 set(TOUPBASE_VERSION_MAJOR 0)
-set(TOUPBASE_VERSION_MINOR 5)
+set(TOUPBASE_VERSION_MINOR 7)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml)
@@ -33,10 +34,11 @@ include_directories( ${ALTAIRCAM_INCLUDE_DIR})
 include_directories( ${STARSHOOTG_INCLUDE_DIR})
 include_directories( ${NNCAM_INCLUDE_DIR})
 include_directories( ${MALLINCAM_INCLUDE_DIR})
+include_directories( ${USB1_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-set(indi_toupbase_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.cpp)
+set(indi_toupbase_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.cpp ${CMAKE_CURRENT_SOURCE_DIR}/oem_cameras.cpp)
 
 ########### indi_toupcam_ccd ###########
 add_executable(indi_toupcam_ccd ${indi_toupbase_SRCS})

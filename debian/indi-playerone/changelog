@@ -1,0 +1,17 @@
+indi-playerone (0.4) bionic; urgency=low
+
+  * Update libplayerone
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 7 Dec 2021 12:00:00 +0900
+
+indi-playerone (0.3) bionic; urgency=medium
+
+  * Fix wrong pixel value except for RAW8
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 19 Oct 2021 12:00:00 +0900
+
+indi-playerone (0.2) bionic; urgency=low
+
+  * Initial Release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 12 Aug 2019 09:00:00 +0300

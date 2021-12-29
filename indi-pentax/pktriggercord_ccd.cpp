@@ -149,7 +149,7 @@ void PkTriggerCordCCD::buildCaptureSwitches() {
     char current[5];
     sprintf(current,"%.1f",(float)status.current_aperture.nom/status.current_aperture.denom);
     buildCaptureSettingSwitch(&mApertureSP,aperture,NARRAY(aperture),"Aperture","CCD_APERTURE",string(current));
-    buildCaptureSettingSwitch(&mWhiteBalanceSP,whitebalance,NARRAY(whitebalance),"White Balance","CCD_WB",string(get_pslr_white_balance_mode_str((pslr_white_balance_mode_t)status.white_balance_mode)));
+    buildCaptureSettingSwitch(&mWhiteBalanceSP,whitebalance,NARRAY(whitebalance),"White Balance","CCD_WB",string(pslr_get_white_balance_mode_str((pslr_white_balance_mode_t)status.white_balance_mode)));
     buildCaptureSettingSwitch(&mIQualitySP,imagequality,pslr_get_model_max_jpeg_stars(device),"Quality","CAPTURE_QUALITY",to_string(status.jpeg_quality));
     sprintf(current,"%.1f",(float)status.ec.nom/status.ec.denom);
     if (status.custom_ev_steps == PSLR_CUSTOM_EV_STEPS_1_2)
@@ -174,12 +174,12 @@ void PkTriggerCordCCD::buildCaptureSwitches() {
     sprintf(exposuremode,"%d",status.exposure_mode);
     sprintf(usermode,"%d",status.user_mode_flag);
 
-    pslr_read_dspinfo( (pslr_handle_t *)device, firmware );
+    pslr_get_dspinfo( (pslr_handle_t *)device, firmware );
 
     IUSaveText(&DeviceInfoT[1],firmware);
     IUSaveText(&DeviceInfoT[3],exposuremode);
     IUSaveText(&DeviceInfoT[4],usermode);
-    IUSaveText(&DeviceInfoT[5],get_pslr_scene_mode_str((pslr_scene_mode_t)status.scene_mode));
+    IUSaveText(&DeviceInfoT[5],pslr_get_scene_mode_str((pslr_scene_mode_t)status.scene_mode));
 
     IDSetText(&DeviceInfoTP,nullptr);
 }
@@ -243,7 +243,7 @@ bool PkTriggerCordCCD::Disconnect()
 bool PkTriggerCordCCD::setupParams()
 {
     if (!getCaptureSettingsState()) return false;
-    uff = get_user_file_format(&status);
+    uff = pslr_get_user_file_format(&status);
     return true;
 }
 
@@ -266,14 +266,14 @@ bool PkTriggerCordCCD::shutterPress(pslr_rational_t shutter_speed)
             pslr_shutter(device);
         } else {
             // TODO: fix waiting time
-            sleep_sec(1);
+            usleep(999999);
             return false;
         }
     }
 	LOG_DEBUG("Shutter pressed.");
 	pslr_get_status(device, &status);
 
-	user_file_format_t ufft = *get_file_format_t(uff);
+	user_file_format_t ufft = *pslr_get_user_file_format_t(uff);
 	char * output_file = TMPFILEBASE;
 	int fd = open_file(output_file, 1, ufft);
 	
@@ -689,12 +689,12 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
     else if (!strcmp(name, mExpCompSP.name)) {
         updateCaptureSettingSwitch(&mExpCompSP,states,names,n);
         pslr_rational_t ec = {(int)(atof(IUFindOnSwitch(&mExpCompSP)->label)*10), 10};
-        pslr_set_ec( device, ec );
+        pslr_set_expose_compensation( device, ec );
         LOG_WARN("Unfortunately, changing the exposure compensation does not work currently on some (all?) models in MSC mode.  You may need to change manually.");
     }
     else if (!strcmp(name, mWhiteBalanceSP.name)) {
         updateCaptureSettingSwitch(&mWhiteBalanceSP,states,names,n);
-        pslr_white_balance_mode_t white_balance_mode = get_pslr_white_balance_mode(IUFindOnSwitch(&mWhiteBalanceSP)->label);
+        pslr_white_balance_mode_t white_balance_mode = pslr_get_white_balance_mode(IUFindOnSwitch(&mWhiteBalanceSP)->label);
         if ( int(white_balance_mode) == -1 ) {
             LOG_WARN("Could not set desired white balance: Invalid setting for current camera mode.");
         }

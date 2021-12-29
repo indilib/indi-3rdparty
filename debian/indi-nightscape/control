@@ -7,7 +7,7 @@ Standards-Version: 3.9.1
 
 Package: indi-nightscape
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1, libftdi1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libftdi1
 Description: INDI Driver for Celestron Nightscape 8300
  Driver for Celestron Nightscape 8300.
  .

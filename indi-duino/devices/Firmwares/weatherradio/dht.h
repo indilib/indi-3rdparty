@@ -31,7 +31,7 @@ void updateDHT() {
   }
 }
 
-void serializeDHT(JsonDocument &doc) {
+void serializeDHT(JsonObject &doc) {
 
   JsonObject data = doc.createNestedObject("DHT");
   data["init"] = dhtData.status;

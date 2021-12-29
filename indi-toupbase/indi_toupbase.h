@@ -23,6 +23,7 @@
 
 #include <map>
 #include <indiccd.h>
+#include <inditimer.h>
 
 #ifdef BUILD_TOUPCAM
 #include <toupcam.h>
@@ -34,7 +35,7 @@
 #elif BUILD_MALLINCAM
 #include <mallincam.h>
 #define FP(x) Toupcam_##x
-#define CP(x) TOUPCAM_##x
+#define CP(x) MALLINCAM_##x
 #define XP(x) Toupcam##x
 #define THAND HToupCam
 #define DNAME "Mallincam"
@@ -43,7 +44,7 @@
 #define FP(x) Altaircam_##x
 #define CP(x) ALTAIRCAM_##x
 #define XP(x) Altaircam##x
-#define THAND HAltairCam
+#define THAND HAltaircam
 #define DNAME "Altair"
 #elif BUILD_STARSHOOTG
 #include <starshootg.h>
@@ -69,7 +70,7 @@ class ToupBase : public INDI::CCD
 {
     public:
         explicit ToupBase(const XP(DeviceV2) *instance);
-        ~ToupBase() override = default;
+        ~ToupBase() override;
 
         virtual const char *getDefaultName() override;
 
@@ -435,6 +436,9 @@ class ToupBase : public INDI::CCD
         static void AutoExposureCB(void* pCtx);
         void AutoExposureChanged();
 
+        // Handle capture timeout
+        void captureTimeoutHandler();
+
         //#############################################################################
         // Camera Handle & Instance
         //#############################################################################
@@ -607,6 +611,10 @@ class ToupBase : public INDI::CCD
         INumberVectorProperty ADCNP;
         INumber ADCN[1];
 
+        // Timeout factor
+        INumberVectorProperty TimeoutFactorNP;
+        INumber TimeoutFactorN[1];
+
         // Gain Conversion
         INumberVectorProperty GainConversionNP;
         INumber GainConversionN[2];
@@ -637,6 +645,11 @@ class ToupBase : public INDI::CCD
         bool m_HasLowNoise { false };
         bool m_HasHeatUp { false };
 
+        INDI::Timer m_CaptureTimeout;
+        uint32_t m_CaptureTimeoutCounter {0};
+        // Download estimation in ms after exposure duration finished.
+        double m_DownloadEstimation {5000};
+
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_MaxBitDepth { 8 };
@@ -646,6 +659,8 @@ class ToupBase : public INDI::CCD
         uint32_t m_MaxGainNative { 0 };
         uint32_t m_MaxGainHCG { 0 };
         uint32_t m_NativeGain { 0 };
+
+        int m_ConfigResolutionIndex {-1};
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
