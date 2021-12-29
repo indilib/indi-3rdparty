@@ -31,7 +31,7 @@
 #include <memory>
 #include <deque>
 
-#define UPDATE_THRESHOLD       0.05   /* Differential temperature threshold (C)*/
+#define UPDATE_THRESHOLD       0.2   /* Differential temperature threshold (C)*/
 
 //NB Disable for real driver
 //#define USE_SIMULATION
@@ -378,8 +378,8 @@ void QHYCCD::ISGetProperties(const char *dev)
 
         if (HasGPS)
         {
-            defineProperty(&GPSSlavingSP);
-            defineProperty(&GPSSlavingParamNP);
+            // defineProperty(&GPSSlavingSP);
+            // defineProperty(&GPSSlavingParamNP);
 
             defineProperty(&VCOXFreqNP);
             defineProperty(&GPSLEDCalibrationSP);
@@ -592,8 +592,8 @@ bool QHYCCD::updateProperties()
 
         if (HasGPS)
         {
-            defineProperty(&GPSSlavingSP);
-            defineProperty(&GPSSlavingParamNP);
+            // defineProperty(&GPSSlavingSP);
+            // defineProperty(&GPSSlavingParamNP);
             defineProperty(&VCOXFreqNP);
             defineProperty(&GPSLEDCalibrationSP);
             defineProperty(&GPSLEDStartPosNP);
@@ -668,8 +668,8 @@ bool QHYCCD::updateProperties()
 
         if (HasGPS)
         {
-            deleteProperty(GPSSlavingSP.name);
-            deleteProperty(GPSSlavingParamNP.name);
+            // deleteProperty(GPSSlavingSP.name);
+            // deleteProperty(GPSSlavingParamNP.name);
             deleteProperty(VCOXFreqNP.name);
             deleteProperty(GPSLEDCalibrationSP.name);
             deleteProperty(GPSLEDStartPosNP.name);
@@ -813,18 +813,18 @@ bool QHYCCD::Connect()
             cap |= CCD_HAS_SHUTTER;
         }
 
-        LOGF_DEBUG("Shutter Control: %s", (cap & CCD_HAS_SHUTTER) ? "True" : "False");
+        LOGF_INFO("Shutter Control: %s", (cap & CCD_HAS_SHUTTER) ? "True" : "False");
 
-        ////////////////////////////////////////////////////////////////////
-        /// Streaming Support
-        ////////////////////////////////////////////////////////////////////
+        // ////////////////////////////////////////////////////////////////////
+        // /// Streaming Support
+        // ////////////////////////////////////////////////////////////////////
         ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_LIVEVIDEOMODE);
         if (ret == QHYCCD_SUCCESS)
         {
             cap |= CCD_HAS_STREAMING;
         }
 
-        LOGF_DEBUG("Has Streaming: %s", (cap & CCD_HAS_STREAMING) ? "True" : "False");
+        LOGF_INFO("Has Streaming: %s", (cap & CCD_HAS_STREAMING) ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// AutoMode Cooler Support
@@ -835,7 +835,7 @@ bool QHYCCD::Connect()
             HasCoolerAutoMode = true;
             cap |= CCD_HAS_COOLER;
         }
-        LOGF_DEBUG("Automatic Cooler Control: %s", (cap & CCD_HAS_COOLER) ? "True" : "False");
+        LOGF_INFO("Automatic Cooler Control: %s", (cap & CCD_HAS_COOLER) ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// Manual PWM Support
@@ -845,7 +845,7 @@ bool QHYCCD::Connect()
         {
             HasCoolerManualMode = true;
         }
-        LOGF_DEBUG("Manual Cooler Control: %s", HasCoolerManualMode ? "True" : "False");
+        LOGF_INFO("Manual Cooler Control: %s", HasCoolerManualMode ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// ST4 Port Support
@@ -856,7 +856,7 @@ bool QHYCCD::Connect()
             cap |= CCD_HAS_ST4_PORT;
         }
 
-        LOGF_DEBUG("Guider Port Control: %s", (cap & CCD_HAS_ST4_PORT) ? "True" : "False");
+        LOGF_INFO("Guider Port Control: %s", (cap & CCD_HAS_ST4_PORT) ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// Camera Speed Support
@@ -874,7 +874,7 @@ bool QHYCCD::Connect()
                 SetQHYCCDParam(m_CameraHandle, CONTROL_SPEED, 1);
         }
 
-        LOGF_DEBUG("USB Speed Control: %s", HasUSBSpeed ? "True" : "False");
+        LOGF_INFO("USB Speed Control: %s", HasUSBSpeed ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// Gain Support
@@ -1026,16 +1026,16 @@ bool QHYCCD::Connect()
 
         ////////////////////////////////////////////////////////////////////
         /// GPS Support
-        ////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////
         ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_GPS);
         // JM 2021.07.25: CAM_GPS is returned as true even when there is no GPS.
         // This bug was reported to QHY and awaiting a fix. Currently limiting GSP to QHY174 only.
-        if (ret == QHYCCD_SUCCESS && strstr(m_CamID, "174"))
+        if ( ret == QHYCCD_SUCCESS && strstr(m_CamID, "174"))
         {
             HasGPS = true;
         }
 
-        LOGF_DEBUG("GPS Support: %s", HasGPS ? "True" : "False");
+        LOGF_WARN("GPS Support: %s", HasGPS ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// Humidity Support
@@ -2570,10 +2570,10 @@ void QHYCCD::streamVideo()
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
                 decodeGPSHeader();
 
-            //DEBUG
-            //if(!frames)
+            
+            // if(!frames)
             //    LOGF_DEBUG("Receiving frames ...");
-            //if(!(++frames % 30))
+            // if(!(++frames % 30))
             //    LOGF_DEBUG("Frames received: %d (%.1f fps)", frames, 1.0 * frames / (time(NULL) - t_start));
         }
         pthread_mutex_lock(&condMutex);
@@ -2759,10 +2759,10 @@ void QHYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
         // GPS Status
 
         // System Clock Offset
-        //fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
+        fits_update_key_dbl(fptr, "GPS_DSYS", GPSHeader.now_us, 6, "System Clock - GPS Clock Offset (s)", &status);
 
         // Time Offset Stable for
-        //fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
+        fits_update_key_lng(fptr, "GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)", &status);
 
         // Longitude
         fits_update_key_dbl(fptr, "GPS_LONG", GPSHeader.longitude, 3, "GPS Longitude", &status);
