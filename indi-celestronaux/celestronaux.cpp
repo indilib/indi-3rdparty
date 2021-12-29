@@ -1774,11 +1774,12 @@ uint32_t CelestronAUX::RAToEncoders(double ra)
         m_TargetPierSide = PIER_EAST;
     else
         m_TargetPierSide = PIER_WEST;
-    // Flip in southerin hemisphere
-    if (!isNorthHemisphere())
+
+    // Flip for Northern hemisphere
+    if (isNorthHemisphere())
         ha *= -1;
 
-    // Range to 0 to 24 hours.
+    // Limit range to 0 to 24 hours.
     ha = range24(ha);
     return HoursToEncoders(ha);
 }
