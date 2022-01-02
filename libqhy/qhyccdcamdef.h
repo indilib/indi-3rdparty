@@ -411,6 +411,10 @@
 #define DEVICETYPE_QHY1920C            4116
 
 #define DEVICETYPE_QHY9701             4117
+#define DEVICETYPE_QHY530              4118
+
+#define DEVICETYPE_QHY600M_OEM     		4119
+#define DEVICETYPE_QHY533M              4120
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -575,6 +579,8 @@
 #define DEVICETYPE_QHY411ERISPCIE  		0X6618c414
 #define DEVICETYPE_QHY600PCIE      		0X6618c603
 #define DEVICETYPE_QHY268PCIE      		0X6618c269
+#define DEVICETYPE_QHY530PCIE      		0X6618c531
+#define DEVICETYPE_QHY990PCIE      		0X6618c991
 #define DEVICETYPE_QHY461PCIE      		0X6618c462
 
 
@@ -995,8 +1001,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH      4144//3864//5680//2712//3864// 2712// 1408    //8432  	
-#define QHY5IIICOMMON_MAX_HEIGHT     3064//2192//3710//1538//2180// 1538// 1052    //5648	  
+#define QHY5IIICOMMON_MAX_WIDTH      5336//4144//3864//5680//2712//3864// 2712// 1408    //8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT     4908//3064//2192//3710//1538//2180// 1538// 1052    //5648	  
 
 /**
  * Type define for QHY247*/
@@ -1345,6 +1351,11 @@
 
 #define   SINGLE_MODE 								0
 #define   LIVE_MODE 								1
+
+#define   QHYCCDParam_On            1
+#define   QHYCCDParam_Off           0
+#define   QHYCCDParam_AirPump_On           3
+#define   QHYCCDParam_AirPump_Off          4
 
 #define   FLASH_CONFIG_PAGE_INDEX					1
 

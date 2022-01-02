@@ -128,6 +128,7 @@ ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c290", RUN+="/sbin/fxload -t fx3 -I 
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c224", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY224.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c550", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY550.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c253", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY1253.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="9701", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY9701.img -D $env{DEVNAME}"
 
 #QHYCCD Medium COLDMOS Camera (9:QHY183,QHY163,QHY294,QHY165,QHY168,QHY247,QHY128,QHY367,QHY600)
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c183", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY183.img -D $env{DEVNAME}"
@@ -150,7 +151,8 @@ ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0432", RUN+="/sbin/fxload -t fx3 -I 
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0342", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY342.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c990", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY990.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="d183", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY183A.img -D $env{DEVNAME}"
-ATTRS{idVendor}=="1618", ATTRS{idProduct}=="D991", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY991.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="d991", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY991.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c192", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY1920.img -D $env{DEVNAME}"
 
 
 #===============================================================================
