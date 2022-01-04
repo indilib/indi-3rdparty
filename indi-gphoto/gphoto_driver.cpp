@@ -151,7 +151,7 @@ struct _gphoto_driver
     int iso;
     int format;
     int upload_settings;
-    bool delete_sdcard_image;
+    CameraImageHandling handle_sdcard_image;
     bool is_aborted;
 
     char *model;
@@ -811,7 +811,7 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     {
         DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
                      "Downloading image... Name: (%s) Folder: (%s) Delete from SD card? (%s)", fn->name, fn->folder,
-                     gphoto->delete_sdcard_image ? "true" : "false");
+                     gphoto->handle_sdcard_image == DELETE_IMAGE ? "true" : "false");
     }
 
     strncpy(gphoto->filename, fn->name, sizeof(gphoto->filename));
@@ -997,7 +997,8 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     int captureTarget = -1;
     gphoto_get_capture_target(gphoto, &captureTarget);
     // If it was set to RAM or SD card image is set to be explicitly deleted
-    if ( (gphoto->is_aborted || gphoto->delete_sdcard_image || captureTarget == 0) && !strstr(gphoto->model, "20D"))
+    if ( (gphoto->is_aborted || gphoto->handle_sdcard_image == DELETE_IMAGE || captureTarget == 0)
+            && !strstr(gphoto->model, "20D"))
     {
         // 2018-04-16 JM: Delete all the folder to make sure there are no ghost images left somehow
         //result = gp_camera_folder_delete_all(gphoto->camera, fn->folder, gphoto->context);
@@ -1360,6 +1361,13 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         pthread_cond_wait(&gphoto->signal, &gphoto->mutex);
 
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Exposure complete.");
+
+    if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
+    {
+        gphoto->command = 0;
+        pthread_mutex_unlock(&gphoto->mutex);
+        return GP_OK;
+    }
 
     if (gphoto->command & DSLR_CMD_CAPTURE)
     {
@@ -1753,7 +1761,7 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
     gphoto->manufacturer    = nullptr;
     gphoto->model           = nullptr;
     gphoto->upload_settings = GP_UPLOAD_CLIENT;
-    gphoto->delete_sdcard_image = false;
+    gphoto->handle_sdcard_image = SAVE_IMAGE;
     gphoto->is_aborted = false;
 
     if (gphoto->format_widget != nullptr)
@@ -2388,12 +2396,12 @@ int gphoto_set_capture_target(gphoto_driver *gphoto, int capture_target)
     return GP_OK;
 }
 
-int gphoto_delete_sdcard_image(gphoto_driver *gphoto, bool delete_sdcard_image)
+int gphoto_handle_sdcard_image(gphoto_driver *gphoto, CameraImageHandling handling)
 {
-    gphoto->delete_sdcard_image = delete_sdcard_image;
-
+    gphoto->handle_sdcard_image = handling;
     return GP_OK;
 }
+
 
 void gphoto_force_bulb(gphoto_driver *gphoto, bool enabled)
 {
