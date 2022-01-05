@@ -2044,7 +2044,7 @@ bool LX200StarGo::getTrackingAdjustment(double *valueRA)
     if (!sendQuery(":X42#", response))
         return false;
 
-    if (sscanf(response, "or%04i#", &raValue) < 1)
+    if (sscanf(response, "or%04d#", &raValue) < 1)
     {
         LOG_ERROR("Unable to parse response");
         return false;
