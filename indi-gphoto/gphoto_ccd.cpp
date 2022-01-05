@@ -1236,14 +1236,20 @@ bool GPhotoCCD::grabImage()
         const char *extension = "unknown";
         if (isSimulation())
         {
-            if (!UploadFileT[0].text[0])
+            if (UploadFileT[0].text == nullptr || !UploadFileT[0].text[0])
             {
                 LOG_WARN("You must specify simulation file path under Options.");
                 return false;
             }
 
             strncpy(filename, UploadFileT[0].text, MAXRBUF);
-            extension = strchr(filename, '.') + 1;
+            const char *found = strchr(filename, '.');
+            if (found == nullptr)
+            {
+                LOGF_ERROR("Upload filename %s is invalid.", UploadFileT[0].text);
+                return false;
+            }
+            extension =  found + 1;
         }
         else
         {
