@@ -1438,7 +1438,7 @@ bool GPhotoCCD::grabImage()
             if(binning) {
 
 // binBayerFrame implemented since 1.9.4
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 5 && INDI_VERSION_RELEASE >=4
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
                 PrimaryCCD.binBayerFrame();
 #else
                 PrimaryCCD.binFrame();
