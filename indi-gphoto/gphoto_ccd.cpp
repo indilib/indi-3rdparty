@@ -1107,25 +1107,20 @@ bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
 bool GPhotoCCD::UpdateCCDBin(int hor, int ver)
 {
 
-    if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
-    {
-        LOG_ERROR("Binning is only supported in FITS transport mode.");
-        return false;
-    }
-
-    if (PrimaryCCD.getSubW() % hor != 0 || PrimaryCCD.getSubH() % ver != 0)
-    {
-        LOGF_ERROR("%dx%d binning is not supported.", hor, ver);
-        return false;
-    }
-
     if(hor == 1 && ver == 1) {
         binning = false;
     } else {
-        binning = true;
-    }
 
-    // hardware binning not supported. Using software binning
+        // only for fits output
+        if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
+        {
+            LOG_ERROR("Binning is only supported in FITS transport mode.");
+            return false;
+        }
+
+        binning = true;
+
+    }
 
     return INDI::CCD::UpdateCCDBin(hor, ver);
 }
@@ -1441,7 +1436,13 @@ bool GPhotoCCD::grabImage()
 
             // binning if needed
             if(binning) {
+
+// binBayerFrame implemented since 1.9.4
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 5 && INDI_VERSION_RELEASE >=4
+                PrimaryCCD.binBayerFrame();
+#else
                 PrimaryCCD.binFrame();
+#endif
             }
 
             ExposureComplete(&PrimaryCCD);
