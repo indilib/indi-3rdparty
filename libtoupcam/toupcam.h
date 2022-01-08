@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 49.19023.20210608 */
+/* Version: 50.19728.20211022 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -12,11 +12,11 @@
        (2) WinRT: x86, x64, arm, arm64; Win10 or above
        (3) macOS: universal (x64 + x86); macOS 10.10 or above
        (4) Linux: kernel 2.6.27 or above; GLIBC 2.17 or above
-              (a) x86: CPU supports SSE3 instruction set or above; built by gcc 5.4.0
-              (b) x64: built by gcc 5.4.0
-              (c) armel: built by toolchain arm-linux-gnueabi (version 4.9.2)
-              (d) armhf: built by toolchain arm-linux-gnueabihf (version 4.9.2)
-              (e) arm64: built by toolchain aarch64-linux-gnu (version 4.9.2)
+              (a) x86: CPU supports SSE3 instruction set or above
+              (b) x64
+              (c) armel: built by toolchain arm-linux-gnueabi (version 5.4.0)
+              (d) armhf: built by toolchain arm-linux-gnueabihf (version 5.4.0)
+              (e) arm64: built by toolchain aarch64-linux-gnu (version 5.4.0)
        (5) Android: arm, arm64, x86, x64; built by android-ndk-r18b; __ANDROID_API__ = 23
 */
 /*
@@ -25,7 +25,7 @@
        (2) hans.html, Simplified Chinese
 */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #ifndef _INC_WINDOWS
 #include <windows.h>
 #endif
@@ -45,7 +45,7 @@ extern "C" {
 #define TOUPCAM_DEPRECATED
 #endif
 
-#ifdef _WIN32 /* Windows */
+#if defined(_WIN32) /* Windows */
 
 #pragma pack(push, 8)
 #ifdef TOUPCAM_EXPORTS
@@ -127,7 +127,7 @@ typedef struct {
 /*                                                                              */
 /* Please note that the return value >= 0 means success                         */
 /* (especially S_FALSE is also successful, indicating that the internal value and the value set by the user is equivalent, which means "no operation"). */
-/* Therefore, the SUCCEEDEDand FAILED macros should generally be used to determine whether the return value is successful or failed. */
+/* Therefore, the SUCCEEDED and FAILED macros should generally be used to determine whether the return value is successful or failed. */
 /* (Unless there are special needs, do not use "==S_OK" or "==0" to judge the return value) */
 /*                                                                              */
 /* #define SUCCEEDED(hr)   (((HRESULT)(hr)) >= 0)                               */
@@ -138,7 +138,7 @@ typedef struct {
 /* handle */
 typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 
-#define TOUPCAM_MAX                      16
+#define TOUPCAM_MAX                      128
                                          
 #define TOUPCAM_FLAG_CMOS                0x00000001  /* cmos sensor */
 #define TOUPCAM_FLAG_CCD_PROGRESSIVE     0x00000002  /* progressive ccd sensor */
@@ -234,6 +234,9 @@ typedef struct ToupcamT { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_DENOISE_DEF              0       /* denoise */
 #define TOUPCAM_DENOISE_MIN              0       /* denoise */
 #define TOUPCAM_DENOISE_MAX              100     /* denoise */
+#define TOUPCAM_TEC_TARGET_MIN           (-300)  /* TEC target: -30.0 degrees Celsius */
+#define TOUPCAM_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
+#define TOUPCAM_TEC_TARGET_MAX           300     /* TEC target: 30.0 degrees Celsius */
 
 typedef struct{
     unsigned    width;
@@ -244,7 +247,7 @@ typedef struct{
 /* In Linux or macOS, we use char */
 
 typedef struct {
-#ifdef _WIN32
+#if defined(_WIN32)
     const wchar_t*      name;        /* model name, in Windows, we use unicode */
 #else
     const char*         name;        /* model name */
@@ -257,24 +260,24 @@ typedef struct {
     unsigned            ioctrol;     /* number of input/output control */
     float               xpixsz;      /* physical pixel size */
     float               ypixsz;      /* physical pixel size */
-    ToupcamResolution   res[TOUPCAM_MAX];
+    ToupcamResolution   res[16];
 }ToupcamModelV2; /* camera model v2 */
 
 typedef struct {
-#ifdef _WIN32
-    wchar_t               displayname[64];    /* display name */
-    wchar_t               id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
+#if defined(_WIN32)
+    wchar_t             displayname[64];    /* display name */
+    wchar_t             id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #else
-    char                  displayname[64];    /* display name */
-    char                  id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
+    char                displayname[64];    /* display name */
+    char                id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #endif
     const ToupcamModelV2* model;
 }ToupcamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 49.19023.20210608
+    get the version of this dll/so/dylib, which is: 50.19728.20211022
 */
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
 #else
 TOUPCAM_API(const char*)      Toupcam_Version();
@@ -296,7 +299,7 @@ TOUPCAM_API(unsigned) Toupcam_EnumV2(ToupcamDeviceV2 pti[TOUPCAM_MAX]);
 /* use the id of ToupcamDeviceV2, which is enumerated by Toupcam_EnumV2.
     if id is NULL, Toupcam_Open will open the first camera.
 */
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HToupcam) Toupcam_Open(const wchar_t* id);
 #else
 TOUPCAM_API(HToupcam) Toupcam_Open(const char* id);
@@ -334,7 +337,7 @@ TOUPCAM_API(void)     Toupcam_Close(HToupcam h);  /* close the handle */
 #define TOUPCAM_EVENT_TRIGGER_ALLOW     0x4002    /* next trigger allow */
 #define TOUPCAM_EVENT_FACTORY           0x8001    /* restore factory settings */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT)  Toupcam_StartPullModeWithWndMsg(HToupcam h, HWND hWnd, UINT nMsg);
 #endif
 
@@ -524,7 +527,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_BlackBalance(HToupcam h, unsigned short aSub[3
 
 /* Flat Field Correction */
 TOUPCAM_API(HRESULT)  Toupcam_FfcOnce(HToupcam h);
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const wchar_t* filepath);
 TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const wchar_t* filepath);
 #else
@@ -535,7 +538,7 @@ TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const char* filepath);
 /* Dark Field Correction */
 TOUPCAM_API(HRESULT)  Toupcam_DfcOnce(HToupcam h);
 
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const wchar_t* filepath);
 TOUPCAM_API(HRESULT)  Toupcam_DfcImport(HToupcam h, const wchar_t* filepath);
 #else
@@ -695,16 +698,11 @@ TOUPCAM_API(HRESULT)  Toupcam_read_EEPROM(HToupcam h, unsigned addr, unsigned ch
 TOUPCAM_API(HRESULT)  Toupcam_read_Pipe(HToupcam h, unsigned pipeNum, void* pBuffer, unsigned nBufferLen);
 TOUPCAM_API(HRESULT)  Toupcam_write_Pipe(HToupcam h, unsigned pipeNum, const void* pBuffer, unsigned nBufferLen);
 TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
-
-/* TEC target range */
-#define TOUPCAM_TEC_TARGET_MIN               (-300)     /* -30.0 degrees Celsius */
-#define TOUPCAM_TEC_TARGET_DEF               0          /* 0.0 degrees Celsius */
-#define TOUPCAM_TEC_TARGET_MAX               300        /* 30.0 degrees Celsius */
                                              
 #define TOUPCAM_OPTION_NOFRAME_TIMEOUT       0x01       /* no frame timeout: 1 = enable; 0 = disable. default: disable */
 #define TOUPCAM_OPTION_THREAD_PRIORITY       0x02       /* set the priority of the internal thread which grab data from the usb device.
-                                                            Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: msdn SetThreadPriority
-                                                            Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority
+                                                            Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+                                                            Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
                                                         */
 #define TOUPCAM_OPTION_PROCESSMODE           0x03       /* obsolete & useless. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
 #define TOUPCAM_OPTION_RAW                   0x04       /* raw data mode, read the sensor "raw" data. This can be set only BEFORE Toupcam_StartXXX(). 0 = rgb, 1 = raw, default value: 0 */
@@ -727,7 +725,7 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
                                                             default value: 1
                                                         */
 #define TOUPCAM_OPTION_FRAMERATE             0x11       /* limit the frame rate, range=[0, 63], the default value 0 means no limit */
-#define TOUPCAM_OPTION_DEMOSAIC              0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients interpolation) = 1, PPG(Patterned Pixel Grouping interpolation) = 2, AHD(Adaptive Homogeneity-Directed interpolation) = 3, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
+#define TOUPCAM_OPTION_DEMOSAIC              0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
 #define TOUPCAM_OPTION_DEMOSAIC_VIDEO        0x13       /* demosaic method for video */
 #define TOUPCAM_OPTION_DEMOSAIC_STILL        0x14       /* demosaic method for still image */
 #define TOUPCAM_OPTION_BLACKLEVEL            0x15       /* black level */
@@ -798,7 +796,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
 #define TOUPCAM_OPTION_BANDWIDTH             0x2e       /* bandwidth, [1-100]% */
 #define TOUPCAM_OPTION_RELOAD                0x2f       /* reload the last frame in trigger mode */
 #define TOUPCAM_OPTION_CALLBACK_THREAD       0x30       /* dedicated thread for callback */
-#define TOUPCAM_OPTION_FRAME_DEQUE_LENGTH    0x31       /* frame buffer deque length, range: [2, 1024], default: 3 */
+#define TOUPCAM_OPTION_FRONTEND_DEQUE_LENGTH 0x31       /* frontend frame buffer deque length, range: [2, 1024], default: 3 */
+#define TOUPCAM_OPTION_FRAME_DEQUE_LENGTH    0x31       /* alias of TOUPCAM_OPTION_FRONTEND_DEQUE_LENGTH */
 #define TOUPCAM_OPTION_MIN_PRECISE_FRAMERATE 0x32       /* precise frame rate minimum value in 0.1 fps, such as 15 means 1.5 fps */
 #define TOUPCAM_OPTION_SEQUENCER_ONOFF       0x33       /* sequencer trigger: on/off */
 #define TOUPCAM_OPTION_SEQUENCER_NUMBER      0x34       /* sequencer trigger: number, range = [1, 255] */
@@ -819,7 +818,7 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
                                                              if the image is wrong, this indicates that the hardware platform does not support this feature, please disable it when the program starts:
                                                                Toupcam_put_Option((this is a global option, the camera handle parameter is not required, use nullptr), TOUPCAM_OPTION_LINUX_USB_ZEROCOPY, 0)
                                                              default value:
-                                                               disable(0): android or arm32
+                                                               disable(0): android or arm
                                                                enable(1):  others
                                                         */
 #define TOUPCAM_OPTION_FLUSH                 0x3d       /* 1 = hard flush, discard frames cached by camera DDR (if any)
@@ -829,6 +828,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeNum);
                                                         */
 #define TOUPCAM_OPTION_NUMBER_DROP_FRAME     0x3e       /* get the number of frames that have been grabbed from the USB but dropped by the software */
 #define TOUPCAM_OPTION_DUMP_CFG              0x3f       /* explicitly dump configuration to ini, json, or EEPROM. when camera is closed, it will dump configuration automatically */
+#define TOUPCAM_OPTION_DEFECT_PIXEL          0x40       /* Defect Pixel Correction: 0 => disable, 1 => enable; default: 1 */
+#define TOUPCAM_OPTION_BACKEND_DEQUE_LENGTH  0x41       /* backend frame buffer deque length (Only available in pull mode), range: [2, 1024], default: 3 */
 
 /* pixel format */
 #define TOUPCAM_PIXELFORMAT_RAW8             0x00
@@ -859,7 +860,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_Roi(HToupcam h, unsigned* pxOffset, unsigned* 
     return E_ACCESSDENIED if without UAC Administrator privileges
     for each device found, it will take about 3 seconds
 */
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT) Toupcam_Replug(const wchar_t* id);
 #else
 TOUPCAM_API(HRESULT) Toupcam_Replug(const char* id);
@@ -950,7 +951,14 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
 
 #define TOUPCAM_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
-TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned index, unsigned nType, int outVal, int* inVal);
+/*
+  ioLineNumber:
+    0-> Opto-isolated input
+    1-> Opto-isolated output
+    2-> GPIO0
+    3-> GPIO1
+*/
+TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
 
 TOUPCAM_API(HRESULT)  Toupcam_write_UART(HToupcam h, const unsigned char* pData, unsigned nDataLen);
 TOUPCAM_API(HRESULT)  Toupcam_read_UART(HToupcam h, unsigned char* pBuffer, unsigned nBufferLen);
@@ -962,7 +970,7 @@ TOUPCAM_API(HRESULT)  Toupcam_read_UART(HToupcam h, unsigned char* pBuffer, unsi
 Please do not unplug the camera or lost power during the upgrade process, this is very very important.
 Once an unplugging or power outage occurs during the upgrade process, the camera will no longer be available and can only be returned to the factory for repair.
 */
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT)  Toupcam_Update(const wchar_t* camId, const wchar_t* filePath, PITOUPCAM_PROGRESS pFun, void* pCtx);
 #else
 TOUPCAM_API(HRESULT)  Toupcam_Update(const char* camId, const char* filePath, PITOUPCAM_PROGRESS pFun, void* pCtx);
@@ -1022,7 +1030,7 @@ TOUPCAM_API(HRESULT)  Toupcam_put_Demosaic(HToupcam h, PTOUPCAM_DEMOSAIC_CALLBAC
     obsolete, please use ToupcamModelV2
 */
 typedef struct {
-#ifdef _WIN32
+#if defined(_WIN32)
     const wchar_t*      name;       /* model name, in Windows, we use unicode */
 #else
     const char*         name;       /* model name */
@@ -1031,14 +1039,14 @@ typedef struct {
     unsigned            maxspeed;   /* number of speed level, same as Toupcam_get_MaxSpeed(), the speed range = [0, maxspeed], closed interval */
     unsigned            preview;    /* number of preview resolution, same as Toupcam_get_ResolutionNumber() */
     unsigned            still;      /* number of still resolution, same as Toupcam_get_StillResolutionNumber() */
-    ToupcamResolution   res[TOUPCAM_MAX];
+    ToupcamResolution   res[16];
 }ToupcamModel; /* camera model */
 
 /*
     obsolete, please use ToupcamDeviceV2
 */
 typedef struct {
-#ifdef _WIN32
+#if defined(_WIN32)
     wchar_t             displayname[64];    /* display name */
     wchar_t             id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #else
@@ -1147,7 +1155,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_VignetMidPointInt(HToupcam h, int* nMidPoint);
 #define TOUPCAM_FLAG_BITDEPTH14    TOUPCAM_FLAG_RAW14  /* pixel format, RAW 14bits */
 #define TOUPCAM_FLAG_BITDEPTH16    TOUPCAM_FLAG_RAW16  /* pixel format, RAW 16bits */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 TOUPCAM_API(HRESULT)  Toupcam_put_Name(const wchar_t* id, const char* name);
 TOUPCAM_API(HRESULT)  Toupcam_get_Name(const wchar_t* id, char name[64]);
 #else
@@ -1156,7 +1164,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_Name(const char* id, char name[64]);
 #endif
 TOUPCAM_API(unsigned) Toupcam_EnumWithName(ToupcamDeviceV2 pti[TOUPCAM_MAX]);
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #pragma pack(pop)
 #endif
 
