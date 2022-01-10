@@ -51,7 +51,7 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
 
 %prep -v
-%autosetup -p1 -n %{name}-master
+%autosetup -v -p1
 
 %build
 %define _lto_cflags %{nil}
