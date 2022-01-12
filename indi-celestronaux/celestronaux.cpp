@@ -152,6 +152,8 @@ bool CelestronAUX::Handshake()
         // update cordwrap position at each init of the alignment subsystem
         if (isConnected())
             syncCoordWrapPosition();
+
+        LOG_WARN("This is an experimental driver. It was not tested in equatorial mode. Use it at your own risk.");
         return true;
     }
     else
@@ -2271,7 +2273,8 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 {
     m.logResponse();
 
-    if ((m.destination() == GPS) && (m.source() != APP)) {
+    if ((m.destination() == GPS) && (m.source() != APP))
+    {
         // Avoid infinite loop by not responding to ourselves
         emulateGPS(m);
     }
@@ -2395,10 +2398,11 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 if (verBuf != nullptr)
                 {
                     size_t verBuflen = 4;
-                    if ( verBuflen != m.dataSize()) {
+                    if ( verBuflen != m.dataSize())
+                    {
                         LOGF_DEBUG("Data and buffer size mismatch for GET_VER: buf[%d] vs data[%d]", verBuflen, m.dataSize());
                     }
-                    for (int i = 0; i < (int)std::min(verBuflen,m.dataSize()); i++)
+                    for (int i = 0; i < (int)std::min(verBuflen, m.dataSize()); i++)
                         verBuf[i] = m.data()[i];
                 }
             }
