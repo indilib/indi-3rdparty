@@ -303,9 +303,9 @@ bool GPhotoCCD::initProperties()
     IUSaveText(&BayerT[2], "RGGB");
 
 #ifdef HAVE_WEBSOCKET
-    SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING | CCD_HAS_WEB_SOCKET);
+    SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING | CCD_HAS_WEB_SOCKET);
 #else
-    SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING);
+    SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING);
 #endif
 
     Streamer->setStreamingExposureEnabled(false);
@@ -1123,6 +1123,29 @@ bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
     return true;
 }
 
+// binning
+bool GPhotoCCD::UpdateCCDBin(int hor, int ver)
+{
+
+    if(hor == 1 && ver == 1) {
+        binning = false;
+    } else {
+
+        // only for fits output
+        if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
+        {
+            LOG_ERROR("Binning is only supported in FITS transport mode.");
+            return false;
+        }
+
+        binning = true;
+
+    }
+
+    return INDI::CCD::UpdateCCDBin(hor, ver);
+}
+
+
 double GPhotoCCD::CalcTimeLeft()
 {
     struct timeval now, diff;
@@ -1330,6 +1353,7 @@ bool GPhotoCCD::grabImage()
         // then we subframe, given the OTHER axis is within range as well.
         if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
         {
+
             uint16_t subX = PrimaryCCD.getSubX();
             uint16_t subY = PrimaryCCD.getSubY();
 
@@ -1381,6 +1405,17 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setNAxis(naxis);
             PrimaryCCD.setBPP(bpp);
 
+            // binning if needed
+            if(binning) {
+
+// binBayerFrame implemented since 1.9.4
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
+                PrimaryCCD.binBayerFrame();
+#else
+                PrimaryCCD.binFrame();
+#endif
+            }
+
             ExposureComplete(&PrimaryCCD);
 
             // Restore old pointer and release memory
@@ -1394,16 +1429,27 @@ bool GPhotoCCD::grabImage()
                 LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purge configuration and update frame size to match camera size.",
                           w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 
-            PrimaryCCD.setFrame(0, 0, w, h);
             PrimaryCCD.setFrameBuffer(memptr);
             PrimaryCCD.setFrameBufferSize(memsize, false);
             PrimaryCCD.setResolution(w, h);
+            PrimaryCCD.setFrame(0, 0, w, h);
             PrimaryCCD.setNAxis(naxis);
             PrimaryCCD.setBPP(bpp);
+
+            // binning if needed
+            if(binning) {
+// binBayerFrame implemented since 1.9.4
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
+                PrimaryCCD.binBayerFrame();
+#else
+                PrimaryCCD.binFrame();
+#endif
+            }
 
             ExposureComplete(&PrimaryCCD);
         }
     }
+
     // Read Native image AS IS
     else
     {
@@ -1486,7 +1532,6 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setBPP(bpp);
 
         }
-
 
         ExposureComplete(&PrimaryCCD);
     }

@@ -79,6 +79,9 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         bool AbortExposure() override;
         bool UpdateCCDFrame(int x, int y, int w, int h) override;
 
+	// enable binning
+	bool UpdateCCDBin(int hor, int ver) override;
+
         virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
         virtual bool ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n) override;
@@ -166,6 +169,9 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
 
         int liveVideoWidth  {-1};
         int liveVideoHeight {-1};
+
+	// binning ?
+	bool binning { false };
 
         ISwitch mConnectS[2];
         ISwitchVectorProperty mConnectSP;
