@@ -9,7 +9,23 @@
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="Nexstar Evolution" manufacturer="Celestron">
+   <device label="Evolution WiFi" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="Evolution WiFi Wedge" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="CGEM II WiFi" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="CGX WiFi" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="Advanced VX WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
