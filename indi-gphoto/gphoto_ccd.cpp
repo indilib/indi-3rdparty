@@ -1127,9 +1127,12 @@ bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
 bool GPhotoCCD::UpdateCCDBin(int hor, int ver)
 {
 
-    if(hor == 1 && ver == 1) {
+    if(hor == 1 && ver == 1)
+    {
         binning = false;
-    } else {
+    }
+    else
+    {
 
         // only for fits output
         if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
@@ -1406,9 +1409,10 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setBPP(bpp);
 
             // binning if needed
-            if(binning) {
+            if(binning)
+            {
 
-// binBayerFrame implemented since 1.9.4
+                // binBayerFrame implemented since 1.9.4
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
                 PrimaryCCD.binBayerFrame();
 #else
@@ -1437,8 +1441,9 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setBPP(bpp);
 
             // binning if needed
-            if(binning) {
-// binBayerFrame implemented since 1.9.4
+            if(binning)
+            {
+                // binBayerFrame implemented since 1.9.4
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
                 PrimaryCCD.binBayerFrame();
 #else
@@ -1971,6 +1976,7 @@ void GPhotoCCD::streamLiveView()
         if (PrimaryCCD.getSubW() != w || PrimaryCCD.getSubH() != h)
         {
             Streamer->setSize(w, h);
+            PrimaryCCD.setBin(1, 1);
             PrimaryCCD.setFrame(0, 0, w, h);
         }
 
