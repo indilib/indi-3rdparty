@@ -574,6 +574,17 @@ bool LX200StarGo::ReadScopeStatus()
         }
     }
 
+    double raCorrection;
+    if (getTrackingAdjustment(&raCorrection))
+    {
+        TrackingAdjustment[0].value = raCorrection;
+        TrackingAdjustmentNP.s      = IPS_OK;
+    }
+    else
+        TrackingAdjustmentNP.s = IPS_ALERT;
+
+    IDSetNumber(&TrackingAdjustmentNP, nullptr);
+
     double r, d;
     if(!getEqCoordinates(&r, &d))
     {
@@ -2002,9 +2013,10 @@ bool LX200StarGo::setTrackingAdjustment(double adjustRA)
     }
 
     int parameter = static_cast<int>(adjustRA * 100);
-    sprintf(cmd, ":X41%+03i#", parameter);
+    sprintf(cmd, ":X41%+04i#", parameter);
 
-    if(!transmit(cmd))
+    char response[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
+    if(!sendQuery(cmd, response, 0))  // No response
     {
         LOGF_ERROR("Cannot adjust tracking by %d%%", adjustRA);
         return false;
@@ -2032,7 +2044,7 @@ bool LX200StarGo::getTrackingAdjustment(double *valueRA)
     if (!sendQuery(":X42#", response))
         return false;
 
-    if (sscanf(response, "or%04i#", &raValue) < 1)
+    if (sscanf(response, "or%04d#", &raValue) < 1)
     {
         LOG_ERROR("Unable to parse response");
         return false;

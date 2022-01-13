@@ -1,3 +1,11 @@
+Version 2.0 - 2021-12-09 (overhaul for firmware 21 of TCS)
+	+ cleaned up structure of source code
+	+ improved documentation and parser for JSON response
+	+ added lunar tracking mode
+	+ adapted system speed to new firmware
+	+ augmented global JSON buffer to 256 chars
+	+ augmented JSON return buffer of helperfunctions to 32 chars
+
 Version 1.1 - 2021-05-10
 	- removed obsolete "Use PulsCmd"-switch (it makes no sense *not* to use
 	  the built-in pulse commands of the TCS)

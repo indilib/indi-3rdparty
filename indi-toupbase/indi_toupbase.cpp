@@ -741,8 +741,7 @@ void ToupBase::setupParams()
 
     // Get active resolution index
     uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
-    rc = FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
-    finalResolutionIndex = currentResolutionIndex;
+    FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
     finalResolutionIndex = (m_ConfigResolutionIndex >= 0
                             && m_ConfigResolutionIndex < ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
@@ -760,14 +759,14 @@ void ToupBase::setupParams()
     if (finalResolutionIndex != currentResolutionIndex)
         FP(put_eSize(m_CameraHandle, finalResolutionIndex));
 
-    SetCCDParams(w[currentResolutionIndex], h[currentResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
+    SetCCDParams(w[finalResolutionIndex], h[finalResolutionIndex], m_BitsPerPixel, m_Instance->model->xpixsz,
                  m_Instance->model->ypixsz);
 
     m_CanSnap = m_Instance->model->still > 0;
     LOGF_DEBUG("Camera snap support: %s", m_CanSnap ? "True" : "False");
 
     // Trigger Mode
-    rc = FP(get_Option(m_CameraHandle, CP(OPTION_TRIGGER), &nVal));
+    FP(get_Option(m_CameraHandle, CP(OPTION_TRIGGER), &nVal));
     LOGF_DEBUG("Trigger mode: %d", nVal);
     m_CurrentTriggerMode = static_cast<eTriggerMode>(nVal);
 
@@ -798,7 +797,7 @@ void ToupBase::setupParams()
     GainConversionS[highConversionGain].s = ISS_ON;
 
     // Gain
-    rc = FP(get_ExpoAGainRange(m_CameraHandle, &nMin, &nMax, &nDef));
+    FP(get_ExpoAGainRange(m_CameraHandle, &nMin, &nMax, &nDef));
     LOGF_DEBUG("Exposure Auto Gain Control. Min: %u Max: %u Default: %u", nMin, nMax, nDef);
     ControlN[TC_GAIN].min = nMin;
     m_MaxGainNative = nMax;

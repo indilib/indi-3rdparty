@@ -1,4 +1,4 @@
 usr/bin/
 usr/share/indi/
 lib/firmware
-etc/udev/rules.d
+lib/udev/rules.d

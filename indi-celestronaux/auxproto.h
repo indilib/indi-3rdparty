@@ -26,7 +26,7 @@
 #include <vector>
 #include <stdint.h>
 
-typedef std::vector<unsigned char> AUXBuffer;
+typedef std::vector<uint8_t> AUXBuffer;
 
 enum AUXCommands
 {
@@ -36,8 +36,10 @@ enum AUXCommands
     MC_SET_POS_GUIDERATE = 0x06,
     MC_SET_NEG_GUIDERATE = 0x07,
     MC_LEVEL_START       = 0x0b,
+    MC_LEVEL_DONE        = 0x12,
     MC_SLEW_DONE         = 0x13,
     MC_GOTO_SLOW         = 0x17,
+    MC_SEEK_DONE         = 0x18,
     MC_SEEK_INDEX        = 0x19,
     MC_MOVE_POS          = 0x24,
     MC_MOVE_NEG          = 0x25,
@@ -48,8 +50,8 @@ enum AUXCommands
     MC_SET_CORDWRAP_POS  = 0x3a,
     MC_POLL_CORDWRAP     = 0x3b,
     MC_GET_CORDWRAP_POS  = 0x3c,
-    MC_SET_AUTOGUIDE_RATE= 0x46,
-    MC_GET_AUTOGUIDE_RATE= 0x47,
+    MC_SET_AUTOGUIDE_RATE = 0x46,
+    MC_GET_AUTOGUIDE_RATE = 0x47,
     GET_VER              = 0xfe,
     GPS_GET_LAT          = 0x01,
     GPS_GET_LONG         = 0x02,
@@ -86,8 +88,8 @@ class AUXCommand
     public:
         AUXCommand();
         AUXCommand(const AUXBuffer &buf);
-        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d, const AUXBuffer &dat);
-        AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d);
+        AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination, const AUXBuffer &data);
+        AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Buffer Management
@@ -97,45 +99,69 @@ class AUXCommand
         void parseBuf(AUXBuffer buf, bool do_checksum);
 
         ///////////////////////////////////////////////////////////////////////////////
-        /// Position
+        /// Getters
         ///////////////////////////////////////////////////////////////////////////////
-        int32_t getPosition();
-        void setPosition(int32_t p);
-        void setPosition(double p);
+        const AUXTargets &source() const
+        {
+            return m_Source;
+        }
+        const AUXTargets &destination() const
+        {
+            return m_Destination;
+        }
+        const AUXBuffer &data() const
+        {
+            return m_Data;
+        }
+        AUXCommands command() const
+        {
+            return m_Command;
+        }
+        size_t dataSize() const
+        {
+            return m_Data.size();
+        }
+        const char * commandName() const
+        {
+            return commandName(m_Command);
+        }
 
         ///////////////////////////////////////////////////////////////////////////////
-        /// Rates
+        /// Set and Get data
         ///////////////////////////////////////////////////////////////////////////////
-        void setRate(unsigned char r);
+        /**
+         * @brief getData Parses data packet and convert it to a 32bit unsigned integer
+         * @param bytes How many bytes to interpret the data.
+         * @return
+         */
+        uint32_t getData();
+        void setData(uint32_t value, uint8_t bytes = 3);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Check sum
         ///////////////////////////////////////////////////////////////////////////////
-        unsigned char checksum(AUXBuffer buf);
+        uint8_t checksum(AUXBuffer buf);
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Logging
         ///////////////////////////////////////////////////////////////////////////////
-        //void logCommand();
-        const char * cmd_name(AUXCommands c);
-        int response_data_size();
-        const char * node_name(AUXTargets n);
+        const char * commandName(AUXCommands command) const;
+        const char * moduleName(AUXTargets n);
+        int responseDataSize();
         void logResponse();
         void logCommand();
-        //void logResponse(AUXBuffer buf);
         static void setDebugInfo(const char *deviceName, uint8_t debugLevel);
-
-        // TODO these should be private
-        AUXCommands cmd;
-        AUXTargets src, dst;
-        AUXBuffer data;
 
         static uint8_t DEBUG_LEVEL;
         static char DEVICE_NAME[64];
 
     private:
-        int len {0};
+        uint8_t len {0};
         bool valid {false};
+
+        AUXCommands m_Command;
+        AUXTargets m_Source, m_Destination;
+        AUXBuffer m_Data;
 
 
 

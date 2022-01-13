@@ -9,5 +9,13 @@
                 <driver name="AZ-GTi">indi_azgti_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
+        <device label="Star Adventurer 2i WiFi" manufacturer="SkyWatcher">
+                <driver name="Star Adventurer 2i">indi_staradventurer2i_telescope</driver>
+                <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
+        </device>
+        <device label="Star Adventurer 2i USB" manufacturer="SkyWatcher">
+                <driver name="Star Adventurer 2i">indi_staradventurer2i_telescope</driver>
+                <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>
