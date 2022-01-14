@@ -1199,13 +1199,28 @@ bool NexDome::processRotatorReport(const std::string &report)
                 IDSetNumber(&RotatorSettingsNP, nullptr);
             }
 
+            // update to fix issue with movement across 0 degrees
+            // for example, if the dead zone is 0.5 degrees, then NexDome won't move if going from 0.1 to 359.9 degrees.
+            // however driver expects response from rotator unless difference calculation is modified, and movement stalls
+            // e.g. the angles 0.1 and -0.1 should be compared instead
+            int a = position;
+            int b = m_TargetAZSteps;
+
             if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING)
             {
-                int a = position;
-                int b = m_TargetAZSteps;
-                // If we reach target position.
-                if (std::abs(a - b) <= m_DomeAzThreshold)
+                // if a > 0 and b < 360 and both within dead zone, make b negative equivalent angle
+                if(a >= 0 && a <= int(dead_zone) && b >= (int(cirumference) - int(dead_zone)))
                 {
+                    b -= int(cirumference);
+                }  // if opposite case then make a the negative angle equivalent
+                else if(b >= 0 && b <=int(dead_zone) && a >= (int(cirumference) - int(dead_zone)))
+                {
+                    a -= int(cirumference);
+                }
+
+                // If we reach target position.  (now calculation is correct)
+                if (std::abs(a - b) <= int(dead_zone) )
+                {                    
                     if (getDomeState() == DOME_MOVING)
                     {
                         LOG_INFO("Dome reached target position.");
