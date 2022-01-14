@@ -68,7 +68,7 @@ set(weatherradio_SRCS
    )
 
 add_executable(indi_weatherradio ${weatherradio_SRCS})
-target_link_libraries(indi_weatherradio ${INDI_LIBRARIES} ${CURL_LIBRARIES})
+target_link_libraries(indi_weatherradio ${INDI_LIBRARIES} CURL::libcurl)
 
 install(TARGETS indi_weatherradio RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml DESTINATION ${INDI_DATA_DIR})
