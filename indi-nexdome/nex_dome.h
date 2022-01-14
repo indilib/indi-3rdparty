@@ -161,7 +161,6 @@ class NexDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
         int32_t m_TargetAZSteps {1000000};
-        int32_t m_DomeAzThreshold {10};
         double StepsPerDegree { 153.0 };
 
 };
