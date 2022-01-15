@@ -49,7 +49,7 @@ add_library(apogee SHARED ${libapogee_SRCS})
 
 set_target_properties(apogee PROPERTIES VERSION ${APOGEE_VERSION} SOVERSION ${APOGEE_SOVERSION})
 
-target_link_libraries(apogee ${USB1_LIBRARIES} ${CURL_LIBRARY})
+target_link_libraries(apogee ${USB1_LIBRARIES} CURL::libcurl)
 
 install(TARGETS apogee LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
