@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <driversList>
 <devGroup group="CCDs">
-        <device label="ToupCam" mdpd="true" manufacturer="Toupcam">
-                <driver name="ToupCam">indi_toupcam_ccd</driver>
+        <device label="Toupcam" mdpd="true" manufacturer="Toupcam">
+                <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="Omegon Pro" mdpd="true" manufacturer="Omegon">
-                <driver name="ToupCam">indi_toupcam_ccd</driver>
+                <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
-        <device label="Meade ToupCam" mdpd="true" manufacturer="Meade">
-                <driver name="ToupCam">indi_toupcam_ccd</driver>
+        <device label="Meade Toupcam" mdpd="true" manufacturer="Meade">
+                <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="Altair" mdpd="true" manufacturer="Altair">
