@@ -29,6 +29,9 @@
 #include <memory>
 #include <cstring>
 #include <unistd.h>
+#include <termios.h>
+#include <chrono>
+#include <thread>
 
 static std::unique_ptr<astromechanics_foc> Astromechanics_foc(new astromechanics_foc());
 
@@ -123,7 +126,6 @@ bool astromechanics_foc::updateProperties()
 ************************************************************************************/
 bool astromechanics_foc::Handshake()
 {
-    char FOC_cmd[32] = "P#";
     char FOC_res[32] = {0};
     int FOC_pos_measd = 0;
     int nbytes_written = 0;
@@ -131,22 +133,22 @@ bool astromechanics_foc::Handshake()
 
     LOG_DEBUG("Handshake");
 
-    tty_write_string(PortFD, FOC_cmd, &nbytes_written);
-    LOGF_INFO("CMD <%s>", FOC_cmd);
-    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+    for (int i = 0; i < 3; i++)
     {
-        LOGF_DEBUG("RES (%s)", FOC_res);
-        sscanf(FOC_res, "%d#", &FOC_pos_measd);
-        LOGF_INFO("Set to absolute focus position (%d)", FOC_pos_measd);
-        FocusAbsPosN[0].value = FOC_pos_measd;
-        FocusAbsPosNP.s = IPS_OK;
+        tcflush(PortFD, TCIOFLUSH);
+        tty_write_string(PortFD, "P#", &nbytes_written);
+        if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+        {
+            LOGF_DEBUG("RES (%s)", FOC_res);
+            sscanf(FOC_res, "%d#", &FOC_pos_measd);
+            LOGF_INFO("Set to absolute focus position (%d)", FOC_pos_measd);
+            FocusAbsPosN[0].value = FOC_pos_measd;
+            FocusAbsPosNP.s = IPS_OK;
+            SetApperture(0);
+            return true;
+        }
 
-        SetApperture(0);
-        return true;
-    }
-    else
-    {
-        LOG_ERROR("ERROR HANDSHAKE");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return false;
