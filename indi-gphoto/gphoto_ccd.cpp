@@ -1460,7 +1460,7 @@ bool GPhotoCCD::grabImage()
     {
         if (isSimulation())
         {
-            int fd = open(UploadFileT[0].text, O_RDONLY | S_IRUSR);
+            int fd = open(UploadFileT[0].text, O_RDONLY);
             struct stat sb;
 
             // Get file size
