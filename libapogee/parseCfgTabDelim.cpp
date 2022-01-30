@@ -18,6 +18,7 @@
 #include <bitset>
 
 #include <regex>
+#include <iterator>
 
 namespace
 {
