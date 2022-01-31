@@ -241,6 +241,10 @@ enum CONTROL_ID
 /*71*/  CAM_TRIGER_OUT, //check if camera support triger out function
 /*72*/  CAM_BURST_MODE, //check if camera support burst mode
 /*73*/  CAM_SPEAKER_LED_ALARM, // for OEM-600
+/*74*/  CAM_WATCH_DOG_FPGA, // for _QHY5III178C Celestron, SDK have to feed this dog or it go reset
+
+/*75*/  CAM_BIN6X6MODE,         //!< check if camera has bin4x4 mode
+/*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin4x4 mode
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */

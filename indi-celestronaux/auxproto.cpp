@@ -42,7 +42,9 @@ char AUXCommand::DEVICE_NAME[64] = {0};
 /////// Utility functions
 //////////////////////////////////////////////////
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void logBytes(unsigned char *buf, int n, const char *deviceName, uint32_t debugLevel)
 {
     char hex_buffer[BUFFER_SIZE] = {0};
@@ -55,98 +57,83 @@ void logBytes(unsigned char *buf, int n, const char *deviceName, uint32_t debugL
     DEBUGFDEVICE(deviceName, debugLevel, "[%s]", hex_buffer);
 }
 
-//void AUXCommand::logResponse(AUXBuffer buf)
-//{
-//    char hex_buffer[BUFFER_SIZE] = {0};
-//    for (size_t i = 0; i < buf.size(); i++)
-//        sprintf(hex_buffer + 3 * i, "%02X ", buf[i]);
-
-//    if (buf.size() > 0)
-//        hex_buffer[3 * buf.size() - 1] = '\0';
-
-//    DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "MSG: %s", hex_buffer);
-//}
-
-//void AUXCommand::logCommand()
-//{
-//    char hex_buffer[BUFFER_SIZE] = {0};
-//    for (size_t i = 0; i < data.size(); i++)
-//        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
-
-//    if (data.size() > 0)
-//        hex_buffer[3 * data.size() - 1] = '\0';
-
-//    DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "<%02x> %02x -> %02x: %s", cmd, src, dst, hex_buffer);
-//}
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::logResponse()
 {
     char hex_buffer[BUFFER_SIZE] = {0}, part1[BUFFER_SIZE] = {0}, part2[BUFFER_SIZE] = {0}, part3[BUFFER_SIZE] = {0};
-    for (size_t i = 0; i < data.size(); i++)
-        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
+    for (size_t i = 0; i < m_Data.size(); i++)
+        sprintf(hex_buffer + 3 * i, "%02X ", m_Data[i]);
 
-    if (data.size() > 0)
-        hex_buffer[3 * data.size() - 1] = '\0';
+    if (m_Data.size() > 0)
+        hex_buffer[3 * m_Data.size() - 1] = '\0';
 
-    const char * c = cmd_name(cmd);
-    const char * s = node_name(src);
-    const char * d = node_name(dst);
+    const char * c = commandName(m_Command);
+    const char * s = moduleName(m_Source);
+    const char * d = moduleName(m_Destination);
 
     if (c != nullptr)
         snprintf(part1, BUFFER_SIZE, "<%12s>", c);
     else
-        snprintf(part1, BUFFER_SIZE, "<%02x>", cmd);
+        snprintf(part1, BUFFER_SIZE, "<%02x>", m_Command);
 
     if (s != nullptr)
         snprintf(part2, BUFFER_SIZE, "%5s ->", s);
     else
-        snprintf(part2, BUFFER_SIZE, "%02x ->", src);
+        snprintf(part2, BUFFER_SIZE, "%02x ->", m_Source);
 
     if (s != nullptr)
         snprintf(part3, BUFFER_SIZE, "%5s", d);
     else
-        snprintf(part3, BUFFER_SIZE, "%02x", dst);
+        snprintf(part3, BUFFER_SIZE, "%02x", m_Destination);
 
-    if (data.size() > 0)
+    if (m_Data.size() > 0)
         DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "RES %s%s%s [%s]", part1, part2, part3, hex_buffer);
     else
         DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "RES %s%s%s", part1, part2, part3);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::logCommand()
 {
     char hex_buffer[BUFFER_SIZE] = {0}, part1[BUFFER_SIZE] = {0}, part2[BUFFER_SIZE] = {0}, part3[BUFFER_SIZE] = {0};
-    for (size_t i = 0; i < data.size(); i++)
-        sprintf(hex_buffer + 3 * i, "%02X ", data[i]);
+    for (size_t i = 0; i < m_Data.size(); i++)
+        sprintf(hex_buffer + 3 * i, "%02X ", m_Data[i]);
 
-    if (data.size() > 0)
-        hex_buffer[3 * data.size() - 1] = '\0';
+    if (m_Data.size() > 0)
+        hex_buffer[3 * m_Data.size() - 1] = '\0';
 
-    const char * c = cmd_name(cmd);
-    const char * s = node_name(src);
-    const char * d = node_name(dst);
+    const char * c = commandName(m_Command);
+    const char * s = moduleName(m_Source);
+    const char * d = moduleName(m_Destination);
 
     if (c != nullptr)
         snprintf(part1, BUFFER_SIZE, "<%12s>", c);
     else
-        snprintf(part1, BUFFER_SIZE, "<%02x>", cmd);
+        snprintf(part1, BUFFER_SIZE, "<%02x>", m_Command);
 
     if (s != nullptr)
         snprintf(part2, BUFFER_SIZE, "%5s ->", s);
     else
-        snprintf(part2, BUFFER_SIZE, "%02x ->", src);
+        snprintf(part2, BUFFER_SIZE, "%02x ->", m_Source);
 
     if (s != nullptr)
         snprintf(part3, BUFFER_SIZE, "%5s", d);
     else
-        snprintf(part3, BUFFER_SIZE, "%02x", dst);
+        snprintf(part3, BUFFER_SIZE, "%02x", m_Destination);
 
-    if (data.size() > 0)
+    if (m_Data.size() > 0)
         DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "CMD %s%s%s [%s]", part1, part2, part3, hex_buffer);
     else
         DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "CMD %s%s%s", part1, part2, part3);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::setDebugInfo(const char *deviceName, uint8_t debugLevel)
 {
     strncpy(DEVICE_NAME, deviceName, 64);
@@ -158,39 +145,51 @@ void AUXCommand::setDebugInfo(const char *deviceName, uint8_t debugLevel)
 
 AUXCommand::AUXCommand()
 {
-    data.reserve(MAX_CMD_LEN);
+    m_Data.reserve(MAX_CMD_LEN);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 AUXCommand::AUXCommand(const AUXBuffer &buf)
 {
-    data.reserve(MAX_CMD_LEN);
+    m_Data.reserve(MAX_CMD_LEN);
     parseBuf(buf);
 }
 
-AUXCommand::AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d, const AUXBuffer &dat)
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+AUXCommand::AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination, const AUXBuffer &data)
 {
-    cmd = c;
-    src = s;
-    dst = d;
-    data.reserve(MAX_CMD_LEN);
-    data = dat;
-    len  = 3 + data.size();
+    m_Command = command;
+    m_Source = source;
+    m_Destination = destination;
+    m_Data.reserve(MAX_CMD_LEN);
+    m_Data = data;
+    len  = 3 + m_Data.size();
 }
 
-AUXCommand::AUXCommand(AUXCommands c, AUXTargets s, AUXTargets d)
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+AUXCommand::AUXCommand(AUXCommands command, AUXTargets source, AUXTargets destination)
 {
-    cmd = c;
-    src = s;
-    dst = d;
-    data.reserve(MAX_CMD_LEN);
-    len = 3 + data.size();
+    m_Command = command;
+    m_Source = source;
+    m_Destination = destination;
+    m_Data.reserve(MAX_CMD_LEN);
+    len = 3 + m_Data.size();
 }
 
-const char * AUXCommand::cmd_name(AUXCommands c)
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+const char * AUXCommand::commandName(AUXCommands command) const
 {
-    if (src == GPS || dst == GPS)
+    if (m_Source == GPS || m_Destination == GPS)
     {
-        switch (c)
+        switch (command)
         {
             case GPS_GET_LAT:
                 return "GPS_GET_LAT";
@@ -214,7 +213,7 @@ const char * AUXCommand::cmd_name(AUXCommands c)
     }
     else
     {
-        switch (c)
+        switch (command)
         {
             case MC_GET_POSITION:
                 return "MC_GET_POSITION";
@@ -256,10 +255,14 @@ const char * AUXCommand::cmd_name(AUXCommands c)
     }
 }
 
-int AUXCommand::response_data_size()
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+int AUXCommand::responseDataSize()
 {
-    if (src == GPS || dst == GPS)
-        switch (cmd)
+    if (m_Source == GPS || m_Destination == GPS)
+    {
+        switch (m_Command)
         {
             case GPS_GET_LAT:
             case GPS_GET_LONG:
@@ -275,8 +278,10 @@ int AUXCommand::response_data_size()
             default :
                 return -1;
         }
+    }
     else
-        switch (cmd)
+    {
+        switch (m_Command)
         {
             case MC_GET_POSITION:
             case MC_GET_CORDWRAP_POS:
@@ -284,6 +289,8 @@ int AUXCommand::response_data_size()
             case GET_VER:
                 return 4;
             case MC_SLEW_DONE:
+            case MC_SEEK_DONE:
+            case MC_LEVEL_DONE:
             case MC_POLL_CORDWRAP:
                 return 1;
             case MC_GOTO_FAST:
@@ -303,10 +310,13 @@ int AUXCommand::response_data_size()
             default :
                 return -1;
         }
+    }
 }
 
-
-const char * AUXCommand::node_name(AUXTargets n)
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+const char * AUXCommand::moduleName(AUXTargets n)
 {
     switch (n)
     {
@@ -339,50 +349,60 @@ const char * AUXCommand::node_name(AUXTargets n)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::fillBuf(AUXBuffer &buf)
 {
     buf.resize(len + 3);
+
     buf[0] = 0x3b;
-    buf[1] = (unsigned char)len;
-    buf[2] = (unsigned char)src;
-    buf[3] = (unsigned char)dst;
-    buf[4] = (unsigned char)cmd;
-    for (unsigned int i = 0; i < data.size(); i++)
+    buf[1] = len;
+    buf[2] = m_Source;
+    buf[3] = m_Destination;
+    buf[4] = m_Command;
+    for (uint32_t i = 0; i < m_Data.size(); i++)
     {
-        buf[i + 5] = data[i];
+        buf[i + 5] = m_Data[i];
     }
     buf.back() = checksum(buf);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::parseBuf(AUXBuffer buf)
 {
     len   = buf[1];
-    src   = (AUXTargets)buf[2];
-    dst   = (AUXTargets)buf[3];
-    cmd   = (AUXCommands)buf[4];
-    data  = AUXBuffer(buf.begin() + 5, buf.end() - 1);
+    m_Source   = (AUXTargets)buf[2];
+    m_Destination   = (AUXTargets)buf[3];
+    m_Command   = (AUXCommands)buf[4];
+    m_Data  = AUXBuffer(buf.begin() + 5, buf.end() - 1);
     valid = (checksum(buf) == buf.back());
     if (valid == false)
     {
         DEBUGFDEVICE(DEVICE_NAME, DEBUG_LEVEL, "Checksum error: %02x vs. %02x", checksum(buf), buf.back());
-        //logResponse(buf);
-        //logCommand();
     };
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::parseBuf(AUXBuffer buf, bool do_checksum)
 {
     (void)do_checksum;
 
     len   = buf[1];
-    src   = (AUXTargets)buf[2];
-    dst   = (AUXTargets)buf[3];
-    cmd   = (AUXCommands)buf[4];
+    m_Source   = (AUXTargets)buf[2];
+    m_Destination   = (AUXTargets)buf[3];
+    m_Command   = (AUXCommands)buf[4];
     if (buf.size() > 5)
-        data  = AUXBuffer(buf.begin() + 5, buf.end());
+        m_Data  = AUXBuffer(buf.begin() + 5, buf.end());
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 unsigned char AUXCommand::checksum(AUXBuffer buf)
 {
     int l  = buf[1];
@@ -391,60 +411,57 @@ unsigned char AUXCommand::checksum(AUXBuffer buf)
     {
         cs += buf[i];
     }
-    //fprintf(stderr,"CS: %x  %x  %x\n", cs, ~cs, ~cs+1);
     return (unsigned char)(((~cs) + 1) & 0xFF);
-    //return ((~sum([ord(c) for c in msg]) + 1) ) & 0xFF
 }
 
-// One definition rule (ODR) constants
-// AUX commands use 24bit integer as a representation of angle in units of
-// fractional revolutions. Thus 2^24 steps makes full revolution.
-const long STEPS_PER_REVOLUTION = 16777216;
-const double STEPS_PER_DEGREE   = STEPS_PER_REVOLUTION / 360.0;
-
-int32_t AUXCommand::getPosition()
+/////////////////////////////////////////////////////////////////////////////////////
+/// Return 8, 16, or 24bit value as dictacted by the data response size.
+/////////////////////////////////////////////////////////////////////////////////////
+uint32_t AUXCommand::getData()
 {
-    if (data.size() == 3)
+    uint32_t value = 0;
+    switch (m_Data.size())
     {
-        int32_t a = static_cast<int8_t>(data[0]); 
-        a <<= 16;
-        a |= static_cast<uint32_t>(data[1]) << 8; 
-        a |= static_cast<uint32_t>(data[2]);
-        //fprintf(stderr,"Angle: %d %08x = %d => %f\n", sizeof(a), a, a, a/pow(2,24));
-        return (int32_t)a % STEPS_PER_REVOLUTION;
+        case 3:
+            value = (m_Data[0] << 16) | (m_Data[1] << 8) | m_Data[2];
+            break;
+
+        case 2:
+            value = (m_Data[0] << 8) | m_Data[1];
+            break;
+
+        case 1:
+            value = m_Data[0];
+            break;
     }
-    else
-    {
-        return 0;
-    }
+
+    return value;
 }
 
-void AUXCommand::setPosition(double p)
+/////////////////////////////////////////////////////////////////////////////////////
+/// Set encoder position in steps.
+/////////////////////////////////////////////////////////////////////////////////////
+void AUXCommand::setData(uint32_t value, uint8_t bytes)
 {
-    setPosition(static_cast<int32_t>(p * STEPS_PER_DEGREE));
-}
-
-void AUXCommand::setPosition(int32_t p)
-{
-    //int a=(int)p; fprintf(stderr,"Angle: %08x = %d => %f\n", a, a, a/pow(2,24));
-    data.resize(3);
-    // Fold the value to 0-STEPS_PER_REVOLUTION range
-    if (p < 0)
+    m_Data.resize(bytes);
+    switch (bytes)
     {
-        p += STEPS_PER_REVOLUTION;
-    }
-    p = p % STEPS_PER_REVOLUTION;
-    for (int i = 2; i > -1; i--)
-    {
-        data[i] = static_cast<uint8_t>(p & 0xff);
-        p >>= 8;
-    }
-    len = 6;
-}
+        case 1:
+            len = 4;
+            m_Data[0] = static_cast<uint8_t>(value >> 0 & 0xff);
+            break;
+        case 2:
+            len = 5;
+            m_Data[1] = static_cast<uint8_t>(value >>  0 & 0xff);
+            m_Data[0] = static_cast<uint8_t>(value >>  8 & 0xff);
+            break;
 
-void AUXCommand::setRate(unsigned char r)
-{
-    data.resize(1);
-    len     = 4;
-    data[0] = r;
+        case 3:
+        default:
+            len = 6;
+            m_Data[2] = static_cast<uint8_t>(value >>  0 & 0xff);
+            m_Data[1] = static_cast<uint8_t>(value >>  8 & 0xff);
+            m_Data[0] = static_cast<uint8_t>(value >> 16 & 0xff);
+            break;
+    }
 }

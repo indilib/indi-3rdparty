@@ -1,3 +1,13 @@
+indi-aok (2.0) bionic; urgency=low (overhaul for firmware 21 of TCS)
+  * cleaned up structure of source code
+  * improved documentation and parser for JSON response
+  * added lunar tracking mode
+  * adapted system speed to new firmware
+  * augmented global JSON buffer to 256 chars
+  * augmented JSON return buffer of helperfunctions to 32 chars
+
+-- T. Schriber <escribana@bluewin.ch> Thu, 9 Dec 2021 16:44 +0200 
+
 indi-aok (1.1) bionic; urgency=low
   * removed obsolete "Use PulsCmd"-switch and corresponding programming code
   

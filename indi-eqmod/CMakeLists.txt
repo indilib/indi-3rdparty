@@ -94,7 +94,7 @@ if(WITH_SCOPE_LIMITS)
   install( FILES  scope-limits/indi_eqmod_scope_limits_sk.xml DESTINATION ${INDI_DATA_DIR})
 endif(WITH_SCOPE_LIMITS)
 
-########### EQMod ###############
+########### AZ GTi ###############
 set(azgti_CXX_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/azgti.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/azgtibase.cpp
@@ -138,6 +138,51 @@ target_link_libraries(indi_azgti_telescope rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_azgti_telescope RUNTIME DESTINATION bin )
+
+########### Star Adventurer 2i ###############
+set(staradventurer2i_CXX_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/staradventurer2i.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/staradventurer2ibase.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(staradventurer2i_CXX_SRCS ${staradventurer2i_CXX_SRCS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/mach_gettime.cpp)
+endif()
+
+set(staradventurer2i_CXX_SRCS ${staradventurer2i_CXX_SRCS}
+   ${CMAKE_CURRENT_SOURCE_DIR}/simulator/simulator.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/simulator/skywatcher-simulator.cpp)
+if(WITH_ALIGN_GEEHALEL)
+  set(staradventurer2i_CXX_SRCS ${staradventurer2i_CXX_SRCS}
+   ${CMAKE_CURRENT_SOURCE_DIR}/align/align.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/pointset.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate_chull.cpp)
+  set(staradventurer2i_C_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/align/htm.c ${CMAKE_CURRENT_SOURCE_DIR}/align/chull/chull.c)
+endif(WITH_ALIGN_GEEHALEL)
+if(WITH_SCOPE_LIMITS)
+  set(staradventurer2i_CXX_SRCS ${staradventurer2i_CXX_SRCS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/scope-limits/scope-limits.cpp)
+endif(WITH_SCOPE_LIMITS)
+
+IF (UNITY_BUILD)
+    ENABLE_UNITY_BUILD(staradventurer2i_c staradventurer2i_C_SRCS 10 c)
+    ENABLE_UNITY_BUILD(staradventurer2i_cxx staradventurer2i_CXX_SRCS 10 cpp)
+ENDIF ()
+
+add_executable(indi_staradventurer2i_telescope ${staradventurer2i_C_SRCS} ${staradventurer2i_CXX_SRCS})
+
+if(WITH_ALIGN)
+  target_link_libraries(indi_staradventurer2i_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
+else(WITH_ALIGN)
+  target_link_libraries(indi_staradventurer2i_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
+endif(WITH_ALIGN)
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+target_link_libraries(indi_staradventurer2i_telescope rt)
+endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+
+install(TARGETS indi_staradventurer2i_telescope RUNTIME DESTINATION bin )
 
 ###################################################################################################
 #########################################  Tests  #################################################

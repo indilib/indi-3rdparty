@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-armadillo-platypus
-Version:1.9.4.git
+Version:1.9.5.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -51,7 +51,7 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
 
 %prep -v
-%setup -n %{name}-%{version}
+%autosetup -v -p1 -n indi-3rdparty-master
 
 %build
 # This package tries to mix and match PIE and PIC which is wrong and will

@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libtoupcam)
 
-# Using ToupCamera SDK Version: 49.19023.20210608
-set (LIBTOUPCAM_VERSION "1.49.1")
+# Using ToupCamera SDK Version: 50.19728.20211022
+set (LIBTOUPCAM_VERSION "1.50.1")
 set (LIBTOUPCAM_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

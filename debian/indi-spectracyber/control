@@ -2,12 +2,12 @@ Source: indi-spectracyber
 Section: science
 Priority: extra
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
-Build-Depends: debhelper (>= 6), cmake, cdbs, libindi-dev, libapogee3-dev,  libcfitsio3-dev|libcfitsio-dev, zlib1g-dev
+Build-Depends: debhelper (>= 6), cmake, cdbs, libindi-dev, libcfitsio3-dev|libcfitsio-dev, zlib1g-dev
 Standards-Version: 3.9.1
 
 Package: indi-spectracyber
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libapogee3
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: This package provides the INDI driver for Radio Astronomy Supplies
  SpectraCyber hydrogen line spectrometer
  .

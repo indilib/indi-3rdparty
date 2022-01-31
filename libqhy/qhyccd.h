@@ -384,9 +384,11 @@ EXPORTC	uint32_t STDCALL GetQHYCCDCFWStatus(qhyccd_handle *handle,char *status);
 EXPORTC	uint32_t STDCALL IsQHYCCDCFWPlugged(qhyccd_handle *handle);
 
 //Get the number of triger mode for camera
-EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeNumber(qhyccd_handle *handle, uint32_t *modeNumber);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceNumber(qhyccd_handle *handle, uint32_t *modeNumber);
 //Get the name of for every triger mode 
-EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeName(qhyccd_handle *handle, uint32_t modeNumber, char *name);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceName(qhyccd_handle *handle, uint32_t modeNumber, char *name);
+//Setup triger interface
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerInterface(qhyccd_handle *handle, uint32_t trigerMode);
 //Setup triger-in mode on/off
 EXPORTC uint32_t STDCALL SetQHYCCDTrigerFunction(qhyccd_handle *h,bool value);
 /**
@@ -990,6 +992,9 @@ EXPORTC void STDCALL QHYCCD_fpga_reset();
 void call_pnp_event();
 void call_data_event_live(char *id, uint8_t *imgdata);
 void call_transfer_event_error();
+void call_critical_event_error(qhyccd_handle *h);
 EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
 EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
 EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
+EXPORTFUNC uint32_t STDCALL PCIEClearDDR(qhyccd_handle *handle);
+
