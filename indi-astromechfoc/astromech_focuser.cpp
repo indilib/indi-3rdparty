@@ -91,7 +91,7 @@ bool astromechanics_foc::initProperties()
     FocusRelPosN[0].value = 0;
 
     // Aperture
-    IUFillNumber(&AppertureN[0], "LENS_APP", "Index", "%2d", 0, 22, 1, 0);
+    IUFillNumber(&AppertureN[0], "LENS_APP", "Index", "%.f", 0, 22, 1, 0);
     IUFillNumberVector(&AppertureNP, AppertureN, 1, getDeviceName(), "LENS_APP_SETTING", "Apperture", MAIN_CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
