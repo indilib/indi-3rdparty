@@ -15,18 +15,16 @@ include (InstallImported)
 
 add_library (ahp_xc SHARED IMPORTED)
 
-set_AHP_XC_DEB_properties (ahp_xc PROPERTIES VERSION ${AHPXC_VERSION} SOVERSION ${AHPXC_SOVERSION})
-
 if (UNIX AND NOT WIN32 AND NOT APPLE)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set (AHP_XC_DEB "libahp-xc_1.1.2_armhf.deb")
+    set (AHP_XC_DEB "libahp-xc_${AHPXC_VERSION}_armhf.deb")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set (AHP_XC_DEB "libahp-xc_1.1.2_arm64.deb")
+    set (AHP_XC_DEB "libahp-xc_${AHPXC_VERSION}_arm64.deb")
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set (AHP_XC_DEB "libahp-xc_1.1.2_amd64.deb")
+    set (AHP_XC_DEB "libahp-xc_${AHPXC_VERSION}_amd64.deb")
   else (CMAKE_SIZEOF_VOID_P MATCHES "4")
-    set (AHP_XC_DEB "libahp-xc_1.1.2_i386.deb")
+    set (AHP_XC_DEB "libahp-xc_${AHPXC_VERSION}_i386.deb")
   endif ()
 
 endif ()
