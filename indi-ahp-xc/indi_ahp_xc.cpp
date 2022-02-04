@@ -277,7 +277,7 @@ void AHP_XC::Callback()
         {
             for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
             {
-                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                 {
                     double d = fabs(baselines[idx]->getDelay(Altitude, Azimuth));
                     unsigned int delay_clocks = d * ahp_xc_get_frequency() / LIGHTSPEED;
@@ -406,7 +406,7 @@ void AHP_XC::Callback()
                     {
                         for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
                         {
-                            if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                            if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                             {
                                 int w = plot_str[0]->sizes[0];
                                 int h = plot_str[0]->sizes[1];
@@ -464,7 +464,7 @@ void AHP_XC::Callback()
                 totalcounts[x] += packet->counts[x];
             for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
             {
-                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                 {
                     totalcorrelations[idx].counts += packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
                                                      2].counts;
@@ -663,6 +663,12 @@ bool AHP_XC::updateProperties()
         for (unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
         {
             defineProperty(&lineEnableSP[x]);
+            if(!ahp_xc_has_leds())
+            {
+                defineProperty(&lineLocationNP[x]);
+                defineProperty(&lineDelayNP[x]);
+                defineProperty(&lineStatsNP[x]);
+            }
         }
         if(ahp_xc_get_autocorrelator_lagsize() > 1)
             defineProperty(&autocorrelationsBP);
@@ -835,7 +841,8 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IUUpdateSwitch(&lineEnableSP[x], states, names, n);
             if(lineEnableSP[x].sp[0].s == ISS_ON)
             {
-                ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+                ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                           || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                            lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
                 defineProperty(&linePowerSP[x]);
                 defineProperty(&lineActiveEdgeSP[x]);
@@ -859,21 +866,24 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
         if(!strcmp(name, linePowerSP[x].name))
         {
             IUUpdateSwitch(&linePowerSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&linePowerSP[x], nullptr);
         }
         if(!strcmp(name, lineActiveEdgeSP[x].name))
         {
             IUUpdateSwitch(&lineActiveEdgeSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&lineActiveEdgeSP[x], nullptr);
         }
         if(!strcmp(name, lineEdgeTriggerSP[x].name))
         {
             IUUpdateSwitch(&lineEdgeTriggerSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&lineEdgeTriggerSP[x], nullptr);
         }
