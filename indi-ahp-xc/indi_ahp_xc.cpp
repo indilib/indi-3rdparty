@@ -270,14 +270,14 @@ void AHP_XC::Callback()
             }
         }
         delay[farest] = 0;
-        ahp_xc_set_lag_auto(static_cast<unsigned int>(farest), 0);
-        ahp_xc_set_lag_cross(static_cast<unsigned int>(farest), 0);
+        ahp_xc_set_channel_auto(static_cast<unsigned int>(farest), 0, 0);
+        ahp_xc_set_channel_cross(static_cast<unsigned int>(farest), 0, 0);
         idx = 0;
         for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
         {
             for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
             {
-                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                 {
                     double d = fabs(baselines[idx]->getDelay(Altitude, Azimuth));
                     unsigned int delay_clocks = d * ahp_xc_get_frequency() / LIGHTSPEED;
@@ -286,14 +286,14 @@ void AHP_XC::Callback()
                     if(y == farest)
                     {
                         delay[x] = d;
-                        ahp_xc_set_lag_auto(x, 0);
-                        ahp_xc_set_lag_cross(x, delay_clocks);
+                        ahp_xc_set_channel_auto(x, 0, 0);
+                        ahp_xc_set_channel_cross(x, delay_clocks, 0);
                     }
                     if(x == farest)
                     {
                         delay[y] = d;
-                        ahp_xc_set_lag_auto(y, 0);
-                        ahp_xc_set_lag_cross(y, delay_clocks);
+                        ahp_xc_set_channel_auto(y, 0, 0);
+                        ahp_xc_set_channel_cross(y, delay_clocks, 0);
                     }
                 }
                 idx++;
@@ -406,7 +406,7 @@ void AHP_XC::Callback()
                     {
                         for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
                         {
-                            if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                            if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                             {
                                 int w = plot_str[0]->sizes[0];
                                 int h = plot_str[0]->sizes[1];
@@ -417,9 +417,11 @@ void AHP_XC::Callback()
                                 if(xx >= -w / 2 && xx < w / 2 && yy >= -w / 2 && yy < h / 2)
                                 {
                                     plot_str[0]->buf[z] += (double)packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
-                                                           2].coherence;
+                                                           2].magnitude / (double)packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
+                                                                   2].counts;
                                     plot_str[0]->buf[w * h - 1 - z] += (double)
-                                                                       packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size / 2].coherence;
+                                                                       packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size / 2].magnitude /
+                                                                       packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size / 2].counts;
                                 }
                             }
                             idx++;
@@ -436,7 +438,7 @@ void AHP_XC::Callback()
                         autocorrelations_str[x]->buf = (dsp_t*)realloc(autocorrelations_str[x]->buf,
                                                        sizeof(dsp_t) * static_cast<unsigned int>(autocorrelations_str[x]->len));
                         for(unsigned int i = 0; i < packet->autocorrelations[x].lag_size; i++)
-                            autocorrelations_str[x]->buf[pos++] = packet->autocorrelations[x].correlations[i].coherence;
+                            autocorrelations_str[x]->buf[pos++] = packet->autocorrelations[x].correlations[i].magnitude;
                     }
                 }
                 if(ahp_xc_get_nbaselines() > 0 && ahp_xc_get_crosscorrelator_lagsize() > 1)
@@ -449,7 +451,7 @@ void AHP_XC::Callback()
                         crosscorrelations_str[x]->buf = (dsp_t*)realloc(crosscorrelations_str[x]->buf,
                                                         sizeof(dsp_t) * static_cast<unsigned int>(crosscorrelations_str[x]->len));
                         for(unsigned int i = 0; i < packet->crosscorrelations[x].lag_size; i++)
-                            crosscorrelations_str[x]->buf[pos++] = packet->crosscorrelations[x].correlations[i].coherence;
+                            crosscorrelations_str[x]->buf[pos++] = packet->crosscorrelations[x].correlations[i].magnitude;
                     }
                 }
             }
@@ -462,12 +464,12 @@ void AHP_XC::Callback()
                 totalcounts[x] += packet->counts[x];
             for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
             {
-                if(lineEnableSP[x].sp[0].s == ISS_ON && lineEnableSP[y].sp[0].s == ISS_ON)
+                if((lineEnableSP[x].sp[0].s == ISS_ON) && lineEnableSP[y].sp[0].s == ISS_ON)
                 {
                     totalcorrelations[idx].counts += packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
                                                      2].counts;
-                    totalcorrelations[idx].correlations += packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
-                                                           2].correlations;
+                    totalcorrelations[idx].magnitude += packet->crosscorrelations[idx].correlations[packet->crosscorrelations[idx].lag_size /
+                                                        2].magnitude;
                 }
                 idx++;
             }
@@ -661,6 +663,12 @@ bool AHP_XC::updateProperties()
         for (unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
         {
             defineProperty(&lineEnableSP[x]);
+            if(!ahp_xc_has_leds())
+            {
+                defineProperty(&lineLocationNP[x]);
+                defineProperty(&lineDelayNP[x]);
+                defineProperty(&lineStatsNP[x]);
+            }
         }
         if(ahp_xc_get_autocorrelator_lagsize() > 1)
             defineProperty(&autocorrelationsBP);
@@ -833,7 +841,8 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             IUUpdateSwitch(&lineEnableSP[x], states, names, n);
             if(lineEnableSP[x].sp[0].s == ISS_ON)
             {
-                ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+                ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                           || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                            lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
                 defineProperty(&linePowerSP[x]);
                 defineProperty(&lineActiveEdgeSP[x]);
@@ -857,21 +866,24 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
         if(!strcmp(name, linePowerSP[x].name))
         {
             IUUpdateSwitch(&linePowerSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&linePowerSP[x], nullptr);
         }
         if(!strcmp(name, lineActiveEdgeSP[x].name))
         {
             IUUpdateSwitch(&lineActiveEdgeSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&lineActiveEdgeSP[x], nullptr);
         }
         if(!strcmp(name, lineEdgeTriggerSP[x].name))
         {
             IUUpdateSwitch(&lineEdgeTriggerSP[x], states, names, n);
-            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON, linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
+            ActiveLine(x, lineEnableSP[x].sp[0].s == ISS_ON
+                       || ahp_xc_has_leds(), linePowerSP[x].sp[0].s == ISS_ON, lineActiveEdgeSP[x].sp[1].s == ISS_ON,
                        lineEdgeTriggerSP[x].sp[1].s == ISS_ON);
             IDSetSwitch(&lineEdgeTriggerSP[x], nullptr);
         }
@@ -978,10 +990,11 @@ void AHP_XC::TimerHit()
         totalcounts[x] = 0;
         for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
         {
-            correlationsNP.np[idx * 2].value = (double)totalcorrelations[idx].correlations * 1000.0 / (double)getCurrentPollingPeriod();
-            correlationsNP.np[idx * 2 + 1].value = (double)totalcorrelations[idx].correlations / (double)totalcorrelations[idx].counts;
+            correlationsNP.np[idx * 2].value = (double)totalcorrelations[idx].magnitude * 1000.0 / (double)getCurrentPollingPeriod();
+            correlationsNP.np[idx * 2 + 1].value = (double)totalcorrelations[idx].magnitude / (double)totalcorrelations[idx].counts;
             totalcorrelations[idx].counts = 0;
-            totalcorrelations[idx].correlations = 0;
+            totalcorrelations[idx].magnitude = 0;
+            totalcorrelations[idx].phase = 0;
             totalcorrelations[idx].counts = 0;
             idx++;
         }
@@ -1233,7 +1246,7 @@ void AHP_XC::SetFrequencyDivider(unsigned char divider)
 void AHP_XC::EnableCapture(bool start)
 {
     if(start)
-        ahp_xc_set_capture_flag(CAP_ENABLE);
+        ahp_xc_set_capture_flags(CAP_ENABLE);
     else
-        ahp_xc_clear_capture_flag(CAP_ENABLE);
+        ahp_xc_set_capture_flags(CAP_NONE);
 }

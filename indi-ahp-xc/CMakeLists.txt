@@ -13,6 +13,7 @@ find_package(Nova REQUIRED)
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(VLBI REQUIRED)
 find_package(Threads REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
@@ -24,6 +25,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${NOVA_INCLUDE_DIR})
 include_directories( ${AHPXC_INCLUDE_DIR})
+include_directories( ${VLBI_INCLUDE_DIR})
 
 include(CMakeCommon)
 
