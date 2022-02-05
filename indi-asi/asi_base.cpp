@@ -327,6 +327,10 @@ bool ASIBase::initProperties()
     ControlNP.fill(getDeviceName(), "CCD_CONTROLS",      "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     ControlSP.fill(getDeviceName(), "CCD_CONTROLS_MODE", "Set Auto", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
 
+    FlipSP[FLIP_HORIZONTAL].fill("FLIP_HORIZONTAL", "Horizontal", ISS_OFF);
+    FlipSP[FLIP_VERTICAL].fill("FLIP_VERTICAL", "Vertical", ISS_OFF);
+    FlipSP.fill(getDeviceName(), "FLIP", "Flip", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
+
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     BlinkNP[BLINK_COUNT   ].fill("BLINK_COUNT",    "Blinks before exposure", "%2.0f", 0, 100, 1.000, 0);
@@ -422,6 +426,12 @@ bool ASIBase::updateProperties()
             loadConfig(true, ControlSP.getName());
         }
 
+        if (hasFlipControl())
+        {
+            defineProperty(FlipSP);
+            loadConfig(true, FlipSP.getName());
+        }
+
         if (!VideoFormatSP.isEmpty())
         {
             defineProperty(VideoFormatSP);
@@ -461,6 +471,11 @@ bool ASIBase::updateProperties()
 
         if (!ControlSP.isEmpty())
             deleteProperty(ControlSP.getName());
+
+        if (hasFlipControl())
+        {
+            deleteProperty(FlipSP.getName());
+        }
 
         if (!VideoFormatSP.isEmpty())
             deleteProperty(VideoFormatSP.getName());
@@ -787,6 +802,35 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             ControlSP.setState(IPS_OK);
             ControlSP.apply();
+            return true;
+        }
+
+        if (FlipSP.isNameMatch(name))
+        {
+            if (FlipSP.update(states, names, n) == false)
+            {
+                FlipSP.setState(IPS_ALERT);
+                FlipSP.apply();
+                return true;
+            }
+
+            int flip = 0;
+            if (FlipSP[FLIP_HORIZONTAL].getState() == ISS_ON)
+                flip |= ASI_FLIP_HORIZ;
+            if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
+                flip |= ASI_FLIP_VERT;
+
+            ASI_ERROR_CODE ret = ASISetControlValue(mCameraInfo.CameraID, ASI_FLIP, flip, ASI_FALSE);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to set ASI_FLIP=%d (%s).", flip, Helpers::toString(ret));
+                FlipSP.setState(IPS_ALERT);
+                FlipSP.apply();
+                return false;
+            }
+
+            FlipSP.setState(IPS_OK);
+            FlipSP.apply();
             return true;
         }
 
@@ -1149,6 +1193,14 @@ bool ASIBase::isMonoBinActive()
     return (imgType == ASI_IMG_RAW8 || imgType == ASI_IMG_RAW16) && bin > 1;
 }
 
+bool ASIBase::hasFlipControl()
+{
+    if (find_if(begin(mControlCaps), end(mControlCaps), [](ASI_CONTROL_CAPS cap) { return cap.ControlType == ASI_FLIP; }) == end(mControlCaps))
+        return false;
+    else
+        return true;
+}
+
 /* The timer call back is used for temperature monitoring */
 void ASIBase::temperatureTimerTimeout()
 {
@@ -1296,7 +1348,7 @@ void ASIBase::createControls(int piNumberOfControls)
                    cap.DefaultValue, cap.IsAutoSupported ? "True" : "False",
                    cap.IsWritable ? "True" : "False");
 
-        if (cap.IsWritable == ASI_FALSE || cap.ControlType == ASI_TARGET_TEMP || cap.ControlType == ASI_COOLER_ON)
+        if (cap.IsWritable == ASI_FALSE || cap.ControlType == ASI_TARGET_TEMP || cap.ControlType == ASI_COOLER_ON || cap.ControlType == ASI_FLIP)
             continue;
 
         // Update Min/Max exposure as supported by the camera
@@ -1438,6 +1490,9 @@ bool ASIBase::saveConfigItems(FILE *fp)
 
     if (!ControlSP.isEmpty())
         ControlSP.save(fp);
+
+    if (hasFlipControl())
+        FlipSP.save(fp);
 
     if (!VideoFormatSP.isEmpty())
         VideoFormatSP.save(fp);
