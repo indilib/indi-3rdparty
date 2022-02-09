@@ -936,6 +936,7 @@ bool GPhotoCCD::Connect()
                 if (strcmp(sp->label, mFormatSP.sp[i].label) && strcasestr("RAW", mFormatSP.sp[i].label))
                 {
                     mFormatS[i].s = ISS_ON;
+                    gphoto_set_format(gphotodrv, i);
                     break;
                 }
             }
