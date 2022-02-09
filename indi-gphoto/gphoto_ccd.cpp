@@ -617,7 +617,7 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
             ISwitch * sp = IUFindOnSwitch(&mFormatSP);
             if (sp)
             {
-                if (strstr(sp->label, "+"))
+                if (strstr(sp->label, "+") || strstr(sp->label, "sRAW") || strstr(sp->label, "mRAW"))
                 {
                     LOGF_ERROR("%s format is not supported.", sp->label);
                     IUResetSwitch(&mFormatSP);
