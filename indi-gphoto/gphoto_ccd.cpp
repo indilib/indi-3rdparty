@@ -621,7 +621,7 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                 {
                     LOGF_ERROR("%s format is not supported.", sp->label);
                     IUResetSwitch(&mFormatSP);
-                    mFormatSP.s                = IPS_ALERT;
+                    mFormatSP.s = IPS_ALERT;
                     mFormatSP.sp[prevSwitch].s = ISS_ON;
                     IDSetSwitch(&mFormatSP, nullptr);
                     return false;
@@ -923,7 +923,7 @@ bool GPhotoCCD::Connect()
         mFormatSP.nsp = max_opts;
 
         ISwitch * sp = IUFindOnSwitch(&mFormatSP);
-        if (sp && strstr(sp->label, "+"))
+        if (sp && (strstr(sp->label, "+") || strstr(sp->label, "sRAW") || strstr(sp->label, "mRAW")))
         {
             IUResetSwitch(&mFormatSP);
             int i = 0;
