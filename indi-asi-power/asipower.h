@@ -35,8 +35,27 @@
     static const int dslr_pin = 21;
     static const uint32_t max_tick = 4294967295;
     static const int32_t max_timer_ms = 50000;
-    
-    
+
+    static const uint8_t i2c_addr[] = {0x48, 0x49, 0x4b};
+    static const int n_sensor = 5;
+    static const int n_va = 2;
+    static const std::string port_name[] = {"Main Power", "Port 1", "Port 2", "Port 3", "Port 4"};
+    static const struct {
+      int n_sensor;
+      int n_va;
+      int n_i2c;
+      uint16_t addr;
+      double adjust;
+    } p_sensors[] = {
+	    {0, 0, 2, 0x83e6, 21./2000}, {0, 1, 2, 0x83f4, 1./200},   // OUT-0 Main Power
+		{1, 0, 0, 0x83c6, 21./2000}, {1, 1, 1, 0x83fa, 1./80},    // OUT-1 Port 1
+		{2, 0, 0, 0x83e6, 21./2000}, {2, 1, 1, 0x83da, 1./80},    // OUT-2 Port 2
+		{3, 0, 1, 0x83c6, 21./2000}, {3, 1, 0, 0x83fa, 1./80},    // OUT-3 Port 3
+		{4, 0, 1, 0x83e6, 21./2000}, {4, 1, 0, 0x83da, 1./80},    // OUT-4 Port 4
+    };
+    static const struct timespec sensor_read_wait = {0, 2500 * 1000}; // I2C 400KHz
+    static const unsigned int sensor_read_interval = 5000;
+
 class IndiAsiPower : public INDI::DefaultDevice
 {
 public:
@@ -52,6 +71,8 @@ public:
     virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     virtual bool ISSnoopDevice(XMLEle *root);
     void IndiTimerCallback();
+
+    void IndiSensorTimerCallback();
 
 protected:
     virtual bool saveConfigItems(FILE *fp);
@@ -81,6 +102,13 @@ private:
     void DslrChange(bool isInit=false, bool abort=false);
     INDI::Timer timer;
 
+// Power sensor
+    bool have_sensor;
+    int i2c_handle[3];
+    INumber PowerSensorN[n_sensor][n_va];
+    INumberVectorProperty PowerSensorNP[n_sensor];
+    void ReadSensor();
+    INDI::Timer sensor_timer;
 };
 
 #endif
