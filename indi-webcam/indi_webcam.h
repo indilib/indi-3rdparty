@@ -36,6 +36,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
+#include <libavutil/version.h>
 
 #ifdef __cplusplus
 }
@@ -186,7 +187,11 @@ private:
     AVFormatContext *pFormatCtx;
     int              videoStream;
     AVCodecContext  *pCodecCtx;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVCodec         *pCodec;
+#else
+    const AVCodec         *pCodec;
+#endif
     AVFrame         *pFrame;
     AVFrame         *pFrameOUT;
     AVDictionary *optionsDict;
