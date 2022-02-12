@@ -79,12 +79,12 @@ bool IndiAsiPower::Connect()
     }
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
 
+    have_sensor = true;
     for(int i=0; i<3; i++)
     {
         i2c_handle[i] = i2c_open(m_piId, 10, i2c_addr[i], 0);
-        if(i2c_handle[i] <  0) return true;
+        have_sensor &= (i2c_handle[i] >=  0);
     }
-    have_sensor = true;
     ReadSensor();
 
     return true;
@@ -96,7 +96,10 @@ bool IndiAsiPower::Disconnect()
     // Close GPIO
     for(int i=0; i<3; i++)
     {
-        i2c_close(m_piId, i2c_handle[i]);
+        if(i2c_handle[i] >= 0)
+        {
+            i2c_close(m_piId, i2c_handle[i]);
+        }
     }
 
     pigpio_stop(m_piId);
@@ -171,8 +174,8 @@ bool IndiAsiPower::updateProperties()
         defineProperty(&DslrSP);
         defineProperty(&DslrExpNP);
 
-	    for(int i=0; i<5; i++)
-	    {
+        for(int i=0; i<n_sensor; i++)
+        {
             defineProperty(&PowerSensorNP[i]);
         }
     }
@@ -188,7 +191,7 @@ bool IndiAsiPower::updateProperties()
         deleteProperty(DslrSP.name);
         deleteProperty(DslrExpNP.name);
 
-        for(int i=0; i<5; i++)
+        for(int i=0; i<n_sensor; i++)
         {
             deleteProperty(PowerSensorNP[i].name);
         }
@@ -503,23 +506,31 @@ void IndiAsiPower::IndiTimerCallback()
 
 void IndiAsiPower::ReadSensor()
 {
-   sensor_timer.stop();
+    sensor_timer.stop();
 
-   if(!have_sensor) return;
+    if(!have_sensor) return;
 
-   for(int i=0; i<(n_sensor*n_va); i++) {
-       i2c_write_word_data(m_piId, i2c_handle[p_sensors[i].n_i2c], 0x1, p_sensors[i].addr);
-       nanosleep(&sensor_read_wait, NULL);
-       uint16_t d = i2c_read_word_data(m_piId, i2c_handle[p_sensors[i].n_i2c], 0x0);
-       d = d << 4 | d >> 12;
-       PowerSensorN[p_sensors[i].n_sensor][p_sensors[i].n_va].value = (double)d * p_sensors[i].adjust;
-   }
+    for(int i=0; i<(n_sensor*n_va); i++) {
+        int r = i2c_write_word_data(m_piId, i2c_handle[p_sensors[i].n_i2c], 0x1, p_sensors[i].addr);
+        if(r < 0) 
+        {
+                DEBUGF(INDI::Logger::DBG_ERROR, "power sensor %d access write error", i);
+                PowerSensorNP[p_sensors[i].n_sensor].s = IPS_ALERT;
+                PowerSensorN[p_sensors[i].n_sensor][p_sensors[i].n_va].value = -1;
+                continue;
+        }
+        nanosleep(&sensor_read_wait, NULL);
+        uint16_t d = i2c_read_word_data(m_piId, i2c_handle[p_sensors[i].n_i2c], 0x0);
+        d = d << 4 | d >> 12;
+        PowerSensorN[p_sensors[i].n_sensor][p_sensors[i].n_va].value = (double)d * p_sensors[i].adjust;
+        PowerSensorNP[p_sensors[i].n_sensor].s = IPS_OK;
+    }
 
-   for(int i=0; i<(n_sensor); i++) {
-     IDSetNumber(&PowerSensorNP[i], nullptr);
-   }
+    for(int i=0; i<(n_sensor); i++) {
+        IDSetNumber(&PowerSensorNP[i], nullptr);
+    }
 
-   sensor_timer.start(sensor_read_interval);
+    sensor_timer.start(sensor_read_interval);
 
     return;
 }
