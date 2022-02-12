@@ -125,7 +125,11 @@ void indi_webcam::findAVFoundationVideoSources()
     //This set of commands should open the avfoundation device to list its sources
     AVDictionary* options = nullptr;
     av_dict_set(&options,"list_devices","true",0);
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVInputFormat *iformat = av_find_input_format("avfoundation");
+#else
+    const AVInputFormat *iformat = av_find_input_format("avfoundation");
+#endif
     avformat_open_input(&pFormatCtx,"",iformat,&options);
     avformat_close_input(&pFormatCtx);
     checkingDevices = false;
@@ -154,11 +158,15 @@ indi_webcam::indi_webcam()
   buffer = nullptr;
   
   // These calls are depreciated, but are required for some older FFMPEG distributions on Linux
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   av_register_all();
+#endif
   //This registers all devices
   avdevice_register_all();
   //This registers all codecs
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   avcodec_register_all();
+#endif
 
   //This call is required for the IP Camera functionality to work
   avformat_network_init();
@@ -238,7 +246,11 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
 
     AVDictionary* options = nullptr;
     av_dict_set(&options, "timeout", ffmpegTimeout.c_str(), 0); //Timeout for open_input and for read_frame.  VERY important.
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVInputFormat *iformat = nullptr;
+#else
+    const AVInputFormat *iformat = nullptr;
+#endif
     if(device != "IP Camera")
     {
         //These items are not used by an IP Camera
@@ -506,7 +518,11 @@ bool indi_webcam::initProperties()
 //This refreshes the input device list
 bool indi_webcam::refreshInputDevices()
 {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVInputFormat * d=nullptr;
+#else
+    const AVInputFormat * d=nullptr;
+#endif
     int i =0;
     int numDevices = getNumOfInputDevices();
     CaptureDevices = new ISwitch[numDevices + 1];
@@ -530,7 +546,11 @@ bool indi_webcam::refreshInputDevices()
 int indi_webcam::getNumOfInputDevices()
 {
     int i = 0;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVInputFormat * d=nullptr;
+#else
+    const AVInputFormat * d=nullptr;
+#endif
     while ((d = av_input_video_device_next(d)))
     {
         i++;
@@ -575,7 +595,11 @@ bool indi_webcam::refreshInputSources()
     {
         int nbdev=0;
         struct AVDeviceInfoList *devlist = nullptr;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
         AVInputFormat *iformat = av_find_input_format(videoDevice.c_str());
+#else
+        const AVInputFormat *iformat = av_find_input_format(videoDevice.c_str());
+#endif
         nbdev=avdevice_list_input_sources(iformat, nullptr, nullptr, &devlist);
 
         //For this case the source list function is not implemented, we have to just list them by number
