@@ -40,6 +40,8 @@
     static const int n_sensor = 5;
     static const int n_va = 2;
     static const std::string port_name[] = {"Main Power", "Port 1", "Port 2", "Port 3", "Port 4"};
+
+
     static const struct {
       int n_sensor;
       int n_va;
@@ -47,11 +49,11 @@
       uint16_t addr;
       double adjust;
     } p_sensors[] = {
-	    {0, 0, 2, 0x83e6, 21./2000}, {0, 1, 2, 0x83f4, 1./200},   // OUT-0 Main Power
-		{1, 0, 0, 0x83c6, 21./2000}, {1, 1, 1, 0x83fa, 1./80},    // OUT-1 Port 1
-		{2, 0, 0, 0x83e6, 21./2000}, {2, 1, 1, 0x83da, 1./80},    // OUT-2 Port 2
-		{3, 0, 1, 0x83c6, 21./2000}, {3, 1, 0, 0x83fa, 1./80},    // OUT-3 Port 3
-		{4, 0, 1, 0x83e6, 21./2000}, {4, 1, 0, 0x83da, 1./80},    // OUT-4 Port 4
+        {0, 0, 2, 0x83e6, 21./2000}, {0, 1, 2, 0x83f4, 1./200},   // OUT-0 Main Power
+        {1, 0, 0, 0x83c6, 21./2000}, {1, 1, 1, 0x83fa, 1./80},    // OUT-1 Port 1
+        {2, 0, 0, 0x83e6, 21./2000}, {2, 1, 1, 0x83da, 1./80},    // OUT-2 Port 2
+        {3, 0, 1, 0x83c6, 21./2000}, {3, 1, 0, 0x83fa, 1./80},    // OUT-3 Port 3
+        {4, 0, 1, 0x83e6, 21./2000}, {4, 1, 0, 0x83da, 1./80},    // OUT-4 Port 4
     };
     static const struct timespec sensor_read_wait = {0, 2500 * 1000}; // I2C 400KHz
     static const unsigned int sensor_read_interval = 5000;
