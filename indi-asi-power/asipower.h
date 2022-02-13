@@ -39,13 +39,14 @@
     static const uint8_t i2c_addr[] = {0x48, 0x49, 0x4b};
     static const int n_sensor = 5;
     static const int n_va = 2;
+    static const int n_i2c = 3;
     static const std::string port_name[] = {"Main Power", "Port 1", "Port 2", "Port 3", "Port 4"};
 
 
     static const struct {
-      int n_sensor;
-      int n_va;
-      int n_i2c;
+      int sensor_id;
+      int va;
+      int i2c_id;
       uint16_t addr;
       double adjust;
     } p_sensors[] = {
@@ -72,9 +73,9 @@ public:
     virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
     virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
     virtual bool ISSnoopDevice(XMLEle *root);
+    virtual void TimerHit() override;
     void IndiTimerCallback();
 
-    void IndiSensorTimerCallback();
 
 protected:
     virtual bool saveConfigItems(FILE *fp);
@@ -110,7 +111,6 @@ private:
     INumber PowerSensorN[n_sensor][n_va];
     INumberVectorProperty PowerSensorNP[n_sensor];
     void ReadSensor();
-    INDI::Timer sensor_timer;
 };
 
 #endif
