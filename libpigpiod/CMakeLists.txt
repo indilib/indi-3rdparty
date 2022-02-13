@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (VERSION_MAJOR 0)
-set (VERSION_MINOR 2)
+set (VERSION_MINOR 3)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
@@ -31,9 +31,11 @@ target_compile_options(pigpio PRIVATE -Wno-type-limits -Wno-sign-compare -Wno-ma
 # pigpiod daemon for controlling GPIO
 add_executable(pigpiod pigpiod.c)
 target_link_libraries(pigpiod pigpio RT::RT Threads::Threads)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pigpiod.sh ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.sh COPYONLY)
 
 # Install pigpiod
 install(TARGETS pigpiod RUNTIME DESTINATION bin )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pigpiod.sh DESTINATION bin PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 install( FILES pigpio.h DESTINATION include)
 
 # Install pigpiod systemd service

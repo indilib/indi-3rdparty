@@ -1,3 +1,9 @@
+libpigpiod (0.3) buster; urgency=medium
+
+  * Add bash script wrapper to detect hardware
+
+ -- Ken Self <ken.kgself@gmail.com>  Sat, 12 Feb 2022 17:30:00 +1000
+
 libpigpiod (0.2) buster; urgency=medium
 
   * Add -m option to service to reduce CPU load
