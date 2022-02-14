@@ -171,9 +171,12 @@ bool IndiAsiPower::updateProperties()
         defineProperty(&DslrSP);
         defineProperty(&DslrExpNP);
 
-        for(int i=0; i<n_sensor; i++)
+        if(have_sensor)
         {
-            defineProperty(&PowerSensorNP[i]);
+            for(int i=0; i<n_sensor; i++)
+            {
+                defineProperty(&PowerSensorNP[i]);
+            }
         }
     }
     else
@@ -188,9 +191,12 @@ bool IndiAsiPower::updateProperties()
         deleteProperty(DslrSP.name);
         deleteProperty(DslrExpNP.name);
 
-        for(int i=0; i<n_sensor; i++)
+        if(have_sensor)
         {
-            deleteProperty(PowerSensorNP[i].name);
+            for(int i=0; i<n_sensor; i++)
+            {
+                deleteProperty(PowerSensorNP[i].name);
+            }
         }
     }
     return true;

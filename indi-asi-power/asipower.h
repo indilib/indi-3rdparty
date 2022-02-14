@@ -107,7 +107,7 @@ private:
 
 // Power sensor
     bool have_sensor;
-    int i2c_handle[3];
+    int i2c_handle[n_i2c];
     INumber PowerSensorN[n_sensor][n_va];
     INumberVectorProperty PowerSensorNP[n_sensor];
     void ReadSensor();
