@@ -34,56 +34,64 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ASIEAF>> focusers;
-public:
-    Loader()
-    {
-        int iAvailableFocusersCount = EAFGetNum();
-
-        if (iAvailableFocusersCount <= 0)
+        std::deque<std::unique_ptr<ASIEAF>> focusers;
+    public:
+        Loader()
         {
-            IDLog("No ASI EAF detected.");
-            return;
+            int iAvailableFocusersCount = EAFGetNum();
+
+            if (iAvailableFocusersCount <= 0)
+            {
+                IDLog("No ASI EAF detected.");
+                return;
+            }
+
+            int iAvailableFocusersCount_ok = 0;
+            for (int i = 0; i < iAvailableFocusersCount; i++)
+            {
+                int id;
+                EAF_ERROR_CODE result = EAFGetID(i, &id);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
+                    continue;
+                }
+
+                // Open device
+                result = EAFOpen(id);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
+                    continue;
+                }
+
+                EAF_INFO info;
+                result = EAFGetProperty(id, &info);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
+                    continue;
+                }
+                EAFClose(id);
+
+                std::string name = "ASI EAF";
+
+                // If we only have a single device connected
+                // then favor the INDIDEV driver label over the auto-generated name above
+                if (iAvailableFocusersCount == 1)
+                {
+                    char *envDev = getenv("INDIDEV");
+                    if (envDev && envDev[0])
+                        name = envDev;
+                }
+                else
+                    name += " " + std::to_string(i);
+
+                focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
+                iAvailableFocusersCount_ok++;
+            }
+            IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
         }
-
-        int iAvailableFocusersCount_ok = 0;
-        for (int i = 0; i < iAvailableFocusersCount; i++)
-        {
-            int id;
-            EAF_ERROR_CODE result = EAFGetID(i, &id);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
-                continue;
-            }
-
-            // Open device
-            result = EAFOpen(id);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
-                continue;
-            }
-
-            EAF_INFO info;
-            result = EAFGetProperty(id, &info);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
-                continue;
-            }
-            EAFClose(id);
-
-            std::string name = "ASI EAF";
-
-            if (iAvailableFocusersCount > 1)
-                name += " " + std::to_string(id);
-
-            focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
-            iAvailableFocusersCount_ok++;
-        }
-        IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
-    }
 } loader;
 
 ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
