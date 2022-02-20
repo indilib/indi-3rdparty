@@ -443,12 +443,15 @@ bool ASIBase::updateProperties()
             {
                 for (size_t i = 0; i < VideoFormatSP.size(); i++)
                 {
+                    CaptureFormatSP[i].setState(ISS_OFF);
                     if (mCameraInfo.SupportedVideoFormat[i] == ASI_IMG_RAW16)
                     {
                         setVideoFormat(i);
+                        CaptureFormatSP[i].setState(ISS_ON);
                         break;
                     }
                 }
+                CaptureFormatSP.apply();
             }
         }
 
@@ -633,6 +636,12 @@ void ASIBase::setupParams()
 
         node.setAux(const_cast<ASI_IMG_TYPE*>(&videoFormat));
         VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == ASI_IMG_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
     }
 
     float x_pixel_size = mCameraInfo.PixelSize;
@@ -870,7 +879,15 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 return true;
             }
 
-            return setVideoFormat(targetIndex);
+            auto result = setVideoFormat(targetIndex);
+            if (result)
+            {
+                CaptureFormatSP.reset();
+                CaptureFormatSP[targetIndex].setState(ISS_ON);
+                CaptureFormatSP.setState(IPS_OK);
+                CaptureFormatSP.apply();
+            }
+            return true;
         }
     }
 
@@ -1195,8 +1212,11 @@ bool ASIBase::isMonoBinActive()
 
 bool ASIBase::hasFlipControl()
 {
-    if (find_if(begin(mControlCaps), end(mControlCaps), [](ASI_CONTROL_CAPS cap) { return cap.ControlType == ASI_FLIP; }) == end(mControlCaps))
-        return false;
+    if (find_if(begin(mControlCaps), end(mControlCaps), [](ASI_CONTROL_CAPS cap)
+{
+    return cap.ControlType == ASI_FLIP;
+}) == end(mControlCaps))
+    return false;
     else
         return true;
 }
@@ -1348,7 +1368,8 @@ void ASIBase::createControls(int piNumberOfControls)
                    cap.DefaultValue, cap.IsAutoSupported ? "True" : "False",
                    cap.IsWritable ? "True" : "False");
 
-        if (cap.IsWritable == ASI_FALSE || cap.ControlType == ASI_TARGET_TEMP || cap.ControlType == ASI_COOLER_ON || cap.ControlType == ASI_FLIP)
+        if (cap.IsWritable == ASI_FALSE || cap.ControlType == ASI_TARGET_TEMP || cap.ControlType == ASI_COOLER_ON
+                || cap.ControlType == ASI_FLIP)
             continue;
 
         // Update Min/Max exposure as supported by the camera
@@ -1500,4 +1521,9 @@ bool ASIBase::saveConfigItems(FILE *fp)
     BlinkNP.save(fp);
 
     return true;
+}
+
+bool ASIBase::SetCaptureFormat(uint8_t index)
+{
+    return setVideoFormat(index);
 }

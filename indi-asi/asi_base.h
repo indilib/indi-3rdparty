@@ -78,6 +78,8 @@ class ASIBase : public INDI::CCD
         // Save config
         virtual bool saveConfigItems(FILE *fp) override;
 
+        virtual bool SetCaptureFormat(uint8_t index) override;
+
         /** Get the current Bayer string used */
         const char *getBayerString() const;
 

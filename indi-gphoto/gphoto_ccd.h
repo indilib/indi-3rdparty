@@ -101,6 +101,9 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip) override;
         void TimerHit() override;
 
+        // Capture format
+        bool SetCaptureFormat(uint8_t index) override;
+
         // Simulation Triggered
         void simulationTriggered(bool enabled) override;
 
@@ -186,16 +189,6 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
 
         ISwitch * mIsoS = nullptr;
         ISwitchVectorProperty mIsoSP;
-        ISwitch * mFormatS = nullptr;
-        ISwitchVectorProperty mFormatSP;
-
-        ISwitchVectorProperty TransferFormatSP;
-        ISwitch TransferFormatS[2];
-        enum
-        {
-            FORMAT_FITS,
-            FORMAT_NATIVE
-        };
 
         ISwitch captureTargetS[2];
         ISwitchVectorProperty captureTargetSP;
@@ -243,6 +236,8 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
 
         // Threading
         std::thread liveViewThread;
+
+        std::map <uint8_t, uint8_t> m_CaptureFormatMap;
 
         static constexpr double MINUMUM_CAMERA_TEMPERATURE = -60.0;
 
