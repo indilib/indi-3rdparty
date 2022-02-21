@@ -226,6 +226,9 @@ bool NightscapeCCD::initProperties()
     setpriority(PRIO_PROCESS, getpid(), -20);
     drop_root_privileges();
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    addCaptureFormat(mono);
+
     // Must init parent properties first!
     INDI::CCD::initProperties();
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", cooler ? ISS_ON : ISS_OFF);

@@ -165,6 +165,22 @@ bool SXCCD::initProperties()
 
 bool SXCCD::updateProperties()
 {
+    // Set format first if connected.
+    if (isConnected())
+    {
+        // N.B. AFAIK, there is no way to switch image formats.
+        CaptureFormat format;
+        if (GetCCDCapability() & CCD_HAS_BAYER)
+        {
+            format = {"INDI_RAW", "RAW", 16, true};
+        }
+        else
+        {
+            format = {"INDI_MONO", "Mono", 16, true};
+        }
+        addCaptureFormat(format);
+    }
+
     INDI::CCD::updateProperties();
     if (isConnected())
     {
@@ -173,9 +189,6 @@ bool SXCCD::updateProperties()
             defineProperty(&CoolerSP);
         if (HasShutter)
             defineProperty(&ShutterSP);
-        //        if (HasColor) {
-        //            defineProperty(&BayerSP);
-        //        }
     }
     else
     {
@@ -183,9 +196,6 @@ bool SXCCD::updateProperties()
             deleteProperty(CoolerSP.name);
         if (HasShutter)
             deleteProperty(ShutterSP.name);
-        //        if (HasColor) {
-        //            deleteProperty(BayerSP.name);
-        //        }
     }
     return true;
 }

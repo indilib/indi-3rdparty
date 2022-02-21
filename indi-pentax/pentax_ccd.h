@@ -67,6 +67,8 @@ protected:
     bool StartStreaming() override;
     bool StopStreaming() override;
 
+    bool SetCaptureFormat(uint8_t index) override;
+
     bool bufferIsBayered;
 
     string getUploadFilePrefix();
@@ -110,10 +112,7 @@ protected:
     float updateShutterSpeed(float requestedSpeed);
     void updateCaptureSetting(CaptureSetting *setting, string newiso);
 
-    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mFormatSP,mStorageWritingSP;
-
-    ISwitch transferFormatS[2];
-    ISwitchVectorProperty transferFormatSP;
+    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mStorageWritingSP;
 
     ISwitch preserveOriginalS[2];
     ISwitchVectorProperty preserveOriginalSP;

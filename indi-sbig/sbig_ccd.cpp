@@ -498,6 +498,23 @@ void SBIGCCD::ISGetProperties(const char *dev)
 
 bool SBIGCCD::updateProperties()
 {
+    // Set format first if connected.
+    if (isConnected())
+    {
+        // N.B. AFAIK, there is no way to switch image formats.
+        CaptureFormatSP.resize(0);
+        CaptureFormat format;
+        if (m_isColor)
+        {
+            format = {"INDI_RAW", "RAW", 16, true};
+        }
+        else
+        {
+            format = {"INDI_MONO", "Mono", 16, true};
+        }
+        addCaptureFormat(format);
+    }
+
     INDI::CCD::updateProperties();
     if (isConnected())
     {

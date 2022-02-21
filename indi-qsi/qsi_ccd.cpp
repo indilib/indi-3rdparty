@@ -113,13 +113,16 @@ QSICCD::~QSICCD()
 
 const char *QSICCD::getDefaultName()
 {
-    return (char *)"QSI CCD";
+    return "QSI CCD";
 }
 
 bool QSICCD::initProperties()
 {
     // Init parent properties first
     INDI::CCD::initProperties();
+
+    CaptureFormat format = {"INDI_MONO", "Mono", 16, true};
+    addCaptureFormat(format);
 
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_OFF);
     IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_ON);

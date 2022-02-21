@@ -61,6 +61,8 @@ protected:
     virtual bool StartStreaming() override;
     virtual bool StopStreaming() override;
 
+    virtual bool SetCaptureFormat(uint8_t index) override;
+
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
     virtual bool UpdateCCDBin(int binx, int biny) override;
 

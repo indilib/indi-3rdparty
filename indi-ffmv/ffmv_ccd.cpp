@@ -288,6 +288,9 @@ bool FFMVCCD::initProperties()
     // Add Debug, Simulator, and Configuration controls
     addAuxControls();
 
+    CaptureFormat color = {"INDI_RGB", "RGB", 8, true};
+    addCaptureFormat(color);
+
     /* Add Gain Vref switch */
     IUFillSwitch(&GainS[0], "GAINVREF", "Vref Boost", ISS_OFF);
     IUFillSwitch(&GainS[1], "GAIN2X", "2x Digital Boost", ISS_OFF);

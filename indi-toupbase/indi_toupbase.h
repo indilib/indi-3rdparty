@@ -96,6 +96,8 @@ class ToupBase : public INDI::CCD
         virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
         virtual bool UpdateCCDBin(int binx, int biny) override;
 
+        virtual bool SetCaptureFormat(uint8_t index) override;
+
         // Guide Port
         virtual IPState GuideNorth(uint32_t ms) override;
         virtual IPState GuideSouth(uint32_t ms) override;
@@ -356,6 +358,7 @@ class ToupBase : public INDI::CCD
         // Video Format & Streaming
         //#############################################################################
         void getVideoImage();
+        bool setVideoFormat(uint8_t index);
 
         //#############################################################################
         // Guiding
