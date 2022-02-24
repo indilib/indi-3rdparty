@@ -182,10 +182,10 @@ typedef enum SVB_CONTROL_TYPE{ //Control type//
 
 	SVB_AUTO_TARGET_BRIGHTNESS,
 	SVB_BLACK_LEVEL, //black level offset
-	SVB_COOLER_ENABLE,
-	SVB_TARGET_TEMPERATURE,
-	SVB_CURRENT_TEMPERATURE,
-	SVB_COOLER_POWER,
+	SVB_COOLER_ENABLE,  //0:disable, 1:enable
+	SVB_TARGET_TEMPERATURE,  //unit is 0.1C
+	SVB_CURRENT_TEMPERATURE, //unit is 0.1C
+	SVB_COOLER_POWER,  //range: 0-100
 }SVB_CONTROL_TYPE;
 
 typedef struct _SVB_CONTROL_CAPS
@@ -288,7 +288,21 @@ SVB_ERROR_INVALID_INDEX  :no camera connected or index value out of boundary
 ***************************************************************************/
 SVBCAMERA_API SVB_ERROR_CODE SVBGetCameraProperty(int iCameraID, SVB_CAMERA_PROPERTY *pCameraProperty);
 
+/***************************************************************************
+Descriptions:
+get the property of the connected cameras
+here is the sample code:
 
+Paras:
+int CameraID: this is get from the camera property use the API SVBGetCameraProperty
+SVB_CAMERA_PROPERTY_EX *pCameraPorpertyEx: Pointer to structure containing the property of camera
+user need to malloc the buffer
+
+return:
+SVB_SUCCESS: Operation is successful
+SVB_ERROR_INVALID_INDEX  :no camera connected or index value out of boundary
+
+***************************************************************************/
 SVBCAMERA_API SVB_ERROR_CODE SVBGetCameraPropertyEx(int iCameraID, SVB_CAMERA_PROPERTY_EX *pCameraPorpertyEx);
 
 /***************************************************************************
