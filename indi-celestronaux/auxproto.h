@@ -24,6 +24,7 @@
 #pragma once
 
 #include <vector>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef std::vector<uint8_t> AUXBuffer;

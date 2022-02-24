@@ -29,11 +29,14 @@
 #include <memory>
 #include <cstring>
 #include <unistd.h>
+#include <termios.h>
+#include <chrono>
+#include <regex>
+#include <thread>
 
 static std::unique_ptr<astromechanics_foc> Astromechanics_foc(new astromechanics_foc());
 
 // Delay for receiving messages
-#define FOCUS_TIMEOUT  1000
 #define FOC_POSMAX_HARDWARE 9999
 #define FOC_POSMIN_HARDWARE 0
 
@@ -88,7 +91,7 @@ bool astromechanics_foc::initProperties()
     FocusRelPosN[0].value = 0;
 
     // Aperture
-    IUFillNumber(&AppertureN[0], "LENS_APP", "Index", "%2d", 0, 22, 1, 0);
+    IUFillNumber(&AppertureN[0], "LENS_APP", "Index", "%.f", 0, 22, 1, 0);
     IUFillNumberVector(&AppertureNP, AppertureN, 1, getDeviceName(), "LENS_APP_SETTING", "Apperture", MAIN_CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
@@ -123,30 +126,20 @@ bool astromechanics_foc::updateProperties()
 ************************************************************************************/
 bool astromechanics_foc::Handshake()
 {
-    char FOC_cmd[32] = "P#";
-    char FOC_res[32] = {0};
-    int FOC_pos_measd = 0;
-    int nbytes_written = 0;
-    int nbytes_read = 0;
-
-    LOG_DEBUG("Handshake");
-
-    tty_write_string(PortFD, FOC_cmd, &nbytes_written);
-    LOGF_INFO("CMD <%s>", FOC_cmd);
-    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+    char res[DRIVER_LEN] = {0};
+    int position = 0;
+    for (int i = 0; i < 3; i++)
     {
-        LOGF_DEBUG("RES (%s)", FOC_res);
-        sscanf(FOC_res, "%d#", &FOC_pos_measd);
-        LOGF_INFO("Set to absolute focus position (%d)", FOC_pos_measd);
-        FocusAbsPosN[0].value = FOC_pos_measd;
-        FocusAbsPosNP.s = IPS_OK;
-
-        SetApperture(0);
-        return true;
-    }
-    else
-    {
-        LOG_ERROR("ERROR HANDSHAKE");
+        if (!sendCommand("P#", res))
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        else
+        {
+            sscanf(res, "%d", &position);
+            FocusAbsPosN[0].value = position;
+            FocusAbsPosNP.s = IPS_OK;
+            SetApperture(0);
+            return true;
+        }
     }
 
     return false;
@@ -161,17 +154,14 @@ bool astromechanics_foc::ISNewNumber(const char *dev, const char *name, double v
     {
         if (strcmp(name, "LENS_APP_SETTING") == 0)
         {
-            AppertureNP.s = IPS_OK;
             IUUpdateNumber(&AppertureNP, values, names, n);
-
+            AppertureNP.s = IPS_OK;
             IDSetNumber(&AppertureNP, nullptr);
             SetApperture(AppertureN[0].value);
-
             return true;
         }
     }
 
-    // Let INDI::Focuser handle any other number properties
     return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -180,28 +170,15 @@ bool astromechanics_foc::ISNewNumber(const char *dev, const char *name, double v
 ************************************************************************************/
 IPState astromechanics_foc::MoveAbsFocuser(uint32_t targetTicks)
 {
-    LOGF_DEBUG("MoveAbsFocuser (%d)", targetTicks);
-
-    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+    char cmd[DRIVER_LEN] = {0};
+    snprintf(cmd, DRIVER_LEN, "M%u#", targetTicks);
+    if (sendCommand(cmd))
     {
-        LOG_ERROR("Error, requested position is out of range!");
-        return IPS_ALERT;
+        FocusAbsPosN[0].value = GetAbsFocuserPosition();
+        return IPS_OK;
     }
 
-    char FOC_cmd[32]  = "M";
-    char abs_pos_char[32]  = {0};
-    int nbytes_written = 0;
-
-    sprintf(abs_pos_char, "%u", targetTicks);
-    strcat(abs_pos_char, "#");
-    strcat(FOC_cmd, abs_pos_char);
-
-    LOGF_DEBUG("CMD <%s>", FOC_cmd);
-    tty_write_string(PortFD, FOC_cmd, &nbytes_written);
-
-    FocusAbsPosN[0].value = GetAbsFocuserPosition();
-
-    return IPS_OK;
+    return IPS_ALERT;
 }
 
 /************************************************************************************
@@ -224,18 +201,11 @@ IPState astromechanics_foc::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 /************************************************************************************
  *
 ************************************************************************************/
-void astromechanics_foc::SetApperture(uint32_t index)
+bool astromechanics_foc::SetApperture(uint32_t index)
 {
-    LOGF_DEBUG("SetApperture(%d)", index);
-    char FOC_cmd[32] = "A";
-    char app_index_char[32]  = {0};
-    int nbytes_written = 0;
-
-    sprintf(app_index_char, "%u", index);
-    strcat(app_index_char, "#");
-    strcat(FOC_cmd, app_index_char);
-
-    tty_write_string(PortFD, FOC_cmd, &nbytes_written);
+    char cmd[DRIVER_LEN] = {0};
+    snprintf(cmd, DRIVER_LEN, "A%u#", index);
+    return sendCommand(cmd);
 }
 
 /************************************************************************************
@@ -243,23 +213,107 @@ void astromechanics_foc::SetApperture(uint32_t index)
 ************************************************************************************/
 uint32_t astromechanics_foc::GetAbsFocuserPosition()
 {
-    LOGF_DEBUG("GetAbsFocuserPosition", 0);
-    char FOC_cmd[32] = "P#";
-    char FOC_res[32] = {0};
-    int FOC_pos_measd = 0;
+    char res[DRIVER_LEN] = {0};
+    int position = 0;
 
-    int nbytes_written = 0;
-    int nbytes_read = 0;
-
-    tty_write_string(PortFD, FOC_cmd, &nbytes_written);
-    LOGF_DEBUG("CMD (%s)", FOC_cmd);
-    if (tty_read_section(PortFD, FOC_res, '#', FOCUS_TIMEOUT, &nbytes_read) == TTY_OK)
+    if (!sendCommand("P#", res))
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    else
     {
-        sscanf(FOC_res, "%d#", &FOC_pos_measd);
-
-        LOGF_DEBUG("RES (%s)", FOC_res);
-        LOGF_INFO("current position: %d", FOC_pos_measd);
+        sscanf(res, "%d", &position);
+        return position;
     }
 
-    return static_cast<uint32_t>(FOC_pos_measd);
+    return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Send Command
+/////////////////////////////////////////////////////////////////////////////
+bool astromechanics_foc::sendCommand(const char * cmd, char * res, int cmd_len, int res_len)
+{
+    int nbytes_written = 0, nbytes_read = 0, rc = -1;
+    tcflush(PortFD, TCIOFLUSH);
+
+    if (cmd_len > 0)
+    {
+        char hex_cmd[DRIVER_LEN * 3] = {0};
+        hexDump(hex_cmd, cmd, cmd_len);
+        LOGF_DEBUG("CMD <%s>", hex_cmd);
+        rc = tty_write(PortFD, cmd, cmd_len, &nbytes_written);
+    }
+    else
+    {
+        LOGF_DEBUG("CMD <%s>", cmd);
+        rc = tty_write_string(PortFD, cmd, &nbytes_written);
+    }
+
+    if (rc != TTY_OK)
+    {
+        char errstr[MAXRBUF] = {0};
+        tty_error_msg(rc, errstr, MAXRBUF);
+        LOGF_ERROR("Serial write error: %s.", errstr);
+        return false;
+    }
+
+    if (res == nullptr)
+        return true;
+
+    if (res_len > 0)
+        rc = tty_read(PortFD, res, res_len, DRIVER_TIMEOUT, &nbytes_read);
+    else
+    {
+        // Read respose
+        rc = tty_nread_section(PortFD, res, DRIVER_LEN, DRIVER_STOP_CHAR, DRIVER_TIMEOUT, &nbytes_read);
+    }
+
+    if (rc != TTY_OK)
+    {
+        char errstr[MAXRBUF] = {0};
+        tty_error_msg(rc, errstr, MAXRBUF);
+        LOGF_ERROR("Serial read error: %s.", errstr);
+        return false;
+    }
+
+    if (res_len > 0)
+    {
+        char hex_res[DRIVER_LEN * 3] = {0};
+        hexDump(hex_res, res, res_len);
+        LOGF_DEBUG("RES <%s>", hex_res);
+    }
+    else
+    {
+        // Remove extra #
+        res[nbytes_read - 1] = 0;
+        LOGF_DEBUG("RES <%s>", res);
+    }
+
+    tcflush(PortFD, TCIOFLUSH);
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+void astromechanics_foc::hexDump(char * buf, const char * data, int size)
+{
+    for (int i = 0; i < size; i++)
+        sprintf(buf + 3 * i, "%02X ", static_cast<uint8_t>(data[i]));
+
+    if (size > 0)
+        buf[3 * size - 1] = '\0';
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+std::vector<std::string> astromechanics_foc::split(const std::string &input, const std::string &regex)
+{
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+    first{input.begin(), input.end(), re, -1},
+          last;
+    return {first, last};
 }

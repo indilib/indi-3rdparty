@@ -106,6 +106,9 @@ bool FishCampCCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    addCaptureFormat(mono);
+
     IUFillNumber(&GainN[0], "Gain", "", "%g", 1, 15, 1., 4.);
     IUFillNumberVector(&GainNP, GainN, 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 

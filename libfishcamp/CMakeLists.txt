@@ -10,14 +10,14 @@ find_package(INDI REQUIRED)
 include_directories( ${INDI_INCLUDE_DIR})
 
 IF(APPLE)
-set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/fishcamp")
-    ##This one is needed for homebrew
-include_directories( "/usr/local/include")
-    ## This one is needed for Craft
-include_directories("${CMAKE_INSTALL_PREFIX}/include")
+  set(FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/fishcamp")
+  ##This one is needed for homebrew
+  include_directories( "/usr/local/include")
+  ## This one is needed for Craft
+  include_directories("${CMAKE_INSTALL_PREFIX}/include")
 ELSE(APPLE)
-set(FIRMWARE_INSTALL_DIR "/lib/firmware")
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  set(FIRMWARE_INSTALL_DIR "/lib/firmware" CACHE STRING "libfishcamp firmware installation dir")
+  set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 ENDIF(APPLE)
 #***********************************************************
 find_package(USB1 REQUIRED)
@@ -44,6 +44,6 @@ INSTALL(TARGETS fishcamp LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install( FILES gdr_usb.hex Guider_mono_rev16_intel.srec DESTINATION ${FIRMWARE_INSTALL_DIR})
 IF(NOT APPLE)
-install(FILES 99-fishcamp.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  install(FILES 99-fishcamp.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 ENDIF(NOT APPLE)
 

@@ -1,20 +1,27 @@
-/*
-    libahp_xc library to drive the AHP XC correlators
-    Copyright (C) 2020  Ilia Platone
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+/**
+* \license
+*    MIT License
+*
+*    libahp_xc library to drive the AHP XC correlators
+*    Copyright (C) 2022  Ilia Platone
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a copy
+*    of this software and associated documentation files (the "Software"), to deal
+*    in the Software without restriction, including without limitation the rights
+*    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*    copies of the Software, and to permit persons to whom the Software is
+*    furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in all
+*    copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+*    SOFTWARE.
 */
 
 #ifndef _AHP_XC_H
@@ -37,58 +44,62 @@ extern "C" {
 * \mainpage AHP® XC Crosscorrelators driver library
 * \section Introduction
 *
-* The AHP XC correlators are devices that permit cross-correlation and auto-correlation
+* The AHP XC correlators do cross-correlation and auto-correlation
 * counting from quantum detectors, ranging from radio to photon counters to geiger-mode detectors
-* or noise-regime, light scattering counters, the XC series offer a scientific grade solution for
+* or noise-scattering sensors. The XC series offer a scientific grade solution for
 * laboratory testing and measurement in quantum resoluting detection environments.
 *
 * This software is meant to work with the XC series cross-correlators
-* visit http://www.iliaplatone.com/xc for more informations and purchase options.
+* visit https://www.iliaplatone.com/xc for more informations and purchase options.
 *
 * \author Ilia Platone
+* \version 1.3.0
+* \date 2017-2022
+* \copyright MIT License.
 */
 
 /**
- * \defgroup XC_API AHP® XC Correlators API
+ * \defgroup XC_API AHP® XC Correlators API Documentation
  *
  * This library contains functions for direct low-level usage of the AHP cross-correlators.<br>
+ *
  * This documentation describes utility, applicative and hardware control functions included into the library.<br>
  * Each section and component is documented for general usage.
 */
-/**@{*/
+/**\{*/
 
 /**
  * \defgroup Defs Defines
  */
- /**@{*/
+ /**\{*/
 
- ///AHP_XC_VERSION This library version
-#define AHP_XC_VERSION 0x112
-///XC_BASE_RATE is the base baud rate of the XC cross-correlators
+///This library version
+#define AHP_XC_VERSION 0x130
+///The base baud rate of the XC cross-correlators
 #define XC_BASE_RATE ((int)57600)
-///XC_HIGH_RATE is the base baud rate for big packet XC cross-correlators
+///The base baud rate for big packet XC cross-correlators
 #define XC_HIGH_RATE ((int)500000)
-///AHP_XC_PLL_FREQUENCY is the PLL frequency of the XC cross-correlators
+///The PLL frequency of the XC cross-correlators
 #define AHP_XC_PLL_FREQUENCY 400000000
 
-/**@}*/
-/**
- * \defgroup Enumerations
- */
- /**@{*/
+/**\}
+ * \defgroup Types
+ *\{*/
 
- /**
- * \brief AHP XC header flags
- */
+///AHP XC header flags
 typedef enum {
-    HAS_CROSSCORRELATOR = 1, ///AHP_XC_HAS_CROSSCORRELATOR indicates if the correlator can cross-correlate or can autocorrelate only
-    HAS_LEDS = 2, ///AHP_XC_HAS_LEDS indicates if the correlator has led lines available to drive
-    HAS_PSU = 4, ///AHP_XC_HAS_PSU indicates if the correlator has an internal PSU PWM driver on 2nd flag bit
-    HAS_CUMULATIVE_ONLY = 8 ///HAS_CUMULATIVE_ONLY indicates if the correlator has cumulative readout available only
+///Indicates that the correlator can cross-correlate its inputs
+HAS_CROSSCORRELATOR = 1,
+///Indicates if the correlator has led lines available to drive
+HAS_LEDS = 2,
+///Indicates that the correlator has an internal PSU PWM driver on 2nd flag bit
+HAS_PSU = 4,
+///Indicates that the correlator has differential correlators only
+HAS_DIFFERENTIAL_ONLY = 8
 } xc_header_flags;
 
 /**
-* \brief These are the baud rates supported
+* \brief Baud rate multipliers
 */
 typedef enum {
     R_BASE = 0,
@@ -101,74 +112,125 @@ typedef enum {
 * \brief The XC firmare commands
 */
 typedef enum {
-    CLEAR = 0, ///Clear autocorrelation and crosscorrelation delays
-    SET_INDEX = 1, ///Set the current input line index for following commands
-    SET_LEDS = 2, /// witch on or off current line leds requires HAS_LEDS
-    SET_BAUD_RATE = 3, ///Set the readout and command baud rate
-    SET_DELAY = 4, ///Set the autocorrelator or crosscorrelator delay
-    SET_FREQ_DIV = 8, ///Set the frequency divider in powers of two
-    SET_VOLTAGE = 9, ///Set the indexed input voltage, requires HAS_PSU in header
-    ENABLE_TEST = 12, ///Enables tests on currently indexed input
-    ENABLE_CAPTURE = 13 ///Enable capture flags
+///Clear autocorrelation and crosscorrelation delays
+CLEAR = 0,
+///Set the current input line index for following commands
+SET_INDEX = 1,
+///Set on or off current line leds, requires HAS_LEDS
+SET_LEDS = 2,
+///Set the readout and command baud rate
+SET_BAUD_RATE = 3,
+///Set the autocorrelator or crosscorrelator delay
+SET_DELAY = 4,
+///Set the frequency divider in powers of two
+SET_FREQ_DIV = 8,
+///Set the indexed input voltage, requires HAS_PSU in header
+SET_VOLTAGE = 9,
+///Enables tests on current input
+ENABLE_TEST = 12,
+///Enable capture flags
+ENABLE_CAPTURE = 13
 } xc_cmd;
 
 /**
 * \brief The XC capture flags
 */
 typedef enum {
-    CAP_ENABLE = 0, ///Enable capture
-    CAP_EXT_CLK = 1, ///Enable external clock
+///No extra signals or functions
+CAP_NONE = 0,
+///Enable capture
+CAP_ENABLE = 1,
+///Enable external clock
+CAP_EXT_CLK = 2,
+///Reset timestamp
+CAP_RESET_TIMESTAMP = 4,
+///Enable extra commands
+CAP_EXTRA_CMD = 8,
+///All flags enabled
+CAP_ALL = 0xf,
 } xc_capture_flags;
 
 /**
 * \brief The XC firmare commands
 */
 typedef enum {
-    TEST_NONE = 0, ///No extra signals or functions
-    TEST_SIGNAL = 1, ///Apply PLL clock on voltage led
-    SCAN_AUTO = 2, ///Autocorrelator continuum scan
-    SCAN_CROSS = 4, ///Crosscorrelator continuum scan
-    TEST_BCM = 8, ///BCM modulation on voltage led
-    TEST_ALL = 0xf, ///All tests enabled
-} xc_test;
+///No extra signals or functions
+TEST_NONE = 0,
+///Apply PLL clock on voltage led
+TEST_SIGNAL = 1,
+///Autocorrelator continuum scan
+SCAN_AUTO = 2,
+///Crosscorrelator continuum scan
+SCAN_CROSS = 4,
+///BCM modulation on voltage led
+TEST_BCM = 8,
+///All tests enabled
+TEST_ALL = 0xf,
+} xc_test_flags;
 
 /**
 * \brief Correlations structure
 */
 typedef struct {
-    unsigned long correlations; ///Correlations count
-    unsigned long counts; ///Pulses count
-    double coherence; ///Coherence ratio given by correlations/counts
+///Time lag offset
+double lag;
+///I samples count
+long real;
+///Q samples count
+long imaginary;
+///Pulses count
+unsigned long counts;
+///Magnitude of this sample
+double magnitude;
+///Phase of this sample
+double phase;
 } ahp_xc_correlation;
 
 /**
 * \brief Sample structure
 */
 typedef struct {
-    unsigned long lag_size; ///Maximum lag in a single shot
-    ahp_xc_correlation *correlations; ///Correlations array, of size lag_size in an ahp_xc_packet
+///Lag offset from sample time
+double lag;
+///Maximum lag in a single shot
+unsigned long lag_size;
+///Correlations array, of size lag_size in an ahp_xc_packet
+ahp_xc_correlation *correlations;
 } ahp_xc_sample;
 
 /**
 * \brief Packet structure
 */
 typedef struct {
-    unsigned long n_lines; ///Number of lines in this correlator
-    unsigned long n_baselines; ///Total number of baselines obtainable
-    unsigned long tau; ///Bandwidth inverse frequency
-    unsigned long bps; ///Bits capacity in each sample
-    unsigned long cross_lag; ///Maximum crosscorrelation lag in a single shot
-    unsigned long auto_lag; ///Maximum autocorrelation lag in a single shot
-    unsigned long* counts; ///Counts in the current shot
-    ahp_xc_sample* autocorrelations; ///Autocorrelations in the current shot
-    ahp_xc_sample* crosscorrelations; ///Crosscorrelations in the current shot
+///Timestamp of the packet
+unsigned long timestamp;
+///Number of lines in this correlator
+unsigned long n_lines;
+///Total number of baselines obtainable
+unsigned long n_baselines;
+///Bandwidth inverse frequency
+unsigned long tau;
+///Bits capacity in each sample
+unsigned long bps;
+///Crosscorrelators channels per packet
+unsigned long cross_lag;
+///Autocorrelators channels per packet
+unsigned long auto_lag;
+///Counts in the current packet
+unsigned long* counts;
+///Autocorrelations in the current packet
+ahp_xc_sample* autocorrelations;
+///Crosscorrelations in the current packet
+ahp_xc_sample* crosscorrelations;
+///Packet buffer string
+const char* buf;
 } ahp_xc_packet;
 
-/**@}*/
+/**\}*/
 /**
  * \defgroup Utilities Utility functions
 */
-/**@{*/
+/**\{*/
 
 /**
 * \brief Get 2d projection for intensity interferometry
@@ -179,28 +241,36 @@ typedef struct {
 */
 DLL_EXPORT double* ahp_xc_get_2d_projection(double alt, double az, double *baseline);
 
-/**@}*/
+/**\}*/
 /**
  * \defgroup Comm Communication
 */
-/**@{*/
+/**\{*/
 
 /**
 * \brief Connect to a serial port
 * \param port The serial port name or filename
-* \return Returns 0 on success, -1 if any error was encountered
+* \param high_rate The correlator needs high-speed communicator rate
+* \return Returns non-zero on failure
 * \sa ahp_xc_disconnect
 */
 DLL_EXPORT int ahp_xc_connect(const char *port, int high_rate);
 
 /**
-* \brief Connect to a serial port or other stream with the given file descriptor
+* \brief Connect to a serial port or other stream associated to the given file descriptor
 * \param fd The file descriptor of the stream
+* \return Returns non-zero on failure
 */
 DLL_EXPORT int ahp_xc_connect_fd(int fd);
 
 /**
-* \brief Disconnect from the serial port opened with ahp_xc_connect
+* \brief Obtain the serial port file descriptor
+* \return The file descriptor of the stream
+*/
+DLL_EXPORT int ahp_xc_get_fd();
+
+/**
+* \brief Disconnect from the serial port or descriptor opened with ahp_xc_connect
 * \sa ahp_xc_connect
 */
 DLL_EXPORT void ahp_xc_disconnect(void);
@@ -210,8 +280,18 @@ DLL_EXPORT void ahp_xc_disconnect(void);
 * \sa ahp_xc_connect
 * \sa ahp_xc_connect_fd
 * \sa ahp_xc_disconnect
+* \return Returns non-zero if connected
 */
 DLL_EXPORT unsigned int ahp_xc_is_connected(void);
+
+/**
+* \brief Report if a correlator was detected
+* \sa ahp_xc_connect
+* \sa ahp_xc_connect_fd
+* \sa ahp_xc_disconnect
+* \return Returns non-zero if a correlator was detected
+*/
+DLL_EXPORT unsigned int ahp_xc_is_detected(void);
 
 /**
 * \brief Obtain the current baud rate
@@ -222,25 +302,24 @@ DLL_EXPORT int ahp_xc_get_baudrate(void);
 /**
 * \brief Obtain the current baud rate
 * \param rate The new baud rate index
-* \param setterm Change the termios settings of the current fd or port opened
 */
 DLL_EXPORT void ahp_xc_set_baudrate(baud_rate rate);
 
-/**@}*/
+/**\}*/
 /**
  * \defgroup Feat Features of the correlator
 */
-/**@{*/
+/**\{*/
 
 /**
-* \brief Obtain the current baud rate
-* \return Returns 0 on success, -1 if any error was encountered
+* \brief Probe for a correlator and take its properties
+* \return Returns non-zero on failure
 */
 DLL_EXPORT int ahp_xc_get_properties(void);
 
 /**
 * \brief Obtain the correlator header
-* \return Returns a string containing the header and device identifier
+* \return Returns a string representing the correlator ID
 */
 DLL_EXPORT char* ahp_xc_get_header(void);
 
@@ -282,68 +361,73 @@ DLL_EXPORT unsigned int ahp_xc_get_crosscorrelator_lagsize(void);
 
 /**
 * \brief Obtain the correlator maximum readout frequency
-* \param index The line index.
 * \return Returns the maximum readout frequency
 */
 DLL_EXPORT unsigned int ahp_xc_get_frequency(void);
 
 /**
-* \brief Obtain the correlator maximum readout frequency
-* \return Returns the maximum readout frequency
+* \brief Obtain the correlator clock divider
+* \return Returns the clock divider (powers of 2)
 */
 DLL_EXPORT unsigned int ahp_xc_get_frequency_divider(void);
 
 /**
-* \brief Obtain the serial packet transmission time in microseconds
-* \return Returns the packet transmission time
+* \brief Obtain the sampling time
+* \return Returns the sampling time in nanoseconds
+*/
+DLL_EXPORT double ahp_xc_get_sampletime(void);
+
+/**
+* \brief Obtain the serial packet transmission time
+* \return Returns the packet transmission time in microseconds
 */
 DLL_EXPORT unsigned int ahp_xc_get_packettime(void);
 
 /**
 * \brief Obtain the serial packet size
-* \return Returns the packet size
+* \return Returns the packet size in bytes
 */
 DLL_EXPORT unsigned int ahp_xc_get_packetsize(void);
 
 /**
 * \brief Returns the cross-correlation capability of the device
-* \return Returns 1 if crosscorrelation is possible
+* \return Returns non-zero if the device is a crosscorrelator
 */
 DLL_EXPORT int ahp_xc_has_crosscorrelator(void);
 
 /**
 * \brief Returns if the device offers internal PSU line
-* \return Returns 1 if PSU is available
+* \return Returns non-zero if PSU is available
 */
 DLL_EXPORT int ahp_xc_has_psu(void);
 
 /**
 * \brief Returns if the device has led lines to drive
-* \return Returns 1 if leds are available
+* \return Returns non-zero if leds are available
 */
 DLL_EXPORT int ahp_xc_has_leds(void);
 
 /**
-* \brief Returns if the device has cumulative readout only
-* \return Returns 1 if edge readout is not available
+* \brief Returns if the device has differential correlators only
+* \return Returns non-zero if the device is a differential correlator only
 */
-DLL_EXPORT int ahp_xc_has_cumulative_only();
+DLL_EXPORT int ahp_xc_has_differential_only();
 
-/**@}*/
+/**\}*/
 /**
  * \defgroup Data Data and streaming
 */
-/**@{*/
+/**\{*/
 
 /**
 * \brief Allocate and return a packet structure
-* \return Returns the packet structure
+* \return Returns a new ahp_xc_packet structure pointer
 */
 DLL_EXPORT ahp_xc_packet *ahp_xc_alloc_packet(void);
 
 /**
 * \brief Free a previously allocated packet structure
-* \param packet the packet structure to be freed
+* \param packet pointer to the ahp_xc_packet structure to be freed
 */
 DLL_EXPORT void ahp_xc_free_packet(ahp_xc_packet *packet);
 
@@ -351,7 +435,7 @@ DLL_EXPORT void ahp_xc_free_packet(ahp_xc_packet *packet);
 * \brief Allocate and return a samples array
 * \param nlines The Number of samples to be allocated.
 * \param len The lag_size and correlations field size of each sample.
-* \return Returns the samples array
+* \return Returns the new allocated ahp_xc_sample array
 * \sa ahp_xc_free_samples
 * \sa ahp_xc_sample
 * \sa ahp_xc_packet
@@ -360,7 +444,8 @@ DLL_EXPORT ahp_xc_sample *ahp_xc_alloc_samples(unsigned long nlines, unsigned lo
 
 /**
 * \brief Free a previously allocated samples array
-* \param packet the samples array to be freed
+* \param nlines The Number of samples to be allocated.
+* \param samples the ahp_xc_sample array to be freed
 * \sa ahp_xc_alloc_samples
 * \sa ahp_xc_sample
 * \sa ahp_xc_packet
@@ -369,9 +454,10 @@ DLL_EXPORT void ahp_xc_free_samples(unsigned long nlines, ahp_xc_sample *samples
 
 /**
 * \brief Grab a data packet
-* \param packet The xc_packet structure to be filled.
-* \sa ahp_xc_set_lag_auto
-* \sa ahp_xc_set_lag_cross
+* \param packet The ahp_xc_packet structure to be filled.
+* \return Returns non-zero on error
+* \sa ahp_xc_set_channel_auto
+* \sa ahp_xc_set_channel_cross
 * \sa ahp_xc_alloc_packet
 * \sa ahp_xc_free_packet
 * \sa ahp_xc_packet
@@ -381,9 +467,10 @@ DLL_EXPORT int ahp_xc_get_packet(ahp_xc_packet *packet);
 /**
 * \brief Initiate an autocorrelation scan
 * \param index The line index.
-* \param start the starting channel for this scan.
+* \param start The starting channel for this scan.
+* \param size The number of channels to scan afterwards.
 */
-DLL_EXPORT void ahp_xc_start_autocorrelation_scan(unsigned int index, off_t start);
+DLL_EXPORT void ahp_xc_start_autocorrelation_scan(unsigned int index, off_t start, size_t size);
 
 /**
 * \brief End an autocorrelation scan
@@ -393,10 +480,13 @@ DLL_EXPORT void ahp_xc_end_autocorrelation_scan(unsigned int index);
 
 /**
 * \brief Scan all available delay channels and get autocorrelations of each input
-* \param index the index of the input chosen for autocorrelation.
-* \param autocorrelations An ahp_xc_sample array pointer that this function will allocate, will be filled with the autocorrelated values and will be of size ahp_xc_delaysize.
-* \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
-* \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
+* \param index the input index.
+* \param autocorrelations An ahp_xc_sample array pointer, can be NULL. Will be allocated by reference and filled by this function.
+* \param start First channel to be scanned.
+* \param len Number of channels to be scanned.
+* \param interrupt This should point to an int32_t variable, when setting to 1, on a separate thread, scanning will be interrupted.
+* \param percent Like interrupt a variable, passed by reference that will be updated with the percent of completion.
+* \return Returns the number of channels scanned
 * \sa ahp_xc_get_delaysize
 * \sa ahp_xc_sample
 */
@@ -407,7 +497,7 @@ DLL_EXPORT int ahp_xc_scan_autocorrelations(unsigned int index, ahp_xc_sample **
 * \param index The line index.
 * \param start the starting channel for this scan.
 */
-DLL_EXPORT void ahp_xc_start_crosscorrelation_scan(unsigned int index, off_t start);
+DLL_EXPORT void ahp_xc_start_crosscorrelation_scan(unsigned int index, off_t start, size_t size);
 
 /**
 * \brief End a crosscorrelation scan
@@ -417,33 +507,37 @@ DLL_EXPORT void ahp_xc_end_crosscorrelation_scan(unsigned int index);
 
 /**
 * \brief Scan all available delay channels and get crosscorrelations of each input with others
-* \param index1 the index of the first input in this baseline.
-* \param index2 the index of the second input in this baseline.
-* \param crosscorrelations An ahp_xc_sample array pointer that this function will allocate, will be filled with the crosscorrelated values and will be of size ahp_xc_delaysize*2-1.
-* \param percent A pointer to a double which, during scanning, will be updated with the percent of completion.
-* \param interrupt A pointer to an integer whose value, during execution, if turns into 1 will abort scanning.
+* \param index1 the first input index.
+* \param index2 the second input index.
+* \param crosscorrelations An ahp_xc_sample array pointer, can be NULL. Will be allocated by reference and filled by this function.
+* \param start1 Initial channel on index1 input.
+* \param start2 Initial channel on index2 input.
+* \param size Number of channels to be scanned.
+* \param interrupt This should point to an int32_t variable, when setting to 1, on a separate thread, scanning will be interrupted.
+* \param percent Like interrupt a variable, passed by reference that will be updated with the percent of completion.
+* \return Returns the number of channels scanned
 * \sa ahp_xc_get_delaysize
 * \sa ahp_xc_sample
 */
 DLL_EXPORT int ahp_xc_scan_crosscorrelations(unsigned int index1, unsigned int index2, ahp_xc_sample **crosscorrelations, off_t start1, off_t start2, unsigned int size, int *interrupt, double *percent);
 
-/**@}*/
+/**\}*/
 /**
  * \defgroup Cmds Commands and setup of the correlator
 */
-/**@{*/
+/**\{*/
 
 /**
 * \brief Set integration flags
-* \param flag the flag to be set.
+* \param flags New capture flags mask.
 */
-DLL_EXPORT int ahp_xc_set_capture_flag(xc_capture_flags flag);
+DLL_EXPORT int ahp_xc_set_capture_flags(xc_capture_flags flags);
 
 /**
-* \brief Clear integration flags
-* \param flag the flag to be clear.
+* \brief Get integration flags
+* \return current capture flags.
 */
-DLL_EXPORT int ahp_xc_clear_capture_flag(xc_capture_flags flag);
+DLL_EXPORT xc_capture_flags ahp_xc_get_capture_flags();
 
 /**
 * \brief Switch on or off the led lines of the correlator
@@ -453,18 +547,20 @@ DLL_EXPORT int ahp_xc_clear_capture_flag(xc_capture_flags flag);
 DLL_EXPORT void ahp_xc_set_leds(unsigned int index, int leds);
 
 /**
-* \brief Set the lag of the selected input in clock cycles (for cross-correlation)
+* \brief Set the channel of the selected input (for cross-correlation)
 * \param index The input line index starting from 0
-* \param value The lag amount in clock cycles
+* \param value The channel number
+* \param size The number of channels to scan afterwards
 */
-DLL_EXPORT void ahp_xc_set_lag_cross(unsigned int index, off_t value);
+DLL_EXPORT void ahp_xc_set_channel_cross(unsigned int index, off_t value, size_t size);
 
 /**
-* \brief Set the lag of the selected input in clock cycles (for auto-correlation)
+* \brief Set the channel of the selected input (for auto-correlation)
 * \param index The input line index starting from 0
-* \param value The lag amount in clock cycles
+* \param value The channel number
+* \param size The number of channels to scan afterwards
 */
-DLL_EXPORT void ahp_xc_set_lag_auto(unsigned int index, off_t value);
+DLL_EXPORT void ahp_xc_set_channel_auto(unsigned int index, off_t value, size_t size);
 
 /**
 * \brief Set the clock divider for autocorrelation and crosscorrelation
@@ -484,45 +580,52 @@ DLL_EXPORT void ahp_xc_set_voltage(unsigned int index, unsigned char value);
 * \param index The input line index starting from 0
 * \param value The test type
 */
-DLL_EXPORT void ahp_xc_set_test(unsigned int index, xc_test value);
-
-/**
-* \brief Disable tests on the current line
-* \param index The input line index starting from 0
-* \param value The test type
-*/
-DLL_EXPORT void ahp_xc_clear_test(unsigned int index, xc_test value);
+DLL_EXPORT void ahp_xc_set_test_flags(unsigned int index, xc_test_flags value);
 
 /**
 * \brief Get the current status of the test features
 * \param index The line index starting from 0
+* \return The current tests on index input
 */
-DLL_EXPORT unsigned char ahp_xc_get_test(unsigned int index);
+DLL_EXPORT unsigned char ahp_xc_get_test_flags(unsigned int index);
 
 /**
 * \brief Get the current status of the leds on line
 * \param index The line index starting from 0
+* \return The current led configuration on index input
 */
 DLL_EXPORT unsigned char ahp_xc_get_leds(unsigned int index);
 
 /**
-* \brief Send an arbitrary command to the AHP xc device
+* \brief Select the input on which to issue next command
+* \param index The input index
+*/
+DLL_EXPORT void ahp_xc_select_input(unsigned int index);
+
+/**
+* \brief Returns the currently selected input on which next command will be issued
+* \return The input index
+*/
+DLL_EXPORT unsigned int ahp_xc_current_input();
+
+/**
+* \brief Send an arbitrary command to the AHP XC device
 * \param cmd The command
 * \param value The command parameter
+* \return non-zero on failure
 */
 DLL_EXPORT int ahp_xc_send_command(xc_cmd cmd, unsigned char value);
 
 /**
 * \brief Obtain the current libahp-xc version
+* \return The current version code
 */
 DLL_EXPORT inline unsigned int ahp_xc_get_version(void) { return AHP_XC_VERSION; }
 
-/**@}*/
-/**@}*/
+/**\}*/
+/**\}*/
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
 #endif //_AHP_XC_H
-
-

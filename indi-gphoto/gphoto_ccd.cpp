@@ -254,19 +254,12 @@ bool GPhotoCCD::initProperties()
     //We don't know how many items will be in the switch yet
     IUFillSwitchVector(&mIsoSP, nullptr, 0, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60,
                        IPS_IDLE);
-    IUFillSwitchVector(&mFormatSP, nullptr, 0, getDeviceName(), "CAPTURE_FORMAT", "Capture Format", IMAGE_SETTINGS_TAB,
-                       IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     IUFillSwitchVector(&mExposurePresetSP, nullptr, 0, getDeviceName(), "CCD_EXPOSURE_PRESETS", "Presets",
                        MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     IUFillSwitch(&autoFocusS[0], "Set", "", ISS_OFF);
     IUFillSwitchVector(&autoFocusSP, autoFocusS, 1, getDeviceName(), "Auto Focus", "", FOCUS_TAB, IP_RW, ISR_1OFMANY, 0,
                        IPS_IDLE);
-
-    IUFillSwitch(&TransferFormatS[FORMAT_FITS], "FORMAT_FITS", "FITS", ISS_ON);
-    IUFillSwitch(&TransferFormatS[FORMAT_NATIVE], "FORMAT_NATIVE", "Native", ISS_OFF);
-    IUFillSwitchVector(&TransferFormatSP, TransferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Transfer Format",
-                       IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     IUFillSwitch(&livePreviewS[0], "Enable", "", ISS_OFF);
     IUFillSwitch(&livePreviewS[1], "Disable", "", ISS_ON);
@@ -379,11 +372,8 @@ bool GPhotoCCD::updateProperties()
             defineProperty(&mExposurePresetSP);
         if (mIsoSP.nsp > 0)
             defineProperty(&mIsoSP);
-        if (mFormatSP.nsp > 0)
-            defineProperty(&mFormatSP);
 
         defineProperty(&livePreviewSP);
-        defineProperty(&TransferFormatSP);
         defineProperty(&autoFocusSP);
 
         if (m_CanFocus)
@@ -431,13 +421,10 @@ bool GPhotoCCD::updateProperties()
             deleteProperty(mExposurePresetSP.name);
         if (mIsoSP.nsp > 0)
             deleteProperty(mIsoSP.name);
-        if (mFormatSP.nsp > 0)
-            deleteProperty(mFormatSP.name);
 
         deleteProperty(mMirrorLockNP.name);
         deleteProperty(livePreviewSP.name);
         deleteProperty(autoFocusSP.name);
-        deleteProperty(TransferFormatSP.name);
 
         if (m_CanFocus)
             FI::updateProperties();
@@ -604,53 +591,6 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                 }
             }
 
-            return true;
-        }
-
-        // Formats
-        if (!strcmp(name, mFormatSP.name))
-        {
-            int prevSwitch = IUFindOnSwitchIndex(&mFormatSP);
-            if (IUUpdateSwitch(&mFormatSP, states, names, n) < 0)
-                return false;
-
-            ISwitch * sp = IUFindOnSwitch(&mFormatSP);
-            if (sp)
-            {
-                if (strstr(sp->label, "+"))
-                {
-                    LOGF_ERROR("%s format is not supported.", sp->label);
-                    IUResetSwitch(&mFormatSP);
-                    mFormatSP.s                = IPS_ALERT;
-                    mFormatSP.sp[prevSwitch].s = ISS_ON;
-                    IDSetSwitch(&mFormatSP, nullptr);
-                    return false;
-                }
-            }
-            for (int i = 0; i < mFormatSP.nsp; i++)
-            {
-                if (mFormatS[i].s == ISS_ON)
-                {
-                    if (isSimulation() == false)
-                        gphoto_set_format(gphotodrv, i);
-                    mFormatSP.s = IPS_OK;
-                    IDSetSwitch(&mFormatSP, nullptr);
-                    // We need to get frame W and H if format changes
-                    frameInitialized = false;
-                    break;
-                }
-            }
-        }
-
-        // How images are transferred to the client
-        if (!strcmp(name, TransferFormatSP.name))
-        {
-            IUUpdateSwitch(&TransferFormatSP, states, names, n);
-            TransferFormatSP.s = IPS_OK;
-            IDSetSwitch(&TransferFormatSP, nullptr);
-            // We need to get frame W and H if transfer format changes
-            // 2017-01-17: Do we? transform format change should not affect W and H
-            //frameInitialized = false;
             return true;
         }
 
@@ -899,54 +839,37 @@ bool GPhotoCCD::Connect()
         PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", min_exposure, max_exposure, 1, true);
     }
 
-    if (mFormatS)
-    {
-        free(mFormatS);
-        mFormatS = nullptr;
-    }
-
     const char * fmts[] = { "Custom" };
-    setidx             = 0;
+    //setidx             = 0;
     max_opts           = 1;
     options            = const_cast<char **>(fmts);
 
     if (!isSimulation())
     {
-        setidx  = gphoto_get_format_current(gphotodrv);
+        //setidx  = gphoto_get_format_current(gphotodrv);
         options = gphoto_get_formats(gphotodrv, &max_opts);
     }
 
     if (max_opts > 0)
     {
-        mFormatS      = create_switch("FORMAT", options, max_opts, setidx);
-        mFormatSP.sp  = mFormatS;
-        mFormatSP.nsp = max_opts;
-
-        ISwitch * sp = IUFindOnSwitch(&mFormatSP);
-        if (sp && strstr(sp->label, "+"))
+        for (int i = 0; i < max_opts; i++)
         {
-            IUResetSwitch(&mFormatSP);
-            int i = 0;
-
-            // Prefer RAW format in case selected format is not supported.
-            for (i = 0; i < mFormatSP.nsp; i++)
+            std::string label = options[i];
+            if (label.find('+') != std::string::npos ||
+                    label.find("sRAW") != std::string::npos ||
+                    label.find("mRAW") != std::string::npos)
             {
-                // Make sure the new selection does not include the problematic label with the +
-                // also also contains the string RAW in it.
-                if (strcmp(sp->label, mFormatSP.sp[i].label) && strcasestr("RAW", mFormatSP.sp[i].label))
-                {
-                    mFormatS[i].s = ISS_ON;
-                    break;
-                }
+                continue;
             }
 
-            if (i == mFormatSP.nsp)
-            {
-                LOGF_ERROR("%s format is not supported. Please select another format.", sp->label);
-                mFormatSP.s = IPS_ALERT;
-            }
+            uint8_t index = CaptureFormatSP.size();
+            auto isRAW = strcasestr(label.c_str(), "RAW") != nullptr;
+            char name[MAXINDINAME] = {0};
+            snprintf(name, MAXINDINAME, "FORMAT_%d", index + 1);
+            CaptureFormat format = {name, label, 8, isRAW};
+            addCaptureFormat(format);
 
-            IDSetSwitch(&mFormatSP, nullptr);
+            m_CaptureFormatMap[index] = i;
         }
     }
 
@@ -1064,19 +987,12 @@ bool GPhotoCCD::StartExposure(float duration)
         return false;
     }
 
-    if (mFormatS != nullptr)
-    {
-        ISwitch * sp = IUFindOnSwitch(&mFormatSP);
-        if (sp == nullptr)
-        {
-            LOG_ERROR("Please select a format before capturing an image.");
-            return false;
-        }
-    }
-
     /* start new exposure with last ExpValues settings.
      * ExpGo goes busy. set timer to read when done
      */
+
+    if (isSimulation() == false)
+        gphoto_set_format(gphotodrv, m_CaptureFormatMap[CaptureFormatSP.findOnSwitchIndex()]);
 
     // Microseconds
     uint32_t exp_us = static_cast<uint32_t>(ceil(duration * 1e6));
@@ -1113,9 +1029,9 @@ bool GPhotoCCD::AbortExposure()
 
 bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
+    if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON)
     {
-        LOG_ERROR("Subframing is only supported in FITS transport mode.");
+        LOG_ERROR("Subframing is only supported in FITS encode mode.");
         return false;
     }
 
@@ -1127,12 +1043,14 @@ bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
 bool GPhotoCCD::UpdateCCDBin(int hor, int ver)
 {
 
-    if(hor == 1 && ver == 1) {
+    if(hor == 1 && ver == 1)
+    {
         binning = false;
-    } else {
-
+    }
+    else
+    {
         // only for fits output
-        if (TransferFormatS[FORMAT_FITS].s != ISS_ON)
+        if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON)
         {
             LOG_ERROR("Binning is only supported in FITS transport mode.");
             return false;
@@ -1253,7 +1171,7 @@ bool GPhotoCCD::grabImage()
         PrimaryCCD.setFrameBufferSize(0);
         ExposureComplete(&PrimaryCCD);
     }
-    else if (TransferFormatS[FORMAT_FITS].s == ISS_ON)
+    if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
     {
         char filename[MAXRBUF] = "/tmp/indi_XXXXXX";
         const char *extension = "unknown";
@@ -1406,9 +1324,10 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setBPP(bpp);
 
             // binning if needed
-            if(binning) {
+            if(binning)
+            {
 
-// binBayerFrame implemented since 1.9.4
+                // binBayerFrame implemented since 1.9.4
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
                 PrimaryCCD.binBayerFrame();
 #else
@@ -1437,8 +1356,9 @@ bool GPhotoCCD::grabImage()
             PrimaryCCD.setBPP(bpp);
 
             // binning if needed
-            if(binning) {
-// binBayerFrame implemented since 1.9.4
+            if(binning)
+            {
+                // binBayerFrame implemented since 1.9.4
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=4
                 PrimaryCCD.binBayerFrame();
 #else
@@ -1455,7 +1375,7 @@ bool GPhotoCCD::grabImage()
     {
         if (isSimulation())
         {
-            int fd = open(UploadFileT[0].text, O_RDONLY | S_IRUSR);
+            int fd = open(UploadFileT[0].text, O_RDONLY);
             struct stat sb;
 
             // Get file size
@@ -1971,6 +1891,7 @@ void GPhotoCCD::streamLiveView()
         if (PrimaryCCD.getSubW() != w || PrimaryCCD.getSubH() != h)
         {
             Streamer->setSize(w, h);
+            PrimaryCCD.setBin(1, 1);
             PrimaryCCD.setFrame(0, 0, w, h);
         }
 
@@ -2082,13 +2003,6 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
     if (mIsoSP.nsp > 0)
         IUSaveConfigSwitch(fp, &mIsoSP);
 
-    // Format Settings
-    if (mFormatSP.nsp > 0)
-        IUSaveConfigSwitch(fp, &mFormatSP);
-
-    // Transfer Format
-    IUSaveConfigSwitch(fp, &TransferFormatSP);
-
     // Force BULB Mode
     IUSaveConfigSwitch(fp, &forceBULBSP);
 
@@ -2136,4 +2050,12 @@ void GPhotoCCD::simulationTriggered(bool enabled)
         defineProperty(&UploadFileTP);
     else
         deleteProperty(UploadFileTP.name);
+}
+
+bool GPhotoCCD::SetCaptureFormat(uint8_t index)
+{
+    INDI_UNUSED(index);
+    // We need to get frame W and H if format changes
+    frameInitialized = false;
+    return true;
 }

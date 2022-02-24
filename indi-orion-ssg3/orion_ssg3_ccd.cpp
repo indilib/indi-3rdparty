@@ -51,7 +51,8 @@ static class Loader
             int i;
             rc = orion_ssg3_camera_info(camera_infos, MAX_CAMERAS);
 
-            for (i = 0; i < rc; i++) {
+            for (i = 0; i < rc; i++)
+            {
                 SSG3CCD *ssg3Ccd = new SSG3CCD(&camera_infos[i], i);
                 cameras[i] = std::shared_ptr<SSG3CCD>(ssg3Ccd);
             }
@@ -82,7 +83,8 @@ bool SSG3CCD::Connect()
     int rc;
 
     rc = orion_ssg3_open(&ssg3, ssg3_info);
-    if (rc) {
+    if (rc)
+    {
         LOGF_ERROR("Unable to connect to Orion StartShoot G3: %s\n", strerror(-rc));
         return false;
     }
@@ -134,6 +136,9 @@ bool SSG3CCD::initProperties()
     /* Must init parent properties first */
     INDI::CCD::initProperties();
 
+    CaptureFormat raw = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(raw);
+
     // Add Debug Control.
     addDebugControl();
 
@@ -144,7 +149,7 @@ bool SSG3CCD::initProperties()
     /* Add Offset number property */
     OffsetNP[0].fill("OFFSET", "Offset", "%.f", 0, 255, 1, 127);
     OffsetNP.fill(getDeviceName(), "CCD_OFFSET", "Offset", IMAGE_SETTINGS_TAB, IP_RW, 0,
-                       IPS_IDLE);
+                  IPS_IDLE);
 
     /* Add Cooler power property */
     CoolerPowerNP[0].fill("COOLER_POWER", "Cooler Power (%)", "%.f", 0, 100, 1, 0);
@@ -155,7 +160,7 @@ bool SSG3CCD::initProperties()
     CoolerSP[0].fill("COOLER_ON", "On", ISS_OFF);
     CoolerSP[1].fill("COOLER_OFF", "Off", ISS_ON);
     CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 0, IPS_OK);
+                  ISR_1OFMANY, 0, IPS_OK);
 
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, .001, false);
@@ -222,7 +227,8 @@ bool SSG3CCD::UpdateCCDBin(int x, int y)
     int rc;
 
     rc = orion_ssg3_set_binning(&ssg3, x, y);
-    if (!rc) {
+    if (!rc)
+    {
         PrimaryCCD.setBin(x, y);
         return true;
     }
@@ -241,7 +247,8 @@ bool SSG3CCD::StartExposure(float duration)
     ExposureRequest = duration;
 
     rc = orion_ssg3_start_exposure(&ssg3, duration * 1000);
-    if (rc) {
+    if (rc)
+    {
         LOGF_ERROR("Failed to start exposure: %d %s\n", rc, strerror(rc));
         return false;
     }
@@ -281,9 +288,12 @@ bool SSG3CCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
             LOGF_INFO("Setting gain to %.f", GainNP[0].getValue());
             rc = orion_ssg3_set_gain(&ssg3, GainNP[0].getValue());
-            if (!rc) {
+            if (!rc)
+            {
                 GainNP.setState(IPS_OK);
-            } else {
+            }
+            else
+            {
                 GainNP.setState(IPS_ALERT);
             }
             GainNP.apply();
@@ -300,9 +310,12 @@ bool SSG3CCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
             LOGF_INFO("Setting offset to %.f", OffsetNP[0].getValue());
             rc = orion_ssg3_set_offset(&ssg3, OffsetNP[0].getValue());
-            if (!rc) {
+            if (!rc)
+            {
                 OffsetNP.setState(IPS_OK);
-            } else {
+            }
+            else
+            {
                 OffsetNP.setState(IPS_ALERT);
             }
             OffsetNP.apply();
@@ -333,9 +346,12 @@ bool SSG3CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             CoolerSP.setState(IPS_OK);
             IDSetSwitch(&CoolerSP, nullptr);
 
-            if (CoolerSP[0].getState() == ISS_OFF) {
+            if (CoolerSP[0].getState() == ISS_OFF)
+            {
                 activateCooler(false);
-            } else {
+            }
+            else
+            {
                 activateCooler(true);
             }
 
@@ -352,20 +368,25 @@ void SSG3CCD::TimerHit()
 {
     long timeleft;
 
-    if (isConnected() == false) {
+    if (isConnected() == false)
+    {
         return;
     }
 
-    if (InExposure) {
+    if (InExposure)
+    {
         timeleft = ExposureRequest - (ExposureElapsedTimer.elapsed() / 1000);
 
-        if (orion_ssg3_exposure_done(&ssg3)) {
+        if (orion_ssg3_exposure_done(&ssg3))
+        {
             /* We're done exposing */
             LOG_INFO("Exposure done, downloading image...");
             PrimaryCCD.setExposureLeft(0);
             InExposure = false;
             grabImage();
-        } else {
+        }
+        else
+        {
             PrimaryCCD.setExposureLeft(timeleft);
         }
     }
@@ -398,7 +419,8 @@ void SSG3CCD::grabImage()
     int sz = PrimaryCCD.getFrameBufferSize();
 
     rc = orion_ssg3_image_download(&ssg3, image, sz);
-    if (rc) {
+    if (rc)
+    {
         LOGF_INFO("Image download failed: %s", strerror(-rc));
     }
 
@@ -407,7 +429,7 @@ void SSG3CCD::grabImage()
 
 #define TEMP_THRESHOLD 0.25
 /**
- * Set the CCD temperature 
+ * Set the CCD temperature
  */
 int SSG3CCD::SetTemperature(double temperature)
 {
@@ -418,7 +440,8 @@ int SSG3CCD::SetTemperature(double temperature)
     if (std::abs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD)
         return 1;
 
-    if (!activateCooler(true)) {
+    if (!activateCooler(true))
+    {
         return -1;
     }
 
@@ -433,7 +456,8 @@ bool SSG3CCD::activateCooler(bool enable)
     if (enable)
     {
         rc = orion_ssg3_set_temperature(&ssg3, TemperatureRequest);
-        if (rc < 0) {
+        if (rc < 0)
+        {
             LOG_ERROR("Failed to turn on cooling.");
             CoolerSP.setState(IPS_ALERT);
             IDSetSwitch(&CoolerSP, nullptr);
@@ -443,9 +467,12 @@ bool SSG3CCD::activateCooler(bool enable)
         CoolerSP[COOLER_ON].setState(ISS_ON);
         CoolerSP[COOLER_OFF].setState(ISS_OFF);
         CoolerSP.setState(IPS_OK);
-    } else {
+    }
+    else
+    {
         rc = orion_ssg3_cooling_off(&ssg3);
-        if (rc < 0) {
+        if (rc < 0)
+        {
             LOG_ERROR("Failed to turn off cooling.");
             CoolerSP.setState(IPS_ALERT);
             IDSetSwitch(&CoolerSP, nullptr);
@@ -467,26 +494,35 @@ void SSG3CCD::updateTemperature(void)
     int rc;
 
     rc = orion_ssg3_get_temperature(&ssg3, &temp);
-    if (rc < 0) {
+    if (rc < 0)
+    {
         TemperatureNP.s = IPS_ALERT;
-    } else {
+    }
+    else
+    {
         LOGF_DEBUG("Read temperature: %f", temp);
         TemperatureN[0].value = temp;
         TemperatureNP.s = IPS_OK;
     }
     IDSetNumber(&TemperatureNP, nullptr);
 
-    if (CoolerSP[COOLER_ON].getState() == ISS_ON) {
+    if (CoolerSP[COOLER_ON].getState() == ISS_ON)
+    {
         rc = orion_ssg3_get_cooling_power(&ssg3, &temp);
-        if (rc < 0) {
+        if (rc < 0)
+        {
             CoolerPowerNP.setState(IPS_ALERT);
-        } else {
+        }
+        else
+        {
             LOGF_DEBUG("Read temperature: %f", temp);
             CoolerPowerNP[0].setValue(temp);
             CoolerPowerNP.setState(IPS_OK);
         }
         IDSetNumber(&CoolerPowerNP, nullptr);
-    } else {
+    }
+    else
+    {
         CoolerPowerNP[0].setValue(0);
         CoolerPowerNP.setState(IPS_OK);
         IDSetNumber(&CoolerPowerNP, nullptr);
@@ -507,7 +543,8 @@ void SSG3CCD::stopWEGuide()
 
 IPState SSG3CCD::GuideNorth(uint32_t ms)
 {
-    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_NORTH, ms)) {
+    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_NORTH, ms))
+    {
         return IPS_ALERT;
     }
     NSTimer.start(ms);
@@ -516,7 +553,8 @@ IPState SSG3CCD::GuideNorth(uint32_t ms)
 
 IPState SSG3CCD::GuideSouth(uint32_t ms)
 {
-    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_SOUTH, ms)) {
+    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_SOUTH, ms))
+    {
         return IPS_ALERT;
     }
     NSTimer.start(ms);
@@ -525,7 +563,8 @@ IPState SSG3CCD::GuideSouth(uint32_t ms)
 
 IPState SSG3CCD::GuideEast(uint32_t ms)
 {
-    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_EAST, ms)) {
+    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_EAST, ms))
+    {
         return IPS_ALERT;
     }
     WETimer.start(ms);
@@ -534,7 +573,8 @@ IPState SSG3CCD::GuideEast(uint32_t ms)
 
 IPState SSG3CCD::GuideWest(uint32_t ms)
 {
-    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_WEST, ms)) {
+    if (orion_ssg3_st4(&ssg3, SSG3_GUIDE_WEST, ms))
+    {
         return IPS_ALERT;
     }
     WETimer.start(ms);

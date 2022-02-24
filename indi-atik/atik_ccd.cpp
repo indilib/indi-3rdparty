@@ -117,6 +117,9 @@ bool ATIKCCD::initProperties()
 {
     INDI::CCD::initProperties();
 
+    CaptureFormat format = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(format);
+
     // Cooler control
     IUFillSwitch(&CoolerS[COOLER_ON], "COOLER_ON", "ON", ISS_OFF);
     IUFillSwitch(&CoolerS[COOLER_OFF], "COOLER_OFF", "OFF", ISS_ON);

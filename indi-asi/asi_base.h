@@ -78,6 +78,8 @@ class ASIBase : public INDI::CCD
         // Save config
         virtual bool saveConfigItems(FILE *fp) override;
 
+        virtual bool SetCaptureFormat(uint8_t index) override;
+
         /** Get the current Bayer string used */
         const char *getBayerString() const;
 
@@ -127,6 +129,9 @@ class ASIBase : public INDI::CCD
         /** Get if MonoBin is active, thus Bayer is irrelevant */
         bool isMonoBinActive();
 
+        /** Can the camera flip the image horizontally and vertically */
+        bool hasFlipControl();
+
         /** Additional Properties to INDI::CCD */
         INDI::PropertyNumber  CoolerNP {1};
         INDI::PropertySwitch  CoolerSP {2};
@@ -143,6 +148,13 @@ class ASIBase : public INDI::CCD
         {
             BLINK_COUNT,
             BLINK_DURATION
+        };
+
+        INDI::PropertySwitch  FlipSP {2};
+        enum
+        {
+            FLIP_HORIZONTAL,
+            FLIP_VERTICAL
         };
 
         std::string mCameraName, mCameraID;

@@ -209,6 +209,9 @@ private:
     ISwitch PowerDefaultOnS[3];
     ISwitchVectorProperty PowerDefaultOnSP;
     
+    ISwitch AutoPWMDefaultOnS[2];
+    ISwitchVectorProperty AutoPWMDefaultOnSP;
+
     INumber OtherSettingsN[4];
     INumberVectorProperty OtherSettingsNP;
     enum

@@ -149,6 +149,9 @@ bool MICCD::initProperties()
     FilterSlotN[0].min = 1;
     FilterSlotN[0].max = numFilters;
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    addCaptureFormat(mono);
+
     IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_ON);
     IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
     IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,

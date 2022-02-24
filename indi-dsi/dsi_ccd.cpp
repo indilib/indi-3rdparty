@@ -148,6 +148,10 @@ bool DSICCD::initProperties()
     // Add Debug Control.
     addDebugControl();
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    CaptureFormat color = {"INDI_RGB", "RGB", 8, true};
+    addCaptureFormat(dsi->isColor() ? color : mono);
+
     /* Add Gain number property (gs) */
     IUFillNumber(GainN, "GAIN", "Gain", "%g", 0, 100, 1, 100);
     IUFillNumberVector(&GainNP, GainN, 1, getDeviceName(), "CCD_GAIN", "Gain", IMAGE_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);

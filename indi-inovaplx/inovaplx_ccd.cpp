@@ -114,17 +114,22 @@ bool INovaCCD::initProperties()
     // Must init parent properties first!
     INDI::CCD::initProperties();
 
+    CaptureFormat raw = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(raw);
+
     // We init the property details. This is a stanard property of the INDI Library.
     IUFillText(&iNovaInformationT[0], "INOVA_NAME", "Camera Name", "");
     IUFillText(&iNovaInformationT[1], "INOVA_SENSOR_NAME", "Sensor Name", "");
     IUFillText(&iNovaInformationT[2], "INOVA_SN", "Serial Number", "");
     IUFillText(&iNovaInformationT[3], "INOVA_ST4", "Can Guide", "");
     IUFillText(&iNovaInformationT[4], "INOVA_COLOR", "Color Sensor", "");
-    IUFillTextVector(&iNovaInformationTP, iNovaInformationT, 5, getDeviceName(), "INOVA_INFO", "iNova Info", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    IUFillTextVector(&iNovaInformationTP, iNovaInformationT, 5, getDeviceName(), "INOVA_INFO", "iNova Info", MAIN_CONTROL_TAB,
+                     IP_RO, 60, IPS_IDLE);
 
     IUFillNumber(&CameraPropertiesN[CCD_GAIN_N], "CCD_GAIN_VALUE", "Gain", "%4.0f", 0, 1023, 1, 255);
     IUFillNumber(&CameraPropertiesN[CCD_BLACKLEVEL_N], "CCD_BLACKLEVEL_VALUE", "Black Level", "%3.0f", 0, 255, 1, 0);
-    IUFillNumberVector(&CameraPropertiesNP, CameraPropertiesN, 2, getDeviceName(), "CCD_PROPERTIES", "Control", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&CameraPropertiesNP, CameraPropertiesN, 2, getDeviceName(), "CCD_PROPERTIES", "Control",
+                       MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 1000, 1, false);
@@ -239,7 +244,8 @@ float INovaCCD::CalcTimeLeft()
     struct timeval now;
     gettimeofday(&now, nullptr);
 
-    timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(ExpStart.tv_sec * 1000.0 + ExpStart.tv_usec / 1000);
+    timesince = (double)(now.tv_sec * 1000.0 + now.tv_usec / 1000) - (double)(ExpStart.tv_sec * 1000.0 + ExpStart.tv_usec /
+                1000);
     timesince = timesince / 1000;
 
     timeleft = ExposureRequest - timesince;
