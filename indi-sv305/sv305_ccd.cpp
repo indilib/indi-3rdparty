@@ -142,6 +142,13 @@ bool Sv305CCD::initProperties()
         cap |= CCD_HAS_ST4_PORT;
     }
 
+    // SV905C is a color camera and has an ST4 port
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV905C") == 0)
+    {
+        cap |= CCD_HAS_BAYER;
+        cap |= CCD_HAS_ST4_PORT;
+    }
+
     SetCCDCapability(cap);
 
     addConfigurationControl();
@@ -160,6 +167,7 @@ void Sv305CCD::ISGetProperties(const char *dev)
 //
 bool Sv305CCD::updateProperties()
 {
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=5
     // Set format first if connected.
     if (isConnected())
     {
@@ -175,6 +183,7 @@ bool Sv305CCD::updateProperties()
         }
         addCaptureFormat(format);
     }
+#endif
 
     INDI::CCD::updateProperties();
 
