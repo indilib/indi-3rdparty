@@ -699,7 +699,8 @@ bool EQMod::Handshake()
     }
     catch (EQModError &e)
     {
-        return (e.DefaultHandleException(this));
+        return false;
+        //return (e.DefaultHandleException(this));
     }
 
 #ifdef WITH_ALIGN
