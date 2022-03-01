@@ -1995,7 +1995,11 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
     if (captureTargetSP.s == IPS_OK)
     {
         IUSaveConfigSwitch(fp, &captureTargetSP);
-        // SD Card delete?
+    }
+
+    // SD Card delete?
+    if (captureTargetSP.s == IPS_OK || strstr(getDeviceName(), "Fuji"))
+    {
         IUSaveConfigSwitch(fp, &SDCardImageSP);
     }
 
