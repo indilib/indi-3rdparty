@@ -8,7 +8,7 @@ include(GNUInstallDirs)
 
 set (SV305_VERSION_MAJOR 1)
 set (SV305_VERSION_MINOR 2)
-set (SV305_VERSION_PATCH 9)
+set (SV305_VERSION_PATCH 10)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)

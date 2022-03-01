@@ -1,3 +1,9 @@
+libsv305 (1.6.10) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.6.4 :
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Thu, 24 Feb 2022 16:00:00 +0300
+
 libsv305 (1.6.9) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.5.0 :

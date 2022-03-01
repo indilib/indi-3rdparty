@@ -1,7 +1,7 @@
 SVBONY SV305 ccd driver
 ==================
 
-This package provides a CCD driver for the SVBONY SV305 camera .
+This package provides a CCD driver for the SVBONY SV305/SV905 cameras.
 
 Requirements
 ============
@@ -66,6 +66,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.2.10 : SV905C support added
 	+ 1.2.9 : binning and subframing enabled in liveview
 	+ 1.2.8 : fix broken .ser file record with SV305M Pro. Cleaned some FITS entries
 	+ 1.2.7 : fix on RAW8/RAW12 formats selection on SV305M Pro
