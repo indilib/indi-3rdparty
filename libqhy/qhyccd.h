@@ -404,6 +404,7 @@ another QHYCCD_ERROR code on other failures
 EXPORTC uint32_t STDCALL SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t trigerMode);
 //Setup triger-out mode on/off
 EXPORTC uint32_t STDCALL EnableQHYCCDTrigerOut(qhyccd_handle *handle);
+EXPORTC uint32_t STDCALL EnableQHYCCDTrigerOutA(qhyccd_handle *handle);
 //Send software triger-in signal to camera
 EXPORTC uint32_t STDCALL SendSoftTriger2QHYCCDCam(qhyccd_handle *handle);
 
@@ -997,4 +998,4 @@ EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
 EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
 EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
 EXPORTFUNC uint32_t STDCALL PCIEClearDDR(qhyccd_handle *handle);
-
+EXPORTFUNC void STDCALL  GPSInfo(uint8_t *inBuf, double &start_JD, double &end_JD, double &now_JD, bool &gps_locked,bool &max_locked, unsigned int &start_us, unsigned int &end_us, unsigned int &now_us, unsigned int &latitude, unsigned int &longitude);
