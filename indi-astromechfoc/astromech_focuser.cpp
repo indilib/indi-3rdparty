@@ -37,7 +37,7 @@
 static std::unique_ptr<astromechanics_foc> Astromechanics_foc(new astromechanics_foc());
 
 // Delay for receiving messages
-#define FOC_POSMAX_HARDWARE 9999
+#define FOC_POSMAX_HARDWARE 32767
 #define FOC_POSMIN_HARDWARE 0
 
 bool astromechanics_foc::Disconnect()
