@@ -1170,6 +1170,7 @@ bool GPhotoCCD::grabImage()
     {
         PrimaryCCD.setFrameBufferSize(0);
         ExposureComplete(&PrimaryCCD);
+        gphoto_read_exposure_fd(gphotodrv, -1);
     }
     else if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
     {

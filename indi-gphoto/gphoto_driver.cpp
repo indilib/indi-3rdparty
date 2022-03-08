@@ -1022,6 +1022,31 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
     return GP_OK;
 }
 
+static int discard_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
+{
+    int result = GP_OK;
+    strncpy(gphoto->filename, fn->name, sizeof(gphoto->filename));
+
+    if (fd < 0)
+    {
+        result = gp_file_new(&gphoto->camerafile);
+        if (result != GP_OK)
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "gp_file_new failed (%s)", gp_result_as_string(result));
+    }
+    else
+    {
+        result = gp_file_new_from_fd(&gphoto->camerafile, fd);
+        if (result != GP_OK)
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "gp_file_new_from_fd failed (%s)", gp_result_as_string(result));
+    }
+
+    gp_camera_file_get(gphoto->camera, fn->folder, fn->name, GP_FILE_TYPE_PREVIEW, gphoto->camerafile,
+                       gphoto->context);
+    gp_file_free(gphoto->camerafile);
+    gphoto->camerafile = nullptr;
+    return GP_OK;
+}
+
 bool gphoto_supports_temperature(gphoto_driver *gphoto)
 {
     return gphoto->supports_temperature;
@@ -1362,15 +1387,15 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Exposure complete.");
 
-    if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
-    {
-        gphoto->command = 0;
-        pthread_mutex_unlock(&gphoto->mutex);
-        return GP_OK;
-    }
-
     if (gphoto->command & DSLR_CMD_CAPTURE)
     {
+        if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
+        {
+            gphoto->command = 0;
+            pthread_mutex_unlock(&gphoto->mutex);
+            return GP_OK;
+        }
+
         result          = download_image(gphoto, &gphoto->camerapath, fd);
         gphoto->command = 0;
         //Set exposure back to original value
@@ -1414,7 +1439,10 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
             case GP_EVENT_FILE_ADDED:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
                 fn     = static_cast<CameraFilePath *>(data);
-                result = download_image(gphoto, fn, fd);
+                if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
+                    result = discard_image(gphoto, fn, fd);
+                else
+                    result = download_image(gphoto, fn, fd);
                 waitMS = 100;
                 downloadComplete = true;
                 break;
