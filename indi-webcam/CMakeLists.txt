@@ -44,6 +44,8 @@ if (CFITSIO_FOUND)
   include_directories(${CFITSIO_INCLUDE_DIR})
 endif (CFITSIO_FOUND)
 
+include(CMakeCommon)
+
 ########### OpenCV ###############
 set(webcam_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_webcam.cpp )
