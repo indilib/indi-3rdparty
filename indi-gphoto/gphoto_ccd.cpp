@@ -1170,8 +1170,9 @@ bool GPhotoCCD::grabImage()
     {
         PrimaryCCD.setFrameBufferSize(0);
         ExposureComplete(&PrimaryCCD);
+        gphoto_read_exposure_fd(gphotodrv, -1);
     }
-    if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
+    else if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
     {
         char filename[MAXRBUF] = "/tmp/indi_XXXXXX";
         const char *extension = "unknown";
