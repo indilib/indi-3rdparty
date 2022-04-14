@@ -1362,15 +1362,15 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Exposure complete.");
 
-    if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
-    {
-        gphoto->command = 0;
-        pthread_mutex_unlock(&gphoto->mutex);
-        return GP_OK;
-    }
-
     if (gphoto->command & DSLR_CMD_CAPTURE)
     {
+        if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
+        {
+            gphoto->command = 0;
+            pthread_mutex_unlock(&gphoto->mutex);
+            return GP_OK;
+        }
+
         result          = download_image(gphoto, &gphoto->camerapath, fd);
         gphoto->command = 0;
         //Set exposure back to original value
@@ -1414,12 +1414,11 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
             case GP_EVENT_FILE_ADDED:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
                 fn     = static_cast<CameraFilePath *>(data);
-                result = download_image(gphoto, fn, fd);
+                if (gphoto->handle_sdcard_image != IGNORE_IMAGE)
+                    download_image(gphoto, fn, fd);
                 waitMS = 100;
                 downloadComplete = true;
                 break;
-            //                pthread_mutex_unlock(&gphoto->mutex);
-            //                return result;
             case GP_EVENT_UNKNOWN:
                 //DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Unknown event.");
                 break;
@@ -1441,12 +1440,8 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
             default:
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Got unexpected message: %d", event);
         }
-        //pthread_mutex_unlock(&gphoto->mutex);
-        //usleep(500 * 1000);
-        //pthread_mutex_lock(&gphoto->mutex);
     }
-    //pthread_mutex_unlock(&gphoto->mutex);
-    //return 0;
+    return GP_OK;
 }
 
 int gphoto_abort_exposure(gphoto_driver *gphoto)

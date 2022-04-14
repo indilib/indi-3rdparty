@@ -670,8 +670,8 @@ void ToupBase::setupParams()
         rc = FP(get_Option(m_CameraHandle, CP(OPTION_RAW), &cameraDataMode));
         LOGF_DEBUG("OPTION_RAW. rc: %s Value: %d", errorCodes[rc].c_str(), cameraDataMode);
 
-        CaptureFormat raw = {"INDI_RAW", m_RAWHighDepthSupport ? "RAW 16" : "RAW 8", static_cast<uint8_t>(m_RAWHighDepthSupport ? 16 : 8)};
         CaptureFormat rgb = {"INDI_RGB", "RGB", 8};
+        CaptureFormat raw = {"INDI_RAW", m_RAWHighDepthSupport ? "RAW 16" : "RAW 8", static_cast<uint8_t>(m_RAWHighDepthSupport ? 16 : 8)};
 
         // Color RAW
         if (cameraDataMode == TC_VIDEO_COLOR_RAW)
@@ -711,8 +711,8 @@ void ToupBase::setupParams()
                 SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
         }
 
-        addCaptureFormat(raw);
         addCaptureFormat(rgb);
+        addCaptureFormat(raw);
 
         LOGF_DEBUG("Bits Per Pixel: %d Video Mode: %s", m_BitsPerPixel,
                    VideoFormatS[TC_VIDEO_COLOR_RGB].s == ISS_ON ? "RGB" : "RAW");

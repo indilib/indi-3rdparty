@@ -1,7 +1,7 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 
 Name: libplayerone
-Version:1.9.5.git
+Version:1.9.6.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -86,6 +86,8 @@ make DESTDIR=%{buildroot} install
 %license libplayerone/license.txt
 
 %changelog
+* Tue Mar 30 2022 Hiroshi Saito <hiro3110g@gmail.com>
+- update PlayerOneCamera SDK to v2.0.6
 * Tue Dec 07 2021 Hiroshi Saito <hiro3110g@gmail.com>
 - update PlayerOneCamera SDK to v2.0.5
 * Sat Aug 21 2021 Hiroshi Saito <hiro3110g@gmail.com>

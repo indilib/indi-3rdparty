@@ -1,3 +1,9 @@
+indi-full (1.9.5) bionic; urgency=medium
+
+  * Minor release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 8 Mar 2022 19:00:00 +0300
+
 indi-full (1.9.4) bionic; urgency=medium
 
   * Minor release.

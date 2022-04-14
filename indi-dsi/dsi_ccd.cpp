@@ -111,6 +111,10 @@ bool DSICCD::Connect()
         IDSetNumber(&CCDTempNP, nullptr);
     }
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    CaptureFormat color = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(dsi->isColor() ? color : mono);
+
     return true;
 }
 
@@ -147,10 +151,6 @@ bool DSICCD::initProperties()
 
     // Add Debug Control.
     addDebugControl();
-
-    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
-    CaptureFormat color = {"INDI_RGB", "RGB", 8, true};
-    addCaptureFormat(dsi->isColor() ? color : mono);
 
     /* Add Gain number property (gs) */
     IUFillNumber(GainN, "GAIN", "Gain", "%g", 0, 100, 1, 100);
