@@ -36,6 +36,9 @@ class ASIEAF : public INDI::Focuser
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
+	virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
+	// save settings
+        virtual bool saveConfigItems(FILE *fp) override;
 
     protected:
         virtual bool Connect() override;
@@ -113,6 +116,39 @@ class ASIEAF : public INDI::Focuser
             BEEL_OFF
         };
 
+	//
+	// Temperature compensation
+	static constexpr const char * TEMPC_TAB = "Temperature compensation";
+
+	// enabling switch
+	ISwitch TempCS[2];
+	ISwitchVectorProperty TempCSP;
+        enum
+        {
+            TEMPC_ON,
+            TEMPC_OFF
+        };
+	bool TempCEnabled=false;
+
+	// settings
+	INumber TempCN[4];
+        INumberVectorProperty TempCNP[4];
+	enum
+	{
+            TEMPC_STEPS,
+            TEMPC_HYSTER,
+	    TEMPC_SAMPLES,
+	    TEMPC_MEAN
+        };
+	int TempCSteps=0;
+	double TempCHyster=1;
+	int TempCSamples=5;
+	double TempCTotalTemp=0;
+	double TempCLastTemp=-274; // should never reach 0 Kelvin
+	int TempCCounter=0;
+	//
+
+	// firm version
         IText VersionInfoS[1] = {};
         ITextVectorProperty VersionInfoSP;
 
