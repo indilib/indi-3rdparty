@@ -403,6 +403,22 @@ void QHYCCD::ISGetProperties(const char *dev)
 
 bool QHYCCD::updateProperties()
 {
+    // Set format first if connected.
+    if (isConnected())
+    {
+        // N.B. AFAIK, there is no way to switch image formats.
+        CaptureFormat format;
+        if (GetCCDCapability() & CCD_HAS_BAYER)
+        {
+            format = {"INDI_RAW", "RAW", 16, true};
+        }
+        else
+        {
+            format = {"INDI_MONO", "Mono", 16, true};
+        }
+        addCaptureFormat(format);
+    }
+
     // Define parent class properties
     INDI::CCD::updateProperties();
 
@@ -978,26 +994,28 @@ bool QHYCCD::Connect()
         //if(ret != QHYCCD_ERROR && ret != QHYCCD_ERROR_NOTSUPPORT)
         if (ret != QHYCCD_ERROR)
         {
-            if (ret == BAYER_GB){
+            if (ret == BAYER_GB)
+            {
                 IUSaveText(&BayerT[2], "GBRG");
                 cap |= CCD_HAS_BAYER;
             }
-            else if (ret == BAYER_GR){
+            else if (ret == BAYER_GR)
+            {
                 IUSaveText(&BayerT[2], "GRBG");
                 cap |= CCD_HAS_BAYER;
             }
-            else if (ret == BAYER_BG){
+            else if (ret == BAYER_BG)
+            {
                 IUSaveText(&BayerT[2], "BGGR");
                 cap |= CCD_HAS_BAYER;
             }
-            else if (ret == BAYER_RG){
+            else if (ret == BAYER_RG)
+            {
                 IUSaveText(&BayerT[2], "RGGB");
                 cap |= CCD_HAS_BAYER;
             }
 
             LOGF_DEBUG("Color camera: %s", BayerT[2].text);
-
-            
         }
 
         ////////////////////////////////////////////////////////////////////

@@ -21,31 +21,39 @@
 
 
 
-const char * getFormatFileExtension(ImageFormat format) {
-    if (format==ImageFormat::JPEG) {
+const char * getFormatFileExtension(ImageFormat format)
+{
+    if (format == ImageFormat::JPEG)
+    {
         return "jpg";
     }
-    else if (format==ImageFormat::DNG) {
+    else if (format == ImageFormat::DNG)
+    {
         return "raw";
     }
-    else {
+    else
+    {
         return "pef";
     }
 }
 
-PentaxEventHandler::PentaxEventHandler(PentaxCCD *driver) {
+PentaxEventHandler::PentaxEventHandler(PentaxCCD *driver)
+{
     this->driver = driver;
 }
 
-const char * PentaxEventHandler::getDeviceName() {
+const char * PentaxEventHandler::getDeviceName()
+{
     return driver->getDeviceName();
 }
 
-void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const CameraImage>& image)
+void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice> &sender,
+                                     const std::shared_ptr<const CameraImage> &image)
 {
     INDI_UNUSED(sender);
 
-    if (driver->transferFormatS[1].s != ISS_ON) {
+    if (driver->EncodeFormatSP[1].s != ISS_ON)
+    {
         uint8_t * memptr = driver->PrimaryCCD.getFrameBuffer();
         size_t memsize = 0;
         int naxis = 2, w = 0, h = 0, bpp = 8;
@@ -53,21 +61,26 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
         //write image to file
         std::ofstream o;
         char filename[32] = "/tmp/indi_pentax_";
-        strcat(filename,image->getName().c_str());
+        strcat(filename, image->getName().c_str());
         o.open(filename, std::ofstream::out | std::ofstream::binary);
         Response response = image->getData(o);
         o.close();
-        if (response.getResult() == Result::Ok) {
-            LOGF_DEBUG("Temp Image path: %s",filename);
-        } else {
-            for (const auto& error : response.getErrors()) {
+        if (response.getResult() == Result::Ok)
+        {
+            LOGF_DEBUG("Temp Image path: %s", filename);
+        }
+        else
+        {
+            for (const auto &error : response.getErrors())
+            {
                 LOGF_ERROR("Error Code: %d (%s)", static_cast<int>(error->getCode()), error->getMessage().c_str());
             }
             return;
         }
 
         //convert it for image buffer
-        if (image->getFormat()==ImageFormat::JPEG) {
+        if (image->getFormat() == ImageFormat::JPEG)
+        {
             if (read_jpeg(filename, &memptr, &memsize, &naxis, &w, &h))
             {
                 LOG_ERROR("Exposure failed to parse jpeg.");
@@ -77,7 +90,8 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
 
             driver->bufferIsBayered = false;
         }
-        else {
+        else
+        {
             char bayer_pattern[8] = {};
 
             if (read_libraw(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
@@ -86,7 +100,8 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
                 return;
             }
 
-            LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",memsize, naxis, w, h, bpp, bayer_pattern);
+            LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)", memsize, naxis, w, h, bpp,
+                       bayer_pattern);
 
             driver->bufferIsBayered = true;
         }
@@ -94,7 +109,8 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
         driver->PrimaryCCD.setImageExtension("fits");
 
         if (driver->PrimaryCCD.getSubW() != 0 && (w > driver->PrimaryCCD.getSubW() || h > driver->PrimaryCCD.getSubH()))
-            LOGF_WARN("Camera image size (%dx%d) is different than requested size (%d,%d). Purging configuration and updating frame size to match camera size.", w, h, driver->PrimaryCCD.getSubW(), driver->PrimaryCCD.getSubH());
+            LOGF_WARN("Camera image size (%dx%d) is different than requested size (%d,%d). Purging configuration and updating frame size to match camera size.",
+                      w, h, driver->PrimaryCCD.getSubW(), driver->PrimaryCCD.getSubH());
 
         driver->PrimaryCCD.setFrame(0, 0, w, h);
         driver->PrimaryCCD.setFrameBuffer(memptr);
@@ -104,7 +120,8 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
         driver->PrimaryCCD.setBPP(bpp);
 
         //(re)move image file
-        if (driver->preserveOriginalS[1].s == ISS_ON) {
+        if (driver->preserveOriginalS[1].s == ISS_ON)
+        {
             char ts[32];
             struct tm * tp;
             time_t t = image->getDateTime();
@@ -113,26 +130,30 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
             std::string prefix = driver->getUploadFilePrefix();
             prefix = std::regex_replace(prefix, std::regex("XXX"), string(ts));
             char newname[255];
-            snprintf(newname, 255, "%s.%s",prefix.c_str(),getFormatFileExtension(image->getFormat()));
-            if (std::rename(filename, newname)) {
-                LOGF_ERROR("File system error prevented saving original image to %s.  Saved to %s instead.", newname,filename);
+            snprintf(newname, 255, "%s.%s", prefix.c_str(), getFormatFileExtension(image->getFormat()));
+            if (std::rename(filename, newname))
+            {
+                LOGF_ERROR("File system error prevented saving original image to %s.  Saved to %s instead.", newname, filename);
             }
-            else {
+            else
+            {
                 LOGF_INFO("Saved original image to %s.", newname);
             }
         }
-        else {
+        else
+        {
             std::remove(filename);
         }
     }
-    else {
+    else
+    {
         driver->PrimaryCCD.setImageExtension(getFormatFileExtension(image->getFormat()));
 
         stringstream img;
         image->getData(img);
         driver->PrimaryCCD.setFrameBufferSize(image->getSize());
         char * memptr = (char *)driver->PrimaryCCD.getFrameBuffer();
-        img.read(memptr,image->getSize());
+        img.read(memptr, image->getSize());
         driver->PrimaryCCD.setFrameBuffer((unsigned char *)memptr);
 
     }
@@ -140,7 +161,8 @@ void PentaxEventHandler::imageStored(const std::shared_ptr<const CameraDevice>& 
     LOG_INFO("Copied to frame buffer.");
 }
 
-void PentaxEventHandler::liveViewFrameUpdated(const std::shared_ptr<const CameraDevice>& sender, const std::shared_ptr<const unsigned char>& liveViewFrame, uint64_t frameSize)
+void PentaxEventHandler::liveViewFrameUpdated(const std::shared_ptr<const CameraDevice> &sender,
+        const std::shared_ptr<const unsigned char> &liveViewFrame, uint64_t frameSize)
 {
     INDI_UNUSED(sender);
     std::unique_lock<std::mutex> ccdguard(driver->ccdBufferLock);
@@ -148,16 +170,20 @@ void PentaxEventHandler::liveViewFrameUpdated(const std::shared_ptr<const Camera
     ccdguard.unlock();
 }
 
-void PentaxEventHandler::deviceDisconnected (const std::shared_ptr< const CameraDevice > &sender, DeviceInterface inf) {
+void PentaxEventHandler::deviceDisconnected (const std::shared_ptr< const CameraDevice > &sender, DeviceInterface inf)
+{
     INDI_UNUSED(sender);
     INDI_UNUSED(inf);
-    if (driver->Disconnect()) {
+    if (driver->Disconnect())
+    {
         driver->setConnected(false, IPS_IDLE);
         driver->updateProperties();
     }
 }
 
-void PentaxEventHandler::captureSettingsChanged(const std::shared_ptr<const CameraDevice>& sender, const std::vector<std::shared_ptr<const CaptureSetting>>& newSettings) {
+void PentaxEventHandler::captureSettingsChanged(const std::shared_ptr<const CameraDevice> &sender,
+        const std::vector<std::shared_ptr<const CaptureSetting>> &newSettings)
+{
     INDI_UNUSED(sender);
     INDI_UNUSED(newSettings);
     driver->getCaptureSettingsState();

@@ -230,6 +230,9 @@ bool MGenAutoguider::initProperties()
 
     INDI::CCD::initProperties();
 
+    CaptureFormat raw = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(raw);
+
     addDebugControl();
 
     {

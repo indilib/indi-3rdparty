@@ -111,6 +111,10 @@ bool DSICCD::Connect()
         IDSetNumber(&CCDTempNP, nullptr);
     }
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    CaptureFormat color = {"INDI_RAW", "RAW", 16, true};
+    addCaptureFormat(dsi->isColor() ? color : mono);
+
     return true;
 }
 

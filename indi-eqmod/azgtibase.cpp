@@ -32,10 +32,6 @@ const char * AZGTIBase::getDefaultName()
 bool AZGTIBase::initProperties()
 {
     EQMod::initProperties();
-
-    tcpConnection->setDefaultHost("192.168.4.1");
-    tcpConnection->setDefaultPort(11880);
-    tcpConnection->setConnectionType(Connection::TCP::TYPE_UDP);
     for (auto oneProperty : *getProperties())
     {
         oneProperty->setDeviceName(getDeviceName());

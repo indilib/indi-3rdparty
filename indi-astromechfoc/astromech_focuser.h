@@ -40,8 +40,19 @@ class astromechanics_foc : public INDI::Focuser
 
     private:
         virtual uint32_t GetAbsFocuserPosition();
-        virtual void SetApperture(uint32_t index);
+        virtual bool SetApperture(uint32_t index);
 
         INumberVectorProperty AppertureNP;
         INumber AppertureN[1];
+
+        bool sendCommand(const char * cmd, char * res = nullptr, int cmd_len = -1, int res_len = -1);
+        void hexDump(char * buf, const char * data, int size);
+        std::vector<std::string> split(const std::string &input, const std::string &regex);
+
+        // # is the stop char
+        static const char DRIVER_STOP_CHAR { 0x23 };
+        // Wait up to a maximum of 3 seconds for serial input
+        static constexpr const uint8_t DRIVER_TIMEOUT {3};
+        // Maximum buffer for sending/receving.
+        static constexpr const uint8_t DRIVER_LEN {64};
 };

@@ -44,26 +44,26 @@ static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static class Loader
 {
-    std::deque<std::unique_ptr<Sv305CCD>> cameras;
-public:
-    Loader()
-    {
-        // enumerate cameras
-        int cameraCount = SVBGetNumOfConnectedCameras();
-        if(cameraCount < 1)
+        std::deque<std::unique_ptr<Sv305CCD>> cameras;
+    public:
+        Loader()
         {
-            IDLog("Error, no camera found\n");
-            return;
-        }
+            // enumerate cameras
+            int cameraCount = SVBGetNumOfConnectedCameras();
+            if(cameraCount < 1)
+            {
+                IDLog("Error, no camera found\n");
+                return;
+            }
 
-        IDLog("Camera(s) found\n");
+            IDLog("Camera(s) found\n");
 
-        // create Sv305CCD object for each camera
-        for(int i = 0; i < cameraCount; i++)
-        {
-            cameras.push_back(std::unique_ptr<Sv305CCD>(new Sv305CCD(i)));
+            // create Sv305CCD object for each camera
+            for(int i = 0; i < cameraCount; i++)
+            {
+                cameras.push_back(std::unique_ptr<Sv305CCD>(new Sv305CCD(i)));
+            }
         }
-    }
 } loader;
 
 //////////////////////////////////////////////////
@@ -81,12 +81,12 @@ Sv305CCD::Sv305CCD(int numCamera)
 
     // Get camera informations
     status = SVBGetCameraInfo(&cameraInfo, num);
-    if(status!=SVB_SUCCESS)
+    if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, can't get camera's informations\n");
     }
 
-    cameraID=cameraInfo.CameraID;
+    cameraID = cameraInfo.CameraID;
 
     // Set camera name
     snprintf(this->name, 32, "%s %d", cameraInfo.FriendlyName, numCamera);
@@ -124,22 +124,29 @@ bool Sv305CCD::initProperties()
     uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305")==0)
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
     {
-        cap|= CCD_HAS_BAYER;
+        cap |= CCD_HAS_BAYER;
     }
 
     // SV305 Pro is a color camera and has an ST4 port
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO")==0)
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO") == 0)
     {
-	cap|= CCD_HAS_BAYER;
-        cap|= CCD_HAS_ST4_PORT;
+        cap |= CCD_HAS_BAYER;
+        cap |= CCD_HAS_ST4_PORT;
     }
 
     // SV305M Pro is a mono camera and has an ST4 port
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0)
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
     {
-        cap|= CCD_HAS_ST4_PORT;
+        cap |= CCD_HAS_ST4_PORT;
+    }
+
+    // SV905C is a color camera and has an ST4 port
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV905C") == 0)
+    {
+        cap |= CCD_HAS_BAYER;
+        cap |= CCD_HAS_ST4_PORT;
     }
 
     SetCCDCapability(cap);
@@ -160,6 +167,24 @@ void Sv305CCD::ISGetProperties(const char *dev)
 //
 bool Sv305CCD::updateProperties()
 {
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=5
+    // Set format first if connected.
+    if (isConnected())
+    {
+        // N.B. AFAIK, there is no way to switch image formats.
+        CaptureFormat format;
+        if (GetCCDCapability() & CCD_HAS_BAYER)
+        {
+            format = {"INDI_RAW", "RAW", 16, true};
+        }
+        else
+        {
+            format = {"INDI_MONO", "Mono", 16, true};
+        }
+        addCaptureFormat(format);
+    }
+#endif
+
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -263,139 +288,157 @@ bool Sv305CCD::Connect()
 
     // fix for SDK gain error issue
     // set exposure time
-    SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(1 * 1000000), SVB_FALSE);
+    SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(1 * 1000000), SVB_FALSE);
 
     // read controls and feed UI
-    for(int i=0; i<controlsNum; i++)
+    for(int i = 0; i < controlsNum; i++)
     {
-         // read control
-         SVB_CONTROL_CAPS caps;
-         status = SVBGetControlCaps(cameraID, i, &caps);
-         if(status != SVB_SUCCESS)
-         {
-             LOG_ERROR("Error, get camera controls caps failed\n");
-             pthread_mutex_unlock(&cameraID_mutex);
-             return false;
-         }
-         switch(caps.ControlType)
-         {
-             case SVB_EXPOSURE :
-                 // Exposure
-                 minExposure = (double)caps.MinValue / 1000000.0;
-                 maxExposure = (double)caps.MaxValue / 1000000.0;
-                 PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExposure, maxExposure, 1, true);
-                 break;
+        // read control
+        SVB_CONTROL_CAPS caps;
+        status = SVBGetControlCaps(cameraID, i, &caps);
+        if(status != SVB_SUCCESS)
+        {
+            LOG_ERROR("Error, get camera controls caps failed\n");
+            pthread_mutex_unlock(&cameraID_mutex);
+            return false;
+        }
+        switch(caps.ControlType)
+        {
+            case SVB_EXPOSURE :
+                // Exposure
+                minExposure = (double)caps.MinValue / 1000000.0;
+                maxExposure = (double)caps.MaxValue / 1000000.0;
+                PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExposure, maxExposure, 1, true);
+                break;
 
-             case SVB_GAIN :
-                 // Gain
-                 IUFillNumber(&ControlsN[CCD_GAIN_N], "GAIN", "Gain", "%.f", caps.MinValue, caps.MaxValue, 10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_GAIN_N], &ControlsN[CCD_GAIN_N], 1, getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_GAIN , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set gain failed\n");
-                 }
-                 break;
+            case SVB_GAIN :
+                // Gain
+                IUFillNumber(&ControlsN[CCD_GAIN_N], "GAIN", "Gain", "%.f", caps.MinValue, caps.MaxValue, 10, caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_GAIN_N], &ControlsN[CCD_GAIN_N], 1, getDeviceName(), "CCD_GAIN", "Gain",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_GAIN, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set gain failed\n");
+                }
+                break;
 
-             case SVB_CONTRAST :
-                 // Contrast
-                 IUFillNumber(&ControlsN[CCD_CONTRAST_N], "CONTRAST", "Contrast", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_CONTRAST_N], &ControlsN[CCD_CONTRAST_N], 1, getDeviceName(), "CCD_CONTRAST", "Contrast", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_CONTRAST , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set contrast failed\n");
-                 }
-                 break;
+            case SVB_CONTRAST :
+                // Contrast
+                IUFillNumber(&ControlsN[CCD_CONTRAST_N], "CONTRAST", "Contrast", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_CONTRAST_N], &ControlsN[CCD_CONTRAST_N], 1, getDeviceName(), "CCD_CONTRAST", "Contrast",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_CONTRAST, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set contrast failed\n");
+                }
+                break;
 
-             case SVB_SHARPNESS :
-                 // Sharpness
-                 IUFillNumber(&ControlsN[CCD_SHARPNESS_N], "SHARPNESS", "Sharpness", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_SHARPNESS_N], &ControlsN[CCD_SHARPNESS_N], 1, getDeviceName(), "CCD_SHARPNESS", "Sharpness", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_SHARPNESS , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set sharpness failed\n");
-                 }
-                 break;
+            case SVB_SHARPNESS :
+                // Sharpness
+                IUFillNumber(&ControlsN[CCD_SHARPNESS_N], "SHARPNESS", "Sharpness", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_SHARPNESS_N], &ControlsN[CCD_SHARPNESS_N], 1, getDeviceName(), "CCD_SHARPNESS",
+                                   "Sharpness", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_SHARPNESS, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set sharpness failed\n");
+                }
+                break;
 
-             case SVB_SATURATION :
-                 // Saturation
-                 IUFillNumber(&ControlsN[CCD_SATURATION_N], "SATURATION", "Saturation", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_SATURATION_N], &ControlsN[CCD_SATURATION_N], 1, getDeviceName(), "CCD_SATURATION", "Saturation", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_SATURATION , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set saturation failed\n");
-                 }
-                 break;
+            case SVB_SATURATION :
+                // Saturation
+                IUFillNumber(&ControlsN[CCD_SATURATION_N], "SATURATION", "Saturation", "%.f", caps.MinValue, caps.MaxValue,
+                             caps.MaxValue / 10, caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_SATURATION_N], &ControlsN[CCD_SATURATION_N], 1, getDeviceName(), "CCD_SATURATION",
+                                   "Saturation", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_SATURATION, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set saturation failed\n");
+                }
+                break;
 
-             case SVB_WB_R :
-                 // Red White Balance
-                 IUFillNumber(&ControlsN[CCD_WBR_N], "WBR", "Red White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_WBR_N], &ControlsN[CCD_WBR_N], 1, getDeviceName(), "CCD_WBR", "Red White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_WB_R , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set red WB failed\n");
-                 }
-                 break;
+            case SVB_WB_R :
+                // Red White Balance
+                IUFillNumber(&ControlsN[CCD_WBR_N], "WBR", "Red White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_WBR_N], &ControlsN[CCD_WBR_N], 1, getDeviceName(), "CCD_WBR", "Red White Balance",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_WB_R, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set red WB failed\n");
+                }
+                break;
 
-             case SVB_WB_G :
-                 // Green White Balance
-                 IUFillNumber(&ControlsN[CCD_WBG_N], "WBG", "Green White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_WBG_N], &ControlsN[CCD_WBG_N], 1, getDeviceName(), "CCD_WBG", "Green White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_WB_G , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set green WB failed\n");
-                 }
-                 break;
+            case SVB_WB_G :
+                // Green White Balance
+                IUFillNumber(&ControlsN[CCD_WBG_N], "WBG", "Green White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_WBG_N], &ControlsN[CCD_WBG_N], 1, getDeviceName(), "CCD_WBG", "Green White Balance",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_WB_G, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set green WB failed\n");
+                }
+                break;
 
-             case SVB_WB_B :
-                 // Blue White Balance
-                 IUFillNumber(&ControlsN[CCD_WBB_N], "WBB", "Blue White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_WBB_N], &ControlsN[CCD_WBB_N], 1, getDeviceName(), "CCD_WBB", "Blue White Balance", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_WB_B , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set blue WB failed\n");
-                 }
-                 break;
+            case SVB_WB_B :
+                // Blue White Balance
+                IUFillNumber(&ControlsN[CCD_WBB_N], "WBB", "Blue White Balance", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_WBB_N], &ControlsN[CCD_WBB_N], 1, getDeviceName(), "CCD_WBB", "Blue White Balance",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_WB_B, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set blue WB failed\n");
+                }
+                break;
 
-             case SVB_GAMMA :
-                 // Gamma
-                 IUFillNumber(&ControlsN[CCD_GAMMA_N], "GAMMA", "Gamma", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_GAMMA_N], &ControlsN[CCD_GAMMA_N], 1, getDeviceName(), "CCD_GAMMA", "Gamma", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_GAMMA , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set gamma failed\n");
-                 }
-                 break;
+            case SVB_GAMMA :
+                // Gamma
+                IUFillNumber(&ControlsN[CCD_GAMMA_N], "GAMMA", "Gamma", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_GAMMA_N], &ControlsN[CCD_GAMMA_N], 1, getDeviceName(), "CCD_GAMMA", "Gamma",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_GAMMA, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set gamma failed\n");
+                }
+                break;
 
-             case SVB_BLACK_LEVEL :
-                 // Dark Offset
-                 IUFillNumber(&ControlsN[CCD_DOFFSET_N], "DOFFSET", "Dark Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue/10, caps.DefaultValue);
-                 IUFillNumberVector(&ControlsNP[CCD_DOFFSET_N], &ControlsN[CCD_DOFFSET_N], 1, getDeviceName(), "CCD_DOFFSET", "Dark Offset", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-                 status = SVBSetControlValue(cameraID, SVB_BLACK_LEVEL , caps.DefaultValue, SVB_FALSE);
-                 if(status != SVB_SUCCESS)
-                 {
-                     LOG_ERROR("Error, camera set dark offset failed\n");
-                 }
+            case SVB_BLACK_LEVEL :
+                // Dark Offset
+                IUFillNumber(&ControlsN[CCD_DOFFSET_N], "DOFFSET", "Dark Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                             caps.DefaultValue);
+                IUFillNumberVector(&ControlsNP[CCD_DOFFSET_N], &ControlsN[CCD_DOFFSET_N], 1, getDeviceName(), "CCD_DOFFSET", "Dark Offset",
+                                   MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+                status = SVBSetControlValue(cameraID, SVB_BLACK_LEVEL, caps.DefaultValue, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOG_ERROR("Error, camera set dark offset failed\n");
+                }
 
-             default :
-                 break;
-         }
+            default :
+                break;
+        }
     }
 
     // set frame speed
     IUFillSwitch(&SpeedS[SPEED_SLOW], "SPEED_SLOW", "Slow", ISS_OFF);
     IUFillSwitch(&SpeedS[SPEED_NORMAL], "SPEED_NORMAL", "Normal", ISS_ON);
     IUFillSwitch(&SpeedS[SPEED_FAST], "SPEED_FAST", "Fast", ISS_OFF);
-    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "FRAME_RATE", "Frame rate", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    frameSpeed=SPEED_NORMAL;
-    status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , SPEED_NORMAL, SVB_FALSE);
+    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "FRAME_RATE", "Frame rate", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
+                       60, IPS_IDLE);
+    frameSpeed = SPEED_NORMAL;
+    status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE, SPEED_NORMAL, SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set frame speed failed\n");
@@ -406,11 +449,15 @@ bool Sv305CCD::Connect()
     // set frame format and feed UI
     IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
     IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
-    IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
     // NOTE : SV305M PRO only supports Y8 and Y16 frame format
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+    {
         status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_Y16]);
-    } else {
+    }
+    else
+    {
         IUSaveText(&BayerT[0], "0");
         IUSaveText(&BayerT[1], "0");
         IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
@@ -422,8 +469,8 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    bitDepth=16;
-    frameFormat=FORMAT_RAW12;
+    bitDepth = 16;
+    frameFormat = FORMAT_RAW12;
     LOG_INFO("Camera set frame format mode\n");
 
     // set bit stretching and feed UI
@@ -432,8 +479,9 @@ bool Sv305CCD::Connect()
     IUFillSwitch(&StretchS[STRETCH_X4], "STRETCH_X4", "x4", ISS_OFF);
     IUFillSwitch(&StretchS[STRETCH_X8], "STRETCH_X8", "x8", ISS_OFF);
     IUFillSwitch(&StretchS[STRETCH_X16], "STRETCH_X16", "x16", ISS_OFF);
-    IUFillSwitchVector(&StretchSP, StretchS, 5, getDeviceName(), "STRETCH_BITS", "12 bits 16 bits stretch", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    bitStretch=0;
+    IUFillSwitchVector(&StretchSP, StretchS, 5, getDeviceName(), "STRETCH_BITS", "12 bits 16 bits stretch", MAIN_CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    bitStretch = 0;
 
     // set camera ROI and BIN
     binning = false;
@@ -445,8 +493,8 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    x_offset=0;
-    y_offset=0;
+    x_offset = 0;
+    y_offset = 0;
     LOG_INFO("Camera set ROI\n");
 
     // set camera soft trigger mode
@@ -536,20 +584,22 @@ bool Sv305CCD::StartExposure(float duration)
     // checks for time limits
     if (duration < minExposure)
     {
-        LOGF_WARN("Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration, minExposure);
+        LOGF_WARN("Exposure shorter than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
+                  minExposure);
         duration = minExposure;
     }
 
     if (duration > maxExposure)
     {
-        LOGF_WARN("Exposure greater than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration, maxExposure);
+        LOGF_WARN("Exposure greater than minimum duration %g s requested. \n Setting exposure time to %g s.\n", duration,
+                  maxExposure);
         duration = maxExposure;
     }
 
     pthread_mutex_lock(&cameraID_mutex);
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(duration * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(duration * 1000000), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -628,9 +678,12 @@ bool Sv305CCD::StartStreaming()
     // stream init
     // NOTE : SV305M is MONO
     // if binning, no more bayer
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0||binning) {
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0 || binning)
+    {
         Streamer->setPixelFormat(INDI_MONO, bitDepth);
-    } else {
+    }
+    else
+    {
         Streamer->setPixelFormat(INDI_BAYER_GRBG, bitDepth);
     }
     Streamer->setSize(PrimaryCCD.getSubW() / PrimaryCCD.getBinX(), PrimaryCCD.getSubH() / PrimaryCCD.getBinY());
@@ -650,7 +703,7 @@ bool Sv305CCD::StartStreaming()
     }
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE , (double)(ExposureRequest * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(ExposureRequest * 1000000), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -801,12 +854,12 @@ void* Sv305CCD::streamVideo()
         finish = std::chrono::high_resolution_clock::now();
 
         // stretching 12bits depth to 16bits depth
-        if(bitDepth==16 && (bitStretch != 0))
+        if(bitDepth == 16 && (bitStretch != 0))
         {
-            u_int16_t* tmp=(u_int16_t*)imageBuffer;
-            for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
+            u_int16_t* tmp = (u_int16_t*)imageBuffer;
+            for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
             {
-                tmp[i]<<=bitStretch;
+                tmp[i] <<= bitStretch;
             }
         }
 
@@ -834,10 +887,10 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
 
     if((x + w) > cameraProperty.MaxWidth
-        || (y + h) > cameraProperty.MaxHeight
-        || w%8 !=0
-        || h%2 != 0
-	)
+            || (y + h) > cameraProperty.MaxHeight
+            || w % 8 != 0
+            || h % 2 != 0
+      )
     {
         LOG_ERROR("Error : Subframe out of range");
         return false;
@@ -875,8 +928,8 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 
     pthread_mutex_unlock(&cameraID_mutex);
 
-    x_offset=x;
-    y_offset=y;
+    x_offset = x;
+    y_offset = y;
 
     return INDI::CCD::UpdateCCDFrame(x, y, w, h);
 }
@@ -954,7 +1007,7 @@ void Sv305CCD::TimerHit()
                         pthread_mutex_unlock(&cameraID_mutex);
                         usleep(100000);
                         pthread_mutex_lock(&cameraID_mutex);
-			status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
+                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
                         LOG_DEBUG("Wait...");
                     }
 
@@ -965,12 +1018,12 @@ void Sv305CCD::TimerHit()
                     InExposure = false;
 
                     // stretching 12bits depth to 16bits depth
-                    if(bitDepth==16 && (bitStretch != 0))
+                    if(bitDepth == 16 && (bitStretch != 0))
                     {
-                        u_int16_t* tmp=(u_int16_t*)imageBuffer;
-                        for(int i=0; i<PrimaryCCD.getFrameBufferSize()/2; i++)
+                        u_int16_t* tmp = (u_int16_t*)imageBuffer;
+                        for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
                         {
-                                tmp[i]<<=bitStretch;
+                            tmp[i] <<= bitStretch;
                         }
                     }
 
@@ -1009,7 +1062,7 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
     pthread_mutex_unlock(&cameraID_mutex);
 
     // set control
-    status = SVBSetControlValue(cameraID, SVB_Control , ControlsN[ControlType].value, SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_Control, ControlsN[ControlType].value, SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
@@ -1093,7 +1146,7 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
 bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     // Make sure the call is for our device
-    if(!strcmp(dev,getDeviceName()))
+    if(!strcmp(dev, getDeviceName()))
     {
         // Check if the call for BPP switch
         if (!strcmp(name, FormatSP.name))
@@ -1117,9 +1170,10 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             pthread_mutex_lock(&cameraID_mutex);
 
             // adjust frame format for SV305M
-            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
+            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+            {
                 // offset format mapper to Y16 and Y8 modes
-                tmpFormat+=FORMAT_Y16;
+                tmpFormat += FORMAT_Y16;
             }
 
             // set new format
@@ -1129,8 +1183,9 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 LOG_ERROR("Error, camera set frame format failed\n");
             }
             // set frame format back for SV305M
-            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")==0) {
-                tmpFormat-=FORMAT_Y16;
+            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+            {
+                tmpFormat -= FORMAT_Y16;
             }
             LOGF_INFO("Frame format is now %s", FormatS[tmpFormat].label);
 
@@ -1180,7 +1235,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             pthread_mutex_lock(&cameraID_mutex);
 
             // set new frame rate
-            status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE , tmpSpeed, SVB_FALSE);
+            status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE, tmpSpeed, SVB_FALSE);
             if(status != SVB_SUCCESS)
             {
                 LOG_ERROR("Error, camera set frame rate failed\n");
@@ -1271,7 +1326,8 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
 
     // NOTE : SV305M PRO is mono
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO")!=0) {
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") != 0)
+    {
         fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
         fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
         fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);

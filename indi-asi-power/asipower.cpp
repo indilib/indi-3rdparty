@@ -44,6 +44,8 @@ IndiAsiPower::IndiAsiPower()
     dslr_counter = 0;
     timer.callOnTimeout([this](){IndiTimerCallback();});
     timer.setSingleShot(true);
+
+    have_sensor = false;
 }
 IndiAsiPower::~IndiAsiPower()
 {
@@ -74,12 +76,29 @@ bool IndiAsiPower::Connect()
         set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
     }
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
+
+    have_sensor = true;
+    for(int i=0; i<n_i2c; i++)
+    {
+        i2c_handle[i] = i2c_open(m_piId, 10, i2c_addr[i], 0);
+        have_sensor &= (i2c_handle[i] >=  0);
+    }
+    if(have_sensor) SetTimer(0);
+
     return true;
 }
 bool IndiAsiPower::Disconnect()
 {
     DslrChange(false,true);       // Abort exposures
     // Close GPIO
+    for(int i=0; i<n_i2c; i++)
+    {
+        if(i2c_handle[i] >= 0)
+        {
+            i2c_close(m_piId, i2c_handle[i]);
+        }
+    }
+
     pigpio_stop(m_piId);
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power disconnected successfully.");
     return true;
@@ -123,6 +142,14 @@ bool IndiAsiPower::initProperties()
     IUFillNumber(&DslrExpN[1], "DSLR_COUNT", "Count", "%0.0f", 1, 500, 1, 1);
     IUFillNumber(&DslrExpN[2], "DSLR_DELAY", "Delay (s)", "%1.1f", 0, 60, 1, 0);
     IUFillNumberVector(&DslrExpNP, DslrExpN, 3, getDeviceName(), "DSLR_EXP", "Exposure", "DSLR", IP_RW, 0, IPS_IDLE);
+
+    for(int i=0; i<n_sensor; i++)
+    {
+        IUFillNumber(&PowerSensorN[i][0], ("OUT" + std::to_string(i) + "_V").c_str(), "Voltage (V)", "%1.4f", 0, 100, 1, 0);
+        IUFillNumber(&PowerSensorN[i][1], ("OUT" + std::to_string(i) + "_A").c_str(), "Current (A)", "%1.4f", 0, 100, 1, 0);
+
+        IUFillNumberVector(&PowerSensorNP[i], PowerSensorN[i], 2, getDeviceName(), ("OUT_" + std::to_string(i)).c_str(), port_name[i].c_str(), "Power Sensor", IP_RO, 0, IPS_IDLE);
+    }
     loadConfig();
 
     return true;
@@ -143,6 +170,14 @@ bool IndiAsiPower::updateProperties()
         }
         defineProperty(&DslrSP);
         defineProperty(&DslrExpNP);
+
+        if(have_sensor)
+        {
+            for(int i=0; i<n_sensor; i++)
+            {
+                defineProperty(&PowerSensorNP[i]);
+            }
+        }
     }
     else
     {
@@ -155,6 +190,14 @@ bool IndiAsiPower::updateProperties()
         }
         deleteProperty(DslrSP.name);
         deleteProperty(DslrExpNP.name);
+
+        if(have_sensor)
+        {
+            for(int i=0; i<n_sensor; i++)
+            {
+                deleteProperty(PowerSensorNP[i].name);
+            }
+        }
     }
     return true;
 }
@@ -461,5 +504,40 @@ void IndiAsiPower::IndiTimerCallback()
 {
     DEBUG(INDI::Logger::DBG_DEBUG, "DSLR callback: Timer ended");
     DslrChange();  // Handle end of timer
+    return;
+}
+
+void IndiAsiPower::ReadSensor()
+{
+    if(!have_sensor) return;
+
+    for(int i=0; i<(n_sensor*n_va); i++) {
+        int r = i2c_write_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x1, p_sensors[i].addr);
+        if(r < 0)
+        {
+                DEBUGF(INDI::Logger::DBG_ERROR, "power sensor %d access write error", i);
+                PowerSensorNP[p_sensors[i].sensor_id].s = IPS_ALERT;
+                PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = -1;
+                continue;
+        }
+        nanosleep(&sensor_read_wait, NULL);
+        uint16_t d = i2c_read_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x0);
+        d = d << 4 | d >> 12;
+        PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = (double)d * p_sensors[i].adjust;
+        PowerSensorNP[p_sensors[i].sensor_id].s = IPS_OK;
+    }
+
+    for(int i=0; i<(n_sensor); i++) {
+        IDSetNumber(&PowerSensorNP[i], nullptr);
+    }
+
+    return;
+}
+
+void IndiAsiPower::TimerHit()
+{
+    if(!isConnected()) return;
+    ReadSensor();
+    SetTimer(sensor_read_interval);
     return;
 }

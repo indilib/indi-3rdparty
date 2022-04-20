@@ -1,3 +1,9 @@
+indi-sv305 (1.2.10) bionic; urgency=low
+
+  * SV905C support added
+
+ -- Blaise-Florentin Collin <thx8411@yahoo.fr>  Thu, 24 Feb 2022 16:00:00 +0300
+
 indi-sv305 (1.2.9) bionic; urgency=low
 
   * binning and subframing enabled in liveview

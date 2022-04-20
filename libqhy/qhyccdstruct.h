@@ -202,8 +202,8 @@ enum CONTROL_ID
 
 /*37*/  CAM_IGNOREOVERSCAN_INTERFACE,            //!< ignore overscan area
 
-/*38*/  QHYCCD_3A_AUTOBALANCE,
-/*39*/  QHYCCD_3A_AUTOEXPOSURE,
+/*38*/  QHYCCD_3A_AUTOBALANCE,					 //!< auto white balance
+/*39*/  QHYCCD_3A_AUTOEXPOSURE,					 //!< auto exposure
 /*40*/  QHYCCD_3A_AUTOFOCUS,
 /*41*/  CONTROL_AMPV,                            //!< ccd or cmos ampv
 /*42*/  CONTROL_VCAM,                            //!< Virtual Camera on off
@@ -245,6 +245,8 @@ enum CONTROL_ID
 
 /*75*/  CAM_BIN6X6MODE,         //!< check if camera has bin4x4 mode
 /*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin4x4 mode
+/*77*/  CAM_GlobalSensorGPSLED,         ///Show GPS LED tab on sharpCap
+/*78*/  CONTROL_ImgProc,   /// Process image
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
@@ -265,6 +267,16 @@ enum CodecID
 {
   NONE_CODEC,
   H261_CODEC
+};
+
+enum ImgProc
+{
+  NOPROC = 0,
+  ROTATION180,
+  ROTATION90L,
+  ROTATION90R,
+  MIRRORH,
+  MIRRORV
 };
 
 

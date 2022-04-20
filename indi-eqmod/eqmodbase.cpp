@@ -293,8 +293,11 @@ bool EQMod::initProperties()
 
     // Force the alignment system to always be on
     getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
-
 #endif
+
+    tcpConnection->setDefaultHost("192.168.4.1");
+    tcpConnection->setDefaultPort(11880);
+    tcpConnection->setConnectionType(Connection::TCP::TYPE_UDP);
 
     addAuxControls();
     return true;
@@ -699,7 +702,8 @@ bool EQMod::Handshake()
     }
     catch (EQModError &e)
     {
-        return (e.DefaultHandleException(this));
+        return false;
+        //return (e.DefaultHandleException(this));
     }
 
 #ifdef WITH_ALIGN

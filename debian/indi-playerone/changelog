@@ -1,3 +1,9 @@
+indi-playerone (0.5) bionic; urgency=low
+
+  * Update libplayerone
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 30 Mar 2022 12:00:00 +0900
+
 indi-playerone (0.4) bionic; urgency=low
 
   * Update libplayerone

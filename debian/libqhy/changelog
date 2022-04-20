@@ -1,3 +1,9 @@
+libqhy (22.3.3) focal; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 3 Mar 2022 14:00:00 +0300
+
 libqhy (22.1.2) focal; urgency=medium
 
   * Upstream release.

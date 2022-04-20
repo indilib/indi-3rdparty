@@ -64,6 +64,9 @@ bool FLICCD::initProperties()
     // Init parent properties first
     INDI::CCD::initProperties();
 
+    CaptureFormat mono = {"INDI_MONO", "Mono", 16, true};
+    addCaptureFormat(mono);
+
     IUFillSwitch(&PortS[0], "USB", "USB", ISS_ON);
     IUFillSwitch(&PortS[1], "SERIAL", "Serial", ISS_OFF);
     IUFillSwitch(&PortS[2], "PARALLEL", "Parallel", ISS_OFF);

@@ -34,56 +34,64 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ASIEAF>> focusers;
-public:
-    Loader()
-    {
-        int iAvailableFocusersCount = EAFGetNum();
-
-        if (iAvailableFocusersCount <= 0)
+        std::deque<std::unique_ptr<ASIEAF>> focusers;
+    public:
+        Loader()
         {
-            IDLog("No ASI EAF detected.");
-            return;
+            int iAvailableFocusersCount = EAFGetNum();
+
+            if (iAvailableFocusersCount <= 0)
+            {
+                IDLog("No ASI EAF detected.");
+                return;
+            }
+
+            int iAvailableFocusersCount_ok = 0;
+            for (int i = 0; i < iAvailableFocusersCount; i++)
+            {
+                int id;
+                EAF_ERROR_CODE result = EAFGetID(i, &id);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
+                    continue;
+                }
+
+                // Open device
+                result = EAFOpen(id);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
+                    continue;
+                }
+
+                EAF_INFO info;
+                result = EAFGetProperty(id, &info);
+                if (result != EAF_SUCCESS)
+                {
+                    IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
+                    continue;
+                }
+                EAFClose(id);
+
+                std::string name = "ASI EAF";
+
+                // If we only have a single device connected
+                // then favor the INDIDEV driver label over the auto-generated name above
+                if (iAvailableFocusersCount == 1)
+                {
+                    char *envDev = getenv("INDIDEV");
+                    if (envDev && envDev[0])
+                        name = envDev;
+                }
+                else
+                    name += " " + std::to_string(i);
+
+                focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
+                iAvailableFocusersCount_ok++;
+            }
+            IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
         }
-
-        int iAvailableFocusersCount_ok = 0;
-        for (int i = 0; i < iAvailableFocusersCount; i++)
-        {
-            int id;
-            EAF_ERROR_CODE result = EAFGetID(i, &id);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
-                continue;
-            }
-
-            // Open device
-            result = EAFOpen(id);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
-                continue;
-            }
-
-            EAF_INFO info;
-            result = EAFGetProperty(id, &info);
-            if (result != EAF_SUCCESS)
-            {
-                IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
-                continue;
-            }
-            EAFClose(id);
-
-            std::string name = "ASI EAF";
-
-            if (iAvailableFocusersCount > 1)
-                name += " " + std::to_string(id);
-
-            focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
-            iAvailableFocusersCount_ok++;
-        }
-        IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
-    }
 } loader;
 
 ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
@@ -124,6 +132,29 @@ bool ASIEAF::initProperties()
     IUFillText(&VersionInfoS[0], "VERSION_FIRMWARE", "Firmware", "Unknown");
     IUFillTextVector(&VersionInfoSP, VersionInfoS, 1, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
+    //
+    // Temperature compensation
+    //
+    // Switch : enable or disable temperature compensation
+    IUFillSwitch(&TempCS[TEMPC_ON], "ON", "On", ISS_OFF);
+    IUFillSwitch(&TempCS[TEMPC_OFF], "OFF", "Off", ISS_ON);
+    IUFillSwitchVector(&TempCSP, TempCS, 2, getDeviceName(), "TEMPC_SWITCH", "Temperature Compensation", TEMPC_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+    // Numbers :
+    //
+    // STEPS : number of steps to move (inward ou outward) per C degree variation (usually negative)
+    // HYSTERESIS : minimal temperature variation before triggering moves
+    // SAMPLES : for better and consistents readings, sum up the temperature samples
+    IUFillNumber(&TempCN[TEMPC_STEPS], "STEPS", "Steps per Celsius", "%.f", -200, 200, 1, 0);
+    IUFillNumber(&TempCN[TEMPC_HYSTER], "HYSTERESIS", "Delta in Celsius", "%.1f", 0, 10, 0.1, 1.0);
+    IUFillNumber(&TempCN[TEMPC_SAMPLES], "SAMPLES", "Number of samples", "%.f", 1, 120, 1, 5);
+    IUFillNumber(&TempCN[TEMPC_MEAN], "MEAN", "Celsius", "%.2f", -274, 100, 0.1, 0);
+    IUFillNumberVector(&TempCNP[TEMPC_STEPS], &TempCN[TEMPC_STEPS], 1, getDeviceName(), "TEMPC_STEPSDEG", "Steps", TEMPC_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&TempCNP[TEMPC_HYSTER], &TempCN[TEMPC_HYSTER], 1, getDeviceName(), "TEMPC_HYSTERESIS", "Hysteresis", TEMPC_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&TempCNP[TEMPC_SAMPLES], &TempCN[TEMPC_SAMPLES], 1, getDeviceName(), "TEMPC_SAMPLES", "Samples", TEMPC_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&TempCNP[TEMPC_MEAN], &TempCN[TEMPC_MEAN], 1, getDeviceName(), "TEMPC_MEAN", "Mean temperature", TEMPC_TAB, IP_RO, 0, IPS_IDLE);
+    //
+
     FocusBacklashN[0].min = 0;
     FocusBacklashN[0].max = 9999;
     FocusBacklashN[0].step = 100;
@@ -163,6 +194,7 @@ bool ASIEAF::updateProperties()
         }
 
         defineProperty(&BeepSP);
+
         //        defineProperty(&FocuserBacklashSP);
         //        defineProperty(&BacklashNP);
 
@@ -172,6 +204,15 @@ bool ASIEAF::updateProperties()
         snprintf(firmware, sizeof(firmware), "%d.%d.%d", major, minor, build);
         IUSaveText(&VersionInfoS[0], firmware);
         defineProperty(&VersionInfoSP);
+
+	//
+	// Temperature compensation
+	defineProperty(&TempCSP);
+	defineProperty(&TempCNP[TEMPC_STEPS]);
+	defineProperty(&TempCNP[TEMPC_HYSTER]);
+	defineProperty(&TempCNP[TEMPC_SAMPLES]);
+	defineProperty(&TempCNP[TEMPC_MEAN]);
+	//
 
         GetFocusParams();
 
@@ -185,8 +226,18 @@ bool ASIEAF::updateProperties()
             deleteProperty(TemperatureNP.name);
         deleteProperty(BeepSP.name);
         deleteProperty(VersionInfoSP.name);
+
         //        deleteProperty(FocuserBacklashSP.name);
         //        deleteProperty(BacklashNP.name);
+
+	//
+	// Temperature compensation
+	deleteProperty(TempCSP.name);
+	deleteProperty(TempCNP[TEMPC_STEPS].name);
+	deleteProperty(TempCNP[TEMPC_HYSTER].name);
+	deleteProperty(TempCNP[TEMPC_SAMPLES].name);
+	deleteProperty(TempCNP[TEMPC_MEAN].name);
+	//
     }
 
     return true;
@@ -400,6 +451,7 @@ bool ASIEAF::ISNewSwitch(const char * dev, const char * name, ISState * states, 
             IDSetSwitch(&BeepSP, nullptr);
             return true;
         }
+
         // Backlash
         //        else if (!strcmp(name, FocuserBacklashSP.name))
         //        {
@@ -415,14 +467,36 @@ bool ASIEAF::ISNewSwitch(const char * dev, const char * name, ISState * states, 
         //            return true;
         //        }
 
+	//
+	// Temperature compensation
+	if (!strcmp(name, TempCSP.name))
+        {
+		IUUpdateSwitch(&TempCSP, states, names, n);
+		if (!strcmp(TempCS[TEMPC_ON].name, IUFindOnSwitchName(states, names, n)))
+		{
+			TempCEnabled=true;
+			LOG_INFO("Temperature compensation enabled");
+		} else {
+			TempCEnabled=false;
+			// reset temp control
+			TempCTotalTemp=0;
+			TempCCounter=0;
+			LOG_INFO("Temperature compensation disabled");
+		}
+                TempCSP.s = IPS_OK;
+		IDSetSwitch(&TempCSP, nullptr);
+	}
+	//
+
     }
     return INDI::Focuser::ISNewSwitch(dev, name, states, names, n);
 }
 
-//bool ASIEAF::ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n)
-//{
-//    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
-//    {
+bool ASIEAF::ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+
 //        if (strcmp(name, BacklashNP.name) == 0)
 //        {
 //            IUUpdateNumber(&BacklashNP, values, names, n);
@@ -432,10 +506,45 @@ bool ASIEAF::ISNewSwitch(const char * dev, const char * name, ISState * states, 
 //            IDSetNumber(&BacklashNP, nullptr);
 //            return true;
 //        }
-//    }
 
-//    return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
-//}
+	//
+	// Temperature compensastion
+	if (strcmp(name, TempCNP[TEMPC_STEPS].name) == 0)
+	{
+		IUUpdateNumber(&TempCNP[TEMPC_STEPS], values, names, n);
+		TempCSteps=TempCN[TEMPC_STEPS].value;
+		TempCNP[TEMPC_STEPS].s = IPS_OK;
+                IDSetNumber(&TempCNP[TEMPC_STEPS], nullptr);
+		LOGF_INFO("Step/C set to : %d",TempCSteps);
+		return true;
+	}
+	if (strcmp(name, TempCNP[TEMPC_HYSTER].name) == 0)
+        {
+		IUUpdateNumber(&TempCNP[TEMPC_HYSTER], values, names, n);
+                TempCHyster=TempCN[TEMPC_HYSTER].value;
+		TempCNP[TEMPC_HYSTER].s = IPS_OK;
+                IDSetNumber(&TempCNP[TEMPC_HYSTER], nullptr);
+		LOGF_INFO("Hysteresis set to : %f",TempCHyster);
+		return true;
+        }
+	if (strcmp(name, TempCNP[TEMPC_SAMPLES].name) == 0)
+        {
+		IUUpdateNumber(&TempCNP[TEMPC_SAMPLES], values, names, n);
+                TempCSamples=TempCN[TEMPC_SAMPLES].value;
+		TempCNP[TEMPC_SAMPLES].s = IPS_OK;
+                IDSetNumber(&TempCNP[TEMPC_SAMPLES], nullptr);
+		// reset
+		TempCTotalTemp=0;
+		TempCCounter=0;
+		TempCLastTemp=-274; // zero Kelvin
+                LOGF_INFO("Samples set to : %d",TempCSamples);
+		return true;
+        }
+	//
+
+    }
+    return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
+}
 
 void ASIEAF::GetFocusParams()
 {
@@ -526,6 +635,44 @@ void ASIEAF::TimerHit()
         }
     }
 
+    //
+    // Temperature compensation
+    if(TempCEnabled) {
+        // stack the samples values
+	if(TempCCounter<TempCSamples) {
+	    TempCCounter++;
+	    TempCTotalTemp+=TemperatureN[0].value;
+	} else {
+            // get the new mean temp value
+	    double meanTemp=TempCTotalTemp/(double)TempCSamples;
+	    // and publish
+	    TempCN[TEMPC_MEAN].value=meanTemp;
+            TempCNP[TEMPC_MEAN].s = IPS_OK;
+            IDSetNumber(&TempCNP[TEMPC_MEAN], nullptr);
+
+	    // wait for 2 measures (last and current)
+	    if(TempCLastTemp==-274.0 /* zero Kelvin : no first value */) {
+		TempCLastTemp=meanTemp;
+            } else {
+            	// if temp delta is over hysteris value
+            	if(abs(meanTemp-TempCLastTemp)>TempCHyster) {
+		    // adjust position
+                    int steps=(int)((meanTemp-TempCLastTemp)*(double)TempCSteps);
+		    LOGF_INFO("Last Temp. : %.2f New Temp. : %.2f Delta : %.2f, Moving %d steps", TempCLastTemp, meanTemp, meanTemp-TempCLastTemp, steps);
+		    FocusDirection dir= steps<0 ? FOCUS_INWARD : FOCUS_OUTWARD ;
+		    MoveRelFocuser(dir,abs(steps));
+		    // store last measure
+		    TempCLastTemp=meanTemp;
+	        }
+            }
+
+	    // reset
+            TempCTotalTemp=0;
+            TempCCounter=0;
+	}
+    }
+    //
+
     SetTimer(getCurrentPollingPeriod());
 }
 
@@ -539,3 +686,22 @@ bool ASIEAF::AbortFocuser()
     }
     return true;
 }
+
+//
+// Temperature compensation
+bool ASIEAF::saveConfigItems(FILE * fp)
+{
+    // Save Temperature compensation Config
+    INDI::Focuser::saveConfigItems(fp);
+
+    // numbers
+    IUSaveConfigNumber(fp, &TempCNP[TEMPC_STEPS]);
+    IUSaveConfigNumber(fp, &TempCNP[TEMPC_HYSTER]);
+    IUSaveConfigNumber(fp, &TempCNP[TEMPC_SAMPLES]);
+
+    // switch
+    IUSaveConfigSwitch(fp, &TempCSP);
+
+    return true;
+}
+//
