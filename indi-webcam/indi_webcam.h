@@ -146,6 +146,9 @@ private:
     //The timeout for how long of a wait time constitutes a buffered frame vs a new frame
     std::string bufferTimeout;
 
+    //The pixel size for the camera
+    double pixelSize = 5.0;
+
     //Related to Options in the Control Panel
     IText InputOptionsT[5] {};
     ITextVectorProperty InputOptionsTP;
@@ -171,6 +174,8 @@ private:
     ISwitchVectorProperty OutputFormatSelection;
     IText TimeoutOptionsT[2] {};
     ITextVectorProperty TimeoutOptionsTP;
+    INumber PixelSizeT[1] {};
+    INumberVectorProperty PixelSizeTP;
     INumber VideoAdjustmentsT[3] {};
     INumberVectorProperty VideoAdjustmentsTP;
 

@@ -326,7 +326,7 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     }
 
     //Set the initial parameters for the CCD.
-    SetCCDParams(pCodecCtx->width, pCodecCtx->height, 8, 5, 5); //Note 5 microns is a guess!
+    SetCCDParams(pCodecCtx->width, pCodecCtx->height, 8, pixelSize, pixelSize);
     return true;
 
 }
@@ -713,6 +713,12 @@ void indi_webcam::ISGetProperties(const char *dev)
 
     defineProperty(&TimeoutOptionsTP);
 
+    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (um)", "%.3f", 0 , 50, 0.1, pixelSize);
+    IUFillNumberVector(&PixelSizeTP, PixelSizeT, NARRAY(PixelSizeT), getDeviceName(), "PIXEL_SIZE",
+                     "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&PixelSizeTP);
+
     IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
     IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_ATMOST1,
                        60, IPS_IDLE);
@@ -845,6 +851,16 @@ bool indi_webcam::ISNewNumber (const char *dev, const char *name, double values[
         VideoAdjustmentsTP.s = IPS_OK;
 
         updateVideoAdjustments();
+        return true;
+    }
+
+    if (!strcmp(name, PixelSizeTP.name) )
+    {
+        IUUpdateNumber(&PixelSizeTP, values, names, n);
+        pixelSize = IUFindNumber( &PixelSizeTP, "PIXEL_SIZE_um" )->value;
+        DEBUGF(INDI::Logger::DBG_SESSION, "New Pixel Size: %f", pixelSize);
+        IDSetNumber(&PixelSizeTP, nullptr);
+        PixelSizeTP.s = IPS_OK;
         return true;
     }
 
@@ -1800,10 +1816,12 @@ bool indi_webcam::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &CaptureDeviceSelection);
     IUSaveConfigSwitch(fp, &RapidStackingSelection);
     IUSaveConfigSwitch(fp, &OutputFormatSelection);
+    IUSaveConfigSwitch(fp, &OnlineProtocolSelection);
+    IUSaveConfigNumber(fp, &PixelSizeTP);
+    IUSaveConfigText(fp, &URLPathTP);
     IUSaveConfigText(fp, &OnlineInputOptionsP);
     IUSaveConfigText(fp, &InputOptionsTP);
     IUSaveConfigText(fp, &TimeoutOptionsTP);
-
 
     return true;
 }
