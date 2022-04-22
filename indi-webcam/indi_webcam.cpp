@@ -1214,6 +1214,7 @@ bool indi_webcam::StartExposure(float duration)
     PrimaryCCD.setExposureDuration(duration);
     gettimeofday(&ExpStart, nullptr);
     timerID = SetTimer(getCurrentPollingPeriod());
+    gotAnImageAlready = false;
     InExposure = true;
     //Set up the stream, if there is an error, return
     if(!setupStreaming())
@@ -1266,24 +1267,14 @@ void indi_webcam::TimerHit()
             return; //  No need to reset timer if we are not connected anymore
 
         timeleft = CalcTimeLeft();
+        PrimaryCCD.setExposureLeft(timeleft);
+        if(webcamStacking || !gotAnImageAlready)
+            grabImage(); //Note that this both starts and ends the exposure
 
         // The time left in the "exposure" is less than the time it takes to make an actual exposure
         // or the time left is less than the polling period, so get it now.
         if (timeleft < (1 / frameRate) || timeleft < getCurrentPollingPeriod()/1000.0)
         {
-            if(!webcamStacking)
-            {
-                //This will ensure that we get the current frame, not some old frame still in the buffer
-                if(avformat_flush(pFormatCtx) != 0)
-                {
-                    PrimaryCCD.setExposureLeft(0);
-                    InExposure = false;
-                    freeMemory();
-                    //State that there was an error?
-                    return;
-                }
-            }
-            grabImage(); //Note that this both starts and ends the exposure
             if(webcamStacking)
                 copyFinalStackToPrimaryFrameBuffer();
             PrimaryCCD.setExposureLeft(0);
@@ -1291,12 +1282,7 @@ void indi_webcam::TimerHit()
             LOG_INFO("Download complete.");
             finishExposure();
             freeMemory();
-        }
-        else
-        {
-            PrimaryCCD.setExposureLeft(timeleft);
-            if(webcamStacking)
-                grabImage();  //This will take another frame which will get added to the average.
+            return;
         }
     }
 
@@ -1317,6 +1303,7 @@ bool indi_webcam::grabImage()
             memcpy(PrimaryCCD.getFrameBuffer(), pFrameOUT->data[0], numBytes);
         if(webcamStacking)
             addToStack();
+        gotAnImageAlready = true;
     }
     else
     {

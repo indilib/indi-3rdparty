@@ -114,6 +114,7 @@ private:
 
     //webcam stacking.
     bool webcamStacking;
+    bool gotAnImageAlready;
     bool averaging;
     float *stackBuffer;
     int numberOfFramesInStack;
