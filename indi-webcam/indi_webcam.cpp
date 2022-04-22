@@ -178,6 +178,7 @@ indi_webcam::indi_webcam()
 #ifdef __linux__
     videoDevice = "video4linux2,v4l2";
     videoSource = "/dev/video0";
+    inputPixelFormat = "yuv420p";
 #elif __APPLE__
     videoDevice = "avfoundation";
     videoSource = "0";
@@ -759,14 +760,15 @@ void indi_webcam::ISGetProperties(const char *dev)
     IUFillSwitchVector(&FrameRateSelection, FrameRates, 7, getDeviceName(), "CAPTURE_FRAME_RATE", "Frame Rate",
                        CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    PixelFormats = new ISwitch[5];
+    PixelFormats = new ISwitch[6];
     IUFillSwitch(&PixelFormats[0], "uyvy422", "uyvy422", ISS_ON);
     IUFillSwitch(&PixelFormats[1], "yuyv422", "yuyv422", ISS_OFF);
-    IUFillSwitch(&PixelFormats[2], "nv12", "nv12", ISS_OFF);
-    IUFillSwitch(&PixelFormats[3], "0rgb", "0rgb", ISS_OFF);
-    IUFillSwitch(&PixelFormats[4], "bgr0", "bgr0", ISS_OFF);
+    IUFillSwitch(&PixelFormats[2], "yuv420p", "yuv420p", ISS_OFF);
+    IUFillSwitch(&PixelFormats[3], "nv12", "nv12", ISS_OFF);
+    IUFillSwitch(&PixelFormats[4], "0rgb", "0rgb", ISS_OFF);
+    IUFillSwitch(&PixelFormats[5], "bgr0", "bgr0", ISS_OFF);
 
-    IUFillSwitchVector(&PixelFormatSelection, PixelFormats, 5, getDeviceName(), "INPUT_PIXEL_FORMAT", "PixelFormat",
+    IUFillSwitchVector(&PixelFormatSelection, PixelFormats, 6, getDeviceName(), "INPUT_PIXEL_FORMAT", "PixelFormat",
                        CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     VideoSizes = new ISwitch[7];
