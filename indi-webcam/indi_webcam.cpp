@@ -1433,48 +1433,52 @@ void indi_webcam::finishExposure()
     int h = pCodecCtx->height;
     int bpp = PrimaryCCD.getBPP();
     int naxis = PrimaryCCD.getNAxis();
+    uint16_t subW = PrimaryCCD.getSubW();
+    uint16_t subH = PrimaryCCD.getSubH();
 
-    if (PrimaryCCD.getSubW() < w || PrimaryCCD.getSubH() < h)
+    if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
     {
-        int subFrameSize     = PrimaryCCD.getSubW() * PrimaryCCD.getSubH() * bpp / 8 * ((naxis == 3) ? 3 : 1);
-        int oneFrameSize     = PrimaryCCD.getSubW() * PrimaryCCD.getSubH() * bpp / 8;
-        uint8_t *subframeBuf = (uint8_t *)malloc(subFrameSize);
-
-        int startY = PrimaryCCD.getSubY();
-        int endY   = startY + PrimaryCCD.getSubH();
-        int lineW  = PrimaryCCD.getSubW() * bpp / 8;
         int subX   = PrimaryCCD.getSubX();
+        int subY = PrimaryCCD.getSubY();
 
-        LOGF_DEBUG("Subframing... subFrameSize: %d - oneFrameSize: %d - startY: %d - endY: %d - lineW: %d - subX: %d", subFrameSize,
-                   oneFrameSize,
-                   startY, endY, lineW, subX);
+        int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
+        int oneFrameSize     = subW * subH * bpp / 8;
+
+        int lineW  = subW * bpp / 8;
+
+        LOGF_DEBUG("Subframing... subFrameSize: %d - oneFrameSize: %d - subX: %d - subY: %d - subW: %d - subH: %d",
+                   subFrameSize, oneFrameSize,
+                   subX, subY, subW, subH);
 
         if (naxis == 2)
         {
-            for (int i = startY; i < endY; i++)
-                memcpy(subframeBuf + (i - startY) * lineW, memptr + (i * w + subX) * PrimaryCCD.getBPP() / 8, lineW);
+            // JM 2020-08-29: Using memmove since regions are overlaping
+            // as proposed by Camiel Severijns on INDI forums.
+            for (int i = subY; i < subY + subH; i++)
+                memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
         }
         else
         {
-            uint8_t *subR = subframeBuf;
-            uint8_t *subG = subframeBuf + oneFrameSize;
-            uint8_t *subB = subframeBuf + oneFrameSize * 2;
+            uint8_t * subR = memptr;
+            uint8_t * subG = memptr + oneFrameSize;
+            uint8_t * subB = memptr + oneFrameSize * 2;
 
             uint8_t *startR = memptr;
             uint8_t *startG = memptr + (w * h * bpp / 8);
             uint8_t *startB = memptr + (w * h * bpp / 8 * 2);
 
-            for (int i = startY; i < endY; i++)
+            for (int i = subY; i < subY + subH; i++)
             {
-                memcpy(subR + (i - startY) * lineW, startR + (i * w + subX) * bpp / 8, lineW);
-                memcpy(subG + (i - startY) * lineW, startG + (i * w + subX) * bpp / 8, lineW);
-                memcpy(subB + (i - startY) * lineW, startB + (i * w + subX) * bpp / 8, lineW);
+                memcpy(subR + (i - subY) * lineW, startR + (i * w + subX) * bpp / 8, lineW);
+                memcpy(subG + (i - subY) * lineW, startG + (i * w + subX) * bpp / 8, lineW);
+                memcpy(subB + (i - subY) * lineW, startB + (i * w + subX) * bpp / 8, lineW);
             }
         }
 
-        PrimaryCCD.setFrameBuffer(subframeBuf);
+        PrimaryCCD.setFrameBuffer(memptr);
         PrimaryCCD.setFrameBufferSize(subFrameSize, false);
         PrimaryCCD.setResolution(w, h);
+        PrimaryCCD.setFrame(subX, subY, subW, subH);
         PrimaryCCD.setNAxis(naxis);
         PrimaryCCD.setBPP(bpp);
 
@@ -1483,8 +1487,6 @@ void indi_webcam::finishExposure()
         // Restore old pointer and release memory
         PrimaryCCD.setFrameBuffer(memptr);
         PrimaryCCD.setFrameBufferSize(numBytes, false);
-        if(subframeBuf)
-            free(subframeBuf);
     }
     else
         ExposureComplete(&PrimaryCCD);
