@@ -98,9 +98,10 @@ private:
     bool convertINDI_RGBtoFITS_RGB(uint8_t *originalImage, uint8_t *convertedImage);
 
     //These are related to how we change sources
-    bool ConnectToSource(std::string device, std::string source, int framerate, std::string videosize, std::string htmlSource);
-    bool ChangeSource(std::string newDevice, std::string newSource, int newFramerate, std::string newVideosize);
-    bool ChangeHTMLSource(std::string newIPAddress, std::string newPort, std::string newUserName, std::string newPassword);
+    bool ConnectToSource(std::string device, std::string source, int framerate, std::string videosize, std::string inputpixelformat,  std::string urlSource);
+    bool ChangeSource(std::string newDevice, std::string newSource, int newFramerate, std::string newInputPixelFormat, std::string newVideosize);
+    bool ChangeOnlineSource(std::string newProtocol, std::string newIPAddress, std::string newPort, std::string newUserName, std::string newPassword);
+    bool ChangeOnlineSource(std::string newURL);
     bool reconnectSource();
 
     //These are related to updating the device list
@@ -129,12 +130,16 @@ private:
     std::string videoSource;
     int frameRate;
     std::string videoSize;
+    std::string inputPixelFormat;
     std::string outputFormat;
     //These are our online device capture settings
+    std::string protocol;
     std::string IPAddress;
     std::string port;
     std::string username;
     std::string password;
+    std::string customURL;
+    std::string url;
 
     //The timeout for avformat commands like av_open_input and av_read_frame
     std::string ffmpegTimeout;
@@ -142,16 +147,22 @@ private:
     std::string bufferTimeout;
 
     //Related to Options in the Control Panel
-    IText InputOptionsT[4] {};
+    IText InputOptionsT[5] {};
     ITextVectorProperty InputOptionsTP;
-    IText HTTPInputOptions[4] {};
-    ITextVectorProperty HTTPInputOptionsP;
+    IText OnlineInputOptions[4] {};
+    ITextVectorProperty OnlineInputOptionsP;
+    ISwitch *OnlineProtocols = nullptr;
+    ISwitchVectorProperty OnlineProtocolSelection;
+    IText URLPathT[1] {};
+    ITextVectorProperty URLPathTP;
     ISwitch *CaptureDevices = nullptr;
     ISwitchVectorProperty CaptureDeviceSelection;
     ISwitch *CaptureSources = nullptr;
     ISwitchVectorProperty CaptureSourceSelection;
     ISwitch *FrameRates = nullptr;
     ISwitchVectorProperty FrameRateSelection;
+    ISwitch *PixelFormats = nullptr;
+    ISwitchVectorProperty PixelFormatSelection;
     ISwitch *VideoSizes = nullptr;
     ISwitchVectorProperty VideoSizeSelection;
     ISwitch *RapidStacking = nullptr;
@@ -168,7 +179,6 @@ private:
     bool setupStreaming();
     void freeMemory();
     bool getStreamFrame();
-    bool flush_frame_buffer();
 
     //Related to streaming
     std::thread capture_thread;
