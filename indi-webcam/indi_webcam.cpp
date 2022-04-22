@@ -175,6 +175,7 @@ indi_webcam::indi_webcam()
     avformat_network_init();
 
     //setting default values
+
 #ifdef __linux__
     videoDevice = "video4linux2,v4l2";
     videoSource = "/dev/video0";
@@ -198,8 +199,9 @@ indi_webcam::indi_webcam()
     username = "iphone";
     password = "password";
 
-    ffmpegTimeout = "1000000";
-    bufferTimeout = "100000";
+    ffmpegTimeout = 1000000;
+    bufferTimeout = 10000;
+    pixelSize = 5.0;
 
     //Creating the format context.
     pFormatCtx = nullptr;
@@ -245,6 +247,8 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
 {
     char stringFrameRate[16];
     snprintf(stringFrameRate, 16, "%u", framerate);
+    char stringffmpegTimeout[16];
+    snprintf(stringffmpegTimeout, 16, "%u", ffmpegTimeout);
     if(isConnected())
     {
         avcodec_close(pCodecCtx);
@@ -252,7 +256,7 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     }
 
     AVDictionary* options = nullptr;
-    av_dict_set(&options, "timeout", ffmpegTimeout.c_str(), 0); //Timeout for open_input and for read_frame.  VERY important.
+    av_dict_set(&options, "timeout", stringffmpegTimeout, 0); //Timeout for open_input and for read_frame.  VERY important.
 
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
     AVInputFormat *iformat = nullptr;
@@ -706,9 +710,9 @@ void indi_webcam::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 
-    IUFillText(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT_TEXT", "FFMPEG", ffmpegTimeout.c_str());
-    IUFillText(&TimeoutOptionsT[1], "BUFFER_TIMEOUT_TEXT", "Buffer", bufferTimeout.c_str());
-    IUFillTextVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS",
+    IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0 , 100000000, 1, ffmpegTimeout);
+    IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0 , 10000000, 1, bufferTimeout);
+    IUFillNumberVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS",
                      "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     defineProperty(&TimeoutOptionsTP);
@@ -861,6 +865,17 @@ bool indi_webcam::ISNewNumber (const char *dev, const char *name, double values[
         DEBUGF(INDI::Logger::DBG_SESSION, "New Pixel Size: %f", pixelSize);
         IDSetNumber(&PixelSizeTP, nullptr);
         PixelSizeTP.s = IPS_OK;
+        return true;
+    }
+
+    if (!strcmp(name, TimeoutOptionsTP.name) )
+    {
+        IUUpdateNumber(&TimeoutOptionsTP, values, names, n);
+        ffmpegTimeout = IUFindNumber( &TimeoutOptionsTP, "FFMPEG_TIMEOUT" )->value;
+        bufferTimeout = IUFindNumber( &TimeoutOptionsTP, "BUFFER_TIMEOUT" )->value;
+        DEBUGF(INDI::Logger::DBG_SESSION, "New Timeouts: ffmpeg: %.0f, buffer: %.0f", ffmpegTimeout, bufferTimeout);
+        IDSetNumber (&TimeoutOptionsTP, nullptr);
+        TimeoutOptionsTP.s = IPS_OK;
         return true;
     }
 
@@ -1150,25 +1165,6 @@ bool indi_webcam::ISNewText (const char *dev, const char *name, char *texts[], c
         }
     }
 
-    if (!strcmp(name, TimeoutOptionsTP.name) )
-    {
-        TimeoutOptionsTP.s = IPS_OK;
-
-        IText *ffmpegTimeoutText = IUFindText( &TimeoutOptionsTP, names[0] );
-        IText *bufferTimeoutText = IUFindText( &TimeoutOptionsTP, names[1] );
-
-        if (!ffmpegTimeoutText || !bufferTimeoutText)
-            return false;
-
-        IUSaveText(ffmpegTimeoutText, texts[0]);
-        IUSaveText(bufferTimeoutText, texts[1]);
-        IDSetText (&TimeoutOptionsTP, nullptr);
-
-        ffmpegTimeout = texts[0];
-        bufferTimeout = texts[1];
-        return true;
-    }
-
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
@@ -1271,8 +1267,9 @@ void indi_webcam::TimerHit()
 
         timeleft = CalcTimeLeft();
 
-        if (timeleft < (1 /
-                        frameRate)) //The time left in the "exposure" is less than the time it takes to make an actual exposure, so get it now.
+        // The time left in the "exposure" is less than the time it takes to make an actual exposure
+        // or the time left is less than the polling period, so get it now.
+        if (timeleft < (1 / frameRate) || timeleft < getCurrentPollingPeriod()/1000.0)
         {
             if(!webcamStacking)
             {
@@ -1727,7 +1724,7 @@ bool indi_webcam::getStreamFrame()
                     DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Error: %d, %s.", ret, errbuff);
                 }
                 tries++;
-                usleep(atoi(bufferTimeout.c_str())); //give it a moment, if it is unavailable
+                usleep(bufferTimeout); //give it a moment, if it is unavailable
             }
         }
         if(ret < 0) // If it still is not working after 10 tries, we should try reconnecting the source.
@@ -1823,7 +1820,7 @@ bool indi_webcam::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &URLPathTP);
     IUSaveConfigText(fp, &OnlineInputOptionsP);
     IUSaveConfigText(fp, &InputOptionsTP);
-    IUSaveConfigText(fp, &TimeoutOptionsTP);
+    IUSaveConfigNumber(fp, &TimeoutOptionsTP);
 
     return true;
 }

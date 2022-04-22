@@ -142,22 +142,23 @@ private:
     std::string url;
 
     //The timeout for avformat commands like av_open_input and av_read_frame
-    std::string ffmpegTimeout;
+    double ffmpegTimeout;
     //The timeout for how long of a wait time constitutes a buffered frame vs a new frame
-    std::string bufferTimeout;
+    double bufferTimeout;
 
     //The pixel size for the camera
-    double pixelSize = 5.0;
+    double pixelSize;
 
     //Related to Options in the Control Panel
     IText InputOptionsT[5] {};
     ITextVectorProperty InputOptionsTP;
     IText OnlineInputOptions[4] {};
     ITextVectorProperty OnlineInputOptionsP;
-    ISwitch *OnlineProtocols = nullptr;
-    ISwitchVectorProperty OnlineProtocolSelection;
     IText URLPathT[1] {};
     ITextVectorProperty URLPathTP;
+
+    ISwitch *OnlineProtocols = nullptr;
+    ISwitchVectorProperty OnlineProtocolSelection;
     ISwitch *CaptureDevices = nullptr;
     ISwitchVectorProperty CaptureDeviceSelection;
     ISwitch *CaptureSources = nullptr;
@@ -172,8 +173,9 @@ private:
     ISwitchVectorProperty RapidStackingSelection;
     ISwitch *OutputFormats = nullptr;
     ISwitchVectorProperty OutputFormatSelection;
-    IText TimeoutOptionsT[2] {};
-    ITextVectorProperty TimeoutOptionsTP;
+
+    INumber TimeoutOptionsT[2] {};
+    INumberVectorProperty TimeoutOptionsTP;
     INumber PixelSizeT[1] {};
     INumberVectorProperty PixelSizeTP;
     INumber VideoAdjustmentsT[3] {};
