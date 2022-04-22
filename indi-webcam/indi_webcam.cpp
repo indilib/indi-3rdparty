@@ -287,7 +287,6 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
         char errbuff[200];
         av_make_error_string(errbuff, 200, connect);
         DEBUGF(INDI::Logger::DBG_SESSION, "Failed to open source. Check your settings: %s", errbuff);
-
         return false;
     }
 
@@ -1218,9 +1217,18 @@ bool indi_webcam::StartExposure(float duration)
     InExposure = true;
     //Set up the stream, if there is an error, return
     if(!setupStreaming())
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Error Setting up streaming from camera\n");
         return -1;
+    }
     //This will ensure that we get the current frame, not some old frame still in the buffer
     //It returns 0 or an error code.
+    if(int ret = avformat_flush(pFormatCtx) != 0 )
+    {
+        char errbuff[200];
+        av_make_error_string(errbuff, 200, ret);
+        DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer: %d, %s.", ret, errbuff);
+    }
     return avformat_flush(pFormatCtx);
 }
 
