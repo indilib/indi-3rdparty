@@ -209,6 +209,7 @@ indi_webcam::indi_webcam()
     //Creating the format context.
     pFormatCtx = nullptr;
     pFormatCtx = avformat_alloc_context();
+    pFormatCtx->flags = pFormatCtx->flags | AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
 }
 
 indi_webcam::~indi_webcam()
