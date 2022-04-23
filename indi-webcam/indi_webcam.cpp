@@ -645,7 +645,6 @@ bool indi_webcam::initProperties()
     cap |= CCD_CAN_SUBFRAME;
     SetCCDCapability(cap);
 
-
     loadConfig(true, RapidStackingSelection.name);
     loadConfig(true, OutputFormatSelection.name);
     loadConfig(true, PixelSizeTP.name);
@@ -656,8 +655,8 @@ bool indi_webcam::initProperties()
     loadConfig(true, OnlineProtocolSelection.name);
 
     refreshInputDevices();
-    refreshInputSources();
     loadConfig(true, CaptureDeviceSelection.name);
+    refreshInputSources();
 
     loadingSettings = false;
     return true;
