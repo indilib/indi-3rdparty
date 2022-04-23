@@ -107,9 +107,10 @@ void indi_webcam::findAVFoundationVideoSources()
     else
     {
         //This appears to be needed for the list to get updated if a device was not connected
-        //But it is fine to do without this the first time, so if the size of the list of sources is 0
-        //Then it should be the first time and good to go.
-        if(listOfSources.size() != 0)
+        //But it is fine to do without this the first time, so it isn't done in that case.
+        if(!connectedOnce)
+            connectedOnce = true;
+        else
         {
             DEBUG(INDI::Logger::DBG_SESSION, "Briefly connecting to avfoundation to update the source list");
             if(ConnectToSource("avfoundation", "default", frameRate, videoSize, inputPixelFormat, "Not using IP Camera"))
@@ -224,10 +225,8 @@ bool indi_webcam::Connect()
 
     ISwitchVectorProperty *connect = getSwitch("CONNECTION");
     if (connect)
-    {
         connect->s = IPS_BUSY;
-        IDSetSwitch(connect, "Connecting to source: %s, on device: %s", videoSource.c_str(), videoDevice.c_str());
-    }
+
     if(videoDevice == "IP Camera")
         DEBUGF(INDI::Logger::DBG_SESSION, "Trying to connect to IP Camera at: %s", url.c_str());
     else
@@ -235,9 +234,6 @@ bool indi_webcam::Connect()
                videoSource.c_str(), videoDevice.c_str(), videoSize.c_str(), frameRate);
 
     rc = ConnectToSource(videoDevice, videoSource, frameRate, videoSize, inputPixelFormat, url.c_str());
-    if(rc)
-        DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful");
-
     return rc;
 }
 
@@ -248,7 +244,7 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     char stringFrameRate[16];
     snprintf(stringFrameRate, 16, "%u", framerate);
     char stringffmpegTimeout[16];
-    snprintf(stringffmpegTimeout, 16, "%u", ffmpegTimeout);
+    snprintf(stringffmpegTimeout, 16, "%.0f", ffmpegTimeout);
     if(isConnected())
     {
         avcodec_close(pCodecCtx);
@@ -330,6 +326,8 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
 
     //Set the initial parameters for the CCD.
     SetCCDParams(pCodecCtx->width, pCodecCtx->height, 8, pixelSize, pixelSize);
+
+    DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful.");
     return true;
 
 }
@@ -367,8 +365,9 @@ bool indi_webcam::ChangeSource(std::string newDevice, std::string newSource, int
 
     //This is the case if the source is not currently connected yet.
     if(isConnected() == false)
-    {
         DEBUG(INDI::Logger::DBG_SESSION, "Not connected now, accepting settings.  It will be tested on connection");
+    if(isConnected() == false || loadingSettings)
+    {
         videoDevice = newDevice;
         videoSource = newSource;
         frameRate = newFramerate;
@@ -383,14 +382,13 @@ bool indi_webcam::ChangeSource(std::string newDevice, std::string newSource, int
         DEBUGF(INDI::Logger::DBG_SESSION, "Changing back to: %s, on device: %s with %s at %u frames per second",
                videoSource.c_str(), videoDevice.c_str(), videoSize.c_str(), frameRate);
         ConnectToSource(videoDevice, videoSource, frameRate, videoSize, inputPixelFormat, url);
-        DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful");
         if(was_streaming)
             StartStreaming();
         return false;
     }
 
     //This is what happens if the connection was successful, it saves the settings and continues.
-    DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful, saving settings.");
+    DEBUG(INDI::Logger::DBG_SESSION, "Due to success, Saving settings.");
     videoDevice = newDevice;
     videoSource = newSource;
     frameRate = newFramerate;
@@ -439,12 +437,11 @@ bool indi_webcam::ChangeOnlineSource(std::string newURL)
         StopStreaming();
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION, "New Connection Settings: IP Camera at: %s", newURL.c_str());
-
     //This is the case if the source is not currently connected yet.
     if(isConnected() == false)
-    {
         DEBUG(INDI::Logger::DBG_SESSION, "Not connected now, accepting settings.  It will be tested on connection");
+    if(isConnected() == false || loadingSettings)
+    {
         url = newURL;
         IText *URLText = &URLPathT[0];
         IUSaveText(URLText, url.c_str());
@@ -452,20 +449,21 @@ bool indi_webcam::ChangeOnlineSource(std::string newURL)
         return true;
     }
 
+    DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to Connect: IP Camera at: %s", newURL.c_str());
+
     //This is an attempt to connect, if it is already connected.  If it is not successful, it goes back to the old settings.
     if(ConnectToSource(videoDevice, videoSource, frameRate, videoSize, inputPixelFormat, newURL) == false)
     {
         DEBUG(INDI::Logger::DBG_SESSION, "Connection was NOT successful");
         DEBUGF(INDI::Logger::DBG_SESSION, "Changing back to IP Camera at: %s", url.c_str());
         ConnectToSource(videoDevice, videoSource, frameRate, videoSize, inputPixelFormat, url);
-        DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful");
         if(was_streaming)
             StartStreaming();
         return false;
     }
 
     //This is what happens if the connection was successful, it saves the settings and continues.
-    DEBUG(INDI::Logger::DBG_SESSION, "Connection Successful, saving settings.");
+    DEBUG(INDI::Logger::DBG_SESSION, "Due to success, saving settings.");
     url = newURL;
     IText *URLText = &URLPathT[0];
     IUSaveText(URLText, url.c_str());
@@ -507,15 +505,16 @@ const char * indi_webcam::getDefaultName()
 ***************************************************************************************/
 bool indi_webcam::initProperties()
 {
+    loadingSettings = true;
+    // Must init parent properties first!
+    INDI::CCD::initProperties();
+
     setDefaultPollingPeriod(10);
 
     DEBUG(INDI::Logger::DBG_SESSION, "Webcam Driver initialized");
 
     CaptureFormat rgb = {"INDI_RGB", "RGB", 8, true};
     addCaptureFormat(rgb);
-
-    // Must init parent properties first!
-    INDI::CCD::initProperties();
 
     RapidStacking = new ISwitch[3];
     IUFillSwitch(&RapidStacking[0], "Integration", "Integration", ISS_OFF);
@@ -538,6 +537,106 @@ bool indi_webcam::initProperties()
     loadConfig(true, "RAPID_STACKING_OPTION");
     loadConfig(true, "OUTPUT_FORMAT_OPTION");
 
+    IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0 , 100000000, 1, ffmpegTimeout);
+    IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0 , 10000000, 1, bufferTimeout);
+    IUFillNumberVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS",
+                     "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&TimeoutOptionsTP);
+
+    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (um)", "%.3f", 0 , 50, 0.1, pixelSize);
+    IUFillNumberVector(&PixelSizeTP, PixelSizeT, NARRAY(PixelSizeT), getDeviceName(), "PIXEL_SIZE",
+                     "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&PixelSizeTP);
+
+    IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
+    IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_ATMOST1,
+                       60, IPS_IDLE);
+
+    defineProperty(&RefreshSP);
+
+    IUFillText(&InputOptionsT[0], "CAPTURE_DEVICE_TEXT", "Capture Device", videoDevice.c_str());
+    IUFillText(&InputOptionsT[1], "CAPTURE_SOURCE_TEXT", "Capture Source", videoSource.c_str());
+    IUFillText(&InputOptionsT[2], "CAPTURE_FRAME_RATE", "Frame Rate", "30");
+    IUFillText(&InputOptionsT[3], "INPUT_PIXEL_FORMAT", "Input Pixel Format", inputPixelFormat.c_str());
+    IUFillText(&InputOptionsT[4], "CAPTURE_VIDEO_SIZE", "Video Size", videoSize.c_str());
+    IUFillTextVector(&InputOptionsTP, InputOptionsT, NARRAY(InputOptionsT), getDeviceName(), "INPUT_OPTIONS", "Input Options",
+                     CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
+
+    IUFillText(&OnlineInputOptions[0], "CAPTURE_IP_ADDRESS", "IP Address", IPAddress.c_str());
+    IUFillText(&OnlineInputOptions[1], "CAPTURE_PORT_NUMBER", "Port", port.c_str());
+    IUFillText(&OnlineInputOptions[2], "CAPTURE_USERNAME", "User Name", username.c_str());
+    IUFillText(&OnlineInputOptions[3], "CAPTURE_PASSWORD", "Password", password.c_str());
+    IUFillTextVector(&OnlineInputOptionsP, OnlineInputOptions, 4, getDeviceName(), "ONLINE_INPUT_OPTIONS", "IP Camera",
+                     CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
+
+    OnlineProtocols = new ISwitch[3];
+    IUFillSwitch(&OnlineProtocols[0], "CUSTOM", "CUSTOM", ISS_OFF);
+    IUFillSwitch(&OnlineProtocols[1], "HTTP", "HTTP", ISS_ON);
+    IUFillSwitch(&OnlineProtocols[2], "RTSP", "RTSP", ISS_OFF);
+
+    IUFillSwitchVector(&OnlineProtocolSelection, OnlineProtocols, 3, getDeviceName(), "ONLINE_PROTOCOL", "Online Protocol",
+                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    IUFillText(&URLPathT[0], "URL_PATH", "URL", url.c_str());
+    IUFillTextVector(&URLPathTP, URLPathT, NARRAY(URLPathT), getDeviceName(), "ONLINE_PATH",
+                     "Online Path", CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&URLPathTP);
+
+    FrameRates = new ISwitch[7];
+    IUFillSwitch(&FrameRates[0], "30", "30 fps", ISS_ON);
+    IUFillSwitch(&FrameRates[1], "25", "25 fps", ISS_OFF);
+    IUFillSwitch(&FrameRates[2], "20", "20 fps", ISS_OFF);
+    IUFillSwitch(&FrameRates[3], "15", "15 fps", ISS_OFF);
+    IUFillSwitch(&FrameRates[4], "10", "10 fps", ISS_OFF);
+    IUFillSwitch(&FrameRates[5], "5", "5 fps", ISS_OFF);
+    IUFillSwitch(&FrameRates[6], "1", "1 fps", ISS_OFF);
+
+    IUFillSwitchVector(&FrameRateSelection, FrameRates, 7, getDeviceName(), "CAPTURE_FRAME_RATE", "Frame Rate",
+                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    PixelFormats = new ISwitch[6];
+    IUFillSwitch(&PixelFormats[0], "uyvy422", "uyvy422", ISS_ON);
+    IUFillSwitch(&PixelFormats[1], "yuyv422", "yuyv422", ISS_OFF);
+    IUFillSwitch(&PixelFormats[2], "yuv420p", "yuv420p", ISS_OFF);
+    IUFillSwitch(&PixelFormats[3], "nv12", "nv12", ISS_OFF);
+    IUFillSwitch(&PixelFormats[4], "0rgb", "0rgb", ISS_OFF);
+    IUFillSwitch(&PixelFormats[5], "bgr0", "bgr0", ISS_OFF);
+
+    IUFillSwitchVector(&PixelFormatSelection, PixelFormats, 6, getDeviceName(), "INPUT_PIXEL_FORMAT", "PixelFormat",
+                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    VideoSizes = new ISwitch[7];
+    IUFillSwitch(&VideoSizes[0], "320x240", "320x240", ISS_OFF);
+    IUFillSwitch(&VideoSizes[1], "640x480", "640x480", ISS_ON);
+    IUFillSwitch(&VideoSizes[2], "800x600", "800x600", ISS_OFF);
+    IUFillSwitch(&VideoSizes[3], "1024x768", "1024x768", ISS_OFF);
+    IUFillSwitch(&VideoSizes[4], "1280x720", "1280x720", ISS_OFF);
+    IUFillSwitch(&VideoSizes[5], "1280x1024", "1280x1024", ISS_OFF);
+    IUFillSwitch(&VideoSizes[6], "1600x1200", "1600x1200", ISS_OFF);
+
+    IUFillSwitchVector(&VideoSizeSelection, VideoSizes, 7, getDeviceName(), "CAPTURE_VIDEO_SIZE", "Video Size",
+                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+
+    IUFillNumber(&VideoAdjustmentsT[0], "BRIGHTNESS", "Brightness", "%.3f", -2.00, 2.00, 0.1, 0.00);
+    IUFillNumber(&VideoAdjustmentsT[1], "CONTRAST", "Contrast", "%.3f", 0.00, 2.00, 0.1, 1.00);
+    IUFillNumber(&VideoAdjustmentsT[2], "SATURATION", "Saturation", "%.3f", 0.00, 8.00, 0.1, 1.00);
+    IUFillNumberVector(&VideoAdjustmentsTP, VideoAdjustmentsT, NARRAY(VideoAdjustmentsT), getDeviceName(), "VIDEO_ADJUSTMENTS",
+                       "Video Adjustment Options", IMAGE_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
+
+    defineProperty(&VideoAdjustmentsTP);
+
+    refreshInputDevices();
+    refreshInputSources();
+
+    //Setting the log level
+    av_log_set_level(AV_LOG_INFO);
+
+    // Set minimum exposure speed to 0.001 seconds
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
 
     /* Add debug controls so we may debug driver if necessary */
     addDebugControl();
@@ -546,6 +645,7 @@ bool indi_webcam::initProperties()
     cap |= CCD_HAS_STREAMING;
     cap |= CCD_CAN_SUBFRAME;
     SetCCDCapability(cap);
+    loadingSettings = false;
     return true;
 }
 
@@ -707,115 +807,9 @@ bool indi_webcam::refreshInputSources()
 
 void indi_webcam::ISGetProperties(const char *dev)
 {
+    loadingSettings = true;
     INDI::CCD::ISGetProperties(dev);
-
-    IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0 , 100000000, 1, ffmpegTimeout);
-    IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0 , 10000000, 1, bufferTimeout);
-    IUFillNumberVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS",
-                     "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
-
-    defineProperty(&TimeoutOptionsTP);
-
-    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (um)", "%.3f", 0 , 50, 0.1, pixelSize);
-    IUFillNumberVector(&PixelSizeTP, PixelSizeT, NARRAY(PixelSizeT), getDeviceName(), "PIXEL_SIZE",
-                     "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
-
-    defineProperty(&PixelSizeTP);
-
-    IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
-    IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_ATMOST1,
-                       60, IPS_IDLE);
-
-    defineProperty(&RefreshSP);
-
-    IUFillText(&InputOptionsT[0], "CAPTURE_DEVICE_TEXT", "Capture Device", videoDevice.c_str());
-    IUFillText(&InputOptionsT[1], "CAPTURE_SOURCE_TEXT", "Capture Source", videoSource.c_str());
-    IUFillText(&InputOptionsT[2], "CAPTURE_FRAME_RATE", "Frame Rate", "30");
-    IUFillText(&InputOptionsT[3], "INPUT_PIXEL_FORMAT", "Input Pixel Format", inputPixelFormat.c_str());
-    IUFillText(&InputOptionsT[4], "CAPTURE_VIDEO_SIZE", "Video Size", videoSize.c_str());
-    IUFillTextVector(&InputOptionsTP, InputOptionsT, NARRAY(InputOptionsT), getDeviceName(), "INPUT_OPTIONS", "Input Options",
-                     CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
-
-    IUFillText(&OnlineInputOptions[0], "CAPTURE_IP_ADDRESS", "IP Address", IPAddress.c_str());
-    IUFillText(&OnlineInputOptions[1], "CAPTURE_PORT_NUMBER", "Port", port.c_str());
-    IUFillText(&OnlineInputOptions[2], "CAPTURE_USERNAME", "User Name", username.c_str());
-    IUFillText(&OnlineInputOptions[3], "CAPTURE_PASSWORD", "Password", password.c_str());
-    IUFillTextVector(&OnlineInputOptionsP, OnlineInputOptions, 4, getDeviceName(), "ONLINE_INPUT_OPTIONS", "IP Camera",
-                     CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
-
-    OnlineProtocols = new ISwitch[3];
-    IUFillSwitch(&OnlineProtocols[0], "CUSTOM", "CUSTOM", ISS_OFF);
-    IUFillSwitch(&OnlineProtocols[1], "HTTP", "HTTP", ISS_ON);
-    IUFillSwitch(&OnlineProtocols[2], "RTSP", "RTSP", ISS_OFF);
-
-    IUFillSwitchVector(&OnlineProtocolSelection, OnlineProtocols, 3, getDeviceName(), "ONLINE_PROTOCOL", "Online Protocol",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-
-    IUFillText(&URLPathT[0], "URL_PATH", "URL", url.c_str());
-    IUFillTextVector(&URLPathTP, URLPathT, NARRAY(URLPathT), getDeviceName(), "ONLINE_PATH",
-                     "Online Path", CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
-
-    defineProperty(&URLPathTP);
-
-    FrameRates = new ISwitch[7];
-    IUFillSwitch(&FrameRates[0], "30", "30 fps", ISS_ON);
-    IUFillSwitch(&FrameRates[1], "25", "25 fps", ISS_OFF);
-    IUFillSwitch(&FrameRates[2], "20", "20 fps", ISS_OFF);
-    IUFillSwitch(&FrameRates[3], "15", "15 fps", ISS_OFF);
-    IUFillSwitch(&FrameRates[4], "10", "10 fps", ISS_OFF);
-    IUFillSwitch(&FrameRates[5], "5", "5 fps", ISS_OFF);
-    IUFillSwitch(&FrameRates[6], "1", "1 fps", ISS_OFF);
-
-    IUFillSwitchVector(&FrameRateSelection, FrameRates, 7, getDeviceName(), "CAPTURE_FRAME_RATE", "Frame Rate",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-
-    PixelFormats = new ISwitch[6];
-    IUFillSwitch(&PixelFormats[0], "uyvy422", "uyvy422", ISS_ON);
-    IUFillSwitch(&PixelFormats[1], "yuyv422", "yuyv422", ISS_OFF);
-    IUFillSwitch(&PixelFormats[2], "yuv420p", "yuv420p", ISS_OFF);
-    IUFillSwitch(&PixelFormats[3], "nv12", "nv12", ISS_OFF);
-    IUFillSwitch(&PixelFormats[4], "0rgb", "0rgb", ISS_OFF);
-    IUFillSwitch(&PixelFormats[5], "bgr0", "bgr0", ISS_OFF);
-
-    IUFillSwitchVector(&PixelFormatSelection, PixelFormats, 6, getDeviceName(), "INPUT_PIXEL_FORMAT", "PixelFormat",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-
-    VideoSizes = new ISwitch[7];
-    IUFillSwitch(&VideoSizes[0], "320x240", "320x240", ISS_OFF);
-    IUFillSwitch(&VideoSizes[1], "640x480", "640x480", ISS_ON);
-    IUFillSwitch(&VideoSizes[2], "800x600", "800x600", ISS_OFF);
-    IUFillSwitch(&VideoSizes[3], "1024x768", "1024x768", ISS_OFF);
-    IUFillSwitch(&VideoSizes[4], "1280x720", "1280x720", ISS_OFF);
-    IUFillSwitch(&VideoSizes[5], "1280x1024", "1280x1024", ISS_OFF);
-    IUFillSwitch(&VideoSizes[6], "1600x1200", "1600x1200", ISS_OFF);
-
-    IUFillSwitchVector(&VideoSizeSelection, VideoSizes, 7, getDeviceName(), "CAPTURE_VIDEO_SIZE", "Video Size",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-
-
-    IUFillNumber(&VideoAdjustmentsT[0], "BRIGHTNESS", "Brightness", "%.3f", -2.00, 2.00, 0.1, 0.00);
-    IUFillNumber(&VideoAdjustmentsT[1], "CONTRAST", "Contrast", "%.3f", 0.00, 2.00, 0.1, 1.00);
-    IUFillNumber(&VideoAdjustmentsT[2], "SATURATION", "Saturation", "%.3f", 0.00, 8.00, 0.1, 1.00);
-    IUFillNumberVector(&VideoAdjustmentsTP, VideoAdjustmentsT, NARRAY(VideoAdjustmentsT), getDeviceName(), "VIDEO_ADJUSTMENTS",
-                       "Video Adjustment Options", IMAGE_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
-
-    defineProperty(&VideoAdjustmentsTP);
-
-    refreshInputDevices();
-    refreshInputSources();
-
-    loadConfig(true, "CAPTURE_DEVICE");
-    loadConfig(true, "INPUT_OPTIONS");
-    loadConfig(true, "HTTP_INPUT_OPTIONS");
-    loadConfig(true, "FFMPEG_TIMEOUT_TEXT");
-    loadConfig(true, "BUFFER_TIMEOUT_TEXT");
-
-    //Setting the log level
-    av_log_set_level(AV_LOG_INFO);
-
-    // Set minimum exposure speed to 0.001 seconds
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
-
+    loadingSettings = false;
 }
 
 /********************************************************************************************
@@ -824,10 +818,18 @@ void indi_webcam::ISGetProperties(const char *dev)
 *********************************************************************************************/
 bool indi_webcam::updateProperties()
 {
+    loadingSettings = true;
 
     // Call parent update properties first
     INDI::CCD::updateProperties();
 
+    loadConfig(true, "CAPTURE_DEVICE");
+    loadConfig(true, "INPUT_OPTIONS");
+    loadConfig(true, "HTTP_INPUT_OPTIONS");
+    loadConfig(true, "FFMPEG_TIMEOUT");
+    loadConfig(true, "BUFFER_TIMEOUT");
+
+    loadingSettings = false;
     return true;
 }
 
@@ -1053,6 +1055,12 @@ bool indi_webcam::ISNewSwitch (const char *dev, const char *name, ISState *state
             {
                 deleteProperty(OnlineInputOptionsP.name);
                 protocol = "CUSTOM";
+                if(customURL.length() == 0)
+                {
+                    OnlineProtocolSelection.s = IPS_OK;
+                    IDSetSwitch(&OnlineProtocolSelection, nullptr);
+                    return false;
+                }
                 if(ChangeOnlineSource(customURL))
                 {
                     OnlineProtocolSelection.s = IPS_OK;
@@ -1150,10 +1158,10 @@ bool indi_webcam::ISNewText (const char *dev, const char *name, char *texts[], c
 
         IText *URLText = IUFindText( &URLPathTP, names[0] );
 
-        if (!URLText)
-            return false;
-
         customURL = texts[0];
+
+        if (!URLText || customURL.length() == 0)
+            return false;
 
         if(ChangeOnlineSource(customURL))
         {
@@ -1690,9 +1698,6 @@ void indi_webcam::updateVideoAdjustments()
     //Note these last 3 values are reported in 16.16 fixed point format
     sws_setColorspaceDetails(sws_ctx, coefs, src_range, coefs, dst_range,
                              (int)(brightness * 65536), (int)(contrast * 65536), (int)(saturation * 65536));
-
-    DEBUGF(INDI::Logger::DBG_SESSION, "Current Video Adjustments: brightness: %.3f, contrast: %.3f, saturation: %.3f",
-           brightness, contrast, saturation);
 }
 
 //This gets one image from the camera.

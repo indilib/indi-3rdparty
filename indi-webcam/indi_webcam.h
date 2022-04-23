@@ -49,6 +49,7 @@ extern "C" {
 //These can't be in indi_webcam class declaration because the callback method has to be passed to FFMpeg
 //We need access to these variables in the callback method
 std::vector<std::string> listOfSources;
+bool connectedOnce = false;
 bool allDevicesFound = false;
 bool checkingDevices = false;
 
@@ -79,7 +80,7 @@ protected:
     void finishExposure();
     void TimerHit() override;
     float CalcTimeLeft();
-    int timerID;
+    int timerID = 0;
     bool grabImage();
 
     bool UpdateCCDFrame(int x, int y, int w, int h) override;
@@ -113,11 +114,12 @@ private:
     ISwitchVectorProperty RefreshSP;
 
     //webcam stacking.
-    bool webcamStacking;
-    bool gotAnImageAlready;
-    bool averaging;
-    float *stackBuffer;
-    int numberOfFramesInStack;
+    bool webcamStacking = false;
+    bool gotAnImageAlready = false;
+    bool loadingSettings = false;
+    bool averaging = false;
+    float *stackBuffer = nullptr;
+    int numberOfFramesInStack = 0;
     bool addToStack();
     void copyFinalStackToPrimaryFrameBuffer();
     void setImageDataValueFromFloat(int x, int y, float value, bool roundAnswer);
@@ -127,28 +129,28 @@ private:
 
     //These are our device capture settings
     bool use16Bit = true;
-    std::string videoDevice;
-    std::string videoSource;
-    int frameRate;
-    std::string videoSize;
-    std::string inputPixelFormat;
-    std::string outputFormat;
+    std::string videoDevice = "";
+    std::string videoSource = "";
+    int frameRate = 0;
+    std::string videoSize = "";
+    std::string inputPixelFormat = "";
+    std::string outputFormat = "";
     //These are our online device capture settings
-    std::string protocol;
-    std::string IPAddress;
-    std::string port;
-    std::string username;
-    std::string password;
-    std::string customURL;
-    std::string url;
+    std::string protocol = "";
+    std::string IPAddress = "";
+    std::string port = "";
+    std::string username = "";
+    std::string password = "";
+    std::string customURL = "";
+    std::string url = "";
 
     //The timeout for avformat commands like av_open_input and av_read_frame
-    double ffmpegTimeout;
+    double ffmpegTimeout = 0;
     //The timeout for how long of a wait time constitutes a buffered frame vs a new frame
-    double bufferTimeout;
+    double bufferTimeout = 0;
 
     //The pixel size for the camera
-    double pixelSize;
+    double pixelSize = 0;
 
     //Related to Options in the Control Panel
     IText InputOptionsT[5] {};
@@ -192,15 +194,15 @@ private:
     std::thread capture_thread;
     static void RunCaptureThread(indi_webcam *webcam);
     void run_capture();
-    bool is_capturing;
-    bool is_streaming;
+    bool is_capturing = false;
+    bool is_streaming = false;
     void start_capturing();
     void stop_capturing();
 
     //FFMpeg Variables to make captures work.
     struct SwsContext *sws_ctx;
     uint8_t *buffer;
-    int numBytes;
+    int numBytes = 0;
     AVPixelFormat out_pix_fmt;
     AVFormatContext *pFormatCtx;
     int              videoStream;
