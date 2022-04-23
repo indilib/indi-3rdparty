@@ -903,6 +903,8 @@ bool indi_webcam::ISNewSwitch (const char *dev, const char *name, ISState *state
     IText *videoSizeText = &InputOptionsT[4];
 
     ISwitchVectorProperty *svp = getSwitch(name);
+    if(!svp)
+        return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 
     if (!strcmp(svp->name, CaptureDeviceSelection.name))
     {
