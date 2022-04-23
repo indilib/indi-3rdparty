@@ -526,7 +526,7 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&RapidStacking[2], "Off", "Off", ISS_ON);
 
     IUFillSwitchVector(&RapidStackingSelection, RapidStacking, 3, getDeviceName(), "RAPID_STACKING_OPTION", "Rapid Stacking",
-                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(&RapidStackingSelection);
 
     OutputFormats = new ISwitch[3];
@@ -535,11 +535,8 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&OutputFormats[2], "8 bit RGB", "8 bit RGB", ISS_ON);
 
     IUFillSwitchVector(&OutputFormatSelection, OutputFormats, 3, getDeviceName(), "OUTPUT_FORMAT_OPTION", "Output Format",
-                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(&OutputFormatSelection);
-
-    loadConfig(true, "RAPID_STACKING_OPTION");
-    loadConfig(true, "OUTPUT_FORMAT_OPTION");
 
     IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0 , 100000000, 1, ffmpegTimeout);
     IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0 , 10000000, 1, bufferTimeout);
@@ -567,6 +564,7 @@ bool indi_webcam::initProperties()
     IUFillText(&InputOptionsT[4], "CAPTURE_VIDEO_SIZE", "Video Size", videoSize.c_str());
     IUFillTextVector(&InputOptionsTP, InputOptionsT, NARRAY(InputOptionsT), getDeviceName(), "INPUT_OPTIONS", "Input Options",
                      CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
+    defineProperty(&InputOptionsTP);
 
     IUFillText(&OnlineInputOptions[0], "CAPTURE_IP_ADDRESS", "IP Address", IPAddress.c_str());
     IUFillText(&OnlineInputOptions[1], "CAPTURE_PORT_NUMBER", "Port", port.c_str());
@@ -574,6 +572,7 @@ bool indi_webcam::initProperties()
     IUFillText(&OnlineInputOptions[3], "CAPTURE_PASSWORD", "Password", password.c_str());
     IUFillTextVector(&OnlineInputOptionsP, OnlineInputOptions, 4, getDeviceName(), "ONLINE_INPUT_OPTIONS", "IP Camera",
                      CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
+    defineProperty(&OnlineInputOptionsP);
 
     OnlineProtocols = new ISwitch[3];
     IUFillSwitch(&OnlineProtocols[0], "CUSTOM", "CUSTOM", ISS_OFF);
@@ -581,12 +580,12 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&OnlineProtocols[2], "RTSP", "RTSP", ISS_OFF);
 
     IUFillSwitchVector(&OnlineProtocolSelection, OnlineProtocols, 3, getDeviceName(), "ONLINE_PROTOCOL", "Online Protocol",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    defineProperty(&OnlineProtocolSelection);
 
     IUFillText(&URLPathT[0], "URL_PATH", "URL", url.c_str());
     IUFillTextVector(&URLPathTP, URLPathT, NARRAY(URLPathT), getDeviceName(), "ONLINE_PATH",
                      "Online Path", CONNECTION_TAB, IP_RW, 0, IPS_IDLE);
-
     defineProperty(&URLPathTP);
 
     FrameRates = new ISwitch[7];
@@ -599,7 +598,7 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&FrameRates[6], "1", "1 fps", ISS_OFF);
 
     IUFillSwitchVector(&FrameRateSelection, FrameRates, 7, getDeviceName(), "CAPTURE_FRAME_RATE", "Frame Rate",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     PixelFormats = new ISwitch[6];
     IUFillSwitch(&PixelFormats[0], "uyvy422", "uyvy422", ISS_ON);
@@ -610,7 +609,7 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&PixelFormats[5], "bgr0", "bgr0", ISS_OFF);
 
     IUFillSwitchVector(&PixelFormatSelection, PixelFormats, 6, getDeviceName(), "INPUT_PIXEL_FORMAT", "PixelFormat",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     VideoSizes = new ISwitch[7];
     IUFillSwitch(&VideoSizes[0], "320x240", "320x240", ISS_OFF);
@@ -622,7 +621,7 @@ bool indi_webcam::initProperties()
     IUFillSwitch(&VideoSizes[6], "1600x1200", "1600x1200", ISS_OFF);
 
     IUFillSwitchVector(&VideoSizeSelection, VideoSizes, 7, getDeviceName(), "CAPTURE_VIDEO_SIZE", "Video Size",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
 
     IUFillNumber(&VideoAdjustmentsT[0], "BRIGHTNESS", "Brightness", "%.3f", -2.00, 2.00, 0.1, 0.00);
@@ -630,11 +629,7 @@ bool indi_webcam::initProperties()
     IUFillNumber(&VideoAdjustmentsT[2], "SATURATION", "Saturation", "%.3f", 0.00, 8.00, 0.1, 1.00);
     IUFillNumberVector(&VideoAdjustmentsTP, VideoAdjustmentsT, NARRAY(VideoAdjustmentsT), getDeviceName(), "VIDEO_ADJUSTMENTS",
                        "Video Adjustment Options", IMAGE_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
-
     defineProperty(&VideoAdjustmentsTP);
-
-    refreshInputDevices();
-    refreshInputSources();
 
     //Setting the log level
     av_log_set_level(AV_LOG_INFO);
@@ -649,6 +644,21 @@ bool indi_webcam::initProperties()
     cap |= CCD_HAS_STREAMING;
     cap |= CCD_CAN_SUBFRAME;
     SetCCDCapability(cap);
+
+
+    loadConfig(true, RapidStackingSelection.name);
+    loadConfig(true, OutputFormatSelection.name);
+    loadConfig(true, PixelSizeTP.name);
+    loadConfig(true, InputOptionsTP.name);
+    loadConfig(true, TimeoutOptionsTP.name);
+    loadConfig(true, OnlineInputOptionsP.name);
+    loadConfig(true, URLPathTP.name);
+    loadConfig(true, OnlineProtocolSelection.name);
+
+    refreshInputDevices();
+    refreshInputSources();
+    loadConfig(true, CaptureDeviceSelection.name);
+
     loadingSettings = false;
     return true;
 }
@@ -675,7 +685,7 @@ bool indi_webcam::refreshInputDevices()
     IUFillSwitch(&CaptureDevices[numDevices], "IP Camera", "IP Camera", ISS_OFF);
     IUFillSwitchVector(&CaptureDeviceSelection, CaptureDevices, numDevices + 1, getDeviceName(), "CAPTURE_DEVICE",
                        "Capture Devices",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(&CaptureDeviceSelection);
 
     return true;
@@ -773,7 +783,7 @@ bool indi_webcam::refreshInputSources()
     }
 
     IUFillSwitchVector(&CaptureSourceSelection, CaptureSources, sourceNum, getDeviceName(), "CAPTURE_SOURCE", "Capture Sources",
-                       CONNECTION_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+                       CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
 
     //This controls whether the Input Options controls or the IP Camera Options controls are visible
@@ -826,12 +836,6 @@ bool indi_webcam::updateProperties()
 
     // Call parent update properties first
     INDI::CCD::updateProperties();
-
-    loadConfig(true, "CAPTURE_DEVICE");
-    loadConfig(true, "INPUT_OPTIONS");
-    loadConfig(true, "HTTP_INPUT_OPTIONS");
-    loadConfig(true, "FFMPEG_TIMEOUT");
-    loadConfig(true, "BUFFER_TIMEOUT");
 
     loadingSettings = false;
     return true;
@@ -1825,9 +1829,9 @@ bool indi_webcam::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &OutputFormatSelection);
     IUSaveConfigSwitch(fp, &OnlineProtocolSelection);
     IUSaveConfigNumber(fp, &PixelSizeTP);
-    IUSaveConfigText(fp, &URLPathTP);
-    IUSaveConfigText(fp, &OnlineInputOptionsP);
     IUSaveConfigText(fp, &InputOptionsTP);
+    IUSaveConfigText(fp, &OnlineInputOptionsP);
+    IUSaveConfigText(fp, &URLPathTP);
     IUSaveConfigNumber(fp, &TimeoutOptionsTP);
 
     return true;
