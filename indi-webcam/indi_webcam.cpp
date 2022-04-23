@@ -189,12 +189,14 @@ indi_webcam::indi_webcam()
     videoDevice = ""
     videoSource = "";
 #endif
+
     frameRate = 30;
     videoSize = "640x480";
     webcamStacking = false;
     averaging = false;
     outputFormat = "8 bit RGB";
 
+    protocol = "HTTP";
     IPAddress = "xxx.xxx.x.xxx";
     port = "xxxx";
     username = "iphone";
@@ -409,7 +411,9 @@ bool indi_webcam::ChangeOnlineSource(std::string newProtocol, std::string newIPA
 {
     std::string newURL;
 
-    if(!strcmp(newProtocol.c_str(), "HTTP"))
+    if(!strcmp(newProtocol.c_str(), "CUSTOM"))
+        newURL = customURL;
+    else if(!strcmp(newProtocol.c_str(), "HTTP"))
         newURL = "http://" + newUserName + ":" + newPassword + "@" + newIPAddress + ":" + newPort;
     else if(!strcmp(newProtocol.c_str(), "RTSP"))
         newURL = "rstp://" + newIPAddress + ":" + newPort + "//user=" + newUserName + "_password=" + newPassword + "_channel=1_stream=0.sdp?real_stream";
@@ -444,7 +448,7 @@ bool indi_webcam::ChangeOnlineSource(std::string newURL)
     {
         url = newURL;
         IText *URLText = &URLPathT[0];
-        IUSaveText(URLText, url.c_str());
+        IUSaveText(URLText, newURL.c_str());
         IDSetText(&URLPathTP, nullptr);
         return true;
     }
@@ -466,7 +470,7 @@ bool indi_webcam::ChangeOnlineSource(std::string newURL)
     DEBUG(INDI::Logger::DBG_SESSION, "Due to success, saving settings.");
     url = newURL;
     IText *URLText = &URLPathT[0];
-    IUSaveText(URLText, url.c_str());
+    IUSaveText(URLText, newURL.c_str());
     IDSetText(&URLPathTP, nullptr);
 
     //If it was streaming, we need to reinitialize that.
@@ -1159,6 +1163,7 @@ bool indi_webcam::ISNewText (const char *dev, const char *name, char *texts[], c
         IText *URLText = IUFindText( &URLPathTP, names[0] );
 
         customURL = texts[0];
+        url = texts[0];
 
         if (!URLText || customURL.length() == 0)
             return false;
