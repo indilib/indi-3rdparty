@@ -1238,7 +1238,8 @@ bool indi_webcam::StartExposure(float duration)
     }
     //This will ensure that we get the current frame, not some old frame still in the buffer
     //It returns 0 or an error code.
-    if(int ret = avformat_flush(pFormatCtx) != 0 )
+    int ret = avformat_flush(pFormatCtx);
+    if(ret != 0 )
     {
         char errbuff[200];
         av_make_error_string(errbuff, 200, ret);
