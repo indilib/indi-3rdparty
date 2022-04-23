@@ -209,7 +209,6 @@ indi_webcam::indi_webcam()
     //Creating the format context.
     pFormatCtx = nullptr;
     pFormatCtx = avformat_alloc_context();
-    pFormatCtx->flags = pFormatCtx->flags | AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
 }
 
 indi_webcam::~indi_webcam()
@@ -1236,8 +1235,12 @@ bool indi_webcam::StartExposure(float duration)
         DEBUG(INDI::Logger::DBG_SESSION, "Error Setting up streaming from camera\n");
         return false;
     }
+
     //This will ensure that we get the current frame, not some old frame still in the buffer
-    //It returns 0 or an error code.
+    if(!flush_frame_buffer())
+        DEBUG(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer");
+
+    /*
     int ret = avformat_flush(pFormatCtx);
     if(ret != 0 )
     {
@@ -1245,6 +1248,8 @@ bool indi_webcam::StartExposure(float duration)
         av_make_error_string(errbuff, 200, ret);
         DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer: %d, %s.", ret, errbuff);
     }
+    */
+
     //This sets up the exposure time settings
     ExposureRequest = duration;
     PrimaryCCD.setExposureDuration(duration);
@@ -1607,8 +1612,18 @@ void indi_webcam::run_capture()
     PrimaryCCD.setFrame(0, 0, w, h);
 
     //This will clear the frame button before streaming is started so that the frames are all current.
-    //if(avformat_flush(pFormatCtx) != 0)
-    //    return;
+    if(!flush_frame_buffer())
+        DEBUG(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer");
+
+    /*
+    int ret = avformat_flush(pFormatCtx);
+    if(ret != 0 )
+    {
+        char errbuff[200];
+        av_make_error_string(errbuff, 200, ret);
+        DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer: %d, %s.", ret, errbuff);
+    }
+    */
 
     while (is_capturing && is_streaming)
     {
@@ -1798,6 +1813,36 @@ bool indi_webcam::getStreamFrame()
     }
     return false;
 }
+
+//This will clear out the frame buffer of any unread frames.
+//That way we are sure to get the latest frames when exposing
+ bool indi_webcam::flush_frame_buffer()
+ {
+     int packetReceiveTime = -1;
+     int num = 0;
+     while(packetReceiveTime < bufferTimeout)
+     {
+         num++;
+         struct timeval then;
+         gettimeofday(&then, nullptr);
+         AVPacket packet;
+         int ret = av_read_frame(pFormatCtx, &packet);
+         if(ret != 0) // Return value less than 0 means error
+         {
+             if(ret == -35) //Leave the loop since the device is not available to give frames.
+                 break;
+             char errbuff[200];
+             av_make_error_string(errbuff, 200, ret);
+             DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Error while clearing buffer: %s.", errbuff);
+         }
+         struct timeval now;
+         gettimeofday(&now, nullptr);
+         packetReceiveTime = now.tv_usec - then.tv_usec;
+         av_packet_unref(&packet);
+     }
+     DEBUGF(INDI::Logger::DBG_SESSION, "Buffer Cleared of %u stale frames.", num);
+     return true;  //Buffer Cleared
+ }
 
 //This frees up the resources used for streaming/exposing
 void indi_webcam::freeMemory()

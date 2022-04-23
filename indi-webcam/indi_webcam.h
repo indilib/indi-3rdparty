@@ -186,6 +186,7 @@ private:
 
 
     //Webcam setup, release, and frame capture
+    bool flush_frame_buffer();
     bool setupStreaming();
     void freeMemory();
     bool getStreamFrame();
