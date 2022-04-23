@@ -1183,7 +1183,7 @@ bool indi_webcam::StartExposure(float duration)
     if (is_streaming || is_capturing)
     {
         DEBUG(INDI::Logger::DBG_SESSION, "Device is currently streaming.");
-        return 0;
+        return false;
     }
 
     //This resets the stack buffer
@@ -1214,20 +1214,16 @@ bool indi_webcam::StartExposure(float duration)
         PrimaryCCD.setNAxis(2);
     }
     else
-        return -1;
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Invalid output format.");
+        return false;
+    }
 
-    //This sets up the exposure time settings
-    ExposureRequest = duration;
-    PrimaryCCD.setExposureDuration(duration);
-    gettimeofday(&ExpStart, nullptr);
-    timerID = SetTimer(getCurrentPollingPeriod());
-    gotAnImageAlready = false;
-    InExposure = true;
     //Set up the stream, if there is an error, return
     if(!setupStreaming())
     {
         DEBUG(INDI::Logger::DBG_SESSION, "Error Setting up streaming from camera\n");
-        return -1;
+        return false;
     }
     //This will ensure that we get the current frame, not some old frame still in the buffer
     //It returns 0 or an error code.
@@ -1237,7 +1233,14 @@ bool indi_webcam::StartExposure(float duration)
         av_make_error_string(errbuff, 200, ret);
         DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Issue in flushing buffer: %d, %s.", ret, errbuff);
     }
-    return avformat_flush(pFormatCtx);
+    //This sets up the exposure time settings
+    ExposureRequest = duration;
+    PrimaryCCD.setExposureDuration(duration);
+    gettimeofday(&ExpStart, nullptr);
+    timerID = SetTimer(getCurrentPollingPeriod());
+    gotAnImageAlready = false;
+    InExposure = true;
+    return true;
 }
 
 bool indi_webcam::AbortExposure()
