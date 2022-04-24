@@ -415,8 +415,8 @@ bool indi_webcam::ChangeOnlineSource(std::string newProtocol, std::string newIPA
         newURL = customURL;
     else if(!strcmp(newProtocol.c_str(), "HTTP"))
         newURL = "http://" + newUserName + ":" + newPassword + "@" + newIPAddress + ":" + newPort;
-    else if(!strcmp(newProtocol.c_str(), "RTSP"))
-        newURL = "rstp://" + newIPAddress + ":" + newPort + "//user=" + newUserName + "_password=" + newPassword + "_channel=1_stream=0.sdp?real_stream";
+    //else if(!strcmp(newProtocol.c_str(), "RTSP"))
+    //    newURL = "rstp://" + newIPAddress + ":" + newPort + "//user=" + newUserName + "_password=" + newPassword + "_channel=1_stream=0.sdp?real_stream";
 
     if(ChangeOnlineSource(newURL))
     {
@@ -598,9 +598,9 @@ bool indi_webcam::initProperties()
     OnlineProtocols = new ISwitch[3];
     IUFillSwitch(&OnlineProtocols[0], "CUSTOM", "CUSTOM", ISS_OFF);
     IUFillSwitch(&OnlineProtocols[1], "HTTP", "HTTP", ISS_ON);
-    IUFillSwitch(&OnlineProtocols[2], "RTSP", "RTSP", ISS_OFF);
+    //IUFillSwitch(&OnlineProtocols[2], "RTSP", "RTSP", ISS_OFF);
 
-    IUFillSwitchVector(&OnlineProtocolSelection, OnlineProtocols, 3, getDeviceName(), "ONLINE_PROTOCOL", "Online Protocol",
+    IUFillSwitchVector(&OnlineProtocolSelection, OnlineProtocols, 2, getDeviceName(), "ONLINE_PROTOCOL", "Online Protocol",
                        CONNECTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(&OnlineProtocolSelection);
 
