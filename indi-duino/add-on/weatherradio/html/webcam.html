@@ -16,7 +16,7 @@
     <script src="js/bootstrap.min.js"></script>
 
   </head>
-  <body onload="loadImages();">
+  <body>
     <div class="navigation">
         <a href="./weatherradio.html">Home</a> | <a href="./sensordata.html">Sensors</a> | Webcam | <a href="./forecast.html">Forecast</a>
     </div>
@@ -33,11 +33,6 @@
 	  <video src="./media/timelapse_current.mp4" width="640" height="480" autobuffer autoplay controls />
         </div>
       </div> <!-- Time lapse images -->
-      <div class="row" align="center" style="padding: 0px; margin: 0px"> <!-- last images -->
-	<!-- filled by updateImageBar -->
-	<div class="col-sm-12" id="image_bar" />
-      </div> <!-- last images -->
-    </div>
 
 <!-- The Lightbox modal -->
     <div id="lightbox" class="modal">
