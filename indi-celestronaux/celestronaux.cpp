@@ -1283,7 +1283,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 {
     // HA = LST - RA
     double HACurrent = rangeHA(EncodersToHours(EncoderNP[AXIS_RA].getValue()));
-    double RACurrent = get_local_sidereal_time(m_Location.longitude) - HACurrent;
+    double RACurrent = get_local_sidereal_time(m_Location.longitude) + HACurrent;
 
     // Mechanical declination
     double DECurrent = range360(EncodersToDegrees(EncoderNP[AXIS_DE].getValue()));
@@ -2019,7 +2019,7 @@ bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
 {
-    AUXCommand command(isNorthHemisphere() ? MC_SET_POS_GUIDERATE : MC_SET_NEG_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
+    AUXCommand command(isNorthHemisphere() ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     switch (mode)
     {
         case TRACK_SOLAR:
@@ -2028,7 +2028,6 @@ bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
         case TRACK_LUNAR:
             command.setData(AUX_LUNAR, 2);
             break;
-
         case TRACK_SIDEREAL:
         default:
             command.setData(AUX_SIDEREAL, 2);
