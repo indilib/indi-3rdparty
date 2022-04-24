@@ -1961,6 +1961,8 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
+    m_DownloadEstimation = 10000.0; // Experimental: Set Download Estimation to high default value otherwise the next larger frame will time out
+
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
 
