@@ -1,5 +1,6 @@
 function loadImages(width) {
     updateImageBar(width);
+    updateCarousel();
     // update images every 5 min
     setInterval( function(){ loadImages(width);}, 5*60000);
 }
@@ -80,7 +81,7 @@ function updateImageBar(width) {
 	    var link = document.createElement("a");
 	    link.setAttribute("href", "#");
 	    // select the image
-	    link.setAttribute("onclick", "selectImage('" + src + "')");
+	    link.setAttribute("onclick", "selectImage('" + src + "', " + nr++ + ")");
 	    link.setAttribute("class", "hover-shadow");
 	    link.setAttribute("title", new Date(file.ctime*1000).toLocaleString());
 	    link.appendChild(img);
@@ -90,7 +91,9 @@ function updateImageBar(width) {
     });
 };
 
-function selectImage(image) {
+function selectImage(image, nr) {
     img = document.getElementById("current_weather");
     img.setAttribute("src", image);
+    link = document.getElementById("current_weather_link");
+    link.setAttribute("onclick", "openLightbox(" + nr + ")");
 };
