@@ -176,6 +176,8 @@ private:
     ISwitchVectorProperty RapidStackingSelection;
     ISwitch *OutputFormats = nullptr;
     ISwitchVectorProperty OutputFormatSelection;
+    ISwitch *PixelSizes = nullptr;
+    ISwitchVectorProperty PixelSizeSelection;
 
     INumber TimeoutOptionsT[2] {};
     INumberVectorProperty TimeoutOptionsTP;

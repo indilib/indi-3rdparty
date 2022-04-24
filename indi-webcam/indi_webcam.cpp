@@ -545,11 +545,32 @@ bool indi_webcam::initProperties()
 
     defineProperty(&TimeoutOptionsTP);
 
-    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (um)", "%.3f", 0 , 50, 0.1, pixelSize);
+    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (µm)", "%.3f", 0 , 50, 0.1, pixelSize);
     IUFillNumberVector(&PixelSizeTP, PixelSizeT, NARRAY(PixelSizeT), getDeviceName(), "PIXEL_SIZE",
                      "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     defineProperty(&PixelSizeTP);
+
+    PixelSizes = new ISwitch[15];
+    IUFillSwitch(&PixelSizes[0], "2.20", "NexImage 5 - 2.2", ISS_OFF);
+    IUFillSwitch(&PixelSizes[1], "3.30", "Logitech Webcam Pro 9000 - 3.3", ISS_OFF);
+    IUFillSwitch(&PixelSizes[2], "3.00", "SVBONY SV105 - 3.0", ISS_OFF);
+    IUFillSwitch(&PixelSizes[3], "4.00", "SVBONY SV205 - 4.0", ISS_OFF);
+    IUFillSwitch(&PixelSizes[4], "1.67", "NexImage 10 - 1.67", ISS_OFF);
+    IUFillSwitch(&PixelSizes[5], "3.75", "NexImage Burst - 3.75", ISS_OFF);
+    IUFillSwitch(&PixelSizes[6], "3.75", "Skyris 132 - 3.75", ISS_OFF);
+    IUFillSwitch(&PixelSizes[7], "2.80", "Skyris 236 - 2.8", ISS_OFF);
+    IUFillSwitch(&PixelSizes[8], "3.75", "iOptron iGuider or iPolar - 3.75", ISS_OFF);
+    IUFillSwitch(&PixelSizes[9], "1.55", "Raspberry Pi HQ Camera - 1.55", ISS_OFF);
+    IUFillSwitch(&PixelSizes[10], "2.8", "Logitech HD C270 - 2.8", ISS_OFF);
+    IUFillSwitch(&PixelSizes[11], "2.9", "IMX290 USB 2.0 Camera Board - 2.9", ISS_OFF);
+    IUFillSwitch(&PixelSizes[12], "2.9", "Spinel 2MP IMX290 H264 Camera - 2.9", ISS_OFF);
+    IUFillSwitch(&PixelSizes[13], "3.0", "Microsoft LifeCam Cinema TM - 3.0", ISS_OFF);
+    IUFillSwitch(&PixelSizes[14], "2.9", "OpenAstroGuider - 2.9", ISS_OFF);
+
+    IUFillSwitchVector(&PixelSizeSelection, PixelSizes, 15, getDeviceName(), "PIXEL_SIZE_SELECTION", "Camera Pixel Sizes (µm)",
+                       OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+     defineProperty(&PixelSizeSelection);
 
     IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
     IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_ATMOST1,
@@ -1049,6 +1070,22 @@ bool indi_webcam::ISNewSwitch (const char *dev, const char *name, ISState *state
             outputFormat = sp->name;
             OutputFormatSelection.s = IPS_OK;
             IDSetSwitch(&OutputFormatSelection, nullptr);
+            return true;
+        }
+        return false;
+    }
+
+    if (!strcmp(svp->name, PixelSizeSelection.name))
+    {
+        IUUpdateSwitch(&PixelSizeSelection, states, names, n);
+        ISwitch *sp = IUFindOnSwitch(&PixelSizeSelection);
+        if (sp)
+        {
+            pixelSize = atof(sp->name);
+            PixelSizeT[0].value = pixelSize;
+            PixelSizeSelection.s = IPS_OK;
+            IDSetSwitch(&PixelSizeSelection, nullptr);
+            IDSetNumber(&PixelSizeTP, nullptr);
             return true;
         }
         return false;
