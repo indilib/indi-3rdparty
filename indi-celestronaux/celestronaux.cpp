@@ -903,6 +903,7 @@ bool CelestronAUX::Park()
 {
     slewTo(AXIS_AZ, GetAxis1Park());
     slewTo(AXIS_ALT, GetAxis2Park());
+    TrackState = SCOPE_PARKING;
     LOG_INFO("Parking in progress...");
     return true;
 }
@@ -2061,7 +2062,7 @@ bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
 {
-    AUXCommand command(isNorthHemisphere() ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
+    AUXCommand command(isNorthHemisphere() ? MC_SET_POS_GUIDERATE : MC_SET_NEG_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     switch (mode)
     {
         case TRACK_SOLAR:

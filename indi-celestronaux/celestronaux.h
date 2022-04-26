@@ -361,7 +361,7 @@ class CelestronAUX :
         // Angles
         INDI::PropertyNumber AngleNP {2};
 
-        int32_t m_LastTrackRate[2] = {0, 0};
+        int32_t m_LastTrackRate[2] = {-1, -1};
         double m_TrackStartSteps[2] = {0, 0};
         double m_LastOffset[2] = {0, 0};
         uint8_t m_OffsetSwitchSettle[2] = {0, 0};
