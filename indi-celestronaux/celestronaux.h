@@ -217,13 +217,13 @@ class CelestronAUX :
 
         double EncodersToHours(uint32_t steps);
         uint32_t HoursToEncoders(double hour);
-        uint32_t RAToEncoders(double ra);
 
         double EncodersToDE(uint32_t steps, TelescopePierSide pierSide);
         double DEToEncoders(double de);
 
         void EncodersToAltAz(INDI::IHorizontalCoordinates &coords);
         void EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide);
+        void RADEToEncoders(const INDI::IEquatorialCoordinates &coords, uint32_t &haEncoder, uint32_t &deEncoder);
 
         /**
          * @brief mountToSkyCoords Convert mount coordinates to equatorial sky coordinates
