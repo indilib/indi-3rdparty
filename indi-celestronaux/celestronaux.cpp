@@ -1874,7 +1874,7 @@ bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
     trackByRate(axis, 0);
     AUXCommand command(fast ? MC_GOTO_FAST : MC_GOTO_SLOW, APP, axis == AXIS_AZ ? AZM : ALT);
     m_AxisStatus[axis] = SLEWING;
-    command.setData(steps);
+    command.setData(steps, 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
@@ -1982,7 +1982,7 @@ bool CelestronAUX::getCordWrapEnabled()
 bool CelestronAUX::setCordWrapPosition(uint32_t steps)
 {
     AUXCommand command(MC_SET_CORDWRAP_POS, APP, AZM);
-    command.setData(steps);
+    command.setData(steps, 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
