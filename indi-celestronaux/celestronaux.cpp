@@ -2045,13 +2045,13 @@ bool CelestronAUX::Abort()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 {
-    if (rate == m_LastTrackRate[axis])
+    if (std::abs(rate) > 0 && rate == m_LastTrackRate[axis])
         return true;
 
     m_LastTrackRate[axis] = rate;
     AUXCommand command(rate < 0 ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     // 24bit rate
-    command.setData(std::abs(rate));
+    command.setData(std::abs(rate), 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
