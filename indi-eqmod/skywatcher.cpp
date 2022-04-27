@@ -1726,7 +1726,7 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
             {
                 if (i > 0)
                 {
-                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), assess cable quality.", __FUNCTION__, (i*EQMOD_TIMEOUT)/1000, i);
+                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__, (i*EQMOD_TIMEOUT)/1000, i);
                 }
                 return true;
             }
