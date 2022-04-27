@@ -1959,6 +1959,9 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
 
+    // As proposed by Max in INDI forum, increase download estimation after changing ROI since next
+    // frame may take longer to download.
+    m_DownloadEstimation = 10000;
 
     // Total bytes required for image buffer
     uint32_t nbuf = (w * h * PrimaryCCD.getBPP() / 8) * m_Channels;
