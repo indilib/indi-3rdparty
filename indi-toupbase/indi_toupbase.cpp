@@ -154,11 +154,12 @@ bool ToupBase::initProperties()
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Cooler Control
+    /// N.B. Some cameras starts with cooling immediately if powered.
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_OFF);
-    IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_ON);
+    IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_ON);
+    IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
     IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
-                       ISR_1OFMANY, 0, IPS_IDLE);
+                       ISR_1OFMANY, 0, IPS_BUSY);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Controls
@@ -367,10 +368,7 @@ bool ToupBase::updateProperties()
         setupParams();
 
         if (HasCooler())
-        {
             defineProperty(&CoolerSP);
-            loadConfig(true, "CCD_COOLER");
-        }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -1328,11 +1326,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 return true;
             }
 
-            if (CoolerS[TC_COOLER_ON].s == ISS_ON)
-                activateCooler(true);
-            else
-                activateCooler(false);
-
+            activateCooler(CoolerS[TC_COOLER_ON].s == ISS_ON);
+            saveConfig(true, CoolerSP.name);
             return true;
         }
 
