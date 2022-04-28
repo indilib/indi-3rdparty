@@ -903,6 +903,7 @@ bool CelestronAUX::Park()
 {
     slewTo(AXIS_AZ, GetAxis1Park());
     slewTo(AXIS_ALT, GetAxis2Park());
+    TrackState = SCOPE_PARKING;
     LOG_INFO("Parking in progress...");
     return true;
 }
@@ -1281,35 +1282,51 @@ void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
 {
-    // HA = LST - RA
-    double HACurrent = rangeHA(EncodersToHours(EncoderNP[AXIS_RA].getValue()));
-    double RACurrent = get_local_sidereal_time(m_Location.longitude) - HACurrent;
+    auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+    auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
-    // Mechanical declination
-    double DECurrent = range360(EncodersToDegrees(EncoderNP[AXIS_DE].getValue()));
-    if (isNorthHemisphere())
+    double de = 0, ha = 0;
+    // Northern Hemisphere
+    if (LocationN[LOCATION_LATITUDE].value >= 0)
     {
-        if ((DECurrent > 180.0) && (DECurrent <= 360.0))
+        // "Normal" Pointing State (East, looking West)
+        if (deEncoder >= 0)
         {
-            //RACurrent = RACurrent - 12.0;
+            de = std::min(90 - deEncoder, 90.0);
+            ha = -6.0 + (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_EAST;
+        }
+        // "Reversed" Pointing State (West, looking East)
+        else
+        {
+            de = 90 + deEncoder;
+            ha = 6.0 + (haEncoder / 360.0) * 24.0 ;
             pierSide = PIER_WEST;
         }
-        else
-            pierSide = PIER_EAST;
-    }
-    else if (DECurrent > 180.0)
-    {
-        //RACurrent = RACurrent + 12.0;
-        pierSide = PIER_WEST;
     }
     else
-        pierSide = PIER_EAST;
+    {
+        // East
+        if (deEncoder <= 0)
+        {
+            de = std::max(-90 - deEncoder, -90.0);
+            ha = -6.0 - (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_WEST;
+        }
+        // West
+        else
+        {
+            de = -90 + deEncoder;
+            ha = 6.0 - (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_EAST;
+        }
+    }
 
-    RACurrent = range24(RACurrent);
-    DECurrent = EncodersToDE(EncoderNP[AXIS_DE].getValue(), pierSide);
+    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
+    double ra = range24(lst - ha);
 
-    coords.rightascension = RACurrent;
-    coords.declination = DECurrent;
+    coords.rightascension = ra;
+    coords.declination = de;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1371,8 +1388,7 @@ bool CelestronAUX::Goto(double ra, double dec)
         {
             EquatorialCoordinatesFromTelescopeDirectionVector(TDV, MountRADE);
             // Converts to steps and we're done.
-            axis1Steps = RAToEncoders(MountRADE.rightascension);
-            axis2Steps = DEToEncoders(MountRADE.declination);
+            RADEToEncoders(MountRADE, axis1Steps, axis2Steps);
         }
     }
     // Conversion failed, use values as is
@@ -1380,8 +1396,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     {
         if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
         {
-            axis1Steps = RAToEncoders(MountRADE.rightascension);
-            axis2Steps = DEToEncoders(MountRADE.declination);
+            RADEToEncoders(MountRADE, axis1Steps, axis2Steps);
         }
         else
         {
@@ -1767,23 +1782,51 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-///
+/// HA encoders at 0 (HA = LST). When going WEST, steps increase from 0 to STEPS_PER_REVOLUTION {16777216}
+/// counter clock-wise.
+/// HA 0 to 6 hours range: 0 to 4194304
+/// HA 0 to -6 hours range: 16777216 to 12582912
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::RAToEncoders(double ra)
+void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, uint32_t &haEncoder, uint32_t &deEncoder)
 {
-    double ha = rangeHA(get_local_sidereal_time(m_Location.longitude) - ra);
-    if (ha > 0)
-        m_TargetPierSide = PIER_EAST;
+
+    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
+    double dHA = rangeHA(lst - coords.rightascension);
+    double de = 0, ha = 0;
+    // Northern Hemisphere
+    if (LocationN[LOCATION_LATITUDE].value >= 0)
+    {
+        // "Normal" Pointing State (East, looking West)
+        if (dHA <= 0)
+        {
+            de = -(coords.declination - 90.0);
+            ha = (dHA + 6.0) * 360.0 / 24.0;
+        }
+        // "Reversed" Pointing State (West, looking East)
+        else
+        {
+            de = coords.declination - 90.0;
+            ha = (dHA - 6.0) * 360.0 / 24.0;
+        }
+    }
     else
-        m_TargetPierSide = PIER_WEST;
+    {
+        // "Normal" Pointing State (East, looking West)
+        if (dHA <= 0)
+        {
+            de = -(coords.declination + 90.0);
+            ha = -(dHA + 6.0) * 360.0 / 24.0;
+        }
+        // "Reversed" Pointing State (West, looking East)
+        else
+        {
+            de = (coords.declination + 90.0);
+            ha = -(dHA - 6.0) * 360 / 24.0;
+        }
+    }
 
-    // Flip for Northern hemisphere
-    if (isNorthHemisphere())
-        ha *= -1;
-
-    // Limit range to 0 to 24 hours.
-    ha = range24(ha);
-    return HoursToEncoders(ha);
+    haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
+    deEncoder  = (360.0 - range360(de)) / 360.0 * STEPS_PER_REVOLUTION;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1831,7 +1874,7 @@ bool CelestronAUX::slewTo(INDI_HO_AXIS axis, uint32_t steps, bool fast)
     trackByRate(axis, 0);
     AUXCommand command(fast ? MC_GOTO_FAST : MC_GOTO_SLOW, APP, axis == AXIS_AZ ? AZM : ALT);
     m_AxisStatus[axis] = SLEWING;
-    command.setData(steps);
+    command.setData(steps, 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
@@ -1939,7 +1982,7 @@ bool CelestronAUX::getCordWrapEnabled()
 bool CelestronAUX::setCordWrapPosition(uint32_t steps)
 {
     AUXCommand command(MC_SET_CORDWRAP_POS, APP, AZM);
-    command.setData(steps);
+    command.setData(steps, 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
@@ -2002,13 +2045,13 @@ bool CelestronAUX::Abort()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::trackByRate(INDI_HO_AXIS axis, int32_t rate)
 {
-    if (rate == m_LastTrackRate[axis])
+    if (std::abs(rate) > 0 && rate == m_LastTrackRate[axis])
         return true;
 
     m_LastTrackRate[axis] = rate;
     AUXCommand command(rate < 0 ? MC_SET_NEG_GUIDERATE : MC_SET_POS_GUIDERATE, APP, axis == AXIS_AZ ? AZM : ALT);
     // 24bit rate
-    command.setData(std::abs(rate));
+    command.setData(std::abs(rate), 3);
     sendAUXCommand(command);
     readAUXResponse(command);
     return true;
@@ -2028,7 +2071,6 @@ bool CelestronAUX::trackByMode(INDI_HO_AXIS axis, uint8_t mode)
         case TRACK_LUNAR:
             command.setData(AUX_LUNAR, 2);
             break;
-
         case TRACK_SIDEREAL:
         default:
             command.setData(AUX_SIDEREAL, 2);

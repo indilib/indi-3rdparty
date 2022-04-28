@@ -49,6 +49,7 @@ extern "C" {
 //These can't be in indi_webcam class declaration because the callback method has to be passed to FFMpeg
 //We need access to these variables in the callback method
 std::vector<std::string> listOfSources;
+bool connectedOnce = false;
 bool allDevicesFound = false;
 bool checkingDevices = false;
 
@@ -79,7 +80,7 @@ protected:
     void finishExposure();
     void TimerHit() override;
     float CalcTimeLeft();
-    int timerID;
+    int timerID = 0;
     bool grabImage();
 
     bool UpdateCCDFrame(int x, int y, int w, int h) override;
@@ -98,9 +99,10 @@ private:
     bool convertINDI_RGBtoFITS_RGB(uint8_t *originalImage, uint8_t *convertedImage);
 
     //These are related to how we change sources
-    bool ConnectToSource(std::string device, std::string source, int framerate, std::string videosize, std::string htmlSource);
-    bool ChangeSource(std::string newDevice, std::string newSource, int newFramerate, std::string newVideosize);
-    bool ChangeHTMLSource(std::string newIPAddress, std::string newPort, std::string newUserName, std::string newPassword);
+    bool ConnectToSource(std::string device, std::string source, int framerate, std::string videosize, std::string inputpixelformat,  std::string urlSource);
+    bool ChangeSource(std::string newDevice, std::string newSource, int newFramerate, std::string newInputPixelFormat, std::string newVideosize);
+    bool ChangeOnlineSource(std::string newProtocol, std::string newIPAddress, std::string newPort, std::string newUserName, std::string newPassword);
+    bool ChangeOnlineSource(std::string newURL);
     bool reconnectSource();
 
     //These are related to updating the device list
@@ -112,10 +114,12 @@ private:
     ISwitchVectorProperty RefreshSP;
 
     //webcam stacking.
-    bool webcamStacking;
-    bool averaging;
-    float *stackBuffer;
-    int numberOfFramesInStack;
+    bool webcamStacking = false;
+    bool gotAnImageAlready = false;
+    bool loadingSettings = false;
+    bool averaging = false;
+    float *stackBuffer = nullptr;
+    int numberOfFramesInStack = 0;
     bool addToStack();
     void copyFinalStackToPrimaryFrameBuffer();
     void setImageDataValueFromFloat(int x, int y, float value, bool roundAnswer);
@@ -125,64 +129,83 @@ private:
 
     //These are our device capture settings
     bool use16Bit = true;
-    std::string videoDevice;
-    std::string videoSource;
-    int frameRate;
-    std::string videoSize;
-    std::string outputFormat;
+    std::string videoDevice = "";
+    std::string videoSource = "";
+    int frameRate = 0;
+    std::string videoSize = "";
+    std::string inputPixelFormat = "";
+    std::string outputFormat = "";
     //These are our online device capture settings
-    std::string IPAddress;
-    std::string port;
-    std::string username;
-    std::string password;
+    std::string protocol = "";
+    std::string IPAddress = "";
+    std::string port = "";
+    std::string username = "";
+    std::string password = "";
+    std::string customURL = "";
+    std::string url = "";
 
     //The timeout for avformat commands like av_open_input and av_read_frame
-    std::string ffmpegTimeout;
+    double ffmpegTimeout = 0;
     //The timeout for how long of a wait time constitutes a buffered frame vs a new frame
-    std::string bufferTimeout;
+    double bufferTimeout = 0;
+
+    //The pixel size for the camera
+    double pixelSize = 0;
 
     //Related to Options in the Control Panel
-    IText InputOptionsT[4] {};
+    IText InputOptionsT[5] {};
     ITextVectorProperty InputOptionsTP;
-    IText HTTPInputOptions[4] {};
-    ITextVectorProperty HTTPInputOptionsP;
+    IText OnlineInputOptions[4] {};
+    ITextVectorProperty OnlineInputOptionsP;
+    IText URLPathT[1] {};
+    ITextVectorProperty URLPathTP;
+
+    ISwitch *OnlineProtocols = nullptr;
+    ISwitchVectorProperty OnlineProtocolSelection;
     ISwitch *CaptureDevices = nullptr;
     ISwitchVectorProperty CaptureDeviceSelection;
     ISwitch *CaptureSources = nullptr;
     ISwitchVectorProperty CaptureSourceSelection;
     ISwitch *FrameRates = nullptr;
     ISwitchVectorProperty FrameRateSelection;
+    ISwitch *PixelFormats = nullptr;
+    ISwitchVectorProperty PixelFormatSelection;
     ISwitch *VideoSizes = nullptr;
     ISwitchVectorProperty VideoSizeSelection;
     ISwitch *RapidStacking = nullptr;
     ISwitchVectorProperty RapidStackingSelection;
     ISwitch *OutputFormats = nullptr;
     ISwitchVectorProperty OutputFormatSelection;
-    IText TimeoutOptionsT[2] {};
-    ITextVectorProperty TimeoutOptionsTP;
+    ISwitch *PixelSizes = nullptr;
+    ISwitchVectorProperty PixelSizeSelection;
+
+    INumber TimeoutOptionsT[2] {};
+    INumberVectorProperty TimeoutOptionsTP;
+    INumber PixelSizeT[1] {};
+    INumberVectorProperty PixelSizeTP;
     INumber VideoAdjustmentsT[3] {};
     INumberVectorProperty VideoAdjustmentsTP;
 
 
     //Webcam setup, release, and frame capture
+    bool flush_frame_buffer();
     bool setupStreaming();
     void freeMemory();
     bool getStreamFrame();
-    bool flush_frame_buffer();
 
     //Related to streaming
     std::thread capture_thread;
     static void RunCaptureThread(indi_webcam *webcam);
     void run_capture();
-    bool is_capturing;
-    bool is_streaming;
+    bool is_capturing = false;
+    bool is_streaming = false;
     void start_capturing();
     void stop_capturing();
 
     //FFMpeg Variables to make captures work.
     struct SwsContext *sws_ctx;
     uint8_t *buffer;
-    int numBytes;
+    int numBytes = 0;
     AVPixelFormat out_pix_fmt;
     AVFormatContext *pFormatCtx;
     int              videoStream;

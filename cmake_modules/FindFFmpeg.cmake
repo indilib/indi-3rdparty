@@ -79,8 +79,15 @@ if (PKG_CONFIG_FOUND)
 	pkg_check_modules(AVFORMAT libavformat${_avformat_ver})
 	pkg_check_modules(AVUTIL libavutil${_avutil_ver})
 	pkg_check_modules(SWSCALE libswscale${_swscale_ver})
-	
-else (PKG_CONFIG_FOUND)
+
+endif (PKG_CONFIG_FOUND)
+
+if (NOT PKG_CONFIG_FOUND OR 
+	NOT FFMPEG_LIBAVCODEC OR
+	NOT FFMPEG_LIBAVDEVICE OR
+	NOT FFMPEG_LIBAVFORMAT OR
+	NOT FFMPEG_LIBAVUTIL OR
+	NOT FFMPEG_LIBSWSCALE)
 
 # LIBAVCODEC
 	set(PACKAGE_NAME "LIBAVCODEC")
@@ -137,7 +144,7 @@ else (PKG_CONFIG_FOUND)
 		set(SWSCALE_VERSION FFMPEG_PACKAGE_VERSION)
 	endif(FFMPEG_PACKAGE_VERSION_OK)
 	
-endif (PKG_CONFIG_FOUND)
+endif ()
 
 find_library(FFMPEG_LIBAVCODEC
 NAMES avcodec libavcodec
