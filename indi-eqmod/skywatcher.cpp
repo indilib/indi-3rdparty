@@ -1723,7 +1723,13 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
         try
         {
             if (read_eqmod())
+            {
+                if (i > 0)
+                {
+                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__, (i*EQMOD_TIMEOUT)/1000, i);
+                }
                 return true;
+            }
         }
         catch (EQModError)
         {
@@ -1749,8 +1755,7 @@ bool Skywatcher::read_eqmod()
     {
         //Have to onsider cases when we read ! (error) or 0x01 (buffer overflow)
         // Read until encountring a CR
-        //if ((err_code = tty_read_section(PortFD, response, 0x0D, 15, &nbytes_read)) != TTY_OK)
-        if ((err_code = tty_read_section(PortFD, response, 0x0D, EQMOD_TIMEOUT, &nbytes_read)) != TTY_OK)
+        if ((err_code = tty_read_section_expanded(PortFD, response, 0x0D, 0, EQMOD_TIMEOUT, &nbytes_read)) != TTY_OK)
         {
             char ttyerrormsg[ERROR_MSG_LENGTH];
             tty_error_msg(err_code, ttyerrormsg, ERROR_MSG_LENGTH);
