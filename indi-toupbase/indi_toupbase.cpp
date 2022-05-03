@@ -153,7 +153,7 @@ bool ToupBase::initProperties()
     INDI::CCD::initProperties();
 
     ///////////////////////////////////////////////////////////////////////////////////
-    /// Cooler Control
+    /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&BinningModeS[0], "BINNING_MODE_AVG", "AVG", ISS_OFF);
     IUFillSwitch(&BinningModeS[1], "BINNING_MODE_ADD", "Add", ISS_ON);
