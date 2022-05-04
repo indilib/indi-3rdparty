@@ -2025,20 +2025,20 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
 bool ToupBase::updateBinningMode(int binx, int mode)
 {
     
-    LOGF_ERROR("updateBinningMode%d",mode);
+    LOGF_DEBUG("Function: updateBinningMode(binx:%d,mode:%s)",binx,(mode==BINNING_MODE_ADD) ? "BINNING_MODE_ADD" : "BINNING_MODE_AVG");
 
     int binningMode = binx;
-    LOGF_ERROR("Experimental: binningMode: %x before",binningMode);
+    
     if ((mode == BINNING_MODE_AVG) && (binx>1))
     {
         binningMode = binx | 0x80;  
     }
-    LOGF_ERROR("Experimental: binningMode: %x after",binningMode);
+    LOGF_DEBUG("binningMode code to set: 0x%x",binningMode);
 
     HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binningMode));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Binning %dx%d is not support. %s", binningMode, binningMode, errorCodes[rc].c_str());
+        LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx , binx, binningMode, errorCodes[rc].c_str());
         return false;
     }
     
@@ -2056,8 +2056,12 @@ bool ToupBase::UpdateCCDBin(int binx, int biny)
     //        LOG_ERROR("Only 1x1, 2x2, 3x3, and 4x4 modes are supported.");
     //        return false;
     //    }
+    if (binx !=biny)
+    {
+        LOG_ERROR("Binning dimensions must be equal");
+        return false;
+    }
 
-    // TODO add option to select between additive vs. average binning
     return updateBinningMode(binx,m_BinningMode);
 } 
 
