@@ -2334,6 +2334,11 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
         m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
         LOGF_DEBUG("New download estimate %.f ms", m_DownloadEstimation);
 
+        if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION) {
+            m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
+            LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
+        }
+
         InExposure  = false;
         PrimaryCCD.setExposureLeft(0);
         uint8_t *buffer = PrimaryCCD.getFrameBuffer();
@@ -2416,6 +2421,11 @@ void ToupBase::eventPullCallBack(unsigned event)
                 gettimeofday(&curtime, nullptr);
                 timersub(&curtime, &ExposureEnd, &diff);
                 m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+
+                if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION) {
+                    m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
+                    LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
+                }
 
                 m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;

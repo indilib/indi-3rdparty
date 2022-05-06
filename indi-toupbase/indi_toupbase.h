@@ -673,4 +673,5 @@ class ToupBase : public INDI::CCD
                                 char *formats[], char *names[], int n);
 
         static const uint8_t MAX_RETRIES { 5 };
+        static const uint32_t MIN_DOWNLOAD_ESTIMATION { 1000 };
 };
