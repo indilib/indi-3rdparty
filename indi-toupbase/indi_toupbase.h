@@ -457,11 +457,11 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         ISwitchVectorProperty BinningModeSP;
         ISwitch BinningModeS[2];
-        enum
+        typedef enum
         {
             TC_BINNING_AVG,
             TC_BINNING_ADD,
-        };
+        } BINNING_MODE;
 
 
         ISwitchVectorProperty CoolerSP;
@@ -647,13 +647,9 @@ class ToupBase : public INDI::CCD
             GAIN_HDR
         };
 
-        typedef enum
-        {
-            BINNING_MODE_AVG,
-            BINNING_MODE_ADD
-        } BINNING_MODE;
+        
 
-        BINNING_MODE m_BinningMode = BINNING_MODE_ADD;
+        BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
         eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;

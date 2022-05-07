@@ -155,8 +155,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&BinningModeS[0], "BINNING_MODE_AVG", "AVG", ISS_OFF);
-    IUFillSwitch(&BinningModeS[1], "BINNING_MODE_ADD", "Add", ISS_ON);
+    IUFillSwitch(&BinningModeS[TC_BINNING_AVG], "BINNING_MODE_AVG", "AVG", ISS_OFF);
+    IUFillSwitch(&BinningModeS[TC_BINNING_ADD], "BINNING_MODE_ADD", "Add", ISS_ON);
     IUFillSwitchVector(&BinningModeSP, BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO,
                        ISR_1OFMANY, 0, IPS_IDLE);
     
@@ -1345,15 +1345,15 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             if (BinningModeS[TC_BINNING_AVG].s == ISS_ON)
             {
 
-                m_BinningMode = BINNING_MODE_AVG;
-                updateBinningMode(PrimaryCCD.getBinX(),BINNING_MODE_AVG);
+                m_BinningMode = TC_BINNING_AVG;
+                updateBinningMode(PrimaryCCD.getBinX(),TC_BINNING_AVG);
                 LOG_DEBUG("Set Binning Mode AVG");
             }
                 
             else
             {
-                m_BinningMode = BINNING_MODE_ADD;
-                updateBinningMode(PrimaryCCD.getBinX(),BINNING_MODE_ADD);
+                m_BinningMode = TC_BINNING_ADD;
+                updateBinningMode(PrimaryCCD.getBinX(),TC_BINNING_ADD);
                 LOG_DEBUG("Set Binning Mode ADD");
             }
             return true;
@@ -2025,11 +2025,11 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
 bool ToupBase::updateBinningMode(int binx, int mode)
 {
     
-    LOGF_DEBUG("Function: updateBinningMode(binx:%d,mode:%s)",binx,(mode==BINNING_MODE_ADD) ? "BINNING_MODE_ADD" : "BINNING_MODE_AVG");
+    LOGF_DEBUG("Function: updateBinningMode(binx:%d,mode:%s)",binx,(mode==TC_BINNING_ADD) ? "TC_BINNING_ADD" : "TC_BINNING_AVG");
 
     int binningMode = binx;
     
-    if ((mode == BINNING_MODE_AVG) && (binx>1))
+    if ((mode == TC_BINNING_AVG) && (binx>1))
     {
         binningMode = binx | 0x80;  
     }
