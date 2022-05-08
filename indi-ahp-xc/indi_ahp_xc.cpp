@@ -282,7 +282,6 @@ void AHP_XC::Callback()
                     double d = fabs(baselines[idx]->getDelay(Altitude, Azimuth));
                     unsigned int delay_clocks = d * ahp_xc_get_frequency() / LIGHTSPEED;
                     delay_clocks = (delay_clocks > 0 ? (delay_clocks < ahp_xc_get_delaysize() ? delay_clocks : ahp_xc_get_delaysize() - 1) : 0);
-                    delay_clocks >>= ahp_xc_get_frequency_divider();
                     if(y == farest)
                     {
                         delay[x] = d;
@@ -605,8 +604,7 @@ bool AHP_XC::initProperties()
                  0.211121449);
     IUFillNumber(&settingsN[1], "INTERFEROMETER_BANDWIDTH_VALUE", "Filter bandwidth (m)", "%g", 3.0E-12, 3.0E+3, 1.0E-9,
                  1199.169832);
-    IUFillNumber(&settingsN[2], "INTERFEROMETER_RESOLUTION_VALUE", "Clock divider", "%g", 0, 15, 1, 0);
-    IUFillNumberVector(&settingsNP, settingsN, 3, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings",
+    IUFillNumberVector(&settingsNP, settingsN, 2, getDeviceName(), "INTERFEROMETER_SETTINGS", "AHP_XC Settings",
                        MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     // Set minimum exposure speed to 0.001 seconds
@@ -789,7 +787,6 @@ bool AHP_XC::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             baselines[x]->setWavelength(settingsN[0].value);
         }
-        ahp_xc_set_frequency_divider(settingsN[2].value);
         IDSetNumber(&settingsNP, nullptr);
         return true;
     }
@@ -1236,11 +1233,6 @@ bool AHP_XC::Connect()
 void AHP_XC::ActiveLine(unsigned int line, bool on, bool power, bool active_low, bool edge_triggered)
 {
     ahp_xc_set_leds(line, (on ? 1 : 0) | (power ? 2 : 0) | (active_low ? 4 : 0) | (edge_triggered ? 8 : 0));
-}
-
-void AHP_XC::SetFrequencyDivider(unsigned char divider)
-{
-    ahp_xc_set_frequency_divider(divider);
 }
 
 void AHP_XC::EnableCapture(bool start)
