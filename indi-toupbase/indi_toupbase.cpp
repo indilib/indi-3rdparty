@@ -1337,10 +1337,10 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
         if (!strcmp(name, BinningModeSP.name))
         {
             IUUpdateSwitch(&BinningModeSP, states, names, n);            
-            auto mode = (BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD
+            auto mode = (BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
             m_BinningMode = mode;
             updateBinningMode(PrimaryCCD.getBinX(),mode);
-            LOGF_DEBUG("Set Binning Mode %s", mode == TC_BINNING_AVG ? "AVG" : "ADD);
+            LOGF_DEBUG("Set Binning Mode %s", mode == TC_BINNING_AVG ? "AVG" : "ADD");
             saveConfig(true, BinningModeSP.name);
             return true;
         }
