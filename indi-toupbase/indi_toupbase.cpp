@@ -155,8 +155,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&BinningModeS[TC_BINNING_AVG], "BINNING_MODE_AVG", "AVG", ISS_OFF);
-    IUFillSwitch(&BinningModeS[TC_BINNING_ADD], "BINNING_MODE_ADD", "Add", ISS_ON);
+    IUFillSwitch(&BinningModeS[TC_BINNING_AVG], "TC_BINNING_AVG", "AVG", ISS_OFF);
+    IUFillSwitch(&BinningModeS[TC_BINNING_ADD], "TC_BINNING_ADD", "Add", ISS_ON);
     IUFillSwitchVector(&BinningModeSP, BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO,
                        ISR_1OFMANY, 0, IPS_IDLE);
     
@@ -373,11 +373,7 @@ bool ToupBase::updateProperties()
     if (isConnected())
     {
         // Let's get parameters now from CCD
-        setupParams();
-
-        // TODO: Check if Camera supports binning mode
-        defineProperty(&BinningModeSP);
-
+        setupParams();        
 
         if (HasCooler())
         {
@@ -419,6 +415,10 @@ bool ToupBase::updateProperties()
             defineProperty(&GainConversionSP);
         }
 
+        // Binning mode
+        // TODO: Check if Camera supports binning mode
+        defineProperty(&BinningModeSP);
+     
         // Levels
         defineProperty(&LevelRangeNP);
         defineProperty(&BlackBalanceNP);
@@ -469,6 +469,7 @@ bool ToupBase::updateProperties()
             deleteProperty(GainConversionSP.name);
         }
 
+        deleteProperty(BinningModeSP.name);
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
         deleteProperty(OffsetNP.name);
@@ -1335,27 +1336,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, BinningModeSP.name))
         {
-            if (IUUpdateSwitch(&BinningModeSP, states, names, n) < 0)
-            {
-                BinningModeSP.s = IPS_ALERT;
-                IDSetSwitch(&BinningModeSP, nullptr);
-                return true;
-            }
-
-            if (BinningModeS[TC_BINNING_AVG].s == ISS_ON)
-            {
-
-                m_BinningMode = TC_BINNING_AVG;
-                updateBinningMode(PrimaryCCD.getBinX(),TC_BINNING_AVG);
-                LOG_DEBUG("Set Binning Mode AVG");
-            }
-                
-            else
-            {
-                m_BinningMode = TC_BINNING_ADD;
-                updateBinningMode(PrimaryCCD.getBinX(),TC_BINNING_ADD);
-                LOG_DEBUG("Set Binning Mode ADD");
-            }
+            IUUpdateSwitch(&BinningModeSP, states, names, n);            
+            auto mode = (BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD
+            m_BinningMode = mode;
+            updateBinningMode(PrimaryCCD.getBinX(),mode);
+            LOGF_DEBUG("Set Binning Mode %s", mode == TC_BINNING_AVG ? "AVG" : "ADD);
+            saveConfig(true, BinningModeSP.name);
             return true;
         }
 
@@ -2327,6 +2313,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 
     IUSaveConfigSwitch(fp, &VideoFormatSP);
     IUSaveConfigSwitch(fp, &ResolutionSP);
+    IUSaveConfigSwitch(fp, &BinningModeSP);
 
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
