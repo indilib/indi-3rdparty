@@ -1083,8 +1083,21 @@
 #define QHY411_MAX_WIDTH        	14304
 #define QHY411_MAX_HEIGHT        	10748
 
+// 10802-92-54=10656 max_y-topBlank-bottomBlank=imageHeight
+// 14304-48-48=14208 max_x-leftBlank-rightBlank=imageWidth
+// only y-shift is supported by most sensor
 #define QHY411ERIS_MAX_WIDTH        14304
-#define QHY411ERIS_MAX_HEIGHT       10748
+#define QHY411ERIS_MAX_HEIGHT       10802
+#define QHY411ERIS_Left_Blank       48
+#define QHY411ERIS_right_Blank      48
+#define QHY411ERIS_Top_Blank        92
+//81 is a default shift value, set to 81 can save data size
+#define QHY411ERIS_M_Default_SHIFT  81
+// for color sensor, shift value must be an odd number
+#define QHY411ERIS_C_Default_SHIFT  81
+// bottom can be set to 0 to reduce data size (set bottom to 0 and set max_height to 10748
+#define QHY411ERIS_Bottom_Blank     54
+
 
 #define QHY600_MAX_WIDTH        	9600
 #define QHY600_MAX_HEIGHT        	6422
