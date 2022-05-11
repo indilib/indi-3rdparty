@@ -1,3 +1,10 @@
+indi-toupbase (0.8) focal; urgency=low
+
+  * Added binningm mode.
+  * Fixed timeout after changing exposure duration.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 9 Sep 2021 09:00:00 +0300
+
 indi-toupbase (0.7) bionic; urgency=low
 
   * Add OEM camera support like Meade.

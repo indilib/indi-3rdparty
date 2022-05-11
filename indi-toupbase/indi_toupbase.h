@@ -647,8 +647,6 @@ class ToupBase : public INDI::CCD
             GAIN_HDR
         };
 
-        
-
         BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
