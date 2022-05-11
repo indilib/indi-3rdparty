@@ -418,6 +418,8 @@ class ToupBase : public INDI::CCD
         // Get the current Bayer string used
         const char *getBayerString();
 
+        bool updateBinningMode(int binx, int mode);
+
         //#############################################################################
         // Callbacks
         //#############################################################################
@@ -453,6 +455,15 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Properties
         //#############################################################################
+        ISwitchVectorProperty BinningModeSP;
+        ISwitch BinningModeS[2];
+        typedef enum
+        {
+            TC_BINNING_AVG,
+            TC_BINNING_ADD,
+        } BINNING_MODE;
+
+
         ISwitchVectorProperty CoolerSP;
         ISwitch CoolerS[2];
         enum
@@ -636,6 +647,9 @@ class ToupBase : public INDI::CCD
             GAIN_HDR
         };
 
+        
+
+        BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
         eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;

@@ -153,6 +153,15 @@ bool ToupBase::initProperties()
     INDI::CCD::initProperties();
 
     ///////////////////////////////////////////////////////////////////////////////////
+    /// Binning Mode Control
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&BinningModeS[TC_BINNING_AVG], "TC_BINNING_AVG", "AVG", ISS_OFF);
+    IUFillSwitch(&BinningModeS[TC_BINNING_ADD], "TC_BINNING_ADD", "Add", ISS_ON);
+    IUFillSwitchVector(&BinningModeSP, BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO,
+                       ISR_1OFMANY, 0, IPS_IDLE);
+    
+    
+    ///////////////////////////////////////////////////////////////////////////////////
     /// Cooler Control
     /// N.B. Some cameras starts with cooling immediately if powered.
     ///////////////////////////////////////////////////////////////////////////////////
@@ -365,7 +374,7 @@ bool ToupBase::updateProperties()
     if (isConnected())
     {
         // Let's get parameters now from CCD
-        setupParams();
+        setupParams();        
 
         if (HasCooler())
             defineProperty(&CoolerSP);
@@ -404,6 +413,10 @@ bool ToupBase::updateProperties()
             defineProperty(&GainConversionSP);
         }
 
+        // Binning mode
+        // TODO: Check if Camera supports binning mode
+        defineProperty(&BinningModeSP);
+     
         // Levels
         defineProperty(&LevelRangeNP);
         defineProperty(&BlackBalanceNP);
@@ -454,6 +467,7 @@ bool ToupBase::updateProperties()
             deleteProperty(GainConversionSP.name);
         }
 
+        deleteProperty(BinningModeSP.name);
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
         deleteProperty(OffsetNP.name);
@@ -1314,6 +1328,23 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+
+        //////////////////////////////////////////////////////////////////////
+        /// Binning Mode Control
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, BinningModeSP.name))
+        {
+            IUUpdateSwitch(&BinningModeSP, states, names, n);            
+            auto mode = (BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
+            m_BinningMode = mode;
+            updateBinningMode(PrimaryCCD.getBinX(),mode);
+            LOGF_DEBUG("Set Binning Mode %s", mode == TC_BINNING_AVG ? "AVG" : "ADD");
+            saveConfig(true, BinningModeSP.name);
+            return true;
+        }
+
+
+
         //////////////////////////////////////////////////////////////////////
         /// Cooler Control
         //////////////////////////////////////////////////////////////////////
@@ -1956,6 +1987,8 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
+    m_DownloadEstimation = 10000.0; // Experimental: Set Download Estimation to high default value otherwise the next larger frame will time out
+
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
 
@@ -1973,6 +2006,33 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
     return true;
 }
 
+bool ToupBase::updateBinningMode(int binx, int mode)
+{
+    
+    LOGF_DEBUG("Function: updateBinningMode(binx:%d,mode:%s)",binx,(mode==TC_BINNING_ADD) ? "TC_BINNING_ADD" : "TC_BINNING_AVG");
+
+    int binningMode = binx;
+    
+    if ((mode == TC_BINNING_AVG) && (binx>1))
+    {
+        binningMode = binx | 0x80;  
+    }
+    LOGF_DEBUG("binningMode code to set: 0x%x",binningMode);
+
+    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binningMode));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx , binx, binningMode, errorCodes[rc].c_str());
+        return false;
+    }
+    
+    PrimaryCCD.setBin(binx, binx);
+
+
+    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());;
+   
+}
+
 bool ToupBase::UpdateCCDBin(int binx, int biny)
 {
     //    if (binx > 4)
@@ -1980,18 +2040,14 @@ bool ToupBase::UpdateCCDBin(int binx, int biny)
     //        LOG_ERROR("Only 1x1, 2x2, 3x3, and 4x4 modes are supported.");
     //        return false;
     //    }
-
-    // TODO add option to select between additive vs. average binning
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binx));
-    if (FAILED(rc))
+    if (binx !=biny)
     {
-        LOGF_ERROR("Binning %dx%d is not support. %s", binx, biny, errorCodes[rc].c_str());
+        LOG_ERROR("Binning dimensions must be equal");
         return false;
     }
-    PrimaryCCD.setBin(binx, binx);
 
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
-}
+    return updateBinningMode(binx,m_BinningMode);
+} 
 
 // The generic timer call back is used for temperature monitoring
 void ToupBase::TimerHit()
@@ -2255,6 +2311,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 
     IUSaveConfigSwitch(fp, &VideoFormatSP);
     IUSaveConfigSwitch(fp, &ResolutionSP);
+    IUSaveConfigSwitch(fp, &BinningModeSP);
 
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
