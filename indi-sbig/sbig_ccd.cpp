@@ -831,7 +831,10 @@ bool SBIGCCD::Connect()
     loadFirmwareOnOSXifNeeded();
 
     if (isConnected())
+    {
+        LOG_DEBUG("CCD device already connected");
         return true;
+    }
     m_hasGuideHead     = false;
     m_hasFilterWheel   = false;
     uint32_t devType = *(static_cast<uint32_t *>(IUFindOnSwitch(&PortSP)->aux));
@@ -850,7 +853,12 @@ bool SBIGCCD::Connect()
 
     LOGF_INFO("CCD is connected at port %s", port);
 
-    GetExtendedCCDInfo();
+    if (GetExtendedCCDInfo() != CE_NO_ERROR)
+    {
+        LOG_ERROR("Failed to get extended CCD info.");
+        return false;
+    }
+
     uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_SHUTTER | CCD_HAS_ST4_PORT;
     if (m_hasGuideHead)
         cap |= CCD_HAS_GUIDE_HEAD;
@@ -2104,7 +2112,8 @@ int SBIGCCD::GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxH
     if (res == CE_NO_ERROR)
     {
         numModes = gccdir.readoutModes;
-        switch(numModes)
+        // the actual readout mode == numModes-1 because the first mode == 0
+        switch(numModes-1)
         {
             case CCD_BIN_2x2_I:
             case CCD_BIN_2x2_E:
@@ -2130,7 +2139,7 @@ int SBIGCCD::GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxH
                 break;
             case CCD_BIN_9x9_I:
                 maxHBin = 9;
-                maxVBin = maxHBin;
+                maxVBin = 255; // because vertical binning modes are also available
                 break;
             case CCD_BIN_NxN_I:
                 maxHBin = 255;
@@ -2144,54 +2153,53 @@ int SBIGCCD::GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxH
                 break;
         }
     }
+    LOGF_DEBUG("%s: max horizontal/vertical binning (%d / %d) supported readout modes (%d)",__FUNCTION__,
+              maxHBin,maxVBin,numModes);
     return res;
 }
 
-void SBIGCCD::GetExtendedCCDInfo()
+int SBIGCCD::GetExtendedCCDInfo()
 {
-    int res = 0;
+    int res = CE_NO_ERROR;
     GetCCDInfoParams gccdip;
-    GetCCDInfoResults4 imaging_ccd_results4;
-    GetCCDInfoResults4 tracking_ccd_results4;
+    GetCCDInfoResults4 results4;
     GetCCDInfoResults6 results6;
+
+    LOG_DEBUG("Fetching extended CCD info from device ...");
 
     if (isSimulation())
     {
         m_hasGuideHead   = true;
         m_hasFilterWheel = true;
-        return;
+        return res;
     }
     gccdip.request = CCD_INFO_EXTENDED2_IMAGING;
-    if (GetCcdInfo(&gccdip, &imaging_ccd_results4) == CE_NO_ERROR)
-    {
+    if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
         LOGF_DEBUG("CCD_IMAGING Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                   imaging_ccd_results4.capabilitiesBits, imaging_ccd_results4.dumpExtra);
+                    results4.capabilitiesBits, results4.dumpExtra);
+    else
+    {
+        LOGF_ERROR("%s: CCD_INFO_EXTENDED2_IMAGING -> (%s)", __FUNCTION__, GetErrorString(res));
+        return res;
     }
+
     gccdip.request = CCD_INFO_EXTENDED2_TRACKING;
-    res = GetCcdInfo(&gccdip, &tracking_ccd_results4);
-    if (res == CE_NO_ERROR)
+    if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
     {
         m_hasGuideHead = true;
+        m_useExternalTrackingCCD = results4.capabilitiesBits & CB_CCD_EXT_TRACKER_YES;
         LOGF_DEBUG("TRACKING_CCD Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                   tracking_ccd_results4.capabilitiesBits, tracking_ccd_results4.dumpExtra);
-        if (tracking_ccd_results4.capabilitiesBits & CB_CCD_EXT_TRACKER_YES)
-        {
-            LOG_DEBUG("External tracking CCD detected.");
-            m_useExternalTrackingCCD = true;
-        }
-        else
-        {
-            m_useExternalTrackingCCD = false;
-        }
+                    results4.capabilitiesBits, results4.dumpExtra);
     }
     else
     {
         m_hasGuideHead = false;
-        LOGF_DEBUG("TRACKING_CCD Error getting extended CCD Info 4 (%s). No guide head detected.",
-                   GetErrorString(res));
+        LOGF_DEBUG("%s: CCD_INFO_EXTENDED2_TRACKING -> (%s). No guide head detected.", __FUNCTION__, GetErrorString(res));
+        return CE_NO_ERROR;
     }
+
     gccdip.request = CCD_INFO_EXTENDED3;
-    if (GetCcdInfo(&gccdip, &results6) == CE_NO_ERROR)
+    if ((res = GetCcdInfo(&gccdip, &results6)) == CE_NO_ERROR)
     {
         LOGF_DEBUG("Extended CCD Info 6. Camerabit: (%ld) CCD bits (%ld) Extra bit (%ld)",
                    results6.cameraBits, results6.ccdBits, results6.extraBits);
@@ -2212,12 +2220,13 @@ void SBIGCCD::GetExtendedCCDInfo()
     {
         LOGF_DEBUG("Error getting extended CCD Info 6 (%s)", GetErrorString(res));
     }
+
     CFWParams CFWp;
     CFWResults CFWr;
     CFWp.cfwModel   = CFWSEL_AUTO;
     CFWp.cfwCommand = CFWC_GET_INFO;
     CFWp.cfwParam1  = CFWG_FIRMWARE_VERSION;
-    if (SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr) == CE_NO_ERROR)
+    if ((res = SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr)) == CE_NO_ERROR)
     {
         LOGF_DEBUG("Filter wheel detected (firmware %ld).", CFWr.cfwResult1);
         m_hasFilterWheel = true;
@@ -2226,6 +2235,7 @@ void SBIGCCD::GetExtendedCCDInfo()
     {
         m_hasFilterWheel = false;
     }
+    return res;
 }
 
 //==========================================================================
@@ -2362,18 +2372,21 @@ int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
         if (targetChip->getBinX() == 1)
             binning = CCD_BIN_1x1_I;
         else if (targetChip->getBinX() == 2)
-            binning = CCD_BIN_1x1_I;
+            binning = CCD_BIN_2x2_I;
         else if (targetChip->getBinX() == 3)
             binning = CCD_BIN_3x3_I;
         else if (targetChip->getBinX() == 9)
             binning = CCD_BIN_9x9_I;
         else
-            binning = CCD_BIN_NxN_I;
+            // store amount of binning in the high byte
+            // not mentioned in the SBIG documentation, but probably similar to the
+            // vertical binning case (see below)
+            binning = CCD_BIN_NxN_I + (targetChip->getBinX() << 8);
     } else {
         if (targetChip->getBinX() == 1)
             binning = CCD_BIN_1xN_I;
         else if (targetChip->getBinX() == 2)
-            binning = CCD_BIN_1xN_I;
+            binning = CCD_BIN_2xN_I;
         else if (targetChip->getBinX() == 3)
             binning = CCD_BIN_3xN_I;
         else // this should not happen
@@ -2385,6 +2398,8 @@ int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
         // (see notes in Sec. 3.2.4 of SBIG Universal Driver documentation)
         binning += targetChip->getBinY() << 8;
     }
+    LOGF_DEBUG("%s: binx (%d) biny (%d) binning_mode (%d)", __FUNCTION__, targetChip->getBinX(),
+               targetChip->getBinY(),binning);
     return res;
 }
 

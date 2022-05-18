@@ -382,7 +382,7 @@ class SBIGCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
         int EstablishLink();
         int GetCcdInfo(GetCCDInfoParams *, void *);
-        void GetExtendedCCDInfo();
+        int GetExtendedCCDInfo();
         int QueryCommandStatus(QueryCommandStatusParams *, QueryCommandStatusResults *);
         int MiscellaneousControl(MiscellaneousControlParams *);
         int ReadOffset(ReadOffsetParams *, ReadOffsetResults *);
