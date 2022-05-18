@@ -446,6 +446,9 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
         case 0x20:
             strcpy(boardinfo[0], "EQ8-R Pro");
             break;
+        case 0x22:
+            strcpy(boardinfo[0], "AZEQ6 Pro");
+            break;
         case 0x23:
             strcpy(boardinfo[0], "EQ6-R Pro");
             break;
