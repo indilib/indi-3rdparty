@@ -824,8 +824,8 @@ bool SBIGCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 bool SBIGCCD::Connect()
 {
     int numModes = -1;
-    int maxHBin  = 1;
-    int maxVBin  = 1;
+    int maxBinX  = 1;
+    int maxBinY  = 1;
     int res = CE_NO_ERROR;
 
     loadFirmwareOnOSXifNeeded();
@@ -870,25 +870,25 @@ bool SBIGCCD::Connect()
         IEAddTimer(TEMPERATURE_POLL_MS, SBIGCCD::updateTemperatureHelper, this);
     }
 
-    res = GetReadoutModes(&PrimaryCCD,numModes,maxHBin,maxVBin);
+    res = getReadoutModes(&PrimaryCCD,numModes,maxBinX,maxBinY);
     if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
     {
         LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
         return false;
     }
-    PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxHBin, 1, false);
-    PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxVBin, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxBinX, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxBinY, 1, false);
 
     if (m_hasGuideHead)
     {
-        res = GetReadoutModes(&GuideCCD,numModes,maxHBin,maxVBin);
+        res = getReadoutModes(&GuideCCD,numModes,maxBinX,maxBinY);
         if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
         {
             LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
             return false;
         }
-        GuideCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxHBin, 1, false);
-        GuideCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxVBin, 1, false);
+        GuideCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxBinX, 1, false);
+        GuideCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxBinY, 1, false);
     }
 
     SetCCDCapability(cap);
@@ -1252,6 +1252,8 @@ bool SBIGCCD::updateFrameProperties(INDI::CCDChip *targetChip)
 {
     int wCcd, hCcd, binning;
     double wPixel, hPixel;
+
+    LOG_DEBUG("Updating frame properties ...");
     int res = getBinningMode(targetChip, binning);
     if (res != CE_NO_ERROR)
     {
@@ -1884,7 +1886,7 @@ int SBIGCCD::GetCcdInfo(GetCCDInfoParams *gcp, void *gcr)
 
 int SBIGCCD::getCCDSizeInfo(int ccd, int binning, int &frmW, int &frmH, double &pixW, double &pixH)
 {
-    int roModeIdx = binning & 0x00FF;  // mask low byte because of vertical binning is written to high byte
+    int roModeIdx = binning & 0x00FF;  // mask low byte because vertical binning is written to high byte
     GetCCDInfoParams gcp;
     GetCCDInfoResults0 gcr;
     if (isSimulation())
@@ -2093,7 +2095,7 @@ const char *SBIGCCD::GetCameraID()
     return gccdir2.serialNumber;
 }
 
-int SBIGCCD::GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxHBin, int &maxVBin)
+int SBIGCCD::getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxBinX, int &maxBinY)
 {
     int res = CE_BAD_PARAMETER;
     GetCCDInfoParams gccdip;
@@ -2117,44 +2119,44 @@ int SBIGCCD::GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxH
         {
             case CCD_BIN_2x2_I:
             case CCD_BIN_2x2_E:
-                maxHBin = 2;
-                maxVBin = maxHBin;
+                maxBinX = 2;
+                maxBinY = maxBinX;
                 break;
             case CCD_BIN_3x3_I:
             case CCD_BIN_3x3_E:
-                maxHBin = 3;
-                maxVBin = maxHBin;
+                maxBinX = 3;
+                maxBinY = maxBinX;
                 break;
             case CCD_BIN_1xN_I:
-                maxHBin = 1;
-                maxVBin = 255;
+                maxBinX = 1;
+                maxBinY = 255;
                 break;
             case CCD_BIN_2xN_I:
-                maxHBin = 2;
-                maxVBin = 255;
+                maxBinX = 2;
+                maxBinY = 255;
                 break;
             case CCD_BIN_3xN_I:
-                maxHBin = 3;
-                maxVBin = 255;
+                maxBinX = 3;
+                maxBinY = 255;
                 break;
             case CCD_BIN_9x9_I:
-                maxHBin = 9;
-                maxVBin = 255; // because vertical binning modes are also available
+                maxBinX = 9;
+                maxBinY = 255; // because vertical binning modes are also available
                 break;
             case CCD_BIN_NxN_I:
-                maxHBin = 255;
-                maxVBin = maxHBin;
+                maxBinX = 255;
+                maxBinY = maxBinX;
                 break;
             case CCD_BIN_1x1_I:
             case CCD_BIN_1x1_E:
             default: // no binning at all
-                maxHBin = 1;
-                maxVBin = maxHBin;
+                maxBinX = 1;
+                maxBinY = maxBinX;
                 break;
         }
     }
     LOGF_DEBUG("%s: max horizontal/vertical binning (%d / %d) supported readout modes (%d)",__FUNCTION__,
-              maxHBin,maxVBin,numModes);
+              maxBinX,maxBinY,numModes);
     return res;
 }
 
@@ -2365,7 +2367,14 @@ void SBIGCCD::InitVars()
 
 int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
 {
-    int res = CE_NO_ERROR;
+    int maxBinX,maxBinY,numModes;
+    int res = getReadoutModes(targetChip,numModes,maxBinX,maxBinY);
+
+    if (res != CE_NO_ERROR || targetChip->getBinX() > maxBinX || targetChip->getBinY() > maxBinY)
+    {
+        binning = CCD_BIN_1x1_I;
+        return res;
+    }
 
     if (targetChip->getBinX() == targetChip->getBinY())
     {
@@ -2398,6 +2407,15 @@ int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
         // (see notes in Sec. 3.2.4 of SBIG Universal Driver documentation)
         binning += targetChip->getBinY() << 8;
     }
+
+    // check if the requested binning mode (low byte only) is supported by the device
+    if ((binning & 0x00FF) > (numModes - 1))
+    {
+        res = CE_BAD_PARAMETER;
+        binning = CCD_BIN_1x1_I; // fallback mode -> no binning
+        LOG_ERROR("Binning mode not supported by the device");
+    }
+
     LOGF_DEBUG("%s: binx (%d) biny (%d) binning_mode (%d)", __FUNCTION__, targetChip->getBinX(),
                targetChip->getBinY(),binning);
     return res;

@@ -440,7 +440,7 @@ class SBIGCCD : public INDI::CCD, public INDI::FilterInterface
         bool CheckLink();
         const char *GetCameraName();
         const char *GetCameraID();
-        int GetReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxHBin, int &maxVBin);
+        int getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxBinX, int &maxBinY);
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISSnoopDevice(XMLEle *root);
