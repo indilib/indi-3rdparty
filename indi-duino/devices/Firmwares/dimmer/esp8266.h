@@ -273,8 +273,10 @@ void wifiServerLoop() {
 /** Parse ssid and passphrase from input
     example "ssid=myWifi&password=1234567890" */
 void parseCredentials(String input) {
+  if (input.length() <= 2 || input.charAt(1) != '?')
+    return;
   int begin = 0;
-  int end = input.indexOf('=', begin);
+  int end = input.substring(2).indexOf('=', begin);
   int next = 0;
 
   String name;
