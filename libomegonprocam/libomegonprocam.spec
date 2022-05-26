@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: libtoupcam
+Name: libomegonprocam
 Version:1.9.6.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -45,8 +45,8 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-Provides: libtoupcam.so()(64bit)
-Provides: libtoupcam.so
+Provides: libomegonprocam.so()(64bit)
+Provides: libomegonprocam.so
 
 
 %description
@@ -65,19 +65,19 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libtoupcam
+cd libomegonprocam
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libtoupcam
+cd libomegonprocam
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
 %files
 %{_libdir}/*
-%{_includedir}/libtoupcam
-/lib/udev/rules.d/99-toupcam.rules
+%{_includedir}/libomegonprocam
+/lib/udev/rules.d/99-omegonprocam.rules
 
 
 %changelog

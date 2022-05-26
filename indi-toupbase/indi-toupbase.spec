@@ -48,6 +48,7 @@ BuildRequires: libtoupcam
 BuildRequires: libstarshootg
 BuildRequires: libnncam
 BuildRequires: libmallincam
+BuildRequires: libomegonprocam
 
 
 %description
