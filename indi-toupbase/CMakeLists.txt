@@ -21,7 +21,7 @@ find_package(OMEGONPROCAM REQUIRED)
 find_package(USB1 REQUIRED)
 
 set(TOUPBASE_VERSION_MAJOR 0)
-set(TOUPBASE_VERSION_MINOR 8)
+set(TOUPBASE_VERSION_MINOR 9)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml)

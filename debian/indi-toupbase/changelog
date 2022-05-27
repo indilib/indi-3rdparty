@@ -1,3 +1,9 @@
+indi-toupbase (0.9) focal; urgency=low
+
+  * Added Omegon SDK based version of toupcam driver.
+
+ -- Kevin Krüger <kkevin@gmx.net>  Thu, 27 May 2022 10:00:00 +0200
+
 indi-toupbase (0.8) focal; urgency=low
 
   * Added binningm mode.
