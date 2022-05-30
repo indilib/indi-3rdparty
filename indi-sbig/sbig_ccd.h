@@ -88,13 +88,18 @@ const double MAX_POLLING_TIME  = 3600.0;
 const double STEP_POLLING_TIME = 1.0;
 const double CUR_POLLING_TIME  = 10.0;
 
-// CCD BINNING:
+// CCD BINNING: (see Sec. 3.2.3 of SBIG Universal Driver documentation)
 const int CCD_BIN_1x1_I = 0;
 const int CCD_BIN_2x2_I = 1;
 const int CCD_BIN_3x3_I = 2;
-const int CCD_BIN_9x9_I = 9;
+const int CCD_BIN_1xN_I = 3;  // variable vertical binning modes
+const int CCD_BIN_2xN_I = 4;
+const int CCD_BIN_3xN_I = 5;
+const int CCD_BIN_1x1_E = 6;  // off-chip binning modes
 const int CCD_BIN_2x2_E = 7;
 const int CCD_BIN_3x3_E = 8;
+const int CCD_BIN_9x9_I = 9;
+const int CCD_BIN_NxN_I = 10;
 
 const double MIN_EXP_TIME  = 0.0;
 const double MAX_EXP_TIME  = 3600.0;
@@ -377,7 +382,7 @@ class SBIGCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
         int EstablishLink();
         int GetCcdInfo(GetCCDInfoParams *, void *);
-        void GetExtendedCCDInfo();
+        int GetExtendedCCDInfo();
         int QueryCommandStatus(QueryCommandStatusParams *, QueryCommandStatusResults *);
         int MiscellaneousControl(MiscellaneousControlParams *);
         int ReadOffset(ReadOffsetParams *, ReadOffsetResults *);
@@ -435,6 +440,7 @@ class SBIGCCD : public INDI::CCD, public INDI::FilterInterface
         bool CheckLink();
         const char *GetCameraName();
         const char *GetCameraID();
+        int getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxBinX, int &maxBinY);
 
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISSnoopDevice(XMLEle *root);
