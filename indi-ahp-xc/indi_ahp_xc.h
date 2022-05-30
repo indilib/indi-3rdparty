@@ -189,6 +189,8 @@ private:
     void ActiveLine(unsigned int, bool, bool, bool, bool);
     void EnableCapture(bool start);
     void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len);
+    void* createFITS(int bpp, size_t *size, dsp_stream *buf);
+    uint8_t* getBuffer(dsp_stream_p in, uint32_t *dims, int **sizes);
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;

@@ -210,6 +210,154 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len)
     LOG_INFO( "Upload complete");
 }
 
+void* AHP_XC::createFITS(int bpp, size_t *memsize, dsp_stream_p stream)
+{
+    int img_type  = USHORT_IMG;
+    int byte_type = TUSHORT;
+    std::string bit_depth = "16 bits per sample";
+    switch (bpp)
+    {
+        case 8:
+            byte_type = TBYTE;
+            img_type  = BYTE_IMG;
+            bit_depth = "8 bits per sample";
+            break;
+
+        case 16:
+            byte_type = TUSHORT;
+            img_type  = USHORT_IMG;
+            bit_depth = "16 bits per pixel";
+            break;
+
+        case 32:
+            byte_type = TUINT;
+            img_type  = ULONG_IMG;
+            bit_depth = "32 bits per sample";
+            break;
+
+        case 64:
+            byte_type = TLONG;
+            img_type  = ULONG_IMG;
+            bit_depth = "64 bits double per sample";
+            break;
+
+        case -32:
+            byte_type = TFLOAT;
+            img_type  = FLOAT_IMG;
+            bit_depth = "32 bits double per sample";
+            break;
+
+        case -64:
+            byte_type = TDOUBLE;
+            img_type  = DOUBLE_IMG;
+            bit_depth = "64 bits double per sample";
+            break;
+
+        default:
+            DEBUGF(INDI::Logger::DBG_ERROR, "Unsupported bits per sample value %d", getBPS());
+            return nullptr;
+    }
+
+    fitsfile *fptr = nullptr;
+    void *memptr;
+    int status    = 0;
+    uint32_t dims = 0;
+    int *sizes = nullptr;
+    uint8_t *buf = getBuffer(stream, &dims, &sizes);
+    int naxis    = static_cast<int>(dims);
+    long *naxes = static_cast<long*>(malloc(sizeof(long) * dims));
+    long nelements = 0;
+
+    for (uint32_t i = 0, nelements = 1; i < dims; nelements *= static_cast<long>(sizes[i++]))
+        naxes[i] = sizes[i];
+    char error_status[MAXINDINAME];
+
+    //  Now we have to send fits format data to the client
+    *memsize = 5760;
+    memptr  = malloc(*memsize);
+    if (!memptr)
+    {
+        LOGF_ERROR("Error: failed to allocate memory: %lu", *memsize);
+        return nullptr;
+    }
+
+    fits_create_memfile(&fptr, &memptr, memsize, 2880, realloc, &status);
+
+    if (status)
+    {
+        fits_report_error(stderr, status); /* print out any error messages */
+        fits_get_errstatus(status, error_status);
+        fits_close_file(fptr, &status);
+        free(memptr);
+        LOGF_ERROR("FITS Error: %s", error_status);
+        return nullptr;
+    }
+
+    fits_create_img(fptr, img_type, naxis, naxes, &status);
+
+    if (status)
+    {
+        fits_report_error(stderr, status); /* print out any error messages */
+        fits_get_errstatus(status, error_status);
+        fits_close_file(fptr, &status);
+        free(memptr);
+        LOGF_ERROR("FITS Error: %s", error_status);
+        return nullptr;
+    }
+
+    addFITSKeywords(fptr, buf, *memsize);
+
+    fits_write_img(fptr, byte_type, 1, nelements, buf, &status);
+
+    if (status)
+    {
+        fits_report_error(stderr, status); /* print out any error messages */
+        fits_get_errstatus(status, error_status);
+        fits_close_file(fptr, &status);
+        free(memptr);
+        LOGF_ERROR("FITS Error: %s", error_status);
+        return nullptr;
+    }
+    fits_close_file(fptr, &status);
+
+    return memptr;
+}
+
+uint8_t* AHP_XC::getBuffer(dsp_stream_p in, uint32_t *dims, int **sizes)
+{
+    void *buffer = malloc(in->len * getBPS() / 8);
+    switch (getBPS())
+    {
+        case 8:
+            dsp_buffer_copy(in->buf, (static_cast<uint8_t *>(buffer)), in->len);
+            break;
+        case 16:
+            dsp_buffer_copy(in->buf, (static_cast<uint16_t *>(buffer)), in->len);
+            break;
+        case 32:
+            dsp_buffer_copy(in->buf, (static_cast<uint32_t *>(buffer)), in->len);
+            break;
+        case 64:
+            dsp_buffer_copy(in->buf, (static_cast<unsigned long *>(buffer)), in->len);
+            break;
+        case -32:
+            dsp_buffer_copy(in->buf, (static_cast<float *>(buffer)), in->len);
+            break;
+        case -64:
+            dsp_buffer_copy(in->buf, (static_cast<double *>(buffer)), in->len);
+            break;
+        default:
+            free (buffer);
+            break;
+    }
+    *dims = in->dims;
+    *sizes = (int*)malloc(sizeof(int) * in->dims);
+    for(int d = 0; d < in->dims; d++)
+        *sizes[d] = in->sizes[d];
+    return static_cast<uint8_t *>(buffer);
+}
+
+
 void AHP_XC::Callback()
 {
     ahp_xc_packet* packet = ahp_xc_alloc_packet();
@@ -314,10 +462,10 @@ void AHP_XC::Callback()
                 {
                     if(HasDSP())
                     {
-                        //DSP->processBLOB(static_cast<unsigned char*>(static_cast<void*>(plot_str[x]->buf)), static_cast<unsigned int>(plot_str[x]->dims), plot_str[x]->sizes, -64); //TODO
+                        DSP->processBLOB(static_cast<unsigned char*>(static_cast<void*>(plot_str[x]->buf)), static_cast<unsigned int>(plot_str[x]->dims), plot_str[x]->sizes, -64); //TODO
                     }
                     size_t memsize = static_cast<unsigned int>(plot_str[x]->len) * sizeof(double);
-                    void* fits = dsp_file_write_fits(-64, &memsize, plot_str[x]);
+                    void* fits = createFITS(-64, &memsize, plot_str[x]);
                     if(fits != nullptr)
                     {
                         blobs[x] = static_cast<char*>(malloc(memsize));
@@ -341,7 +489,7 @@ void AHP_XC::Callback()
                     for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
                     {
                         size_t memsize = static_cast<unsigned int>(autocorrelations_str[x]->len) * sizeof(double);
-                        void* fits = dsp_file_write_fits(-64, &memsize, autocorrelations_str[x]);
+                        void* fits = createFITS(-64, &memsize, autocorrelations_str[x]);
                         if(fits != nullptr)
                         {
                             blobs[x] = static_cast<char*>(malloc(memsize));
@@ -370,7 +518,7 @@ void AHP_XC::Callback()
                         for(unsigned int y = x + 1; y < ahp_xc_get_nlines(); y++)
                         {
                             size_t memsize = static_cast<unsigned int>(crosscorrelations_str[x]->len) * sizeof(double);
-                            void* fits = dsp_file_write_fits(-64, &memsize, crosscorrelations_str[x]);
+                            void* fits = createFITS(-64, &memsize, crosscorrelations_str[x]);
                             if(fits != nullptr)
                             {
                                 blobs[x] = static_cast<char*>(malloc(memsize));
