@@ -130,7 +130,6 @@ void initWiFi() {
   esp8266Data.status = WIFI_CONNECTING;
   esp8266Data.retry_count = 0;
   esp8266Data.last_retry = millis();
-  Serial.println("Connecting WiFi ...");
 
   addJsonLine("Connecting WiFi ...", MESSAGE_INFO);
 

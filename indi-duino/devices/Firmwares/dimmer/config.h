@@ -14,7 +14,7 @@
 // #define BAUD_RATE 9600   // standard rate that should always work
 #define BAUD_RATE 115200 // modern boards like ESP8266
 
-#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
+//#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
 
 // verbosity level
 #define MESSAGE_VERBOSITY MESSAGE_INFO
@@ -34,6 +34,11 @@
 #define PWM_FREQ_DEFAULT 40000
 // PWM default duty cycle (0..255)
 #define PWM_DUTY_CYCLE_DEFAULT 128 
+
+// pins controlling the power switches
+#define POWER_PIN_1 5 // D1
+#define POWER_PIN_2 4 // D2
+#define POWER_INVERTED true // inverted control, i.e. HIGH turns current OFF
 
 
 // ============== device configurations (end) ==============

@@ -8,8 +8,6 @@
     version 2 of the License, or (at your option) any later version.
 */
 
-#include "config.h"
-
 struct {
   // frequency of the pwm signal
   unsigned long pwm_frequency = PWM_FREQ_DEFAULT;
@@ -28,15 +26,15 @@ void showHelp() {
   addJsonLine("h - show this help message", MESSAGE_INFO);
   addJsonLine("i - show PWM info", MESSAGE_INFO);
   addJsonLine("p - turn PWM on", MESSAGE_INFO);
-  addJsonLine("x - turn PWM ff", MESSAGE_INFO);
+  addJsonLine("x - turn PWM off", MESSAGE_INFO);
   addJsonLine("f=<frequency> - change the PWM frequency", MESSAGE_INFO);
   addJsonLine("d=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
+  addJsonLine("w?switch=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
 #ifdef USE_WIFI
   addJsonLine("s?ssid=<wifi ssid>&password=<wifi password> - connect to WiFi access point", MESSAGE_INFO);
   addJsonLine("r - reconnect WiFi", MESSAGE_INFO);
 #endif
 }
-
 
 /**
    translate the dimmer status into a JSON document
@@ -48,25 +46,6 @@ void serializeDimmerStatus(JsonObject &doc) {
   pwmdata["duty cycle"] = pwm_data.pwm_duty_cycle;
 }
 
-String getStatus() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(1) + // 1 sub node
-                      JSON_OBJECT_SIZE(3);  // PWM parameters
-  StaticJsonDocument <docSize> root;
-  JsonObject doc = root.createNestedObject("status");
-
-  serializeDimmerStatus(doc);
-
-  String result = "";
-  serializeJson(root, result);
-
-  if (root.isNull())
-    return "{}";
-  else {
-    return result;
-  }
-}
-
 /**
    Turn PWM on or off
 */
@@ -74,11 +53,10 @@ void setPower(bool on) {
   // ignore identical values
   if (on == pwm_data.pwm_power)
     return;
-    
+
   pwm_data.pwm_power = on;
   if (on) analogWrite(PWM_PIN, pwm_data.pwm_duty_cycle);
   else    analogWrite(PWM_PIN, 0);
-  addJsonLine(getStatus());
 }
 
 /**
@@ -90,8 +68,6 @@ void setDutyCycle(long value) {
   if (pwm_data.pwm_power)
   {
     analogWrite(PWM_PIN, pwm_data.pwm_duty_cycle);
-    // report new status
-    addJsonLine(getStatus());
   }
 }
 
@@ -110,8 +86,6 @@ void setFrequency(long value) {
   if (value > 0) pwm_data.pwm_frequency = value;
   // change the frequency
   analogWriteFreq(pwm_data.pwm_frequency);
-  // report new status
-  addJsonLine(getStatus());
 }
 
 void parseFrequency(String input) {
@@ -123,15 +97,25 @@ void parseFrequency(String input) {
 }
 
 /**
+   Initialize the dimmer
+*/
+void initDimmer() {
+  setPower(false);
+  setFrequency(PWM_FREQ_DEFAULT);
+  setDutyCycle(0);
+}
+
+
+/**
    translate the configuration to a JSON document
 */
 String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(7) + // max 7 configurations
+                      JSON_OBJECT_SIZE(4) + // max 4 sub nodes
                       JSON_OBJECT_SIZE(1) + // Arduino
                       JSON_OBJECT_SIZE(6) + // WiFi parameters
                       JSON_OBJECT_SIZE(3) + // PWM parameters
-                      JSON_OBJECT_SIZE(2);  // buffer
+                      JSON_OBJECT_SIZE(2);  // switches status
   StaticJsonDocument <docSize> root;
   JsonObject doc = root.createNestedObject("config");
 
@@ -176,53 +160,5 @@ String getCurrentConfig() {
     return "{}";
   else {
     return result;
-  }
-}
-
-
-
-/**
-   Parse the input read from the serial line and translate
-*/
-// it into commands
-void  parseInput(String input) {
-  // ignore empty input
-  if (input.length() == 0)
-    return;
-
-  switch (input.charAt(0)) {
-    case 'h':
-      showHelp();
-      break;
-    case 'c':
-      addJsonLine(getCurrentConfig());
-      break;
-    case 'i':
-      addJsonLine(getStatus());
-      break;
-    case 'p':
-      setPower(true);
-      break;
-    case 'x':
-      setPower(false);
-      break;
-    case 'f':
-      parseFrequency(input);
-      break;
-    case 'd':
-      parseDutyCycle(input);
-      break;
-#ifdef USE_WIFI
-    case 's':
-      parseCredentials(input);
-      initWiFi();
-      break;
-    case 'r':
-      reset();
-      break;
-    case 'o':
-      stopWiFi();
-      break;
-#endif
   }
 }
