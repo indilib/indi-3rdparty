@@ -84,7 +84,8 @@ void parseSwitchControl(String input) {
    translate the dimmer status into a JSON document
 */
 void serializeSwitchStatus(JsonObject &doc) {
-  JsonObject switchdata = doc.createNestedObject("Switches");
-  switchdata["switch 1"] = power_data.switch_1_power;
-  switchdata["switch 2"] = power_data.switch_2_power;
+  JsonObject switchdata_1 = doc.createNestedObject("Switch 1");
+  switchdata_1["power"] = power_data.switch_1_power ? "on" : "off";
+  JsonObject switchdata_2 = doc.createNestedObject("Switch 2");
+  switchdata_2["power"] = power_data.switch_2_power ? "on" : "off";
 }

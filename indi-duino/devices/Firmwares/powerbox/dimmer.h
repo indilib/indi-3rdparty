@@ -17,20 +17,6 @@ struct {
   // power status (on = true)
   bool pwm_power = false;
 } pwm_data_1, pwm_data_2;
-/**
-   Create Json lines displaying help information.
-*/
-void showHelp() {
-  String init_text = "Dimmer V ";
-  init_text += DIMMER_VERSION + " - Available commands:";
-  addJsonLine(init_text, MESSAGE_INFO);
-  addJsonLine("h - show this help message", MESSAGE_INFO);
-  addJsonLine("i - show devices status information", MESSAGE_INFO);
-  addJsonLine("f=<frequency> - change the PWM frequency", MESSAGE_INFO);
-  addJsonLine("d?id=<[1|2|>&value=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
-  addJsonLine("p?id=<[1|2|>&power=[on|off] - turn PWM on or off", MESSAGE_INFO);
-  addJsonLine("w?id=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
-}
 
 /**
    translate the dimmer status into a JSON document
@@ -38,10 +24,10 @@ void showHelp() {
 void serializeDimmerStatus(JsonObject &doc) {
   doc["PWM frequency"] = pwm_frequency;
   JsonObject pwmdata_1 = doc.createNestedObject("PWM 1");
-  pwmdata_1["power"]   = pwm_data_1.pwm_power ? "on" : "off";
+  pwmdata_1["power"]      = pwm_data_1.pwm_power ? "on" : "off";
   pwmdata_1["duty cycle"] = pwm_data_1.pwm_duty_cycle;
   JsonObject pwmdata_2 = doc.createNestedObject("PWM 2");
-  pwmdata_2["power"]   = pwm_data_2.pwm_power ? "on" : "off";
+  pwmdata_2["power"]      = pwm_data_2.pwm_power ? "on" : "off";
   pwmdata_2["duty cycle"] = pwm_data_2.pwm_duty_cycle;
 }
 
