@@ -42,6 +42,7 @@ void initSwitches() {
   setSwitchPower(POWER_PIN_2, false);
 }
 
+
 /** Parse switch control
     example "id=[1|2]&power=[on|off]" */
 void parseSwitchControl(String input) {

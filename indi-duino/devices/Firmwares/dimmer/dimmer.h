@@ -8,14 +8,15 @@
     version 2 of the License, or (at your option) any later version.
 */
 
+// frequency of the pwm signal
+unsigned long pwm_frequency = PWM_FREQ_DEFAULT;
+
 struct {
-  // frequency of the pwm signal
-  unsigned long pwm_frequency = PWM_FREQ_DEFAULT;
   // percentage the signal is on (0..255)
   unsigned int  pwm_duty_cycle = PWM_DUTY_CYCLE_DEFAULT;
   // power status (on = true)
   bool pwm_power = false;
-} pwm_data;
+} pwm_data_1, pwm_data_2;
 /**
    Create Json lines displaying help information.
 */
@@ -24,11 +25,10 @@ void showHelp() {
   init_text += DIMMER_VERSION + " - Available commands:";
   addJsonLine(init_text, MESSAGE_INFO);
   addJsonLine("h - show this help message", MESSAGE_INFO);
-  addJsonLine("i - show PWM info", MESSAGE_INFO);
-  addJsonLine("p - turn PWM on", MESSAGE_INFO);
-  addJsonLine("x - turn PWM off", MESSAGE_INFO);
+  addJsonLine("i - show devices status information", MESSAGE_INFO);
   addJsonLine("f=<frequency> - change the PWM frequency", MESSAGE_INFO);
-  addJsonLine("d=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
+  addJsonLine("d?id=<[1|2|>&value=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
+  addJsonLine("p?id=<[1|2|>&power=[on|off] - turn PWM on or off", MESSAGE_INFO);
   addJsonLine("w?id=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
 }
 
@@ -36,52 +36,128 @@ void showHelp() {
    translate the dimmer status into a JSON document
 */
 void serializeDimmerStatus(JsonObject &doc) {
-  JsonObject pwmdata = doc.createNestedObject("PWM");
-  pwmdata["power on"]   = pwm_data.pwm_power;
-  pwmdata["frequency"]  = pwm_data.pwm_frequency;
-  pwmdata["duty cycle"] = pwm_data.pwm_duty_cycle;
+  doc["PWM frequency"] = pwm_frequency;
+  JsonObject pwmdata_1 = doc.createNestedObject("PWM 1");
+  pwmdata_1["power"]   = pwm_data_1.pwm_power ? "on" : "off";
+  pwmdata_1["duty cycle"] = pwm_data_1.pwm_duty_cycle;
+  JsonObject pwmdata_2 = doc.createNestedObject("PWM 2");
+  pwmdata_2["power"]   = pwm_data_2.pwm_power ? "on" : "off";
+  pwmdata_2["duty cycle"] = pwm_data_2.pwm_duty_cycle;
 }
 
 /**
    Turn PWM on or off
 */
-void setPower(bool on) {
-  // ignore identical values
-  if (on == pwm_data.pwm_power)
-    return;
+void setPower(int pin, bool on) {
 
-  pwm_data.pwm_power = on;
-  if (on) analogWrite(PWM_PIN, pwm_data.pwm_duty_cycle);
-  else    analogWrite(PWM_PIN, 0);
+  switch (pin) {
+    case PWM_PIN_1:
+      pwm_data_1.pwm_power = on;
+      analogWrite(pin, on ? pwm_data_1.pwm_duty_cycle : 0);
+      break;
+    case PWM_PIN_2:
+      pwm_data_2.pwm_power = on;
+      analogWrite(pin, on ? pwm_data_2.pwm_duty_cycle : 0);
+      break;
+  }
+}
+
+
+/** Parse PWM power control
+    example "p?id=[1|2]&power=[on|off]" */
+void parsePWMControl(String input) {
+  if (input.length() <= 2 || input.charAt(1) != '?')
+    return;
+  int begin = 2;
+  int end = input.indexOf('=', begin);
+  int next = 0;
+
+  String name;
+  String value;
+  int pin ;
+  bool status;
+
+  while (end > begin) {
+    name = input.substring(begin, end);
+    next = input.indexOf('&', end + 1);
+
+    if (next == -1) {
+      // last parameter
+      value = input.substring(end + 1);
+      // finish
+      end = -1;
+    } else {
+      value = input.substring(end + 1, next);
+      // next cycle
+      begin = next + 1;
+      end = input.indexOf('=', begin);
+    }
+
+    if (name == String("id")) pin = value.toInt() == 1 ? PWM_PIN_1 : PWM_PIN_2;
+    if (name == String("power"))  status = (value == "on");
+  }
+  setPower(pin, status);
 }
 
 /**
    Set the PWM duty cycle
 */
-void setDutyCycle(long value) {
-  pwm_data.pwm_duty_cycle = value % 256;
-  // change the duty cycle if power is on
-  if (pwm_data.pwm_power)
-  {
-    analogWrite(PWM_PIN, pwm_data.pwm_duty_cycle);
+void setDutyCycle(int pin, long value) {
+  switch (pin) {
+    case PWM_PIN_1:
+      pwm_data_1.pwm_duty_cycle = value % 256;
+      if (pwm_data_1.pwm_power) analogWrite(PWM_PIN_1, pwm_data_1.pwm_duty_cycle);
+      break;
+    case PWM_PIN_2:
+      pwm_data_2.pwm_duty_cycle = value % 256;
+      if (pwm_data_2.pwm_power) analogWrite(PWM_PIN_2, pwm_data_2.pwm_duty_cycle);
+      break;
   }
 }
 
+/** Parse PWM duty cycle
+    example "d?id=[1|2]&cycle=[on|off]" */
 void parseDutyCycle(String input) {
-  // ignore invalid input
-  if (input.length() <= 2 || input.charAt(1) != '=')
+  if (input.length() <= 2 || input.charAt(1) != '?')
     return;
-  // handle value
-  setDutyCycle(input.substring(2).toInt());
+  int begin = 2;
+  int end = input.indexOf('=', begin);
+  int next = 0;
+
+  String name;
+  String value;
+  int pin = PWM_PIN_1, cycle = 0;
+
+  while (end > begin) {
+    name = input.substring(begin, end);
+    next = input.indexOf('&', end + 1);
+
+    if (next == -1) {
+      // last parameter
+      value = input.substring(end + 1);
+      // finish
+      end = -1;
+    } else {
+      value = input.substring(end + 1, next);
+      // next cycle
+      begin = next + 1;
+      end = input.indexOf('=', begin);
+    }
+
+    if (name == String("id"))    pin = value.toInt() == 1 ? PWM_PIN_1 : PWM_PIN_2;
+    if (name == String("cycle")) cycle = value.toInt();
+
+  }
+  setDutyCycle(pin, cycle);
 }
 
 /**
    Set the PWM frequency
 */
 void setFrequency(long value) {
-  if (value > 0) pwm_data.pwm_frequency = value;
+  if (value > 0) pwm_frequency = value;
   // change the frequency
-  analogWriteFreq(pwm_data.pwm_frequency);
+  analogWriteFreq(pwm_frequency);
 }
 
 void parseFrequency(String input) {
@@ -96,32 +172,11 @@ void parseFrequency(String input) {
    Initialize the dimmer
 */
 void initDimmer() {
-  setPower(false);
+  pinMode(PWM_PIN_1, OUTPUT);
+  pinMode(PWM_PIN_2, OUTPUT);
+  setPower(PWM_PIN_1, false);
+  setPower(PWM_PIN_2, false);
   setFrequency(PWM_FREQ_DEFAULT);
-  setDutyCycle(0);
-}
-
-
-/**
-   translate the configuration to a JSON document
-*/
-String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(3) + // max 3 sub nodes
-                      JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(3) + // PWM parameters
-                      JSON_OBJECT_SIZE(2);  // switches status
-  StaticJsonDocument <docSize> root;
-  JsonObject doc = root.createNestedObject("config");
-
-  serializeDimmerStatus(doc);
-
-  String result = "";
-  serializeJson(root, result);
-
-  if (root.isNull())
-    return "{}";
-  else {
-    return result;
-  }
+  setDutyCycle(PWM_PIN_1, 0);
+  setDutyCycle(PWM_PIN_2, 0);
 }

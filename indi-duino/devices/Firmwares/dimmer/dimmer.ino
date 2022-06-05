@@ -30,8 +30,9 @@ void setup() {
 
 String getStatus() {
   const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(2) + // 2 sub node
-                      JSON_OBJECT_SIZE(3) + // PWM parameters
+                      JSON_OBJECT_SIZE(5) + // max 5 sub nodes (freq, 2xPWM, Arduino, switches)
+                      JSON_OBJECT_SIZE(1) + // Arduino
+                      JSON_OBJECT_SIZE(4) + // PWM parameters
                       JSON_OBJECT_SIZE(2);  // switches status
   StaticJsonDocument <docSize> root;
   JsonObject doc = root.createNestedObject("status");
@@ -50,6 +51,29 @@ String getStatus() {
 }
 
 
+/**
+   translate the configuration to a JSON document
+*/
+String getCurrentConfig() {
+  const int docSize = JSON_OBJECT_SIZE(1) + // top level
+                      JSON_OBJECT_SIZE(4);  // 4 pins
+  StaticJsonDocument <docSize> root;
+  JsonObject doc = root.createNestedObject("config");
+
+  doc["PWM pin 1"]    = PWM_PIN_1;
+  doc["PWM pin 2"]    = PWM_PIN_2;
+  doc["switch pin 1"] = POWER_PIN_1;
+  doc["switch pin 2"] = POWER_PIN_2;
+
+  String result = "";
+  serializeJson(root, result);
+
+  if (root.isNull())
+    return "{}";
+  else {
+    return result;
+  }
+}
 
 /**
    Parse the input read from the serial line and translate
@@ -71,11 +95,7 @@ void  parseInput(String input) {
       addJsonLine(getStatus());
       break;
     case 'p':
-      setPower(true);
-      addJsonLine(getStatus());
-      break;
-    case 'x':
-      setPower(false);
+      parsePWMControl(input);
       addJsonLine(getStatus());
       break;
     case 'f':
@@ -86,7 +106,7 @@ void  parseInput(String input) {
       parseDutyCycle(input);
       addJsonLine(getStatus());
       break;
-    case 'w':
+    case 's':
       parseSwitchControl(input);
       addJsonLine(getStatus());
       break;

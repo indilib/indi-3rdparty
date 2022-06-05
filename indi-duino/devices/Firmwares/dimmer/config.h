@@ -22,9 +22,10 @@
 // ============== device configurations (begin) ============
 
 // pin sending the PWM signal
-#define PWM_PIN 13 // D7
+#define PWM_PIN_1 12 // D6
+#define PWM_PIN_2 13 // D7
 // PWM default frequency in Hz
-#define PWM_FREQ_DEFAULT 40000
+#define PWM_FREQ_DEFAULT 20000
 // PWM default duty cycle (0..255)
 #define PWM_DUTY_CYCLE_DEFAULT 128 
 
