@@ -29,11 +29,7 @@ void showHelp() {
   addJsonLine("x - turn PWM off", MESSAGE_INFO);
   addJsonLine("f=<frequency> - change the PWM frequency", MESSAGE_INFO);
   addJsonLine("d=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
-  addJsonLine("w?switch=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
-#ifdef USE_WIFI
-  addJsonLine("s?ssid=<wifi ssid>&password=<wifi password> - connect to WiFi access point", MESSAGE_INFO);
-  addJsonLine("r - reconnect WiFi", MESSAGE_INFO);
-#endif
+  addJsonLine("w?id=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
 }
 
 /**
@@ -111,45 +107,12 @@ void initDimmer() {
 */
 String getCurrentConfig() {
   const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(4) + // max 4 sub nodes
+                      JSON_OBJECT_SIZE(3) + // max 3 sub nodes
                       JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(6) + // WiFi parameters
                       JSON_OBJECT_SIZE(3) + // PWM parameters
                       JSON_OBJECT_SIZE(2);  // switches status
   StaticJsonDocument <docSize> root;
   JsonObject doc = root.createNestedObject("config");
-
-#ifdef USE_WIFI
-  // currently, we have memory info only available for ESP8266
-  JsonObject arduinodata = doc.createNestedObject("Arduino");
-  arduinodata["free memory"] = freeMemory();
-
-  JsonObject wifidata = doc.createNestedObject("WiFi");
-  wifidata["SSID"]      = WiFi.SSID();
-  switch (getWiFiStatus()) {
-    case WIFI_CONNECTED:
-      wifidata["status"]    = "connected";
-      wifidata["IP"]        = WiFi.localIP();
-      wifidata["rssi"]      = WiFi.RSSI();
-      wifidata["ping (ms)"] = networkData.avg_response_time;
-      wifidata["loss"]      = networkData.loss;
-      break;
-    case WIFI_IDLE:
-      wifidata["status"]    = "disconnected";
-      break;
-    case WIFI_CONNECTING:
-      wifidata["status"]    = "connecting";
-      wifidata["retry"]     = esp8266Data.retry_count;
-      break;
-    case WIFI_DISCONNECTING:
-      wifidata["status"]    = "disconnecting";
-      wifidata["retry"]     = esp8266Data.retry_count;
-      break;
-    case WIFI_CONNECTION_FAILED:
-      wifidata["status"]    = "connection failed";
-      break;
-  }
-#endif
 
   serializeDimmerStatus(doc);
 

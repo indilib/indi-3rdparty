@@ -24,68 +24,6 @@ void setup() {
 
   initDimmer();
   initSwitches();
-
-#ifdef USE_WIFI
-  initWiFi();
-
-  server.on("/", []() {
-    addJsonLine(getStatus());
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/h", []() {
-    showHelp();
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/p", []() {
-    setPower(true);
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/x", []() {
-    setPower(false);
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/x", []() {
-    setPower(false);
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/f", []() {
-    String freq = server.arg("value");
-    setFrequency(freq.toInt());
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/d", []() {
-    String cycle = server.arg("value");
-    setDutyCycle(cycle.toInt());
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/r", []() {
-    reset();
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/c", []() {
-    addJsonLine(getCurrentConfig());
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.on("/i", []() {
-    addJsonLine(getStatus());
-    server.send(200, "application/json; charset=utf-8", processJsonLines());
-  });
-
-  server.onNotFound([]() {
-    server.send(404, "text/plain", "Ressource not found: " + server.uri());
-  });
-
-  server.begin();
-#endif
 }
 
 
@@ -152,19 +90,6 @@ void  parseInput(String input) {
       parseSwitchControl(input);
       addJsonLine(getStatus());
       break;
-#ifdef USE_WIFI
-    case 's':
-      parseCredentials(input);
-      initWiFi();
-      addJsonLine(getStatus());
-      break;
-    case 'r':
-      reset();
-      break;
-    case 'o':
-      stopWiFi();
-      break;
-#endif
   }
 
 }
@@ -188,9 +113,4 @@ void loop() {
     else
       input += (char)ch;
   }
-
-#ifdef USE_WIFI
-  wifiServerLoop();
-#endif
-
 }

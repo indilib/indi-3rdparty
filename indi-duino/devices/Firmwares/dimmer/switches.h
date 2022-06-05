@@ -43,7 +43,7 @@ void initSwitches() {
 }
 
 /** Parse switch control
-    example "switch=[1|2]&power=[on|off]" */
+    example "id=[1|2]&power=[on|off]" */
 void parseSwitchControl(String input) {
   if (input.length() <= 2 || input.charAt(1) != '?')
     return;
@@ -72,7 +72,7 @@ void parseSwitchControl(String input) {
       end = input.indexOf('=', begin);
     }
 
-    if (name == String("switch")) pin = value.toInt() == 2 ? POWER_PIN_2 : POWER_PIN_1;
+    if (name == String("id")) pin = value.toInt() == 2 ? POWER_PIN_2 : POWER_PIN_1;
     if (name == String("power"))  status = (value == "on");
   }
 

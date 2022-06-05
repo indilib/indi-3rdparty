@@ -14,19 +14,12 @@
 // #define BAUD_RATE 9600   // standard rate that should always work
 #define BAUD_RATE 115200 // modern boards like ESP8266
 
-//#define USE_WIFI                  // Run a web server on the Arduino (e.g. ESP8266 etc.)
-
 // verbosity level
 #define MESSAGE_VERBOSITY MESSAGE_INFO
 // maximal size of buffered JSON messages
 #define MAX_JSON_BUFFER_SIZE 16000
 
 // ============== device configurations (begin) ============
-
-// WiFi settings
-// Fill in your WiFi ID and password - leave empty if nothing has changed
-#define WIFI_SSID ""
-#define WIFI_PWD  ""
 
 // pin sending the PWM signal
 #define PWM_PIN 13 // D7
@@ -44,7 +37,3 @@
 // ============== device configurations (end) ==============
 
 #include "jsonmessage.h"
-
-#ifdef USE_WIFI
-#include "esp8266.h"
-#endif
