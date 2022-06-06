@@ -32,6 +32,9 @@
 class PowerBox : public INDI::DefaultDevice, public INDI::LightBoxInterface
 {
 public:
+
+    const char *LIGHT_BOX_TAB = "Light Box";
+
     PowerBox();
 
     // define basic properties to clients.
@@ -130,13 +133,31 @@ protected:
      * @brief Extract the power switch status
      * @param value parsed JSON document
      */
-    bool readPowerSwitchStatus(JsonValue jvalue);
+    bool readPowerPortStatus(JsonValue jvalue);
+    /**
+     * @brief Turn a power switch on or off
+     * @param port_number corresponding port number
+     * @return true iff setting the value succeeded
+     */
+    bool setPowerPortStatus(int port_number);
 
     /**
      * @brief Extract the PWM port status
      * @param value parsed JSON document
      */
     PwmStatus readPWMPortStatus(JsonValue jvalue);
+    /**
+     * @brief Turn a PWM port on or off
+     * @param port_number corresponding port number
+     * @return true iff setting the value succeeded
+     */
+    bool setPWMPortStatus(int port_number);
+    /**
+     * @brief Set the PWM duty cycle
+     * @param port_number corresponding port number
+     * @return true iff setting the value succeeded
+     */
+    bool setPWMDutyCycle(int port_number, int value);
 
     // TTY interface timeout
     int getTTYTimeout() { return ttyTimeout; }
@@ -159,5 +180,4 @@ protected:
     int PortFD = -1;
     // serial port connection
     Connection::Serial *serialConnection{ nullptr };
-
 };

@@ -55,6 +55,33 @@ void PowerBox::ISGetProperties(const char *dev)
 
 bool PowerBox::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+
+        if (strcmp(name, PWMFrequencyNP.name) == 0)
+        {
+            IUUpdateNumber(&PWMFrequencyNP, values, names, n);
+            std::string args = "value=" + std::to_string(static_cast<int>(values[0]));
+
+            bool result = executeCommand(CMD_PWM_FREQUENCY, args);
+            PWMFrequencyNP.s = result ? IPS_OK : IPS_ALERT;
+            IDSetNumber(&PWMFrequencyNP, nullptr);
+            return result;
+        }
+        else if (strcmp(name, PWMDutyCycle_1_NP.name) == 0)
+        {
+            IUUpdateNumber(&PWMDutyCycle_1_NP, values, names, n);
+            bool result = setPWMDutyCycle(1, static_cast<int>(values[0]));
+            return result;
+        }
+        else if (strcmp(name, PWMDutyCycle_2_NP.name) == 0)
+        {
+            IUUpdateNumber(&PWMDutyCycle_2_NP, values, names, n);
+            bool result = setPWMDutyCycle(2, static_cast<int>(values[0]));
+            return result;
+        }
+    }
+    // in all other cases let the default device handle the switch
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
@@ -65,6 +92,35 @@ bool PowerBox::ISNewText(const char *dev, const char *name, char *texts[], char 
 
 bool PowerBox::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+
+        if (strcmp(name, PowerPortStatus_1_SP.name) == 0)
+        {
+            IUUpdateSwitch(&PowerPortStatus_1_SP, states, names, n);
+            bool result = setPowerPortStatus(1);
+            return result;
+        }
+        else if (strcmp(name, PowerPortStatus_2_SP.name) == 0)
+        {
+            IUUpdateSwitch(&PowerPortStatus_2_SP, states, names, n);
+            bool result = setPowerPortStatus(2);
+            return result;
+        }
+        else if (strcmp(name, PWMPortStatus_1_SP.name) == 0)
+        {
+            IUUpdateSwitch(&PWMPortStatus_1_SP, states, names, n);
+            bool result = setPWMPortStatus(1);
+            return result;
+        }
+        else if (strcmp(name, PWMPortStatus_2_SP.name) == 0)
+        {
+            IUUpdateSwitch(&PWMPortStatus_2_SP, states, names, n);
+            bool result = setPWMPortStatus(2);
+            return result;
+        }
+    }
+    // in all other cases let the default device handle the switch
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
@@ -123,7 +179,7 @@ bool PowerBox::initProperties()
     IUFillNumber(&PWMDutyCycle_2_N[0], "PWM_DUTY_CYCLE", "PWM Duty Cycle", "%.f", 0, 255, 1, getTTYTimeout());
     IUFillNumberVector(&PWMDutyCycle_2_NP, PWMDutyCycle_2_N, 1, getDeviceName(), "PWM_PORT_2_DC", " ", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
-    initLightBoxProperties(getDeviceName(), MAIN_CONTROL_TAB);
+    initLightBoxProperties(getDeviceName(), LIGHT_BOX_TAB);
 
     addConfigurationControl();
 
@@ -178,7 +234,10 @@ bool PowerBox::updateProperties()
 
 bool PowerBox::getBasicData()
 {
-    bool result = executeCommand(CMD_STATUS);
+    // read device configuration
+    bool result = executeCommand(CMD_CONFIG);
+    // read device status
+    result &= getStatus();
     return result;
 }
 
@@ -279,7 +338,7 @@ IPState PowerBox::handleStatus(JsonValue jvalue)
         else if (strncmp(statusIter->key, "Switch", 6) == 0 && strlen(statusIter->key) > 7)
         {
             int switch_nr = static_cast<int>(statusIter->key[7] - '0');
-            bool status = readPowerSwitchStatus(statusIter->value);
+            bool status = readPowerPortStatus(statusIter->value);
             switch (switch_nr)
             {
             case 1:
@@ -305,7 +364,7 @@ IPState PowerBox::handleStatus(JsonValue jvalue)
     return IPS_OK;
 }
 
-bool PowerBox::readPowerSwitchStatus(JsonValue jvalue)
+bool PowerBox::readPowerPortStatus(JsonValue jvalue)
 {
     JsonIterator statusIter;
     for (statusIter = begin(jvalue); statusIter != end(jvalue); ++statusIter)
@@ -315,6 +374,18 @@ bool PowerBox::readPowerSwitchStatus(JsonValue jvalue)
     }
     LOG_WARN("Power status missing");
     return false;
+}
+
+bool PowerBox::setPowerPortStatus(int port_number)
+{
+    ISwitchVectorProperty *svp = port_number == 1 ? &PowerPortStatus_1_SP : &PowerPortStatus_2_SP;
+    int pressed = IUFindOnSwitchIndex(svp);
+    std::string args = "id=" + std::to_string(port_number) + "&power=" + (pressed == POWER_ON ? "on" : "off");
+
+    bool result = executeCommand(CMD_SWITCH_POWER, args);
+    svp->s = result ? IPS_OK : IPS_ALERT;
+    IDSetSwitch(svp, nullptr);
+    return result;
 }
 
 PowerBox::PwmStatus PowerBox::readPWMPortStatus(JsonValue jvalue)
@@ -329,6 +400,30 @@ PowerBox::PwmStatus PowerBox::readPWMPortStatus(JsonValue jvalue)
             status.duty_cycle = statusIter->value.toNumber();
     }
     return status;
+}
+
+bool PowerBox::setPWMPortStatus(int port_number)
+{
+    ISwitchVectorProperty *svp = port_number == 1 ? &PWMPortStatus_1_SP : &PWMPortStatus_2_SP;
+    int pressed = IUFindOnSwitchIndex(svp);
+    std::string args = "id=" + std::to_string(port_number) + "&power=" + (pressed == POWER_ON ? "on" : "off");
+
+    bool result = executeCommand(CMD_PWM_POWER, args);
+    svp->s = result ? IPS_OK : IPS_ALERT;
+    IDSetSwitch(svp, nullptr);
+    return result;
+}
+
+bool PowerBox::setPWMDutyCycle(int port_number, int value)
+{
+    INumberVectorProperty *nvp = port_number == 1 ? &PWMDutyCycle_1_NP : &PWMDutyCycle_2_NP;
+    std::string args = "id=" + std::to_string(port_number) + "&value=" + std::to_string(value);
+
+    bool result = executeCommand(CMD_PWM_DUTY_CYCLE, args);
+    nvp->s = result ? IPS_OK : IPS_ALERT;
+    IDSetNumber(nvp, nullptr);
+
+    return result;
 }
 
 /**************************************************************************************
