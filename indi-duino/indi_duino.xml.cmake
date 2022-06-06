@@ -37,6 +37,13 @@
                 <driver name="Arduino Roof">indi_duino</driver>
                 <version>@DUINO_VERSION_MAJOR@.@DUINO_VERSION_MINOR@</version>
         </device>
+        <device label="Arduino Power Box" manufacturer="DIY">
+                <driver name="Duino Power Box">indi_duino_powerbox</driver>
+                <version>@DUINOPOWERBOX_VERSION_MAJOR@.@DUINOPOWERBOX_VERSION_MINOR@</version>
+        </device>
+</devGroup>
+
+
 </devGroup>
 <devGroup group="Weather">
     <device label="Arduino MeteoStation" skel="meteostation_sk.xml" manufacturer="DIY">
