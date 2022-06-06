@@ -75,12 +75,14 @@ bool PowerBox::ISNewBLOB(const char *dev, const char *name, int sizes[], int blo
 
 bool PowerBox::Handshake()
 {
+    PortFD = serialConnection->getPortFD();
+
     // Load the configuration
     loadConfig();
 
     // retrieve basic data to initialize the weather station
-    IPState result = getBasicData();
-    return result == IPS_OK;
+    bool result = getBasicData();
+    return result;
 }
 
 const char *PowerBox::getDefaultName()
@@ -91,7 +93,37 @@ const char *PowerBox::getDefaultName()
 bool PowerBox::initProperties()
 {
     INDI::DefaultDevice::initProperties();
-    INDI::LightBoxInterface::initLightBoxProperties(getDeviceName(), MAIN_CONTROL_TAB);
+
+    // Power Port 1
+    IUFillSwitch(&PowerPortStatus_1_S[POWER_ON], "ON", "On", ISS_OFF);
+    IUFillSwitch(&PowerPortStatus_1_S[POWER_OFF], "OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&PowerPortStatus_1_SP, PowerPortStatus_1_S, 2, getDeviceName(), "POWER_PORT_1", "Power Port 1",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    // Power Port 2
+    IUFillSwitch(&PowerPortStatus_2_S[POWER_ON], "ON", "On", ISS_OFF);
+    IUFillSwitch(&PowerPortStatus_2_S[POWER_OFF], "OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&PowerPortStatus_2_SP, PowerPortStatus_2_S, 2, getDeviceName(), "POWER_PORT_2", "Power Port 2",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    // PWM frequency
+    IUFillNumber(&PWMFrequencyN[0], "PWM_FREQUENCY", "PWM Frequency (Hz)", "%.f", 0, 50000, 100, getTTYTimeout());
+    IUFillNumberVector(&PWMFrequencyNP, PWMFrequencyN, 1, getDeviceName(), "PWM_SETUP", "PWM Setup", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+
+    // PWM Port 1
+    IUFillSwitch(&PWMPortStatus_1_S[POWER_ON], "ON", "On", ISS_OFF);
+    IUFillSwitch(&PWMPortStatus_1_S[POWER_OFF], "OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&PWMPortStatus_1_SP, PWMPortStatus_1_S, 2, getDeviceName(), "PWM_PORT_1", "PWM Port 1",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    IUFillNumber(&PWMDutyCycle_1_N[0], "PWM_DUTY_CYCLE", "PWM Duty Cycle", "%.f", 0, 255, 1, getTTYTimeout());
+    IUFillNumberVector(&PWMDutyCycle_1_NP, PWMDutyCycle_1_N, 1, getDeviceName(), "PWM_PORT_1_DC", " ", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    // PWM Port 2
+    IUFillSwitch(&PWMPortStatus_2_S[POWER_ON], "ON", "On", ISS_OFF);
+    IUFillSwitch(&PWMPortStatus_2_S[POWER_OFF], "OFF", "Off", ISS_OFF);
+    IUFillSwitchVector(&PWMPortStatus_2_SP, PWMPortStatus_2_S, 2, getDeviceName(), "PWM_PORT_2", "PWM Port 2",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    IUFillNumber(&PWMDutyCycle_2_N[0], "PWM_DUTY_CYCLE", "PWM Duty Cycle", "%.f", 0, 255, 1, getTTYTimeout());
+    IUFillNumberVector(&PWMDutyCycle_2_NP, PWMDutyCycle_2_N, 1, getDeviceName(), "PWM_PORT_2_DC", " ", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+
+    initLightBoxProperties(getDeviceName(), MAIN_CONTROL_TAB);
 
     addConfigurationControl();
 
@@ -114,6 +146,13 @@ bool PowerBox::updateProperties()
     bool result = true;
     if (isConnected())
     {
+        defineProperty(&PowerPortStatus_1_SP);
+        defineProperty(&PowerPortStatus_2_SP);
+        defineProperty(&PWMFrequencyNP);
+        defineProperty(&PWMPortStatus_1_SP);
+        defineProperty(&PWMDutyCycle_1_NP);
+        defineProperty(&PWMPortStatus_2_SP);
+        defineProperty(&PWMDutyCycle_2_NP);
         defineProperty(&LightSP);
         defineProperty(&LightIntensityNP);
 
@@ -123,6 +162,13 @@ bool PowerBox::updateProperties()
     {
         deleteProperty(LightSP.name);
         deleteProperty(LightIntensityNP.name);
+        deleteProperty(PWMPortStatus_2_SP.name);
+        deleteProperty(PWMDutyCycle_2_NP.name);
+        deleteProperty(PWMPortStatus_1_SP.name);
+        deleteProperty(PWMDutyCycle_1_NP.name);
+        deleteProperty(PWMFrequencyNP.name);
+        deleteProperty(PowerPortStatus_2_SP.name);
+        deleteProperty(PowerPortStatus_1_SP.name);
 
         result = updateLightBoxProperties();
     }
@@ -130,10 +176,159 @@ bool PowerBox::updateProperties()
     return result;
 }
 
-IPState PowerBox::getBasicData()
+bool PowerBox::getBasicData()
 {
-    IPState result = IPS_OK;
+    bool result = executeCommand(CMD_STATUS);
     return result;
+}
+
+bool PowerBox::getStatus()
+{
+    bool result = executeCommand(CMD_STATUS);
+    return result;
+}
+
+bool PowerBox::SetLightBoxBrightness(uint16_t value)
+{
+    LOG_WARN("PowerBox::SetLightBoxBrightness not implemented");
+    INDI_UNUSED(value);
+    return true;
+}
+
+bool PowerBox::EnableLightBox(bool enable)
+{
+    LOG_WARN("PowerBox::EnableLightBox not implemented");
+    INDI_UNUSED(enable);
+    return true;
+}
+
+bool PowerBox::saveConfigItems(FILE *fp)
+{
+    bool result = saveLightBoxConfigItems(fp);
+    result &= INDI::DefaultDevice::saveConfigItems(fp);
+    return result;
+}
+
+void PowerBox::TimerHit()
+{
+    if (!isConnected())
+        return;
+
+    SetTimer(getCurrentPollingPeriod());
+}
+
+IPState PowerBox::handleConfig(JsonValue jvalue)
+{
+    INDI_UNUSED(jvalue);
+    LOG_WARN("PowerBox::handleConfig not implemented");
+    return IPS_OK;
+}
+
+IPState PowerBox::handleStatus(JsonValue jvalue)
+{
+    JsonIterator statusIter;
+    for (statusIter = begin(jvalue); statusIter != end(jvalue); ++statusIter)
+    {
+        if (strcmp(statusIter->key, "PWM frequency") == 0)
+        {
+            if (statusIter->value.getTag() == JSON_NUMBER)
+            {
+                PWMFrequencyN[0].value = statusIter->value.toNumber();
+                PWMFrequencyNP.s = IPS_OK;
+            }
+            else
+            {
+                PWMFrequencyNP.s = IPS_ALERT;
+                LOGF_WARN("Unknown PWM frequency %s", statusIter->value.toString());
+            }
+            IDSetNumber(&PWMFrequencyNP, nullptr);
+        }
+        else if (strncmp(statusIter->key, "PWM", 3) == 0 && strlen(statusIter->key) > 4)
+        {
+            int switch_nr = static_cast<int>(statusIter->key[4] - '0');
+            PwmStatus status = readPWMPortStatus(statusIter->value);
+            switch (switch_nr)
+            {
+            case 1:
+                // set PWM 1 status
+                PWMPortStatus_1_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
+                PWMPortStatus_1_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
+                PWMPortStatus_1_SP.s = IPS_OK;
+                IDSetSwitch(&PWMPortStatus_1_SP, nullptr);
+                // set PWM 1 duty cycle
+                PWMDutyCycle_1_N[0].value = status.duty_cycle;
+                PWMDutyCycle_1_NP.s = IPS_OK;
+                IDSetNumber(&PWMDutyCycle_1_NP, nullptr);
+                break;
+            case 2:
+                // set PWM 2 status
+                PWMPortStatus_2_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
+                PWMPortStatus_2_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
+                PWMPortStatus_2_SP.s = IPS_OK;
+                IDSetSwitch(&PWMPortStatus_2_SP, nullptr);
+                // set PWM 2 duty cycle
+                PWMDutyCycle_2_N[0].value = status.duty_cycle;
+                PWMDutyCycle_2_NP.s = IPS_OK;
+                IDSetNumber(&PWMDutyCycle_2_NP, nullptr);
+                break;
+            default:
+                LOGF_WARN("Unknown PWM control %d %s, duty cycle %f", switch_nr, status.power ? "on" : "off", status.duty_cycle);
+                break;
+            }
+        }
+        else if (strncmp(statusIter->key, "Switch", 6) == 0 && strlen(statusIter->key) > 7)
+        {
+            int switch_nr = static_cast<int>(statusIter->key[7] - '0');
+            bool status = readPowerSwitchStatus(statusIter->value);
+            switch (switch_nr)
+            {
+            case 1:
+                // set power switch 1 status
+                PowerPortStatus_1_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
+                PowerPortStatus_1_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
+                PowerPortStatus_1_SP.s = IPS_OK;
+                IDSetSwitch(&PowerPortStatus_1_SP, nullptr);
+                break;
+            case 2:
+                // set power switch 2 status
+                PowerPortStatus_2_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
+                PowerPortStatus_2_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
+                PowerPortStatus_2_SP.s = IPS_OK;
+                IDSetSwitch(&PowerPortStatus_2_SP, nullptr);
+                break;
+            default:
+                LOGF_WARN("Unknown power switch %d %s", switch_nr, status ? "on" : "off");
+                break;
+            }
+        }
+    }
+    return IPS_OK;
+}
+
+bool PowerBox::readPowerSwitchStatus(JsonValue jvalue)
+{
+    JsonIterator statusIter;
+    for (statusIter = begin(jvalue); statusIter != end(jvalue); ++statusIter)
+    {
+        if (strcmp(statusIter->key, "power") == 0)
+            return (strcmp(statusIter->value.toString(), "on") == 0);
+    }
+    LOG_WARN("Power status missing");
+    return false;
+}
+
+PowerBox::PwmStatus PowerBox::readPWMPortStatus(JsonValue jvalue)
+{
+    PwmStatus status = {false, -1.0};
+    JsonIterator statusIter;
+    for (statusIter = begin(jvalue); statusIter != end(jvalue); ++statusIter)
+    {
+        if (strcmp(statusIter->key, "power") == 0)
+            status.power = (strcmp(statusIter->value.toString(), "on") == 0);
+        else if (strcmp(statusIter->key, "duty cycle") == 0 && statusIter->value.getTag() == JSON_NUMBER)
+            status.duty_cycle = statusIter->value.toNumber();
+    }
+    return status;
 }
 
 /**************************************************************************************
@@ -183,7 +378,7 @@ bool PowerBox::transmitSerial(std::string buffer)
 
 bool PowerBox::executeCommand(PowerBox::pb_command cmd, std::string args)
 {
-    std::string cmdstring= commands[cmd];
+    std::string cmdstring = commands[cmd];
     // append arguments if present
     if (args != "")
         cmdstring += "?" + args;
@@ -236,6 +431,7 @@ bool PowerBox::executeCommand(PowerBox::pb_command cmd, std::string args)
 
 void PowerBox::handleResponse(PowerBox::pb_command cmd, const char *response, u_long length)
 {
+    INDI_UNUSED(cmd);
     // ignore empty response and non JSON
     if (length == 0 || strcmp(response, "\r\n") == 0 || (response[0] != '[' && response[0] != '{'))
         return;
@@ -258,7 +454,12 @@ void PowerBox::handleResponse(PowerBox::pb_command cmd, const char *response, u_
     JsonIterator typeIter;
     for (typeIter = begin(value); typeIter != end(value); ++typeIter)
     {
-        LOGF_WARN("Unknown response type: %s", typeIter->key);
+        if (strcmp(typeIter->key, "config") == 0)
+            handleConfig(typeIter->value);
+        else if (strcmp(typeIter->key, "status") == 0)
+            handleStatus(typeIter->value);
+        else
+            LOGF_WARN("Unknown response type: %s", typeIter->key);
     }
 }
 
