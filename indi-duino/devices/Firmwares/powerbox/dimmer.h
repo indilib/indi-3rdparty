@@ -131,7 +131,7 @@ void parseDutyCycle(String input) {
     }
 
     if (name == String("id"))    pin = value.toInt() == 1 ? PWM_PIN_1 : PWM_PIN_2;
-    if (name == String("cycle")) cycle = value.toInt();
+    if (name == String("value")) cycle = value.toInt();
 
   }
   setDutyCycle(pin, cycle);
@@ -147,11 +147,34 @@ void setFrequency(long value) {
 }
 
 void parseFrequency(String input) {
-  // ignore invalid input
-  if (input.length() <= 2 || input.charAt(1) != '=')
+  if (input.length() <= 2 || input.charAt(1) != '?')
     return;
-  // handle value
-  setFrequency(input.substring(2).toInt());
+  int begin = 2;
+  int end = input.indexOf('=', begin);
+  int next = 0;
+
+  String name;
+  String value;
+
+  while (end > begin) {
+    name = input.substring(begin, end);
+    next = input.indexOf('&', end + 1);
+
+    if (next == -1) {
+      // last parameter
+      value = input.substring(end + 1);
+      // finish
+      end = -1;
+    } else {
+      value = input.substring(end + 1, next);
+      // next cycle
+      begin = next + 1;
+      end = input.indexOf('=', begin);
+    }
+
+    // handle value
+    if (name == String("value")) setFrequency(value.toInt());
+  }
 }
 
 /**

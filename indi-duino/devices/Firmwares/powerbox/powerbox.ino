@@ -27,7 +27,7 @@ void showHelp() {
   addJsonLine("h - show this help message", MESSAGE_INFO);
   addJsonLine("c - show the configuration", MESSAGE_INFO);
   addJsonLine("i - show devices status information", MESSAGE_INFO);
-  addJsonLine("f=<frequency> - change the PWM frequency", MESSAGE_INFO);
+  addJsonLine("f?value=<frequency> - change the PWM frequency", MESSAGE_INFO);
   addJsonLine("d?id=<[1|2|>&value=<duty cycle> - change the PWM duty cycle", MESSAGE_INFO);
   addJsonLine("p?id=<[1|2|>&power=[on|off] - turn PWM on or off", MESSAGE_INFO);
   addJsonLine("s?id=<[1|2|>&power=[on|off] - turn switch on or off", MESSAGE_INFO);
