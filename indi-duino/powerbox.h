@@ -74,17 +74,17 @@ protected:
     typedef std::map<pb_command, std::string> pb_command_map;
     pb_command_map commands;
 
-    // switches for the two power ports
+    // properties for the two power ports
     ISwitch PowerPortStatus_1_S[2] = {};
     ISwitchVectorProperty PowerPortStatus_1_SP;
     ISwitch PowerPortStatus_2_S[2] = {};
     ISwitchVectorProperty PowerPortStatus_2_SP;
 
-    // PWM frequency
+    // PWM frequency property
     INumber PWMFrequencyN[1] = {};
     INumberVectorProperty PWMFrequencyNP;
 
-    // switches for the two PWM ports
+    // properties for the two PWM ports
     ISwitch PWMPortStatus_1_S[2] = {};
     ISwitchVectorProperty PWMPortStatus_1_SP;
     ISwitch PWMPortStatus_2_S[2] = {};
@@ -94,6 +94,10 @@ protected:
     INumberVectorProperty PWMDutyCycle_1_NP;
     INumber PWMDutyCycle_2_N[1] = {};
     INumberVectorProperty PWMDutyCycle_2_NP;
+
+    // Light box control properties
+    ISwitch LightBoxPWMPortS[2] = {};
+    ISwitchVectorProperty LightBoxPWMPortSP;
 
     // default device name
     const char *getDefaultName() override;
@@ -149,15 +153,22 @@ protected:
     /**
      * @brief Turn a PWM port on or off
      * @param port_number corresponding port number
+     * @param powerOn true iff port to be turned on
      * @return true iff setting the value succeeded
      */
-    bool setPWMPortStatus(int port_number);
+    bool setPWMPortStatus(int port_number, bool powerOn);
     /**
      * @brief Set the PWM duty cycle
      * @param port_number corresponding port number
      * @return true iff setting the value succeeded
      */
     bool setPWMDutyCycle(int port_number, int value);
+
+    /**
+     * @brief Update the light box settings matching the selected
+     *        PWM control.
+     */
+    void updateLightBoxSettings();
 
     // TTY interface timeout
     int getTTYTimeout() { return ttyTimeout; }
