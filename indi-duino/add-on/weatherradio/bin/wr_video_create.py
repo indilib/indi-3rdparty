@@ -75,7 +75,7 @@ input     = []
 
 for file in files:
     if Path(file).suffix in [".jpg", ".png"]:
-        if file.stat().st_mtime - starttime > args.length * 3600:
+        if file.stat().st_mtime - starttime > args.length * 3600 and len(input) > 0:
             create_video(input, starttime, file.parent.parent, args.mode)
             input = []
             starttime = file.stat().st_mtime

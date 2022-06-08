@@ -1,3 +1,14 @@
+indi-duino (1.17) buster; urgency=medium
+
+  * New firmware for an Arduino based power box
+  * New INDI service "Arduino Power Box"
+  * Image bar and image carousel shifted to front page
+  * Bug fix to skip gaps in timelapse frames when creating videos
+  * Bug fix for updating RRD file with empty list
+  * Bug fix loading configuration already during handshake
+
+ -- Wolfgang Reissenberger <wolfgang@debian10.localdomain>  Tue, 07 Jun 2022 20:45:12 +0200
+
 indi-duino (1.16) buster; urgency=medium
 
   * Bug fix causing crashes of rain sensors
