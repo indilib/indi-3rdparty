@@ -38,10 +38,6 @@
 
 #include "sv305_ccd.h"
 
-// streaming mutex
-static pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
-
 static class Loader
 {
         std::deque<std::unique_ptr<Sv305CCD>> cameras;
@@ -149,6 +145,12 @@ bool Sv305CCD::initProperties()
         cap |= CCD_HAS_ST4_PORT;
     }
 
+    // SV405 CCis a color camera
+    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV405CC") == 0)
+    {
+        cap |= (CCD_HAS_BAYER | CCD_HAS_COOLER);
+    }
+
     SetCCDCapability(cap);
 
     addConfigurationControl();
@@ -190,6 +192,8 @@ bool Sv305CCD::updateProperties()
     if (isConnected())
     {
 
+        // cooler enable
+        defineProperty(&CoolerSP);
         // define controls
         defineProperty(&ControlsNP[CCD_GAIN_N]);
         defineProperty(&ControlsNP[CCD_CONTRAST_N]);
@@ -203,6 +207,7 @@ bool Sv305CCD::updateProperties()
 
         // define frame format
         defineProperty(&FormatSP);
+        // define frame rate
         defineProperty(&SpeedSP);
 
         // stretch factor
@@ -213,6 +218,9 @@ bool Sv305CCD::updateProperties()
     else
     {
         rmTimer(timerID);
+
+        // delete cooler enable
+        deleteProperty(CoolerSP.name);
 
         // delete controls
         deleteProperty(ControlsNP[CCD_GAIN_N].name);
@@ -227,6 +235,7 @@ bool Sv305CCD::updateProperties()
 
         // delete frame format
         deleteProperty(FormatSP.name);
+        // delete frame rate
         deleteProperty(SpeedSP.name);
 
         // stretch factor
@@ -416,15 +425,16 @@ bool Sv305CCD::Connect()
 
             case SVB_BLACK_LEVEL :
                 // Dark Offset
-                IUFillNumber(&ControlsN[CCD_DOFFSET_N], "DOFFSET", "Dark Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
+                IUFillNumber(&ControlsN[CCD_DOFFSET_N], "OFFSET", "Offset", "%.f", caps.MinValue, caps.MaxValue, caps.MaxValue / 10,
                              caps.DefaultValue);
-                IUFillNumberVector(&ControlsNP[CCD_DOFFSET_N], &ControlsN[CCD_DOFFSET_N], 1, getDeviceName(), "CCD_DOFFSET", "Dark Offset",
+                IUFillNumberVector(&ControlsNP[CCD_DOFFSET_N], &ControlsN[CCD_DOFFSET_N], 1, getDeviceName(), "CCD_OFFSET", "Offset",
                                    MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
                 status = SVBSetControlValue(cameraID, SVB_BLACK_LEVEL, caps.DefaultValue, SVB_FALSE);
                 if(status != SVB_SUCCESS)
                 {
-                    LOG_ERROR("Error, camera set dark offset failed\n");
+                    LOG_ERROR("Error, camera set offset failed\n");
                 }
+                break;
 
             default :
                 break;
@@ -482,6 +492,18 @@ bool Sv305CCD::Connect()
     IUFillSwitchVector(&StretchSP, StretchS, 5, getDeviceName(), "STRETCH_BITS", "12 bits 16 bits stretch", MAIN_CONTROL_TAB,
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     bitStretch = 0;
+
+    // Cooler Enable
+    if (GetCCDCapability() & CCD_HAS_COOLER) {
+        // set initial target temperature
+        IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 0.);
+
+        // set cooler status to disable
+        IUFillSwitch(&CoolerS[COOLER_ENABLE], "COOLER_ON", "ON", ISS_OFF);
+        IUFillSwitch(&CoolerS[COOLER_DISABLE], "COOLER_OFF", "OFF", ISS_ON);
+        IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
+    }
+    coolerEnable = COOLER_DISABLE;
 
     // set camera ROI and BIN
     binning = false;
@@ -577,6 +599,53 @@ bool Sv305CCD::updateCCDParams()
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////
+/// Set camera temperature
+///////////////////////////////////////////////////////////////////////////////////////
+int Sv305CCD::SetTemperature(double temperature)
+{
+    /**********************************************************
+     *  We return 0 if setting the temperature will take some time
+     *  If the requested is the same as current temperature, or very
+     *  close, we return 1 and INDI::CCD will mark the temperature status as OK
+     *  If we return 0, INDI::CCD will mark the temperature status as BUSY
+     **********************************************************/
+    SVB_ERROR_CODE ret;
+    long lValue;
+    SVB_BOOL bAuto;
+    if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
+        LOGF_INFO("Error, unable to get temp due to ...", ret);
+        return -1; // API ERROR
+    }
+    TemperatureN[0].value = ((double)lValue)/10;
+
+    // Enable Cooler
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
+        LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
+        return -1; // API ERROR
+    }
+
+    CoolerS[COOLER_ENABLE].s = ISS_ON;
+    CoolerS[COOLER_DISABLE].s = ISS_OFF;
+    CoolerSP.s   = IPS_OK;
+    IDSetSwitch(&CoolerSP, NULL);
+
+    // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
+    if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD) {
+        return 1; // The requested temperature is the same as current temperature, or very close
+    }
+    // Set target temperature
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
+        LOGF_INFO("Setting target temperature is fail.(SVB_TARGET_TEMPERATURE:%d)", ret);
+        return -1; // API ERROR
+    }
+
+    // Otherwise, we set the temperature request and we update the status in TimerHit() function.
+    TemperatureRequest = temperature;
+    LOGF_INFO("Setting CCD temperature to %+06.2f C", temperature);
+
+    return 0;
+}
 
 //
 bool Sv305CCD::StartExposure(float duration)
@@ -1048,6 +1117,44 @@ void Sv305CCD::TimerHit()
         }
     }
 
+
+    if (GetCCDCapability() & CCD_HAS_COOLER) {
+        // Are we performing temperature readout or regulation?
+        SVB_ERROR_CODE ret;
+        long lValue;
+        SVB_BOOL bAuto;
+
+        switch (TemperatureNP.s)
+        {
+            case IPS_IDLE:
+            case IPS_OK:
+                if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
+                    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
+                }
+                else {
+                    TemperatureN[0].value = ((double)lValue)/10;
+                    IDSetNumber(&TemperatureNP, nullptr);
+                }
+                break;
+
+            case IPS_BUSY:
+                if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
+                    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
+                }
+                else {
+                    TemperatureN[0].value = ((double)lValue)/10;
+                    if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD) {
+                        TemperatureNP.s = IPS_OK;
+                    }
+                    IDSetNumber(&TemperatureNP, nullptr);
+                }
+                break;
+
+            case IPS_ALERT:
+                break;
+        }
+    }
+
     if (timerID == -1)
         SetTimer(getCurrentPollingPeriod());
     return;
@@ -1279,6 +1386,39 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             return true;
         }
 
+        // Check if the Cooler Enable
+        if (!strcmp(name, CoolerSP.name))
+        {
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            int tmpCoolerEnable = IUFindOnSwitchIndex(&CoolerSP);
+            if (!strcmp(actionName, StretchS[tmpCoolerEnable].name))
+            {
+                LOGF_INFO("Cooler Enable is already %s", CoolerS[tmpCoolerEnable].label);
+                CoolerSP.s = IPS_IDLE;
+                IDSetSwitch(&CoolerSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&CoolerSP, states, names, n);
+            tmpCoolerEnable = IUFindOnSwitchIndex(&CoolerSP);
+
+            LOGF_INFO("Cooler Power is now %s", CoolerS[tmpCoolerEnable].label);
+
+            coolerEnable = tmpCoolerEnable;
+
+            SVB_ERROR_CODE ret;
+            // Change cooler state
+            if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, (coolerEnable == COOLER_ENABLE ? 1 : 0), SVB_FALSE))) {
+                LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
+            }
+            CoolerSP.s = IPS_OK;
+            IDSetSwitch(&CoolerSP, NULL);
+            return true;
+        }
+
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
@@ -1336,7 +1476,7 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 
     fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
     fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
-    fits_update_key_dbl(fptr, "Dark Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Dark Offset", &_status);
+    fits_update_key_dbl(fptr, "Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Offset", &_status);
     fits_update_key_dbl(fptr, "16 bits stretch factor (bit shift)", bitStretch, 3, "Stretch factor", &_status);
 }
 

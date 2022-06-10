@@ -55,6 +55,7 @@ class Sv305CCD : public INDI::CCD
         bool Connect() override;
         bool Disconnect() override;
 
+        int SetTemperature(double temperature) override;
         bool StartExposure(float duration) override;
         bool AbortExposure() override;
 
@@ -120,7 +121,7 @@ class Sv305CCD : public INDI::CCD
 
         // ROI offsets
         int x_offset;
-	int y_offset;
+	    int y_offset;
 
         // streaming ?
         bool streaming;
@@ -128,6 +129,9 @@ class Sv305CCD : public INDI::CCD
         pthread_mutex_t streaming_mutex;
         pthread_t primary_thread;
         bool terminateThread;
+
+        // for cooling control
+        double TemperatureRequest;
 
         // controls settings
         enum
@@ -152,6 +156,12 @@ class Sv305CCD : public INDI::CCD
         ISwitchVectorProperty SpeedSP;
         enum { SPEED_SLOW, SPEED_NORMAL, SPEED_FAST};
         int frameSpeed;
+
+        // cooler enable
+        ISwitch CoolerS[2];
+        ISwitchVectorProperty CoolerSP;
+        enum { COOLER_ENABLE = 0, COOLER_DISABLE = 1 };
+        int coolerEnable; // 0:Enable, 1:Disable
 
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
@@ -186,6 +196,13 @@ class Sv305CCD : public INDI::CCD
         friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
         friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
                                 char *names[], int n);
+
+        // Tolerance for cooling temperature differences
+        static constexpr double TEMP_THRESHOLD {0.01};
+
+        // Threading - streaming mutex
+        pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
+        pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 };
 
 #endif // SV305_CCD_H
