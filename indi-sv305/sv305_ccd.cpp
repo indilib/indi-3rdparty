@@ -458,7 +458,7 @@ bool Sv305CCD::Connect()
 
     // set frame format and feed UI
     IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
-    IUFillSwitch(&FormatS[FORMAT_RAW12], "FORMAT_RAW12", "Raw 12 bits", ISS_ON);
+    IUFillSwitch(&FormatS[FORMAT_RAW16], "FORMAT_RAW16", "Raw 16 bits", ISS_ON);
     IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
     // NOTE : SV305M PRO only supports Y8 and Y16 frame format
@@ -471,7 +471,7 @@ bool Sv305CCD::Connect()
         IUSaveText(&BayerT[0], "0");
         IUSaveText(&BayerT[1], "0");
         IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
-        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_RAW12]);
+        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_RAW16]);
     }
     if(status != SVB_SUCCESS)
     {
@@ -480,7 +480,7 @@ bool Sv305CCD::Connect()
         return false;
     }
     bitDepth = 16;
-    frameFormat = FORMAT_RAW12;
+    frameFormat = FORMAT_RAW16;
     LOG_INFO("Camera set frame format mode\n");
 
     // set bit stretching and feed UI
@@ -563,14 +563,14 @@ bool Sv305CCD::Disconnect()
     pthread_cond_signal(&cv);
     pthread_mutex_unlock(&condMutex);
 
-    //pthread_mutex_lock(&cameraID_mutex);
+    //pthread_mutex_lock(&cameraID_mutex); // *1
 
     // stop camera
     status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
-        pthread_mutex_unlock(&cameraID_mutex);
+        // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
         return false;
     }
 
@@ -578,7 +578,7 @@ bool Sv305CCD::Disconnect()
     status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
 
-    pthread_mutex_unlock(&cameraID_mutex);
+    // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
     return true;
 }
@@ -604,41 +604,51 @@ bool Sv305CCD::updateCCDParams()
 ///////////////////////////////////////////////////////////////////////////////////////
 int Sv305CCD::SetTemperature(double temperature)
 {
+    pthread_mutex_lock(&cameraID_mutex);
+
     /**********************************************************
      *  We return 0 if setting the temperature will take some time
      *  If the requested is the same as current temperature, or very
      *  close, we return 1 and INDI::CCD will mark the temperature status as OK
      *  If we return 0, INDI::CCD will mark the temperature status as BUSY
      **********************************************************/
-    SVB_ERROR_CODE ret;
-    long lValue;
-    SVB_BOOL bAuto;
-    if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
-        LOGF_INFO("Error, unable to get temp due to ...", ret);
-        return -1; // API ERROR
-    }
-    TemperatureN[0].value = ((double)lValue)/10;
+    try {
+        SVB_ERROR_CODE ret;
+        long lValue;
+        SVB_BOOL bAuto;
+        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
+            LOGF_INFO("Error, unable to get temp due to ...", ret);
+            throw -1;
+        }
+        TemperatureN[0].value = ((double)lValue)/10;
 
-    // Enable Cooler
-    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
-        LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
-        return -1; // API ERROR
+        // Enable Cooler
+        if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
+            LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
+            throw -1;
+        }
+
+        CoolerS[COOLER_ENABLE].s = ISS_ON;
+        CoolerS[COOLER_DISABLE].s = ISS_OFF;
+        CoolerSP.s   = IPS_OK;
+        IDSetSwitch(&CoolerSP, NULL);
+
+        // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
+        if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD) {
+            throw 1; // The requested temperature is the same as current temperature, or very close
+        }
+        // Set target temperature
+        if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
+            LOGF_INFO("Setting target temperature is fail.(SVB_TARGET_TEMPERATURE:%d)", ret);
+            throw -1;
+        }
+    }
+    catch (int result) {
+        pthread_mutex_unlock(&cameraID_mutex);
+        return result; // 1:no need to set target tenperature, -1:API ERROR
     }
 
-    CoolerS[COOLER_ENABLE].s = ISS_ON;
-    CoolerS[COOLER_DISABLE].s = ISS_OFF;
-    CoolerSP.s   = IPS_OK;
-    IDSetSwitch(&CoolerSP, NULL);
-
-    // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD) {
-        return 1; // The requested temperature is the same as current temperature, or very close
-    }
-    // Set target temperature
-    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
-        LOGF_INFO("Setting target temperature is fail.(SVB_TARGET_TEMPERATURE:%d)", ret);
-        return -1; // API ERROR
-    }
+    pthread_mutex_unlock(&cameraID_mutex);
 
     // Otherwise, we set the temperature request and we update the status in TimerHit() function.
     TemperatureRequest = temperature;
@@ -1128,6 +1138,7 @@ void Sv305CCD::TimerHit()
         {
             case IPS_IDLE:
             case IPS_OK:
+                pthread_mutex_lock(&cameraID_mutex);
                 if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
                     LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
                 }
@@ -1135,9 +1146,11 @@ void Sv305CCD::TimerHit()
                     TemperatureN[0].value = ((double)lValue)/10;
                     IDSetNumber(&TemperatureNP, nullptr);
                 }
+                pthread_mutex_unlock(&cameraID_mutex);
                 break;
 
             case IPS_BUSY:
+                pthread_mutex_lock(&cameraID_mutex);
                 if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
                     LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
                 }
@@ -1148,6 +1161,7 @@ void Sv305CCD::TimerHit()
                     }
                     IDSetNumber(&TemperatureNP, nullptr);
                 }
+                pthread_mutex_unlock(&cameraID_mutex);
                 break;
 
             case IPS_ALERT:
@@ -1166,13 +1180,14 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
 {
     IUUpdateNumber(&ControlsNP[ControlType], values, names, n);
 
-    pthread_mutex_unlock(&cameraID_mutex);
+    pthread_mutex_lock(&cameraID_mutex);
 
     // set control
     status = SVBSetControlValue(cameraID, SVB_Control, ControlsN[ControlType].value, SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
+        pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
     LOGF_INFO("Camera control %d to %.f\n", ControlType, ControlsN[ControlType].value);
@@ -1273,7 +1288,10 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             // Otherwise, let us update the switch state
             IUUpdateSwitch(&FormatSP, states, names, n);
             tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-
+            if (tmpFormat == -1)
+            {
+                tmpFormat = FORMAT_RAW16; // Set Frame Format as FORMAT_RAW16 if frameFromat is -1
+            }
             pthread_mutex_lock(&cameraID_mutex);
 
             // adjust frame format for SV305M
@@ -1306,11 +1324,13 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 case FORMAT_RAW8 :
                     bitDepth = 8;
                     break;
-                case FORMAT_RAW12 :
+                case FORMAT_RAW16 :
                     bitDepth = 16;
                     break;
                 default :
+                    frameFormat = FORMAT_RAW16; // Set frameFormat as FORMAT_RAW16 if frameFromat is unknown
                     bitDepth = 16;
+                    break;
             }
             // update CCD parameters
             updateCCDParams();
@@ -1490,6 +1510,7 @@ IPState Sv305CCD::GuideNorth(uint32_t ms)
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide North failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return IPS_ALERT;
     }
     LOG_INFO("Guiding North\n");
@@ -1509,6 +1530,7 @@ IPState Sv305CCD::GuideSouth(uint32_t ms)
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide South failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return IPS_ALERT;
     }
     LOG_INFO("Guiding South\n");
@@ -1528,6 +1550,7 @@ IPState Sv305CCD::GuideEast(uint32_t ms)
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide East failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return IPS_ALERT;
     }
     LOG_INFO("Guiding East\n");
@@ -1546,6 +1569,7 @@ IPState Sv305CCD::GuideWest(uint32_t ms)
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide West failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
         return IPS_ALERT;
     }
     LOG_INFO("Guiding North\n");
