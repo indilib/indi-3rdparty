@@ -47,7 +47,7 @@ else (PLAYERONE_INCLUDE_DIR AND PLAYERONE_LIBRARIES)
     endif (NOT PLAYERONE_FIND_QUIETLY)
   else (PLAYERONE_FOUND)
     if (PLAYERONE_FIND_REQUIRED)
-      message(FATAL_ERROR "PLAYERONE not found. Please install libPlayerOneCamera.2 http://www.indilib.org")
+      message(FATAL_ERROR "PLAYERONE not found. Please install libPlayerOneCamera.3 http://www.indilib.org")
     endif (PLAYERONE_FIND_REQUIRED)
   endif (PLAYERONE_FOUND)
 
