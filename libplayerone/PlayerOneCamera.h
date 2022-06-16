@@ -28,7 +28,7 @@ extern "C" {
 #  define POACAMERA_API     __attribute__((visibility("default")))
 #endif
 
-//----->For more information, please read our development manual
+//-----For more information, please read our development manual-----//
 
 typedef enum _POABool ///< BOOL Value Definition
 {
@@ -38,7 +38,7 @@ typedef enum _POABool ///< BOOL Value Definition
 
 typedef enum _POABayerPattern ///< Bayer Pattern Definition
 {
-    POA_BAYER_RG=0,     ///< RGGB
+    POA_BAYER_RG = 0,   ///< RGGB
     POA_BAYER_BG,       ///< BGGR
     POA_BAYER_GR,       ///< GRBG
     POA_BAYER_GB,       ///< GBRG
@@ -47,7 +47,7 @@ typedef enum _POABayerPattern ///< Bayer Pattern Definition
 
 typedef enum _POAImgFormat  ///< Image Data Format Definition
 {
-    POA_RAW8,       ///< 8bit raw data, 1 pixel 1 byte, value range[0, 255]
+    POA_RAW8 = 0,   ///< 8bit raw data, 1 pixel 1 byte, value range[0, 255]
     POA_RAW16,      ///< 16bit raw data, 1 pixel 2 bytes, value range[0, 65535]
     POA_RGB24,      ///< RGB888 color data, 1 pixel 3 bytes, value range[0, 255] (only color camera)
     POA_MONO8,      ///< 8bit monochrome data, convert the Bayer Filter Array to monochrome data. 1 pixel 1 byte, value range[0, 255] (only color camera)
@@ -72,7 +72,7 @@ typedef enum _POAErrors                 ///< Return Error Code Definition
     POA_ERROR_CONF_CANNOT_WRITE,        ///< the POAConfig is not writable
     POA_ERROR_CONF_CANNOT_READ,         ///< the POAConfig is not readable
     POA_ERROR_ACCESS_DENIED,            ///< access denied
-    POA_ERROR_OPERATION_FAILED,         ///< operation failed
+    POA_ERROR_OPERATION_FAILED,         ///< operation failed, maybe the camera is disconnected suddenly
     POA_ERROR_MEMORY_FAILED             ///< memory allocation failed
 } POAErrors;
 
@@ -87,39 +87,42 @@ typedef enum _POAValueType              ///< Config Value Type Definition
 {
     VAL_INT = 0,                        ///< integer(long)
     VAL_FLOAT,                          ///< float(double)
-    VAL_BOOL,                           ///< bool(POABool)
+    VAL_BOOL                            ///< bool(POABool)
 } POAValueType;
 
 typedef enum _POAConfig                 ///< Camera Config Definition
 {
-    POA_EXPOSURE = 0,                   ///< exposure time(unit: us), valueType == VAL_INT
-    POA_GAIN,                           ///< gain, valueType == VAL_INT
-    POA_HARDWARE_BIN,                   ///< hardware bin, valueType == VAL_BOOL
-    POA_TEMPERATURE,                    ///< camera temperature(uint: C), valueType == VAL_FLOAT
-    POA_WB_R,                           ///< red pixels coefficient of white balance, valueType == VAL_INT
-    POA_WB_G,                           ///< green pixels coefficient of white balance, valueType == VAL_INT
-    POA_WB_B,                           ///< blue pixels coefficient of white balance, valueType == VAL_INT
-    POA_OFFSET,                         ///< camera offset, valueType == VAL_INT
-    POA_AUTOEXPO_MAX_GAIN,              ///< maximum gain when auto-adjust, valueType == VAL_INT
-    POA_AUTOEXPO_MAX_EXPOSURE,          ///< maximum exposure when auto-adjust(uint: ms), valueType == VAL_INT
-    POA_AUTOEXPO_BRIGHTNESS,            ///< target brightness when auto-adjust, valueType == VAL_INT
-    POA_GUIDE_NORTH,                    ///< ST4 guide north, generally,it's DEC+ on the mount, valueType == VAL_BOOL
-    POA_GUIDE_SOUTH,                    ///< ST4 guide south, generally,it's DEC- on the mount, valueType == VAL_BOOL
-    POA_GUIDE_EAST,                     ///< ST4 guide east, generally,it's RA- on the mount, valueType == VAL_BOOL
-    POA_GUIDE_WEST,                     ///< ST4 guide west, generally,it's RA+ on the mount, valueType == VAL_BOOL
-    POA_EGAIN,                          ///< e/ADU, This value will change with gain, valueType == VAL_FLOAT
-    POA_COOLER_POWER,                   ///< cooler power percentage(only cool camera), valueType == VAL_INT
-    POA_TARGET_TEMP,                    ///< camera target temperature(uint: C), valueType == VAL_INT
-    POA_COOLER,                         ///< turn cooler on or off, valueType == VAL_BOOL
-    POA_HEATER,                         ///< turn lens heater on or off, valueType == VAL_BOOL
-    POA_FLIP_NONE,                      ///< no flip, Note: set this config(POASetConfig), the 'confValue' will be ignored, valueType == VAL_BOOL
-    POA_FLIP_HORI,                      ///< flip the image horizontally, Note: set this config(POASetConfig), the 'confValue' will be ignored, valueType == VAL_BOOL
-    POA_FLIP_VERT,                      ///< flip the image vertically, Note: set this config(POASetConfig), the 'confValue' will be ignored, valueType == VAL_BOOL
-    POA_FLIP_BOTH,                      ///< flip the image horizontally and vertically, Note: set this config(POASetConfig), the 'confValue' will be ignored, valueType == VAL_BOOL
-    POA_FRAME_LIMIT,                    ///< Frame rate limit, the range:[0, 2000], 0 means no limit, valueType == VAL_INT
+    POA_EXPOSURE = 0,                   ///< exposure time(unit: us), read-write, valueType == VAL_INT
+    POA_GAIN,                           ///< gain, read-write, valueType == VAL_INT
+    POA_HARDWARE_BIN,                   ///< hardware bin, read-write, valueType == VAL_BOOL
+    POA_TEMPERATURE,                    ///< camera temperature(uint: C), read-only, valueType == VAL_FLOAT
+    POA_WB_R,                           ///< red pixels coefficient of white balance, read-write, valueType == VAL_INT
+    POA_WB_G,                           ///< green pixels coefficient of white balance, read-write, valueType == VAL_INT
+    POA_WB_B,                           ///< blue pixels coefficient of white balance, read-write, valueType == VAL_INT
+    POA_OFFSET,                         ///< camera offset, read-write, valueType == VAL_INT
+    POA_AUTOEXPO_MAX_GAIN,              ///< maximum gain when auto-adjust, read-write, valueType == VAL_INT
+    POA_AUTOEXPO_MAX_EXPOSURE,          ///< maximum exposure when auto-adjust(uint: ms), read-write, valueType == VAL_INT
+    POA_AUTOEXPO_BRIGHTNESS,            ///< target brightness when auto-adjust, read-write, valueType == VAL_INT
+    POA_GUIDE_NORTH,                    ///< ST4 guide north, generally,it's DEC+ on the mount, read-write, valueType == VAL_BOOL
+    POA_GUIDE_SOUTH,                    ///< ST4 guide south, generally,it's DEC- on the mount, read-write, valueType == VAL_BOOL
+    POA_GUIDE_EAST,                     ///< ST4 guide east, generally,it's RA- on the mount, read-write, valueType == VAL_BOOL
+    POA_GUIDE_WEST,                     ///< ST4 guide west, generally,it's RA+ on the mount, read-write, valueType == VAL_BOOL
+    POA_EGAIN,                          ///< e/ADU, This value will change with gain, read-only, valueType == VAL_FLOAT
+    POA_COOLER_POWER,                   ///< cooler power percentage[0-100%](only cool camera), read-only, valueType == VAL_INT
+    POA_TARGET_TEMP,                    ///< camera target temperature(uint: C), read-write, valueType == VAL_INT
+    POA_COOLER,                         ///< turn cooler(and fan) on or off, read-write, valueType == VAL_BOOL
+    POA_HEATER,                         ///< turn lens heater on or off, read-write, valueType == VAL_BOOL
+    POA_HEATER_POWER,                   ///< lens heater power percentage[0-100%], read-write, valueType == VAL_INT
+    POA_FAN_POWER,                      ///< radiator fan power percentage[0-100%], read-write, valueType == VAL_INT
+    POA_FLIP_NONE,                      ///< no flip, Note: set this config(POASetConfig), the 'confValue' will be ignored, read-write, valueType == VAL_BOOL
+    POA_FLIP_HORI,                      ///< flip the image horizontally, Note: set this config(POASetConfig), the 'confValue' will be ignored, read-write, valueType == VAL_BOOL
+    POA_FLIP_VERT,                      ///< flip the image vertically, Note: set this config(POASetConfig), the 'confValue' will be ignored, read-write, valueType == VAL_BOOL
+    POA_FLIP_BOTH,                      ///< flip the image horizontally and vertically, Note: set this config(POASetConfig), the 'confValue' will be ignored, read-write, valueType == VAL_BOOL
+    POA_FRAME_LIMIT,                    ///< Frame rate limit, the range:[0, 2000], 0 means no limit, read-write, valueType == VAL_INT
     POA_HQI,                            ///< High quality image, for those without DDR camera(guide camera), if set POA_TRUE, this will reduce the waviness and stripe of the image,
-                                        ///< but frame rate may go down, note: this config has no effect on those cameras that with DDR. valueType == VAL_BOOL
-    POA_USB_BANDWIDTH_LIMIT,            ///< USB bandwidth limit, valueType == VAL_INT
+                                        ///< but frame rate may go down, note: this config has no effect on those cameras that with DDR. read-write, valueType == VAL_BOOL
+    POA_USB_BANDWIDTH_LIMIT,            ///< USB bandwidth limit, read-write, valueType == VAL_INT
+    POA_PIXEL_BIN_SUM                   ///< take the sum of pixels after binning, POA_TRUE is sum and POA_FLASE is average, default is POA_FLASE, read-write, valueType == VAL_BOOL
 
 } POAConfig;
 
@@ -611,6 +614,78 @@ POACAMERA_API  POAErrors POAGetImageData(int nCameraID, unsigned char *pBuf, lon
  *          POA_ERROR_NOT_OPENED: camera not opened
  */
 POACAMERA_API  POAErrors POAGetDroppedImagesCount(int nCameraID, int *pDroppedCount);
+
+
+/**
+ * @brief POAGetSensorModeCount: get the number of sensor mode
+ *
+ * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
+ *
+ * @param pModeCount (output), pointer to a int value for saving the sensor mode count, NOTE: 0 means camera don't supported mode selection
+ *
+ * @return  POA_OK: operation successful
+ *          POA_ERROR_POINTER: pModeCount is NULL pointer
+ *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
+ *          POA_ERROR_NOT_OPENED: camera not opened
+ */
+POACAMERA_API  POAErrors POAGetSensorModeCount(int nCameraID, int *pModeCount);
+
+
+typedef struct _POASensorModeInfo ///< Sensor mode information
+{
+    char name[64];  ///< sensor mode name, can be used to display on the UI (eg: Combobox)
+    char desc[128]; ///< sensor mode description, may be useful for tooltip
+}POASensorModeInfo;
+
+
+/**
+ * @brief POAGetSensorModeInfo: get the camera sensor mode information according to the index
+ *
+ * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
+ *
+ * @param modeIndex (input), the range: [0, mode count)
+ *
+ * @param pSenModeInfo (output), pointer to a POASensorModeInfo value for saving the sensor mode information
+ *
+ * @return  POA_OK: operation successful
+ *          POA_ERROR_POINTER: pSenModeInfo is NULL pointer
+ *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
+ *          POA_ERROR_NOT_OPENED: camera not opened
+ *          POA_ERROR_ACCESS_DENIED: camera don't supported mode selection
+ *          POA_ERROR_INVALID_ARGU: modeIndex is out of range
+ */
+POACAMERA_API  POAErrors POAGetSensorModeInfo(int nCameraID, int modeIndex, POASensorModeInfo *pSenModeInfo);
+
+
+/**
+ * @brief POASetSensorMode: set the camera sensor mode by the index, Note: should stop exposure first if exposing
+ *
+ * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
+ *
+ * @param modeIndex (input), the range: [0, mode count)
+ *
+ * @return  POA_OK: operation successful
+ *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
+ *          POA_ERROR_NOT_OPENED: camera not opened
+ *          POA_ERROR_ACCESS_DENIED: camera don't supported mode selection
+ *          POA_ERROR_INVALID_ARGU: modeIndex is out of range
+ *          POA_ERROR_OPERATION_FAILED: operation failed, maybe the camera is disconnected suddenly
+ */
+POACAMERA_API  POAErrors POASetSensorMode(int nCameraID, int modeIndex);
+
+
+/**
+ * @brief POAGetSensorMode: get camera the current sensor mode
+ * @param nCameraID (input), get from in the POACameraProperties structure, use POAGetCameraProperties function
+ * @param pModeIndex (output), pointer to a int value for saving the current sensor mode index
+ * @return  POA_OK: operation successful
+ *          POA_ERROR_POINTER: pModeIndex is NULL pointer
+ *          POA_ERROR_INVALID_ID: no camera with this ID was found or the ID is out of boundary
+ *          POA_ERROR_NOT_OPENED: camera not opened
+ *          POA_ERROR_ACCESS_DENIED: camera don't supported mode selection
+ *          POA_ERROR_OPERATION_FAILED: operation failed, the current mode is not matched
+ */
+POACAMERA_API  POAErrors POAGetSensorMode(int nCameraID, int *pModeIndex);
 
 
 /**
