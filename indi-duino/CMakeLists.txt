@@ -10,7 +10,10 @@ set (DUINO_VERSION_MAJOR 0)
 set (DUINO_VERSION_MINOR 6)
  
 set (WEATHERRADIO_VERSION_MAJOR 1)
-set (WEATHERRADIO_VERSION_MINOR 16)
+set (WEATHERRADIO_VERSION_MINOR 17)
+
+set (DUINOPOWERBOX_VERSION_MAJOR 0)
+set (DUINOPOWERBOX_VERSION_MINOR 1)
 
 find_package(INDI REQUIRED)
 find_package(CURL REQUIRED)
@@ -81,6 +84,16 @@ target_link_libraries(indi_weatherradio ${INDI_LIBRARIES} ${CURL})
 
 install(TARGETS indi_weatherradio RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_weatherradio.xml DESTINATION ${INDI_DATA_DIR})
+##################### power box ######################
+set(powerbox_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/gason/gason.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/powerbox.cpp
+   )
+
+add_executable(indi_duino_powerbox ${powerbox_SRCS})
+target_link_libraries(indi_duino_powerbox ${INDI_LIBRARIES} ${CURL})
+
+install(TARGETS indi_duino_powerbox RUNTIME DESTINATION bin)
 ################### DEVICES XML  #####################
 add_subdirectory(devices)
 

@@ -49,6 +49,8 @@ static class Loader
             int iAvailableDevicesCount = 0;
             std::vector<std::string> cameraNames;
 
+            INDI_UNUSED(hArtemisDLL);
+
             IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
 
             for (int loop = 0; loop < MAX_CONNECTION_RETRIES; loop++)

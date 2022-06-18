@@ -15,7 +15,7 @@ OS=$(uname -s)
 
 case "$OS" in
     Darwin)
-        brew install \
+        brew install --overwrite \
             git \
             cfitsio libnova libusb curl \
             gsl jpeg fftw \

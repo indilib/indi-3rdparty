@@ -42,6 +42,8 @@ public:
         int iAvailablefilterWheelsCount = MAX_DEVICES;
         std::vector<std::string> filterWheelNames;
 
+        INDI_UNUSED(hArtemisDLL);
+
         for (int i = 0; i < iAvailablefilterWheelsCount; i++)
         {
             // We only do filterWheels in this driver.

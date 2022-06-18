@@ -9,6 +9,10 @@
                 <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Omegon Pro/GUIDE" mdpd="true" manufacturer="Omegon">
+                <driver name="Omegonprocam">indi_omegonprocam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
         <device label="Meade Toupcam" mdpd="true" manufacturer="Meade">
                 <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>

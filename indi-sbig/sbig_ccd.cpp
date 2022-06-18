@@ -1,6 +1,7 @@
 /*
     Driver type: SBIG CCD Camera INDI Driver
 
+    Copyright (C) 2022 Tobias Illenseer (tillense AT astrophysik DOT uni-kiel DOT de)
     Copyright (C) 2013-2018 Jasem Mutlaq (mutlaqja AT ikarustech DOT com)
     Copyright (C) 2017 Peter Polakovic (peter DOT polakovic AT cloudmakers DOT eu)
     Copyright (C) 2005-2006 Jan Soldan (jsoldan AT asu DOT cas DOT cz)
@@ -822,53 +823,79 @@ bool SBIGCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 
 bool SBIGCCD::Connect()
 {
+    int numModes = -1;
+    int maxBinX  = 1;
+    int maxBinY  = 1;
+    int res = CE_NO_ERROR;
+
     loadFirmwareOnOSXifNeeded();
 
     if (isConnected())
+    {
+        LOG_DEBUG("CCD device already connected");
         return true;
+    }
     m_hasGuideHead     = false;
     m_hasFilterWheel   = false;
     uint32_t devType = *(static_cast<uint32_t *>(IUFindOnSwitch(&PortSP)->aux));
     char *port       = IUFindOnSwitch(&PortSP)->label;
-    if (OpenDevice(devType) == CE_NO_ERROR)
+    if (OpenDevice(devType) != CE_NO_ERROR)
     {
-        if (EstablishLink() == CE_NO_ERROR)
-        {
-            LOGF_INFO("CCD is connected at port %s", port);
-            GetExtendedCCDInfo();
-            uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_SHUTTER | CCD_HAS_ST4_PORT;
-            if (m_hasGuideHead)
-                cap |= CCD_HAS_GUIDE_HEAD;
-            if (m_isColor)
-                cap |= CCD_HAS_BAYER;
-            if (GetCameraType() == STI_CAMERA)
-            {
-                PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 2, 1, false);
-                PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 2, 1, false);
-            }
-            else
-            {
-                cap |= CCD_HAS_COOLER;
-                IEAddTimer(TEMPERATURE_POLL_MS, SBIGCCD::updateTemperatureHelper, this);
-                PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 9, 1, false);
-                PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 9, 1, false);
-            }
-            SetCCDCapability(cap);
-
-            m_hasAO = AoCenter() == CE_NO_ERROR;
-
-            return true;
-        }
-        else
-        {
-            LOGF_ERROR("Failed to connect CCD at port %s", port);
-        }
+        LOGF_ERROR("Failed to open CCD at port %s", port);
+        return false;
     }
-    else
+
+    if (EstablishLink() != CE_NO_ERROR)
     {
         LOGF_ERROR("Failed to connect CCD at port %s", port);
+        return false;
     }
-    return false;
+
+    LOGF_INFO("CCD is connected at port %s", port);
+
+    if (GetExtendedCCDInfo() != CE_NO_ERROR)
+    {
+        LOG_ERROR("Failed to get extended CCD info.");
+        return false;
+    }
+
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_SHUTTER | CCD_HAS_ST4_PORT;
+    if (m_hasGuideHead)
+        cap |= CCD_HAS_GUIDE_HEAD;
+    if (m_isColor)
+        cap |= CCD_HAS_BAYER;
+    if (GetCameraType() != STI_CAMERA)
+    {
+        cap |= CCD_HAS_COOLER;
+        IEAddTimer(TEMPERATURE_POLL_MS, SBIGCCD::updateTemperatureHelper, this);
+    }
+
+    res = getReadoutModes(&PrimaryCCD, numModes, maxBinX, maxBinY);
+    if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
+    {
+        LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
+        return false;
+    }
+    PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxBinX, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxBinY, 1, false);
+
+    if (m_hasGuideHead)
+    {
+        res = getReadoutModes(&GuideCCD, numModes, maxBinX, maxBinY);
+        if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
+        {
+            LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
+            return false;
+        }
+        GuideCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxBinX, 1, false);
+        GuideCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxBinY, 1, false);
+    }
+
+    SetCCDCapability(cap);
+
+    m_hasAO = AoCenter() == CE_NO_ERROR;
+
+    return true;
 }
 
 bool SBIGCCD::Disconnect()
@@ -1225,6 +1252,8 @@ bool SBIGCCD::updateFrameProperties(INDI::CCDChip *targetChip)
 {
     int wCcd, hCcd, binning;
     double wPixel, hPixel;
+
+    LOG_DEBUG("Updating frame properties ...");
     int res = getBinningMode(targetChip, binning);
     if (res != CE_NO_ERROR)
     {
@@ -1281,24 +1310,17 @@ bool SBIGCCD::UpdateGuiderFrame(int x, int y, int w, int h)
 
 bool SBIGCCD::UpdateCCDBin(int binx, int biny)
 {
-    if (binx != biny)
+    // only basic sanity checks; if the camera really supports the requested binning
+    // mode is checked in getBinningMode
+    if (binx > 255 || biny > 255)
     {
-        biny = binx;
-    }
-    if (GetCameraType() == STI_CAMERA)
-    {
-        if (binx < 1 || binx > 2)
-        {
-            LOG_ERROR("Failed to update main camera binning mode, use 1x1 or 2x2");
-            return false;
-        }
-    }
-    else if ((binx < 1 || binx > 3) && binx != 9)
-    {
-        DEBUG(
-            INDI::Logger::DBG_ERROR,
-            "Failed to update main camera binning mode, use 1x1, 2x2, 3x3 or 9x9"); // expand conditions to supply 9x9 binning
+        LOG_ERROR("Failed to update main camera binning mode, binning should be at least < 256");
         return false;
+    }
+    if (binx > 3 && biny != binx)
+    {
+        LOG_WARN("Forcing y-binning = x-binning while updating main camera binning mode");
+        biny = binx;
     }
     PrimaryCCD.setBin(binx, biny);
     return updateFrameProperties(&PrimaryCCD);
@@ -1307,7 +1329,10 @@ bool SBIGCCD::UpdateCCDBin(int binx, int biny)
 bool SBIGCCD::UpdateGuiderBin(int binx, int biny)
 {
     if (binx != biny)
+    {
+        LOG_WARN("Forcing y-binning = x-binning while updating guide head binning mode");
         biny = binx;
+    }
     if (binx < 1 || binx > 3)
     {
         LOG_ERROR("Failed to update guide head binning mode, use 1x1, 2x2 or 3x3");
@@ -1862,6 +1887,7 @@ int SBIGCCD::GetCcdInfo(GetCCDInfoParams *gcp, void *gcr)
 
 int SBIGCCD::getCCDSizeInfo(int ccd, int binning, int &frmW, int &frmH, double &pixW, double &pixH)
 {
+    int roModeIdx = binning & 0x00FF;  // mask low byte because vertical binning is written to high byte
     GetCCDInfoParams gcp;
     GetCCDInfoResults0 gcr;
     if (isSimulation())
@@ -1887,10 +1913,21 @@ int SBIGCCD::getCCDSizeInfo(int ccd, int binning, int &frmW, int &frmH, double &
         return CE_DEVICE_NOT_IMPLEMENTED;
     if (res == CE_NO_ERROR)
     {
-        frmW = gcr.readoutInfo[binning].width;
-        frmH = gcr.readoutInfo[binning].height;
-        pixW = BcdPixel2double(gcr.readoutInfo[binning].pixelWidth);
-        pixH = BcdPixel2double(gcr.readoutInfo[binning].pixelHeight);
+        frmW = gcr.readoutInfo[roModeIdx].width;
+        pixW = BcdPixel2double(gcr.readoutInfo[roModeIdx].pixelWidth);
+        // modify height and pixelHeight for readout modes with vertical binning
+        if ( ( (binning & 0x00FF) == CCD_BIN_1xN_I ) ||
+                ( (binning & 0x00FF) == CCD_BIN_2xN_I ) ||
+                ( (binning & 0x00FF) == CCD_BIN_3xN_I ) )
+        {
+            frmH = gcr.readoutInfo[0].height / ( (binning & 0xFF00) >> 8);
+            pixH = BcdPixel2double(gcr.readoutInfo[0].pixelHeight * ( (binning & 0xFF00) >> 8) );
+        }
+        else
+        {
+            frmH = gcr.readoutInfo[roModeIdx].height;
+            pixH = BcdPixel2double(gcr.readoutInfo[roModeIdx].pixelHeight);
+        }
         LOGF_DEBUG(
             "%s: CC_GET_CCD_INFO -> binning (%d) width (%d) height (%d) pixW (%g) pixH (%g)", __FUNCTION__, binning,
             frmW, frmH, pixW, pixH);
@@ -2049,7 +2086,7 @@ const char *SBIGCCD::GetCameraID()
 
     GetCCDInfoParams gccdip;
     static GetCCDInfoResults2 gccdir2;
-    gccdip.request = 2;
+    gccdip.request = CCD_INFO_EXTENDED;
     int res        = GetCcdInfo(&gccdip, &gccdir2);
     if (res != CE_NO_ERROR)
     {
@@ -2059,50 +2096,112 @@ const char *SBIGCCD::GetCameraID()
     return gccdir2.serialNumber;
 }
 
-void SBIGCCD::GetExtendedCCDInfo()
+int SBIGCCD::getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxBinX, int &maxBinY)
 {
-    int res = 0;
+    int res = CE_BAD_PARAMETER;
     GetCCDInfoParams gccdip;
-    GetCCDInfoResults4 imaging_ccd_results4;
-    GetCCDInfoResults4 tracking_ccd_results4;
+    static GetCCDInfoResults0 gccdir;
+
+    if (targetChip == &PrimaryCCD)
+        gccdip.request = CCD_INFO_IMAGING;
+    else if (targetChip == &GuideCCD)
+        gccdip.request = CCD_INFO_TRACKING;
+    else
+    {
+        LOGF_ERROR("%s: CCD not selected and/or uninitialized", __FUNCTION__);
+        return res;
+    }
+    res = SBIGUnivDrvCommand(CC_GET_CCD_INFO, &gccdip, &gccdir);
+    if (res == CE_NO_ERROR)
+    {
+        numModes = gccdir.readoutModes - 1;
+        switch(numModes)
+        {
+            case CCD_BIN_2x2_I:
+            case CCD_BIN_2x2_E:
+                maxBinX = 2;
+                maxBinY = maxBinX;
+                break;
+            case CCD_BIN_3x3_I:
+            case CCD_BIN_3x3_E:
+                maxBinX = 3;
+                maxBinY = maxBinX;
+                break;
+            case CCD_BIN_1xN_I:
+                maxBinX = 1;
+                maxBinY = 255;
+                break;
+            case CCD_BIN_2xN_I:
+                maxBinX = 2;
+                maxBinY = 255;
+                break;
+            case CCD_BIN_3xN_I:
+                maxBinX = 3;
+                maxBinY = 255;
+                break;
+            case CCD_BIN_9x9_I:
+                maxBinX = 9;
+                maxBinY = 255; // because vertical binning modes are also available
+                break;
+            case CCD_BIN_NxN_I:
+                maxBinX = 255;
+                maxBinY = maxBinX;
+                break;
+            case CCD_BIN_1x1_I:
+            case CCD_BIN_1x1_E:
+            default: // no binning at all
+                maxBinX = 1;
+                maxBinY = maxBinX;
+                break;
+        }
+    }
+    LOGF_DEBUG("%s: max horizontal/vertical binning (%d / %d) supported readout modes (%d)", __FUNCTION__,
+               maxBinX, maxBinY, numModes);
+    return res;
+}
+
+int SBIGCCD::GetExtendedCCDInfo()
+{
+    int res = CE_NO_ERROR;
+    GetCCDInfoParams gccdip;
+    GetCCDInfoResults4 results4;
     GetCCDInfoResults6 results6;
+
+    LOG_DEBUG("Fetching extended CCD info from device ...");
 
     if (isSimulation())
     {
         m_hasGuideHead   = true;
         m_hasFilterWheel = true;
-        return;
+        return res;
     }
-    gccdip.request = 4;
-    if (GetCcdInfo(&gccdip, &imaging_ccd_results4) == CE_NO_ERROR)
-    {
+    gccdip.request = CCD_INFO_EXTENDED2_IMAGING;
+    if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
         LOGF_DEBUG("CCD_IMAGING Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                   imaging_ccd_results4.capabilitiesBits, imaging_ccd_results4.dumpExtra);
+                   results4.capabilitiesBits, results4.dumpExtra);
+    else
+    {
+        LOGF_ERROR("%s: CCD_INFO_EXTENDED2_IMAGING -> (%s)", __FUNCTION__, GetErrorString(res));
+        return res;
     }
-    gccdip.request = 5;
-    if (GetCcdInfo(&gccdip, &tracking_ccd_results4) == CE_NO_ERROR)
+
+    gccdip.request = CCD_INFO_EXTENDED2_TRACKING;
+    if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
     {
         m_hasGuideHead = true;
+        m_useExternalTrackingCCD = results4.capabilitiesBits & CB_CCD_EXT_TRACKER_YES;
         LOGF_DEBUG("TRACKING_CCD Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                   tracking_ccd_results4.capabilitiesBits, tracking_ccd_results4.dumpExtra);
-        if (tracking_ccd_results4.capabilitiesBits & CB_CCD_EXT_TRACKER_YES)
-        {
-            LOG_DEBUG("External tracking CCD detected.");
-            m_useExternalTrackingCCD = true;
-        }
-        else
-        {
-            m_useExternalTrackingCCD = false;
-        }
+                   results4.capabilitiesBits, results4.dumpExtra);
     }
     else
     {
         m_hasGuideHead = false;
-        LOGF_DEBUG("TRACKING_CCD Error getting extended CCD Info 4 (%s). No guide head detected.",
-                   GetErrorString(res));
+        LOGF_DEBUG("%s: CCD_INFO_EXTENDED2_TRACKING -> (%s). No guide head detected.", __FUNCTION__, GetErrorString(res));
+        return CE_NO_ERROR;
     }
-    gccdip.request = 6;
-    if (GetCcdInfo(&gccdip, &results6) == CE_NO_ERROR)
+
+    gccdip.request = CCD_INFO_EXTENDED3;
+    if ((res = GetCcdInfo(&gccdip, &results6)) == CE_NO_ERROR)
     {
         LOGF_DEBUG("Extended CCD Info 6. Camerabit: (%ld) CCD bits (%ld) Extra bit (%ld)",
                    results6.cameraBits, results6.ccdBits, results6.extraBits);
@@ -2123,12 +2222,13 @@ void SBIGCCD::GetExtendedCCDInfo()
     {
         LOGF_DEBUG("Error getting extended CCD Info 6 (%s)", GetErrorString(res));
     }
+
     CFWParams CFWp;
     CFWResults CFWr;
     CFWp.cfwModel   = CFWSEL_AUTO;
     CFWp.cfwCommand = CFWC_GET_INFO;
     CFWp.cfwParam1  = CFWG_FIRMWARE_VERSION;
-    if (SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr) == CE_NO_ERROR)
+    if ((res = SBIGUnivDrvCommand(CC_CFW, &CFWp, &CFWr)) == CE_NO_ERROR)
     {
         LOGF_DEBUG("Filter wheel detected (firmware %ld).", CFWr.cfwResult1);
         m_hasFilterWheel = true;
@@ -2137,6 +2237,7 @@ void SBIGCCD::GetExtendedCCDInfo()
     {
         m_hasFilterWheel = false;
     }
+    return res;
 }
 
 //==========================================================================
@@ -2266,28 +2367,59 @@ void SBIGCCD::InitVars()
 
 int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
 {
-    int res = CE_NO_ERROR;
-    if (targetChip->getBinX() == 1 && targetChip->getBinY() == 1)
+    int maxBinX, maxBinY, numModes;
+    int res = getReadoutModes(targetChip, numModes, maxBinX, maxBinY);
+
+    if (res != CE_NO_ERROR || targetChip->getBinX() > maxBinX || targetChip->getBinY() > maxBinY)
     {
         binning = CCD_BIN_1x1_I;
+        return res;
     }
-    else if (targetChip->getBinX() == 2 && targetChip->getBinY() == 2)
+
+    if (targetChip->getBinX() == targetChip->getBinY())
     {
-        binning = CCD_BIN_2x2_I;
-    }
-    else if (targetChip->getBinX() == 3 && targetChip->getBinY() == 3)
-    {
-        binning = CCD_BIN_3x3_I;
-    }
-    else if (targetChip->getBinX() == 9 && targetChip->getBinY() == 9)
-    {
-        binning = CCD_BIN_9x9_I;
+        if (targetChip->getBinX() == 1)
+            binning = CCD_BIN_1x1_I;
+        else if (targetChip->getBinX() == 2)
+            binning = CCD_BIN_2x2_I;
+        else if (targetChip->getBinX() == 3)
+            binning = CCD_BIN_3x3_I;
+        else if (targetChip->getBinX() == 9)
+            binning = CCD_BIN_9x9_I;
+        else
+            // store amount of binning in the high byte
+            // not mentioned in the SBIG documentation, but probably similar to the
+            // vertical binning case (see below)
+            binning = CCD_BIN_NxN_I + (targetChip->getBinX() << 8);
     }
     else
     {
-        res = CE_BAD_PARAMETER;
-        LOG_ERROR("Bad CCD binning mode, use 1x1, 2x2, 3x3 or 9x9");
+        if (targetChip->getBinX() == 1)
+            binning = CCD_BIN_1xN_I;
+        else if (targetChip->getBinX() == 2)
+            binning = CCD_BIN_2xN_I;
+        else if (targetChip->getBinX() == 3)
+            binning = CCD_BIN_3xN_I;
+        else // this should not happen
+        {
+            res = CE_BAD_PARAMETER;
+            LOG_ERROR("Bad CCD binning mode: x-binning > 3 and y-binning != x-binning");
+        }
+        // amount of vertical binning is specified in the most significant byte of the readout mode
+        // (see notes in Sec. 3.2.4 of SBIG Universal Driver documentation)
+        binning += targetChip->getBinY() << 8;
     }
+
+    // check if the requested binning mode (low byte only) is supported by the device
+    if ((binning & 0x00FF) > (numModes - 1))
+    {
+        res = CE_BAD_PARAMETER;
+        binning = CCD_BIN_1x1_I; // fallback mode -> no binning
+        LOG_ERROR("Binning mode not supported by the device");
+    }
+
+    LOGF_DEBUG("%s: binx (%d) biny (%d) binning_mode (%d)", __FUNCTION__, targetChip->getBinX(),
+               targetChip->getBinY(), binning);
     return res;
 }
 
