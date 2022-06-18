@@ -145,7 +145,7 @@ bool Sv305CCD::initProperties()
         cap |= CCD_HAS_ST4_PORT;
     }
 
-    // SV405 CCis a color camera
+    // SV405 CC is a cooled color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV405CC") == 0)
     {
         cap |= (CCD_HAS_BAYER | CCD_HAS_COOLER);
@@ -194,6 +194,7 @@ bool Sv305CCD::updateProperties()
 
         // cooler enable
         defineProperty(&CoolerSP);
+
         // define controls
         defineProperty(&ControlsNP[CCD_GAIN_N]);
         defineProperty(&ControlsNP[CCD_CONTRAST_N]);

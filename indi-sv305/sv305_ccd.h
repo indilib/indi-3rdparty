@@ -166,7 +166,7 @@ class Sv305CCD : public INDI::CCD
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
-	// NOTE : SV305M PRO d'ont support RAW8 and RAW16, only Y8 and Y16
+	// NOTE : SV305M PRO doesn't support RAW8 and RAW16, only Y8 and Y16
         ISwitch FormatS[2];
         ISwitchVectorProperty FormatSP;
         enum { FORMAT_RAW16, FORMAT_RAW8, FORMAT_Y16, FORMAT_Y8};
