@@ -88,7 +88,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         virtual void TimerHit() override;
         virtual bool saveConfigItems(FILE *fp) override;
         virtual const char *getDefaultName() override;
-        void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+        void addFITSKeywords(INDI::CCDChip *targetChip) override;
 
         /////////////////////////////////////////////////////////////////////////////
         /// Camera Properties

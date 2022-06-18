@@ -187,7 +187,7 @@ class Sv305CCD : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         // add FITS fields
-        virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
 
         // INDI Callbacks
         friend void ::ISGetProperties(const char *dev);

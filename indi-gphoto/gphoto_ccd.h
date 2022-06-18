@@ -98,7 +98,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
     protected:
         // Misc.
         bool saveConfigItems(FILE * fp) override;
-        void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip) override;
+        void addFITSKeywords(INDI::CCDChip * targetChip) override;
         void TimerHit() override;
 
         // Capture format
