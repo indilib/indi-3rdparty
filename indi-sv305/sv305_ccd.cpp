@@ -298,7 +298,7 @@ bool Sv305CCD::Connect()
 
     // fix for SDK gain error issue
     // set exposure time
-    SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(1 * 1000000), SVB_FALSE);
+    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000), SVB_FALSE);
 
     // read controls and feed UI
     for(int i = 0; i < controlsNum; i++)
@@ -679,7 +679,7 @@ bool Sv305CCD::StartExposure(float duration)
     pthread_mutex_lock(&cameraID_mutex);
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(duration * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(duration * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -1052,7 +1052,7 @@ float Sv305CCD::CalcTimeLeft()
 void Sv305CCD::TimerHit()
 {
     int timerID = -1;
-    long timeleft;
+    double timeleft;
 
     if (isConnected() == false)
         return; //  No need to reset timer if we are not connected anymore
@@ -1074,23 +1074,21 @@ void Sv305CCD::TimerHit()
                 if (timeleft > 0.07)
                 {
                     //  use an even tighter timer
-                    timerID = SetTimer(50);
+                    timerID = SetTimer((uint32_t)(timeleft*1000));
                 }
                 else
                 {
+                    LOGF_DEBUG("Current timeleft:%.2lf sec.", timeleft);
+
                     pthread_mutex_lock(&cameraID_mutex);
 
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
-                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                    while(status != SVB_SUCCESS)
-                    {
-                        pthread_mutex_unlock(&cameraID_mutex);
-                        usleep(100000);
-                        pthread_mutex_lock(&cameraID_mutex);
-                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                        LOG_DEBUG("Wait...");
-                    }
-
+                    int tried = 0;
+                    do {
+                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  (int)(ExposureRequest*1000*2)+500 );
+                        LOGF_DEBUG("Tried downloading frame %d times:(status:%d)", ++tried, status);
+                    } while (status != SVB_SUCCESS);
+                    
                     pthread_mutex_unlock(&cameraID_mutex);
 
                     // exposing done
@@ -1120,7 +1118,7 @@ void Sv305CCD::TimerHit()
         {
             if (isDebug())
             {
-                IDLog("With time left %ld\n", timeleft);
+                IDLog("With time left %.2lf\n", timeleft);
                 IDLog("image not yet ready....\n");
             }
 
@@ -1278,7 +1276,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             const char *actionName = IUFindOnSwitchName(states, names, n);
             // If same state as actionName, then we do nothing
             int tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-            if (!strcmp(actionName, FormatS[tmpFormat].name))
+            if (actionName && !strcmp(actionName, FormatS[tmpFormat].name)) // skip strcmp if actionName is null, it means there are no selected swich.
             {
                 LOGF_INFO("Frame format is already %s", FormatS[tmpFormat].label);
                 FormatSP.s = IPS_IDLE;
