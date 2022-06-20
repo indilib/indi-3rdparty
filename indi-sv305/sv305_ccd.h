@@ -163,6 +163,10 @@ class Sv305CCD : public INDI::CCD
         enum { COOLER_ENABLE = 0, COOLER_DISABLE = 1 };
         int coolerEnable; // 0:Enable, 1:Disable
 
+	// cooler power
+	INumber CoolerN[1];
+	INumberVectorProperty CoolerNP;
+
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
@@ -194,11 +198,7 @@ class Sv305CCD : public INDI::CCD
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
         friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
         friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-                                char *names[], int n);
-
-        // Tolerance for cooling temperature differences
-        static constexpr double TEMP_THRESHOLD {0.01};
+        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
         // Threading - streaming mutex
         pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;

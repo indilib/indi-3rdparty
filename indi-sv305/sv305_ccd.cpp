@@ -194,6 +194,7 @@ bool Sv305CCD::updateProperties()
 
         // cooler enable
         defineProperty(&CoolerSP);
+	defineProperty(&CoolerNP);
 
         // define controls
         defineProperty(&ControlsNP[CCD_GAIN_N]);
@@ -222,6 +223,7 @@ bool Sv305CCD::updateProperties()
 
         // delete cooler enable
         deleteProperty(CoolerSP.name);
+	deleteProperty(CoolerNP.name);
 
         // delete controls
         deleteProperty(ControlsNP[CCD_GAIN_N].name);
@@ -497,12 +499,23 @@ bool Sv305CCD::Connect()
     // Cooler Enable
     if (GetCCDCapability() & CCD_HAS_COOLER) {
         // set initial target temperature
-        IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 0.);
+        IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 25.);
+
+	// default target temperature is 0. Setting to 25.
+        if (SVB_SUCCESS != (status = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(25*10), SVB_FALSE))) {
+            LOGF_INFO("Setting default target temperature failed. (SVB_TARGET_TEMPERATURE:%d)", status);
+        }
+	TemperatureRequest = 25;
 
         // set cooler status to disable
         IUFillSwitch(&CoolerS[COOLER_ENABLE], "COOLER_ON", "ON", ISS_OFF);
         IUFillSwitch(&CoolerS[COOLER_DISABLE], "COOLER_OFF", "OFF", ISS_ON);
         IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
+
+	// cooler power info
+	IUFillNumber(&CoolerN[0], "CCD_COOLER_POWER_VALUE", "Cooler power (%)", "%3.f", 0.0, 100.0, 1., 0.);
+	IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooler power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+
     }
     coolerEnable = COOLER_DISABLE;
 
@@ -605,51 +618,43 @@ bool Sv305CCD::updateCCDParams()
 ///////////////////////////////////////////////////////////////////////////////////////
 int Sv305CCD::SetTemperature(double temperature)
 {
-    pthread_mutex_lock(&cameraID_mutex);
-
     /**********************************************************
      *  We return 0 if setting the temperature will take some time
      *  If the requested is the same as current temperature, or very
      *  close, we return 1 and INDI::CCD will mark the temperature status as OK
      *  If we return 0, INDI::CCD will mark the temperature status as BUSY
      **********************************************************/
-    try {
-        SVB_ERROR_CODE ret;
-        long lValue;
-        SVB_BOOL bAuto;
-        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
-            LOGF_INFO("Error, unable to get temp due to ...", ret);
-            throw -1;
-        }
-        TemperatureN[0].value = ((double)lValue)/10;
+    SVB_ERROR_CODE ret;
 
-        // Enable Cooler
-        if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
-            LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
-            throw -1;
-        }
-
-        CoolerS[COOLER_ENABLE].s = ISS_ON;
-        CoolerS[COOLER_DISABLE].s = ISS_OFF;
-        CoolerSP.s   = IPS_OK;
-        IDSetSwitch(&CoolerSP, NULL);
-
-        // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-        if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD) {
-            throw 1; // The requested temperature is the same as current temperature, or very close
-        }
-        // Set target temperature
-        if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
-            LOGF_INFO("Setting target temperature is fail.(SVB_TARGET_TEMPERATURE:%d)", ret);
-            throw -1;
-        }
+    // If below threshold, do nothing
+    if (fabs(temperature - TemperatureN[0].value) < TemperatureRampNP[RAMP_THRESHOLD].value) {
+        return 1; // The requested temperature is the same as current temperature, or very close
     }
-    catch (int result) {
-        pthread_mutex_unlock(&cameraID_mutex);
-        return result; // 1:no need to set target tenperature, -1:API ERROR
+
+    pthread_mutex_lock(&cameraID_mutex);
+    // Set target temperature
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
+        LOGF_INFO("Setting target temperature failed. (SVB_TARGET_TEMPERATURE:%d)", ret);
+	pthread_mutex_unlock(&cameraID_mutex);
+	return -1;
     }
 
     pthread_mutex_unlock(&cameraID_mutex);
+
+    // Enable Cooler
+    pthread_mutex_lock(&cameraID_mutex);
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
+        LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
+	pthread_mutex_unlock(&cameraID_mutex);
+        return -1
+    }
+
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    CoolerS[COOLER_ENABLE].s = ISS_ON;
+    CoolerS[COOLER_DISABLE].s = ISS_OFF;
+    CoolerSP.s   = IPS_OK;
+    IDSetSwitch(&CoolerSP, NULL);
 
     // Otherwise, we set the temperature request and we update the status in TimerHit() function.
     TemperatureRequest = temperature;
@@ -1130,44 +1135,38 @@ void Sv305CCD::TimerHit()
 
 
     if (GetCCDCapability() & CCD_HAS_COOLER) {
-        // Are we performing temperature readout or regulation?
-        SVB_ERROR_CODE ret;
+	SVB_ERROR_CODE ret;
         long lValue;
         SVB_BOOL bAuto;
 
-        switch (TemperatureNP.s)
-        {
-            case IPS_IDLE:
-            case IPS_OK:
-                pthread_mutex_lock(&cameraID_mutex);
-                if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
-                    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
-                }
-                else {
-                    TemperatureN[0].value = ((double)lValue)/10;
-                    IDSetNumber(&TemperatureNP, nullptr);
-                }
-                pthread_mutex_unlock(&cameraID_mutex);
-                break;
-
-            case IPS_BUSY:
-                pthread_mutex_lock(&cameraID_mutex);
-                if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
-                    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
-                }
-                else {
-                    TemperatureN[0].value = ((double)lValue)/10;
-                    if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD) {
-                        TemperatureNP.s = IPS_OK;
-                    }
-                    IDSetNumber(&TemperatureNP, nullptr);
-                }
-                pthread_mutex_unlock(&cameraID_mutex);
-                break;
-
-            case IPS_ALERT:
-                break;
+        // temperature readout
+	pthread_mutex_lock(&cameraID_mutex);
+        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
+       	    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
+            TemperatureNP.s = IPS_ALERT;
+        } else {
+            TemperatureN[0].value = ((double)lValue)/10;
+	    if (fabs(TemperatureRequest - TemperatureN[0].value) <= TemperatureRampNP[RAMP_THRESHOLD].value) {
+                TemperatureNP.s = IPS_OK;
+            } else {
+                TemperatureNP.s = IPS_BUSY;
+	    }
+            IDSetNumber(&TemperatureNP, nullptr);
         }
+        pthread_mutex_unlock(&cameraID_mutex);
+
+	// read cooler power
+	pthread_mutex_lock(&cameraID_mutex);
+        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_COOLER_POWER, &lValue, &bAuto))) {
+            LOGF_INFO("Error, unable to get cooler power due to ...(SVB_COOLER_POWER:%d)", ret);
+            CoolerNP.s = IPS_ALERT;
+        }
+        else {
+            CoolerN[0].value = (double)lValue;
+            CoolerNP.s = IPS_OK;
+            IDSetNumber(&CoolerNP, nullptr);
+        }
+        pthread_mutex_unlock(&cameraID_mutex);
     }
 
     if (timerID == -1)
@@ -1414,7 +1413,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             const char *actionName = IUFindOnSwitchName(states, names, n);
             // If same state as actionName, then we do nothing
             int tmpCoolerEnable = IUFindOnSwitchIndex(&CoolerSP);
-            if (!strcmp(actionName, StretchS[tmpCoolerEnable].name))
+            if (!strcmp(actionName, CoolerS[tmpCoolerEnable].name))
             {
                 LOGF_INFO("Cooler Enable is already %s", CoolerS[tmpCoolerEnable].label);
                 CoolerSP.s = IPS_IDLE;
@@ -1435,11 +1434,11 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, (coolerEnable == COOLER_ENABLE ? 1 : 0), SVB_FALSE))) {
                 LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
             }
+
             CoolerSP.s = IPS_OK;
             IDSetSwitch(&CoolerSP, NULL);
             return true;
         }
-
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
