@@ -646,7 +646,7 @@ int Sv305CCD::SetTemperature(double temperature)
     if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
         LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
 	pthread_mutex_unlock(&cameraID_mutex);
-        return -1
+        return -1;
     }
 
     pthread_mutex_unlock(&cameraID_mutex);
