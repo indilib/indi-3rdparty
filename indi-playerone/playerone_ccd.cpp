@@ -802,6 +802,12 @@ void POACCD::setupParams()
 
         node.setAux(const_cast<POAImgFormat*>(&videoFormat));
         VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == POA_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
     }
 
     float x_pixel_size = mCameraInfo.pixelSize;
