@@ -117,7 +117,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
@@ -497,7 +497,7 @@ bool Sv305CCD::Connect()
     bitStretch = 0;
 
     // Cooler Enable
-    if (GetCCDCapability() & CCD_HAS_COOLER) {
+    if (HasCooler()) {
         // set initial target temperature
         IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 25.);
 
@@ -1086,36 +1086,47 @@ void Sv305CCD::TimerHit()
                     LOGF_DEBUG("Current timeleft:%.2lf sec.", timeleft);
 
                     pthread_mutex_lock(&cameraID_mutex);
-
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
-                    int tried = 0;
-                    do {
-                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  (int)(ExposureRequest*1000*2)+500 );
-                        LOGF_DEBUG("Tried downloading frame %d times:(status:%d)", ++tried, status);
-                    } while (status != SVB_SUCCESS);
-                    
+                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
                     pthread_mutex_unlock(&cameraID_mutex);
+               	    LOGF_DEBUG("SVBGetVideoData:result=%d", status);
 
-                    // exposing done
-                    PrimaryCCD.setExposureLeft(0);
-                    InExposure = false;
+                    switch (status) {
+                    case SVB_SUCCESS:
+                        // exposing done
+                        PrimaryCCD.setExposureLeft(0);
+                        InExposure = false;
 
-                    // stretching 12bits depth to 16bits depth
-                    if(bitDepth == 16 && (bitStretch != 0))
-                    {
-                        u_int16_t* tmp = (u_int16_t*)imageBuffer;
-                        for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                        // stretching 12bits depth to 16bits depth
+                        if(bitDepth == 16 && (bitStretch != 0))
                         {
-                            tmp[i] <<= bitStretch;
+                            u_int16_t* tmp = (u_int16_t*)imageBuffer;
+                            for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                            {
+                                tmp[i] <<= bitStretch;
+                            }
                         }
+
+                        // binning if needed
+                        if(binning)
+                            PrimaryCCD.binFrame();
+
+                        // exposure done
+                        ExposureComplete(&PrimaryCCD);
+                        break;
+
+                    case SVB_ERROR_TIMEOUT:
+                        // set retry timer for SVGGetVideoData
+                        timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
+                        break;
+                    
+                    default:
+                        // Error in SVBGetVideoData
+                        PrimaryCCD.setExposureLeft(0);
+                        ExposureComplete(&PrimaryCCD);
+                        InExposure = false;
+                        break;
                     }
-
-                    // binning if needed
-                    if(binning)
-                        PrimaryCCD.binFrame();
-
-                    // exposure done
-                    ExposureComplete(&PrimaryCCD);
                 }
             }
         }
@@ -1132,7 +1143,7 @@ void Sv305CCD::TimerHit()
     }
 
 
-    if (GetCCDCapability() & CCD_HAS_COOLER) {
+    if (HasCooler()) {
 	SVB_ERROR_CODE ret;
         long lValue;
         SVB_BOOL bAuto;
