@@ -1155,11 +1155,6 @@ void Sv305CCD::TimerHit()
             TemperatureNP.s = IPS_ALERT;
         } else {
             TemperatureN[0].value = ((double)lValue)/10;
-	    if (fabs(TemperatureRequest - TemperatureN[0].value) <= TemperatureRampNP[RAMP_THRESHOLD].value) {
-                TemperatureNP.s = IPS_OK;
-            } else {
-                TemperatureNP.s = IPS_BUSY;
-	    }
             IDSetNumber(&TemperatureNP, nullptr);
         }
         pthread_mutex_unlock(&cameraID_mutex);
