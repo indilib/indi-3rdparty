@@ -117,7 +117,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
@@ -300,7 +300,7 @@ bool Sv305CCD::Connect()
 
     // fix for SDK gain error issue
     // set exposure time
-    SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(1 * 1000000), SVB_FALSE);
+    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000), SVB_FALSE);
 
     // read controls and feed UI
     for(int i = 0; i < controlsNum; i++)
@@ -497,7 +497,7 @@ bool Sv305CCD::Connect()
     bitStretch = 0;
 
     // Cooler Enable
-    if (GetCCDCapability() & CCD_HAS_COOLER) {
+    if (HasCooler()) {
         // set initial target temperature
         IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 25.);
 
@@ -646,7 +646,7 @@ int Sv305CCD::SetTemperature(double temperature)
     if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
         LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
 	pthread_mutex_unlock(&cameraID_mutex);
-        return -1
+        return -1;
     }
 
     pthread_mutex_unlock(&cameraID_mutex);
@@ -684,7 +684,7 @@ bool Sv305CCD::StartExposure(float duration)
     pthread_mutex_lock(&cameraID_mutex);
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(duration * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(duration * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -1057,7 +1057,7 @@ float Sv305CCD::CalcTimeLeft()
 void Sv305CCD::TimerHit()
 {
     int timerID = -1;
-    long timeleft;
+    double timeleft;
 
     if (isConnected() == false)
         return; //  No need to reset timer if we are not connected anymore
@@ -1083,12 +1083,19 @@ void Sv305CCD::TimerHit()
                 }
                 else
                 {
+                    LOGF_DEBUG("Current timeleft:%.2lf sec.", timeleft);
+
                     pthread_mutex_lock(&cameraID_mutex);
 
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
                     status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
                     while(status != SVB_SUCCESS)
                     {
+                        if (status != SVB_ERROR_TIMEOUT) {
+                            // Error in SVBGetVideoData
+                            LOGF_INFO("Error retrieval image data (status:%d)", status);
+                            break;
+                        }
                         pthread_mutex_unlock(&cameraID_mutex);
                         usleep(100000);
                         pthread_mutex_lock(&cameraID_mutex);
@@ -1125,7 +1132,7 @@ void Sv305CCD::TimerHit()
         {
             if (isDebug())
             {
-                IDLog("With time left %ld\n", timeleft);
+                IDLog("With time left %.2lf\n", timeleft);
                 IDLog("image not yet ready....\n");
             }
 
@@ -1134,7 +1141,7 @@ void Sv305CCD::TimerHit()
     }
 
 
-    if (GetCCDCapability() & CCD_HAS_COOLER) {
+    if (HasCooler()) {
 	SVB_ERROR_CODE ret;
         long lValue;
         SVB_BOOL bAuto;
@@ -1146,11 +1153,6 @@ void Sv305CCD::TimerHit()
             TemperatureNP.s = IPS_ALERT;
         } else {
             TemperatureN[0].value = ((double)lValue)/10;
-	    if (fabs(TemperatureRequest - TemperatureN[0].value) <= TemperatureRampNP[RAMP_THRESHOLD].value) {
-                TemperatureNP.s = IPS_OK;
-            } else {
-                TemperatureNP.s = IPS_BUSY;
-	    }
             IDSetNumber(&TemperatureNP, nullptr);
         }
         pthread_mutex_unlock(&cameraID_mutex);
@@ -1277,7 +1279,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             const char *actionName = IUFindOnSwitchName(states, names, n);
             // If same state as actionName, then we do nothing
             int tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-            if (!strcmp(actionName, FormatS[tmpFormat].name))
+            if (actionName && !strcmp(actionName, FormatS[tmpFormat].name)) // skip strcmp if there are no selected swich.
             {
                 LOGF_INFO("Frame format is already %s", FormatS[tmpFormat].label);
                 FormatSP.s = IPS_IDLE;
