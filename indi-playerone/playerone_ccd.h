@@ -73,7 +73,7 @@ protected:
     virtual IPState GuideWest(uint32_t ms) override;
 
     // PlayerOne specific keywords
-    virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+    virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
 
     // Save config
     virtual bool saveConfigItems(FILE *fp) override;

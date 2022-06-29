@@ -212,6 +212,10 @@ class CelestronAUX :
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
 
+
+        double AzimuthToDegrees(double degree);
+        double DegreesToAzimuth(double degree);
+
         double EncodersToDegrees(uint32_t steps);
         uint32_t DegreesToEncoders(double degrees);
 

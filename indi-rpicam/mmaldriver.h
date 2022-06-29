@@ -62,7 +62,7 @@ protected:
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
     virtual bool saveConfigItems(FILE * fp) override;
-    virtual void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip) override;
+    virtual void addFITSKeywords(INDI::CCDChip * targetChip) override;
     virtual bool StartExposure(float duration) override;
     virtual bool AbortExposure() override;
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;

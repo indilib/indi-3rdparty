@@ -673,9 +673,9 @@ bool PentaxCCD::saveConfigItems(FILE * fp)
     return INDI::CCD::saveConfigItems(fp);
 }
 
-void PentaxCCD::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
+void PentaxCCD::addFITSKeywords(INDI::CCDChip * targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     int status = 0;
 
@@ -686,7 +686,7 @@ void PentaxCCD::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
         {
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
-                fits_update_key_s(fptr, TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fits_update_key_s(*targetChip->fitsFilePointer(), TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
         }
     }
 }

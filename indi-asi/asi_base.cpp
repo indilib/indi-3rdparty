@@ -1479,23 +1479,23 @@ void ASIBase::updateRecorderFormat()
     );
 }
 
-void ASIBase::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     // e-/ADU
     auto np = ControlNP.findWidgetByName("Gain");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(np->value), "Gain", &status);
     }
 
     np = ControlNP.findWidgetByName("Offset");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
     }
 }
 

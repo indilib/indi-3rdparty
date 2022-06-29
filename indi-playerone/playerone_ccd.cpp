@@ -802,6 +802,12 @@ void POACCD::setupParams()
 
         node.setAux(const_cast<POAImgFormat*>(&videoFormat));
         VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == POA_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
     }
 
     float x_pixel_size = mCameraInfo.pixelSize;
@@ -1649,23 +1655,23 @@ void POACCD::updateRecorderFormat()
     );
 }
 
-void POACCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void POACCD::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     // e-/ADU
     auto np = ControlNP.findWidgetByName("Gain");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(np->value), "Gain", &status);
     }
 
     np = ControlNP.findWidgetByName("Offset");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
     }
 }
 

@@ -1477,9 +1477,11 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
 
 
 //
-void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void Sv305CCD::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
+
+    auto fptr = *targetChip->fitsFilePointer();
 
     // report controls in FITS file
     int _status = 0;
