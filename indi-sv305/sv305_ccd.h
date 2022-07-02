@@ -191,7 +191,12 @@ class Sv305CCD : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         // add FITS fields
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+	virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+#else
+        virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+#endif
 
         // INDI Callbacks
         friend void ::ISGetProperties(const char *dev);

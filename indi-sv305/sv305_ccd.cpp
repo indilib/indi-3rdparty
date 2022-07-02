@@ -117,7 +117,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
@@ -169,7 +169,6 @@ void Sv305CCD::ISGetProperties(const char *dev)
 //
 bool Sv305CCD::updateProperties()
 {
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=5
     // Set format first if connected.
     if (isConnected())
     {
@@ -185,7 +184,6 @@ bool Sv305CCD::updateProperties()
         }
         addCaptureFormat(format);
     }
-#endif
 
     INDI::CCD::updateProperties();
 
@@ -1477,11 +1475,20 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
 
 
 //
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
 void Sv305CCD::addFITSKeywords(INDI::CCDChip *targetChip)
+#else
+void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+#endif
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    //INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(fptr, targetChip);
 
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
     auto fptr = *targetChip->fitsFilePointer();
+#endif
 
     // report controls in FITS file
     int _status = 0;
