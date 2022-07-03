@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driversList>
+  <devGroup group="Weather">
+    <device label="NUTMonitor" manufacturer="Others">
+      <driver name="NUTMonitor">indi_nut</driver>
+      <version>0.1</version>
+    </device>
+  </devGroup>
+</driversList>
