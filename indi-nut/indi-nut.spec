@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: indi-webcam
+Name: indi-nut
 Version:1.9.6.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -31,6 +31,7 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
+BuildRequires: libnutclient-dev
 
 BuildRequires: gmock
 
@@ -59,12 +60,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi-webcam
+cd indi-nut
 %cmake -DINDI_DATA_DIR=/usr/share/indi .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi-webcam
+cd indi-nut
 make DESTDIR=%{buildroot} install
 
 %files

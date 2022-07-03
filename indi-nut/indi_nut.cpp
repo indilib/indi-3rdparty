@@ -1,7 +1,6 @@
 /*******************************************************************************
-  Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
-
-  INDI Weather Underground (TM) Weather Driver
+  Copyright(c) 2022 Rick Bassham. All rights reserved.
+  INDI NUT Weather Driver
 
   Modified for NetworkUPSToolsMonitor API by Jarno Paananen
 

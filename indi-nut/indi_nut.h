@@ -1,8 +1,7 @@
 /*******************************************************************************
 
-  Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
-
-  INDI Weather Underground (TM) Weather Driver
+  Copyright(c) 2022 Rick Bassham. All rights reserved.
+  INDI NUT Weather Driver
 
   Modified for NetworkUPSToolsMonitor API by Jarno Paananen
 
@@ -33,29 +32,35 @@
 
 class NetworkUPSToolsMonitor : public INDI::Weather
 {
-    public:
-        NetworkUPSToolsMonitor();
-        virtual ~NetworkUPSToolsMonitor();
+  public:
+    NetworkUPSToolsMonitor();
+    virtual ~NetworkUPSToolsMonitor();
 
-        //  Generic indi device entries
-        bool Connect() override;
-        bool Disconnect() override;
-        const char *getDefaultName() override;
+    //  Generic indi device entries
+    bool Connect() override;
+    bool Disconnect() override;
+    const char *getDefaultName() override;
 
-        virtual bool initProperties() override;
-        bool updateProperties() override;
-        virtual void ISGetProperties(const char *dev) override;
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool initProperties() override;
+    bool updateProperties() override;
+    virtual void ISGetProperties(const char *dev) override;
+    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
-    protected:
-        virtual IPState updateWeather() override;
+  protected:
+    virtual IPState updateWeather() override;
 
-        virtual bool saveConfigItems(FILE *fp) override;
-        virtual bool updateLocation(double latitude, double longitude, double elevation) override;
+    virtual bool saveConfigItems(FILE *fp) override;
+    virtual bool updateLocation(double latitude, double longitude, double elevation) override;
 
-    private:
-        INDI::PropertyText nutMonitorUrl{4};
-        enum {NUT_HOST, NUT_PORT, NUT_USER, NUT_PASSWORD};
+  private:
+    INDI::PropertyText nutMonitorUrl{ 4 };
+    enum
+    {
+        NUT_HOST,
+        NUT_PORT,
+        NUT_USER,
+        NUT_PASSWORD
+    };
 
-        nut::TcpClient* nutClient = nullptr;
+    nut::TcpClient *nutClient = nullptr;
 };
