@@ -298,7 +298,7 @@ bool Sv305CCD::Connect()
 
     // fix for SDK gain error issue
     // set exposure time
-    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000), SVB_FALSE);
+    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000L), SVB_FALSE);
 
     // read controls and feed UI
     for(int i = 0; i < controlsNum; i++)
@@ -582,7 +582,7 @@ bool Sv305CCD::Disconnect()
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
-        // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
+        //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
         return false;
     }
 
@@ -590,7 +590,7 @@ bool Sv305CCD::Disconnect()
     status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
 
-    // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
+    //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
     return true;
 }
@@ -786,7 +786,7 @@ bool Sv305CCD::StartStreaming()
     }
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(ExposureRequest * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(ExposureRequest * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
