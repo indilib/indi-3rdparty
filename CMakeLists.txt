@@ -110,6 +110,7 @@ option(WITH_ORION_SSG3 "Install Orion StarShoot G3 Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
+option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -518,6 +519,10 @@ endif(WITH_ARMADILLO)
 
 if (WITH_WEBCAM)
 add_subdirectory(indi-webcam)
+endif()
+
+if (WITH_WEEWX_JSON)
+add_subdirectory(indi-weewx-json)
 endif()
 
 if (WITH_NIGHTSCAPE)
