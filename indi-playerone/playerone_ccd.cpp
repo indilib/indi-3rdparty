@@ -1024,7 +1024,15 @@ bool POACCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 return true;
             }
 
-            return setVideoFormat(targetIndex);
+            auto result = setVideoFormat(targetIndex);
+            if (result)
+            {
+                CaptureFormatSP.reset();
+                CaptureFormatSP[targetIndex].setState(ISS_ON);
+                CaptureFormatSP.setState(IPS_OK);
+                CaptureFormatSP.apply();
+            }
+            return true;
         }
     }
 
