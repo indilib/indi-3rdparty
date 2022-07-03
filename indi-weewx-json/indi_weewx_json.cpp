@@ -84,7 +84,6 @@ bool WeewxJSON::initProperties()
     addParameter("WEATHER_WIND_CHILL", "Wind Chill (C)", -20, 35, 15);
     addParameter("WEATHER_RAIN_RATE", "Rain (mm/h)", 0, 0, 15);
 
-    setCriticalParameter("WEATHER_FORECAST");
     setCriticalParameter("WEATHER_TEMPERATURE");
     setCriticalParameter("WEATHER_WIND_SPEED");
     setCriticalParameter("WEATHER_RAIN_RATE");
