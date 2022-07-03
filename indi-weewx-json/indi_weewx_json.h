@@ -1,10 +1,8 @@
 /*******************************************************************************
 
-  Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
+  Copyright(c) 2022 Rick Bassham. All rights reserved.
 
-  INDI Weather Underground (TM) Weather Driver
-
-  Modified for WeewxJSON API by Jarno Paananen
+  INDI WeeWx JSON Weather Driver
 
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the Free
