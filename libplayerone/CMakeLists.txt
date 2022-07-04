@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.0)
 project (libplayerone)
 
-# Using PlayerOne Camera SDK Version 3.0.2 updated on 2022-6-14
+# Using PlayerOne Camera SDK Version 3.0.3 updated on 2022-6-20
 
-set (POACAM_VERSION "3.0.2")
+set (POACAM_VERSION "3.0.3")
 set (POACAM_SOVERSION "3")
 
 
