@@ -24,6 +24,7 @@
 *******************************************************************************/
 
 #include "indi_nut.h"
+#include "config.h"
 
 #include <memory>
 #include <cstring>
@@ -33,7 +34,7 @@ std::unique_ptr<NetworkUPSToolsMonitor> nutMonitor(new NetworkUPSToolsMonitor())
 
 NetworkUPSToolsMonitor::NetworkUPSToolsMonitor()
 {
-    setVersion(1, 1);
+    setVersion(NUT_VERSION_MAJOR, NUT_VERSION_MINOR);
 
     setWeatherConnection(CONNECTION_NONE);
 
