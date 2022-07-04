@@ -1,3 +1,40 @@
+libasi (1.23) buster; urgency=medium
+
+  * ASI Camera SDK 1.24 release. Changelog including older entries:
+    V1.24 2022.6.23
+    (1) Add new cameras
+    (2) The camera name from ASIGetCameraProperty no longer contains alias.
+    If the application software needs to display alias, it needs to obtain
+    them through the ASIGetID method.
+    (3) Some optimizations have been made
+
+    V1.23 2022.5.13
+    (1) Fixed some bugs
+
+    V1.22 2022.3.10
+    (1) Add: The interface ASICameraCheck is added to replace 
+    ASIGetProductIDs, which will be discarded soon
+    (2) Fixed bug: 294MM cann't load image  in some cases
+    (3) Fixed bug: 294MM get bad images in 1s exposure under USB2.0
+    (4) Optimized: Maximum frame rate of 174
+    (5) More bug fixes and optimizations
+
+    V1.21 2022.1.17
+    (1) Add new cameras
+    (2) Some optimizations have been made
+
+    V1.20.3 2021.11.16
+    (1) Fix bug: When two cameras are turned on at the same time, turn off
+    one camera and the other camera may crash.
+    (2) Fix bug: At the snap mode of 120S cameras, when change BIN1 to
+    BIN2, there may be no image upload.
+    (3) Other bug fixes and feature optimization.
+
+    V1.20.2 2021.10.21
+    Some optimizations have been made
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sun, 03 Jul 2022 21:56:46 +0300
+
 libasi (1.22) buster; urgency=medium
 
   * ASI Camera SDK 1.20.2 release. No changelog entry from ZWO.
