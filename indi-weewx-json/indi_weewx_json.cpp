@@ -23,6 +23,7 @@
 *******************************************************************************/
 
 #include "indi_weewx_json.h"
+#include "config.h"
 
 #include <curl/curl.h>
 
@@ -41,7 +42,7 @@ std::unique_ptr<WeewxJSON> weewx_json(new WeewxJSON());
 
 WeewxJSON::WeewxJSON()
 {
-    setVersion(1, 1);
+    setVersion(WEEWX_VERSION_MAJOR, WEEWX_VERSION_MINOR);
 
     setWeatherConnection(CONNECTION_NONE);
 }
@@ -302,8 +303,6 @@ void WeewxJSON::handleWeatherData(JsonValue value)
         {
             handleRainRateData(sensorIter->value);
         }
-
-        LOG_INFO(sensorIter->key);
     }
 }
 
