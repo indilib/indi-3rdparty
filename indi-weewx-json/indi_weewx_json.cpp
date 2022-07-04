@@ -37,7 +37,7 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 }
 
 // We declare an auto pointer to WeewxJSON.
-std::unique_ptr<WeewxJSON> nutMonitor(new WeewxJSON());
+std::unique_ptr<WeewxJSON> weewx_json(new WeewxJSON());
 
 WeewxJSON::WeewxJSON()
 {
