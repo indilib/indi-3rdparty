@@ -870,7 +870,7 @@ bool SBIGCCD::Connect()
         IEAddTimer(TEMPERATURE_POLL_MS, SBIGCCD::updateTemperatureHelper, this);
     }
 
-    res = getReadoutModes(&PrimaryCCD,numModes,maxBinX,maxBinY);
+    res = getReadoutModes(&PrimaryCCD, numModes, maxBinX, maxBinY);
     if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
     {
         LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
@@ -881,7 +881,7 @@ bool SBIGCCD::Connect()
 
     if (m_hasGuideHead)
     {
-        res = getReadoutModes(&GuideCCD,numModes,maxBinX,maxBinY);
+        res = getReadoutModes(&GuideCCD, numModes, maxBinX, maxBinY);
         if (res != CE_NO_ERROR || numModes < CCD_BIN_1x1_I || numModes > CCD_BIN_NxN_I)
         {
             LOG_ERROR("Failed to determine number of supported readout modes for primary CCD");
@@ -1328,7 +1328,8 @@ bool SBIGCCD::UpdateCCDBin(int binx, int biny)
 
 bool SBIGCCD::UpdateGuiderBin(int binx, int biny)
 {
-    if (binx != biny) {
+    if (binx != biny)
+    {
         LOG_WARN("Forcing y-binning = x-binning while updating guide head binning mode");
         biny = binx;
     }
@@ -1916,8 +1917,8 @@ int SBIGCCD::getCCDSizeInfo(int ccd, int binning, int &frmW, int &frmH, double &
         pixW = BcdPixel2double(gcr.readoutInfo[roModeIdx].pixelWidth);
         // modify height and pixelHeight for readout modes with vertical binning
         if ( ( (binning & 0x00FF) == CCD_BIN_1xN_I ) ||
-             ( (binning & 0x00FF) == CCD_BIN_2xN_I ) ||
-             ( (binning & 0x00FF) == CCD_BIN_3xN_I ) )
+                ( (binning & 0x00FF) == CCD_BIN_2xN_I ) ||
+                ( (binning & 0x00FF) == CCD_BIN_3xN_I ) )
         {
             frmH = gcr.readoutInfo[0].height / ( (binning & 0xFF00) >> 8);
             pixH = BcdPixel2double(gcr.readoutInfo[0].pixelHeight * ( (binning & 0xFF00) >> 8) );
@@ -2113,9 +2114,8 @@ int SBIGCCD::getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxB
     res = SBIGUnivDrvCommand(CC_GET_CCD_INFO, &gccdip, &gccdir);
     if (res == CE_NO_ERROR)
     {
-        numModes = gccdir.readoutModes;
-        // the actual readout mode == numModes-1 because the first mode == 0
-        switch(numModes-1)
+        numModes = gccdir.readoutModes - 1;
+        switch(numModes)
         {
             case CCD_BIN_2x2_I:
             case CCD_BIN_2x2_E:
@@ -2155,8 +2155,8 @@ int SBIGCCD::getReadoutModes(INDI::CCDChip *targetChip, int &numModes, int &maxB
                 break;
         }
     }
-    LOGF_DEBUG("%s: max horizontal/vertical binning (%d / %d) supported readout modes (%d)",__FUNCTION__,
-              maxBinX,maxBinY,numModes);
+    LOGF_DEBUG("%s: max horizontal/vertical binning (%d / %d) supported readout modes (%d)", __FUNCTION__,
+               maxBinX, maxBinY, numModes);
     return res;
 }
 
@@ -2178,7 +2178,7 @@ int SBIGCCD::GetExtendedCCDInfo()
     gccdip.request = CCD_INFO_EXTENDED2_IMAGING;
     if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
         LOGF_DEBUG("CCD_IMAGING Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                    results4.capabilitiesBits, results4.dumpExtra);
+                   results4.capabilitiesBits, results4.dumpExtra);
     else
     {
         LOGF_ERROR("%s: CCD_INFO_EXTENDED2_IMAGING -> (%s)", __FUNCTION__, GetErrorString(res));
@@ -2191,7 +2191,7 @@ int SBIGCCD::GetExtendedCCDInfo()
         m_hasGuideHead = true;
         m_useExternalTrackingCCD = results4.capabilitiesBits & CB_CCD_EXT_TRACKER_YES;
         LOGF_DEBUG("TRACKING_CCD Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                    results4.capabilitiesBits, results4.dumpExtra);
+                   results4.capabilitiesBits, results4.dumpExtra);
     }
     else
     {
@@ -2367,8 +2367,8 @@ void SBIGCCD::InitVars()
 
 int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
 {
-    int maxBinX,maxBinY,numModes;
-    int res = getReadoutModes(targetChip,numModes,maxBinX,maxBinY);
+    int maxBinX, maxBinY, numModes;
+    int res = getReadoutModes(targetChip, numModes, maxBinX, maxBinY);
 
     if (res != CE_NO_ERROR || targetChip->getBinX() > maxBinX || targetChip->getBinY() > maxBinY)
     {
@@ -2391,7 +2391,9 @@ int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
             // not mentioned in the SBIG documentation, but probably similar to the
             // vertical binning case (see below)
             binning = CCD_BIN_NxN_I + (targetChip->getBinX() << 8);
-    } else {
+    }
+    else
+    {
         if (targetChip->getBinX() == 1)
             binning = CCD_BIN_1xN_I;
         else if (targetChip->getBinX() == 2)
@@ -2417,7 +2419,7 @@ int SBIGCCD::getBinningMode(INDI::CCDChip *targetChip, int &binning)
     }
 
     LOGF_DEBUG("%s: binx (%d) biny (%d) binning_mode (%d)", __FUNCTION__, targetChip->getBinX(),
-               targetChip->getBinY(),binning);
+               targetChip->getBinY(), binning);
     return res;
 }
 

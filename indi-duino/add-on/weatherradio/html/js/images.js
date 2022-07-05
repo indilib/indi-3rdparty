@@ -1,8 +1,8 @@
-function loadImages() {
-    updateImageBar();
+function loadImages(width) {
+    updateImageBar(width);
     updateCarousel();
     // update images every 5 min
-    setInterval( function(){ loadImages();}, 5*60000);
+    setInterval( function(){ loadImages(width);}, 5*60000);
 }
 
 function openLightbox(n) {
@@ -63,7 +63,7 @@ function updateCarousel() {
     });
 };
 
-function updateImageBar() {
+function updateImageBar(width) {
     $.get("data/images.json", function(files) {
 	imageBar = document.querySelector("#image_bar");
 	// clear the image bar
@@ -73,18 +73,27 @@ function updateImageBar() {
 	for (file of files) {
 	    // images
 	    var img = document.createElement("img");
+	    src = "./media/" + file.name;
 	    img.setAttribute("id", file.name);
-	    img.setAttribute("src", "./media/" + file.name);
-	    img.setAttribute("width", "96");
+	    img.setAttribute("src", src);
+	    img.setAttribute("width", width);
 
 	    var link = document.createElement("a");
 	    link.setAttribute("href", "#");
-	    // open modal dialog
-	    link.setAttribute("onclick", "openLightbox(" + nr++ + ")");
+	    // select the image
+	    link.setAttribute("onclick", "selectImage('" + src + "', " + nr++ + ")");
 	    link.setAttribute("class", "hover-shadow");
+	    link.setAttribute("title", new Date(file.ctime*1000).toLocaleString());
 	    link.appendChild(img);
 	    imageBar.appendChild(link);
 	}
 
     });
+};
+
+function selectImage(image, nr) {
+    img = document.getElementById("current_weather");
+    img.setAttribute("src", image);
+    link = document.getElementById("current_weather_link");
+    link.setAttribute("onclick", "openLightbox(" + nr + ")");
 };

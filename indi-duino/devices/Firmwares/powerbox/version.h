@@ -1,0 +1,1 @@
+#define POWERBOX_VERSION "1.0";

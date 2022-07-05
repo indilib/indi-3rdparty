@@ -2,7 +2,7 @@
     Weather Radio - a universal driver for weather stations that
     transmit their raw sensor data as JSON documents.
 
-    Copyright (C) 2019 Wolfgang Reissenberger <sterne-jaeger@t-online.de>
+    Copyright (C) 2019-2022 Wolfgang Reissenberger <sterne-jaeger@openfuture.de>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -318,8 +318,6 @@ bool WeatherRadio::updateProperties()
             defineProperty(&rawDevices[i]);
         LOG_INFO("Raw sensors added.");
 
-        // Load the configuration
-        loadConfig();
         result = INDI::Weather::updateProperties();
 
         defineProperty(&resetArduinoSP);
@@ -994,6 +992,9 @@ bool WeatherRadio::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 ***************************************************************************************/
 bool WeatherRadio::Handshake()
 {
+    // Load the configuration
+    loadConfig();
+
     // Sleep for 5 seconds so that the serial connection of the Arduino has settled
     // This seems to be necessary for some Arduinos, otherwise they run into a timeout
     struct timespec request_delay = {ARDUINO_SETTLING_TIME, 0L};
