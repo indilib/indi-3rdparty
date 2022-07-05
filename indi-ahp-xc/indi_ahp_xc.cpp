@@ -418,8 +418,8 @@ void AHP_XC::Callback()
             }
         }
         delay[farest] = 0;
-        ahp_xc_set_channel_auto(static_cast<unsigned int>(farest), 0, 0);
-        ahp_xc_set_channel_cross(static_cast<unsigned int>(farest), 0, 0);
+        ahp_xc_set_channel_auto(static_cast<unsigned int>(farest), 0, 1, 1);
+        ahp_xc_set_channel_cross(static_cast<unsigned int>(farest), 0, 1, 1);
         idx = 0;
         for(unsigned int x = 0; x < ahp_xc_get_nlines(); x++)
         {
@@ -433,14 +433,14 @@ void AHP_XC::Callback()
                     if(y == farest)
                     {
                         delay[x] = d;
-                        ahp_xc_set_channel_auto(x, 0, 0);
-                        ahp_xc_set_channel_cross(x, delay_clocks, 0);
+                        ahp_xc_set_channel_auto(x, 0, 1, 1);
+                        ahp_xc_set_channel_cross(x, delay_clocks, 1, 1);
                     }
                     if(x == farest)
                     {
                         delay[y] = d;
-                        ahp_xc_set_channel_auto(y, 0, 0);
-                        ahp_xc_set_channel_cross(y, delay_clocks, 0);
+                        ahp_xc_set_channel_auto(y, 0, 1, 1);
+                        ahp_xc_set_channel_cross(y, delay_clocks, 1, 1);
                     }
                 }
                 idx++;
