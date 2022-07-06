@@ -5,6 +5,10 @@
 		<driver name="FLI CCD">indi_fli_ccd</driver>
                 <version>@FLI_CCD_VERSION_MAJOR@.@FLI_CCD_VERSION_MINOR@</version>
 	</device>
+        <device label="FLI Kepler" manufacturer="Finger Lakes Instruments">
+                <driver name="FLI Kepler">indi_kepler_ccd</driver>
+                <version>@FLI_CCD_VERSION_MAJOR@.@FLI_CCD_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 <devGroup group="Focusers">
 	<device label="FLI PDF" manufacturer="Finger Lakes Instruments">
