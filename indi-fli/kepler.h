@@ -23,12 +23,13 @@
 #include <indiccd.h>
 #include <indipropertyswitch.h>
 
-using namespace std;
+#include <inditimer.h>
+#include <indisinglethreadpool.h>
 
 class Kepler : public INDI::CCD
 {
     public:
-        Kepler();
+        Kepler(const FPRODEVICEINFO &info, std::wstring name);
         virtual ~Kepler() override;
 
         const char *getDefaultName() override;
@@ -69,6 +70,12 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         bool establishConnection();
         bool setup();
-        bool download();
+        bool grabImage();
+
+        //****************************************************************************************
+        // Workers
+        //****************************************************************************************
+        void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+        void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
 };

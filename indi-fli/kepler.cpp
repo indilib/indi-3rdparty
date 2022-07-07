@@ -20,11 +20,102 @@
 #include "config.h"
 #include "kepler.h"
 
+#include <unistd.h>
 #include <memory>
+#include <map>
+#include <indielapsedtimer.h>
 
-static std::unique_ptr<Kepler> kepler(new Kepler());
+#define FLI_MAX_SUPPORTED_CAMERAS 4
 
-Kepler::Kepler()
+static class Loader
+{
+        INDI::Timer hotPlugTimer;
+        FPRODEVICEINFO camerasDeviceInfo[FLI_MAX_SUPPORTED_CAMERAS];
+        // Serial / Camera Object
+        std::map<std::wstring, std::shared_ptr<Kepler>> cameras;
+    public:
+        Loader()
+        {
+            load(false);
+        }
+
+    public:
+        size_t getCountOfConnectedCameras()
+        {
+            uint32_t detectedCamerasCount = FLI_MAX_SUPPORTED_CAMERAS;
+            int32_t result = FPROCam_GetCameraList(camerasDeviceInfo, &detectedCamerasCount);
+            return (result >= 0 ? detectedCamerasCount : 0);
+
+        }
+
+    public:
+        void load(bool isHotPlug)
+        {
+            auto usedCameras = std::move(cameras);
+            auto detectedCamerasCount = getCountOfConnectedCameras();
+
+            UniqueName uniqueName(usedCameras);
+
+            for(uint32_t i = 0; i < detectedCamerasCount; i++)
+            {
+                const auto serialID = camerasDeviceInfo[i].cSerialNo;
+
+                // camera already created
+                if (usedCameras.find(serialID) != usedCameras.end())
+                {
+                    std::swap(cameras[serialID], usedCameras[serialID]);
+                    continue;
+                }
+
+                Kepler *kepler = new Kepler(camerasDeviceInfo[i], uniqueName.make(camerasDeviceInfo[i]));
+                cameras[serialID] = std::shared_ptr<Kepler>(kepler);
+                if (isHotPlug)
+                    kepler->ISGetProperties(nullptr);
+            }
+        }
+
+    public:
+        class UniqueName
+        {
+                std::map<std::wstring, bool> used;
+            public:
+                UniqueName() = default;
+                UniqueName(const std::map<std::wstring, std::shared_ptr<Kepler>> &usedCameras)
+                {
+
+                    for (const auto &camera : usedCameras)
+                    {
+                        auto name = std::string(camera.second->getDeviceName());
+                        auto wname = std::wstring(name.begin(), name.end());
+                        used[wname] = true;
+                    }
+                }
+
+                std::wstring make(const FPRODEVICEINFO &cameraInfo)
+                {
+                    std::wstring cameraName = std::wstring(L"FLI ") + std::wstring(cameraInfo.cFriendlyName + 4);
+                    std::wstring uniqueName = cameraName;
+
+                    for (int index = 0; used[uniqueName] == true; )
+                        uniqueName = cameraName + std::wstring(L" ") + std::to_wstring(++index);
+
+                    used[uniqueName] = true;
+                    return uniqueName;
+                }
+        };
+} loader;
+
+void Kepler::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
+{
+
+}
+
+
+void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
+{
+}
+
+Kepler::Kepler(const FPRODEVICEINFO &info, std::wstring name)
 {
     setVersion(FLI_CCD_VERSION_MAJOR, FLI_CCD_VERSION_MINOR);
 }
@@ -164,7 +255,7 @@ bool Kepler::UpdateCCDBin(int binx, int biny)
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 }
 
-bool Kepler::download()
+bool Kepler::grabImage()
 {
     std::unique_lock<std::mutex> guard(ccdBufferLock);
 
@@ -210,5 +301,5 @@ bool Kepler::saveConfigItems(FILE *fp)
 
 void Kepler::debugTriggered(bool enable)
 {
-
+    FPRODebug_EnableLevel(true, enable ? FPRO_DEBUG_DEBUG : FPRO_DEBUG_NONE);
 }
