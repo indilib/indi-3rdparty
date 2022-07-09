@@ -1482,8 +1482,11 @@ void Sv305CCD::addFITSKeywords(INDI::CCDChip *targetChip)
 void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 #endif
 {
-    //INDI::CCD::addFITSKeywords(targetChip);
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+    INDI::CCD::addFITSKeywords(targetChip);
+#else
     INDI::CCD::addFITSKeywords(fptr, targetChip);
+#endif
 
 // to avoid build issues with old indi
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
