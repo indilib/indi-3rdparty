@@ -1,9 +1,9 @@
 /*
     Celestron Aux Mount Driver.
 
-    Copyright (C) 2020 Pawe? T. Jochym
+    Copyright (C) 2020 Paweł T. Jochym
     Copyright (C) 2020 Fabrizio Pollastri
-    Copyright (C) 2021 Jasem Mutlaq
+    Copyright (C) 2020-2022 Jasem Mutlaq
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
     JM 2022.07.07: Added Wedge support.
-
 */
 
 #include <algorithm>
@@ -1474,6 +1473,7 @@ bool CelestronAUX::mountToSkyCoords()
 {
     double RightAscension, Declination;
 
+    // TODO for Alt-Az Mounts on a Wedge, we need a watch to set this.
     if (MountTypeSP[ALTAZ].getState() == ISS_ON)
     {
         INDI::IHorizontalCoordinates AltAz = m_MountCurrentAltAz;
@@ -1793,14 +1793,13 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
     {
         if (m_IsWedge)
         {
-            // TODO: Test how this should be changed in southern hemisphere
             pierSide = PIER_UNKNOWN;
             if (deEncoder >= 270)
-                de = 360 - deEncoder;
+                de = deEncoder - 360;
             else if (deEncoder >= 90)
-                de = deEncoder - 180;
+                de = 180 - deEncoder;
             else
-                de = -deEncoder;
+                de = deEncoder;
 
             if (haEncoder >= 180)
                 ha = -((360 - haEncoder) / 360.0) * 24.0 ;
@@ -1874,10 +1873,10 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
     {
         if (m_IsWedge)
         {
-            if (coords.declination < 0)
-                de = -coords.declination;
+            if (coords.declination >= 0)
+                de = coords.declination;
             else
-                de = 360 - coords.declination;
+                de = 360 + coords.declination;
 
             if (dHA < 0)
                 ha = 360 - ((dHA / -24.0) * 360.0);
