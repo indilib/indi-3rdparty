@@ -161,8 +161,8 @@ int read_ppm(FILE *handle, struct dcraw_header *header, uint8_t **memptr, size_t
 
     *memptr = (uint8_t *)realloc(*memptr, *memsize);
 
-    uint8_t *oldmem =
-        *memptr; // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    uint8_t *oldmem = *memptr;
 
     ppm = (uint8_t *)malloc(width * bpp);
     if (naxis == 3)
@@ -364,7 +364,9 @@ int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_
                  RawProcessor.imgdata.sizes.left_margin, first_visible_pixel);
 
     *memsize = RawProcessor.imgdata.rawdata.sizes.width * RawProcessor.imgdata.rawdata.sizes.height * sizeof(uint16_t);
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
 
     DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
                  "read_libraw: rawdata.sizes.width: %d rawdata.sizes.height %d memsize %d bayer_pattern %s",
@@ -447,9 +449,11 @@ int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxi
     jpeg_start_decompress(&cinfo);
 
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
-    uint8_t *oldmem =
-        *memptr; // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    uint8_t *oldmem = *memptr;
     *naxis = cinfo.num_components;
     *w     = cinfo.output_width;
     *h     = cinfo.output_height;
@@ -521,7 +525,7 @@ int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **mempt
     jpeg_start_decompress(&cinfo);
 
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
 
     uint8_t *destmem = *memptr;
 

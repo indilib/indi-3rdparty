@@ -2072,9 +2072,9 @@ void gphoto_show_options(gphoto_driver *gphoto)
     }
 }
 
-void gphoto_get_buffer(gphoto_driver *gphoto, const char **buffer, size_t *size)
+void gphoto_get_buffer(gphoto_driver *gphoto, const char **buffer, unsigned long *size)
 {
-    gp_file_get_data_and_size(gphoto->camerafile, buffer, (unsigned long *)size);
+    gp_file_get_data_and_size(gphoto->camerafile, buffer, size);
 }
 
 void gphoto_free_buffer(gphoto_driver *gphoto)
