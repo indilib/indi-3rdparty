@@ -367,6 +367,11 @@ int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_
     *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
     if (*memptr == nullptr)
         *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
 
     DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
                  "read_libraw: rawdata.sizes.width: %d rawdata.sizes.height %d memsize %d bayer_pattern %s",
@@ -384,39 +389,6 @@ int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_
     }
 
     return 0;
-}
-
-int read_dcraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h, int *bitsperpixel)
-{
-    struct dcraw_header header;
-    FILE *handle = nullptr;
-    char *cmd    = nullptr;
-    int ret      = 0;
-
-    if (dcraw_parse_header_info(filename, &header) || !header.width || !header.height)
-    {
-        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "read_file_from_dcraw: failed to parse header");
-        return -1;
-    }
-
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Reading exposure %d x %d", header.width, header.height);
-    ret = asprintf(&cmd, "%s -c -t 0 -4 -D %s", dcraw_cmd, filename);
-
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "%s", cmd);
-
-    handle = popen(cmd, "r");
-    free(cmd);
-    if (handle == nullptr)
-    {
-        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "read_file_from_dcraw: failed to run dcraw");
-        return -1;
-    }
-
-    int rc = read_ppm(handle, &header, memptr, memsize, n_axis, w, h, bitsperpixel);
-
-    pclose(handle);
-
-    return rc;
 }
 
 int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h)
@@ -452,6 +424,11 @@ int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxi
     *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
     if (*memptr == nullptr)
         *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
     // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
     uint8_t *oldmem = *memptr;
     *naxis = cinfo.num_components;
@@ -526,6 +503,13 @@ int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **mempt
 
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
     *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
 
     uint8_t *destmem = *memptr;
 
