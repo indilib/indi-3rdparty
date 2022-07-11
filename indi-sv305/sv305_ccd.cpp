@@ -117,7 +117,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
@@ -169,7 +169,6 @@ void Sv305CCD::ISGetProperties(const char *dev)
 //
 bool Sv305CCD::updateProperties()
 {
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=5
     // Set format first if connected.
     if (isConnected())
     {
@@ -185,7 +184,6 @@ bool Sv305CCD::updateProperties()
         }
         addCaptureFormat(format);
     }
-#endif
 
     INDI::CCD::updateProperties();
 
@@ -300,7 +298,7 @@ bool Sv305CCD::Connect()
 
     // fix for SDK gain error issue
     // set exposure time
-    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000), SVB_FALSE);
+    SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(1 * 1000000L), SVB_FALSE);
 
     // read controls and feed UI
     for(int i = 0; i < controlsNum; i++)
@@ -584,7 +582,7 @@ bool Sv305CCD::Disconnect()
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
-        // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
+        //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
         return false;
     }
 
@@ -592,7 +590,7 @@ bool Sv305CCD::Disconnect()
     status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
 
-    // pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
+    //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
     return true;
 }
@@ -788,7 +786,7 @@ bool Sv305CCD::StartStreaming()
     }
 
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (double)(ExposureRequest * 1000000), SVB_FALSE);
+    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(ExposureRequest * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -1079,54 +1077,52 @@ void Sv305CCD::TimerHit()
                 if (timeleft > 0.07)
                 {
                     //  use an even tighter timer
-                    timerID = SetTimer((uint32_t)(timeleft*1000));
+                    timerID = SetTimer(50);
                 }
                 else
                 {
                     LOGF_DEBUG("Current timeleft:%.2lf sec.", timeleft);
 
                     pthread_mutex_lock(&cameraID_mutex);
+
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
-                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
-                    pthread_mutex_unlock(&cameraID_mutex);
-               	    LOGF_DEBUG("SVBGetVideoData:result=%d", status);
-
-                    switch (status) {
-                    case SVB_SUCCESS:
-                        // exposing done
-                        PrimaryCCD.setExposureLeft(0);
-                        InExposure = false;
-
-                        // stretching 12bits depth to 16bits depth
-                        if(bitDepth == 16 && (bitStretch != 0))
-                        {
-                            u_int16_t* tmp = (u_int16_t*)imageBuffer;
-                            for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
-                            {
-                                tmp[i] <<= bitStretch;
-                            }
+                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
+                    while(status != SVB_SUCCESS)
+                    {
+                        if (status != SVB_ERROR_TIMEOUT) {
+                            // Error in SVBGetVideoData
+                            LOGF_INFO("Error retrieval image data (status:%d)", status);
+                            break;
                         }
-
-                        // binning if needed
-                        if(binning)
-                            PrimaryCCD.binFrame();
-
-                        // exposure done
-                        ExposureComplete(&PrimaryCCD);
-                        break;
-
-                    case SVB_ERROR_TIMEOUT:
-                        // set retry timer for SVGGetVideoData
-                        timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
-                        break;
-                    
-                    default:
-                        // Error in SVBGetVideoData
-                        PrimaryCCD.setExposureLeft(0);
-                        ExposureComplete(&PrimaryCCD);
-                        InExposure = false;
-                        break;
+                        pthread_mutex_unlock(&cameraID_mutex);
+                        usleep(100000);
+                        pthread_mutex_lock(&cameraID_mutex);
+                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
+                        LOG_DEBUG("Wait...");
                     }
+
+                    pthread_mutex_unlock(&cameraID_mutex);
+
+                    // exposing done
+                    PrimaryCCD.setExposureLeft(0);
+                    InExposure = false;
+
+                    // stretching 12bits depth to 16bits depth
+                    if(bitDepth == 16 && (bitStretch != 0))
+                    {
+                        u_int16_t* tmp = (u_int16_t*)imageBuffer;
+                        for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                        {
+                            tmp[i] <<= bitStretch;
+                        }
+                    }
+
+                    // binning if needed
+                    if(binning)
+                        PrimaryCCD.binFrame();
+
+                    // exposure done
+                    ExposureComplete(&PrimaryCCD);
                 }
             }
         }
@@ -1281,7 +1277,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             const char *actionName = IUFindOnSwitchName(states, names, n);
             // If same state as actionName, then we do nothing
             int tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-            if (actionName && !strcmp(actionName, FormatS[tmpFormat].name)) // skip strcmp if actionName is null, it means there are no selected swich.
+            if (actionName && !strcmp(actionName, FormatS[tmpFormat].name)) // skip strcmp if there are no selected swich.
             {
                 LOGF_INFO("Frame format is already %s", FormatS[tmpFormat].label);
                 FormatSP.s = IPS_IDLE;
@@ -1479,9 +1475,23 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
 
 
 //
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+void Sv305CCD::addFITSKeywords(INDI::CCDChip *targetChip)
+#else
 void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+#endif
 {
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+    INDI::CCD::addFITSKeywords(targetChip);
+#else
     INDI::CCD::addFITSKeywords(fptr, targetChip);
+#endif
+
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+    auto fptr = *targetChip->fitsFilePointer();
+#endif
 
     // report controls in FITS file
     int _status = 0;

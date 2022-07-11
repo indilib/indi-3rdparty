@@ -971,7 +971,7 @@ double CelestronAUX::getNorthAz()
     if (!GetDatabaseReferencePosition(location))
         northAz = 0.;
     else
-        northAz = AltAzFromRaDec(get_local_sidereal_time(m_Location.longitude), 0., 0.).azimuth;
+        northAz = DegreesToAzimuth(AltAzFromRaDec(get_local_sidereal_time(m_Location.longitude), 0., 0.).azimuth);
     LOGF_DEBUG("North Azimuth = %lf", northAz);
     return northAz;
 }
@@ -1018,7 +1018,10 @@ bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
     int rate = IUFindOnSwitchIndex(&SlewRateSP) + 1;
-    m_AxisDirection[AXIS_AZ] = (dir == DIRECTION_WEST) ? FORWARD : REVERSE;
+    if (isNorthHemisphere())
+        m_AxisDirection[AXIS_AZ] = (dir == DIRECTION_WEST) ? FORWARD : REVERSE;
+    else
+        m_AxisDirection[AXIS_AZ] = (dir == DIRECTION_WEST) ? REVERSE : FORWARD;
     m_AxisStatus[AXIS_AZ] = (command == MOTION_START) ? SLEWING : STOPPED;
     ScopeStatus      = SLEWING_MANUAL;
     TrackState       = SCOPE_SLEWING;
@@ -1269,7 +1272,7 @@ bool CelestronAUX::ReadScopeStatus()
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
 {
-    coords.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+    coords.azimuth = DegreesToAzimuth(EncodersToDegrees(EncoderNP[AXIS_AZ].getValue()));
     coords.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
     DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, "Axis1 encoder %10.f -> AZ %.4f°", EncoderNP[AXIS_AZ].getValue(),
            coords.azimuth);
@@ -1377,7 +1380,7 @@ bool CelestronAUX::Goto(double ra, double dec)
             INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
             AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAltAz);
             // Converts to steps and we're done.
-            axis1Steps = DegreesToEncoders(MountAltAz.azimuth);
+            axis1Steps = DegreesToEncoders(AzimuthToDegrees(MountAltAz.azimuth));
             axis2Steps = DegreesToEncoders(MountAltAz.altitude);
 
             // For logging purposes
@@ -1423,7 +1426,7 @@ bool CelestronAUX::Goto(double ra, double dec)
             AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAltAz);
 
             // Converts to steps and we're done.
-            axis1Steps = DegreesToEncoders(MountAltAz.azimuth);
+            axis1Steps = DegreesToEncoders(AzimuthToDegrees(MountAltAz.azimuth));
             axis2Steps = DegreesToEncoders(MountAltAz.altitude);
         }
     }
@@ -1471,7 +1474,7 @@ bool CelestronAUX::Sync(double ra, double dec)
     if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
     {
         INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
-        MountAltAz.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+        MountAltAz.azimuth = DegreesToAzimuth(EncodersToDegrees(EncoderNP[AXIS_AZ].getValue()));
         MountAltAz.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
         NewEntry.TelescopeDirection = TelescopeDirectionVectorFromAltitudeAzimuth(MountAltAz);
     }
@@ -1633,7 +1636,7 @@ void CelestronAUX::TimerHit()
 
                 // Next get current alt-az
                 INDI::IHorizontalCoordinates currentAltAz { 0, 0 };
-                currentAltAz.azimuth = EncodersToDegrees(EncoderNP[AXIS_AZ].getValue());
+                currentAltAz.azimuth = DegreesToAzimuth(EncodersToDegrees(EncoderNP[AXIS_AZ].getValue()));
                 currentAltAz.altitude = EncodersToDegrees(EncoderNP[AXIS_ALT].getValue());
 
                 // Offset in degrees
@@ -1654,7 +1657,7 @@ void CelestronAUX::TimerHit()
                 {
                     m_OffsetSwitchSettle[AXIS_AZ] = 0;
                     m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
-                    targetSteps[AXIS_AZ] = targetMountAxisCoordinates.azimuth * STEPS_PER_DEGREE;
+                    targetSteps[AXIS_AZ] = DegreesToEncoders(AzimuthToDegrees(targetMountAxisCoordinates.azimuth));
                     trackRates[AXIS_AZ] = m_Controllers[AXIS_AZ]->calculate(targetSteps[AXIS_AZ], EncoderNP[AXIS_AZ].getValue());
 
                     LOGF_DEBUG("Tracking AZ Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ],
@@ -1676,7 +1679,7 @@ void CelestronAUX::TimerHit()
                 {
                     m_OffsetSwitchSettle[AXIS_ALT] = 0;
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
-                    targetSteps[AXIS_ALT]  = targetMountAxisCoordinates.altitude * STEPS_PER_DEGREE;
+                    targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
                     trackRates[AXIS_ALT] = m_Controllers[AXIS_ALT]->calculate(targetSteps[AXIS_ALT], EncoderNP[AXIS_ALT].getValue());
 
                     LOGF_DEBUG("Tracking AL Now: %.f Target: %d Offset: %d Rate: %.2f", EncoderNP[AXIS_ALT].getValue(), targetSteps[AXIS_ALT],
@@ -1739,12 +1742,7 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 /////////////////////////////////////////////////////////////////////////////////////
 double CelestronAUX::EncodersToDegrees(uint32_t steps)
 {
-    double value = steps * DEGREES_PER_STEP;
-    // North hemisphere
-    if (isNorthHemisphere())
-        return range360(value);
-    else
-        return range360(360 - value);
+    return range360(steps * DEGREES_PER_STEP);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1752,12 +1750,29 @@ double CelestronAUX::EncodersToDegrees(uint32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 uint32_t CelestronAUX::DegreesToEncoders(double degree)
 {
-    double target = range360(degree);
-    if (isNorthHemisphere() == false)
-        target = 360.0 - target;
-    //    if (target > 270.0)
-    //        target -= 360.0;
-    return round(target * STEPS_PER_DEGREE);
+    return round(range360(degree) * STEPS_PER_DEGREE);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::DegreesToAzimuth(double degree)
+{
+    if (isNorthHemisphere())
+        return degree;
+    else
+        return range360(degree + 180);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+double CelestronAUX::AzimuthToDegrees(double degree)
+{
+    if (isNorthHemisphere())
+        return degree;
+    else
+        return range360(degree + 180);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

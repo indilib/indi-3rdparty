@@ -563,9 +563,7 @@ bool POACCD::updateProperties()
         if (HasCooler())
         {
             defineProperty(CoolerNP);
-            loadConfig(true, CoolerNP.getName());
             defineProperty(CoolerSP);
-            loadConfig(true, CoolerSP.getName());
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
@@ -577,36 +575,16 @@ bool POACCD::updateProperties()
         if (!ControlNP.isEmpty())
         {
             defineProperty(ControlNP);
-            loadConfig(true, ControlNP.getName());
         }
 
         if (!ControlSP.isEmpty())
         {
             defineProperty(ControlSP);
-            loadConfig(true, ControlSP.getName());
         }
 
         if (!VideoFormatSP.isEmpty())
         {
             defineProperty(VideoFormatSP);
-
-            // Try to set 16bit RAW by default.
-            // It can get be overwritten by config value.
-            // If config fails, we try to set 16 if exists.
-            if (loadConfig(true, VideoFormatSP.getName()) == false)
-            {
-                for (size_t i = 0; i < VideoFormatSP.size(); i++)
-                {
-                    CaptureFormatSP[i].setState(ISS_OFF);
-                    if (mCameraInfo.imgFormats[i] == POA_RAW16)
-                    {
-                        setVideoFormat(i);
-                        CaptureFormatSP[i].setState(ISS_ON);
-                        break;
-                    }
-                }
-                CaptureFormatSP.apply();
-            }
         }
 
         defineProperty(BlinkNP);
@@ -701,18 +679,13 @@ bool POACCD::Disconnect()
     }
 
     LOG_INFO("Camera is offline.");
-
-
-    setConnected(false, IPS_IDLE);
     return true;
 }
 
 void POACCD::setupParams()
 {
     int piNumberOfControls = 0;
-    POAErrors ret;
-
-    ret = POAGetConfigsCount(mCameraInfo.cameraID, &piNumberOfControls);
+    POAErrors ret = POAGetConfigsCount(mCameraInfo.cameraID, &piNumberOfControls);
 
     if (ret != POA_OK)
         LOGF_ERROR("Failed to get number of controls (%s).", Helpers::toString(ret));
@@ -802,13 +775,19 @@ void POACCD::setupParams()
 
         node.setAux(const_cast<POAImgFormat*>(&videoFormat));
         VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == POA_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
     }
 
-    float x_pixel_size = mCameraInfo.pixelSize;
-    float y_pixel_size = mCameraInfo.pixelSize;
+    auto x_pixel_size = mCameraInfo.pixelSize;
+    auto y_pixel_size = mCameraInfo.pixelSize;
 
-    uint32_t maxWidth = mCameraInfo.maxWidth;
-    uint32_t maxHeight = mCameraInfo.maxHeight;
+    auto maxWidth = mCameraInfo.maxWidth;
+    auto maxHeight = mCameraInfo.maxHeight;
 
 #if 0
     // JM 2019-04-22
@@ -919,6 +898,7 @@ bool POACCD::ISNewNumber(const char *dev, const char *name, double values[], cha
 
             ControlNP.setState(IPS_OK);
             ControlNP.apply();
+            saveConfig(true, ControlNP.getName());
             return true;
         }
 
@@ -926,6 +906,7 @@ bool POACCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             BlinkNP.setState(BlinkNP.update(values, names, n) ? IPS_OK : IPS_ALERT);
             BlinkNP.apply();
+            saveConfig(true, BlinkNP.getName());
             return true;
         }
     }
@@ -1649,23 +1630,23 @@ void POACCD::updateRecorderFormat()
     );
 }
 
-void POACCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void POACCD::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     // e-/ADU
     auto np = ControlNP.findWidgetByName("Gain");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(np->value), "Gain", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(np->value), "Gain", &status);
     }
 
     np = ControlNP.findWidgetByName("Offset");
     if (np)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
     }
 }
 

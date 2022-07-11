@@ -105,7 +105,7 @@ protected:
     bool saveConfigItems(FILE * fp);
 
     bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n);
-    void addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip);
+    void addFITSKeywords(INDI::CCDChip * targetChip);
 
     friend void ::ISGetProperties(const char *dev);
     friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
