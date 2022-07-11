@@ -116,7 +116,7 @@ void MMALCamera::setExposureParameters(double gain, uint32_t shutter_speed)
         low = {5, 1000};
         high = {166, 1000};
     }
-    else if(shutter_speed > 1000000) {
+    else if(shutter_speed >= 1000000) {
         low = {167, 1000};
         high = {999, 1000};
     }
