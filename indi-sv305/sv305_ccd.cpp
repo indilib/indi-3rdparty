@@ -1122,6 +1122,7 @@ void Sv305CCD::TimerHit()
                     default:
                         LOGF_INFO("Error retrieval image data (status:%d)", status);
                         // Exposure be aborted. Error in SVBGetVideoData
+                        PrimaryCCD.setExposureFailed();
                         PrimaryCCD.setExposureLeft(0);
                         InExposure = false;
                         break;
