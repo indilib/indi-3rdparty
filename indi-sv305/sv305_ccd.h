@@ -163,10 +163,14 @@ class Sv305CCD : public INDI::CCD
         enum { COOLER_ENABLE = 0, COOLER_DISABLE = 1 };
         int coolerEnable; // 0:Enable, 1:Disable
 
+	// cooler power
+	INumber CoolerN[1];
+	INumberVectorProperty CoolerNP;
+
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
-	// NOTE : SV305M PRO d'ont support RAW8 and RAW16, only Y8 and Y16
+	// NOTE : SV305M PRO doesn't support RAW8 and RAW16, only Y8 and Y16
         ISwitch FormatS[2];
         ISwitchVectorProperty FormatSP;
         enum { FORMAT_RAW16, FORMAT_RAW8, FORMAT_Y16, FORMAT_Y8};
@@ -187,18 +191,19 @@ class Sv305CCD : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         // add FITS fields
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+// to avoid build issues with old indi
+#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
+	virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+#else
+        virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
+#endif
 
         // INDI Callbacks
         friend void ::ISGetProperties(const char *dev);
         friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
         friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
         friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-                                char *names[], int n);
-
-        // Tolerance for cooling temperature differences
-        static constexpr double TEMP_THRESHOLD {0.01};
+        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
         // Threading - streaming mutex
         pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
