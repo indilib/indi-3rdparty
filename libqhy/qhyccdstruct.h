@@ -247,6 +247,7 @@ enum CONTROL_ID
 /*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin4x4 mode
 /*77*/  CAM_GlobalSensorGPSLED,         ///Show GPS LED tab on sharpCap
 /*78*/  CONTROL_ImgProc,   /// Process image
+/*79*/  CONTROL_RemoveRBI,   /// Remove single RBI
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */

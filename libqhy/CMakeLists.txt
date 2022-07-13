@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libqhy)
 
-# QHY SDK 22.05.11
-set (LIBQHY_VERSION "22.5.11")
+# QHY SDK 22.7.6.15
+set (LIBQHY_VERSION "22.7.6.15")
 set (LIBQHY_SOVERSION "22")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -55,7 +55,7 @@ elseif (UNIX AND NOT WIN32)
 endif ()
 
 # Install header files
-install (FILES qhyccd.h qhyccderr.h qhyccdcamdef.h qhyccdstruct.h DESTINATION include/libqhy)
+install (FILES config.h qhyccd.h qhyccderr.h qhyccdcamdef.h qhyccdstruct.h DESTINATION include/libqhy)
 
 # Install firmware
 install (
