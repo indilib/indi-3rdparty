@@ -345,8 +345,6 @@ IPState WeewxJSON::updateWeather()
 
         if (res == CURLcode::CURLE_OK)
         {
-            LOG_INFO(chunk.response);
-
             char *endptr;
             JsonValue value;
             JsonAllocator allocator;
