@@ -334,7 +334,7 @@ IPState WeewxJSON::updateWeather()
     curl = curl_easy_init();
     if (curl)
     {
-        struct response_t chunk = { .response = { 0 }, .size = 0 };
+        struct response_t chunk = { .response = nullptr, .size = 0 };
 
         curl_easy_setopt(curl, CURLOPT_URL, weewxJsonUrl[WEEWX_URL].text);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
