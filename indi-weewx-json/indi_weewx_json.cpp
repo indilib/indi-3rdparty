@@ -31,10 +31,27 @@
 #include <cstring>
 #include <string>
 
-static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+struct response_t
 {
-    strcpy(static_cast<char *>(userp), static_cast<char *>(contents));
-    return size * nmemb;
+    char *response;
+    size_t size;
+};
+
+static size_t cb(void *data, size_t size, size_t nmemb, void *userp)
+{
+    size_t realsize        = size * nmemb;
+    struct response_t *mem = (struct response_t *)userp;
+
+    char *ptr = (char *)realloc(mem->response, mem->size + realsize + 1);
+    if (ptr == NULL)
+        return 0; /* out of memory! */
+
+    mem->response = ptr;
+    memcpy(&(mem->response[mem->size]), data, realsize);
+    mem->size += realsize;
+    mem->response[mem->size] = 0;
+
+    return realsize;
 }
 
 // We declare an auto pointer to WeewxJSON.
@@ -317,23 +334,26 @@ IPState WeewxJSON::updateWeather()
     curl = curl_easy_init();
     if (curl)
     {
-        char response[20480] = { 0 };
+        struct response_t chunk = { 0 };
+
         curl_easy_setopt(curl, CURLOPT_URL, weewxJsonUrl[WEEWX_URL].text);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
 
         if (res == CURLcode::CURLE_OK)
         {
+            LOG_INFO(chunk.response);
+
             char *endptr;
             JsonValue value;
             JsonAllocator allocator;
-            int status = jsonParse(response, &endptr, &value, allocator);
+            int status = jsonParse(chunk.response, &endptr, &value, allocator);
             if (status != JSON_OK)
             {
-                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - response);
+                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - chunk.response);
                 return IPS_ALERT;
             }
 
