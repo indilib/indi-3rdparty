@@ -62,15 +62,12 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         // INDI Properties
         //****************************************************************************************
-
         INDI::PropertySwitch CommunicationMethodSP {2};
 
         //****************************************************************************************
         // Communication Functions
         //****************************************************************************************
-        bool establishConnection();
         bool setup();
-        bool grabImage();
 
         //****************************************************************************************
         // Workers
@@ -90,6 +87,4 @@ class Kepler : public INDI::CCD
         INDI::SingleThreadPool m_Worker;
 
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
-
-
 };

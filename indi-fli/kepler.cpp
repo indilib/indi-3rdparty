@@ -178,6 +178,9 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
     float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
     while (timeLeft >= 1)
     {
+        if (isAboutToQuit)
+            return;
+
         auto delay = std::max(timeLeft - std::trunc(timeLeft), 0.005f);
         timeLeft = std::round(timeLeft);
         PrimaryCCD.setExposureLeft(timeLeft);
@@ -349,14 +352,6 @@ bool Kepler::Disconnect()
 /********************************************************************************
 *
 ********************************************************************************/
-bool Kepler::establishConnection()
-{
-    return true;
-}
-
-/********************************************************************************
-*
-********************************************************************************/
 bool Kepler::setup()
 {
     // We need image data
@@ -409,8 +404,9 @@ bool Kepler::StartExposure(float duration)
 
 bool Kepler::AbortExposure()
 {
-    InExposure = false;
-    return true;
+    LOG_DEBUG("Aborting exposure...");
+    m_Worker.quit();
+    return (FPROFrame_CaptureStop(m_CameraHandle) == 0);
 }
 
 /********************************************************************************
@@ -418,6 +414,7 @@ bool Kepler::AbortExposure()
 ********************************************************************************/
 bool Kepler::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
 {
+    INDI_UNUSED(fType);
     return true;
 }
 
