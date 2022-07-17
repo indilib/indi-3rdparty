@@ -63,7 +63,7 @@ class Kepler : public INDI::CCD
         // INDI Properties
         //****************************************************************************************
 
-        INDI::PropertySwitch CommunicationMethod {2};
+        INDI::PropertySwitch CommunicationMethodSP {2};
 
         //****************************************************************************************
         // Communication Functions
@@ -77,5 +77,19 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
+
+        //****************************************************************************************
+        // Variables
+        //****************************************************************************************
+        FPRODEVICEINFO m_CameraInfo;
+        int32_t m_CameraHandle;
+        FPROCAP m_CameraCapabilities;
+        uint32_t m_CameraCapabilitiesSize {0};
+
+        uint8_t m_ExposureRetry {0};
+        INDI::SingleThreadPool m_Worker;
+
+        static std::map<FPRODEVICETYPE, double> SensorPixelSize;
+
 
 };
