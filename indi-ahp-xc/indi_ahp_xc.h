@@ -171,7 +171,7 @@ private:
     dsp_stream_p *crosscorrelations_str;
     dsp_stream_p *plot_str;
 
-    INumber settingsN[3];
+    INumber settingsN[2];
     INumberVectorProperty settingsNP;
 
     unsigned int clock_frequency;
@@ -187,9 +187,10 @@ private:
     bool SendChar(char);
     bool SendCommand(it_cmd cmd, unsigned char value = 0);
     void ActiveLine(unsigned int, bool, bool, bool, bool);
-    void SetFrequencyDivider(unsigned char divider);
     void EnableCapture(bool start);
     void sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len);
+    void* createFITS(int bpp, size_t *size, dsp_stream *buf);
+    uint8_t* getBuffer(dsp_stream_p in, uint32_t *dims, int **sizes);
     int getFileIndex(const char * dir, const char * prefix, const char * ext);
     // Struct to keep timing
     struct timeval ExpStart;

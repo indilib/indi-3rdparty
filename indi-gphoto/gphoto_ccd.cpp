@@ -1434,11 +1434,21 @@ bool GPhotoCCD::grabImage()
             // We're done exposing
             if (ExposureRequest > 3)
                 LOG_DEBUG("Exposure done, downloading image...");
-            uint8_t * newMemptr = nullptr;
-            gphoto_get_buffer(gphotodrv, const_cast<const char **>(reinterpret_cast<char **>(&newMemptr)), &memsize);
+            const char * gphotoFileData = nullptr;
+            unsigned long gphotoFileSize = 0;
+            gphoto_get_buffer(gphotodrv, &gphotoFileData, &gphotoFileSize);
+            memsize = gphotoFileSize;
             // We copy the obtained memory pointer to avoid freeing some gphoto memory
-            memptr = static_cast<uint8_t *>(realloc(memptr, memsize));
-            memcpy(memptr, newMemptr, memsize);
+            memptr = static_cast<uint8_t *>(IDSharedBlobRealloc(memptr, gphotoFileSize));
+            if (memptr == nullptr)
+                memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(gphotoFileSize));
+            if (memptr == nullptr)
+            {
+                LOG_ERROR("Failed to allocate memory to load file from camera.");
+                PrimaryCCD.setExposureFailed();
+                return false;
+            }
+            memcpy(memptr, gphotoFileData, gphotoFileSize);
 
             gphoto_get_dimensions(gphotodrv, &w, &h);
 
@@ -2014,9 +2024,11 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
     return true;
 }
 
-void GPhotoCCD::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
+void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    auto fptr = *targetChip->fitsFilePointer();
+
+    INDI::CCD::addFITSKeywords(targetChip);
 
     int status = 0;
 

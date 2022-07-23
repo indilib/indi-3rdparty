@@ -1,3 +1,19 @@
+indi-sv305 (1.3.1) bionic; urgency=low
+
+  * SV405CC temperature regulation Fix
+  * Some code cleaning and minor fixes
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Sun, 7 Jul 2022 01:00:00 +0900
+
+indi-sv305 (1.3.0) bionic; urgency=low
+
+  * SV405CC support added
+  * Some Mutex issues fixed
+  * OFFSET support on Ekos Camera module
+  * Fix generation of luminance 0 data by specifying SVB_IMG_RAW12
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Tue, 14 Jun 2022 01:00:00 +0900
+
 indi-sv305 (1.2.10) bionic; urgency=low
 
   * SV905C support added

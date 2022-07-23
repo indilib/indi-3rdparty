@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-int read_dcraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h, int *bitsperpixel);
 int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h, int *bitsperpixel,
                 char *bayer_pattern);
 int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h);

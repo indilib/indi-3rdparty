@@ -165,7 +165,7 @@ var settings = {t_min: -40, t_max: 50, t_prec: 1,
                 sqm_min: 0, sqm_max: 25, sqm_prec: 1,
                 windSpeed_min: 0, windSpeed_max: 35, windSpeed_prec: 1};
 
-function init() {
+function initCharts() {
 
     // add event listeners to buttons
     document.querySelector("#timeline_6h").

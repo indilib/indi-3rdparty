@@ -49,6 +49,8 @@ static class Loader
             int iAvailableDevicesCount = 0;
             std::vector<std::string> cameraNames;
 
+            INDI_UNUSED(hArtemisDLL);
+
             IDLog("Atik Cameras API V%d DLL V%d initializing.", ArtemisAPIVersion(), ArtemisDLLVersion());
 
             for (int loop = 0; loop < MAX_CONNECTION_RETRIES; loop++)
@@ -1505,15 +1507,15 @@ void ATIKCCD::exposureSetRequest(ImageState request)
 /////////////////////////////////////////////////////////
 /// Add applicable FITS keywords to header
 /////////////////////////////////////////////////////////
-void ATIKCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void ATIKCCD::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     if (m_isHorizon)
     {
         int status = 0;
-        fits_update_key_dbl(fptr, "Gain", ControlN[CONTROL_GAIN].value, 3, "Gain", &status);
-        fits_update_key_dbl(fptr, "Offset", ControlN[CONTROL_OFFSET].value, 3, "Offset", &status);
+        fits_update_key_dbl(*targetChip->fitsFilePointer(), "Gain", ControlN[CONTROL_GAIN].value, 3, "Gain", &status);
+        fits_update_key_dbl(*targetChip->fitsFilePointer(), "Offset", ControlN[CONTROL_OFFSET].value, 3, "Offset", &status);
     }
 }
 

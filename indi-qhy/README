@@ -6,7 +6,7 @@ This package provides QHY CCD/CMOS and Filter Wheels INDI driver.
 Requirements
 ============
 
-+ INDI >= v1.5.0 (http://www.indilib.org)
++ INDI >= v1.9.6 (http://www.indilib.org)
 
 	You need to install both indi and indi-devel to build this package.
 	
@@ -21,6 +21,10 @@ Requirements
 + libqhy
 	libqhy SDK is required.
 	
++ fxload
+  fxload that can upload FX3 EZUSB firmware files is required. Some distributions include an old version that do not support the fx3 flag.
+  Compile a compatible version (https://github.com/lhondareyte/fxload.git) to support FX3.
+
 Installation
 ============
 

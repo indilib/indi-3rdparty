@@ -1060,7 +1060,7 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
     {
         DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Locking mirror by opening remote serial shutter port: %s ...",
                      gphoto->bulb_port);
-        gphoto->bulb_fd = open(gphoto->bulb_port, O_RDWR, O_NONBLOCK);
+        gphoto->bulb_fd = open(gphoto->bulb_port, O_RDWR | O_NONBLOCK);
         if (gphoto->bulb_fd < 0)
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Failed to open serial port: %s", gphoto->bulb_port);
@@ -1210,7 +1210,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         else if (gphoto->bulb_port[0])
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Opening remote serial shutter port: %s ...", gphoto->bulb_port);
-            gphoto->bulb_fd = open(gphoto->bulb_port, O_RDWR, O_NONBLOCK);
+            gphoto->bulb_fd = open(gphoto->bulb_port, O_RDWR | O_NONBLOCK);
             if (gphoto->bulb_fd < 0)
             {
                 DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "Failed to open serial port: %s", gphoto->bulb_port);
@@ -2072,9 +2072,9 @@ void gphoto_show_options(gphoto_driver *gphoto)
     }
 }
 
-void gphoto_get_buffer(gphoto_driver *gphoto, const char **buffer, size_t *size)
+void gphoto_get_buffer(gphoto_driver *gphoto, const char **buffer, unsigned long *size)
 {
-    gp_file_get_data_and_size(gphoto->camerafile, buffer, (unsigned long *)size);
+    gp_file_get_data_and_size(gphoto->camerafile, buffer, size);
 }
 
 void gphoto_free_buffer(gphoto_driver *gphoto)

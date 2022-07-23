@@ -156,7 +156,7 @@ def updateRRD(rrdfile, data):
     updateString="N"
     templateString=""
 
-    if data is not None:
+    if data:
         for key in data.keys():
             updateString=updateString+":"+str(data[key])
             if templateString:

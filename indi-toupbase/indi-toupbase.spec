@@ -48,6 +48,7 @@ BuildRequires: libtoupcam
 BuildRequires: libstarshootg
 BuildRequires: libnncam
 BuildRequires: libmallincam
+BuildRequires: libomegonprocam
 
 
 %description
@@ -81,4 +82,5 @@ make DESTDIR=%{buildroot} install
 %changelog
 * Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.7.git-1
 - update to build from git for copr, credit to Sergio Pascual and Christian Dersch for prior work on spec files
+- added Omegon SDK based toupcam driver. 2022-05-27 
 

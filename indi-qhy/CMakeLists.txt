@@ -50,9 +50,9 @@ add_executable(indi_qhy_ccd ${indiqhy_SRCS})
 
 target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-target_link_libraries(indi_qhy_ccd rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(indi_qhy_ccd rt)
+endif()
 
 install(TARGETS indi_qhy_ccd RUNTIME DESTINATION bin )
 
@@ -61,19 +61,17 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml DESTINATION ${INDI_DATA_D
 ########### qhy_test_ccd ###########
 add_executable(qhy_ccd_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_test.cpp)
 target_link_libraries(qhy_ccd_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_ccd_test rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif()
 
 install(TARGETS qhy_ccd_test RUNTIME DESTINATION bin )
 
 ########### qhy_video_test ###########
 add_executable(qhy_video_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_video_test.cpp)
 target_link_libraries(qhy_video_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_video_test rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )

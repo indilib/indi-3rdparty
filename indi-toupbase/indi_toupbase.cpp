@@ -153,12 +153,23 @@ bool ToupBase::initProperties()
     INDI::CCD::initProperties();
 
     ///////////////////////////////////////////////////////////////////////////////////
-    /// Cooler Control
+    /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_OFF);
-    IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
+    IUFillSwitch(&BinningModeS[TC_BINNING_AVG], "TC_BINNING_AVG", "AVG", ISS_OFF);
+    IUFillSwitch(&BinningModeS[TC_BINNING_ADD], "TC_BINNING_ADD", "Add", ISS_ON);
+    IUFillSwitchVector(&BinningModeSP, BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB,
+                       IP_WO,
                        ISR_1OFMANY, 0, IPS_IDLE);
+
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    /// Cooler Control
+    /// N.B. Some cameras starts with cooling immediately if powered.
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&CoolerS[0], "COOLER_ON", "ON", ISS_ON);
+    IUFillSwitch(&CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
+    IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
+                       ISR_1OFMANY, 0, IPS_BUSY);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Controls
@@ -367,10 +378,7 @@ bool ToupBase::updateProperties()
         setupParams();
 
         if (HasCooler())
-        {
             defineProperty(&CoolerSP);
-            loadConfig(true, "CCD_COOLER");
-        }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -405,6 +413,10 @@ bool ToupBase::updateProperties()
             defineProperty(&GainConversionNP);
             defineProperty(&GainConversionSP);
         }
+
+        // Binning mode
+        // TODO: Check if Camera supports binning mode
+        defineProperty(&BinningModeSP);
 
         // Levels
         defineProperty(&LevelRangeNP);
@@ -456,6 +468,7 @@ bool ToupBase::updateProperties()
             deleteProperty(GainConversionSP.name);
         }
 
+        deleteProperty(BinningModeSP.name);
         deleteProperty(LevelRangeNP.name);
         deleteProperty(BlackBalanceNP.name);
         deleteProperty(OffsetNP.name);
@@ -1316,6 +1329,23 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+
+        //////////////////////////////////////////////////////////////////////
+        /// Binning Mode Control
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, BinningModeSP.name))
+        {
+            IUUpdateSwitch(&BinningModeSP, states, names, n);
+            auto mode = (BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
+            m_BinningMode = mode;
+            updateBinningMode(PrimaryCCD.getBinX(), mode);
+            LOGF_DEBUG("Set Binning Mode %s", mode == TC_BINNING_AVG ? "AVG" : "ADD");
+            saveConfig(true, BinningModeSP.name);
+            return true;
+        }
+
+
+
         //////////////////////////////////////////////////////////////////////
         /// Cooler Control
         //////////////////////////////////////////////////////////////////////
@@ -1328,11 +1358,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 return true;
             }
 
-            if (CoolerS[TC_COOLER_ON].s == ISS_ON)
-                activateCooler(true);
-            else
-                activateCooler(false);
-
+            activateCooler(CoolerS[TC_COOLER_ON].s == ISS_ON);
+            saveConfig(true, CoolerSP.name);
             return true;
         }
 
@@ -1964,6 +1991,9 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
 
+    // As proposed by Max in INDI forum, increase download estimation after changing ROI since next
+    // frame may take longer to download.
+    m_DownloadEstimation = 10000;
 
     // Total bytes required for image buffer
     uint32_t nbuf = (w * h * PrimaryCCD.getBPP() / 8) * m_Channels;
@@ -1975,6 +2005,30 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
     return true;
 }
 
+bool ToupBase::updateBinningMode(int binx, int mode)
+{
+    int binningMode = binx;
+
+    if ((mode == TC_BINNING_AVG) && (binx > 1))
+    {
+        binningMode = binx | 0x80;
+    }
+    LOGF_DEBUG("binningMode code to set: 0x%x", binningMode);
+
+    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binningMode));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode, errorCodes[rc].c_str());
+        return false;
+    }
+
+    PrimaryCCD.setBin(binx, binx);
+
+
+    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());;
+
+}
+
 bool ToupBase::UpdateCCDBin(int binx, int biny)
 {
     //    if (binx > 4)
@@ -1982,17 +2036,13 @@ bool ToupBase::UpdateCCDBin(int binx, int biny)
     //        LOG_ERROR("Only 1x1, 2x2, 3x3, and 4x4 modes are supported.");
     //        return false;
     //    }
-
-    // TODO add option to select between additive vs. average binning
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binx));
-    if (FAILED(rc))
+    if (binx != biny)
     {
-        LOGF_ERROR("Binning %dx%d is not support. %s", binx, biny, errorCodes[rc].c_str());
+        LOG_ERROR("Binning dimensions must be equal");
         return false;
     }
-    PrimaryCCD.setBin(binx, binx);
 
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+    return updateBinningMode(binx, m_BinningMode);
 }
 
 // The generic timer call back is used for temperature monitoring
@@ -2227,16 +2277,16 @@ void ToupBase::refreshControls()
     IDSetNumber(&ControlNP, nullptr);
 }
 
-void ToupBase::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
+void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     INumber *gainNP = IUFindNumber(&ControlNP, ControlN[TC_GAIN].name);
 
     if (gainNP)
     {
         int status = 0;
-        fits_update_key_s(fptr, TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
+        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
     }
 }
 
@@ -2257,6 +2307,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 
     IUSaveConfigSwitch(fp, &VideoFormatSP);
     IUSaveConfigSwitch(fp, &ResolutionSP);
+    IUSaveConfigSwitch(fp, &BinningModeSP);
 
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
@@ -2335,6 +2386,12 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
         timersub(&curtime, &ExposureEnd, &diff);
         m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
         LOGF_DEBUG("New download estimate %.f ms", m_DownloadEstimation);
+
+        if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
+        {
+            m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
+            LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
+        }
 
         InExposure  = false;
         PrimaryCCD.setExposureLeft(0);
@@ -2418,6 +2475,12 @@ void ToupBase::eventPullCallBack(unsigned event)
                 gettimeofday(&curtime, nullptr);
                 timersub(&curtime, &ExposureEnd, &diff);
                 m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+
+                if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
+                {
+                    m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
+                    LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
+                }
 
                 m_TimeoutRetries = 0;
                 XP(FrameInfoV2) info;

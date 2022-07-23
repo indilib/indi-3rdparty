@@ -3,7 +3,7 @@
 
     Copyright (C) 2020 Paweł T. Jochym
     Copyright (C) 2020 Fabrizio Pollastri
-    Copyright (C) 2021 Jasem Mutlaq
+    Copyright (C) 2020-2022 Jasem Mutlaq
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+    JM 2022.07.07: Added Wedge support.
 */
 
 #pragma once
@@ -212,18 +213,22 @@ class CelestronAUX :
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
 
+
+        double AzimuthToDegrees(double degree);
+        double DegreesToAzimuth(double degree);
+
         double EncodersToDegrees(uint32_t steps);
         uint32_t DegreesToEncoders(double degrees);
 
         double EncodersToHours(uint32_t steps);
         uint32_t HoursToEncoders(double hour);
-        uint32_t RAToEncoders(double ra);
 
         double EncodersToDE(uint32_t steps, TelescopePierSide pierSide);
         double DEToEncoders(double de);
 
         void EncodersToAltAz(INDI::IHorizontalCoordinates &coords);
         void EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide);
+        void RADEToEncoders(const INDI::IEquatorialCoordinates &coords, uint32_t &haEncoder, uint32_t &deEncoder);
 
         /**
          * @brief mountToSkyCoords Convert mount coordinates to equatorial sky coordinates
@@ -361,10 +366,11 @@ class CelestronAUX :
         // Angles
         INDI::PropertyNumber AngleNP {2};
 
-        int32_t m_LastTrackRate[2] = {0, 0};
+        int32_t m_LastTrackRate[2] = {-1, -1};
         double m_TrackStartSteps[2] = {0, 0};
         double m_LastOffset[2] = {0, 0};
         uint8_t m_OffsetSwitchSettle[2] = {0, 0};
+        bool m_IsWedge {false};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};

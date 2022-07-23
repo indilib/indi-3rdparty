@@ -97,10 +97,10 @@ bool MMALDriver::saveConfigItems(FILE * fp)
     return true;
 }
 
-void MMALDriver::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
+void MMALDriver::addFITSKeywords(INDI::CCDChip * targetChip)
 {
     LOGF_DEBUG("%s()", __FUNCTION__);
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
 #ifdef USE_ISO
     int status = 0;
@@ -112,7 +112,7 @@ void MMALDriver::addFITSKeywords(fitsfile * fptr, INDI::CCDChip * targetChip)
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
             {
-                fits_update_key_s(fptr, TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fits_update_key_s(*targetChip->fitsFilePointer(), TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
             }
         }
     }
@@ -222,7 +222,8 @@ bool MMALDriver::initProperties()
     IUFillSwitch(&mIsoS[1], "ISO_200", "200", ISS_OFF);
     IUFillSwitch(&mIsoS[2], "ISO_400", "400", ISS_ON);
     IUFillSwitch(&mIsoS[3], "ISO_800", "800", ISS_OFF);
-    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&mIsoSP, mIsoS, 4, getDeviceName(), "CCD_ISO", "ISO", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60,
+                       IPS_IDLE);
 #endif
 
     // CCD Gain
@@ -247,6 +248,9 @@ bool MMALDriver::initProperties()
 
     setDefaultPollingPeriod(500);
 
+    CaptureFormat format = {"INDI_RAW", "RAW 16", 16, true};
+    addCaptureFormat(format);
+
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 1000, .0001, false);
 
     return true;
@@ -257,13 +261,15 @@ bool MMALDriver::updateProperties()
     LOGF_DEBUG("%s()", __FUNCTION__);
     // We must ALWAYS call the parent class updateProperties() first
     INDI::CCD::updateProperties();
-    
+
     if (isConnected())
     {
-        if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
+        if (!strcmp(camera_control->get_camera()->getModel(), "ov5647"))
+        {
             IUSaveText(&BayerT[2], "GBRG");
         }
-        else {
+        else
+        {
             IUSaveText(&BayerT[2], "BGGR");
         }
 
@@ -374,7 +380,8 @@ bool MMALDriver::StartExposure(float duration)
 #endif
         camera_control->setGain(gain);
         camera_control->setShutterSpeed(static_cast<long>(ExposureTime * 1000000));
-        camera_control->get_camera()->set_crop(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+        camera_control->get_camera()->set_crop(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(),
+                                               PrimaryCCD.getSubH());
         camera_control->startCapture();
     }
     catch (MMALException &e)
@@ -589,8 +596,9 @@ void MMALDriver::setupPipeline()
         Raw12ToBayer16Pipeline *raw12_pipe = new Raw12ToBayer16Pipeline(brcm_pipe, &chipWrapper);
         brcm_pipe->daisyChain(raw12_pipe);
     }
-    else if (!strcmp(camera_control->get_camera()->getModel(), "ov5647")) {
-        
+    else if (!strcmp(camera_control->get_camera()->getModel(), "ov5647"))
+    {
+
 
         raw_pipe.reset(new JpegPipeline());
 
@@ -600,7 +608,7 @@ void MMALDriver::setupPipeline()
         Raw10ToBayer16Pipeline *raw10_pipe = new Raw10ToBayer16Pipeline(brcm_pipe, &chipWrapper);
         // receiver->daisyChain(&raw_writer);
         brcm_pipe->daisyChain(raw10_pipe);
-    }    
+    }
     else if (!strcmp(camera_control->get_camera()->getModel(), "imx219"))
     {
         raw_pipe.reset(new JpegPipeline());
