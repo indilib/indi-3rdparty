@@ -1001,8 +1001,8 @@
 
 /**
  * Type define for QHY-DevelopDev*/
-#define QHY5IIICOMMON_MAX_WIDTH      5336//4144//3864//5680//2712//3864// 2712// 1408    //8432  	
-#define QHY5IIICOMMON_MAX_HEIGHT     4908//3064//2192//3710//1538//2180// 1538// 1052    //5648	  
+#define QHY5IIICOMMON_MAX_WIDTH      14304//6280//5336//4144//3864//5680//2712//3864// 2712// 1408    //8432  	
+#define QHY5IIICOMMON_MAX_HEIGHT     10748//4210//4908//3064//2192//3710//1538//2180// 1538// 1052    //5648	  
 
 /**
  * Type define for QHY247*/
@@ -1087,16 +1087,38 @@
 // 14304-48-48=14208 max_x-leftBlank-rightBlank=imageWidth
 // only y-shift is supported by most sensor
 #define QHY411ERIS_MAX_WIDTH        14304
-#define QHY411ERIS_MAX_HEIGHT       10802
-#define QHY411ERIS_Left_Blank       48
-#define QHY411ERIS_right_Blank      48
+// the target image is  W 14304 H 10748, top blank cut by soft roi, so, have to add 38 to bottom
+#define QHY411ERIS_MAX_HEIGHT       (10802 + 38)
+// can not use isOverscanRemoved=false to get a black border image in sharpCap,because sharpCap use effective size to set whole image size, not like ezcap or ascom driver
+#define QHY411ERIS_Left_Blank_single       48
+#define QHY411ERIS_right_Blank_single      48
+#define QHY411ERIS_Left_Blank_live       0
+#define QHY411ERIS_right_Blank_live      0
 #define QHY411ERIS_Top_Blank        92
 //81 is a default shift value, set to 81 can save data size
 #define QHY411ERIS_M_Default_SHIFT  81
 // for color sensor, shift value must be an odd number
 #define QHY411ERIS_C_Default_SHIFT  81
+// bottom can be set to 0 to reduce data size (set bottom to 0 and set max_height to 10748 (but now we need overScan area and fit to W 14304 H 10748 , so, can not set to 0)
+//#define QHY411ERIS_Bottom_Blank     (54 + 38)
+#define QHY411ERIS_Bottom_Blank_live     (0 + 0)
+#define QHY411ERIS_Bottom_Blank_single     (54 + 38)
+
+
+#define QHY411ERIS_BIN33_MAX_WIDTH        4768
+#define QHY411ERIS_BIN33_MAX_HEIGHT       3588
+#define QHY411ERIS_M_BIN33_Left_Blank       16
+#define QHY411ERIS_M_BIN33_right_Blank      16
+#define QHY411ERIS_BIN33_Top_Blank        34
+
+#define QHY411ERIS_BIN33_M_C_Default_SHIFT  27
+//for onchip 3*3binning. in camera firmware it is input * 3 . it can be both odd or even
+#define QHY411ERIS_BIN33_M_Default_SHIFT  28
+// for color sensor, shift value must be an odd number
+#define QHY411ERIS_BIN33_C_Default_SHIFT  85
 // bottom can be set to 0 to reduce data size (set bottom to 0 and set max_height to 10748
-#define QHY411ERIS_Bottom_Blank     54
+#define QHY411ERIS_BIN33_Bottom_Blank     6
+
 
 
 #define QHY600_MAX_WIDTH        	9600

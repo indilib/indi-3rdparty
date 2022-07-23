@@ -755,7 +755,8 @@ EXPORTC void STDCALL SetQHYCCDGPSSlaveModeParameter(qhyccd_handle *handle,uint32
 
 EXPORTC void STDCALL SetQHYCCDQuit();
 
-EXPORTC uint32_t STDCALL QHYCCDVendRequestWrite(qhyccd_handle *h,uint8_t req,uint16_t value,uint16_t index1,uint32_t length,uint8_t *data);
+EXPORTC uint32_t STDCALL QHYCCDVendRequestWrite(qhyccd_handle *h, uint8_t req, uint16_t value, uint16_t index1, uint32_t length, uint8_t *data);
+EXPORTC uint32_t STDCALL QHYCCDVendRequestRead(qhyccd_handle *h, uint8_t req, uint16_t value, uint16_t index1, uint32_t length, uint8_t *data);
 
 EXPORTC uint32_t STDCALL QHYCCDReadUSB_SYNC(qhyccd_handle *pDevHandle, uint8_t endpoint, uint32_t length, uint8_t *data, uint32_t timeout);
 
@@ -910,6 +911,7 @@ EXPORTFUNC void STDCALL QHYCCDResetFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDTestFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDSetFlashInitPWM(qhyccd_handle *handle,uint8_t pwm);
 EXPORTFUNC void STDCALL QHYCCDGetDebugDataD3(qhyccd_handle *handle, char* debugData_raw64);
+EXPORTFUNC uint32_t STDCALL QHYCCDSolve(const std::string filePath,int timeout_s, float scale_l, float  scale_h,float center_ra, float center_dec,float center_r, float& s_ra, float& s_dec,float& s_size_x,float& s_size_y, float& s_rotation);
 void  QHYCCDGetDebugControlID(CONTROL_ID controlId, bool hasValue, bool isSetValue, double value);
 
 
@@ -998,3 +1000,4 @@ EXPORTFUNC void RegisterPnpEventIn( void (*in_pnp_event_in_func)(char *id));
 EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
 EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
 EXPORTFUNC uint32_t STDCALL PCIEClearDDR(qhyccd_handle *handle);
+EXPORTFUNC uint32_t STDCALL PCIEWriteCameraRegister2(qhyccd_handle *handle, unsigned char idx, unsigned char val);
