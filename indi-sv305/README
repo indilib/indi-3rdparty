@@ -58,6 +58,7 @@ Known issues
 
 	+ Intensive configuration changes could lead to a crash
 	+ Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
+	+ SV405CC Temperature regulation fix and improvement needed
 
 Limitations
 ===========

@@ -3,7 +3,7 @@
 
     Copyright (C) 2020 Paweł T. Jochym
     Copyright (C) 2020 Fabrizio Pollastri
-    Copyright (C) 2021 Jasem Mutlaq
+    Copyright (C) 2020-2022 Jasem Mutlaq
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+    JM 2022.07.07: Added Wedge support.
 */
 
 #pragma once
@@ -369,6 +370,7 @@ class CelestronAUX :
         double m_TrackStartSteps[2] = {0, 0};
         double m_LastOffset[2] = {0, 0};
         uint8_t m_OffsetSwitchSettle[2] = {0, 0};
+        bool m_IsWedge {false};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};

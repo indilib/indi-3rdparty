@@ -3,7 +3,7 @@
 
     Copyright (C) 2020 Paweł T. Jochym
     Copyright (C) 2020 Fabrizio Pollastri
-    Copyright (C) 2021 Jasem Mutlaq
+    Copyright (C) 2020-2022 Jasem Mutlaq
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+    JM 2022.07.07: Added Wedge support.
 */
 
 #include <algorithm>
@@ -289,6 +290,7 @@ bool CelestronAUX::initProperties()
     {
         // Force equatorial for such mounts
         configMountType = EQUATORIAL;
+        m_IsWedge = (strstr(getDeviceName(), "Wedge") != nullptr);
     }
 
     if (configMountType == EQUATORIAL)
@@ -1280,57 +1282,6 @@ void CelestronAUX::EncodersToAltAz(INDI::IHorizontalCoordinates &coords)
            coords.altitude);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////////////
-void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
-{
-    auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
-    auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
-
-    double de = 0, ha = 0;
-    // Northern Hemisphere
-    if (LocationN[LOCATION_LATITUDE].value >= 0)
-    {
-        // "Normal" Pointing State (East, looking West)
-        if (deEncoder >= 0)
-        {
-            de = std::min(90 - deEncoder, 90.0);
-            ha = -6.0 + (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_EAST;
-        }
-        // "Reversed" Pointing State (West, looking East)
-        else
-        {
-            de = 90 + deEncoder;
-            ha = 6.0 + (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_WEST;
-        }
-    }
-    else
-    {
-        // East
-        if (deEncoder <= 0)
-        {
-            de = std::max(-90 - deEncoder, -90.0);
-            ha = -6.0 - (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_WEST;
-        }
-        // West
-        else
-        {
-            de = -90 + deEncoder;
-            ha = 6.0 - (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_EAST;
-        }
-    }
-
-    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
-    double ra = range24(lst - ha);
-
-    coords.rightascension = ra;
-    coords.declination = de;
-}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -1797,6 +1748,88 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
+{
+    auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+    auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+
+    double de = 0, ha = 0;
+    // Northern Hemisphere
+    if (LocationN[LOCATION_LATITUDE].value >= 0)
+    {
+        if (m_IsWedge)
+        {
+            pierSide = PIER_UNKNOWN;
+            if (deEncoder >= 270)
+                de = 360 - deEncoder;
+            else if (deEncoder >= 90)
+                de = deEncoder - 180;
+            else
+                de = -deEncoder;
+
+            if (haEncoder >= 180)
+                ha = -((360 - haEncoder) / 360.0) * 24.0 ;
+            else
+                ha = (haEncoder / 360.0) * 24.0 ;
+        }
+        // "Normal" Pointing State (East, looking West)
+        else if (deEncoder >= 0)
+        {
+            de = std::min(90 - deEncoder, 90.0);
+            ha = -6.0 + (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_EAST;
+        }
+        // "Reversed" Pointing State (West, looking East)
+        else
+        {
+            de = 90 + deEncoder;
+            ha = 6.0 + (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_WEST;
+        }
+    }
+    else
+    {
+        if (m_IsWedge)
+        {
+            pierSide = PIER_UNKNOWN;
+            if (deEncoder >= 270)
+                de = deEncoder - 360;
+            else if (deEncoder >= 90)
+                de = 180 - deEncoder;
+            else
+                de = deEncoder;
+
+            if (haEncoder >= 180)
+                ha = -((360 - haEncoder) / 360.0) * 24.0 ;
+            else
+                ha = (haEncoder / 360.0) * 24.0 ;
+        }
+        // East
+        else if (deEncoder <= 0)
+        {
+            de = std::max(-90 - deEncoder, -90.0);
+            ha = -6.0 - (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_WEST;
+        }
+        // West
+        else
+        {
+            de = -90 + deEncoder;
+            ha = 6.0 - (haEncoder / 360.0) * 24.0 ;
+            pierSide = PIER_EAST;
+        }
+    }
+
+    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
+    double ra = range24(lst - ha);
+
+    coords.rightascension = ra;
+    coords.declination = de;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
 /// HA encoders at 0 (HA = LST). When going WEST, steps increase from 0 to STEPS_PER_REVOLUTION {16777216}
 /// counter clock-wise.
 /// HA 0 to 6 hours range: 0 to 4194304
@@ -1804,15 +1837,27 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, uint32_t &haEncoder, uint32_t &deEncoder)
 {
-
     double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
     double dHA = rangeHA(lst - coords.rightascension);
     double de = 0, ha = 0;
     // Northern Hemisphere
     if (LocationN[LOCATION_LATITUDE].value >= 0)
     {
+        if (m_IsWedge)
+        {
+            if (coords.declination < 0)
+                de = -coords.declination;
+            else
+                de = 360 - coords.declination;
+
+            if (dHA < 0)
+                ha = 360 - ((dHA / -24.0) * 360.0);
+            else
+                ha = (dHA / 24.0) * 360.0;
+
+        }
         // "Normal" Pointing State (East, looking West)
-        if (dHA <= 0)
+        else if (dHA <= 0)
         {
             de = -(coords.declination - 90.0);
             ha = (dHA + 6.0) * 360.0 / 24.0;
@@ -1826,8 +1871,21 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
     }
     else
     {
+        if (m_IsWedge)
+        {
+            if (coords.declination >= 0)
+                de = coords.declination;
+            else
+                de = 360 + coords.declination;
+
+            if (dHA < 0)
+                ha = 360 - ((dHA / -24.0) * 360.0);
+            else
+                ha = (dHA / 24.0) * 360.0;
+
+        }
         // "Normal" Pointing State (East, looking West)
-        if (dHA <= 0)
+        else if (dHA <= 0)
         {
             de = -(coords.declination + 90.0);
             ha = -(dHA + 6.0) * 360.0 / 24.0;
@@ -1851,7 +1909,9 @@ double CelestronAUX::EncodersToDE(uint32_t steps, TelescopePierSide pierSide)
 {
     double degrees = EncodersToDegrees(steps);
     double de = 0;
-    if ((isNorthHemisphere() && pierSide == PIER_WEST) || (!isNorthHemisphere() && pierSide == PIER_EAST))
+    if (m_IsWedge)
+        de = degrees;
+    else if ((isNorthHemisphere() && pierSide == PIER_WEST) || (!isNorthHemisphere() && pierSide == PIER_EAST))
         de = degrees - 270;
     else
         de = 90 - degrees;
@@ -1865,7 +1925,9 @@ double CelestronAUX::EncodersToDE(uint32_t steps, TelescopePierSide pierSide)
 double CelestronAUX::DEToEncoders(double de)
 {
     double degrees = 0;
-    if ((isNorthHemisphere() && m_TargetPierSide == PIER_WEST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_EAST))
+    if (m_IsWedge)
+        degrees = de;
+    else if ((isNorthHemisphere() && m_TargetPierSide == PIER_WEST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_EAST))
         degrees = 270 + de;
     else
         degrees = 90 - de;

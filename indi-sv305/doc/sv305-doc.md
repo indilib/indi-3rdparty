@@ -32,6 +32,7 @@ The driver supports single framing and streaming.
 
 - Intensive configuration changes could lead to a crash
 - Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
+- SV405CC Temperature regulation a bit wobbly
 
 ## Operation
 

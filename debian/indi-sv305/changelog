@@ -4,7 +4,7 @@ indi-sv305 (1.3.2) bionic; urgency=low
   * Better handling of GetVideoData TIMEOUTS in TimerHit
   * Streaming timeout fixed
 
- -- Tetsuya Kakura <jcpgm@outlook.jp>  Tue, 19 Jul 2022 01:00:00 +0900
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 25 Jul 2022 01:00:00 +0900
 
 indi-sv305 (1.3.1) bionic; urgency=low
 

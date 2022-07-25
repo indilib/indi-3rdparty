@@ -1,0 +1,11 @@
+Source: indi-nut
+Section: science
+Priority: extra
+Maintainer: Rick Bassham <brodrick.bassham@gmail.com>
+Build-Depends: debhelper (>= 6), cdbs, cmake, libcfitsio3-dev|libcfitsio-dev, libindi-dev, zlib1g-dev
+Standards-Version: 3.9.2
+
+Package: indi-nut
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for a NUT UPS

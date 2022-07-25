@@ -110,6 +110,7 @@ option(WITH_ORION_SSG3 "Install Orion StarShoot G3 Driver" On)
 option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
+option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -132,6 +133,15 @@ option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" On)
 ELSE ()
 option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" Off)
 ENDIF(MMAL_FOUND)
+
+find_package(NUTClient)
+if (NUTCLIENT_FOUND)
+    message(STATUS "Since nutclient was found, INDI NUT Driver can be built")
+    option(WITH_NUT "Install INDI NUT Driver" On)
+ELSE(NUTCLIENT_FOUND)
+    message(STATUS "Since an up to date nutclient was not found, INDI NUT Driver will not be built")
+    option(WITH_NUT "Install INDI NUT Driver" Off)
+ENDIF(NUTCLIENT_FOUND)
 
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -520,6 +530,10 @@ if (WITH_WEBCAM)
 add_subdirectory(indi-webcam)
 endif()
 
+if (WITH_WEEWX_JSON)
+add_subdirectory(indi-weewx-json)
+endif()
+
 if (WITH_NIGHTSCAPE)
 add_subdirectory(indi-nightscape)
 endif(WITH_NIGHTSCAPE)
@@ -593,6 +607,11 @@ add_subdirectory(libplayerone)
 SET(LIBRARIES_FOUND FALSE)
 endif(PLAYERONE_FOUND)
 endif(WITH_PLAYERONE)
+
+# NUT
+if (WITH_NUT)
+add_subdirectory(indi-nut)
+endif()
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)

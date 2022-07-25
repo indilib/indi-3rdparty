@@ -5,12 +5,12 @@
 
 #include <jpeglib.h>
 #include <fitsio.h>
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 // the older libraw uses auto_ptr
 #include <libraw.h>
 #pragma GCC diagnostic pop
+
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -49,189 +49,12 @@ void *tstrealloc(void *ptr, size_t size)
     return realloc(ptr, size);
 }
 
-static void skip_line(FILE *fp)
-{
-    int ch;
-
-    //while( (ch = fgetc( fp )) != '' );
-    while ((ch = fgetc(fp)) != '\n')
-        ;
-}
-
-static void skip_white_space(FILE *fp)
-{
-    int ch;
-    while (isspace(ch = fgetc(fp)))
-        ;
-    ungetc(ch, fp);
-
-    if (ch == '#')
-    {
-        skip_line(fp);
-        skip_white_space(fp);
-    }
-}
-
-static unsigned int read_uint(FILE *fp)
-{
-    int i;
-    char buf[80];
-    int ch;
-
-    skip_white_space(fp);
-
-    /* Stop complaints about used-before-set on ch.
-     */
-    ch = -1;
-
-    for (i = 0; i < 80 - 1 && isdigit(ch = fgetc(fp)); i++)
-        buf[i] = ch;
-    buf[i] = '\0';
-
-    if (i == 0)
-    {
-        return (-1);
-    }
-
-    ungetc(ch, fp);
-
-    return (atoi(buf));
-}
-
 void addFITSKeywords(fitsfile *fptr)
 {
     int status = 0;
 
     /* TODO add other data later */
     fits_write_date(fptr, &status);
-}
-
-int read_ppm(FILE *handle, struct dcraw_header *header, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h,
-             int *bitsperpixel)
-{
-    char prefix[] = { 0, 0 };
-    int bpp, maxcolor, row, i;
-    uint8_t *ppm    = nullptr;
-    uint8_t *r_data = nullptr, *g_data = nullptr, *b_data = nullptr;
-    int width, height;
-    int naxis = 2;
-
-    prefix[0] = fgetc(handle);
-    prefix[1] = fgetc(handle);
-    if (prefix[0] != 'P' || (prefix[1] != '6' && prefix[1] != '5'))
-    {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "read_ppm: got unexpected prefix %x %x", prefix[0], prefix[1]);
-        return -1;
-    }
-
-    if (prefix[1] == '6')
-        naxis = 3;
-
-    *n_axis = naxis;
-
-    width  = read_uint(handle);
-    height = read_uint(handle);
-    if (width != header->width || height != header->height)
-    {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "read_ppm: Expected (%d x %d) but image is actually (%d x %d)",
-                     header->width, header->height, width, height);
-        //return -1;
-    }
-    *w       = width;
-    *h       = height;
-    maxcolor = read_uint(handle);
-    fgetc(handle);
-    if (maxcolor > 65535)
-    {
-        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "read_ppm: 32bit PPM isn't supported");
-        return -1;
-    }
-    else if (maxcolor > 255)
-    {
-        bpp           = 2;
-        *bitsperpixel = 16;
-    }
-    else
-    {
-        bpp           = 1;
-        *bitsperpixel = 8;
-    }
-
-    *memsize = width * height * bpp * (naxis == 2 ? 1 : 3);
-
-    *memptr = (uint8_t *)realloc(*memptr, *memsize);
-
-    uint8_t *oldmem =
-        *memptr; // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
-
-    ppm = (uint8_t *)malloc(width * bpp);
-    if (naxis == 3)
-    {
-        r_data = (uint8_t *)*memptr;
-        g_data = r_data + width * height * bpp;
-        b_data = r_data + 2 * width * height * bpp;
-    }
-
-    for (row = 0; row < height; row++)
-    {
-        int len = fread(ppm, 1, width * bpp, handle);
-
-        if (len != width * bpp)
-        {
-            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
-                         "read_ppm: aborted during PPM reading at row: %d, read %d bytes", row, len);
-            free(ppm);
-            return -1;
-        }
-        if (bpp == 2)
-        {
-            uint16_t *ppm16 = (uint16_t *)ppm;
-            if (htons(0x55aa) != 0x55aa)
-            {
-                uint8_t *ppmtemp = ppm;
-                swab(ppm, ppmtemp, width * bpp);
-                ppm = ppmtemp;
-            }
-            if (naxis == 3)
-            {
-                for (i = 0; i < width; i++)
-                {
-                    *(uint16_t *)r_data++ = *ppm16++;
-                    *(uint16_t *)g_data++ = *ppm16++;
-                    *(uint16_t *)b_data++ = *ppm16++;
-                }
-            }
-            else
-            {
-                memcpy(*memptr, ppm16, width * bpp);
-                *memptr += width * bpp;
-            }
-        }
-        else
-        {
-            uint8_t *ppm8 = ppm;
-            if (naxis == 3)
-            {
-                for (i = 0; i < width; i++)
-                {
-                    *r_data++ = *ppm8++;
-                    *g_data++ = *ppm8++;
-                    *b_data++ = *ppm8++;
-                }
-            }
-            else
-            {
-                memcpy(*memptr, ppm8, width * bpp);
-                *memptr += width * bpp;
-            }
-        }
-    }
-
-    free(ppm);
-
-    *memptr = oldmem;
-
-    return 0;
 }
 
 int dcraw_parse_time(char *month, int day, int year, char *timestr)
@@ -364,7 +187,14 @@ int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_
                  RawProcessor.imgdata.sizes.left_margin, first_visible_pixel);
 
     *memsize = RawProcessor.imgdata.rawdata.sizes.width * RawProcessor.imgdata.rawdata.sizes.height * sizeof(uint16_t);
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
 
     DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,
                  "read_libraw: rawdata.sizes.width: %d rawdata.sizes.height %d memsize %d bayer_pattern %s",
@@ -382,39 +212,6 @@ int read_libraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_
     }
 
     return 0;
-}
-
-int read_dcraw(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h, int *bitsperpixel)
-{
-    struct dcraw_header header;
-    FILE *handle = nullptr;
-    char *cmd    = nullptr;
-    int ret      = 0;
-
-    if (dcraw_parse_header_info(filename, &header) || !header.width || !header.height)
-    {
-        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "read_file_from_dcraw: failed to parse header");
-        return -1;
-    }
-
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Reading exposure %d x %d", header.width, header.height);
-    ret = asprintf(&cmd, "%s -c -t 0 -4 -D %s", dcraw_cmd, filename);
-
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "%s", cmd);
-
-    handle = popen(cmd, "r");
-    free(cmd);
-    if (handle == nullptr)
-    {
-        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "read_file_from_dcraw: failed to run dcraw");
-        return -1;
-    }
-
-    int rc = read_ppm(handle, &header, memptr, memsize, n_axis, w, h, bitsperpixel);
-
-    pclose(handle);
-
-    return rc;
 }
 
 int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h)
@@ -447,9 +244,16 @@ int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxi
     jpeg_start_decompress(&cinfo);
 
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
-    uint8_t *oldmem =
-        *memptr; // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
+    // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    uint8_t *oldmem = *memptr;
     *naxis = cinfo.num_components;
     *w     = cinfo.output_width;
     *h     = cinfo.output_height;
@@ -521,7 +325,14 @@ int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **mempt
     jpeg_start_decompress(&cinfo);
 
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
-    *memptr  = (uint8_t *)realloc(*memptr, *memsize);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return -1;
+    }
 
     uint8_t *destmem = *memptr;
 
