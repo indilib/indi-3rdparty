@@ -32,9 +32,7 @@ include_directories( ${CURL_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/gason/gason.cpp PROPERTIES COMPILE_FLAGS "-Wno-implicit-fallthrough")
 set(weewx_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/gason/gason.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/indi_weewx_json.cpp
 )
 
