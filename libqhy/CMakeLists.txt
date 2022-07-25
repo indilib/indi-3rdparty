@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libqhy)
 
-# QHY SDK 22.05.11
-set (LIBQHY_VERSION "22.5.11")
+# QHY SDK 22.07.23
+set (LIBQHY_VERSION "22.7.23")
 set (LIBQHY_SOVERSION "22")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -20,19 +20,19 @@ if (APPLE)
 
   set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd.dylib")
 
-  # One problem that is often encountered on macs when using rpaths is that the ID the dylib has does not match the links being made to the dylib
+  # One problem that could be encountered on macs when using rpaths is that the ID the dylib has does not match the links being made to the dylib
   # Since when using RPATHS, programs link to libraries using their IDs, that would cause a problem later when a program being built tries to link to the wrong name for the dylib
-  # This should get the current ID of the dylib and make sure it matches what we expect it to be, and stops the build if it does not.
+  # This should get the current ID of the dylib and make sure it matches what we expect it to be, and warn if it does not.
   execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/libqhyccd.dylib | tail -n 1 | tr -d '\n'" OUTPUT_VARIABLE DYLIB_ID)
-  if (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib")
-    message (STATUS "The Mac dylib in the repo matches the libqhy SDK in the repo, linking should succeed.")
-  else (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib")
+  if ((${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib") OR (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.dylib"))
+    message (STATUS "The ID for the Mac QHY dylib in the repo is compatible with the SDK version, linking should succeed.")
+  else ((${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib") OR (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.dylib"))
     if (${DYLIB_ID} MATCHES "rpath")
-      message (FATAL_ERROR "The Mac dylib in the libqhy source folder does not match the current SDK Version.  Linking will fail since it uses rpaths for linking, since the library is called ${DYLIB_ID} and the linker thinks it should be called @rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib.  Please request that the library be updated in the repo.")
+      message (WARNING "The Mac dylib in the libqhy source folder has an ID that does not match the current SDK Version.  Linking could fail since it uses rpaths for linking.  The library is called ${DYLIB_ID} and the linker might try to link to @rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib.  Please request that either the library or rpath be updated in the repo.")
     else (${DYLIB_ID} MATCHES "rpath")
       message (WARNING "The Mac dylib does not have an RPATH ID, you might have issues linking it later since it probably uses an absoute path.  Please request that the ID be changed in the repo.")
     endif (${DYLIB_ID} MATCHES "rpath")
-  endif (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib")
+  endif ((${DYLIB_ID} STREQUAL "@rpath/libqhyccd.${LIBQHY_SOVERSION}.dylib") OR (${DYLIB_ID} STREQUAL "@rpath/libqhyccd.dylib"))
 
 elseif (UNIX AND NOT WIN32)
 
