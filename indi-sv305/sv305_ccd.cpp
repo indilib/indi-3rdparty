@@ -930,7 +930,7 @@ void* Sv305CCD::streamVideo()
         pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
-        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100000 );
+        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 1000 );
 
         pthread_mutex_unlock(&cameraID_mutex);
 
@@ -1118,7 +1118,7 @@ void Sv305CCD::TimerHit()
                         // set retry timer for SVGGetVideoData
                         timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
                         break;
-                    
+
                     default:
                         LOGF_INFO("Error retrieval image data (status:%d)", status);
                         // Exposure be aborted. Error in SVBGetVideoData

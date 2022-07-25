@@ -2,6 +2,7 @@ indi-sv305 (1.3.2) bionic; urgency=low
 
   * AbortExposure added
   * Better handling of GetVideoData TIMEOUTS in TimerHit
+  * Streaming timeout fixed
 
  -- Tetsuya Kakura <jcpgm@outlook.jp>  Tue, 19 Jul 2022 01:00:00 +0900
 
