@@ -23,14 +23,13 @@ The driver supports single framing and streaming.
 - ROI (snapshot and liveview)
 - Binning (software, snapshot and liveview)
 - Slow, medium and fast framing
-- RAW8 and RAW12 frame format
+- RAW8 and RAW16 frame format
 - Dynamic stretching in RAW12 mode
 - Color bayer pattern
 - Cooler on SV405CC
 
 ### Known issues (mostly firmware related):
 
-- Exposures can't be aborted
 - Intensive configuration changes could lead to a crash
 - Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
 - SV405CC Temperature regulation a bit wobbly
@@ -78,7 +77,7 @@ Family :		CCDs
 Manufacturer :		SVBONY  
 Platforms :		Linux (Intel, ARM),Mac OS X 64 bits  
 Author :		Blaise-Florentin Collin & Tetsuya Kakura  
-Version :		1.3.1  
+Version :		1.3.2  
 
 ![SV305 camera](./SV305.jpg)
 

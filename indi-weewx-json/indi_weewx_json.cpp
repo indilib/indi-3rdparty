@@ -31,10 +31,27 @@
 #include <cstring>
 #include <string>
 
-static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+struct response_t
 {
-    strcpy(static_cast<char *>(userp), static_cast<char *>(contents));
-    return size * nmemb;
+    char *response;
+    size_t size;
+};
+
+static size_t cb(void *data, size_t size, size_t nmemb, void *userp)
+{
+    size_t realsize        = size * nmemb;
+    struct response_t *mem = (struct response_t *)userp;
+
+    char *ptr = (char *)realloc(mem->response, mem->size + realsize + 1);
+    if (ptr == NULL)
+        return 0; /* out of memory! */
+
+    mem->response = ptr;
+    memcpy(&(mem->response[mem->size]), data, realsize);
+    mem->size += realsize;
+    mem->response[mem->size] = 0;
+
+    return realsize;
 }
 
 // We declare an auto pointer to WeewxJSON.
@@ -138,25 +155,15 @@ bool WeewxJSON::ISNewText(const char *dev, const char *name, char *texts[], char
     return INDI::Weather::ISNewText(dev, name, texts, names, n);
 }
 
-void WeewxJSON::handleTemperatureData(JsonValue value, std::string key)
+void WeewxJSON::handleTemperatureData(json value, std::string key)
 {
     double temperatureValue = 0.0;
-    bool isFarhenheit       = false;
+    std::string units;
 
-    JsonIterator iter;
-    for (iter = begin(value); iter != end(value); ++iter)
-    {
-        if (strcmp(iter->key, "value") == 0)
-        {
-            temperatureValue = iter->value.toNumber();
-        }
-        else if (strcmp(iter->key, "units") == 0)
-        {
-            isFarhenheit = strcmp(iter->value.toString(), "°F") == 0;
-        }
-    }
+    value["value"].get_to(temperatureValue);
+    value["units"].get_to(units);
 
-    if (isFarhenheit)
+    if (strcmp(units.c_str(), "°F") == 0)
     {
         temperatureValue = (temperatureValue - 32.0) * 5.0 / 9.0;
     }
@@ -164,67 +171,40 @@ void WeewxJSON::handleTemperatureData(JsonValue value, std::string key)
     setParameterValue(key, temperatureValue);
 }
 
-void WeewxJSON::handleRawData(JsonValue value, std::string key)
+void WeewxJSON::handleRawData(json value, std::string key)
 {
     double rawValue = 0.0;
 
-    JsonIterator iter;
-    for (iter = begin(value); iter != end(value); ++iter)
-    {
-        if (strcmp(iter->key, "value") == 0)
-        {
-            rawValue = iter->value.toNumber();
-        }
-    }
+    value["value"].get_to(rawValue);
 
     setParameterValue(key, rawValue);
 }
 
-void WeewxJSON::handleBarometerData(JsonValue value)
+void WeewxJSON::handleBarometerData(json value, std::string key)
 {
     double pressureValue = 0.0;
-    bool isINHG          = false;
+    std::string units;
 
-    JsonIterator iter;
-    for (iter = begin(value); iter != end(value); ++iter)
-    {
-        if (strcmp(iter->key, "value") == 0)
-        {
-            pressureValue = iter->value.toNumber();
-        }
-        else if (strcmp(iter->key, "units") == 0)
-        {
-            isINHG = strcmp(iter->value.toString(), "inHg") == 0;
-        }
-    }
+    value["value"].get_to(pressureValue);
+    value["units"].get_to(units);
 
-    if (isINHG)
+    if (strcmp(units.c_str(), "inHg") == 0)
     {
         pressureValue = pressureValue * 33.864;
     }
 
-    setParameterValue("WEATHER_BAROMETER", pressureValue);
+    setParameterValue(key, pressureValue);
 }
 
-void WeewxJSON::handleWindSpeedData(JsonValue value, std::string key)
+void WeewxJSON::handleWindSpeedData(json value, std::string key)
 {
     double speedValue = 0.0;
-    bool isMPH        = false;
+    std::string units;
 
-    JsonIterator iter;
-    for (iter = begin(value); iter != end(value); ++iter)
-    {
-        if (strcmp(iter->key, "value") == 0)
-        {
-            speedValue = iter->value.toNumber();
-        }
-        else if (strcmp(iter->key, "units") == 0)
-        {
-            isMPH = strcmp(iter->value.toString(), "mph") == 0;
-        }
-    }
+    value["value"].get_to(speedValue);
+    value["units"].get_to(units);
 
-    if (isMPH)
+    if (strcmp(units.c_str(), "mph") == 0)
     {
         speedValue = speedValue * 1.609;
     }
@@ -232,78 +212,44 @@ void WeewxJSON::handleWindSpeedData(JsonValue value, std::string key)
     setParameterValue(key, speedValue);
 }
 
-void WeewxJSON::handleRainRateData(JsonValue value)
+void WeewxJSON::handleRainRateData(json value, std::string key)
 {
-    double rainRate  = 0.0;
-    bool isInPerHour = false;
+    double rainRate = 0.0;
+    std::string units;
 
-    JsonIterator iter;
-    for (iter = begin(value); iter != end(value); ++iter)
-    {
-        if (strcmp(iter->key, "value") == 0)
-        {
-            rainRate = iter->value.toNumber();
-        }
-        else if (strcmp(iter->key, "units") == 0)
-        {
-            isInPerHour = strcmp(iter->value.toString(), "in/h") == 0;
-        }
-    }
+    value["value"].get_to(rainRate);
+    value["units"].get_to(units);
 
-    if (isInPerHour)
+    if (strcmp(units.c_str(), "in/hr") == 0)
     {
         rainRate = rainRate * 25.4;
     }
 
-    setParameterValue("WEATHER_RAIN_RATE", rainRate);
+    setParameterValue(key, rainRate);
 }
 
-void WeewxJSON::handleWeatherData(JsonValue value)
+void WeewxJSON::handleWeatherData(json value)
 {
-    JsonIterator sensorIter;
-    for (sensorIter = begin(value); sensorIter != end(value); ++sensorIter)
-    {
-        if (strcmp(sensorIter->key, "temperature") == 0)
-        {
-            handleTemperatureData(sensorIter->value, "WEATHER_TEMPERATURE");
-        }
-        else if (strcmp(sensorIter->key, "dewpoint") == 0)
-        {
-            handleTemperatureData(sensorIter->value, "WEATHER_DEW_POINT");
-        }
-        else if (strcmp(sensorIter->key, "humidity") == 0)
-        {
-            handleRawData(sensorIter->value, "WEATHER_HUMIDITY");
-        }
-        else if (strcmp(sensorIter->key, "heat index") == 0)
-        {
-            handleTemperatureData(sensorIter->value, "WEATHER_HEAT_INDEX");
-        }
-        else if (strcmp(sensorIter->key, "barometer") == 0)
-        {
-            handleBarometerData(sensorIter->value);
-        }
-        else if (strcmp(sensorIter->key, "wind speed") == 0)
-        {
-            handleWindSpeedData(sensorIter->value, "WEATHER_WIND_SPEED");
-        }
-        else if (strcmp(sensorIter->key, "wind gust") == 0)
-        {
-            handleWindSpeedData(sensorIter->value, "WEATHER_WIND_GUST");
-        }
-        else if (strcmp(sensorIter->key, "wind direction") == 0)
-        {
-            handleRawData(sensorIter->value, "WEATHER_WIND_DIRECTION");
-        }
-        else if (strcmp(sensorIter->key, "wind chill") == 0)
-        {
-            handleTemperatureData(sensorIter->value, "WEATHER_WIND_CHILL");
-        }
-        else if (strcmp(sensorIter->key, "rain rate") == 0)
-        {
-            handleRainRateData(sensorIter->value);
-        }
-    }
+    if (value.contains("temperature"))
+        handleTemperatureData(value["temperature"], "WEATHER_TEMPERATURE");
+    if (value.contains("dewpoint"))
+        handleTemperatureData(value["dewpoint"], "WEATHER_DEW_POINT");
+    if (value.contains("humidity"))
+        handleRawData(value["humidity"], "WEATHER_HUMIDITY");
+    if (value.contains("heat index"))
+        handleTemperatureData(value["heat index"], "WEATHER_HEAT_INDEX");
+    if (value.contains("barometer"))
+        handleBarometerData(value["barometer"], "WEATHER_BAROMETER");
+    if (value.contains("wind speed"))
+        handleWindSpeedData(value["wind speed"], "WEATHER_WIND_SPEED");
+    if (value.contains("wind gust"))
+        handleWindSpeedData(value["wind gust"], "WEATHER_WIND_GUST");
+    if (value.contains("wind direction"))
+        handleRawData(value["wind direction"], "WEATHER_WIND_DIRECTION");
+    if (value.contains("wind chill"))
+        handleTemperatureData(value["wind chill"], "WEATHER_WIND_CHILL");
+    if (value.contains("rain rate"))
+        handleRainRateData(value["rain rate"], "WEATHER_RAIN_RATE");
 }
 
 IPState WeewxJSON::updateWeather()
@@ -317,33 +263,27 @@ IPState WeewxJSON::updateWeather()
     curl = curl_easy_init();
     if (curl)
     {
-        char response[20480] = { 0 };
+        struct response_t chunk = { .response = nullptr, .size = 0 };
+
         curl_easy_setopt(curl, CURLOPT_URL, weewxJsonUrl[WEEWX_URL].text);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
 
         if (res == CURLcode::CURLE_OK)
         {
-            char *endptr;
-            JsonValue value;
-            JsonAllocator allocator;
-            int status = jsonParse(response, &endptr, &value, allocator);
-            if (status != JSON_OK)
-            {
-                LOGF_ERROR("Parsing error %s at %zd", jsonStrError(status), endptr - response);
-                return IPS_ALERT;
-            }
+            nlohmann::json report = nlohmann::json::parse(chunk.response);
 
-            JsonIterator typeIter;
-            for (typeIter = begin(value); typeIter != end(value); ++typeIter)
+            if (report.contains("current"))
             {
-                if (strcmp(typeIter->key, "current") == 0)
-                {
-                    handleWeatherData(typeIter->value);
-                }
+                handleWeatherData(report["current"]);
+            }
+            else
+            {
+                LOG_ERROR("No current weather data found in report.");
+                return IPS_ALERT;
             }
 
             return IPS_OK;

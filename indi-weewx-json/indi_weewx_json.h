@@ -27,8 +27,9 @@
 
 #include <libindi/indiweather.h>
 #include <libindi/indipropertytext.h>
+#include <libindi/json.h>
 
-#include "gason/gason.h"
+using json = nlohmann::json;
 
 class WeewxJSON : public INDI::Weather
 {
@@ -47,12 +48,12 @@ class WeewxJSON : public INDI::Weather
     virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
   protected:
-    void handleTemperatureData(JsonValue value, std::string key);
-    void handleRawData(JsonValue value, std::string key);
-    void handleBarometerData(JsonValue value);
-    void handleWindSpeedData(JsonValue value, std::string key);
-    void handleRainRateData(JsonValue value);
-    void handleWeatherData(JsonValue value);
+    void handleTemperatureData(json value, std::string key);
+    void handleRawData(json value, std::string key);
+    void handleBarometerData(json value, std::string key);
+    void handleWindSpeedData(json value, std::string key);
+    void handleRainRateData(json value, std::string key);
+    void handleWeatherData(json value);
 
     virtual IPState updateWeather() override;
 

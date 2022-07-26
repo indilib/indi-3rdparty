@@ -1,3 +1,20 @@
+libasi (1.24) buster; urgency=medium
+
+  * ASI Camera SDK 1.25 release. Changelog including updated entry for
+    1.24:
+
+    V1.25 2022.7.20
+    Optimize the performance of ASI432
+
+    V1.24 2022.6.23
+    (1) Add ASI585,ASI432,ASI662,ASI678
+    (2) The camera name from ASIGetCameraProperty no longer contains
+    alias. If the application software needs to display alias, it needs to
+    obtain them through the ASIGetID method.
+    (3) Some optimizations have been made
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Mon, 25 Jul 2022 23:55:58 +0300
+
 libasi (1.23) buster; urgency=medium
 
   * ASI Camera SDK 1.24 release. Changelog including older entries:

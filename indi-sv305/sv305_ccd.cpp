@@ -117,7 +117,7 @@ bool Sv305CCD::initProperties()
     INDI::CCD::initProperties();
 
     // base capabilities
-    uint32_t cap = /* CCD_CAN_ABORT | */ CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
+    uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
     // SV305 is a color camera
     if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
@@ -930,7 +930,7 @@ void* Sv305CCD::streamVideo()
         pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
-        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100000 );
+        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 1000 );
 
         pthread_mutex_unlock(&cameraID_mutex);
 
@@ -1077,52 +1077,56 @@ void Sv305CCD::TimerHit()
                 if (timeleft > 0.07)
                 {
                     //  use an even tighter timer
-                    timerID = SetTimer(50);
+                    timerID = SetTimer((uint32_t)(timeleft*1000));
                 }
                 else
                 {
                     LOGF_DEBUG("Current timeleft:%.2lf sec.", timeleft);
 
                     pthread_mutex_lock(&cameraID_mutex);
-
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
-                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                    while(status != SVB_SUCCESS)
-                    {
-                        if (status != SVB_ERROR_TIMEOUT) {
-                            // Error in SVBGetVideoData
-                            LOGF_INFO("Error retrieval image data (status:%d)", status);
-                            break;
-                        }
-                        pthread_mutex_unlock(&cameraID_mutex);
-                        usleep(100000);
-                        pthread_mutex_lock(&cameraID_mutex);
-                        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 100 );
-                        LOG_DEBUG("Wait...");
-                    }
-
+                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
                     pthread_mutex_unlock(&cameraID_mutex);
+               	    LOGF_DEBUG("SVBGetVideoData:result=%d", status);
 
-                    // exposing done
-                    PrimaryCCD.setExposureLeft(0);
-                    InExposure = false;
+                    switch (status) {
+                    case SVB_SUCCESS:
+                        // exposing done
+                        PrimaryCCD.setExposureLeft(0);
+                        InExposure = false;
 
-                    // stretching 12bits depth to 16bits depth
-                    if(bitDepth == 16 && (bitStretch != 0))
-                    {
-                        u_int16_t* tmp = (u_int16_t*)imageBuffer;
-                        for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                        // stretching 12bits depth to 16bits depth
+                        if(bitDepth == 16 && (bitStretch != 0))
                         {
-                            tmp[i] <<= bitStretch;
+                            u_int16_t* tmp = (u_int16_t*)imageBuffer;
+                            for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                            {
+                                tmp[i] <<= bitStretch;
+                            }
                         }
+
+                        // binning if needed
+                        if(binning)
+                            PrimaryCCD.binFrame();
+
+                        // exposure done
+                        ExposureComplete(&PrimaryCCD);
+                        break;
+
+                    case SVB_ERROR_TIMEOUT:
+                        LOG_DEBUG("Timeout for image data retrieval.");
+                        // set retry timer for SVGGetVideoData
+                        timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
+                        break;
+
+                    default:
+                        LOGF_INFO("Error retrieval image data (status:%d)", status);
+                        // Exposure be aborted. Error in SVBGetVideoData
+                        PrimaryCCD.setExposureFailed(); // The exposure will be restarted after calling PrimaryCCD.setExposureFailed().
+                        PrimaryCCD.setExposureLeft(0);
+                        InExposure = false;
+                        break;
                     }
-
-                    // binning if needed
-                    if(binning)
-                        PrimaryCCD.binFrame();
-
-                    // exposure done
-                    ExposureComplete(&PrimaryCCD);
                 }
             }
         }
