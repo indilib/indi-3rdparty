@@ -18,6 +18,8 @@ if (APPLE)
 
   set_property (TARGET altaircam PROPERTY IMPORTED_LOCATION "mac/libaltaircam.bin")
 
+  FIX_LIBRARY_ID("libaltaircam" "mac/libaltaircam.bin" "ALTAIR")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

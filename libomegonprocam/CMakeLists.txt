@@ -18,6 +18,8 @@ if (APPLE)
 
   set_property (TARGET omegonprocam PROPERTY IMPORTED_LOCATION "mac/libomegonprocam.bin")
 
+  FIX_LIBRARY_ID("libomegonprocam" "mac/libomegonprocam.bin" "OMEGON")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

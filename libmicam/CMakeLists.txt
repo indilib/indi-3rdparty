@@ -20,6 +20,8 @@ if (APPLE)
 
   set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdmac.bin")
 
+  FIX_LIBRARY_ID("libgxccd" "libgxccdmac.bin" "Moravian/GXCCD")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
