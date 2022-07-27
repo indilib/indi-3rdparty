@@ -18,6 +18,8 @@ if (APPLE)
 
   set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "mac/libnncam.bin")
 
+  FIX_LIBRARY_ID("libnncam" "mac/libnncam.bin" "Levenhuk (libnncam)")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

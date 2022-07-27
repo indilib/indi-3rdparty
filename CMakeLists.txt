@@ -16,6 +16,45 @@ if (APPLE)
 include_directories( "/usr/local/include")
     ## This one is needed for Craft
 include_directories("${CMAKE_INSTALL_PREFIX}/include")
+
+# FIX_LIBRARY_ID Macro
+# On MacOS, the Install ID of the library is used for linking with the programs that need them.
+# If a version number is used in the install ID, linking could fail.  (Example: @rpath/libqhyccd.20.dylib)
+# If @loader_path, @executable_path, or an absolute path are used and the library is installed or packaged differently than that,
+# linking could fail (Example: @loader_path/libASICamera2.dylib or /usr/local/lib/libsbig.dylib).
+# It is easiest to make the Install ID with just rpath and the name of the library (Examples: @rpath/libqhyccd.dylib and @rpath/libASICamera2.dylib).
+# Then when linking, it will use that path for linking, and the program just has to have the right rpath.
+# It will not matter then if the library is located in /usr/local/lib or bundled in an app bundle.
+# This code will check the library for these errors, correct them and give warnings.
+macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
+    execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | tail -n 1 | tr -d '\n'" OUTPUT_VARIABLE DYLIB_ID)
+    if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
+      message (WARNING
+          "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
+          "Please let the maintainer for ${LIBRARY_DISPLAY_NAME} know about the issue."
+          "Changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
+      )
+      execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
+    endif (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
+
+    # This section corrects absolute or bad links to libusb
+    execute_process(COMMAND bash "-c" "otool -L ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | cut -d ' ' -f1" OUTPUT_VARIABLE LINKS_LIST)
+    string (REPLACE "\t" "" LINKS_LIST "${LINKS_LIST}")
+    string (REPLACE "\n" ";" LINKS_LIST "${LINKS_LIST}")
+    foreach(LINK IN LISTS LINKS_LIST)
+        if("${LINK}" MATCHES "libusb-1.0.0")
+            if (NOT "${LINK}" STREQUAL "@rpath/libusb-1.0.0.dylib")
+                message (WARNING
+                    "The mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to "
+                    "${LINK} which could cause issues if libusb-1.0.0 is not actually at that location. "
+                    "Changing the link to @rpath/libusb-1.0.0.dylib for better compatibility."
+                )
+                execute_process(COMMAND bash "-c" "install_name_tool -change ${LINK} @rpath/libusb-1.0.0.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
+            endif (NOT "${LINK}" STREQUAL "@rpath/libusb-1.0.0.dylib")
+        endif("${LINK}" MATCHES "libusb-1.0.0")
+    endforeach(LINK IN LISTS LINKS_LIST)
+endmacro(FIX_LIBRARY_ID)
+
 endif(APPLE)
 
 set(LIBRARIES_FOUND TRUE)

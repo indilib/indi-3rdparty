@@ -18,6 +18,8 @@ if (APPLE)
 
   set_property (TARGET toupcam PROPERTY IMPORTED_LOCATION "mac/libtoupcam.bin")
 
+  FIX_LIBRARY_ID("libtoupcam" "mac/libtoupcam.bin" "TOUPCAM")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

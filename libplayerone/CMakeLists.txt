@@ -20,6 +20,8 @@ if (APPLE)
 
   set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "mac/libPlayerOneCamera.bin")
 
+  FIX_LIBRARY_ID("libPlayerOneCamera" "mac/libPlayerOneCamera.bin" "PLAYER ONE")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

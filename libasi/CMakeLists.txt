@@ -40,6 +40,11 @@ if (APPLE)
   set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "mac/libUSB2ST4Conv.bin")
   set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "mac/libEAFFocuser.bin")
 
+  FIX_LIBRARY_ID("libASICamera2" "mac/libASICamera2.bin" "ASI/ZWO")
+  FIX_LIBRARY_ID("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
+  FIX_LIBRARY_ID("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
+  FIX_LIBRARY_ID("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

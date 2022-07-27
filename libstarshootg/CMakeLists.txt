@@ -18,6 +18,8 @@ if (APPLE)
 
   set_property (TARGET starshootg PROPERTY IMPORTED_LOCATION "mac/libstarshootg.bin")
 
+  FIX_LIBRARY_ID("libstarshootg" "mac/libstarshootg.bin" "StarShoot")
+
 elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")

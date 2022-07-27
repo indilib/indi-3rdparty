@@ -21,6 +21,8 @@ elseif (APPLE)
 
     set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_mac64.bin")
 
+    FIX_LIBRARY_ID("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
+
 elseif (UNIX)
 
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
