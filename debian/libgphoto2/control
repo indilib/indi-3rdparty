@@ -47,7 +47,7 @@ Description: gphoto2 digital camera library (development files)
 
 Package: libgphoto2-dev-doc
 Section: doc
-Architecture: all
+Architecture: any
 Depends: libjs-jquery, ${misc:Depends}
 Description: gphoto2 digital camera library (development documentation)
  The gphoto2 library can be used by applications to access various
@@ -90,7 +90,7 @@ Description: gphoto2 digital camera library
 
 Package: libgphoto2-l10n
 Section: localization
-Architecture: all
+Architecture: any
 Multi-Arch: foreign
 Depends: ${misc:Depends}
 Description: gphoto2 digital camera library - localized messages
