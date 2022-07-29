@@ -42,9 +42,6 @@
                 <version>@DUINOPOWERBOX_VERSION_MAJOR@.@DUINOPOWERBOX_VERSION_MINOR@</version>
         </device>
 </devGroup>
-
-
-</devGroup>
 <devGroup group="Weather">
     <device label="Arduino MeteoStation" skel="meteostation_sk.xml" manufacturer="DIY">
             <driver name="Arduino MeteoStation">indi_duino</driver>
