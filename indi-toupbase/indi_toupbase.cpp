@@ -2061,8 +2061,7 @@ void ToupBase::TimerHit()
             timeleft = 0;
         PrimaryCCD.setExposureLeft(timeleft);
     }
-
-    if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
+    else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
         double currentTemperature = TemperatureN[0].value;
         int16_t nTemperature = 0;
