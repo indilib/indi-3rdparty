@@ -1,3 +1,9 @@
+libomegonprocam (1.53.0) bionic; urgency=medium
+
+  * Upstream release
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 30 Jul 2022 18:00:00 +0300
+
 libomegonprocam (1.0.0) bionic; urgency=medium
 
   * Initial release
