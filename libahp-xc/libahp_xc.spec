@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: libahp-xc
-Version:1.9.6.git
+Version:1.9.8.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
