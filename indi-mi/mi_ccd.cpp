@@ -1003,13 +1003,14 @@ bool MICCD::saveConfigItems(FILE *fp)
     return true;
 }
 
-void MICCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void MICCD::addFITSKeywords(INDI::CCDChip *targetChip)
 {
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
+    INDI::CCD::addFITSKeywords(targetChip);
 
     char svalue[256];
     int ivalue = 0;
     int status = 0;
+    auto fptr = *targetChip->fitsFilePointer();
 
     if (hasGain)
         fits_update_key_dbl(fptr, "GAIN", GainN[0].value, 3, "Gain", &status);
