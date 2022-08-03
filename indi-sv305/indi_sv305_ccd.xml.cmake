@@ -5,5 +5,9 @@
                 <driver name="SVBONY SV305">indi_sv305_ccd</driver>
                 <version>@SV305_VERSION_MAJOR@.@SV305_VERSION_MINOR@</version>
 	</device>
+        <device label="SVBONY CCD" mdpd="true" manufacturer="SVBONY">
+                <driver name="SVBONY CCD">indi_sv305_ccd</driver>
+                <version>@SV305_VERSION_MAJOR@.@SV305_VERSION_MINOR@</version>
+	</device>
 </devGroup>
 </driversList>
