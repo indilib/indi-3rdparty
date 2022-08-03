@@ -41,6 +41,18 @@
 // driver afterwards.
 extern char *__progname;
 
+static char *rtrim(char *str)
+{
+    if (!str)
+        return str;
+
+    char *end = str + strlen(str) - 1;
+    while (end >= str && isspace(*end))
+        end--;
+    *(end + 1) = '\0';
+    return str;
+}
+
 static class Loader
 {
         std::deque<std::unique_ptr<MICCD>> cameras;
@@ -103,12 +115,7 @@ MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
     }
     else
     {
-        // trim trailing spaces
-        char *end = sp + strlen(sp) - 1;
-        while (end > sp && isspace(*end))
-            end--;
-        *(end + 1) = '\0';
-
+        rtrim(sp);
         snprintf(name, MAXINDINAME, "MI %s", sp);
         IDLog("Detected camera: %s.\n", name);
     }
@@ -488,7 +495,10 @@ bool MICCD::StartExposure(float duration)
         int y = PrimaryCCD.getSubY() / PrimaryCCD.getBinY();
         int w = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
         int d = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-        gxccd_start_exposure(cameraHandle, duration, useShutter, x, y, w, d);
+        // invert frame, libgxccd has 0 on the bottom
+        int fd = PrimaryCCD.getYRes() / PrimaryCCD.getBinY();
+        int fy = fd - y - d;
+        gxccd_start_exposure(cameraHandle, duration, useShutter, x, fy, w, d);
     }
 
     ExposureRequest = duration;
@@ -529,12 +539,12 @@ bool MICCD::UpdateCCDFrame(int x, int y, int w, int h)
     long x_2 = x_1 + (w / PrimaryCCD.getBinX());
     long y_2 = y_1 + (h / PrimaryCCD.getBinY());
 
-    if (x_2 > PrimaryCCD.getXRes())
+    if (x_2 > PrimaryCCD.getXRes() / PrimaryCCD.getBinX())
     {
         LOGF_ERROR("Error: Requested width out of bounds %ld", x_2);
         return false;
     }
-    else if (y_2 > PrimaryCCD.getYRes())
+    else if (y_2 > PrimaryCCD.getYRes() / PrimaryCCD.getBinY())
     {
         LOGF_ERROR("Error: Requested height out of bounds %ld", y_2);
         return false;
@@ -991,4 +1001,52 @@ bool MICCD::saveConfigItems(FILE *fp)
         IUSaveConfigNumber(fp, &GainNP);
 
     return true;
+}
+
+void MICCD::addFITSKeywords(INDI::CCDChip *targetChip)
+{
+    INDI::CCD::addFITSKeywords(targetChip);
+
+    char svalue[256];
+    int ivalue = 0;
+    int status = 0;
+    auto fptr = *targetChip->fitsFilePointer();
+
+    if (hasGain)
+        fits_update_key_dbl(fptr, "GAIN", GainN[0].value, 3, "Gain", &status);
+
+    if (!gxccd_get_integer_parameter(cameraHandle, GIP_MAX_PIXEL_VALUE, &ivalue))
+        fits_update_key_lng(fptr, "DATAMAX", ivalue, "", &status);
+
+    if (numReadModes > 0)
+    {
+        ivalue = IUFindOnSwitchIndex(&ReadModeSP);
+        strncpy(svalue, ReadModeS[ivalue].label, sizeof(svalue));
+    }
+    else
+    {
+        ivalue = 0;
+        strncpy(svalue, "No read mode", sizeof(svalue));
+    }
+    fits_update_key_lng(fptr, "READMODE", ivalue, svalue, &status);
+
+    if (!gxccd_get_string_parameter(cameraHandle, GSP_CHIP_DESCRIPTION, svalue, 256))
+    {
+        rtrim(svalue);
+        fits_update_key_str(fptr, "CHIPTYPE", svalue, "", &status);
+
+        if (!strcmp(svalue, "GSENSE4040"))
+        {
+            // we use hardcoded values here, because:
+            // - so far there is no possibility to read / set HDR threshold in libgxccd
+            // - it's not even easy to find out if the camera supports HDR...
+            fits_update_key_lng(fptr, "HDRTHRES", 3600, "", &status);
+        }
+    }
+
+    if (canDoPreflash)
+    {
+        fits_update_key_dbl(fptr, "PREFLASH", PreflashN[0].value, 3, "seconds", &status);
+        fits_update_key_lng(fptr, "NUM-CLR", PreflashN[1].value, "", &status);
+    }
 }
