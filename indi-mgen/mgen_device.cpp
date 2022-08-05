@@ -44,8 +44,11 @@
 #include "mgen_device.h"
 
 // There is no official way to detect the version of the FTDI library from headers, hence this ugly method
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 int ftdi_tcioflush() __attribute__((weak));
 int ftdi_tcioflush(struct ftdi_context *ftdi) { return ftdi_usb_purge_buffers(ftdi); }
+#pragma GCC diagnostic pop
 
 MGenDevice::MGenDevice()
     : _lock(), ftdi(NULL), is_device_connected(false), tried_turn_on(false), mode(OPM_UNKNOWN), vid(0), pid(0)
