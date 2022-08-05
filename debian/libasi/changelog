@@ -1,3 +1,13 @@
+libasi (1.25) UNRELEASED; urgency=medium
+
+  * ASI Camera SDK 1.26 release. Changelog:
+    V1.26 2022.8.4
+    (1) Fixed the bug of ASI432
+    (2) Optimized the middle gain of 432;411;461;585;662;678;2600;6200
+    (3) Fixed the crash problem on ARMV8
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Fri, 05 Aug 2022 14:18:30 +0300
+
 libasi (1.24) buster; urgency=medium
 
   * ASI Camera SDK 1.25 release. Changelog including updated entry for
