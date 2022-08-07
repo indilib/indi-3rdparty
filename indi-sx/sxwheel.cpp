@@ -98,6 +98,12 @@ bool SXWHEEL::initProperties()
     INDI::FilterWheel::initProperties();
     addDebugControl();
     addSimulationControl();
+
+    MovementModeSP[UNIDIRECTIONAL].fill("UNIDIRECTIONAL", "Unidirectional", ISS_OFF);
+    MovementModeSP[BIDIRECTIONAL].fill("BIDIRECTIONAL", "Bidirectional", ISS_ON);
+    MovementModeSP.fill(getDeviceName(), "MOVEMENT", "Movement", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
+    defineProperty(&MovementModeSP);
+
     return true;
 }
 
@@ -106,7 +112,7 @@ int SXWHEEL::SendWheelMessage(int a, int b)
     if (isSimulation())
     {
         LOGF_DEBUG("simulation: command %d %d", a, b);
-        if (a > 0)
+        if (a >= 0x80)
             CurrentFilter = a - 0x80;
         FilterSlotN[0].max = 5;
         return 0;
@@ -146,7 +152,14 @@ int SXWHEEL::QueryFilter()
 bool SXWHEEL::SelectFilter(int f)
 {
     TargetFilter = f;
-    SendWheelMessage(f + 0x80, 0);
+    if(MovementModeSP[BIDIRECTIONAL].s == ISS_ON)
+    {
+        SendWheelMessage(f + 0x80, 0);
+    }
+    else
+    {
+        SendWheelMessage(f, 0);
+    }
     SetTimer(250);
     return true;
 }
@@ -162,4 +175,27 @@ void SXWHEEL::TimerHit()
     {
         SelectFilterDone(CurrentFilter);
     }
+}
+
+bool SXWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    // ignore if not ours
+    if (!dev || strcmp(dev, getDeviceName()))
+        return false;
+
+    if (MovementModeSP.isNameMatch(name))
+    {
+        MovementModeSP.update(states, names, n);
+        MovementModeSP.apply();
+        return true;
+    }
+    return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool SXWHEEL::saveConfigItems(FILE *fp)
+{
+    INDI::FilterWheel::saveConfigItems(fp);
+
+    MovementModeSP.save(fp);
+    return true;
 }
