@@ -143,7 +143,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
-            LOG_DEBUG( "ERROR in getIRSkyTemperature" );
+            LOG_ERROR( "ERROR in getIRSkyTemperature" );
             return false;
         }
 
@@ -151,14 +151,14 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
-            LOG_DEBUG( "ERROR in getIRSensorTemperature" );
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
             return false;
         }
 
         check = getRainFrequency(&rainFrequency[i]);
         if (!check)
         {
-            LOG_DEBUG( "ERROR in getIRSensorTemperature" );
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
             return false;
         }
 
@@ -166,7 +166,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
-            LOG_DEBUG( "ERROR in getValues" );
+            LOG_ERROR( "ERROR in getValues" );
             return false;
         }
 
@@ -174,7 +174,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
-            LOG_DEBUG( "ERROR in getWindSpeed" );
+            LOG_ERROR( "ERROR in getWindSpeed" );
             return false;
         }
 
@@ -184,7 +184,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
             if (!check)
             {
-                LOG_DEBUG( "ERROR in getHumidity" );
+                LOG_ERROR( "ERROR in getHumidity" );
                 return false;
             }
         }
@@ -196,7 +196,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
             if (!check)
             {
-                LOG_DEBUG( "ERROR in getPressure" );
+                LOG_ERROR( "ERROR in getPressure" );
                 return false;
             }
         }
