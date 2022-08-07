@@ -29,26 +29,36 @@
 #pragma once
 
 #include <indifilterwheel.h>
+#include <indipropertyswitch.h>
 
 #include <hidapi.h>
 
 class SXWHEEL : public INDI::FilterWheel
 {
-  private:
-    hid_device *handle;
-    int SendWheelMessage(int a, int b);
+    private:
+        hid_device *handle;
+        int SendWheelMessage(int a, int b);
+        enum MovementMode
+        {
+            UNIDIRECTIONAL,
+            BIDIRECTIONAL
+        };
+        INDI::PropertySwitch MovementModeSP{2};
 
-  public:
-    SXWHEEL();
-    ~SXWHEEL();
+    public:
+        SXWHEEL();
+        ~SXWHEEL();
 
-    bool Connect();
-    bool Disconnect();
-    const char *getDefaultName();
+        bool Connect() override;
+        bool Disconnect() override;
+        const char *getDefaultName() override;
 
-    bool initProperties();
+        bool initProperties() override;
 
-    int QueryFilter();
-    bool SelectFilter(int);
-    void TimerHit();
+        int QueryFilter() override;
+        bool SelectFilter(int) override;
+        void TimerHit() override;
+
+        bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        bool saveConfigItems(FILE *fp) override;
 };

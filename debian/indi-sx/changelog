@@ -1,3 +1,9 @@
+indi-sx (1.16) jammy; urgency=low
+
+  * Added option for unidirectional motion to SX wheels
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sun, 07 Aug 2022 14:47:12 +0300
+
 indi-sx (1.15) bionic; urgency=low
 
   * Fixed bayer option.
