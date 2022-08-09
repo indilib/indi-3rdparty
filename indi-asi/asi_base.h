@@ -142,6 +142,8 @@ class ASIBase : public INDI::CCD
 
         INDI::PropertyNumber  ADCDepthNP   {1};
         INDI::PropertyText    SDKVersionSP {1};
+        INDI::PropertyText    SerialNumberTP {1};
+        INDI::PropertyText    NicknameTP {1};
 
         INDI::PropertyNumber  BlinkNP {2};
         enum
@@ -157,7 +159,7 @@ class ASIBase : public INDI::CCD
             FLIP_VERTICAL
         };
 
-        std::string mCameraName, mCameraID;
+        std::string mCameraName, mCameraID, mSerialNumber, mNickname;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};
         ASI_IMG_TYPE mCurrentVideoFormat;
