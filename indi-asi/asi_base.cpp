@@ -464,8 +464,11 @@ bool ASIBase::updateProperties()
         defineProperty(BlinkNP);
         defineProperty(ADCDepthNP);
         defineProperty(SDKVersionSP);
-        defineProperty(SerialNumberTP);
-        defineProperty(NicknameTP);
+        if (!mSerialNumber.empty())
+        {
+            defineProperty(SerialNumberTP);
+            defineProperty(NicknameTP);
+        }
     }
     else
     {
