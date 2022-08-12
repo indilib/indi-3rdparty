@@ -28,10 +28,10 @@ class ASICCD : public ASIBase
 {
     public:
         explicit ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
-                  const std::string &serialNumber);
+                        const std::string &serialNumber);
     protected:
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-  
+
     private:
         void loadNicknames();
         void saveNicknames();

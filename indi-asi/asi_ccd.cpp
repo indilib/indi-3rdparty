@@ -100,8 +100,10 @@ static class Loader
 
                 ASI_SN serialNumber;
                 std::string serialNumberStr = "";
-                if(ASIOpenCamera(cameraInfo.CameraID) == ASI_SUCCESS) {
-                    if (ASIGetSerialNumber(cameraInfo.CameraID, &serialNumber) == ASI_SUCCESS) {
+                if(ASIOpenCamera(cameraInfo.CameraID) == ASI_SUCCESS)
+                {
+                    if (ASIGetSerialNumber(cameraInfo.CameraID, &serialNumber) == ASI_SUCCESS)
+                    {
                         ASICloseCamera(cameraInfo.CameraID);
                         char snChars[100];
                         auto &sn = serialNumber;
@@ -147,23 +149,28 @@ static class Loader
 
 namespace
 {
-  
+
 // trim from start (in place)
-static inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+static inline void ltrim(std::string &s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
+    {
         return !std::isspace(ch);
     }));
 }
 
 // trim from end (in place)
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+static inline void rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
+    {
         return !std::isspace(ch);
     }).base(), s.end());
 }
 
 // trim from both ends (in place)
-static inline void trim(std::string &s) {
+static inline void trim(std::string &s)
+{
     ltrim(s);
     rtrim(s);
 }
@@ -201,7 +208,7 @@ void ASICCD::loadNicknames()
 {
     const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
     mNicknames.clear();
-    
+
     LilXML *xmlHandle = newLilXML();
     XMLEle *rootXmlNode = nullptr;
     char errorMessage[512] = {0};
@@ -210,11 +217,11 @@ void ASICCD::loadNicknames()
     {
         rootXmlNode = readXMLFile(file, xmlHandle, errorMessage);
         fclose(file);
-    } 
+    }
     delLilXML(xmlHandle);
 
     if (rootXmlNode == nullptr)
-      return;
+        return;
 
     XMLEle *currentXmlNode = nextXMLEle(rootXmlNode, 1);
     while (currentXmlNode)
@@ -222,11 +229,11 @@ void ASICCD::loadNicknames()
         const char *id = findXMLAttValu(currentXmlNode, ATTRIBUTE);
         if (id != nullptr)
         {
-          std::string name = pcdataXMLEle(currentXmlNode);
-          if (!name.empty())
-            trim(name);
-          if (!name.empty())
-            mNicknames[id] = name;
+            std::string name = pcdataXMLEle(currentXmlNode);
+            if (!name.empty())
+                trim(name);
+            if (!name.empty())
+                mNicknames[id] = name;
         }
         currentXmlNode = nextXMLEle(rootXmlNode, 0);
     }
@@ -256,7 +263,7 @@ void ASICCD::saveNicknames()
     delXMLEle(rootXmlNode);
 }
 
- 
+
 bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
@@ -283,7 +290,9 @@ bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
                 }
                 saveNicknames();
                 LOG_INFO("The driver must now be restarted for this change to take effect.");
-            } else {
+            }
+            else
+            {
                 LOG_INFO("Can't apply nickname change--serial number not known.");
             }
             NicknameTP.apply();
@@ -302,7 +311,7 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
     mCameraInfo = camInfo;
     mSerialNumber = serialNumber;
 
-    loadNicknames();    
+    loadNicknames();
     if (!serialNumber.empty())
     {
         auto nickname = mNicknames[mSerialNumber];
@@ -313,7 +322,7 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
             mNickname = nickname;
             LOGF_INFO("Using nickname %s for serial number %s.", nickname.c_str(), mSerialNumber.c_str());
             return;
-        }      
+        }
     }
 
     setDeviceName(cameraName.c_str());

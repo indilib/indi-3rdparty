@@ -350,7 +350,7 @@ bool ASIBase::initProperties()
 
     NicknameTP[0].fill("nickname", "nickname", mNickname);
     NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
-    
+
     int maxBin = 1;
 
     for (const auto &supportedBin : mCameraInfo.SupportedBins)
@@ -496,8 +496,11 @@ bool ASIBase::updateProperties()
 
         deleteProperty(BlinkNP.getName());
         deleteProperty(SDKVersionSP.getName());
-        deleteProperty(SerialNumberTP.getName());
-        deleteProperty(NicknameTP.getName());
+        if (!mSerialNumber.empty())
+        {
+            deleteProperty(SerialNumberTP.getName());
+            deleteProperty(NicknameTP.getName());
+        }
         deleteProperty(ADCDepthNP.getName());
     }
 
