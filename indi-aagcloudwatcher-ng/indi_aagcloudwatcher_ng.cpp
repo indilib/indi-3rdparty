@@ -592,20 +592,20 @@ bool AAGCloudWatcher::sendData()
         return false;
 
     INumberVectorProperty *nvp = getNumber("readings");
-    nvp->np[SENSOR_SUPPLY].value = data.supply;
-    nvp->np[SENSOR_SKY].value = data.sky;
-    nvp->np[SENSOR_SENSOR].value = data.sensor;
-    nvp->np[SENSOR_AMBIENT].value = data.ambient;
-    nvp->np[SENSOR_RAIN].value = data.rain;
-    nvp->np[SENSOR_RAIN_HEATER].value = data.rainHeater;
-    nvp->np[SENSOR_RAIN_TEMPERATURE].value = data.rainTemperature;
-    nvp->np[SENSOR_LDR].value = data.ldr;
-    nvp->np[SENSOR_READ_CYCLES].value = data.readCycle;
+    nvp->np[RAW_SENSOR_SUPPLY].value = data.supply;
+    nvp->np[RAW_SENSOR_SKY].value = data.sky;
+    nvp->np[RAW_SENSOR_SENSOR].value = data.sensor;
+    nvp->np[RAW_SENSOR_AMBIENT].value = data.ambient;
+    nvp->np[RAW_SENSOR_RAIN].value = data.rain;
+    nvp->np[RAW_SENSOR_RAIN_HEATER].value = data.rainHeater;
+    nvp->np[RAW_SENSOR_RAIN_TEMPERATURE].value = data.rainTemperature;
+    nvp->np[RAW_SENSOR_LDR].value = data.ldr;
+    nvp->np[RAW_SENSOR_READ_CYCLES].value = data.readCycle;
     lastReadPeriod = data.readCycle;
-    nvp->np[SENSOR_WIND_SPEED].value = data.windSpeed;
-    nvp->np[SENSOR_RELATIVE_HUMIDITY].value = data.humidity;
-    nvp->np[SENSOR_PRESSURE].value = data.pressure;
-    nvp->np[SENSOR_TOTAL_READINGS].value = data.totalReadings;
+    nvp->np[RAW_SENSOR_WIND_SPEED].value = data.windSpeed;
+    nvp->np[RAW_SENSOR_RELATIVE_HUMIDITY].value = data.humidity;
+    nvp->np[RAW_SENSOR_PRESSURE].value = data.pressure;
+    nvp->np[RAW_SENSOR_TOTAL_READINGS].value = data.totalReadings;
     nvp->s = IPS_OK;
     IDSetNumber(nvp, nullptr);
 
@@ -621,9 +621,10 @@ bool AAGCloudWatcher::sendData()
     INumberVectorProperty *nvpS = getNumber("sensors");
 
     float skyTemperature = float(data.sky) / 100.0;
-    nvpS->np[0].value = skyTemperature;
-    nvpS->np[1].value = float(data.sensor) / 100.0;
-    nvpS->np[2].value = data.rain;
+    nvpS->np[SENSOR_INFRARED_SKY].value = skyTemperature;
+    nvpS->np[SENSOR_INFRARED_SENSOR].value = float(data.sensor) / 100.0;
+
+    nvpS->np[SENSOR_RAIN_SENSOR].value = data.rain;
 
     float rainSensorTemperature = data.rainTemperature;
     if (rainSensorTemperature > 1022)
@@ -639,11 +640,11 @@ bool AAGCloudWatcher::sendData()
     rainSensorTemperature =
         1.0 / (rainSensorTemperature / constants.rainBetaFactor + 1.0 / (ABS_ZERO + 25.0)) - ABS_ZERO;
 
-    nvpS->np[3].value = rainSensorTemperature;
+    nvpS->np[SENSOR_RAIN_SENSOR_TEMPERATURE].value = rainSensorTemperature;
 
     float rainSensorHeater = data.rainHeater;
     rainSensorHeater       = 100.0 * rainSensorHeater / 1023.0;
-    nvpS->np[4].value = rainSensorHeater;
+    nvpS->np[SENSOR_RAIN_SENSOR_HEATER].value = rainSensorHeater;
 
     float ambientLight = float(data.ldr);
     if (ambientLight > 1022.0)
@@ -655,7 +656,7 @@ bool AAGCloudWatcher::sendData()
         ambientLight = 1.0;
     }
     ambientLight = constants.ldrPullUpResistance / ((1023.0 / ambientLight) - 1.0);
-    nvpS->np[5].value  = ambientLight;
+    nvpS->np[SENSOR_BRIGHTNESS_SENSOR].value  = ambientLight;
 
     setParameterValue("WEATHER_BRIGHTNESS", ambientLight);
 
@@ -681,7 +682,7 @@ bool AAGCloudWatcher::sendData()
             1.0 / (ambientTemperature / constants.ambientBetaFactor + 1.0 / (ABS_ZERO + 25.0)) - ABS_ZERO;
     }
 
-    nvpS->np[6].value = ambientTemperature;
+    nvpS->np[SENSOR_AMBIENT_TEMPERATURE_SENSOR].value = ambientTemperature;
 
     INumberVectorProperty *nvpSky = getNumber("skyCorrection");
     float k1                      = getNumberValueFromVector(nvpSky, "k1");
@@ -694,10 +695,10 @@ bool AAGCloudWatcher::sendData()
         skyTemperature - ((k1 / 100.0) * (ambientTemperature - k2 / 10.0) +
                           (k3 / 100.0) * pow(exp(k4 / 1000 * ambientTemperature), (k5 / 100.0)));
 
-    nvpS->np[7].value = correctedTemperature;
-    nvpS->np[8].value = data.windSpeed;
-    nvpS->np[9].value = data.humidity;
-    nvpS->np[10].value = data.pressure;
+    nvpS->np[SENSOR_CORRECTED_INFRARED_SKY].value = correctedTemperature;
+    nvpS->np[SENSOR_WIND_SPEED].value = data.windSpeed;
+    nvpS->np[SENSOR_HUMIDITY].value = data.humidity;
+    nvpS->np[SENSOR_PRESSURE].value = data.pressure;
     nvpS->s = IPS_OK;
     IDSetNumber(nvpS, nullptr);
 
@@ -817,7 +818,7 @@ bool AAGCloudWatcher::resetData()
     nvpE->s = IPS_IDLE;
     IDSetNumber(nvpE, nullptr);
 
-    const int N_SENS = 9;
+    const int N_SENS = 10;
     double valuesS[N_SENS];
     char *namesS[N_SENS];
 
@@ -838,16 +839,21 @@ bool AAGCloudWatcher::resetData()
 
     namesS[5]  = const_cast<char *>("brightnessSensor");
     valuesS[5] = 0.0;
+
     setParameterValue("WEATHER_BRIGHTNESS", 0);
 
-    namesS[6]  = const_cast<char *>("ambientTemperatureSensor");
+    namesS[6]  = const_cast<char *>("correctedInfraredSky");
     valuesS[6] = 0.0;
 
-    namesS[7]  = const_cast<char *>("correctedInfraredSky");
+    namesS[7]  = const_cast<char *>("ambientTemperatureSensor");
     valuesS[7] = 0.0;
 
-    namesS[6]  = const_cast<char *>("windSpeed");
-    valuesS[6] = 0.0;
+    namesS[8]  = const_cast<char *>("windSpeed");
+    valuesS[8] = 0.0;
+
+    namesS[9]  = const_cast<char *>("pressure");
+    valuesS[9] = 0.0;
+
     setParameterValue("WEATHER_WIND_SPEED", 0);
 
     INumberVectorProperty *nvpS = getNumber("sensors");

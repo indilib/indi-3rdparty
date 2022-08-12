@@ -1,4 +1,4 @@
-AAG Cloud Watcher INDI Driver v1.3
+AAG Cloud Watcher INDI Driver v1.7
 
 A INDI driver for the AAG Cloud Watcher (AAGware - http://www.aagware.eu/)
 
@@ -7,6 +7,11 @@ A INDI driver for the AAG Cloud Watcher (AAGware - http://www.aagware.eu/)
   
   Anemometer code contributed by Joao Bento.
 
+Version 1.7
+
+  + Added Debug Output
+  + Handling Devices with Firmware >= 5.8 but no humidity and pressure sensor
+  + Fixed Sensor Tab Mapping
 
 Version 1.3
 

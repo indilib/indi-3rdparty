@@ -80,19 +80,34 @@ class AAGCloudWatcher : public INDI::Weather
 
         enum
         {
-            SENSOR_SUPPLY,
-            SENSOR_SKY,
-            SENSOR_SENSOR,
-            SENSOR_AMBIENT,
-            SENSOR_RAIN,
-            SENSOR_RAIN_HEATER,
-            SENSOR_RAIN_TEMPERATURE,
-            SENSOR_LDR,
-            SENSOR_READ_CYCLES,
-            SENSOR_WIND_SPEED,
-            SENSOR_RELATIVE_HUMIDITY,
-            SENSOR_PRESSURE,
-            SENSOR_TOTAL_READINGS
+            RAW_SENSOR_SUPPLY,
+            RAW_SENSOR_SKY,
+            RAW_SENSOR_SENSOR,
+            RAW_SENSOR_AMBIENT,
+            RAW_SENSOR_RAIN,
+            RAW_SENSOR_RAIN_HEATER,
+            RAW_SENSOR_RAIN_TEMPERATURE,
+            RAW_SENSOR_LDR,
+            RAW_SENSOR_READ_CYCLES,
+            RAW_SENSOR_WIND_SPEED,
+            RAW_SENSOR_RELATIVE_HUMIDITY,
+            RAW_SENSOR_PRESSURE,
+            RAW_SENSOR_TOTAL_READINGS
+        };
+
+         enum
+        {
+            SENSOR_INFRARED_SKY, //skyTemperature
+            SENSOR_CORRECTED_INFRARED_SKY, //correctedTemperature
+            SENSOR_INFRARED_SENSOR,
+            SENSOR_RAIN_SENSOR, //data.sensor
+            SENSOR_RAIN_SENSOR_TEMPERATURE, //rainSensorTemperature
+            SENSOR_RAIN_SENSOR_HEATER, //rainSensorHeater
+            SENSOR_BRIGHTNESS_SENSOR, //ambientLight
+            SENSOR_AMBIENT_TEMPERATURE_SENSOR, //ambientTemperature
+            SENSOR_WIND_SPEED, //data.windSpeed;
+            SENSOR_HUMIDITY, //data.humidity;
+            SENSOR_PRESSURE //data.pressure;
         };
 
 };

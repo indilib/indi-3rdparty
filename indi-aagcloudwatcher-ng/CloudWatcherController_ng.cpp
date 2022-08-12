@@ -143,6 +143,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
+            LOG_ERROR( "ERROR in getIRSkyTemperature" );
             return false;
         }
 
@@ -150,13 +151,14 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
             return false;
         }
 
         check = getRainFrequency(&rainFrequency[i]);
-
         if (!check)
         {
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
             return false;
         }
 
@@ -164,6 +166,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
+            LOG_ERROR( "ERROR in getValues" );
             return false;
         }
 
@@ -171,6 +174,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
         if (!check)
         {
+            LOG_ERROR( "ERROR in getWindSpeed" );
             return false;
         }
 
@@ -180,6 +184,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
             if (!check)
             {
+                LOG_ERROR( "ERROR in getHumidity" );
                 return false;
             }
         }
@@ -191,6 +196,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
             if (!check)
             {
+                LOG_ERROR( "ERROR in getPressure" );
                 return false;
             }
         }
@@ -225,6 +231,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     if (!check)
     {
+        LOG_DEBUG( "ERROR in getIRErrors" );
         return false;
     }
 
@@ -234,6 +241,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     if (!check)
     {
+        LOG_DEBUG( "ERROR in getPWMDutyCycle" );
         return false;
     }
 
@@ -241,6 +249,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     if (!check)
     {
+        LOG_DEBUG( "ERROR in getSwitchStatus" );
         return false;
     }
 
@@ -466,7 +475,6 @@ bool CloudWatcherController::getIRSensorTemperature(int *temp)
     }
 
     int res = sscanf(inputBuffer, "!2        %d", temp);
-
     if (res != 1)
     {
         return false;
@@ -672,7 +680,12 @@ bool CloudWatcherController::getHumidity(int *humidity)
             if (h == 100)
                 return false;
 
-            *humidity = h * 125 / 65536 - 6;
+            if( h == 65535 ) {
+                *humidity = 0;
+            }
+            else {
+                *humidity = h * 125 / 65536 - 6;
+            }
 
             return true;
         }
@@ -699,13 +712,19 @@ bool CloudWatcherController::getPressure(int *pressure)
 
         if (!r)
         {
-            return false;
+            *pressure = 0;
+            return true;
         }
 
         int p = 0;
         int res = sscanf(inputBuffer, "!p       %d", &p);
 
-        *pressure = p / 16;
+        if( p == 65535 ) {
+            *pressure = 0;
+        }
+        else {
+            *pressure = p / 16;
+        }
 
         if (res != 1)
         {
@@ -904,6 +923,8 @@ bool CloudWatcherController::sendCloudwatcherCommand(const char *command, int si
     int n = 0;
     char errstr[MAXRBUF];
 
+    LOGF_DEBUG( "sendCloudwatcherCommand(%s,%i)", command, size );
+
     if ((rc = tty_write(PortFD, command, size, &n)) != TTY_OK)
     {
         tty_error_msg(rc, errstr, MAXRBUF);
@@ -932,7 +953,14 @@ bool CloudWatcherController::getCloudWatcherAnswer(char *buffer, int nBlocks)
         return false;
     }
 
+    if( buffer[0] == '!' && ( buffer[1] == 'f' || buffer[1] == 'd' ) ) {
+        LOGF_DEBUG( "skip answer %s %i", buffer, nBlocks );
+        return getCloudWatcherAnswer(buffer, nBlocks);
+    }
+
     int valid = checkValidMessage(buffer, nBlocks);
+
+    LOGF_DEBUG( "getCloudWatcherAnswer(%s,%i) = %s", buffer, nBlocks, valid ? "valid" : "invalid" );
 
     if (!valid)
     {
