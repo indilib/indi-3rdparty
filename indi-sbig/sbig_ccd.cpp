@@ -2175,16 +2175,18 @@ int SBIGCCD::GetExtendedCCDInfo()
         m_hasFilterWheel = true;
         return res;
     }
+
+    // Extended 2 Imaging caps
     gccdip.request = CCD_INFO_EXTENDED2_IMAGING;
     if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
-        LOGF_DEBUG("CCD_IMAGING Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)",
-                   results4.capabilitiesBits, results4.dumpExtra);
+        LOGF_DEBUG("CCD_IMAGING Extended CCD Info 4. CapabilitiesBit: (%u) Dump Extra (%u)", results4.capabilitiesBits,
+                   results4.dumpExtra);
     else
     {
-        LOGF_ERROR("%s: CCD_INFO_EXTENDED2_IMAGING -> (%s)", __FUNCTION__, GetErrorString(res));
-        return res;
+        LOGF_WARN("%s: CCD_INFO_EXTENDED2_IMAGING -> (%s)", __FUNCTION__, GetErrorString(res));
     }
 
+    // Extended 2 Tracking
     gccdip.request = CCD_INFO_EXTENDED2_TRACKING;
     if ((res = GetCcdInfo(&gccdip, &results4)) == CE_NO_ERROR)
     {
@@ -2197,14 +2199,13 @@ int SBIGCCD::GetExtendedCCDInfo()
     {
         m_hasGuideHead = false;
         LOGF_DEBUG("%s: CCD_INFO_EXTENDED2_TRACKING -> (%s). No guide head detected.", __FUNCTION__, GetErrorString(res));
-        return CE_NO_ERROR;
     }
 
     gccdip.request = CCD_INFO_EXTENDED3;
     if ((res = GetCcdInfo(&gccdip, &results6)) == CE_NO_ERROR)
     {
-        LOGF_DEBUG("Extended CCD Info 6. Camerabit: (%ld) CCD bits (%ld) Extra bit (%ld)",
-                   results6.cameraBits, results6.ccdBits, results6.extraBits);
+        LOGF_DEBUG("Extended CCD Info 6. Camerabit: (%ld) CCD bits (%ld) Extra bit (%ld)",   results6.cameraBits, results6.ccdBits,
+                   results6.extraBits);
         if (results6.ccdBits & 0x0001)
         {
             LOG_DEBUG("Color CCD detected.");
@@ -2237,7 +2238,7 @@ int SBIGCCD::GetExtendedCCDInfo()
     {
         m_hasFilterWheel = false;
     }
-    return res;
+    return CE_NO_ERROR;
 }
 
 //==========================================================================
