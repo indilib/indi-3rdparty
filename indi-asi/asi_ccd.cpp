@@ -296,8 +296,8 @@ bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
                 LOG_INFO("Can't apply nickname change--serial number not known.");
             }
             NicknameTP.apply();
+            return true;
         }
-        return true;
     }
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
