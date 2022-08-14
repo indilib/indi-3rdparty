@@ -22,6 +22,7 @@
 #include <libflipro.h>
 #include <indiccd.h>
 #include <indipropertyswitch.h>
+#include <indipropertytext.h>
 
 #include <inditimer.h>
 #include <indisinglethreadpool.h>
@@ -46,6 +47,7 @@ class Kepler : public INDI::CCD
 
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
     protected:
         virtual void TimerHit() override;
@@ -63,6 +65,23 @@ class Kepler : public INDI::CCD
         // INDI Properties
         //****************************************************************************************
         INDI::PropertySwitch CommunicationMethodSP {2};
+
+        INDI::PropertySwitch MergeMethodSP {2};
+        enum
+        {
+            MERGE_DEFAULT,
+            MERGE_HARDWARE
+        };
+
+        INDI::PropertySwitch MergePlanesSP {3};
+
+        INDI::PropertyText MergeCalibrationFilesTP {2};
+        enum
+        {
+            CALIBRATION_DARK,
+            CALIBRATION_FLAT
+        };
+
 
         //****************************************************************************************
         // Communication Functions
@@ -85,6 +104,12 @@ class Kepler : public INDI::CCD
 
         uint8_t m_ExposureRetry {0};
         INDI::SingleThreadPool m_Worker;
+        uint32_t m_TotalFrameBufferSize {0};
+
+        // Merging
+        FPROUNPACKEDIMAGES fproUnpacked;
+        FPROUNPACKEDSTATS  fproStats;
+        FPRO_HWMERGEENABLE mergeEnables;
 
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
 };

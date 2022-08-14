@@ -99,7 +99,7 @@ static class Loader
 
                 std::wstring make(const FPRODEVICEINFO &cameraInfo)
                 {
-                    std::wstring cameraName = std::wstring(L"FLI ") + std::wstring(cameraInfo.cFriendlyName + 4);
+                    std::wstring cameraName = std::wstring(L"FLI ") + std::wstring(cameraInfo.cFriendlyName);
                     std::wstring uniqueName = cameraName;
 
                     for (int index = 0; used[uniqueName] == true; )
@@ -187,7 +187,7 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
         std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(delay * 1e6)));
     }
 
-    uint32_t grabSize = PrimaryCCD.getFrameBufferSize();
+    uint32_t grabSize = m_TotalFrameBufferSize;
 
     // This is blocking?
     std::unique_lock<std::mutex> guard(ccdBufferLock);
@@ -212,9 +212,12 @@ Kepler::Kepler(const FPRODEVICEINFO &info, std::wstring name) : m_CameraInfo(inf
 {
     setVersion(FLI_CCD_VERSION_MAJOR, FLI_CCD_VERSION_MINOR);
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> convert;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
     auto byteName = convert.to_bytes(name);
     setDeviceName(byteName.c_str());
+
+    memset(&fproUnpacked, 0, sizeof(fproUnpacked));
+    memset(&fproStats, 0, sizeof(fproStats));
 }
 
 Kepler::~Kepler()
@@ -250,7 +253,26 @@ bool Kepler::initProperties()
     // Communication Method
     CommunicationMethodSP[FPRO_CONNECTION_USB].fill("FPRO_CONNECTION_USB", "USB", ISS_ON);
     CommunicationMethodSP[FPRO_CONNECTION_FIBRE].fill("FPRO_CONNECTION_FIBRE", "Fiber", ISS_OFF);
-    CommunicationMethodSP.fill(getDefaultName(), "COMMUNICATION_METHOD", "Connect Via", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60, IPS_IDLE);
+    CommunicationMethodSP.fill(getDeviceName(), "COMMUNICATION_METHOD", "Connect Via", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Merge Method
+    MergeMethodSP[MERGE_DEFAULT].fill("MERGE_DEFAULT", "Default", ISS_ON);
+    MergeMethodSP[MERGE_HARDWARE].fill("MERGE_HARDWARE", "Hardware", ISS_OFF);
+    MergeMethodSP.fill(getDeviceName(), "MERGE_METHOD", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Merge Planes
+    MergePlanesSP[HWMERGE_FRAME_BOTH].fill("HWMERGE_FRAME_BOTH", "Both", ISS_ON);
+    MergePlanesSP[HWMERGE_FRAME_LOWONLY].fill("HWMERGE_FRAME_LOWONLY", "Low Only", ISS_OFF);
+    MergePlanesSP[HWMERGE_FRAME_HIGHONLY].fill("HWMERGE_FRAME_HIGHONLYE", "High Only", ISS_OFF);
+    MergePlanesSP.fill(getDeviceName(), "MERGE_PLANES", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Calibration Frames (for MERGE_HARDWARE)
+    MergeCalibrationFilesTP[CALIBRATION_DARK].fill("CALIBRATION_DARK", "Dark", "");
+    MergeCalibrationFilesTP[CALIBRATION_FLAT].fill("CALIBRATION_FLAT", "Flat", "");
+    MergeCalibrationFilesTP.fill(getDeviceName(), "MERGE_CALIBRATION_FRAMES", "Calibration", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
+
+
+
 
     addAuxControls();
 
@@ -275,11 +297,19 @@ bool Kepler::updateProperties()
 
     if (isConnected())
     {
+        setup();
+
+        defineProperty(MergeMethodSP);
+        defineProperty(MergePlanesSP);
+        defineProperty(MergeCalibrationFilesTP);
 
     }
     else
     {
 
+        deleteProperty(MergeMethodSP);
+        deleteProperty(MergePlanesSP);
+        deleteProperty(MergeCalibrationFilesTP);
     }
 
     return true;
@@ -305,10 +335,86 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+        // Merge Planes
+        if (MergePlanesSP.isNameMatch(name))
+        {
+            MergePlanesSP.update(states, names, n);
+            MergePlanesSP.setState(IPS_OK);
 
+            int index = IUFindOnSwitchIndex(&MergePlanesSP);
+            fproUnpacked.bLowImageRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
+            fproUnpacked.bHighImageRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
+            fproUnpacked.bMergedImageRequest = index == HWMERGE_FRAME_BOTH;
+            fproUnpacked.bMetaDataRequest = true;
+            fproStats.bLowRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
+            fproStats.bHighRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
+            fproStats.bMergedRequest = index == HWMERGE_FRAME_BOTH;
+
+            MergePlanesSP.apply();
+            saveConfig(MergePlanesSP);
+            return true;
+        }
+
+        // Merge Methods
+        if (MergeMethodSP.isNameMatch(name))
+        {
+            int previousIndex = IUFindOnSwitchIndex(&MergeMethodSP);
+            MergeMethodSP.update(states, names, n);
+
+            switch (IUFindOnSwitchIndex(&MergeMethodSP))
+            {
+                case MERGE_DEFAULT:
+                    mergeEnables.bMergeEnable = true;
+                    mergeEnables.eMergeFrames = static_cast<FPRO_HWMERGEFRAMES>(IUFindOnSwitchIndex(&MergePlanesSP));
+                    mergeEnables.eMergeFormat = IFORMAT_RCD;
+                    break;
+                case MERGE_HARDWARE:
+                    // TODO
+                    break;
+            }
+
+
+            int result = FPROAlgo_SetHardwareMergeEnables(m_CameraHandle, mergeEnables);
+            if (result >= 0)
+            {
+                MergeMethodSP.setState(IPS_OK);
+            }
+            else
+            {
+                MergeMethodSP.setState(IPS_ALERT);
+                IUResetSwitch(&MergeMethodSP);
+                MergeMethodSP[previousIndex].setState(ISS_ON);
+                LOGF_ERROR("Error setting hardware merge enables: %d", result);
+            }
+
+            MergeMethodSP.apply();
+            saveConfig(MergeMethodSP);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+
+/********************************************************************************
+*
+********************************************************************************/
+bool Kepler::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if (dev != nullptr && !strcmp(dev, getDeviceName()))
+    {
+        if (MergeCalibrationFilesTP.isNameMatch(name))
+        {
+            MergeCalibrationFilesTP.update(texts, names, n);
+            MergeCalibrationFilesTP.setState(IPS_OK);
+            MergeCalibrationFilesTP.apply();
+            saveConfig(MergeCalibrationFilesTP);
+            return true;
+        }
+
+    }
+
+    return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
 /********************************************************************************
@@ -365,6 +471,8 @@ bool Kepler::setup()
         return false;
     }
 
+    pixelDepth = (pixelDepth > 8) ? 16 : 8;
+
     auto pixelSize = SensorPixelSize[static_cast<FPRODEVICETYPE>(m_CameraCapabilities.uiDeviceType)];
 
     if (pixelSize > 90)
@@ -372,16 +480,28 @@ bool Kepler::setup()
 
     SetCCDParams(m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight, pixelDepth, pixelSize, pixelSize);
 
+    FPROFrame_SetImageArea(m_CameraHandle, 0, 0, m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight);
+
+    uint32_t macSize = FPRO_IMAGE_DIMENSIONS_TO_FRAMEBYTES(m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight);
     // Get required frame buffer size including all the metadata and extra bits added by the SDK.
     // We need to only
-    uint32_t totalFrameBufferSize = FPROFrame_ComputeFrameSize(m_CameraHandle);
+    m_TotalFrameBufferSize = FPROFrame_ComputeFrameSize(m_CameraHandle);
     // This would allocate memory
-    PrimaryCCD.setFrameBufferSize(totalFrameBufferSize);
+    PrimaryCCD.setFrameBufferSize(m_TotalFrameBufferSize);
     // This is actual image data size
     uint32_t rawFrameSize = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     // We set it again, but without allocating memory.
     PrimaryCCD.setFrameBufferSize(rawFrameSize, false);
 
+
+    fproUnpacked.bLowImageRequest = true;
+    fproUnpacked.bHighImageRequest = true;
+    fproUnpacked.bMergedImageRequest = true;
+    fproUnpacked.bMetaDataRequest = true;
+    fproStats.bLowRequest = true;
+    fproStats.bHighRequest = true;
+    fproStats.bMergedRequest = true;
+    fproUnpacked.eMergAlgo = FPROMERGE_ALGO;
     return true;
 }
 
@@ -470,6 +590,11 @@ void Kepler::TimerHit()
 bool Kepler::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
+
+    IUSaveConfigSwitch(fp, &MergeMethodSP);
+    IUSaveConfigSwitch(fp, &MergePlanesSP);
+    IUSaveConfigText(fp, &MergeCalibrationFilesTP);
+
     return true;
 }
 
