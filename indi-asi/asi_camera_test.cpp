@@ -21,6 +21,7 @@
 
 #include <ASICamera2.h>
 #include "stdio.h"
+#include <string.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -48,9 +49,33 @@ int  main()
     {
         ASIGetCameraProperty(&ASICameraInfo, i);
         printf("%d %s\n", i, ASICameraInfo.Name);
+
+        if(ASIOpenCamera(ASICameraInfo.CameraID) != ASI_SUCCESS)
+        {
+            printf("failed to open camera id %d\n", ASICameraInfo.CameraID);
+        }
+
+        ASI_SN asi_sn;
+        if (ASIGetSerialNumber(i, &asi_sn) == ASI_SUCCESS)
+        {
+            printf("serial number for %d: ", i);
+            for (int i = 0; i < 8; ++i)
+                printf("%02x", asi_sn.id[i] & 0xff);
+            printf("\n");
+        }
+        else
+        {
+            printf("Serial number for %d is unavailable\n", i);
+        }
+
+        if(ASICloseCamera(ASICameraInfo.CameraID) != ASI_SUCCESS)
+        {
+            printf("failed to close camera id %d\n", ASICameraInfo.CameraID);
+        }
+
     }
 
-    printf("\nselect one to privew\n");
+    printf("\nselect one to preview\n");
     if (scanf("%d", &CamNum) != 1)
     {
         fprintf(stderr, "Error no input. Assuming camera 0");
@@ -64,6 +89,8 @@ int  main()
         return -1;
     }
     ASIInitCamera(CamNum);
+
+    ASIGetCameraProperty(&ASICameraInfo, CamNum);
 
     printf("%s information\n", ASICameraInfo.Name);
     int iMaxWidth, iMaxHeight;
