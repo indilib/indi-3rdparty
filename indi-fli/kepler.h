@@ -50,7 +50,6 @@ class Kepler : public INDI::CCD
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
     protected:
-        virtual void TimerHit() override;
         virtual int SetTemperature(double temperature) override;
         virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
         virtual bool UpdateCCDBin(int binx, int biny) override;
@@ -83,6 +82,7 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         bool setup();
         void prepareUnpacked();
+        void readTemperature();
 
         //****************************************************************************************
         // Workers
@@ -110,7 +110,10 @@ class Kepler : public INDI::CCD
 
         // Temperature
         double m_TargetTemperature {0};
+        INDI::Timer m_TemperatureTimer;
 
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
         static constexpr double TEMPERATURE_THRESHOLD {0.1};
+        static constexpr double TEMPERATURE_FREQUENCY_BUSY {1000};
+        static constexpr double TEMPERATURE_FREQUENCY_IDLE {5000};
 };

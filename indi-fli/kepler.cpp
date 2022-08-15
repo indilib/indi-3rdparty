@@ -241,6 +241,9 @@ Kepler::Kepler(const FPRODEVICEINFO &info, std::wstring name) : m_CameraInfo(inf
 
     memset(&fproUnpacked, 0, sizeof(fproUnpacked));
     memset(&fproStats, 0, sizeof(fproStats));
+
+    m_TemperatureTimer.callOnTimeout(std::bind(&Kepler::readTemperature, this));
+    m_TemperatureTimer.setInterval(TEMPERATURE_FREQUENCY_IDLE);
 }
 
 Kepler::~Kepler()
@@ -476,6 +479,7 @@ bool Kepler::Disconnect()
     free(m_FrameBuffer);
     m_FrameBuffer = nullptr;
     FPROCam_Close(m_CameraHandle);
+    m_TemperatureTimer.stop();
     return true;
 }
 
@@ -527,6 +531,8 @@ bool Kepler::setup()
     fproStats.bHighRequest = true;
     fproStats.bMergedRequest = true;
     fproUnpacked.eMergAlgo = FPROMERGE_ALGO;
+
+    m_TemperatureTimer.start();
     return true;
 }
 
@@ -565,6 +571,7 @@ int Kepler::SetTemperature(double temperature)
     if (result >= 0)
     {
         m_TargetTemperature = temperature;
+        m_TemperatureTimer.start(TEMPERATURE_FREQUENCY_BUSY);
         return 0;
     }
 
@@ -623,11 +630,8 @@ bool Kepler::UpdateCCDBin(int binx, int biny)
 /********************************************************************************
 *
 ********************************************************************************/
-void Kepler::TimerHit()
+void Kepler::readTemperature()
 {
-    if (isConnected() == false)
-        return;
-
     double ambient = 0, base = 0, cooler = 0;
     int result = FPROCtrl_GetTemperatures(m_CameraHandle, &ambient, &base, &cooler);
     if (result < 0)
@@ -649,7 +653,11 @@ void Kepler::TimerHit()
 
         case IPS_BUSY:
             if (std::abs(cooler - m_TargetTemperature) <= TEMPERATURE_THRESHOLD)
+            {
                 TemperatureNP.s = IPS_OK;
+                // Reset now to idle frequency checks.
+                m_TemperatureTimer.setInterval(TEMPERATURE_FREQUENCY_IDLE);
+            }
             TemperatureN[0].value = cooler;
             IDSetNumber(&TemperatureNP, nullptr);
             break;
