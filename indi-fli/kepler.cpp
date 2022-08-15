@@ -191,15 +191,36 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 
     // This is blocking?
     std::unique_lock<std::mutex> guard(ccdBufferLock);
-    result = FPROFrame_GetVideoFrame(m_CameraHandle, PrimaryCCD.getFrameBuffer(), &grabSize, timeLeft * 1000);
+    result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, nullptr);
 
     if (result >= 0)
     {
+        FPROFrame_CaptureAbort(m_CameraHandle);
+
+        // Send the merged image.
+        switch (IUFindOnSwitchIndex(&MergePlanesSP))
+        {
+            case HWMERGE_FRAME_BOTH:
+                PrimaryCCD.setFrameBuffer(reinterpret_cast<uint8_t*>(fproUnpacked.pMergedImage));
+                PrimaryCCD.setFrameBufferSize(fproUnpacked.uiMergedBufferSize, false);
+                break;
+            case HWMERGE_FRAME_HIGHONLY:
+                PrimaryCCD.setFrameBuffer(reinterpret_cast<uint8_t*>(fproUnpacked.pHighImage));
+                PrimaryCCD.setFrameBufferSize(fproUnpacked.uiHighBufferSize, false);
+                break;
+            case HWMERGE_FRAME_LOWONLY:
+                PrimaryCCD.setFrameBuffer(reinterpret_cast<uint8_t*>(fproUnpacked.pLowImage));
+                PrimaryCCD.setFrameBufferSize(fproUnpacked.uiLowBufferSize, false);
+                break;
+        }
+
         PrimaryCCD.setExposureLeft(0.0);
         if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
             LOG_INFO("Exposure done, downloading image...");
 
         ExposureComplete(&PrimaryCCD);
+
+        FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     }
     else
     {
@@ -270,8 +291,6 @@ bool Kepler::initProperties()
     MergeCalibrationFilesTP[CALIBRATION_DARK].fill("CALIBRATION_DARK", "Dark", "");
     MergeCalibrationFilesTP[CALIBRATION_FLAT].fill("CALIBRATION_FLAT", "Flat", "");
     MergeCalibrationFilesTP.fill(getDeviceName(), "MERGE_CALIBRATION_FRAMES", "Calibration", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
-
-
 
 
     addAuxControls();
@@ -452,6 +471,9 @@ bool Kepler::Connect()
 ********************************************************************************/
 bool Kepler::Disconnect()
 {
+    free(m_FrameBuffer);
+    m_FrameBuffer = nullptr;
+    FPROCam_Close(m_CameraHandle);
     return true;
 }
 
@@ -482,16 +504,17 @@ bool Kepler::setup()
 
     FPROFrame_SetImageArea(m_CameraHandle, 0, 0, m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight);
 
-    uint32_t macSize = FPRO_IMAGE_DIMENSIONS_TO_FRAMEBYTES(m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight);
     // Get required frame buffer size including all the metadata and extra bits added by the SDK.
     // We need to only
     m_TotalFrameBufferSize = FPROFrame_ComputeFrameSize(m_CameraHandle);
+
+    m_FrameBuffer = static_cast<uint8_t*>(malloc(m_TotalFrameBufferSize));
     // This would allocate memory
-    PrimaryCCD.setFrameBufferSize(m_TotalFrameBufferSize);
-    // This is actual image data size
-    uint32_t rawFrameSize = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
-    // We set it again, but without allocating memory.
-    PrimaryCCD.setFrameBufferSize(rawFrameSize, false);
+    //PrimaryCCD.setFrameBufferSize(m_TotalFrameBufferSize);
+    //    // This is actual image data size
+    //    uint32_t rawFrameSize = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    //    // We set it again, but without allocating memory.
+    //    PrimaryCCD.setFrameBufferSize(rawFrameSize, false);
 
 
     fproUnpacked.bLowImageRequest = true;

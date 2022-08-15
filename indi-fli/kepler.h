@@ -107,6 +107,7 @@ class Kepler : public INDI::CCD
         uint32_t m_TotalFrameBufferSize {0};
 
         // Merging
+        uint8_t *m_FrameBuffer {nullptr};
         FPROUNPACKEDIMAGES fproUnpacked;
         FPROUNPACKEDSTATS  fproStats;
         FPRO_HWMERGEENABLE mergeEnables;
