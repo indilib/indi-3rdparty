@@ -175,22 +175,25 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 
     // Countdown if we have a multi-second exposure.
     // For expsures less than a second, we skip this entirely.
-    float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
-    while (timeLeft >= 1)
+    double timeLeft = 0.0;
+    do
     {
+        timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
         if (isAboutToQuit)
             return;
 
-        auto delay = std::max(timeLeft - std::trunc(timeLeft), 0.005f);
+        auto delay = std::max(timeLeft - std::trunc(timeLeft), 0.005);
         timeLeft = std::round(timeLeft);
         PrimaryCCD.setExposureLeft(timeLeft);
         std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(delay * 1e6)));
     }
+    while (timeLeft > 0);
 
     uint32_t grabSize = m_TotalFrameBufferSize;
 
     // This is blocking?
     std::unique_lock<std::mutex> guard(ccdBufferLock);
+    FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, nullptr);
 
     if (result >= 0)
@@ -219,8 +222,6 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
             LOG_INFO("Exposure done, downloading image...");
 
         ExposureComplete(&PrimaryCCD);
-
-        FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     }
     else
     {
