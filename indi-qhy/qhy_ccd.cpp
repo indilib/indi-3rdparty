@@ -917,31 +917,40 @@ bool QHYCCD::Connect()
         ////////////////////////////////////////////////////////////////////
         /// Filter Wheel Support
         ////////////////////////////////////////////////////////////////////
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CFWPORT);
-        if (ret == QHYCCD_SUCCESS)
+        HasFilters = false;
+        // Try 3 times before giving up since this query is sometimes unreliable
+        for (int i = 0; i < 3; i++)
         {
-            HasFilters = true;
-
-            m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
-            LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
-            // If we get invalid value, check again in 0.5 sec
-            if (m_MaxFilterCount > 16)
+            ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CFWPORT);
+            if (ret == QHYCCD_SUCCESS)
             {
-                usleep(500000);
+                HasFilters = true;
+
                 m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
                 LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
-            }
+                // If we get invalid value, check again in 0.5 sec
+                if (m_MaxFilterCount > 16)
+                {
+                    usleep(500000);
+                    m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
+                    LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+                }
 
-            if (m_MaxFilterCount > 16)
-            {
-                LOG_DEBUG("Camera can support CFW but no filters are present.");
-                m_MaxFilterCount = -1;
-            }
+                if (m_MaxFilterCount > 16)
+                {
+                    LOG_DEBUG("Camera can support CFW but no filters are present.");
+                    m_MaxFilterCount = -1;
+                }
 
-            if (m_MaxFilterCount > 0)
-                updateFilterProperties();
+                if (m_MaxFilterCount > 0)
+                    updateFilterProperties();
+                else
+                    HasFilters = false;
+
+                break;
+            }
             else
-                HasFilters = false;
+                usleep(250000);
         }
 
         if (HasFilters)
