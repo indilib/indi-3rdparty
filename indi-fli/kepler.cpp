@@ -194,6 +194,7 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
     // This is blocking?
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
+    prepareUnpacked();
     result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, nullptr);
 
     if (result >= 0)
@@ -278,8 +279,8 @@ bool Kepler::initProperties()
     CommunicationMethodSP.fill(getDeviceName(), "COMMUNICATION_METHOD", "Connect Via", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Merge Method
-    MergeMethodSP[MERGE_DEFAULT].fill("MERGE_DEFAULT", "Default", ISS_ON);
-    MergeMethodSP[MERGE_HARDWARE].fill("MERGE_HARDWARE", "Hardware", ISS_OFF);
+    MergeMethodSP[FPROMERGE_ALGO].fill("FPROMERGE_ALGO", "Default", ISS_ON);
+    MergeMethodSP[FPROMERGE_ALGO_REF_FRAME].fill("FPROMERGE_ALGO_REF_FRAME", "Hardware", ISS_OFF);
     MergeMethodSP.fill(getDeviceName(), "MERGE_METHOD", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Merge Planes
@@ -383,12 +384,12 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 
             switch (IUFindOnSwitchIndex(&MergeMethodSP))
             {
-                case MERGE_DEFAULT:
+                case FPROMERGE_ALGO:
                     mergeEnables.bMergeEnable = true;
                     mergeEnables.eMergeFrames = static_cast<FPRO_HWMERGEFRAMES>(IUFindOnSwitchIndex(&MergePlanesSP));
                     mergeEnables.eMergeFormat = IFORMAT_RCD;
                     break;
-                case MERGE_HARDWARE:
+                case FPROMERGE_ALGO_REF_FRAME:
                     // TODO
                     break;
             }
@@ -532,9 +533,42 @@ bool Kepler::setup()
 /********************************************************************************
 *
 ********************************************************************************/
+void Kepler::prepareUnpacked()
+{
+    memset(&fproUnpacked, 0, sizeof(fproUnpacked));
+
+    // Merging Planes
+    int index = IUFindOnSwitchIndex(&MergePlanesSP);
+    fproUnpacked.bLowImageRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
+    fproUnpacked.bHighImageRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
+    fproUnpacked.bMergedImageRequest = index == HWMERGE_FRAME_BOTH;
+    fproUnpacked.bMetaDataRequest = true;
+
+    // Statistics
+    fproStats.bLowRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
+    fproStats.bHighRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
+    fproStats.bMergedRequest = index == HWMERGE_FRAME_BOTH;
+
+    // Merging Method
+    fproUnpacked.eMergAlgo = static_cast<FPRO_MERGEALGO>(IUFindOnSwitchIndex(&MergeMethodSP));
+
+}
+/********************************************************************************
+*
+********************************************************************************/
 int Kepler::SetTemperature(double temperature)
 {
-    return 0;
+    // Return OK for
+    if (std::abs(temperature - TemperatureN[0].value) < TEMPERATURE_THRESHOLD)
+        return 1;
+    int result = FPROCtrl_SetTemperatureSetPoint(m_CameraHandle, temperature);
+    if (result >= 0)
+    {
+        m_TargetTemperature = temperature;
+        return 0;
+    }
+
+    return -1;
 }
 
 /********************************************************************************
@@ -594,13 +628,30 @@ void Kepler::TimerHit()
     if (isConnected() == false)
         return;
 
+    double ambient = 0, base = 0, cooler = 0;
+    int result = FPROCtrl_GetTemperatures(m_CameraHandle, &ambient, &base, &cooler);
+    if (result < 0)
+    {
+        TemperatureNP.s = IPS_ALERT;
+        IDSetNumber(&TemperatureNP, nullptr);
+    }
+
     switch (TemperatureNP.s)
     {
         case IPS_IDLE:
         case IPS_OK:
+            if (std::abs(cooler - TemperatureN[0].value) > TEMPERATURE_THRESHOLD)
+            {
+                TemperatureN[0].value = cooler;
+                IDSetNumber(&TemperatureNP, nullptr);
+            }
             break;
 
         case IPS_BUSY:
+            if (std::abs(cooler - m_TargetTemperature) <= TEMPERATURE_THRESHOLD)
+                TemperatureNP.s = IPS_OK;
+            TemperatureN[0].value = cooler;
+            IDSetNumber(&TemperatureNP, nullptr);
             break;
 
         case IPS_ALERT:

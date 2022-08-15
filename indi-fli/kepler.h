@@ -67,11 +67,6 @@ class Kepler : public INDI::CCD
         INDI::PropertySwitch CommunicationMethodSP {2};
 
         INDI::PropertySwitch MergeMethodSP {2};
-        enum
-        {
-            MERGE_DEFAULT,
-            MERGE_HARDWARE
-        };
 
         INDI::PropertySwitch MergePlanesSP {3};
 
@@ -87,6 +82,7 @@ class Kepler : public INDI::CCD
         // Communication Functions
         //****************************************************************************************
         bool setup();
+        void prepareUnpacked();
 
         //****************************************************************************************
         // Workers
@@ -112,5 +108,9 @@ class Kepler : public INDI::CCD
         FPROUNPACKEDSTATS  fproStats;
         FPRO_HWMERGEENABLE mergeEnables;
 
+        // Temperature
+        double m_TargetTemperature {0};
+
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
+        static constexpr double TEMPERATURE_THRESHOLD {0.1};
 };
