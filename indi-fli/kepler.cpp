@@ -599,8 +599,24 @@ bool Kepler::AbortExposure()
 ********************************************************************************/
 bool Kepler::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
 {
-    INDI_UNUSED(fType);
-    return true;
+    int result = 0;
+    switch (fType)
+    {
+        case INDI::CCDChip::LIGHT_FRAME:
+            result = FPROFrame_SetFrameType(m_CameraHandle, FPRO_FRAME_TYPE::FPRO_FRAMETYPE_NORMAL);
+            break;
+        case INDI::CCDChip::BIAS_FRAME:
+            result = FPROFrame_SetFrameType(m_CameraHandle, FPRO_FRAME_TYPE::FPRO_FRAMETYPE_BIAS);
+            break;
+        case INDI::CCDChip::DARK_FRAME:
+            result = FPROFrame_SetFrameType(m_CameraHandle, FPRO_FRAME_TYPE::FPRO_FRAMETYPE_DARK);
+            break;
+        case INDI::CCDChip::FLAT_FRAME:
+            result = FPROFrame_SetFrameType(m_CameraHandle, FPRO_FRAME_TYPE::FPRO_FRAMETYPE_LIGHTFLASH);
+            break;
+    }
+
+    return (result >= 0);
 }
 
 /********************************************************************************
@@ -608,14 +624,26 @@ bool Kepler::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
 ********************************************************************************/
 bool Kepler::UpdateCCDFrame(int x, int y, int w, int h)
 {
+    int result = FPROFrame_SetImageArea(m_CameraHandle, x, y, w, h);
+    if (result >= 0)
+    {
+        // Set UNBINNED coords
+        PrimaryCCD.setFrame(x, y, w, h);
 
-    // Set UNBINNED coords
-    PrimaryCCD.setFrame(x, y, w, h);
+        uint32_t size = (w / PrimaryCCD.getBinX()) * (h / PrimaryCCD.getBinY()) * (PrimaryCCD.getBPP() / 8);
+        PrimaryCCD.setFrameBufferSize(size);
 
-    int nbuf = (w / PrimaryCCD.getBinX()) * (h / PrimaryCCD.getBinY()) * (PrimaryCCD.getBPP() / 8);
-    PrimaryCCD.setFrameBufferSize(nbuf);
-
-    return true;
+        // Get required frame buffer size including all the metadata and extra bits added by the SDK.
+        // We need to only
+        m_TotalFrameBufferSize = FPROFrame_ComputeFrameSize(m_CameraHandle);
+        m_FrameBuffer = static_cast<uint8_t*>(realloc(m_FrameBuffer, m_TotalFrameBufferSize));
+        return true;
+    }
+    else
+    {
+        LOGF_ERROR("Failed to update frame ROI: %d", result);
+        return false;
+    }
 }
 
 /********************************************************************************
@@ -623,8 +651,17 @@ bool Kepler::UpdateCCDFrame(int x, int y, int w, int h)
 ********************************************************************************/
 bool Kepler::UpdateCCDBin(int binx, int biny)
 {
-    PrimaryCCD.setBin(binx, biny);
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+    int result = FPROSensor_SetBinning(m_CameraHandle, binx, biny);
+    if (result >= 0)
+    {
+        PrimaryCCD.setBin(binx, biny);
+        return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+    }
+    else
+    {
+        LOGF_ERROR("Error updating bin: %d", result);
+        return false;
+    }
 }
 
 /********************************************************************************
