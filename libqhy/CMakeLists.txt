@@ -16,7 +16,7 @@ set_target_properties (qhyccd PROPERTIES VERSION ${LIBQHY_VERSION} SOVERSION ${L
 
 if (APPLE)
 
-  set (FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE STRING "QHY firmware installation directory")
+  set (QHY_FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE STRING "QHY firmware installation directory")
 
   set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd.dylib")
 
@@ -24,7 +24,7 @@ if (APPLE)
 
 elseif (UNIX AND NOT WIN32)
 
-  set (FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
+  set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd_armv6.bin")
@@ -49,7 +49,7 @@ install (FILES qhyccd.h qhyccderr.h qhyccdcamdef.h qhyccdstruct.h DESTINATION in
 install (
    CODE "
    file(GLOB QHY_FIRMWARE ${CMAKE_CURRENT_SOURCE_DIR}/firmware/*) \n
-   file(INSTALL DESTINATION ${FIRMWARE_INSTALL_DIR} TYPE FILE FILES \${QHY_FIRMWARE})"
+   file(INSTALL DESTINATION ${QHY_FIRMWARE_INSTALL_DIR} TYPE FILE FILES \${QHY_FIRMWARE})"
 )
 
 # Install library
