@@ -25,11 +25,19 @@
 #include <stream/streammanager.h>
 #include <indielapsedtimer.h>
 
+#include "image/image.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
 #include <map>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <libraw.h>
+#include <jpeglib.h>
+
 
 #define CONTROL_TAB "Controls"
 
@@ -41,15 +49,215 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
-    StillOptions const *options = GetOptions();
-    unsigned int still_flags = LibcameraApp::FLAG_STILL_NONE;
-    if (options->encoding == "rgb" || options->encoding == "png")
-        still_flags |= LibcameraApp::FLAG_STILL_BGR;
-    else if (options->encoding == "bmp")
-        still_flags |= LibcameraApp::FLAG_STILL_RGB;
-    if (options->raw)
-        still_flags |= LibcameraApp::FLAG_STILL_RAW;
+    StillOptions *options = GetOptions();
+    options->shutter = duration * 1e6;
 
+    unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
+    ConfigureStill(still_flags);
+
+    StartCamera();
+
+    //auto start_time = std::chrono::high_resolution_clock::now();
+
+    LibcameraApp::Msg msg = Wait();
+    if (msg.type != LibcameraApp::MsgType::RequestComplete)
+    {
+        PrimaryCCD.setExposureFailed();
+        LOGF_ERROR("Exposure failed: %d", msg.type);
+        return;
+    }
+    else if (isAboutToQuit)
+        return;
+
+    //auto now = std::chrono::high_resolution_clock::now();
+    StopCamera();
+
+    auto stream = StillStream();
+    auto payload = std::get<CompletedRequestPtr>(msg.payload);
+    StreamInfo info = GetStreamInfo(stream);
+    const std::vector<libcamera::Span<uint8_t>> mem = Mmap(payload->buffers[stream]);
+
+    try
+    {
+        char filename[MAXINDIFORMAT] {0};
+
+        if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
+        {
+            strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
+            dng_save(mem, info, payload->metadata, filename, CameraId(), GetOptions());
+        }
+        else
+        {
+            strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
+            jpeg_save(mem, info, payload->metadata, filename, CameraId(), GetOptions());
+        }
+
+        char bayer_pattern[8] = {};
+        uint8_t * memptr = PrimaryCCD.getFrameBuffer();
+        size_t memsize = 0;
+        int naxis = 2, w = 0, h = 0, bpp = 8;
+
+        if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
+        {
+            if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
+            {
+                if (processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+                {
+                    LOG_ERROR("Exposure failed to parse raw image.");
+                    PrimaryCCD.setExposureFailed();
+                    unlink(filename);
+                    return;
+                }
+
+                SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+                IUSaveText(&BayerT[2], bayer_pattern);
+                IDSetText(&BayerTP, nullptr);
+            }
+            else
+            {
+                if (processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
+                {
+                    LOG_ERROR("Exposure failed to parse jpeg.");
+                    unlink(filename);
+                    return;
+                }
+
+                LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis, w, h, bpp);
+
+                SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+            }
+
+            PrimaryCCD.setImageExtension("fits");
+
+            uint16_t subW = PrimaryCCD.getSubW();
+            uint16_t subH = PrimaryCCD.getSubH();
+
+            // If subframing is requested
+            // If either axis is less than the image resolution
+            // then we subframe, given the OTHER axis is within range as well.
+            if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
+            {
+
+                uint16_t subX = PrimaryCCD.getSubX();
+                uint16_t subY = PrimaryCCD.getSubY();
+
+                int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
+                int oneFrameSize     = subW * subH * bpp / 8;
+
+                int lineW  = subW * bpp / 8;
+
+                LOGF_DEBUG("Subframing... subFrameSize: %d - oneFrameSize: %d - subX: %d - subY: %d - subW: %d - subH: %d",
+                           subFrameSize, oneFrameSize,
+                           subX, subY, subW, subH);
+
+                if (naxis == 2)
+                {
+                    // JM 2020-08-29: Using memmove since regions are overlaping
+                    // as proposed by Camiel Severijns on INDI forums.
+                    for (int i = subY; i < subY + subH; i++)
+                        memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
+                }
+                else
+                {
+                    uint8_t * subR = memptr;
+                    uint8_t * subG = memptr + oneFrameSize;
+                    uint8_t * subB = memptr + oneFrameSize * 2;
+
+                    uint8_t * startR = memptr;
+                    uint8_t * startG = memptr + (w * h * bpp / 8);
+                    uint8_t * startB = memptr + (w * h * bpp / 8 * 2);
+
+                    for (int i = subY; i < subY + subH; i++)
+                    {
+                        memcpy(subR + (i - subY) * lineW, startR + (i * w + subX) * bpp / 8, lineW);
+                        memcpy(subG + (i - subY) * lineW, startG + (i * w + subX) * bpp / 8, lineW);
+                        memcpy(subB + (i - subY) * lineW, startB + (i * w + subX) * bpp / 8, lineW);
+                    }
+                }
+
+                PrimaryCCD.setFrameBuffer(memptr);
+                PrimaryCCD.setFrameBufferSize(memsize, false);
+                PrimaryCCD.setResolution(w, h);
+                PrimaryCCD.setFrame(subX, subY, subW, subH);
+                PrimaryCCD.setNAxis(naxis);
+                PrimaryCCD.setBPP(bpp);
+
+                // binning if needed
+                if(PrimaryCCD.getBinX() > 1)
+                    PrimaryCCD.binBayerFrame();
+
+                ExposureComplete(&PrimaryCCD);
+            }
+            else
+            {
+                if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
+                    LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purge configuration and update frame size to match camera size.",
+                              w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+
+                PrimaryCCD.setFrameBuffer(memptr);
+                PrimaryCCD.setFrameBufferSize(memsize, false);
+                PrimaryCCD.setResolution(w, h);
+                PrimaryCCD.setFrame(0, 0, w, h);
+                PrimaryCCD.setNAxis(naxis);
+                PrimaryCCD.setBPP(bpp);
+
+                // binning if needed
+                if(PrimaryCCD.getBinX() > 1)
+                    PrimaryCCD.binBayerFrame();
+
+                ExposureComplete(&PrimaryCCD);
+            }
+        }
+        else
+        {
+            int fd = open(filename, O_RDONLY);
+            struct stat sb;
+
+            // Get file size
+            if (fstat(fd, &sb) == -1)
+            {
+                LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
+                close(fd);
+                return;
+            }
+
+            // Copy file to memory using mmap
+            memsize = sb.st_size;
+            void *mmap_mem = mmap(nullptr, memsize, PROT_READ, MAP_PRIVATE, fd, 0);
+            if (mmap_mem == nullptr)
+            {
+                LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
+                close(fd);
+                return;
+            }
+
+            // Guard CCD Buffer content until we finish copying mmap buffer to it
+            std::unique_lock<std::mutex> guard(ccdBufferLock);
+            // If CCD Buffer size is different, allocate memory to file size
+            if (PrimaryCCD.getFrameBufferSize() != static_cast<int>(memsize))
+            {
+                PrimaryCCD.setFrameBufferSize(memsize);
+                memptr = PrimaryCCD.getFrameBuffer();
+            }
+
+            // Copy mmap buffer to ccd buffer
+            memcpy(memptr, mmap_mem, memsize);
+
+            // Release mmap memory
+            munmap(mmap_mem, memsize);
+            // Close file
+            close(fd);
+            // Set extension (eg. cr2..etc)
+            PrimaryCCD.setImageExtension(strchr(filename, '.') + 1);
+            // We are ready to unlock
+            guard.unlock();
+        }
+    }
+
+    catch (std::exception &e)
+    {
+        LOGF_ERROR("Error saving RAW image: %s", e.what());
+    }
 
 
 }
@@ -88,8 +296,6 @@ bool INDILibCamera::initProperties()
 {
     INDI::CCD::initProperties();
 
-    VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 3600, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -104,6 +310,12 @@ bool INDILibCamera::initProperties()
 
     // Add Debug Control.
     addDebugControl();
+
+    CaptureFormat dng = {"DNG", "DNG", 8, true};
+    CaptureFormat jpg = {"JPG", "JPG", 8, false};
+
+    addCaptureFormat(dng);
+    addCaptureFormat(jpg);
 
     return true;
 }
@@ -186,7 +398,7 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * states, char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
@@ -195,37 +407,6 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState *stat
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-bool INDILibCamera::setVideoFormat(uint8_t index)
-{
-    if (index == VideoFormatSP.findOnSwitchIndex())
-        return true;
-
-    VideoFormatSP.reset();
-    VideoFormatSP[index].setState(ISS_ON);
-
-    //    switch (getImageType())
-    //    {
-    //        case ASI_IMG_RAW16:
-    //            PrimaryCCD.setBPP(16);
-    //            break;
-
-    //        default:
-    //            PrimaryCCD.setBPP(8);
-    //            break;
-    //    }
-
-    // When changing video format, reset frame
-    UpdateCCDFrame(0, 0, PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
-
-    updateRecorderFormat();
-
-    VideoFormatSP.setState(IPS_OK);
-    VideoFormatSP.apply();
-    return true;
-}
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -322,16 +503,7 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-int INDILibCamera::grabImage(float duration)
-{
-    ExposureComplete(&PrimaryCCD);
-    return 0;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-void INDILibCamera::addFITSKeywords(INDI::CCDChip *targetChip)
+void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip)
 {
     INDI::CCD::addFITSKeywords(targetChip);
 
@@ -340,20 +512,12 @@ void INDILibCamera::addFITSKeywords(INDI::CCDChip *targetChip)
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-bool INDILibCamera::saveConfigItems(FILE *fp)
+bool INDILibCamera::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
 
     return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-bool INDILibCamera::SetCaptureFormat(uint8_t index)
-{
-    return setVideoFormat(index);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -373,4 +537,175 @@ void INDILibCamera::updateRecorderFormat()
     //        ),
     //        mCurrentVideoFormat == ASI_IMG_RAW16 ? 16 : 8
     //    );
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool INDILibCamera::processRAW(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h,
+                               int *bitsperpixel,
+                               char *bayer_pattern)
+{
+    int ret = 0;
+    // Creation of image processing object
+    LibRaw RawProcessor;
+
+    // Let us open the file
+    if ((ret = RawProcessor.open_file(filename)) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR("Cannot open %s: %s", filename, libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    // Let us unpack the image
+    if ((ret = RawProcessor.unpack()) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR( "Cannot unpack %s: %s", filename, libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    // Covert to image
+    if ((ret = RawProcessor.raw2image()) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR("Cannot convert %s : %s", filename, libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    *n_axis       = 2;
+    *w            = RawProcessor.imgdata.rawdata.sizes.width;
+    *h            = RawProcessor.imgdata.rawdata.sizes.height;
+    *bitsperpixel = 16;
+    // cdesc contains counter-clock wise e.g. RGBG CFA pattern while we want it sequential as RGGB
+    bayer_pattern[0] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(0, 0)];
+    bayer_pattern[1] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(0, 1)];
+    bayer_pattern[2] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 0)];
+    bayer_pattern[3] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 1)];
+    bayer_pattern[4] = '\0';
+
+    int first_visible_pixel = RawProcessor.imgdata.rawdata.sizes.raw_width * RawProcessor.imgdata.sizes.top_margin +
+                              RawProcessor.imgdata.sizes.left_margin;
+
+    LOGF_DEBUG("read_libraw: raw_width: %d top_margin %d left_margin %d first_visible_pixel %d",
+               RawProcessor.imgdata.rawdata.sizes.raw_width, RawProcessor.imgdata.sizes.top_margin,
+               RawProcessor.imgdata.sizes.left_margin, first_visible_pixel);
+
+    *memsize = RawProcessor.imgdata.rawdata.sizes.width * RawProcessor.imgdata.rawdata.sizes.height * sizeof(uint16_t);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        LOGF_ERROR("%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return false;
+    }
+
+    LOGF_DEBUG("read_libraw: rawdata.sizes.width: %d rawdata.sizes.height %d memsize %d bayer_pattern %s",
+               RawProcessor.imgdata.rawdata.sizes.width, RawProcessor.imgdata.rawdata.sizes.height, *memsize,
+               bayer_pattern);
+
+    uint16_t *image = reinterpret_cast<uint16_t *>(*memptr);
+    uint16_t *src   = RawProcessor.imgdata.rawdata.raw_image + first_visible_pixel;
+
+    for (int i = 0; i < RawProcessor.imgdata.rawdata.sizes.height; i++)
+    {
+        memcpy(image, src, RawProcessor.imgdata.rawdata.sizes.width * 2);
+        image += RawProcessor.imgdata.rawdata.sizes.width;
+        src += RawProcessor.imgdata.rawdata.sizes.raw_width;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool INDILibCamera::processJPEG(const char *filename, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h)
+{
+    unsigned char *r_data = nullptr, *g_data = nullptr, *b_data = nullptr;
+
+    /* these are standard libjpeg structures for reading(decompression) */
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    /* libjpeg data structure for storing one row, that is, scanline of an image */
+    JSAMPROW row_pointer[1] = { nullptr };
+
+    FILE *infile = fopen(filename, "rb");
+
+    if (!infile)
+    {
+        LOGF_DEBUG("Error opening jpeg file %s!", filename);
+        return false;
+    }
+    /* here we set up the standard libjpeg error handler */
+    cinfo.err = jpeg_std_error(&jerr);
+    /* setup decompression process and source, then read JPEG header */
+    jpeg_create_decompress(&cinfo);
+    /* this makes the library read from infile */
+    jpeg_stdio_src(&cinfo, infile);
+    /* reading the image header which contains image information */
+    jpeg_read_header(&cinfo, (boolean)TRUE);
+
+    /* Start decompression jpeg here */
+    jpeg_start_decompress(&cinfo);
+
+    *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        LOGF_ERROR("%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return false;
+    }
+    // if you do some ugly pointer math, remember to restore the original pointer or some random crashes will happen. This is why I do not like pointers!!
+    uint8_t *oldmem = *memptr;
+    *naxis = cinfo.num_components;
+    *w     = cinfo.output_width;
+    *h     = cinfo.output_height;
+
+    /* now actually read the jpeg into the raw buffer */
+    row_pointer[0] = (unsigned char *)malloc(cinfo.output_width * cinfo.num_components);
+    if (cinfo.num_components)
+    {
+        r_data = (unsigned char *)*memptr;
+        g_data = r_data + cinfo.output_width * cinfo.output_height;
+        b_data = r_data + 2 * cinfo.output_width * cinfo.output_height;
+    }
+    /* read one scan line at a time */
+    for (unsigned int row = 0; row < cinfo.image_height; row++)
+    {
+        unsigned char *ppm8 = row_pointer[0];
+        jpeg_read_scanlines(&cinfo, row_pointer, 1);
+
+        if (cinfo.num_components == 3)
+        {
+            for (unsigned int i = 0; i < cinfo.output_width; i++)
+            {
+                *r_data++ = *ppm8++;
+                *g_data++ = *ppm8++;
+                *b_data++ = *ppm8++;
+            }
+        }
+        else
+        {
+            memcpy(*memptr, ppm8, cinfo.output_width);
+            *memptr += cinfo.output_width;
+        }
+    }
+
+    /* wrap up decompression, destroy objects, free pointers and close open files */
+    jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
+
+    if (row_pointer[0])
+        free(row_pointer[0]);
+    if (infile)
+        fclose(infile);
+
+    *memptr = oldmem;
+
+    return true;
 }

@@ -69,9 +69,7 @@ class INDILibCamera : public INDI::CCD, public LibcameraApp
         virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
 
         // Save config
-        virtual bool saveConfigItems(FILE *fp) override;
-
-        virtual bool SetCaptureFormat(uint8_t index) override;
+        virtual bool saveConfigItems(FILE *fp) override;        
 
         /** Get the current Bayer string used */
         const char *getBayerString() const;
@@ -81,9 +79,6 @@ class INDILibCamera : public INDI::CCD, public LibcameraApp
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-        /** Get image from CCD and send it to client */
-        int grabImage(float duration);
-
     protected:
         /** Get initial parameters from camera */
         void setup();
@@ -91,8 +86,15 @@ class INDILibCamera : public INDI::CCD, public LibcameraApp
         /** Update SER recorder video format */
         void updateRecorderFormat();
 
-        /** Set Video Format */
-        bool setVideoFormat(uint8_t index);
-        INDI::PropertySwitch  VideoFormatSP {0};
+        enum
+        {
+            CAPTURE_DNG,
+            CAPTURE_JPG
+        };
+
+        bool processRAW(const char *filename, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h, int *bitsperpixel,
+                        char *bayer_pattern);
+
+        bool processJPEG(const char *filename, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h);
 
 };
