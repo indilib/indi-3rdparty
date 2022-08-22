@@ -51,8 +51,14 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 {
     auto options = GetOptions();
     options->shutter = duration * 1e6;
-
+    options->nopreview = true;
+    options->immediate = true;
+    // TODO add denoise property
+    options->denoise = "cdn_off";
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
+
+    OpenCamera();
+
     ConfigureStill(still_flags);
 
     StartCamera();
@@ -71,6 +77,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     //auto now = std::chrono::high_resolution_clock::now();
     StopCamera();
+    CloseCamera();
 
     auto stream = StillStream();
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
@@ -268,6 +275,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 INDILibCamera::INDILibCamera(): LibcameraApp(std::make_unique<StillOptions>())
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
+    m_CameraManager.reset(new CameraManager());
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -347,7 +355,21 @@ bool INDILibCamera::Connect()
 {
     try
     {
-        OpenCamera();
+        m_CameraManager->start();
+        auto cameras = m_CameraManager->cameras();
+        // Do not show USB webcams as these are not supported in libcamera-apps!
+        auto rem = std::remove_if(cameras.begin(), cameras.end(),
+                                  [](auto & cam)
+        {
+            return cam->id().find("/usb") != std::string::npos;
+        });
+        cameras.erase(rem, cameras.end());
+
+        if (cameras.size() == 0)
+        {
+            LOG_ERROR("No cameras detected.");
+            return false;
+        }
         return true;
     }
     catch (std::exception &e)
@@ -381,10 +403,6 @@ bool INDILibCamera::Disconnect()
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::setup()
 {
-    auto options = GetOptions();
-    options->immediate = true;
-    // TODO add denoise property
-    options->denoise = "cdn_off";
 }
 
 /////////////////////////////////////////////////////////////////////////////

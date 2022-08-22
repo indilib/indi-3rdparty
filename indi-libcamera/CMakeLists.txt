@@ -58,6 +58,7 @@ target_link_libraries(indi_libcamera_ccd
     ${USB1_LIBRARIES}
     ${LibRaw_LIBRARIES}
     ${JPEG_LIBRARIES}
+    ${LIBCAMERA_LINK_LIBRARIES}
     ${ZLIB_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT})
 

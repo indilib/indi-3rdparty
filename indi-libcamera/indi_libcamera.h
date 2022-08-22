@@ -97,4 +97,7 @@ class INDILibCamera : public INDI::CCD, public LibcameraApp
 
         bool processJPEG(const char *filename, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h);
 
+     private:
+        std::unique_ptr<CameraManager> m_CameraManager;
+
 };
