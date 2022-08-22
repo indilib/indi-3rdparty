@@ -269,6 +269,15 @@ bool Sv305CCD::Connect()
     // wait a bit for the camera to get ready
     usleep(0.5 * 1e6);
 
+    // disable suto save param
+    status = SVBSetAutoSaveParam(cameraID, SVB_FALSE);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, disable auto save param failed.\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+
     // get camera properties
     status = SVBGetCameraProperty(cameraID, &cameraProperty);
     if (status != SVB_SUCCESS)
