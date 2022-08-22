@@ -116,7 +116,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         {
             if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
             {
-                if (processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+                if (!processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
                 {
                     LOG_ERROR("Exposure failed to parse raw image.");
                     PrimaryCCD.setExposureFailed();
@@ -131,7 +131,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             }
             else
             {
-                if (processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
+                if (!processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
                 {
                     LOG_ERROR("Exposure failed to parse jpeg.");
                     Teardown();
@@ -202,8 +202,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 // binning if needed
                 if(PrimaryCCD.getBinX() > 1)
                     PrimaryCCD.binBayerFrame();
-
-                ExposureComplete(&PrimaryCCD);
             }
             else
             {
@@ -221,8 +219,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 // binning if needed
                 if(PrimaryCCD.getBinX() > 1)
                     PrimaryCCD.binBayerFrame();
-
-                ExposureComplete(&PrimaryCCD);
             }
         }
         else
@@ -272,6 +268,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             guard.unlock();
         }
 
+        ExposureComplete(&PrimaryCCD);
         Teardown();
     }
     catch (std::exception &e)
