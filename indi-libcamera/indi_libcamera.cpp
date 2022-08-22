@@ -275,7 +275,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 INDILibCamera::INDILibCamera(): LibcameraApp(std::make_unique<StillOptions>())
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
-    m_CameraManager.reset(new CameraManager());
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -355,8 +354,9 @@ bool INDILibCamera::Connect()
 {
     try
     {
-        m_CameraManager->start();
-        auto cameras = m_CameraManager->cameras();
+        std::unique_ptr<CameraManager> cameraManager(new CameraManager());
+        cameraManager->start();
+        auto cameras = cameraManager->cameras();
         // Do not show USB webcams as these are not supported in libcamera-apps!
         auto rem = std::remove_if(cameras.begin(), cameras.end(),
                                   [](auto & cam)
