@@ -49,7 +49,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
-    StillOptions *options = GetOptions();
+    auto options = GetOptions();
     options->shutter = duration * 1e6;
 
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
@@ -381,6 +381,10 @@ bool INDILibCamera::Disconnect()
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::setup()
 {
+    auto options = GetOptions();
+    options->immediate = true;
+    // TODO add denoise property
+    options->denoise = "cdn_off";
 }
 
 /////////////////////////////////////////////////////////////////////////////
