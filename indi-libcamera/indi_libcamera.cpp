@@ -53,15 +53,25 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     options->shutter = duration * 1e6;
     options->nopreview = true;
     options->immediate = true;
+    options->encoding = "yuv420";
     // TODO add denoise property
     options->denoise = "cdn_off";
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
 
-    OpenCamera();
+    try
+    {
+        OpenCamera();
 
-    ConfigureStill(still_flags);
+        ConfigureStill(still_flags);
 
-    StartCamera();
+        StartCamera();
+    }
+    catch (std::exception &e)
+    {
+        LOGF_ERROR("Error opening camera: %s", e.what());
+        PrimaryCCD.setExposureFailed();
+        return;
+    }
 
     //auto start_time = std::chrono::high_resolution_clock::now();
 
