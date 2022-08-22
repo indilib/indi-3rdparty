@@ -77,7 +77,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     //auto now = std::chrono::high_resolution_clock::now();
     StopCamera();
-    CloseCamera();
 
     auto stream = StillStream();
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
@@ -91,12 +90,12 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
         {
             strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
-            dng_save(mem, info, payload->metadata, filename, CameraId(), GetOptions());
+            dng_save(mem, info, payload->metadata, filename, CameraId(), options);
         }
         else
         {
             strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
-            jpeg_save(mem, info, payload->metadata, filename, CameraId(), GetOptions());
+            jpeg_save(mem, info, payload->metadata, filename, CameraId(), options);
         }
 
         char bayer_pattern[8] = {};
@@ -266,7 +265,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         LOGF_ERROR("Error saving RAW image: %s", e.what());
     }
 
-
+    CloseCamera();
 }
 
 ///////////////////////////////////////////////////////////////////////
