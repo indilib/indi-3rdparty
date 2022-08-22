@@ -69,6 +69,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     catch (std::exception &e)
     {
         LOGF_ERROR("Error opening camera: %s", e.what());
+        Teardown();
+        CloseCamera();
         PrimaryCCD.setExposureFailed();
         return;
     }
@@ -272,9 +274,11 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     catch (std::exception &e)
     {
-        LOGF_ERROR("Error saving RAW image: %s", e.what());
+        LOGF_ERROR("Error saving image: %s", e.what());
+        PrimaryCCD.setExposureFailed();
     }
 
+    Teardown();
     CloseCamera();
 }
 
