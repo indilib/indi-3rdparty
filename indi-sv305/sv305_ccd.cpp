@@ -119,38 +119,6 @@ bool Sv305CCD::initProperties()
     // base capabilities
     uint32_t cap = CCD_CAN_ABORT | CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_HAS_STREAMING;
 
-    // SV305 is a color camera
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305") == 0)
-    {
-        cap |= CCD_HAS_BAYER;
-    }
-
-    // SV305 Pro is a color camera and has an ST4 port
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO") == 0)
-    {
-        cap |= CCD_HAS_BAYER;
-        cap |= CCD_HAS_ST4_PORT;
-    }
-
-    // SV305M Pro is a mono camera and has an ST4 port
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
-    {
-        cap |= CCD_HAS_ST4_PORT;
-    }
-
-    // SV905C is a color camera and has an ST4 port
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV905C") == 0)
-    {
-        cap |= CCD_HAS_BAYER;
-        cap |= CCD_HAS_ST4_PORT;
-    }
-
-    // SV405 CC is a cooled color camera
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV405CC") == 0)
-    {
-        cap |= (CCD_HAS_BAYER | CCD_HAS_COOLER);
-    }
-
     SetCCDCapability(cap);
 
     addConfigurationControl();
@@ -286,6 +254,81 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
+    if (isDebug())
+    {
+        // Output camera properties to log 
+        IDLog("Camera Property:\n WxH= %ldx%ld, Color:%d, BayerPattern:%d, MaxBitDepth:%d, IsTriggerCam:%d\n",
+            cameraProperty.MaxWidth, cameraProperty.MaxHeight,
+            cameraProperty.IsColorCam,
+            cameraProperty.BayerPattern,
+            cameraProperty.MaxBitDepth,
+            cameraProperty.IsTriggerCam);
+        IDLog(" Bin:");
+        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedBins)/sizeof(cameraProperty.SupportedBins[0]))) && cameraProperty.SupportedBins[i] != 0; i++) {
+            IDLog("%d ", cameraProperty.SupportedBins[i]);
+        }
+        IDLog("\n");
+        IDLog(" SupportedVideFormat:");
+        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++) {
+            IDLog("%d ", cameraProperty.SupportedVideoFormat[i]);
+        }
+        IDLog("\n");
+    }
+
+#if 0 // SVBGetCameraPropertyEx is not defined in SVBONY Camera SDK 1.9.1 of shared library edition. So code of this block must be commented out.
+    // get camera properties ex
+    status = SVBGetCameraPropertyEx(cameraID, &cameraPropertyEx);
+    if (status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get camera property ex failed\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+#else // workaround until to define SVBGetCameraPropertyEx in SVBONY Camera SDK
+    // SV305 is a color camera
+
+    // Camera has ST4 port
+    if(!strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO") ||
+        !strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") ||
+        !strcmp(cameraInfo.FriendlyName, "SVBONY SV905C"))
+    {
+        cameraPropertyEx.bSupportPulseGuide = SVB_TRUE;
+    }
+    else {
+        cameraPropertyEx.bSupportPulseGuide = SVB_FALSE;
+    }
+
+    // Camera is a cooled camera
+    if(!strcmp(cameraInfo.FriendlyName, "SVBONY SV405CC"))
+    {
+        cameraPropertyEx.bSupportControlTemp = SVB_TRUE;
+    }
+    else {
+        cameraPropertyEx.bSupportControlTemp = SVB_FALSE;
+    }
+
+#endif
+    // Set CCD Capability
+    uint32_t cap = GetCCDCapability();
+    if (cameraProperty.IsColorCam) {
+        cap |= CCD_HAS_BAYER;
+    }
+    else {
+        cap &= ~CCD_HAS_BAYER;
+    }
+    if (cameraPropertyEx.bSupportPulseGuide) {
+        cap |= CCD_HAS_ST4_PORT;
+    }
+    else {
+        cap &= ~CCD_HAS_ST4_PORT;
+    }
+    if (cameraPropertyEx.bSupportControlTemp) {
+        cap |= CCD_HAS_COOLER;
+    }
+    else {
+        cap &= ~CCD_HAS_COOLER;
+    }
+    SetCCDCapability(cap);
 
     // get camera pixel size
     status = SVBGetSensorPixelSize(cameraID, &pixelSize);
