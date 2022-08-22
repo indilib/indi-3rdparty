@@ -100,6 +100,8 @@ class Sv305CCD : public INDI::CCD
         SVB_CAMERA_PROPERTY cameraProperty;
         // number of camera control
         int controlsNum;
+        // camera propertyEx
+        SVB_CAMERA_PROPERTY_EX cameraPropertyEx;
         // exposure limits
         double minExposure;
         double maxExposure;
