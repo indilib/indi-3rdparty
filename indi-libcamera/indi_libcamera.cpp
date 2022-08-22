@@ -392,6 +392,7 @@ bool INDILibCamera::Connect()
             LOG_ERROR("No cameras detected.");
             return false;
         }
+        cameraManager.reset();
 
         OpenCamera();
         return true;
