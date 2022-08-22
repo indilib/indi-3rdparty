@@ -60,17 +60,14 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     try
     {
-        OpenCamera();
-
         ConfigureStill(still_flags);
-
         StartCamera();
     }
     catch (std::exception &e)
     {
         LOGF_ERROR("Error opening camera: %s", e.what());
+        StopCamera();
         Teardown();
-        CloseCamera();
         PrimaryCCD.setExposureFailed();
         return;
     }
@@ -123,6 +120,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 {
                     LOG_ERROR("Exposure failed to parse raw image.");
                     PrimaryCCD.setExposureFailed();
+                    Teardown();
                     unlink(filename);
                     return;
                 }
@@ -136,6 +134,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 if (processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
                 {
                     LOG_ERROR("Exposure failed to parse jpeg.");
+                    Teardown();
                     unlink(filename);
                     return;
                 }
@@ -235,6 +234,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             if (fstat(fd, &sb) == -1)
             {
                 LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
+                Teardown();
                 close(fd);
                 return;
             }
@@ -245,6 +245,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             if (mmap_mem == nullptr)
             {
                 LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
+                Teardown();
                 close(fd);
                 return;
             }
@@ -270,16 +271,16 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             // We are ready to unlock
             guard.unlock();
         }
-    }
 
+        Teardown();
+    }
     catch (std::exception &e)
     {
         LOGF_ERROR("Error saving image: %s", e.what());
+        Teardown();
         PrimaryCCD.setExposureFailed();
-    }
 
-    Teardown();
-    CloseCamera();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -288,6 +289,13 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 INDILibCamera::INDILibCamera(): LibcameraApp(std::make_unique<StillOptions>())
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
+
+    auto options = GetOptions();
+    options->nopreview = true;
+    options->immediate = true;
+    options->encoding = "yuv420";
+    // TODO add denoise property
+    options->denoise = "cdn_off";
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -297,6 +305,7 @@ INDILibCamera::~INDILibCamera()
 {
     if (isConnected())
     {
+        CloseCamera();
         Disconnect();
     }
 }
@@ -383,6 +392,8 @@ bool INDILibCamera::Connect()
             LOG_ERROR("No cameras detected.");
             return false;
         }
+
+        OpenCamera();
         return true;
     }
     catch (std::exception &e)
