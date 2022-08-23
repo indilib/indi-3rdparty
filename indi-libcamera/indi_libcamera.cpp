@@ -85,7 +85,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         return;
 
     //auto now = std::chrono::high_resolution_clock::now();
-    StopCamera();
 
     auto stream = StillStream();
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
@@ -120,6 +119,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 {
                     LOG_ERROR("Exposure failed to parse raw image.");
                     PrimaryCCD.setExposureFailed();
+                    StopCamera();
                     Teardown();
                     unlink(filename);
                     return;
@@ -134,6 +134,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 if (!processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
                 {
                     LOG_ERROR("Exposure failed to parse jpeg.");
+                    PrimaryCCD.setExposureFailed();
+                    StopCamera();
                     Teardown();
                     unlink(filename);
                     return;
@@ -230,6 +232,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             if (fstat(fd, &sb) == -1)
             {
                 LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
+                PrimaryCCD.setExposureFailed();
+                StopCamera();
                 Teardown();
                 close(fd);
                 return;
@@ -237,15 +241,6 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
             // Copy file to memory using mmap
             memsize = sb.st_size;
-            void *mmap_mem = mmap(nullptr, memsize, PROT_READ, MAP_PRIVATE, fd, 0);
-            if (mmap_mem == nullptr)
-            {
-                LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
-                Teardown();
-                close(fd);
-                return;
-            }
-
             // Guard CCD Buffer content until we finish copying mmap buffer to it
             std::unique_lock<std::mutex> guard(ccdBufferLock);
             // If CCD Buffer size is different, allocate memory to file size
@@ -253,6 +248,17 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             {
                 PrimaryCCD.setFrameBufferSize(memsize);
                 memptr = PrimaryCCD.getFrameBuffer();
+            }
+
+            void *mmap_mem = mmap(nullptr, memsize, PROT_READ, MAP_PRIVATE, fd, 0);
+            if (mmap_mem == nullptr)
+            {
+                LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
+                PrimaryCCD.setExposureFailed();
+                StopCamera();
+                Teardown();
+                close(fd);
+                return;
             }
 
             // Copy mmap buffer to ccd buffer
@@ -269,11 +275,14 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         }
 
         ExposureComplete(&PrimaryCCD);
+
+        StopCamera();
         Teardown();
     }
     catch (std::exception &e)
     {
         LOGF_ERROR("Error saving image: %s", e.what());
+        StopCamera();
         Teardown();
         PrimaryCCD.setExposureFailed();
 
@@ -288,6 +297,9 @@ INDILibCamera::INDILibCamera(): LibcameraApp(std::make_unique<StillOptions>())
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
 
     auto options = GetOptions();
+
+    options->Parse(0, nullptr);
+
     options->nopreview = true;
     options->immediate = true;
     options->encoding = "yuv420";
@@ -328,9 +340,10 @@ bool INDILibCamera::initProperties()
 
     uint32_t cap = 0;
     cap |= CCD_HAS_BAYER;
+    cap |= CCD_HAS_STREAMING;
     cap |= CCD_CAN_ABORT;
     cap |= CCD_CAN_SUBFRAME;
-    cap |= CCD_HAS_STREAMING;
+    cap |= CCD_CAN_BIN;
 
     SetCCDCapability(cap);
 
