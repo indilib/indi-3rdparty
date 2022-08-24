@@ -771,6 +771,23 @@ bool QHYCCD::Connect()
         versionInfo << year << "." << month << "." << day;
         LOGF_INFO("Using QHY SDK version %s", versionInfo.str().c_str());
         IUSaveText(&SDKVersionT[0], versionInfo.str().c_str());
+	
+	////////////////////////////////////////////////////////////////////
+        /// Bin Modes
+        ////////////////////////////////////////////////////////////////////
+        bool m_SupportedBins[4];
+		enum
+		{
+		Bin1x1,
+		Bin2x2,
+		Bin3x3,
+		Bin4x4,
+		}
+
+		m_SupportedBins[Bin1x1] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+		m_SupportedBins[Bin2x2] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+		m_SupportedBins[Bin3x3] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+		m_SupportedBins[Bin4x4] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
 
         ////////////////////////////////////////////////////////////////////
         /// Read Modes
@@ -972,21 +989,21 @@ bool QHYCCD::Connect()
         LOGF_DEBUG("Has Transfer Bit control? %s", HasTransferBit ? "True" : "False");
 
         // Using software binning
-        cap |= CCD_CAN_BIN;
+        //cap |= CCD_CAN_BIN;
 
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
-        LOGF_DEBUG("Bin 1x1: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
-        LOGF_DEBUG("Bin 2x2: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
-        LOGF_DEBUG("Bin 3x3: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
-        LOGF_DEBUG("Bin 4x4: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+        //LOGF_DEBUG("Bin 1x1: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        //LOGF_DEBUG("Bin 2x2: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+        //LOGF_DEBUG("Bin 3x3: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        //LOGF_DEBUG("Bin 4x4: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
 
         // Only use software binning if NOT supported by hardware
         //useSoftBin = !(ret == QHYCCD_SUCCESS);
 
-        LOGF_DEBUG("Binning Control: %s", (cap & CCD_CAN_BIN) ? "True" : "False");
+        //LOGF_DEBUG("Binning Control: %s", (cap & CCD_CAN_BIN) ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// USB Traffic Control Support
@@ -1460,19 +1477,23 @@ bool QHYCCD::UpdateCCDBin(int hor, int ver)
 
     if (hor == 1 && ver == 1)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+	ret = m_SupportedBins[Bin1x1];  
     }
     else if (hor == 2 && ver == 2)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+	ret = m_SupportedBins[Bin2x2];  
     }
     else if (hor == 3 && ver == 3)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+	ret = m_SupportedBins[Bin3x3];  
     }
     else if (hor == 4 && ver == 4)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+	ret = m_SupportedBins[Bin4x4];  
     }
 
     // Binning ALWAYS succeeds
