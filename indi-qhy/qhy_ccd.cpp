@@ -772,6 +772,43 @@ bool QHYCCD::Connect()
         LOGF_INFO("Using QHY SDK version %s", versionInfo.str().c_str());
         IUSaveText(&SDKVersionT[0], versionInfo.str().c_str());
 
+	////////////////////////////////////////////////////////////////////
+        /// Bin Modes
+        ////////////////////////////////////////////////////////////////////
+
+	m_SupportedBins[Bin1x1] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+        LOGF_INFO("Bin1x1: %s", m_SupportedBins[Bin1x1] == QHYCCD_SUCCESS ? "true" :
+                          "false");
+	if (m_SupportedBins[Bin1x1] == QHYCCD_SUCCESS)
+	{
+	cap = CCD_CAN_BIN;
+	}
+	m_SupportedBins[Bin2x2] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        LOGF_INFO("Bin2x2: %s", m_SupportedBins[Bin2x2] == QHYCCD_SUCCESS ? "true" :
+                          "false");
+	if (m_SupportedBins[Bin2x2] == QHYCCD_SUCCESS)
+	{
+	cap = CCD_CAN_BIN;
+	}
+
+	m_SupportedBins[Bin3x3] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+	LOGF_INFO("Bin3x3: %s", m_SupportedBins[Bin3x3] == QHYCCD_SUCCESS ? "true" :
+                          "false");
+	if (m_SupportedBins[Bin3x3] == QHYCCD_SUCCESS)
+	{
+	cap = CCD_CAN_BIN;
+	}
+
+	m_SupportedBins[Bin4x4] = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+	LOGF_INFO("Bin4x4: %s", m_SupportedBins[Bin4x4] == QHYCCD_SUCCESS ? "true" :
+                          "false");
+	if (m_SupportedBins[Bin4x4] == QHYCCD_SUCCESS)
+	{
+	cap = CCD_CAN_BIN;
+	}
+
+        LOGF_INFO("Binning Control: %s", (cap & CCD_CAN_BIN) ? "True" : "False");
+
         ////////////////////////////////////////////////////////////////////
         /// Read Modes
         ////////////////////////////////////////////////////////////////////
@@ -917,20 +954,22 @@ bool QHYCCD::Connect()
         ////////////////////////////////////////////////////////////////////
         /// Filter Wheel Support
         ////////////////////////////////////////////////////////////////////
+
         HasFilters = false;
         // Try 3 times before giving up since this query is sometimes unreliable
-        for (int i = 0; i < 3; i++)
-        {
-            ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CFWPORT);
+	//        for (int i = 0; i < 3; i++)
+	//       {
+            //ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CFWPORT);
+	    //Using new SDK query
+            ret = IsQHYCCDCFWPlugged(m_CameraHandle);
             if (ret == QHYCCD_SUCCESS)
             {
-                HasFilters = true;
-
-                m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
-                LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
-                // If we get invalid value, check again in 0.5 sec
-                if (m_MaxFilterCount > 16)
-                {
+              HasFilters = true;
+              m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
+	      LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+              // If we get invalid value, check again in 0.5 sec
+              if (m_MaxFilterCount > 16)
+               {
                     usleep(500000);
                     m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
                     LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
@@ -940,20 +979,26 @@ bool QHYCCD::Connect()
                 {
                     LOG_DEBUG("Camera can support CFW but no filters are present.");
                     m_MaxFilterCount = -1;
+                    HasFilters = false;
                 }
 
                 if (m_MaxFilterCount > 0)
+		{
+                    HasFilters = true;
                     updateFilterProperties();
+                    LOGF_INFO("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+		}
                 else
+		{
                     HasFilters = false;
-
-                break;
+		}
+                //break;
             }
-            else
-                usleep(250000);
-        }
+//           else
+//              usleep(250000);
+//       }
 
-        if (HasFilters)
+        if (HasFilters == true)
             setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
         else
             setDriverInterface(getDriverInterface() & ~FILTER_INTERFACE);
@@ -967,19 +1012,21 @@ bool QHYCCD::Connect()
         LOGF_DEBUG("Has Transfer Bit control? %s", HasTransferBit ? "True" : "False");
 
         // Using software binning
-        cap |= CCD_CAN_BIN;
+        //cap |= CCD_CAN_BIN;
 
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
-        LOGF_DEBUG("Bin 1x1: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
-
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
-        ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+        //LOGF_DEBUG("Bin 1x1: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        //LOGF_DEBUG("Bin 2x2: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+        //LOGF_DEBUG("Bin 3x3: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
+        //ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        //LOGF_DEBUG("Bin 4x4: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
 
         // Only use software binning if NOT supported by hardware
         //useSoftBin = !(ret == QHYCCD_SUCCESS);
 
-        LOGF_DEBUG("Binning Control: %s", (cap & CCD_CAN_BIN) ? "True" : "False");
+        //LOGF_DEBUG("Binning Control: %s", (cap & CCD_CAN_BIN) ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
         /// USB Traffic Control Support
@@ -1445,27 +1492,25 @@ bool QHYCCD::UpdateCCDBin(int hor, int ver)
         return false;
     }
 
-    if (hor == 3)
-    {
-        LOG_ERROR("Invalid binning mode. Only 1x1, 2x2, and 4x4 binning modes supported.");
-        return false;
-    }
-
     if (hor == 1 && ver == 1)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
+	ret = m_SupportedBins[Bin1x1];
     }
     else if (hor == 2 && ver == 2)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+	ret = m_SupportedBins[Bin2x2];
     }
     else if (hor == 3 && ver == 3)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+	ret = m_SupportedBins[Bin3x3];
     }
     else if (hor == 4 && ver == 4)
     {
-        ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        //ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+	ret = m_SupportedBins[Bin4x4];
     }
 
     // Binning ALWAYS succeeds
