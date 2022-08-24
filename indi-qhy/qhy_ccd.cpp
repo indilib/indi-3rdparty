@@ -940,14 +940,19 @@ bool QHYCCD::Connect()
                 {
                     LOG_DEBUG("Camera can support CFW but no filters are present.");
                     m_MaxFilterCount = -1;
+                    HasFilters = false;
                 }
 
                 if (m_MaxFilterCount > 0)
+		{
+                    HasFilters = true;
                     updateFilterProperties();
+		}
                 else
+		{
                     HasFilters = false;
-
-                break;
+		}
+                //break;
             }
             else
                 usleep(250000);
@@ -971,10 +976,12 @@ bool QHYCCD::Connect()
 
         ret = IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN1X1MODE);
         LOGF_DEBUG("Bin 1x1: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
-
         ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN2X2MODE);
+        LOGF_DEBUG("Bin 2x2: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
         ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN3X3MODE);
+        LOGF_DEBUG("Bin 3x3: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
         ret &= IsQHYCCDControlAvailable(m_CameraHandle, CAM_BIN4X4MODE);
+        LOGF_DEBUG("Bin 4x4: %s", (ret == QHYCCD_SUCCESS) ? "True" : "False");
 
         // Only use software binning if NOT supported by hardware
         //useSoftBin = !(ret == QHYCCD_SUCCESS);
@@ -1445,11 +1452,11 @@ bool QHYCCD::UpdateCCDBin(int hor, int ver)
         return false;
     }
 
-    if (hor == 3)
-    {
-        LOG_ERROR("Invalid binning mode. Only 1x1, 2x2, and 4x4 binning modes supported.");
-        return false;
-    }
+//    if (hor == 3)
+//    {
+//        LOG_ERROR("Invalid binning mode. Only 1x1, 2x2, and 4x4 binning modes supported.");
+//        return false;
+//    }
 
     if (hor == 1 && ver == 1)
     {
