@@ -275,7 +275,6 @@ bool Sv305CCD::Connect()
         IDLog("\n");
     }
 
-#if 0 // SVBGetCameraPropertyEx is not defined in SVBONY Camera SDK 1.9.1 of shared library edition. So code of this block must be commented out.
     // get camera properties ex
     status = SVBGetCameraPropertyEx(cameraID, &cameraPropertyEx);
     if (status != SVB_SUCCESS)
@@ -284,30 +283,15 @@ bool Sv305CCD::Connect()
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-#else // workaround until to define SVBGetCameraPropertyEx in SVBONY Camera SDK
-    // SV305 is a color camera
 
-    // Camera has ST4 port
-    if(!strcmp(cameraInfo.FriendlyName, "SVBONY SV305PRO") ||
-        !strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") ||
-        !strcmp(cameraInfo.FriendlyName, "SVBONY SV905C"))
+    if (isDebug())
     {
-        cameraPropertyEx.bSupportPulseGuide = SVB_TRUE;
-    }
-    else {
-        cameraPropertyEx.bSupportPulseGuide = SVB_FALSE;
-    }
-
-    // Camera is a cooled camera
-    if(!strcmp(cameraInfo.FriendlyName, "SVBONY SV405CC"))
-    {
-        cameraPropertyEx.bSupportControlTemp = SVB_TRUE;
-    }
-    else {
-        cameraPropertyEx.bSupportControlTemp = SVB_FALSE;
+        // outout camera properties ex to log
+        IDLog("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d\n",
+            cameraPropertyEx.bSupportPulseGuide,
+            cameraPropertyEx.bSupportControlTemp);
     }
 
-#endif
     // Set CCD Capability
     uint32_t cap = GetCCDCapability();
     if (cameraProperty.IsColorCam) {
@@ -514,8 +498,8 @@ bool Sv305CCD::Connect()
     IUFillSwitch(&FormatS[FORMAT_RAW16], "FORMAT_RAW16", "Raw 16 bits", ISS_ON);
     IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
-    // NOTE : SV305M PRO only supports Y8 and Y16 frame format
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+    // NOTE : Monochrome camera supports Y8 and Y16 frame format
+    if(!HasBayer())
     {
         status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_Y16]);
     }
@@ -811,9 +795,9 @@ bool Sv305CCD::StartStreaming()
     LOG_INFO("framing\n");
 
     // stream init
-    // NOTE : SV305M is MONO
+    // Check monochrome camera or binning
     // if binning, no more bayer
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0 || binning)
+    if(!HasBayer() || binning)
     {
         Streamer->setPixelFormat(INDI_MONO, bitDepth);
     }
@@ -1350,8 +1334,8 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
             pthread_mutex_lock(&cameraID_mutex);
 
-            // adjust frame format for SV305M
-            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+            // adjust frame format for Monochrome camera
+            if(!HasBayer())
             {
                 // offset format mapper to Y16 and Y8 modes
                 tmpFormat += FORMAT_Y16;
@@ -1363,8 +1347,8 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             {
                 LOG_ERROR("Error, camera set frame format failed\n");
             }
-            // set frame format back for SV305M
-            if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") == 0)
+            // set frame format back for Monochrome camera
+            if(!HasBayer())
             {
                 tmpFormat -= FORMAT_Y16;
             }
@@ -1555,8 +1539,8 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
     fits_update_key_dbl(fptr, "Contrast", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast", &_status);
     fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
 
-    // NOTE : SV305M PRO is mono
-    if(strcmp(cameraInfo.FriendlyName, "SVBONY SV305M PRO") != 0)
+    // Add items for color camera
+    if(HasBayer())
     {
         fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
         fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
