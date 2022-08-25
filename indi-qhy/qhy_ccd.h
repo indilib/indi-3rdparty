@@ -100,6 +100,19 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         // SDK Version
         ITextVectorProperty SDKVersionTP;
         IText SDKVersionT[1] {};
+        /////////////////////////////////////////////////////////////////////////////
+        /// Properties: Binning Support
+        /////////////////////////////////////////////////////////////////////////////
+
+        bool m_SupportedBins[4];
+		enum
+		{
+		Bin1x1,
+		Bin2x2,
+		Bin3x3,
+		Bin4x4,
+		};
+
 
         // Cooler Switch
         ISwitchVectorProperty CoolerSP;
