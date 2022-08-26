@@ -494,30 +494,75 @@ bool Sv305CCD::Connect()
     }
 
     // set frame format and feed UI
-    IUFillSwitch(&FormatS[FORMAT_RAW8], "FORMAT_RAW8", "Raw 8 bits", ISS_OFF);
-    IUFillSwitch(&FormatS[FORMAT_RAW16], "FORMAT_RAW16", "Raw 16 bits", ISS_ON);
-    IUFillSwitchVector(&FormatSP, FormatS, 2, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
-    // NOTE : Monochrome camera supports Y8 and Y16 frame format
-    if(!HasBayer())
+    nFrameFormat = 0;
+    // initialize frameFormatDefinitions from cameraProperty
+    defaultMaxBitDepth = 0; // max pixel bit depth
+    for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
     {
-        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_Y16]);
+        int svb_img_fmt = cameraProperty.SupportedVideoFormat[i];
+
+        if (svb_img_fmt != SVB_IMG_RGB24 && svb_img_fmt != SVB_IMG_RGB32) // INDI not support RGB24,RGB32 
+        {
+            frameFormatDefinitions[svb_img_fmt].isIndex = i; // Set the index of the ISwitch
+
+            if (HasBayer() == frameFormatDefinitions[svb_img_fmt].isColor) // either HasBayer and color frame format or not HasBayer and grayscale format.
+            {
+                // For color CCDs, find the maximum color format bits
+                // For monochrome CCDs, find the maximum bits in grayscale format.
+                if (defaultMaxBitDepth < frameFormatDefinitions[svb_img_fmt].isBits)
+                    defaultMaxBitDepth = frameFormatDefinitions[svb_img_fmt].isBits;
+            }
+            ++nFrameFormat; // count up number of ISwitch
+        }
     }
-    else
+
+    // initialize ISwitchs
+    if (!(FormatS = (ISwitch*)calloc(nFrameFormat, sizeof(ISwitch))))
+    {
+        LOG_ERROR("Error, memory allocation for image format switches\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    if (!(switch2frameFormatDefinitionsIndex = (SVB_IMG_TYPE*)calloc(nFrameFormat, sizeof(int))))
+    {
+        LOG_ERROR("Error, memory allocation for image format switches index\n");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    defaultFrameFormatIndex = SVB_IMG_END;
+    for (int i = 0; i < (int)(sizeof(frameFormatDefinitions)/sizeof(FrameFormatDefinition)); i++)
+    {
+        FrameFormatDefinition *pFrameFormatDef = &frameFormatDefinitions[i];
+        if (pFrameFormatDef->isIndex != -1)
+        {
+            if (HasBayer() == pFrameFormatDef->isColor && defaultMaxBitDepth == pFrameFormatDef->isBits)
+            {
+                // Switch on the maximum number of bits. For color cameras, the number of bits for color; for monochrome cameras, the number of bits for grayscale.
+                pFrameFormatDef->isStateDefault = ISS_ON;
+                defaultFrameFormatIndex = (SVB_IMG_TYPE)i;
+            }
+            switch2frameFormatDefinitionsIndex[pFrameFormatDef->isIndex] = (SVB_IMG_TYPE)i;
+            IUFillSwitch(&FormatS[pFrameFormatDef->isIndex], pFrameFormatDef->isName, pFrameFormatDef->isLabel, pFrameFormatDef->isStateDefault);
+        }
+    }
+    IUFillSwitchVector(&FormatSP, FormatS, nFrameFormat, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
+
+    if(HasBayer())
     {
         IUSaveText(&BayerT[0], "0");
         IUSaveText(&BayerT[1], "0");
         IUSaveText(&BayerT[2], bayerPatternMapping[cameraProperty.BayerPattern]);
-        status = SVBSetOutputImageType(cameraID, frameFormatMapping[FORMAT_RAW16]);
     }
+    status = SVBSetOutputImageType(cameraID, defaultFrameFormatIndex);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set frame format failed\n");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    bitDepth = 16;
-    frameFormat = FORMAT_RAW16;
+    bitDepth = defaultMaxBitDepth;
+    frameFormat = defaultFrameFormatIndex;
     LOG_INFO("Camera set frame format mode\n");
 
     // set bit stretching and feed UI
@@ -625,6 +670,9 @@ bool Sv305CCD::Disconnect()
     // destroy camera
     status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
+
+    // free format ISwitch
+    free(FormatS);
 
     //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
@@ -1316,10 +1364,10 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             // Find out which state is requested by the client
             const char *actionName = IUFindOnSwitchName(states, names, n);
             // If same state as actionName, then we do nothing
-            int tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-            if (actionName && !strcmp(actionName, FormatS[tmpFormat].name)) // skip strcmp if there are no selected swich.
+            int isIndex = IUFindOnSwitchIndex(&FormatSP);
+            if (actionName && !strcmp(actionName, FormatS[isIndex].name)) // skip strcmp if there are no selected swich.
             {
-                LOGF_INFO("Frame format is already %s", FormatS[tmpFormat].label);
+                LOGF_INFO("Frame format is already %s", FormatS[isIndex].label);
                 FormatSP.s = IPS_IDLE;
                 IDSetSwitch(&FormatSP, NULL);
                 return true;
@@ -1327,50 +1375,39 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             // Otherwise, let us update the switch state
             IUUpdateSwitch(&FormatSP, states, names, n);
-            tmpFormat = IUFindOnSwitchIndex(&FormatSP);
-            if (tmpFormat == -1)
+            isIndex = IUFindOnSwitchIndex(&FormatSP);
+            if (isIndex == -1) // if there is no ON switch, set index of default format.
             {
-                tmpFormat = FORMAT_RAW16; // Set Frame Format as FORMAT_RAW16 if frameFromat is -1
+                isIndex = frameFormatDefinitions[defaultFrameFormatIndex].isIndex;
             }
+            SVB_IMG_TYPE newFrameFormat = switch2frameFormatDefinitionsIndex[isIndex];
+
             pthread_mutex_lock(&cameraID_mutex);
-
-            // adjust frame format for Monochrome camera
-            if(!HasBayer())
-            {
-                // offset format mapper to Y16 and Y8 modes
-                tmpFormat += FORMAT_Y16;
-            }
-
-            // set new format
-            status = SVBSetOutputImageType(cameraID, frameFormatMapping[tmpFormat]);
+            status = SVBSetOutputImageType(cameraID, newFrameFormat);
             if(status != SVB_SUCCESS)
             {
                 LOG_ERROR("Error, camera set frame format failed\n");
             }
-            // set frame format back for Monochrome camera
-            if(!HasBayer())
-            {
-                tmpFormat -= FORMAT_Y16;
-            }
-            LOGF_INFO("Frame format is now %s", FormatS[tmpFormat].label);
+            LOGF_INFO("Frame format is now %s", FormatS[isIndex].label);
 
             pthread_mutex_unlock(&cameraID_mutex);
 
-            frameFormat = tmpFormat;
+            frameFormat = newFrameFormat;
 
             // pixel depth
-            switch(frameFormat)
-            {
-                case FORMAT_RAW8 :
-                    bitDepth = 8;
-                    break;
-                case FORMAT_RAW16 :
-                    bitDepth = 16;
-                    break;
-                default :
-                    frameFormat = FORMAT_RAW16; // Set frameFormat as FORMAT_RAW16 if frameFromat is unknown
-                    bitDepth = 16;
-                    break;
+            bitDepth = frameFormatDefinitions[newFrameFormat].isBits;
+
+            // Change color/grascale mode of CCD
+            if (HasBayer() != frameFormatDefinitions[newFrameFormat].isColor) {
+                // Set CCD Capability
+                uint32_t cap = GetCCDCapability();
+                if (HasBayer()) {
+                    cap &= ~CCD_HAS_BAYER; // if color mode exchange to monochrome
+                }
+                else {
+                    cap |= CCD_HAS_BAYER; // if monochrome mode exchange to color
+                }
+                SetCCDCapability(cap);
             }
             // update CCD parameters
             updateCCDParams();
