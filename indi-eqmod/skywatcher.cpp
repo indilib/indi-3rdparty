@@ -1338,7 +1338,22 @@ void Skywatcher::TurnPPEC(bool on)
         command = TURN_PPEC_ON_CMD;
     else
         command = TURN_PPEC_OFF_CMD;
-    SetFeature(Axis1, command);
+    try
+    {
+        SetFeature(Axis1, command);
+    }
+    catch(EQModError e)
+    {
+        if (on)
+        {
+            if (e.severity == EQModError::ErrCmdFailed && response[1] == '8')
+                LOG_ERROR("Can't enable PEC: no PEC data");
+            else
+                LOGF_ERROR("Can't enable PEC: %s", e.message);
+        }
+        else
+            LOG_ERROR(e.message);
+    }
 }
 
 void Skywatcher::GetPPECStatus(bool *intraining, bool *inppec)
