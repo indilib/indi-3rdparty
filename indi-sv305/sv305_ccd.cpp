@@ -673,6 +673,8 @@ bool Sv305CCD::Disconnect()
 
     // free format ISwitch
     free(FormatS);
+    // free map for frame format Switch to frame format definition array
+    free(switch2frameFormatDefinitionsIndex);
 
     //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
