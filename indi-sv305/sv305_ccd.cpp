@@ -275,18 +275,15 @@ bool Sv305CCD::Connect()
     status = SVBGetCameraPropertyEx(cameraID, &cameraPropertyEx);
     if (status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, get camera property ex failed\n");
+        LOG_ERROR("Error, get camera property ex failed");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
 
-    if (isDebug())
-    {
-        // outout camera properties ex to log
-        LOGF_DEBUG("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d",
-            cameraPropertyEx.bSupportPulseGuide,
-            cameraPropertyEx.bSupportControlTemp);
-    }
+    // output camera properties ex to log
+    LOGF_DEBUG("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d",
+        cameraPropertyEx.bSupportPulseGuide,
+        cameraPropertyEx.bSupportControlTemp);
 
     // Set CCD Capability
     uint32_t cap = GetCCDCapability();
