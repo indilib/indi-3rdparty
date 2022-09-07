@@ -366,7 +366,7 @@ extern "C" {
 	/// @param previewOffsetY a pointer to an integer which will be set to the preview offset over the Y axis.
 	/// @see ARTEMISERROR
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
-	artfn int ArtemisColourProperties(ArtemisHandle handle, ARTEMISCOLOURTYPE *colourType, int *normalOffsetX, int *normalOffsetY, int *previewOffsetX, int *previewOffsetY);
+	artfn int ArtemisColourProperties(ArtemisHandle handle, enum ARTEMISCOLOURTYPE *colourType, int *normalOffsetX, int *normalOffsetY, int *previewOffsetX, int *previewOffsetY);
 
 	/// Gets the connected camera's physical properties.
 	/// @param handle The connected camera's handle.
@@ -380,7 +380,7 @@ extern "C" {
 	/// @param state if successful, a pointer to a user provided ARTEMISCONNECTIONSTATE instance.
 	/// @see ARTEMISERROR
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
-	artfn int ArtemisCameraConnectionState(ArtemisHandle handle, ARTEMISCONNECTIONSTATE * state);
+	artfn int ArtemisCameraConnectionState(ArtemisHandle handle, enum ARTEMISCONNECTIONSTATE * state);
 
 	// ------------------- Exposure Settings -----------------------------------
 
@@ -680,6 +680,31 @@ extern "C" {
 	/// @param callback a pointer to a function which will be invoked when fast mode is completed.
 	/// @return TRUE on success, FALSE on failure.
 	artfn BOOL ArtemisSetFastCallback(  ArtemisHandle handle, void(*callback)(ArtemisHandle handle, int x, int y, int w, int h, int binx, int biny, void * imageBuffer));
+
+	/// @brief Set the callback that will be invoked when a fast mode exposure is completed. This extension provides
+	/// an array of info as the last arguments. The first char in the info array is always the length of the array
+	/// -1
+	/// @param handle the connected Atik device handle.
+	/// @param callback a pointer to a function which will be invoked when fast mode is completed.
+	/// @return TRUE on success, FALSE on failure.
+	artfn BOOL ArtemisSetFastCallbackEx(ArtemisHandle handle, void(*callback)(ArtemisHandle handle, int x, int y, int w, int h, int binx, int biny, void * imageBuffer, unsigned char * info));
+
+	/// @brief Returns a pointer to the formatted last exposure start time while using the fast mode callback.
+	/// The buffer is internal to the SDK and is overwritten every time this function is called.
+	/// Only works with our Horizon II and ACIS/Apx series cameras
+	/// Does not include milliseconds.
+	/// @param handle the connected Atik device handle.
+	/// @see ArtemisLastStartTimeMilliseconds()
+	/// @return pointer to a null terminated buffer containing the formatted time exposure was started at.
+	artfn char* ArtemisLastFastModeStartTime(ArtemisHandle handle);
+
+	/// @brief Returns the last fast mode callback exposure start time millisecond component.
+	/// Only works with our Horizon II and ACIS/Apx series cameras
+	/// @param handle the connected Atik device handle.
+	/// @see ArtemisLastStartTime
+	/// @return millisecond component of the last exposure time.
+	artfn int   ArtemisLastFastModeStartTimeMilliseconds(ArtemisHandle handle);
+
 	// ------------------- Amplifier -----------------------------------
 
 	/// @brief Enable/disable the device's amplifier.
@@ -839,7 +864,7 @@ extern "C" {
 	/// @param serialNumber a pointer to a char array of length 100, which will be set to the serial number of the filter wheel.
 	/// @see ARTEMISERROR, ARTEMISEFWTYPE, ArtemisEFWGetDetails()
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
-	artfn int			ArtemisEFWGetDeviceDetails(int i, ARTEMISEFWTYPE * type, char * serialNumber);
+	artfn int			ArtemisEFWGetDeviceDetails(int i, enum ARTEMISEFWTYPE * type, char * serialNumber);
 
 	/// @brief Connect to a filter wheel device at the specified index.
 	/// @param i The index of the filter wheel device to connect to.
@@ -863,7 +888,7 @@ extern "C" {
 	/// @param type a pointer to an ARTEMISEFWTYPE enumeration, which will be set to the type of the filter wheel device.
 	/// @param serialNumber a pointer to a char array of length 100, which will be set to the serial number of the filter wheel.
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
-	artfn int			ArtemisEFWGetDetails( ArtemisHandle handle, ARTEMISEFWTYPE * type, char * serialNumber);
+	artfn int			ArtemisEFWGetDetails( ArtemisHandle handle, enum ARTEMISEFWTYPE * type, char * serialNumber);
 
 	/// @brief Gets the number of filters inside the filter wheel.
 	/// @param handle the connected Atik device handle.
@@ -1006,7 +1031,7 @@ extern "C" {
 	/// @param hps This determines what defines a hot pixel. HPS_HIGH will see the most hot pixels,
 	/// but may think that some normal pixels are hot.
 	artfn int ArtemisHotPixelAdvancedRemoval(ArtemisHandle handle, bool on, bool darkFrame,
-											 bool checkForAdjacentHotPixels, HotPixelSensitivity hps);
+											 bool checkForAdjacentHotPixels, enum HotPixelSensitivity hps);
 
 	/// @brief Will begin the process of calculating the internal array of hot pixels determined using
 	/// the darkFrame option of @ArtemisHotPixelAdvancedRemoval this function needs to be called after any
