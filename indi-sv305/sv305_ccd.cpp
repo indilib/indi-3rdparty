@@ -241,7 +241,7 @@ bool Sv305CCD::Connect()
     status = SVBSetAutoSaveParam(cameraID, SVB_FALSE);
     if (status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, disable auto save param failed.\n");
+        LOG_ERROR("Error, disable auto save param failed.");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
@@ -257,22 +257,18 @@ bool Sv305CCD::Connect()
     if (isDebug())
     {
         // Output camera properties to log 
-        IDLog("Camera Property:\n WxH= %ldx%ld, Color:%d, BayerPattern:%d, MaxBitDepth:%d, IsTriggerCam:%d\n",
+        LOGF_DEBUG("Camera Property:\n WxH= %ldx%ld, Color:%d, BayerPattern:%d, MaxBitDepth:%d, IsTriggerCam:%d",
             cameraProperty.MaxWidth, cameraProperty.MaxHeight,
             cameraProperty.IsColorCam,
             cameraProperty.BayerPattern,
             cameraProperty.MaxBitDepth,
             cameraProperty.IsTriggerCam);
-        IDLog(" Bin:");
         for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedBins)/sizeof(cameraProperty.SupportedBins[0]))) && cameraProperty.SupportedBins[i] != 0; i++) {
-            IDLog("%d ", cameraProperty.SupportedBins[i]);
+            LOGF_DEBUG(" Bin %d", cameraProperty.SupportedBins[i]);
         }
-        IDLog("\n");
-        IDLog(" SupportedVideFormat:");
         for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++) {
-            IDLog("%d ", cameraProperty.SupportedVideoFormat[i]);
+            LOGF_DEBUG(" SupportedVideFormat: %d", cameraProperty.SupportedVideoFormat[i]);
         }
-        IDLog("\n");
     }
 
     // get camera properties ex
@@ -287,7 +283,7 @@ bool Sv305CCD::Connect()
     if (isDebug())
     {
         // outout camera properties ex to log
-        IDLog("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d\n",
+        LOGF_DEBUG("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d",
             cameraPropertyEx.bSupportPulseGuide,
             cameraPropertyEx.bSupportControlTemp);
     }
