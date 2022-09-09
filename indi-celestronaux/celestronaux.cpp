@@ -154,7 +154,6 @@ bool CelestronAUX::Handshake()
         if (isConnected())
             syncCoordWrapPosition();
 
-        LOG_WARN("This is an experimental driver. It was not tested in equatorial mode. Use it at your own risk.");
         return true;
     }
     else
@@ -163,83 +162,6 @@ bool CelestronAUX::Handshake()
     }
 
 }
-
-//bool CelestronAUX::Handshake()
-//{
-//    LOGF_DEBUG("CAUX: connect %d (%s)", PortFD, (getActiveConnection() == serialConnection) ? "serial" : "net");
-//    if (PortFD > 0)
-//    {
-//        if (getActiveConnection() == serialConnection)
-//        {
-//            LOGF_DEBUG("detectRTSCTS = %s.",  detectRTSCTS() ? "true" : "false");
-
-//            // if serial connection, check if hardware control flow is required.
-//            // yes for AUX and PC ports, no for HC port and mount USB port.
-//            if ((m_IsRTSCTS = detectRTSCTS()))
-//            {
-//                LOG_INFO("Detected AUX or PC port connection.");
-//                serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
-//                if (!tty_set_speed(B19200))
-//                    return false;
-//                LOG_INFO("Setting serial speed to 19200 baud.");
-//            }
-//            else
-//            {
-//                serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
-//                if (!tty_set_speed(B9600))
-//                {
-//                    LOG_ERROR("Cannot set serial speed to 9600 baud.");
-//                    return false;
-//                }
-
-//                // wait for speed to settle
-//                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-//                LOG_INFO("Setting serial speed to 9600 baud.");
-
-//                // detect if connectd to HC port or to mount USB port
-//                // ask for HC version
-//                char version[10];
-//                if ((m_isHandController = detectHC(version, 10)))
-//                    LOGF_INFO("Detected Hand Controller (v%s) serial connection.", version);
-//                else
-//                    LOG_INFO("Detected Mount USB serial connection.");
-//            }
-//        }
-//        else
-//            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-//        // read firmware version, if read ok, detected scope
-//        LOG_DEBUG("Communicating with mount motor controllers...");
-//        if (getVersion(AZM) && getVersion(ALT))
-//        {
-//            LOG_INFO("Got response from target ALT or AZM.");
-//        }
-//        else
-//        {
-//            LOG_ERROR("Got no response from target ALT or AZM.");
-//            LOG_ERROR("Cannot continue without connection to motor controllers.");
-//            return false;
-//        }
-
-//        LOG_DEBUG("Connection ready. Starting Processing.");
-
-//        // set mount type to alignment subsystem
-//        SetApproximateMountAlignmentFromMountType(static_cast<MountType>(MountTypeSP.findOnSwitchIndex()));
-//        // tell the alignment math plugin to reinitialise
-//        Initialise(this);
-
-//        // update cordwrap position at each init of the alignment subsystem
-//        if (isConnected())
-//            syncCoordWrapPosition();
-//        return true;
-//    }
-//    else
-//    {
-//        return false ;
-//    }
-
-//}
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
