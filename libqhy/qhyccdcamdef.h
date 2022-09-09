@@ -415,6 +415,9 @@
 
 #define DEVICETYPE_QHY600M_OEM     		4119
 #define DEVICETYPE_QHY533M              4120
+#define DEVICETYPE_QHY5III200M              4121
+#define DEVICETYPE_QHY5III585C              4122
+#define DEVICETYPE_QHY10768              4123
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -1080,6 +1083,9 @@
 #define QHY6060_MAX_WIDTH        	7936
 #define QHY6060_MAX_HEIGHT        	6134
 
+#define QHY10768_MAX_WIDTH        	1028
+#define QHY10768_MAX_HEIGHT        	50
+
 #define QHY411_MAX_WIDTH        	14304
 #define QHY411_MAX_HEIGHT        	10748
 
@@ -1128,7 +1134,7 @@
 #define QHY461_MAX_WIDTH		   11760
 #define QHY461_MAX_HEIGHT		   8842
 
-#define QHY268C_MAX_WIDTH        6280
+#define QHY268C_MAX_WIDTH        6288
 #define QHY268C_MAX_HEIGHT       4210
 
 #define QHY410C_MAX_WIDTH        6112
