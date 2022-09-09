@@ -34,6 +34,7 @@ EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 #endif
 
 EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
+EXPORTC void STDCALL set_histogram_equalization(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
 
 
@@ -912,6 +913,7 @@ EXPORTFUNC void STDCALL QHYCCDTestFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDSetFlashInitPWM(qhyccd_handle *handle,uint8_t pwm);
 EXPORTFUNC void STDCALL QHYCCDGetDebugDataD3(qhyccd_handle *handle, char* debugData_raw64);
 EXPORTFUNC uint32_t STDCALL QHYCCDSolve(const std::string filePath,int timeout_s, float scale_l, float  scale_h,float center_ra, float center_dec,float center_r, float& s_ra, float& s_dec,float& s_size_x,float& s_size_y, float& s_rotation);
+EXPORTFUNC void STDCALL QHYCCDEqualizeHistogram(uint8_t * pdata, int width, int height, int bpp);
 void  QHYCCDGetDebugControlID(CONTROL_ID controlId, bool hasValue, bool isSetValue, double value);
 
 
