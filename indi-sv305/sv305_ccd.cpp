@@ -87,19 +87,12 @@ Sv305CCD::Sv305CCD(int numCamera)
     // Set camera name
     snprintf(this->name, 32, "%s %d", cameraInfo.FriendlyName, numCamera);
     setDeviceName(this->name);
-
-    // mutex init
-    pthread_mutex_init(&cameraID_mutex, NULL);
-    pthread_mutex_init(&streaming_mutex, NULL);
 }
 
 
 //
 Sv305CCD::~Sv305CCD()
 {
-    // mutex destroy
-    pthread_mutex_destroy(&cameraID_mutex);
-    pthread_mutex_destroy(&streaming_mutex);
 }
 
 
@@ -222,6 +215,12 @@ bool Sv305CCD::Connect()
     streaming = false;
 
     LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
+
+    // init mutex and cond
+    pthread_mutex_init(&cameraID_mutex, NULL);
+    pthread_mutex_init(&streaming_mutex, NULL);
+    pthread_mutex_init(&condMutex, NULL);
+    pthread_cond_init(&cv, NULL);
 
     pthread_mutex_lock(&cameraID_mutex);
 
@@ -671,6 +670,14 @@ bool Sv305CCD::Disconnect()
 
     //pthread_mutex_unlock(&cameraID_mutex); // *1 has been comment outed, so this line comment outed too
 
+    // destroy mutex, cond and streaming thread
+    pthread_mutex_destroy(&cameraID_mutex);
+    pthread_mutex_destroy(&streaming_mutex);
+    pthread_mutex_destroy(&condMutex);
+    pthread_cond_destroy(&cv);
+
+    pthread_cancel(primary_thread);
+
     return true;
 }
 
@@ -906,9 +913,8 @@ bool Sv305CCD::StartStreaming()
 
     pthread_mutex_lock(&condMutex);
     streaming = true;
-    pthread_mutex_unlock(&condMutex);
-
     pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&condMutex);
 
     LOG_INFO("Streaming started\n");
 
@@ -965,9 +971,8 @@ bool Sv305CCD::StopStreaming()
 
     pthread_mutex_lock(&condMutex);
     streaming = false;
-    pthread_mutex_unlock(&condMutex);
-
     pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&condMutex);
 
     LOG_INFO("Streaming stopped\n");
 
@@ -999,10 +1004,10 @@ void* Sv305CCD::streamVideo()
             ExposureRequest = 1.0 / Streamer->getTargetFPS();
         }
 
+        pthread_mutex_unlock(&condMutex);
+
         if (terminateThread)
             break;
-
-        pthread_mutex_unlock(&condMutex);
 
         unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
 

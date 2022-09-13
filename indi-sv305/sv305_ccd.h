@@ -230,8 +230,8 @@ class Sv305CCD : public INDI::CCD
         friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 
         // Threading - streaming mutex
-        pthread_cond_t cv         = PTHREAD_COND_INITIALIZER;
-        pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
+        pthread_cond_t cv;
+        pthread_mutex_t condMutex;
 };
 
 #endif // SV305_CCD_H
