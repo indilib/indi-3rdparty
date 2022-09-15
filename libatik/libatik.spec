@@ -46,6 +46,7 @@ BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
 Provides: libatikcameras.so()(64bit)
+Provides: libatikcameras.so()
 Provides: libflycapture.so.2()(64bit)
 
 %description
