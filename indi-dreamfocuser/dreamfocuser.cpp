@@ -139,10 +139,10 @@ bool DreamFocuser::initProperties()
     IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "PARK", "Park", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     // Focuser temperature and humidity
-    IUFillNumber(&WeatherN[0], "TEMPERATURE", "Temperature [C]", "%6.1f", -100, 100, 0, 0);
-    IUFillNumber(&WeatherN[1], "HUMIDITY", "Humidity [%]", "%6.1f", 0, 100, 0, 0);
-    IUFillNumber(&WeatherN[2], "DEWPOINT", "Dew point [C]", "%6.1f", -100, 100, 0, 0);
-    IUFillNumberVector(&WeatherNP, WeatherN, 3, getDeviceName(), "FOCUS_WEATHER", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    IUFillNumber(&WeatherN[0], "FOCUS_TEMPERATURE", "Temperature [C]", "%6.1f", -100, 100, 0, 0);
+    IUFillNumber(&WeatherN[1], "FOCUS_HUMIDITY", "Humidity [%]", "%6.1f", 0, 100, 0, 0);
+    IUFillNumber(&WeatherN[2], "FOCUS_DEWPOINT", "Dew point [C]", "%6.1f", -100, 100, 0, 0);
+    IUFillNumberVector(&WeatherNP, WeatherN, 3, getDeviceName(), "WEATHER_PARAMETERS", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Focuser humidity
     //IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "HUMIDITY", "Humidity", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
