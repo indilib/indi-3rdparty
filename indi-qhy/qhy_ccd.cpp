@@ -945,37 +945,45 @@ bool QHYCCD::Connect()
 
         HasFilters = false;
         //Using new SDK query
-        ret = IsQHYCCDCFWPlugged(m_CameraHandle);
-        if (ret == QHYCCD_SUCCESS)
+        // N.B. JM 2022.09.18: Still must retry multiple times as sometimes the filter is not picked up
+        for (int i = 0; i < 3; i++)
         {
-            HasFilters = true;
-            m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
-            LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
-            // If we get invalid value, check again in 0.5 sec
-            if (m_MaxFilterCount > 16)
-            {
-                usleep(500000);
-                m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
-                LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
-            }
-
-            if (m_MaxFilterCount > 16)
-            {
-                LOG_DEBUG("Camera can support CFW but no filters are present.");
-                m_MaxFilterCount = -1;
-                HasFilters = false;
-            }
-
-            if (m_MaxFilterCount > 0)
+            ret = IsQHYCCDCFWPlugged(m_CameraHandle);
+            if (ret == QHYCCD_SUCCESS)
             {
                 HasFilters = true;
-                updateFilterProperties();
-                LOGF_INFO("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+                m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
+                LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+                // If we get invalid value, check again in 0.5 sec
+                if (m_MaxFilterCount > 16)
+                {
+                    usleep(500000);
+                    m_MaxFilterCount = GetQHYCCDParam(m_CameraHandle, CONTROL_CFWSLOTSNUM);
+                    LOGF_DEBUG("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+                }
+
+                if (m_MaxFilterCount > 16)
+                {
+                    LOG_DEBUG("Camera can support CFW but no filters are present.");
+                    m_MaxFilterCount = -1;
+                    HasFilters = false;
+                }
+
+                if (m_MaxFilterCount > 0)
+                {
+                    HasFilters = true;
+                    updateFilterProperties();
+                    LOGF_INFO("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
+                }
+                else
+                {
+                    HasFilters = false;
+                }
+
+                break;
             }
-            else
-            {
-                HasFilters = false;
-            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
 
         if (HasFilters == true)
