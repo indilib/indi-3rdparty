@@ -71,7 +71,10 @@ class DreamFocuser : public INDI::Focuser
 
     private:
 
-        INumber WeatherN[3];
+        INumber TemperatureN[1];
+        INumberVectorProperty TemperatureNP;
+
+        INumber WeatherN[2];
         INumberVectorProperty WeatherNP;
 
         ISwitch ParkS[2];
