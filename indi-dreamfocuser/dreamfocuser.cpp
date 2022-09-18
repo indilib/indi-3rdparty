@@ -138,14 +138,14 @@ bool DreamFocuser::initProperties()
     IUFillSwitch(&ParkS[PARK_UNPARK], "UNPARK", "Unpark", ISS_OFF);
     IUFillSwitchVector(&ParkSP, ParkS, 2, getDeviceName(), "PARK", "Park", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
-    // Focuser temperature and humidity
-    IUFillNumber(&WeatherN[0], "TEMPERATURE", "Temperature [C]", "%6.1f", -100, 100, 0, 0);
-    IUFillNumber(&WeatherN[1], "HUMIDITY", "Humidity [%]", "%6.1f", 0, 100, 0, 0);
-    IUFillNumber(&WeatherN[2], "DEWPOINT", "Dew point [C]", "%6.1f", -100, 100, 0, 0);
-    IUFillNumberVector(&WeatherNP, WeatherN, 3, getDeviceName(), "FOCUS_WEATHER", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    // Focuser temperature
+    IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%6.2f", -100, 100, 0, 0);
+    IUFillNumberVector(&TemperatureNP, TemperatureN, 1, getDeviceName(), "FOCUS_TEMPERATURE", "Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    // Focuser humidity
-    //IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "HUMIDITY", "Humidity", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    // Focuser humidity and dewpoint
+    IUFillNumber(&WeatherN[0], "FOCUS_HUMIDITY", "Humidity [%]", "%6.1f", 0, 100, 0, 0);
+    IUFillNumber(&WeatherN[1], "FOCUS_DEWPOINT", "Dew point [C]", "%6.1f", -100, 100, 0, 0);
+    IUFillNumberVector(&WeatherNP, WeatherN, 2, getDeviceName(), "FOCUS_WEATHER", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // We init here the property we wish to "snoop" from the target device
     IUFillSwitch(&StatusS[0], "ABSOLUTE", "Absolute", ISS_OFF);
@@ -184,6 +184,7 @@ bool DreamFocuser::updateProperties()
     {
         //defineProperty(&SyncSP);
         defineProperty(&ParkSP);
+        defineProperty(&TemperatureNP);
         defineProperty(&WeatherNP);
         defineProperty(&StatusSP);
         //defineProperty(&MaxPositionNP);
@@ -193,6 +194,7 @@ bool DreamFocuser::updateProperties()
     {
         //deleteProperty(SyncSP.name);
         deleteProperty(ParkSP.name);
+        deleteProperty(TemperatureNP.name);
         deleteProperty(WeatherNP.name);
         deleteProperty(StatusSP.name);
         //deleteProperty(MaxPositionNP.name);
@@ -592,13 +594,17 @@ void DreamFocuser::TimerHit()
 
     if ( getTemperature() )
     {
-        WeatherNP.s = ( (WeatherN[0].value != currentTemperature) || (WeatherN[1].value != currentHumidity)) ? IPS_BUSY : IPS_OK;
-        WeatherN[0].value = currentTemperature;
-        WeatherN[1].value = currentHumidity;
-        WeatherN[2].value = pow(currentHumidity / 100, 1.0 / 8) * (112 + 0.9 * currentTemperature) + 0.1 * currentTemperature - 112;
+        TemperatureNP.s = TemperatureN[0].value != currentTemperature ? IPS_BUSY : IPS_OK;
+        WeatherNP.s = WeatherN[1].value != currentHumidity ? IPS_BUSY : IPS_OK;
+        TemperatureN[0].value = currentTemperature;
+        WeatherN[0].value = currentHumidity;
+        WeatherN[1].value = pow(currentHumidity / 100, 1.0 / 8) * (112 + 0.9 * currentTemperature) + 0.1 * currentTemperature - 112;
     }
     else
+    {
+        TemperatureNP.s = IPS_ALERT;
         WeatherNP.s = IPS_ALERT;
+    }
 
     if ( FocusAbsPosNP.s != IPS_IDLE )
     {
@@ -626,10 +632,11 @@ void DreamFocuser::TimerHit()
     if ((oldAbsStatus != FocusAbsPosNP.s) || (oldPosition != currentPosition))
         IDSetNumber(&FocusAbsPosNP, nullptr);
 
+    IDSetNumber(&TemperatureNP, nullptr);
     IDSetNumber(&WeatherNP, nullptr);
     //IDSetSwitch(&SyncSP, nullptr);
     IDSetSwitch(&StatusSP, nullptr);
-   IDSetSwitch(&ParkSP, NULL);
+    IDSetSwitch(&ParkSP, NULL);
 
     SetTimer(getCurrentPollingPeriod());
 
