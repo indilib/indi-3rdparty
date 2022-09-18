@@ -142,7 +142,7 @@ bool DreamFocuser::initProperties()
     IUFillNumber(&WeatherN[0], "FOCUS_TEMPERATURE", "Temperature [C]", "%6.1f", -100, 100, 0, 0);
     IUFillNumber(&WeatherN[1], "FOCUS_HUMIDITY", "Humidity [%]", "%6.1f", 0, 100, 0, 0);
     IUFillNumber(&WeatherN[2], "FOCUS_DEWPOINT", "Dew point [C]", "%6.1f", -100, 100, 0, 0);
-    IUFillNumberVector(&WeatherNP, WeatherN, 3, getDeviceName(), "WEATHER_PARAMETERS", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    IUFillNumberVector(&WeatherNP, WeatherN, 3, getDeviceName(), "FOCUS_WEATHER", "Weather", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Focuser humidity
     //IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "HUMIDITY", "Humidity", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
