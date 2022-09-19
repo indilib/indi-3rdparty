@@ -297,6 +297,9 @@ bool Kepler::initProperties()
     MergeCalibrationFilesTP[CALIBRATION_FLAT].fill("CALIBRATION_FLAT", "Flat", "");
     MergeCalibrationFilesTP.fill(getDeviceName(), "MERGE_CALIBRATION_FRAMES", "Calibration", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
 
+    // Cooler Duty Cycle
+    CoolerDutyNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 5, 0.0);
+    CoolerDutyNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
     addAuxControls();
 
@@ -323,17 +326,22 @@ bool Kepler::updateProperties()
     {
         setup();
 
+        defineProperty(CoolerDutyNP);
         defineProperty(MergeMethodSP);
         defineProperty(MergePlanesSP);
         defineProperty(MergeCalibrationFilesTP);
+        defineProperty(LowGainSP);
+        defineProperty(HighGainSP);
 
     }
     else
     {
-
+        deleteProperty(CoolerDutyNP);
         deleteProperty(MergeMethodSP);
         deleteProperty(MergePlanesSP);
         deleteProperty(MergeCalibrationFilesTP);
+        deleteProperty(LowGainSP);
+        deleteProperty(HighGainSP);
     }
 
     return true;
@@ -415,6 +423,34 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             saveConfig(MergeMethodSP);
             return true;
         }
+
+        // Low Gain
+        if (LowGainSP.isNameMatch(name))
+        {
+            LowGainSP.update(states, names, n);
+            int index = LowGainSP.findOnSwitchIndex();
+            if (FPROSensor_SetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_LOW_CHANNEL, m_LowGainTable[index].uiDeviceIndex) >= 0)
+                LowGainSP.setState(IPS_OK);
+            else
+                LowGainSP.setState(IPS_ALERT);
+            LowGainSP.apply();
+            saveConfig(true, LowGainSP.getName());
+            return true;
+        }
+
+        // High Gain
+        if (HighGainSP.isNameMatch(name))
+        {
+            HighGainSP.update(states, names, n);
+            int index = HighGainSP.findOnSwitchIndex();
+            if (FPROSensor_SetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, m_HighGainTable[index].uiDeviceIndex) >= 0)
+                HighGainSP.setState(IPS_OK);
+            else
+                HighGainSP.setState(IPS_ALERT);
+            HighGainSP.apply();
+            saveConfig(true, HighGainSP.getName());
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -480,6 +516,8 @@ bool Kepler::Disconnect()
     m_FrameBuffer = nullptr;
     FPROCam_Close(m_CameraHandle);
     m_TemperatureTimer.stop();
+    delete [] m_LowGainTable;
+    delete [] m_HighGainTable;
     return true;
 }
 
@@ -531,6 +569,54 @@ bool Kepler::setup()
     fproStats.bHighRequest = true;
     fproStats.bMergedRequest = true;
     fproUnpacked.eMergAlgo = FPROMERGE_ALGO;
+
+    // Low Gain tables
+    if (m_CameraCapabilities.uiLowGain > 0)
+    {
+        uint32_t count = m_CameraCapabilities.uiLowGain;
+        m_LowGainTable = new FPROGAINVALUE[count];
+        if (FPROSensor_GetGainTable(m_CameraHandle, FPRO_GAIN_TABLE_LOW_CHANNEL, m_LowGainTable, &count) >= 0)
+        {
+            LowGainSP.resize(count);
+            char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
+            for (uint32_t i = 0; i < count; i++)
+            {
+                auto gain = static_cast<double>(m_LowGainTable->uiValue) / FPRO_GAIN_SCALE_FACTOR;
+                snprintf(name, MAXINDINAME, "LOW_GAIN_%u", i);
+                snprintf(name, MAXINDILABEL, "%.2f", gain);
+                LowGainSP[i].fill(name, label, ISS_OFF);
+            }
+        }
+
+        uint32_t index = 0;
+        FPROSensor_GetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_LOW_CHANNEL, &index);
+        LowGainSP[index].setState(ISS_ON);
+        LowGainSP.fill(getDefaultName(), "LOW_GAIN", "Low Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    }
+
+    // High gain tables
+    if (m_CameraCapabilities.uiHighGain > 0)
+    {
+        uint32_t count = m_CameraCapabilities.uiLowGain;
+        m_HighGainTable = new FPROGAINVALUE[count];
+        if (FPROSensor_GetGainTable(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, m_HighGainTable, &count) >= 0)
+        {
+            HighGainSP.resize(count);
+            char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
+            for (uint32_t i = 0; i < count; i++)
+            {
+                auto gain = static_cast<double>(m_HighGainTable->uiValue) / FPRO_GAIN_SCALE_FACTOR;
+                snprintf(name, MAXINDINAME, "HIGH_GAIN_%u", i);
+                snprintf(name, MAXINDILABEL, "%.2f", gain);
+                LowGainSP[i].fill(name, label, ISS_OFF);
+            }
+        }
+
+        uint32_t index = 0;
+        FPROSensor_GetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, &index);
+        HighGainSP[index].setState(ISS_ON);
+        HighGainSP.fill(getDefaultName(), "HIGH_GAIN", "High Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    }
 
     m_TemperatureTimer.start();
     return true;
@@ -702,6 +788,23 @@ void Kepler::readTemperature()
         case IPS_ALERT:
             break;
     }
+
+    uint32_t duty = 0;
+    result = FPROCtrl_GetCoolerDutyCycle(m_CameraHandle, &duty);
+    auto percentage = duty / 100.0;
+    // Set alert, if not set already in case there is SDK error.
+    if (result < 0 && CoolerDutyNP.getState() != IPS_ALERT)
+    {
+        CoolerDutyNP.setState(IPS_ALERT);
+        CoolerDutyNP.apply();
+    }
+    // Only send updates if we are above 1 percent threshold
+    else if (std::abs(percentage - CoolerDutyNP[0].getValue()) >= 1)
+    {
+        CoolerDutyNP[0].setValue(percentage);
+        CoolerDutyNP.setState(duty > 0 ? IPS_BUSY : IPS_IDLE);
+        CoolerDutyNP.apply();
+    }
 }
 
 /********************************************************************************
@@ -714,6 +817,10 @@ bool Kepler::saveConfigItems(FILE * fp)
     IUSaveConfigSwitch(fp, &MergeMethodSP);
     IUSaveConfigSwitch(fp, &MergePlanesSP);
     IUSaveConfigText(fp, &MergeCalibrationFilesTP);
+    if (LowGainSP.size() > 0)
+        IUSaveConfigSwitch(fp, &LowGainSP);
+    if (HighGainSP.size() > 0)
+        IUSaveConfigSwitch(fp, &HighGainSP);
 
     return true;
 }

@@ -69,6 +69,11 @@ class Kepler : public INDI::CCD
 
         INDI::PropertySwitch MergePlanesSP {3};
 
+        INDI::PropertySwitch LowGainSP {0};
+        INDI::PropertySwitch HighGainSP {0};
+
+        INDI::PropertyNumber CoolerDutyNP {1};
+
         INDI::PropertyText MergeCalibrationFilesTP {2};
         enum
         {
@@ -109,8 +114,11 @@ class Kepler : public INDI::CCD
         FPRO_HWMERGEENABLE mergeEnables;
 
         // Temperature
-        double m_TargetTemperature {0};
         INDI::Timer m_TemperatureTimer;
+
+        // Gain Tables
+        FPROGAINVALUE *m_LowGainTable {nullptr};
+        FPROGAINVALUE *m_HighGainTable {nullptr};
 
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
         static constexpr double TEMPERATURE_THRESHOLD {0.1};
