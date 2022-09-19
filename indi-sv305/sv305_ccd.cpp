@@ -592,16 +592,27 @@ bool Sv305CCD::Connect()
 
     // set camera ROI and BIN
     binning = false;
-    SetCCDParams(cameraProperty.MaxWidth, cameraProperty.MaxHeight, bitDepth, pixelSize, pixelSize);
     status = SVBSetROIFormat(cameraID, 0, 0, cameraProperty.MaxWidth, cameraProperty.MaxHeight, 1);
     if(status != SVB_SUCCESS)
     {
-        LOG_ERROR("Error, camera set ROI failed\n");
+        LOG_ERROR("Error, camera set ROI failed");
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    x_offset = 0;
-    y_offset = 0;
+    int x, y, w, h, bin;
+	status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin); // Get Actual ROI
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera get ROI failed");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    LOGF_DEBUG("Actual ROI x=%d, y=%d, w=%d, h=%d, bin=%d", x, y, w, h, bin);
+    SetCCDParams(w, h, bitDepth, pixelSize, pixelSize);
+    x_offset = x;
+    y_offset = y;
+    ROI_width = w;
+    ROI_height = h;
     LOG_INFO("Camera set ROI\n");
 
     // set camera soft trigger mode
@@ -1082,7 +1093,17 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
         pthread_mutex_unlock(&cameraID_mutex);
         return false;
     }
-    LOG_INFO("Subframe set\n");
+    LOGF_DEBUG("Given ROI x=%d, y=%d, w=%d, h=%d", x, y, w, h);
+    int bin;
+	status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin);
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, get actual subframe failed");
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+    LOGF_DEBUG("Actual ROI x=%d, y=%d, w=%d, h=%d, bin=%d", x, y, w, h, bin);
+    LOG_INFO("Subframe set");
 
     // start framing
     status = SVBStartVideoCapture(cameraID);
@@ -1097,6 +1118,8 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 
     x_offset = x;
     y_offset = y;
+    ROI_width = w;
+    ROI_height = h;
 
     return INDI::CCD::UpdateCCDFrame(x, y, w, h);
 }
@@ -1348,7 +1371,16 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
         return updateControl(CCD_DOFFSET_N, SVB_BLACK_LEVEL, values, names, n);
     }
 
-    return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+    bool result = INDI::CCD::ISNewNumber(dev, name, values, names, n);
+
+    // look for ROI settings
+    if (!strcmp(name, "CCD_FRAME") && result)
+    {
+        // Set actural ROI size
+        PrimaryCCD.setFrame(x_offset, y_offset, ROI_width, ROI_height);
+    }
+
+    return result;
 }
 
 
