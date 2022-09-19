@@ -581,7 +581,7 @@ bool Kepler::setup()
             char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
             for (uint32_t i = 0; i < count; i++)
             {
-                auto gain = static_cast<double>(m_LowGainTable->uiValue) / FPRO_GAIN_SCALE_FACTOR;
+                auto gain = static_cast<double>(m_LowGainTable[i].uiValue) / FPRO_GAIN_SCALE_FACTOR;
                 snprintf(name, MAXINDINAME, "LOW_GAIN_%u", i);
                 snprintf(name, MAXINDILABEL, "%.2f", gain);
                 LowGainSP[i].fill(name, label, ISS_OFF);
@@ -605,7 +605,7 @@ bool Kepler::setup()
             char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
             for (uint32_t i = 0; i < count; i++)
             {
-                auto gain = static_cast<double>(m_HighGainTable->uiValue) / FPRO_GAIN_SCALE_FACTOR;
+                auto gain = static_cast<double>(m_HighGainTable[i].uiValue) / FPRO_GAIN_SCALE_FACTOR;
                 snprintf(name, MAXINDINAME, "HIGH_GAIN_%u", i);
                 snprintf(name, MAXINDILABEL, "%.2f", gain);
                 HighGainSP[i].fill(name, label, ISS_OFF);
