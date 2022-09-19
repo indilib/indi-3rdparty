@@ -127,9 +127,6 @@ class Sv305CCD : public INDI::CCD
         // ROI actual size
         int ROI_width;
         int ROI_height;
-        // INDI properties
-        INumber ROI_N[4];
-        INumberVectorProperty ROI_NP; 
 
         // streaming ?
         bool streaming;
