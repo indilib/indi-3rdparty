@@ -123,7 +123,10 @@ class Sv305CCD : public INDI::CCD
 
         // ROI offsets
         int x_offset;
-	    int y_offset;
+	int y_offset;
+        // ROI actual size
+        int ROI_width;
+        int ROI_height;
 
         // streaming ?
         bool streaming;
