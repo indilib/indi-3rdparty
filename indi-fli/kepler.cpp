@@ -591,13 +591,13 @@ bool Kepler::setup()
         uint32_t index = 0;
         FPROSensor_GetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_LOW_CHANNEL, &index);
         LowGainSP[index].setState(ISS_ON);
-        LowGainSP.fill(getDefaultName(), "LOW_GAIN", "Low Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        LowGainSP.fill(getDeviceName(), "LOW_GAIN", "Low Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     // High gain tables
     if (m_CameraCapabilities.uiHighGain > 0)
     {
-        uint32_t count = m_CameraCapabilities.uiLowGain;
+        uint32_t count = m_CameraCapabilities.uiHighGain;
         m_HighGainTable = new FPROGAINVALUE[count];
         if (FPROSensor_GetGainTable(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, m_HighGainTable, &count) >= 0)
         {
@@ -608,14 +608,14 @@ bool Kepler::setup()
                 auto gain = static_cast<double>(m_HighGainTable->uiValue) / FPRO_GAIN_SCALE_FACTOR;
                 snprintf(name, MAXINDINAME, "HIGH_GAIN_%u", i);
                 snprintf(name, MAXINDILABEL, "%.2f", gain);
-                LowGainSP[i].fill(name, label, ISS_OFF);
+                HighGainSP[i].fill(name, label, ISS_OFF);
             }
         }
 
         uint32_t index = 0;
         FPROSensor_GetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, &index);
         HighGainSP[index].setState(ISS_ON);
-        HighGainSP.fill(getDefaultName(), "HIGH_GAIN", "High Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        HighGainSP.fill(getDeviceName(), "HIGH_GAIN", "High Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     m_TemperatureTimer.start();
