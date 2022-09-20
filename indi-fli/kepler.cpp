@@ -306,6 +306,10 @@ bool Kepler::initProperties()
     FanSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
     FanSP.fill(getDeviceName(), "FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Black Level
+    BlackLevelNP[0].fill("VALUE", "Value", "%.f", 0, 1000, 10, 0);
+    BlackLevelNP.fill(getDeviceName(), "BLACK_LEVEL", "Black Level", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
+
     addAuxControls();
 
     return true;
@@ -338,7 +342,7 @@ bool Kepler::updateProperties()
         defineProperty(LowGainSP);
         defineProperty(HighGainSP);
         defineProperty(FanSP);
-
+        defineProperty(BlackLevelNP);
     }
     else
     {
@@ -349,6 +353,7 @@ bool Kepler::updateProperties()
         deleteProperty(LowGainSP);
         deleteProperty(HighGainSP);
         deleteProperty(FanSP);
+        deleteProperty(BlackLevelNP);
     }
 
     return true;
@@ -361,7 +366,18 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-
+        if (BlackLevelNP.isNameMatch(name))
+        {
+            if (FPROSensor_SetBlackLevelAdjust(m_CameraHandle, values[0]) >= 0)
+            {
+                BlackLevelNP.update(values, names, n);
+                BlackLevelNP.setState(IPS_OK);
+            }
+            else
+                BlackLevelNP.setState(IPS_ALERT);
+            BlackLevelNP.apply();
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -641,6 +657,14 @@ bool Kepler::setup()
         FanSP[INDI_ENABLED].setState(fanOn ? ISS_ON : ISS_OFF);
         FanSP[INDI_DISABLED].setState(fanOn ? ISS_OFF : ISS_ON);
         FanSP.setState(IPS_OK);
+    }
+
+    // Black level
+    uint32_t blackLevel = 0;
+    if (FPROSensor_GetBlackLevelAdjust(m_CameraHandle, &blackLevel))
+    {
+        BlackLevelNP[0].setValue(blackLevel);
+        BlackLevelNP.setState(IPS_OK);
     }
 
     m_TemperatureTimer.start();

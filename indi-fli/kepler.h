@@ -66,7 +66,6 @@ class Kepler : public INDI::CCD
         INDI::PropertySwitch CommunicationMethodSP {2};
 
 
-
         // Gain
         INDI::PropertySwitch LowGainSP {0};
         INDI::PropertySwitch HighGainSP {0};
@@ -84,6 +83,9 @@ class Kepler : public INDI::CCD
             CALIBRATION_DARK,
             CALIBRATION_FLAT
         };
+
+        // Black Level Adjust
+        INDI::PropertyNumber BlackLevelNP {1};
 
 
         //****************************************************************************************
