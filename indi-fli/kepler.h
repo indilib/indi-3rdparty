@@ -65,15 +65,19 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         INDI::PropertySwitch CommunicationMethodSP {2};
 
-        INDI::PropertySwitch MergeMethodSP {2};
 
-        INDI::PropertySwitch MergePlanesSP {3};
 
+        // Gain
         INDI::PropertySwitch LowGainSP {0};
         INDI::PropertySwitch HighGainSP {0};
 
+        // Cooler & Fan
         INDI::PropertyNumber CoolerDutyNP {1};
+        INDI::PropertySwitch FanSP {2};
 
+        // Merging
+        INDI::PropertySwitch MergeMethodSP {2};
+        INDI::PropertySwitch MergePlanesSP {3};
         INDI::PropertyText MergeCalibrationFilesTP {2};
         enum
         {

@@ -301,6 +301,11 @@ bool Kepler::initProperties()
     CoolerDutyNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 5, 0.0);
     CoolerDutyNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
+    // Fan
+    FanSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_OFF);
+    FanSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
+    FanSP.fill(getDeviceName(), "FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     addAuxControls();
 
     return true;
@@ -332,6 +337,7 @@ bool Kepler::updateProperties()
         defineProperty(MergeCalibrationFilesTP);
         defineProperty(LowGainSP);
         defineProperty(HighGainSP);
+        defineProperty(FanSP);
 
     }
     else
@@ -342,6 +348,7 @@ bool Kepler::updateProperties()
         deleteProperty(MergeCalibrationFilesTP);
         deleteProperty(LowGainSP);
         deleteProperty(HighGainSP);
+        deleteProperty(FanSP);
     }
 
     return true;
@@ -449,6 +456,15 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 HighGainSP.setState(IPS_ALERT);
             HighGainSP.apply();
             saveConfig(true, HighGainSP.getName());
+            return true;
+        }
+
+        // Fan
+        if (FanSP.isNameMatch(name))
+        {
+            FanSP.update(states, names, n);
+            FanSP.setState(FPROCtrl_SetFanEnable(m_CameraHandle, FanSP.findOnSwitchIndex() == INDI_ENABLED) >= 0 ? IPS_OK : IPS_ALERT);
+            FanSP.apply();
             return true;
         }
     }
@@ -616,6 +632,15 @@ bool Kepler::setup()
         FPROSensor_GetGainIndex(m_CameraHandle, FPRO_GAIN_TABLE_HIGH_CHANNEL, &index);
         HighGainSP[index].setState(ISS_ON);
         HighGainSP.fill(getDeviceName(), "HIGH_GAIN", "High Gain", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    }
+
+    // Fan
+    bool fanOn = false;
+    if (FPROCtrl_GetFanEnable(m_CameraHandle, &fanOn) >= 0)
+    {
+        FanSP[INDI_ENABLED].setState(fanOn ? ISS_ON : ISS_OFF);
+        FanSP[INDI_DISABLED].setState(fanOn ? ISS_OFF : ISS_ON);
+        FanSP.setState(IPS_OK);
     }
 
     m_TemperatureTimer.start();
