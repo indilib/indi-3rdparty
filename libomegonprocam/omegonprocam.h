@@ -1,7 +1,7 @@
 #ifndef __omegonprocam_h__
 #define __omegonprocam_h__
 
-/* Version: 53.20923.20220526 */
+/* Version: 53.21120.20220710 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -18,10 +18,10 @@
               (d) armhf: GLIBC 2.8 or above; built by toolchain arm-linux-gnueabihf (version 5.4.0)
               (e) arm64: GLIBC 2.17 or above; built by toolchain aarch64-linux-gnu (version 5.4.0)
        (5) Android: built by android-ndk-r18b; __ANDROID_API__ = 23
-               (a) arm: armeabi-v7a
-               (b) arm64: arm64-v8a
-               (c) x86
-               (d) x64: x86_64
+              (a) arm: armeabi-v7a
+              (b) arm64: arm64-v8a
+              (c) x86
+              (d) x64: x86_64
 */
 /*
     doc:
@@ -103,6 +103,7 @@ extern "C" {
 #define E_WRONG_THREAD      0x8001010e /* Call function in the wrong thread */
 #define E_GEN_FAILURE       0x8007001f /* Device not functioning */
 #define E_PENDING           0x8000000a /* The data necessary to complete this operation is not yet available */
+#define E_TIMEOUT           0x8001011f /* This operation returned because the timeout period expired */
 #endif
 
 /* handle */
@@ -210,7 +211,7 @@ typedef struct Omegonprocam_t { int unused; } *HOmegonprocam;
 #define OMEGONPROCAM_DENOISE_MAX              100     /* denoise */
 #define OMEGONPROCAM_TEC_TARGET_MIN           (-300)  /* TEC target: -30.0 degrees Celsius */
 #define OMEGONPROCAM_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
-#define OMEGONPROCAM_TEC_TARGET_MAX           300     /* TEC target: 30.0 degrees Celsius */
+#define OMEGONPROCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define OMEGONPROCAM_HEARTBEAT_MIN            100     /* millisecond */
 #define OMEGONPROCAM_HEARTBEAT_MAX            10000   /* millisecond */
 #define OMEGONPROCAM_AE_PERCENT_MIN           0       /* auto exposure percent, 0 => full roi average */
@@ -256,7 +257,7 @@ typedef struct {
 } OmegonprocamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.20923.20220526
+    get the version of this dll/so/dylib, which is: 53.21120.20220710
 */
 #if defined(_WIN32)
 OMEGONPROCAM_API(const wchar_t*)   Omegonprocam_Version();
@@ -309,7 +310,8 @@ OMEGONPROCAM_API(void)     Omegonprocam_Close(HOmegonprocam h);
 #define OMEGONPROCAM_EVENT_DFC               0x000a    /* dark field correction status changed */
 #define OMEGONPROCAM_EVENT_ROI               0x000b    /* roi changed */
 #define OMEGONPROCAM_EVENT_LEVELRANGE        0x000c    /* level range changed */
-#define OMEGONPROCAM_EVENT_AUTOEXPO_FINISH   0x000d    /* auto exposure once mode finish */
+#define OMEGONPROCAM_EVENT_AUTOEXPO_CONV     0x000d    /* auto exposure convergence */
+#define OMEGONPROCAM_EVENT_AUTOEXPO_CONVFAIL 0x000e    /* auto exposure once mode convergence failed */
 #define OMEGONPROCAM_EVENT_ERROR             0x0080    /* generic error */
 #define OMEGONPROCAM_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define OMEGONPROCAM_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
@@ -320,6 +322,7 @@ OMEGONPROCAM_API(void)     Omegonprocam_Close(HOmegonprocam h);
 #define OMEGONPROCAM_EVENT_EXPO_STOP         0x4001    /* hardware event: exposure stop */
 #define OMEGONPROCAM_EVENT_TRIGGER_ALLOW     0x4002    /* hardware event: next trigger allow */
 #define OMEGONPROCAM_EVENT_HEARTBEAT         0x4003    /* hardware event: heartbeat, can be used to monitor whether the camera is alive */
+#define OMEGONPROCAM_EVENT_TRIGGER_IN        0x4004    /* hardware event: trigger in */
 #define OMEGONPROCAM_EVENT_FACTORY           0x8001    /* restore factory settings */
 
 #if defined(_WIN32)
@@ -469,9 +472,9 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_ResolutionRatio(HOmegonprocam h, uns
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_Field(HOmegonprocam h);
 
 /*
-see: http://www.fourcc.org
+see: http://www.siliconimaging.com/RGB%20Bayer.htm
 FourCC:
-    MAKEFOURCC('G', 'B', 'R', 'G'), see http://www.siliconimaging.com/RGB%20Bayer.htm
+    MAKEFOURCC('G', 'B', 'R', 'G')
     MAKEFOURCC('R', 'G', 'G', 'B')
     MAKEFOURCC('B', 'G', 'G', 'R')
     MAKEFOURCC('G', 'R', 'B', 'G')
@@ -749,7 +752,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_read_Pipe(HOmegonprocam h, unsigned pipe
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_write_Pipe(HOmegonprocam h, unsigned pipeId, const void* pBuffer, unsigned nBufferLen);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipeId);
                                              
-#define OMEGONPROCAM_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 = disable, positive value = timeout milliseconds. default: disable */
+#define OMEGONPROCAM_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 => disable, positive value (>= 500) => timeout milliseconds. default: disable */
 #define OMEGONPROCAM_OPTION_THREAD_PRIORITY        0x02       /* set the priority of the internal thread which grab data from the usb device.
                                                              Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
@@ -913,6 +916,14 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
                                                                 0 or 100: full roi average
                                                          */
 #define OMEGONPROCAM_OPTION_ANTI_SHUTTER_EFFECT    0x4b       /* anti shutter effect: 1 => disable, 0 => disable; default: 1 */
+#define OMEGONPROCAM_OPTION_CHAMBER_HT             0x4c       /* get chamber humidity & temperature:
+                                                                high 16 bits: humidity, in 0.1%, such as: 325 means humidity is 32.5%
+                                                                low 16 bits: temperature, in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius
+                                                         */
+#define OMEGONPROCAM_OPTION_ENV_HT                 0x4d       /* get environment humidity & temperature */
+#define OMEGONPROCAM_OPTION_EXPOSURE_PRE_DELAY     0x4e       /* exposure signal pre-delay, microsecond */
+#define OMEGONPROCAM_OPTION_EXPOSURE_POST_DELAY    0x4f       /* exposure signal post-delay, microsecond */
+#define OMEGONPROCAM_OPTION_AUTOEXPO_CONV          0x50       /* get auto exposure convergence status: 1(YES) or 0(NO), -1(NA) */
 
 /* pixel format */
 #define OMEGONPROCAM_PIXELFORMAT_RAW8              0x00
@@ -1094,10 +1105,13 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_ST4PlusGuideState(HOmegonprocam h);
 /*
     calculate the clarity factor:
     pImageData: pointer to the image data
-    bits: 8(Grey), 24 (RGB24), 32(RGB32)
+    bits: 8(Grey), 16(Grey), 24(RGB24), 32(RGB32), 48(RGB48), 64(RGB64)
     nImgWidth, nImgHeight: the image width and height
+    xOffset, yOffset, xWidth, yHeight: the Roi used to calculate. If not specified, use 1/5 * 1/5 rectangle in the center
+    return < 0.0 when error
 */
 OMEGONPROCAM_API(double)   Omegonprocam_calc_ClarityFactor(const void* pImageData, int bits, unsigned nImgWidth, unsigned nImgHeight);
+OMEGONPROCAM_API(double)   Omegonprocam_calc_ClarityFactorV2(const void* pImageData, int bits, unsigned nImgWidth, unsigned nImgHeight, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
 
 /*
     nBitCount: output bitmap bit count
@@ -1109,15 +1123,15 @@ OMEGONPROCAM_API(double)   Omegonprocam_calc_ClarityFactor(const void* pImageDat
                     48 => RGB48
                     64 => RGB64
 */
-OMEGONPROCAM_API(void)     Omegonprocam_deBayerV2(unsigned nBayer, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+OMEGONPROCAM_API(void)     Omegonprocam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
 
 /*
     obsolete, please use Omegonprocam_deBayerV2
 */
 OMEGONPROCAM_DEPRECATED
-OMEGONPROCAM_API(void)     Omegonprocam_deBayer(unsigned nBayer, int nW, int nH, const void* input, void* output, unsigned char nBitDepth);
+OMEGONPROCAM_API(void)     Omegonprocam_deBayer(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth);
 
-typedef void (__stdcall* POMEGONPROCAM_DEMOSAIC_CALLBACK)(unsigned nBayer, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, void* ctxDemosaic);
+typedef void (__stdcall* POMEGONPROCAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, void* ctxDemosaic);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_Demosaic(HOmegonprocam h, POMEGONPROCAM_DEMOSAIC_CALLBACK funDemosaic, void* ctxDemosaic);
 
 /*
