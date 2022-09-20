@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libomegonprocam)
 
-# Using ToupCamera SDK Version: 53.20923.20220526
-set (LIBOMEGONPROCAM_VERSION "1.53.0")
+# Using ToupCamera SDK Version: 53.21120.20220710
+set (LIBOMEGONPROCAM_VERSION "1.53.2")
 set (LIBOMEGONPROCAM_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
