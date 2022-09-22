@@ -1,7 +1,7 @@
 #ifndef __altaircam_h__
 #define __altaircam_h__
 
-/* Version: 53.21132.20220713 */
+/* Version: 53.21445.20220918 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -17,7 +17,7 @@
               (c) armel: GLIBC 2.8 or above; built by toolchain arm-linux-gnueabi (version 5.4.0)
               (d) armhf: GLIBC 2.8 or above; built by toolchain arm-linux-gnueabihf (version 5.4.0)
               (e) arm64: GLIBC 2.17 or above; built by toolchain aarch64-linux-gnu (version 5.4.0)
-       (5) Android: built by android-ndk-r18b; __ANDROID_API__ = 23
+       (5) Android: __ANDROID_API__ >= 24 (Android 7.0); built by android-ndk-r18b; see https://developer.android.com/ndk/guides/abis
               (a) arm: armeabi-v7a
               (b) arm64: arm64-v8a
               (c) x86
@@ -91,7 +91,7 @@ extern "C" {
 /********************************************************************************/
 #if defined(ALTAIRCAM_HRESULT_ERRORCODE_NEEDED)
 #define S_OK                0x00000000 /* Success */
-#define S_FALSE             0x00000001 /* Success with noop */
+#define S_FALSE             0x00000001 /* Success, something special, such as noop */
 #define E_UNEXPECTED        0x8000ffff /* Catastrophic failure */
 #define E_NOTIMPL           0x80004001 /* Not supported or not implemented */
 #define E_NOINTERFACE       0x80004002
@@ -155,6 +155,8 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 #define ALTAIRCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define ALTAIRCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
+#define ALTAIRCAM_FLAG_GIGE                0x0000200000000000  /* GigE */
+#define ALTAIRCAM_FLAG_10GIGE              0x0000400000000000  /* 10 Gige */
 
 #define ALTAIRCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define ALTAIRCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -257,7 +259,7 @@ typedef struct {
 } AltaircamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.21132.20220713
+    get the version of this dll/so/dylib, which is: 53.21445.20220918
 */
 #if defined(_WIN32)
 ALTAIRCAM_API(const wchar_t*)   Altaircam_Version();
@@ -334,12 +336,13 @@ ALTAIRCAM_API(HRESULT)  Altaircam_StartPullModeWithWndMsg(HAltaircam h, HWND hWn
 typedef void (__stdcall* PALTAIRCAM_EVENT_CALLBACK)(unsigned nEvent, void* ctxEvent);
 ALTAIRCAM_API(HRESULT)  Altaircam_StartPullModeWithCallback(HAltaircam h, PALTAIRCAM_EVENT_CALLBACK funEvent, void* ctxEvent);
 
-#define ALTAIRCAM_FRAMEINFO_FLAG_SEQ          0x01 /* frame sequence number */
-#define ALTAIRCAM_FRAMEINFO_FLAG_TIMESTAMP    0x02 /* timestamp */
-#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOTIME     0x04 /* exposure time */
-#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOGAIN     0x08 /* exposure gain */
-#define ALTAIRCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x10 /* black level */
-#define ALTAIRCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x20 /* sequence shutter counter */
+#define ALTAIRCAM_FRAMEINFO_FLAG_SEQ          0x0001 /* frame sequence number */
+#define ALTAIRCAM_FRAMEINFO_FLAG_TIMESTAMP    0x0002 /* timestamp */
+#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOTIME     0x0004 /* exposure time */
+#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOGAIN     0x0008 /* exposure gain */
+#define ALTAIRCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x0010 /* black level */
+#define ALTAIRCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x0020 /* sequence shutter counter */
+#define ALTAIRCAM_FRAMEINFO_FLAG_STILL        0x8000 /* still image */
 
 typedef struct {
     unsigned            width;
@@ -436,6 +439,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_Pause(HAltaircam h, int bPause);
 */
 ALTAIRCAM_API(HRESULT)  Altaircam_Snap(HAltaircam h, unsigned nResolutionIndex);  /* still image snap */
 ALTAIRCAM_API(HRESULT)  Altaircam_SnapN(HAltaircam h, unsigned nResolutionIndex, unsigned nNumber);  /* multiple still image snap */
+ALTAIRCAM_API(HRESULT)  Altaircam_SnapR(HAltaircam h, unsigned nResolutionIndex, unsigned nNumber);  /* multiple RAW still image snap */
 /*
     soft trigger:
     nNumber:    0xffff:     trigger continuously
@@ -489,7 +493,7 @@ FourCC:
 #define MAKEFOURCC(a, b, c, d) ((unsigned)(unsigned char)(a) | ((unsigned)(unsigned char)(b) << 8) | ((unsigned)(unsigned char)(c) << 16) | ((unsigned)(unsigned char)(d) << 24))
 #endif
 */
-ALTAIRCAM_API(HRESULT)  Altaircam_get_RawFormat(HAltaircam h, unsigned* nFourCC, unsigned* bitsperpixel);
+ALTAIRCAM_API(HRESULT)  Altaircam_get_RawFormat(HAltaircam h, unsigned* pFourCC, unsigned* pBitsPerPixel);
 
 /*
     ------------------------------------------------------------------|
@@ -598,7 +602,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_put_Contrast(HAltaircam h, int Contrast);
 ALTAIRCAM_API(HRESULT)  Altaircam_get_Gamma(HAltaircam h, int* Gamma); /* percent */
 ALTAIRCAM_API(HRESULT)  Altaircam_put_Gamma(HAltaircam h, int Gamma);  /* percent */
 
-ALTAIRCAM_API(HRESULT)  Altaircam_get_Chrome(HAltaircam h, int* bChrome);  /* monochromatic mode */
+ALTAIRCAM_API(HRESULT)  Altaircam_get_Chrome(HAltaircam h, int* bChrome);  /* 1 => monochromatic mode, 0 => color mode */
 ALTAIRCAM_API(HRESULT)  Altaircam_put_Chrome(HAltaircam h, int bChrome);
 
 ALTAIRCAM_API(HRESULT)  Altaircam_get_VFlip(HAltaircam h, int* bVFlip);  /* vertical flip */
@@ -829,7 +833,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
                                                          */
 #define ALTAIRCAM_OPTION_FACTORY                0x1f       /* restore the factory settings */
 #define ALTAIRCAM_OPTION_TEC_VOLTAGE            0x20       /* get the current TEC voltage in 0.1V, 59 mean 5.9V; readonly */
-#define ALTAIRCAM_OPTION_TEC_VOLTAGE_MAX        0x21       /* get the TEC maximum voltage in 0.1V; readonly */
+#define ALTAIRCAM_OPTION_TEC_VOLTAGE_MAX        0x21       /* TEC maximum voltage in 0.1V */
 #define ALTAIRCAM_OPTION_DEVICE_RESET           0x22       /* reset usb device, simulate a replug */
 #define ALTAIRCAM_OPTION_UPSIDE_DOWN            0x23       /* upsize down:
                                                              1: yes
@@ -924,6 +928,13 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
 #define ALTAIRCAM_OPTION_EXPOSURE_PRE_DELAY     0x4e       /* exposure signal pre-delay, microsecond */
 #define ALTAIRCAM_OPTION_EXPOSURE_POST_DELAY    0x4f       /* exposure signal post-delay, microsecond */
 #define ALTAIRCAM_OPTION_AUTOEXPO_CONV          0x50       /* get auto exposure convergence status: 1(YES) or 0(NO), -1(NA) */
+#define ALTAIRCAM_OPTION_AUTOEXPO_TRIGGER       0x51       /* auto exposure on trigger mode: 0 => disable, 1 => enable; default: 0 */
+#define ALTAIRCAM_OPTION_LINE_PRE_DELAY         0x52       /* specified line signal pre-delay, microsecond */
+#define ALTAIRCAM_OPTION_LINE_POST_DELAY        0x53       /* specified line signal post-delay, microsecond */
+#define ALTAIRCAM_OPTION_TEC_VOLTAGE_MAX_RANGE  0x54       /* get the tec maximum voltage range:
+                                                                high 16 bits: max
+                                                                low 16 bits: min
+                                                         */
 
 /* pixel format */
 #define ALTAIRCAM_PIXELFORMAT_RAW8              0x00
@@ -1042,7 +1053,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_AfParam(HAltaircam h, AltaircamAfParam* pA
 #define ALTAIRCAM_IOCONTROLTYPE_SET_UART_BAUDRATE           0x2c
 #define ALTAIRCAM_IOCONTROLTYPE_GET_UART_LINEMODE           0x2d /* line mode: 0 => TX(GPIO_0)/RX(GPIO_1); 1 => TX(GPIO_1)/RX(GPIO_0) */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_UART_LINEMODE           0x2e
-#define ALTAIRCAM_IOCONTROLTYPE_GET_EXPO_ACTIVE_MODE        0x2f /* 0 => specified lines, 1 => common exposure time, default: 0 */
+#define ALTAIRCAM_IOCONTROLTYPE_GET_EXPO_ACTIVE_MODE        0x2f /* exposure time signal: 0 => specified line, 1 => common exposure time */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_EXPO_ACTIVE_MODE        0x30
 #define ALTAIRCAM_IOCONTROLTYPE_GET_EXPO_START_LINE         0x31 /* exposure start line, default: 0 */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_EXPO_START_LINE         0x32
@@ -1050,6 +1061,8 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_AfParam(HAltaircam h, AltaircamAfParam* pA
                                                                   end line must be no less than start line
                                                                */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_EXPO_END_LINE           0x34
+#define ALTAIRCAM_IOCONTROLTYPE_GET_EXEVT_ACTIVE_MODE       0x35 /* exposure event: 0 => specified line, 1 => common exposure time */
+#define ALTAIRCAM_IOCONTROLTYPE_SET_EXEVT_ACTIVE_MODE       0x36
 
 #define ALTAIRCAM_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
@@ -1218,7 +1231,6 @@ ALTAIRCAM_API(HRESULT)  Altaircam_AwbOnePush(HAltaircam h, PIALTAIRCAM_TEMPTINT_
 ALTAIRCAM_DEPRECATED
 ALTAIRCAM_API(HRESULT)  Altaircam_AbbOnePush(HAltaircam h, PIALTAIRCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
-#if !defined(_WIN32) && !defined(__ANDROID__)
 /*
 Only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
@@ -1231,6 +1243,7 @@ Only available on macOS and Linux, it's unnecessary on Windows & Android. To pro
 Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
 */
 typedef void (*PALTAIRCAM_HOTPLUG)(void* ctxHotPlug);
+#if !defined(_WIN32) && !defined(__ANDROID__)
 ALTAIRCAM_API(void)   Altaircam_HotPlug(PALTAIRCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif
 
