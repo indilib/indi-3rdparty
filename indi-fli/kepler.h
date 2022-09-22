@@ -81,6 +81,7 @@ class Kepler : public INDI::CCD
         // Merging
         INDI::PropertySwitch MergeMethodSP {2};
         INDI::PropertySwitch MergePlanesSP {3};
+        INDI::PropertySwitch RequestStatSP {2};
         INDI::PropertyText MergeCalibrationFilesTP {2};
         enum
         {

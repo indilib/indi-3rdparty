@@ -195,7 +195,12 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     prepareUnpacked();
-    result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, &fproStats);
+    result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle,
+             m_FrameBuffer,
+             &grabSize,
+             timeLeft * 1000,
+             &fproUnpacked,
+             RequestStatSP.findOnSwitchIndex() == INDI_ENABLED ? &fproStats : nullptr);
 
     if (result >= 0)
     {
@@ -319,6 +324,11 @@ bool Kepler::initProperties()
     GPSStateLP[FPRO_GPS_DETECTED_AND_SAT_LOCK].fill("FPRO_GPS_DETECTED_AND_SAT_LOCK", "Sat locked", IPS_IDLE);
     GPSStateLP.fill(getDeviceName(), "GPS_STATE", "GPS", GPS_TAB, IPS_IDLE);
 
+    // Request Stats
+    RequestStatSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_ON);
+    RequestStatSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_OFF);
+    RequestStatSP.fill(getDeviceName(), "REQUEST_STATS", "Statistics", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     addAuxControls();
 
     return true;
@@ -352,6 +362,8 @@ bool Kepler::updateProperties()
         defineProperty(HighGainSP);
         defineProperty(FanSP);
         defineProperty(BlackLevelNP);
+        defineProperty(GPSStateLP);
+        defineProperty(RequestStatSP);
     }
     else
     {
@@ -363,6 +375,8 @@ bool Kepler::updateProperties()
         deleteProperty(HighGainSP);
         deleteProperty(FanSP);
         deleteProperty(BlackLevelNP);
+        deleteProperty(GPSStateLP);
+        deleteProperty(RequestStatSP);
     }
 
     return true;
@@ -490,6 +504,20 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             FanSP.update(states, names, n);
             FanSP.setState(FPROCtrl_SetFanEnable(m_CameraHandle, FanSP.findOnSwitchIndex() == INDI_ENABLED) >= 0 ? IPS_OK : IPS_ALERT);
             FanSP.apply();
+            return true;
+        }
+
+        // Request Stats
+        if (RequestStatSP.isNameMatch(name))
+        {
+            RequestStatSP.update(states, names, n);
+            RequestStatSP.setState(IPS_OK);
+            RequestStatSP.apply();
+            if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)
+                LOG_INFO("Statistics are enabled. Merged images would take longer to download.");
+            else
+                LOG_INFO("Statistics are disabled. Merged images would be faster to download.");
+            saveConfig(true, RequestStatSP.getName());
             return true;
         }
     }
@@ -900,10 +928,12 @@ bool Kepler::saveConfigItems(FILE * fp)
     IUSaveConfigSwitch(fp, &MergeMethodSP);
     IUSaveConfigSwitch(fp, &MergePlanesSP);
     IUSaveConfigText(fp, &MergeCalibrationFilesTP);
+    IUSaveConfigSwitch(fp, &RequestStatSP);
     if (LowGainSP.size() > 0)
         IUSaveConfigSwitch(fp, &LowGainSP);
     if (HighGainSP.size() > 0)
         IUSaveConfigSwitch(fp, &HighGainSP);
+
 
     return true;
 }
@@ -925,26 +955,29 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
 
     auto fptr = *targetChip->fitsFilePointer();
 
-    if (fproStats.bLowRequest)
+    if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)
     {
-        int status = 0;
-        fits_update_key_dbl(fptr, "LOW_MEAN", fproStats.statsLowImage.dblMean, 3, "Low Mean", &status);
-        fits_update_key_dbl(fptr, "LOW_MEDIAN", fproStats.statsLowImage.dblMedian, 3, "Low Median", &status);
-        fits_update_key_dbl(fptr, "LOW_STDDEV", fproStats.statsLowImage.dblStandardDeviation, 3, "Low Standard Deviation", &status);
-    }
-    if (fproStats.bHighRequest)
-    {
-        int status = 0;
-        fits_update_key_dbl(fptr, "HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean", &status);
-        fits_update_key_dbl(fptr, "HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median", &status);
-        fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation", &status);
-    }
-    if (fproStats.bMergedRequest)
-    {
-        int status = 0;
-        fits_update_key_dbl(fptr, "MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean", &status);
-        fits_update_key_dbl(fptr, "MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median", &status);
-        fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation", &status);
+        if (fproStats.bLowRequest)
+        {
+            int status = 0;
+            fits_update_key_dbl(fptr, "LOW_MEAN", fproStats.statsLowImage.dblMean, 3, "Low Mean", &status);
+            fits_update_key_dbl(fptr, "LOW_MEDIAN", fproStats.statsLowImage.dblMedian, 3, "Low Median", &status);
+            fits_update_key_dbl(fptr, "LOW_STDDEV", fproStats.statsLowImage.dblStandardDeviation, 3, "Low Standard Deviation", &status);
+        }
+        if (fproStats.bHighRequest)
+        {
+            int status = 0;
+            fits_update_key_dbl(fptr, "HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean", &status);
+            fits_update_key_dbl(fptr, "HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median", &status);
+            fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation", &status);
+        }
+        if (fproStats.bMergedRequest)
+        {
+            int status = 0;
+            fits_update_key_dbl(fptr, "MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean", &status);
+            fits_update_key_dbl(fptr, "MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median", &status);
+            fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation", &status);
+        }
     }
 }
 
@@ -954,6 +987,7 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
 void Kepler::UploadComplete(INDI::CCDChip *targetChip)
 {
     INDI_UNUSED(targetChip);
-    FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
+    if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)
+        FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     FPROFrame_FreeUnpackedStatistics(&fproStats);
 }
