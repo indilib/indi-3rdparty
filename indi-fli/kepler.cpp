@@ -193,7 +193,6 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
 
     // This is blocking?
     std::unique_lock<std::mutex> guard(ccdBufferLock);
-    FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     prepareUnpacked();
     result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle,
              m_FrameBuffer,
