@@ -947,3 +947,13 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
         fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation", &status);
     }
 }
+
+/********************************************************************************
+*
+********************************************************************************/
+void Kepler::UploadComplete(INDI::CCDChip *targetChip)
+{
+    INDI_UNUSED(targetChip);
+    FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
+    FPROFrame_FreeUnpackedStatistics(&fproStats);
+}

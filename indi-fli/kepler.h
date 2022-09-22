@@ -59,7 +59,8 @@ class Kepler : public INDI::CCD
         virtual void debugTriggered(bool enable) override;
         virtual bool saveConfigItems(FILE *fp) override;
 
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip);
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+        virtual void UploadComplete(INDI::CCDChip *targetChip) override;
 
     private:
 
