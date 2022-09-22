@@ -195,7 +195,7 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     prepareUnpacked();
-    result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, nullptr);
+    result = FPROFrame_GetVideoFrameUnpacked(m_CameraHandle, m_FrameBuffer, &grabSize, timeLeft * 1000, &fproUnpacked, &fproStats);
 
     if (result >= 0)
     {
@@ -244,6 +244,9 @@ Kepler::Kepler(const FPRODEVICEINFO &info, std::wstring name) : m_CameraInfo(inf
 
     m_TemperatureTimer.callOnTimeout(std::bind(&Kepler::readTemperature, this));
     m_TemperatureTimer.setInterval(TEMPERATURE_FREQUENCY_IDLE);
+
+    m_GPSTimer.callOnTimeout(std::bind(&Kepler::readGPS, this));
+    m_GPSTimer.setInterval(GPS_TIMER_PERIOD);
 }
 
 Kepler::~Kepler()
@@ -309,6 +312,12 @@ bool Kepler::initProperties()
     // Black Level
     BlackLevelNP[0].fill("VALUE", "Value", "%.f", 0, 1000, 10, 0);
     BlackLevelNP.fill(getDeviceName(), "BLACK_LEVEL", "Black Level", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
+
+    // GPS
+    GPSStateLP[FPRO_GPS_NOT_DETECTED].fill("FPRO_GPS_NOT_DETECTED", "Not detected", IPS_IDLE);
+    GPSStateLP[FPRO_GPS_DETECTED_NO_SAT_LOCK].fill("FPRO_GPS_DETECTED_NO_SAT_LOCK", "No Sat lock", IPS_IDLE);
+    GPSStateLP[FPRO_GPS_DETECTED_AND_SAT_LOCK].fill("FPRO_GPS_DETECTED_AND_SAT_LOCK", "Sat locked", IPS_IDLE);
+    GPSStateLP.fill(getDeviceName(), "GPS_STATE", "GPS", GPS_TAB, IPS_IDLE);
 
     addAuxControls();
 
@@ -668,6 +677,7 @@ bool Kepler::setup()
     }
 
     m_TemperatureTimer.start();
+    m_GPSTimer.start();
     return true;
 }
 
@@ -859,6 +869,30 @@ void Kepler::readTemperature()
 /********************************************************************************
 *
 ********************************************************************************/
+void Kepler::readGPS()
+{
+    FPROGPSSTATE state;
+    if (FPROCtrl_GetGPSState(m_CameraHandle, &state))
+    {
+        if (state != m_LastGPSState)
+        {
+            m_LastGPSState = state;
+            for (auto &lp : GPSStateLP)
+                lp.setState(IPS_IDLE);
+            GPSStateLP[state].setState(IPS_OK);
+            GPSStateLP.setState(IPS_OK);
+            GPSStateLP.apply();
+        }
+    }
+    else
+    {
+        GPSStateLP.setState(IPS_ALERT);
+        GPSStateLP.apply();
+    }
+}
+/********************************************************************************
+*
+********************************************************************************/
 bool Kepler::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
@@ -880,4 +914,36 @@ bool Kepler::saveConfigItems(FILE * fp)
 void Kepler::debugTriggered(bool enable)
 {
     FPRODebug_EnableLevel(true, enable ? FPRO_DEBUG_DEBUG : FPRO_DEBUG_NONE);
+}
+
+/********************************************************************************
+*
+********************************************************************************/
+void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
+{
+    INDI::CCD::addFITSKeywords(targetChip);
+
+    auto fptr = *targetChip->fitsFilePointer();
+
+    if (fproStats.bLowRequest)
+    {
+        int status = 0;
+        fits_update_key_dbl(fptr, "LOW_MEAN", fproStats.statsLowImage.dblMean, 3, "Low Mean", &status);
+        fits_update_key_dbl(fptr, "LOW_MEDIAN", fproStats.statsLowImage.dblMedian, 3, "Low Median", &status);
+        fits_update_key_dbl(fptr, "LOW_STDDEV", fproStats.statsLowImage.dblStandardDeviation, 3, "Low Standard Deviation", &status);
+    }
+    if (fproStats.bHighRequest)
+    {
+        int status = 0;
+        fits_update_key_dbl(fptr, "HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean", &status);
+        fits_update_key_dbl(fptr, "HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median", &status);
+        fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation", &status);
+    }
+    if (fproStats.bMergedRequest)
+    {
+        int status = 0;
+        fits_update_key_dbl(fptr, "MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean", &status);
+        fits_update_key_dbl(fptr, "MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median", &status);
+        fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation", &status);
+    }
 }

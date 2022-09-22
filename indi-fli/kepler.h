@@ -23,6 +23,7 @@
 #include <indiccd.h>
 #include <indipropertyswitch.h>
 #include <indipropertytext.h>
+#include <indipropertylight.h>
 
 #include <inditimer.h>
 #include <indisinglethreadpool.h>
@@ -58,6 +59,8 @@ class Kepler : public INDI::CCD
         virtual void debugTriggered(bool enable) override;
         virtual bool saveConfigItems(FILE *fp) override;
 
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip);
+
     private:
 
         //****************************************************************************************
@@ -87,6 +90,9 @@ class Kepler : public INDI::CCD
         // Black Level Adjust
         INDI::PropertyNumber BlackLevelNP {1};
 
+        // GPS State
+        INDI::PropertyLight GPSStateLP {3};
+
 
         //****************************************************************************************
         // Communication Functions
@@ -94,6 +100,7 @@ class Kepler : public INDI::CCD
         bool setup();
         void prepareUnpacked();
         void readTemperature();
+        void readGPS();
 
         //****************************************************************************************
         // Workers
@@ -119,8 +126,12 @@ class Kepler : public INDI::CCD
         FPROUNPACKEDSTATS  fproStats;
         FPRO_HWMERGEENABLE mergeEnables;
 
+        // GPS
+        FPROGPSSTATE m_LastGPSState {FPRO_GPS_NOT_DETECTED};
+
         // Temperature
         INDI::Timer m_TemperatureTimer;
+        INDI::Timer m_GPSTimer;
 
         // Gain Tables
         FPROGAINVALUE *m_LowGainTable {nullptr};
@@ -130,4 +141,6 @@ class Kepler : public INDI::CCD
         static constexpr double TEMPERATURE_THRESHOLD {0.1};
         static constexpr double TEMPERATURE_FREQUENCY_BUSY {1000};
         static constexpr double TEMPERATURE_FREQUENCY_IDLE {5000};
+        static constexpr uint32_t GPS_TIMER_PERIOD {5000};
+        static constexpr const char *GPS_TAB {"GPS"};
 };
