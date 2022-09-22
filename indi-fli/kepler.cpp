@@ -848,6 +848,7 @@ void Kepler::readTemperature()
     {
         TemperatureNP.s = IPS_ALERT;
         IDSetNumber(&TemperatureNP, nullptr);
+        LOGF_WARN("FPROCtrl_GetTemperatures failed: %d", result);
     }
 
     switch (TemperatureNP.s)
@@ -900,7 +901,8 @@ void Kepler::readTemperature()
 void Kepler::readGPS()
 {
     FPROGPSSTATE state;
-    if (FPROCtrl_GetGPSState(m_CameraHandle, &state))
+    int result = 0;
+    if ( (result = FPROCtrl_GetGPSState(m_CameraHandle, &state)) >= 0)
     {
         if (state != m_LastGPSState)
         {
@@ -916,6 +918,7 @@ void Kepler::readGPS()
     {
         GPSStateLP.setState(IPS_ALERT);
         GPSStateLP.apply();
+        LOGF_WARN("FPROCtrl_GetGPSState failed: %d", result);
     }
 }
 /********************************************************************************
