@@ -200,10 +200,10 @@ class Sv305CCD : public INDI::CCD
                 { "FORMAT_Y16", "Y 16 bits", 16, false, -1, ISS_OFF }
         };
         SVB_IMG_TYPE *switch2frameFormatDefinitionsIndex;
-        ISwitch *FormatS;
-        ISwitchVectorProperty FormatSP;
         SVB_IMG_TYPE frameFormat; // currenct Frame format
         const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
+        
+        virtual bool SetCaptureFormat(uint8_t index) override;
 
         // exposure timing
         int timerID;

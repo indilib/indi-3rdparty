@@ -130,22 +130,6 @@ void Sv305CCD::ISGetProperties(const char *dev)
 //
 bool Sv305CCD::updateProperties()
 {
-    // Set format first if connected.
-    if (isConnected())
-    {
-        // N.B. AFAIK, there is no way to switch image formats.
-        CaptureFormat format;
-        if (GetCCDCapability() & CCD_HAS_BAYER)
-        {
-            format = {"INDI_RAW", "RAW", 16, true};
-        }
-        else
-        {
-            format = {"INDI_MONO", "Mono", 16, true};
-        }
-        addCaptureFormat(format);
-    }
-
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -166,8 +150,6 @@ bool Sv305CCD::updateProperties()
         defineProperty(&ControlsNP[CCD_GAMMA_N]);
         defineProperty(&ControlsNP[CCD_DOFFSET_N]);
 
-        // define frame format
-        defineProperty(&FormatSP);
         // define frame rate
         defineProperty(&SpeedSP);
 
@@ -195,8 +177,6 @@ bool Sv305CCD::updateProperties()
         deleteProperty(ControlsNP[CCD_GAMMA_N].name);
         deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
 
-        // delete frame format
-        deleteProperty(FormatSP.name);
         // delete frame rate
         deleteProperty(SpeedSP.name);
 
@@ -266,7 +246,7 @@ bool Sv305CCD::Connect()
             LOGF_DEBUG(" Bin %d", cameraProperty.SupportedBins[i]);
         }
         for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++) {
-            LOGF_DEBUG(" SupportedVideFormat: %d", cameraProperty.SupportedVideoFormat[i]);
+            LOGF_DEBUG(" Supported Video Format: %d", cameraProperty.SupportedVideoFormat[i]);
         }
     }
 
@@ -509,12 +489,6 @@ bool Sv305CCD::Connect()
     }
 
     // initialize ISwitchs
-    if (!(FormatS = (ISwitch*)calloc(nFrameFormat, sizeof(ISwitch))))
-    {
-        LOG_ERROR("Error, memory allocation for image format switches\n");
-        pthread_mutex_unlock(&cameraID_mutex);
-        return false;
-    }
     if (!(switch2frameFormatDefinitionsIndex = (SVB_IMG_TYPE*)calloc(nFrameFormat, sizeof(int))))
     {
         LOG_ERROR("Error, memory allocation for image format switches index\n");
@@ -534,11 +508,23 @@ bool Sv305CCD::Connect()
                 defaultFrameFormatIndex = (SVB_IMG_TYPE)i;
             }
             switch2frameFormatDefinitionsIndex[pFrameFormatDef->isIndex] = (SVB_IMG_TYPE)i;
-            IUFillSwitch(&FormatS[pFrameFormatDef->isIndex], pFrameFormatDef->isName, pFrameFormatDef->isLabel, pFrameFormatDef->isStateDefault);
+            // Setup Capture Format
+            CaptureFormat format = {
+                pFrameFormatDef->isName,
+                pFrameFormatDef->isLabel,
+                (uint8_t)(pFrameFormatDef->isBits),
+                pFrameFormatDef->isStateDefault == ISS_ON ? true: false
+            };
+            addCaptureFormat(format);
         }
     }
-    IUFillSwitchVector(&FormatSP, FormatS, nFrameFormat, getDeviceName(), "FRAME_FORMAT", "Frame Format", MAIN_CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    // Set ISS_ON for default switch cause addCapture cannot set ISS_ON when config.xml 'CCD_CAPTURE_FORMAT' is old format.
+    if (CaptureFormatSP.findOnSwitchIndex() == -1)
+    {
+        FrameFormatDefinition *pFrameFormatDef = &frameFormatDefinitions[defaultFrameFormatIndex];
+        CaptureFormatSP[pFrameFormatDef->isIndex].setState(ISS_ON);
+        CaptureFormatSP.apply();
+    }
 
     if(HasBayer())
     {
@@ -674,8 +660,6 @@ bool Sv305CCD::Disconnect()
     status = SVBCloseCamera(cameraID);
     LOG_INFO("CCD is offline.\n");
 
-    // free format ISwitch
-    free(FormatS);
     // free map for frame format Switch to frame format definition array
     free(switch2frameFormatDefinitionsIndex);
 
@@ -1390,63 +1374,30 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     // Make sure the call is for our device
     if(!strcmp(dev, getDeviceName()))
     {
-        // Check if the call for BPP switch
-        if (!strcmp(name, FormatSP.name))
+        // Check is the call for capture format
+        if (CaptureFormatSP.isNameMatch(name))
         {
-            // Find out which state is requested by the client
-            const char *actionName = IUFindOnSwitchName(states, names, n);
-            // If same state as actionName, then we do nothing
-            int isIndex = IUFindOnSwitchIndex(&FormatSP);
-            if (actionName && !strcmp(actionName, FormatS[isIndex].name)) // skip strcmp if there are no selected swich.
+            // search capture format in frameFormatDefinitions
+            int tempFormatIndex = -1; // index of matched frameFormatDefinitions.
+            for (int i = 0; i < (int)nFrameFormat; i++)
             {
-                LOGF_INFO("Frame format is already %s", FormatS[isIndex].label);
-                FormatSP.s = IPS_IDLE;
-                IDSetSwitch(&FormatSP, NULL);
-                return true;
-            }
+                int currentIndex = (int)switch2frameFormatDefinitionsIndex[i];
 
-            // Otherwise, let us update the switch state
-            IUUpdateSwitch(&FormatSP, states, names, n);
-            isIndex = IUFindOnSwitchIndex(&FormatSP);
-            if (isIndex == -1) // if there is no ON switch, set index of default format.
-            {
-                isIndex = frameFormatDefinitions[defaultFrameFormatIndex].isIndex;
-            }
-            SVB_IMG_TYPE newFrameFormat = switch2frameFormatDefinitionsIndex[isIndex];
-
-            pthread_mutex_lock(&cameraID_mutex);
-            status = SVBSetOutputImageType(cameraID, newFrameFormat);
-            if(status != SVB_SUCCESS)
-            {
-                LOG_ERROR("Error, camera set frame format failed\n");
-            }
-            LOGF_INFO("Frame format is now %s", FormatS[isIndex].label);
-
-            pthread_mutex_unlock(&cameraID_mutex);
-
-            frameFormat = newFrameFormat;
-
-            // pixel depth
-            bitDepth = frameFormatDefinitions[newFrameFormat].isBits;
-
-            // Change color/grascale mode of CCD
-            if (HasBayer() != frameFormatDefinitions[newFrameFormat].isColor) {
-                // Set CCD Capability
-                uint32_t cap = GetCCDCapability();
-                if (HasBayer()) {
-                    cap &= ~CCD_HAS_BAYER; // if color mode exchange to monochrome
+                // check to match this frameFormatDefinitions.
+                for (int j = 0; j < n; j++)
+                {
+                    if (!strcmp(names[j], frameFormatDefinitions[currentIndex].isName))
+                    {
+                        tempFormatIndex = currentIndex; // found it.
+                        break;
+                    }
                 }
-                else {
-                    cap |= CCD_HAS_BAYER; // if monochrome mode exchange to color
-                }
-                SetCCDCapability(cap);
             }
-            // update CCD parameters
-            updateCCDParams();
-
-            FormatSP.s = IPS_OK;
-            IDSetSwitch(&FormatSP, NULL);
-            return true;
+            if (tempFormatIndex == -1) // If it is not found, abort the process.
+            {
+                LOGF_ERROR("Error, %s is not exist in Format switches.", names[0]);
+                return false;
+            }
         }
 
         // Check if the call for frame rate switch
@@ -1554,6 +1505,50 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
+bool Sv305CCD::SetCaptureFormat(uint8_t index)
+{
+    if (index >= nFrameFormat) // if there is no ON switch, set index of default format.
+    {
+        LOG_ERROR("Error, No capture format selected.");
+        return false;
+    }
+    SVB_IMG_TYPE newFrameFormat = switch2frameFormatDefinitionsIndex[index];
+
+    pthread_mutex_lock(&cameraID_mutex);
+    status = SVBSetOutputImageType(cameraID, newFrameFormat);
+    pthread_mutex_unlock(&cameraID_mutex);
+
+    if(status != SVB_SUCCESS)
+    {
+        LOG_ERROR("Error, camera set frame format failed");
+        return false;
+    }
+    LOGF_INFO("Capture format is now %s", CaptureFormatSP[index].label);
+
+    frameFormat = newFrameFormat;
+
+    // pixel depth
+    bitDepth = frameFormatDefinitions[newFrameFormat].isBits;
+    PrimaryCCD.setBPP(bitDepth);
+
+    // Change color/grascale mode of CCD
+    if (HasBayer() != frameFormatDefinitions[newFrameFormat].isColor) {
+        // Set CCD Capability
+        uint32_t cap = GetCCDCapability();
+        if (HasBayer()) {
+            cap &= ~CCD_HAS_BAYER; // if color mode exchange to monochrome
+        }
+        else {
+            cap |= CCD_HAS_BAYER; // if monochrome mode exchange to color
+        }
+        SetCCDCapability(cap);
+    }
+    // update CCD parameters
+    updateCCDParams();
+
+    return true;
+}
+
 
 //
 bool Sv305CCD::saveConfigItems(FILE * fp)
@@ -1572,8 +1567,6 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
     IUSaveConfigNumber(fp, &ControlsNP[CCD_GAMMA_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_DOFFSET_N]);
 
-    // Frame format
-    IUSaveConfigSwitch(fp, &FormatSP);
     IUSaveConfigSwitch(fp, &SpeedSP);
 
     // bit stretching
