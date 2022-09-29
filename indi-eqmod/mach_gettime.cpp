@@ -1,7 +1,7 @@
 /* complete rewrite May 2017, Rumen G.Bogdanovski */
 #include <time.h>
 
-#ifdef __MACH__ /* Mac OSX prior Sierra is missing clock_gettime() */
+#if defined(__MACH__) && defined(__APPLE__) /* Mac OSX prior Sierra is missing clock_gettime() */
 #include <mach/clock.h>
 #include <mach/mach.h>
 void get_utc_time(struct timespec *ts)
