@@ -762,6 +762,9 @@ bool Sv305CCD::StartExposure(float duration)
 
     pthread_mutex_lock(&cameraID_mutex);
 
+    // Discard unretrieved exposure data
+    discardVideoData();
+
     // set exposure time (s -> us)
     status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(duration * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
@@ -793,6 +796,13 @@ bool Sv305CCD::StartExposure(float duration)
     return true;
 }
 
+// Discard unretrieved exposure data
+void Sv305CCD::discardVideoData()
+{
+    unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
+    SVB_ERROR_CODE status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
+    LOGF_DEBUG("Discard unretrieved exposure data: SVBGetVideoData:result=%d", status);
+}
 
 //
 bool Sv305CCD::AbortExposure()
