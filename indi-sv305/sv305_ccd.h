@@ -214,6 +214,9 @@ class Sv305CCD : public INDI::CCD
         // update CCD Params
         bool updateCCDParams();
 
+        // Discard unretrieved exposure data
+        void discardVideoData();
+
         // save settings
         virtual bool saveConfigItems(FILE *fp) override;
 
