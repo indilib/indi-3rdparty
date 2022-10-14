@@ -232,6 +232,7 @@ bool ATIKCCD::updateProperties()
 
         if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
         {
+            setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
             INDI::FilterInterface::updateProperties();
         }
 
