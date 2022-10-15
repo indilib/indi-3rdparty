@@ -1,6 +1,6 @@
 /*
- SV305 CCD
- SVBONY SV305 Camera driver
+ SVBONY CCD
+ SVBONY CCD Camera driver
  Copyright (C) 2020 Blaise-Florentin Collin (thx8411@yahoo.fr)
 
  Generic CCD skeleton Copyright (C) 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
@@ -22,27 +22,27 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef SV305_CCD_H
-#define SV305_CCD_H
+#ifndef SVBONY_CCD_H
+#define SVBONY_CCD_H
 
 #include <indiccd.h>
 #include <iostream>
 
-#include "libsv305/SVBCameraSDK.h"
+#include "libsvbony/SVBCameraSDK.h"
 
 
 using namespace std;
 
 
 /////////////////////////////////////////////////
-// SV305CCD CLASS
+// SVBONYCCD CLASS
 //
 
-class Sv305CCD : public INDI::CCD
+class SVBONYCCD : public INDI::CCD
 {
     public:
-        Sv305CCD(int numCamera);
-        virtual ~Sv305CCD();
+        SVBONYCCD(int numCamera);
+        virtual ~SVBONYCCD();
 
         // INDI BASE
         const char *getDefaultName() override;
@@ -240,4 +240,4 @@ class Sv305CCD : public INDI::CCD
         pthread_mutex_t condMutex;
 };
 
-#endif // SV305_CCD_H
+#endif // SVBONY_CCD_H

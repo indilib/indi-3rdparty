@@ -1,6 +1,6 @@
 /*
- SV305 CCD
- SVBONY SV305 Camera driver
+ SVBONY CCD
+ SVBONY CCD Camera driver
  Copyright (C) 2020-2021 Blaise-Florentin Collin (thx8411@yahoo.fr)
 
  Generic CCD skeleton Copyright (C) 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
@@ -34,13 +34,13 @@
 #include "eventloop.h"
 #include "stream/streammanager.h"
 
-#include "libsv305/SVBCameraSDK.h"
+#include "libsvbony/SVBCameraSDK.h"
 
-#include "sv305_ccd.h"
+#include "svbony_ccd.h"
 
 static class Loader
 {
-        std::deque<std::unique_ptr<Sv305CCD>> cameras;
+        std::deque<std::unique_ptr<SVBONYCCD>> cameras;
     public:
         Loader()
         {
@@ -54,26 +54,26 @@ static class Loader
 
             IDLog("Camera(s) found\n");
 
-            // create Sv305CCD object for each camera
+            // create SVBONYCCD object for each camera
             for(int i = 0; i < cameraCount; i++)
             {
-                cameras.push_back(std::unique_ptr<Sv305CCD>(new Sv305CCD(i)));
+                cameras.push_back(std::unique_ptr<SVBONYCCD>(new SVBONYCCD(i)));
             }
         }
 } loader;
 
 //////////////////////////////////////////////////
-// SV305 CLASS
+// SVBONY CLASS
 //
 
 
 //
-Sv305CCD::Sv305CCD(int numCamera)
+SVBONYCCD::SVBONYCCD(int numCamera)
 {
     num = numCamera;
 
     // set driver version
-    setVersion(SV305_VERSION_MAJOR, SV305_VERSION_MINOR);
+    setVersion(SVBONY_VERSION_MAJOR, SVBONY_VERSION_MINOR);
 
     // Get camera informations
     status = SVBGetCameraInfo(&cameraInfo, num);
@@ -91,20 +91,20 @@ Sv305CCD::Sv305CCD(int numCamera)
 
 
 //
-Sv305CCD::~Sv305CCD()
+SVBONYCCD::~SVBONYCCD()
 {
 }
 
 
 //
-const char *Sv305CCD::getDefaultName()
+const char *SVBONYCCD::getDefaultName()
 {
-    return "SVBONY SV305";
+    return "SVBONY CCD";
 }
 
 
 //
-bool Sv305CCD::initProperties()
+bool SVBONYCCD::initProperties()
 {
     // Init parent properties first
     INDI::CCD::initProperties();
@@ -121,14 +121,14 @@ bool Sv305CCD::initProperties()
 
 
 //
-void Sv305CCD::ISGetProperties(const char *dev)
+void SVBONYCCD::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
 }
 
 
 //
-bool Sv305CCD::updateProperties()
+bool SVBONYCCD::updateProperties()
 {
     INDI::CCD::updateProperties();
 
@@ -189,12 +189,12 @@ bool Sv305CCD::updateProperties()
 
 
 //
-bool Sv305CCD::Connect()
+bool SVBONYCCD::Connect()
 {
     // boolean init
     streaming = false;
 
-    LOG_INFO("Attempting to find the SVBONY SV305 CCD...\n");
+    LOG_INFO("Attempting to find the SVBONY CCD...\n");
 
     // init mutex and cond
     pthread_mutex_init(&cameraID_mutex, NULL);
@@ -636,7 +636,7 @@ bool Sv305CCD::Connect()
 
 
 //
-bool Sv305CCD::Disconnect()
+bool SVBONYCCD::Disconnect()
 {
     // destroy streaming
     pthread_mutex_lock(&condMutex);
@@ -678,7 +678,7 @@ bool Sv305CCD::Disconnect()
 
 
 // set CCD parameters
-bool Sv305CCD::updateCCDParams()
+bool SVBONYCCD::updateCCDParams()
 {
     // set CCD parameters
     PrimaryCCD.setBPP(bitDepth);
@@ -695,7 +695,7 @@ bool Sv305CCD::updateCCDParams()
 ///////////////////////////////////////////////////////////////////////////////////////
 /// Set camera temperature
 ///////////////////////////////////////////////////////////////////////////////////////
-int Sv305CCD::SetTemperature(double temperature)
+int SVBONYCCD::SetTemperature(double temperature)
 {
     /**********************************************************
      *  We return 0 if setting the temperature will take some time
@@ -743,7 +743,7 @@ int Sv305CCD::SetTemperature(double temperature)
 }
 
 //
-bool Sv305CCD::StartExposure(float duration)
+bool SVBONYCCD::StartExposure(float duration)
 {
     // checks for time limits
     if (duration < minExposure)
@@ -797,7 +797,7 @@ bool Sv305CCD::StartExposure(float duration)
 }
 
 // Discard unretrieved exposure data
-void Sv305CCD::discardVideoData()
+void SVBONYCCD::discardVideoData()
 {
     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
     SVB_ERROR_CODE status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
@@ -805,7 +805,7 @@ void Sv305CCD::discardVideoData()
 }
 
 //
-bool Sv305CCD::AbortExposure()
+bool SVBONYCCD::AbortExposure()
 {
 
     LOG_INFO("Abort exposure\n");
@@ -845,7 +845,7 @@ bool Sv305CCD::AbortExposure()
 
 
 //
-bool Sv305CCD::StartStreaming()
+bool SVBONYCCD::StartStreaming()
 {
     LOG_INFO("framing\n");
 
@@ -928,7 +928,7 @@ bool Sv305CCD::StartStreaming()
 
 
 //
-bool Sv305CCD::StopStreaming()
+bool SVBONYCCD::StopStreaming()
 {
     LOG_INFO("stop framing\n");
 
@@ -986,14 +986,14 @@ bool Sv305CCD::StopStreaming()
 
 
 //
-void* Sv305CCD::streamVideoHelper(void * context)
+void* SVBONYCCD::streamVideoHelper(void * context)
 {
-    return static_cast<Sv305CCD *>(context)->streamVideo();
+    return static_cast<SVBONYCCD *>(context)->streamVideo();
 }
 
 
 //
-void* Sv305CCD::streamVideo()
+void* SVBONYCCD::streamVideo()
 {
     auto start = std::chrono::high_resolution_clock::now();
     auto finish = std::chrono::high_resolution_clock::now();
@@ -1055,7 +1055,7 @@ void* Sv305CCD::streamVideo()
 
 
 // subframing
-bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
+bool SVBONYCCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
 
     if((x + w) > cameraProperty.MaxWidth
@@ -1120,7 +1120,7 @@ bool Sv305CCD::UpdateCCDFrame(int x, int y, int w, int h)
 
 
 // binning
-bool Sv305CCD::UpdateCCDBin(int hor, int ver)
+bool SVBONYCCD::UpdateCCDBin(int hor, int ver)
 {
     if(hor == 1 && ver == 1)
         binning = false;
@@ -1136,7 +1136,7 @@ bool Sv305CCD::UpdateCCDBin(int hor, int ver)
 
 
 //
-float Sv305CCD::CalcTimeLeft()
+float SVBONYCCD::CalcTimeLeft()
 {
     double timesince;
     double timeleft;
@@ -1153,7 +1153,7 @@ float Sv305CCD::CalcTimeLeft()
 
 
 // grab loop
-void Sv305CCD::TimerHit()
+void SVBONYCCD::TimerHit()
 {
     int timerID = -1;
     double timeleft;
@@ -1281,7 +1281,7 @@ void Sv305CCD::TimerHit()
 
 
 // helper : update camera control depending on control type
-bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n)
+bool SVBONYCCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, double values[], char *names[], int n)
 {
     IUUpdateNumber(&ControlsNP[ControlType], values, names, n);
 
@@ -1306,7 +1306,7 @@ bool Sv305CCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, doub
 
 
 //
-bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+bool SVBONYCCD::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (strcmp (dev, getDeviceName()))
         return false;
@@ -1379,7 +1379,7 @@ bool Sv305CCD::ISNewNumber(const char *dev, const char *name, double values[], c
 
 
 //
-bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool SVBONYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     // Make sure the call is for our device
     if(!strcmp(dev, getDeviceName()))
@@ -1515,7 +1515,7 @@ bool Sv305CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
-bool Sv305CCD::SetCaptureFormat(uint8_t index)
+bool SVBONYCCD::SetCaptureFormat(uint8_t index)
 {
     if (index >= nFrameFormat) // if there is no ON switch, set index of default format.
     {
@@ -1561,7 +1561,7 @@ bool Sv305CCD::SetCaptureFormat(uint8_t index)
 
 
 //
-bool Sv305CCD::saveConfigItems(FILE * fp)
+bool SVBONYCCD::saveConfigItems(FILE * fp)
 {
     // Save CCD Config
     INDI::CCD::saveConfigItems(fp);
@@ -1589,9 +1589,9 @@ bool Sv305CCD::saveConfigItems(FILE * fp)
 //
 // to avoid build issues with old indi
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
-void Sv305CCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void SVBONYCCD::addFITSKeywords(INDI::CCDChip *targetChip)
 #else
-void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
+void SVBONYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 #endif
 {
 #if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
@@ -1628,7 +1628,7 @@ void Sv305CCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
 
 
 //
-IPState Sv305CCD::GuideNorth(uint32_t ms)
+IPState SVBONYCCD::GuideNorth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
@@ -1648,7 +1648,7 @@ IPState Sv305CCD::GuideNorth(uint32_t ms)
 
 
 //
-IPState Sv305CCD::GuideSouth(uint32_t ms)
+IPState SVBONYCCD::GuideSouth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
@@ -1668,7 +1668,7 @@ IPState Sv305CCD::GuideSouth(uint32_t ms)
 
 
 //
-IPState Sv305CCD::GuideEast(uint32_t ms)
+IPState SVBONYCCD::GuideEast(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
@@ -1687,7 +1687,7 @@ IPState Sv305CCD::GuideEast(uint32_t ms)
 
 
 //
-IPState Sv305CCD::GuideWest(uint32_t ms)
+IPState SVBONYCCD::GuideWest(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
