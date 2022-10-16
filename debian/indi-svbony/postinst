@@ -4,3 +4,7 @@
 if [ -f /usr/bin/indi_sv305_ccd ]; then
     rm -f "/usr/bin/indi_sv305_ccd" 2> /dev/null
 fi
+
+if [ -f /usr/share/indi/indi_sv305_ccd.xml ]; then
+    rm -f "/usr/share/indi/indi_sv305_ccd.xml" 2> /dev/null
+fi
