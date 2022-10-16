@@ -1,7 +1,7 @@
-SVBONY SV305 ccd driver
+SVBONY SVBONY ccd driver
 ==================
 
-This package provides a CCD driver for the SVBONY SV305/SV905 cameras.
+This package is a CCD driver for SVBONY's SV305 or later cameras.
 
 Requirements
 ============
@@ -18,9 +18,9 @@ Requirements
 
 	zlib-devel is required for compression (zlib1g-dev)
 
-+ libsv305
++ libsvbony
 
-	SVBONY SV305 SDK binaries (1.6.1 or higher), also provided by indi-3rdparty
+	SVBONY SVBONY Camera SDK binaries (1.9.6 or higher), also provided by indi-3rdparty
 
 Installation
 ============
@@ -30,11 +30,11 @@ Installation
 How to Use
 ==========
 
-	You can use the SV305 INDI Driver in any INDI-compatible client such as KStars or Xephem.
+	You can use the SVBONY INDI Driver in any INDI-compatible client such as KStars or Xephem.
 	
 	To run the driver from the command line:
 	
-	$ indiserver indi_sv305_ccd
+	$ indiserver indi_svbony_ccd
 	
 	You can then connect to the driver from any client, the default port is 7624.
 	If you're using KStars, the driver will be automatically listed in KStars' Device Manager,
@@ -49,16 +49,19 @@ Features
 	+ Subframing (snapshot and liveview)
 	+ Software binning (snapshot and liveview)
 	+ Streaming
-	+ SV305PRO ST4 port supported
-	+ SV305M PRO supported
-	+ SV405CC supported
+	+ ST4 port supported.If the camera has a guider port.
+	+ Monochrome camera supported
+	+ Cooled camera supported
 
 Known issues
 ============
 
 	+ Intensive configuration changes could lead to a crash
-	+ Some shifts in frame order had been reported (frame N-1 uploaded instead of frame N)
-	+ SV405CC Temperature regulation fix and improvement needed
+	+ If Sub frame is enabled when auto focus is executed, it may not be possible to retrieve shooting data or cooling information.
+	+ The driver crashes when Native file format is selected and exposed.
+	+ Binning that the camera does not support can be selected.
+
+
 
 Limitations
 ===========
@@ -68,6 +71,13 @@ Limitations
 Changelog
 =========
 
+	+ 1.3.3 : Generalization of driver names. Some issues and improvements below:
+        + Support for format selection in Capture Module
+        + Fixed out-of-order image data search
+        + Determination of functions by camera properties
+        + ROI size optimization
+        + Fixed problems with Mutex
+        + Fixed unstable behavior with automatic parameter saving
 	+ 1.3.2 : AbortExposure added, better handling of GetVideoData TIMEOUTS in TimerHit, streaming timeout fixed
 	+ 1.3.1 : SV405CC temperature regulation fix, code cleaning and fixes
 	+ 1.3.0 : SV405CC support added

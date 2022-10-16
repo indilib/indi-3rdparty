@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.0)
-project (libsv305)
+project (libsvbony)
 
 set (SVBCAMERASDK_VERSION "1.9.6")
 set (SVBCAMERASDK_SOVERSION "1")
@@ -42,7 +42,7 @@ elseif (UNIX)
 endif ()
 
 # install header files
-install (FILES SVBCameraSDK.h DESTINATION include/libsv305)
+install (FILES SVBCameraSDK.h DESTINATION include/libsvbony)
 
 # Install library
 install_imported (TARGETS SVBCameraSDK DESTINATION ${CMAKE_INSTALL_LIBDIR})

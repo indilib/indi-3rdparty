@@ -1,3 +1,15 @@
+indi-svbony (1.3.3) bionic; urgency=low
+
+  * Generalization of driver names. Some issues and improvements below:
+  * Support for format selection in Capture Module
+  * Fixed out-of-order image data search
+  * Determination of functions by camera properties
+  * ROI size optimization
+  * Fixed problems with Mutex
+  * Fixed unstable behavior with automatic parameter saving
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Sat, 15 Oct 2022 01:00:00 +0900
+
 indi-sv305 (1.3.2) bionic; urgency=low
 
   * AbortExposure added

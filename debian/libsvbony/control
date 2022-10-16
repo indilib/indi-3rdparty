@@ -1,12 +1,12 @@
-Source: libsv305
+Source: libsvbony
 Section: libs
 Priority: extra
 Maintainer: Blaise-Florentin Collin <thx8411@yahoo.fr>
 Build-Depends: debhelper (>= 6), cdbs, cmake
 Standards-Version: 3.9.2
 
-Package: libsv305
+Package: libsvbony
 Architecture: i386 amd64 armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: SDK library for the SVBONY SV305 Camera
+Description: SDK library for the SVBONY Camera
 
