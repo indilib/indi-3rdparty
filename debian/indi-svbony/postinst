@@ -1,0 +1,6 @@
+#!/bin/sh
+# postinst script for indi_svbony_ccd
+
+if [ -f /usr/bin/indi_sv305_ccd ]; then
+    rm -f "/usr/bin/indi_sv305_ccd" 2> /dev/null
+fi
