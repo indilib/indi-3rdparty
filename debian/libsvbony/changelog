@@ -1,4 +1,4 @@
-libsv305 (1.9.6) bionic; urgency=low
+libsvbony (1.9.6) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.9.6 :
   * *** Note: The following changes were made from 1.7.3 to 1.9.6 ***
