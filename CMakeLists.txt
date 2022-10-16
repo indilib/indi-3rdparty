@@ -80,7 +80,7 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} libqsi DIR5_FOUND)
             STRING(FIND ${SOURCE_FILE} libsbig DIR6_FOUND)            
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
-            STRING(FIND ${SOURCE_FILE} libsv305 DIR9_FOUND)
+            STRING(FIND ${SOURCE_FILE} libsvbony DIR9_FOUND)
             STRING(FIND ${SOURCE_FILE} libahp-xc DIR10_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
@@ -146,7 +146,7 @@ option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_XC "Install AHP XC Correlators Driver" On)
 option(WITH_ORION_SSG3 "Install Orion StarShoot G3 Driver" On)
-option(WITH_SV305 "Install SVBONY SV305 Camera Driver" On)
+option(WITH_SVBONY "Install SVBONY Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
@@ -274,10 +274,10 @@ add_subdirectory(libmallincam)
 add_subdirectory(libomegonprocam)
 endif (WITH_TOUPBASE)
 
-#libsv305
-if (WITH_SV305)
-add_subdirectory(libsv305)
-endif (WITH_SV305)
+#libsvbiny
+if (WITH_SVBONY)
+add_subdirectory(libsvbony)
+endif (WITH_SVBONY)
 
 #libplayerone
 if (WITH_PLAYERONE)
@@ -610,16 +610,16 @@ add_subdirectory(libahp-xc)
 endif(AHPXC_FOUND)
 endif(WITH_AHP_XC)
 
-# sv305
-if (WITH_SV305)
-find_package(SV305)
-if(SV305_FOUND)
-add_subdirectory(indi-sv305)
-else(SV305_FOUND)
-add_subdirectory(libsv305)
+# svbony
+if (WITH_SVBONY)
+find_package(SVBONY)
+if(SVBONY_FOUND)
+add_subdirectory(indi-svbony)
+else(SVBONY_FOUND)
+add_subdirectory(libsvbony)
 SET(LIBRARIES_FOUND FALSE)
-endif(SV305_FOUND)
-endif(WITH_SV305)
+endif(SVBONY_FOUND)
+endif(WITH_SVBONY)
 
 # rpi_cam
 if (WITH_RPICAM)
@@ -725,9 +725,9 @@ if (WITH_PENTAX AND NOT PENTAX_FOUND)
 message(STATUS "libpktriggercord and/or libricohcamerasdk were not found and will now be built. Please install these libraries first before running cmake again to install indi-pentax.")
 endif (WITH_PENTAX AND NOT PENTAX_FOUND)
 
-if (WITH_SV305 AND NOT SV305_FOUND)
-message(STATUS "libsv305 was not found and will now be built. Please install this libsv305 first before running cmake again to install indi-sv305.")
-endif (WITH_SV305 AND NOT SV305_FOUND)
+if (WITH_SVBONY AND NOT SVBONY_FOUND)
+message(STATUS "libsvbony was not found and will now be built. Please install this libsvbony first before running cmake again to install indi-svbony.")
+endif (WITH_SVBONY AND NOT SVBONY_FOUND)
 
 if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")

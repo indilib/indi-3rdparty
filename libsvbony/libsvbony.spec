@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: libsv305
+Name: libsvbony
 Version:1.9.8.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -66,18 +66,18 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd libsv305
+cd libsvbony
 %cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd libsv305
+cd libsvbony
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
 %files
 %{_libdir}/*
-%{_includedir}/libsv305
+%{_includedir}/libsvbony
 /lib/udev/rules.d/90-svbonyusb.rules
 
 

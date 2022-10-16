@@ -1,3 +1,23 @@
+libsvbony (1.9.6) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.9.6 :
+  * *** Note: The following changes were made from 1.7.3 to 1.9.6 ***
+  * Fixed the bug that the SV705C could not output the image at the low resolution of RAW8
+  * Fixed the bug that the camera could not be opened multiple times through DirectShow when using sharpcap
+  * Disable output syslog
+  * Fixed the bug that the soft trigger of SV505C and SV705C did not output the image
+  * Support SV505C, SV605CC and SV705C
+  * Optimize the full well of SV405CC
+  * Optimize the performance of SV505C
+  * Fixed the problem of unstable temperature control of SV405CC
+  * Fixed the first frame timeout problem of SV405CC soft trigger
+  * Modify the maximum gain of SV405CC to 57dB, and add the HCG gain control
+  * Fixed the problem of unstable temperature control of SV405CC
+  * Fixed the first frame timeout problem of SV405CC soft trigger
+  * Modify the maximum gain of SV405CC to 57dB, and add the HCG gain control
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 8 Oct 2022 01:00:00 +0900
+
 libsv305 (1.6.11) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.6.5 :
