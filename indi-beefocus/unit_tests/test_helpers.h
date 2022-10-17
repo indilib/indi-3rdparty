@@ -28,7 +28,7 @@ class CStringWrap
   /// @brief Make a wrapped C String from an std::string
   CStringWrap( const std::string &name_rhs )
   {
-    name = std::unique_ptr<char>( new char[ name_rhs.length() + 1 ] );
+    name = std::unique_ptr<char[]>( new char[ name_rhs.length() + 1 ] );
     strncpy( name.get(), name_rhs.c_str(), name_rhs.length() + 1 );
   }
 
@@ -36,7 +36,7 @@ class CStringWrap
   CStringWrap( const CStringWrap& name_rhs )
   {
     size_t length = strlen( name_rhs.get() );
-    name = std::unique_ptr<char>( new char[ length + 1 ] );
+    name = std::unique_ptr<char[]>( new char[ length + 1 ] );
     strncpy( name.get(), name_rhs.get(), length + 1 );
   }
 
@@ -56,7 +56,7 @@ class CStringWrap
 
   // unique pointer will take care of deallocation and make sure we don't
   // ever do a double deallocation.
-  std::unique_ptr<char> name;
+  std::unique_ptr<char[]> name;
 };
 
 ///

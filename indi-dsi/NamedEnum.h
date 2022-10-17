@@ -21,8 +21,11 @@ class NamedEnum
 
   private:
     // Predicate for finding the corresponding instance
-    struct Enum_Predicate_Corresponds : public std::unary_function<const NamedEnum<TValue, T> *, bool>
+    struct Enum_Predicate_Corresponds
     {
+        typedef const NamedEnum<TValue, T> * argument_type;
+        typedef bool result_type;
+
         Enum_Predicate_Corresponds(const TValue &Value) : m_value(Value) {}
         bool operator()(const NamedEnum<TValue, T> *E) const { return E->value() == m_value; }
 
@@ -32,8 +35,11 @@ class NamedEnum
 
     // Comparison functor for the set of instances
     struct NamedEnum_Ptr_LessThan
-        : public std::binary_function<const NamedEnum<TValue, T> *, const NamedEnum<TValue, T> *, bool>
     {
+        typedef const NamedEnum<TValue, T> * first_argument_type;
+        typedef const NamedEnum<TValue, T> * second_argument_type;
+        typedef bool result_type;
+
         bool operator()(const NamedEnum<TValue, T> *E_1, const NamedEnum<TValue, T> *E_2) const
         {
             return E_1->value() < E_2->value();
