@@ -14,6 +14,7 @@
 #include <firmata.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctime>
 
 void (*firmata_debug_cb)(const char *file, int line, const char *msg, ...) = NULL;
 
