@@ -320,7 +320,7 @@ bool QHYCCD::initProperties()
     IUFillTextVector(&GPSDataNowTP, GPSDataNowT, 4, getDeviceName(), "GPS_DATA_NOW", "Now", GPS_DATA_TAB, IP_RO, 60, IPS_IDLE);
 
     addAuxControls();
-    setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
+    setDriverInterface(getDriverInterface());
 
     return true;
 }
@@ -987,9 +987,10 @@ bool QHYCCD::Connect()
         }
 
         if (HasFilters == true)
+        {
             setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
-        else
-            setDriverInterface(getDriverInterface() & ~FILTER_INTERFACE);
+            syncDriverInfo();
+        }
         LOGF_DEBUG("Has Filters: %s", HasFilters ? "True" : "False");
 
         ////////////////////////////////////////////////////////////////////
