@@ -601,12 +601,17 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             RequestStatSP.update(states, names, n);
             if (RequestStatSP[0].getState() == ISS_ON)
             {
-                StartExposure(m_ExposureRequest);
+                double values[1] = {m_ExposureRequest};
+                const char *names[1] = {"CCD_EXPOSURE_VALUE"};
+                ISNewNumber(getDeviceName(), "CCD_EXPOSURE", values, const_cast<char **>(names), 1);
                 RequestStatSP.setState(IPS_BUSY);
             }
             else
             {
-                AbortExposure();
+                ISState states[1] = {ISS_ON};
+                const char *names[1] = {"ABORT"};
+                ISNewSwitch(getDeviceName(), "CCD_ABORT_EXPOSURE", states, const_cast<char **>(names), 1);
+                RequestStatSP.reset();
                 RequestStatSP.setState(IPS_IDLE);
             }
 
