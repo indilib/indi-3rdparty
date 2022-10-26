@@ -13,6 +13,8 @@ find_package(ZLIB REQUIRED)
 set (FLI_CCD_VERSION_MAJOR 2)
 set (FLI_CCD_VERSION_MINOR 0)
 
+OPTION (LEGACY_MODE "Build Legacy Mode" OFF)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_fli.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_fli.xml )
 
@@ -23,6 +25,11 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${FLI_INCLUDE_DIR})
 
 include(CMakeCommon)
+
+IF (LEGACY_MODE)
+# Legacy mode to support older INDI properties used in some observatories.
+add_definitions(-DLEGACY_MODE)
+ENDIF(LEGACY_MODE)
 
 ###### FLI Precision Digital Focuser ######
 set(flipdf_SRCS

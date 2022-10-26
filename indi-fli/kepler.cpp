@@ -328,6 +328,9 @@ bool Kepler::initProperties()
     RequestStatSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_OFF);
     RequestStatSP.fill(getDeviceName(), "REQUEST_STATS", "Statistics", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    /*****************************************************************************************************
+    // Legacy Properties
+    ******************************************************************************************************/
     addAuxControls();
 
     return true;
@@ -801,9 +804,6 @@ bool Kepler::UpdateCCDFrame(int x, int y, int w, int h)
     {
         // Set UNBINNED coords
         PrimaryCCD.setFrame(x, y, w, h);
-
-        uint32_t size = (w / PrimaryCCD.getBinX()) * (h / PrimaryCCD.getBinY()) * (PrimaryCCD.getBPP() / 8);
-        PrimaryCCD.setFrameBufferSize(size);
 
         // Get required frame buffer size including all the metadata and extra bits added by the SDK.
         // We need to only

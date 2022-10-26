@@ -24,6 +24,7 @@
 #include <indipropertyswitch.h>
 #include <indipropertytext.h>
 #include <indipropertylight.h>
+#include <indipropertyblob.h>
 
 #include <inditimer.h>
 #include <indisinglethreadpool.h>
@@ -95,7 +96,6 @@ class Kepler : public INDI::CCD
         // GPS State
         INDI::PropertyLight GPSStateLP {3};
 
-
         //****************************************************************************************
         // Communication Functions
         //****************************************************************************************
@@ -144,5 +144,7 @@ class Kepler : public INDI::CCD
         static constexpr double TEMPERATURE_FREQUENCY_BUSY {1000};
         static constexpr double TEMPERATURE_FREQUENCY_IDLE {5000};
         static constexpr uint32_t GPS_TIMER_PERIOD {5000};
+
         static constexpr const char *GPS_TAB {"GPS"};
+        static constexpr const char *LEGACY_TAB {"Legacy"};
 };
