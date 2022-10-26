@@ -335,8 +335,8 @@ bool Kepler::initProperties()
     ******************************************************************************************************/
 #ifdef LEGACY_MODE
     ExpValuesNP[ExpTime].fill("ExpTime", "ExpTime", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4000, 1, 4000);
-    ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4000, 1, 4000);
+    ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4096, 1, 4096);
+    ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4096, 1, 4096);
     ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 1, 1, 0);
     ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 1, 1, 0);
     ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 1, 4, 1, 1);
