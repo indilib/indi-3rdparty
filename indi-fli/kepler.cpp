@@ -345,7 +345,7 @@ bool Kepler::initProperties()
     ExpValuesNP[ROIY].fill("ROIY", "ROIY", "%.f", 0, 100, 1, 1);
     ExpValuesNP[Shutter].fill("Shutter", "Shutter", "%.f", 0, 1, 1, 1);
     ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 4, 1, 1);
-    ExpValuesNP.fill(getDefaultName(), "ExpValues", "ExpValues", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
+    ExpValuesNP.fill(getDeviceName(), "ExpValues", "ExpValues", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
 
     ExposureTriggerSP[0].fill("Go", "Start Exposure", ISS_OFF);
     ExposureTriggerSP.fill(getDeviceName(), "ExpGo", "Control Exposure", LEGACY_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
