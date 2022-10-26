@@ -337,8 +337,8 @@ bool Kepler::initProperties()
     ExpValuesNP[ExpTime].fill("ExpTime", "ExpTime", "%.f", 0, 3600, 1, 1);
     ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4096, 1, 4096);
     ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4096, 1, 4096);
-    ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 1, 1, 0);
-    ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 1, 1, 0);
+    ExpValuesNP[OSW].fill("OSW", "OSW", "%.f", 0, 1, 1, 0);
+    ExpValuesNP[OSH].fill("OSH", "OSH", "%.f", 0, 1, 1, 0);
     ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 1, 4, 1, 1);
     ExpValuesNP[BinH].fill("BinH", "BinH", "%.f", 1, 4, 1, 1);
     ExpValuesNP[ROIX].fill("ROIX", "ROIX", "%.f", 0, 100, 1, 0);
@@ -350,8 +350,6 @@ bool Kepler::initProperties()
     ExposureTriggerSP[0].fill("Go", "Start Exposure", ISS_OFF);
     ExposureTriggerSP.fill(getDeviceName(), "ExpGo", "Control Exposure", LEGACY_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    BLOBDataBP[0].fill("Img", "Image", ".fits");
-    BLOBDataBP.fill(getDeviceName(), "Pixels", "Image data", LEGACY_TAB, IP_RO, 60, IPS_IDLE);
 #endif
     addAuxControls();
 
@@ -369,7 +367,6 @@ void Kepler::ISGetProperties(const char *dev)
 #ifdef LEGACY_MODE
     defineProperty(ExpValuesNP);
     defineProperty(ExposureTriggerSP);
-    defineProperty(BLOBDataBP);
 #endif
 
 }
@@ -1090,18 +1087,11 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
 ********************************************************************************/
 void Kepler::UploadComplete(INDI::CCDChip *targetChip)
 {
+    INDI_UNUSED(targetChip);
 #ifdef LEGACY_MODE
-    BLOBDataBP[0].setBlob(*(targetChip->fitsMemoryBlockPointer()));
-    BLOBDataBP[0].setBlobLen(*(targetChip->fitsMemorySizePointer()));
-    BLOBDataBP[0].setSize(*(targetChip->fitsMemorySizePointer()));
-    BLOBDataBP.setState(IPS_OK);
-    BLOBDataBP.apply();
-
     ExposureTriggerSP[0].setState(ISS_OFF);
     ExposureTriggerSP.setState(IPS_IDLE);
     ExposureTriggerSP.apply();
-#else
-    INDI_UNUSED(targetChip);
 #endif
 
     if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)

@@ -106,8 +106,8 @@ class Kepler : public INDI::CCD
             ExpTime,
             ROIW,
             ROIH,
-            OVW,
-            OVH,
+            OSW,
+            OSH,
             BinW,
             BinH,
             ROIX,
@@ -116,7 +116,6 @@ class Kepler : public INDI::CCD
             Type
         };
         INDI::PropertySwitch ExposureTriggerSP {1};
-        INDI::PropertyBlob BLOBDataBP {1};
         INDI::PropertyNumber TemperatureSetNP {1};
         double m_ExposureRequest {1};
 #endif
