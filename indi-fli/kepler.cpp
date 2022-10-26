@@ -335,16 +335,16 @@ bool Kepler::initProperties()
     ******************************************************************************************************/
 #ifdef LEGACY_MODE
     ExpValuesNP[ExpTime].fill("ExpTime", "ExpTime", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4000, 1, 1);
-    ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4000, 1, 1);
-    ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 1, 1, 1);
-    ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 1, 1, 1);
-    ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 0, 4, 1, 1);
-    ExpValuesNP[BinH].fill("BinH", "BinH", "%.f", 0, 4, 1, 1);
-    ExpValuesNP[ROIX].fill("ROIX", "ROIX", "%.f", 0, 100, 1, 1);
-    ExpValuesNP[ROIY].fill("ROIY", "ROIY", "%.f", 0, 100, 1, 1);
+    ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4000, 1, 4000);
+    ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4000, 1, 4000);
+    ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 1, 1, 0);
+    ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 1, 1, 0);
+    ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 1, 4, 1, 1);
+    ExpValuesNP[BinH].fill("BinH", "BinH", "%.f", 1, 4, 1, 1);
+    ExpValuesNP[ROIX].fill("ROIX", "ROIX", "%.f", 0, 100, 1, 0);
+    ExpValuesNP[ROIY].fill("ROIY", "ROIY", "%.f", 0, 100, 1, 0);
     ExpValuesNP[Shutter].fill("Shutter", "Shutter", "%.f", 0, 1, 1, 1);
-    ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 4, 1, 1);
+    ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 4, 1, 4);
     ExpValuesNP.fill(getDeviceName(), "ExpValues", "ExpValues", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
 
     ExposureTriggerSP[0].fill("Go", "Start Exposure", ISS_OFF);
