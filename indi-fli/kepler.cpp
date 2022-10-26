@@ -598,24 +598,24 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 #ifdef LEGACY_MODE
         if (ExposureTriggerSP.isNameMatch(name))
         {
-            RequestStatSP.update(states, names, n);
-            if (RequestStatSP[0].getState() == ISS_ON)
+            ExposureTriggerSP.update(states, names, n);
+            if (ExposureTriggerSP[0].getState() == ISS_ON)
             {
                 double values[1] = {m_ExposureRequest};
                 const char *names[1] = {"CCD_EXPOSURE_VALUE"};
                 ISNewNumber(getDeviceName(), "CCD_EXPOSURE", values, const_cast<char **>(names), 1);
-                RequestStatSP.setState(IPS_BUSY);
+                ExposureTriggerSP.setState(IPS_BUSY);
             }
             else
             {
                 ISState states[1] = {ISS_ON};
                 const char *names[1] = {"ABORT"};
                 ISNewSwitch(getDeviceName(), "CCD_ABORT_EXPOSURE", states, const_cast<char **>(names), 1);
-                RequestStatSP.reset();
-                RequestStatSP.setState(IPS_IDLE);
+                ExposureTriggerSP.reset();
+                ExposureTriggerSP.setState(IPS_IDLE);
             }
 
-            RequestStatSP.apply();
+            ExposureTriggerSP.apply();
             return true;
         }
 #endif
