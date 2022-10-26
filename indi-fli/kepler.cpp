@@ -286,7 +286,8 @@ bool Kepler::initProperties()
     // Communication Method
     CommunicationMethodSP[FPRO_CONNECTION_USB].fill("FPRO_CONNECTION_USB", "USB", ISS_ON);
     CommunicationMethodSP[FPRO_CONNECTION_FIBRE].fill("FPRO_CONNECTION_FIBRE", "Fiber", ISS_OFF);
-    CommunicationMethodSP.fill(getDeviceName(), "COMMUNICATION_METHOD", "Connect Via", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60, IPS_IDLE);
+    CommunicationMethodSP.fill(getDeviceName(), "COMMUNICATION_METHOD", "Connect Via", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60,
+                               IPS_IDLE);
 
     // Merge Method
     MergeMethodSP[FPROMERGE_ALGO].fill("FPROMERGE_ALGO", "Default", ISS_ON);
@@ -302,7 +303,8 @@ bool Kepler::initProperties()
     // Calibration Frames (for MERGE_HARDWARE)
     MergeCalibrationFilesTP[CALIBRATION_DARK].fill("CALIBRATION_DARK", "Dark", "");
     MergeCalibrationFilesTP[CALIBRATION_FLAT].fill("CALIBRATION_FLAT", "Flat", "");
-    MergeCalibrationFilesTP.fill(getDeviceName(), "MERGE_CALIBRATION_FRAMES", "Calibration", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
+    MergeCalibrationFilesTP.fill(getDeviceName(), "MERGE_CALIBRATION_FRAMES", "Calibration", IMAGE_SETTINGS_TAB, IP_RW, 60,
+                                 IPS_IDLE);
 
     // Cooler Duty Cycle
     CoolerDutyNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 5, 0.0);
@@ -335,14 +337,21 @@ bool Kepler::initProperties()
     ExpValuesNP[ExpTime].fill("ExpTime", "ExpTime", "%.f", 0, 3600, 1, 1);
     ExpValuesNP[ROIW].fill("ROIW", "ROIW", "%.f", 0, 4000, 1, 1);
     ExpValuesNP[ROIH].fill("ROIH", "ROIH", "%.f", 0, 4000, 1, 1);
-    ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[BinH].fill("BinH", "BinH", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[ROIX].fill("ROIX", "ROIX", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[ROIY].fill("ROIY", "ROIY", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[Shutter].fill("Shutter", "Shutter", "%.f", 0, 3600, 1, 1);
-    ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 3600, 1, 1);
+    ExpValuesNP[OVW].fill("OVW", "OVW", "%.f", 0, 1, 1, 1);
+    ExpValuesNP[OVH].fill("OVH", "OVH", "%.f", 0, 1, 1, 1);
+    ExpValuesNP[BinW].fill("BinW", "BinW", "%.f", 0, 4, 1, 1);
+    ExpValuesNP[BinH].fill("BinH", "BinH", "%.f", 0, 4, 1, 1);
+    ExpValuesNP[ROIX].fill("ROIX", "ROIX", "%.f", 0, 100, 1, 1);
+    ExpValuesNP[ROIY].fill("ROIY", "ROIY", "%.f", 0, 100, 1, 1);
+    ExpValuesNP[Shutter].fill("Shutter", "Shutter", "%.f", 0, 1, 1, 1);
+    ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 4, 1, 1);
+    ExpValuesNP.fill(getDefaultName(), "ExpValues", "ExpValues", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
+
+    ExposureTriggerSP[0].fill("Go", "Start Exposure", ISS_OFF);
+    ExposureTriggerSP.fill(getDeviceName(), "ExpGo", "Control Exposure", LEGACY_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+    BLOBDataBP[0].fill("Img", "Image", ".fits");
+    BLOBDataBP.fill(getDeviceName(), "Pixels", "Image data", LEGACY_TAB, IP_RO, 60, IPS_IDLE);
 #endif
     addAuxControls();
 
@@ -356,6 +365,13 @@ void Kepler::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
     defineProperty(&CommunicationMethodSP);
+
+#ifdef LEGACY_MODE
+    defineProperty(ExpValuesNP);
+    defineProperty(ExposureTriggerSP);
+    defineProperty(BLOBDataBP);
+#endif
+
 }
 
 /********************************************************************************
@@ -404,6 +420,7 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+        // Black Level
         if (BlackLevelNP.isNameMatch(name))
         {
             if (FPROSensor_SetBlackLevelAdjust(m_CameraHandle, values[0]) >= 0)
@@ -416,6 +433,30 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
             BlackLevelNP.apply();
             return true;
         }
+
+        // Legacy Exposure Values
+#ifdef LEGACY_MODE
+        if (ExpValuesNP.isNameMatch(name))
+        {
+            ExpValuesNP.update(values, names, n);
+            m_ExposureRequest = ExpValuesNP[ExpTime].value;
+            UpdateCCDFrame(ExpValuesNP[ROIX].value, ExpValuesNP[ROIY].value, ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value);
+            UpdateCCDBin(ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value);
+            int frameType = ExpValuesNP[Type].value;
+            if (frameType == 1)
+                UpdateCCDFrameType(INDI::CCDChip::BIAS_FRAME);
+            else if (frameType == 2)
+                UpdateCCDFrameType(INDI::CCDChip::DARK_FRAME);
+            else if (frameType == 3)
+                UpdateCCDFrameType(INDI::CCDChip::FLAT_FRAME);
+            else
+                UpdateCCDFrameType(INDI::CCDChip::LIGHT_FRAME);
+            ExpValuesNP.setState(IPS_OK);
+            ExpValuesNP.apply();
+            return true;
+        }
+
+#endif
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -535,6 +576,28 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             saveConfig(true, RequestStatSP.getName());
             return true;
         }
+
+        // Legacy Trigger Exposure
+#ifdef LEGACY_MODE
+        if (ExposureTriggerSP.isNameMatch(name))
+        {
+            RequestStatSP.update(states, names, n);
+            if (RequestStatSP[0].getState() == ISS_ON)
+            {
+                StartExposure(m_ExposureRequest);
+                RequestStatSP.setState(IPS_BUSY);
+            }
+            else
+            {
+                AbortExposure();
+                RequestStatSP.setState(IPS_IDLE);
+            }
+
+            RequestStatSP.apply();
+            return true;
+        }
+#endif
+
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -628,9 +691,11 @@ bool Kepler::setup()
     if (pixelSize > 90)
         LOG_WARN("Pixel size is unkown for this camera model! Contact INDI to supply correct pixel information.");
 
-    SetCCDParams(m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight, pixelDepth, pixelSize, pixelSize);
+    SetCCDParams(m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight, pixelDepth, pixelSize,
+                 pixelSize);
 
-    FPROFrame_SetImageArea(m_CameraHandle, 0, 0, m_CameraCapabilities.uiMaxPixelImageWidth, m_CameraCapabilities.uiMaxPixelImageHeight);
+    FPROFrame_SetImageArea(m_CameraHandle, 0, 0, m_CameraCapabilities.uiMaxPixelImageWidth,
+                           m_CameraCapabilities.uiMaxPixelImageHeight);
 
     // Get required frame buffer size including all the metadata and extra bits added by the SDK.
     // We need to only
@@ -984,14 +1049,16 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
             int status = 0;
             fits_update_key_dbl(fptr, "HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean", &status);
             fits_update_key_dbl(fptr, "HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median", &status);
-            fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation", &status);
+            fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation",
+                                &status);
         }
         if (fproStats.bMergedRequest)
         {
             int status = 0;
             fits_update_key_dbl(fptr, "MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean", &status);
             fits_update_key_dbl(fptr, "MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median", &status);
-            fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation", &status);
+            fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation",
+                                &status);
         }
     }
 }
@@ -1001,7 +1068,20 @@ void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
 ********************************************************************************/
 void Kepler::UploadComplete(INDI::CCDChip *targetChip)
 {
+#ifdef LEGACY_MODE
+    BLOBDataBP[0].setBlob(*(targetChip->fitsMemoryBlockPointer()));
+    BLOBDataBP[0].setBlobLen(*(targetChip->fitsMemorySizePointer()));
+    BLOBDataBP[0].setSize(*(targetChip->fitsMemorySizePointer()));
+    BLOBDataBP.setState(IPS_OK);
+    BLOBDataBP.apply();
+
+    ExposureTriggerSP[0].setState(ISS_OFF);
+    ExposureTriggerSP.setState(IPS_IDLE);
+    ExposureTriggerSP.apply();
+#else
     INDI_UNUSED(targetChip);
+#endif
+
     if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)
         FPROFrame_FreeUnpackedBuffers(&fproUnpacked);
     FPROFrame_FreeUnpackedStatistics(&fproStats);
