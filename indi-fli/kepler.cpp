@@ -440,17 +440,34 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
         {
             ExpValuesNP.update(values, names, n);
             m_ExposureRequest = ExpValuesNP[ExpTime].value;
-            UpdateCCDFrame(ExpValuesNP[ROIX].value, ExpValuesNP[ROIY].value, ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value);
-            UpdateCCDBin(ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value);
-            int frameType = ExpValuesNP[Type].value;
-            if (frameType == 1)
-                UpdateCCDFrameType(INDI::CCDChip::BIAS_FRAME);
-            else if (frameType == 2)
-                UpdateCCDFrameType(INDI::CCDChip::DARK_FRAME);
-            else if (frameType == 3)
-                UpdateCCDFrameType(INDI::CCDChip::FLAT_FRAME);
-            else
-                UpdateCCDFrameType(INDI::CCDChip::LIGHT_FRAME);
+
+            // ROI
+            {
+                double values[4] = {ExpValuesNP[ROIX].value, ExpValuesNP[ROIY].value, ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value};
+                const char *names[4] = {"X", "Y", "WIDTH", "HEIGHT"};
+                ISNewNumber(getDeviceName(), "CCD_FRAME", values, const_cast<char **>(names), 4);
+            }
+
+            // Binning
+            {
+                double values[2] = {ExpValuesNP[BinW].value, ExpValuesNP[BinH].value};
+                const char *names[2] = {"HOR_BIN", "VER_BIN"};
+                ISNewNumber(getDeviceName(), "CCD_BINNING", values, const_cast<char **>(names), 2);
+            }
+
+            // Frame Type
+            {
+                ISState states[4] = {ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF};
+                const char *names[4] = {"FRAME_LIGHT", "FRAME_BIAS", "FRAME_DARK", "FRAME_FLAT"};
+
+                int frameType = ExpValuesNP[Type].value;
+                if (frameType == 0 || frameType == 4)
+                    states[0] = ISS_ON;
+                else
+                    states[frameType] = ISS_ON;
+                ISNewSwitch(getDeviceName(), "CCD_FRAME_TYPE", states, const_cast<char **>(names), 4);
+            }
+
             ExpValuesNP.setState(IPS_OK);
             ExpValuesNP.apply();
             return true;
