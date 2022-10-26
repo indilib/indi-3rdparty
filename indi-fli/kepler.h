@@ -96,6 +96,31 @@ class Kepler : public INDI::CCD
         // GPS State
         INDI::PropertyLight GPSStateLP {3};
 
+#ifdef LEGACY_MODE
+        //****************************************************************************************
+        // Legacy INDI Properties
+        //****************************************************************************************
+        INDI::PropertyNumber ExpValuesNP {11};
+        enum
+        {
+            ExpTime,
+            ROIW,
+            ROIH,
+            OVW,
+            OVH,
+            BinW,
+            BinH,
+            ROIX,
+            ROIY,
+            Shutter,
+            Type
+        };
+        INDI::PropertySwitch ExposureTriggerSP {1};
+        INDI::PropertyBlob BLOBDataBP {1};
+        INDI::PropertyNumber TemperatureSetNP {1};
+#endif
+
+
         //****************************************************************************************
         // Communication Functions
         //****************************************************************************************
