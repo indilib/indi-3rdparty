@@ -1018,9 +1018,8 @@ void Kepler::readTemperature()
             break;
     }
 
-    uint32_t duty = 0;
-    result = FPROCtrl_GetCoolerDutyCycle(m_CameraHandle, &duty);
-    auto percentage = duty / 100.0;
+    uint32_t dutycycle = 0;
+    result = FPROCtrl_GetCoolerDutyCycle(m_CameraHandle, &dutycycle);
     // Set alert, if not set already in case there is SDK error.
     if (result < 0 && CoolerDutyNP.getState() != IPS_ALERT)
     {
@@ -1033,14 +1032,14 @@ void Kepler::readTemperature()
 #endif
     }
     // Only send updates if we are above 1 percent threshold
-    else if (std::abs(percentage - CoolerDutyNP[0].getValue()) >= 1)
+    else if (std::abs(dutycycle - CoolerDutyNP[0].getValue()) >= 1)
     {
-        CoolerDutyNP[0].setValue(percentage);
-        CoolerDutyNP.setState(duty > 0 ? IPS_BUSY : IPS_IDLE);
+        CoolerDutyNP[0].setValue(dutycycle);
+        CoolerDutyNP.setState(dutycycle > 0 ? IPS_BUSY : IPS_IDLE);
         CoolerDutyNP.apply();
 
 #ifdef LEGACY_MODE
-        TemperatureReadNP[1].value = percentage;
+        TemperatureReadNP[1].value = dutycycle;
         TemperatureReadNP.apply();
 #endif
     }
