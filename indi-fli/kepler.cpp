@@ -354,7 +354,7 @@ bool Kepler::initProperties()
     TemperatureSetNP.fill(getDeviceName(), "SetTemp", "Set Temperature", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
     // Temperature readout and cooler value
     TemperatureReadNP[0].fill("Temp", "Temp", "%.f", -40, 40, 10, 0);
-    TemperatureReadNP[0].fill("Drive", "Cooler", "%.f", 0, 100, 10, 0);
+    TemperatureReadNP[1].fill("Drive", "Cooler", "%.f", 0, 100, 10, 0);
     TemperatureReadNP.fill(getDeviceName(), "TempNow", "Cooler Temp.", LEGACY_TAB, IP_RO, 60, IPS_IDLE);
 
 
