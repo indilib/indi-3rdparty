@@ -375,6 +375,8 @@ void Kepler::ISGetProperties(const char *dev)
 #ifdef LEGACY_MODE
     defineProperty(ExpValuesNP);
     defineProperty(ExposureTriggerSP);
+    defineProperty(TemperatureSetNP);
+    defineProperty(TemperatureReadNP);
 #endif
 
 }
