@@ -1143,7 +1143,7 @@ void Kepler::UploadComplete(INDI::CCDChip *targetChip)
     INDI_UNUSED(targetChip);
 #ifdef LEGACY_MODE
     ExposureTriggerSP[0].setState(ISS_OFF);
-    ExposureTriggerSP.setState(IPS_IDLE);
+    ExposureTriggerSP.setState(IPS_OK);
     ExposureTriggerSP.apply();
 #endif
 
