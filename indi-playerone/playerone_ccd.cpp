@@ -174,34 +174,6 @@ void POACCD::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
     if (ret != POA_OK)
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
 
-#ifdef ASI_LEGACY
-    while (!isAbortToQuit)
-    {
-        uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
-        uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
-        int waitMS           = static_cast<int>((ExposureRequest / 1000.0) + 500);
-
-        ret = POAGetImageData(mCameraInfo.cameraID, targetFrame, totalBytes, waitMS);
-        if (ret != POA_OK)
-        {
-            if (ret != POA_ERROR_TIMEOUT)
-            {
-                Streamer->setStream(false);
-                LOGF_ERROR("Failed to read video data (%s).", Helpers::toString(ret));
-                break;
-            }
-
-            usleep(100);
-            continue;
-        }
-
-        if (mCurrentVideoFormat == POA_RGB24)
-            for (uint32_t i = 0; i < totalBytes; i += 3)
-                std::swap(targetFrame[i], targetFrame[i + 2]);
-
-        Streamer->newFrame(targetFrame, totalBytes);
-    }
-#else
     uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
     uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
     int waitMS           = static_cast<int>((ExposureRequest / 1000.0) + 500);
@@ -235,7 +207,6 @@ void POACCD::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 
         Streamer->newFrame(targetFrame, totalBytes);
     }
-#endif
 
     // stop video capture
     POAStopExposure(mCameraInfo.cameraID);
@@ -267,28 +238,6 @@ void POACCD::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int blin
             LOGF_ERROR("Failed to start blink exposure (%s).", Helpers::toString(ret));
             break;
         }
-
-#ifdef ASI_LEGACY
-        POACameraState status = STATE_EXPOSING;
-        do
-        {
-            if (isAbortToQuit)
-                return;
-
-            usleep(100 * 1000);
-            ret = POAGetCameraState(mCameraInfo.cameraID, &status);
-        }
-        while (ret == POA_OK && status == STATE_EXPOSING);
-
-        POABool pIsReady = POA_FALSE;
-        POAImageReady(mCameraInfo.cameraID, &pIsReady);
-
-        if (pIsReady != POA_TRUE)
-        {
-            LOGF_ERROR("Blink exposure failed, status %d (%s).", status, Helpers::toString(ret));
-            break;
-        }
-#else
         POABool pIsReady = POA_FALSE;
         while(pIsReady == POA_FALSE)
         {
@@ -303,7 +252,6 @@ void POACCD::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int blin
                 break;
             }
         }
-#endif
     }
     while (--blinks > 0);
 
@@ -343,27 +291,11 @@ void POACCD::workerExposure(const std::atomic_bool &isAbortToQuit, float duratio
         // Wait 100ms before trying again
         usleep(100 * 1000);
 
-#ifdef ASI_LEGACY
-        // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
-        // that fail on 16bit images.
-        if (getImageType() == POA_RAW16 &&
-                (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
-        {
-            LOG_INFO("Switching to 8-bit video.");
-            setVideoFormat(POA_RAW8);
-        }
-#endif
-        //POAStopExposure(mCameraInfo.cameraID);
     }
 
     if (ret != POA_OK)
     {
-        LOG_WARN(
-            "PlayerOne firmware might require an update to *compatible mode."
-#ifdef ASI_LEGACY
-            "Check http://www.indilib.org/devices/ccds/zwo-optics-asi-cameras.html for details."
-#endif
-        );
+        LOG_WARN("PlayerOne firmware might require an update to *compatible mode.");
         return;
     }
 
@@ -585,6 +517,24 @@ bool POACCD::updateProperties()
         if (!VideoFormatSP.isEmpty())
         {
             defineProperty(VideoFormatSP);
+
+            // Try to set 16bit RAW by default.
+            // It can get be overwritten by config value.
+            // If config fails, we try to set 16 if exists.
+            if (loadConfig(true, VideoFormatSP.getName()) == false)
+            {
+                for (size_t i = 0; i < VideoFormatSP.size(); i++)
+                {
+                    CaptureFormatSP[i].setState(ISS_OFF);
+                    if (mCameraInfo.imgFormats[i] == POA_RAW16)
+                    {
+                        setVideoFormat(i);
+                        CaptureFormatSP[i].setState(ISS_ON);
+                        break;
+                    }
+                }
+                CaptureFormatSP.apply();
+            }
         }
 
         defineProperty(BlinkNP);
