@@ -117,6 +117,7 @@ class Kepler : public INDI::CCD
         };
         INDI::PropertySwitch ExposureTriggerSP {1};
         INDI::PropertyNumber TemperatureSetNP {1};
+        INDI::PropertyNumber TemperatureReadNP {2};
         double m_ExposureRequest {1};
 #endif
 

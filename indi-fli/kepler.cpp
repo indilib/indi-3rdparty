@@ -346,9 +346,17 @@ bool Kepler::initProperties()
     ExpValuesNP[Shutter].fill("Shutter", "Shutter", "%.f", 0, 1, 1, 1);
     ExpValuesNP[Type].fill("Type", "Type", "%.f", 0, 4, 1, 4);
     ExpValuesNP.fill(getDeviceName(), "ExpValues", "ExpValues", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
-
+    // Trigger
     ExposureTriggerSP[0].fill("Go", "Start Exposure", ISS_OFF);
     ExposureTriggerSP.fill(getDeviceName(), "ExpGo", "Control Exposure", LEGACY_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    // Set Point
+    TemperatureSetNP[0].fill("Target", "Target", "%.f", -40, 20, 5, 0);
+    TemperatureSetNP.fill(getDeviceName(), "SetTemp", "Set Temperature", LEGACY_TAB, IP_RW, 60, IPS_IDLE);
+    // Temperature readout and cooler value
+    TemperatureReadNP[0].fill("Temp", "Temp", "%.f", -40, 40, 10, 0);
+    TemperatureReadNP[0].fill("Drive", "Cooler", "%.f", 0, 100, 10, 0);
+    TemperatureReadNP.fill(getDeviceName(), "TempNow", "Cooler Temp.", LEGACY_TAB, IP_RO, 60, IPS_IDLE);
+
 
 #endif
     addAuxControls();
@@ -440,33 +448,44 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
 
             // ROI
             {
-                double values[4] = {ExpValuesNP[ROIX].value, ExpValuesNP[ROIY].value, ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value};
-                const char *names[4] = {"X", "Y", "WIDTH", "HEIGHT"};
-                ISNewNumber(getDeviceName(), "CCD_FRAME", values, const_cast<char **>(names), 4);
+                double tvalues[4] = {ExpValuesNP[ROIX].value, ExpValuesNP[ROIY].value, ExpValuesNP[ROIW].value, ExpValuesNP[ROIH].value};
+                const char *tnames[4] = {"X", "Y", "WIDTH", "HEIGHT"};
+                ISNewNumber(getDeviceName(), "CCD_FRAME", tvalues, const_cast<char **>(tnames), 4);
             }
 
             // Binning
             {
-                double values[2] = {ExpValuesNP[BinW].value, ExpValuesNP[BinH].value};
-                const char *names[2] = {"HOR_BIN", "VER_BIN"};
-                ISNewNumber(getDeviceName(), "CCD_BINNING", values, const_cast<char **>(names), 2);
+                double tvalues[2] = {ExpValuesNP[BinW].value, ExpValuesNP[BinH].value};
+                const char *tnames[2] = {"HOR_BIN", "VER_BIN"};
+                ISNewNumber(getDeviceName(), "CCD_BINNING", tvalues, const_cast<char **>(tnames), 2);
             }
 
             // Frame Type
             {
-                ISState states[4] = {ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF};
-                const char *names[4] = {"FRAME_LIGHT", "FRAME_BIAS", "FRAME_DARK", "FRAME_FLAT"};
+                ISState tstates[4] = {ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF};
+                const char *tnames[4] = {"FRAME_LIGHT", "FRAME_BIAS", "FRAME_DARK", "FRAME_FLAT"};
 
                 int frameType = ExpValuesNP[Type].value;
                 if (frameType == 0 || frameType == 4)
-                    states[0] = ISS_ON;
+                    tstates[0] = ISS_ON;
                 else
-                    states[frameType] = ISS_ON;
-                ISNewSwitch(getDeviceName(), "CCD_FRAME_TYPE", states, const_cast<char **>(names), 4);
+                    tstates[frameType] = ISS_ON;
+                ISNewSwitch(getDeviceName(), "CCD_FRAME_TYPE", tstates, const_cast<char **>(tnames), 4);
             }
 
             ExpValuesNP.setState(IPS_OK);
             ExpValuesNP.apply();
+            return true;
+        }
+
+        if (TemperatureSetNP.isNameMatch(name))
+        {
+            TemperatureSetNP.update(values, names, n);
+            double tvalues[1] = {TemperatureSetNP[0].value};
+            const char *tnames[1] = {TemperatureN[0].name};
+            ISNewNumber(getDeviceName(), "CCD_TEMPERATURE", tvalues, const_cast<char **>(tnames), 1);
+            TemperatureSetNP.setState(IPS_OK);
+            TemperatureSetNP.apply();
             return true;
         }
 
@@ -844,6 +863,12 @@ int Kepler::SetTemperature(double temperature)
     {
         m_TargetTemperature = temperature;
         m_TemperatureTimer.start(TEMPERATURE_FREQUENCY_BUSY);
+
+#ifdef LEGACY_MODE
+        TemperatureReadNP.setState(IPS_BUSY);
+        TemperatureReadNP.apply();
+#endif
+
         return 0;
     }
 
@@ -944,6 +969,11 @@ void Kepler::readTemperature()
     {
         TemperatureNP.s = IPS_ALERT;
         IDSetNumber(&TemperatureNP, nullptr);
+
+#ifdef LEGACY_MODE
+        TemperatureReadNP.setState(IPS_ALERT);
+        TemperatureReadNP.apply();
+#endif
         LOGF_WARN("FPROCtrl_GetTemperatures failed: %d", result);
     }
 
@@ -955,6 +985,12 @@ void Kepler::readTemperature()
             {
                 TemperatureN[0].value = cooler;
                 IDSetNumber(&TemperatureNP, nullptr);
+
+#ifdef LEGACY_MODE
+                TemperatureReadNP.setState(IPS_OK);
+                TemperatureReadNP[0].value = cooler;
+                TemperatureReadNP.apply();
+#endif
             }
             break;
 
@@ -962,11 +998,18 @@ void Kepler::readTemperature()
             if (std::abs(cooler - m_TargetTemperature) <= TEMPERATURE_THRESHOLD)
             {
                 TemperatureNP.s = IPS_OK;
+#ifdef LEGACY_MODE
+                TemperatureReadNP.setState(IPS_OK);
+#endif
                 // Reset now to idle frequency checks.
                 m_TemperatureTimer.setInterval(TEMPERATURE_FREQUENCY_IDLE);
             }
             TemperatureN[0].value = cooler;
             IDSetNumber(&TemperatureNP, nullptr);
+#ifdef LEGACY_MODE
+            TemperatureReadNP[0].value = cooler;
+            TemperatureReadNP.apply();
+#endif
             break;
 
         case IPS_ALERT:
@@ -981,6 +1024,11 @@ void Kepler::readTemperature()
     {
         CoolerDutyNP.setState(IPS_ALERT);
         CoolerDutyNP.apply();
+
+#ifdef LEGACY_MODE
+        TemperatureReadNP.setState(IPS_ALERT);
+        TemperatureReadNP.apply();
+#endif
     }
     // Only send updates if we are above 1 percent threshold
     else if (std::abs(percentage - CoolerDutyNP[0].getValue()) >= 1)
@@ -988,6 +1036,11 @@ void Kepler::readTemperature()
         CoolerDutyNP[0].setValue(percentage);
         CoolerDutyNP.setState(duty > 0 ? IPS_BUSY : IPS_IDLE);
         CoolerDutyNP.apply();
+
+#ifdef LEGACY_MODE
+        TemperatureReadNP[1].value = percentage;
+        TemperatureReadNP.apply();
+#endif
     }
 }
 
