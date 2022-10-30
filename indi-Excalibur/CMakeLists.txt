@@ -20,7 +20,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-########### DreamFocuser Focuser ###########
+########### RBFocus Excalibur ###########
 set(indiExcalibur_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/Excalibur.cpp
    )

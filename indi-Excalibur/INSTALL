@@ -1,5 +1,5 @@
-Prerequisities required to build DreamFocuser driver
-====================================================
+Prerequisities required to build RBF Excalibur driver
+======================================================
 cmake
 INDI library with the header files
 
