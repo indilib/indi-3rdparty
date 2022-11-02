@@ -545,7 +545,7 @@ void ATIKCCD::updateGainOffset()
     uint8_t data[6] = {0};
     int len = 0;
 
-    if (ControlPresetsS[0].s == ISS_ON)
+    // First read the Gain and Offset boundaries (and value) as if the preset was Custom
     {
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 6, &len))
         {
@@ -585,9 +585,10 @@ void ATIKCCD::updateGainOffset()
         }
         IDSetNumber(&ControlNP, nullptr);
     }
-    else
+
+    // Then if a Preset other than Custom is used, read the associated values
+    if (ControlPresetsS[0].s != ISS_ON)
     {
-        // Else one Preset is configured
         int const preset_index = IUFindOnSwitchIndex(&ControlPresetsSP) - 1;
         if (0 <= preset_index && preset_index < (int)(sizeof(ControlPresetsS) / sizeof(ControlPresetsS[0])))
         {
