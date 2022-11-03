@@ -147,14 +147,13 @@ int cc_parseVectors(char *spec, int *level, double *ra, double *dec)
 uint64 cc_vector2ID(double x, double y, double z, int depth)
 {
     uint64 rstat = 0;
-    int startID;
+    //int startID;
     char name[80];
     int len = 0;
 
     double v1[3], v2[3], v0[3];
     double w1[3], w2[3], w0[3];
-    double p[3];
-    double dtmp;
+    double p[3];    
 
     p[0] = x;
     p[1] = y;
@@ -164,53 +163,45 @@ uint64 cc_vector2ID(double x, double y, double z, int depth)
     // Get the ID of the level0 triangle, and its starting vertices
     //
 
-    startID = cc_startpane(v0, v1, v2, x, y, z, name);
+    //startID = cc_startpane(v0, v1, v2, x, y, z, name);
     len     = 2;
     //
     // Start searching for the children
     ///
     while (depth-- > 0)
     {
-        m4_midpoint(v0, v1, w2, dtmp);
-        m4_midpoint(v1, v2, w0, dtmp);
-        m4_midpoint(v2, v0, w1, dtmp);
+        double dtmp = 0;
 
-        /*     prmag("v0", v0); */
-        /*     prmag("v1", v1); */
-        /*     prmag("v2", v2); */
-
-        /*     prmag("w0", w0); */
-        /*     prmag("w1", w1); */
-        /*     prmag("w2", w2); */
-
-        /*     prmag("The point", p); */
+        m4_midpoint(v0, v1, w2, dtmp)
+        m4_midpoint(v1, v2, w0, dtmp)
+        m4_midpoint(v2, v0, w1, dtmp)
 
         if (cc_isinside(p, v0, w2, w1))
         {
             name[len++] = '0';
-            copy_vec(v1, w2);
-            copy_vec(v2, w1);
+            copy_vec(v1, w2)
+            copy_vec(v2, w1)
         }
         else if (cc_isinside(p, v1, w0, w2))
         {
             name[len++] = '1';
-            copy_vec(v0, v1);
-            copy_vec(v1, w0);
-            copy_vec(v2, w2);
+            copy_vec(v0, v1)
+            copy_vec(v1, w0)
+            copy_vec(v2, w2)
         }
         else if (cc_isinside(p, v2, w1, w0))
         {
             name[len++] = '2';
-            copy_vec(v0, v2);
-            copy_vec(v1, w1);
-            copy_vec(v2, w0);
+            copy_vec(v0, v2)
+            copy_vec(v1, w1)
+            copy_vec(v2, w0)
         }
         else if (cc_isinside(p, w0, w1, w2))
         {
             name[len++] = '3';
-            copy_vec(v0, w0);
-            copy_vec(v1, w1);
-            copy_vec(v2, w2);
+            copy_vec(v0, w0)
+            copy_vec(v1, w1)
+            copy_vec(v2, w2)
         }
         else
         {
@@ -224,8 +215,7 @@ uint64 cc_vector2ID(double x, double y, double z, int depth)
 
 uint64 cc_radec2ID(double ra, double dec, int depth)
 {
-    uint64 rstat = 0;
-    int startID;
+    uint64 rstat = 0;    
     double x, y, z;
     char name[80];
     int len = 0;
@@ -244,42 +234,42 @@ uint64 cc_radec2ID(double ra, double dec, int depth)
     // Get the ID of the level0 triangle, and its starting vertices
     //
 
-    startID = cc_startpane(v0, v1, v2, x, y, z, name);
+    //startID = cc_startpane(v0, v1, v2, x, y, z, name);
     len     = 2;
     //
     // Start searching for the children
     ///
     while (depth-- > 0)
     {
-        m4_midpoint(v0, v1, w2, dtmp);
-        m4_midpoint(v1, v2, w0, dtmp);
-        m4_midpoint(v2, v0, w1, dtmp);
+        m4_midpoint(v0, v1, w2, dtmp)
+        m4_midpoint(v1, v2, w0, dtmp)
+        m4_midpoint(v2, v0, w1, dtmp)
         if (cc_isinside(p, v0, w2, w1))
         {
             name[len++] = '0';
-            copy_vec(v1, w2);
-            copy_vec(v2, w1);
+            copy_vec(v1, w2)
+            copy_vec(v2, w1)
         }
         else if (cc_isinside(p, v1, w0, w2))
         {
             name[len++] = '1';
-            copy_vec(v0, v1);
-            copy_vec(v1, w0);
-            copy_vec(v2, w2);
+            copy_vec(v0, v1)
+            copy_vec(v1, w0)
+            copy_vec(v2, w2)
         }
         else if (cc_isinside(p, v2, w1, w0))
         {
             name[len++] = '2';
-            copy_vec(v0, v2);
-            copy_vec(v1, w1);
-            copy_vec(v2, w0);
+            copy_vec(v0, v2)
+            copy_vec(v1, w1)
+            copy_vec(v2, w0)
         }
         else if (cc_isinside(p, w0, w1, w2))
         {
             name[len++] = '3';
-            copy_vec(v0, w0);
-            copy_vec(v1, w1);
-            copy_vec(v2, w2);
+            copy_vec(v0, w0)
+            copy_vec(v1, w1)
+            copy_vec(v2, w2)
         }
     }
     name[len] = '\0';
@@ -500,35 +490,35 @@ int cc_name2Triangle(char *name, double *v0, double *v1, double *v2)
         anchor_offsets[2] = N_indexes[k][2];
     }
     s = name + 2;
-    copy_vec(v0, anchor[anchor_offsets[0]]);
-    copy_vec(v1, anchor[anchor_offsets[1]]);
-    copy_vec(v2, anchor[anchor_offsets[2]]);
+    copy_vec(v0, anchor[anchor_offsets[0]])
+    copy_vec(v1, anchor[anchor_offsets[1]])
+    copy_vec(v2, anchor[anchor_offsets[2]])
 
     while (*s)
     {
-        m4_midpoint(v0, v1, w2, dtmp);
-        m4_midpoint(v1, v2, w0, dtmp);
-        m4_midpoint(v2, v0, w1, dtmp);
+        m4_midpoint(v0, v1, w2, dtmp)
+        m4_midpoint(v1, v2, w0, dtmp)
+        m4_midpoint(v2, v0, w1, dtmp)
         switch (*s)
         {
             case '0':
-                copy_vec(v1, w2);
-                copy_vec(v2, w1);
+                copy_vec(v1, w2)
+                copy_vec(v2, w1)
                 break;
             case '1':
-                copy_vec(v0, v1);
-                copy_vec(v1, w0);
-                copy_vec(v2, w2);
+                copy_vec(v0, v1)
+                copy_vec(v1, w0)
+                copy_vec(v2, w2)
                 break;
             case '2':
-                copy_vec(v0, v2);
-                copy_vec(v1, w1);
-                copy_vec(v2, w0);
+                copy_vec(v0, v2)
+                copy_vec(v1, w1)
+                copy_vec(v2, w0)
                 break;
             case '3':
-                copy_vec(v0, w0);
-                copy_vec(v1, w1);
-                copy_vec(v2, w2);
+                copy_vec(v0, w0)
+                copy_vec(v1, w1)
+                copy_vec(v2, w2)
                 break;
         }
         s++;
