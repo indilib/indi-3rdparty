@@ -9,6 +9,7 @@ find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(FLI REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(FLIPRO)
 
 set (FLI_CCD_VERSION_MAJOR 2)
 set (FLI_CCD_VERSION_MINOR 0)
@@ -64,6 +65,12 @@ target_link_libraries(indi_fli_ccd ${INDI_LIBRARIES} ${FLI_LIBRARIES} ${CFITSIO_
 
 install(TARGETS indi_fli_ccd RUNTIME DESTINATION bin)
 
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_fli.xml DESTINATION ${INDI_DATA_DIR})
+
+if (FLIPRO_FOUND)
+include_directories( ${FLIPRO_INCLUDE_DIR})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_flipro.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml )
+
 ############# Kepler Camera ###############
 set(kepler_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/kepler.cpp
@@ -71,9 +78,10 @@ set(kepler_SRCS
 
 add_executable(indi_kepler_ccd ${kepler_SRCS})
 
-target_link_libraries(indi_kepler_ccd ${INDI_LIBRARIES} -llibflipro ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+target_link_libraries(indi_kepler_ccd ${INDI_LIBRARIES} ${FLIPRO_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_kepler_ccd RUNTIME DESTINATION bin)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_fli.xml DESTINATION ${INDI_DATA_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml DESTINATION ${INDI_DATA_DIR})
 
+endif (FLIPRO_FOUND)
