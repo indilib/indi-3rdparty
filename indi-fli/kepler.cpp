@@ -73,7 +73,11 @@ static class Loader
                     continue;
                 }
 
+#ifdef LEGACY_MODE
+                Kepler *kepler = new Kepler(camerasDeviceInfo[i], L"CMOSCam");
+#else
                 Kepler *kepler = new Kepler(camerasDeviceInfo[i], uniqueName.make(camerasDeviceInfo[i]));
+#endif
                 cameras[serialID] = std::shared_ptr<Kepler>(kepler);
                 if (isHotPlug)
                     kepler->ISGetProperties(nullptr);
