@@ -153,11 +153,11 @@ tVertex MakeNullVertex(void)
 {
     tVertex v;
 
-    NEW(v, tsVertex);
+    NEW(v, tsVertex)
     v->duplicate = NULL;
     v->onhull    = !ONHULL;
     v->mark      = !PROCESSED;
-    ADD(vertices, v);
+    ADD(vertices, v)
 
     return v;
 }
@@ -381,8 +381,7 @@ vertices are those in the list marked as onhull.
 ---------------------------------------------------------------------*/
 void ConstructHull(void)
 {
-    tVertex v, vnext;
-    bool changed = FALSE; /* T if addition changes hull; not used. */
+    tVertex v, vnext;    
 
     v = vertices;
     do
@@ -390,8 +389,7 @@ void ConstructHull(void)
         vnext = v->next;
         if (!v->mark)
         {
-            v->mark = PROCESSED;
-            changed = AddOne(v);
+            v->mark = PROCESSED;            
             CleanUp(&vnext); /* Pass down vnext in case it gets deleted. */
 
             if (check)
@@ -634,11 +632,11 @@ tEdge MakeNullEdge(void)
 {
     tEdge e;
 
-    NEW(e, tsEdge);
+    NEW(e, tsEdge)
     e->adjface[0] = e->adjface[1] = e->newface = NULL;
     e->endpts[0] = e->endpts[1] = NULL;
     e->delete                   = !REMOVED;
-    ADD(edges, e);
+    ADD(edges, e)
     return e;
 }
 
@@ -652,14 +650,14 @@ tFace MakeNullFace(void)
     tFace f;
     int i;
 
-    NEW(f, tsFace);
+    NEW(f, tsFace)
     for (i = 0; i < 3; ++i)
     {
         f->edge[i]   = NULL;
         f->vertex[i] = NULL;
     }
     f->visible = !VISIBLE;
-    ADD(faces, f);
+    ADD(faces, f)
     return f;
 }
 
@@ -749,7 +747,7 @@ void CleanEdges(void)
     while (edges && edges->delete)
     {
         e = edges;
-        DELETE(edges, e);
+        DELETE(edges, e)
     }
     e = edges->next;
     do
@@ -758,7 +756,7 @@ void CleanEdges(void)
         {
             t = e;
             e = e->next;
-            DELETE(edges, t);
+            DELETE(edges, t)
         }
         else
             e = e->next;
@@ -776,7 +774,7 @@ void CleanFaces(void)
     while (faces && faces->visible)
     {
         f = faces;
-        DELETE(faces, f);
+        DELETE(faces, f)
     }
     f = faces->next;
     do
@@ -785,7 +783,7 @@ void CleanFaces(void)
         {
             t = f;
             f = f->next;
-            DELETE(faces, t);
+            DELETE(faces, t)
         }
         else
             f = f->next;
@@ -820,7 +818,7 @@ void CleanVertices(tVertex *pvnext)
         v = vertices;
         if (v == *pvnext)
             *pvnext = v->next;
-        DELETE(vertices, v);
+        DELETE(vertices, v)
     }
     v = vertices->next;
     do
@@ -831,7 +829,7 @@ void CleanVertices(tVertex *pvnext)
             v = v->next;
             if (t == *pvnext)
                 *pvnext = t->next;
-            DELETE(vertices, t);
+            DELETE(vertices, t)
         }
         else
             v = v->next;
