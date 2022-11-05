@@ -1020,19 +1020,10 @@ bool EQMod::ReadScopeStatus()
                         }
                         else
                         {
-                            ISState state;
                             sw    = IUFindOnSwitch(TrackDefaultSP);
                             name  = sw->name;
-                            state = ISS_ON;
                             mount->StartRATracking(GetDefaultRATrackRate());
                             mount->StartDETracking(GetDefaultDETrackRate());
-
-#if 0
-                            IUResetSwitch(TrackModeSP);
-                            IUUpdateSwitch(TrackModeSP, &state, &name, 1);
-                            TrackModeSP->s = IPS_BUSY;
-                            IDSetSwitch(TrackModeSP, nullptr);
-#endif
                         }
 
                         TrackState = SCOPE_TRACKING;
@@ -1769,7 +1760,6 @@ bool EQMod::gotoInProgress()
 bool EQMod::Goto(double r, double d)
 {
     double juliandate;
-    double lst;
 #ifdef WITH_SCOPE_LIMITS
     INDI::IEquatorialCoordinates gotoradec;
     INDI::IHorizontalCoordinates gotoaltaz;
@@ -1787,7 +1777,7 @@ bool EQMod::Goto(double r, double d)
     }
 
     juliandate = getJulianDate();
-    lst        = getLst(juliandate, getLongitude());
+    //lst        = getLst(juliandate, getLongitude());
 
 #ifdef WITH_SCOPE_LIMITS
     gotoradec.rightascension  = r;
@@ -2072,7 +2062,7 @@ bool EQMod::Sync(double ra, double dec)
         EncodersToRADec(tmpsyncdata.telescopeRAEncoder, tmpsyncdata.telescopeDECEncoder, lst, &tmpsyncdata.telescopeRA,
                         &tmpsyncdata.telescopeDEC, nullptr, nullptr);
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return (e.DefaultHandleException(this));
     }
@@ -2258,7 +2248,7 @@ IPState EQMod::GuideSouth(uint32_t ms)
             {
                 mount->StartDETracking(GetDETrackRate());
             }
-            catch (EQModError e)
+            catch (EQModError &e)
             {
                 if (!(e.DefaultHandleException(this)))
                 {
@@ -2270,7 +2260,7 @@ IPState EQMod::GuideSouth(uint32_t ms)
             DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_DEBUG, "End Timed guide North/South");
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         e.DefaultHandleException(this);
         return IPS_ALERT;
@@ -2340,7 +2330,7 @@ IPState EQMod::GuideEast(uint32_t ms)
                 }
                 mount->StartRATracking(GetRATrackRate());
             }
-            catch (EQModError e)
+            catch (EQModError &e)
             {
                 if (!(e.DefaultHandleException(this)))
                 {
@@ -2352,7 +2342,7 @@ IPState EQMod::GuideEast(uint32_t ms)
             DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_DEBUG, "End Timed guide West/East");
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         e.DefaultHandleException(this);
         return IPS_ALERT;
@@ -2423,7 +2413,7 @@ IPState EQMod::GuideWest(uint32_t ms)
                 }
                 mount->StartRATracking(GetRATrackRate());
             }
-            catch (EQModError e)
+            catch (EQModError &e)
             {
                 if (!(e.DefaultHandleException(this)))
                 {
@@ -2435,7 +2425,7 @@ IPState EQMod::GuideWest(uint32_t ms)
             DEBUGDEVICE(getDeviceName(), INDI::Logger::DBG_DEBUG, "End Timed guide West/East");
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         e.DefaultHandleException(this);
         return IPS_ALERT;
@@ -2468,7 +2458,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                             mount->SetDERate(values[i]);
                     }
                 }
-                catch (EQModError e)
+                catch (EQModError &e)
                 {
                     return (e.DefaultHandleException(this));
                 }
@@ -2728,13 +2718,9 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_JD")->value           = syncdata.jd;
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_SYNCTIME")->value     = syncdata.lst;
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_CELESTIAL_RA")->value = syncdata.targetRA;
-                ;
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_CELESTIAL_DE")->value = syncdata.targetDEC;
-                ;
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_TELESCOPE_RA")->value = syncdata.telescopeRA;
-                ;
                 IUFindNumber(StandardSyncPointNP, "STANDARDSYNCPOINT_TELESCOPE_DE")->value = syncdata.telescopeDEC;
-                ;
                 IDSetNumber(StandardSyncPointNP, nullptr);
                 LOG_INFO("Cleared current Sync Data");
                 tpa_alt                                                     = 0.0;
@@ -2787,12 +2773,10 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             {
                 if ((TrackState != SCOPE_IDLE) && (TrackState != SCOPE_AUTOHOMING))
                 {
-                    if (TrackState != SCOPE_AUTOHOMING)
-                    {
-                        AutoHomeSP->s = IPS_IDLE;
-                        IUResetSwitch(AutoHomeSP);
-                        IDSetSwitch(AutoHomeSP, nullptr);
-                    }
+                    AutoHomeSP->s = IPS_IDLE;
+                    IUResetSwitch(AutoHomeSP);
+                    IDSetSwitch(AutoHomeSP, nullptr);
+
                     LOG_WARN("Can not start AutoHome. Scope not idle");
                     return true;
                 }
@@ -2867,7 +2851,7 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                         mount->AbsSlewTo(ah_iPosition_RA, ah_iPosition_DE, ah_bSlewingUp_RA, ah_bSlewingUp_DE);
                         AutohomeState = AUTO_HOME_WAIT_PHASE1;
                     }
-                    catch (EQModError e)
+                    catch (EQModError &e)
                     {
                         AutoHomeSP->s = IPS_ALERT;
                         IUResetSwitch(AutoHomeSP);
@@ -2927,7 +2911,7 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                         {
                             mount->TurnPPECTraining(true);
                         }
-                        catch (EQModError e)
+                        catch (EQModError &e)
                         {
                             LOG_WARN("Unable to start PPEC Training.");
                             PPECTrainingSP->s       = IPS_ALERT;
@@ -3210,7 +3194,7 @@ bool EQMod::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
                 break;
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return e.DefaultHandleException(this);
     }
@@ -3258,7 +3242,7 @@ bool EQMod::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
                 break;
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return e.DefaultHandleException(this);
     }
@@ -3271,7 +3255,7 @@ bool EQMod::Abort()
     {
         mount->StopRA();
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         if (!(e.DefaultHandleException(this)))
         {
@@ -3282,7 +3266,7 @@ bool EQMod::Abort()
     {
         mount->StopDE();
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         if (!(e.DefaultHandleException(this)))
         {
@@ -3320,7 +3304,7 @@ void EQMod::timedguideNSCallback(void *userpointer)
     {
         p->mount->StartDETracking(p->GetDETrackRate());
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         if (!(e.DefaultHandleException(p)))
         {
@@ -3351,7 +3335,7 @@ void EQMod::timedguideWECallback(void *userpointer)
         }
         p->mount->StartRATracking(p->GetRATrackRate());
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         if (!(e.DefaultHandleException(p)))
         {
@@ -3652,7 +3636,7 @@ bool EQMod::SetTrackRate(double raRate, double deRate)
         mount->SetRARate(raRate / SKYWATCHER_STELLAR_SPEED);
         mount->SetDERate(deRate / SKYWATCHER_STELLAR_SPEED);
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return (e.DefaultHandleException(this));
     }
@@ -3672,7 +3656,7 @@ bool EQMod::SetTrackMode(uint8_t mode)
         mount->StartRATracking(GetRATrackRate());
         mount->StartDETracking(GetDETrackRate());
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return (e.DefaultHandleException(this));
     }
@@ -3692,7 +3676,7 @@ bool EQMod::SetTrackEnabled(bool enabled)
             mount->StartRATracking(GetRATrackRate());
             mount->StartDETracking(GetDETrackRate());
         }
-        else if (enabled == false)
+        else
         {
             LOGF_WARN("Stopping Tracking (%s).", IUFindOnSwitch(&TrackModeSP)->label);
             TrackState     = SCOPE_IDLE;
@@ -3701,7 +3685,7 @@ bool EQMod::SetTrackEnabled(bool enabled)
             mount->StopDE();
         }
     }
-    catch (EQModError e)
+    catch (EQModError &e)
     {
         return (e.DefaultHandleException(this));
     }

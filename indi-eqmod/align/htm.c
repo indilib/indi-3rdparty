@@ -147,13 +147,12 @@ int cc_parseVectors(char *spec, int *level, double *ra, double *dec)
 uint64 cc_vector2ID(double x, double y, double z, int depth)
 {
     uint64 rstat = 0;
-    //int startID;
     char name[80];
     int len = 0;
 
     double v1[3], v2[3], v0[3];
     double w1[3], w2[3], w0[3];
-    double p[3];    
+    double p[3];
 
     p[0] = x;
     p[1] = y;
@@ -171,7 +170,6 @@ uint64 cc_vector2ID(double x, double y, double z, int depth)
     while (depth-- > 0)
     {
         double dtmp = 0;
-
         m4_midpoint(v0, v1, w2, dtmp)
         m4_midpoint(v1, v2, w0, dtmp)
         m4_midpoint(v2, v0, w1, dtmp)
@@ -215,16 +213,15 @@ uint64 cc_vector2ID(double x, double y, double z, int depth)
 
 uint64 cc_radec2ID(double ra, double dec, int depth)
 {
-    uint64 rstat = 0;    
-    double x, y, z;
+    uint64 rstat = 0;
+    double x = 0, y = 0, z = 0;
     char name[80];
     int len = 0;
 
     double v1[3], v2[3], v0[3];
     double w1[3], w2[3], w0[3];
     double p[3];
-    double cd = cos(dec * cc_Pr);
-    double dtmp;
+    double cd = cos(dec * cc_Pr);    
 
     p[0] = x = cos(ra * cc_Pr) * cd;
     p[1] = y = sin(ra * cc_Pr) * cd;
@@ -241,6 +238,7 @@ uint64 cc_radec2ID(double ra, double dec, int depth)
     ///
     while (depth-- > 0)
     {
+        double dtmp = 0;
         m4_midpoint(v0, v1, w2, dtmp)
         m4_midpoint(v1, v2, w0, dtmp)
         m4_midpoint(v2, v0, w1, dtmp)
@@ -468,7 +466,7 @@ int cc_name2Triangle(char *name, double *v0, double *v1, double *v2)
     int rstat = 0;
     char *s;
     double w1[3], w2[3], w0[3];
-    double dtmp;
+    double dtmp = 0;
 
     //
     // Get the top level hemi-demi-semi space
