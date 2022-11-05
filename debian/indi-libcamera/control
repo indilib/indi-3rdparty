@@ -1,0 +1,21 @@
+Source: indi-libcamera
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 6), cmake, cdbs, libindi-dev, libcamera-dev,  libcfitsio3-dev|libcfitsio-dev, zlib1g-dev
+Standards-Version: 3.9.1
+
+Package: indi-libcamera
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcamera0, libcamera-apps
+Description: INDI driver for cameras accessible via libcamera. 
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-libcamera-dbg
+Architecture: any
+Depends: indi-libcamera (= ${binary:Version}), ${misc:Depends}
+Description: INDI driver for cameras accessible via libcamera. 
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.
