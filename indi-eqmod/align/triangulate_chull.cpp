@@ -62,23 +62,24 @@ bool TriangulateCHull::AddPoint(HtmID id)
     v->v[Y] = (int)(p.cy * 1000000);
     v->v[Z] = (int)(p.cz * 1000000);
     v->vnum = vnum++;
-    //fprintf(stderr, "Triangulate addpoint: vertex created %d\n", v->vnum);
     vvertices.push_back(id);
-    //fprintf(stderr, "Triangulate addpoint: vertex added (%d total)\n", vvertices.size());
     if (vnum < 4)
-        return false;
+        return true;
+
     if (vnum == 4)
     {
         if (DoubleTriangle() != 0)
             return false;
         ConstructHull();
     }
+
     if (vnum > 4)
     {
         vnext = v->next;
         AddOne(v);
         CleanUp(&vnext);
     }
+
     vfaces.clear();
     f = faces;
     do
