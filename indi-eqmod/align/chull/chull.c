@@ -126,11 +126,11 @@ main( int argc, char *argv[] )
     if( argv[1][1] ==  'd' ) {
       debug = TRUE;
       check = TRUE;
-      fprintf( stderr, "Debug and check mode\n");
+      fprintf(stderr, stderr, "Debug and check mode\n");
     }
     if( argv[1][1] == 'c' ) {
       check = TRUE;
-      fprintf( stderr, "Check mode\n");
+      fprintf(stderr, stderr, "Check mode\n");
     }
   }
   else if ( argc > 1 && argv[1][0] != '-' ) {
@@ -183,7 +183,7 @@ void ReadVertices(void)
         v->vnum = vnum++;
         if ((abs(x) > SAFE) || (abs(y) > SAFE) || (abs(z) > SAFE))
         {
-            printf("Coordinate of vertex below might be too large: run with -d flag\n");
+            fprintf(stderr,"Coordinate of vertex below might be too large: run with -d flag\n");
             PrintPoint(v);
         }
     }
@@ -231,10 +231,10 @@ void Print(void)
     } while (v != vertices);
 
     /* PostScript header */
-    printf("%%!PS\n");
-    printf("%%%%BoundingBox: %d %d %d %d\n", xmin, ymin, xmax, ymax);
-    printf(".00 .00 setlinewidth\n");
-    printf("%d %d translate\n", -xmin + 72, -ymin + 72);
+    fprintf(stderr,"%%!PS\n");
+    fprintf(stderr,"%%%%BoundingBox: %d %d %d %d\n", xmin, ymin, xmax, ymax);
+    fprintf(stderr,".00 .00 setlinewidth\n");
+    fprintf(stderr,"%d %d translate\n", -xmin + 72, -ymin + 72);
     /* The +72 shifts the figure one inch from the lower left corner */
 
     /* Vertices. */
@@ -245,11 +245,11 @@ void Print(void)
             V++;
         v = v->next;
     } while (v != vertices);
-    printf("\n%%%% Vertices:\tV = %d\n", V);
-    printf("%%%% index:\tx\ty\tz\n");
+    fprintf(stderr,"\n%%%% Vertices:\tV = %d\n", V);
+    fprintf(stderr,"%%%% index:\tx\ty\tz\n");
     do
     {
-        printf("%%%% %5d:\t%d\t%d\t%d\n", v->vnum, v->v[X], v->v[Y], v->v[Z]);
+        fprintf(stderr,"%%%% %5d:\t%d\t%d\t%d\n", v->vnum, v->v[X], v->v[Y], v->v[Z]);
         v = v->next;
     } while (v != vertices);
 
@@ -261,8 +261,8 @@ void Print(void)
         ++F;
         f = f->next;
     } while (f != faces);
-    printf("\n%%%% Faces:\tF = %d\n", F);
-    printf("%%%% Visible faces only: \n");
+    fprintf(stderr,"\n%%%% Faces:\tF = %d\n", F);
+    fprintf(stderr,"%%%% Visible faces only: \n");
     do
     {
         /* Print face only if it is visible: if normal vector >= 0 */
@@ -270,22 +270,22 @@ void Print(void)
         SubVec(f->vertex[2]->v, f->vertex[1]->v, b);
         if ((a[0] * b[1] - a[1] * b[0]) >= 0)
         {
-            printf("%%%% vnums:  %d  %d  %d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
-            printf("newpath\n");
-            printf("%d\t%d\tmoveto\n", f->vertex[0]->v[X], f->vertex[0]->v[Y]);
-            printf("%d\t%d\tlineto\n", f->vertex[1]->v[X], f->vertex[1]->v[Y]);
-            printf("%d\t%d\tlineto\n", f->vertex[2]->v[X], f->vertex[2]->v[Y]);
-            printf("closepath stroke\n\n");
+            fprintf(stderr,"%%%% vnums:  %d  %d  %d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
+            fprintf(stderr,"newpath\n");
+            fprintf(stderr,"%d\t%d\tmoveto\n", f->vertex[0]->v[X], f->vertex[0]->v[Y]);
+            fprintf(stderr,"%d\t%d\tlineto\n", f->vertex[1]->v[X], f->vertex[1]->v[Y]);
+            fprintf(stderr,"%d\t%d\tlineto\n", f->vertex[2]->v[X], f->vertex[2]->v[Y]);
+            fprintf(stderr,"closepath stroke\n\n");
         }
         f = f->next;
     } while (f != faces);
 
     /* prints a list of all faces */
-    printf("%%%% List of all faces: \n");
-    printf("%%%%\tv0\tv1\tv2\t(vertex indices)\n");
+    fprintf(stderr,"%%%% List of all faces: \n");
+    fprintf(stderr,"%%%%\tv0\tv1\tv2\t(vertex indices)\n");
     do
     {
-        printf("%%%%\t%d\t%d\t%d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
+        fprintf(stderr,"%%%%\t%d\t%d\t%d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
         f = f->next;
     } while (f != faces);
 
@@ -296,10 +296,10 @@ void Print(void)
         E++;
         e = e->next;
     } while (e != edges);
-    printf("\n%%%% Edges:\tE = %d\n", E);
+    fprintf(stderr,"\n%%%% Edges:\tE = %d\n", E);
     /* Edges not printed out (but easily added). */
 
-    printf("\nshowpage\n\n");
+    fprintf(stderr,"\nshowpage\n\n");
 
     check = TRUE;
     CheckEuler(V, E, F);
@@ -334,8 +334,13 @@ void DoubleTriangle(void)
     /* Find 3 noncollinear points. */
     v0 = vertices;
     while (Collinear(v0, v0->next, v0->next->next))
+    {
         if ((v0 = v0->next) == vertices)
-            printf("DoubleTriangle:  All points are Collinear!\n"), exit(0);
+        {
+            fprintf(stderr, "DoubleTriangle:  All points are Collinear!\n");
+            return;
+        }
+    }
     v1 = v0->next;
     v2 = v1->next;
 
@@ -362,7 +367,10 @@ void DoubleTriangle(void)
     while (!vol)
     {
         if ((v3 = v3->next) == v0)
-            printf("DoubleTriangle:  All points are coplanar!\n"), exit(0);
+        {
+            fprintf(stderr,"DoubleTriangle:  All points are coplanar!\n");
+            return;
+        }
         vol = VolumeSign(f0, v3);
     }
 
@@ -532,7 +540,7 @@ void PrintPoint(tVertex p)
     int i;
 
     for (i = 0; i < 3; i++)
-        printf("\t%d", p->v[i]);
+        fprintf(stderr,"\t%d", p->v[i]);
     putchar('\n');
 }
 
