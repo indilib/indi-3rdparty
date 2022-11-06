@@ -191,7 +191,7 @@ void DSI::Device::initImager(const char *devname)
     }
 
     // Upload firmware in case of MacOS
-    #ifdef __APPLE__
+#ifdef __APPLE__
     cnt = libusb_get_device_list(nullptr, &list);
     handle = nullptr;
     for (i = 0; i < cnt; ++i)
@@ -208,9 +208,9 @@ void DSI::Device::initImager(const char *devname)
                     char driverSupportPath[MAXRBUF];
                     //On OS X, Prefer embedded App location if it exists
                     if (getenv("INDIPREFIX") != nullptr)
-                    	snprintf(driverSupportPath, MAXRBUF, "%s/Contents/Resources", getenv("INDIPREFIX"));
+                        snprintf(driverSupportPath, MAXRBUF, "%s/Contents/Resources", getenv("INDIPREFIX"));
                     else
-                    	strncpy(driverSupportPath, "/usr/local/lib/indi", MAXRBUF);
+                        strncpy(driverSupportPath, "/usr/local/lib/indi", MAXRBUF);
                     strncat(driverSupportPath, "/DriverSupport/dsi/meade-deepskyimager.hex", MAXRBUF);
                     char errmsg[MAXRBUF];
                     if (fx2_ram_download(handle, driverSupportPath, 1, errmsg))
@@ -219,10 +219,10 @@ void DSI::Device::initImager(const char *devname)
                 }
             }
         }
-     }
+    }
     libusb_free_device_list(list, 0);
-    list=nullptr;
-    #endif
+    list = nullptr;
+#endif
 
     cnt = libusb_get_device_list(nullptr, &list);
 
@@ -239,7 +239,7 @@ void DSI::Device::initImager(const char *devname)
                     dev = nullptr;
                 }
                 break;
-            }            
+            }
         }
     }
     libusb_free_device_list(list, 0);
@@ -679,7 +679,6 @@ int DSI::Device::startExposure(int howlong, int gain, int offs)
     // is required because w/o it, I get segfaults on the second attempt
     // to run the code.
 
-    int status;
     int interlaced;
 
     /* for safety reasons, just in case howlong is zero (gs) */
@@ -697,109 +696,110 @@ int DSI::Device::startExposure(int howlong, int gain, int offs)
         enable2x2Binning();
 
     if (interlaced) // original DSI I/II code
-    {               // better not touch otherwise it could break (gs)
+    {
+        // better not touch otherwise it could break (gs)
 
         // status = command(DeviceCommand::GET_TEMP);
         // status = command(DeviceCommand::GET_EXP_MODE);
         // status = command(DeviceCommand::SET_GAIN,     0x3f);
         // status = command(DeviceCommand::SET_OFFSET,   0x00);
-        status = command(DeviceCommand::SET_EXP_TIME, exposure_time);
+        command(DeviceCommand::SET_EXP_TIME, exposure_time);
         if (exposure_time < 10000)
         {
-            status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
-            status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
-            status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
+            command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
+            command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
+            command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
         }
         else
         {
-            status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::NORMAL.value());
-            status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 7);
-            status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
+            command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::NORMAL.value());
+            command(DeviceCommand::SET_NORM_READOUT_DELAY, 7);
+            command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
         }
 
-        status = command(DeviceCommand::GET_READOUT_MODE);
+        command(DeviceCommand::GET_READOUT_MODE);
         if (exposure_time < VDD_TRH)
         {
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
         }
         else
         {
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::AUTO.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::AUTO.value());
         }
         if (log_commands)
             std::cerr << "Gain  = " << gain << " Offset = " << offs << std::endl;
 
         // status = command(DeviceCommand::SET_GAIN, 0);
-        status = command(DeviceCommand::SET_GAIN, gain);
+        command(DeviceCommand::SET_GAIN, gain);
         // status = command(DeviceCommand::GET_READOUT_MODE);
         //status = command(DeviceCommand::SET_OFFSET, 0x0ff);
-        status = command(DeviceCommand::SET_OFFSET, offs);
-        status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
-        status = command(DeviceCommand::GET_READOUT_MODE);
-        status = command(DeviceCommand::GET_EXP_TIME);
+        command(DeviceCommand::SET_OFFSET, offs);
+        command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
+        command(DeviceCommand::GET_READOUT_MODE);
+        command(DeviceCommand::GET_EXP_TIME);
 
-        status = command(DeviceCommand::TRIGGER);
+        command(DeviceCommand::TRIGGER);
     }
     else // This is what the DSI III monkey found while sniffing USB (gs)
     {
         std::cerr << "Epsosure time: " << exposure_time << ", Gain: " << gain << ", Offset: " << offs << std::endl;
 
         // first, set gain and offset
-        status = command(DeviceCommand::SET_GAIN, gain);
-        status = command(DeviceCommand::SET_OFFSET, offs);
+        command(DeviceCommand::SET_GAIN, gain);
+        command(DeviceCommand::SET_OFFSET, offs);
 
         // then, set exposure time
-        status = command(DeviceCommand::SET_EXP_TIME, exposure_time);
+        command(DeviceCommand::SET_EXP_TIME, exposure_time);
 
         // next, set readout speed and delay
 
         // Readout speed appears to be always high for DSI III
-        status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
+        command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
 
         // Norm readout delay appears to be always 4 for DSI III
-        status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 4);
+        command(DeviceCommand::SET_NORM_READOUT_DELAY, 4);
 
         // now, set readout mode, which appears to behave like DSI I/II
 
         if (exposure_time < 10000)
         {
-            status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
+            command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
         }
         else
         {
-            status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
+            command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
         }
 
         // now, get readout mode
-        status = command(DeviceCommand::GET_READOUT_MODE);
+        command(DeviceCommand::GET_READOUT_MODE);
 
         // next, set Vdd mode ...
         // Vdd appears to be always on in envisage for DSI III
 
         if ((vdd_on) || (exposure_time < VDD_TRH))
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
         else
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::OFF.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::OFF.value());
 
         // next step is to set flush mode
-        status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
+        command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
 
         // for some reason, we have to get readout mode
         // and exposure time again
         // probably this is not necessary, but better mimic
         // the Meade driver here ...
 
-        status = command(DeviceCommand::GET_READOUT_MODE);
-        status = command(DeviceCommand::GET_EXP_TIME);
+        command(DeviceCommand::GET_READOUT_MODE);
+        command(DeviceCommand::GET_EXP_TIME);
 
         // and finally, we are ready to pull the trigger ...
 
-        status = command(DeviceCommand::TRIGGER);
+        command(DeviceCommand::TRIGGER);
     }
 
     /* image download for short exposures (gs)
-	   If exposure time is smaller than 2s, download image immediately
-	   into framebuffer, otherwise there might be problems with
+       If exposure time is smaller than 2s, download image immediately
+       into framebuffer, otherwise there might be problems with
            short exposure frames at least with DSI III                        */
 
     if (exposure_time < LONGEXP)
@@ -876,10 +876,10 @@ unsigned char *DSI::Device::downloadImage()
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
 
             std::cerr << std::dec << "read even data, status = (" << status << ") " << (status > 0 ? "" : strerror(-status))
-                 << std::endl
-                 << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
-                 << " (even pixels)" << std::endl
-                 << "Transferred: " << transferred << " bytes" << std::endl;
+                      << std::endl
+                      << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
+                      << " (even pixels)" << std::endl
+                      << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -895,10 +895,10 @@ unsigned char *DSI::Device::downloadImage()
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)odd_data, 0);
 
             std::cerr << std::dec << "read odd data, status = (" << status << ") " << (status > 0 ? "" : strerror(-status))
-                 << std::endl
-                 << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
-                 << " (odd pixels)" << std::endl
-                 << "Transferred: " << transferred << " bytes" << std::endl;
+                      << std::endl
+                      << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
+                      << " (odd pixels)" << std::endl
+                      << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -911,7 +911,7 @@ unsigned char *DSI::Device::downloadImage()
     else // progressive mode for DSI III (gs)
     {
         if ((!vdd_on) && (exposure_time >= VDD_TRH))
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
 
         status = libusb_bulk_transfer(handle, 0x86, odd_data, odd_size, &transferred, 60000 * MILLISEC);
         if (log_commands)
@@ -919,9 +919,9 @@ unsigned char *DSI::Device::downloadImage()
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)odd_data, 0);
 
             std::cerr << std::dec << "read progressive data, status = (" << status << ") " << std::endl
-                 << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
-                 << " (pixels)" << std::endl
-                 << "Transferred: " << transferred << " bytes" << std::endl;
+                      << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
+                      << " (pixels)" << std::endl
+                      << "Transferred: " << transferred << " bytes" << std::endl;
         }
 
         if (status != 0)
@@ -940,7 +940,7 @@ unsigned char *DSI::Device::downloadImage()
         ccd_temp = floor((float)rawtemp / 25.6) / 10.0;
     }
 
-    status = command(DeviceCommand::GET_EXP_MODE);
+    command(DeviceCommand::GET_EXP_MODE);
 
     /* disable 2x2 binning after downloading image (gs) */
     disable2x2Binning();
@@ -952,12 +952,12 @@ unsigned char *DSI::Device::downloadImage()
 
     if (log_commands)
         std::cerr << "t_image_height  =" << t_image_height << std::endl
-             << "t_image_width   =" << t_image_width << std::endl
-             << "t_image_offset_x=" << t_image_offset_x << std::endl
-             << "t_image_offset_y=" << t_image_offset_y << std::endl
-             << "t_read_width    =" << t_read_width << std::endl
-             << "t_read_height   =" << t_read_height << std::endl
-             << "t_read_bpp      =" << t_read_bpp << std::endl;
+                  << "t_image_width   =" << t_image_width << std::endl
+                  << "t_image_offset_x=" << t_image_offset_x << std::endl
+                  << "t_image_offset_y=" << t_image_offset_y << std::endl
+                  << "t_read_width    =" << t_read_width << std::endl
+                  << "t_read_height   =" << t_read_height << std::endl
+                  << "t_read_bpp      =" << t_read_bpp << std::endl;
 
     if (interlaced)
     {
@@ -967,8 +967,8 @@ unsigned char *DSI::Device::downloadImage()
             is_odd     = (y_ptr + t_image_offset_y) % 2;
 
             std::cerr << "starting image row " << y_ptr << ", write_ptr=" << write_ptr << ", line_start=" << line_start
-                 << ", is_odd=" << (is_odd == 0 ? 0 : 1) << ", read_ptr=" << (line_start + t_image_offset_x) * 2
-                 << std::endl;
+                      << ", is_odd=" << (is_odd == 0 ? 0 : 1) << ", read_ptr=" << (line_start + t_image_offset_x) * 2
+                      << std::endl;
 
             for (x_ptr = 0; x_ptr < t_image_width; x_ptr++)
             {
@@ -979,7 +979,8 @@ unsigned char *DSI::Device::downloadImage()
                     lsb = odd[read_ptr + 1];
                 }
                 else
-                { // even line
+                {
+                    // even line
                     msb = even[read_ptr];
                     lsb = even[read_ptr + 1];
                 }
@@ -1111,43 +1112,44 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
             enable2x2Binning();
 
         if (interlaced) // original DSI I/II code
-        {               // better not touch otherwise it could break
+        {
+            // better not touch otherwise it could break
 
             // status = command(DeviceCommand::GET_TEMP);
             // status = command(DeviceCommand::GET_EXP_MODE);
             // status = command(DeviceCommand::SET_GAIN,     0x3f);
             // status = command(DeviceCommand::SET_OFFSET,   0x00);
-            status = command(DeviceCommand::SET_EXP_TIME, howlong);
+            command(DeviceCommand::SET_EXP_TIME, howlong);
             if (howlong < 10000)
             {
-                status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
-                status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
+                command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
+                command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
             }
             else
             {
-                status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::NORMAL.value());
-                status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 7);
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
+                command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::NORMAL.value());
+                command(DeviceCommand::SET_NORM_READOUT_DELAY, 7);
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
             }
 
-            status = command(DeviceCommand::GET_READOUT_MODE);
+            command(DeviceCommand::GET_READOUT_MODE);
             if (howlong < VDD_TRH)
             {
-                status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+                command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
             }
             else
             {
-                status = command(DeviceCommand::SET_VDD_MODE, VddMode::AUTO.value());
+                command(DeviceCommand::SET_VDD_MODE, VddMode::AUTO.value());
             }
-            status = command(DeviceCommand::SET_GAIN, 0);
+            command(DeviceCommand::SET_GAIN, 0);
             // status = command(DeviceCommand::GET_READOUT_MODE);
-            status = command(DeviceCommand::SET_OFFSET, 0x0ff);
-            status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
-            status = command(DeviceCommand::GET_READOUT_MODE);
-            status = command(DeviceCommand::GET_EXP_TIME);
+            command(DeviceCommand::SET_OFFSET, 0x0ff);
+            command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
+            command(DeviceCommand::GET_READOUT_MODE);
+            command(DeviceCommand::GET_EXP_TIME);
 
-            status = command(__command);
+            command(__command);
 
             // XXX: wait for exposure to complete. signal handler to set abort
             // flag then clean up connection.
@@ -1155,80 +1157,80 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
         else // This is what the DSI III monkey found while sniffing USB
         {
             // first, set exposure time to zero
-            status = command(DeviceCommand::SET_EXP_TIME, 0);
+            command(DeviceCommand::SET_EXP_TIME, 0);
 
             // next, set readout speed and delay
 
             // Readout speed appears to be always high for DSI III
-            status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
+            command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
 
-            status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
+            command(DeviceCommand::SET_NORM_READOUT_DELAY, 3);
 
             // now, set readout mode, which appears to behaves like DSI I/II
 
             if (howlong < 10000)
             {
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
             }
             else
             {
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
             }
 
             // now, get readout mode
-            status = command(DeviceCommand::GET_READOUT_MODE);
+            command(DeviceCommand::GET_READOUT_MODE);
 
             // next, set Vdd mode ...
             // Vdd appears to be always on in envisage for DSI III
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
 
             // next step is to set flush mode
-            status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
+            command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
 
             // then, set gain and offset
             // here, we use default values for gain and offset
-            status = command(DeviceCommand::SET_GAIN, 0x00);
-            status = command(DeviceCommand::SET_OFFSET, 0x7f);
+            command(DeviceCommand::SET_GAIN, 0x00);
+            command(DeviceCommand::SET_OFFSET, 0x7f);
 
             // next, set real exposure time
-            status = command(DeviceCommand::SET_EXP_TIME, howlong);
+            command(DeviceCommand::SET_EXP_TIME, howlong);
 
             // again, set readout speed and delay
 
             // Readout speed appears to be always high for DSI III
-            status = command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
+            command(DeviceCommand::SET_READOUT_SPD, ReadoutSpeed::HIGH.value());
 
-            status = command(DeviceCommand::SET_NORM_READOUT_DELAY, 4);
+            command(DeviceCommand::SET_NORM_READOUT_DELAY, 4);
 
             // now, set readout mode again
 
             if (howlong < 10000)
             {
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::DUAL.value());
             }
             else
             {
-                status = command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
+                command(DeviceCommand::SET_READOUT_MODE, ReadoutMode::SINGLE.value());
             }
 
             // next, get readout mode one more
-            status = command(DeviceCommand::GET_READOUT_MODE);
+            command(DeviceCommand::GET_READOUT_MODE);
 
             // again, set Vdd mode ...
 
-            status = command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
+            command(DeviceCommand::SET_VDD_MODE, VddMode::ON.value());
 
             // next, again set flush mode
-            status = command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
+            command(DeviceCommand::SET_FLUSH_MODE, FlushMode::CONTINUOUS.value());
 
             // for some reason, we have to get readout mode
             // and exposure time again
-            status = command(DeviceCommand::GET_READOUT_MODE);
-            status = command(DeviceCommand::GET_EXP_TIME);
+            command(DeviceCommand::GET_READOUT_MODE);
+            command(DeviceCommand::GET_EXP_TIME);
 
             // and finally, we are ready to pull the trigger ...
 
-            status = command(__command);
+            command(__command);
         }
 
         unsigned int t_read_width = 0;
@@ -1340,9 +1342,9 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
                 log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
 
                 std::cerr << std::dec << "read even data, status = (" << status << ") " << (status > 0 ? "" : strerror(-status))
-                     << std::endl
-                     << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
-                     << " (even pixels)" << std::endl;
+                          << std::endl
+                          << "    requested " << even_size << " bytes " << t_read_width << " x " << t_read_height_even
+                          << " (even pixels)" << std::endl;
             }
 
             if (status < 0)
@@ -1359,9 +1361,9 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
             log_command_info(false, "r 86", (status > 0 ? status : 0), (char *)even_data, 0);
 
             std::cerr << std::dec << "read odd data, status = (" << status << ") " << (status > 0 ? "" : strerror(-status))
-                 << std::endl
-                 << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
-                 << " (odd pixels)" << std::endl;
+                      << std::endl
+                      << "    requested " << odd_size << " bytes " << t_read_width << " x " << t_read_height_odd
+                      << " (odd pixels)" << std::endl;
         }
 
         if (status < 0)
@@ -1377,7 +1379,7 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
             ccd_temp = floor((float)rawtemp / 25.6) / 10.0;
         }
 
-        status = command(DeviceCommand::GET_EXP_MODE);
+        command(DeviceCommand::GET_EXP_MODE);
 
         disable2x2Binning();
 
@@ -1388,12 +1390,12 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
 
         if (log_commands)
             std::cerr << "t_image_height  =" << t_image_height << std::endl
-                 << "t_image_width   =" << t_image_width << std::endl
-                 << "t_image_offset_x=" << t_image_offset_x << std::endl
-                 << "t_image_offset_y=" << t_image_offset_y << std::endl
-                 << "t_read_width    =" << t_read_width << std::endl
-                 << "t_read_height   =" << t_read_height << std::endl
-                 << "t_read_bpp      =" << t_read_bpp << std::endl;
+                      << "t_image_width   =" << t_image_width << std::endl
+                      << "t_image_offset_x=" << t_image_offset_x << std::endl
+                      << "t_image_offset_y=" << t_image_offset_y << std::endl
+                      << "t_read_width    =" << t_read_width << std::endl
+                      << "t_read_height   =" << t_read_height << std::endl
+                      << "t_read_bpp      =" << t_read_bpp << std::endl;
 
         if (interlaced)
         {
@@ -1403,8 +1405,8 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
                 is_odd     = (y_ptr + t_image_offset_y) % 2;
 
                 std::cerr << "starting image row " << y_ptr << ", write_ptr=" << write_ptr << ", line_start=" << line_start
-                     << ", is_odd=" << (is_odd == 0 ? 0 : 1) << ", read_ptr=" << (line_start + t_image_offset_x) * 2
-                     << std::endl;
+                          << ", is_odd=" << (is_odd == 0 ? 0 : 1) << ", read_ptr=" << (line_start + t_image_offset_x) * 2
+                          << std::endl;
                 for (x_ptr = 0; x_ptr < t_image_width; x_ptr++)
                 {
                     read_ptr = (line_start + x_ptr + t_image_offset_x) * 2;
@@ -1414,7 +1416,8 @@ unsigned char *DSI::Device::getImage(DeviceCommand __command, int howlong)
                         lsb = odd[read_ptr + 1];
                     }
                     else
-                    { // even line
+                    {
+                        // even line
                         msb = even[read_ptr];
                         lsb = even[read_ptr + 1];
                     }
@@ -1475,19 +1478,19 @@ unsigned int DSI::Device::command(DeviceCommand __command)
     // This is the one place where having class-based enums instead of
     // built-in enums is annoying: you can't use a switch statement here.
     if (((__command == DeviceCommand::PING)) || (__command == DeviceCommand::RESET) ||
-        (__command == DeviceCommand::ABORT) || (__command == DeviceCommand::TRIGGER) ||
-        (__command == DeviceCommand::PS_ON) || (__command == DeviceCommand::PS_OFF) ||
-        (__command == DeviceCommand::CCD_VDD_ON) || (__command == DeviceCommand::CCD_VDD_OFF) ||
-        (__command == DeviceCommand::TEST_PATTERN) || (__command == DeviceCommand::ERASE_EEPROM) ||
-        (__command == DeviceCommand::GET_VERSION) || (__command == DeviceCommand::GET_STATUS) ||
-        (__command == DeviceCommand::GET_TIMESTAMP) || (__command == DeviceCommand::GET_EXP_TIME) ||
-        (__command == DeviceCommand::GET_EXP_TIMER_COUNT) || (__command == DeviceCommand::GET_EEPROM_VIDPID) ||
-        (__command == DeviceCommand::GET_EEPROM_LENGTH) || (__command == DeviceCommand::GET_GAIN) ||
-        (__command == DeviceCommand::GET_EXP_MODE) || (__command == DeviceCommand::GET_VDD_MODE) ||
-        (__command == DeviceCommand::GET_FLUSH_MODE) || (__command == DeviceCommand::GET_CLEAN_MODE) ||
-        (__command == DeviceCommand::GET_READOUT_SPD) || (__command == DeviceCommand::GET_READOUT_MODE) ||
-        (__command == DeviceCommand::GET_OFFSET) || (__command == DeviceCommand::GET_NORM_READOUT_DELAY) ||
-        (__command == DeviceCommand::GET_TEMP))
+            (__command == DeviceCommand::ABORT) || (__command == DeviceCommand::TRIGGER) ||
+            (__command == DeviceCommand::PS_ON) || (__command == DeviceCommand::PS_OFF) ||
+            (__command == DeviceCommand::CCD_VDD_ON) || (__command == DeviceCommand::CCD_VDD_OFF) ||
+            (__command == DeviceCommand::TEST_PATTERN) || (__command == DeviceCommand::ERASE_EEPROM) ||
+            (__command == DeviceCommand::GET_VERSION) || (__command == DeviceCommand::GET_STATUS) ||
+            (__command == DeviceCommand::GET_TIMESTAMP) || (__command == DeviceCommand::GET_EXP_TIME) ||
+            (__command == DeviceCommand::GET_EXP_TIMER_COUNT) || (__command == DeviceCommand::GET_EEPROM_VIDPID) ||
+            (__command == DeviceCommand::GET_EEPROM_LENGTH) || (__command == DeviceCommand::GET_GAIN) ||
+            (__command == DeviceCommand::GET_EXP_MODE) || (__command == DeviceCommand::GET_VDD_MODE) ||
+            (__command == DeviceCommand::GET_FLUSH_MODE) || (__command == DeviceCommand::GET_CLEAN_MODE) ||
+            (__command == DeviceCommand::GET_READOUT_SPD) || (__command == DeviceCommand::GET_READOUT_MODE) ||
+            (__command == DeviceCommand::GET_OFFSET) || (__command == DeviceCommand::GET_NORM_READOUT_DELAY) ||
+            (__command == DeviceCommand::GET_TEMP))
         return command(__command, 0, 3);
 
     throw dsi_exception("unsupported device command " + __command.name());
@@ -1508,10 +1511,10 @@ unsigned int DSI::Device::command(DeviceCommand __command, int __option)
     // This is the one place where having class-based enums instead of
     // built-in enums is annoying: you can't use a switch statement here.
     if ((__command == DeviceCommand::GET_EEPROM_BYTE) || (__command == DeviceCommand::SET_GAIN) ||
-        (__command == DeviceCommand::SET_EXP_MODE) || (__command == DeviceCommand::SET_VDD_MODE) ||
-        (__command == DeviceCommand::SET_FLUSH_MODE) || (__command == DeviceCommand::SET_CLEAN_MODE) ||
-        (__command == DeviceCommand::SET_READOUT_SPD) || (__command == DeviceCommand::SET_READOUT_MODE) ||
-        (__command == DeviceCommand::AD_READ) || (__command == DeviceCommand::GET_DEBUG_VALUE))
+            (__command == DeviceCommand::SET_EXP_MODE) || (__command == DeviceCommand::SET_VDD_MODE) ||
+            (__command == DeviceCommand::SET_FLUSH_MODE) || (__command == DeviceCommand::SET_CLEAN_MODE) ||
+            (__command == DeviceCommand::SET_READOUT_SPD) || (__command == DeviceCommand::SET_READOUT_MODE) ||
+            (__command == DeviceCommand::AD_READ) || (__command == DeviceCommand::GET_DEBUG_VALUE))
     {
         return command(__command, __option, 4);
     }
@@ -1549,41 +1552,41 @@ unsigned int DSI::Device::command(DeviceCommand __command, int __option, int __l
     // This is the one place where having class-based enums instead of
     // built-in enums is annoying: you can't use a switch statement here.
     if (((__command == DeviceCommand::PING)) || (__command == DeviceCommand::RESET) ||
-        (__command == DeviceCommand::ABORT) || (__command == DeviceCommand::TRIGGER) ||
-        (__command == DeviceCommand::TEST_PATTERN) || (__command == DeviceCommand::SET_EEPROM_BYTE) ||
-        (__command == DeviceCommand::SET_GAIN) || (__command == DeviceCommand::SET_OFFSET) ||
-        (__command == DeviceCommand::SET_EXP_TIME) || (__command == DeviceCommand::SET_VDD_MODE) ||
-        (__command == DeviceCommand::SET_FLUSH_MODE) || (__command == DeviceCommand::SET_CLEAN_MODE) ||
-        (__command == DeviceCommand::SET_READOUT_SPD) || (__command == DeviceCommand::SET_READOUT_MODE) ||
-        (__command == DeviceCommand::SET_NORM_READOUT_DELAY) || (__command == DeviceCommand::SET_ROW_COUNT_ODD) ||
-        (__command == DeviceCommand::SET_ROW_COUNT_EVEN) || (__command == DeviceCommand::PS_ON) ||
-        (__command == DeviceCommand::PS_OFF) || (__command == DeviceCommand::CCD_VDD_ON) ||
-        (__command == DeviceCommand::CCD_VDD_OFF) || (__command == DeviceCommand::AD_WRITE) ||
-        (__command == DeviceCommand::SET_EEPROM_VIDPID) || (__command == DeviceCommand::ERASE_EEPROM))
+            (__command == DeviceCommand::ABORT) || (__command == DeviceCommand::TRIGGER) ||
+            (__command == DeviceCommand::TEST_PATTERN) || (__command == DeviceCommand::SET_EEPROM_BYTE) ||
+            (__command == DeviceCommand::SET_GAIN) || (__command == DeviceCommand::SET_OFFSET) ||
+            (__command == DeviceCommand::SET_EXP_TIME) || (__command == DeviceCommand::SET_VDD_MODE) ||
+            (__command == DeviceCommand::SET_FLUSH_MODE) || (__command == DeviceCommand::SET_CLEAN_MODE) ||
+            (__command == DeviceCommand::SET_READOUT_SPD) || (__command == DeviceCommand::SET_READOUT_MODE) ||
+            (__command == DeviceCommand::SET_NORM_READOUT_DELAY) || (__command == DeviceCommand::SET_ROW_COUNT_ODD) ||
+            (__command == DeviceCommand::SET_ROW_COUNT_EVEN) || (__command == DeviceCommand::PS_ON) ||
+            (__command == DeviceCommand::PS_OFF) || (__command == DeviceCommand::CCD_VDD_ON) ||
+            (__command == DeviceCommand::CCD_VDD_OFF) || (__command == DeviceCommand::AD_WRITE) ||
+            (__command == DeviceCommand::SET_EEPROM_VIDPID) || (__command == DeviceCommand::ERASE_EEPROM))
     {
         return command(__command, __option, __length, 0);
     }
 
     if (((__command == DeviceCommand::GET_EEPROM_LENGTH)) || (__command == DeviceCommand::GET_EEPROM_BYTE) ||
-        (__command == DeviceCommand::GET_GAIN) || (__command == DeviceCommand::GET_EXP_MODE) ||
-        (__command == DeviceCommand::GET_VDD_MODE) || (__command == DeviceCommand::GET_FLUSH_MODE) ||
-        (__command == DeviceCommand::GET_CLEAN_MODE) || (__command == DeviceCommand::GET_READOUT_SPD) ||
-        (__command == DeviceCommand::GET_READOUT_MODE))
+            (__command == DeviceCommand::GET_GAIN) || (__command == DeviceCommand::GET_EXP_MODE) ||
+            (__command == DeviceCommand::GET_VDD_MODE) || (__command == DeviceCommand::GET_FLUSH_MODE) ||
+            (__command == DeviceCommand::GET_CLEAN_MODE) || (__command == DeviceCommand::GET_READOUT_SPD) ||
+            (__command == DeviceCommand::GET_READOUT_MODE))
     {
         return command(__command, __option, __length, 1);
     }
 
     if (((__command == DeviceCommand::GET_VERSION)) || (__command == DeviceCommand::GET_STATUS) ||
-        (__command == DeviceCommand::GET_TIMESTAMP) || (__command == DeviceCommand::GET_EXP_TIME) ||
-        (__command == DeviceCommand::GET_EXP_TIMER_COUNT) || (__command == DeviceCommand::GET_EEPROM_VIDPID))
+            (__command == DeviceCommand::GET_TIMESTAMP) || (__command == DeviceCommand::GET_EXP_TIME) ||
+            (__command == DeviceCommand::GET_EXP_TIMER_COUNT) || (__command == DeviceCommand::GET_EEPROM_VIDPID))
     {
         return command(__command, __option, __length, 4);
     }
 
     if (((__command == DeviceCommand::GET_OFFSET)) || (__command == DeviceCommand::GET_NORM_READOUT_DELAY) ||
-        (__command == DeviceCommand::SET_EXP_MODE) || (__command == DeviceCommand::GET_ROW_COUNT_ODD) ||
-        (__command == DeviceCommand::GET_ROW_COUNT_EVEN) || (__command == DeviceCommand::GET_TEMP) ||
-        (__command == DeviceCommand::AD_READ) || (__command == DeviceCommand::GET_DEBUG_VALUE))
+            (__command == DeviceCommand::SET_EXP_MODE) || (__command == DeviceCommand::GET_ROW_COUNT_ODD) ||
+            (__command == DeviceCommand::GET_ROW_COUNT_EVEN) || (__command == DeviceCommand::GET_TEMP) ||
+            (__command == DeviceCommand::AD_READ) || (__command == DeviceCommand::GET_DEBUG_VALUE))
     {
         return command(__command, __option, __length, 2);
     }
