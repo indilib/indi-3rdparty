@@ -55,9 +55,11 @@ bool TriangulateCHull::AddPoint(HtmID id)
     PointSet::Point p;
     tFace f;
     Triangulate::AddPoint(id);
-    //fprintf(stderr, "Triangulate addpoint: %ld\n", id);
+
+    if (pmap->count(id) < 1)
+        return false;
+
     p = pmap->at(id);
-    //fprintf(stderr, "Triangulate addpoint: point retrieved %d\n", p.index);
     v       = MakeNullVertex();
     v->v[X] = (int)(p.cx * 1000000);
     v->v[Y] = (int)(p.cy * 1000000);

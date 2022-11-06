@@ -635,13 +635,17 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             sw = IUFindOnSwitch(AlignListSP);
             if (!strcmp(sw->name, "ALIGNLISTADD"))
             {
-                pointset->AddPoint(syncdata, nullptr);
-                IDMessage(telescope->getDeviceName(), "Align: added point to list");
-                pointset->setBlobData(AlignDataBP);
-                // JM 2015-12-10: Disable setting AlignData temporary
-                //IDSetBLOB(AlignDataBP, nullptr);
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
+                if (!pointset->AddPoint(syncdata, nullptr))
+                    AlignCountNP->s = IPS_ALERT;
+                else
+                {
+                    IDMessage(telescope->getDeviceName(), "Align: added point to list");
+                    pointset->setBlobData(AlignDataBP);
+                    // JM 2015-12-10: Disable setting AlignData temporary
+                    //IDSetBLOB(AlignDataBP, nullptr);
+                    IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
+                    IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
+                }
                 IDSetNumber(AlignCountNP, nullptr);
             }
             else if (!strcmp(sw->name, "ALIGNLISTCLEAR"))
