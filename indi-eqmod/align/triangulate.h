@@ -39,7 +39,7 @@ class Triangulate
   public:
     Triangulate(std::map<HtmID, PointSet::Point> *p);
     virtual void Reset();
-    virtual void AddPoint(HtmID id);
+    virtual bool AddPoint(HtmID id);
     virtual XMLEle *toXML();
     virtual std::vector<Face *> getFaces();
     virtual bool isValid();

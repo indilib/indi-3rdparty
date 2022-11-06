@@ -49,7 +49,7 @@ void TriangulateCHull::Reset()
     v->vnum  = vnum++;
 }
 
-void TriangulateCHull::AddPoint(HtmID id)
+bool TriangulateCHull::AddPoint(HtmID id)
 {
     tVertex v, vnext;
     PointSet::Point p;
@@ -67,10 +67,11 @@ void TriangulateCHull::AddPoint(HtmID id)
     vvertices.push_back(id);
     //fprintf(stderr, "Triangulate addpoint: vertex added (%d total)\n", vvertices.size());
     if (vnum < 4)
-        return;
+        return false;
     if (vnum == 4)
     {
-        DoubleTriangle();
+        if (DoubleTriangle() != 0)
+            return false;
         ConstructHull();
     }
     if (vnum > 4)
@@ -94,7 +95,10 @@ void TriangulateCHull::AddPoint(HtmID id)
                                   vvertices.at(f->vertex[2]->vnum - 1)));
         //fprintf(stderr, "Triangulate addpoint: added face (%d total)\n", vfaces.size());
         f = f->next;
-    } while (f != faces);
+    }
+    while (f != faces);
+
+    return true;
 }
 
 //XMLEle *TriangulateCHull::toXML()

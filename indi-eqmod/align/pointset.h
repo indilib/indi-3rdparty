@@ -59,7 +59,7 @@ class PointSet
         typedef enum PointFilter { None, SameQuadrant } PointFilter;
         PointSet(INDI::Telescope *);
         const char *getDeviceName();
-        void AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos);
+        bool AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos);
         Point *getPoint(HtmID htmid);
         int getNbPoints();
         int getNbTriangles();

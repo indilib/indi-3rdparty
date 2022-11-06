@@ -89,7 +89,7 @@ tVertex MakeNullVertex(void);
 void ReadVertices(void);
 void Print(void);
 void SubVec(int a[3], int b[3], int c[3]);
-void DoubleTriangle(void);
+int DoubleTriangle(void);
 void ConstructHull(void);
 bool AddOne(tVertex p);
 int VolumeSign(tFace f, tVertex p);
@@ -325,7 +325,7 @@ void SubVec(int a[3], int b[3], int c[3])
  3 newfaces to the fourth point are constructed and the data structures
  are cleaned up. 
 ---------------------------------------------------------------------*/
-void DoubleTriangle(void)
+int DoubleTriangle(void)
 {
     tVertex v0, v1, v2, v3;
     tFace f0, f1 = NULL;
@@ -338,7 +338,7 @@ void DoubleTriangle(void)
         if ((v0 = v0->next) == vertices)
         {
             fprintf(stderr, "DoubleTriangle:  All points are Collinear!\n");
-            return;
+            return -1;
         }
     }
     v1 = v0->next;
@@ -369,7 +369,7 @@ void DoubleTriangle(void)
         if ((v3 = v3->next) == v0)
         {
             fprintf(stderr,"DoubleTriangle:  All points are coplanar!\n");
-            return;
+            return -1;
         }
         vol = VolumeSign(f0, v3);
     }
@@ -381,6 +381,7 @@ void DoubleTriangle(void)
         fprintf(stderr, "DoubleTriangle: finished. Head repositioned at v3.\n");
         PrintOut(vertices);
     }
+    return 0;
 }
 
 /*---------------------------------------------------------------------

@@ -494,7 +494,9 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
     syncdata.telescopeRA  = thissync.telescopeRA;
     syncdata.telescopeDEC = thissync.telescopeDEC;
 
-    pointset->AddPoint(syncdata, nullptr);
+    if (!pointset->AddPoint(syncdata, nullptr))
+        return;
+
     DEBUGF(INDI::Logger::DBG_SESSION,
            "Align Sync: point added: lst=%.8f celestial RA %.8f DEC %.8f Telescope RA %.8f DEC %.8f", syncdata.lst,
            syncdata.targetRA, syncdata.targetDEC, syncdata.telescopeRA, syncdata.telescopeDEC);
@@ -635,7 +637,6 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             {
                 pointset->AddPoint(syncdata, nullptr);
                 IDMessage(telescope->getDeviceName(), "Align: added point to list");
-                ;
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);
@@ -647,7 +648,6 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             {
                 pointset->Reset();
                 IDMessage(telescope->getDeviceName(), "Align: list cleared");
-                ;
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);

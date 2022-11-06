@@ -160,15 +160,12 @@ PointSet::ComputeDistances(double alt, double az, PointFilter filter, bool ingot
     return distances;
 }
 
-void PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
+bool PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
 {
     Point point;
     point.aligndata = aligndata;
     double horangle, altangle;
-    //point.celestialAZ = (range24(point.aligndata.lst - point.aligndata.targetRA - 12.0) * 360.0) / 24.0;
-    //point.telescopeAZ = (range24(point.aligndata.lst - point.aligndata.telescopeRA - 12.0) * 360.0) / 24.0;
-    //point.celestialALT = point.aligndata.targetDEC + lat;
-    //point.telescopeALT = point.aligndata.telescopeDEC + lat;
+
     if (point.aligndata.jd > 0.0)
     {
         AltAzFromRaDec(point.aligndata.targetRA, point.aligndata.targetDEC, point.aligndata.jd, &point.celestialALT,
@@ -183,6 +180,7 @@ void PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
         AltAzFromRaDecSidereal(point.aligndata.telescopeRA, point.aligndata.telescopeDEC, point.aligndata.lst,
                                &point.telescopeALT, &point.telescopeAZ, pos);
     }
+
     horangle    = range360(-180.0 - point.celestialAZ) * M_PI / 180.0;
     altangle    = point.celestialALT * M_PI / 180.0;
     point.cx    = cos(altangle) * cos(horangle);
@@ -196,11 +194,16 @@ void PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
     point.htmID = cc_radec2ID(point.celestialAZ, point.celestialALT, 19);
     cc_ID2name(point.htmname, point.htmID);
     point.index = getNbPoints();
+
+    if (!Triangulation->AddPoint(point.htmID))
+        return false;
+
     PointSetMap->insert(std::pair<HtmID, Point>(point.htmID, point));
-    Triangulation->AddPoint(point.htmID);
-    LOGF_INFO("Align Pointset: added point %d alt = %g az = %g\n", point.index,
+
+    LOGF_INFO("Align Pointset: added point %d alt = %g az = %g", point.index,
               point.celestialALT, point.celestialAZ);
-    LOGF_INFO("Align Triangulate: number of faces is %d\n", Triangulation->getFaces().size());
+    LOGF_INFO("Align Triangulate: number of faces is %d", Triangulation->getFaces().size());
+    return true;
 }
 
 PointSet::Point *PointSet::getPoint(HtmID htmid)

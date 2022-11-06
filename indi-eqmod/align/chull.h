@@ -80,7 +80,7 @@ extern tVertex MakeNullVertex(void);
 extern void ReadVertices(void);
 extern void Print(void);
 extern void SubVec(int a[3], int b[3], int c[3]);
-extern void DoubleTriangle(void);
+extern int DoubleTriangle(void);
 extern void ConstructHull(void);
 extern bool AddOne(tVertex p);
 extern int VolumeSign(tFace f, tVertex p);
