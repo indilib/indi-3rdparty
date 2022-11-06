@@ -469,7 +469,7 @@ void Align::AlignGoto(SyncData globalsync, double jd, INDI::IGeographicCoordinat
     //}
 }
 
-void Align::AlignSync(SyncData globalsync, SyncData thissync)
+bool Align::AlignSync(SyncData globalsync, SyncData thissync)
 {
     INDI_UNUSED(globalsync);
     double values[6]     = { thissync.lst,       thissync.jd,          thissync.targetRA,
@@ -479,14 +479,6 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
                              "ALIGNPOINT_CELESTIAL_DE", "ALIGNPOINT_TELESCOPE_RA", "ALIGNPOINT_TELESCOPE_DE"
                            };
 
-    /*syncdata.lst = lst; syncdata.jd = jd;
-    syncdata.targetRA = targetRA;  syncdata.targetDEC = targetDEC;
-    syncdata.telescopeRA = telescopeRA;  syncdata.telescopeDEC = telescopeDEC;
-    IDLog("AlignSync \n");
-    */
-    // add point on sync
-    //alignsyncsw=IUFindSwitch(AlignOptionsSP,"ADDONSYNC");
-    //if (alignsyncsw->s == ISS_ON) {
     syncdata.lst          = thissync.lst;
     syncdata.jd           = thissync.jd;
     syncdata.targetRA     = thissync.targetRA;
@@ -495,7 +487,7 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
     syncdata.telescopeDEC = thissync.telescopeDEC;
 
     if (!pointset->AddPoint(syncdata, nullptr))
-        return;
+        return false;
 
     DEBUGF(INDI::Logger::DBG_SESSION,
            "Align Sync: point added: lst=%.8f celestial RA %.8f DEC %.8f Telescope RA %.8f DEC %.8f", syncdata.lst,
@@ -511,6 +503,8 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
     IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
     IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
     IDSetNumber(AlignCountNP, nullptr);
+
+    return true;
 }
 
 void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, IGeographicCoordinates *position)

@@ -80,6 +80,6 @@ class Align
         virtual void AlignGoto(SyncData globalsync, double jd, INDI::IGeographicCoordinates *position, double *gotoRA,
                                double *gotoDEC);
         //virtual void AlignSync(double lst, double jd, double targetRA, double targetDEC, double telescopeRA, double telescopeDEC);
-        virtual void AlignSync(SyncData globalsync, SyncData thissync);
+        virtual bool AlignSync(SyncData globalsync, SyncData thissync);
         virtual void AlignStandardSync(SyncData globalsync, SyncData *thissync, INDI::IGeographicCoordinates *position);
 };

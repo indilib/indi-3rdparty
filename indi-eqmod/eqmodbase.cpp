@@ -2074,8 +2074,8 @@ bool EQMod::Sync(double ra, double dec)
 #ifdef WITH_ALIGN_GEEHALEL
     if (align && !isStandardSync())
     {
-        align->AlignSync(syncdata, tmpsyncdata);
-        //return true;
+        if (!align->AlignSync(syncdata, tmpsyncdata))
+            return false;
     }
 #endif
 #ifdef WITH_ALIGN

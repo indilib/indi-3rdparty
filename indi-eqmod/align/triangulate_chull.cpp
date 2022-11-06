@@ -56,9 +56,6 @@ bool TriangulateCHull::AddPoint(HtmID id)
     tFace f;
     Triangulate::AddPoint(id);
 
-    if (pmap->count(id) < 1)
-        return false;
-
     p = pmap->at(id);
     v       = MakeNullVertex();
     v->v[X] = (int)(p.cx * 1000000);

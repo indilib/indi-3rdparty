@@ -195,10 +195,13 @@ bool PointSet::AddPoint(AlignData aligndata, INDI::IGeographicCoordinates *pos)
     cc_ID2name(point.htmname, point.htmID);
     point.index = getNbPoints();
 
-    if (!Triangulation->AddPoint(point.htmID))
-        return false;
-
     PointSetMap->insert(std::pair<HtmID, Point>(point.htmID, point));
+
+    if (!Triangulation->AddPoint(point.htmID))
+    {
+        PointSetMap->erase(point.htmID);
+        return false;
+    }
 
     LOGF_INFO("Align Pointset: added point %d alt = %g az = %g", point.index,
               point.celestialALT, point.celestialAZ);
