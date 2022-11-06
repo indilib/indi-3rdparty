@@ -545,49 +545,46 @@ void ATIKCCD::updateGainOffset()
     uint8_t data[6] = {0};
     int len = 0;
 
-    if (ControlPresetsS[0].s == ISS_ON)
+    // First read the Gain and Offset boundaries (and value) as if the preset was Custom
+    if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 6, &len))
     {
-        if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 6, &len))
-        {
-            uint16_t const minGain = (reinterpret_cast<uint16_t*>(&data))[0];
-            uint16_t const maxGain = (reinterpret_cast<uint16_t*>(&data))[1];
-            uint16_t const valGain = (reinterpret_cast<uint16_t*>(&data))[2];
-            LOGF_INFO("Horizon current gain: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
-                      data[0], data[1], data[2], data[3], data[4], data[5], minGain, maxGain, valGain);
-            ControlN[0].min = static_cast <double> (minGain);
-            ControlN[0].max = static_cast <double> (maxGain);
-            ControlN[0].value = static_cast <double> (valGain);
-            ControlNP.s = IPS_OK;
-        }
-        else
-        {
-            LOG_ERROR("Failed reading Custom Gain.");
-            ControlNP.s = IPS_ALERT;
-        }
-        IDSetNumber(&ControlNP, nullptr);
-
-        if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomOffset, data, 6, &len))
-        {
-            uint16_t const minOffset = (reinterpret_cast<uint16_t*>(&data))[0];
-            uint16_t const maxOffset = (reinterpret_cast<uint16_t*>(&data))[1];
-            uint16_t const valOffset = (reinterpret_cast<uint16_t*>(&data))[2];
-            LOGF_DEBUG("Horizon current offset: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
-                       data[0], data[1], data[2], data[3], data[4], data[5], minOffset, maxOffset, valOffset);
-            ControlN[1].min = static_cast <double> (minOffset);
-            ControlN[1].max = static_cast <double> (maxOffset);
-            ControlN[1].value = static_cast <double> (valOffset);
-            ControlNP.s = IPS_OK;
-        }
-        else
-        {
-            LOG_ERROR("Failed reading Custom Offset.");
-            ControlNP.s = IPS_ALERT;
-        }
-        IDSetNumber(&ControlNP, nullptr);
+        uint16_t const minGain = (reinterpret_cast<uint16_t*>(&data))[0];
+        uint16_t const maxGain = (reinterpret_cast<uint16_t*>(&data))[1];
+        uint16_t const valGain = (reinterpret_cast<uint16_t*>(&data))[2];
+        LOGF_INFO("Horizon current gain: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
+                  data[0], data[1], data[2], data[3], data[4], data[5], minGain, maxGain, valGain);
+        ControlN[0].min = static_cast <double> (minGain);
+        ControlN[0].max = static_cast <double> (maxGain);
+        ControlN[0].value = static_cast <double> (valGain);
+        ControlNP.s = IPS_OK;
     }
     else
     {
-        // Else one Preset is configured
+        LOG_ERROR("Failed reading Custom Gain.");
+        ControlNP.s = IPS_ALERT;
+    }
+
+    if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomOffset, data, 6, &len))
+    {
+        uint16_t const minOffset = (reinterpret_cast<uint16_t*>(&data))[0];
+        uint16_t const maxOffset = (reinterpret_cast<uint16_t*>(&data))[1];
+        uint16_t const valOffset = (reinterpret_cast<uint16_t*>(&data))[2];
+        LOGF_DEBUG("Horizon current offset: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
+                   data[0], data[1], data[2], data[3], data[4], data[5], minOffset, maxOffset, valOffset);
+        ControlN[1].min = static_cast <double> (minOffset);
+        ControlN[1].max = static_cast <double> (maxOffset);
+        ControlN[1].value = static_cast <double> (valOffset);
+        ControlNP.s = IPS_OK;
+    }
+    else
+    {
+        LOG_ERROR("Failed reading Custom Offset.");
+        ControlNP.s = IPS_ALERT;
+    }
+
+    // Then if a Preset other than Custom is used, read the associated values
+    if (ControlPresetsS[0].s != ISS_ON)
+    {
         int const preset_index = IUFindOnSwitchIndex(&ControlPresetsSP) - 1;
         if (0 <= preset_index && preset_index < (int)(sizeof(ControlPresetsS) / sizeof(ControlPresetsS[0])))
         {
@@ -617,10 +614,9 @@ void ATIKCCD::updateGainOffset()
             LOGF_WARN("Failed reading Preset #%d Gain/Offset, incorrect preset index.", preset_index);
             ControlNP.s = IPS_ALERT;
         }
-
-        IDSetNumber(&ControlNP, nullptr);
     }
 
+    IDSetNumber(&ControlNP, nullptr);
 }
 
 bool ATIKCCD::Disconnect()
