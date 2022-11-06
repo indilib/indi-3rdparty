@@ -361,22 +361,21 @@ bool ToupBase::initProperties()
 
 bool ToupBase::updateProperties()
 {
-    // Set format first if connected.
+    // Setup parameters and reset capture format.
     if (isConnected())
     {
+        // Clear format
         CaptureFormatSP.resize(0);
         m_CaptureFormats.clear();
 
-
+        // Get parameters from camera
+        setupParams();
     }
 
     INDI::CCD::updateProperties();
 
     if (isConnected())
     {
-        // Let's get parameters now from CCD
-        setupParams();
-
         if (HasCooler())
             defineProperty(&CoolerSP);
         // Even if there is no cooler, we define temperature property as READ ONLY
@@ -992,7 +991,7 @@ void ToupBase::setupParams()
     //    LOG_DEBUG("Starting event callback in pull mode.");
 
     // Start push callback
-    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &ToupBase::pushCB, this, &ToupBase::eventCB, this)) != 0))
+    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &ToupBase::pushCB, this, &ToupBase::eventCB, this))) != 0)
     {
         LOGF_ERROR("Failed to start camera push mode. %s", errorCodes[rc].c_str());
         Disconnect();
@@ -1005,7 +1004,7 @@ void ToupBase::setupParams()
 
 void ToupBase::allocateFrameBuffer()
 {
-    LOG_DEBUG("Allocating Frame Buffer...");
+    //LOG_DEBUG("Allocating Frame Buffer...");
 
     // Allocate memory
     if (m_MonoCamera)
@@ -2424,10 +2423,10 @@ void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int
                 uint8_t *subR = image;
                 uint8_t *subG = image + width * height;
                 uint8_t *subB = image + width * height * 2;
-                int size      = width * height * 3 - 3;
+                int totalSize = width * height * 3 - 3;
 
                 // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
-                for (int i = 0; i <= size; i += 3)
+                for (int i = 0; i <= totalSize; i += 3)
                 {
                     *subR++ = buffer[i];
                     *subG++ = buffer[i + 1];
@@ -2458,197 +2457,197 @@ void ToupBase::eventPullCallBack(unsigned event)
     LOGF_DEBUG("Event %#04X", event);
     switch (event)
     {
-        case CP(EVENT_EXPOSURE: )
-                m_CaptureTimeoutCounter = 0;
+        case CP(EVENT_EXPOSURE):
+            m_CaptureTimeoutCounter = 0;
             m_CaptureTimeout.stop();
             break;
-        case CP(EVENT_TEMPTINT: )
-                break;
-        case CP(EVENT_IMAGE: )
+        case CP(EVENT_TEMPTINT):
+            break;
+        case CP(EVENT_IMAGE):
+        {
+            m_CaptureTimeoutCounter = 0;
+            m_CaptureTimeout.stop();
+
+            // Estimate download time
+            struct timeval curtime, diff;
+            gettimeofday(&curtime, nullptr);
+            timersub(&curtime, &ExposureEnd, &diff);
+            m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+
+            if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
             {
-                m_CaptureTimeoutCounter = 0;
-                m_CaptureTimeout.stop();
+                m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
+                LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
+            }
 
-                // Estimate download time
-                struct timeval curtime, diff;
-                gettimeofday(&curtime, nullptr);
-                timersub(&curtime, &ExposureEnd, &diff);
-                m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
+            m_TimeoutRetries = 0;
+            XP(FrameInfoV2) info;
+            memset(&info, 0, sizeof(XP(FrameInfoV2)));
 
-                if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
+            int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+
+            if (Streamer->isStreaming() || Streamer->isRecording())
+            {
+                std::unique_lock<std::mutex> guard(ccdBufferLock);
+                HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                guard.unlock();
+                if (SUCCEEDED(rc))
+                    Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
+            }
+            else if (InExposure)
+            {
+                InExposure = false;
+                PrimaryCCD.setExposureLeft(0);
+                uint8_t *buffer = PrimaryCCD.getFrameBuffer();
+
+                if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                    buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+
+                std::unique_lock<std::mutex> guard(ccdBufferLock);
+                HRESULT rc = FP(PullImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                guard.unlock();
+                if (FAILED(rc))
                 {
-                    m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
-                    LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
-                }
-
-                m_TimeoutRetries = 0;
-                XP(FrameInfoV2) info;
-                memset(&info, 0, sizeof(XP(FrameInfoV2)));
-
-                int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
-
-                if (Streamer->isStreaming() || Streamer->isRecording())
-                {
-                    std::unique_lock<std::mutex> guard(ccdBufferLock);
-                    HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
-                    guard.unlock();
-                    if (SUCCEEDED(rc))
-                        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
-                }
-                else if (InExposure)
-                {
-                    InExposure = false;
-                    PrimaryCCD.setExposureLeft(0);
-                    uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-
+                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+                    PrimaryCCD.setExposureFailed();
                     if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                        buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
-
-                    std::unique_lock<std::mutex> guard(ccdBufferLock);
-                    HRESULT rc = FP(PullImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
-                    guard.unlock();
-                    if (FAILED(rc))
-                    {
-                        LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
-                        PrimaryCCD.setExposureFailed();
-                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                            free(buffer);
-                    }
-                    else
-                    {
-                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                        {
-                            std::unique_lock<std::mutex> guard(ccdBufferLock);
-                            uint8_t *image  = PrimaryCCD.getFrameBuffer();
-                            uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
-                            uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
-
-                            uint8_t *subR = image;
-                            uint8_t *subG = image + width * height;
-                            uint8_t *subB = image + width * height * 2;
-                            int size      = width * height * 3 - 3;
-
-                            // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
-                            for (int i = 0; i <= size; i += 3)
-                            {
-                                *subR++ = buffer[i];
-                                *subG++ = buffer[i + 1];
-                                *subB++ = buffer[i + 2];
-                            }
-
-                            guard.unlock();
-                            free(buffer);
-                        }
-
-                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
-                                   info.timestamp);
-                        ExposureComplete(&PrimaryCCD);
-                    }
+                        free(buffer);
                 }
                 else
                 {
-                    // Fix proposed by Seven Watt
-                    // Check https://github.com/indilib/indi-3rdparty/issues/112
-                    //
-                    // Starshootg_Flush is deprecated but there are no alternativess
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-                    HRESULT rc = FP(Flush(m_CameraHandle));
-#pragma GCC diagnostic pop
-                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
-                    if (FAILED(rc))
-                    {
-                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
-                    }
-                }
-            }
-            break;
-        case CP(EVENT_STILLIMAGE: )
-            {
-                m_CaptureTimeoutCounter = 0;
-                m_CaptureTimeout.stop();
-                m_TimeoutRetries = 0;
-                XP(FrameInfoV2) info;
-                memset(&info, 0, sizeof(XP(FrameInfoV2)));
-
-                int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
-
-                if (Streamer->isStreaming() || Streamer->isRecording())
-                {
-                    std::unique_lock<std::mutex> guard(ccdBufferLock);
-                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
-                    guard.unlock();
-                    if (SUCCEEDED(rc))
-                        Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
-                }
-                else if (InExposure)
-                {
-                    InExposure = false;
-                    PrimaryCCD.setExposureLeft(0);
-                    uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-
                     if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                        buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+                    {
+                        std::unique_lock<std::mutex> locker(ccdBufferLock);
+                        uint8_t *image  = PrimaryCCD.getFrameBuffer();
+                        uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
+                        uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
 
-                    std::unique_lock<std::mutex> guard(ccdBufferLock);
-                    HRESULT rc = FP(PullStillImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
-                    guard.unlock();
-                    if (FAILED(rc))
-                    {
-                        LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
-                        PrimaryCCD.setExposureFailed();
-                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                            free(buffer);
-                    }
-                    else
-                    {
-                        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        uint8_t *subR = image;
+                        uint8_t *subG = image + width * height;
+                        uint8_t *subB = image + width * height * 2;
+                        int size      = width * height * 3 - 3;
+
+                        // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
+                        for (int i = 0; i <= size; i += 3)
                         {
-                            std::unique_lock<std::mutex> guard(ccdBufferLock);
-                            uint8_t *image  = PrimaryCCD.getFrameBuffer();
-                            uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
-                            uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
-
-                            uint8_t *subR = image;
-                            uint8_t *subG = image + width * height;
-                            uint8_t *subB = image + width * height * 2;
-                            int size      = width * height * 3 - 3;
-
-                            // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
-                            for (int i = 0; i <= size; i += 3)
-                            {
-                                *subR++ = buffer[i];
-                                *subG++ = buffer[i + 1];
-                                *subB++ = buffer[i + 2];
-                            }
-
-                            guard.unlock();
-                            free(buffer);
+                            *subR++ = buffer[i];
+                            *subG++ = buffer[i + 1];
+                            *subB++ = buffer[i + 2];
                         }
 
-                        LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
-                                   info.timestamp);
-                        ExposureComplete(&PrimaryCCD);
+                        locker.unlock();
+                        free(buffer);
                     }
+
+                    LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                               info.timestamp);
+                    ExposureComplete(&PrimaryCCD);
+                }
+            }
+            else
+            {
+                // Fix proposed by Seven Watt
+                // Check https://github.com/indilib/indi-3rdparty/issues/112
+                //
+                // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+                HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
+                LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                if (FAILED(rc))
+                {
+                    LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
+                }
+            }
+        }
+        break;
+        case CP(EVENT_STILLIMAGE):
+        {
+            m_CaptureTimeoutCounter = 0;
+            m_CaptureTimeout.stop();
+            m_TimeoutRetries = 0;
+            XP(FrameInfoV2) info;
+            memset(&info, 0, sizeof(XP(FrameInfoV2)));
+
+            int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+
+            if (Streamer->isStreaming() || Streamer->isRecording())
+            {
+                std::unique_lock<std::mutex> guard(ccdBufferLock);
+                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                guard.unlock();
+                if (SUCCEEDED(rc))
+                    Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
+            }
+            else if (InExposure)
+            {
+                InExposure = false;
+                PrimaryCCD.setExposureLeft(0);
+                uint8_t *buffer = PrimaryCCD.getFrameBuffer();
+
+                if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                    buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+
+                std::unique_lock<std::mutex> guard(ccdBufferLock);
+                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                guard.unlock();
+                if (FAILED(rc))
+                {
+                    LOGF_ERROR("Failed to pull image. %s", errorCodes[rc].c_str());
+                    PrimaryCCD.setExposureFailed();
+                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
+                        free(buffer);
                 }
                 else
                 {
-                    // Fix proposed by Seven Watt
-                    // Check https://github.com/indilib/indi-3rdparty/issues/112
-                    //
-                    // Starshootg_Flush is deprecated but there are no alternativess
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-                    HRESULT rc = FP(Flush(m_CameraHandle));
-#pragma GCC diagnostic pop
-                    LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
-                    if (FAILED(rc))
+                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     {
-                        LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
+                        std::unique_lock<std::mutex> locker(ccdBufferLock);
+                        uint8_t *image  = PrimaryCCD.getFrameBuffer();
+                        uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
+                        uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
+
+                        uint8_t *subR = image;
+                        uint8_t *subG = image + width * height;
+                        uint8_t *subB = image + width * height * 2;
+                        int size      = width * height * 3 - 3;
+
+                        // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
+                        for (int i = 0; i <= size; i += 3)
+                        {
+                            *subR++ = buffer[i];
+                            *subG++ = buffer[i + 1];
+                            *subB++ = buffer[i + 2];
+                        }
+
+                        locker.unlock();
+                        free(buffer);
                     }
+
+                    LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
+                               info.timestamp);
+                    ExposureComplete(&PrimaryCCD);
                 }
             }
-            break;
+            else
+            {
+                // Fix proposed by Seven Watt
+                // Check https://github.com/indilib/indi-3rdparty/issues/112
+                //
+                // Starshootg_Flush is deprecated but there are no alternativess
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+                HRESULT rc = FP(Flush(m_CameraHandle));
+#pragma GCC diagnostic pop
+                LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
+                if (FAILED(rc))
+                {
+                    LOGF_ERROR("Failed to flush image. %s", errorCodes[rc].c_str());
+                }
+            }
+        }
+        break;
             //    {
             //                XP(FrameInfoV2) info;
             //                memset(&info, 0, sizeof(XP(FrameInfoV2)));
@@ -2669,30 +2668,30 @@ void ToupBase::eventPullCallBack(unsigned event)
             //                               info.timestamp);
             //                }
             //            }
+        break;
+        case CP(EVENT_WBGAIN):
+            LOG_DEBUG("White Balance Gain changed.");
             break;
-        case CP(EVENT_WBGAIN: )
-                LOG_DEBUG("White Balance Gain changed.");
+        case CP(EVENT_TRIGGERFAIL):
             break;
-        case CP(EVENT_TRIGGERFAIL: )
-                break;
-        case CP(EVENT_BLACK: )
-                LOG_DEBUG("Black Balance Gain changed.");
+        case CP(EVENT_BLACK):
+            LOG_DEBUG("Black Balance Gain changed.");
             break;
-        case CP(EVENT_FFC: )
-                break;
-        case CP(EVENT_DFC: )
-                break;
-        case CP(EVENT_ERROR: )
-                break;
-        case CP(EVENT_DISCONNECTED: )
-                LOG_DEBUG("Camera disconnected.");
+        case CP(EVENT_FFC):
             break;
-        case CP(EVENT_NOFRAMETIMEOUT: )
-                LOG_DEBUG("Camera timed out.");
+        case CP(EVENT_DFC):
+            break;
+        case CP(EVENT_ERROR):
+            break;
+        case CP(EVENT_DISCONNECTED):
+            LOG_DEBUG("Camera disconnected.");
+            break;
+        case CP(EVENT_NOFRAMETIMEOUT):
+            LOG_DEBUG("Camera timed out.");
             PrimaryCCD.setExposureFailed();
             break;
-        case CP(EVENT_FACTORY: )
-                break;
+        case CP(EVENT_FACTORY):
+            break;
         default:
             break;
     }

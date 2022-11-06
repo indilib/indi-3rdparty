@@ -1,3 +1,9 @@
+indi-toupbase (1.0) focal; urgency=low
+
+  * Define capture formats on initial connection.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 6 Nov 2022 09:00:00 +0300
+
 indi-toupbase (0.9) focal; urgency=low
 
   * Added Omegon SDK based version of toupcam driver.
