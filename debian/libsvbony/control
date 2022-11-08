@@ -6,6 +6,8 @@ Build-Depends: debhelper (>= 6), cdbs, cmake
 Standards-Version: 3.9.2
 
 Package: libsvbony
+Conflicts: libsv305
+Replaces: libsv305
 Architecture: i386 amd64 armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: SDK library for the SVBONY Camera
