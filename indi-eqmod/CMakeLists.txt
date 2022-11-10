@@ -94,6 +94,57 @@ if(WITH_SCOPE_LIMITS)
   install( FILES  scope-limits/indi_eqmod_scope_limits_sk.xml DESTINATION ${INDI_DATA_DIR})
 endif(WITH_SCOPE_LIMITS)
 
+########### AHP GT controllers ###############
+find_package(AHPGT REQUIRED)
+if(WITH_AHPGT)
+    if(AHPGT_FOUND)
+        include_directories( ${AHPGT_INCLUDE_DIR})
+        set(ahp_gt_CXX_SRCS
+           ${CMAKE_CURRENT_SOURCE_DIR}/ahp_gt.cpp
+           ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
+           ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
+           ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
+
+        if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+          set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
+            ${CMAKE_CURRENT_SOURCE_DIR}/mach_gettime.cpp)
+        endif()
+
+        set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
+           ${CMAKE_CURRENT_SOURCE_DIR}/simulator/simulator.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/simulator/skywatcher-simulator.cpp)
+        if(WITH_ALIGN_GEEHALEL)
+          set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
+           ${CMAKE_CURRENT_SOURCE_DIR}/align/align.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/pointset.cpp
+           ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate_chull.cpp)
+          set(ahp_gt_C_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/align/htm.c ${CMAKE_CURRENT_SOURCE_DIR}/align/chull/chull.c)
+        endif(WITH_ALIGN_GEEHALEL)
+        if(WITH_SCOPE_LIMITS)
+          set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
+            ${CMAKE_CURRENT_SOURCE_DIR}/scope-limits/scope-limits.cpp)
+        endif(WITH_SCOPE_LIMITS)
+
+        IF (UNITY_BUILD)
+            ENABLE_UNITY_BUILD(ahp_gt_c ahp_gt_C_SRCS 10 c)
+            ENABLE_UNITY_BUILD(ahp_gt_cxx ahp_gt_CXX_SRCS 10 cpp)
+        ENDIF ()
+
+        add_executable(indi_ahp_gt ${ahp_gt_C_SRCS} ${ahp_gt_CXX_SRCS})
+
+        if(WITH_ALIGN)
+          target_link_libraries(indi_ahp_gt ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
+        else(WITH_ALIGN)
+          target_link_libraries(indi_ahp_gt ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
+        endif(WITH_ALIGN)
+
+        target_link_libraries(indi_ahp_gt ${AHPGT_LIBRARIES})
+
+        if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+        target_link_libraries(indi_ahp_gt rt)
+        endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+
+        install(TARGETS indi_ahp_gt RUNTIME DESTINATION bin )
+    endif(AHPGT_FOUND)
+endif(WITH_AHPGT)
 ########### AZ GTi ###############
 set(azgti_CXX_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/azgti.cpp

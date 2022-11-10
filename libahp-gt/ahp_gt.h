@@ -59,7 +59,7 @@ extern "C" {
 * visit https://www.iliaplatone.com/gt1 for more informations and purchase options.
 *
 * \author Ilia Platone
-* \version 1.5.7
+* \version 1.5.9
 * \date 2017-2021
 * \copyright MIT License.
 */
@@ -73,7 +73,49 @@ extern "C" {
  * Each section and component is documented for general usage.
 *
 * \{
-* \defgroup Defs Types
+* \defgroup Debug Debug features
+* \{*/
+
+#ifndef AHP_DEBUG
+#define AHP_DEBUG
+#define AHP_DEBUG_INFO 0
+#define AHP_DEBUG_ERROR 1
+#define AHP_DEBUG_WARNING 2
+#define AHP_DEBUG_DEBUG 3
+/**
+* \brief set the debug level
+* \param value the debug level
+*/
+DLL_EXPORT void ahp_set_debug_level(int value);
+/**
+* \brief get the debug level
+* \return The current debug level
+*/
+DLL_EXPORT int ahp_get_debug_level();
+/**
+* \brief set the application name
+* \param name the application name to be printed on logs
+*/
+DLL_EXPORT void ahp_set_app_name(char* name);
+/**
+* \brief get the application name
+* \return The current application name printed on logs
+*/
+DLL_EXPORT char* ahp_get_app_name();
+/**
+* \brief set the output log stream
+* \param f The FILE stream pointer to set as standard output
+*/
+DLL_EXPORT void ahp_set_stdout(FILE *f);
+/**
+* \brief set the error log stream
+* \param f The FILE stream pointer to set as standard error
+*/
+DLL_EXPORT void ahp_set_stderr(FILE *f);
+#endif
+
+/** \}
+* \defgroup Types Types
 * \{*/
 
 ///Motor coils phase winding configuration
@@ -328,7 +370,7 @@ double timestamp;
  * \defgroup Defines Defines
  *\{*/
 ///AHP_GT_VERSION This library version
-#define AHP_GT_VERSION 0x157
+#define AHP_GT_VERSION 0x159
 
 /**\}
  * \defgroup Conn Connection
@@ -913,12 +955,24 @@ DLL_EXPORT double ahp_gt_tracking_cosine(double Alt, double Az, double Lat);
 DLL_EXPORT void ahp_gt_goto_radec(double ra, double dec);
 
 /**
+* \brief Set both axes positions to celestial coordinates
+* \param ra Right ascension in hours
+* \param dec Declination in degrees
+*/
+DLL_EXPORT void ahp_gt_sync_radec(double ra, double dec);
+
+/**
 * \brief Start a tracking motion correction
 * \param axis The motor to tune at sidereal speed
 * \param target_period The target sidereal period
 * \param interrupt if non-zero stop training before ending this session
 */
 DLL_EXPORT void ahp_gt_correct_tracking(int axis, double target_period, int *interrupt);
+
+/**
+* \brief Start the tracking thread
+*/
+DLL_EXPORT void ahp_gt_start_tracking_thread();
 
 /**
 * \brief Set the tracking mode
