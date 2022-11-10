@@ -1,3 +1,13 @@
+libsvbony (1.9.8) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.9.8 :
+  * *** Note: The following changes were made both 1.9.7 and 1.9.8 ***
+  * Fixed the bug that SV405CC occasionally loses response(Camera firmware needs to be upgraded to v2.0.0.6)
+  * Fixed the bug that SV405CC cannot set the maximum resolution
+  * Fixed the bug that SV405CC set some resolution images incorrectly
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 10 Nov 2022 12:00:00 +0900
+
 libsvbony (1.9.6) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.9.6 :
