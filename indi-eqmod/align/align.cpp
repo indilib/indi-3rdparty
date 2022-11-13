@@ -469,7 +469,7 @@ void Align::AlignGoto(SyncData globalsync, double jd, INDI::IGeographicCoordinat
     //}
 }
 
-bool Align::AlignSync(SyncData globalsync, SyncData thissync)
+void Align::AlignSync(SyncData globalsync, SyncData thissync)
 {
     INDI_UNUSED(globalsync);
     double values[6]     = { thissync.lst,       thissync.jd,          thissync.targetRA,
@@ -479,6 +479,14 @@ bool Align::AlignSync(SyncData globalsync, SyncData thissync)
                              "ALIGNPOINT_CELESTIAL_DE", "ALIGNPOINT_TELESCOPE_RA", "ALIGNPOINT_TELESCOPE_DE"
                            };
 
+    /*syncdata.lst = lst; syncdata.jd = jd;
+    syncdata.targetRA = targetRA;  syncdata.targetDEC = targetDEC;
+    syncdata.telescopeRA = telescopeRA;  syncdata.telescopeDEC = telescopeDEC;
+    IDLog("AlignSync \n");
+    */
+    // add point on sync
+    //alignsyncsw=IUFindSwitch(AlignOptionsSP,"ADDONSYNC");
+    //if (alignsyncsw->s == ISS_ON) {
     syncdata.lst          = thissync.lst;
     syncdata.jd           = thissync.jd;
     syncdata.targetRA     = thissync.targetRA;
@@ -486,9 +494,7 @@ bool Align::AlignSync(SyncData globalsync, SyncData thissync)
     syncdata.telescopeRA  = thissync.telescopeRA;
     syncdata.telescopeDEC = thissync.telescopeDEC;
 
-    if (!pointset->AddPoint(syncdata, nullptr))
-        return false;
-
+    pointset->AddPoint(syncdata, nullptr);
     DEBUGF(INDI::Logger::DBG_SESSION,
            "Align Sync: point added: lst=%.8f celestial RA %.8f DEC %.8f Telescope RA %.8f DEC %.8f", syncdata.lst,
            syncdata.targetRA, syncdata.targetDEC, syncdata.telescopeRA, syncdata.telescopeDEC);
@@ -503,8 +509,6 @@ bool Align::AlignSync(SyncData globalsync, SyncData thissync)
     IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
     IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
     IDSetNumber(AlignCountNP, nullptr);
-
-    return true;
 }
 
 void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, IGeographicCoordinates *position)
@@ -629,23 +633,21 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
             sw = IUFindOnSwitch(AlignListSP);
             if (!strcmp(sw->name, "ALIGNLISTADD"))
             {
-                if (!pointset->AddPoint(syncdata, nullptr))
-                    AlignCountNP->s = IPS_ALERT;
-                else
-                {
-                    IDMessage(telescope->getDeviceName(), "Align: added point to list");
-                    pointset->setBlobData(AlignDataBP);
-                    // JM 2015-12-10: Disable setting AlignData temporary
-                    //IDSetBLOB(AlignDataBP, nullptr);
-                    IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-                    IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-                }
+                pointset->AddPoint(syncdata, nullptr);
+                IDMessage(telescope->getDeviceName(), "Align: added point to list");
+                ;
+                pointset->setBlobData(AlignDataBP);
+                // JM 2015-12-10: Disable setting AlignData temporary
+                //IDSetBLOB(AlignDataBP, nullptr);
+                IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
+                IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
                 IDSetNumber(AlignCountNP, nullptr);
             }
             else if (!strcmp(sw->name, "ALIGNLISTCLEAR"))
             {
                 pointset->Reset();
                 IDMessage(telescope->getDeviceName(), "Align: list cleared");
+                ;
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);

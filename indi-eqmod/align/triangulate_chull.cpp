@@ -49,37 +49,36 @@ void TriangulateCHull::Reset()
     v->vnum  = vnum++;
 }
 
-bool TriangulateCHull::AddPoint(HtmID id)
+void TriangulateCHull::AddPoint(HtmID id)
 {
     tVertex v, vnext;
     PointSet::Point p;
     tFace f;
     Triangulate::AddPoint(id);
-
+    //fprintf(stderr, "Triangulate addpoint: %ld\n", id);
     p = pmap->at(id);
+    //fprintf(stderr, "Triangulate addpoint: point retrieved %d\n", p.index);
     v       = MakeNullVertex();
     v->v[X] = (int)(p.cx * 1000000);
     v->v[Y] = (int)(p.cy * 1000000);
     v->v[Z] = (int)(p.cz * 1000000);
     v->vnum = vnum++;
+    //fprintf(stderr, "Triangulate addpoint: vertex created %d\n", v->vnum);
     vvertices.push_back(id);
+    //fprintf(stderr, "Triangulate addpoint: vertex added (%d total)\n", vvertices.size());
     if (vnum < 4)
-        return true;
-
+        return;
     if (vnum == 4)
     {
-        if (DoubleTriangle() != 0)
-            return false;
+        DoubleTriangle();
         ConstructHull();
     }
-
     if (vnum > 4)
     {
         vnext = v->next;
         AddOne(v);
         CleanUp(&vnext);
     }
-
     vfaces.clear();
     f = faces;
     do
@@ -95,10 +94,7 @@ bool TriangulateCHull::AddPoint(HtmID id)
                                   vvertices.at(f->vertex[2]->vnum - 1)));
         //fprintf(stderr, "Triangulate addpoint: added face (%d total)\n", vfaces.size());
         f = f->next;
-    }
-    while (f != faces);
-
-    return true;
+    } while (f != faces);
 }
 
 //XMLEle *TriangulateCHull::toXML()
