@@ -24,7 +24,7 @@ class TriangulateCHull : public Triangulate
   public:
     TriangulateCHull(std::map<HtmID, PointSet::Point> *p);
     void Reset();
-    bool AddPoint(HtmID id);
+    void AddPoint(HtmID id);
     //XMLEle *toXML();
 
   private:

@@ -29,11 +29,10 @@ void Triangulate::Reset()
     vfaces.clear();
 }
 
-bool Triangulate::AddPoint(HtmID id)
+void Triangulate::AddPoint(HtmID id)
 {
     INDI_UNUSED(id);
     isvalid = false;
-    return false;
 }
 
 XMLEle *Triangulate::toXML()

@@ -89,7 +89,7 @@ tVertex MakeNullVertex(void);
 void ReadVertices(void);
 void Print(void);
 void SubVec(int a[3], int b[3], int c[3]);
-int DoubleTriangle(void);
+void DoubleTriangle(void);
 void ConstructHull(void);
 bool AddOne(tVertex p);
 int VolumeSign(tFace f, tVertex p);
@@ -126,11 +126,11 @@ main( int argc, char *argv[] )
     if( argv[1][1] ==  'd' ) {
       debug = TRUE;
       check = TRUE;
-      fprintf(stderr, stderr, "Debug and check mode\n");
+      fprintf( stderr, "Debug and check mode\n");
     }
     if( argv[1][1] == 'c' ) {
       check = TRUE;
-      fprintf(stderr, stderr, "Check mode\n");
+      fprintf( stderr, "Check mode\n");
     }
   }
   else if ( argc > 1 && argv[1][0] != '-' ) {
@@ -153,11 +153,11 @@ tVertex MakeNullVertex(void)
 {
     tVertex v;
 
-    NEW(v, tsVertex)
+    NEW(v, tsVertex);
     v->duplicate = NULL;
     v->onhull    = !ONHULL;
     v->mark      = !PROCESSED;
-    ADD(vertices, v)
+    ADD(vertices, v);
 
     return v;
 }
@@ -183,7 +183,7 @@ void ReadVertices(void)
         v->vnum = vnum++;
         if ((abs(x) > SAFE) || (abs(y) > SAFE) || (abs(z) > SAFE))
         {
-            fprintf(stderr,"Coordinate of vertex below might be too large: run with -d flag\n");
+            printf("Coordinate of vertex below might be too large: run with -d flag\n");
             PrintPoint(v);
         }
     }
@@ -231,10 +231,10 @@ void Print(void)
     } while (v != vertices);
 
     /* PostScript header */
-    fprintf(stderr,"%%!PS\n");
-    fprintf(stderr,"%%%%BoundingBox: %d %d %d %d\n", xmin, ymin, xmax, ymax);
-    fprintf(stderr,".00 .00 setlinewidth\n");
-    fprintf(stderr,"%d %d translate\n", -xmin + 72, -ymin + 72);
+    printf("%%!PS\n");
+    printf("%%%%BoundingBox: %d %d %d %d\n", xmin, ymin, xmax, ymax);
+    printf(".00 .00 setlinewidth\n");
+    printf("%d %d translate\n", -xmin + 72, -ymin + 72);
     /* The +72 shifts the figure one inch from the lower left corner */
 
     /* Vertices. */
@@ -245,11 +245,11 @@ void Print(void)
             V++;
         v = v->next;
     } while (v != vertices);
-    fprintf(stderr,"\n%%%% Vertices:\tV = %d\n", V);
-    fprintf(stderr,"%%%% index:\tx\ty\tz\n");
+    printf("\n%%%% Vertices:\tV = %d\n", V);
+    printf("%%%% index:\tx\ty\tz\n");
     do
     {
-        fprintf(stderr,"%%%% %5d:\t%d\t%d\t%d\n", v->vnum, v->v[X], v->v[Y], v->v[Z]);
+        printf("%%%% %5d:\t%d\t%d\t%d\n", v->vnum, v->v[X], v->v[Y], v->v[Z]);
         v = v->next;
     } while (v != vertices);
 
@@ -261,8 +261,8 @@ void Print(void)
         ++F;
         f = f->next;
     } while (f != faces);
-    fprintf(stderr,"\n%%%% Faces:\tF = %d\n", F);
-    fprintf(stderr,"%%%% Visible faces only: \n");
+    printf("\n%%%% Faces:\tF = %d\n", F);
+    printf("%%%% Visible faces only: \n");
     do
     {
         /* Print face only if it is visible: if normal vector >= 0 */
@@ -270,22 +270,22 @@ void Print(void)
         SubVec(f->vertex[2]->v, f->vertex[1]->v, b);
         if ((a[0] * b[1] - a[1] * b[0]) >= 0)
         {
-            fprintf(stderr,"%%%% vnums:  %d  %d  %d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
-            fprintf(stderr,"newpath\n");
-            fprintf(stderr,"%d\t%d\tmoveto\n", f->vertex[0]->v[X], f->vertex[0]->v[Y]);
-            fprintf(stderr,"%d\t%d\tlineto\n", f->vertex[1]->v[X], f->vertex[1]->v[Y]);
-            fprintf(stderr,"%d\t%d\tlineto\n", f->vertex[2]->v[X], f->vertex[2]->v[Y]);
-            fprintf(stderr,"closepath stroke\n\n");
+            printf("%%%% vnums:  %d  %d  %d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
+            printf("newpath\n");
+            printf("%d\t%d\tmoveto\n", f->vertex[0]->v[X], f->vertex[0]->v[Y]);
+            printf("%d\t%d\tlineto\n", f->vertex[1]->v[X], f->vertex[1]->v[Y]);
+            printf("%d\t%d\tlineto\n", f->vertex[2]->v[X], f->vertex[2]->v[Y]);
+            printf("closepath stroke\n\n");
         }
         f = f->next;
     } while (f != faces);
 
     /* prints a list of all faces */
-    fprintf(stderr,"%%%% List of all faces: \n");
-    fprintf(stderr,"%%%%\tv0\tv1\tv2\t(vertex indices)\n");
+    printf("%%%% List of all faces: \n");
+    printf("%%%%\tv0\tv1\tv2\t(vertex indices)\n");
     do
     {
-        fprintf(stderr,"%%%%\t%d\t%d\t%d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
+        printf("%%%%\t%d\t%d\t%d\n", f->vertex[0]->vnum, f->vertex[1]->vnum, f->vertex[2]->vnum);
         f = f->next;
     } while (f != faces);
 
@@ -296,10 +296,10 @@ void Print(void)
         E++;
         e = e->next;
     } while (e != edges);
-    fprintf(stderr,"\n%%%% Edges:\tE = %d\n", E);
+    printf("\n%%%% Edges:\tE = %d\n", E);
     /* Edges not printed out (but easily added). */
 
-    fprintf(stderr,"\nshowpage\n\n");
+    printf("\nshowpage\n\n");
 
     check = TRUE;
     CheckEuler(V, E, F);
@@ -325,7 +325,7 @@ void SubVec(int a[3], int b[3], int c[3])
  3 newfaces to the fourth point are constructed and the data structures
  are cleaned up. 
 ---------------------------------------------------------------------*/
-int DoubleTriangle(void)
+void DoubleTriangle(void)
 {
     tVertex v0, v1, v2, v3;
     tFace f0, f1 = NULL;
@@ -334,13 +334,8 @@ int DoubleTriangle(void)
     /* Find 3 noncollinear points. */
     v0 = vertices;
     while (Collinear(v0, v0->next, v0->next->next))
-    {
         if ((v0 = v0->next) == vertices)
-        {
-            fprintf(stderr, "DoubleTriangle:  All points are Collinear!\n");
-            return -1;
-        }
-    }
+            printf("DoubleTriangle:  All points are Collinear!\n"), exit(0);
     v1 = v0->next;
     v2 = v1->next;
 
@@ -367,10 +362,7 @@ int DoubleTriangle(void)
     while (!vol)
     {
         if ((v3 = v3->next) == v0)
-        {
-            fprintf(stderr,"DoubleTriangle:  All points are coplanar!\n");
-            return -1;
-        }
+            printf("DoubleTriangle:  All points are coplanar!\n"), exit(0);
         vol = VolumeSign(f0, v3);
     }
 
@@ -381,7 +373,6 @@ int DoubleTriangle(void)
         fprintf(stderr, "DoubleTriangle: finished. Head repositioned at v3.\n");
         PrintOut(vertices);
     }
-    return 0;
 }
 
 /*---------------------------------------------------------------------
@@ -390,7 +381,8 @@ vertices are those in the list marked as onhull.
 ---------------------------------------------------------------------*/
 void ConstructHull(void)
 {
-    tVertex v, vnext;    
+    tVertex v, vnext;
+    bool changed = FALSE; /* T if addition changes hull; not used. */
 
     v = vertices;
     do
@@ -398,7 +390,8 @@ void ConstructHull(void)
         vnext = v->next;
         if (!v->mark)
         {
-            v->mark = PROCESSED;            
+            v->mark = PROCESSED;
+            changed = AddOne(v);
             CleanUp(&vnext); /* Pass down vnext in case it gets deleted. */
 
             if (check)
@@ -541,7 +534,7 @@ void PrintPoint(tVertex p)
     int i;
 
     for (i = 0; i < 3; i++)
-        fprintf(stderr,"\t%d", p->v[i]);
+        printf("\t%d", p->v[i]);
     putchar('\n');
 }
 
@@ -641,11 +634,11 @@ tEdge MakeNullEdge(void)
 {
     tEdge e;
 
-    NEW(e, tsEdge)
+    NEW(e, tsEdge);
     e->adjface[0] = e->adjface[1] = e->newface = NULL;
     e->endpts[0] = e->endpts[1] = NULL;
     e->delete                   = !REMOVED;
-    ADD(edges, e)
+    ADD(edges, e);
     return e;
 }
 
@@ -659,14 +652,14 @@ tFace MakeNullFace(void)
     tFace f;
     int i;
 
-    NEW(f, tsFace)
+    NEW(f, tsFace);
     for (i = 0; i < 3; ++i)
     {
         f->edge[i]   = NULL;
         f->vertex[i] = NULL;
     }
     f->visible = !VISIBLE;
-    ADD(faces, f)
+    ADD(faces, f);
     return f;
 }
 
@@ -756,7 +749,7 @@ void CleanEdges(void)
     while (edges && edges->delete)
     {
         e = edges;
-        DELETE(edges, e)
+        DELETE(edges, e);
     }
     e = edges->next;
     do
@@ -765,7 +758,7 @@ void CleanEdges(void)
         {
             t = e;
             e = e->next;
-            DELETE(edges, t)
+            DELETE(edges, t);
         }
         else
             e = e->next;
@@ -783,7 +776,7 @@ void CleanFaces(void)
     while (faces && faces->visible)
     {
         f = faces;
-        DELETE(faces, f)
+        DELETE(faces, f);
     }
     f = faces->next;
     do
@@ -792,7 +785,7 @@ void CleanFaces(void)
         {
             t = f;
             f = f->next;
-            DELETE(faces, t)
+            DELETE(faces, t);
         }
         else
             f = f->next;
@@ -827,7 +820,7 @@ void CleanVertices(tVertex *pvnext)
         v = vertices;
         if (v == *pvnext)
             *pvnext = v->next;
-        DELETE(vertices, v)
+        DELETE(vertices, v);
     }
     v = vertices->next;
     do
@@ -838,7 +831,7 @@ void CleanVertices(tVertex *pvnext)
             v = v->next;
             if (t == *pvnext)
                 *pvnext = t->next;
-            DELETE(vertices, t)
+            DELETE(vertices, t);
         }
         else
             v = v->next;
