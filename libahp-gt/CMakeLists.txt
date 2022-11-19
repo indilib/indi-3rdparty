@@ -32,7 +32,7 @@ if (UNIX AND NOT WIN32 AND NOT APPLE)
 endif ()
 
 # Install header files
-install (FILES AHP_GT.h DESTINATION include/ahp)
+install (FILES ahp_gt.h DESTINATION include/ahp)
 
 # Install library
 install_imported (TARGETS AHP_GT DESTINATION ${CMAKE_INSTALL_LIBDIR})
