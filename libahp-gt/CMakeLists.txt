@@ -13,20 +13,20 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
-add_library (AHP_GT SHARED IMPORTED)
+add_library (ahp_gt SHARED IMPORTED)
 
-set_target_properties (AHP_GT PROPERTIES VERSION ${AHPGT_VERSION} SOVERSION ${AHPGT_SOVERSION})
+set_target_properties (ahp_gt PROPERTIES VERSION ${AHPGT_VERSION} SOVERSION ${AHPGT_SOVERSION})
 
 if (UNIX AND NOT WIN32 AND NOT APPLE)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set_property (TARGET AHP_GT PROPERTY IMPORTED_LOCATION "libahp_gt.so.armhf")
+    set_property (TARGET ahp_gt PROPERTY IMPORTED_LOCATION "libahp_gt.so.armhf")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set_property (TARGET AHP_GT PROPERTY IMPORTED_LOCATION "libahp_gt.so.arm64")
+    set_property (TARGET ahp_gt PROPERTY IMPORTED_LOCATION "libahp_gt.so.arm64")
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET AHP_GT PROPERTY IMPORTED_LOCATION "libahp_gt.so.amd64")
+    set_property (TARGET ahp_gt PROPERTY IMPORTED_LOCATION "libahp_gt.so.amd64")
   else (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET AHP_GT PROPERTY IMPORTED_LOCATION "libahp_gt.so.i386")
+    set_property (TARGET ahp_gt PROPERTY IMPORTED_LOCATION "libahp_gt.so.i386")
   endif ()
 
 endif ()
@@ -35,4 +35,4 @@ endif ()
 install (FILES ahp_gt.h DESTINATION include/ahp)
 
 # Install library
-install_imported (TARGETS AHP_GT DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install_imported (TARGETS ahp_gt DESTINATION ${CMAKE_INSTALL_LIBDIR})

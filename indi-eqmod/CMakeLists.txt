@@ -22,6 +22,7 @@ endif(CYGWIN)
 option(WITH_ALIGN "Enable Alignment Subsystem" ON)
 option(WITH_ALIGN_GEEHALEL "Enable EQMod Alignment" ON)
 option(WITH_SCOPE_LIMITS "Enable Scope limits" ON)
+option(WITH_AHPGT "Add AHP GT Driver" ON)
 
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
@@ -95,8 +96,8 @@ if(WITH_SCOPE_LIMITS)
 endif(WITH_SCOPE_LIMITS)
 
 ########### AHP GT controllers ###############
-find_package(AHPGT REQUIRED)
 if(WITH_AHPGT)
+    find_package(AHPGT REQUIRED)
     if(AHPGT_FOUND)
         include_directories( ${AHPGT_INCLUDE_DIR})
         set(ahp_gt_CXX_SRCS
