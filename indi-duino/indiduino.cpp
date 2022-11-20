@@ -481,6 +481,7 @@ void indiduino::ISGetProperties(const char *dev)
     INDI::DefaultDevice::ISGetProperties(dev);
 
     configLoaded = 1;
+    INDI_UNUSED(configLoaded);
 
     controller->ISGetProperties(dev);
 }
