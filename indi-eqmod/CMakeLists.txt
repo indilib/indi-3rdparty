@@ -22,10 +22,10 @@ endif(CYGWIN)
 option(WITH_ALIGN "Enable Alignment Subsystem" ON)
 option(WITH_ALIGN_GEEHALEL "Enable EQMod Alignment" ON)
 option(WITH_SCOPE_LIMITS "Enable Scope limits" ON)
-option(WITH_AHP_GT "Install AHP GT Controllers Driver" On)
+option(WITH_AHP_GT "Install AHP GT Controllers Driver" ON)
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(WITH_AHP_GT Off)
+    set(WITH_AHP_GT OFF)
 ENDIF()
 
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
@@ -100,7 +100,7 @@ if(WITH_SCOPE_LIMITS)
 endif(WITH_SCOPE_LIMITS)
 
 ########### AHP GT controllers ###############
-if(WITH_AHPGT)
+if(WITH_AHP_GT)
     find_package(AHPGT REQUIRED)
     if(AHPGT_FOUND)
         include_directories( ${AHPGT_INCLUDE_DIR})
@@ -149,7 +149,7 @@ if(WITH_AHPGT)
 
         install(TARGETS indi_ahp_gt RUNTIME DESTINATION bin )
     endif(AHPGT_FOUND)
-endif(WITH_AHPGT)
+endif(WITH_AHP_GT)
 ########### AZ GTi ###############
 set(azgti_CXX_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/azgti.cpp
