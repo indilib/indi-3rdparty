@@ -22,6 +22,11 @@ endif(CYGWIN)
 option(WITH_ALIGN "Enable Alignment Subsystem" ON)
 option(WITH_ALIGN_GEEHALEL "Enable EQMod Alignment" ON)
 option(WITH_SCOPE_LIMITS "Enable Scope limits" ON)
+option(WITH_AHP_GT "Install AHP GT Controllers Driver" On)
+
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(WITH_AHP_GT Off)
+ENDIF()
 
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
