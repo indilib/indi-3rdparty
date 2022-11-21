@@ -7,7 +7,7 @@
     See https://www.iliaplatone.com/gt1 for more information
 */
 
-#include "indi_ahp_gt.h"
+#include "ahpgtbase.h"
 #include <ahp_gt.h>
 
 #include "indicom.h"
@@ -15,18 +15,16 @@
 #include <cmath>
 #include <memory>
 
-static std::unique_ptr<AHPGT> ahp_gt(new AHPGT());
-
-AHPGT::AHPGT()
+AHPGTBase::AHPGTBase() : EQMod()
 {
 }
 
-bool AHPGT::Disconnect()
+bool AHPGTBase::Disconnect()
 {
     return EQMod::Disconnect();
 }
 
-bool AHPGT::Handshake()
+bool AHPGTBase::Handshake()
 {
     if(EQMod::Handshake()) {
         ahp_gt_select_device(0);
@@ -46,7 +44,7 @@ bool AHPGT::Handshake()
     return false;
 }
 
-bool AHPGT::initProperties()
+bool AHPGTBase::initProperties()
 {
     EQMod::initProperties();
     for (auto oneProperty : *getProperties())
@@ -121,7 +119,7 @@ bool AHPGT::initProperties()
     return true;
 }
 
-void AHPGT::ISGetProperties(const char *dev)
+void AHPGTBase::ISGetProperties(const char *dev)
 {
     EQMod::ISGetProperties(dev);
     if (isConnected())
@@ -141,7 +139,7 @@ void AHPGT::ISGetProperties(const char *dev)
     }
 }
 
-bool AHPGT::updateProperties()
+bool AHPGTBase::updateProperties()
 {
     EQMod::updateProperties();
 
@@ -233,7 +231,7 @@ bool AHPGT::updateProperties()
     return true;
 }
 
-bool AHPGT::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if(!strcmp(dev, getDeviceName())) {
         if(!strcmp(GTRAConfigurationNP.name, name)) {
@@ -266,7 +264,7 @@ bool AHPGT::ISNewNumber(const char *dev, const char *name, double values[], char
     return EQMod::ISNewNumber(dev, name, values, names, n);
 }
 
-bool AHPGT::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if(!strcmp(dev, getDeviceName())) {
         if(!strcmp(GTMountConfigSP.name, name)) {
@@ -337,7 +335,7 @@ bool AHPGT::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     return EQMod::ISNewSwitch(dev, name, states, names, n);
 }
 
-const char *AHPGT::getDefaultName()
+const char *AHPGTBase::getDefaultName()
 {
     return "AHP GT Mount";
 }

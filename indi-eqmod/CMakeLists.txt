@@ -105,7 +105,8 @@ if(WITH_AHP_GT)
     if(AHPGT_FOUND)
         include_directories( ${AHPGT_INCLUDE_DIR})
         set(ahp_gt_CXX_SRCS
-           ${CMAKE_CURRENT_SOURCE_DIR}/ahp_gt.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgt.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgtbase.cpp
            ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
            ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
            ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)

@@ -12,10 +12,10 @@
 */
 
 /** \file indi_ahp_gt.h
-    \brief Driver for the GT1 Telescope motor controller.
+    \brief Driver for the GT Telescope motor controllers.
     \author Ilia Platone
 
-    AHP GT1 Telescope stepper motor GOTO controller.
+    AHP GT Telescope stepper motor GOTO controllers.
 */
 
 #pragma once
@@ -24,10 +24,10 @@
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
 
-class AHPGT : public EQMod
+class AHPGTBase : public EQMod
 {
     public:
-        AHPGT();
+        AHPGTBase();
         bool initProperties() override;
         bool updateProperties() override;
         const char *getDefaultName() override;
