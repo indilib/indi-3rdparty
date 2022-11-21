@@ -488,7 +488,7 @@ bool AAGCloudWatcher::heatingAlgorithm()
         // Check desired temperature and act accordingly
         // Obtain the difference in temperature and modifier
         float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
-        float refreshModifier = sqrt(WI::UpdatePeriodNP[0].getValue() / 10.0);
+        float refreshModifier = sqrt(getCurrentPollingPeriod() / 10000.0);
         float modifier        = 1;
 
         if (dif > 8)
