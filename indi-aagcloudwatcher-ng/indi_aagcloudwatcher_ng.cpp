@@ -359,12 +359,6 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
     return false;
 }
 
-float AAGCloudWatcher::getRefreshPeriod()
-{
-    // XXX: The WEATHER_UPDATE property is defined / deleted when connection status changes, so we just retrieve it from here.
-    return UpdatePeriodN[0].value;
-}
-
 float AAGCloudWatcher::getLastReadPeriod()
 {
     return lastReadPeriod;
@@ -391,13 +385,11 @@ bool AAGCloudWatcher::heatingAlgorithm()
     float ambient                  = getNumberValueFromVector(sensors, "ambientTemperatureSensor");
     float rainSensorTemperature    = getNumberValueFromVector(sensors, "rainSensorTemperature");
 
-    float refresh = getRefreshPeriod();
-
     // XXX FIXME: when the automatic refresh is disabled the refresh period is set to 0, however we can be called in a manual fashion.
     // this is needed as we divide by refresh later...
-    if (refresh < 3)
+    if (WI::UpdatePeriodNP[0].getValue() < 3)
     {
-        refresh = 3;
+        WI::UpdatePeriodNP[0].setValue(3);
     }
 
     if (globalRainSensorHeater == -1)
@@ -495,7 +487,7 @@ bool AAGCloudWatcher::heatingAlgorithm()
         // Check desired temperature and act accordingly
         // Obtain the difference in temperature and modifier
         float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
-        float refreshModifier = sqrt(refresh / 10.0);
+        float refreshModifier = sqrt(WI::UpdatePeriodNP[0].getValue() / 10.0);
         float modifier        = 1;
 
         if (dif > 8)

@@ -292,6 +292,8 @@ int AUXCommand::responseDataSize()
             case MC_SEEK_DONE:
             case MC_LEVEL_DONE:
             case MC_POLL_CORDWRAP:
+            case MC_AUX_GUIDE:
+            case MC_AUX_GUIDE_ACTIVE:
                 return 1;
             case MC_GOTO_FAST:
             case MC_SET_POSITION:
