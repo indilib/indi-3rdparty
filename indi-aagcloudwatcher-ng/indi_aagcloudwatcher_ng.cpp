@@ -387,9 +387,10 @@ bool AAGCloudWatcher::heatingAlgorithm()
 
     // XXX FIXME: when the automatic refresh is disabled the refresh period is set to 0, however we can be called in a manual fashion.
     // this is needed as we divide by refresh later...
-    if (WI::UpdatePeriodNP[0].getValue() < 3)
+    if (getCurrentPollingPeriod() < 3000)
     {
-        WI::UpdatePeriodNP[0].setValue(3);
+        setCurrentPollingPeriod(3000);
+        SetTimer(getCurrentPollingPeriod());
     }
 
     if (globalRainSensorHeater == -1)
