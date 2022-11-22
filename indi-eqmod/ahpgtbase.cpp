@@ -53,8 +53,8 @@ bool AHPGTBase::initProperties()
     }
 
     IUFillNumber(&GTRAConfigurationN[GT_MOTOR_STEPS], "GT_MOTOR_STEPS", "Motor steps", "%.0f", 1, 1000, 1, 200);
-    IUFillNumber(&GTRAConfigurationN[GT_MOTOR_TEETH], "GT_MOTOR_TEETH", "Motor teeth", "%.3f", 1, 100000, 1, 1);
-    IUFillNumber(&GTRAConfigurationN[GT_WORM_TEETH], "GT_WORM_TEETH", "Worm teeth", "%.3f", 1, 100000, 1, 4);
+    IUFillNumber(&GTRAConfigurationN[GT_MOTOR_TEETH], "GT_MOTOR_TEETH", "Motor teeth", "%.0f", 1, 100000, 1, 1);
+    IUFillNumber(&GTRAConfigurationN[GT_WORM_TEETH], "GT_WORM_TEETH", "Worm teeth", "%.0f", 1, 100000, 1, 4);
     IUFillNumber(&GTRAConfigurationN[GT_CROWN_TEETH], "GT_CROWN_TEETH", "Crown teeth", "%.0f", 1, 100000, 1, 180);
     IUFillNumber(&GTRAConfigurationN[GT_MAX_SPEED], "GT_MAX_SPEED", "Max speed", "%.0f", 1, 1000, 1, 800);
     IUFillNumber(&GTRAConfigurationN[GT_ACCELERATION], "GT_ACCELERATION", "Acceleration (deg)", "%.1f", 1, 20, 0.1, 1.0);
@@ -81,8 +81,8 @@ bool AHPGTBase::initProperties()
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     IUFillNumber(&GTDEConfigurationN[GT_MOTOR_STEPS], "GT_MOTOR_STEPS", "Motor steps", "%.0f", 1, 1000, 1, 200);
-    IUFillNumber(&GTDEConfigurationN[GT_MOTOR_TEETH], "GT_MOTOR_TEETH", "Motor teeth", "%.3f", 1, 100000, 1, 1);
-    IUFillNumber(&GTDEConfigurationN[GT_WORM_TEETH], "GT_WORM_TEETH", "Worm teeth", "%.3f", 1, 100000, 1, 4);
+    IUFillNumber(&GTDEConfigurationN[GT_MOTOR_TEETH], "GT_MOTOR_TEETH", "Motor teeth", "%.0f", 1, 100000, 1, 1);
+    IUFillNumber(&GTDEConfigurationN[GT_WORM_TEETH], "GT_WORM_TEETH", "Worm teeth", "%.0f", 1, 100000, 1, 4);
     IUFillNumber(&GTDEConfigurationN[GT_CROWN_TEETH], "GT_CROWN_TEETH", "Crown teeth", "%.0f", 1, 100000, 1, 180);
     IUFillNumber(&GTDEConfigurationN[GT_MAX_SPEED], "GT_MAX_SPEED", "Max speed", "%.0f", 1, 1000, 1, 800);
     IUFillNumber(&GTDEConfigurationN[GT_ACCELERATION], "GT_ACCELERATION", "Acceleration (deg)", "%.1f", 1, 20, 0.1, 1.0);
