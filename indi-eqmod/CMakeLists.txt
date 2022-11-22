@@ -134,21 +134,21 @@ if(WITH_AHP_GT)
             ENABLE_UNITY_BUILD(ahp_gt_cxx ahp_gt_CXX_SRCS 10 cpp)
         ENDIF ()
 
-        add_executable(indi_ahp_gt ${ahp_gt_C_SRCS} ${ahp_gt_CXX_SRCS})
+        add_executable(indi_ahpgt_telescope ${ahp_gt_C_SRCS} ${ahp_gt_CXX_SRCS})
 
         if(WITH_ALIGN)
-          target_link_libraries(indi_ahp_gt ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
+          target_link_libraries(indi_ahpgt_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
         else(WITH_ALIGN)
-          target_link_libraries(indi_ahp_gt ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
+          target_link_libraries(indi_ahpgt_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
         endif(WITH_ALIGN)
 
-        target_link_libraries(indi_ahp_gt ${AHPGT_LIBRARIES})
+        target_link_libraries(indi_ahpgt_telescope ${AHPGT_LIBRARIES})
 
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-        target_link_libraries(indi_ahp_gt rt)
+        target_link_libraries(indi_ahpgt_telescope rt)
         endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
-        install(TARGETS indi_ahp_gt RUNTIME DESTINATION bin )
+        install(TARGETS indi_ahpgt_telescope RUNTIME DESTINATION bin )
     endif(AHPGT_FOUND)
 endif(WITH_AHP_GT)
 ########### AZ GTi ###############
