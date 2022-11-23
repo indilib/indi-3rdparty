@@ -24,6 +24,8 @@
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
 
+using namespace INDI;
+
 class AHPGTBase : public EQMod
 {
     public:
@@ -82,34 +84,23 @@ class AHPGTBase : public EQMod
         };
 
         // Telescope & guider aperture and focal length
-        INumber GTRAConfigurationN[GT_AXIS_N_PARAMS];
-        INumberVectorProperty GTRAConfigurationNP;
-        ISwitch GTRASteppingModeS[GT_N_STEPPING_MODE];
-        ISwitchVectorProperty GTRASteppingModeSP;
-        ISwitch GTRAWindingS[GT_N_WINDING_MODE];
-        ISwitchVectorProperty GTRAWindingSP;
-        ISwitch GTRAInvertAxisS[GT_N_INVERSION];
-        ISwitchVectorProperty GTRAInvertAxisSP;
-        ISwitch GTRAGPIOConfigS[GT_N_GPIO_CONFIG];
-        ISwitchVectorProperty GTRAGPIOConfigSP;
 
-        INumber GTDEConfigurationN[GT_AXIS_N_PARAMS];
-        INumberVectorProperty GTDEConfigurationNP;
-        ISwitch GTDESteppingModeS[GT_N_STEPPING_MODE];
-        ISwitchVectorProperty GTDESteppingModeSP;
-        ISwitch GTDEWindingS[GT_N_WINDING_MODE];
-        ISwitchVectorProperty GTDEWindingSP;
-        ISwitch GTDEInvertAxisS[GT_N_INVERSION];
-        ISwitchVectorProperty GTDEInvertAxisSP;
-        ISwitch GTDEGPIOConfigS[GT_N_GPIO_CONFIG];
-        ISwitchVectorProperty GTDEGPIOConfigSP;
+        PropertyNumber GTRAConfigurationNP{GT_AXIS_N_PARAMS};
+        PropertySwitch GTRASteppingModeSP{GT_N_STEPPING_MODE};
+        PropertySwitch GTRAWindingSP{GT_N_WINDING_MODE};
+        PropertySwitch GTRAInvertAxisSP{GT_N_INVERSION};
+        PropertySwitch GTRAGPIOConfigSP{GT_N_GPIO_CONFIG};
 
-        ISwitch GTMountConfigS[3];
-        ISwitchVectorProperty GTMountConfigSP;
-        INumber GTConfigurationN[GT_N_PARAMS];
-        INumberVectorProperty GTConfigurationNP;
-        INumber GTProgressN[1];
-        INumberVectorProperty GTProgressNP;
+        PropertyNumber GTDEConfigurationNP{GT_AXIS_N_PARAMS};
+        PropertySwitch GTDESteppingModeSP{GT_N_STEPPING_MODE};
+
+        PropertySwitch GTDEWindingSP{GT_N_WINDING_MODE};
+        PropertySwitch GTDEInvertAxisSP{GT_N_INVERSION};
+        PropertySwitch GTDEGPIOConfigSP{GT_N_GPIO_CONFIG};
+
+        PropertySwitch GTMountConfigSP{3};
+        PropertyNumber GTConfigurationNP{GT_N_PARAMS};
+        PropertyNumber GTProgressNP{1};
 
         int progress { 0 };
         int write_finished { 1 };
