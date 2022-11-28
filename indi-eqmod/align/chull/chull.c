@@ -383,7 +383,7 @@ void ConstructHull(void)
 {
     tVertex v, vnext;
     bool changed = FALSE; /* T if addition changes hull; not used. */
-
+    (void)changed;
     v = vertices;
     do
     {

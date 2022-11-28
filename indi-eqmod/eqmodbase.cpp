@@ -1020,10 +1020,8 @@ bool EQMod::ReadScopeStatus()
                         }
                         else
                         {
-                            ISState state;
                             sw    = IUFindOnSwitch(TrackDefaultSP);
                             name  = sw->name;
-                            state = ISS_ON;
                             mount->StartRATracking(GetDefaultRATrackRate());
                             mount->StartDETracking(GetDefaultDETrackRate());
 
@@ -1769,7 +1767,6 @@ bool EQMod::gotoInProgress()
 bool EQMod::Goto(double r, double d)
 {
     double juliandate;
-    double lst;
 #ifdef WITH_SCOPE_LIMITS
     INDI::IEquatorialCoordinates gotoradec;
     INDI::IHorizontalCoordinates gotoaltaz;
@@ -1787,7 +1784,6 @@ bool EQMod::Goto(double r, double d)
     }
 
     juliandate = getJulianDate();
-    lst        = getLst(juliandate, getLongitude());
 
 #ifdef WITH_SCOPE_LIMITS
     gotoradec.rightascension  = r;

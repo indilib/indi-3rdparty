@@ -332,7 +332,8 @@ int fx2_ram_download (libusb_device_handle *h, char *filename, unsigned char ext
     
     struct stat filbuf;
     int filsz;
-    
+    (void)len;
+    (void)filsz;
     fp1 = fopen(filename, "rb");
     if ( !fp1 ) {
         snprintf(errmsg, MAXRBUF, "Error: File %s does not exist", filename);

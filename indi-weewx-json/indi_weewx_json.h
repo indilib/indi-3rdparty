@@ -25,44 +25,44 @@
 
 #pragma once
 
-#include <indiweather.h>
-#include <indipropertytext.h>
-#include <json.h>
+#include <libindi/indiweather.h>
+#include <libindi/indipropertytext.h>
+#include <libindi/json.h>
 
 using json = nlohmann::json;
 
 class WeewxJSON : public INDI::Weather
 {
-    public:
-        WeewxJSON();
-        virtual ~WeewxJSON();
+  public:
+    WeewxJSON();
+    virtual ~WeewxJSON();
 
-        //  Generic indi device entries
-        bool Connect() override;
-        bool Disconnect() override;
-        const char *getDefaultName() override;
+    //  Generic indi device entries
+    bool Connect() override;
+    bool Disconnect() override;
+    const char *getDefaultName() override;
 
-        virtual bool initProperties() override;
-        bool updateProperties() override;
-        virtual void ISGetProperties(const char *dev) override;
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool initProperties() override;
+    bool updateProperties() override;
+    virtual void ISGetProperties(const char *dev) override;
+    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
-    protected:
-        void handleTemperatureData(json value, std::string key);
-        void handleRawData(json value, std::string key);
-        void handleBarometerData(json value, std::string key);
-        void handleWindSpeedData(json value, std::string key);
-        void handleRainRateData(json value, std::string key);
-        void handleWeatherData(json value);
+  protected:
+    void handleTemperatureData(json value, std::string key);
+    void handleRawData(json value, std::string key);
+    void handleBarometerData(json value, std::string key);
+    void handleWindSpeedData(json value, std::string key);
+    void handleRainRateData(json value, std::string key);
+    void handleWeatherData(json value);
 
-        virtual IPState updateWeather() override;
+    virtual IPState updateWeather() override;
 
-        virtual bool saveConfigItems(FILE *fp) override;
+    virtual bool saveConfigItems(FILE *fp) override;
 
-    private:
-        INDI::PropertyText weewxJsonUrl{ 1 };
-        enum
-        {
-            WEEWX_URL,
-        };
+  private:
+    INDI::PropertyText weewxJsonUrl{ 1 };
+    enum
+    {
+        WEEWX_URL,
+    };
 };

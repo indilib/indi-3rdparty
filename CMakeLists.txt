@@ -84,9 +84,10 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsvbony DIR9_FOUND)
             STRING(FIND ${SOURCE_FILE} libahp-xc DIR10_FOUND)
+            STRING(FIND ${SOURCE_FILE} libahp-gt DIR11_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
-                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND})
+                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND} OR NOT ${DIR11_FOUND})
                 LIST(REMOVE_ITEM ALL_SOURCE_FILES ${SOURCE_FILE})
             ENDIF ()
         ENDFOREACH ()
@@ -147,6 +148,7 @@ option(WITH_TALON6 "Install Talon6 Mount Driver" On)
 option(WITH_PENTAX "Install Pentax Driver" On)
 option(WITH_ASTROLINK4 "Install AstroLink4 Driver" On)
 option(WITH_AHP_XC "Install AHP XC Correlators Driver" On)
+option(WITH_AHP_GT "Install AHP GT Controllers Driver" On)
 option(WITH_ORION_SSG3 "Install Orion StarShoot G3 Driver" On)
 option(WITH_SVBONY "Install SVBONY Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
@@ -191,8 +193,6 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_AHP_XC Off)
-    # JM 2022.11.27: Disable MI driver on MacOs until library issue with Craft is fixed.
-    SET(WITH_MI Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -267,6 +267,11 @@ endif (WITH_PENTAX)
 if (WITH_AHP_XC)
 add_subdirectory(libahp-xc)
 endif(WITH_AHP_XC)
+
+# libahp-gt
+if (WITH_AHP_GT)
+add_subdirectory(libahp-gt)
+endif(WITH_AHP_GT)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
