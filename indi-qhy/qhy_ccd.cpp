@@ -949,6 +949,11 @@ bool QHYCCD::Connect()
         for (int i = 0; i < 3; i++)
         {
             ret = IsQHYCCDCFWPlugged(m_CameraHandle);
+
+            // Add yet another check
+            if (ret != QHYCCD_SUCCESS)
+                ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CFWPORT);
+
             if (ret == QHYCCD_SUCCESS)
             {
                 HasFilters = true;
@@ -983,7 +988,7 @@ bool QHYCCD::Connect()
                 break;
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
         }
 
         if (HasFilters == true)
