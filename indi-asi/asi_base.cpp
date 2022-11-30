@@ -248,15 +248,6 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
 
         if (status == ASI_EXP_FAILED)
         {
-            // JM 2020-02-17 Special hack for older ASI120 and ASI130 cameras (USB 2.0)
-            // that fail on 16bit images.
-            if (getImageType() == ASI_IMG_RAW16 &&
-                    (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
-            {
-                LOG_INFO("Switching to 8-bit video.");
-                setVideoFormat(ASI_IMG_RAW8);
-            }
-
             if (++mExposureRetry < MAX_EXP_RETRIES)
             {
                 LOG_DEBUG("ASIGetExpStatus failed. Restarting exposure...");
@@ -898,10 +889,10 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             auto result = setVideoFormat(targetIndex);
             if (result)
             {
-                CaptureFormatSP.reset();
-                CaptureFormatSP[targetIndex].setState(ISS_ON);
-                CaptureFormatSP.setState(IPS_OK);
-                CaptureFormatSP.apply();
+                VideoFormatSP.reset();
+                VideoFormatSP[targetIndex].setState(ISS_ON);
+                VideoFormatSP.setState(IPS_OK);
+                VideoFormatSP.apply();
             }
             return true;
         }
@@ -912,11 +903,28 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
 bool ASIBase::setVideoFormat(uint8_t index)
 {
+    auto currentFormat = getImageType();
+    // If requested type is 16bit but we are already on 8bit and camera is 120, then ignore request
+    if (currentFormat != ASI_IMG_RAW16 && index == ASI_IMG_RAW16 && (strstr(getDeviceName(), "ASI120")
+            || (strstr(getDeviceName(), "ASI130"))))
+    {
+        VideoFormatSP.reset();
+        VideoFormatSP[currentFormat].setState(ISS_ON);
+        VideoFormatSP.setState(IPS_OK);
+        VideoFormatSP.apply();
+        return false;
+    }
+
     if (index == VideoFormatSP.findOnSwitchIndex())
         return true;
 
     VideoFormatSP.reset();
-    VideoFormatSP[index].setState(ISS_ON);
+
+    // JM 2022-11-30 Always set ASI120 to 8bit if target was 16bit since 16bit is not supported.
+    if (index == ASI_IMG_RAW16 && (strstr(getDeviceName(), "ASI120") || (strstr(getDeviceName(), "ASI130"))))
+        VideoFormatSP[ASI_IMG_RAW8].setState(ISS_ON);
+    else
+        VideoFormatSP[index].setState(ISS_ON);
 
     switch (getImageType())
     {
