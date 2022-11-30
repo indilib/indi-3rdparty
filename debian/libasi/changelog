@@ -1,3 +1,12 @@
+libasi (1.27) jammy; urgency=medium
+
+  * ASI Camera SDK 1.27 release. Changelog:
+    V1.27 2022.11.28
+    (1) Add ASI220 Mini ASI461MM
+    (2) Some optimizations have been made    
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 30 Nov 2022 18:00:00 +0300
+
 libasi (1.26) jammy; urgency=medium
 
   * ASI Camera SDK 1.26 release. Changelog:
