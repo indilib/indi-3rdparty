@@ -34,6 +34,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${LIBCAMERA_INCLUDE_DIRS})
 include_directories( ${CFITSIO_INCLUDE_DIR})
+include_directories( libcamera-apps/)
 
 include(CMakeCommon)
 

@@ -166,8 +166,8 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
 void INDILibCamera::shutdownExposure()
 {
     m_StillApp->StopCamera();
-    m_StillApp->Teardown();
-    m_StillApp->CloseCamera();
+    //m_StillApp->Teardown();
+    //m_StillApp->CloseCamera();
     PrimaryCCD.setExposureFailed();
 }
 
@@ -175,6 +175,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 {
     //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
     auto options = static_cast<StillOptions *>(m_StillApp->GetOptions());
+    options->Print();
     //options->Parse(0, nullptr);
     options->nopreview = true;
     options->immediate = true;
