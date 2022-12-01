@@ -114,6 +114,7 @@ public:
 	Stream *VideoStream(StreamInfo *info = nullptr) const;
 	Stream *LoresStream(StreamInfo *info = nullptr) const;
 	Stream *GetMainStream() const;
+	CameraManager *GetCameraManager() const;
 
 	std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
 

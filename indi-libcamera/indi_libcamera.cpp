@@ -186,7 +186,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     try
     {
-        m_StillApp->OpenCamera();
+        //m_StillApp->OpenCamera();
         m_StillApp->ConfigureStill(still_flags);
         m_StillApp->StartCamera();
     }
@@ -411,6 +411,7 @@ INDILibCamera::INDILibCamera()
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
+    m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -495,11 +496,15 @@ bool INDILibCamera::updateProperties()
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-static std::unique_ptr<LibcameraApp::CameraManager> cameraManager(new LibcameraApp::CameraManager());
+// static std::unique_ptr<LibcameraApp::CameraManager> cameraManager(new LibcameraApp::CameraManager());
 
 void INDILibCamera::detectCameras()
 {
-    cameraManager->start();
+    
+    m_StillApp->OpenCamera();
+    libcamera::CameraManager *cameraManager = m_StillApp->GetCameraManager();
+
+    //cameraManager->start();
     auto cameras = cameraManager->cameras();
     // Do not show USB webcams as these are not supported in libcamera-apps!
     auto rem = std::remove_if(cameras.begin(), cameras.end(),
@@ -547,7 +552,6 @@ bool INDILibCamera::Connect()
 {
     try
     {
-        m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
 
         auto stillOptions = static_cast<StillOptions *>(m_StillApp->GetOptions());
         //stillOptions->Parse(0, nullptr);
@@ -561,13 +565,13 @@ bool INDILibCamera::Connect()
         PrimaryCCD.setResolution(1920,1080);
         PrimaryCCD.setPixelSize(2.55, 2.55);
 
-        m_VideoApp.reset(new LibcameraEncoder());
+/*        m_VideoApp.reset(new LibcameraEncoder());
         VideoOptions* videoOptions = m_VideoApp->GetOptions();
         videoOptions->nopreview = true;
         videoOptions->width = 1920;
         videoOptions->height = 1080;
         videoOptions->camera = CameraSP.findOnSwitchIndex();
-        //m_VideoApp->OpenCamera();
+        //m_VideoApp->OpenCamera();*/
 
         return true;
     }

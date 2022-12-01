@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "indipropertyswitch.h"
+//#include "indipropertyswitch.h"
 //#include "indipropertynumber.h"
 //#include "indipropertytext.h"
 #include "indisinglethreadpool.h"
