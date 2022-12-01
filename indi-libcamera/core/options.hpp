@@ -40,6 +40,7 @@ struct Options
 	{
 		using namespace boost::program_options;
 		// clang-format off
+        // return;
 		options_.add_options()
 			("help,h", value<bool>(&help)->default_value(false)->implicit_value(true),
 			 "Print this help message")

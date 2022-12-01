@@ -70,9 +70,11 @@ struct StillOptions : public Options
 	std::string metadata;
 
 	virtual bool Parse(int argc, char *argv[]) override
-	{
-		if (Options::Parse(argc, argv) == false)
-			return false;
+    {
+        char *s = "";
+        // argv = &s;
+        if (Options::Parse(argc, argv) == false)
+            return false;
 		if ((keypress || signal) && timelapse)
 			throw std::runtime_error("keypress/signal and timelapse options are mutually exclusive");
 		if (strcasecmp(thumb.c_str(), "none") == 0)

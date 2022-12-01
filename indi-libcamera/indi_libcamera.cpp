@@ -50,7 +50,7 @@ void INDILibCamera::shutdownVideo()
     m_VideoApp->StopCamera();
     m_VideoApp->StopEncoder();
     m_VideoApp->Teardown();
-    //m_VideoApp->CloseCamera();
+    m_VideoApp->CloseCamera();
     Streamer->setStream(false);
 }
 
@@ -72,7 +72,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
     try
     {
-        //m_VideoApp->OpenCamera();
+        m_VideoApp->OpenCamera();
         m_VideoApp->ConfigureVideo(LibcameraEncoder::FLAG_VIDEO_JPEG_COLOURSPACE);
         m_VideoApp->StartEncoder();
         m_VideoApp->StartCamera();
@@ -165,7 +165,7 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
 
 void INDILibCamera::shutdownExposure()
 {
-    // m_StillApp->StopCamera();
+    m_StillApp->StopCamera();
     m_StillApp->Teardown();
     m_StillApp->CloseCamera();
     PrimaryCCD.setExposureFailed();
@@ -186,7 +186,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
     try
     {
-        //m_StillApp->OpenCamera();
+        m_StillApp->OpenCamera();
         m_StillApp->ConfigureStill(still_flags);
         m_StillApp->StartCamera();
     }
@@ -495,9 +495,10 @@ bool INDILibCamera::updateProperties()
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
+static std::unique_ptr<LibcameraApp::CameraManager> cameraManager(new LibcameraApp::CameraManager());
+
 void INDILibCamera::detectCameras()
 {
-    std::unique_ptr<LibcameraApp::CameraManager> cameraManager(new LibcameraApp::CameraManager());
     cameraManager->start();
     auto cameras = cameraManager->cameras();
     // Do not show USB webcams as these are not supported in libcamera-apps!
@@ -515,8 +516,10 @@ void INDILibCamera::detectCameras()
     }
 
     CameraSP.resize(cameras.size());
-    for (size_t i = 0; i < cameras.size(); i++)
+    for (size_t i = 0; i < cameras.size(); i++) {
         CameraSP[i].fill(cameras[i]->id().c_str(), cameras[i]->id().c_str(), ISS_OFF);
+        //cameras[i]->release();
+    }
 
     int onIndex = -1;
     if (IUGetConfigOnSwitchIndex(getDeviceName(), "CAMERAS", &onIndex) == 0)
@@ -524,8 +527,9 @@ void INDILibCamera::detectCameras()
     else
         CameraSP[0].setState(ISS_ON);
 
-    cameraManager->stop();
-    cameraManager.reset();
+    //cameraManager->stop();
+    //cameraManager.release();
+    //cameraManager.reset();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -544,17 +548,26 @@ bool INDILibCamera::Connect()
     try
     {
         m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
-        m_VideoApp.reset(new LibcameraEncoder());
 
         auto stillOptions = static_cast<StillOptions *>(m_StillApp->GetOptions());
-        stillOptions->Parse(0, nullptr);
+        //stillOptions->Parse(0, nullptr);
+        stillOptions->immediate = true;
+        stillOptions->nopreview = true;
+        stillOptions->width = 1920;
+        stillOptions->height = 1080;
         stillOptions->camera = CameraSP.findOnSwitchIndex();
+        //stillOptions->Print();
+        //m_StillApp->OpenCamera();
+        PrimaryCCD.setResolution(1920,1080);
+        PrimaryCCD.setPixelSize(2.55, 2.55);
 
+        m_VideoApp.reset(new LibcameraEncoder());
         VideoOptions* videoOptions = m_VideoApp->GetOptions();
+        videoOptions->nopreview = true;
+        videoOptions->width = 1920;
+        videoOptions->height = 1080;
         videoOptions->camera = CameraSP.findOnSwitchIndex();
-
-        m_StillApp->OpenCamera();
-        m_VideoApp->OpenCamera();
+        //m_VideoApp->OpenCamera();
 
         return true;
     }
