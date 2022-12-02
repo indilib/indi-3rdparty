@@ -49,7 +49,7 @@ void INDILibCamera::shutdownVideo()
 {
     m_VideoApp->StopCamera();
     m_VideoApp->StopEncoder();
-    //m_VideoApp->Teardown();
+    m_VideoApp->Teardown();
     //m_VideoApp->CloseCamera();
     Streamer->setStream(false);
 }
@@ -106,7 +106,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     m_VideoApp->StopCamera();
     m_VideoApp->StopEncoder();
     m_VideoApp->Teardown();
-    m_VideoApp->CloseCamera();
+    //m_VideoApp->CloseCamera();
 }
 
 void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe)
@@ -166,7 +166,7 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
 void INDILibCamera::shutdownExposure()
 {
     m_StillApp->StopCamera();
-    //m_StillApp->Teardown();
+    m_StillApp->Teardown();
     //m_StillApp->CloseCamera();
     PrimaryCCD.setExposureFailed();
 }
@@ -198,12 +198,12 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     //auto options = static_cast<StillOptions *>(m_StillApp->GetOptions());
     auto options = static_cast<VideoOptions *>(m_StillApp->GetOptions());
     options->Parse(0, nullptr);
-    options->Print();
     options->nopreview = true;
     //options->immediate = true;
     //options->encoding = "yuv420";
     options->shutter = duration * 1e6;
     options->denoise = "cdn_off";
+    options->Print();
 
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
 
@@ -226,6 +226,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     if (msg.type != LibcameraApp::MsgType::RequestComplete)
     {
         PrimaryCCD.setExposureFailed();
+        shutdownExposure();
         LOGF_ERROR("Exposure failed: %d", msg.type);
         return;
     }
@@ -419,7 +420,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
         m_StillApp->StopCamera();
         m_StillApp->Teardown();
-        m_StillApp->CloseCamera();
+        //m_StillApp->CloseCamera();
     }
     catch (std::exception &e)
     {
