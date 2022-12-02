@@ -110,7 +110,7 @@ class INDILibCamera : public INDI::CCD
 
         INDI::PropertySwitch CameraSP {0};
 
-        std::unique_ptr<LibcameraApp> m_StillApp;
+        std::unique_ptr<LibcameraEncoder> m_StillApp;
         std::unique_ptr<LibcameraEncoder> m_VideoApp;
 
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};

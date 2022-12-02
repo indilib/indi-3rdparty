@@ -49,8 +49,8 @@ void INDILibCamera::shutdownVideo()
 {
     m_VideoApp->StopCamera();
     m_VideoApp->StopEncoder();
-    m_VideoApp->Teardown();
-    m_VideoApp->CloseCamera();
+    //m_VideoApp->Teardown();
+    //m_VideoApp->CloseCamera();
     Streamer->setStream(false);
 }
 
@@ -72,7 +72,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
     try
     {
-        m_VideoApp->OpenCamera();
+        //m_VideoApp->OpenCamera();
         m_VideoApp->ConfigureVideo(LibcameraEncoder::FLAG_VIDEO_JPEG_COLOURSPACE);
         m_VideoApp->StartEncoder();
         m_VideoApp->StartCamera();
@@ -171,15 +171,37 @@ void INDILibCamera::shutdownExposure()
     PrimaryCCD.setExposureFailed();
 }
 
+static char *args = "-n -t 0 -o - --awbgains 1,1,1 --quality 100  --immediate";
+static char *argv[64];
+static int parseArgs(char *args) 
+{
+    int argc = 0;
+    int idx = 0, last = 0;
+    char *prev = args;
+    while(char c = *args)
+    {
+        if(c == ' ') 
+        {
+            argv[argc] = prev;
+            args[idx] = 0;
+            last = idx + 1;
+        }
+        idx ++;
+        idx ++;
+    }
+    return argc;
+}
+
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
-    auto options = static_cast<StillOptions *>(m_StillApp->GetOptions());
+    //auto options = static_cast<StillOptions *>(m_StillApp->GetOptions());
+    auto options = static_cast<VideoOptions *>(m_StillApp->GetOptions());
+    options->Parse(0, nullptr);
     options->Print();
-    //options->Parse(0, nullptr);
     options->nopreview = true;
-    options->immediate = true;
-    options->encoding = "yuv420";
+    //options->immediate = true;
+    //options->encoding = "yuv420";
     options->shutter = duration * 1e6;
     options->denoise = "cdn_off";
 
@@ -220,16 +242,17 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     try
     {
         char filename[MAXINDIFORMAT] {0};
+        StillOptions stillOptions = StillOptions();
 
         if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
         {
             strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
-            dng_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), options);
+            dng_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), &stillOptions);
         }
         else
         {
             strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
-            jpeg_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), options);
+            jpeg_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), &stillOptions);
         }
 
         char bayer_pattern[8] = {};
@@ -412,7 +435,9 @@ INDILibCamera::INDILibCamera()
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
-    m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
+    //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
+    m_StillApp.reset(new LibcameraEncoder());
+    m_VideoApp.reset(m_StillApp.get());
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -554,17 +579,29 @@ bool INDILibCamera::Connect()
     try
     {
 
-        auto stillOptions = static_cast<StillOptions *>(m_StillApp->GetOptions());
+        //auto stillOptions = static_cast<StillOptions *>(m_StillApp->GetOptions());
+        auto stillOptions = static_cast<VideoOptions *>(m_StillApp->GetOptions());
         //stillOptions->Parse(0, nullptr);
-        stillOptions->immediate = true;
+        // not in video options
+        // stillOptions->immediate = true;
         stillOptions->nopreview = true;
         stillOptions->width = 1920;
         stillOptions->height = 1080;
         stillOptions->camera = CameraSP.findOnSwitchIndex();
         //stillOptions->Print();
         //m_StillApp->OpenCamera();
-        PrimaryCCD.setResolution(1920,1080);
-        PrimaryCCD.setPixelSize(2.55, 2.55);
+        const libcamera::ControlList props = m_StillApp->GetCameraManager()->cameras()[0]->properties();
+        
+        auto pas = props.get(properties::PixelArraySize);
+        PrimaryCCD.setResolution(pas->width, pas->height);
+        UpdateCCDFrame(0, 0, pas->width, pas->height);
+        LOGF_INFO("PixelArraySize %i x %i", pas->width, pas->height);
+        
+        auto ucs = props.get(properties::UnitCellSize);
+        auto ucsWidth = ucs->width / 1000.0;
+        auto ucsHeight = ucs->height / 1000.0;
+        PrimaryCCD.setPixelSize(ucsWidth, ucsHeight);
+        LOGF_INFO("UnitCellSize %f x %f", ucsWidth, ucsHeight);
 
 /*        m_VideoApp.reset(new LibcameraEncoder());
         VideoOptions* videoOptions = m_VideoApp->GetOptions();
