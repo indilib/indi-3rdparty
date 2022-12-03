@@ -15,6 +15,9 @@ find_package(LibRaw REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Boost COMPONENTS program_options)
 find_package(PkgConfig REQUIRED)
+find_library(EXIF_LIBRARY exif REQUIRED)
+find_library(TIFF_LIBRARY tiff REQUIRED)
+
 
 pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 message(STATUS "libcamera library found:")
@@ -42,11 +45,13 @@ set (CMAKE_CXX_STANDARD 17)
 
 ########### indi_libcamera_ccd ###########
 set(indi_libcamera_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/dng_new.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_libcamera.cpp
    )
 
 add_executable(indi_libcamera_ccd ${indi_libcamera_SRCS})
-target_link_libraries(indi_libcamera_ccd
+target_link_libraries(indi_libcamera_ccd 
+    exif tiff
     ${INDI_LIBRARIES}
     ${CFITSIO_LIBRARIES}
     ${LIBCAMERAAPPS_APPS}
