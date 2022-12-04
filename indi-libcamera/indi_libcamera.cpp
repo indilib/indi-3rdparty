@@ -109,10 +109,6 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     //m_VideoApp->CloseCamera();
 }
 
-void dng_save_new(std::vector<libcamera::Span<uint8_t>> const &mem, StreamInfo const &info,
-			  libcamera::ControlList const &metadata, std::string const &filename,
-			  std::string const &cam_name, StillOptions const *options);
-
 void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe)
 {
     INDI_UNUSED(timestamp_us);
@@ -252,7 +248,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
         {
             strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
-            dng_save_new(mem, info, payload->metadata, filename, m_StillApp->CameraId(), &stillOptions);
+            dng_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), &stillOptions);
         }
         else
         {

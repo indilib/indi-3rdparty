@@ -46,29 +46,20 @@ set (CMAKE_CXX_STANDARD 17)
 
 ########### indi_libcamera_ccd ###########
 set(indi_libcamera_SRCS
-   ${CMAKE_CURRENT_SOURCE_DIR}/dng_new.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_libcamera.cpp
 )
 
-link_directories(
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/core
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/encoders
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/image
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/output
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/post_processing_stages
- ${CMAKE_SOURCE_DIR}/libcamera-apps/build/preview
-)
 
 set(LIBCAMERAAPPS_APPS camera_app)
 set(LIBCAMERAAPPS_ENCODERS encoders)
 set(LIBCAMERAAPPS_IMAGES images)
 set(LIBCAMERAAPPS_OUTPUTS outputs)
-set(LIBCAMERAAPPS_POST post_processing_stages)
 set(LIBCAMERAAPPS_PREVIEW preview)
+set(LIBCAMERAAPPS_POST post_processing_stages)
 
+add_subdirectory(libcamera-apps)
 add_executable(indi_libcamera_ccd ${indi_libcamera_SRCS})
 target_link_libraries(indi_libcamera_ccd 
-    exif tiff drm
     ${INDI_LIBRARIES}
     ${CFITSIO_LIBRARIES}
     ${LIBCAMERAAPPS_APPS}

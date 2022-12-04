@@ -67,7 +67,7 @@ else()
     message(STATUS "QT display mode will be unavailable!")
 endif()
 
-add_library(preview null_preview.cpp ${SRC})
+add_library(preview STATIC null_preview.cpp ${SRC})
 target_link_libraries(preview ${TARGET_LIBS})
 
 target_compile_definitions(preview PUBLIC LIBDRM_PRESENT=${DRM_FOUND})

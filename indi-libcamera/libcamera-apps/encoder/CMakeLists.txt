@@ -10,6 +10,7 @@ set(LIBAV_PRESENT 0)
 set(SRC encoder.cpp null_encoder.cpp h264_encoder.cpp mjpeg_encoder.cpp)
 set(TARGET_LIBS images)
 
+set(ENABLE_LIBAV 0)
 if (ENABLE_LIBAV)
     message(STATUS "Checking for libavcodec")
     pkg_check_modules(LIBAV QUIET IMPORTED_TARGET
