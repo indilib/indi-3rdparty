@@ -30,7 +30,7 @@ else()
     message(STATUS "Omitting libavcodec")
 endif()
 
-add_library(encoders ${SRC})
+add_library(encoders STATIC ${SRC})
 target_link_libraries(encoders ${TARGET_LIBS})
 target_compile_definitions(encoders PUBLIC LIBAV_PRESENT=${LIBAV_PRESENT})
 

@@ -11,6 +11,10 @@ pkg_check_modules(QTWIDGETS QUIET Qt5Widgets)
 set(SRC "preview.cpp")
 set(TARGET_LIBS "")
 
+SET(ENABLE_DRM 0)
+SET(ENABLE_X11 0)
+SET(ENABLE_QT 0)
+
 IF (NOT DEFINED ENABLE_DRM)
     SET(ENABLE_DRM 1)
 endif()

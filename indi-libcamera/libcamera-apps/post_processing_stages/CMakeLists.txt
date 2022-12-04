@@ -48,7 +48,7 @@ else()
     message(STATUS "TFLite support not being included")
 endif()
 
-add_library(post_processing_stages ${SRC})
+add_library(post_processing_stages STATIC ${SRC})
 target_link_libraries(post_processing_stages ${TARGET_LIBS})
 target_compile_definitions(post_processing_stages PUBLIC OPENCV_PRESENT=${OpenCV_FOUND})
 
