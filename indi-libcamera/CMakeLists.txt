@@ -38,7 +38,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${LIBCAMERA_INCLUDE_DIRS})
 include_directories( ${CFITSIO_INCLUDE_DIR})
-include_directories( libcamera-apps/)
+include_directories( libcamera-apps)
 
 include(CMakeCommon)
 
@@ -50,20 +50,21 @@ set(indi_libcamera_SRCS
 )
 
 
-set(LIBCAMERAAPPS_APPS camera_app)
+set(LIBCAMERAAPPS_APPS libcamera_app)
 set(LIBCAMERAAPPS_ENCODERS encoders)
 set(LIBCAMERAAPPS_IMAGES images)
 set(LIBCAMERAAPPS_OUTPUTS outputs)
 set(LIBCAMERAAPPS_PREVIEW preview)
 set(LIBCAMERAAPPS_POST post_processing_stages)
 
-add_subdirectory(libcamera-apps)
+add_subdirectory(libcamera-apps SYSTEM)
 add_executable(indi_libcamera_ccd ${indi_libcamera_SRCS})
+
 target_link_libraries(indi_libcamera_ccd 
     ${INDI_LIBRARIES}
     ${CFITSIO_LIBRARIES}
-    ${LIBCAMERAAPPS_APPS}
     ${LIBCAMERAAPPS_ENCODERS}
+    ${LIBCAMERAAPPS_APPS}
     ${LIBCAMERAAPPS_IMAGES}
     ${LIBCAMERAAPPS_OUTPUTS}
     ${LIBCAMERAAPPS_POST}
