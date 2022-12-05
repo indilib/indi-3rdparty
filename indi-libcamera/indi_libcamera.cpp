@@ -255,6 +255,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
             stillOptions.quality = 90;
             stillOptions.restart = true;
+            stillOptions.thumb_quality = 0;
             jpeg_save(mem, info, payload->metadata, filename, m_StillApp->CameraId(), &stillOptions);
         }
 
