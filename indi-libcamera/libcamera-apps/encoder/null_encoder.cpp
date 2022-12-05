@@ -57,7 +57,7 @@ void NullEncoder::outputThread()
 					return;
 			}
 		}
-		output_ready_callback_(item.mem, item.length, item.timestamp_us, true);
 		input_done_callback_(nullptr);
-	}
+        output_ready_callback_(item.mem, item.length, item.timestamp_us, true);
+    }
 }
