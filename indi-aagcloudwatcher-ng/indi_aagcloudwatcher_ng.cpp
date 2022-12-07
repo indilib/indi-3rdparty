@@ -389,7 +389,7 @@ bool AAGCloudWatcher::heatingAlgorithm()
     // this is needed as we divide by refresh later...
     if (WI::UpdatePeriodNP[0].getValue() < 3)
     {
-        WI::UpdatePeriodNP[0].setValue(3);
+        WI::UpdatePeriodNP[0].setValue(3.0);
     }
 
     if (globalRainSensorHeater == -1)

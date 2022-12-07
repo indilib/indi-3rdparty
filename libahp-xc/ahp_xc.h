@@ -53,7 +53,7 @@ extern "C" {
 * visit https://www.iliaplatone.com/xc for more informations and purchase options.
 *
 * \author Ilia Platone
-* \version 1.2.8
+* \version 1.3.0
 * \date 2017-2022
 * \copyright MIT License.
 */
@@ -74,7 +74,7 @@ extern "C" {
  /**\{*/
 
 ///This library version
-#define AHP_XC_VERSION 0x128
+#define AHP_XC_VERSION 0x130
 ///The base baud rate of the XC cross-correlators
 #define XC_BASE_RATE ((int)57600)
 ///The base baud rate for big packet XC cross-correlators
@@ -83,7 +83,7 @@ extern "C" {
 #define AHP_XC_PLL_FREQUENCY 400000000
 
 /**\}
- * \defgroup Types
+ * \defgroup Types Types and structures
  *\{*/
 
 ///AHP XC header flags
@@ -94,8 +94,8 @@ HAS_CROSSCORRELATOR = 1,
 HAS_LEDS = 2,
 ///Indicates that the correlator has an internal PSU PWM driver on 2nd flag bit
 HAS_PSU = 4,
-///Indicates that the correlator has differential correlators only
-HAS_DIFFERENTIAL_ONLY = 8
+///Indicates that the correlator has cumulative correlators only
+HAS_CUMULATIVE_ONLY = 8
 } xc_header_flags;
 
 /**
@@ -112,6 +112,7 @@ typedef enum {
 /**
 * \brief The XC firmare commands
 */
+
 typedef enum {
 ///Clear autocorrelation and crosscorrelation delays
 CLEAR = 0,
@@ -157,8 +158,6 @@ CAP_ALL = 0xf,
 typedef enum {
 ///No extra signals or functions
 TEST_NONE = 0,
-///Apply PLL clock on voltage led
-TEST_SIGNAL = 1<<0,
 ///Autocorrelator continuum scan
 SCAN_AUTO = 1<<1,
 ///Crosscorrelator continuum scan
@@ -225,6 +224,8 @@ unsigned long* counts;
 ahp_xc_sample* autocorrelations;
 ///Crosscorrelations in the current packet
 ahp_xc_sample* crosscorrelations;
+///Packet lock mutex
+void *lock;
 ///Packet buffer string
 const char* buf;
 } ahp_xc_packet;
@@ -316,10 +317,15 @@ DLL_EXPORT void ahp_xc_set_baudrate(baud_rate rate);
 
 /**
 * \brief Set the crosscorrelation order
-* \param rate The new crosscorrelation order
+* \param order The new crosscorrelation order
 */
 DLL_EXPORT void ahp_xc_set_correlation_order(unsigned int order);
 
+/**
+* \brief Get the crosscorrelation order
+* \return The crosscorrelation order
+*/
+DLL_EXPORT int ahp_xc_get_correlation_order();
 /**\}*/
 /**
  * \defgroup Feat Features of the correlator
@@ -441,10 +447,10 @@ DLL_EXPORT int ahp_xc_has_psu(void);
 DLL_EXPORT int ahp_xc_has_leds(void);
 
 /**
-* \brief Returns if the device has differential correlators only
-* \return Returns non-zero if the device is a differential correlator only
+* \brief Returns if the device has cumulative correlators only
+* \return Returns non-zero if the device is a cumulative correlator only
 */
-DLL_EXPORT int ahp_xc_has_differential_only();
+DLL_EXPORT int ahp_xc_has_cumulative_only();
 
 /**\}*/
 /**

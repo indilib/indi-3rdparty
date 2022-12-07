@@ -165,6 +165,7 @@ uint64 cc_vector2ID(double x, double y, double z, int depth)
     //
 
     startID = cc_startpane(v0, v1, v2, x, y, z, name);
+    (void)startID;
     len     = 2;
     //
     // Start searching for the children
@@ -245,6 +246,7 @@ uint64 cc_radec2ID(double ra, double dec, int depth)
     //
 
     startID = cc_startpane(v0, v1, v2, x, y, z, name);
+    (void)startID;
     len     = 2;
     //
     // Start searching for the children
