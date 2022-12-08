@@ -171,27 +171,6 @@ void INDILibCamera::shutdownExposure()
     PrimaryCCD.setExposureFailed();
 }
 
-static char *args = "-n -t 0 -o - --awbgains 1,1,1 --quality 100  --immediate";
-static char *argv[64];
-static int parseArgs(char *args) 
-{
-    int argc = 0;
-    int idx = 0, last = 0;
-    char *prev = args;
-    while(char c = *args)
-    {
-        if(c == ' ') 
-        {
-            argv[argc] = prev;
-            args[idx] = 0;
-            last = idx + 1;
-        }
-        idx ++;
-        idx ++;
-    }
-    return argc;
-}
-
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
@@ -432,11 +411,47 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     }
 }
 
+static int parseArgs(char *str, char *delim, char **argv, int max)
+{
+	int argc = 0;
+    char* token = strtok(str, delim);
+	argv[argc++] = token;
+    while (token != NULL) {
+        token = strtok(NULL, delim);
+		argv[argc++] = token;
+		if(max < argc) {
+			break;
+		}
+    }
+ 
+    return argc-1;
+}
+
+static void doArgs(char *str)
+{
+    Options option = StillOptions();
+    printf("-->\n");
+	char *argv[64] = {};
+	char delim[] = " \t\n";
+	int argc = parseArgs(str, delim, argv, sizeof(argv));
+    printf("%d\n", argc);
+	for(int i = 0; i < argc; i++) {
+		char *token = argv[i];
+        printf("0x%8lx >%s<\n", token, token);
+	}
+    option.Parse(argc, argv);
+    option.Print();
+    printf("--<\n");
+}
 ///////////////////////////////////////////////////////////////////////
 /// Generic constructor
 ///////////////////////////////////////////////////////////////////////
 INDILibCamera::INDILibCamera()
 {
+    //char str1[] = "-n -t 0 -o -\n --awbgains 1,1 --immediate";
+    //doArgs(str1);
+    char str2[] = "--config /tmp/config.txt";
+    //doArgs(str2);
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
     //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
