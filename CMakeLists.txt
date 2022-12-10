@@ -87,7 +87,7 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} libahp-gt DIR11_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
                 NOT ${DIR5_FOUND} EQUAL -1 OR NOT ${DIR6_FOUND} EQUAL -1 OR NOT ${DIR7_FOUND} EQUAL -1 OR NOT ${DIR8_FOUND} EQUAL -1 OR
-                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND} OR NOT ${DIR11_FOUND})
+                NOT ${DIR9_FOUND} EQUAL -1 OR NOT ${DIR10_FOUND} EQUAL -1 OR NOT ${DIR11_FOUND} EQUAL -1)
                 LIST(REMOVE_ITEM ALL_SOURCE_FILES ${SOURCE_FILE})
             ENDIF ()
         ENDFOREACH ()
@@ -741,6 +741,14 @@ endif (WITH_SVBONY AND NOT SVBONY_FOUND)
 if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
 endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
+
+if (WITH_AHPXC AND NOT AHPXC_FOUND)
+message(STATUS "libahp-xc was not found and will now be built. Please install libahp-xc first before running cmake again to install indi-ahp-xc.")
+endif (WITH_AHPXC AND NOT AHPXC_FOUND)
+
+if (WITH_AHPGT AND NOT AHPGT_FOUND)
+message(STATUS "libahp-gt was not found and will now be built. Please install libahp-gt first before running cmake again to install indi-ahpgt.")
+endif (WITH_AHPGT AND NOT AHPGT_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)
