@@ -70,11 +70,12 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&autoFocusS[1], "OFF", "Off", ISS_ON);
     IUFillSwitchVector(&autoFocusSP, autoFocusS, 2, getDeviceName(), "AUTO_FOCUS", "Auto Focus", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 0, IPS_IDLE);
-
+/*
     IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
     IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
     IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB,
                        IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+*/
 
     IUFillSwitch(&preserveOriginalS[1], "PRESERVE_ON", "Also Copy Native Image", ISS_OFF);
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
@@ -110,9 +111,10 @@ bool PkTriggerCordCCD::updateProperties()
 
         buildCaptureSwitches();
 
-        defineProperty(&transferFormatSP);
+        // defineProperty(&transferFormatSP);
         defineProperty(&autoFocusSP);
-        if (transferFormatS[0].s == ISS_ON)
+        //if (transferFormatS[0].s == ISS_ON)        
+        if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
         {
             defineProperty(&preserveOriginalSP);
         }
@@ -124,7 +126,7 @@ bool PkTriggerCordCCD::updateProperties()
         deleteCaptureSwitches();
 
         deleteProperty(autoFocusSP.name);
-        deleteProperty(transferFormatSP.name);
+        // deleteProperty(transferFormatSP.name);
         deleteProperty(preserveOriginalSP.name);
 
         rmTimer(timerID);
@@ -203,7 +205,7 @@ void PkTriggerCordCCD::deleteCaptureSwitches()
     if (mExpCompSP.nsp > 0) deleteProperty(mExpCompSP.name);
     if (mWhiteBalanceSP.nsp > 0) deleteProperty(mWhiteBalanceSP.name);
     if (mIQualitySP.nsp > 0) deleteProperty(mIQualitySP.name);
-    if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
+    // if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
 }
 
 
@@ -585,7 +587,8 @@ bool PkTriggerCordCCD::grabImage()
 
 
     // fits handling code
-    if (transferFormatS[0].s == ISS_ON)
+    // if (transferFormatS[0].s == ISS_ON)    
+    if ( EncodeFormatSP[FORMAT_FITS].s == ISS_ON )
     {
         PrimaryCCD.setImageExtension("fits");
         uint8_t * memptr = PrimaryCCD.getFrameBuffer();
@@ -725,6 +728,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         autoFocusSP.s = IPS_OK;
         IDSetSwitch(&autoFocusSP, nullptr);
     }
+ /*
     else if (!strcmp(name, transferFormatSP.name))
     {
         IUUpdateSwitch(&transferFormatSP, states, names, n);
@@ -739,6 +743,7 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
             deleteProperty(preserveOriginalSP.name);
         }
     }
+    */
     else if (!strcmp(name, preserveOriginalSP.name))
     {
         IUUpdateSwitch(&preserveOriginalSP, states, names, n);
