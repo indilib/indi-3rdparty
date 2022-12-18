@@ -201,6 +201,27 @@ IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
     SET(WITH_MI Off)
 ENDIF ()
 
+# Disable pre-built SDKs / drivers
+option(NO_PRE_BUILT "Do not install pre-built libraries/drivers" Off)
+if (NO_PRE_BUILT)
+    SET(WITH_AHP_GT Off)
+    SET(WITH_AHP_XC Off)
+    SET(WITH_ASICAM Off)
+    SET(WITH_ATIK Off)
+    SET(WITH_DSI Off)
+    SET(WITH_DUINO Off)
+    SET(WITH_FISHCAMP Off)
+    SET(WITH_INOVAPLX Off)
+    SET(WITH_MI Off)
+    SET(WITH_PENTAX Off)
+    SET(WITH_PLAYERONE Off)
+    SET(WITH_QHY Off)
+    SET(WITH_QSI Off)
+    SET(WITH_SBIG Off)
+    SET(WITH_SVBONY Off)
+    SET(WITH_TOUPBASE Off)
+endif(NO_PRE_BUILT)
+
 # If the Build Libs option is selected, it will just build the required libraries.
 # This should be run before the main 3rd Party Drivers build, so the drivers can find the libraries.
 IF (BUILD_LIBS)
