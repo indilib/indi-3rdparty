@@ -82,6 +82,7 @@ class INDILibCamera : public INDI::CCD
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
         void outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe);
         bool SetCaptureFormat(uint8_t index) override;
+        void initOptions(bool video);
 
     protected:
         /** Get initial parameters from camera */
@@ -109,6 +110,7 @@ class INDILibCamera : public INDI::CCD
      private:
 
         INDI::PropertySwitch CameraSP {0};
+        INDI::PropertyNumber GainNP {1};
 
         std::unique_ptr<LibcameraEncoder> m_StillApp;
         std::unique_ptr<LibcameraEncoder> m_VideoApp;
