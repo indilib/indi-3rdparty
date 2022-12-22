@@ -109,12 +109,17 @@ class INDILibCamera : public INDI::CCD
 
      private:
 
-        INDI::PropertySwitch CameraSP {0};
-        INDI::PropertyNumber GainNP {1};
-        INDI::PropertyNumber BrightnessNP {1};
+        enum {
+            AdjustBrightness = 0, AdjustContrast, AdjustSaturation, AdjustSharpness, AdjustQuality, AdjustExposureValue,
+            AdjustMeteringMode, AdjustExposureMode,
+            AdjustAwbMode, AdjustAwbRed, AdjustAwbBlue
+        };
 
-        std::unique_ptr<LibcameraEncoder> m_StillApp;
-        std::unique_ptr<LibcameraEncoder> m_VideoApp;
+        INDI::PropertySwitch CameraSP {0};
+        INDI::PropertyNumber AdjustmentNP {AdjustAwbBlue+1};
+        INDI::PropertyNumber GainNP {1};
+
+        std::unique_ptr<LibcameraEncoder> m_CameraApp;
 
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
 

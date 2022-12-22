@@ -121,6 +121,7 @@ public:
 
 	void ShowPreview(CompletedRequestPtr &completed_request, Stream *stream);
 
+	ControlList GetControls();
 	void SetControls(ControlList &controls);
 	StreamInfo GetStreamInfo(Stream const *stream) const;
 
