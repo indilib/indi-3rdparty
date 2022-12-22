@@ -463,6 +463,22 @@ AeConstraintMode : [0..3]
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
+void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char **names)
+{
+
+    switchSP.resize(n);
+    for (size_t i = 0; i < n; i++) {
+        switchSP[i].fill(names[i], names[i], ISS_OFF);
+    }
+
+    int onIndex = -1;
+    if (IUGetConfigOnSwitchIndex(getDeviceName(), "CAMERAS", &onIndex) == 0)
+        switchSP[onIndex].setState(ISS_ON);
+    else
+        switchSP[0].setState(ISS_ON);
+
+}
+
 bool INDILibCamera::initProperties()
 {
     INDI::CCD::initProperties();
@@ -477,6 +493,21 @@ bool INDILibCamera::initProperties()
     detectCameras();
     
     const char *IMAGE_CONTROLS_TAB = MAIN_CONTROL_TAB;
+    AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *exposureModes[] = {"normal", "sport", "short", "long", "custom"};
+    initSwitch(AdjustExposureModeSP, 5, exposureModes);
+
+    AdjustAwbModeSP.fill(getDeviceName(), "AwbMode", "Awb Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *awbModes[] = { "auto", "normal", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"};
+    initSwitch(AdjustAwbModeSP, 9, awbModes);
+
+    AdjustMeteringModeSP.fill(getDeviceName(), "MeteringMode", "Metering Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *meteringModes[] = { "centre", "spot", "average", "matrix", "custom"};
+    initSwitch(AdjustMeteringModeSP, 5, meteringModes);
+
+    AdjustDenoiseModeSP.fill(getDeviceName(), "DenoiseMode", "Denoise Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *denoiseModes[] = { "off", "cdn_off", "cdn_fast", "cdn_hq"};
+    initSwitch(AdjustDenoiseModeSP, 4, denoiseModes);
 
     AdjustmentNP[AdjustBrightness].fill("Brightness", "Brightness", "%.2f", -1.00, 1.00, 0.1, 0.00);
     AdjustmentNP[AdjustContrast].fill("Contrast", "Contrast", "%.2f", 0.00, 2.00, 0.1, 1.00);
@@ -484,9 +515,10 @@ bool INDILibCamera::initProperties()
     AdjustmentNP[AdjustSharpness].fill("Sharpness", "Sharpness", "%.2f", 0.00, 16.00, 1.00, 1.00);
     AdjustmentNP[AdjustQuality].fill("Quality", "Quality", "%.2f", 0.00, 100.00, 1.00, 100.00);
     AdjustmentNP[AdjustExposureValue].fill("ExposureValue", "Exposure Value", "%.2f", -8.00, 8.00, .25, 0.00);
-    AdjustmentNP[AdjustExposureMode].fill("ExposureMode", "Exposure Mode", "%.2f", 0, 4.00, 1.0, 4.00);
+    /*AdjustmentNP[AdjustExposureMode].fill("ExposureMode", "Exposure Mode", "%.2f", 0, 4.00, 1.0, 4.00);
     AdjustmentNP[AdjustMeteringMode].fill("MeteringMode", "Metering Mode", "%.2f", 0, 4.00, 1.0, 4.00);
     AdjustmentNP[AdjustAwbMode].fill("AwbMode", "Awb Mode", "%.2f", 0.00, 8.00, 1.0, 8.00);
+    */
     AdjustmentNP[AdjustAwbRed].fill("AwbRed", "AWB Red", "%.2f", 0.00, 2.00, .1, 0.00);
     AdjustmentNP[AdjustAwbBlue].fill("AwbBlue", "AWB Blue", "%.2f", 0.00, 2.00, .1, 0.00);
     AdjustmentNP.fill(getDeviceName(), "Adjustments", "Adjustments", IMAGE_CONTROLS_TAB, IP_RW, 60, IPS_IDLE);
@@ -520,9 +552,14 @@ bool INDILibCamera::initProperties()
 void INDILibCamera::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
+
     defineProperty(CameraSP);
     defineProperty(AdjustmentNP);
     defineProperty(GainNP);
+    defineProperty(AdjustExposureModeSP);
+    defineProperty(AdjustAwbModeSP);
+    defineProperty(AdjustMeteringModeSP);
+    defineProperty(AdjustDenoiseModeSP);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -548,7 +585,6 @@ bool INDILibCamera::updateProperties()
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-// static std::unique_ptr<LibcameraApp::CameraManager> cameraManager(new LibcameraApp::CameraManager());
 
 void INDILibCamera::detectCameras()
 {
@@ -595,11 +631,7 @@ void INDILibCamera::default_signal_handler(int signal_number)
 void INDILibCamera::initOptions(bool video)
 {
     auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-
-    options->denoise = "cdn_off";
-    options->exposure = "normal";
     options->nopreview = true;
-    options->awb = "custom";
     options->framerate = 0.0;
     options->shutter = 0.0;
     options->Print();
@@ -719,9 +751,10 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             options->quality = values[AdjustQuality];
 
             options->ev = values[AdjustExposureValue];
+            /*
             options->exposure_index = values[AdjustExposureMode];
             options->metering_index = values[AdjustMeteringMode];
-            options->awb_index = values[AdjustAwbMode];
+            options->awb_index = values[AdjustAwbMode];*/
             options->awb_gain_r = values[AdjustAwbRed];
             options->awb_gain_b = values[AdjustAwbBlue];
 
@@ -739,7 +772,6 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             options->Print();
             return true;
         }
-
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -758,6 +790,55 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             CameraSP.setState(IPS_OK);
             CameraSP.apply();
             saveConfig(CameraSP);
+            return true;
+        }
+        auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
+        for(int i = 0; i < n; i++)
+        {
+            LOGF_INFO("%s.%s -> %d", name, names[i], states[i]);
+        }
+        if (AdjustExposureModeSP.isNameMatch(name))
+        {
+            AdjustExposureModeSP.update(states, names, n);
+            AdjustExposureModeSP.setState(IPS_OK);
+            AdjustExposureModeSP.apply();
+            saveConfig(AdjustExposureModeSP);
+
+            options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+            options->Print();
+            return true;
+        }
+        if (AdjustAwbModeSP.isNameMatch(name))
+        {
+            AdjustAwbModeSP.update(states, names, n);
+            AdjustAwbModeSP.setState(IPS_OK);
+            AdjustAwbModeSP.apply();
+            saveConfig(AdjustAwbModeSP);
+
+            options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
+            options->Print();
+            return true;
+        }
+        if (AdjustMeteringModeSP.isNameMatch(name))
+        {
+            AdjustMeteringModeSP.update(states, names, n);
+            AdjustMeteringModeSP.setState(IPS_OK);
+            AdjustMeteringModeSP.apply();
+            saveConfig(AdjustMeteringModeSP);
+
+            options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
+            options->Print();
+            return true;
+        }
+        if (AdjustDenoiseModeSP.isNameMatch(name))
+        {
+            AdjustDenoiseModeSP.update(states, names, n);
+            AdjustDenoiseModeSP.setState(IPS_OK);
+            AdjustDenoiseModeSP.apply();
+            saveConfig(AdjustDenoiseModeSP);
+
+            options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
+            options->Print();
             return true;
         }
     }
@@ -878,6 +959,12 @@ bool INDILibCamera::saveConfigItems(FILE * fp)
     INDI::CCD::saveConfigItems(fp);
 
     IUSaveConfigSwitch(fp, &CameraSP);
+    IUSaveConfigNumber(fp, &AdjustmentNP);
+    IUSaveConfigNumber(fp, &GainNP);
+    IUSaveConfigSwitch(fp, &AdjustExposureModeSP);
+    IUSaveConfigSwitch(fp, &AdjustAwbModeSP);
+    IUSaveConfigSwitch(fp, &AdjustMeteringModeSP);
+    IUSaveConfigSwitch(fp, &AdjustDenoiseModeSP);
 
     return true;
 }

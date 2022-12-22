@@ -83,6 +83,8 @@ class INDILibCamera : public INDI::CCD
         void outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe);
         bool SetCaptureFormat(uint8_t index) override;
         void initOptions(bool video);
+        void initSwitch(INDI::PropertySwitch &switchSP, int n, const char **names);
+
 
     protected:
         /** Get initial parameters from camera */
@@ -111,11 +113,12 @@ class INDILibCamera : public INDI::CCD
 
         enum {
             AdjustBrightness = 0, AdjustContrast, AdjustSaturation, AdjustSharpness, AdjustQuality, AdjustExposureValue,
-            AdjustMeteringMode, AdjustExposureMode,
-            AdjustAwbMode, AdjustAwbRed, AdjustAwbBlue
+            //AdjustMeteringMode, AdjustExposureMode, AdjustAwbMode,
+            AdjustAwbRed, AdjustAwbBlue
         };
 
         INDI::PropertySwitch CameraSP {0};
+        INDI::PropertySwitch AdjustExposureModeSP {0}, AdjustAwbModeSP {0}, AdjustMeteringModeSP {0}, AdjustDenoiseModeSP {0} ;
         INDI::PropertyNumber AdjustmentNP {AdjustAwbBlue+1};
         INDI::PropertyNumber GainNP {1};
 
