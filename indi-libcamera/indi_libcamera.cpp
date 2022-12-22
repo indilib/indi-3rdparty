@@ -54,7 +54,7 @@ void INDILibCamera::shutdownVideo()
     Streamer->setStream(false);
 }
 
-void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
+void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate)
 {
     //m_VideoApp.reset(new LibcameraEncoder());
 
@@ -66,8 +66,8 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
     VideoOptions* options = m_VideoApp->GetOptions();
     initOptions(true);
-    options->nopreview = true;
     options->codec = "mjpeg";
+    options->framerate = framerate;
 
     try
     {
@@ -446,11 +446,11 @@ INDILibCamera::INDILibCamera()
     //m_StillApp.reset(new LibcameraApp(std::make_unique<StillOptions>()));
     m_StillApp.reset(new LibcameraEncoder());
     m_VideoApp.reset(m_StillApp.get());
-    //char str1[] = "-n -t 0 -o -\n --awbgains 1,1 --immediate";
+    /*char str1[] = "-n -t 0 -o -\n --awbgains 1,1 --immediate";
     //doArgs(str1);
     char str2[] = "--config /tmp/config.txt";
     auto stillOptions = static_cast<VideoOptions *>(m_StillApp->GetOptions());
-    doArgs(str2, stillOptions);
+    doArgs(str2, stillOptions);*/
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -602,7 +602,9 @@ void INDILibCamera::initOptions(bool video)
     options->contrast = 1.0;
     options->saturation = 1.0;
     options->sharpness = 1.0;
-    options->framerate = 1.0;
+    options->framerate = 0.0;
+    options->shutter = 0.0;
+    options->quality = 99;
     options->Print();
 }
 
@@ -617,9 +619,8 @@ bool INDILibCamera::Connect()
         auto options = static_cast<VideoOptions *>(m_StillApp->GetOptions());
         options->nopreview = true;
         options->camera = CameraSP.findOnSwitchIndex();
-        options->Print();
         //m_StillApp->OpenCamera();
-        const libcamera::ControlList props = m_StillApp->GetCameraManager()->cameras()[0]->properties();
+        const libcamera::ControlList props = m_StillApp->GetCameraManager()->cameras()[options->camera]->properties();
         
         auto pas = props.get(properties::PixelArraySize);
         PrimaryCCD.setResolution(pas->width, pas->height);
@@ -666,6 +667,10 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {        
+        for(int i = 0; i < n; i++)
+        {
+            LOGF_INFO("%s.%s -> %f", name, names[i], values[i]);
+        }
         auto options = static_cast<VideoOptions *>(m_StillApp->GetOptions());
         if (GainNP.isNameMatch(name) && n == 1)
         {
@@ -727,7 +732,9 @@ bool INDILibCamera::AbortExposure()
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::StartStreaming()
 {
-    m_Worker.start(std::bind(&INDILibCamera::workerStreamVideo, this, std::placeholders::_1));
+    // do something dynamic here
+    double framerate = Streamer.get()->getTargetFPS();
+    m_Worker.start(std::bind(&INDILibCamera::workerStreamVideo, this, std::placeholders::_1, framerate));
     return true;
 }
 

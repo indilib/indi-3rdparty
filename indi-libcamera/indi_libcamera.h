@@ -78,7 +78,7 @@ class INDILibCamera : public INDI::CCD
 
     protected:
         INDI::SingleThreadPool m_Worker;
-        void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+        void workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
         void outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe);
         bool SetCaptureFormat(uint8_t index) override;
@@ -111,6 +111,7 @@ class INDILibCamera : public INDI::CCD
 
         INDI::PropertySwitch CameraSP {0};
         INDI::PropertyNumber GainNP {1};
+        INDI::PropertyNumber BrightnessNP {1};
 
         std::unique_ptr<LibcameraEncoder> m_StillApp;
         std::unique_ptr<LibcameraEncoder> m_VideoApp;
