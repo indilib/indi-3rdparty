@@ -634,7 +634,6 @@ void INDILibCamera::initOptions(bool video)
     options->nopreview = true;
     options->framerate = 0.0;
     options->shutter = 0.0;
-    options->Print();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -671,9 +670,13 @@ bool INDILibCamera::Connect()
         options->sharpness = 1.0;
         options->quality = 100.0;
 
+        options->denoise = "off";
+
+/*
         options->metering_index = 4;
         options->exposure_index = 4;
         options->awb_index = 8;
+*/
 
         return true;
     }
@@ -751,14 +754,9 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             options->quality = values[AdjustQuality];
 
             options->ev = values[AdjustExposureValue];
-            /*
-            options->exposure_index = values[AdjustExposureMode];
-            options->metering_index = values[AdjustMeteringMode];
-            options->awb_index = values[AdjustAwbMode];*/
             options->awb_gain_r = values[AdjustAwbRed];
             options->awb_gain_b = values[AdjustAwbBlue];
 
-            options->Print();
             return true;
         }
         if (GainNP.isNameMatch(name))
@@ -769,7 +767,6 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             saveConfig(GainNP);
 
             options->gain = values[0];
-            options->Print();
             return true;
         }
     }
@@ -804,8 +801,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustExposureModeSP.apply();
             saveConfig(AdjustExposureModeSP);
 
-            options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
-            options->Print();
+            //options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
             return true;
         }
         if (AdjustAwbModeSP.isNameMatch(name))
@@ -815,8 +811,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustAwbModeSP.apply();
             saveConfig(AdjustAwbModeSP);
 
-            options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
-            options->Print();
+            //options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
             return true;
         }
         if (AdjustMeteringModeSP.isNameMatch(name))
@@ -826,8 +821,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustMeteringModeSP.apply();
             saveConfig(AdjustMeteringModeSP);
 
-            options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
-            options->Print();
+            //options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
             return true;
         }
         if (AdjustDenoiseModeSP.isNameMatch(name))
@@ -837,8 +831,8 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustDenoiseModeSP.apply();
             saveConfig(AdjustDenoiseModeSP);
 
-            options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
-            options->Print();
+            //options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
+            options->denoise = "cdn_off";
             return true;
         }
     }
