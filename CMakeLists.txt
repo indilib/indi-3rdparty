@@ -33,6 +33,7 @@ macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
      if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
          if (FIX_MACOS_LIBS)
              execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
+             message(WARING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
          else()
              message (FATAL_ERROR
                  "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
