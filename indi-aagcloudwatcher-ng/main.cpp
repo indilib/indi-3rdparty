@@ -97,6 +97,7 @@ int main(int /*argc*/, char ** /*argv*/)
         std::cout << "Supply: " << cwd.supply << "\n";
         std::cout << "Ambient: " << cwd.ambient << "\n";
         std::cout << "LDR: " << cwd.ldr << "\n";
+        std::cout << "LDR Freq: " << cwd.ldrFreq << "\n";
         std::cout << "Rain Temperature: " << cwd.rainTemperature << "\n";
         std::cout << "Read Cycle: " << cwd.readCycle << "\n";
         std::cout << "Wind Speed: " << cwd.windSpeed << "\n";

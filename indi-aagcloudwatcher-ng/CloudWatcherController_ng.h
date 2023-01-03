@@ -69,6 +69,7 @@ struct CloudWatcherData
     int rainHeater; ///< PWM Duty Cycle
     int rainTemperature; ///< Rain sensor temperature (used as ambient temperature in models where there is no ambient temperature sensor)
     int ldr;               ///< Ambient light sensor
+    int ldrFreq;            ///< Ambient light sensor in K
     float readCycle;       ///< Time used in the readings
     int totalReadings;     ///< Total number of readings taken by the Cloud Watcher Controller
     int internalErrors;    ///< Total number of internal errors
@@ -372,11 +373,12 @@ class CloudWatcherController
         * and Rain Sensor Temperature values of the AAG Cloud Watcher
         * @param internalSupplyVoltage where the sensor value will be stored
         * @param ambientTemperature where the sensor value will be stored
-        * @param ldrValue where the sensor value will be stored
+        * @param ldrValue where the sensor value will be 
+        * @param ldrFreqValue where the sensor value in K will be stored, if Firmware >= 5.88
         * @param rainSensorTemperature where the sensor value will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue, int *rainSensorTemperature);
+        bool getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue, int *ldrFreqValue, int *rainSensorTemperature);
 
         /**
         * Reads the current PWM Duty Cycle value of the AAG Cloud Watcher

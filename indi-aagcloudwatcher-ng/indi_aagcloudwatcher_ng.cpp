@@ -69,8 +69,11 @@ bool AAGCloudWatcher::Handshake()
         LOG_INFO("Connected to AAG Cloud Watcher");
         sendConstants();
 
-        if (m_FirmwareVersion >= 5.6)
+        if (m_FirmwareVersion >= 5.6) {
             addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
+            setCriticalParameter("WEATHER_HUMIDITY");
+        }
+
         return true;
     }
     else
@@ -99,6 +102,7 @@ bool AAGCloudWatcher::initProperties()
     setCriticalParameter("WEATHER_WIND_SPEED");
     setCriticalParameter("WEATHER_RAIN");
     setCriticalParameter("WEATHER_CLOUD");
+    
 
     addDebugControl();
 
@@ -592,6 +596,7 @@ bool AAGCloudWatcher::sendData()
     nvp->np[RAW_SENSOR_RAIN_HEATER].value = data.rainHeater;
     nvp->np[RAW_SENSOR_RAIN_TEMPERATURE].value = data.rainTemperature;
     nvp->np[RAW_SENSOR_LDR].value = data.ldr;
+    nvp->np[RAW_SENSOR_LDR_FREQ].value = data.ldrFreq;
     nvp->np[RAW_SENSOR_READ_CYCLES].value = data.readCycle;
     lastReadPeriod = data.readCycle;
     nvp->np[RAW_SENSOR_WIND_SPEED].value = data.windSpeed;
@@ -638,21 +643,36 @@ bool AAGCloudWatcher::sendData()
     rainSensorHeater       = 100.0 * rainSensorHeater / 1023.0;
     nvpS->np[SENSOR_RAIN_SENSOR_HEATER].value = rainSensorHeater;
 
-    float ambientLight = float(data.ldr);
-    if (ambientLight > 1022.0)
-    {
-        ambientLight = 1022.0;
+
+    INumberVectorProperty *nvpSqmLimit = getNumber("sqmLimit");
+    float sqmLimit                     = getNumberValueFromVector(nvpSqmLimit, "sqmLimit");
+
+    float ambientTemperature = data.ambient;
+
+    float ambientLight;
+    if( data.ldrFreq >= 0 ) {
+        double sqm = ( 250000.0 / double(data.ldrFreq) );
+
+        sqm = sqmLimit - 2.5 * log10( sqm );
+
+        ambientLight = float( sqm );
     }
-    if (ambientLight < 1)
-    {
-        ambientLight = 1.0;
+    else {
+        ambientLight = float(data.ldr);
+        if (ambientLight > 1022.0)
+        {
+            ambientLight = 1022.0;
+        }
+        if (ambientLight < 1)
+        {
+            ambientLight = 1.0;
+        }
+        ambientLight = constants.ldrPullUpResistance / ((1023.0 / ambientLight) - 1.0);
     }
-    ambientLight = constants.ldrPullUpResistance / ((1023.0 / ambientLight) - 1.0);
     nvpS->np[SENSOR_BRIGHTNESS_SENSOR].value  = ambientLight;
 
     setParameterValue("WEATHER_BRIGHTNESS", ambientLight);
 
-    float ambientTemperature = data.ambient;
 
     if (ambientTemperature == -10000)
     {
