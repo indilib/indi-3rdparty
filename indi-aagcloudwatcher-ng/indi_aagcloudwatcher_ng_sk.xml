@@ -9,6 +9,9 @@
     <defNumber name="k5" label="K5" format="%.0f" min="-999" max="999" step="0">100</defNumber>
   </defNumberVector>
   
+  <defNumberVector device="AAG Cloud Watcher NG" name="sqmLimit" label="SQM Limit" group="Options" state="Idle" perm="rw" timeout="0">
+    <defNumber name="sqmLimit" label="SQM Limit" format="%.2f" min="0" max="30" step="0">19</defNumber>
+  </defNumberVector>
   
   <defSwitchVector device="AAG Cloud Watcher NG" name="anemometerType" label="Anemometer Type" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
     <defSwitch name="GRAY"  label="Gray (old)">Off</defSwitch>
@@ -22,7 +25,7 @@
     <defNumber name="rainSensor" label="Rain Sensor (cycles)" format="%.0f" min="0" max="100000" step="0">0</defNumber>
     <defNumber name="rainSensorTemperature" label="Rain Sensor Temperature (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>    
     <defNumber name="rainSensorHeater" label="Rain Sensor Heater (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
-    <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.0f" min="0" max="1000000" step="0">0</defNumber> 
+    <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.2f" min="0" max="1000000" step="0">0</defNumber> 
     <defNumber name="ambientTemperatureSensor" label="Ambient Temp. Sensor (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed (Km/H)" format="%.0f" min="0" max="1000" step="0">0</defNumber>
     <defNumber name="humidity" label="Relative Humidity (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
@@ -71,6 +74,7 @@
     <defNumber name="rainHeater" label="Rain Heater" format="%f" min="-1" max="1023" step="0">0</defNumber>
     <defNumber name="rainTemp" label="Rain Temp." format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
     <defNumber name="LDR" label="LDR" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
+    <defNumber name="ldrFreq" label="LDR frequency" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
     <defNumber name="readCycle" label="Read Cycle (s)" format="%.3f" min="-200000" max="200000" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed" format="%.0f" min="0" max="20000000" step="0">0</defNumber>
     <defNumber name="humidity" label="Relative Humidity" format="%.1f" min="0" max="100" step="0">0</defNumber>

@@ -125,6 +125,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
     int internalSupplyVoltage[NUMBER_OF_READS] = {0};
     int ambientTemperature[NUMBER_OF_READS] = {0};
     int ldrValue[NUMBER_OF_READS] = {0};
+    int ldrFreqValue[NUMBER_OF_READS] = {0};
     int rainSensorTemperature[NUMBER_OF_READS] = {0};
     int windSpeed[NUMBER_OF_READS] = {0};
     int humidity[NUMBER_OF_READS] = {0};
@@ -162,7 +163,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
             return false;
         }
 
-        check = getValues(&internalSupplyVoltage[i], &ambientTemperature[i], &ldrValue[i], &rainSensorTemperature[i]);
+        check = getValues(&internalSupplyVoltage[i], &ambientTemperature[i], &ldrValue[i], &ldrFreqValue[i], &rainSensorTemperature[i]);
 
         if (!check)
         {
@@ -215,6 +216,7 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
     cwd->supply          = aggregateInts(internalSupplyVoltage, NUMBER_OF_READS);
     cwd->ambient         = aggregateInts(ambientTemperature, NUMBER_OF_READS);
     cwd->ldr             = aggregateInts(ldrValue, NUMBER_OF_READS);
+    cwd->ldrFreq          = aggregateInts(ldrFreqValue, NUMBER_OF_READS);
     cwd->rainTemperature = aggregateInts(rainSensorTemperature, NUMBER_OF_READS);
     cwd->windSpeed       = aggregateInts(windSpeed, NUMBER_OF_READS);
     if (m_FirmwareVersion >= 5.6)
@@ -739,7 +741,7 @@ bool CloudWatcherController::getPressure(int *pressure)
     return true;
 }
 
-bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue,
+bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue, int *ldrFreqValue,
                                        int *rainSensorTemperature)
 {
     sendCloudwatcherCommand("C!");
@@ -748,8 +750,27 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientT
     int ambTemp = -10000;
     int ldrRes;
     int rainSensTemp;
+    int ldrFreq = -10000;
 
-    if (m_FirmwareVersion >= 3)
+    if (m_FirmwareVersion >= 5.88)
+    {
+        char inputBuffer[BLOCK_SIZE * 4];
+
+        int r = getCloudWatcherAnswer(inputBuffer, 5);
+
+        if (!r)
+        {
+            return false;
+        }
+
+        int res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq, &rainSensTemp);
+
+        if (res != 4)
+        {
+            return false;
+        }
+    }
+    else if (m_FirmwareVersion >= 3)
     {
         char inputBuffer[BLOCK_SIZE * 4];
 
@@ -791,6 +812,7 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientT
     *ambientTemperature    = ambTemp;
     *ldrValue              = ldrRes;
     *rainSensorTemperature = rainSensTemp;
+    *ldrFreqValue           = ldrFreq;
 
     return true;
 }
