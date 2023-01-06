@@ -17,11 +17,23 @@
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
+   <device label="CGEM II Wired" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
    <device label="CGEM II WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
+   <device label="CGX Wired" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
    <device label="CGX WiFi" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
+   <device label="Advanced VX Wired" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
