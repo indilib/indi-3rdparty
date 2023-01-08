@@ -33,6 +33,7 @@
 
 #include <indiccd.h>
 #include <inditimer.h>
+#include <atomic>
 
 class SingleWorker;
 class ASIBase : public INDI::CCD
@@ -97,6 +98,13 @@ class ASIBase : public INDI::CCD
         double mCurrentTemperature;
         INDI::Timer mTimerTemperature;
         void temperatureTimerTimeout();
+
+        std::atomic<bool> mWarmingCCD;
+        double mPreWarmingTargetTemperature;
+        int mWarmingStepSettledCounter;
+        int mWarmingStepSettleTryCounter;
+
+        void warmingStepSettled( bool finished );
 
         /** Timers for NS/WE guiding */
         INDI::Timer mTimerNS;

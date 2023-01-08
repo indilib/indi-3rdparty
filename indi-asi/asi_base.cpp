@@ -281,6 +281,8 @@ ASIBase::ASIBase()
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     mTimerWE.setSingleShot(true);
     mTimerNS.setSingleShot(true);
+    mWarmingCCD = false;
+    mPreWarmingTargetTemperature = 999;
 }
 
 ASIBase::~ASIBase()
@@ -947,6 +949,33 @@ bool ASIBase::setVideoFormat(uint8_t index)
     return true;
 }
 
+void ASIBase::warmingStepSettled( bool finished ) {
+    TemperatureNP.s = finished ? IPS_OK : IPS_BUSY;
+    IDSetNumber(&TemperatureNP, nullptr);
+
+    if( finished ) {
+        LOGF_INFO( "Warming CCD has finished at %.2f C", mCurrentTemperature );
+
+        ASI_ERROR_CODE ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, ASI_FALSE, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+        {
+            LOGF_ERROR("Failed to deactivate cooler (%s).", Helpers::toString(ret));
+        }
+
+        mWarmingCCD = false;
+    }
+    else {
+        double temperature = mCurrentTemperature + 2.0;
+    
+        LOGF_INFO( "Warming CCD to %.2f C", temperature );
+
+        mTargetTemperature = temperature;
+        SetTemperature( temperature );
+    }
+
+    
+}   
+
 int ASIBase::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
@@ -954,7 +983,13 @@ int ASIBase::SetTemperature(double temperature)
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (activateCooler(true) == false)
+    if( mWarmingCCD.load() ) {
+        if( temperature != mTargetTemperature ) {
+            mWarmingCCD = false;
+        }
+    }
+
+    if ( mWarmingCCD.load() == false && activateCooler(true) == false)
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
@@ -977,7 +1012,51 @@ int ASIBase::SetTemperature(double temperature)
 
 bool ASIBase::activateCooler(bool enable)
 {
-    ASI_ERROR_CODE ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE);
+    ASI_ERROR_CODE ret;
+    if( !enable ) {
+
+        long coolerIsOn = ASI_FALSE;
+        ASI_BOOL isAuto = ASI_FALSE;
+        ret = ASIGetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, &coolerIsOn, &isAuto);
+
+        if (ret != ASI_SUCCESS)
+        {
+            if (ret != ASI_ERROR_INVALID_CONTROL_TYPE)
+            {
+                LOGF_ERROR("Failed to get is coller on (%s).", Helpers::toString(ret));
+            }
+            return false;
+        }
+
+        if( coolerIsOn == ASI_TRUE ) {
+            if( mWarmingCCD.load() == false ) {
+
+                mWarmingStepSettledCounter = 0;
+                mWarmingStepSettleTryCounter = 0;
+                mPreWarmingTargetTemperature = mTargetTemperature;
+                //warming
+                mWarmingCCD = true;
+                
+                warmingStepSettled( false );
+            }
+
+            CoolerSP[0].setState(ISS_OFF);
+            CoolerSP[1].setState(ISS_ON);
+            CoolerSP.setState(IPS_IDLE);
+            CoolerSP.apply();
+
+            return true;
+        }
+    }
+    else if( mWarmingCCD.load() ) {
+        //restore previous temp
+        mWarmingCCD = false;
+        if( mPreWarmingTargetTemperature != 999 ) {
+            SetTemperature( mPreWarmingTargetTemperature );
+        }
+    }
+    
+    ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE);
     if (ret != ASI_SUCCESS)
     {
         CoolerSP.setState(IPS_ALERT);
@@ -1297,6 +1376,23 @@ void ASIBase::temperatureTimerTimeout()
             CoolerNP.setState(value > 0 ? IPS_BUSY : IPS_IDLE);
         }
         CoolerNP.apply();
+
+        if( mWarmingCCD.load() ) {
+            if (std::abs(mTargetTemperature - TemperatureN[0].value) <= TemperatureRampNP[RAMP_THRESHOLD].value) {
+                //check if we hit the target temp at least 5 times
+                if( ++mWarmingStepSettledCounter > 5 ) {
+                    mWarmingStepSettledCounter = 0;
+                    mWarmingStepSettleTryCounter = 0;
+                    warmingStepSettled( false );
+                }
+            }
+            else if( ++mWarmingStepSettleTryCounter > 300 ) {
+                //failed to settle within aprox 5 minutes > warming has finished
+                 mWarmingStepSettledCounter = 0;
+                mWarmingStepSettleTryCounter = 0;
+                warmingStepSettled( true );
+            }
+        }
     }
 }
 
