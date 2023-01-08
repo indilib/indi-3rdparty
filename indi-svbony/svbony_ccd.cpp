@@ -137,7 +137,7 @@ bool SVBONYCCD::updateProperties()
 
         // cooler enable
         defineProperty(&CoolerSP);
-	defineProperty(&CoolerNP);
+        defineProperty(&CoolerNP);
 
         // define controls
         defineProperty(&ControlsNP[CCD_GAIN_N]);
@@ -164,7 +164,7 @@ bool SVBONYCCD::updateProperties()
 
         // delete cooler enable
         deleteProperty(CoolerSP.name);
-	deleteProperty(CoolerNP.name);
+        deleteProperty(CoolerNP.name);
 
         // delete controls
         deleteProperty(ControlsNP[CCD_GAIN_N].name);
@@ -235,17 +235,19 @@ bool SVBONYCCD::Connect()
     }
     if (isDebug())
     {
-        // Output camera properties to log 
+        // Output camera properties to log
         LOGF_DEBUG("Camera Property:\n WxH= %ldx%ld, Color:%d, BayerPattern:%d, MaxBitDepth:%d, IsTriggerCam:%d",
-            cameraProperty.MaxWidth, cameraProperty.MaxHeight,
-            cameraProperty.IsColorCam,
-            cameraProperty.BayerPattern,
-            cameraProperty.MaxBitDepth,
-            cameraProperty.IsTriggerCam);
-        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedBins)/sizeof(cameraProperty.SupportedBins[0]))) && cameraProperty.SupportedBins[i] != 0; i++) {
+                   cameraProperty.MaxWidth, cameraProperty.MaxHeight,
+                   cameraProperty.IsColorCam,
+                   cameraProperty.BayerPattern,
+                   cameraProperty.MaxBitDepth,
+                   cameraProperty.IsTriggerCam);
+        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedBins) / sizeof(cameraProperty.SupportedBins[0]))) && cameraProperty.SupportedBins[i] != 0; i++)
+        {
             LOGF_DEBUG(" Bin %d", cameraProperty.SupportedBins[i]);
         }
-        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++) {
+        for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat) / sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
+        {
             LOGF_DEBUG(" Supported Video Format: %d", cameraProperty.SupportedVideoFormat[i]);
         }
     }
@@ -261,27 +263,33 @@ bool SVBONYCCD::Connect()
 
     // output camera properties ex to log
     LOGF_DEBUG("Camera Property Ex:\n SupportPulseGuide:%d, SupportControlTemp:%d",
-        cameraPropertyEx.bSupportPulseGuide,
-        cameraPropertyEx.bSupportControlTemp);
+               cameraPropertyEx.bSupportPulseGuide,
+               cameraPropertyEx.bSupportControlTemp);
 
     // Set CCD Capability
     uint32_t cap = GetCCDCapability();
-    if (cameraProperty.IsColorCam) {
+    if (cameraProperty.IsColorCam)
+    {
         cap |= CCD_HAS_BAYER;
     }
-    else {
+    else
+    {
         cap &= ~CCD_HAS_BAYER;
     }
-    if (cameraPropertyEx.bSupportPulseGuide) {
+    if (cameraPropertyEx.bSupportPulseGuide)
+    {
         cap |= CCD_HAS_ST4_PORT;
     }
-    else {
+    else
+    {
         cap &= ~CCD_HAS_ST4_PORT;
     }
-    if (cameraPropertyEx.bSupportControlTemp) {
+    if (cameraPropertyEx.bSupportControlTemp)
+    {
         cap |= CCD_HAS_COOLER;
     }
-    else {
+    else
+    {
         cap &= ~CCD_HAS_COOLER;
     }
     SetCCDCapability(cap);
@@ -469,11 +477,11 @@ bool SVBONYCCD::Connect()
     nFrameFormat = 0;
     // initialize frameFormatDefinitions from cameraProperty
     defaultMaxBitDepth = 0; // max pixel bit depth
-    for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat)/sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
+    for (int i = 0; (i < (int)(sizeof(cameraProperty.SupportedVideoFormat) / sizeof(cameraProperty.SupportedVideoFormat[0]))) && cameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
     {
         int svb_img_fmt = cameraProperty.SupportedVideoFormat[i];
 
-        if (svb_img_fmt != SVB_IMG_RGB24 && svb_img_fmt != SVB_IMG_RGB32) // INDI not support RGB24,RGB32 
+        if (svb_img_fmt != SVB_IMG_RGB24 && svb_img_fmt != SVB_IMG_RGB32) // INDI not support RGB24,RGB32
         {
             frameFormatDefinitions[svb_img_fmt].isIndex = i; // Set the index of the ISwitch
 
@@ -496,7 +504,7 @@ bool SVBONYCCD::Connect()
         return false;
     }
     defaultFrameFormatIndex = SVB_IMG_END;
-    for (int i = 0; i < (int)(sizeof(frameFormatDefinitions)/sizeof(FrameFormatDefinition)); i++)
+    for (int i = 0; i < (int)(sizeof(frameFormatDefinitions) / sizeof(FrameFormatDefinition)); i++)
     {
         FrameFormatDefinition *pFrameFormatDef = &frameFormatDefinitions[i];
         if (pFrameFormatDef->isIndex != -1)
@@ -509,11 +517,12 @@ bool SVBONYCCD::Connect()
             }
             switch2frameFormatDefinitionsIndex[pFrameFormatDef->isIndex] = (SVB_IMG_TYPE)i;
             // Setup Capture Format
-            CaptureFormat format = {
+            CaptureFormat format =
+            {
                 pFrameFormatDef->isName,
                 pFrameFormatDef->isLabel,
                 (uint8_t)(pFrameFormatDef->isBits),
-                pFrameFormatDef->isStateDefault == ISS_ON ? true: false
+                pFrameFormatDef->isStateDefault == ISS_ON ? true : false
             };
             addCaptureFormat(format);
         }
@@ -554,24 +563,26 @@ bool SVBONYCCD::Connect()
     bitStretch = 0;
 
     // Cooler Enable
-    if (HasCooler()) {
+    if (HasCooler())
+    {
         // set initial target temperature
         IUFillNumber(&TemperatureN[0], "CCD_TEMPERATURE_VALUE", "Temperature (C)", "%5.2f", -50.0, 50.0, 0., 25.);
 
-	// default target temperature is 0. Setting to 25.
-        if (SVB_SUCCESS != (status = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(25*10), SVB_FALSE))) {
+        // default target temperature is 0. Setting to 25.
+        if (SVB_SUCCESS != (status = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(25 * 10), SVB_FALSE)))
+        {
             LOGF_INFO("Setting default target temperature failed. (SVB_TARGET_TEMPERATURE:%d)", status);
         }
-	TemperatureRequest = 25;
+        TemperatureRequest = 25;
 
         // set cooler status to disable
         IUFillSwitch(&CoolerS[COOLER_ENABLE], "COOLER_ON", "ON", ISS_OFF);
         IUFillSwitch(&CoolerS[COOLER_DISABLE], "COOLER_OFF", "OFF", ISS_ON);
         IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
 
-	// cooler power info
-	IUFillNumber(&CoolerN[0], "CCD_COOLER_POWER_VALUE", "Cooler power (%)", "%3.f", 0.0, 100.0, 1., 0.);
-	IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooler power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+        // cooler power info
+        IUFillNumber(&CoolerN[0], "CCD_COOLER_POWER_VALUE", "Cooler power (%)", "%3.f", 0.0, 100.0, 1., 0.);
+        IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooler power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
     }
     coolerEnable = COOLER_DISABLE;
@@ -586,7 +597,7 @@ bool SVBONYCCD::Connect()
         return false;
     }
     int x, y, w, h, bin;
-	status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin); // Get Actual ROI
+    status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin); // Get Actual ROI
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera get ROI failed");
@@ -706,25 +717,28 @@ int SVBONYCCD::SetTemperature(double temperature)
     SVB_ERROR_CODE ret;
 
     // If below threshold, do nothing
-    if (fabs(temperature - TemperatureN[0].value) < TemperatureRampNP[RAMP_THRESHOLD].value) {
+    if (fabs(temperature - TemperatureN[0].value) < TemperatureRampNP[RAMP_THRESHOLD].value)
+    {
         return 1; // The requested temperature is the same as current temperature, or very close
     }
 
     pthread_mutex_lock(&cameraID_mutex);
     // Set target temperature
-    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature*10), SVB_FALSE))) {
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_TARGET_TEMPERATURE, (long)(temperature * 10), SVB_FALSE)))
+    {
         LOGF_INFO("Setting target temperature failed. (SVB_TARGET_TEMPERATURE:%d)", ret);
-	pthread_mutex_unlock(&cameraID_mutex);
-	return -1;
+        pthread_mutex_unlock(&cameraID_mutex);
+        return -1;
     }
 
     pthread_mutex_unlock(&cameraID_mutex);
 
     // Enable Cooler
     pthread_mutex_lock(&cameraID_mutex);
-    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE))) {
+    if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, 1, SVB_FALSE)))
+    {
         LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
-	pthread_mutex_unlock(&cameraID_mutex);
+        pthread_mutex_unlock(&cameraID_mutex);
         return -1;
     }
 
@@ -1089,7 +1103,7 @@ bool SVBONYCCD::UpdateCCDFrame(int x, int y, int w, int h)
     }
     LOGF_DEBUG("Given ROI x=%d, y=%d, w=%d, h=%d", x, y, w, h);
     int bin;
-	status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin);
+    status = SVBGetROIFormat(cameraID, &x, &y, &w, &h, &bin);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, get actual subframe failed");
@@ -1178,7 +1192,7 @@ void SVBONYCCD::TimerHit()
                 if (timeleft > 0.07)
                 {
                     //  use an even tighter timer
-                    timerID = SetTimer((uint32_t)(timeleft*1000));
+                    timerID = SetTimer((uint32_t)(timeleft * 1000));
                 }
                 else
                 {
@@ -1188,45 +1202,46 @@ void SVBONYCCD::TimerHit()
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
                     status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
                     pthread_mutex_unlock(&cameraID_mutex);
-               	    LOGF_DEBUG("SVBGetVideoData:result=%d", status);
+                    LOGF_DEBUG("SVBGetVideoData:result=%d", status);
 
-                    switch (status) {
-                    case SVB_SUCCESS:
-                        // exposing done
-                        PrimaryCCD.setExposureLeft(0);
-                        InExposure = false;
+                    switch (status)
+                    {
+                        case SVB_SUCCESS:
+                            // exposing done
+                            PrimaryCCD.setExposureLeft(0);
+                            InExposure = false;
 
-                        // stretching 12bits depth to 16bits depth
-                        if(bitDepth == 16 && (bitStretch != 0))
-                        {
-                            u_int16_t* tmp = (u_int16_t*)imageBuffer;
-                            for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                            // stretching 12bits depth to 16bits depth
+                            if(bitDepth == 16 && (bitStretch != 0))
                             {
-                                tmp[i] <<= bitStretch;
+                                u_int16_t* tmp = (u_int16_t*)imageBuffer;
+                                for(int i = 0; i < PrimaryCCD.getFrameBufferSize() / 2; i++)
+                                {
+                                    tmp[i] <<= bitStretch;
+                                }
                             }
-                        }
 
-                        // binning if needed
-                        if(binning)
-                            PrimaryCCD.binFrame();
+                            // binning if needed
+                            if(binning)
+                                PrimaryCCD.binFrame();
 
-                        // exposure done
-                        ExposureComplete(&PrimaryCCD);
-                        break;
+                            // exposure done
+                            ExposureComplete(&PrimaryCCD);
+                            break;
 
-                    case SVB_ERROR_TIMEOUT:
-                        LOG_DEBUG("Timeout for image data retrieval.");
-                        // set retry timer for SVGGetVideoData
-                        timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
-                        break;
+                        case SVB_ERROR_TIMEOUT:
+                            LOG_DEBUG("Timeout for image data retrieval.");
+                            // set retry timer for SVGGetVideoData
+                            timerID = SetTimer((uint32_t)100); // Time until next image data acquisition: 100 ms
+                            break;
 
-                    default:
-                        LOGF_INFO("Error retrieval image data (status:%d)", status);
-                        // Exposure be aborted. Error in SVBGetVideoData
-                        PrimaryCCD.setExposureFailed(); // The exposure will be restarted after calling PrimaryCCD.setExposureFailed().
-                        PrimaryCCD.setExposureLeft(0);
-                        InExposure = false;
-                        break;
+                        default:
+                            LOGF_INFO("Error retrieval image data (status:%d)", status);
+                            // Exposure be aborted. Error in SVBGetVideoData
+                            PrimaryCCD.setExposureFailed(); // The exposure will be restarted after calling PrimaryCCD.setExposureFailed().
+                            PrimaryCCD.setExposureLeft(0);
+                            InExposure = false;
+                            break;
                     }
                 }
             }
@@ -1244,29 +1259,35 @@ void SVBONYCCD::TimerHit()
     }
 
 
-    if (HasCooler()) {
-	SVB_ERROR_CODE ret;
+    if (HasCooler())
+    {
+        SVB_ERROR_CODE ret;
         long lValue;
         SVB_BOOL bAuto;
 
         // temperature readout
-	pthread_mutex_lock(&cameraID_mutex);
-        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto))) {
-       	    LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
+        pthread_mutex_lock(&cameraID_mutex);
+        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_CURRENT_TEMPERATURE, &lValue, &bAuto)))
+        {
+            LOGF_INFO("Error, unable to get temp due to ...(SVB_CURRENT_TEMPERATURE:%d)", ret);
             TemperatureNP.s = IPS_ALERT;
-        } else {
-            TemperatureN[0].value = ((double)lValue)/10;
+        }
+        else
+        {
+            TemperatureN[0].value = ((double)lValue) / 10;
             IDSetNumber(&TemperatureNP, nullptr);
         }
         pthread_mutex_unlock(&cameraID_mutex);
 
-	// read cooler power
-	pthread_mutex_lock(&cameraID_mutex);
-        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_COOLER_POWER, &lValue, &bAuto))) {
+        // read cooler power
+        pthread_mutex_lock(&cameraID_mutex);
+        if (SVB_SUCCESS != (ret = SVBGetControlValue(cameraID, SVB_COOLER_POWER, &lValue, &bAuto)))
+        {
             LOGF_INFO("Error, unable to get cooler power due to ...(SVB_COOLER_POWER:%d)", ret);
             CoolerNP.s = IPS_ALERT;
         }
-        else {
+        else
+        {
             CoolerN[0].value = (double)lValue;
             CoolerNP.s = IPS_OK;
             IDSetNumber(&CoolerNP, nullptr);
@@ -1501,7 +1522,8 @@ bool SVBONYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 
             SVB_ERROR_CODE ret;
             // Change cooler state
-            if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, (coolerEnable == COOLER_ENABLE ? 1 : 0), SVB_FALSE))) {
+            if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_COOLER_ENABLE, (coolerEnable == COOLER_ENABLE ? 1 : 0), SVB_FALSE)))
+            {
                 LOGF_INFO("Enabling cooler is fail.(SVB_COOLER_ENABLE:%d)", ret);
             }
 
@@ -1542,13 +1564,16 @@ bool SVBONYCCD::SetCaptureFormat(uint8_t index)
     PrimaryCCD.setBPP(bitDepth);
 
     // Change color/grascale mode of CCD
-    if (HasBayer() != frameFormatDefinitions[newFrameFormat].isColor) {
+    if (HasBayer() != frameFormatDefinitions[newFrameFormat].isColor)
+    {
         // Set CCD Capability
         uint32_t cap = GetCCDCapability();
-        if (HasBayer()) {
+        if (HasBayer())
+        {
             cap &= ~CCD_HAS_BAYER; // if color mode exchange to monochrome
         }
-        else {
+        else
+        {
             cap |= CCD_HAS_BAYER; // if monochrome mode exchange to color
         }
         SetCCDCapability(cap);
@@ -1586,24 +1611,10 @@ bool SVBONYCCD::saveConfigItems(FILE * fp)
 }
 
 
-//
-// to avoid build issues with old indi
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
 void SVBONYCCD::addFITSKeywords(INDI::CCDChip *targetChip)
-#else
-void SVBONYCCD::addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip)
-#endif
 {
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
     INDI::CCD::addFITSKeywords(targetChip);
-#else
-    INDI::CCD::addFITSKeywords(fptr, targetChip);
-#endif
-
-// to avoid build issues with old indi
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
     auto fptr = *targetChip->fitsFilePointer();
-#endif
 
     // report controls in FITS file
     int _status = 0;

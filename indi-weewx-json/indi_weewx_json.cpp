@@ -117,7 +117,7 @@ void WeewxJSON::ISGetProperties(const char *dev)
     if (once)
     {
         once = false;
-        defineProperty(&weewxJsonUrl);
+        defineProperty(weewxJsonUrl);
         loadConfig(true, weewxJsonUrl.getName());
     }
 }
@@ -128,7 +128,7 @@ bool WeewxJSON::updateProperties()
 
     if (isConnected())
     {
-        defineProperty(&weewxJsonUrl);
+        defineProperty(weewxJsonUrl);
         SetTimer(getCurrentPollingPeriod());
     }
     else
@@ -306,8 +306,6 @@ IPState WeewxJSON::updateWeather()
 bool WeewxJSON::saveConfigItems(FILE *fp)
 {
     INDI::Weather::saveConfigItems(fp);
-
-    IUSaveConfigText(fp, &weewxJsonUrl);
-
+    weewxJsonUrl.save(fp);
     return true;
 }

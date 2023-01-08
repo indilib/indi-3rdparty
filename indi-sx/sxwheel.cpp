@@ -102,7 +102,7 @@ bool SXWHEEL::initProperties()
     MovementModeSP[UNIDIRECTIONAL].fill("UNIDIRECTIONAL", "Unidirectional", ISS_OFF);
     MovementModeSP[BIDIRECTIONAL].fill("BIDIRECTIONAL", "Bidirectional", ISS_ON);
     MovementModeSP.fill(getDeviceName(), "MOVEMENT", "Movement", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
-    defineProperty(&MovementModeSP);
+    defineProperty(MovementModeSP);
 
     return true;
 }

@@ -210,7 +210,7 @@ void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duratio
         FPROFrame_CaptureAbort(m_CameraHandle);
 
         // Send the merged image.
-        switch (IUFindOnSwitchIndex(&MergePlanesSP))
+        switch (MergePlanesSP.findOnSwitchIndex())
         {
             case HWMERGE_FRAME_BOTH:
                 PrimaryCCD.setFrameBuffer(reinterpret_cast<uint8_t*>(fproUnpacked.pMergedImage));
@@ -374,7 +374,7 @@ bool Kepler::initProperties()
 void Kepler::ISGetProperties(const char *dev)
 {
     INDI::CCD::ISGetProperties(dev);
-    defineProperty(&CommunicationMethodSP);
+    defineProperty(CommunicationMethodSP);
 
 #ifdef LEGACY_MODE
     defineProperty(ExpValuesNP);
@@ -514,7 +514,7 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             MergePlanesSP.update(states, names, n);
             MergePlanesSP.setState(IPS_OK);
 
-            int index = IUFindOnSwitchIndex(&MergePlanesSP);
+            int index = MergePlanesSP.findOnSwitchIndex();
             fproUnpacked.bLowImageRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
             fproUnpacked.bHighImageRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
             fproUnpacked.bMergedImageRequest = index == HWMERGE_FRAME_BOTH;
@@ -531,14 +531,14 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
         // Merge Methods
         if (MergeMethodSP.isNameMatch(name))
         {
-            int previousIndex = IUFindOnSwitchIndex(&MergeMethodSP);
+            int previousIndex = MergeMethodSP.findOnSwitchIndex();
             MergeMethodSP.update(states, names, n);
 
-            switch (IUFindOnSwitchIndex(&MergeMethodSP))
+            switch (MergeMethodSP.findOnSwitchIndex())
             {
                 case FPROMERGE_ALGO:
                     mergeEnables.bMergeEnable = true;
-                    mergeEnables.eMergeFrames = static_cast<FPRO_HWMERGEFRAMES>(IUFindOnSwitchIndex(&MergePlanesSP));
+                    mergeEnables.eMergeFrames = static_cast<FPRO_HWMERGEFRAMES>(MergePlanesSP.findOnSwitchIndex());
                     mergeEnables.eMergeFormat = IFORMAT_RCD;
                     break;
                 case FPROMERGE_ALGO_REF_FRAME:
@@ -555,7 +555,7 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             else
             {
                 MergeMethodSP.setState(IPS_ALERT);
-                IUResetSwitch(&MergeMethodSP);
+                MergeMethodSP.reset();
                 MergeMethodSP[previousIndex].setState(ISS_ON);
                 LOGF_ERROR("Error setting hardware merge enables: %d", result);
             }
@@ -841,7 +841,7 @@ void Kepler::prepareUnpacked()
     memset(&fproUnpacked, 0, sizeof(fproUnpacked));
 
     // Merging Planes
-    int index = IUFindOnSwitchIndex(&MergePlanesSP);
+    int index = MergePlanesSP.findOnSwitchIndex();
     fproUnpacked.bLowImageRequest = index == HWMERGE_FRAME_LOWONLY || index == HWMERGE_FRAME_BOTH;
     fproUnpacked.bHighImageRequest = index == HWMERGE_FRAME_HIGHONLY || index == HWMERGE_FRAME_BOTH;
     fproUnpacked.bMergedImageRequest = index == HWMERGE_FRAME_BOTH;
@@ -853,7 +853,7 @@ void Kepler::prepareUnpacked()
     fproStats.bMergedRequest = index == HWMERGE_FRAME_BOTH;
 
     // Merging Method
-    fproUnpacked.eMergAlgo = static_cast<FPRO_MERGEALGO>(IUFindOnSwitchIndex(&MergeMethodSP));
+    fproUnpacked.eMergAlgo = static_cast<FPRO_MERGEALGO>(MergeMethodSP.findOnSwitchIndex());
 
 }
 /********************************************************************************
@@ -1082,15 +1082,14 @@ bool Kepler::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    IUSaveConfigSwitch(fp, &MergeMethodSP);
-    IUSaveConfigSwitch(fp, &MergePlanesSP);
-    IUSaveConfigText(fp, &MergeCalibrationFilesTP);
-    IUSaveConfigSwitch(fp, &RequestStatSP);
+    MergeMethodSP.save(fp);
+    MergePlanesSP.save(fp);
+    MergeCalibrationFilesTP.save(fp);
+    RequestStatSP.save(fp);
     if (LowGainSP.size() > 0)
-        IUSaveConfigSwitch(fp, &LowGainSP);
+        LowGainSP.save(fp);
     if (HighGainSP.size() > 0)
-        IUSaveConfigSwitch(fp, &HighGainSP);
-
+        HighGainSP.save(fp);
 
     return true;
 }

@@ -186,7 +186,7 @@ const char *CelestronAUX::getDefaultName()
 void CelestronAUX::ISGetProperties(const char *dev)
 {
     INDI::Telescope::ISGetProperties(dev);
-    defineProperty(&PortTypeSP);
+    defineProperty(PortTypeSP);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -389,16 +389,16 @@ bool CelestronAUX::updateProperties()
     if (isConnected())
     {
         // Main Control Panel
-        defineProperty(&MountTypeSP);
-        //defineProperty(&GainNP);
+        defineProperty(MountTypeSP);
+        //defineProperty(GainNP);
         if (MountTypeSP[ALTAZ].getState() == ISS_ON)
-            defineProperty(&HorizontalCoordsNP);
-        defineProperty(&HomeSP);
+            defineProperty(HorizontalCoordsNP);
+        defineProperty(HomeSP);
 
         // Guide
         defineProperty(&GuideNSNP);
         defineProperty(&GuideWENP);
-        defineProperty(&GuideRateNP);
+        defineProperty(GuideRateNP);
 
         // Cord wrap Enabled?
         if (MountTypeSP[ALTAZ].getState() == ISS_ON)
@@ -406,26 +406,26 @@ bool CelestronAUX::updateProperties()
             getCordWrapEnabled();
             CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
             CordWrapToggleSP[INDI_DISABLED].s  = m_CordWrapActive ? ISS_OFF : ISS_ON;
-            defineProperty(&CordWrapToggleSP);
+            defineProperty(CordWrapToggleSP);
 
             // Cord wrap Position?
             getCordWrapPosition();
             double cordWrapAngle = range360(m_CordWrapPosition / STEPS_PER_DEGREE);
             LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
             CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 90))].s = ISS_ON;
-            defineProperty(&CordWrapPositionSP);
-            defineProperty(&CordWrapBaseSP);
+            defineProperty(CordWrapPositionSP);
+            defineProperty(CordWrapBaseSP);
         }
 
-        defineProperty(&GPSEmuSP);
+        defineProperty(GPSEmuSP);
 
         // Encoders
-        defineProperty(&EncoderNP);
-        defineProperty(&AngleNP);
+        defineProperty(EncoderNP);
+        defineProperty(AngleNP);
         if (MountTypeSP[ALTAZ].getState() == ISS_ON)
         {
-            defineProperty(&Axis1PIDNP);
-            defineProperty(&Axis2PIDNP);
+            defineProperty(Axis1PIDNP);
+            defineProperty(Axis2PIDNP);
         }
 
         getVersions();
@@ -445,7 +445,7 @@ bool CelestronAUX::updateProperties()
         FirmwareTP[FW_BAT].setText(fwText);
         formatVersionString(fwText, 10, m_GPSVersion);
         FirmwareTP[FW_GPS].setText(fwText);
-        defineProperty(&FirmwareTP);
+        defineProperty(FirmwareTP);
 
         if (InitPark())
         {
@@ -506,17 +506,17 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
 
-    IUSaveConfigSwitch(fp, &MountTypeSP);
-    IUSaveConfigSwitch(fp, &PortTypeSP);
-    IUSaveConfigSwitch(fp, &CordWrapToggleSP);
-    IUSaveConfigSwitch(fp, &CordWrapPositionSP);
-    IUSaveConfigSwitch(fp, &CordWrapBaseSP);
-    IUSaveConfigSwitch(fp, &GPSEmuSP);
+    MountTypeSP.save(fp);
+    PortTypeSP.save(fp);
+    CordWrapToggleSP.save(fp);
+    CordWrapPositionSP.save(fp);
+    CordWrapBaseSP.save(fp);
+    GPSEmuSP.save(fp);
 
     if (MountTypeSP[ALTAZ].getState() == ISS_ON)
     {
-        IUSaveConfigNumber(fp, &Axis1PIDNP);
-        IUSaveConfigNumber(fp, &Axis2PIDNP);
+        Axis1PIDNP.save(fp);
+        Axis2PIDNP.save(fp);
     }
 
     return true;
@@ -671,14 +671,14 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         if (MountTypeSP.isNameMatch(name))
         {
             // Get current type
-            MountType currentMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ : EQUATORIAL;
+            MountType currentMountType = MountTypeSP.findOnSwitchIndex() ? ALTAZ : EQUATORIAL;
 
             MountTypeSP.update(states, names, n);
             MountTypeSP.setState(IPS_OK);
             MountTypeSP.apply();
 
             // Get target type
-            MountType targetMountType = IUFindOnSwitchIndex(&MountTypeSP) ? ALTAZ : EQUATORIAL;
+            MountType targetMountType = MountTypeSP.findOnSwitchIndex() ? ALTAZ : EQUATORIAL;
 
             // If different then update
             if (currentMountType != targetMountType)
@@ -696,9 +696,9 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             PortTypeSP.update(states, names, n);
             PortTypeSP.setState(IPS_OK);
             PortTypeSP.apply();
-            if (m_ConfigPortType != IUFindOnSwitchIndex(&PortTypeSP))
+            if (m_ConfigPortType != PortTypeSP.findOnSwitchIndex())
             {
-                m_ConfigPortType = IUFindOnSwitchIndex(&PortTypeSP);
+                m_ConfigPortType = PortTypeSP.findOnSwitchIndex();
                 saveConfig(true, PortTypeSP.getName());
             }
             return true;

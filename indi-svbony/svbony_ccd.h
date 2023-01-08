@@ -123,7 +123,7 @@ class SVBONYCCD : public INDI::CCD
 
         // ROI offsets
         int x_offset;
-	int y_offset;
+        int y_offset;
         // ROI actual size
         int ROI_width;
         int ROI_height;
@@ -168,41 +168,43 @@ class SVBONYCCD : public INDI::CCD
         enum { COOLER_ENABLE = 0, COOLER_DISABLE = 1 };
         int coolerEnable; // 0:Enable, 1:Disable
 
-	// cooler power
-	INumber CoolerN[1];
-	INumberVectorProperty CoolerNP;
+        // cooler power
+        INumber CoolerN[1];
+        INumberVectorProperty CoolerNP;
 
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
-	// NOTE : SV305M PRO doesn't support RAW8 and RAW16, only Y8 and Y16
+        // NOTE : SV305M PRO doesn't support RAW8 and RAW16, only Y8 and Y16
         size_t nFrameFormat; // number of frame format types without SVB_IMG_RGB24
         SVB_IMG_TYPE defaultFrameFormatIndex; // Index of Default ISwitch in frameFormatDefinions array. The index is the same as SVB_IMG_TYPE.
         int defaultMaxBitDepth; // Maximum bit depth in camera.
-        typedef struct frameFormatDefinition {
-                const char* isName; // Name of ISwitch
-                const char* isLabel; // label of ISwitch
-                int isBits; // bit depth
-                bool isColor; // true:color, false:grayscale
-                int isIndex; // index for ISwitch
-                ISState isStateDefault; // default ISState
+        typedef struct frameFormatDefinition
+        {
+            const char* isName; // Name of ISwitch
+            const char* isLabel; // label of ISwitch
+            int isBits; // bit depth
+            bool isColor; // true:color, false:grayscale
+            int isIndex; // index for ISwitch
+            ISState isStateDefault; // default ISState
         } FrameFormatDefinition;
-        FrameFormatDefinition frameFormatDefinitions[SVB_IMG_RGB24] = {
-        	{ "FORMAT_RAW8", "RAW 8 bits", 8, true, -1, ISS_OFF },
-                { "FORMAT_RAW10", "RAW 10 bits", 10, true, -1, ISS_OFF },
-                { "FORMAT_RAW12", "RAW 12 bits", 12, true, -1, ISS_OFF },
-                { "FORMAT_RAW14", "RAW 14 bits", 14, true, -1, ISS_OFF },
-                { "FORMAT_RAW16", "RAW 16 bits", 16, true, -1, ISS_OFF },
-                { "FORMAT_Y8", "Y 8 bits", 8, false, -1, ISS_OFF },
-                { "FORMAT_Y10", "Y 10 bits", 10, false, -1, ISS_OFF },
-                { "FORMAT_Y12", "Y 12 bits", 12, false, -1, ISS_OFF },
-                { "FORMAT_Y14", "Y 14 bits", 14, false, -1, ISS_OFF },
-                { "FORMAT_Y16", "Y 16 bits", 16, false, -1, ISS_OFF }
+        FrameFormatDefinition frameFormatDefinitions[SVB_IMG_RGB24] =
+        {
+            { "FORMAT_RAW8", "RAW 8 bits", 8, true, -1, ISS_OFF },
+            { "FORMAT_RAW10", "RAW 10 bits", 10, true, -1, ISS_OFF },
+            { "FORMAT_RAW12", "RAW 12 bits", 12, true, -1, ISS_OFF },
+            { "FORMAT_RAW14", "RAW 14 bits", 14, true, -1, ISS_OFF },
+            { "FORMAT_RAW16", "RAW 16 bits", 16, true, -1, ISS_OFF },
+            { "FORMAT_Y8", "Y 8 bits", 8, false, -1, ISS_OFF },
+            { "FORMAT_Y10", "Y 10 bits", 10, false, -1, ISS_OFF },
+            { "FORMAT_Y12", "Y 12 bits", 12, false, -1, ISS_OFF },
+            { "FORMAT_Y14", "Y 14 bits", 14, false, -1, ISS_OFF },
+            { "FORMAT_Y16", "Y 16 bits", 16, false, -1, ISS_OFF }
         };
         SVB_IMG_TYPE *switch2frameFormatDefinitionsIndex;
         SVB_IMG_TYPE frameFormat; // currenct Frame format
         const char* bayerPatternMapping[4] = {"RGGB", "BGGR", "GRBG", "GBRG"};
-        
+
         virtual bool SetCaptureFormat(uint8_t index) override;
 
         // exposure timing
@@ -221,12 +223,7 @@ class SVBONYCCD : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         // add FITS fields
-// to avoid build issues with old indi
-#if INDI_VERSION_MAJOR >= 1 && INDI_VERSION_MINOR >= 9 && INDI_VERSION_RELEASE >=7
-	virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
-#else
-        virtual void addFITSKeywords(fitsfile *fptr, INDI::CCDChip *targetChip) override;
-#endif
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
 
         // INDI Callbacks
         friend void ::ISGetProperties(const char *dev);
