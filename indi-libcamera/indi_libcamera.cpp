@@ -175,6 +175,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
     initOptions(false);
     options->shutter = duration * 1e6;
+    options->framerate = 1/duration;
 
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
 
@@ -634,6 +635,7 @@ void INDILibCamera::initOptions(bool video)
     options->nopreview = true;
     options->framerate = 0.0;
     options->shutter = 0.0;
+    options->timeout = 1;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -807,7 +809,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustExposureModeSP.apply();
             saveConfig(AdjustExposureModeSP);
 
-            //options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+            options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
             return true;
         }
         if (AdjustAwbModeSP.isNameMatch(name))
@@ -837,7 +839,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             AdjustDenoiseModeSP.apply();
             saveConfig(AdjustDenoiseModeSP);
 
-            options->denoise = "cdn_off";
+            //options->denoise = "cdn_off";
             options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
             return true;
         }
