@@ -293,9 +293,17 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&LowNoiseS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
     IUFillSwitch(&LowNoiseS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
-    IUFillSwitchVector(&LowNoiseSP, LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE_CONTROL", "Low Noise Mode", CONTROL_TAB,
+    IUFillSwitchVector(&LowNoiseSP, LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE_CONTROL", "LN Mode", CONTROL_TAB,
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+
+    ///////////////////////////////////////////////////////////////////////////////////
+    /// High Fullwell Mode
+    ///////////////////////////////////////////////////////////////////////////////////
+    IUFillSwitch(&HighFullwellModeS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&HighFullwellModeS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitchVector(&HighFullwellModeSP, HighFullwellModeS, 2, getDeviceName(), "TC_HIGHFULLWELL_CONTROL", "HFW Mode", CONTROL_TAB,
+                       IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Heat Control
@@ -401,8 +409,13 @@ bool ToupBase::updateProperties()
         defineProperty(&VideoFormatSP);
         defineProperty(&ResolutionSP);
         defineProperty(&ADCNP);
+
+        if (m_HasHighFullwellMode)
+            defineProperty(&HighFullwellModeSP);
+
         if (m_HasLowNoise)
             defineProperty(&LowNoiseSP);
+
         if (m_HasHeatUp)
             defineProperty(&HeatUpSP);
 
@@ -456,8 +469,13 @@ bool ToupBase::updateProperties()
         deleteProperty(VideoFormatSP.name);
         deleteProperty(ResolutionSP.name);
         deleteProperty(ADCNP.name);
+
         if (m_HasLowNoise)
             deleteProperty(LowNoiseSP.name);
+        
+        if (m_HasHighFullwellMode)
+            deleteProperty(HighFullwellModeSP.name);
+
         if (m_HasHeatUp)
             deleteProperty(HeatUpSP.name);
 
@@ -856,6 +874,19 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
+#if defined(BUILD_TOUPCAM)
+    // High FullWell Mode
+    if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
+    {
+        m_HasHighFullwellMode = true;
+        LOG_INFO("High Full Well is possible");
+    }
+    else 
+    {
+        m_HasHighFullwellMode = false;
+        LOG_INFO("High Full Well is NOT possible");
+    }
+#endif
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
@@ -1372,8 +1403,63 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             IDSetSwitch(&FanSpeedSP, nullptr);
             return true;
         }
+#if defined(BUILD_TOUPCAM)
 
-#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)
+       //////////////////////////////////////////////////////////////////////
+        /// High Fullwell Mode
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, HighFullwellModeSP.name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&HighFullwellModeSP);
+            IUUpdateSwitch(&HighFullwellModeSP, states, names, n);
+
+            if (HighFullwellModeS[TC_HIGHFULLWELL_ON].s == ISS_ON)
+            {
+
+                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 1));
+                if (FAILED(rc))
+                {
+                    LOGF_ERROR("Failed to set High Full Well Mode %s. Error (%s)", HighFullwellModeS[INDI_ENABLED].s == ISS_ON ? "on" : "off",
+                            errorCodes[rc].c_str());
+                    HighFullwellModeSP.s = IPS_ALERT;
+                    IUResetSwitch(&HighFullwellModeSP);
+                    HighFullwellModeS[prevIndex].s = ISS_ON;
+                }
+                else
+                {
+                    LOG_INFO("Set High Full Well Mode to ON");
+                    HighFullwellModeSP.s = IPS_OK;
+                }
+
+                IDSetSwitch(&HighFullwellModeSP, nullptr);
+            }
+            else
+            {
+                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 0));
+                if (FAILED(rc))
+                {
+                    LOGF_ERROR("Failed to set high Full Well Mode %s. Error (%s)", HighFullwellModeS[INDI_ENABLED].s == ISS_ON ? "on" : "off",
+                            errorCodes[rc].c_str());
+                    HighFullwellModeSP.s = IPS_ALERT;
+                    IUResetSwitch(&HighFullwellModeSP);
+                    HighFullwellModeS[prevIndex].s = ISS_ON;
+                }
+                else
+                {
+                    LOG_INFO("Set High Full Well Mode to OFF");
+                    HighFullwellModeSP.s = IPS_OK;
+                }
+
+                IDSetSwitch(&HighFullwellModeSP, nullptr);
+                
+            }
+            return true;
+        }
+
+        
+#endif
+
+#if defined(BUILD_TOUPCAM) || defined(BUILD_ALTAIRCAM) || defined(BUILD_STARSHOOTG)    
         //////////////////////////////////////////////////////////////////////
         /// Low Noise
         //////////////////////////////////////////////////////////////////////
@@ -2309,6 +2395,10 @@ bool ToupBase::saveConfigItems(FILE * fp)
 
     if (m_HasLowNoise)
         IUSaveConfigSwitch(fp, &LowNoiseSP);
+
+    if (m_HasHighFullwellMode)
+        IUSaveConfigSwitch(fp, &HighFullwellModeSP);        
+    
     return true;
 }
 

@@ -159,7 +159,7 @@ class ToupBase : public INDI::CCD
             FLAG_USB30_OVER_USB20    = 0x00000100,   /* usb3.0 camera connected to usb2.0 port */
             FLAG_ST4                 = 0x00000200,   /* ST4 */
             FLAG_GETTEMPERATURE      = 0x00000400,   /* support to get the temperature of the sensor */
-            FLAG_PUTTEMPERATURE      = 0x00000800,   /* support to put the target temperature of the sensor */
+            FLAG_HIGH_FULLWELL       = 0x00000800,   /* high full well supported , was in driver v 50: support to put the target temperature of the sensor */
             FLAG_RAW10               = 0x00001000,   /* pixel format, RAW 10bits */
             FLAG_RAW12               = 0x00002000,   /* pixel format, RAW 12bits */
             FLAG_RAW14               = 0x00004000,   /* pixel format, RAW 14bits*/
@@ -284,6 +284,7 @@ class ToupBase : public INDI::CCD
             OPTION_HEAT_MAX        = 0x36,     /* maximum level: heat to prevent fogging up */
             OPTION_HEAT            = 0x37,     /* heat to prevent fogging up */
             OPTION_LOW_NOISE       = 0x38,     /* low noise mode: 1 => enable */
+            OPTION_HIGH_FULLWELL   = 0x55
         };
 
         enum eGUIDEDIRECTION
@@ -470,6 +471,13 @@ class ToupBase : public INDI::CCD
             TC_BINNING_ADD,
         } BINNING_MODE;
 
+        ISwitchVectorProperty HighFullwellModeSP;
+        ISwitch HighFullwellModeS[2];
+        typedef enum
+        {
+            TC_HIGHFULLWELL_ON,
+            TC_HIGHFULLWELL_OFF,
+        } HIGHFULLWELL_MODE;
 
         ISwitchVectorProperty CoolerSP;
         ISwitch CoolerS[2];
@@ -665,6 +673,7 @@ class ToupBase : public INDI::CCD
         bool m_MonoCamera { false };
         bool m_hasDualGain { false };
         bool m_HasLowNoise { false };
+        bool m_HasHighFullwellMode { false };
         bool m_HasHeatUp { false };
 
         INDI::Timer m_CaptureTimeout;
