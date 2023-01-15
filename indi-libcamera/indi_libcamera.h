@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "indipropertyswitch.h"
+//#include "indipropertyswitch.h"
 //#include "indipropertynumber.h"
 //#include "indipropertytext.h"
 #include "indisinglethreadpool.h"
@@ -78,10 +78,13 @@ class INDILibCamera : public INDI::CCD
 
     protected:
         INDI::SingleThreadPool m_Worker;
-        void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
+        void workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
         void outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe);
         bool SetCaptureFormat(uint8_t index) override;
+        void initOptions(bool video);
+        void initSwitch(INDI::PropertySwitch &switchSP, int n, const char **names);
+
 
     protected:
         /** Get initial parameters from camera */
@@ -108,10 +111,18 @@ class INDILibCamera : public INDI::CCD
 
      private:
 
-        INDI::PropertySwitch CameraSP {0};
+        enum {
+            AdjustBrightness = 0, AdjustContrast, AdjustSaturation, AdjustSharpness, AdjustQuality, AdjustExposureValue,
+            //AdjustMeteringMode, AdjustExposureMode, AdjustAwbMode,
+            AdjustAwbRed, AdjustAwbBlue
+        };
 
-        std::unique_ptr<LibcameraApp> m_StillApp;
-        std::unique_ptr<LibcameraEncoder> m_VideoApp;
+        INDI::PropertySwitch CameraSP {0};
+        INDI::PropertySwitch AdjustExposureModeSP {0}, AdjustAwbModeSP {0}, AdjustMeteringModeSP {0}, AdjustDenoiseModeSP {0} ;
+        INDI::PropertyNumber AdjustmentNP {AdjustAwbBlue+1};
+        INDI::PropertyNumber GainNP {1};
+
+        std::unique_ptr<LibcameraEncoder> m_CameraApp;
 
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
 

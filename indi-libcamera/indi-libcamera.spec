@@ -28,6 +28,8 @@ BuildRequires: libjpeg-turbo-devel
 BuildRequires: fftw-devel
 BuildRequires: libftdi-devel
 BuildRequires: gpsd-devel
+BuildRequires: libftdi-devel
+BuildRequires: libcamera-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
@@ -61,12 +63,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi-asi
+cd indi-libcamera
 %cmake -DINDI_DATA_DIR=/usr/share/indi .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi-asi
+cd indi-libcamera
 make DESTDIR=%{buildroot} install
 
 %files
