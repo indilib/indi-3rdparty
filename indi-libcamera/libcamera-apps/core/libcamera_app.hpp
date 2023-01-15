@@ -115,10 +115,13 @@ public:
 	Stream *LoresStream(StreamInfo *info = nullptr) const;
 	Stream *GetMainStream() const;
 
+	CameraManager *GetCameraManager() const;
+
 	std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
 
 	void ShowPreview(CompletedRequestPtr &completed_request, Stream *stream);
 
+	ControlList GetControls();
 	void SetControls(ControlList &controls);
 	StreamInfo GetStreamInfo(Stream const *stream) const;
 
