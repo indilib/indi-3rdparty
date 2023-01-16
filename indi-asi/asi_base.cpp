@@ -966,14 +966,23 @@ void ASIBase::warmingStepSettled( bool finished ) {
     }
     else {
         double temperature = mCurrentTemperature + 2.0;
-    
-        LOGF_INFO( "Warming CCD to %.2f C", temperature );
+        
+        mWarmingCCD = true;
+                
+        ASI_ERROR_CODE ret;
 
+        ret = ASISetControlValue(mCameraInfo.CameraID, ASI_TARGET_TEMP, std::round(temperature), ASI_TRUE);
+        if (ret != ASI_SUCCESS)
+        {
+            LOGF_ERROR("Failed to set temperature (%s).", Helpers::toString(ret));
+            return;
+        }
+
+        // Otherwise, we set the temperature request and we update the status in TimerHit() function.
         mTargetTemperature = temperature;
-        SetTemperature( temperature );
+        LOGF_INFO( "Warming CCD to %.2f C", temperature );
+        return;
     }
-
-    
 }   
 
 int ASIBase::SetTemperature(double temperature)
@@ -983,13 +992,10 @@ int ASIBase::SetTemperature(double temperature)
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if( mWarmingCCD.load() ) {
-        if( temperature != mTargetTemperature ) {
-            mWarmingCCD = false;
-        }
-    }
+    mWarmingCCD = false;
+    mPreWarmingTargetTemperature = 999;
 
-    if ( mWarmingCCD.load() == false && activateCooler(true) == false)
+    if ( activateCooler(true) == false )
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
@@ -1030,13 +1036,9 @@ bool ASIBase::activateCooler(bool enable)
 
         if( coolerIsOn == ASI_TRUE ) {
             if( mWarmingCCD.load() == false ) {
-
                 mWarmingStepSettledCounter = 0;
                 mWarmingStepSettleTryCounter = 0;
                 mPreWarmingTargetTemperature = mTargetTemperature;
-                //warming
-                mWarmingCCD = true;
-                
                 warmingStepSettled( false );
             }
 
