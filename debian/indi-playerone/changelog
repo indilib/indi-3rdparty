@@ -1,3 +1,10 @@
+indi-playerone (1.0) bionic; urgency=low
+
+  * Add PlayerOne Filter Wheel driver
+  * Update libplayerone with PlayerOneCamera SDK v3.1.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 18 Jan 2023 12:00:00 +0900
+
 indi-playerone (0.9) bionic; urgency=low
 
   * Update libplayerone with PlayerOneCamera SDK v3.1.0

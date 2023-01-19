@@ -15,9 +15,10 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 %define __find_requires %{nil}
 
 Provides: libPlayerOneCamera.so
-
+Provides: libPlayerOnePW.so
 
 Provides: libPlayerOneCamera.so()(64bit)
+Provides: libPlayerOnePW.so()(64bit)
 
 
 BuildRequires: cmake
@@ -86,6 +87,9 @@ make DESTDIR=%{buildroot} install
 %license libplayerone/license.txt
 
 %changelog
+* Wed Jan 18 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- add PlayerOne Filter Wheel driver
+- update PlayerOneCamera SDK to v3.1.1
 * Thu Dec 15 2022 Hiroshi Saito <hiro3110g@gmail.com>
 - update PlayerOneCamera SDK to v3.1.0
 * Tue Sep 13 2022 Hiroshi Saito <hiro3110g@gmail.com>
