@@ -74,6 +74,9 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Wed Jan 18 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- Add PlayerOne Filter Wheel driver
+- Update PlayerOneCamera SDK to v3.1.1
 * Thu Dec 15 2022 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOneCamera SDK to v3.1.0
 * Tue Sep 13 2022 Hiroshi Saito <hiro3110g@gmail.com>
