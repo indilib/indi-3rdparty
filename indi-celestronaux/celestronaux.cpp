@@ -1752,12 +1752,12 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
     fs_sexa(string_ha, ha, 2, 3600);
     fs_sexa(string_ra, ra, 2, 3600);
     fs_sexa(string_de, de, 2, 3600);
-    LOGF_DEBUG("Encoder [Axis1: %ld --> LST: %s HA: %s RA: %s] [Axis2: %ld --> DE: %s]",
-               EncoderNP.at(AXIS_AZ)->getValue(),
+    LOGF_DEBUG("Encoder [Axis1: %.f --> LST: %s HA: %s RA: %s] [Axis2: %.f --> DE: %s]",
+               EncoderNP.at(AXIS_RA)->getValue(),
                string_lst,
                string_ha,
                string_ra,
-               EncoderNP.at(AXIS_ALT)->getValue(),
+               EncoderNP.at(AXIS_DE)->getValue(),
                string_de);
 
     coords.rightascension = ra;
