@@ -1747,6 +1747,19 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
     double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
     double ra = range24(lst - ha);
 
+    char string_lst[32] = {0}, string_ha[32] = {0}, string_ra[32] = {0}, string_de[32] = {0};
+    fs_sexa(string_lst, lst, 2, 3600);
+    fs_sexa(string_ha, ha, 2, 3600);
+    fs_sexa(string_ra, ra, 2, 3600);
+    fs_sexa(string_de, de, 2, 3600);
+    LOGF_DEBUG("Encoder [Axis1: %ld --> LST: %s HA: %s RA: %s] [Axis2: %ld --> DE: %s]",
+               EncoderNP.at(AXIS_AZ)->getValue(),
+               string_lst,
+               string_ha,
+               string_ra,
+               EncoderNP.at(AXIS_ALT)->getValue(),
+               string_de);
+
     coords.rightascension = ra;
     coords.declination = de;
 }
