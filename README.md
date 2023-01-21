@@ -193,6 +193,18 @@ When submitting a new driver, the driver user **documentation** is required as p
   * Etc: Any other tabs created by the driver.
 * Issues: Any problems or issues or warnings the users should be aware about when using this driver.
 
+# MacOS Libraries
+
+Some binary files are dynamic libraries provided by various manufacturers and/or are built by various people who are volunteers.
+The binary library files have install names that are then used when building and installing software on MacOS to properly link the
+libraries to the programs or to each other. The problem is that for various reasons, the install names sometimes are based on
+the build folders or install methods that those individuals used on their own computers and when the software is built by others,
+built using different methods. linked in different ways, or is built on craft servers, the install names cause the linking to fail.
+
+This will make the software look like it built and installed correctly, but when it is used, it completely fails to work.
+The install names were changed in the binary files so that they are more consistent across the indi 3rd party libraries and will work
+using other building and linking methods on more people's computers.
+
 # Unit tests
 
 In order to run the unit test suite you must first install the [Google Test Framework](https://github.com/google/googletest). You will need to build and install this from source code as Google does not recommend package managers for distributing distros.(This is because each build system is often unique and a one size fits all aproach does not work well).
