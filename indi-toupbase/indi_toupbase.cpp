@@ -151,8 +151,7 @@ const char *ToupBase::getDefaultName()
 bool ToupBase::initProperties()
 {
     INDI::CCD::initProperties();
-
-    LOG_INFO("init properties");
+    
     ///////////////////////////////////////////////////////////////////////////////////
     /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
@@ -622,7 +621,6 @@ bool ToupBase::Disconnect()
 void ToupBase::setupParams()
 {
     HRESULT rc = 0;
-    LOG_INFO("setupParams");
     FP(put_Option(m_CameraHandle, CP(OPTION_NOFRAME_TIMEOUT), 1));
 
     // Get Firmware Info
@@ -1408,7 +1406,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-
         //////////////////////////////////////////////////////////////////////
         /// Binning Mode Control
         //////////////////////////////////////////////////////////////////////
@@ -1422,8 +1419,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             saveConfig(true, BinningModeSP.name);
             return true;
         }
-
-
 
         //////////////////////////////////////////////////////////////////////
         /// Cooler Control
@@ -1454,7 +1449,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
         }
 #if defined(BUILD_TOUPCAM)
 
-       //////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////
         /// High Fullwell Mode
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, HighFullwellModeSP.name))
