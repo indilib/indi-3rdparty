@@ -2104,7 +2104,14 @@ bool ToupBase::updateBinningMode(int binx, int mode)
     if (FAILED(rc))
     {
         LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode, errorCodes[rc].c_str());
+        BinningModeSP.s = IPS_ALERT;
+        IDSetSwitch(&BinningModeSP, nullptr);
         return false;
+    }
+    else
+    {
+        BinningModeSP.s = IPS_OK;
+        IDSetSwitch(&BinningModeSP, nullptr);
     }
 
     PrimaryCCD.setBin(binx, binx);
