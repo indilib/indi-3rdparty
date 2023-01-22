@@ -152,6 +152,7 @@ bool ToupBase::initProperties()
 {
     INDI::CCD::initProperties();
 
+    LOG_INFO("init properties");
     ///////////////////////////////////////////////////////////////////////////////////
     /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
@@ -314,6 +315,9 @@ bool ToupBase::initProperties()
     IUFillSwitchVector(&HeatUpSP, HeatUpS, 2, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB,
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    IUFillNumber(&HeatLevelN[0], "Heat_Level", "Heat Level", "%.f", 0, 4, 1, 4);
+    IUFillNumberVector(&HeatLevelNP, HeatLevelN, 1, getDeviceName(), "Heat_Level", "Heat Level", CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Fan Control
@@ -417,7 +421,10 @@ bool ToupBase::updateProperties()
             defineProperty(&LowNoiseSP);
 
         if (m_HasHeatUp)
+        {
             defineProperty(&HeatUpSP);
+            defineProperty(&HeatLevelNP);
+        }
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
         {
@@ -477,7 +484,10 @@ bool ToupBase::updateProperties()
             deleteProperty(HighFullwellModeSP.name);
 
         if (m_HasHeatUp)
+        {
             deleteProperty(HeatUpSP.name);
+            deleteProperty(HeatLevelNP.name);
+        }
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
         {
@@ -612,7 +622,7 @@ bool ToupBase::Disconnect()
 void ToupBase::setupParams()
 {
     HRESULT rc = 0;
-
+    LOG_INFO("setupParams");
     FP(put_Option(m_CameraHandle, CP(OPTION_NOFRAME_TIMEOUT), 1));
 
     // Get Firmware Info
@@ -897,6 +907,12 @@ void ToupBase::setupParams()
     if (m_Instance->model->flag & CP(FLAG_HEAT))
     {
         m_HasHeatUp = true;
+        int maxHeat = 0;
+        rc = FP(get_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), &maxHeat));
+        LOGF_INFO("MaxHeat %d",maxHeat);
+        HeatLevelN[0].value = maxHeat; //
+
+
     }
 
     // Contrast
@@ -1083,7 +1099,10 @@ void ToupBase::allocateFrameBuffer()
 }
 
 bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+
 {
+    int rc;
+
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
         //////////////////////////////////////////////////////////////////////
@@ -1350,6 +1369,36 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             return true;
         }
 
+        /////////////////////////////////////////////////////////////////////
+        /// Heat Level
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, HeatLevelNP.name))
+        {
+            LOG_INFO("new heat level");
+            IUUpdateNumber(&HeatLevelNP, values, names, n);
+            HeatLevelNP.s = IPS_OK;
+            IDSetNumber(&HeatLevelNP, nullptr);
+
+            if (HeatUpS[TC_HEAT_ON].s == ISS_ON)
+            {
+                LOG_INFO("Heater on --> update Level");
+                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), HeatLevelN->value ));
+            }
+
+            if (FAILED(rc))
+            {
+                LOGF_ERROR("Failed to set heat mode. Error (%s)", errorCodes[rc].c_str());
+                HeatUpSP.s = IPS_ALERT;
+                IUResetSwitch(&HeatUpSP);
+                HeatUpS[TC_HEAT_ON].s = ISS_ON;
+                HeatUpSP.s = IPS_ALERT;
+            }
+            else
+            {
+                HeatUpSP.s = IPS_OK;
+            }
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1495,23 +1544,10 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
             HRESULT rc = 0;
             if (HeatUpS[TC_HEAT_OFF].s == ISS_ON)
                 rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 0));
-            else if (HeatUpS[TC_HEAT_ON].s == ISS_ON)
-            {
-                // Max heat off
-                FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 0));
-                // Regular heater on
-                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 1));
-            }
-            else
-            {
-                // Regular heater on
-                FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 1));
-                // Max heat on
-                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 1));
-            }
+            
             if (FAILED(rc))
             {
-                LOGF_ERROR("Failed to set heat mode. Error (%s)", errorCodes[rc].c_str());
+                LOGF_ERROR("Failed to set heat mode to OFF. Error (%s)", errorCodes[rc].c_str());
                 HeatUpSP.s = IPS_ALERT;
                 IUResetSwitch(&HeatUpSP);
                 HeatUpS[prevIndex].s = ISS_ON;
@@ -1521,7 +1557,38 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState * states, 
                 HeatUpSP.s = IPS_OK;
             }
 
-            IDSetSwitch(&HeatUpSP, nullptr);
+            if (HeatUpS[TC_HEAT_ON].s == ISS_ON)
+            {
+                // Max heat off
+                // FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 0));
+                // Regular heater on
+                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), HeatLevelN->value ));
+            }
+            /*
+            else
+            {
+                // Regular heater on
+                FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 1));
+                // Max heat on
+                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 1));
+            }
+            */
+            if (FAILED(rc))
+            {
+                LOGF_ERROR("Failed to set heat mode. Error (%s)", errorCodes[rc].c_str());
+                HeatUpSP.s = IPS_ALERT;
+                IUResetSwitch(&HeatUpSP);
+                HeatUpS[TC_HEAT_ON].s = ISS_ON;
+                HeatUpSP.s = IPS_ALERT;
+            }
+            else
+            {
+                IDSetSwitch(&HeatUpSP, nullptr);
+                HeatUpSP.s = IPS_OK;
+            }
+
+            //IDSetSwitch(&HeatUpSP, nullptr);
+            saveConfig(true, HeatLevelNP.name);
             return true;
         }
 #endif
@@ -2406,6 +2473,12 @@ bool ToupBase::saveConfigItems(FILE * fp)
     if (m_HasHighFullwellMode)
         IUSaveConfigSwitch(fp, &HighFullwellModeSP);        
     
+    if (m_HasHeatUp)
+    {
+        IUSaveConfigSwitch(fp,&HeatUpSP);
+        IUSaveConfigNumber(fp, &HeatLevelNP);
+    }
+
     return true;
 }
 

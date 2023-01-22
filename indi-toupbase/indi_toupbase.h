@@ -618,7 +618,8 @@ class ToupBase : public INDI::CCD
             TC_HEAT_ON,
             TC_HEAT_MAX,
         };
-
+        INumberVectorProperty HeatLevelNP;
+        INumber HeatLevelN[1];
 
         // Firmware Info
         ITextVectorProperty FirmwareTP;
