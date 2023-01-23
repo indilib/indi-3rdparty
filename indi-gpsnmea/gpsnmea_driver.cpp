@@ -220,10 +220,10 @@ void GPSNMEA::parseNEMA()
                 {
                     if (frame.valid)
                     {
-                        LocationN[LOCATION_LATITUDE].value  = minmea_tocoord(&frame.latitude);
-                        LocationN[LOCATION_LONGITUDE].value = minmea_tocoord(&frame.longitude);
-                        if (LocationN[LOCATION_LONGITUDE].value < 0)
-                            LocationN[LOCATION_LONGITUDE].value += 360;
+                        LocationNP[LOCATION_LATITUDE].value  = minmea_tocoord(&frame.latitude);
+                        LocationNP[LOCATION_LONGITUDE].value = minmea_tocoord(&frame.longitude);
+                        if (LocationNP[LOCATION_LONGITUDE].value < 0)
+                            LocationNP[LOCATION_LONGITUDE].value += 360;
 
                         struct timespec timesp;
                         time_t raw_time;
@@ -235,13 +235,13 @@ void GPSNMEA::parseNEMA()
                         raw_time = timesp.tv_sec;
                         utc = gmtime(&raw_time);
                         strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
-                        IUSaveText(&TimeT[0], ts);
+                        TimeTP[0].setText(ts);
 
                         setSystemTime(raw_time);
 
                         local = localtime(&raw_time);
                         snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
-                        IUSaveText(&TimeT[1], ts);
+                        TimeTP[1].setText(ts);
 
                         pthread_mutex_lock(&lock);
                         locationPending = false;
@@ -264,12 +264,12 @@ void GPSNMEA::parseNEMA()
                 {
                     if (frame.fix_quality == 1)
                     {
-                        LocationN[LOCATION_LATITUDE].value  = minmea_tocoord(&frame.latitude);
-                        LocationN[LOCATION_LONGITUDE].value = minmea_tocoord(&frame.longitude);
-                        if (LocationN[LOCATION_LONGITUDE].value < 0)
-                            LocationN[LOCATION_LONGITUDE].value += 360;
+                        LocationNP[LOCATION_LATITUDE].value  = minmea_tocoord(&frame.latitude);
+                        LocationNP[LOCATION_LONGITUDE].value = minmea_tocoord(&frame.longitude);
+                        if (LocationNP[LOCATION_LONGITUDE].value < 0)
+                            LocationNP[LOCATION_LONGITUDE].value += 360;
 
-                        LocationN[LOCATION_ELEVATION].value = minmea_tofloat(&frame.altitude);
+                        LocationNP[LOCATION_ELEVATION].value = minmea_tofloat(&frame.altitude);
 
                         struct timespec timesp;
                         time_t raw_time;
@@ -287,12 +287,12 @@ void GPSNMEA::parseNEMA()
                         raw_time = timesp.tv_sec;
                         utc = gmtime(&raw_time);
                         strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
-                        IUSaveText(&TimeT[0], ts);
+                        TimeTP[0].setText(ts);
                         setSystemTime(raw_time);
 
                         local = localtime(&raw_time);
                         snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
-                        IUSaveText(&TimeT[1], ts);
+                        TimeTP[1].setText(ts);
 
                         pthread_mutex_lock(&lock);
                         timePending = false;
@@ -361,12 +361,12 @@ void GPSNMEA::parseNEMA()
                     raw_time = timesp.tv_sec;
                     utc = gmtime(&raw_time);
                     strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
-                    IUSaveText(&TimeT[0], ts);
+                    TimeTP[0].setText(ts);
                     setSystemTime(raw_time);
 
                     local = localtime(&raw_time);
                     snprintf(ts, 32, "%4.2f", (local->tm_gmtoff / 3600.0));
-                    IUSaveText(&TimeT[1], ts);
+                    TimeTP[1].setText(ts);
 
                     pthread_mutex_lock(&lock);
                     timePending = false;
