@@ -132,6 +132,9 @@ class CelestronAUX :
         virtual void TimerHit() override;
         virtual bool updateLocation(double latitude, double longitude, double elevation) override;
 
+        bool SetCurrentPark() override;
+        bool SetDefaultPark() override;
+
         /////////////////////////////////////////////////////////////////////////////////////
         /// Motion Control
         /////////////////////////////////////////////////////////////////////////////////////
