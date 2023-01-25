@@ -201,8 +201,9 @@ bool CelestronAUX::initProperties()
     /// Main Control Tab
     /////////////////////////////////////////////////////////////////////////////////////
     // Mount type
-    int configMountType = ALTAZ;
+    int configMountType = ALT_AZ;
     IUGetConfigOnSwitchIndex(getDeviceName(), "MOUNT_TYPE", &configMountType);
+    m_MountType = static_cast<MountType>(configMountType);
 
     // Detect Equatorial Mounts
     if (strstr(getDeviceName(), "CGX") ||
@@ -211,21 +212,23 @@ bool CelestronAUX::initProperties()
             strstr(getDeviceName(), "Wedge"))
     {
         // Force equatorial for such mounts
-        configMountType = EQUATORIAL;
-        m_IsWedge = (strstr(getDeviceName(), "Wedge") != nullptr);
+        m_MountType = EQ_GEM;
+        if (strstr(getDeviceName(), "Wedge") != nullptr)
+            m_MountType = EQ_FORK;
     }
 
-    if (configMountType == EQUATORIAL)
-        SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
-    else
+    if (m_MountType == ALT_AZ)
         SetApproximateMountAlignment(ZENITH);
+    else
+        SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    MountTypeSP[EQUATORIAL].fill("EQUATORIAL", "Equatorial", configMountType == EQUATORIAL ? ISS_ON : ISS_OFF);
-    MountTypeSP[ALTAZ].fill("ALTAZ", "AltAz", configMountType == ALTAZ ? ISS_ON : ISS_OFF);
-    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    //    MountTypeSP[ALT_AZ].fill("ALTAZ", "AltAz", m_MountType == ALT_AZ ? ISS_ON : ISS_OFF);
+    //    MountTypeSP[EQ_FORK].fill("FORK", "EQ Fork", m_MountType == EQ_FORK ? ISS_ON : ISS_OFF);
+    //    MountTypeSP[EQ_GEM].fill("GEM", "EQ GEM", m_MountType == EQ_GEM ? ISS_ON : ISS_OFF);
+    //    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Track Modes for Equatorial Mount
-    if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+    if (m_MountType != ALT_AZ)
     {
         AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
         AddTrackMode("TRACK_SOLAR", "Solar");
@@ -330,10 +333,6 @@ bool CelestronAUX::initProperties()
     FirmwareTP[FW_GPS].fill("GPS version", "", nullptr);
     FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
 
-    // Gain Rate
-    //    GainNP[AXIS_AZ].fill("AXIS_AZ", "Axis1", "%.f", -10000, 10000, 500, 0);
-    //    GainNP[AXIS_ALT].fill("AXIS_ALT", "Axis2", "%.f", -10000, 10000, 500, 0);
-    //    GainNP.fill(getDeviceName(), "TRACK_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     /////////////////////////////////////////////////////////////////////////////////////
     /// Initial Configuration
     /////////////////////////////////////////////////////////////////////////////////////
@@ -355,7 +354,7 @@ bool CelestronAUX::initProperties()
     tcpConnection->setDefaultHost(CAUX_DEFAULT_IP);
     tcpConnection->setDefaultPort(CAUX_DEFAULT_PORT);
 
-    SetParkDataType(PARK_AZ_ALT_ENCODER);
+    SetParkDataType(PARK_RA_DEC_ENCODER);
 
     // to update cordwrap pos at each init of alignment subsystem
     IDSnoopDevice(getDeviceName(), "ALIGNMENT_SUBSYSTEM_MATH_PLUGIN_INITIALISE");
@@ -389,9 +388,9 @@ bool CelestronAUX::updateProperties()
     if (isConnected())
     {
         // Main Control Panel
-        defineProperty(MountTypeSP);
+        //defineProperty(MountTypeSP);
         //defineProperty(GainNP);
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
             defineProperty(HorizontalCoordsNP);
         defineProperty(HomeSP);
 
@@ -401,7 +400,7 @@ bool CelestronAUX::updateProperties()
         defineProperty(GuideRateNP);
 
         // Cord wrap Enabled?
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             getCordWrapEnabled();
             CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
@@ -422,7 +421,7 @@ bool CelestronAUX::updateProperties()
         // Encoders
         defineProperty(EncoderNP);
         defineProperty(AngleNP);
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             defineProperty(Axis1PIDNP);
             defineProperty(Axis2PIDNP);
@@ -450,23 +449,22 @@ bool CelestronAUX::updateProperties()
         if (InitPark())
         {
             // If loading parking data is successful, we just set the default parking values.
-            SetAxis1ParkDefault(0);
-            SetAxis2ParkDefault(0);
+            SetAxis1ParkDefault(m_MountType == EQ_GEM ? GEM_HOME : 0);
+            SetAxis2ParkDefault(m_MountType == EQ_GEM ? GEM_HOME : 0);
         }
         else
         {
             // Otherwise, we set all parking data to default in case no parking data is found.
-            SetAxis1Park(0);
-            SetAxis2Park(0);
-            SetAxis1ParkDefault(0);
-            SetAxis2ParkDefault(0);
+            SetAxis1Park(m_MountType == EQ_GEM ? GEM_HOME : 0);
+            SetAxis2Park(m_MountType == EQ_GEM ? GEM_HOME : 0);
+            SetAxis1ParkDefault(m_MountType == EQ_GEM ? GEM_HOME : 0);
+            SetAxis2ParkDefault(m_MountType == EQ_GEM ? GEM_HOME : 0);
         }
     }
     else
     {
-        deleteProperty(MountTypeSP.getName());
-        //deleteProperty(GainNP.getName());
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        //deleteProperty(MountTypeSP.getName());
+        if (m_MountType == ALT_AZ)
             deleteProperty(HorizontalCoordsNP.getName());
         deleteProperty(HomeSP.getName());
 
@@ -474,7 +472,7 @@ bool CelestronAUX::updateProperties()
         deleteProperty(GuideWENP.name);
         deleteProperty(GuideRateNP.getName());
 
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             deleteProperty(CordWrapToggleSP.getName());
             deleteProperty(CordWrapPositionSP.getName());
@@ -486,7 +484,7 @@ bool CelestronAUX::updateProperties()
         deleteProperty(EncoderNP.getName());
         deleteProperty(AngleNP.getName());
 
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             deleteProperty(Axis1PIDNP.getName());
             deleteProperty(Axis2PIDNP.getName());
@@ -506,14 +504,14 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
 
-    MountTypeSP.save(fp);
+    //MountTypeSP.save(fp);
     PortTypeSP.save(fp);
     CordWrapToggleSP.save(fp);
     CordWrapPositionSP.save(fp);
     CordWrapBaseSP.save(fp);
     GPSEmuSP.save(fp);
 
-    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    if (m_MountType == ALT_AZ)
     {
         Axis1PIDNP.save(fp);
         Axis2PIDNP.save(fp);
@@ -558,15 +556,6 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-        // Gain
-        //        if (GainNP.isNameMatch(name))
-        //        {
-        //            GainNP.update(values, names, n);
-        //            GainNP.setState(IPS_OK);
-        //            GainNP.apply();
-        //            return true;
-        //        }
-
         // Axis1 PID
         if (Axis1PIDNP.isNameMatch(name))
         {
@@ -668,27 +657,27 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
     if (strcmp(dev, getDeviceName()) == 0)
     {
         // mount type
-        if (MountTypeSP.isNameMatch(name))
-        {
-            // Get current type
-            MountType currentMountType = MountTypeSP.findOnSwitchIndex() ? ALTAZ : EQUATORIAL;
+        //        if (MountTypeSP.isNameMatch(name))
+        //        {
+        //            // Get current type
+        //            MountType currentMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
 
-            MountTypeSP.update(states, names, n);
-            MountTypeSP.setState(IPS_OK);
-            MountTypeSP.apply();
+        //            MountTypeSP.update(states, names, n);
+        //            MountTypeSP.setState(IPS_OK);
+        //            MountTypeSP.apply();
 
-            // Get target type
-            MountType targetMountType = MountTypeSP.findOnSwitchIndex() ? ALTAZ : EQUATORIAL;
+        //            // Get target type
+        //            MountType targetMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
 
-            // If different then update
-            if (currentMountType != targetMountType)
-            {
-                LOG_INFO("Mount type updated. You must restart the driver for changes to take effect.");
-                saveConfig(true, MountTypeSP.getName());
-            }
+        //            // If different then update
+        //            if (currentMountType != targetMountType)
+        //            {
+        //                LOG_INFO("Mount type updated. You must restart the driver for changes to take effect.");
+        //                saveConfig(true, MountTypeSP.getName());
+        //            }
 
-            return true;
-        }
+        //            return true;
+        //        }
 
         // Port Type
         if (PortTypeSP.isNameMatch(name))
@@ -906,7 +895,7 @@ double CelestronAUX::getNorthAz()
 void CelestronAUX::syncCoordWrapPosition()
 {
     // No coord wrap for equatorial mounts.
-    if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+    if (m_MountType != ALT_AZ)
         return;
 
     uint32_t coordWrapPosition = 0;
@@ -992,7 +981,7 @@ IPState CelestronAUX::GuideWest(uint32_t ms)
 bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 {
     // For Equatorial mounts, use regular guiding.
-    if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+    if (m_MountType != ALT_AZ)
     {
         uint8_t ticks = std::min(255u, ms / 10);
         AUXBuffer data(2);
@@ -1080,7 +1069,7 @@ bool CelestronAUX::ReadScopeStatus()
     }
 
     // Mount Alt-Az Coords
-    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    if (m_MountType == ALT_AZ)
     {
         EncodersToAltAz(m_MountCurrentAltAz);
     }
@@ -1097,7 +1086,7 @@ bool CelestronAUX::ReadScopeStatus()
     {
         EncoderNP.setState(IPS_OK);
         EncoderNP.apply();
-        if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             AngleNP[AXIS_AZ].setValue(m_MountCurrentAltAz.azimuth);
             AngleNP[AXIS_ALT].setValue(m_MountCurrentAltAz.altitude);
@@ -1132,7 +1121,7 @@ bool CelestronAUX::ReadScopeStatus()
            AzStr,
            AltStr,
            HAStr,
-           MountTypeSP[ALTAZ].getState() == ISS_ON ? "NA" : getPierSideStr(currentPierSide));
+           (m_MountType == ALT_AZ) ? "NA" : getPierSideStr(currentPierSide));
 
     if (std::abs(celestialAzAlt.azimuth - HorizontalCoordsNP[AXIS_AZ].getValue()) > 0.1 ||
             std::abs(celestialAzAlt.altitude - HorizontalCoordsNP[AXIS_ALT].getValue()) > 0.1)
@@ -1167,7 +1156,7 @@ bool CelestronAUX::ReadScopeStatus()
                 resetTracking();
 
                 // For equatorial mounts, engage tracking.
-                if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+                if (m_MountType != ALT_AZ)
                     SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
                 LOG_INFO("Tracking started.");
             }
@@ -1248,7 +1237,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
     {
         // For Alt-Az Mounts, we get the Mount AltAz coords
-        if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+        if (m_MountType == ALT_AZ)
         {
             INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
             AltitudeAzimuthFromTelescopeDirectionVector(TDV, MountAltAz);
@@ -1270,7 +1259,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     // Conversion failed, use values as is
     else
     {
-        if (MountTypeSP[EQUATORIAL].getState() == ISS_ON)
+        if (m_MountType != ALT_AZ)
         {
             RADEToEncoders(MountRADE, axis1Steps, axis2Steps);
         }
@@ -1316,7 +1305,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     ScopeStatus = (ScopeStatus == APPROACH) ? SLEWING_SLOW : SLEWING_FAST;
     TrackState = SCOPE_SLEWING;
 
-    if (MountTypeSP[ALTAZ].getState() == ISS_ON && HorizontalCoordsNP.getState() != IPS_BUSY)
+    if (m_MountType == ALT_AZ && HorizontalCoordsNP.getState() != IPS_BUSY)
     {
         HorizontalCoordsNP.setState(IPS_BUSY);
         HorizontalCoordsNP.apply();
@@ -1344,7 +1333,7 @@ bool CelestronAUX::Sync(double ra, double dec)
     NewEntry.Declination        = dec;
 
 
-    if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+    if (m_MountType == ALT_AZ)
     {
         INDI::IHorizontalCoordinates MountAltAz { 0, 0 };
         MountAltAz.azimuth = DegreesToAzimuth(EncodersToDegrees(EncoderNP[AXIS_AZ].getValue()));
@@ -1396,7 +1385,7 @@ bool CelestronAUX::mountToSkyCoords()
     double RightAscension, Declination;
 
     // TODO for Alt-Az Mounts on a Wedge, we need a watch to set this.
-    if (MountTypeSP[ALTAZ].getState() == ISS_ON)
+    if (m_MountType == ALT_AZ)
     {
         INDI::IHorizontalCoordinates AltAz = m_MountCurrentAltAz;
         TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
@@ -1476,7 +1465,7 @@ void CelestronAUX::TimerHit()
             }
             // We only engage ACTIVE tracking if the mount is Alt-Az.
             // For Equatorial mount, we simply use user-selected tracking mode and let it passively track.
-            else if (MountTypeSP[MOUNT_ALTAZ].getState() == ISS_ON)
+            else if (m_MountType == ALT_AZ)
             {
                 TelescopeDirectionVector TDV;
                 INDI::IHorizontalCoordinates targetMountAxisCoordinates { 0, 0 };
@@ -1674,14 +1663,14 @@ uint32_t CelestronAUX::HoursToEncoders(double hour)
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, TelescopePierSide &pierSide)
 {
-    auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
-    auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
-
     double de = 0, ha = 0;
-    // Northern Hemisphere
-    if (LocationN[LOCATION_LATITUDE].value >= 0)
+    if (m_MountType == EQ_FORK)
     {
-        if (m_IsWedge)
+        auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+        auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+
+        // Northern Hemisphere
+        if (LocationN[LOCATION_LATITUDE].value >= 0)
         {
             pierSide = PIER_UNKNOWN;
             if (deEncoder >= 270)
@@ -1696,24 +1685,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
             else
                 ha = (haEncoder / 360.0) * 24.0 ;
         }
-        // "Normal" Pointing State (East, looking West)
-        else if (deEncoder >= 0)
-        {
-            de = std::min(90 - deEncoder, 90.0);
-            ha = -6.0 + (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_EAST;
-        }
-        // "Reversed" Pointing State (West, looking East)
         else
-        {
-            de = 90 + deEncoder;
-            ha = 6.0 + (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_WEST;
-        }
-    }
-    else
-    {
-        if (m_IsWedge)
         {
             pierSide = PIER_UNKNOWN;
             if (deEncoder >= 270)
@@ -1728,20 +1700,27 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
             else
                 ha = (haEncoder / 360.0) * 24.0 ;
         }
-        // East
-        else if (deEncoder <= 0)
+    }
+    // GEM
+    else
+    {
+        auto haEncoder = (EncoderNP[AXIS_RA].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+        // DE encoders is +90 at home position (North Hemisphere).
+        // Pier Side East range: -90 to +90 (Mechanically 2^24*0.75 to 2^24*0.25)
+        // Pier Side West range: +90 to -90 (Mechanically 2^24*0.25 to 2^24*0.75)
+        auto deEncoder = (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
+
+        de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
+        ha = range24(haEncoder / 15.0);
+        if (deEncoder < 90 || deEncoder > 270)
         {
-            de = std::max(-90 - deEncoder, -90.0);
-            ha = -6.0 - (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_WEST;
+            de = rangeDec(180 - de);
+            ha = rangeHA(ha + 12);
         }
-        // West
-        else
-        {
-            de = -90 + deEncoder;
-            ha = 6.0 - (haEncoder / 360.0) * 24.0 ;
-            pierSide = PIER_EAST;
-        }
+
+        // Last step
+        if (de < -90)
+            de = (de + 180) * -1;
     }
 
     double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
@@ -1761,7 +1740,21 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
                string_de);
 
     coords.rightascension = ra;
-    coords.declination = de;
+    coords.declination = rangeDec(de);
+
+    char string_lst[32] = {0}, string_ha[32] = {0}, string_ra[32] = {0}, string_de[32] = {0};
+    fs_sexa(string_lst, lst, 2, 3600);
+    fs_sexa(string_ha, ha, 2, 3600);
+    fs_sexa(string_ra, coords.rightascension, 2, 3600);
+    fs_sexa(string_de, coords.declination, 2, 3600);
+    LOGF_DEBUG("Encoder [Axis1: %.f --> LST: %s HA: %s RA: %s] [Axis2: %.f --> DE: %s]",
+               EncoderNP.at(AXIS_RA)->getValue(),
+               string_lst,
+               string_ha,
+               string_ra,
+               EncoderNP.at(AXIS_DE)->getValue(),
+               string_de);
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1775,10 +1768,10 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
     double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
     double dHA = rangeHA(lst - coords.rightascension);
     double de = 0, ha = 0;
-    // Northern Hemisphere
-    if (LocationN[LOCATION_LATITUDE].value >= 0)
+
+    if (m_MountType == EQ_FORK)
     {
-        if (m_IsWedge)
+        if (LocationN[LOCATION_LATITUDE].value >= 0)
         {
             if (coords.declination < 0)
                 de = -coords.declination;
@@ -1789,24 +1782,8 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
                 ha = 360 - ((dHA / -24.0) * 360.0);
             else
                 ha = (dHA / 24.0) * 360.0;
-
         }
-        // "Normal" Pointing State (East, looking West)
-        else if (dHA <= 0)
-        {
-            de = -(coords.declination - 90.0);
-            ha = (dHA + 6.0) * 360.0 / 24.0;
-        }
-        // "Reversed" Pointing State (West, looking East)
         else
-        {
-            de = coords.declination - 90.0;
-            ha = (dHA - 6.0) * 360.0 / 24.0;
-        }
-    }
-    else
-    {
-        if (m_IsWedge)
         {
             if (coords.declination >= 0)
                 de = coords.declination;
@@ -1817,24 +1794,68 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
                 ha = 360 - ((dHA / -24.0) * 360.0);
             else
                 ha = (dHA / 24.0) * 360.0;
+        }
 
-        }
-        // "Normal" Pointing State (East, looking West)
-        else if (dHA <= 0)
+        haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
+        deEncoder  = (360.0 - range360(de)) / 360.0 * STEPS_PER_REVOLUTION;
+    }
+    else
+    {
+        // Northern Hemisphere
+        if (LocationN[LOCATION_LATITUDE].value >= 0)
         {
-            de = -(coords.declination + 90.0);
-            ha = -(dHA + 6.0) * 360.0 / 24.0;
+
+            // "Normal" Pointing State (East, looking West)
+            if (dHA >= 0)
+            {
+                de = 90 + (90 - coords.declination);
+                ha = dHA * 15.0;
+            }
+            // "Reversed" Pointing State (West, looking East)
+            else
+            {
+                de = coords.declination;
+                if (de < 0)
+                    de += 360;
+                ha = rangeHA(dHA + 12) * 15.0;
+            }
         }
-        // "Reversed" Pointing State (West, looking East)
         else
         {
-            de = (coords.declination + 90.0);
-            ha = -(dHA - 6.0) * 360 / 24.0;
+            // "Normal" Pointing State (East, looking West)
+            if (dHA >= 0)
+            {
+                de = coords.declination;
+                if (de < 0)
+                    de += 360;
+
+                ha = rangeHA(dHA + 12) * 15.0;
+            }
+            // "Reversed" Pointing State (West, looking East)
+            else
+            {
+                de = 90 + (90 - coords.declination);
+                ha = dHA * 15.0;
+            }
         }
+
+        haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
+        deEncoder  = (range360(de) / 360.0) * STEPS_PER_REVOLUTION;
     }
 
-    haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
-    deEncoder  = (360.0 - range360(de)) / 360.0 * STEPS_PER_REVOLUTION;
+    char string_lst[32] = {0}, string_ha[32] = {0}, string_ra[32] = {0}, string_de[32] = {0};
+    fs_sexa(string_lst, lst, 2, 3600);
+    fs_sexa(string_ha, ha, 2, 3600);
+    fs_sexa(string_ra, coords.rightascension, 2, 3600);
+    fs_sexa(string_de, coords.declination, 2, 3600);
+    LOGF_DEBUG("[RA: %s LST: %s HA: %s --> Axis1: %u] [DE: %s --> Axis2: %u]",
+               string_ra,
+               string_lst,
+               string_ha,
+               haEncoder,
+               string_de,
+               deEncoder
+              );
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1844,7 +1865,7 @@ double CelestronAUX::EncodersToDE(uint32_t steps, TelescopePierSide pierSide)
 {
     double degrees = EncodersToDegrees(steps);
     double de = 0;
-    if (m_IsWedge)
+    if (m_MountType == EQ_FORK)
         de = degrees;
     else if ((isNorthHemisphere() && pierSide == PIER_WEST) || (!isNorthHemisphere() && pierSide == PIER_EAST))
         de = degrees - 270;
@@ -1860,7 +1881,7 @@ double CelestronAUX::EncodersToDE(uint32_t steps, TelescopePierSide pierSide)
 double CelestronAUX::DEToEncoders(double de)
 {
     double degrees = 0;
-    if (m_IsWedge)
+    if (m_MountType == EQ_FORK)
         degrees = de;
     else if ((isNorthHemisphere() && m_TargetPierSide == PIER_WEST) || (!isNorthHemisphere() && m_TargetPierSide == PIER_EAST))
         degrees = 270 + de;

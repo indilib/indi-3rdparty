@@ -332,12 +332,7 @@ class CelestronAUX :
         INDI::PropertyText FirmwareTP {7};
         enum {FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS};
         // Mount type
-        INDI::PropertySwitch MountTypeSP {2};
-        enum
-        {
-            MOUNT_EQUATORIAL,
-            MOUNT_ALTAZ
-        };
+        //INDI::PropertySwitch MountTypeSP {3};
 
         // Mount Cord wrap Toogle
         INDI::PropertySwitch CordWrapToggleSP {2};
@@ -370,7 +365,6 @@ class CelestronAUX :
         double m_TrackStartSteps[2] = {0, 0};
         double m_LastOffset[2] = {0, 0};
         uint8_t m_OffsetSwitchSettle[2] = {0, 0};
-        bool m_IsWedge {false};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};
@@ -401,7 +395,9 @@ class CelestronAUX :
             HOME_AXIS2,
             HOME_ALL
         };
-        //INDI::PropertyNumber GainNP {2};
+
+        typedef enum { ALT_AZ, EQ_FORK, EQ_GEM } MountType;
+        MountType m_MountType {ALT_AZ};
         ///////////////////////////////////////////////////////////////////////////////
         /// Static Const Private Variables
         ///////////////////////////////////////////////////////////////////////////////
@@ -437,6 +433,8 @@ class CelestronAUX :
         static constexpr uint16_t AUX_SIDEREAL {0xffff};
         static constexpr uint16_t AUX_SOLAR {0xfffe};
         static constexpr uint16_t AUX_LUNAR {0xfffd};
+        // GEM Home Position
+        static constexpr uint32_t GEM_HOME {4194304};
 
 
 };
