@@ -77,6 +77,22 @@ CelestronAUX::CelestronAUX()
 
     //Both communication available, Serial and network (tcp/ip).
     setTelescopeConnection(CONNECTION_TCP | CONNECTION_SERIAL);
+
+    m_GuideRATimer.setSingleShot(true);
+    m_GuideRATimer.callOnTimeout([this]()
+    {
+        GuideWEN[0].value = GuideWEN[1].value = 0;
+        GuideWENP.s = IPS_IDLE;
+        IDSetNumber(&GuideWENP, nullptr);
+    });
+
+    m_GuideDETimer.setSingleShot(true);
+    m_GuideDETimer.callOnTimeout([this]()
+    {
+        GuideNSN[0].value = GuideNSN[1].value = 0;
+        GuideNSNP.s = IPS_IDLE;
+        IDSetNumber(&GuideNSNP, nullptr);
+    });
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1007,6 +1023,10 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
         data[0] = rate;
         data[1] = ticks;
         AUXCommand cmd(MC_AUX_GUIDE, APP, axis == AXIS_DE ? ALT : AZM, data);
+        if (axis == AXIS_DE)
+            m_GuideDETimer.start(ticks * 10);
+        else
+            m_GuideRATimer.start(ticks * 10);
         return sendAUXCommand(cmd);
     }
     // For Alt-Az mounts in tracking state, add to guide delta

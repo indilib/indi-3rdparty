@@ -28,6 +28,7 @@
 #include <indiguiderinterface.h>
 #include <inditelescope.h>
 #include <indielapsedtimer.h>
+#include <inditimer.h>
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
 #include <alignment/AlignmentSubsystemForDrivers.h>
@@ -271,6 +272,7 @@ class CelestronAUX :
         INDI::IHorizontalCoordinates m_MountCurrentAltAz {0, 0};
 
         INDI::ElapsedTimer m_TrackingElapsedTimer;
+        INDI::Timer m_GuideRATimer, m_GuideDETimer;
 
 
         /////////////////////////////////////////////////////////////////////////////////////
