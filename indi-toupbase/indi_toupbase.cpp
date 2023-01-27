@@ -2368,16 +2368,15 @@ void ToupBase::refreshControls()
     IDSetNumber(&ControlNP, nullptr);
 }
 
-void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip)
+void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     INumber *gainNP = IUFindNumber(&ControlNP, ControlN[TC_GAIN].name);
 
     if (gainNP)
     {
-        int status = 0;
-        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(gainNP->value), "Gain", &status);
+        fitsKeywords.push_back({"GAIN", gainNP->value, 3, "Gain"});
     }
 }
 

@@ -1105,36 +1105,29 @@ void Kepler::debugTriggered(bool enable)
 /********************************************************************************
 *
 ********************************************************************************/
-void Kepler::addFITSKeywords(INDI::CCDChip *targetChip)
+void Kepler::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
-
-    auto fptr = *targetChip->fitsFilePointer();
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     if (RequestStatSP.findOnSwitchIndex() == INDI_ENABLED)
     {
         if (fproStats.bLowRequest)
         {
-            int status = 0;
-            fits_update_key_dbl(fptr, "LOW_MEAN", fproStats.statsLowImage.dblMean, 3, "Low Mean", &status);
-            fits_update_key_dbl(fptr, "LOW_MEDIAN", fproStats.statsLowImage.dblMedian, 3, "Low Median", &status);
-            fits_update_key_dbl(fptr, "LOW_STDDEV", fproStats.statsLowImage.dblStandardDeviation, 3, "Low Standard Deviation", &status);
+            fitsKeywords.push_back({"LOW_MEAN", fproStats.statsLowImage.dblMean, 3, "Low Mean"});
+            fitsKeywords.push_back({"LOW_MEDIAN", fproStats.statsLowImage.dblMedian, 3, "Low Median"});
+            fitsKeywords.push_back({"LOW_STDDEV", fproStats.statsLowImage.dblStandardDeviation, 3, "Low Standard Deviation"});
         }
         if (fproStats.bHighRequest)
         {
-            int status = 0;
-            fits_update_key_dbl(fptr, "HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean", &status);
-            fits_update_key_dbl(fptr, "HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median", &status);
-            fits_update_key_dbl(fptr, "HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation",
-                                &status);
+            fitsKeywords.push_back({"HIGH_MEAN", fproStats.statsHighImage.dblMean, 3, "High Mean"});
+            fitsKeywords.push_back({"HIGH_MEDIAN", fproStats.statsHighImage.dblMedian, 3, "High Median"});
+            fitsKeywords.push_back({"HIGH_STDDEV", fproStats.statsHighImage.dblStandardDeviation, 3, "High Standard Deviation"});
         }
         if (fproStats.bMergedRequest)
         {
-            int status = 0;
-            fits_update_key_dbl(fptr, "MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean", &status);
-            fits_update_key_dbl(fptr, "MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median", &status);
-            fits_update_key_dbl(fptr, "MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation",
-                                &status);
+            fitsKeywords.push_back({"MERGED_MEAN", fproStats.statsMergedImage.dblMean, 3, "Merged Mean"});
+            fitsKeywords.push_back({"MERGED_MEDIAN", fproStats.statsMergedImage.dblMedian, 3, "Merged Median"});
+            fitsKeywords.push_back({"MERGED_STDDEV", fproStats.statsMergedImage.dblStandardDeviation, 3, "Merged Standard Deviation"});
         }
     }
 }

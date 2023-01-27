@@ -128,7 +128,7 @@ protected:
     bool saveConfigItems(FILE * fp) override;
 
     bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
-    void addFITSKeywords(INDI::CCDChip * targetChip) override;
+    void addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
     void buildCaptureSettingSwitch(ISwitchVectorProperty *control, CaptureSetting *setting, const char *label = nullptr, const char *name = nullptr);
     void updateCaptureSettingSwitch(CaptureSetting *setting, ISwitchVectorProperty *sw, ISState *states, char *names[], int n);

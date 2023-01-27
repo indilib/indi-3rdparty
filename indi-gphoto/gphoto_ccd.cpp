@@ -2024,13 +2024,9 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
     return true;
 }
 
-void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip)
+void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    auto fptr = *targetChip->fitsFilePointer();
-
-    INDI::CCD::addFITSKeywords(targetChip);
-
-    int status = 0;
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     if (mIsoSP.nsp > 0)
     {
@@ -2039,13 +2035,13 @@ void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip)
         {
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
-                fits_update_key_s(fptr, TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fitsKeywords.push_back({"ISOSPEED", isoSpeed, "ISO Speed"});
         }
     }
 
     if (isTemperatureSupported)
     {
-        fits_update_key_s(fptr, TDOUBLE, "CCD-TEMP", &(TemperatureN[0].value), "CCD Temperature (Celsius)", &status);
+        fitsKeywords.push_back({"CCD-TEMP", TemperatureN[0].value, 3, "CCD Temperature (Celsius)"});
     }
 }
 

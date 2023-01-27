@@ -278,19 +278,18 @@ bool INovaCCD::ISNewNumber(const char *dev, const char *name, double values[], c
 /**************************************************************************************
 ** INDI is asking us to add any FITS keywords to the FITS header
 ***************************************************************************************/
-void INovaCCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void INovaCCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     // Let's first add parent keywords
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     // Add temperature to FITS header
-    int status = 0;
     double gain =  CameraPropertiesN[CCD_GAIN_N].value;
     double blkLvl = CameraPropertiesN[CCD_BLACKLEVEL_N].value;
-    fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "GAIN", &gain, "CCD Gain", &status);
-    fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "BLACKLEVEL", &blkLvl, "CCD Black Level", &status);
+    fitsKeywords.push_back({"GAIN", gain, 3, "CCD Gain"});
+    fitsKeywords.push_back({"BLACKLEVEL", blkLvl, 3, "CCD Black Level"});
+    int status = 0;
     fits_write_date(*targetChip->fitsFilePointer(), &status);
-
 }
 
 /**************************************************************************************

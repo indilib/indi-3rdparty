@@ -68,7 +68,7 @@ protected:
 
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
     virtual bool UpdateCCDBin(int binx, int biny) override;
-    virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+    virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
     virtual IPState GuideNorth(uint32_t ms) override;
     virtual IPState GuideSouth(uint32_t ms) override;
