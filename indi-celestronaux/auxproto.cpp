@@ -231,6 +231,8 @@ const char * AUXCommand::commandName(AUXCommands command) const
                 return "MC_SLEW_DONE";
             case MC_GOTO_SLOW:
                 return "MC_GOTO_SLOW";
+            case MC_SEEK_DONE:
+                return "MC_SEEK_DONE";
             case MC_SEEK_INDEX:
                 return "MC_SEEK_INDEX";
             case MC_MOVE_POS:
@@ -249,6 +251,12 @@ const char * AUXCommand::commandName(AUXCommands command) const
                 return "MC_GET_CORDWRAP_POS";
             case GET_VER:
                 return "GET_VER";
+            case MC_LEVEL_DONE:
+                return "MC_LEVEL_DONE";
+            case MC_AUX_GUIDE:
+                return "MC_AUX_GUIDE";
+            case MC_AUX_GUIDE_ACTIVE:
+                return "MC_AUX_GUIDE_ACTIVE";
             default :
                 return nullptr;
         }
