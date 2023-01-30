@@ -257,6 +257,10 @@ const char * AUXCommand::commandName(AUXCommands command) const
                 return "MC_AUX_GUIDE";
             case MC_AUX_GUIDE_ACTIVE:
                 return "MC_AUX_GUIDE_ACTIVE";
+            case MC_SET_AUTOGUIDE_RATE:
+                return "MC_SET_AUTOGUIDE_RATE";
+            case MC_GET_AUTOGUIDE_RATE:
+                return "MC_GET_AUTOGUIDE_RATE";
             default :
                 return nullptr;
         }
@@ -302,6 +306,7 @@ int AUXCommand::responseDataSize()
             case MC_POLL_CORDWRAP:
             case MC_AUX_GUIDE:
             case MC_AUX_GUIDE_ACTIVE:
+            case MC_GET_AUTOGUIDE_RATE:
                 return 1;
             case MC_GOTO_FAST:
             case MC_SET_POSITION:
@@ -314,6 +319,7 @@ int AUXCommand::responseDataSize()
             case MC_ENABLE_CORDWRAP:
             case MC_DISABLE_CORDWRAP:
             case MC_SET_CORDWRAP_POS:
+            case MC_SET_AUTOGUIDE_RATE:
                 return 0;
             case MC_SEEK_INDEX:
                 return -1;

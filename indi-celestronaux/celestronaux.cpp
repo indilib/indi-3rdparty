@@ -170,6 +170,10 @@ bool CelestronAUX::Handshake()
         if (isConnected())
             syncCoordWrapPosition();
 
+        // Get Guide Rate
+        getGuideRate(AZM);
+        getGuideRate(ALT);
+
         return true;
     }
     else
@@ -630,7 +634,14 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
         if (GuideRateNP.isNameMatch(name))
         {
             GuideRateNP.update(values, names, n);
-            GuideRateNP.setState(IPS_OK);
+
+            uint8_t raRate  = static_cast<uint8_t>(std::min(GuideRateNP[AXIS_RA].getValue() * 256.0, 255.0));
+            uint8_t deRate = static_cast<uint8_t>(std::min(GuideRateNP[AXIS_DE].getValue() * 256.0, 255.0));
+
+            if (setGuideRate(AZM, raRate) && setGuideRate(ALT, deRate))
+                GuideRateNP.setState(IPS_OK);
+            else
+                GuideRateNP.setState(IPS_ALERT);
             GuideRateNP.apply();
             return true;
         }
@@ -1991,6 +2002,32 @@ bool CelestronAUX::getVersion(AUXTargets target)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getGuideRate(AUXTargets target)
+{
+    AUXCommand cmd(MC_GET_AUTOGUIDE_RATE, APP, target);
+    if (! sendAUXCommand(cmd))
+        return false;
+    if (! readAUXResponse(cmd))
+        return false;
+    return true;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::setGuideRate(AUXTargets target, uint8_t rate)
+{
+    AUXBuffer data(1);
+    data[0] = rate;
+    AUXCommand cmd(MC_SET_AUTOGUIDE_RATE, APP, target, data);
+    if (! sendAUXCommand(cmd))
+        return false;
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::getVersions()
 {
     if (!m_isHandController)
@@ -2380,6 +2417,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
         emulateGPS(m);
     }
     else if (m.destination() == APP)
+    {
         switch (m.command())
         {
             case MC_GET_POSITION:
@@ -2421,10 +2459,10 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 switch (m.source())
                 {
                     case ALT:
-                        GuideRateNP[AXIS_ALT].setValue(m.getData() / 255.);
+                        GuideRateNP[AXIS_ALT].setValue(m.getData() / 255.0);
                         break;
                     case AZM:
-                        GuideRateNP[AXIS_AZ].setValue(m.getData() * 255.);
+                        GuideRateNP[AXIS_AZ].setValue(m.getData() / 255.0);
                         break;
                     default:
                         break;
@@ -2512,6 +2550,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 break;
 
         }
+    }
     else
     {
         DEBUGF(DBG_CAUX, "Got msg not for me (%s). Ignoring.", m.moduleName(m.destination()));

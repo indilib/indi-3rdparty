@@ -244,6 +244,8 @@ class CelestronAUX :
         /// Guiding
         /////////////////////////////////////////////////////////////////////////////////////
         bool guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate);
+        bool getGuideRate(AUXTargets target);
+        bool setGuideRate(AUXTargets target, uint8_t rate);
 
 
     private:
