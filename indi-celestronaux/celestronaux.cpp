@@ -305,8 +305,8 @@ bool CelestronAUX::initProperties()
     // Guide Properties
     initGuiderProperties(getDeviceName(), GUIDE_TAB);
     // Rate rate
-    GuideRateNP[AXIS_AZ].fill("GUIDE_RATE_WE", "W/E Rate", "%.f", 0, 1, .1, 0.5);
-    GuideRateNP[AXIS_ALT].fill("GUIDE_RATE_NS", "N/S Rate", "%.f", 0, 1, .1, 0.5);
+    GuideRateNP[AXIS_AZ].fill("GUIDE_RATE_WE", "W/E Rate", "%.1f", 0, 1, .1, 0.5);
+    GuideRateNP[AXIS_ALT].fill("GUIDE_RATE_NS", "N/S Rate", "%.1f", 0, 1, .1, 0.5);
     GuideRateNP.fill(getDeviceName(), "GUIDE_RATE", "Guiding Rate", GUIDE_TAB, IP_RW, 0, IPS_IDLE);
 
     setDriverInterface(getDriverInterface() | GUIDER_INTERFACE);
