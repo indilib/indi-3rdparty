@@ -2593,10 +2593,15 @@ void QHYCCD::streamVideo()
         guard.unlock();
         if (ret == QHYCCD_SUCCESS)
         {
-            Streamer->newFrame(buffer, w * h * bpp / 8 * channels);
-
+            uint64_t timestamp = 0;
             if (HasGPS && GPSControlS[INDI_ENABLED].s == ISS_ON)
+            {
                 decodeGPSHeader();
+                timestamp = (uint64_t)GPSHeader.start_sec * 1e6;
+                timestamp += GPSHeader.start_us;
+            }
+
+            Streamer->newFrame(buffer, w * h * bpp / 8 * channels, timestamp);
 
             //DEBUG
             //if(!frames)
