@@ -37,15 +37,10 @@ NetworkUPSToolsMonitor::NetworkUPSToolsMonitor()
     setVersion(NUT_VERSION_MAJOR, NUT_VERSION_MINOR);
 
     setWeatherConnection(CONNECTION_NONE);
-
-    nutClient = new nut::TcpClient();
 }
 
 NetworkUPSToolsMonitor::~NetworkUPSToolsMonitor()
-{
-    delete nutClient;
-    nutClient = nullptr;
-}
+{ }
 
 const char *NetworkUPSToolsMonitor::getDefaultName()
 {
@@ -54,15 +49,15 @@ const char *NetworkUPSToolsMonitor::getDefaultName()
 
 bool NetworkUPSToolsMonitor::Connect()
 {
-    nutClient->connect(nutMonitorUrl[NUT_HOST].getText(), atoi(nutMonitorUrl[NUT_PORT].getText()));
-    nutClient->authenticate(nutMonitorUrl[NUT_USER].getText(), nutMonitorUrl[NUT_PASSWORD].getText());
+    nutClient.connect(nutMonitorUrl[NUT_HOST].getText(), atoi(nutMonitorUrl[NUT_PORT].getText()));
+    nutClient.authenticate(nutMonitorUrl[NUT_USER].getText(), nutMonitorUrl[NUT_PASSWORD].getText());
 
     return true;
 }
 
 bool NetworkUPSToolsMonitor::Disconnect()
 {
-    nutClient->disconnect();
+    nutClient.disconnect();
 
     return true;
 }
@@ -141,11 +136,11 @@ IPState NetworkUPSToolsMonitor::updateWeather()
 {
     double charge = 0;
 
-    auto devices = nutClient->getDeviceNames();
+    auto devices = nutClient.getDeviceNames();
 
     for (auto &device : devices)
     {
-        auto variables = nutClient->getDeviceVariableValue(device, "battery.charge");
+        auto variables = nutClient.getDeviceVariableValue(device, "battery.charge");
 
         if (variables.size() == 0)
             continue;
