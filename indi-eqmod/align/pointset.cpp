@@ -42,8 +42,8 @@ void PointSet::AltAzFromRaDec(double ra, double dec, double jd, double *alt, dou
     }
     else
     {
-        lnpos.longitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
-        lnpos.latitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
+        lnpos.longitude = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LONG")->getValue();
+        lnpos.latitude = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LAT")->getValue();
     }
 
     INDI::EquatorialToHorizontal(&lnradec, &lnpos, jd, &lnaltaz);
@@ -66,8 +66,8 @@ void PointSet::AltAzFromRaDecSidereal(double ra, double dec, double lst, double 
     }
     else
     {
-        lnpos.lng = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
-        lnpos.lat = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
+        lnpos.lng = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LONG")->getValue();
+        lnpos.lat = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LAT")->getValue();
     }
 
     if (lnpos.lng > 180)
@@ -92,8 +92,8 @@ void PointSet::RaDecFromAltAz(double alt, double az, double jd, double *ra, doub
     }
     else
     {
-        lnpos.longitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value;
-        lnpos.latitude = IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value;
+        lnpos.longitude = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LONG")->getValue();
+        lnpos.latitude = telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LAT")->getValue();
     }
 
     INDI::HorizontalToEquatorial(&lnaltaz, &lnpos, jd, &lnradec);
@@ -355,8 +355,8 @@ char *PointSet::WriteDataFile(const char *filename)
     if (lnalignpos)
     {
         // Why this ?
-        if ((fabs(lnalignpos->longitude - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value) > 1E-4) ||
-                (fabs(lnalignpos->latitude - IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value) > 1E-4))
+        if ((fabs(lnalignpos->longitude - telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LONG")->getValue()) > 1E-4) ||
+                (fabs(lnalignpos->latitude - telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LAT")->getValue()) > 1E-4))
             return (char *)("Can not mix alignment data from different sites (lng. and/or lat. differs)");
     }
     //if (filename == nullptr) return;
@@ -391,12 +391,12 @@ XMLEle *PointSet::toXML()
     addXMLAtt(sitexml, "name", sitename);
 
     snprintf(sitedata, sizeof(sitedata), "%g",
-             ((lnalignpos == nullptr) ? IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LONG")->value :
+             ((lnalignpos == nullptr) ? telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LONG")->getValue() :
               lnalignpos->longitude));
     addXMLAtt(sitexml, "lon", sitedata);
 
     snprintf(sitedata, sizeof(sitedata), "%g",
-             ((lnalignpos == nullptr) ? IUFindNumber(telescope->getNumber("GEOGRAPHIC_COORD"), "LAT")->value :
+             ((lnalignpos == nullptr) ? telescope->getNumber("GEOGRAPHIC_COORD").findWidgetByName("LAT")->getValue() :
               lnalignpos->latitude));
     addXMLAtt(sitexml, "lat", sitedata);
 
@@ -464,10 +464,17 @@ void PointSet::setTriangulationBlobData(IBLOB *blob)
     blob->blob = (void *)triangblobxml;
 }
 
+// deprecated
 void PointSet::setBlobData(IBLOBVectorProperty *bp)
 {
     setPointBlobData(IUFindBLOB(bp, "POINTLIST"));
     setTriangulationBlobData(IUFindBLOB(bp, "TRIANGULATION"));
+}
+
+void PointSet::setBlobData(INDI::PropertyBlob bp)
+{
+    setPointBlobData(bp.findWidgetByName("POINTLIST"));
+    setTriangulationBlobData(bp.findWidgetByName("TRIANGULATION"));
 }
 
 double PointSet::scalarTripleProduct(Point *p, Point *e1, Point *e2, bool ingoto)

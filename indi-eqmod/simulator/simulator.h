@@ -29,12 +29,12 @@ class EQModSimulator
     INDI::Telescope *telescope = NULL;
     SkywatcherSimulator *sksim = NULL;
 
-    INumberVectorProperty *SimWormNP      = NULL;
-    INumberVectorProperty *SimRatioNP     = NULL;
-    INumberVectorProperty *SimMotorNP     = NULL;
-    ISwitchVectorProperty *SimModeSP      = NULL;
-    ISwitchVectorProperty *SimHighSpeedSP = NULL;
-    ITextVectorProperty *SimMCVersionTP   = NULL;
+    INDI::PropertyNumber SimWormNP        {INDI::Property()};
+    INDI::PropertyNumber SimRatioNP       {INDI::Property()};
+    INDI::PropertyNumber SimMotorNP       {INDI::Property()};
+    INDI::PropertySwitch SimModeSP        {INDI::Property()};
+    INDI::PropertySwitch SimHighSpeedSP   {INDI::Property()};
+    INDI::PropertyText   SimMCVersionTP   {INDI::Property()};
 
     bool defined=false;
 

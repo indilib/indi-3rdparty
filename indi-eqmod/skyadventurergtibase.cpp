@@ -34,7 +34,7 @@ bool SkyAdventurerGTIBase::initProperties()
     serialConnection->setDefaultBaudRate(Connection::Serial::B_115200);
     for (auto oneProperty : *getProperties())
     {
-        oneProperty->setDeviceName(getDeviceName());
+        oneProperty.setDeviceName(getDeviceName());
     }
 
     return true;

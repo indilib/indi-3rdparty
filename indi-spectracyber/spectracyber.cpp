@@ -646,109 +646,113 @@ bool SpectraCyber::dispatch_command(SpectrometerCommand command_type)
     int err_code = 0, nbytes_written = 0, final_value = 0;
     // Maximum of 3 hex digits in addition to null terminator
     char hex[5];
-    INumberVectorProperty *nProp = nullptr;
-    ISwitchVectorProperty *sProp = nullptr;
 
     tcflush(fd, TCIOFLUSH);
 
     switch (command_type)
     {
         // Intermediate Frequency Gain
-        case IF_GAIN:
-            nProp = getNumber("70 Mhz IF");
-            if (nProp == nullptr)
+        case IF_GAIN: {
+            auto prop = getNumber("70 Mhz IF");
+            if (!prop)
                 return false;
             command[1] = 'A';
             command[2] = '0';
             // Equation is
             // Value = ((X - 10) * 63) / 15.75, where X is the user selection (10dB to 25.75dB)
-            final_value = (int)((nProp->np[0].value - 10) * 63) / 15.75;
+            final_value = (int)((prop[0].getValue() - 10) * 63) / 15.75;
             sprintf(hex, "%02X", (uint16_t)final_value);
             command[3] = hex[0];
             command[4] = hex[1];
             break;
+        }
 
         // Continuum Gain
-        case CONT_GAIN:
-            sProp = getSwitch("Continuum Gain");
-            if (sProp == nullptr)
+        case CONT_GAIN: {
+            auto prop = getSwitch("Continuum Gain");
+            if (!prop)
                 return false;
             command[1]  = 'G';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(sProp);
+            final_value = prop.findOnSwitchIndex();
             sprintf(hex, "%d", (uint8_t)final_value);
             command[4] = hex[0];
             break;
+        }
 
         // Continuum Integration
-        case CONT_TIME:
-            sProp = getSwitch("Continuum Integration (s)");
-            if (sProp == nullptr)
+        case CONT_TIME: {
+            auto prop = getSwitch("Continuum Integration (s)");
+            if (!prop)
                 return false;
             command[1]  = 'I';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(sProp);
+            final_value = prop.findOnSwitchIndex();
             sprintf(hex, "%d", (uint8_t)final_value);
             command[4] = hex[0];
             break;
+        }
 
         // Spectral Gain
-        case SPEC_GAIN:
-            sProp = getSwitch("Spectral Gain");
-            if (sProp == nullptr)
+        case SPEC_GAIN: {
+            auto prop = getSwitch("Spectral Gain");
+            if (!prop)
                 return false;
             command[1]  = 'K';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(sProp);
+            final_value = prop.findOnSwitchIndex();
             sprintf(hex, "%d", (uint8_t)final_value);
             command[4] = hex[0];
-
             break;
+        }
 
         // Spectral Integration
-        case SPEC_TIME:
-            sProp = getSwitch("Spectral Integration (s)");
-            if (sProp == nullptr)
+        case SPEC_TIME: {
+            auto prop = getSwitch("Spectral Integration (s)");
+            if (!prop)
                 return false;
             command[1]  = 'L';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(sProp);
+            final_value = prop.findOnSwitchIndex();
             sprintf(hex, "%d", (uint8_t)final_value);
             command[4] = hex[0];
             break;
+        }
 
         // Continuum DC Offset
-        case CONT_OFFSET:
-            nProp = getNumber("DC Offset");
-            if (nProp == nullptr)
+        case CONT_OFFSET: {
+            auto prop = getNumber("DC Offset");
+            if (!prop)
                 return false;
             command[1]  = 'O';
-            final_value = (int)nProp->np[CONTINUUM_CHANNEL].value / 0.001;
+            final_value = (int)prop[CONTINUUM_CHANNEL].getValue() / 0.001;
             sprintf(hex, "%03X", (uint32_t)final_value);
             command[2] = hex[0];
             command[3] = hex[1];
             command[4] = hex[2];
             break;
+        }
 
         // Spectral DC Offset
-        case SPEC_OFFSET:
-            nProp = getNumber("DC Offset");
-            if (nProp == nullptr)
+        case SPEC_OFFSET: {
+            auto prop = getNumber("DC Offset");
+            if (!prop)
                 return false;
             command[1]  = 'J';
-            final_value = (int)nProp->np[SPECTRAL_CHANNEL].value / 0.001;
+            final_value = (int)prop[SPECTRAL_CHANNEL].getValue() / 0.001;
             sprintf(hex, "%03X", (uint32_t)final_value);
             command[2] = hex[0];
             command[3] = hex[1];
             command[4] = hex[2];
             break;
+        }
 
         // FREQ
-        case RECV_FREQ:
+        case RECV_FREQ: {
             command[1] = 'F';
             // Each value increment is 5 Khz. Range is 050h to 3e8h.
             // 050h corresponds to 46.4 Mhz (min), 3e8h to 51.2 Mhz (max)
@@ -769,28 +773,31 @@ bool SpectraCyber::dispatch_command(SpectrometerCommand command_type)
             command[3] = hex[1];
             command[4] = hex[2];
             break;
+        }
 
         // Read Channel
-        case READ_CHANNEL:
+        case READ_CHANNEL: {
             command[1]  = 'D';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(ChannelSP);
+            final_value = ChannelSP.findOnSwitchIndex();
             command[4]  = (final_value == 0) ? '0' : '1';
             break;
+        }
 
         // Bandwidth
-        case BANDWIDTH:
-            sProp = getSwitch("Bandwidth (Khz)");
-            if (sProp == nullptr)
+        case BANDWIDTH: {
+            auto prop = getSwitch("Bandwidth (Khz)");
+            if (!prop)
                 return false;
             command[1]  = 'B';
             command[2]  = '0';
             command[3]  = '0';
-            final_value = get_on_switch(sProp);
+            final_value = prop.findOnSwitchIndex();
             //sprintf(hex, "%x", final_value);
             command[4] = (final_value == 0) ? '0' : '1';
             break;
+        }
 
         // Reset
         case RESET:

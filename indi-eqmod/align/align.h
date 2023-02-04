@@ -37,13 +37,13 @@ class Align
 
         INDI::Telescope *telescope;
         PointSet *pointset;
-        ITextVectorProperty *AlignDataFileTP;
-        IBLOBVectorProperty *AlignDataBP;
-        INumberVectorProperty *AlignPointNP;
-        ISwitchVectorProperty *AlignListSP;
-        INumberVectorProperty *AlignTelescopeCoordsNP;
-        ISwitchVectorProperty *AlignModeSP;
-        INumberVectorProperty *AlignCountNP;
+        INDI::PropertyText   AlignDataFileTP        {INDI::Property()};
+        INDI::PropertyBlob   AlignDataBP            {INDI::Property()};
+        INDI::PropertyNumber AlignPointNP           {INDI::Property()};
+        INDI::PropertySwitch AlignListSP            {INDI::Property()};
+        INDI::PropertyNumber AlignTelescopeCoordsNP {INDI::Property()};
+        INDI::PropertySwitch AlignModeSP            {INDI::Property()};
+        INDI::PropertyNumber AlignCountNP           {INDI::Property()};
 
         AlignData syncdata;
 

@@ -26,14 +26,14 @@ class HorizonLimits
   protected:
   private:
     INDI::Telescope *telescope;
-    ITextVectorProperty *HorizonLimitsDataFileTP;
-    IBLOBVectorProperty *HorizonLimitsDataFitsBP;
-    INumberVectorProperty *HorizonLimitsPointNP;
-    ISwitchVectorProperty *HorizonLimitsTraverseSP;
-    ISwitchVectorProperty *HorizonLimitsManageSP;
-    ISwitchVectorProperty *HorizonLimitsFileOperationSP;
-    ISwitchVectorProperty *HorizonLimitsOnLimitSP;
-    ISwitchVectorProperty *HorizonLimitsLimitGotoSP;
+    INDI::PropertyText   HorizonLimitsDataFileTP      {INDI::Property()};
+    INDI::PropertyBlob   HorizonLimitsDataFitsBP      {INDI::Property()};
+    INDI::PropertyNumber HorizonLimitsPointNP         {INDI::Property()};
+    INDI::PropertySwitch HorizonLimitsTraverseSP      {INDI::Property()};
+    INDI::PropertySwitch HorizonLimitsManageSP        {INDI::Property()};
+    INDI::PropertySwitch HorizonLimitsFileOperationSP {INDI::Property()};
+    INDI::PropertySwitch HorizonLimitsOnLimitSP       {INDI::Property()};
+    INDI::PropertySwitch HorizonLimitsLimitGotoSP     {INDI::Property()};
 
     std::vector<INDI::IHorizontalCoordinates> *horizon;
     int horizonindex;
