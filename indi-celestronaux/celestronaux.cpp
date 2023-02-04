@@ -367,7 +367,7 @@ bool CelestronAUX::initProperties()
     InitAlignmentProperties(this);
 
     // set alignment system be on the first time by default
-    getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")->sp[0].s = ISS_ON;
+    getSwitch("ALIGNMENT_SUBSYSTEM_ACTIVE")[0].setState(ISS_ON);
 
     // Default connection options
     serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
