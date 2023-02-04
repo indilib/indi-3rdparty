@@ -91,7 +91,7 @@ void NetworkUPSToolsMonitor::ISGetProperties(const char *dev)
 {
     INDI::Weather::ISGetProperties(dev);
 
-    defineProperty(&nutMonitorUrl);
+    defineProperty(nutMonitorUrl);
     loadConfig(true, nutMonitorUrl.getName());
 }
 
@@ -101,12 +101,12 @@ bool NetworkUPSToolsMonitor::updateProperties()
 
     if (isConnected())
     {
-        defineProperty(&nutMonitorUrl);
+        defineProperty(nutMonitorUrl);
         SetTimer(getCurrentPollingPeriod());
     }
     else
     {
-        deleteProperty(nutMonitorUrl.getName());
+        deleteProperty(nutMonitorUrl);
     }
 
     return true;
@@ -162,7 +162,7 @@ bool NetworkUPSToolsMonitor::saveConfigItems(FILE *fp)
 {
     INDI::Weather::saveConfigItems(fp);
 
-    IUSaveConfigText(fp, &nutMonitorUrl);
+    nutMonitorUrl.save(fp);
 
     return true;
 }
