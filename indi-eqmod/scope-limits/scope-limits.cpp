@@ -406,6 +406,23 @@ bool HorizonLimits::ISNewBLOB(const char *dev, const char *name, int sizes[], in
     return false;
 }
 
+/** @brief Create an ISO 8601 formatted time stamp. The format is YYYY-MM-DDTHH:MM:SS
+ *  @return The formatted time stamp.
+ *  @note function copied from INDI Core library where name changed. In the future,
+ *  you can remove this function and use indi_timestamp.
+ */
+static const char *s_indi_timestamp()
+{
+    static char ts[32];
+    struct tm *tp;
+    time_t t;
+
+    time(&t);
+    tp = gmtime(&t);
+    strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%S", tp);
+    return (ts);
+}
+
 char *HorizonLimits::WriteDataFile(const char *filename)
 {
     wordexp_t wexp;
@@ -438,7 +455,7 @@ char *HorizonLimits::WriteDataFile(const char *filename)
     numberFormat(lat, "%10.6m", nlat->value);
     fprintf(fp, "# Horizon Data for device %s\n", getDeviceName());
     fprintf(fp, "# Location: longitude=%s latitude=%s\n", lon, lat);
-    fprintf(fp, "# Created on %s by %s\n", timestamp(), telescope->getDriverName());
+    fprintf(fp, "# Created on %s by %s\n", s_indi_timestamp(), telescope->getDriverName());
     for (std::vector<INDI::IHorizontalCoordinates>::iterator it = horizon->begin(); it != horizon->end(); ++it)
         fprintf(fp, "%g %g\n", it->azimuth, it->altitude);
 
