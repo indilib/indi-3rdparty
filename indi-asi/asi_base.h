@@ -73,7 +73,7 @@ class ASIBase : public INDI::CCD
         virtual IPState GuideWest(uint32_t ms) override;
 
         // ASI specific keywords
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
         // Save config
         virtual bool saveConfigItems(FILE *fp) override;

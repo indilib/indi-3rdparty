@@ -1503,23 +1503,21 @@ void ASIBase::updateRecorderFormat()
     );
 }
 
-void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip)
+void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     // e-/ADU
     auto np = ControlNP.findWidgetByName("Gain");
     if (np)
     {
-        int status = 0;
-        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "Gain", &(np->value), "Gain", &status);
+        fitsKeywords.push_back({"GAIN", np->value, 3, "Gain"});
     }
 
     np = ControlNP.findWidgetByName("Offset");
     if (np)
     {
-        int status = 0;
-        fits_update_key_s(*targetChip->fitsFilePointer(), TDOUBLE, "OFFSET", &(np->value), "Offset", &status);
+        fitsKeywords.push_back({"OFFSET", np->value, 3, "Offset"});
     }
 }
 

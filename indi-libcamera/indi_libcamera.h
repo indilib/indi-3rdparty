@@ -68,7 +68,7 @@ class INDILibCamera : public INDI::CCD
         virtual bool UpdateCCDBin(int binx, int biny) override;
 
         // specific keywords
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
         // Save config
         virtual bool saveConfigItems(FILE *fp) override;        

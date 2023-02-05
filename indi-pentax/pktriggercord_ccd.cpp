@@ -832,11 +832,9 @@ bool PkTriggerCordCCD::saveConfigItems(FILE * fp)
     return INDI::CCD::saveConfigItems(fp);
 }
 
-void PkTriggerCordCCD::addFITSKeywords(INDI::CCDChip * targetChip)
+void PkTriggerCordCCD::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
-
-    int status = 0;
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     if (mIsoSP.nsp > 0)
     {
@@ -845,7 +843,7 @@ void PkTriggerCordCCD::addFITSKeywords(INDI::CCDChip * targetChip)
         {
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
-                fits_update_key_s(*targetChip->fitsFilePointer(), TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fitsKeywords.push_back({"ISOSPEED", isoSpeed, "ISO Speed"});
         }
     }
 }
