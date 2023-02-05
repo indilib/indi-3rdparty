@@ -69,7 +69,10 @@ class PointSet
         char *LoadDataFile(const char *filename);
         char *WriteDataFile(const char *filename);
         XMLEle *toXML();
+        
         void setBlobData(IBLOBVectorProperty *bp);
+        void setBlobData(INDI::PropertyBlob bp);
+
         void setPointBlobData(IBLOB *blob);
         void setTriangulationBlobData(IBLOB *blob);
         std::set<Distance, bool (*)(Distance, Distance)> *ComputeDistances(double alt, double az, PointFilter filter,

@@ -229,8 +229,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         ITextVectorProperty UploadFileTP;
         IText UploadFileT[1] {};
 
-        IBLOBVectorProperty * imageBP = nullptr;
-        IBLOB * imageB                = nullptr;
+        INDI::PropertyBlob imageBP {INDI::Property()};
 
         Camera * camera = nullptr;
 

@@ -191,77 +191,77 @@ TEST(EqmodTest, scope_limits_properties)
     TestEQMod eqmod;
 
     {
-        ITextVectorProperty * const p = eqmod.getText("HORIZONLIMITSDATAFILE");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getText("HORIZONLIMITSDATAFILE");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindText(p, "HORIZONLIMITSFILENAME"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSFILENAME"), nullptr);
         }
     }
     {
-        INumberVectorProperty * const p = eqmod.getNumber("HORIZONLIMITSPOINT");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getNumber("HORIZONLIMITSPOINT");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_AZ"), nullptr);
-            EXPECT_NE(IUFindNumber(p, "HORIZONLIMITS_POINT_ALT"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITS_POINT_AZ"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITS_POINT_ALT"), nullptr);
         }
     }
     {
-        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSTRAVERSE");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getSwitch("HORIZONLIMITSTRAVERSE");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTFIRST"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTPREV"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTNEXT"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTLAST"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTFIRST"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTPREV"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTNEXT"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTLAST"), nullptr);
         }
     }
     {
-        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSMANAGE");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getSwitch("HORIZONLIMITSMANAGE");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTADDCURRENT"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTDELETE"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLISTCLEAR"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTADDCURRENT"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTDELETE"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLISTCLEAR"), nullptr);
         }
     }
     {
-        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSFILEOPERATION");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getSwitch("HORIZONLIMITSFILEOPERATION");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSWRITEFILE"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLOADFILE"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSWRITEFILE"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLOADFILE"), nullptr);
         }
     }
     {
-        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITTRACK"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITSLEW"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSONLIMITGOTO"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSONLIMITTRACK"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSONLIMITSLEW"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSONLIMITGOTO"), nullptr);
         }
     }
     {
-        ISwitchVectorProperty * const p = eqmod.getSwitch("HORIZONLIMITSLIMITGOTO");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getSwitch("HORIZONLIMITSLIMITGOTO");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTODISABLE"), nullptr);
-            EXPECT_NE(IUFindSwitch(p, "HORIZONLIMITSLIMITGOTOENABLE"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLIMITGOTODISABLE"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONLIMITSLIMITGOTOENABLE"), nullptr);
         }
     }
     {
-        IBLOBVectorProperty * const p = eqmod.getBLOB("HORIZONLIMITSDATAFITS");
-        EXPECT_NE(p, nullptr);
-        if (p != nullptr)
+        auto p = eqmod.getBLOB("HORIZONLIMITSDATAFITS");
+        EXPECT_TRUE(p.isValid());
+        if (p)
         {
-            EXPECT_NE(IUFindBLOB(p, "HORIZONPOINTS"), nullptr);
+            EXPECT_NE(p.findWidgetByName("HORIZONPOINTS"), nullptr);
         }
     }
 }
@@ -271,13 +271,13 @@ TEST(EqmodTest, scope_limits_empty)
     TestEQMod eqmod;
     eqmod.updateLocation(50.0, 15.0, 0);
 
-    ISwitchVectorProperty * const onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
-    ASSERT_NE(onlimit, nullptr);
-    ISwitch * const limittrack = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITTRACK");
+    auto onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+    ASSERT_TRUE(onlimit.isValid());
+    auto limittrack = onlimit.findWidgetByName("HORIZONLIMITSONLIMITTRACK");
     ASSERT_NE(limittrack, nullptr);
-    ISwitch * const limitslew = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITSLEW");
+    auto limitslew = onlimit.findWidgetByName("HORIZONLIMITSONLIMITSLEW");
     ASSERT_NE(limitslew, nullptr);
-    ISwitch * const limitgoto = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITGOTO");
+    auto limitgoto = onlimit.findWidgetByName("HORIZONLIMITSONLIMITGOTO");
     ASSERT_NE(limitgoto, nullptr);
 
     HorizonLimits * const hl = eqmod.horizon;
@@ -295,7 +295,7 @@ TEST(EqmodTest, scope_limits_empty)
             {
                 limitgoto->s = (ISState) fgoto;
 
-                IDSetSwitch(onlimit, nullptr);
+                onlimit.apply();
 
                 // Over the horizon (0 <= alt), so always outside limits
                 for (double alt = 0; alt < +90; alt += 0.7)
@@ -353,38 +353,38 @@ TEST(EqmodTest, scope_limits_altaz)
     TestEQMod eqmod;
     eqmod.updateLocation(50.0, 15.0, 0);
 
-    ISwitchVectorProperty * const onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
-    ASSERT_NE(onlimit, nullptr);
-    ISwitch * const limittrack = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITTRACK");
+    auto onlimit = eqmod.getSwitch("HORIZONLIMITSONLIMIT");
+    ASSERT_TRUE(onlimit.isValid());
+    auto limittrack = onlimit.findWidgetByName("HORIZONLIMITSONLIMITTRACK");
     ASSERT_NE(limittrack, nullptr);
-    ISwitch * const limitslew = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITSLEW");
+    auto limitslew = onlimit.findWidgetByName("HORIZONLIMITSONLIMITSLEW");
     ASSERT_NE(limitslew, nullptr);
-    ISwitch * const limitgoto = IUFindSwitch(onlimit, "HORIZONLIMITSONLIMITGOTO");
+    auto limitgoto = onlimit.findWidgetByName("HORIZONLIMITSONLIMITGOTO");
     ASSERT_NE(limitgoto, nullptr);
 
     HorizonLimits * const hl = eqmod.horizon;
     ASSERT_NE(hl, nullptr);
 
     // Use a configuration that aborts tracking out of limits
-    limittrack->s = ISS_ON;
-    limitslew->s = ISS_OFF;
-    limitgoto->s = ISS_OFF;
-    IDSetSwitch(onlimit, nullptr);
+    limittrack->setState(ISS_ON);
+    limitslew->setState(ISS_OFF);
+    limitgoto->setState(ISS_OFF);
+    onlimit.apply();
 
     // Retrieve points properties
-    INumberVectorProperty * const ppoint = eqmod.getNumber("HORIZONTAL_COORD");
-    ASSERT_NE(ppoint, nullptr);
-    INumber * const paz = IUFindNumber(ppoint, "AZ");
+    auto ppoint = eqmod.getNumber("HORIZONTAL_COORD");
+    ASSERT_TRUE(ppoint.isValid());
+    auto paz = ppoint.findWidgetByName("AZ");
     ASSERT_NE(paz, nullptr);
-    INumber * const palt = IUFindNumber(ppoint, "ALT");
+    auto palt = ppoint.findWidgetByName("ALT");
     ASSERT_NE(palt, nullptr);
 
     // Retrieve points management properties
-    ISwitchVectorProperty * const pmanage = eqmod.getSwitch("HORIZONLIMITSMANAGE");
-    ASSERT_NE(pmanage, nullptr);
-    ISwitch * const padd = IUFindSwitch(pmanage, "HORIZONLIMITSLISTADDCURRENT");
+    auto pmanage = eqmod.getSwitch("HORIZONLIMITSMANAGE");
+    ASSERT_TRUE(pmanage.isValid());
+    auto padd = pmanage.findWidgetByName("HORIZONLIMITSLISTADDCURRENT");
     ASSERT_NE(padd, nullptr);
-    ISwitch * const pclear = IUFindSwitch(pmanage, "HORIZONLIMITSLISTCLEAR");
+    auto pclear = pmanage.findWidgetByName("HORIZONLIMITSLISTCLEAR");
     ASSERT_NE(pclear, nullptr);
 
     ISState iss_on[] = { ISS_ON };
@@ -394,7 +394,7 @@ TEST(EqmodTest, scope_limits_altaz)
     // Add a single alt-az horizon point and test edge case points, then clear horizon points
     paz->value = 30;
     palt->value = 45;
-    IDSetNumber(ppoint, nullptr);
+    ppoint.apply();
     ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
     ASSERT_EQ(hl->checkLimits(30, 50, INDI::Telescope::SCOPE_TRACKING, false), false);
     ASSERT_EQ(hl->checkLimits(30, 40, INDI::Telescope::SCOPE_TRACKING, false), true);
@@ -409,7 +409,7 @@ TEST(EqmodTest, scope_limits_altaz)
     {
         for (paz->value = 0; paz->value < 360; paz->value += 60)
         {
-            IDSetNumber(ppoint, nullptr);
+            ppoint.apply();
             ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
         }
 
@@ -423,12 +423,12 @@ TEST(EqmodTest, scope_limits_altaz)
     // Try out increasing altitude to test interpolation
     paz->value = 0;
     palt->value = 10;
-    IDSetNumber(ppoint, nullptr);
+    ppoint.apply();
     ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
 
     paz->value = 180;
     palt->value = 20;
-    IDSetNumber(ppoint, nullptr);
+    ppoint.apply();
     ASSERT_TRUE(hl->ISNewSwitch(eqmod.getDeviceName(), "HORIZONLIMITSMANAGE", iss_on, (char**) manage_add, 1));
 
     // Test at horizon points

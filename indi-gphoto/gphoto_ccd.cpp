@@ -387,7 +387,6 @@ bool GPhotoCCD::updateProperties()
         defineProperty(&SDCardImageSP);
 
         imageBP = getBLOB("CCD1");
-        imageB  = imageBP->bp;
 
         // Dummy values until first capture is done
         //SetCCDParams(1280, 1024, 8, 5.4, 5.4);
@@ -1962,12 +1961,11 @@ bool GPhotoCCD::startLivePreview()
 
     char * previewBlob = (char *)previewData;
 
-    imageB->blob    = previewBlob;
-    imageB->bloblen = previewSize;
-    imageB->size    = previewSize;
-    strncpy(imageB->format, "stream_jpeg", MAXINDIBLOBFMT);
-
-    IDSetBLOB(imageBP, nullptr);
+    imageBP[0].setBlob(previewBlob);
+    imageBP[0].setBlobLen(previewSize);
+    imageBP[0].setSize(previewSize);
+    imageBP[0].setFormat("stream_jpeg");
+    imageBP.apply();
 
     if (previewFile)
     {

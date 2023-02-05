@@ -86,11 +86,11 @@ class SpectraCyber : public INDI::DefaultDevice
     bool update_freq(double nFreq);
 
   private:
-    INumberVectorProperty *FreqNP;
-    INumberVectorProperty *ScanNP;
-    ISwitchVectorProperty *ScanSP;
-    ISwitchVectorProperty *ChannelSP;
-    IBLOBVectorProperty *DataStreamBP;
+    INDI::PropertyNumber FreqNP       {INDI::Property()};
+    INDI::PropertyNumber ScanNP       {INDI::Property()};
+    INDI::PropertySwitch ScanSP       {INDI::Property()};
+    INDI::PropertySwitch ChannelSP    {INDI::Property()};
+    INDI::PropertyBlob   DataStreamBP {INDI::Property()};
     IText *telescopeID;
 
     // Snooping On
