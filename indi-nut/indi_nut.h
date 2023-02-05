@@ -62,5 +62,5 @@ class NetworkUPSToolsMonitor : public INDI::Weather
         NUT_PASSWORD
     };
 
-    nut::TcpClient *nutClient = nullptr;
+    nut::TcpClient nutClient;
 };
