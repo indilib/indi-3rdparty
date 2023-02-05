@@ -25,7 +25,7 @@ jobs:
         with:
           repo: indilib/indi
           branch: master
-          workflow: default.yml
+          workflow: linux.yml
           name: indi-core-package-${{ matrix.container }}
           path: ./packages/
 
