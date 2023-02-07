@@ -1,3 +1,12 @@
+libasi (1.28) jammy; urgency=medium
+
+  * ASI Camera SDK 1.28 release. Changelog:
+    V1.28 2023.1.12
+    (1) Add ASI990-MM Pro,ASI462MM
+    (2) Some optimizations have been made
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Tue, 07 Feb 2023 22:46:29 +0200
+
 libasi (1.27) jammy; urgency=medium
 
   * ASI Camera SDK 1.27 release. Changelog:
