@@ -1,3 +1,9 @@
+indi-playerone (1.1) bionic; urgency=low
+
+  * Update libplayerone with PlayerOnePW SDK v1.1.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 5 Feb 2023 12:00:00 +0900
+
 indi-playerone (1.0) bionic; urgency=low
 
   * Add PlayerOne Filter Wheel driver
