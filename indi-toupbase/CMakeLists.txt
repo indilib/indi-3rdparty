@@ -14,10 +14,13 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 find_package(TOUPCAM REQUIRED)
 find_package(ALTAIRCAM REQUIRED)
-find_package(STARSHOOTG REQUIRED)
-find_package(NNCAM REQUIRED)
+find_package(BRESSERCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
+find_package(NNCAM REQUIRED)
+find_package(OGMACAM REQUIRED)
 find_package(OMEGONPROCAM REQUIRED)
+find_package(STARSHOOTG REQUIRED)
+find_package(TSCAM REQUIRED)
 find_package(USB1 REQUIRED)
 
 set(TOUPBASE_VERSION_MAJOR 1)
@@ -52,44 +55,65 @@ add_executable(indi_altair_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_altair_ccd PRIVATE "-DBUILD_ALTAIRCAM")
 target_link_libraries(indi_altair_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ALTAIRCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
-########### indi_starshootg_ccd ###########
-add_executable(indi_starshootg_ccd ${indi_toupbase_SRCS})
-target_compile_definitions(indi_starshootg_ccd PRIVATE "-DBUILD_STARSHOOTG")
-target_link_libraries(indi_starshootg_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${STARSHOOTG_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-
-########### indi_nncam_ccd ###########
-add_executable(indi_nncam_ccd ${indi_toupbase_SRCS})
-target_compile_definitions(indi_nncam_ccd PRIVATE "-DBUILD_NNCAM")
-target_link_libraries(indi_nncam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${NNCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+########### indi_bressercam_ccd ###########
+add_executable(indi_bressercam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_bressercam_ccd PRIVATE "-DBUILD_BRESSERCAM")
+target_link_libraries(indi_bressercam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${BRESSERCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_mallincam_ccd ###########
 add_executable(indi_mallincam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_mallincam_ccd PRIVATE "-DBUILD_MALLINCAM")
 target_link_libraries(indi_mallincam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
+########### indi_nncam_ccd ###########
+add_executable(indi_nncam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_nncam_ccd PRIVATE "-DBUILD_NNCAM")
+target_link_libraries(indi_nncam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${NNCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+########### indi_ogmacam_ccd ###########
+add_executable(indi_ogmacam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_ogmacam_ccd PRIVATE "-DBUILD_OGMACAM")
+target_link_libraries(indi_ogmacam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OGMACAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
 ########### indi_omegonprocam_ccd ###########
 add_executable(indi_omegonprocam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_omegonprocam_ccd PRIVATE "-DBUILD_OMEGONPROCAM")
 target_link_libraries(indi_omegonprocam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OMEGONPROCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+########### indi_starshootg_ccd ###########
+add_executable(indi_starshootg_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_starshootg_ccd PRIVATE "-DBUILD_STARSHOOTG")
+target_link_libraries(indi_starshootg_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${STARSHOOTG_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+########### indi_tscam_ccd ###########
+add_executable(indi_starshootg_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_tscam_ccd PRIVATE "-DBUILD_TSCAM")
+target_link_libraries(indi_tscam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TSCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 #####################################
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_toupcam_ccd rt)
 target_link_libraries(indi_altair_ccd rt)
-target_link_libraries(indi_starshootg_ccd rt)
-target_link_libraries(indi_nncam_ccd rt)
+target_link_libraries(indi_bressercam_ccd rt)
 target_link_libraries(indi_mallincam_ccd rt)
+target_link_libraries(indi_nncam_ccd rt)
+target_link_libraries(indi_ogmacam_ccd rt)
 target_link_libraries(indi_omegonprocam_ccd rt)
+target_link_libraries(indi_starshootg_ccd rt)
+target_link_libraries(indi_tscam_ccd rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS
     indi_toupcam_ccd
     indi_altair_ccd
-    indi_starshootg_ccd
-    indi_nncam_ccd
+	indi_bressercam_ccd
     indi_mallincam_ccd
-    indi_omegonprocam_ccd
+    indi_nncam_ccd
+	indi_ogmacam_ccd
+	indi_omegonprocam_ccd
+    indi_starshootg_ccd
+    indi_tscam_ccd
     RUNTIME DESTINATION bin)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml DESTINATION ${INDI_DATA_DIR})

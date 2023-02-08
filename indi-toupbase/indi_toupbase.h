@@ -30,36 +30,43 @@
 #define FP(x) Toupcam_##x
 #define CP(x) TOUPCAM_##x
 #define XP(x) Toupcam##x
-#define THAND HToupCam
+#define THAND HToupcam
 #define DNAME "Toupcam"
-#elif BUILD_MALLINCAM
-#include <mallincam.h>
-#define FP(x) Toupcam_##x
-#define CP(x) MALLINCAM_##x
-#define XP(x) Toupcam##x
-#define THAND HToupCam
-#define DNAME "Mallincam"
 #elif BUILD_ALTAIRCAM
-#include <altaircam.h>
+#include <bressercam.h>
 #define FP(x) Altaircam_##x
 #define CP(x) ALTAIRCAM_##x
 #define XP(x) Altaircam##x
 #define THAND HAltaircam
 #define DNAME "Altair"
-#elif BUILD_STARSHOOTG
-#include <starshootg.h>
-#define FP(x) Starshootg_##x
-#define CP(x) STARSHOOTG_##x
-#define XP(x) Starshootg##x
-#define THAND HStarshootg
-#define DNAME "StarshootG"
+#elif BUILD_BRESSERCAM
+#include <altaircam.h>
+#define FP(x) Bressercam_##x
+#define CP(x) BRESSERCAM_##x
+#define XP(x) Bressercam##x
+#define THAND HBressercam
+#define DNAME "Bressercam"
+#elif BUILD_MALLINCAM
+#include <mallincam.h>
+#define FP(x) Mallincam_##x
+#define CP(x) Mallincam_##x
+#define XP(x) Mallincam##x
+#define THAND HMallincam
+#define DNAME "Mallincam"
 #elif BUILD_NNCAM
 #include <nncam.h>
 #define FP(x) Nncam_##x
 #define CP(x) NNCAM_##x
 #define XP(x) Nncam##x
 #define THAND HNncam
-#define DNAME "Levenhuk"
+#define DNAME "Nn"
+#elif BUILD_OGMACAM
+#include <ogmacam.h>
+#define FP(x) Ogmacam_##x
+#define CP(x) OGMACAM_##x
+#define XP(x) Ogmacam##x
+#define THAND HOgmacam
+#define DNAME "Ogmacam"
 #elif BUILD_OMEGONPROCAM
 #include <omegonprocam.h>
 #define FP(x) Omegonprocam_##x
@@ -67,6 +74,20 @@
 #define XP(x) Omegonprocam##x
 #define THAND HOmegonprocam
 #define DNAME "OmegonProCam"
+#elif BUILD_STARSHOOTG
+#include <starshootg.h>
+#define FP(x) Starshootg_##x
+#define CP(x) STARSHOOTG_##x
+#define XP(x) Starshootg##x
+#define THAND HStarshootg
+#define DNAME "StarshootG"
+#elif BUILD_TSCAM
+#include <tscam.h>
+#define FP(x) Tscam_##x
+#define CP(x) TSCAM_##x
+#define XP(x) Tscam##x
+#define THAND HTscam
+#define DNAME "Tscam"
 #endif
 
 #define RAW_SUPPORTED   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
