@@ -1,11 +1,13 @@
-Source: libnncam
+Source: libogmacam
 Section: libs
 Priority: extra
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
 Build-Depends: debhelper (>= 6), cdbs, cmake, libusb-1.0-0
 Standards-Version: 3.9.1
 
-Package: libnncam
+Package: libogmacam
 Architecture: amd64 armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Library for Nn Cameras.
+Description: Library for OGMAVision Cameras.
+
+
