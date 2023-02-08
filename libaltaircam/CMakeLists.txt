@@ -1,9 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libaltaircam)
 
-# Using AltairCamera SDK Version: 53.21445.20220918
-set (LIBALTAIRCAM_VERSION "1.53.2")
-set (LIBALTAIRCAM_SOVERSION "1")
+set (LIBALTAIRCAM_VERSION "53.22081")
+set (LIBALTAIRCAM_SOVERSION "53")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
