@@ -86,7 +86,7 @@ target_compile_definitions(indi_starshootg_ccd PRIVATE "-DBUILD_STARSHOOTG")
 target_link_libraries(indi_starshootg_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${STARSHOOTG_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_tscam_ccd ###########
-add_executable(indi_starshootg_ccd ${indi_toupbase_SRCS})
+add_executable(indi_tscam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_tscam_ccd PRIVATE "-DBUILD_TSCAM")
 target_link_libraries(indi_tscam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TSCAM_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
