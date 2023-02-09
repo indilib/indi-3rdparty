@@ -743,15 +743,15 @@ message(STATUS "libaltaircam was not found and will now be built. Please install
 endif (WITH_TOUPBASE AND NOT ALTAIRCAM_FOUND)
 
 if (WITH_TOUPBASE AND NOT BRESSERCAM_FOUND)
-message(STATUS "libbressercam was not found and will now be built. Please install libaltaircam first before running cmake again to install indi-toupbase.")
+message(STATUS "libbressercam was not found and will now be built. Please install libbressercam first before running cmake again to install indi-toupbase.")
 endif (WITH_TOUPBASE AND NOT BRESSERCAM_FOUND)
 
 if (WITH_TOUPBASE AND NOT OGMACAM_FOUND)
-message(STATUS "libogmacam was not found and will now be built. Please install libaltaircam first before running cmake again to install indi-toupbase.")
+message(STATUS "libogmacam was not found and will now be built. Please install libogmacam first before running cmake again to install indi-toupbase.")
 endif (WITH_TOUPBASE AND NOT OGMACAM_FOUND)
 
 if (WITH_TOUPBASE AND NOT TSCAM_FOUND)
-message(STATUS "libtscam was not found and will now be built. Please install libaltaircam first before running cmake again to install indi-toupbase.")
+message(STATUS "libtscam was not found and will now be built. Please install libtscam first before running cmake again to install indi-toupbase.")
 endif (WITH_TOUPBASE AND NOT TSCAM_FOUND)
 
 if (WITH_TOUPBASE AND NOT STARSHOOTG_FOUND)
