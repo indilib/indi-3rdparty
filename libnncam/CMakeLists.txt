@@ -28,7 +28,7 @@ elseif (UNIX AND NOT WIN32)
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
     set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "x64/libnncam.bin")
   else ()
-    set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "x86/libnncam.bin")
+    message (FATAL_ERROR "unsupported architecture.")
   endif ()
 
   # Install udev rules

@@ -28,7 +28,7 @@ elseif (UNIX AND NOT WIN32)
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
     set_property (TARGET bressercam PROPERTY IMPORTED_LOCATION "x64/libbressercam.bin")
   else ()
-    set_property (TARGET bressercam PROPERTY IMPORTED_LOCATION "x86/libbressercam.bin")
+    message (FATAL_ERROR "unsupported architecture.")
   endif ()
 
   # Install udev rules
