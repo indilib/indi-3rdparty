@@ -33,14 +33,14 @@
 #define THAND HToupcam
 #define DNAME "Toupcam"
 #elif BUILD_ALTAIRCAM
-#include <bressercam.h>
+#include <altaircam.h>
 #define FP(x) Altaircam_##x
 #define CP(x) ALTAIRCAM_##x
 #define XP(x) Altaircam##x
 #define THAND HAltaircam
 #define DNAME "Altair"
 #elif BUILD_BRESSERCAM
-#include <altaircam.h>
+#include <bressercam.h>
 #define FP(x) Bressercam_##x
 #define CP(x) BRESSERCAM_##x
 #define XP(x) Bressercam##x
