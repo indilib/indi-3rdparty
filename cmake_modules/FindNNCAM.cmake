@@ -36,11 +36,11 @@ else (NNCAM_INCLUDE_DIR AND NNCAM_LIBRARIES)
 
   if (NNCAM_FOUND)
     if (NOT NNCAM_FIND_QUIETLY)
-      message(STATUS "Found NNCAM: ${NNCAM_LIBRARIES}")
+      message(STATUS "Found Nncam: ${NNCAM_LIBRARIES}")
     endif (NOT NNCAM_FIND_QUIETLY)
   else (NNCAM_FOUND)
     if (NNCAM_FIND_REQUIRED)
-      message(FATAL_ERROR "NNCAM not found. Please install NNCAM Library http://www.indilib.org")
+      message(FATAL_ERROR "Nncam not found. Please install NNCAM Library http://www.indilib.org")
     endif (NNCAM_FIND_REQUIRED)
   endif (NNCAM_FOUND)
 
