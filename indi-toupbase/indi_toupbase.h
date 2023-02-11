@@ -49,7 +49,7 @@
 #elif BUILD_MALLINCAM
 #include <mallincam.h>
 #define FP(x) Mallincam_##x
-#define CP(x) Mallincam_##x
+#define CP(x) MALLINCAM_##x
 #define XP(x) Mallincam##x
 #define THAND HMallincam
 #define DNAME "Mallincam"
