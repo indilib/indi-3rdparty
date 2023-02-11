@@ -1,9 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libstarshootg)
 
-# Using Starshoot G SDK Version: 48.18421.20210202
-set (LIBSTARSHOOTG_VERSION "1.48.1")
-set (LIBSTARSHOOTG_SOVERSION "1")
+set (LIBSTARSHOOTG_VERSION "53.22081")
+set (LIBSTARSHOOTG_SOVERSION "53")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
