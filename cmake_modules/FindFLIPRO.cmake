@@ -26,7 +26,7 @@ else (FLIPRO_INCLUDE_DIR AND FLIPRO_LIBRARIES)
     ${GNUWIN32_DIR}/include
   )
 
-  find_library(FLIPRO_LIBRARIES NAMES libflipro
+  find_library(FLIPRO_LIBRARIES NAMES flipro flialgo
     PATHS
     ${_obLinkDir}
     ${GNUWIN32_DIR}/lib
