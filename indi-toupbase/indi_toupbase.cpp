@@ -143,15 +143,14 @@ bool ToupBase::initProperties()
     /// Controls
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&ControlN[TC_GAIN], "Gain", "Gain", "%.f", 0, 400, 10, 0);
-    IUFillNumber(&ControlN[TC_CONTRAST], "Contrast", "Contrast", "%.f", -100.0, 100, 10, 0);
+    IUFillNumber(&ControlN[TC_CONTRAST], "Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 10, CP(CONTRAST_DEF));
     IUFillNumber(&ControlN[TC_HUE], "Hue", "Hue", "%.f", -180.0, 180, 10, 0);
-    IUFillNumber(&ControlN[TC_SATURATION], "Saturation", "Saturation", "%.f", 0, 255, 10, 128);
-    IUFillNumber(&ControlN[TC_BRIGHTNESS], "Brightness", "Brightness", "%.f", -64, 64, 8, 0);
-    IUFillNumber(&ControlN[TC_GAMMA], "Gamma", "Gamma", "%.f", 20, 180, 10, 100);
+    IUFillNumber(&ControlN[TC_SATURATION], "Saturation", "Saturation", "%.f", CP(SATURATION_MIN), CP(SATURATION_MAX), 10, CP(SATURATION_DEF));
+    IUFillNumber(&ControlN[TC_BRIGHTNESS], "Brightness", "Brightness", "%.f", CP(BRIGHTNESS_MIN), CP(BRIGHTNESS_MAX), 8, 0);
+    IUFillNumber(&ControlN[TC_GAMMA], "Gamma", "Gamma", "%.f", CP(GAMMA_MIN), CP(GAMMA_MAX), 10, CP(GAMMA_DEF));
     IUFillNumber(&ControlN[TC_SPEED], "Speed", "Speed", "%.f", 0, 10, 1, 0);
     IUFillNumber(&ControlN[TC_FRAMERATE_LIMIT], "FPS Limit", "FPS Limit", "%.f", 0, 63, 1, 0);
-    IUFillNumberVector(&ControlNP, ControlN, 8, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
-                       IPS_IDLE);
+    IUFillNumberVector(&ControlNP, ControlN, 8, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Black Balance RGB
@@ -204,16 +203,16 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     // White Balance - Temp/Tint
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&WBTempTintN[TC_WB_TEMP], "TC_WB_TEMP", "Temp", "%.f", 2000, 15000, 1000, 6503);
-    IUFillNumber(&WBTempTintN[TC_WB_TINT], "TC_WB_TINT", "Tint", "%.f", 200, 2500, 100, 1000);
+    IUFillNumber(&WBTempTintN[TC_WB_TEMP], "TC_WB_TEMP", "Temp", "%.f", CP(TEMP_MIN), CP(TEMP_MAX), 1000, CP(TEMP_DEF));
+    IUFillNumber(&WBTempTintN[TC_WB_TINT], "TC_WB_TINT", "Tint", "%.f", CP(TINT_MIN), CP(TINT_MAX), 100, CP(TINT_DEF));
     IUFillNumberVector(&WBTempTintNP, WBTempTintN, 2, getDeviceName(), "TC_WB_TT", "WB #1", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // White Balance - RGB
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&WBRGBN[TC_WB_R], "TC_WB_R", "Red", "%.f", -127, 127, 10, 0);
-    IUFillNumber(&WBRGBN[TC_WB_G], "TC_WB_G", "Green", "%.f", -127, 127, 10, 0);
-    IUFillNumber(&WBRGBN[TC_WB_B], "TC_WB_B", "Blue", "%.f", -127, 127, 10, 0);
+    IUFillNumber(&WBRGBN[TC_WB_R], "TC_WB_R", "Red", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+    IUFillNumber(&WBRGBN[TC_WB_G], "TC_WB_G", "Green", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+    IUFillNumber(&WBRGBN[TC_WB_B], "TC_WB_B", "Blue", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
     IUFillNumberVector(&WBRGBNP, WBRGBN, 3, getDeviceName(), "TC_WB_RGB", "WB #2", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
 
 
@@ -229,13 +228,13 @@ bool ToupBase::initProperties()
     /// Analog Digital Converter
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&ADCN[0], "ADC_BITDEPTH", "Bit Depth", "%.f", 8, 32, 0, 8);
-    IUFillNumberVector(&ADCNP, ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB,  IP_RO, 60, IPS_IDLE);
+    IUFillNumberVector(&ADCNP, ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&TimeoutFactorN[0], "VALUE", "Factor", "%.f", 1, 10, 1, 1.2);
-    IUFillNumberVector(&TimeoutFactorNP, TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,  IP_RW,
+    IUFillNumberVector(&TimeoutFactorNP, TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW,
                        60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -674,18 +673,6 @@ void ToupBase::setupParams()
         // Color RGB
         else
         {
-            int rgbMode = 0;
-            rc = FP(get_Option(m_CameraHandle, CP(OPTION_RGB), &rgbMode));
-            LOGF_DEBUG("OPTION_RGB. rc: %s Value: %d", errorCodes(rc).c_str(), rgbMode);
-
-            // 0 = RGB24, 1 = RGB48, 2 = RGB32
-            // We only support RGB24 in the driver
-            if (rgbMode != 0)
-            {
-                LOGF_DEBUG("RGB Mode %s is not supported. Setting mode to RGB24", rgbMode == 1 ? "RGB48" : "RGB32");
-                FP(put_Option(m_CameraHandle, CP(OPTION_RGB), 0));
-            }
-
             LOG_INFO("Video Mode RGB detected.");
             VideoFormatS[TC_VIDEO_COLOR_RGB].s = ISS_ON;
             m_Channels = 3;
@@ -829,7 +816,6 @@ void ToupBase::setupParams()
     GainConversionN[TC_HCG_THRESHOLD].max = m_MaxGainNative;
     GainConversionN[TC_HCG_THRESHOLD].step = (m_MaxGainNative - nMin) / 20.0;
 
-#if defined(BUILD_TOUPCAM)
     // High FullWell Mode
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
     {
@@ -841,18 +827,14 @@ void ToupBase::setupParams()
         m_HasHighFullwellMode = false;
         LOG_INFO("High Full Well is NOT possible");
     }
-#endif
+	
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-    {
         m_HasLowNoise = true;
-    }
 
     // Heat Up
     if (m_Instance->model->flag & CP(FLAG_HEAT))
-    {
         m_HasHeatUp = true;
-    }
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
@@ -959,7 +941,6 @@ void ToupBase::setupParams()
     int bLevelStep = 1 << (m_MaxBitDepth - 8);
     OffsetN[TC_OFFSET].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
     OffsetN[TC_OFFSET].step = bLevelStep;
-
 
     // Allocate memory
     allocateFrameBuffer();
@@ -1223,7 +1204,6 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
 
             HRESULT rc = FP(put_TempTint(m_CameraHandle, static_cast<int>(WBTempTintN[TC_WB_TEMP].value),
                                          static_cast<int>(WBTempTintN[TC_WB_TINT].value)));
-
             if (FAILED(rc))
             {
                 WBTempTintNP.s = IPS_ALERT;
@@ -1255,7 +1235,6 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             {
                 WBRGBNP.s = IPS_ALERT;
                 LOGF_ERROR("Failed to set White Balance gain. %s", errorCodes(rc).c_str());
-
             }
             else
                 WBRGBNP.s = IPS_OK;
@@ -1943,7 +1922,7 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
-    LOGF_DEBUG("Camera ROI. X: %d Y: %d W: %d H: %d. Binning %dx%d ", x, y, w, h, PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
+    LOGF_DEBUG("Camera ROI. X: %d Y: %d W: %d H: %d. Binning %dx%d", x, y, w, h, PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
 
     HRESULT rc = FP(put_Roi(m_CameraHandle, x, y, w, h));
     if (FAILED(rc))
@@ -1974,9 +1953,7 @@ bool ToupBase::updateBinningMode(int binx, int mode)
     int binningMode = binx;
 
     if ((mode == TC_BINNING_AVG) && (binx > 1))
-    {
         binningMode = binx | 0x80;
-    }
     LOGF_DEBUG("binningMode code to set: 0x%x", binningMode);
 
     HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binningMode));
@@ -1995,8 +1972,7 @@ bool ToupBase::updateBinningMode(int binx, int mode)
 
     PrimaryCCD.setBin(binx, binx);
 
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());;
-
+    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 }
 
 bool ToupBase::UpdateCCDBin(int binx, int biny)
@@ -2228,9 +2204,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FIT
     INumber *gainNP = IUFindNumber(&ControlNP, ControlN[TC_GAIN].name);
 
     if (gainNP)
-    {
         fitsKeywords.push_back({"GAIN", gainNP->value, 3, "Gain"});
-    }
 }
 
 bool ToupBase::saveConfigItems(FILE * fp)
@@ -2440,8 +2414,7 @@ void ToupBase::eventCallBack(unsigned event)
                         free(buffer);
                     }
 
-                    LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag,
-                               info.timestamp);
+                    LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
                     ExposureComplete(&PrimaryCCD);
                 }
             }
