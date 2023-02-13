@@ -20,11 +20,8 @@
 */
 
 #include "indi_toupbase.h"
-
 #include "config.h"
-
 #include <stream/streammanager.h>
-
 #include <math.h>
 #include <unistd.h>
 #include <deque>
@@ -969,15 +966,6 @@ void ToupBase::setupParams()
 
     SetTimer(getCurrentPollingPeriod());
 
-    // Start push callback
-    if ( (rc = FP(StartPushModeV3(m_CameraHandle, &ToupBase::pushCB, this, &ToupBase::eventCB, this))) != 0)
-    {
-        LOGF_ERROR("Failed to start camera push mode. %s", errorCodes(rc).c_str());
-        Disconnect();
-        updateProperties();
-        return;
-    }
-
     LOG_DEBUG("Starting event callback in push mode.");
 }
 
@@ -1240,7 +1228,6 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             {
                 WBTempTintNP.s = IPS_ALERT;
                 LOGF_ERROR("Failed to set White Balance Temperature & Tint. %s", errorCodes(rc).c_str());
-
             }
             else
                 WBTempTintNP.s = IPS_OK;
@@ -1544,15 +1531,15 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             switch (IUFindOnSwitchIndex(&AutoControlSP))
             {
                 case TC_AUTO_TINT:
-                    rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
+                    rc = FP(AwbOnce(m_CameraHandle, nullptr, nullptr));
                     autoOperation = "Auto White Balance Tint/Temp";
                     break;
                 case TC_AUTO_WB:
-                    rc = FP(AwbInit(m_CameraHandle, &ToupBase::WhiteBalanceCB, this));
+                    rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
                     autoOperation = "Auto White Balance RGB";
                     break;
                 case TC_AUTO_BB:
-                    rc = FP(AbbOnce(m_CameraHandle, &ToupBase::BlackBalanceCB, this));
+                    rc = FP(AbbOnce(m_CameraHandle, nullptr, nullptr));
                     autoOperation = "Auto Black Balance";
                     break;
                 default:
@@ -1639,9 +1626,9 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IUUpdateSwitch(&WBAutoSP, states, names, n);
             HRESULT rc = 0;
             if (IUFindOnSwitchIndex(&WBAutoSP) == TC_AUTO_WB_TT)
-                rc = FP(AwbOnce(m_CameraHandle, &ToupBase::TempTintCB, this));
+                rc = FP(AwbOnce(m_CameraHandle, nullptr, nullptr));
             else
-                rc = FP(AwbInit(m_CameraHandle, &ToupBase::WhiteBalanceCB, this));
+                rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
 
             IUResetSwitch(&WBAutoSP);
             if (SUCCEEDED(rc))
@@ -2274,144 +2261,12 @@ bool ToupBase::saveConfigItems(FILE * fp)
     return true;
 }
 
-void ToupBase::TempTintCB(const int nTemp, const int nTint, void* pCtx)
-{
-    static_cast<ToupBase*>(pCtx)->TempTintChanged(nTemp, nTint);
-}
-
-void ToupBase::TempTintChanged(const int nTemp, const int nTint)
-{
-    WBTempTintN[TC_WB_TEMP].value = nTemp;
-    WBTempTintN[TC_WB_TINT].value = nTint;
-    WBTempTintNP.s = IPS_OK;
-    IDSetNumber(&WBTempTintNP, nullptr);
-}
-
-void ToupBase::WhiteBalanceCB(const int aGain[3], void* pCtx)
-{
-    static_cast<ToupBase*>(pCtx)->WhiteBalanceChanged(aGain);
-}
-void ToupBase::WhiteBalanceChanged(const int aGain[3])
-{
-    WBRGBN[TC_WB_R].value = aGain[TC_WB_R];
-    WBRGBN[TC_WB_G].value = aGain[TC_WB_G];
-    WBRGBN[TC_WB_B].value = aGain[TC_WB_B];
-    WBRGBNP.s = IPS_OK;
-    IDSetNumber(&WBRGBNP, nullptr);
-}
-
-void ToupBase::BlackBalanceCB(const unsigned short aSub[3], void* pCtx)
-{
-    static_cast<ToupBase*>(pCtx)->BlackBalanceChanged(aSub);
-}
-void ToupBase::BlackBalanceChanged(const unsigned short aSub[3])
-{
-    BlackBalanceN[TC_BLACK_R].value = aSub[TC_BLACK_R];
-    BlackBalanceN[TC_BLACK_G].value = aSub[TC_BLACK_G];
-    BlackBalanceN[TC_BLACK_B].value = aSub[TC_BLACK_B];
-    BlackBalanceNP.s = IPS_OK;
-    IDSetNumber(&BlackBalanceNP, nullptr);
-}
-
-void ToupBase::AutoExposureCB(void* pCtx)
-{
-    static_cast<ToupBase*>(pCtx)->AutoExposureChanged();
-}
-void ToupBase::AutoExposureChanged()
-{
-    // TODO
-}
-
-void ToupBase::pushCB(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap, void* pCallbackCtx)
-{
-    static_cast<ToupBase*>(pCallbackCtx)->pushCallback(pData, pInfo, bSnap);
-}
-
-void ToupBase::pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap)
-{
-    INDI_UNUSED(bSnap);
-
-    if (Streamer->isStreaming() || Streamer->isRecording())
-    {
-        Streamer->newFrame(reinterpret_cast<const uint8_t*>(pData), PrimaryCCD.getFrameBufferSize());
-    }
-    else if (InExposure)
-    {
-        m_CaptureTimeoutCounter = 0;
-        m_CaptureTimeout.stop();
-
-        // Estimate download time
-        timeval curtime, diff;
-        gettimeofday(&curtime, nullptr);
-        timersub(&curtime, &ExposureEnd, &diff);
-        m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
-        LOGF_DEBUG("New download estimate %.f ms", m_DownloadEstimation);
-
-        if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
-        {
-            m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
-            LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
-        }
-
-        InExposure  = false;
-        PrimaryCCD.setExposureLeft(0);
-        uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-        uint32_t size = PrimaryCCD.getFrameBufferSize();
-
-        if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-        {
-            size = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3;
-            buffer = static_cast<uint8_t*>(malloc(size));
-        }
-
-        if (pData == nullptr)
-        {
-            LOG_ERROR("Failed to push image.");
-            PrimaryCCD.setExposureFailed();
-            if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                free(buffer);
-        }
-        else
-        {
-            memcpy(buffer, pData, size);
-
-            if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-            {
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
-                uint8_t *image  = PrimaryCCD.getFrameBuffer();
-                uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
-                uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
-
-                uint8_t *subR = image;
-                uint8_t *subG = image + width * height;
-                uint8_t *subB = image + width * height * 2;
-                int totalSize = width * height * 3 - 3;
-
-                // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
-                for (int i = 0; i <= totalSize; i += 3)
-                {
-                    *subR++ = buffer[i];
-                    *subG++ = buffer[i + 1];
-                    *subB++ = buffer[i + 2];
-                }
-
-                guard.unlock();
-                free(buffer);
-            }
-
-            LOGF_DEBUG("Image received. Width: %d Height: %d flag: %d timestamp: %ld"
-                       , pInfo->width, pInfo->height, pInfo->flag, pInfo->timestamp);
-            ExposureComplete(&PrimaryCCD);
-        }
-    }
-}
-
 void ToupBase::eventCB(unsigned event, void* pCtx)
 {
-    static_cast<ToupBase*>(pCtx)->eventPullCallBack(event);
+    static_cast<ToupBase*>(pCtx)->eventCallBack(event);
 }
 
-void ToupBase::eventPullCallBack(unsigned event)
+void ToupBase::eventCallBack(unsigned event)
 {
     LOGF_DEBUG("Event %#04X", event);
     switch (event)
@@ -2421,7 +2276,17 @@ void ToupBase::eventPullCallBack(unsigned event)
             m_CaptureTimeout.stop();
             break;
         case CP(EVENT_TEMPTINT):
-            break;
+		{
+			LOG_DEBUG("Temp Tint changed.");
+			int nTemp = CP(TEMP_DEF), nTint = CP(TINT_DEF);
+			FP(get_TempTint)(m_CameraHandle, &nTemp, &nTint);
+			
+			WBTempTintN[TC_WB_TEMP].value = nTemp;
+			WBTempTintN[TC_WB_TINT].value = nTint;
+			WBTempTintNP.s = IPS_OK;
+			IDSetNumber(&WBTempTintNP, nullptr);
+		}
+        break;
         case CP(EVENT_IMAGE):
         {
             m_CaptureTimeoutCounter = 0;
@@ -2592,18 +2457,31 @@ void ToupBase::eventPullCallBack(unsigned event)
         }
         break;
         case CP(EVENT_WBGAIN):
-            LOG_DEBUG("White Balance Gain changed.");
-            break;
-        case CP(EVENT_TRIGGERFAIL):
-            break;
+        {
+			LOG_DEBUG("White Balance Gain changed.");
+			int aGain[3] = { 0 };
+			FP(get_WhiteBalanceGain)(m_CameraHandle, aGain);
+			WBRGBN[TC_WB_R].value = aGain[TC_WB_R];
+			WBRGBN[TC_WB_G].value = aGain[TC_WB_G];
+			WBRGBN[TC_WB_B].value = aGain[TC_WB_B];
+			WBRGBNP.s = IPS_OK;
+			IDSetNumber(&WBRGBNP, nullptr);
+        }
+		break;
         case CP(EVENT_BLACK):
-            LOG_DEBUG("Black Balance Gain changed.");
-            break;
-        case CP(EVENT_FFC):
-            break;
-        case CP(EVENT_DFC):
-            break;
+        {
+			LOG_DEBUG("Black Balance Gain changed.");
+			unsigned short aSub[3] = { 0 };
+			FP(get_BlackBalance)(m_CameraHandle, aSub);
+			BlackBalanceN[TC_BLACK_R].value = aSub[TC_BLACK_R];
+			BlackBalanceN[TC_BLACK_G].value = aSub[TC_BLACK_G];
+			BlackBalanceN[TC_BLACK_B].value = aSub[TC_BLACK_B];
+			BlackBalanceNP.s = IPS_OK;
+			IDSetNumber(&BlackBalanceNP, nullptr);
+		}
+        break;
         case CP(EVENT_ERROR):
+            LOG_DEBUG("Camera Error.");
             break;
         case CP(EVENT_DISCONNECTED):
             LOG_DEBUG("Camera disconnected.");
@@ -2611,8 +2489,6 @@ void ToupBase::eventPullCallBack(unsigned event)
         case CP(EVENT_NOFRAMETIMEOUT):
             LOG_DEBUG("Camera timed out.");
             PrimaryCCD.setExposureFailed();
-            break;
-        case CP(EVENT_FACTORY):
             break;
         default:
             break;

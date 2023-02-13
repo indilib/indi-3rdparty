@@ -232,23 +232,8 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Callbacks
         //#############################################################################
-        static void pushCB(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap, void* pCallbackCtx);
-        void pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap);
-
         static void eventCB(unsigned event, void* pCtx);
-        void eventPullCallBack(unsigned event);
-
-        static void TempTintCB(const int nTemp, const int nTint, void* pCtx);
-        void TempTintChanged(const int nTemp, const int nTint);
-
-        static void WhiteBalanceCB(const int aGain[3], void* pCtx);
-        void WhiteBalanceChanged(const int aGain[3]);
-
-        static void BlackBalanceCB(const unsigned short aSub[3], void* pCtx);
-        void BlackBalanceChanged(const unsigned short aSub[3]);
-
-        static void AutoExposureCB(void* pCtx);
-        void AutoExposureChanged();
+        void eventCallBack(unsigned event);
 
         // Handle capture timeout
         void captureTimeoutHandler();
