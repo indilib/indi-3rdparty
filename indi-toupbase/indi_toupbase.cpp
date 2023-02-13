@@ -2447,7 +2447,7 @@ void ToupBase::eventPullCallBack(unsigned event)
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
                 std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
                 guard.unlock();
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
@@ -2462,7 +2462,7 @@ void ToupBase::eventPullCallBack(unsigned event)
                     buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
 
                 std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
                 guard.unlock();
                 if (FAILED(rc))
                 {
@@ -2525,7 +2525,7 @@ void ToupBase::eventPullCallBack(unsigned event)
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
                 std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, &info));
+                HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
                 guard.unlock();
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
@@ -2540,7 +2540,7 @@ void ToupBase::eventPullCallBack(unsigned event)
                     buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
 
                 std::unique_lock<std::mutex> guard(ccdBufferLock);
-                HRESULT rc = FP(PullStillImageV2(m_CameraHandle, buffer, captureBits * m_Channels, &info));
+                HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
                 guard.unlock();
                 if (FAILED(rc))
                 {
