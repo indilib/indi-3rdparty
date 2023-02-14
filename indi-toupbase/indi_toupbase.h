@@ -407,10 +407,6 @@ class ToupBase : public INDI::CCD
         ITextVectorProperty m_SDKVersionTP;
         IText m_SDKVersionT[1] = {};
 
-        // ADC / Max Bitdepth
-        INumberVectorProperty m_ADCNP;
-        INumber m_ADCN[1];
-
         // Timeout factor
         INumberVectorProperty m_TimeoutFactorNP;
         INumber TimeoutFactorN[1];

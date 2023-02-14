@@ -245,12 +245,6 @@ bool ToupBase::initProperties()
 		IUFillSwitch(&m_WBAutoS[TC_AUTO_WB_RGB], "TC_AUTO_WB_RGB", "RGB", ISS_OFF);
 		IUFillSwitchVector(&m_WBAutoSP, m_WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 	}
-	
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Analog Digital Converter
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_ADCN[0], "ADC_BITDEPTH", "Bit Depth", "%.f", 8, 32, 0, 8);
-    IUFillNumberVector(&m_ADCNP, m_ADCN, 1, getDeviceName(), "ADC", "ADC", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
@@ -340,8 +334,8 @@ bool ToupBase::initProperties()
     IUFillText(&m_FirmwareT[TC_FIRMWARE_REV], "Revision", "Revision", nullptr);
     IUFillTextVector(&m_FirmwareTP, m_FirmwareT, 5, getDeviceName(), "Firmware", "Firmware", "Firmware", IP_RO, 0, IPS_IDLE);
 
-    IUFillText(&m_SDKVersionT[0], "VERSION", "Version", nullptr);
-    IUFillTextVector(&m_SDKVersionTP, m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", "Firmware", IP_RO, 0, IPS_IDLE);
+    IUFillText(&m_SDKVersionT[0], "Version", "Version", nullptr);
+    IUFillTextVector(&m_SDKVersionTP, m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", "SDK", IP_RO, 0, IPS_IDLE);
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -392,7 +386,6 @@ bool ToupBase::updateProperties()
         defineProperty(&m_AutoExposureSP);
         defineProperty(&m_VideoFormatSP);
         defineProperty(&m_ResolutionSP);
-        defineProperty(&m_ADCNP);
 
         if (m_HasHighFullwellMode)
             defineProperty(&m_HighFullwellModeSP);
@@ -447,7 +440,6 @@ bool ToupBase::updateProperties()
         deleteProperty(m_AutoExposureSP.name);
         deleteProperty(m_VideoFormatSP.name);
         deleteProperty(m_ResolutionSP.name);
-        deleteProperty(m_ADCNP.name);
 
         if (m_HasLowNoise)
             deleteProperty(m_LowNoiseSP.name);
@@ -589,7 +581,6 @@ void ToupBase::setupParams()
     // Max supported bit depth
     m_MaxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
     LOGF_DEBUG("Max bit depth: %d", m_MaxBitDepth);
-    m_ADCN[0].value = m_MaxBitDepth;
 
     m_BitsPerPixel = 8;
     int nVal = 0;
@@ -598,9 +589,7 @@ void ToupBase::setupParams()
     if (m_MonoCamera)
     {
         IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
-        /// RGB Mode but 16 bits grayscale
         IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
-        LOG_DEBUG("Mono camera detected");
 
         rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), 1));
         LOGF_DEBUG("OPTION_RAW 1. rc: %s", errorCodes(rc).c_str());
@@ -766,20 +755,12 @@ void ToupBase::setupParams()
     LOGF_DEBUG("Exposure Gain Control. Min: %u, Max: %u, Default: %u", nMin, nMax, nDef);
     m_ControlN[TC_GAIN].min = nMin;
     m_ControlN[TC_GAIN].max = nMax;
-    m_ControlN[TC_GAIN].step = (m_ControlN[TC_GAIN].max - nMin) / 20.0;
+    m_ControlN[TC_GAIN].step = 1;
     m_ControlN[TC_GAIN].value = nDef;
 
     // High FullWell Mode
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-    {
         m_HasHighFullwellMode = true;
-        LOG_INFO("High Full Well is possible");
-    }
-    else 
-    {
-        m_HasHighFullwellMode = false;
-        LOG_INFO("High Full Well is NOT possible");
-    }
 	
     // Low Noise
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
@@ -818,23 +799,20 @@ void ToupBase::setupParams()
     m_ControlN[TC_GAMMA].value = nVal;
 
     // Speed
-    rc = FP(get_Speed(m_CameraHandle, &nDef));
-    LOGF_DEBUG("Speed Control: %d", nDef);
-
     // JM 2020-05-06: Reduce speed on ARM for all resolutions
 #if defined(__arm__) || defined (__aarch64__)
     m_ControlN[TC_SPEED].value = 0;
     FP(put_Speed(m_CameraHandle, 0));
 #else
+    rc = FP(get_Speed(m_CameraHandle, &nDef));
+    LOGF_DEBUG("Speed Control: %d", nDef);
     m_ControlN[TC_SPEED].value = nDef;
 #endif
-    m_ControlN[TC_SPEED].max = m_Instance->model->maxspeed;
 
     // Frame Rate
     int frameRateLimit = 0;
     rc = FP(get_Option(m_CameraHandle, CP(OPTION_FRAMERATE), &frameRateLimit));
     LOGF_DEBUG("Frame Rate Limit %d, rc: %d", frameRateLimit, rc);
-
     // JM 2019-08-19: On ARM, set frame limit to max (63) instead of 0 (unlimited)
     // since that results in failure to capture from large sensors
 #ifdef __arm__
@@ -865,7 +843,7 @@ void ToupBase::setupParams()
 	}
 
     // Get Level Ranges
-    uint16_t aLow[4] = {0}, aHigh[4] = {0};
+    uint16_t aLow[4] = {0}, aHigh[4] = {255, 255, 255, 255};
     rc = FP(get_LevelRange(m_CameraHandle, aLow, aHigh));
     if (SUCCEEDED(rc))
     {
@@ -1750,10 +1728,10 @@ void ToupBase::captureTimeoutHandler()
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
 {
     // Make sure all are even
-    x -= (x % 2);
-    y -= (y % 2);
-    w -= (w % 2);
-    h -= (h % 2);
+    x -= x % 2;
+    y -= y % 2;
+    w -= w % 2;
+    h -= h % 2;
 
     if (w > PrimaryCCD.getXRes())
     {
@@ -1853,7 +1831,7 @@ void ToupBase::TimerHit()
         HRESULT rc = FP(get_Temperature(m_CameraHandle, &nTemperature));
         if (FAILED(rc))
         {
-            LOGF_ERROR("get_Temperature error. %s", errorCodes(rc).c_str());
+            LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
             TemperatureNP.s = IPS_ALERT;
         }
 		
@@ -2123,9 +2101,7 @@ void ToupBase::eventCallBack(unsigned event)
 
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
                 HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
-                guard.unlock();
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
             }
@@ -2138,9 +2114,7 @@ void ToupBase::eventCallBack(unsigned event)
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
 
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
                 HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
-                guard.unlock();
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
@@ -2152,7 +2126,6 @@ void ToupBase::eventCallBack(unsigned event)
                 {
                     if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     {
-                        std::unique_lock<std::mutex> locker(ccdBufferLock);
                         uint8_t *image  = PrimaryCCD.getFrameBuffer();
                         uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
                         uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
@@ -2170,7 +2143,6 @@ void ToupBase::eventCallBack(unsigned event)
                             *subB++ = buffer[i + 2];
                         }
 
-                        locker.unlock();
                         free(buffer);
                     }
 
@@ -2198,9 +2170,7 @@ void ToupBase::eventCallBack(unsigned event)
 
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
                 HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
-                guard.unlock();
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
             }
@@ -2213,9 +2183,7 @@ void ToupBase::eventCallBack(unsigned event)
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
 
-                std::unique_lock<std::mutex> guard(ccdBufferLock);
                 HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
-                guard.unlock();
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
@@ -2227,7 +2195,6 @@ void ToupBase::eventCallBack(unsigned event)
                 {
                     if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     {
-                        std::unique_lock<std::mutex> locker(ccdBufferLock);
                         uint8_t *image  = PrimaryCCD.getFrameBuffer();
                         uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
                         uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
@@ -2245,7 +2212,6 @@ void ToupBase::eventCallBack(unsigned event)
                             *subB++ = buffer[i + 2];
                         }
 
-                        locker.unlock();
                         free(buffer);
                     }
 
