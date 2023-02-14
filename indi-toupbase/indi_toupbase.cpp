@@ -96,8 +96,6 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
-    m_WEtimerID = m_NStimerID = -1;
-
     snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), instance->displayname);
     setDeviceName(this->m_name);
 
@@ -536,6 +534,7 @@ bool ToupBase::Connect()
     m_AutoExposureSP.s = IPS_OK;
 
     PrimaryCCD.setBin(1, 1);
+	
     // Success!
     LOGF_INFO("%s is online. Retrieving basic data", getDeviceName());
 
@@ -549,6 +548,13 @@ bool ToupBase::Disconnect()
 
     FP(Close(m_CameraHandle));
 
+	if (m_rgbBuffer)
+	{
+		free(m_rgbBuffer);
+		m_rgbBuffer = nullptr;
+	}
+	m_rgbBufferSize = 0;
+	
     return true;
 }
 
@@ -2056,6 +2062,15 @@ void ToupBase::eventCB(unsigned event, void* pCtx)
     static_cast<ToupBase*>(pCtx)->eventCallBack(event);
 }
 
+uint8_t* ToupBase::getRgbBuffer()
+{
+	if (m_rgbBuffer && (m_rgbBufferSize == PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3))
+		return m_rgbBuffer;
+	m_rgbBufferSize = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3;
+	m_rgbBuffer = static_cast<uint8_t*>(realloc(m_rgbBuffer, m_rgbBufferSize));
+	return m_rgbBuffer;
+}
+
 void ToupBase::eventCallBack(unsigned event)
 {
     LOGF_DEBUG("Event %#04X", event);
@@ -2112,15 +2127,13 @@ void ToupBase::eventCallBack(unsigned event)
                 uint8_t *buffer = PrimaryCCD.getFrameBuffer();
 
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                    buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+                    buffer = getRgbBuffer();
 
                 HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
                     PrimaryCCD.setExposureFailed();
-                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                        free(buffer);
                 }
                 else
                 {
@@ -2142,8 +2155,6 @@ void ToupBase::eventCallBack(unsigned event)
                             *subG++ = buffer[i + 1];
                             *subB++ = buffer[i + 2];
                         }
-
-                        free(buffer);
                     }
 
                     LOGF_DEBUG("Image received. Width: %d, Height: %d, flag: %d, timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
@@ -2181,15 +2192,13 @@ void ToupBase::eventCallBack(unsigned event)
                 uint8_t *buffer = PrimaryCCD.getFrameBuffer();
 
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                    buffer = static_cast<uint8_t*>(malloc(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3));
+                    buffer = getRgbBuffer();
 
                 HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
                     PrimaryCCD.setExposureFailed();
-                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                        free(buffer);
                 }
                 else
                 {
@@ -2211,8 +2220,6 @@ void ToupBase::eventCallBack(unsigned event)
                             *subG++ = buffer[i + 1];
                             *subB++ = buffer[i + 2];
                         }
-
-                        free(buffer);
                     }
 
                     LOGF_DEBUG("Image received. Width: %d, Height: %d, flag: %d, timestamp: %ld", info.width, info.height, info.flag, info.timestamp);

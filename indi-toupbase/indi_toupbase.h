@@ -177,14 +177,14 @@ class ToupBase : public INDI::CCD
         void TimerNS();
         void stopTimerNS();
         IPState guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        int m_NStimerID;
+        int m_NStimerID { -1 };
 
         // W/E Guiding
         static void TimerHelperWE(void *context);
         void TimerWE();
         void stopTimerWE();
         IPState guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        int m_WEtimerID;
+        int m_WEtimerID { -1 };
 
         //#############################################################################
         // Temperature Control & Cooling
@@ -440,6 +440,10 @@ class ToupBase : public INDI::CCD
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
+		
+		uint8_t* getRgbBuffer();
+		uint8_t *m_rgbBuffer { nullptr };
+		int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
 
