@@ -1848,7 +1848,8 @@ void ToupBase::TimerHit()
     }
     else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
-        int16_t nTemperature = 0, currentTemperature = (int16_t)(TemperatureN[0].value * 10);
+        int16_t currentTemperature = (int16_t)(TemperatureN[0].value * 10);
+		int16_t nTemperature = currentTemperature;
         HRESULT rc = FP(get_Temperature(m_CameraHandle, &nTemperature));
         if (FAILED(rc))
         {
