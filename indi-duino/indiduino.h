@@ -51,11 +51,11 @@ typedef struct
     double OnAngle;
     double OffAngle;
     double buttonIncValue;
-    char *SwitchButton;
-    char *UpButton;
-    char *DownButton;
-    char *defName;
-    char *defVectorName;
+    const char *SwitchButton;
+    const char *UpButton;
+    const char *DownButton;
+    const char *defName;
+    const char *defVectorName;
 } IO;
 
 class indiduino : public INDI::DefaultDevice

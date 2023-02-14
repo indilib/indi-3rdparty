@@ -5,32 +5,36 @@
                 <driver name="Toupcam">indi_toupcam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
-        <device label="Omegon Pro" mdpd="true" manufacturer="Omegon">
-                <driver name="Toupcam">indi_toupcam_ccd</driver>
-                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
-        </device>
-        <device label="Omegon Pro/GUIDE" mdpd="true" manufacturer="Omegon">
-                <driver name="Omegonprocam">indi_omegonprocam_ccd</driver>
-                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
-        </device>
-        <device label="Meade Toupcam" mdpd="true" manufacturer="Meade">
-                <driver name="Toupcam">indi_toupcam_ccd</driver>
-                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
-        </device>
         <device label="Altair" mdpd="true" manufacturer="Altair">
                 <driver name="Altair">indi_altair_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Bresser" mdpd="true" manufacturer="Bresser">
+                <driver name="Bressercam">indi_bressercam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Mallincam" mdpd="true" manufacturer="Mallincam">
+                <driver name="Mallincam">indi_mallincam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Nncam" mdpd="true" manufacturer="Nn">
+                <driver name="Nncam">indi_nncam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Ogmacam" mdpd="true" manufacturer="OGMAVision">
+                <driver name="Ogmacam">indi_ogmacam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="OmegonPro" mdpd="true" manufacturer="Omegon">
+                <driver name="OmegonPro">indi_omegonprocam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="StartshootG" mdpd="true" manufacturer="Orion">
                 <driver name="StartshootG">indi_starshootg_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
-        <device label="Levenhuk" mdpd="true" manufacturer="Levenhuk">
-                <driver name="Levenhuk">indi_nncam_ccd</driver>
-                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
-        </device>
-        <device label="Mallincam" mdpd="true" manufacturer="Mallincam">
-                <driver name="Mallincam">indi_mallincam_ccd</driver>
+        <device label="Tscam" mdpd="true" manufacturer="Teleskop">
+                <driver name="Tscam">indi_tscam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>

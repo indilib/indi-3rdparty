@@ -52,7 +52,7 @@ bool AHPGTBase::initProperties()
     EQMod::initProperties();
     for (auto oneProperty : *getProperties())
     {
-        oneProperty->setDeviceName(getDeviceName());
+        oneProperty.setDeviceName(getDeviceName());
     }
 
     GTRAConfigurationNP[GT_MOTOR_STEPS].fill("GT_MOTOR_STEPS", "Motor steps", "%.0f", 1, 1000, 1, 200);

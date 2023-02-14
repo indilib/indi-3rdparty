@@ -223,7 +223,7 @@ class SVBONYCCD : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         // add FITS fields
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
         // INDI Callbacks
         friend void ::ISGetProperties(const char *dev);

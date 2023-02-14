@@ -97,10 +97,10 @@ bool MMALDriver::saveConfigItems(FILE * fp)
     return true;
 }
 
-void MMALDriver::addFITSKeywords(INDI::CCDChip * targetChip)
+void MMALDriver::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     LOGF_DEBUG("%s()", __FUNCTION__);
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
 #ifdef USE_ISO
     int status = 0;
@@ -112,7 +112,7 @@ void MMALDriver::addFITSKeywords(INDI::CCDChip * targetChip)
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
             {
-                fits_update_key_s(*targetChip->fitsFilePointer(), TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fitsKeywords.push_back({"ISOSPEED", isoSpeed, "ISO Speed"});
             }
         }
     }

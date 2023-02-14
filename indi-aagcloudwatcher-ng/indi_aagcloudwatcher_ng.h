@@ -65,6 +65,7 @@ class AAGCloudWatcher : public INDI::Weather
         bool resetConstants();
         bool resetData();
         double getNumberValueFromVector(INumberVectorProperty *nvp, const char *name);
+        double getNumberValueFromVector(INDI::PropertyNumber nvp, const char *name);
         bool isWetRain();
 
         HeatingAlgorithmStatus heatingStatus;

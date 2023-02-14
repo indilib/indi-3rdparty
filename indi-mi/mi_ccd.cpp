@@ -1003,20 +1003,18 @@ bool MICCD::saveConfigItems(FILE *fp)
     return true;
 }
 
-void MICCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void MICCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     char svalue[256];
     int ivalue = 0;
-    int status = 0;
-    auto fptr = *targetChip->fitsFilePointer();
 
     if (hasGain)
-        fits_update_key_dbl(fptr, "GAIN", GainN[0].value, 3, "Gain", &status);
+        fitsKeywords.push_back({"GAIN", GainN[0].value, 3, "Gain"});
 
     if (!gxccd_get_integer_parameter(cameraHandle, GIP_MAX_PIXEL_VALUE, &ivalue))
-        fits_update_key_lng(fptr, "DATAMAX", ivalue, "", &status);
+        fitsKeywords.push_back({"DATAMAX", ivalue, nullptr});
 
     if (numReadModes > 0)
     {
@@ -1028,25 +1026,25 @@ void MICCD::addFITSKeywords(INDI::CCDChip *targetChip)
         ivalue = 0;
         strncpy(svalue, "No read mode", sizeof(svalue));
     }
-    fits_update_key_lng(fptr, "READMODE", ivalue, svalue, &status);
+    fitsKeywords.push_back({"READMODE", ivalue, svalue});
 
     if (!gxccd_get_string_parameter(cameraHandle, GSP_CHIP_DESCRIPTION, svalue, 256))
     {
         rtrim(svalue);
-        fits_update_key_str(fptr, "CHIPTYPE", svalue, "", &status);
+        fitsKeywords.push_back({"CHIPTYPE", svalue, nullptr});
 
         if (!strcmp(svalue, "GSENSE4040"))
         {
             // we use hardcoded values here, because:
             // - so far there is no possibility to read / set HDR threshold in libgxccd
             // - it's not even easy to find out if the camera supports HDR...
-            fits_update_key_lng(fptr, "HDRTHRES", 3600, "", &status);
+            fitsKeywords.push_back({"HDRTHRES", 3600, nullptr});
         }
     }
 
     if (canDoPreflash)
     {
-        fits_update_key_dbl(fptr, "PREFLASH", PreflashN[0].value, 3, "seconds", &status);
-        fits_update_key_lng(fptr, "NUM-CLR", PreflashN[1].value, "", &status);
+        fitsKeywords.push_back({"PREFLASH", PreflashN[0].value, 3, "seconds"});
+        fitsKeywords.push_back({"NUM-CLR", PreflashN[1].value, 3, nullptr});
     }
 }

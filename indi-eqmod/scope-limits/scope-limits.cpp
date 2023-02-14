@@ -62,16 +62,16 @@ void HorizonLimits::Init()
 {
     if (!HorizonInitialized)
     {
-        char *res = LoadDataFile(IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
+        char *res = LoadDataFile(HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
         if (res)
         {
             LOGF_WARN("Can not load HorizonLimits Data File %s: %s",
-                      IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text, res);
+                      HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText(), res);
         }
         else
         {
             LOGF_INFO("HorizonLimits: Data loaded from file %s",
-                      IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
+                      HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
         }
     }
     HorizonInitialized = true;
@@ -128,14 +128,14 @@ bool HorizonLimits::updateProperties()
     }
     else if (HorizonLimitsDataFileTP)
     {
-        telescope->deleteProperty(HorizonLimitsDataFileTP->name);
-        telescope->deleteProperty(HorizonLimitsDataFitsBP->name);
-        telescope->deleteProperty(HorizonLimitsPointNP->name);
-        telescope->deleteProperty(HorizonLimitsTraverseSP->name);
-        telescope->deleteProperty(HorizonLimitsManageSP->name);
-        telescope->deleteProperty(HorizonLimitsFileOperationSP->name);
-        telescope->deleteProperty(HorizonLimitsOnLimitSP->name);
-        telescope->deleteProperty(HorizonLimitsLimitGotoSP->name);
+        telescope->deleteProperty(HorizonLimitsDataFileTP);
+        telescope->deleteProperty(HorizonLimitsDataFitsBP);
+        telescope->deleteProperty(HorizonLimitsPointNP);
+        telescope->deleteProperty(HorizonLimitsTraverseSP);
+        telescope->deleteProperty(HorizonLimitsManageSP);
+        telescope->deleteProperty(HorizonLimitsFileOperationSP);
+        telescope->deleteProperty(HorizonLimitsOnLimitSP);
+        telescope->deleteProperty(HorizonLimitsLimitGotoSP);
     }
     return true;
 }
@@ -145,14 +145,14 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
     //  first check if it's for our device
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (HorizonLimitsPointNP && strcmp(name, HorizonLimitsPointNP->name) == 0)
+        if (HorizonLimitsPointNP && HorizonLimitsPointNP.isNameMatch(name))
         {
             std::vector<INDI::IHorizontalCoordinates>::iterator low;
-            HorizonLimitsPointNP->s = IPS_OK;
-            if (IUUpdateNumber(HorizonLimitsPointNP, values, names, n) != 0)
+            HorizonLimitsPointNP.setState(IPS_OK);
+            if (!HorizonLimitsPointNP.update(values, names, n))
             {
-                HorizonLimitsPointNP->s = IPS_ALERT;
-                IDSetNumber(HorizonLimitsPointNP, nullptr);
+                HorizonLimitsPointNP.setState(IPS_ALERT);
+                HorizonLimitsPointNP.apply();
                 return false;
             }
             INDI::IHorizontalCoordinates hp{values[0], values[1]};
@@ -160,8 +160,8 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
             {
                 DEBUGF(INDI::Logger::DBG_WARNING,
                        "Horizon Limits: point with Az = %f already present. Delete it first.", hp.azimuth);
-                HorizonLimitsPointNP->s = IPS_ALERT;
-                IDSetNumber(HorizonLimitsPointNP, nullptr);
+                HorizonLimitsPointNP.setState(IPS_ALERT);
+                HorizonLimitsPointNP.apply();
                 return false;
             }
             horizon->push_back(hp);
@@ -171,7 +171,7 @@ bool HorizonLimits::ISNewNumber(const char *dev, const char *name, double values
             DEBUGF(INDI::Logger::DBG_SESSION,
                    "Horizon Limits: Added point Az = %lf, Alt  = %lf, Rank=%d (Total %d points)", hp.azimuth, hp.altitude,
                    horizonindex, horizon->size());
-            IDSetNumber(HorizonLimitsPointNP, nullptr);
+            HorizonLimitsPointNP.apply();
             return true;
         }
     }
@@ -182,77 +182,76 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
 {
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (HorizonLimitsTraverseSP && strcmp(name, HorizonLimitsTraverseSP->name) == 0)
+        if (HorizonLimitsTraverseSP && HorizonLimitsTraverseSP.isNameMatch(name))
         {
             if (!horizon || horizon->size() == 0)
             {
                 LOG_WARN("Horizon Limits: Can not traverse empty list");
-                HorizonLimitsTraverseSP->s = IPS_ALERT;
-                IDSetSwitch(HorizonLimitsTraverseSP, nullptr);
+                HorizonLimitsTraverseSP.setState(IPS_ALERT);
+                HorizonLimitsTraverseSP.apply();
                 return true;
             }
-            ISwitch *sw;
-            INumber *az  = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_AZ");
-            INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
-            IUUpdateSwitch(HorizonLimitsTraverseSP, states, names, n);
-            sw = IUFindOnSwitch(HorizonLimitsTraverseSP);
-            if (!strcmp(sw->name, "HORIZONLIMITSLISTFIRST"))
+            auto az  = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_AZ");
+            auto alt = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_ALT");
+            HorizonLimitsTraverseSP.update(states, names, n);
+            auto sw = HorizonLimitsTraverseSP.findOnSwitch();
+
+            if (sw->isNameMatch("HORIZONLIMITSLISTFIRST"))
             {
                 horizonindex = 0;
             }
-            if (!strcmp(sw->name, "HORIZONLIMITSLISTPREV"))
+            if (sw->isNameMatch("HORIZONLIMITSLISTPREV"))
             {
                 if (horizonindex > 0)
                     horizonindex = horizonindex - 1;
                 else if (horizonindex == -1)
                     horizonindex = horizon->size() - 1;
             }
-            if (!strcmp(sw->name, "HORIZONLIMITSLISTNEXT"))
+            if (sw->isNameMatch("HORIZONLIMITSLISTNEXT"))
             {
                 if (horizonindex < (int)(horizon->size() - 1))
                     horizonindex = horizonindex + 1;
             }
-            if (!strcmp(sw->name, "HORIZONLIMITSLISTLAST"))
+            if (sw->isNameMatch("HORIZONLIMITSLISTLAST"))
             {
                 horizonindex = horizon->size() - 1;
             }
-            az->value               = horizon->at(horizonindex).azimuth;
-            alt->value              = horizon->at(horizonindex).altitude;
-            HorizonLimitsPointNP->s = IPS_OK;
-            IDSetNumber(HorizonLimitsPointNP, nullptr);
-            HorizonLimitsTraverseSP->s = IPS_OK;
-            IDSetSwitch(HorizonLimitsTraverseSP, nullptr);
+            az->setValue(horizon->at(horizonindex).azimuth);
+            alt->setValue(horizon->at(horizonindex).altitude);
+            HorizonLimitsPointNP.setState(IPS_OK);
+            HorizonLimitsPointNP.apply();
+            HorizonLimitsTraverseSP.setState(IPS_OK);
+            HorizonLimitsTraverseSP.apply();
             return true;
         }
 
-        if (HorizonLimitsManageSP && strcmp(name, HorizonLimitsManageSP->name) == 0)
+        if (HorizonLimitsManageSP && HorizonLimitsManageSP.isNameMatch(name))
         {
-            ISwitch *sw;
-            IUUpdateSwitch(HorizonLimitsManageSP, states, names, n);
-            sw           = IUFindOnSwitch(HorizonLimitsManageSP);
-            INumber *az  = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_AZ");
-            INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
-            if (!strcmp(sw->name, "HORIZONLIMITSLISTADDCURRENT"))
+            HorizonLimitsManageSP.update(states, names, n);
+            auto sw  = HorizonLimitsManageSP.findOnSwitch();
+            auto az  = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_AZ");
+            auto alt = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_ALT");
+            if (sw->isNameMatch("HORIZONLIMITSLISTADDCURRENT"))
             {
                 std::vector<INDI::IHorizontalCoordinates>::iterator low;
                 double values[2];
                 const char *names[]                     = { "HORIZONLIMITS_POINT_AZ", "HORIZONLIMITS_POINT_ALT" };
-                INumberVectorProperty *horizontalcoords = telescope->getNumber("HORIZONTAL_COORD");
+                auto horizontalcoords = telescope->getNumber("HORIZONTAL_COORD");
                 if (!horizontalcoords)
                 {
                     LOG_WARN("Horizon Limits: Scope does not support horizontal coordinates.");
-                    HorizonLimitsManageSP->s = IPS_ALERT;
-                    IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                    HorizonLimitsManageSP.setState(IPS_ALERT);
+                    HorizonLimitsManageSP.apply();
                     return false;
                 }
-                values[0] = IUFindNumber(horizontalcoords, "AZ")->value;
-                values[1] = IUFindNumber(horizontalcoords, "ALT")->value;
-                if (IUUpdateNumber(HorizonLimitsPointNP, values, (char **)names, 2) != 0)
+                values[0] = horizontalcoords.findWidgetByName("AZ")->getValue();
+                values[1] = horizontalcoords.findWidgetByName("ALT")->getValue();
+                if (!HorizonLimitsPointNP.update(values, (char **)names, 2))
                 {
-                    HorizonLimitsPointNP->s = IPS_ALERT;
-                    IDSetNumber(HorizonLimitsPointNP, nullptr);
-                    HorizonLimitsManageSP->s = IPS_ALERT;
-                    IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                    HorizonLimitsPointNP.setState(IPS_ALERT);
+                    HorizonLimitsPointNP.apply();
+                    HorizonLimitsManageSP.setState(IPS_ALERT);;
+                    HorizonLimitsManageSP.apply();
                     return false;
                 }
                 INDI::IHorizontalCoordinates hp{values[0], values[1]};
@@ -260,8 +259,8 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                 {
                     DEBUGF(INDI::Logger::DBG_WARNING,
                            "Horizon Limits: point with Az = %f already present. Delete it first.", hp.azimuth);
-                    HorizonLimitsManageSP->s = IPS_ALERT;
-                    IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                    HorizonLimitsManageSP.setState(IPS_ALERT);
+                    HorizonLimitsManageSP.apply();
                     return false;
                 }
                 horizon->push_back(hp);
@@ -271,19 +270,20 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                 DEBUGF(INDI::Logger::DBG_SESSION,
                        "Horizon Limits: Added point Az = %f, Alt  = %f, Rank=%d (Total %d points)", hp.azimuth, hp.altitude,
                        horizonindex, horizon->size());
-                HorizonLimitsPointNP->s = IPS_OK;
-                IDSetNumber(HorizonLimitsPointNP, nullptr);
-                HorizonLimitsManageSP->s = IPS_OK;
-                IDSetSwitch(HorizonLimitsManageSP, nullptr);
+
+                HorizonLimitsPointNP.setState(IPS_OK);
+                HorizonLimitsPointNP.apply();
+                HorizonLimitsManageSP.setState(IPS_OK);
+                HorizonLimitsManageSP.apply();
                 return true;
             }
-            else if (!strcmp(sw->name, "HORIZONLIMITSLISTDELETE"))
+            else if (sw->isNameMatch("HORIZONLIMITSLISTDELETE"))
             {
                 if (!horizon || (horizonindex >= (int)horizon->size()))
                 {
                     LOG_WARN("Horizon Limits: Can not delete point");
-                    HorizonLimitsManageSP->s = IPS_ALERT;
-                    IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                    HorizonLimitsManageSP.setState(IPS_ALERT);
+                    HorizonLimitsManageSP.apply();
                     return true;
                 }
                 LOGF_INFO("Horizon Limits: Deleted point Az = %f, Alt  = %f, Rank=%d",
@@ -291,86 +291,85 @@ bool HorizonLimits::ISNewSwitch(const char *dev, const char *name, ISState *stat
                 horizon->erase(horizon->begin() + horizonindex);
                 if (horizonindex >= (int)horizon->size())
                     horizonindex = horizon->size() - 1;
-                az->value               = horizon->at(horizonindex).azimuth;
-                alt->value              = horizon->at(horizonindex).altitude;
-                HorizonLimitsPointNP->s = IPS_OK;
-                IDSetNumber(HorizonLimitsPointNP, nullptr);
-                HorizonLimitsManageSP->s = IPS_OK;
-                IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                az->setValue(horizon->at(horizonindex).azimuth);
+                alt->setValue(horizon->at(horizonindex).altitude);
+                HorizonLimitsPointNP.setState(IPS_OK);
+                HorizonLimitsPointNP.apply();
+                HorizonLimitsManageSP.setState(IPS_OK);
+                HorizonLimitsManageSP.apply();
                 return true;
             }
-            else if (!strcmp(sw->name, "HORIZONLIMITSLISTCLEAR"))
+            else if (sw->isNameMatch("HORIZONLIMITSLISTCLEAR"))
             {
                 LOG_INFO("Horizon Limits: List cleared");
                 if (horizon)
                     horizon->erase(horizon->begin(), horizon->end());
                 horizonindex            = -1;
-                az->value               = 0.0;
-                alt->value              = 0.0;
-                HorizonLimitsPointNP->s = IPS_OK;
-                IDSetNumber(HorizonLimitsPointNP, nullptr);
-                HorizonLimitsManageSP->s = IPS_OK;
-                IDSetSwitch(HorizonLimitsManageSP, nullptr);
+                az->setValue(0.0);
+                alt->setValue(0.0);
+                HorizonLimitsPointNP.setState(IPS_OK);
+                HorizonLimitsPointNP.apply();
+                HorizonLimitsManageSP.setState(IPS_OK);
+                HorizonLimitsManageSP.apply();
                 return true;
             }
         }
-        if (HorizonLimitsFileOperationSP && strcmp(name, HorizonLimitsFileOperationSP->name) == 0)
+        if (HorizonLimitsFileOperationSP && HorizonLimitsFileOperationSP.isNameMatch(name))
         {
-            ISwitch *sw;
-            IUUpdateSwitch(HorizonLimitsFileOperationSP, states, names, n);
-            sw = IUFindOnSwitch(HorizonLimitsFileOperationSP);
-            if (!strcmp(sw->name, "HORIZONLIMITSWRITEFILE"))
+            HorizonLimitsFileOperationSP.update(states, names, n);
+            auto sw = HorizonLimitsFileOperationSP.findOnSwitch();
+            if (sw->isNameMatch("HORIZONLIMITSWRITEFILE"))
             {
                 char *res;
-                res = WriteDataFile(IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
+                res = WriteDataFile(HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
                 if (res)
                 {
                     LOGF_WARN("Can not save HorizonLimits Data to file %s: %s",
-                              IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text, res);
-                    HorizonLimitsFileOperationSP->s = IPS_ALERT;
+                              HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText(), res);
+                    HorizonLimitsFileOperationSP.setState(IPS_ALERT);
                 }
                 else
                 {
                     LOGF_INFO("HorizonLimits: Data saved in file %s",
-                              IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
-                    HorizonLimitsFileOperationSP->s = IPS_OK;
+                              HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
+                    HorizonLimitsFileOperationSP.setState(IPS_OK);
                 }
             }
-            else if (!strcmp(sw->name, "HORIZONLIMITSLOADFILE"))
+            else if (sw->isNameMatch("HORIZONLIMITSLOADFILE"))
             {
                 char *res;
                 //Reset();
-                res = LoadDataFile(IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
+                res = LoadDataFile(HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
                 if (res)
                 {
                     LOGF_WARN("Can not load HorizonLimits Data File %s: %s",
-                              IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text, res);
-                    HorizonLimitsFileOperationSP->s = IPS_ALERT;
+                              HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText(), res);
+                    HorizonLimitsFileOperationSP.setState(IPS_ALERT);
                 }
                 else
                 {
                     LOGF_INFO("HorizonLimits: Data loaded from file %s",
-                              IUFindText(HorizonLimitsDataFileTP, "HORIZONLIMITSFILENAME")->text);
-                    HorizonLimitsFileOperationSP->s = IPS_OK;
+                              HorizonLimitsDataFileTP.findWidgetByName("HORIZONLIMITSFILENAME")->getText());
+                    HorizonLimitsFileOperationSP.setState(IPS_OK);
                 }
             }
-            IDSetSwitch(HorizonLimitsFileOperationSP, nullptr);
+            HorizonLimitsFileOperationSP.apply();
             return true;
         }
 
-        if (HorizonLimitsOnLimitSP && strcmp(name, HorizonLimitsOnLimitSP->name) == 0)
+        if (HorizonLimitsOnLimitSP && HorizonLimitsOnLimitSP.isNameMatch(name))
         {
-            HorizonLimitsOnLimitSP->s = IPS_OK;
-            IUUpdateSwitch(HorizonLimitsOnLimitSP, states, names, n);
-            IDSetSwitch(HorizonLimitsOnLimitSP, nullptr);
+            HorizonLimitsOnLimitSP.setState(IPS_OK);
+            HorizonLimitsOnLimitSP.update(states, names, n);
+            HorizonLimitsOnLimitSP.apply();
             return true;
         }
 
-        if (HorizonLimitsLimitGotoSP && strcmp(name, HorizonLimitsLimitGotoSP->name) == 0)
+        if (HorizonLimitsLimitGotoSP && HorizonLimitsLimitGotoSP.isNameMatch(name))
         {
-            HorizonLimitsLimitGotoSP->s = IPS_OK;
-            IUUpdateSwitch(HorizonLimitsLimitGotoSP, states, names, n);
-            IDSetSwitch(HorizonLimitsLimitGotoSP, nullptr);
+            HorizonLimitsLimitGotoSP.setState(IPS_OK);
+            HorizonLimitsLimitGotoSP.update(states, names, n);
+            HorizonLimitsLimitGotoSP.apply();
             return true;
         }
     }
@@ -382,10 +381,10 @@ bool HorizonLimits::ISNewText(const char *dev, const char *name, char *texts[], 
 {
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (HorizonLimitsDataFileTP && (strcmp(name, HorizonLimitsDataFileTP->name) == 0))
+        if (HorizonLimitsDataFileTP && HorizonLimitsDataFileTP.isNameMatch(name))
         {
-            IUUpdateText(HorizonLimitsDataFileTP, texts, names, n);
-            IDSetText(HorizonLimitsDataFileTP, nullptr);
+            HorizonLimitsDataFileTP.update(texts, names, n);
+            HorizonLimitsDataFileTP.apply();
             return true;
         }
     }
@@ -406,14 +405,31 @@ bool HorizonLimits::ISNewBLOB(const char *dev, const char *name, int sizes[], in
     return false;
 }
 
+/** @brief Create an ISO 8601 formatted time stamp. The format is YYYY-MM-DDTHH:MM:SS
+ *  @return The formatted time stamp.
+ *  @note function copied from INDI Core library where name changed. In the future,
+ *  you can remove this function and use indi_timestamp.
+ */
+static const char *s_indi_timestamp()
+{
+    static char ts[32];
+    struct tm *tp;
+    time_t t;
+
+    time(&t);
+    tp = gmtime(&t);
+    strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%S", tp);
+    return (ts);
+}
+
 char *HorizonLimits::WriteDataFile(const char *filename)
 {
     wordexp_t wexp;
     FILE *fp;
     char lon[10], lat[10];
-    INumberVectorProperty *geo = telescope->getNumber("GEOGRAPHIC_COORD");
-    INumber *nlon              = IUFindNumber(geo, "LONG");
-    INumber *nlat              = IUFindNumber(geo, "LAT");
+    auto geo  = telescope->getNumber("GEOGRAPHIC_COORD");
+    auto nlon = geo.findWidgetByName("LONG");
+    auto nlat = geo.findWidgetByName("LAT");
 
     if (wordexp(filename, &wexp, 0))
     {
@@ -434,11 +450,11 @@ char *HorizonLimits::WriteDataFile(const char *filename)
 
     setlocale(LC_NUMERIC, "C");
 
-    numberFormat(lon, "%10.6m", nlon->value);
-    numberFormat(lat, "%10.6m", nlat->value);
+    numberFormat(lon, "%10.6m", nlon->getValue());
+    numberFormat(lat, "%10.6m", nlat->getValue());
     fprintf(fp, "# Horizon Data for device %s\n", getDeviceName());
     fprintf(fp, "# Location: longitude=%s latitude=%s\n", lon, lat);
-    fprintf(fp, "# Created on %s by %s\n", timestamp(), telescope->getDriverName());
+    fprintf(fp, "# Created on %s by %s\n", s_indi_timestamp(), telescope->getDriverName());
     for (std::vector<INDI::IHorizontalCoordinates>::iterator it = horizon->begin(); it != horizon->end(); ++it)
         fprintf(fp, "%g %g\n", it->azimuth, it->altitude);
 
@@ -455,8 +471,8 @@ char *HorizonLimits::LoadDataFile(const char *filename)
     size_t len = 0;
     ssize_t read;
     int nline = 0, pos = 0;
-    INumber *az  = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_AZ");
-    INumber *alt = IUFindNumber(HorizonLimitsPointNP, "HORIZONLIMITS_POINT_ALT");
+    auto az  = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_AZ");
+    auto alt = HorizonLimitsPointNP.findWidgetByName("HORIZONLIMITS_POINT_ALT");
 
     if (wordexp(filename, &wexp, 0))
     {
@@ -505,10 +521,10 @@ char *HorizonLimits::LoadDataFile(const char *filename)
     }
 
     horizonindex            = -1;
-    az->value               = 0.0;
-    alt->value              = 0.0;
-    HorizonLimitsPointNP->s = IPS_OK;
-    IDSetNumber(HorizonLimitsPointNP, nullptr);
+    az->setValue(0.0);
+    alt->setValue(0.0);
+    HorizonLimitsPointNP.setState(IPS_OK);
+    HorizonLimitsPointNP.apply();
 
     if (line)
         free(line);
@@ -562,30 +578,30 @@ bool HorizonLimits::inLimits(double raw_az, double raw_alt)
 
 bool HorizonLimits::inGotoLimits(double az, double alt)
 {
-    ISwitch *swlimitgotodisable = IUFindSwitch(HorizonLimitsLimitGotoSP, "HORIZONLIMITSLIMITGOTODISABLE");
-    return (inLimits(az, alt) || (swlimitgotodisable->s == ISS_ON));
+    auto swlimitgotodisable = HorizonLimitsLimitGotoSP.findWidgetByName("HORIZONLIMITSLIMITGOTODISABLE");
+    return (inLimits(az, alt) || (swlimitgotodisable->getState() == ISS_ON));
 }
 
 bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::TelescopeStatus status, bool ingoto)
 {
     static bool warningMessageDispatched = false;
     bool abortscope = false;
-    ISwitch *swaborttrack = IUFindSwitch(HorizonLimitsOnLimitSP, "HORIZONLIMITSONLIMITTRACK");
-    ISwitch *swabortslew  = IUFindSwitch(HorizonLimitsOnLimitSP, "HORIZONLIMITSONLIMITSLEW");
-    ISwitch *swabortgoto  = IUFindSwitch(HorizonLimitsOnLimitSP, "HORIZONLIMITSONLIMITGOTO");
+    auto swaborttrack = HorizonLimitsOnLimitSP.findWidgetByName("HORIZONLIMITSONLIMITTRACK");
+    auto swabortslew  = HorizonLimitsOnLimitSP.findWidgetByName("HORIZONLIMITSONLIMITSLEW");
+    auto swabortgoto  = HorizonLimitsOnLimitSP.findWidgetByName("HORIZONLIMITSONLIMITGOTO");
     if (!(inLimits(az, alt)))
     {
-        if ((status == INDI::Telescope::SCOPE_TRACKING) && (swaborttrack->s == ISS_ON))
+        if ((status == INDI::Telescope::SCOPE_TRACKING) && (swaborttrack->getState() == ISS_ON))
         {
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Tracking.", az, alt);
         }
-        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortslew->s == ISS_ON) && !ingoto)
+        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortslew->getState() == ISS_ON) && !ingoto)
         {
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Slewing.", az, alt);
         }
-        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortgoto->s == ISS_ON) && ingoto)
+        else if ((status == INDI::Telescope::SCOPE_SLEWING) && (swabortgoto->getState() == ISS_ON) && ingoto)
         {
             abortscope = true;
             LOGF_WARN("Horizon Limits: Scope at AZ=%3.3lf ALT=%3.3lf is outside limits. Abort Goto.", az, alt);
@@ -604,8 +620,8 @@ bool HorizonLimits::checkLimits(double az, double alt, INDI::Telescope::Telescop
 bool HorizonLimits::saveConfigItems(FILE *fp)
 {
     if (HorizonLimitsOnLimitSP)
-        IUSaveConfigSwitch(fp, HorizonLimitsOnLimitSP);
+        HorizonLimitsOnLimitSP.save(fp);
     if (HorizonLimitsLimitGotoSP)
-        IUSaveConfigSwitch(fp, HorizonLimitsLimitGotoSP);
+        HorizonLimitsLimitGotoSP.save(fp);
     return true;
 }

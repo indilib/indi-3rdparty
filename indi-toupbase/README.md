@@ -1,6 +1,4 @@
-This is the INDI driver for the Touptek cameras. It was tested
-with ToupCam GCMOS01200KPB but, hopefully, should work with
-other cameras from Touptek too.
+This is the INDI driver for the Touptek cameras.
 
 COMPILING
 

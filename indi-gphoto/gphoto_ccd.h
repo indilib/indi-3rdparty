@@ -98,7 +98,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
     protected:
         // Misc.
         bool saveConfigItems(FILE * fp) override;
-        void addFITSKeywords(INDI::CCDChip * targetChip) override;
+        void addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
         void TimerHit() override;
 
         // Capture format
@@ -229,8 +229,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         ITextVectorProperty UploadFileTP;
         IText UploadFileT[1] {};
 
-        IBLOBVectorProperty * imageBP = nullptr;
-        IBLOB * imageB                = nullptr;
+        INDI::PropertyBlob imageBP {INDI::Property()};
 
         Camera * camera = nullptr;
 

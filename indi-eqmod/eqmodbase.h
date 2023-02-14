@@ -88,52 +88,52 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int GuideTimerNS;
         int GuideTimerWE;
 
-        INumber *GuideRateN                        = nullptr;
-        INumberVectorProperty *GuideRateNP         = nullptr;
-        ITextVectorProperty *MountInformationTP    = nullptr;
-        INumberVectorProperty *SteppersNP          = nullptr;
-        INumberVectorProperty *CurrentSteppersNP   = nullptr;
-        INumberVectorProperty *PeriodsNP           = nullptr;
-        INumberVectorProperty *JulianNP            = nullptr;
-        INumberVectorProperty *TimeLSTNP           = nullptr;
-        ILightVectorProperty *RAStatusLP           = nullptr;
-        ILightVectorProperty *DEStatusLP           = nullptr;
-        INumberVectorProperty *SlewSpeedsNP        = nullptr;
-        ISwitchVectorProperty *HemisphereSP        = nullptr;
-        ISwitchVectorProperty *TrackDefaultSP      = nullptr;
-        INumberVectorProperty *HorizontalCoordNP   = nullptr;
-        INumberVectorProperty *StandardSyncNP      = nullptr;
-        INumberVectorProperty *StandardSyncPointNP = nullptr;
-        INumberVectorProperty *SyncPolarAlignNP    = nullptr;
-        ISwitchVectorProperty *SyncManageSP        = nullptr;
-        ISwitchVectorProperty *ReverseDECSP        = nullptr;
-        ISwitchVectorProperty *TargetPierSideSP    = nullptr;
-        INumberVectorProperty *BacklashNP          = nullptr;
-        ISwitchVectorProperty *UseBacklashSP       = nullptr;
-        INumberVectorProperty *LEDBrightnessNP     = nullptr;
+        // INumber *GuideRateN                        = nullptr;
+        INDI::PropertyNumber   GuideRateNP         {INDI::Property()};
+        INDI::PropertyText     MountInformationTP  {INDI::Property()};
+        INDI::PropertyNumber   SteppersNP          {INDI::Property()};
+        INDI::PropertyNumber   CurrentSteppersNP   {INDI::Property()};
+        INDI::PropertyNumber   PeriodsNP           {INDI::Property()};
+        INDI::PropertyNumber   JulianNP            {INDI::Property()};
+        INDI::PropertyNumber   TimeLSTNP           {INDI::Property()};
+        INDI::PropertyLight    RAStatusLP          {INDI::Property()};
+        INDI::PropertyLight    DEStatusLP          {INDI::Property()};
+        INDI::PropertyNumber   SlewSpeedsNP        {INDI::Property()};
+        INDI::PropertySwitch   HemisphereSP        {INDI::Property()};
+        INDI::PropertySwitch   TrackDefaultSP      {INDI::Property()};
+        INDI::PropertyNumber   HorizontalCoordNP   {INDI::Property()};
+        INDI::PropertyNumber   StandardSyncNP      {INDI::Property()};
+        INDI::PropertyNumber   StandardSyncPointNP {INDI::Property()};
+        INDI::PropertyNumber   SyncPolarAlignNP    {INDI::Property()};
+        INDI::PropertySwitch   SyncManageSP        {INDI::Property()};
+        INDI::PropertySwitch   ReverseDECSP        {INDI::Property()};
+        INDI::PropertySwitch   TargetPierSideSP    {INDI::Property()};
+        INDI::PropertyNumber   BacklashNP          {INDI::Property()};
+        INDI::PropertySwitch   UseBacklashSP       {INDI::Property()};
+        INDI::PropertyNumber   LEDBrightnessNP     {INDI::Property()};
 #if defined WITH_ALIGN && defined WITH_ALIGN_GEEHALEL
         ISwitch AlignMethodS[2];
         ISwitchVectorProperty AlignMethodSP;
 #endif
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
-        ISwitchVectorProperty *AlignSyncModeSP = nullptr;
+        INDI::PropertySwitch   AlignSyncModeSP     {INDI::Property()};
 #endif
-        ISwitchVectorProperty *AutoHomeSP   = nullptr;
-        ISwitchVectorProperty *AuxEncoderSP = nullptr;
-        INumberVectorProperty *AuxEncoderNP = nullptr;
+        INDI::PropertySwitch   AutoHomeSP          {INDI::Property()};
+        INDI::PropertySwitch   AuxEncoderSP        {INDI::Property()};
+        INDI::PropertyNumber   AuxEncoderNP        {INDI::Property()};
 
-        ISwitchVectorProperty *ST4GuideRateNSSP = nullptr;
-        ISwitchVectorProperty *ST4GuideRateWESP = nullptr;
+        INDI::PropertySwitch   ST4GuideRateNSSP    {INDI::Property()};
+        INDI::PropertySwitch   ST4GuideRateWESP    {INDI::Property()};
 
-        ISwitchVectorProperty *PPECTrainingSP = nullptr;
-        ISwitchVectorProperty *PPECSP         = nullptr;
+        INDI::PropertySwitch   PPECTrainingSP      {INDI::Property()};
+        INDI::PropertySwitch   PPECSP              {INDI::Property()};
 
-        ISwitchVectorProperty *SNAPPORT1SP      = nullptr;
-        ISwitchVectorProperty *SNAPPORT2SP      = nullptr;
+        INDI::PropertySwitch   SNAPPORT1SP         {INDI::Property()};
+        INDI::PropertySwitch   SNAPPORT2SP         {INDI::Property()};
 
         INumber *MinPulseN                   = nullptr;
         INumber *MinPulseTimerN              = nullptr;
-        INumberVectorProperty *PulseLimitsNP = nullptr;
+        INDI::PropertyNumber   PulseLimitsNP       {INDI::Property()};
 
         enum Hemisphere
         {

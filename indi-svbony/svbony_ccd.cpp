@@ -1611,30 +1611,28 @@ bool SVBONYCCD::saveConfigItems(FILE * fp)
 }
 
 
-void SVBONYCCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void SVBONYCCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
-    auto fptr = *targetChip->fitsFilePointer();
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     // report controls in FITS file
-    int _status = 0;
-    fits_update_key_dbl(fptr, "Gain", ControlsN[CCD_GAIN_N].value, 3, "Gain", &_status);
-    fits_update_key_dbl(fptr, "Contrast", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast", &_status);
-    fits_update_key_dbl(fptr, "Sharpness", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness", &_status);
+    fitsKeywords.push_back({"GAIN", ControlsN[CCD_GAIN_N].value, 3, "Gain"});
+    fitsKeywords.push_back({"CONTRAST", ControlsN[CCD_CONTRAST_N].value, 3, "Contrast"});
+    fitsKeywords.push_back({"SHARPNESS", ControlsN[CCD_SHARPNESS_N].value, 3, "Sharpness"});
 
     // Add items for color camera
     if(HasBayer())
     {
-        fits_update_key_dbl(fptr, "Saturation", ControlsN[CCD_SATURATION_N].value, 3, "Saturation", &_status);
-        fits_update_key_dbl(fptr, "Red White Balance", ControlsN[CCD_WBR_N].value, 3, "Red White Balance", &_status);
-        fits_update_key_dbl(fptr, "Green White Balance", ControlsN[CCD_WBG_N].value, 3, "Green White Balance", &_status);
-        fits_update_key_dbl(fptr, "Blue White Balance", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance", &_status);
+        fitsKeywords.push_back({"SATURATION", ControlsN[CCD_SATURATION_N].value, 3, "Saturation"});
+        fitsKeywords.push_back({"RED WHITE BALANCE", ControlsN[CCD_WBR_N].value, 3, "Red White Balance"});
+        fitsKeywords.push_back({"GREEN WHITE BALANCE", ControlsN[CCD_WBG_N].value, 3, "Green White Balance"});
+        fitsKeywords.push_back({"BLUE WHITE BALANCE", ControlsN[CCD_WBB_N].value, 3, "Blue White Balance"});
     }
 
-    fits_update_key_dbl(fptr, "Gamma", ControlsN[CCD_GAMMA_N].value, 3, "Gamma", &_status);
-    fits_update_key_dbl(fptr, "Frame Speed", frameSpeed, 3, "Frame Speed", &_status);
-    fits_update_key_dbl(fptr, "Offset", ControlsN[CCD_DOFFSET_N].value, 3, "Offset", &_status);
-    fits_update_key_dbl(fptr, "16 bits stretch factor (bit shift)", bitStretch, 3, "Stretch factor", &_status);
+    fitsKeywords.push_back({"GAMMA", ControlsN[CCD_GAMMA_N].value, 3, "Gamma"});
+    fitsKeywords.push_back({"FRAME SPEED", frameSpeed, "Frame Speed"});
+    fitsKeywords.push_back({"OFFSET", ControlsN[CCD_DOFFSET_N].value, 3, "Offset"});
+    fitsKeywords.push_back({"16 BITS STRETCH FACTOR (BIT SHIFT)", bitStretch, "Stretch factor"});
 }
 
 

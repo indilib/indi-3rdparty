@@ -39,7 +39,7 @@ protected:
     bool StartExposure(float duration);
     bool AbortExposure();
     void TimerHit();
-    void addFITSKeywords(INDI::CCDChip *targetChip);
+    void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords);
 
     // Guiding
     IPState GuideEast(uint32_t ms);
