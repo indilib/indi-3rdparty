@@ -202,13 +202,6 @@ class ToupBase : public INDI::CCD
         void refreshControls();
 
         //#############################################################################
-        // Dual conversion Gain
-        //#############################################################################
-        bool dualGainEnabled();
-        double setDualGainMode(double gain);
-        void setDualGainRange();
-
-        //#############################################################################
         // Resolution
         //#############################################################################
         ISwitch m_ResolutionS[CP(MAX)];
@@ -366,7 +359,7 @@ class ToupBase : public INDI::CCD
         };
 
         // Fan Speed
-        ISwitch *m_FanSpeedS = nullptr;
+        ISwitch *m_FanSpeedS { nullptr };
         ISwitchVectorProperty m_FanSpeedSP;
 
         // Video Format
@@ -422,17 +415,8 @@ class ToupBase : public INDI::CCD
         INumberVectorProperty m_TimeoutFactorNP;
         INumber TimeoutFactorN[1];
 
-        // Gain Conversion
-        INumberVectorProperty m_GainConversionNP;
-        INumber m_GainConversionN[2];
-        enum
-        {
-            TC_HCG_THRESHOLD,
-            TC_HCG_LCG_RATIO,
-        };
-
         ISwitchVectorProperty m_GainConversionSP;
-        ISwitch GainConversionS[3];
+        ISwitch m_GainConversionS[3];
         enum
         {
             GAIN_LOW,
@@ -446,9 +430,7 @@ class ToupBase : public INDI::CCD
         eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;
 
         bool m_CanSnap { false };
-        bool m_RAWHighDepthSupport { false };
         bool m_MonoCamera { false };
-        bool m_hasDualGain { false };
         bool m_HasLowNoise { false };
         bool m_HasHighFullwellMode { false };
         bool m_HasHeatUp { false };
@@ -462,10 +444,6 @@ class ToupBase : public INDI::CCD
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
-
-        uint32_t m_MaxGainNative { 0 };
-        uint32_t m_MaxGainHCG { 0 };
-        uint32_t m_NativeGain { 0 };
 
         int m_ConfigResolutionIndex {-1};
 
