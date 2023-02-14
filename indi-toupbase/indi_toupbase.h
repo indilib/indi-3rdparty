@@ -258,6 +258,9 @@ class ToupBase : public INDI::CCD
             TC_COOLER_ON,
             TC_COOLER_OFF,
         };
+        IText m_CoolerT;
+        ITextVectorProperty m_CoolerTP;
+		int32_t m_maxTecVoltage { -1 };
 
         INumberVectorProperty m_ControlNP;
         INumber m_ControlN[8];
@@ -300,11 +303,7 @@ class ToupBase : public INDI::CCD
         };
 
         INumberVectorProperty m_OffsetNP;
-        INumber m_OffsetN[1];
-        enum
-        {
-            TC_OFFSET,
-        };
+        INumber m_OffsetN;
 
         // R/G/B/Gray low/high levels
         INumber m_LevelRangeN[8];
@@ -349,18 +348,9 @@ class ToupBase : public INDI::CCD
             TC_AUTO_WB_RGB
         };
 
-        // Fan control
-        ISwitch m_FanControlS[2];
-        ISwitchVectorProperty m_FanControlSP;
-        enum
-        {
-            TC_FAN_ON,
-            TC_FAN_OFF,
-        };
-
         // Fan Speed
-        ISwitch *m_FanSpeedS { nullptr };
-        ISwitchVectorProperty m_FanSpeedSP;
+        INumber m_FanSpeedS;
+        INumberVectorProperty m_FanSpeedSP;
 
         // Video Format
         ISwitch m_VideoFormatS[2];
@@ -382,14 +372,8 @@ class ToupBase : public INDI::CCD
         ISwitch m_LowNoiseS[2];
 
         // Heat Up
-        ISwitchVectorProperty m_HeatUpSP;
-        ISwitch m_HeatUpS[3];
-        enum
-        {
-            TC_HEAT_OFF,
-            TC_HEAT_ON,
-            TC_HEAT_MAX,
-        };
+        INumberVectorProperty m_HeatUpSP;
+        INumber m_HeatUpS;
 
         // Firmware Info
         ITextVectorProperty m_FirmwareTP;
@@ -405,11 +389,11 @@ class ToupBase : public INDI::CCD
 
         // SDK Version
         ITextVectorProperty m_SDKVersionTP;
-        IText m_SDKVersionT[1] = {};
+        IText m_SDKVersionT;
 
         // Timeout factor
         INumberVectorProperty m_TimeoutFactorNP;
-        INumber TimeoutFactorN[1];
+        INumber m_TimeoutFactorN;
 
         ISwitchVectorProperty m_GainConversionSP;
         ISwitch m_GainConversionS[3];
@@ -425,12 +409,7 @@ class ToupBase : public INDI::CCD
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
         eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;
 
-        bool m_CanSnap { false };
         bool m_MonoCamera { false };
-        bool m_HasLowNoise { false };
-        bool m_HasHighFullwellMode { false };
-        bool m_HasHeatUp { false };
-
         INDI::Timer m_CaptureTimeout;
         uint32_t m_CaptureTimeoutCounter {0};
         // Download estimation in ms after exposure duration finished.

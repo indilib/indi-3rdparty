@@ -128,14 +128,19 @@ bool ToupBase::initProperties()
     IUFillSwitch(&m_BinningModeS[TC_BINNING_ADD], "TC_BINNING_ADD", "Add", ISS_ON);
     IUFillSwitchVector(&m_BinningModeSP, m_BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Cooler Control
-    /// N.B. Some cameras starts with cooling immediately if powered.
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_CoolerS[0], "COOLER_ON", "ON", ISS_ON);
-    IUFillSwitch(&m_CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
-    IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_BUSY);
-
+	if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
+    {
+		///////////////////////////////////////////////////////////////////////////////////
+		/// Cooler Control
+		///////////////////////////////////////////////////////////////////////////////////
+		IUFillSwitch(&m_CoolerS[0], "COOLER_ON", "ON", ISS_ON);
+		IUFillSwitch(&m_CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
+		IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_BUSY);
+		
+	    IUFillText(&m_CoolerT, "COOLER_POWER", "Value", nullptr);
+		IUFillTextVector(&m_CoolerTP, &m_CoolerT, 1, getDeviceName(), "Cooler Power", "Cooler Power", "Cooler Power", IP_RO, 0, IPS_IDLE);
+	}
+	
     ///////////////////////////////////////////////////////////////////////////////////
     /// Controls
     ///////////////////////////////////////////////////////////////////////////////////
@@ -173,10 +178,10 @@ bool ToupBase::initProperties()
     IUFillNumberVector(&BlackBalanceNP, m_BlackBalanceN, nsp, getDeviceName(), "CCD_BLACK_BALANCE", "Black Balance", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
-    // Black Level RAW
+    // Black Level
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_OffsetN[TC_OFFSET], "OFFSET", "Value", "%.f", 0, 255, 1, 0);
-    IUFillNumberVector(&m_OffsetNP, m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&m_OffsetN, "OFFSET", "Value", "%.f", 0, 255, 1, 0);
+    IUFillNumberVector(&m_OffsetNP, &m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y levels
@@ -217,7 +222,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillSwitch(&m_AutoExposureS[TC_AUTO_EXPOSURE_ON], "TC_AUTO_EXPOSURE_ON", "Enabled", ISS_ON);
     IUFillSwitch(&m_AutoExposureS[TC_AUTO_EXPOSURE_OFF], "TC_AUTO_EXPOSURE_OFF", "Disabled", ISS_OFF);
-    IUFillSwitchVector(&m_AutoExposureSP, m_AutoExposureS, 2, getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exp.", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    IUFillSwitchVector(&m_AutoExposureSP, m_AutoExposureS, 2, getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
 	if (m_MonoCamera == false)
     {
@@ -247,8 +252,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&TimeoutFactorN[0], "VALUE", "Factor", "%.f", 1, 10, 1, 1.2);
-    IUFillNumberVector(&m_TimeoutFactorNP, TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.f", 1, 10, 1, 1.2);
+    IUFillNumberVector(&m_TimeoutFactorNP, &m_TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
 
 	if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
     {
@@ -273,7 +278,6 @@ bool ToupBase::initProperties()
     IUFillSwitch(&m_LowNoiseS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE_CONTROL", "Low Noise Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell Mode
     ///////////////////////////////////////////////////////////////////////////////////
@@ -281,25 +285,23 @@ bool ToupBase::initProperties()
     IUFillSwitch(&m_HighFullwellModeS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&m_HighFullwellModeSP, m_HighFullwellModeS, 2, getDeviceName(), "TC_HIGHFULLWELL_CONTROL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Heat Control
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_HeatUpS[TC_HEAT_OFF], "TC_HEAT_OFF", "Off", ISS_ON);
-    IUFillSwitch(&m_HeatUpS[TC_HEAT_ON], "TC_HEAT_ON", "On", ISS_OFF);
-    IUFillSwitch(&m_HeatUpS[TC_HEAT_MAX], "TC_HEAT_MAX", "Max", ISS_OFF);
-    IUFillSwitchVector(&m_HeatUpSP, m_HeatUpS, 2, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+	if (m_Instance->model->flag & CP(FLAG_HEAT))
+    {
+		///////////////////////////////////////////////////////////////////////////////////
+		/// Heat Control
+		///////////////////////////////////////////////////////////////////////////////////
+		IUFillNumber(&m_HeatUpS, "Heat", "Heat", "%.f", 0, 0, 1, 0);
+		IUFillNumberVector(&m_HeatUpSP, &m_HeatUpS, 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+	}
 
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Fan Control
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_FanControlS[TC_FAN_ON], "TC_FAN_ON", "On", ISS_ON);
-    IUFillSwitch(&m_FanControlS[TC_FAN_OFF], "TC_FAN_OFF", "Off", ISS_OFF);
-    IUFillSwitchVector(&m_FanControlSP, m_FanControlS, 2, getDeviceName(), "TC_FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Fan Speed
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitchVector(&m_FanSpeedSP, m_FanSpeedS, 0, getDeviceName(), "TC_FAN_Speed", "Fan Speed", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+	if (m_Instance->model->flag & CP(FLAG_FAN))
+    {
+		///////////////////////////////////////////////////////////////////////////////////
+		/// Fan Speed
+		///////////////////////////////////////////////////////////////////////////////////
+		IUFillNumber(&m_FanSpeedS, "Fan Speed", "Fan Speed", "%.f", 0, m_Instance->model->maxfanspeed, 1, 0);
+		IUFillNumberVector(&m_FanSpeedSP, &m_FanSpeedS, 1, getDeviceName(), "TC_FAN_Speed", "Fan Speed", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+	}
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Video Format
@@ -332,8 +334,8 @@ bool ToupBase::initProperties()
     IUFillText(&m_FirmwareT[TC_FIRMWARE_REV], "Revision", "Revision", nullptr);
     IUFillTextVector(&m_FirmwareTP, m_FirmwareT, 5, getDeviceName(), "Firmware", "Firmware", "Firmware", IP_RO, 0, IPS_IDLE);
 
-    IUFillText(&m_SDKVersionT[0], "Version", "Version", nullptr);
-    IUFillTextVector(&m_SDKVersionTP, m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", "SDK", IP_RO, 0, IPS_IDLE);
+    IUFillText(&m_SDKVersionT, "Version", "Version", nullptr);
+    IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", "SDK", IP_RO, 0, IPS_IDLE);
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -361,7 +363,10 @@ bool ToupBase::updateProperties()
     if (isConnected())
     {
         if (HasCooler())
-            defineProperty(&m_CoolerSP);
+		{
+			defineProperty(&m_CoolerSP);
+			defineProperty(&m_CoolerTP);
+		}
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -370,10 +375,7 @@ bool ToupBase::updateProperties()
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-        {
-            defineProperty(&m_FanControlSP);
             defineProperty(&m_FanSpeedSP);
-        }
 
         if (m_MonoCamera == false)
             defineProperty(&m_WBAutoSP);
@@ -385,13 +387,13 @@ bool ToupBase::updateProperties()
         defineProperty(&m_VideoFormatSP);
         defineProperty(&m_ResolutionSP);
 
-        if (m_HasHighFullwellMode)
+        if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
             defineProperty(&m_HighFullwellModeSP);
 
-        if (m_HasLowNoise)
+        if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
             defineProperty(&m_LowNoiseSP);
 
-        if (m_HasHeatUp)
+        if (m_Instance->model->flag & CP(FLAG_HEAT))
             defineProperty(&m_HeatUpSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
@@ -419,15 +421,17 @@ bool ToupBase::updateProperties()
     else
     {
         if (HasCooler())
-            deleteProperty(m_CoolerSP.name);
+		{
+			deleteProperty(m_CoolerSP.name);
+			deleteProperty(m_CoolerTP.name);
+		}
         else
-            deleteProperty(TemperatureNP.name);
+		{
+			deleteProperty(TemperatureNP.name);
+		}
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-        {
-            deleteProperty(m_FanControlSP.name);
             deleteProperty(m_FanSpeedSP.name);
-        }
 
         if (m_MonoCamera == false)
             deleteProperty(m_WBAutoSP.name);
@@ -439,13 +443,13 @@ bool ToupBase::updateProperties()
         deleteProperty(m_VideoFormatSP.name);
         deleteProperty(m_ResolutionSP.name);
 
-        if (m_HasLowNoise)
+        if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
             deleteProperty(m_LowNoiseSP.name);
         
-        if (m_HasHighFullwellMode)
+        if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
             deleteProperty(m_HighFullwellModeSP.name);
 
-        if (m_HasHeatUp)
+        if (m_Instance->model->flag & CP(FLAG_HEAT))
             deleteProperty(m_HeatUpSP.name);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
@@ -494,9 +498,6 @@ bool ToupBase::Connect()
     if (m_MonoCamera == false)
         cap |= CCD_HAS_BAYER;
 
-    if (m_Instance->model->flag & CP(FLAG_BINSKIP_SUPPORTED))
-        LOG_DEBUG("Bin-Skip supported");
-
     // Hardware ROI really needed? Check later
     if (m_Instance->model->flag & CP(FLAG_ROI_HARDWARE))
     {
@@ -506,7 +507,7 @@ bool ToupBase::Connect()
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
-        LOG_DEBUG("TEC control enabled");
+        LOG_DEBUG("TEC control");
         cap |= CCD_HAS_COOLER;
     }
 
@@ -581,12 +582,14 @@ void ToupBase::setupParams()
     m_FirmwareTP.s = IPS_OK;
 
     // SDK Version
-    IUSaveText(&m_SDKVersionT[0], FP(Version()));
+    IUSaveText(&m_SDKVersionT, FP(Version()));
     m_SDKVersionTP.s = IPS_OK;
 
     // Max supported bit depth
     m_MaxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
     LOGF_DEBUG("Max bit depth: %d", m_MaxBitDepth);
+	
+	FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE_MAX), &m_maxTecVoltage));
 
     m_BitsPerPixel = 8;
     int nVal = 0;
@@ -686,27 +689,8 @@ void ToupBase::setupParams()
     {
         int fan = 0;
         FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
-        LOGF_DEBUG("Fan is %s", fan == 0 ? "Off" : "On");
-        IUResetSwitch(&m_FanControlSP);
-        m_FanControlS[TC_FAN_ON].s = fan == 0 ? ISS_OFF : ISS_ON;
-        m_FanControlS[TC_FAN_OFF].s = fan == 0 ? ISS_ON : ISS_OFF;
-        m_FanControlSP.s = (fan == 0) ? IPS_IDLE : IPS_BUSY;
-
-        // Fan Speed
-        delete[] m_FanSpeedS;
-        // If Fan is OFF, then set the default one to 1x
-        uint32_t activeFan = (fan == 0) ? 1 : fan;
-        m_FanSpeedS = new ISwitch[m_Instance->model->maxfanspeed];
-        for (uint32_t i = 0; i < m_Instance->model->maxfanspeed; i++)
-        {
-            char name[MAXINDINAME] = {0}, label[MAXINDINAME] = {0};
-            snprintf(name, MAXINDINAME, "FAN_SPEED_%u", i + 1);
-            snprintf(label, MAXINDINAME, "%ux", i + 1);
-            IUFillSwitch(m_FanSpeedS + i, name, label, (activeFan == i + 1) ? ISS_ON : ISS_OFF);
-        }
-        m_FanSpeedSP.sp = m_FanSpeedS;
-        m_FanSpeedSP.nsp = m_Instance->model->maxfanspeed;
-        m_FanSpeedSP.s = IPS_OK;
+        LOGF_DEBUG("Fan is %d", fan);
+        m_FanSpeedS.value = fan;
     }
 
     // Get active resolution index
@@ -730,8 +714,7 @@ void ToupBase::setupParams()
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height, m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
 
-    m_CanSnap = m_Instance->model->still > 0;
-    LOGF_DEBUG("Camera snap support: %s", m_CanSnap ? "True" : "False");
+    LOGF_DEBUG("Camera snap support: %s", m_Instance->model->still ? "True" : "False");
 
     // Trigger Mode
     FP(get_Option(m_CameraHandle, CP(OPTION_TRIGGER), &nVal));
@@ -763,18 +746,14 @@ void ToupBase::setupParams()
     m_ControlN[TC_GAIN].max = nMax;
     m_ControlN[TC_GAIN].step = 1;
     m_ControlN[TC_GAIN].value = nDef;
-
-    // High FullWell Mode
-    if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-        m_HasHighFullwellMode = true;
 	
-    // Low Noise
-    if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-        m_HasLowNoise = true;
-
     // Heat Up
     if (m_Instance->model->flag & CP(FLAG_HEAT))
-        m_HasHeatUp = true;
+	{
+		int val = 0;
+		FP(get_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), &val));
+		m_HeatUpS.max = val;
+	}
 
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
@@ -833,6 +812,7 @@ void ToupBase::setupParams()
         LOG_DEBUG("Selecting BIN mode over SKIP");
         rc = FP(put_Mode(m_CameraHandle, 0));
     }
+	FP(put_HZ(m_CameraHandle, 2));
 
 	if (m_MonoCamera == false)
     {
@@ -890,8 +870,8 @@ void ToupBase::setupParams()
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_MaxBitDepth - 8);
-    m_OffsetN[TC_OFFSET].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
-    m_OffsetN[TC_OFFSET].step = bLevelStep;
+    m_OffsetN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    m_OffsetN.step = bLevelStep;
 
     // Allocate memory
     allocateFrameBuffer();
@@ -1091,9 +1071,9 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         if (!strcmp(name, m_OffsetNP.name))
         {
             IUUpdateNumber(&m_OffsetNP, values, names, n);
-            int bLevel = static_cast<uint16_t>(m_OffsetN[TC_OFFSET].value);
+            int bLevel = static_cast<uint16_t>(m_OffsetN.value);
 
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), m_OffsetN[TC_OFFSET].value));
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), m_OffsetN.value));
             if (FAILED(rc))
             {
                 m_OffsetNP.s = IPS_ALERT;
@@ -1166,6 +1146,42 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             IDSetNumber(&m_TimeoutFactorNP, nullptr);
             return true;
         }
+		
+		//////////////////////////////////////////////////////////////////////
+        /// Fan Speed
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, m_FanSpeedSP.name))
+        {
+            IUUpdateNumber(&m_FanSpeedSP, values, names, n);
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FAN), static_cast<int>(m_FanSpeedS.value)));
+            if (SUCCEEDED(rc))
+				m_FanSpeedSP.s = IPS_OK;
+			else
+            {
+                m_FanSpeedSP.s = IPS_ALERT;
+                LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
+            }
+            IDSetNumber(&m_FanSpeedSP, nullptr);
+            return true;
+        }
+		
+        //////////////////////////////////////////////////////////////////////
+        /// Heat Control
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, m_HeatUpSP.name))
+        {
+            IUUpdateNumber(&m_HeatUpSP, values, names, n);
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), static_cast<int>(m_HeatUpS.value)));
+            if (SUCCEEDED(rc))
+				m_HeatUpSP.s = IPS_OK;
+			else
+            {
+                LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
+                m_HeatUpSP.s = IPS_ALERT;
+            }
+            IDSetNumber(&m_HeatUpSP, nullptr);
+            return true;
+        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1203,17 +1219,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             activateCooler(m_CoolerS[TC_COOLER_ON].s == ISS_ON);
             saveConfig(true, m_CoolerSP.name);
-            return true;
-        }
-
-        //////////////////////////////////////////////////////////////////////
-        /// Fan Speed
-        //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_FanSpeedSP.name))
-        {
-            IUUpdateSwitch(&m_FanSpeedSP, states, names, n);
-            m_FanSpeedSP.s = IPS_OK;
-            IDSetSwitch(&m_FanSpeedSP, nullptr);
             return true;
         }
 
@@ -1283,66 +1288,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
 
             IDSetSwitch(&m_LowNoiseSP, nullptr);
-            return true;
-        }
-
-        //////////////////////////////////////////////////////////////////////
-        /// Heat Control
-        //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_HeatUpSP.name))
-        {
-            int prevIndex = IUFindOnSwitchIndex(&m_HeatUpSP);
-            IUUpdateSwitch(&m_HeatUpSP, states, names, n);
-            HRESULT rc = 0;
-            if (m_HeatUpS[TC_HEAT_OFF].s == ISS_ON)
-                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 0));
-            else if (m_HeatUpS[TC_HEAT_ON].s == ISS_ON)
-            {
-                // Max heat off
-                FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 0));
-                // Regular heater on
-                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 1));
-            }
-            else
-            {
-                // Regular heater on
-                FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), 1));
-                // Max heat on
-                rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), 1));
-            }
-            if (SUCCEEDED(rc))
-				m_HeatUpSP.s = IPS_OK;
-			else
-            {
-                LOGF_ERROR("Failed to set heat mode. Error (%s)", errorCodes(rc).c_str());
-                m_HeatUpSP.s = IPS_ALERT;
-                IUResetSwitch(&m_HeatUpSP);
-                m_HeatUpS[prevIndex].s = ISS_ON;
-            }
-
-            IDSetSwitch(&m_HeatUpSP, nullptr);
-            return true;
-        }
-
-        //////////////////////////////////////////////////////////////////////
-        /// Fan Control
-        //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_FanControlSP.name))
-        {
-            int prevIndex = IUFindOnSwitchIndex(&m_FanControlSP);
-            IUUpdateSwitch(&m_FanControlSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FAN), m_FanControlS[0].s == ISS_ON ? IUFindOnSwitchIndex(&m_FanSpeedSP) + 1 : 0 ));
-            if (SUCCEEDED(rc))
-				m_FanControlSP.s = (m_FanControlS[0].s == ISS_ON) ? IPS_BUSY : IPS_IDLE;
-			else
-            {
-                LOGF_ERROR("Failed to turn the fan %s. Error (%s)", m_FanControlS[0].s == ISS_ON ? "on" : "off", errorCodes(rc).c_str());
-                m_FanControlSP.s = IPS_ALERT;
-                IUResetSwitch(&m_FanControlSP);
-                m_FanControlS[prevIndex].s = ISS_ON;
-            }
-
-            IDSetSwitch(&m_FanControlSP, nullptr);
             return true;
         }
 
@@ -1658,15 +1603,12 @@ bool ToupBase::StartExposure(float duration)
     bool capturedStarted = false;
 
     // Snap still image
-    if (m_CanSnap)
+    if (m_Instance->model->still)
     {
         if (SUCCEEDED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
             capturedStarted = true;
         else
-        {
             LOGF_WARN("Failed to snap exposure. Error: %s. Switching to regular exposure", errorCodes(rc).c_str());
-            m_CanSnap = false;
-        }
     }
 
     if (!capturedStarted)
@@ -1680,7 +1622,7 @@ bool ToupBase::StartExposure(float duration)
     }
 
     // Timeout 500ms after expected duration
-    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
+    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * m_TimeoutFactorN.value);
 
     return true;
 }
@@ -1712,7 +1654,7 @@ void ToupBase::captureTimeoutHandler()
     }
 
     // Snap still image
-    if (m_CanSnap && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
+    if (m_Instance->model->still && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
     {
         LOGF_ERROR("Failed to snap exposure. Error: %s", errorCodes(rc).c_str());
         return;
@@ -1728,7 +1670,7 @@ void ToupBase::captureTimeoutHandler()
     }
 
     LOG_DEBUG("Capture timed out, restarting exposure");
-    m_CaptureTimeout.start(m_ExposureRequest * 1000 + m_DownloadEstimation * TimeoutFactorN[0].value);
+    m_CaptureTimeout.start(m_ExposureRequest * 1000 + m_DownloadEstimation * m_TimeoutFactorN.value);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -1830,7 +1772,7 @@ void ToupBase::TimerHit()
             timeleft = 0;
         PrimaryCCD.setExposureLeft(timeleft);
     }
-    else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
+    if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
         int16_t currentTemperature = (int16_t)(TemperatureN[0].value * 10);
 		int16_t nTemperature = currentTemperature;
@@ -1861,6 +1803,23 @@ void ToupBase::TimerHit()
                 break;
         }
     }
+	if (HasCooler() && (m_maxTecVoltage > 0))
+	{
+		int val = 0;
+		HRESULT rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE), &val));
+        if (FAILED(rc))
+        {
+            LOGF_ERROR("get tec voltage error. %s", errorCodes(rc).c_str());
+            m_CoolerTP.s = IPS_ALERT;
+        }
+		else if (val <= m_maxTecVoltage)
+		{
+			char str[32];
+			sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
+			IUSaveText(&m_CoolerT, str);
+			IDSetText(&m_CoolerTP, nullptr);
+		}
+	}
 
     SetTimer(getCurrentPollingPeriod());
 
@@ -2048,10 +2007,10 @@ bool ToupBase::saveConfigItems(FILE * fp)
     IUSaveConfigSwitch(fp, &m_ResolutionSP);
     IUSaveConfigSwitch(fp, &m_BinningModeSP);
 
-    if (m_HasLowNoise)
+    if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
         IUSaveConfigSwitch(fp, &m_LowNoiseSP);
 
-    if (m_HasHighFullwellMode)
+    if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
         IUSaveConfigSwitch(fp, &m_HighFullwellModeSP);        
     
     return true;
