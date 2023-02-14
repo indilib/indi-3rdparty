@@ -160,8 +160,8 @@ class ToupBase : public INDI::CCD
         // Capture
         //#############################################################################
         void allocateFrameBuffer();
-        timeval ExposureEnd;
-        double ExposureRequest;
+        timeval m_ExposureEnd;
+        double m_ExposureRequest;
 
         //#############################################################################
         // Video Format & Streaming
@@ -177,26 +177,19 @@ class ToupBase : public INDI::CCD
         void TimerNS();
         void stopTimerNS();
         IPState guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        timeval NSPulseEnd;
-        int NStimerID;
-        eGUIDEDIRECTION NSDir;
-        const char *NSDirName;
+        int m_NStimerID;
 
         // W/E Guiding
         static void TimerHelperWE(void *context);
         void TimerWE();
         void stopTimerWE();
         IPState guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        timeval WEPulseEnd;
-        int WEtimerID;
-        eGUIDEDIRECTION WEDir;
-        const char *WEDirName;
+        int m_WEtimerID;
 
         //#############################################################################
         // Temperature Control & Cooling
         //#############################################################################
         bool activateCooler(bool enable);
-        double TemperatureRequest;
 
         //#############################################################################
         // Setup & Controls
@@ -218,8 +211,8 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Resolution
         //#############################################################################
-        ISwitch ResolutionS[CP(MAX)];
-        ISwitchVectorProperty ResolutionSP;
+        ISwitch m_ResolutionS[CP(MAX)];
+        ISwitchVectorProperty m_ResolutionSP;
 
         //#############################################################################
         // Misc.
@@ -244,37 +237,37 @@ class ToupBase : public INDI::CCD
         THAND m_CameraHandle { nullptr };
         const XP(DeviceV2) *m_Instance;
         // Camera Display Name
-        char name[MAXINDIDEVICE];
+        char m_name[MAXINDIDEVICE];
 
         //#############################################################################
         // Properties
         //#############################################################################
-        ISwitchVectorProperty BinningModeSP;
-        ISwitch BinningModeS[2];
+        ISwitchVectorProperty m_BinningModeSP;
+        ISwitch m_BinningModeS[2];
         typedef enum
         {
             TC_BINNING_AVG,
             TC_BINNING_ADD,
         } BINNING_MODE;
 
-        ISwitchVectorProperty HighFullwellModeSP;
-        ISwitch HighFullwellModeS[2];
+        ISwitchVectorProperty m_HighFullwellModeSP;
+        ISwitch m_HighFullwellModeS[2];
         typedef enum
         {
             TC_HIGHFULLWELL_ON,
             TC_HIGHFULLWELL_OFF,
         } HIGHFULLWELL_MODE;
 
-        ISwitchVectorProperty CoolerSP;
-        ISwitch CoolerS[2];
+        ISwitchVectorProperty m_CoolerSP;
+        ISwitch m_CoolerS[2];
         enum
         {
             TC_COOLER_ON,
             TC_COOLER_OFF,
         };
 
-        INumberVectorProperty ControlNP;
-        INumber ControlN[8];
+        INumberVectorProperty m_ControlNP;
+        INumber m_ControlN[8];
         enum
         {
             TC_GAIN,
@@ -287,8 +280,8 @@ class ToupBase : public INDI::CCD
             TC_FRAMERATE_LIMIT,
         };
 
-        ISwitch AutoControlS[3];
-        ISwitchVectorProperty AutoControlSP;
+        ISwitch m_AutoControlS[3];
+        ISwitchVectorProperty m_AutoControlSP;
         enum
         {
             TC_AUTO_TINT,
@@ -296,15 +289,15 @@ class ToupBase : public INDI::CCD
             TC_AUTO_BB,
         };
 
-        ISwitch AutoExposureS[2];
-        ISwitchVectorProperty AutoExposureSP;
+        ISwitch m_AutoExposureS[2];
+        ISwitchVectorProperty m_AutoExposureSP;
         enum
         {
             TC_AUTO_EXPOSURE_ON,
             TC_AUTO_EXPOSURE_OFF,
         };
 
-        INumber BlackBalanceN[3];
+        INumber m_BlackBalanceN[3];
         INumberVectorProperty BlackBalanceNP;
         enum
         {
@@ -313,16 +306,16 @@ class ToupBase : public INDI::CCD
             TC_BLACK_B,
         };
 
-        INumberVectorProperty OffsetNP;
-        INumber OffsetN[1];
+        INumberVectorProperty m_OffsetNP;
+        INumber m_OffsetN[1];
         enum
         {
             TC_OFFSET,
         };
 
         // R/G/B/Gray low/high levels
-        INumber LevelRangeN[8];
-        INumberVectorProperty LevelRangeNP;
+        INumber m_LevelRangeN[8];
+        INumberVectorProperty m_LevelRangeNP;
         enum
         {
             TC_LO_R,
@@ -336,8 +329,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Temp/Tint White Balance
-        INumber WBTempTintN[2];
-        INumberVectorProperty WBTempTintNP;
+        INumber m_WBTempTintN[2];
+        INumberVectorProperty m_WBTempTintNP;
         enum
         {
             TC_WB_TEMP,
@@ -345,8 +338,8 @@ class ToupBase : public INDI::CCD
         };
 
         // RGB White Balance
-        INumber WBRGBN[3];
-        INumberVectorProperty WBRGBNP;
+        INumber m_WBRGBN[3];
+        INumberVectorProperty m_WBRGBNP;
         enum
         {
             TC_WB_R,
@@ -355,8 +348,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Auto Balance Mode
-        ISwitch WBAutoS[2];
-        ISwitchVectorProperty WBAutoSP;
+        ISwitch m_WBAutoS[2];
+        ISwitchVectorProperty m_WBAutoSP;
         enum
         {
             TC_AUTO_WB_TT,
@@ -364,8 +357,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Fan control
-        ISwitch FanControlS[2];
-        ISwitchVectorProperty FanControlSP;
+        ISwitch m_FanControlS[2];
+        ISwitchVectorProperty m_FanControlSP;
         enum
         {
             TC_FAN_ON,
@@ -373,12 +366,12 @@ class ToupBase : public INDI::CCD
         };
 
         // Fan Speed
-        ISwitch *FanSpeedS = nullptr;
-        ISwitchVectorProperty FanSpeedSP;
+        ISwitch *m_FanSpeedS = nullptr;
+        ISwitchVectorProperty m_FanSpeedSP;
 
         // Video Format
-        ISwitch VideoFormatS[2];
-        ISwitchVectorProperty VideoFormatSP;
+        ISwitch m_VideoFormatS[2];
+        ISwitchVectorProperty m_VideoFormatSP;
         enum
         {
             TC_VIDEO_COLOR_RGB,
@@ -392,12 +385,12 @@ class ToupBase : public INDI::CCD
         };
 
         // Low Noise
-        ISwitchVectorProperty LowNoiseSP;
-        ISwitch LowNoiseS[2];
+        ISwitchVectorProperty m_LowNoiseSP;
+        ISwitch m_LowNoiseS[2];
 
         // Heat Up
-        ISwitchVectorProperty HeatUpSP;
-        ISwitch HeatUpS[3];
+        ISwitchVectorProperty m_HeatUpSP;
+        ISwitch m_HeatUpS[3];
         enum
         {
             TC_HEAT_OFF,
@@ -406,8 +399,8 @@ class ToupBase : public INDI::CCD
         };
 
         // Firmware Info
-        ITextVectorProperty FirmwareTP;
-        IText FirmwareT[5] = {};
+        ITextVectorProperty m_FirmwareTP;
+        IText m_FirmwareT[5] = {};
         enum
         {
             TC_FIRMWARE_SERIAL,
@@ -418,27 +411,27 @@ class ToupBase : public INDI::CCD
         };
 
         // SDK Version
-        ITextVectorProperty SDKVersionTP;
-        IText SDKVersionT[1] = {};
+        ITextVectorProperty m_SDKVersionTP;
+        IText m_SDKVersionT[1] = {};
 
         // ADC / Max Bitdepth
-        INumberVectorProperty ADCNP;
-        INumber ADCN[1];
+        INumberVectorProperty m_ADCNP;
+        INumber m_ADCN[1];
 
         // Timeout factor
-        INumberVectorProperty TimeoutFactorNP;
+        INumberVectorProperty m_TimeoutFactorNP;
         INumber TimeoutFactorN[1];
 
         // Gain Conversion
-        INumberVectorProperty GainConversionNP;
-        INumber GainConversionN[2];
+        INumberVectorProperty m_GainConversionNP;
+        INumber m_GainConversionN[2];
         enum
         {
             TC_HCG_THRESHOLD,
             TC_HCG_LCG_RATIO,
         };
 
-        ISwitchVectorProperty GainConversionSP;
+        ISwitchVectorProperty m_GainConversionSP;
         ISwitch GainConversionS[3];
         enum
         {
