@@ -276,14 +276,9 @@ class ToupBase : public INDI::CCD
             TC_FRAMERATE_LIMIT,
         };
 
-        ISwitch m_AutoControlS[3];
-        ISwitchVectorProperty m_AutoControlSP;
-        enum
-        {
-            TC_AUTO_TINT,
-            TC_AUTO_WB,
-            TC_AUTO_BB,
-        };
+        // Auto Black Balance
+        ISwitch m_BBAutoS;
+        ISwitchVectorProperty m_BBAutoSP;
 
         ISwitch m_AutoExposureS[2];
         ISwitchVectorProperty m_AutoExposureSP;
@@ -320,18 +315,9 @@ class ToupBase : public INDI::CCD
             TC_HI_Y,
         };
 
-        // Temp/Tint White Balance
-        INumber m_WBTempTintN[2];
-        INumberVectorProperty m_WBTempTintNP;
-        enum
-        {
-            TC_WB_TEMP,
-            TC_WB_TINT,
-        };
-
-        // RGB White Balance
-        INumber m_WBRGBN[3];
-        INumberVectorProperty m_WBRGBNP;
+        // White Balance
+        INumber m_WBN[3];
+        INumberVectorProperty m_WBNP;
         enum
         {
             TC_WB_R,
@@ -339,14 +325,9 @@ class ToupBase : public INDI::CCD
             TC_WB_B,
         };
 
-        // Auto Balance Mode
-        ISwitch m_WBAutoS[2];
+        // Auto White Balance
+        ISwitch m_WBAutoS;
         ISwitchVectorProperty m_WBAutoSP;
-        enum
-        {
-            TC_AUTO_WB_TT,
-            TC_AUTO_WB_RGB
-        };
 
         // Fan Speed
         INumber m_FanSpeedS;

@@ -93,7 +93,9 @@ public:
 } loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
-{
+{	
+    LOGF_DEBUG("maxSpeed: %d, preview: %d, still: %d, maxFanSpeed %d", m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->still, m_Instance->model->maxfanspeed);
+	
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
     snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), instance->displayname);
@@ -161,7 +163,7 @@ bool ToupBase::initProperties()
     IUFillNumberVector(&m_ControlNP, m_ControlN, nsp, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
-    // Black Balance RGB
+    // Black Balance
     ///////////////////////////////////////////////////////////////////////////////////
     if (m_MonoCamera)
 	{
@@ -177,12 +179,18 @@ bool ToupBase::initProperties()
 	}
     IUFillNumberVector(&BlackBalanceNP, m_BlackBalanceN, nsp, getDeviceName(), "CCD_BLACK_BALANCE", "Black Balance", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
 
+	///////////////////////////////////////////////////////////////////////////////////
+	/// Auto Black Balance
+	///////////////////////////////////////////////////////////////////////////////////
+	IUFillSwitch(&m_BBAutoS, "TC_AUTO_BB", "Auto", ISS_OFF);
+	IUFillSwitchVector(&m_BBAutoSP, &m_BBAutoS, 1, getDeviceName(), "TC_AUTO_BB", "Auto Black Balance", LEVEL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);	
+
     ///////////////////////////////////////////////////////////////////////////////////
     // Black Level
     ///////////////////////////////////////////////////////////////////////////////////
     IUFillNumber(&m_OffsetN, "OFFSET", "Value", "%.f", 0, 255, 1, 0);
     IUFillNumberVector(&m_OffsetNP, &m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-
+	
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y levels
     ///////////////////////////////////////////////////////////////////////////////////
@@ -205,17 +213,6 @@ bool ToupBase::initProperties()
 		IUFillNumber(&m_LevelRangeN[TC_HI_Y], "TC_HI_Y", "High Gray", "%.f", 0, 255, 1, 0);
 	}
     IUFillNumberVector(&m_LevelRangeNP, m_LevelRangeN, nsp, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
-
-	if (m_MonoCamera == false)
-    {
-		///////////////////////////////////////////////////////////////////////////////////
-		// Auto Controls
-		///////////////////////////////////////////////////////////////////////////////////
-		IUFillSwitch(&m_AutoControlS[TC_AUTO_TINT], "TC_AUTO_TINT", "White Balance Tint", ISS_OFF);
-		IUFillSwitch(&m_AutoControlS[TC_AUTO_WB], "TC_AUTO_WB", "White Balance RGB", ISS_OFF);
-		IUFillSwitch(&m_AutoControlS[TC_AUTO_BB], "TC_AUTO_BB", "Black Balance", ISS_OFF);
-		IUFillSwitchVector(&m_AutoControlSP, m_AutoControlS, 3, getDeviceName(), "CCD_AUTO_CONTROL", "Auto", CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
-	}
 	
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Exposure
@@ -227,26 +224,18 @@ bool ToupBase::initProperties()
 	if (m_MonoCamera == false)
     {
 		///////////////////////////////////////////////////////////////////////////////////
-		// White Balance - Temp/Tint
-		///////////////////////////////////////////////////////////////////////////////////
-		IUFillNumber(&m_WBTempTintN[TC_WB_TEMP], "TC_WB_TEMP", "Temp", "%.f", CP(TEMP_MIN), CP(TEMP_MAX), 1000, CP(TEMP_DEF));
-		IUFillNumber(&m_WBTempTintN[TC_WB_TINT], "TC_WB_TINT", "Tint", "%.f", CP(TINT_MIN), CP(TINT_MAX), 100, CP(TINT_DEF));
-		IUFillNumberVector(&m_WBTempTintNP, m_WBTempTintN, 2, getDeviceName(), "TC_WB_TT", "WB #1", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
-
-		///////////////////////////////////////////////////////////////////////////////////
 		// White Balance - RGB
 		///////////////////////////////////////////////////////////////////////////////////
-		IUFillNumber(&m_WBRGBN[TC_WB_R], "TC_WB_R", "Red", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-		IUFillNumber(&m_WBRGBN[TC_WB_G], "TC_WB_G", "Green", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-		IUFillNumber(&m_WBRGBN[TC_WB_B], "TC_WB_B", "Blue", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-		IUFillNumberVector(&m_WBRGBNP, m_WBRGBN, 3, getDeviceName(), "TC_WB_RGB", "WB #2", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
+		IUFillNumber(&m_WBN[TC_WB_R], "TC_WB_R", "Red", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+		IUFillNumber(&m_WBN[TC_WB_G], "TC_WB_G", "Green", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+		IUFillNumber(&m_WBN[TC_WB_B], "TC_WB_B", "Blue", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+		IUFillNumberVector(&m_WBNP, m_WBN, 3, getDeviceName(), "TC_WB_RGB", "WB #2", LEVEL_TAB, IP_RW, 60, IPS_IDLE);
 
 		///////////////////////////////////////////////////////////////////////////////////
-		/// White Balance - Auto
+		/// Auto White Balance
 		///////////////////////////////////////////////////////////////////////////////////
-		IUFillSwitch(&m_WBAutoS[TC_AUTO_WB_TT], "TC_AUTO_WB_TT", "Temp/Tint", ISS_ON);
-		IUFillSwitch(&m_WBAutoS[TC_AUTO_WB_RGB], "TC_AUTO_WB_RGB", "RGB", ISS_OFF);
-		IUFillSwitchVector(&m_WBAutoSP, m_WBAutoS, 2, getDeviceName(), "TC_AUTO_WB", "Default WB Mode", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+		IUFillSwitch(&m_WBAutoS, "TC_AUTO_WB", "Auto", ISS_OFF);
+		IUFillSwitchVector(&m_WBAutoSP, &m_WBAutoS, 1, getDeviceName(), "TC_AUTO_WB", "Auto White Balance", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 	}
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -379,10 +368,10 @@ bool ToupBase::updateProperties()
 
         if (m_MonoCamera == false)
             defineProperty(&m_WBAutoSP);
+		defineProperty(&m_BBAutoSP);
 
         defineProperty(&m_TimeoutFactorNP);
         defineProperty(&m_ControlNP);
-        defineProperty(&m_AutoControlSP);
         defineProperty(&m_AutoExposureSP);
         defineProperty(&m_VideoFormatSP);
         defineProperty(&m_ResolutionSP);
@@ -409,10 +398,7 @@ bool ToupBase::updateProperties()
 
         // Balance
         if (m_MonoCamera == false)
-        {
-            defineProperty(&m_WBTempTintNP);
-            defineProperty(&m_WBRGBNP);
-        }
+            defineProperty(&m_WBNP);
 
         // Firmware
         defineProperty(&m_FirmwareTP);
@@ -435,10 +421,10 @@ bool ToupBase::updateProperties()
 
         if (m_MonoCamera == false)
             deleteProperty(m_WBAutoSP.name);
-
+		deleteProperty(m_BBAutoSP.name);
+		
         deleteProperty(m_TimeoutFactorNP.name);
         deleteProperty(m_ControlNP.name);
-        deleteProperty(m_AutoControlSP.name);
         deleteProperty(m_AutoExposureSP.name);
         deleteProperty(m_VideoFormatSP.name);
         deleteProperty(m_ResolutionSP.name);
@@ -461,10 +447,7 @@ bool ToupBase::updateProperties()
         deleteProperty(m_OffsetNP.name);
 
         if (m_MonoCamera == false)
-        {
-            deleteProperty(m_WBTempTintNP.name);
-            deleteProperty(m_WBRGBNP.name);
-        }
+            deleteProperty(m_WBNP.name);
 
         deleteProperty(m_FirmwareTP.name);
         deleteProperty(m_SDKVersionTP.name);
@@ -481,7 +464,7 @@ bool ToupBase::Connect()
     {
         std::string fullID = m_Instance->id;
         // For RGB White Balance Mode, we need to add @ at the beginning as per docs.
-        if (m_MonoCamera == false && m_WBAutoS[TC_AUTO_WB_RGB].s == ISS_ON)
+        if (m_MonoCamera == false)
             fullID = "@" + fullID;
 
         m_CameraHandle = FP(Open(fullID.c_str()));
@@ -493,17 +476,10 @@ bool ToupBase::Connect()
         return false;
     }
 
-    uint32_t cap = CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_STREAMING;
+    uint32_t cap = CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_STREAMING | CCD_CAN_SUBFRAME;
     // If raw format is support then we have bayer
     if (m_MonoCamera == false)
         cap |= CCD_HAS_BAYER;
-
-    // Hardware ROI really needed? Check later
-    if (m_Instance->model->flag & CP(FLAG_ROI_HARDWARE))
-    {
-        LOG_DEBUG("Hardware ROI supported");
-        cap |= CCD_CAN_SUBFRAME;
-    }
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
@@ -518,8 +494,6 @@ bool ToupBase::Connect()
     }
 
     SetCCDCapability(cap);
-
-    LOGF_DEBUG("maxSpeed: %d, preview: %d, still: %d, maxFanSpeed %d", m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->still, m_Instance->model->maxfanspeed);
 
     // Get min/max exposures
     uint32_t min = 0, max = 0, current = 0;
@@ -821,9 +795,9 @@ void ToupBase::setupParams()
 		rc = FP(get_WhiteBalanceGain(m_CameraHandle, aGain));
 		if (SUCCEEDED(rc))
 		{
-			m_WBRGBN[TC_WB_R].value = aGain[TC_WB_R];
-			m_WBRGBN[TC_WB_G].value = aGain[TC_WB_G];
-			m_WBRGBN[TC_WB_B].value = aGain[TC_WB_B];
+			m_WBN[TC_WB_R].value = aGain[TC_WB_R];
+			m_WBN[TC_WB_G].value = aGain[TC_WB_G];
+			m_WBN[TC_WB_B].value = aGain[TC_WB_B];
 			LOGF_DEBUG("White Balance Gain. R: %d, G: %d, B: %d", aGain[TC_WB_R], aGain[TC_WB_G], aGain[TC_WB_B]);
 		}
 	}
@@ -1090,49 +1064,29 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// Temp/Tint White Balance
-        //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_WBTempTintNP.name))
-        {
-            IUUpdateNumber(&m_WBTempTintNP, values, names, n);
-
-            HRESULT rc = FP(put_TempTint(m_CameraHandle, static_cast<int>(m_WBTempTintN[TC_WB_TEMP].value), static_cast<int>(m_WBTempTintN[TC_WB_TINT].value)));
-            if (SUCCEEDED(rc))
-				m_WBTempTintNP.s = IPS_OK;
-			else
-            {
-                m_WBTempTintNP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set White Balance Temperature & Tint. %s", errorCodes(rc).c_str());
-            }                
-
-            IDSetNumber(&m_WBTempTintNP, nullptr);
-            return true;
-        }
-
-        //////////////////////////////////////////////////////////////////////
         /// RGB White Balance
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_WBRGBNP.name))
+        if (!strcmp(name, m_WBNP.name))
         {
-            IUUpdateNumber(&m_WBRGBNP, values, names, n);
+            IUUpdateNumber(&m_WBNP, values, names, n);
 
             int aSub[3] =
             {
-                static_cast<int>(m_WBRGBN[TC_WB_R].value),
-                static_cast<int>(m_WBRGBN[TC_WB_G].value),
-                static_cast<int>(m_WBRGBN[TC_WB_B].value),
+                static_cast<int>(m_WBN[TC_WB_R].value),
+                static_cast<int>(m_WBN[TC_WB_G].value),
+                static_cast<int>(m_WBN[TC_WB_B].value),
             };
 
             HRESULT rc = FP(put_WhiteBalanceGain(m_CameraHandle, aSub));
             if (SUCCEEDED(rc))
-				m_WBRGBNP.s = IPS_OK;
+				m_WBNP.s = IPS_OK;
 			else
             {
-                m_WBRGBNP.s = IPS_ALERT;
+                m_WBNP.s = IPS_ALERT;
                 LOGF_ERROR("Failed to set White Balance gain. %s", errorCodes(rc).c_str());
             }
 
-            IDSetNumber(&m_WBRGBNP, nullptr);
+            IDSetNumber(&m_WBNP, nullptr);
             return true;
         }
 
@@ -1335,58 +1289,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// Auto Controls
-        //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_AutoControlSP.name))
-        {
-            int previousSwitch = IUFindOnSwitchIndex(&m_AutoControlSP);
-
-            if (IUUpdateSwitch(&m_AutoControlSP, states, names, n) < 0)
-            {
-                m_AutoControlSP.s = IPS_ALERT;
-                IDSetSwitch(&m_AutoControlSP, nullptr);
-                return true;
-            }
-
-            HRESULT rc = 0;
-            std::string autoOperation;
-            switch (IUFindOnSwitchIndex(&m_AutoControlSP))
-            {
-                case TC_AUTO_TINT:
-                    rc = FP(AwbOnce(m_CameraHandle, nullptr, nullptr));
-                    autoOperation = "Auto White Balance Tint/Temp";
-                    break;
-                case TC_AUTO_WB:
-                    rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
-                    autoOperation = "Auto White Balance RGB";
-                    break;
-                case TC_AUTO_BB:
-                    rc = FP(AbbOnce(m_CameraHandle, nullptr, nullptr));
-                    autoOperation = "Auto Black Balance";
-                    break;
-                default:
-                    rc = -1;
-            }
-
-            IUResetSwitch(&m_AutoControlSP);
-
-            if (FAILED(rc))
-            {
-                m_AutoControlS[previousSwitch].s = ISS_ON;
-                m_AutoControlSP.s = IPS_ALERT;
-                LOGF_ERROR("%s failed (%d)", autoOperation.c_str(), rc);
-            }
-            else
-            {
-                m_AutoControlSP.s = IPS_OK;
-                LOGF_INFO("%s complete", autoOperation.c_str());
-            }
-
-            IDSetSwitch(&m_AutoControlSP, nullptr);
-            return true;
-        }
-
-        //////////////////////////////////////////////////////////////////////
         /// Resolution
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_ResolutionSP.name))
@@ -1446,12 +1348,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_WBAutoSP.name))
         {
             IUUpdateSwitch(&m_WBAutoSP, states, names, n);
-            HRESULT rc = 0;
-            if (IUFindOnSwitchIndex(&m_WBAutoSP) == TC_AUTO_WB_TT)
-                rc = FP(AwbOnce(m_CameraHandle, nullptr, nullptr));
-            else
-                rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
-
+            HRESULT rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
             IUResetSwitch(&m_WBAutoSP);
             if (SUCCEEDED(rc))
             {
@@ -1467,6 +1364,29 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IDSetSwitch(&m_WBAutoSP, nullptr);
             return true;
         }
+		
+        //////////////////////////////////////////////////////////////////////
+        /// Auto Black Balance
+        //////////////////////////////////////////////////////////////////////
+        if (!strcmp(name, m_BBAutoSP.name))
+        {
+            IUUpdateSwitch(&m_BBAutoSP, states, names, n);
+            HRESULT rc = FP(AbbOnce(m_CameraHandle, nullptr, nullptr));
+            IUResetSwitch(&m_BBAutoSP);
+            if (SUCCEEDED(rc))
+            {
+                LOG_INFO("Executing auto black balance");
+                m_BBAutoSP.s = IPS_OK;
+            }
+            else
+            {
+                LOGF_ERROR("Executing auto black balance failed %s", errorCodes(rc).c_str());
+                m_BBAutoSP.s = IPS_ALERT;
+            }
+
+            IDSetSwitch(&m_BBAutoSP, nullptr);
+            return true;
+        }		
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -2039,18 +1959,6 @@ void ToupBase::eventCallBack(unsigned event)
             m_CaptureTimeoutCounter = 0;
             m_CaptureTimeout.stop();
             break;
-        case CP(EVENT_TEMPTINT):
-		{
-			LOG_DEBUG("Temp Tint changed");
-			int nTemp = CP(TEMP_DEF), nTint = CP(TINT_DEF);
-			FP(get_TempTint)(m_CameraHandle, &nTemp, &nTint);
-			
-			m_WBTempTintN[TC_WB_TEMP].value = nTemp;
-			m_WBTempTintN[TC_WB_TINT].value = nTint;
-			m_WBTempTintNP.s = IPS_OK;
-			IDSetNumber(&m_WBTempTintNP, nullptr);
-		}
-        break;
         case CP(EVENT_IMAGE):
         {
             m_CaptureTimeoutCounter = 0;
@@ -2199,11 +2107,11 @@ void ToupBase::eventCallBack(unsigned event)
 			LOG_DEBUG("White Balance Gain changed");
 			int aGain[3] = { 0 };
 			FP(get_WhiteBalanceGain)(m_CameraHandle, aGain);
-			m_WBRGBN[TC_WB_R].value = aGain[TC_WB_R];
-			m_WBRGBN[TC_WB_G].value = aGain[TC_WB_G];
-			m_WBRGBN[TC_WB_B].value = aGain[TC_WB_B];
-			m_WBRGBNP.s = IPS_OK;
-			IDSetNumber(&m_WBRGBNP, nullptr);
+			m_WBN[TC_WB_R].value = aGain[TC_WB_R];
+			m_WBN[TC_WB_G].value = aGain[TC_WB_G];
+			m_WBN[TC_WB_B].value = aGain[TC_WB_B];
+			m_WBNP.s = IPS_OK;
+			IDSetNumber(&m_WBNP, nullptr);
         }
 		break;
         case CP(EVENT_BLACK):
