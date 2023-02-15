@@ -243,8 +243,8 @@ class ToupBase : public INDI::CCD
             TC_BINNING_ADD,
         } BINNING_MODE;
 
-        ISwitchVectorProperty m_HighFullwellModeSP;
-        ISwitch m_HighFullwellModeS[2];
+        ISwitchVectorProperty m_HighFullwellSP;
+        ISwitch m_HighFullwellS[2];
         typedef enum
         {
             TC_HIGHFULLWELL_ON,

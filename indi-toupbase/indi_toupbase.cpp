@@ -270,9 +270,9 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell Mode
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_HighFullwellModeS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&m_HighFullwellModeS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
-    IUFillSwitchVector(&m_HighFullwellModeSP, m_HighFullwellModeS, 2, getDeviceName(), "TC_HIGHFULLWELL_CONTROL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitch(&m_HighFullwellS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&m_HighFullwellS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitchVector(&m_HighFullwellSP, m_HighFullwellS, 2, getDeviceName(), "TC_HIGHFULLWELL_CONTROL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
 	if (m_Instance->model->flag & CP(FLAG_HEAT))
     {
@@ -292,15 +292,18 @@ bool ToupBase::initProperties()
 		IUFillNumberVector(&m_FanSpeedSP, &m_FanSpeedS, 1, getDeviceName(), "TC_FAN_Speed", "Fan Speed", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 	}
 
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// Video Format
-    ///////////////////////////////////////////////////////////////////////////////////
-    /// RGB Mode with RGB24 color
-    IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RGB], "TC_VIDEO_COLOR_RGB", "RGB", ISS_OFF);
-    /// Raw mode (8 to 16 bit)
-    IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", "Raw", ISS_OFF);
-    IUFillSwitchVector(&m_VideoFormatSP, m_VideoFormatS, 2, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-
+	if ((m_Instance->model->flag & BITDEPTH_FLAG) || (m_MonoCamera == false))
+	{
+		///////////////////////////////////////////////////////////////////////////////////
+		/// Video Format, some camera support only Mono 8
+		///////////////////////////////////////////////////////////////////////////////////
+		/// RGB Mode with RGB24 color
+		IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RGB], "TC_VIDEO_COLOR_RGB", "RGB", ISS_OFF);
+		/// Raw mode (8 to 16 bit)
+		IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", "Raw", ISS_OFF);
+		IUFillSwitchVector(&m_VideoFormatSP, m_VideoFormatS, 2, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+	}
+	
     ///////////////////////////////////////////////////////////////////////////////////
     /// Resolution
     ///////////////////////////////////////////////////////////////////////////////////
@@ -373,11 +376,12 @@ bool ToupBase::updateProperties()
         defineProperty(&m_TimeoutFactorNP);
         defineProperty(&m_ControlNP);
         defineProperty(&m_AutoExposureSP);
-        defineProperty(&m_VideoFormatSP);
+        if ((m_Instance->model->flag & BITDEPTH_FLAG) || (m_MonoCamera == false))
+			defineProperty(&m_VideoFormatSP);
         defineProperty(&m_ResolutionSP);
 
         if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-            defineProperty(&m_HighFullwellModeSP);
+            defineProperty(&m_HighFullwellSP);
 
         if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
             defineProperty(&m_LowNoiseSP);
@@ -426,14 +430,15 @@ bool ToupBase::updateProperties()
         deleteProperty(m_TimeoutFactorNP.name);
         deleteProperty(m_ControlNP.name);
         deleteProperty(m_AutoExposureSP.name);
-        deleteProperty(m_VideoFormatSP.name);
+        if ((m_Instance->model->flag & BITDEPTH_FLAG) || (m_MonoCamera == false))
+			deleteProperty(m_VideoFormatSP.name);
         deleteProperty(m_ResolutionSP.name);
 
         if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
             deleteProperty(m_LowNoiseSP.name);
         
         if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-            deleteProperty(m_HighFullwellModeSP.name);
+            deleteProperty(m_HighFullwellSP.name);
 
         if (m_Instance->model->flag & CP(FLAG_HEAT))
             deleteProperty(m_HeatUpSP.name);
@@ -477,22 +482,18 @@ bool ToupBase::Connect()
     }
 
     uint32_t cap = CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_STREAMING | CCD_CAN_SUBFRAME;
-    // If raw format is support then we have bayer
     if (m_MonoCamera == false)
         cap |= CCD_HAS_BAYER;
-
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
         LOG_DEBUG("TEC control");
         cap |= CCD_HAS_COOLER;
     }
-
     if (m_Instance->model->flag & CP(FLAG_ST4))
     {
         LOG_DEBUG("ST4 guiding enabled");
         cap |= CCD_HAS_ST4_PORT;
     }
-
     SetCCDCapability(cap);
 
     // Get min/max exposures
@@ -566,25 +567,30 @@ void ToupBase::setupParams()
 	FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE_MAX), &m_maxTecVoltage));
 
     m_BitsPerPixel = 8;
+	
     int nVal = 0;
+	bool RAWHighDepthSupport = false;
+	if (m_Instance->model->flag & BITDEPTH_FLAG)
+	{
+		RAWHighDepthSupport = true;
+        // enable bitdepth
+        rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), 1));
+        LOGF_DEBUG("OPTION_BITDEPTH 1. rc: %s", errorCodes(rc).c_str());
+        m_BitsPerPixel = 16;		
+	}
 
+    rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), 1));
+    LOGF_DEBUG("OPTION_RAW 1. rc: %s", errorCodes(rc).c_str());
+		
     // Check if mono only camera
     if (m_MonoCamera)
     {
-        IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
-        IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
-
-        rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), 1));
-        LOGF_DEBUG("OPTION_RAW 1. rc: %s", errorCodes(rc).c_str());
-
         CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
         CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
-        if (m_Instance->model->flag & BITDEPTH_FLAG)
+        if (RAWHighDepthSupport)
         {
-            // enable bitdepth
-            rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), 1));
-            LOGF_DEBUG("OPTION_BITDEPTH 1. rc: %s", errorCodes(rc).c_str());
-            m_BitsPerPixel = 16;
+			IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
+			IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
             m_VideoFormatS[TC_VIDEO_MONO_16].s = ISS_ON;
             m_CurrentVideoFormat = TC_VIDEO_MONO_16;
             mono16.isDefault = true;
@@ -592,7 +598,6 @@ void ToupBase::setupParams()
         else
         {
             m_BitsPerPixel = 8;
-            m_VideoFormatS[TC_VIDEO_MONO_8].s = ISS_ON;
             m_CurrentVideoFormat = TC_VIDEO_MONO_8;
             mono8.isDefault = true;
         }
@@ -601,54 +606,19 @@ void ToupBase::setupParams()
         m_Channels = 1;
 
         addCaptureFormat(mono8);
-        addCaptureFormat(mono16);
-        LOGF_DEBUG("Bits Per Pixel: %d, Video Mode: %s", m_BitsPerPixel, m_VideoFormatS[TC_VIDEO_MONO_8].s == ISS_ON ? "Mono 8-bit" : "Mono 16-bit");
-    }
-    // Color Camera
-    else
+        if (RAWHighDepthSupport)
+			addCaptureFormat(mono16);
+        LOGF_DEBUG("Mono, Bits Per Pixel: %d", m_BitsPerPixel);
+    }    
+    else// Color Camera
     {
-		bool RAWHighDepthSupport = false;
-        if (m_Instance->model->flag & BITDEPTH_FLAG)
-        {
-            // enable bitdepth
-            FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), 1));
-            m_BitsPerPixel = 16;
-            RAWHighDepthSupport = true;
-            LOG_DEBUG("RAW Bit Depth: 16");
-        }
-
-        // Get RAW/RGB Mode
-        int cameraDataMode = 0;
-        IUResetSwitch(&m_VideoFormatSP);
-        rc = FP(get_Option(m_CameraHandle, CP(OPTION_RAW), &cameraDataMode));
-        LOGF_DEBUG("OPTION_RAW. rc: %s, Value: %d", errorCodes(rc).c_str(), cameraDataMode);
-
-        CaptureFormat rgb = {"INDI_RGB", "RGB", 8};
-        CaptureFormat raw = {"INDI_RAW", RAWHighDepthSupport ? "RAW 16" : "RAW 8", static_cast<uint8_t>(RAWHighDepthSupport ? 16 : 8)};
-
+        CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
+        CaptureFormat raw = {"INDI_RAW", RAWHighDepthSupport ? "RAW 16" : "RAW 8", static_cast<uint8_t>(RAWHighDepthSupport ? 16 : 8), true };
+	
         // Color RAW
-        if (cameraDataMode == TC_VIDEO_COLOR_RAW)
-        {
-            m_VideoFormatS[TC_VIDEO_COLOR_RAW].s = ISS_ON;
-            m_Channels = 1;
-            LOG_INFO("Video Mode RAW detected");
-            raw.isDefault = true;
-
-            // Get RAW Format
-            IUSaveText(&BayerT[2], getBayerString());
-        }
-        // Color RGB
-        else
-        {
-            LOG_INFO("Video Mode RGB detected");
-            m_VideoFormatS[TC_VIDEO_COLOR_RGB].s = ISS_ON;
-            m_Channels = 3;
-            m_CameraPixelFormat = INDI_RGB;
-            m_BitsPerPixel = 8;
-            rgb.isDefault = true;
-
-            SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-        }
+        m_VideoFormatS[TC_VIDEO_COLOR_RAW].s = ISS_ON;
+        m_Channels = 1;
+        IUSaveText(&BayerT[2], getBayerString());// Get RAW Format
 
         addCaptureFormat(rgb);
         addCaptureFormat(raw);
@@ -1177,48 +1147,48 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// High Fullwell Mode
+        /// High Fullwell
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_HighFullwellModeSP.name))
+        if (!strcmp(name, m_HighFullwellSP.name))
         {
-            int prevIndex = IUFindOnSwitchIndex(&m_HighFullwellModeSP);
-            IUUpdateSwitch(&m_HighFullwellModeSP, states, names, n);
+            int prevIndex = IUFindOnSwitchIndex(&m_HighFullwellSP);
+            IUUpdateSwitch(&m_HighFullwellSP, states, names, n);
 
-            if (m_HighFullwellModeS[TC_HIGHFULLWELL_ON].s == ISS_ON)
+            if (m_HighFullwellS[TC_HIGHFULLWELL_ON].s == ISS_ON)
             {
                 HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 1));
                 if (FAILED(rc))
                 {
-                    LOGF_ERROR("Failed to set High Full Well Mode %s. Error (%s)", m_HighFullwellModeS[INDI_ENABLED].s == ISS_ON ? "on" : "off", errorCodes(rc).c_str());
-                    m_HighFullwellModeSP.s = IPS_ALERT;
-                    IUResetSwitch(&m_HighFullwellModeSP);
-                    m_HighFullwellModeS[prevIndex].s = ISS_ON;
+                    LOGF_ERROR("Failed to set High Fullwell %s. Error (%s)", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "on" : "off", errorCodes(rc).c_str());
+                    m_HighFullwellSP.s = IPS_ALERT;
+                    IUResetSwitch(&m_HighFullwellSP);
+                    m_HighFullwellS[prevIndex].s = ISS_ON;
                 }
                 else
                 {
-                    LOG_INFO("Set High Full Well Mode to ON");
-                    m_HighFullwellModeSP.s = IPS_OK;
+                    LOG_INFO("Set High Fullwell to ON");
+                    m_HighFullwellSP.s = IPS_OK;
                 }
 
-                IDSetSwitch(&m_HighFullwellModeSP, nullptr);
+                IDSetSwitch(&m_HighFullwellSP, nullptr);
             }
             else
             {
                 HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 0));
                 if (FAILED(rc))
                 {
-                    LOGF_ERROR("Failed to set high Full Well Mode %s. Error (%s)", m_HighFullwellModeS[INDI_ENABLED].s == ISS_ON ? "on" : "off", errorCodes(rc).c_str());
-                    m_HighFullwellModeSP.s = IPS_ALERT;
-                    IUResetSwitch(&m_HighFullwellModeSP);
-                    m_HighFullwellModeS[prevIndex].s = ISS_ON;
+                    LOGF_ERROR("Failed to set high Fullwell %s. Error (%s)", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "on" : "off", errorCodes(rc).c_str());
+                    m_HighFullwellSP.s = IPS_ALERT;
+                    IUResetSwitch(&m_HighFullwellSP);
+                    m_HighFullwellS[prevIndex].s = ISS_ON;
                 }
                 else
                 {
-                    LOG_INFO("Set High Full Well Mode to OFF");
-                    m_HighFullwellModeSP.s = IPS_OK;
+                    LOG_INFO("Set High Fullwell to OFF");
+                    m_HighFullwellSP.s = IPS_OK;
                 }
 
-                IDSetSwitch(&m_HighFullwellModeSP, nullptr);                
+                IDSetSwitch(&m_HighFullwellSP, nullptr);                
             }
             return true;
         }
@@ -1931,7 +1901,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
         IUSaveConfigSwitch(fp, &m_LowNoiseSP);
 
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-        IUSaveConfigSwitch(fp, &m_HighFullwellModeSP);        
+        IUSaveConfigSwitch(fp, &m_HighFullwellSP);        
     
     return true;
 }
