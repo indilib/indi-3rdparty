@@ -59,7 +59,7 @@ extern "C" {
 * visit https://www.iliaplatone.com/gt1 for more informations and purchase options.
 *
 * \author Ilia Platone
-* \version 1.6.1
+* \version 1.6.2
 * \date 2017-2021
 * \copyright MIT License.
 */
@@ -376,7 +376,7 @@ double timestamp;
  * \defgroup Defines Defines
  *\{*/
 ///AHP_GT_VERSION This library version
-#define AHP_GT_VERSION 0x161
+#define AHP_GT_VERSION 0x162
 
 /**\}
  * \defgroup Conn Connection
