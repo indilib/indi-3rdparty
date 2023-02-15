@@ -137,8 +137,8 @@ class ToupBase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
     private:
-        static std::map<int, std::string> errCodes;
-		static std::string errorCodes(int rc);
+        static std::map<HRESULT, std::string> errCodes;
+		static std::string errorCodes(HRESULT rc);
 
         enum eGUIDEDIRECTION
         {
@@ -152,8 +152,7 @@ class ToupBase : public INDI::CCD
         enum eTriggerMode
         {
             TRIGGER_VIDEO,
-            TRIGGER_SOFTWARE,
-            TRIGGER_EXTERNAL,
+            TRIGGER_SOFTWARE
         };
 
         //#############################################################################
@@ -388,7 +387,7 @@ class ToupBase : public INDI::CCD
         BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
-        eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;
+        eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE;
 
         bool m_MonoCamera { false };
         INDI::Timer m_CaptureTimeout;
@@ -398,7 +397,7 @@ class ToupBase : public INDI::CCD
 
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };
-        uint8_t m_MaxBitDepth { 8 };
+        uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
 		
 		uint8_t* getRgbBuffer();

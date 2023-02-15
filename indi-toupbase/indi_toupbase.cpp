@@ -38,7 +38,7 @@
     | (static_cast<uint32_t>(static_cast<uint8_t>(ch3)) << 24))
 #endif /* defined(MAKEFOURCC) */
 
-std::map<int, std::string> ToupBase::errCodes =
+std::map<HRESULT, std::string> ToupBase::errCodes =
 {
     {0x00000000, "Success"},
     {0x00000001, "Yet another success"},
@@ -56,9 +56,9 @@ std::map<int, std::string> ToupBase::errCodes =
     {0x8001011f, "This operation returned because the timeout period expired"}
 };
 
-std::string ToupBase::errorCodes(int rc)
+std::string ToupBase::errorCodes(HRESULT rc)
 {
-	const std::map<int, std::string>::iterator it = errCodes.find(rc);
+	const std::map<HRESULT, std::string>::iterator it = errCodes.find(rc);
 	if (it != errCodes.end())
 		return it->second;
 	else
@@ -145,7 +145,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Controls
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_ControlN[TC_GAIN], "Gain", "Gain", "%.f", CP(EXPOGAIN_MIN), CP(EXPOGAIN_MIN), 10, CP(EXPOGAIN_MIN));
+    IUFillNumber(&m_ControlN[TC_GAIN], "Gain", "Gain", "%.f", CP(EXPOGAIN_MIN), CP(EXPOGAIN_MIN), 1, CP(EXPOGAIN_MIN));
     IUFillNumber(&m_ControlN[TC_CONTRAST], "Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 1, CP(CONTRAST_DEF));
     if (m_MonoCamera)
 		nsp = 6;
@@ -509,8 +509,12 @@ bool ToupBase::Connect()
 
     PrimaryCCD.setBin(1, 1);
 	
-    // Success!
-    LOGF_INFO("%s is online. Retrieving basic data", getDeviceName());
+	FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
+	HRESULT rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+	if (FAILED(rc))
+		LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
+	else // Success!
+		LOGF_INFO("%s is online. Retrieving basic data", getDeviceName());
 
     return true;
 }
@@ -559,18 +563,16 @@ void ToupBase::setupParams()
     m_SDKVersionTP.s = IPS_OK;
 
     // Max supported bit depth
-    m_MaxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
-    LOGF_DEBUG("Max bit depth: %d", m_MaxBitDepth);
+    m_maxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
+    LOGF_DEBUG("Max bit depth: %d", m_maxBitDepth);
 	
 	FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE_MAX), &m_maxTecVoltage));
 
     m_BitsPerPixel = 8;
 	
     int nVal = 0;
-	bool RAWHighDepthSupport = false;
-	if (m_Instance->model->flag & BITDEPTH_FLAG)
+	if (m_maxBitDepth > 8)
 	{
-		RAWHighDepthSupport = true;
         // enable bitdepth
         rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), 1));
         LOGF_DEBUG("OPTION_BITDEPTH = 1. %s", errorCodes(rc).c_str());
@@ -585,7 +587,7 @@ void ToupBase::setupParams()
     {
         CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
         CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
-        if (RAWHighDepthSupport)
+        if (m_maxBitDepth > 8)
         {
 			IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
 			IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
@@ -604,14 +606,14 @@ void ToupBase::setupParams()
         m_Channels = 1;
 
         addCaptureFormat(mono8);
-        if (RAWHighDepthSupport)
+        if (m_maxBitDepth > 8)
 			addCaptureFormat(mono16);
         LOGF_DEBUG("Mono, Bits Per Pixel: %d", m_BitsPerPixel);
     }    
     else// Color Camera
     {
         CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
-        CaptureFormat raw = {"INDI_RAW", RAWHighDepthSupport ? "RAW 16" : "RAW 8", static_cast<uint8_t>(RAWHighDepthSupport ? 16 : 8), true };
+        CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 	
         // Color RAW
         m_VideoFormatS[TC_VIDEO_COLOR_RAW].s = ISS_ON;
@@ -680,13 +682,11 @@ void ToupBase::setupParams()
     LOGF_DEBUG("Conversion Gain %d, rc: %d", conversionGain, rc);
     m_GainConversionS[conversionGain].s = ISS_ON;
 
-	uint16_t nMin = 0, nMax = 0, nDef = 0;
+	uint16_t nMax = 0, nDef = 0;
     // Gain
-    FP(get_ExpoAGainRange(m_CameraHandle, &nMin, &nMax, &nDef));
-    LOGF_DEBUG("Exposure Gain Control. Min: %u, Max: %u, Default: %u", nMin, nMax, nDef);
-    m_ControlN[TC_GAIN].min = nMin;
+    FP(get_ExpoAGainRange(m_CameraHandle, nullptr, &nMax, &nDef));
+    LOGF_DEBUG("Exposure Gain Control. Max: %u, Default: %u", nMax, nDef);
     m_ControlN[TC_GAIN].max = nMax;
-    m_ControlN[TC_GAIN].step = 1;
     m_ControlN[TC_GAIN].value = nDef;
 	
     // Heat Up
@@ -811,7 +811,7 @@ void ToupBase::setupParams()
     // Getting the black level option from camera yields the defaut setting
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
-    int bLevelStep = 1 << (m_MaxBitDepth - 8);
+    int bLevelStep = 1 << (m_maxBitDepth - 8);
     m_OffsetN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
     m_OffsetN.step = bLevelStep;
 
@@ -1304,8 +1304,11 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IDSetSwitch(&m_ResolutionSP, nullptr);
 
             // Restart capture
-            FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-            LOG_DEBUG("Restarting event callback after changing resolution");
+            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+			if (FAILED(rc))
+				LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
+            else
+				LOG_DEBUG("Restarting event callback after changing resolution");
             return true;
         }
 
@@ -1361,7 +1364,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
 bool ToupBase::StartStreaming()
 {
-    int rc = 0;
+    HRESULT rc = 0;
     // Always disable Auto-Exposure on streaming
     FP(put_AutoExpoEnable(m_CameraHandle, 0));
 
@@ -1391,7 +1394,7 @@ bool ToupBase::StartStreaming()
 
 bool ToupBase::StopStreaming()
 {
-    int rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
+    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set video trigger mode. %s", errorCodes(rc).c_str());
@@ -1449,9 +1452,9 @@ bool ToupBase::activateCooler(bool enable)
 
 bool ToupBase::StartExposure(float duration)
 {
-    HRESULT rc = 0;
     PrimaryCCD.setExposureDuration(static_cast<double>(duration));
 
+    HRESULT rc = 0;
     uint32_t uSecs = static_cast<uint32_t>(duration * 1000000.0f);
 
     LOGF_DEBUG("Starting exposure: %d us @ %s", uSecs, IUFindOnSwitch(&m_ResolutionSP)->label);
@@ -1525,8 +1528,6 @@ bool ToupBase::AbortExposure()
 
 void ToupBase::captureTimeoutHandler()
 {
-    HRESULT rc = 0;
-
     if (!isConnected())
         return;
 
@@ -1539,7 +1540,8 @@ void ToupBase::captureTimeoutHandler()
         PrimaryCCD.setExposureFailed();
         return;
     }
-
+	
+    HRESULT rc = 0;
     // Snap still image
     if (m_Instance->model->still && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
     {
@@ -1950,7 +1952,7 @@ void ToupBase::eventCallBack(unsigned event)
             XP(FrameInfoV2) info;
             memset(&info, 0, sizeof(XP(FrameInfoV2)));
 
-            int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+            int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
 
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
@@ -2015,7 +2017,7 @@ void ToupBase::eventCallBack(unsigned event)
             XP(FrameInfoV2) info;
             memset(&info, 0, sizeof(XP(FrameInfoV2)));
 
-            int captureBits = m_BitsPerPixel == 8 ? 8 : m_MaxBitDepth;
+            int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
 
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
@@ -2119,61 +2121,56 @@ bool ToupBase::setVideoFormat(uint8_t index)
     // Mono
     if (m_MonoCamera)
     {
-        if (m_MaxBitDepth == 8 && index == TC_VIDEO_MONO_16)
-        {
-            m_VideoFormatSP.s = IPS_ALERT;
-            LOG_ERROR("Only 8-bit format is supported");
-            IUResetSwitch(&m_VideoFormatSP);
-            m_VideoFormatS[TC_VIDEO_MONO_8].s = ISS_ON;
-            IDSetSwitch(&m_VideoFormatSP, nullptr);
-            return false;
-        }
-
         // We need to stop camera first
         LOG_DEBUG("Stopping camera to change video mode");
         FP(Stop(m_CameraHandle));
 
-        int rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), index));
+        HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), index));
         if (SUCCEEDED(rc))
-			LOGF_DEBUG("Set OPTION_BITDEPTH --> %d", index);
+			LOGF_DEBUG("Set OPTION_BITDEPTH: %d", index);
 		else
         {
-            LOGF_ERROR("Failed to set high bit depth mode %s", errorCodes(rc).c_str());
+            LOGF_ERROR("Failed to set high bit depth. %s", errorCodes(rc).c_str());
             m_VideoFormatSP.s = IPS_ALERT;
             IUResetSwitch(&m_VideoFormatSP);
             m_VideoFormatS[TC_VIDEO_MONO_8].s = ISS_ON;
             IDSetSwitch(&m_VideoFormatSP, nullptr);
 
             // Restart Capture
-            FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-            LOG_DEBUG("Restarting event callback after video mode change failed");
+            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+			if (FAILED(rc))
+				LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
+            else
+				LOG_DEBUG("Restarting event callback after video mode change failed");
 
             return false;
         }
 
         m_BitsPerPixel = (index == TC_VIDEO_MONO_8) ? 8 : 16;
-    }
-    // Color
-    else
+    }    
+    else// Color
     {
         // We need to stop camera first
         LOG_DEBUG("Stopping camera to change video mode");
         FP(Stop(m_CameraHandle));
 
-        int rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), index));
+        HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), index));
         if (SUCCEEDED(rc))
-			LOGF_DEBUG("Set OPTION_RAW --> %d", index);
+			LOGF_DEBUG("Set OPTION_RAW: %d", index);
 		else
         {
-            LOGF_ERROR("Failed to set video mode. %s", errorCodes(rc).c_str());
+            LOGF_ERROR("Failed to set raw mode. %s", errorCodes(rc).c_str());
             m_VideoFormatSP.s = IPS_ALERT;
             IUResetSwitch(&m_VideoFormatSP);
             m_VideoFormatS[TC_VIDEO_COLOR_RGB].s = ISS_ON;
             IDSetSwitch(&m_VideoFormatSP, nullptr);
 
             // Restart Capture
-            FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-            LOG_DEBUG("Restarting event callback after changing video mode failed");
+            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+			if (FAILED(rc))
+				LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
+            else
+				LOG_DEBUG("Restarting event callback after changing video mode failed");
             return false;
         }            
 
@@ -2206,8 +2203,11 @@ bool ToupBase::setVideoFormat(uint8_t index)
     IDSetSwitch(&m_VideoFormatSP, nullptr);
 
     // Restart Capture
-    FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-    LOG_DEBUG("Restarting event callback after video mode change");
+    HRESULT rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+	if (FAILED(rc))
+		LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());	
+    else
+		LOG_DEBUG("Restarting event callback after video mode change");
     saveConfig(true, m_VideoFormatSP.name);
 
     return true;
