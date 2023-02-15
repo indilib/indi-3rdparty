@@ -31,7 +31,7 @@
 #define CP(x) TOUPCAM_##x
 #define XP(x) Toupcam##x
 #define THAND HToupcam
-#define DNAME "Toupcam"
+#define DNAME "ToupTek"
 #elif BUILD_ALTAIRCAM
 #include <altaircam.h>
 #define FP(x) Altaircam_##x
@@ -45,14 +45,14 @@
 #define CP(x) BRESSERCAM_##x
 #define XP(x) Bressercam##x
 #define THAND HBressercam
-#define DNAME "Bressercam"
+#define DNAME "Bresser"
 #elif BUILD_MALLINCAM
 #include <mallincam.h>
 #define FP(x) Mallincam_##x
 #define CP(x) MALLINCAM_##x
 #define XP(x) Mallincam##x
 #define THAND HMallincam
-#define DNAME "Mallincam"
+#define DNAME "MALLINCAM"
 #elif BUILD_NNCAM
 #include <nncam.h>
 #define FP(x) Nncam_##x
@@ -66,28 +66,28 @@
 #define CP(x) OGMACAM_##x
 #define XP(x) Ogmacam##x
 #define THAND HOgmacam
-#define DNAME "Ogmacam"
+#define DNAME "OGMAVision"
 #elif BUILD_OMEGONPROCAM
 #include <omegonprocam.h>
 #define FP(x) Omegonprocam_##x
 #define CP(x) OMEGONPROCAM_##x
 #define XP(x) Omegonprocam##x
 #define THAND HOmegonprocam
-#define DNAME "OmegonProCam"
+#define DNAME "Astroshop"
 #elif BUILD_STARSHOOTG
 #include <starshootg.h>
 #define FP(x) Starshootg_##x
 #define CP(x) STARSHOOTG_##x
 #define XP(x) Starshootg##x
 #define THAND HStarshootg
-#define DNAME "StarshootG"
+#define DNAME "Orion"
 #elif BUILD_TSCAM
 #include <tscam.h>
 #define FP(x) Tscam_##x
 #define CP(x) TSCAM_##x
 #define XP(x) Tscam##x
 #define THAND HTscam
-#define DNAME "Tscam"
+#define DNAME "Teleskop"
 #endif
 
 #define BITDEPTH_FLAG   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
@@ -289,7 +289,7 @@ class ToupBase : public INDI::CCD
         };
 
         INumber m_BlackBalanceN[3];
-        INumberVectorProperty BlackBalanceNP;
+        INumberVectorProperty m_BlackBalanceNP;
         enum
         {
             TC_BLACK_R,
