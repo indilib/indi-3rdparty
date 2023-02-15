@@ -1869,7 +1869,7 @@ void ToupBase::refreshControls()
     IDSetNumber(&m_ControlNP, nullptr);
 }
 
-void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
+void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
@@ -1879,21 +1879,19 @@ void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FIT
         fitsKeywords.push_back({"GAIN", gainNP->value, 3, "Gain"});
 }
 
-bool ToupBase::saveConfigItems(FILE * fp)
+bool ToupBase::saveConfigItems(FILE *fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
     IUSaveConfigNumber(fp, &m_TimeoutFactorNP);
     if (HasCooler())
         IUSaveConfigSwitch(fp, &m_CoolerSP);
+	
     IUSaveConfigNumber(fp, &m_ControlNP);
-
     IUSaveConfigNumber(fp, &m_OffsetNP);
 
-    if (m_MonoCamera == false)
-        IUSaveConfigSwitch(fp, &m_WBAutoSP);
-
-    IUSaveConfigSwitch(fp, &m_VideoFormatSP);
+    if ((m_Instance->model->flag & BITDEPTH_FLAG) || (m_MonoCamera == false))
+		IUSaveConfigSwitch(fp, &m_VideoFormatSP);
     IUSaveConfigSwitch(fp, &m_ResolutionSP);
     IUSaveConfigSwitch(fp, &m_BinningModeSP);
 
