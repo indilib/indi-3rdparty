@@ -140,8 +140,8 @@ bool ToupBase::initProperties()
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillSwitch(&m_CoolerS[0], "COOLER_ON", "ON", ISS_ON);
-        IUFillSwitch(&m_CoolerS[1], "COOLER_OFF", "OFF", ISS_OFF);
+        IUFillSwitch(&m_CoolerS[0], "INDI_ENABLED", "ON", ISS_ON);
+        IUFillSwitch(&m_CoolerS[1], "INDI_DISABLED", "OFF", ISS_OFF);
         IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_BUSY);
         
         IUFillText(&m_CoolerT, "COOLER_POWER", "Percent", nullptr);
@@ -323,14 +323,14 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_SERIAL], "Serial", "Serial", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_SW_VERSION], "Software", "Software", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], "Hardware", "Hardware", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_DATE], "Date", "Date", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_REV], "Revision", "Revision", nullptr);
-    IUFillTextVector(&m_FirmwareTP, m_FirmwareT, 5, getDeviceName(), "FIRMWARE", "Firmware", INFO_TAB, IP_RO, 0, IPS_IDLE);
+    IUFillText(&m_FirmwareT[TC_FIRMWARE_SN], "SN", "SN", nullptr);
+    IUFillText(&m_FirmwareT[TC_FIRMWARE_FW_VERSION], "FIRMWAREVERSION", "Firmware Version", nullptr);
+    IUFillText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], "HARDWAREVERSION", "Hardware Version", nullptr);
+    IUFillText(&m_FirmwareT[TC_FIRMWARE_DATE], "PRODUCTIONDATE", "Production Date", nullptr);
+    IUFillText(&m_FirmwareT[TC_FIRMWARE_REV], "REVISION", "Revision", nullptr);
+    IUFillTextVector(&m_FirmwareTP, m_FirmwareT, 5, getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillText(&m_SDKVersionT, "Version", "Version", nullptr);
+    IUFillText(&m_SDKVersionT, "VERSION", "Version", nullptr);
     IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
@@ -510,7 +510,7 @@ bool ToupBase::Connect()
     if (FAILED(rc))
         LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
     else // Success!
-        LOGF_INFO("%s is online. Retrieving basic data", getDeviceName());
+        LOGF_INFO("%s is online", getDeviceName());
 
     return true;
 }
@@ -560,19 +560,19 @@ void ToupBase::setupParams()
     FP(put_Option(m_CameraHandle, CP(OPTION_NOFRAME_TIMEOUT), 1));
 
     // Get Firmware Info
-    char firmwareBuffer[32] = {0};
+    char tmpBuffer[64] = {0};
     uint16_t pRevision = 0;
-    FP(get_SerialNumber(m_CameraHandle, firmwareBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_SERIAL], firmwareBuffer);
-    FP(get_ProductionDate(m_CameraHandle, firmwareBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_DATE], firmwareBuffer); 
-    FP(get_FwVersion(m_CameraHandle, firmwareBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_SW_VERSION], firmwareBuffer);
-    FP(get_HwVersion(m_CameraHandle, firmwareBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], firmwareBuffer);
+    FP(get_SerialNumber(m_CameraHandle, tmpBuffer));
+    IUSaveText(&m_FirmwareT[TC_FIRMWARE_SN], tmpBuffer);
+    FP(get_ProductionDate(m_CameraHandle, tmpBuffer));
+    IUSaveText(&m_FirmwareT[TC_FIRMWARE_DATE], tmpBuffer); 
+    FP(get_FwVersion(m_CameraHandle, tmpBuffer));
+    IUSaveText(&m_FirmwareT[TC_FIRMWARE_FW_VERSION], tmpBuffer);
+    FP(get_HwVersion(m_CameraHandle, tmpBuffer));
+    IUSaveText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], tmpBuffer);
     FP(get_Revision(m_CameraHandle, &pRevision));
-    snprintf(firmwareBuffer, 32, "%d", pRevision);
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_REV], firmwareBuffer);
+    snprintf(tmpBuffer, 32, "%d", pRevision);
+    IUSaveText(&m_FirmwareT[TC_FIRMWARE_REV], tmpBuffer);
     m_FirmwareTP.s = IPS_OK;
 
     // SDK Version
@@ -1184,7 +1184,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
 
             IUUpdateSwitch(&m_VideoFormatSP, states, names, n);
-            setVideoFormat(IUFindOnSwitchIndex(&m_VideoFormatSP));
+            SetCaptureFormat(IUFindOnSwitchIndex(&m_VideoFormatSP));
             return true;
         }
 
@@ -2053,7 +2053,7 @@ void ToupBase::eventCallBack(unsigned event)
     }
 }
 
-bool ToupBase::setVideoFormat(uint8_t index)
+bool ToupBase::SetCaptureFormat(uint8_t index)
 {
     m_Channels = 1;
     m_BitsPerPixel = 8;
@@ -2137,9 +2137,4 @@ bool ToupBase::setVideoFormat(uint8_t index)
     saveConfig(true, m_VideoFormatSP.name);
 
     return true;
-}
-
-bool ToupBase::SetCaptureFormat(uint8_t index)
-{
-    return setVideoFormat(index);
 }

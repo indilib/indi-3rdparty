@@ -166,7 +166,6 @@ class ToupBase : public INDI::CCD
         // Video Format & Streaming
         //#############################################################################
         void getVideoImage();
-        bool setVideoFormat(uint8_t index);
 
         //#############################################################################
         // Guiding
@@ -341,8 +340,8 @@ class ToupBase : public INDI::CCD
         IText m_FirmwareT[5];
         enum
         {
-            TC_FIRMWARE_SERIAL,
-            TC_FIRMWARE_SW_VERSION,
+            TC_FIRMWARE_SN,
+            TC_FIRMWARE_FW_VERSION,
             TC_FIRMWARE_HW_VERSION,
             TC_FIRMWARE_DATE,
             TC_FIRMWARE_REV
