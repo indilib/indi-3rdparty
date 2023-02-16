@@ -252,12 +252,12 @@ class ToupBase : public INDI::CCD
         {
             TC_GAIN,
             TC_CONTRAST,
-            TC_HUE,
-            TC_SATURATION,
             TC_BRIGHTNESS,
             TC_GAMMA,
             TC_SPEED,
             TC_FRAMERATE_LIMIT,
+            TC_HUE,
+            TC_SATURATION
         };
 
         // Auto Black Balance
