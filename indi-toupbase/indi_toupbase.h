@@ -367,7 +367,7 @@ class ToupBase : public INDI::CCD
         BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
-        eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE;
+        eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
         INDI::Timer m_CaptureTimeout;

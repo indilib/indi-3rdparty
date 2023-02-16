@@ -504,14 +504,8 @@ bool ToupBase::Connect()
     m_AutoExposureSP.s = IPS_OK;
 
     PrimaryCCD.setBin(1, 1);
-    
-    FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
-    HRESULT rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
-    if (FAILED(rc))
-        LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
-    else // Success!
-        LOGF_INFO("%s is online", getDeviceName());
-
+	
+    LOGF_INFO("%s connect", getDeviceName());
     return true;
 }
 
@@ -666,20 +660,10 @@ void ToupBase::setupParams()
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height, m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
 
-    // Trigger Mode
-    int nVal = 0;
-    FP(get_Option(m_CameraHandle, CP(OPTION_TRIGGER), &nVal));
-    m_CurrentTriggerMode = static_cast<eTriggerMode>(nVal);
-
     // Set trigger mode to software
-    if (m_CurrentTriggerMode != TRIGGER_SOFTWARE)
-    {
-        rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
-        if (FAILED(rc))
-            LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
-        else
-            m_CurrentTriggerMode = TRIGGER_SOFTWARE;
-    }
+    rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
+    if (FAILED(rc))
+		LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
 
     // Get CCD Controls values
     int conversionGain = 0;
@@ -692,6 +676,7 @@ void ToupBase::setupParams()
     m_ControlN[TC_GAIN].max = nMax;
     m_ControlN[TC_GAIN].value = nDef;
     
+	int nVal = 0;
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
     m_ControlN[TC_CONTRAST].value = nVal;
@@ -804,6 +789,9 @@ void ToupBase::setupParams()
     // Allocate memory
     allocateFrameBuffer();
 
+    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+    if (FAILED(rc))
+        LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
     SetTimer(getCurrentPollingPeriod());
 }
 
