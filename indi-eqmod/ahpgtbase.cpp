@@ -28,7 +28,6 @@ bool AHPGTBase::Handshake()
 {
     if(EQMod::Handshake())
     {
-        ahp_gt_select_device(0);
         if(!ahp_gt_connect_fd(PortFD))
         {
             if(!ahp_gt_detect_device())
