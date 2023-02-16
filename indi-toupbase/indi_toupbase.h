@@ -186,11 +186,6 @@ class ToupBase : public INDI::CCD
         int m_WEtimerID { -1 };
 
         //#############################################################################
-        // Temperature Control & Cooling
-        //#############################################################################
-        bool activateCooler(bool enable);
-
-        //#############################################################################
         // Setup & Controls
         //#############################################################################
         // Get initial parameters from camera
@@ -244,19 +239,10 @@ class ToupBase : public INDI::CCD
 
         ISwitchVectorProperty m_HighFullwellSP;
         ISwitch m_HighFullwellS[2];
-        typedef enum
-        {
-            TC_HIGHFULLWELL_ON,
-            TC_HIGHFULLWELL_OFF,
-        } HIGHFULLWELL_MODE;
 
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
-        enum
-        {
-            TC_COOLER_ON,
-            TC_COOLER_OFF,
-        };
+		
         IText m_CoolerT;
         ITextVectorProperty m_CoolerTP;
         int32_t m_maxTecVoltage { -1 };
@@ -281,11 +267,6 @@ class ToupBase : public INDI::CCD
 
         ISwitch m_AutoExposureS[2];
         ISwitchVectorProperty m_AutoExposureSP;
-        enum
-        {
-            TC_AUTO_EXPOSURE_ON,
-            TC_AUTO_EXPOSURE_OFF,
-        };
 
         INumber m_BlackBalanceN[3];
         INumberVectorProperty m_BlackBalanceNP;

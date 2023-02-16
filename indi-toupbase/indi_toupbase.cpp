@@ -222,8 +222,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Exposure
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_AutoExposureS[TC_AUTO_EXPOSURE_ON], "TC_AUTO_EXPOSURE_ON", "Enabled", ISS_ON);
-    IUFillSwitch(&m_AutoExposureS[TC_AUTO_EXPOSURE_OFF], "TC_AUTO_EXPOSURE_OFF", "Disabled", ISS_OFF);
+    IUFillSwitch(&m_AutoExposureS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
+    IUFillSwitch(&m_AutoExposureS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
     IUFillSwitchVector(&m_AutoExposureSP, m_AutoExposureS, 2, getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     if (m_MonoCamera == false)
@@ -499,8 +499,8 @@ bool ToupBase::Connect()
     // Auto Exposure
     int autoExposure = 0;
     FP(get_AutoExpoEnable(m_CameraHandle, &autoExposure));
-    m_AutoExposureS[TC_AUTO_EXPOSURE_ON].s = autoExposure ? ISS_ON : ISS_OFF;
-    m_AutoExposureS[TC_AUTO_EXPOSURE_OFF].s = autoExposure ? ISS_OFF : ISS_ON;
+    m_AutoExposureS[INDI_ENABLED].s = autoExposure ? ISS_ON : ISS_OFF;
+    m_AutoExposureS[INDI_DISABLED].s = autoExposure ? ISS_OFF : ISS_ON;
     m_AutoExposureSP.s = IPS_OK;
 
     PrimaryCCD.setBin(1, 1);
@@ -594,8 +594,7 @@ void ToupBase::setupParams()
 
     FP(put_Option(m_CameraHandle, CP(OPTION_RAW), 1));
     
-    // Check if mono camera
-    if (m_MonoCamera)
+    if (m_MonoCamera)// Check if mono camera
     {
         CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
         CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
@@ -1089,8 +1088,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IUUpdateSwitch(&m_BinningModeSP, states, names, n);
             auto mode = (m_BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
             m_BinningMode = mode;
-            updateBinningMode(PrimaryCCD.getBinX(), mode);
-            saveConfig(true, m_BinningModeSP.name);
+            updateBinningMode(PrimaryCCD.getBinX(), mode);			
             return true;
         }
 
@@ -1099,15 +1097,32 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_CoolerSP.name))
         {
-            if (IUUpdateSwitch(&m_CoolerSP, states, names, n) < 0)
+            int prevIndex = IUFindOnSwitchIndex(&m_CoolerSP);
+            IUUpdateSwitch(&m_CoolerSP, states, names, n);
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TEC), m_CoolerS[INDI_ENABLED].s));
+            if (SUCCEEDED(rc))
+                m_CoolerSP.s = IPS_OK;
+            else
             {
+                LOGF_ERROR("Failed to cooler %s. %s", m_CoolerS[INDI_ENABLED].s ? "ON" : "OFF", errorCodes(rc).c_str());
                 m_CoolerSP.s = IPS_ALERT;
-                IDSetSwitch(&m_CoolerSP, nullptr);
-                return true;
+                IUResetSwitch(&m_CoolerSP);
+                m_CoolerS[prevIndex].s = ISS_ON;
             }
 
-            activateCooler(m_CoolerS[TC_COOLER_ON].s == ISS_ON);
-            saveConfig(true, m_CoolerSP.name);
+			/* turn on TEC may force to turn on the fan */
+			if (m_CoolerS[INDI_ENABLED].s && (m_Instance->model->flag & CP(FLAG_FAN)))
+			{
+				int fan = 0;
+				FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
+				IUResetSwitch(&m_FanSpeedSP);
+				for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
+					m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+				IDSetSwitch(&m_FanSpeedSP, nullptr);
+			}
+	
+            IDSetSwitch(&m_CoolerSP, nullptr);
+			saveConfig(true, m_CoolerSP.name);
             return true;
         }
 
@@ -1118,43 +1133,18 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             int prevIndex = IUFindOnSwitchIndex(&m_HighFullwellSP);
             IUUpdateSwitch(&m_HighFullwellSP, states, names, n);
-
-            if (m_HighFullwellS[TC_HIGHFULLWELL_ON].s == ISS_ON)
-            {
-                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 1));
-                if (FAILED(rc))
-                {
-                    LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
-                    m_HighFullwellSP.s = IPS_ALERT;
-                    IUResetSwitch(&m_HighFullwellSP);
-                    m_HighFullwellS[prevIndex].s = ISS_ON;
-                }
-                else
-                {
-                    LOG_INFO("Set high fullwell to ON");
-                    m_HighFullwellSP.s = IPS_OK;
-                }
-
-                IDSetSwitch(&m_HighFullwellSP, nullptr);
-            }
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellS[INDI_ENABLED].s));
+            if (SUCCEEDED(rc))
+                m_HighFullwellSP.s = IPS_OK;
             else
             {
-                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), 0));
-                if (FAILED(rc))
-                {
-                    LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
-                    m_HighFullwellSP.s = IPS_ALERT;
-                    IUResetSwitch(&m_HighFullwellSP);
-                    m_HighFullwellS[prevIndex].s = ISS_ON;
-                }
-                else
-                {
-                    LOG_INFO("Set High fullwell to OFF");
-                    m_HighFullwellSP.s = IPS_OK;
-                }
-
-                IDSetSwitch(&m_HighFullwellSP, nullptr);
+                LOGF_ERROR("Failed to set low noise mode %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                m_HighFullwellSP.s = IPS_ALERT;
+                IUResetSwitch(&m_HighFullwellSP);
+                m_HighFullwellS[prevIndex].s = ISS_ON;
             }
+
+            IDSetSwitch(&m_HighFullwellSP, nullptr);
             return true;
         }
  
@@ -1205,7 +1195,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             IUUpdateSwitch(&m_AutoExposureSP, states, names, n);
             m_AutoExposureSP.s = IPS_OK;
-            FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[TC_AUTO_EXPOSURE_ON].s == ISS_ON ? 1 : 0));
+            FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
             IDSetSwitch(&m_AutoExposureSP, nullptr);
             return true;
         }
@@ -1405,30 +1395,9 @@ bool ToupBase::StopStreaming()
     m_CurrentTriggerMode = TRIGGER_SOFTWARE;
 
     // Return auto exposure to what it was
-    FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[TC_AUTO_EXPOSURE_ON].s == ISS_ON ? 1 : 0));
+    FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
 
     return true;
-}
-
-bool ToupBase::activateCooler(bool enable)
-{
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TEC), enable ? 1 : 0));
-    IUResetSwitch(&m_CoolerSP);
-    if (FAILED(rc))
-    {
-        m_CoolerS[enable ? TC_COOLER_OFF : TC_COOLER_ON].s = ISS_ON;
-        m_CoolerSP.s = IPS_ALERT;
-        LOGF_ERROR("Failed to turn cooler %s. %s", enable ? "ON" : "OFF", errorCodes(rc).c_str());
-        IDSetSwitch(&m_CoolerSP, nullptr);
-        return false;
-    }
-    else
-    {
-        m_CoolerS[enable ? TC_COOLER_ON : TC_COOLER_OFF].s = ISS_ON;
-        m_CoolerSP.s = IPS_OK;
-        IDSetSwitch(&m_CoolerSP, nullptr);
-        return true;
-    }
 }
 
 bool ToupBase::StartExposure(float duration)
@@ -1891,7 +1860,7 @@ uint8_t* ToupBase::getRgbBuffer()
 
 void ToupBase::eventCallBack(unsigned event)
 {
-    LOGF_DEBUG("Event %#04X", event);
+    LOGF_DEBUG("%s: 0x%08x", __func__, event);
     switch (event)
     {
         case CP(EVENT_EXPOSURE):
@@ -2042,7 +2011,6 @@ void ToupBase::eventCallBack(unsigned event)
             else
             {
                 HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FLUSH), 3));
-                LOG_DEBUG("Image event received after CCD is stopped. Image flushed");
                 if (FAILED(rc))
                     LOGF_ERROR("Failed to flush image. %s", errorCodes(rc).c_str());
             }
@@ -2089,7 +2057,7 @@ bool ToupBase::setVideoFormat(uint8_t index)
 {
     m_Channels = 1;
     m_BitsPerPixel = 8;
-    // Mono
+	
     if (m_MonoCamera)
     {
         // We need to stop camera first
@@ -2108,8 +2076,6 @@ bool ToupBase::setVideoFormat(uint8_t index)
             rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
             if (FAILED(rc))
                 LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
-            else
-                LOG_DEBUG("Restarting event callback after video mode change failed");
 
             return false;
         }
@@ -2157,8 +2123,7 @@ bool ToupBase::setVideoFormat(uint8_t index)
 
     LOGF_DEBUG("Video Format: %d, BitsPerPixel: %d", index, m_BitsPerPixel);
 
-    // Allocate memory
-    allocateFrameBuffer();
+    allocateFrameBuffer();// Allocate memory
 
     IUResetSwitch(&m_VideoFormatSP);
     m_VideoFormatS[index].s = ISS_ON;
