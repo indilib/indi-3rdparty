@@ -270,9 +270,9 @@ bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
     {
         if (NicknameTP.isNameMatch(name))
         {
-            IUUpdateText(&NicknameTP, texts, names, n);
+            NicknameTP.update(texts, names, n);
             NicknameTP.setState(IPS_OK);
-            IDSetText(&NicknameTP, nullptr);
+            NicknameTP.apply();
             if (!mSerialNumber.empty())
             {
                 loadNicknames();  // another camera may have updated its nickname.

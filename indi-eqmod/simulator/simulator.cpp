@@ -3,6 +3,13 @@
 
 #include <string.h>
 
+#ifndef INDI_PROPERTY_HAS_COMPARISON
+static bool operator!=(INDI::Property lhs, INDI::Property rhs)
+{
+    return lhs.getProperty() != rhs.getProperty();
+}
+#endif
+
 EQModSimulator::EQModSimulator(INDI::Telescope *t)
 {
     telescope = t;
@@ -10,74 +17,75 @@ EQModSimulator::EQModSimulator(INDI::Telescope *t)
 
 void EQModSimulator::Connect()
 {
-    ISwitch *sw           = IUFindOnSwitch(SimModeSP);
-    sksim                 = new SkywatcherSimulator();
-    if (!strcmp(sw->name, "SIM_EQ6"))
+    auto sw  = SimModeSP.findOnSwitch();
+    sksim    = new SkywatcherSimulator();
+
+    if (sw->isNameMatch("SIM_EQ6"))
     {
         sksim->setupVersion("020300");
         sksim->setupRA(180, 47, 12, 200, 64, 2);
         sksim->setupDE(180, 47, 12, 200, 64, 2);
+        return;
     }
-    else
-    {
-        if (!strcmp(sw->name, "SIM_HEQ5"))
-        {
-            sksim->setupVersion("020301");
-            sksim->setupRA(135, 47, 9, 200, 64, 2);
-            sksim->setupDE(135, 47, 9, 200, 64, 2);
-        }
-        else
-        {
-            if (!strcmp(sw->name, "SIM_NEQ5"))
-            {
-                sksim->setupVersion("020302");
-                sksim->setupRA(144, 44, 9, 200, 32, 2);
-                sksim->setupDE(144, 44, 9, 200, 32, 2);
-            }
-            else
-            {
-                if (!strcmp(sw->name, "SIM_NEQ3"))
-                {
-                    sksim->setupVersion("020303");
-                    sksim->setupRA(130, 55, 10, 200, 32, 2);
-                    sksim->setupDE(130, 55, 10, 200, 32, 2);
-                }
-                else
-                {
-                    if (!strcmp(sw->name, "SIM_GEEHALEL"))
-                    {
-                        sksim->setupVersion("0203F0");
-                        sksim->setupRA(144, 60, 15, 400, 8, 1);
-                        sksim->setupDE(144, 60, 10, 400, 8, 1);
-                    }
-                    else
-                    {
-                        if (!strcmp(sw->name, "SIM_CUSTOM"))
-                        {
-                            double teeth, num, den, steps, microsteps, highspeed;
-                            ISwitch *hssw = IUFindOnSwitch(SimHighSpeedSP);
-                            sksim->setupVersion(IUFindText(SimMCVersionTP, "SIM_MCPHRASE")->text);
-                            teeth      = IUFindNumber(SimWormNP, "RA_TEETH")->value;
-                            num        = IUFindNumber(SimRatioNP, "RA_RATIO_NUM")->value;
-                            den        = IUFindNumber(SimRatioNP, "RA_RATIO_DEN")->value;
-                            steps      = IUFindNumber(SimMotorNP, "RA_MOTOR_STEPS")->value;
-                            microsteps = IUFindNumber(SimMotorNP, "RA_MOTOR_USTEPS")->value;
-                            highspeed  = 1;
-                            if (!strcmp(hssw->name, "SIM_HALFSTEP"))
-                                highspeed = 2;
-                            sksim->setupRA(teeth, num, den, steps, microsteps, highspeed);
 
-                            teeth      = IUFindNumber(SimWormNP, "DE_TEETH")->value;
-                            num        = IUFindNumber(SimRatioNP, "DE_RATIO_NUM")->value;
-                            den        = IUFindNumber(SimRatioNP, "DE_RATIO_DEN")->value;
-                            steps      = IUFindNumber(SimMotorNP, "DE_MOTOR_STEPS")->value;
-                            microsteps = IUFindNumber(SimMotorNP, "DE_MOTOR_USTEPS")->value;
-                            sksim->setupDE(teeth, num, den, steps, microsteps, highspeed);
-                        }
-                    }
-                }
-            }
-        }
+    if (sw->isNameMatch("SIM_HEQ5"))
+    {
+        sksim->setupVersion("020301");
+        sksim->setupRA(135, 47, 9, 200, 64, 2);
+        sksim->setupDE(135, 47, 9, 200, 64, 2);
+        return;
+    }
+
+    if (sw->isNameMatch("SIM_NEQ5"))
+    {
+        sksim->setupVersion("020302");
+        sksim->setupRA(144, 44, 9, 200, 32, 2);
+        sksim->setupDE(144, 44, 9, 200, 32, 2);
+        return;
+    }
+
+    if (sw->isNameMatch("SIM_NEQ3"))
+    {
+        sksim->setupVersion("020303");
+        sksim->setupRA(130, 55, 10, 200, 32, 2);
+        sksim->setupDE(130, 55, 10, 200, 32, 2);
+        return;
+    }
+
+    if (sw->isNameMatch("SIM_GEEHALEL"))
+    {
+        sksim->setupVersion("0203F0");
+        sksim->setupRA(144, 60, 15, 400, 8, 1);
+        sksim->setupDE(144, 60, 10, 400, 8, 1);
+        return;
+    }
+
+    if (sw->isNameMatch("SIM_CUSTOM"))
+    {
+        double teeth, num, den, steps, microsteps, highspeed;
+        auto hssw = SimHighSpeedSP.findOnSwitch();
+
+        sksim->setupVersion(SimMCVersionTP.findWidgetByName("SIM_MCPHRASE")->getText());
+        teeth      = SimWormNP.findWidgetByName("RA_TEETH")->getValue();
+        num        = SimRatioNP.findWidgetByName("RA_RATIO_NUM")->getValue();
+        den        = SimRatioNP.findWidgetByName("RA_RATIO_DEN")->getValue();
+        steps      = SimMotorNP.findWidgetByName("RA_MOTOR_STEPS")->getValue();
+        microsteps = SimMotorNP.findWidgetByName("RA_MOTOR_USTEPS")->getValue();
+        highspeed  = 1;
+
+        if (hssw->isNameMatch("SIM_HALFSTEP"))
+            highspeed = 2;
+
+        sksim->setupRA(teeth, num, den, steps, microsteps, highspeed);
+
+        teeth      = SimWormNP.findWidgetByName("DE_TEETH")->getValue();
+        num        = SimRatioNP.findWidgetByName("DE_RATIO_NUM")->getValue();
+        den        = SimRatioNP.findWidgetByName("DE_RATIO_DEN")->getValue();
+        steps      = SimMotorNP.findWidgetByName("DE_MOTOR_STEPS")->getValue();
+        microsteps = SimMotorNP.findWidgetByName("DE_MOTOR_USTEPS")->getValue();
+        sksim->setupDE(teeth, num, den, steps, microsteps, highspeed);
+
+        return;
     }
 }
 
@@ -129,12 +137,12 @@ bool EQModSimulator::updateProperties(bool enable)
     }
     else if (defined)
     {
-        telescope->deleteProperty(SimModeSP->name);
-        telescope->deleteProperty(SimWormNP->name);
-        telescope->deleteProperty(SimRatioNP->name);
-        telescope->deleteProperty(SimMotorNP->name);
-        telescope->deleteProperty(SimHighSpeedSP->name);
-        telescope->deleteProperty(SimMCVersionTP->name);
+        telescope->deleteProperty(SimModeSP);
+        telescope->deleteProperty(SimWormNP);
+        telescope->deleteProperty(SimRatioNP);
+        telescope->deleteProperty(SimMotorNP);
+        telescope->deleteProperty(SimHighSpeedSP);
+        telescope->deleteProperty(SimMCVersionTP);
     }
 
     return true;
@@ -146,7 +154,7 @@ bool EQModSimulator::ISNewNumber(const char *dev, const char *name, double value
 
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        INumberVectorProperty *nvp = telescope->getNumber(name);
+        auto nvp = telescope->getNumber(name);
         if ((nvp != SimWormNP) && (nvp != SimRatioNP) & (nvp != SimMotorNP))
             return false;
         if (telescope->isConnected())
@@ -156,9 +164,9 @@ bool EQModSimulator::ISNewNumber(const char *dev, const char *name, double value
             return false;
         }
 
-        nvp->s = IPS_OK;
-        IUUpdateNumber(nvp, values, names, n);
-        IDSetNumber(nvp, nullptr);
+        nvp.setState(IPS_OK);
+        nvp.update(values, names, n);
+        nvp.apply();
         return true;
     }
     return false;
@@ -170,9 +178,10 @@ bool EQModSimulator::ISNewSwitch(const char *dev, const char *name, ISState *sta
 
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        ISwitchVectorProperty *svp = telescope->getSwitch(name);
+        auto svp = telescope->getSwitch(name);
         if ((svp != SimModeSP) && (svp != SimHighSpeedSP))
             return false;
+
         if (telescope->isConnected())
         {
             DEBUGDEVICE(telescope->getDeviceName(), INDI::Logger::DBG_WARNING,
@@ -180,9 +189,9 @@ bool EQModSimulator::ISNewSwitch(const char *dev, const char *name, ISState *sta
             return false;
         }
 
-        svp->s = IPS_OK;
-        IUUpdateSwitch(svp, states, names, n);
-        IDSetSwitch(svp, nullptr);
+        svp.setState(IPS_OK);
+        svp.update(states, names, n);
+        svp.apply();
         return true;
     }
     return false;
@@ -194,11 +203,12 @@ bool EQModSimulator::ISNewText(const char *dev, const char *name, char *texts[],
 
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        ITextVectorProperty *tvp = telescope->getText(name);
+        auto tvp = telescope->getText(name);
         if (tvp)
         {
-            if ((tvp != SimMCVersionTP))
+            if (tvp != SimMCVersionTP)
                 return false;
+
             if (telescope->isConnected())
             {
                 DEBUGDEVICE(telescope->getDeviceName(), INDI::Logger::DBG_WARNING,
@@ -206,9 +216,9 @@ bool EQModSimulator::ISNewText(const char *dev, const char *name, char *texts[],
                 return false;
             }
 
-            tvp->s = IPS_OK;
-            IUUpdateText(tvp, texts, names, n);
-            IDSetText(tvp, nullptr);
+            tvp.setState(IPS_OK);
+            tvp.update(texts, names, n);
+            tvp.apply();
             return true;
         }
     }

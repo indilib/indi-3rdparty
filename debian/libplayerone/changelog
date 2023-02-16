@@ -1,3 +1,16 @@
+libplayerone (0.9) bionic; urgency=low
+
+  * Update PlayerOnePW SDK to v1.1.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 5 Feb 2023 08:00:00 +0900
+
+libplayerone (0.8) bionic; urgency=low
+
+  * Add PlayerOne Filter Wheel driver
+  * Update PlayerOneCamera SDK to v3.1.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 18 Jan 2023 08:00:00 +0900
+
 libplayerone (0.7) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.1.0

@@ -959,7 +959,7 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 states[0] = states[1] = states[2] = ISS_OFF;
                 states[3] = ISS_ON;
             }
-            IUUpdateSwitch(getSwitch("DEVICE_BAUD_RATE"), states, names, n);
+            getSwitch("DEVICE_BAUD_RATE").update(states, names, n);
             if (states[3] == ISS_ON)
             {
                 ahp_xc_set_baudrate(R_BASE);
@@ -972,7 +972,7 @@ bool AHP_XC::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             {
                 ahp_xc_set_baudrate(R_BASEX4);
             }
-            IDSetSwitch(getSwitch("DEVICE_BAUD_RATE"), nullptr);
+            getSwitch("DEVICE_BAUD_RATE").apply();
         }
     }
 

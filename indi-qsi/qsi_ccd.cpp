@@ -910,12 +910,10 @@ int QSICCD::grabImage()
     return 0;
 }
 
-void QSICCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void QSICCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
-    auto fptr = *targetChip->fitsFilePointer();
-    int status = 0;
     double electronsPerADU;
 
     try
@@ -932,7 +930,7 @@ void QSICCD::addFITSKeywords(INDI::CCDChip *targetChip)
     if (IUFindOnSwitchIndex(&GainSP) == GAIN_AUTO && PrimaryCCD.getBinX() > 1)
         electronsPerADU = 1.1;
 
-    fits_update_key_s(fptr, TDOUBLE, "EPERADU", &electronsPerADU, "Electrons per ADU", &status);
+    fitsKeywords.push_back({"EPERADU", electronsPerADU, 3, "Electrons per ADU"});
 }
 
 bool QSICCD::manageDefaults()

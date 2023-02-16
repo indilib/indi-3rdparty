@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-toupbase
-Version:1.9.9.git
+Version:2.0.0.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -40,15 +40,17 @@ BuildRequires: pkgconfig(cfitsio)
 BuildRequires: pkgconfig(libcurl)
 BuildRequires: pkgconfig(gsl)
 BuildRequires: pkgconfig(libjpeg)
-BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-BuildRequires: libaltaircam
 BuildRequires: libtoupcam
-BuildRequires: libstarshootg
-BuildRequires: libnncam
+BuildRequires: libaltaircam
+BuildRequires: libbressercam
 BuildRequires: libmallincam
+BuildRequires: libnncam
+BuildRequires: libogmacam
 BuildRequires: libomegonprocam
+BuildRequires: libstarshootg
+BuildRequires: libtscam
 
 
 %description

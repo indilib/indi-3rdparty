@@ -387,7 +387,6 @@ bool GPhotoCCD::updateProperties()
         defineProperty(&SDCardImageSP);
 
         imageBP = getBLOB("CCD1");
-        imageB  = imageBP->bp;
 
         // Dummy values until first capture is done
         //SetCCDParams(1280, 1024, 8, 5.4, 5.4);
@@ -1962,12 +1961,11 @@ bool GPhotoCCD::startLivePreview()
 
     char * previewBlob = (char *)previewData;
 
-    imageB->blob    = previewBlob;
-    imageB->bloblen = previewSize;
-    imageB->size    = previewSize;
-    strncpy(imageB->format, "stream_jpeg", MAXINDIBLOBFMT);
-
-    IDSetBLOB(imageBP, nullptr);
+    imageBP[0].setBlob(previewBlob);
+    imageBP[0].setBlobLen(previewSize);
+    imageBP[0].setSize(previewSize);
+    imageBP[0].setFormat("stream_jpeg");
+    imageBP.apply();
 
     if (previewFile)
     {
@@ -2024,13 +2022,9 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
     return true;
 }
 
-void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip)
+void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    auto fptr = *targetChip->fitsFilePointer();
-
-    INDI::CCD::addFITSKeywords(targetChip);
-
-    int status = 0;
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     if (mIsoSP.nsp > 0)
     {
@@ -2039,13 +2033,13 @@ void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip)
         {
             int isoSpeed = atoi(onISO->label);
             if (isoSpeed > 0)
-                fits_update_key_s(fptr, TUINT, "ISOSPEED", &isoSpeed, "ISO Speed", &status);
+                fitsKeywords.push_back({"ISOSPEED", isoSpeed, "ISO Speed"});
         }
     }
 
     if (isTemperatureSupported)
     {
-        fits_update_key_s(fptr, TDOUBLE, "CCD-TEMP", &(TemperatureN[0].value), "CCD Temperature (Celsius)", &status);
+        fitsKeywords.push_back({"CCD-TEMP", TemperatureN[0].value, 3, "CCD Temperature (Celsius)"});
     }
 }
 

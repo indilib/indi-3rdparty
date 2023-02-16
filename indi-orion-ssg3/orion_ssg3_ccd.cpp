@@ -188,17 +188,17 @@ bool SSG3CCD::updateProperties()
         setupParams();
 
         SetTimer(getCurrentPollingPeriod());
-        defineProperty(&GainNP);
-        defineProperty(&OffsetNP);
-        defineProperty(&CoolerSP);
-        defineProperty(&CoolerPowerNP);
+        defineProperty(GainNP);
+        defineProperty(OffsetNP);
+        defineProperty(CoolerSP);
+        defineProperty(CoolerPowerNP);
     }
     else
     {
-        deleteProperty(GainNP.getName());
-        deleteProperty(OffsetNP.getName());
-        deleteProperty(CoolerSP.getName());
-        deleteProperty(CoolerPowerNP.getName());
+        deleteProperty(GainNP);
+        deleteProperty(OffsetNP);
+        deleteProperty(CoolerSP);
+        deleteProperty(CoolerPowerNP);
     }
 
     return true;
@@ -342,9 +342,9 @@ bool SSG3CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 CoolerSP.apply();
                 return true;
             }
-            IUUpdateSwitch(&CoolerSP, states, names, n);
+            CoolerSP.update(states, names, n);
             CoolerSP.setState(IPS_OK);
-            IDSetSwitch(&CoolerSP, nullptr);
+            CoolerSP.apply();
 
             if (CoolerSP[0].getState() == ISS_OFF)
             {
@@ -403,8 +403,8 @@ bool SSG3CCD::saveConfigItems(FILE *fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    IUSaveConfigNumber(fp, &GainNP);
-    IUSaveConfigNumber(fp, &OffsetNP);
+    GainNP.save(fp);
+    OffsetNP.save(fp);
 
     return true;
 }
@@ -452,7 +452,7 @@ bool SSG3CCD::activateCooler(bool enable)
 {
     int rc;
 
-    IUResetSwitch(&CoolerSP);
+    CoolerSP.reset();
     if (enable)
     {
         rc = orion_ssg3_set_temperature(&ssg3, TemperatureRequest);
@@ -460,7 +460,7 @@ bool SSG3CCD::activateCooler(bool enable)
         {
             LOG_ERROR("Failed to turn on cooling.");
             CoolerSP.setState(IPS_ALERT);
-            IDSetSwitch(&CoolerSP, nullptr);
+            CoolerSP.apply();
             return false;
         }
 
@@ -475,7 +475,7 @@ bool SSG3CCD::activateCooler(bool enable)
         {
             LOG_ERROR("Failed to turn off cooling.");
             CoolerSP.setState(IPS_ALERT);
-            IDSetSwitch(&CoolerSP, nullptr);
+            CoolerSP.apply();
             return false;
         }
 
@@ -484,7 +484,7 @@ bool SSG3CCD::activateCooler(bool enable)
         CoolerSP.setState(IPS_IDLE);
     }
 
-    IDSetSwitch(&CoolerSP, nullptr);
+    CoolerSP.apply();
     return true;
 }
 
@@ -519,13 +519,13 @@ void SSG3CCD::updateTemperature(void)
             CoolerPowerNP[0].setValue(temp);
             CoolerPowerNP.setState(IPS_OK);
         }
-        IDSetNumber(&CoolerPowerNP, nullptr);
+        CoolerPowerNP.apply();
     }
     else
     {
         CoolerPowerNP[0].setValue(0);
         CoolerPowerNP.setState(IPS_OK);
-        IDSetNumber(&CoolerPowerNP, nullptr);
+        CoolerPowerNP.apply();
     }
 }
 

@@ -1,7 +1,7 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 
 Name: libplayerone
-Version:1.9.9.git
+Version:2.0.0.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -15,9 +15,10 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 %define __find_requires %{nil}
 
 Provides: libPlayerOneCamera.so
-
+Provides: libPlayerOnePW.so
 
 Provides: libPlayerOneCamera.so()(64bit)
+Provides: libPlayerOnePW.so()(64bit)
 
 
 BuildRequires: cmake
@@ -86,6 +87,11 @@ make DESTDIR=%{buildroot} install
 %license libplayerone/license.txt
 
 %changelog
+* Sun Feb 05 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- update PlayerOnePW SDK to v1.1.0
+* Wed Jan 18 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- add PlayerOne Filter Wheel driver
+- update PlayerOneCamera SDK to v3.1.1
 * Thu Dec 15 2022 Hiroshi Saito <hiro3110g@gmail.com>
 - update PlayerOneCamera SDK to v3.1.0
 * Tue Sep 13 2022 Hiroshi Saito <hiro3110g@gmail.com>

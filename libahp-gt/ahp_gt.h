@@ -59,7 +59,7 @@ extern "C" {
 * visit https://www.iliaplatone.com/gt1 for more informations and purchase options.
 *
 * \author Ilia Platone
-* \version 1.5.9
+* \version 1.6.2
 * \date 2017-2021
 * \copyright MIT License.
 */
@@ -154,6 +154,12 @@ GpioAsPulseDrive       = 0x0003,
 typedef enum {
 ///Fork mount, will avoid meridian flip
 isForkMount = 0x1,
+///Half-current high-speed on RA
+halfCurrentRA = 0x2,
+///Half-current high-speed on Dec
+halfCurrentDec = 0x4,
+///high Baud Rate 115200
+bauds_115200 = 0x8,
 } GT1Flags;
 
 ///Skywatcher default features - EQ8/AZEQ6/AZEQ5 only
@@ -370,7 +376,7 @@ double timestamp;
  * \defgroup Defines Defines
  *\{*/
 ///AHP_GT_VERSION This library version
-#define AHP_GT_VERSION 0x159
+#define AHP_GT_VERSION 0x162
 
 /**\}
  * \defgroup Conn Connection
@@ -406,7 +412,6 @@ DLL_EXPORT int ahp_gt_connect_udp(const char* address, int port);
 
 /**
 * \brief Return the file descriptor of the port connected to the GT controllers
-* \param fd The serial stream file descriptor
 * \return The serial stream file descriptor
 */
 DLL_EXPORT int ahp_gt_get_fd();
@@ -771,9 +776,8 @@ DLL_EXPORT int ahp_gt_detect_device();
 DLL_EXPORT void ahp_gt_select_device(int address);
 
 /**
-* \brief Obtain the current device selection
-* \param address The address to query on bus
-* \return -1 if no devices with such address, 0 if a device with the given address is present
+* \brief Obtain the current device address
+* \return -1 if no devices were detected at all, or currently selected device address
 */
 DLL_EXPORT int ahp_gt_get_current_device();
 

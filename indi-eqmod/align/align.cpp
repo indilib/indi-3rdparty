@@ -83,14 +83,14 @@ Align::Align(INDI::Telescope *t)
     currentdeltaDEC  = 0.0;
     lastnearestindex = -1;
 
-    AlignDataFileTP        = nullptr;
-    AlignDataBP            = nullptr;
-    AlignPointNP           = nullptr;
-    AlignListSP            = nullptr;
-    AlignModeSP            = nullptr;
-    AlignTelescopeCoordsNP = nullptr;
+    AlignDataFileTP        = INDI::Property();
+    AlignDataBP            = INDI::Property();
+    AlignPointNP           = INDI::Property();
+    AlignListSP            = INDI::Property();
+    AlignModeSP            = INDI::Property();
+    AlignTelescopeCoordsNP = INDI::Property();
 
-    AlignCountNP = nullptr;
+    AlignCountNP = INDI::Property();
 }
 
 Align::~Align()
@@ -109,16 +109,16 @@ void Align::Init()
     if (!pointset->isInitialized())
     {
         pointset->Init();
-        loadres = pointset->LoadDataFile(IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text);
+        loadres = pointset->LoadDataFile(AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText());
         if (loadres)
         {
             IDMessage(telescope->getDeviceName(), "Can not load Align Data File %s: %s",
-                      IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text, loadres);
+                      AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText(), loadres);
             return;
         }
-        IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-        IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-        IDSetNumber(AlignCountNP, nullptr);
+        AlignCountNP.findWidgetByName("ALIGNCOUNT_POINTS")->setValue(pointset->getNbPoints());
+        AlignCountNP.findWidgetByName("ALIGNCOUNT_TRIANGLES")->setValue(pointset->getNbTriangles());
+        AlignCountNP.apply();
     }
 }
 
@@ -169,13 +169,13 @@ bool Align::updateProperties()
     }
     else if (AlignDataBP)
     {
-        telescope->deleteProperty(AlignDataBP->name);
-        telescope->deleteProperty(AlignPointNP->name);
-        telescope->deleteProperty(AlignListSP->name);
-        telescope->deleteProperty(AlignTelescopeCoordsNP->name);
-        telescope->deleteProperty(AlignCountNP->name);
-        telescope->deleteProperty(AlignModeSP->name);
-        telescope->deleteProperty(AlignDataFileTP->name);
+        telescope->deleteProperty(AlignDataBP);
+        telescope->deleteProperty(AlignPointNP);
+        telescope->deleteProperty(AlignListSP);
+        telescope->deleteProperty(AlignTelescopeCoordsNP);
+        telescope->deleteProperty(AlignCountNP);
+        telescope->deleteProperty(AlignModeSP);
+        telescope->deleteProperty(AlignDataFileTP);
     }
     return true;
 }
@@ -504,11 +504,12 @@ void Align::AlignSync(SyncData globalsync, SyncData thissync)
     // JM 2015-12-10: Disable setting AlignData temporary
     //IDSetBLOB(AlignDataBP, nullptr);
 
-    IUUpdateNumber(AlignPointNP, values, (char **)names, 6);
-    IDSetNumber(AlignPointNP, nullptr);
-    IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-    IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-    IDSetNumber(AlignCountNP, nullptr);
+    AlignPointNP.update(values, (char **)names, 6);
+    AlignPointNP.apply();
+
+    AlignCountNP.findWidgetByName("ALIGNCOUNT_POINTS")->setValue(pointset->getNbPoints());
+    AlignCountNP.findWidgetByName("ALIGNCOUNT_TRIANGLES")->setValue(pointset->getNbTriangles());
+    AlignCountNP.apply();
 }
 
 void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, IGeographicCoordinates *position)
@@ -526,30 +527,35 @@ void Align::AlignStandardSync(SyncData globalsync, SyncData *thissync, IGeograph
 
 Align::AlignmentMode Align::GetAlignmentMode()
 {
-    ISwitch *sw;
-    sw = IUFindOnSwitch(AlignModeSP);
+    auto sw = AlignModeSP.findOnSwitch();
     if (!sw)
+    {
         return NONE;
-    if (!strcmp(sw->name, "NOALIGN"))
+    }
+
+    if (sw->isNameMatch("NOALIGN"))
     {
         return NONE;
         ;
         //return SYNCS;;
     }
-    else if (!strcmp(sw->name, "ALIGNSYNC"))
+    
+    if (sw->isNameMatch("ALIGNSYNC"))
     {
         return SYNCS;
     }
-    else if (!strcmp(sw->name, "ALIGNNEAREST"))
+    
+    if (sw->isNameMatch("ALIGNNEAREST"))
     {
         return NEAREST;
     }
-    else if (!strcmp(sw->name, "ALIGNNSTAR"))
+    
+    if (sw->isNameMatch("ALIGNNSTAR"))
     {
         return NSTAR;
     }
-    else
-        return NONE;
+
+    return NONE;
 }
 
 void Align::GetAlignedCoords(SyncData globalsync, double jd, INDI::IGeographicCoordinates *position, double currentRA,
@@ -558,8 +564,8 @@ void Align::GetAlignedCoords(SyncData globalsync, double jd, INDI::IGeographicCo
     //double values[2] = {currentRA + globalsync.deltaRA, currentDEC + globalsync.deltaDEC };
     double values[2]     = { currentRA, currentDEC };
     const char *names[2] = { "ALIGNTELESCOPE_RA", "ALIGNTELESCOPE_DE" };
-    IUUpdateNumber(AlignTelescopeCoordsNP, values, (char **)names, 2);
-    IDSetNumber(AlignTelescopeCoordsNP, nullptr);
+    AlignTelescopeCoordsNP.update(values, (char **)names, 2);
+    AlignTelescopeCoordsNP.apply();
     switch (GetAlignmentMode())
     {
         case NSTAR:
@@ -595,11 +601,11 @@ bool Align::ISNewNumber(const char *dev, const char *name, double values[], char
 
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (AlignPointNP && strcmp(name, AlignPointNP->name) == 0)
+        if (AlignPointNP && AlignPointNP.isNameMatch(name))
         {
-            AlignPointNP->s = IPS_OK;
-            IUUpdateNumber(AlignPointNP, values, names, n);
-            IDSetNumber(AlignPointNP, nullptr);
+            AlignPointNP.setState(IPS_OK);
+            AlignPointNP.update(values, names, n);
+            AlignPointNP.apply();
             return true;
         }
     }
@@ -616,21 +622,19 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     */
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (AlignModeSP && strcmp(name, AlignModeSP->name) == 0)
+        if (AlignModeSP && AlignModeSP.isNameMatch(name))
         {
-            ISwitch *sw;
-            AlignModeSP->s = IPS_OK;
-            IUUpdateSwitch(AlignModeSP, states, names, n);
-            sw = IUFindOnSwitch(AlignModeSP);
-            IDSetSwitch(AlignModeSP, "Alignment mode set to %s", sw->label);
+            AlignModeSP.setState(IPS_OK);
+            AlignModeSP.update(states, names, n);
+            auto sw = AlignModeSP.findOnSwitch();
+            AlignModeSP.apply("Alignment mode set to %s", sw->getLabel());
             return true;
         }
 
-        if (AlignListSP && strcmp(name, AlignListSP->name) == 0)
+        if (AlignListSP && AlignListSP.isNameMatch(name))
         {
-            ISwitch *sw;
-            IUUpdateSwitch(AlignListSP, states, names, n);
-            sw = IUFindOnSwitch(AlignListSP);
+            AlignListSP.update(states, names, n);
+            auto sw = AlignListSP.findOnSwitch();
             if (!strcmp(sw->name, "ALIGNLISTADD"))
             {
                 pointset->AddPoint(syncdata, nullptr);
@@ -639,9 +643,9 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-                IDSetNumber(AlignCountNP, nullptr);
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_POINTS")->setValue(pointset->getNbPoints());
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_TRIANGLES")->setValue(pointset->getNbTriangles());
+                AlignCountNP.apply();
             }
             else if (!strcmp(sw->name, "ALIGNLISTCLEAR"))
             {
@@ -651,42 +655,42 @@ bool Align::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-                IDSetNumber(AlignCountNP, nullptr);
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_POINTS")->setValue(pointset->getNbPoints());
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_TRIANGLES")->setValue(pointset->getNbTriangles());
+                AlignCountNP.apply();
             }
             else if (!strcmp(sw->name, "ALIGNWRITEFILE"))
             {
                 char *res;
-                res = pointset->WriteDataFile(IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text);
+                res = pointset->WriteDataFile(AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText());
                 if (res)
                     IDMessage(telescope->getDeviceName(), "Can not save Align Data to file %s: %s",
-                              IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text, res);
+                              AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText(), res);
                 else
                     IDMessage(telescope->getDeviceName(), "Align: Data saved in file %s",
-                              IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text);
+                              AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText());
             }
             else if (!strcmp(sw->name, "ALIGNLOADFILE"))
             {
                 char *res;
                 pointset->Reset();
-                res = pointset->LoadDataFile(IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text);
+                res = pointset->LoadDataFile(AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText());
                 if (res)
                     IDMessage(telescope->getDeviceName(), "Can not load Align Data File %s: %s",
-                              IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text, res);
+                              AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText(), res);
                 else
                     IDMessage(telescope->getDeviceName(), "Align: Data loaded from file %s",
-                              IUFindText(AlignDataFileTP, "ALIGNDATAFILENAME")->text);
+                              AlignDataFileTP.findWidgetByName("ALIGNDATAFILENAME")->getText());
                 pointset->setBlobData(AlignDataBP);
                 // JM 2015-12-10: Disable setting AlignData temporary
                 //IDSetBLOB(AlignDataBP, nullptr);
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_POINTS")->value    = pointset->getNbPoints();
-                IUFindNumber(AlignCountNP, "ALIGNCOUNT_TRIANGLES")->value = pointset->getNbTriangles();
-                IDSetNumber(AlignCountNP, nullptr);
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_POINTS")->setValue(pointset->getNbPoints());
+                AlignCountNP.findWidgetByName("ALIGNCOUNT_TRIANGLES")->setValue(pointset->getNbTriangles());
+                AlignCountNP.apply();
             }
             sw->s          = ISS_OFF; // Reset back to off to allow pressing same button multiple times
-            AlignListSP->s = IPS_OK;
-            IDSetSwitch(AlignListSP, nullptr);
+            AlignListSP.setState(IPS_OK);
+            AlignListSP.apply();
             return true;
         }
     }
@@ -698,7 +702,7 @@ bool Align::ISNewText(const char *dev, const char *name, char *texts[], char *na
 {
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
-        if (AlignDataFileTP && (strcmp(name, AlignDataFileTP->name) == 0))
+        if (AlignDataFileTP && AlignDataFileTP.isNameMatch(name))
         {
             /*	  char *loadres=nullptr;
             pointset->Reset();
@@ -712,8 +716,8 @@ bool Align::ISNewText(const char *dev, const char *name, char *texts[], char *na
             AlignDataFileTP->s=IPS_OK;
             IDSetText(AlignDataFileTP,nullptr);
             */
-            IUUpdateText(AlignDataFileTP, texts, names, n);
-            IDSetText(AlignDataFileTP, nullptr);
+            AlignDataFileTP.update(texts, names, n);
+            AlignDataFileTP.apply();
             return true;
         }
     }
@@ -737,6 +741,7 @@ bool Align::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsi
 bool Align::saveConfigItems(FILE *fp)
 {
     if (AlignModeSP)
-        IUSaveConfigSwitch(fp, AlignModeSP);
+        AlignModeSP.save(fp);
+
     return true;
 }

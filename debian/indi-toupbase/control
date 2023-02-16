@@ -2,28 +2,28 @@ Source: indi-toupbase
 Section: science
 Priority: extra
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
-Build-Depends: debhelper (>= 5),
+Build-Depends: debhelper (>= 9),
                cdbs,
                cmake,
-               libusb-1.0-0-dev,
                pkg-config,
-               libcfitsio3-dev|libcfitsio-dev,
+               libcfitsio-dev,
                libindi-dev,
                zlib1g-dev,
                libnova-dev,
                libtoupcam,
                libaltaircam,
+               libbressercam,
+               libogmacam,
+               libtscam,
                libstarshootg,
                libnncam,
                libmallincam,
                libomegonprocam
-Standards-Version: 3.9.1
+Standards-Version: 3.9.4
 
 Package: indi-toupbase
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libtoupcam, libaltaircam, libstarshootg, libnncam, libmallincam, libomegonprocam
-conflicts: indi-toupcam, indi-altaircam
-replaces: indi-toupcam, indi-altaircam
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtoupcam, libaltaircam, libbressercam, libogmacam, libtscam, libstarshootg, libnncam, libmallincam, libomegonprocam
 Description: INDI Driver for Touptek based cameras
  Driver for Touptek based cameras.
  .
@@ -34,8 +34,6 @@ Priority: extra
 Section: debug
 Architecture: any
 Depends: indi-toupbase (= ${binary:Version}), ${misc:Depends}
-conflicts: indi-toupcam-dbg, indi-altaircam-dbg
-replaces: indi-toupcam-dbg, indi-altaircam-dbg
 Description: INDI Driver for Touptek based cameras
  Driver for Touptek based cameras.
  .

@@ -1506,15 +1506,14 @@ void ATIKCCD::exposureSetRequest(ImageState request)
 /////////////////////////////////////////////////////////
 /// Add applicable FITS keywords to header
 /////////////////////////////////////////////////////////
-void ATIKCCD::addFITSKeywords(INDI::CCDChip *targetChip)
+void ATIKCCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    INDI::CCD::addFITSKeywords(targetChip);
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     if (m_isHorizon)
     {
-        int status = 0;
-        fits_update_key_dbl(*targetChip->fitsFilePointer(), "Gain", ControlN[CONTROL_GAIN].value, 3, "Gain", &status);
-        fits_update_key_dbl(*targetChip->fitsFilePointer(), "Offset", ControlN[CONTROL_OFFSET].value, 3, "Offset", &status);
+        fitsKeywords.push_back({"GAIN", ControlN[CONTROL_GAIN].value, 3, "Gain"});
+        fitsKeywords.push_back({"OFFSET", ControlN[CONTROL_OFFSET].value, 3, "Offset"});
     }
 }
 

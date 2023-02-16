@@ -75,12 +75,29 @@ class Skywatcher
         uint32_t GetDEEncoderHome();
         uint32_t GetRAPeriod();
         uint32_t GetDEPeriod();
+
+        INDI_DEPRECATED("Use GetRAMotorStatus(INDI::PropertyLight).")
         void GetRAMotorStatus(ILightVectorProperty *motorLP);
+        void GetRAMotorStatus(INDI::PropertyLight motorLP);
+        
+        INDI_DEPRECATED("Use GetDEMotorStatus(INDI::PropertyLight).")
         void GetDEMotorStatus(ILightVectorProperty *motorLP);
+        void GetDEMotorStatus(INDI::PropertyLight motorLP);
+
+        INDI_DEPRECATED("Use InquireBoardVersion(INDI::PropertyText).")
         void InquireBoardVersion(ITextVectorProperty *boardTP);
+        void InquireBoardVersion(INDI::PropertyText boardTP);
+
         void InquireFeatures();
+
+        INDI_DEPRECATED("Use InquireRAEncoderInfo(INDI::PropertyNumber).")
         void InquireRAEncoderInfo(INumberVectorProperty *encoderNP);
+        void InquireRAEncoderInfo(INDI::PropertyNumber encoderNP);
+
+        INDI_DEPRECATED("Use InquireDEEncoderInfo(INDI::PropertyNumber).")
         void InquireDEEncoderInfo(INumberVectorProperty *encoderNP);
+        void InquireDEEncoderInfo(INDI::PropertyNumber encoderNP);
+
         void Init();
         void SlewRA(double rate);
         void SlewDE(double rate);

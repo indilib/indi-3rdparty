@@ -58,7 +58,7 @@ class MICCD : public INDI::CCD, public INDI::FilterInterface
         // Misc.
         virtual void TimerHit() override;
         virtual bool saveConfigItems(FILE *fp) override;
-        virtual void addFITSKeywords(INDI::CCDChip *targetChip) override;
+        virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
 
         // CCD
         virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;

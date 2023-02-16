@@ -48,7 +48,7 @@ bool StarAdventurer2i::initProperties()
 
     for (auto oneProperty : *getProperties())
     {
-        oneProperty->setDeviceName(getDeviceName());
+        oneProperty.setDeviceName(getDeviceName());
     }
 
     return true;

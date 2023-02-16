@@ -6,4 +6,10 @@
                 <version>@PLAYERONE_VERSION_MAJOR@.@PLAYERONE_VERSION_MINOR@</version>
 	</device>
 </devGroup>
+<devGroup group="Filter Wheels">
+        <device label="PlayerOne EFW" mdpd="true" manufacturer="PlayerOne">
+                <driver name="PlayerOne EFW">indi_playerone_wheel</driver>
+                <version>@PLAYERONE_VERSION_MAJOR@.@PLAYERONE_VERSION_MINOR@</version>
+        </device>
+</devGroup>
 </driversList>

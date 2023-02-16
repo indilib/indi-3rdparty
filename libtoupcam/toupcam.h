@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 53.21849.20221208 */
+/* Version: 53.22081.20230207 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -10,7 +10,9 @@
               (c) arm64: Win10 or above
               (d) arm: Win10 or above
        (2) WinRT: x64, x86, arm64, arm; Win10 or above
-       (3) macOS: universal (x64 + x86); macOS 10.10 or above
+       (3) macOS:
+              (a) x64+x86: macOS 10.10 or above
+              (b) x64+arm64: macOS 12 or above, support x64 and Apple silicon (such as M1, M2, etc)
        (4) Linux: kernel 2.6.27 or above
               (a) x64: GLIBC 2.14 or above
               (b) x86: CPU supports SSE3 instruction set or above; GLIBC 2.8 or above
@@ -91,7 +93,7 @@ extern "C" {
 /********************************************************************************/
 #if defined(TOUPCAM_HRESULT_ERRORCODE_NEEDED)
 #define S_OK                0x00000000 /* Success */
-#define S_FALSE             0x00000001 /* Success, something special, such as noop */
+#define S_FALSE             0x00000001 /* Yet another success */
 #define E_UNEXPECTED        0x8000ffff /* Catastrophic failure */
 #define E_NOTIMPL           0x80004001 /* Not supported or not implemented */
 #define E_NOINTERFACE       0x80004002
@@ -220,8 +222,8 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_AE_PERCENT_MIN           0       /* auto exposure percent, 0 => full roi average */
 #define TOUPCAM_AE_PERCENT_MAX           100
 #define TOUPCAM_AE_PERCENT_DEF           10
-#define TOUPCAM_NOPACKET_TIMEOUT_MIN     500     /* 500ms */
-#define TOUPCAM_NOFRAME_TIMEOUT_MIN      500     /* 500ms */
+#define TOUPCAM_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
+#define TOUPCAM_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
 
 typedef struct {
     unsigned    width;
@@ -260,7 +262,7 @@ typedef struct {
 } ToupcamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.21849.20221208
+    get the version of this dll/so/dylib, which is: 53.22081.20230207
 */
 #if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -304,8 +306,8 @@ TOUPCAM_API(void)     Toupcam_Close(HToupcam h);
 
 #define TOUPCAM_EVENT_EXPOSURE          0x0001    /* exposure time or gain changed */
 #define TOUPCAM_EVENT_TEMPTINT          0x0002    /* white balance changed, Temp/Tint mode */
-#define TOUPCAM_EVENT_IMAGE             0x0004    /* live image arrived, use Toupcam_PullImage to get this image */
-#define TOUPCAM_EVENT_STILLIMAGE        0x0005    /* snap (still) frame arrived, use Toupcam_PullStillImage to get this frame */
+#define TOUPCAM_EVENT_IMAGE             0x0004    /* live image arrived, use Toupcam_PullImageXXXX to get this image */
+#define TOUPCAM_EVENT_STILLIMAGE        0x0005    /* snap (still) frame arrived, use Toupcam_PullStillImageXXXX to get this frame */
 #define TOUPCAM_EVENT_WBGAIN            0x0006    /* white balance changed, RGB Gain mode */
 #define TOUPCAM_EVENT_TRIGGERFAIL       0x0007    /* trigger failed */
 #define TOUPCAM_EVENT_BLACK             0x0008    /* black balance changed */
@@ -675,7 +677,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_RealTime(HToupcam h, int* val);
 
 /* discard the current internal frame cache.
     If DDR present, also discard the frames in the DDR.
-    Toupcam_Flush is obsolete, it's a synonyms for Toupcam_put_Option(h, TOUPCAM_OPTION_FLUSH, 3)
+    Toupcam_Flush is obsolete, recommend using Toupcam_put_Option(h, TOUPCAM_OPTION_FLUSH, 3)
 */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_Flush(HToupcam h);
@@ -757,7 +759,7 @@ TOUPCAM_API(HRESULT)  Toupcam_read_Pipe(HToupcam h, unsigned pipeId, void* pBuff
 TOUPCAM_API(HRESULT)  Toupcam_write_Pipe(HToupcam h, unsigned pipeId, const void* pBuffer, unsigned nBufferLen);
 TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                              
-#define TOUPCAM_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 => disable, positive value (>= 500) => timeout milliseconds. default: disable */
+#define TOUPCAM_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 => disable, positive value (>= TOUPCAM_NOFRAME_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define TOUPCAM_OPTION_THREAD_PRIORITY        0x02       /* set the priority of the internal thread which grab data from the usb device.
                                                              Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
@@ -853,8 +855,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                             9: chromatic diagonal stripes
                                                          */
 #define TOUPCAM_OPTION_AUTOEXP_THRESHOLD      0x29       /* threshold of auto exposure, default value: 5, range = [2, 15] */
-#define TOUPCAM_OPTION_BYTEORDER              0x2a       /* Byte order, BGR or RGB: 0 = >RGB, 1 => BGR, default value: 1(Win), 0(macOS, Linux, Android) */
-#define TOUPCAM_OPTION_NOPACKET_TIMEOUT       0x2b       /* no packet timeout: 0 = disable, positive value = timeout milliseconds. default: disable */
+#define TOUPCAM_OPTION_BYTEORDER              0x2a       /* Byte order, BGR or RGB: 0 => RGB, 1 => BGR, default value: 1(Win), 0(macOS, Linux, Android) */
+#define TOUPCAM_OPTION_NOPACKET_TIMEOUT       0x2b       /* no packet timeout: 0 => disable, positive value (>= TOUPCAM_NOPACKET_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define TOUPCAM_OPTION_MAX_PRECISE_FRAMERATE  0x2c       /* get the precise frame rate maximum value in 0.1 fps, such as 115 means 11.5 fps */
 #define TOUPCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
 #define TOUPCAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
@@ -1043,7 +1045,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
 #define TOUPCAM_IOCONTROLTYPE_SET_STROBEDELAYTIME         0x24
 #define TOUPCAM_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, [0, 5000000] */
 #define TOUPCAM_IOCONTROLTYPE_SET_STROBEDURATION          0x26
-#define TOUPCAM_IOCONTROLTYPE_GET_USERVALUE               0x27 /* 
+#define TOUPCAM_IOCONTROLTYPE_GET_USERVALUE               0x27 /*
                                                                   bit0 => Opto-isolated output
                                                                   bit1 => GPIO0 output
                                                                   bit2 => GPIO1 output
@@ -1077,9 +1079,19 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
 */
 TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
 
+#define TOUPCAM_FLASH_SIZE      0x00    /* query total size */
+#define TOUPCAM_FLASH_EBLOCK    0x01    /* query erase block size */
+#define TOUPCAM_FLASH_RWBLOCK   0x02    /* query read/write block size */
+#define TOUPCAM_FLASH_STATUS    0x03    /* query status */
+#define TOUPCAM_FLASH_READ      0x04    /* read */
+#define TOUPCAM_FLASH_WRITE     0x05    /* write */
+#define TOUPCAM_FLASH_ERASE     0x06    /* erase */
+TOUPCAM_API(HRESULT)  Toupcam_rwc_Flash(HToupcam h, unsigned action, unsigned addr, unsigned len, void* pData);
+
 TOUPCAM_API(HRESULT)  Toupcam_write_UART(HToupcam h, const unsigned char* pData, unsigned nDataLen);
 TOUPCAM_API(HRESULT)  Toupcam_read_UART(HToupcam h, unsigned char* pBuffer, unsigned nBufferLen);
 
+TOUPCAM_API(const ToupcamModelV2**) Toupcam_all_Model(); /* return all supported USB model array */
 TOUPCAM_API(const ToupcamModelV2*) Toupcam_query_Model(HToupcam h);
 TOUPCAM_API(const ToupcamModelV2*) Toupcam_get_Model(unsigned short idVendor, unsigned short idProduct);
 
@@ -1217,19 +1229,19 @@ TOUPCAM_API(HRESULT)  Toupcam_put_ExpoCallback(HToupcam h, PITOUPCAM_EXPOSURE_CA
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_ChromeCallback(HToupcam h, PITOUPCAM_CHROME_CALLBACK funChrome, void* ctxChrome);
 
-/* Toupcam_FfcOnePush is obsolete, it's a synonyms for Toupcam_FfcOnce. */
+/* Toupcam_FfcOnePush is obsolete, recommend using Toupcam_FfcOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_FfcOnePush(HToupcam h);
 
-/* Toupcam_DfcOnePush is obsolete, it's a synonyms for Toupcam_DfcOnce. */
+/* Toupcam_DfcOnePush is obsolete, recommend using Toupcam_DfcOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_DfcOnePush(HToupcam h);
 
-/* Toupcam_AwbOnePush is obsolete, it's a synonyms for Toupcam_AwbOnce. */
+/* Toupcam_AwbOnePush is obsolete, recommend using Toupcam_AwbOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_AwbOnePush(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK funTT, void* ctxTT);
 
-/* Toupcam_AbbOnePush is obsolete, it's a synonyms for Toupcam_AbbOnce. */
+/* Toupcam_AbbOnePush is obsolete, recommend using Toupcam_AbbOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_AbbOnePush(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
@@ -1250,7 +1262,7 @@ TOUPCAM_API(void)   Toupcam_HotPlug(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlu
 #endif
 
 #if defined(_WIN32)
-/* Toupcam_put_TempTintInit is obsolete, it's a synonyms for Toupcam_AwbOnce. */
+/* Toupcam_put_TempTintInit is obsolete, recommend using Toupcam_AwbOnce. */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_TempTintInit(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK funTT, void* ctxTT);
 
@@ -1266,7 +1278,7 @@ TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_get_ProcessMode(HToupcam h, unsigned* pnProcessMode);
 #endif
 
-/* obsolete, please use Toupcam_put_Roi and Toupcam_get_Roi */
+/* obsolete, recommend using Toupcam_put_Roi and Toupcam_get_Roi */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_RoiMode(HToupcam h, int bRoiMode, int xOffset, int yOffset);
 TOUPCAM_DEPRECATED

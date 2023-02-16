@@ -1,5 +1,5 @@
 # INDI 3rd Party Drivers
-[![Linux](https://github.com/indilib/indi-3rdparty/actions/workflows/default.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
+[![Linux](https://github.com/indilib/indi-3rdparty/actions/workflows/linux.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
 [![MacOS](https://github.com/indilib/indi-3rdparty/actions/workflows/macos.yml/badge.svg)](https://github.com/indilib/indi-3rdparty/actions)
 
 INDI 3rd party drivers include all the drivers not included by default in the INDI Core Library.
@@ -192,6 +192,18 @@ When submitting a new driver, the driver user **documentation** is required as p
   * Options: Explanation for the various options available.
   * Etc: Any other tabs created by the driver.
 * Issues: Any problems or issues or warnings the users should be aware about when using this driver.
+
+# MacOS Libraries
+
+Some binary files are dynamic libraries provided by various manufacturers and/or are built by various people who are volunteers.
+The binary library files have install names that are then used when building and installing software on MacOS to properly link the
+libraries to the programs or to each other. The problem is that for various reasons, the install names sometimes are based on
+the build folders or install methods that those individuals used on their own computers and when the software is built by others,
+built using different methods. linked in different ways, or is built on craft servers, the install names cause the linking to fail.
+
+This will make the software look like it built and installed correctly, but when it is used, it completely fails to work.
+The install names were changed in the binary files so that they are more consistent across the indi 3rd party libraries and will work
+using other building and linking methods on more people's computers.
 
 # Unit tests
 

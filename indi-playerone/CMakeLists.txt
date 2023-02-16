@@ -12,8 +12,8 @@ find_package(ZLIB REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
-set(PLAYERONE_VERSION_MAJOR 0)
-set(PLAYERONE_VERSION_MINOR 9)
+set(PLAYERONE_VERSION_MAJOR 1)
+set(PLAYERONE_VERSION_MINOR 1)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)
@@ -45,6 +45,15 @@ if (HAVE_WEBSOCKET)
     target_link_libraries(indi_playerone_ccd ${Boost_LIBRARIES})
 endif()
 
+########### indi_playerone_wheel ###########
+add_executable(indi_playerone_wheel ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel.cpp)
+IF (APPLE)
+set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
+target_link_libraries(indi_playerone_wheel ${INDI_LIBRARIES} ${PLAYERONE_LIBRARIES} ${LIBUSB_LIBRARIES})
+ELSE()
+target_link_libraries(indi_playerone_wheel ${INDI_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+ENDIF()
+
 ########### playerone_camera_test ###########
 add_executable(playerone_camera_test ${CMAKE_CURRENT_SOURCE_DIR}/playerone_camera_test.cpp)
 IF (APPLE)
@@ -58,9 +67,11 @@ ENDIF()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_playerone_ccd rt)
+target_link_libraries(indi_playerone_wheel rt)
 target_link_libraries(playerone_camera_test rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_playerone_ccd RUNTIME DESTINATION bin)
+install(TARGETS indi_playerone_wheel RUNTIME DESTINATION bin)
 install(TARGETS playerone_camera_test RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml DESTINATION ${INDI_DATA_DIR})

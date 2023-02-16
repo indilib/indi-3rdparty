@@ -10,11 +10,15 @@ find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(LibCameraApps REQUIRED)
+#find_package(LibCameraApps REQUIRED)
 find_package(LibRaw REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Boost COMPONENTS program_options)
 find_package(PkgConfig REQUIRED)
+find_library(EXIF_LIBRARY exif REQUIRED)
+find_library(TIFF_LIBRARY tiff REQUIRED)
+find_library(DRM_LIBRARY drm REQUIRED)
+
 
 pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 message(STATUS "libcamera library found:")
@@ -34,6 +38,7 @@ include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${LIBCAMERA_INCLUDE_DIRS})
 include_directories( ${CFITSIO_INCLUDE_DIR})
+include_directories( libcamera-apps)
 
 include(CMakeCommon)
 
@@ -42,14 +47,24 @@ set (CMAKE_CXX_STANDARD 17)
 ########### indi_libcamera_ccd ###########
 set(indi_libcamera_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_libcamera.cpp
-   )
+)
 
+
+set(LIBCAMERAAPPS_APPS libcamera_app)
+set(LIBCAMERAAPPS_ENCODERS encoders)
+set(LIBCAMERAAPPS_IMAGES images)
+set(LIBCAMERAAPPS_OUTPUTS outputs)
+set(LIBCAMERAAPPS_PREVIEW preview)
+set(LIBCAMERAAPPS_POST post_processing_stages)
+
+add_subdirectory(libcamera-apps SYSTEM)
 add_executable(indi_libcamera_ccd ${indi_libcamera_SRCS})
-target_link_libraries(indi_libcamera_ccd
+
+target_link_libraries(indi_libcamera_ccd 
     ${INDI_LIBRARIES}
     ${CFITSIO_LIBRARIES}
-    ${LIBCAMERAAPPS_APPS}
     ${LIBCAMERAAPPS_ENCODERS}
+    ${LIBCAMERAAPPS_APPS}
     ${LIBCAMERAAPPS_IMAGES}
     ${LIBCAMERAAPPS_OUTPUTS}
     ${LIBCAMERAAPPS_POST}

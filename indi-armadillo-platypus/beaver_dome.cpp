@@ -100,17 +100,17 @@ bool Beaver::updateProperties()
     {
         InitPark();
 
-        defineProperty(&FirmwareVersionTP);
-        defineProperty(&RotatorCalibrationSP);
+        defineProperty(FirmwareVersionTP);
+        defineProperty(RotatorCalibrationSP);
         defineProperty(ShutterCalibrationSP);
         defineProperty(ShutterSettingsNP);
     }
     else
     {
-        deleteProperty(FirmwareVersionTP.getName());
-        deleteProperty(RotatorCalibrationSP.getName());
-        deleteProperty(ShutterCalibrationSP.getName());
-        deleteProperty(ShutterSettingsNP.getName());
+        deleteProperty(FirmwareVersionTP);
+        deleteProperty(RotatorCalibrationSP);
+        deleteProperty(ShutterCalibrationSP);
+        deleteProperty(ShutterSettingsNP);
     }
 
     return true;
@@ -355,7 +355,7 @@ IPState Beaver::UnPark()
 bool Beaver::saveConfigItems(FILE *fp)
 {
     INDI::Dome::saveConfigItems(fp);
-    IUSaveConfigNumber(fp, &ShutterSettingsNP);
+    ShutterSettingsNP.save(fp);
     return true;
 }
 

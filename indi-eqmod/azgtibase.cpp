@@ -34,7 +34,7 @@ bool AZGTIBase::initProperties()
     EQMod::initProperties();
     for (auto oneProperty : *getProperties())
     {
-        oneProperty->setDeviceName(getDeviceName());
+        oneProperty.setDeviceName(getDeviceName());
     }
 
     return true;
