@@ -150,6 +150,9 @@ bool SVBONYCCD::updateProperties()
         defineProperty(&ControlsNP[CCD_GAMMA_N]);
         defineProperty(&ControlsNP[CCD_DOFFSET_N]);
 
+        // a switch for automatic correction of dynamic dead pixels
+        defineProperty(&CorrectDDPSP);
+
         // define frame rate
         defineProperty(&SpeedSP);
 
@@ -176,6 +179,9 @@ bool SVBONYCCD::updateProperties()
         deleteProperty(ControlsNP[CCD_WBB_N].name);
         deleteProperty(ControlsNP[CCD_GAMMA_N].name);
         deleteProperty(ControlsNP[CCD_DOFFSET_N].name);
+
+        // a switch for automatic correction of dynamic dead pixels
+        deleteProperty(CorrectDDPSP.name);
 
         // delete frame rate
         deleteProperty(SpeedSP.name);
@@ -215,7 +221,15 @@ bool SVBONYCCD::Connect()
 
     // wait a bit for the camera to get ready
     usleep(0.5 * 1e6);
-
+#if 000
+    status = SVBRestoreDefaultParam(cameraID);
+    if (status != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Error, restore default parameters failed.:%d", status);
+        pthread_mutex_unlock(&cameraID_mutex);
+        return false;
+    }
+#endif
     // disable suto save param
     status = SVBSetAutoSaveParam(cameraID, SVB_FALSE);
     if (status != SVB_SUCCESS)
@@ -450,6 +464,20 @@ bool SVBONYCCD::Connect()
                 if(status != SVB_SUCCESS)
                 {
                     LOG_ERROR("Error, camera set offset failed\n");
+                }
+                break;
+
+            case SVB_BAD_PIXEL_CORRECTION_ENABLE :
+                // a switch for automatic correction of dynamic dead pixels
+                // set the status to disable
+                IUFillSwitch(&CorrectDDPS[CORRECT_DDP_ENABLE], "CORRECT_DDP_ENABLE", "ENABLE", ISS_OFF);
+                IUFillSwitch(&CorrectDDPS[CORRECT_DDP_DISABLE], "CORRECT_DDP_DISABLE", "DISABLE", ISS_ON);
+                IUFillSwitchVector(&CorrectDDPSP, CorrectDDPS, 2, getDeviceName(), "CORRECT_DDP", "Correct Dead pixel", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 60, IPS_IDLE);
+
+                status = SVBSetControlValue(cameraID, SVB_BAD_PIXEL_CORRECTION_ENABLE, 0, SVB_FALSE);
+                if(status != SVB_SUCCESS)
+                {
+                    LOGF_ERROR("Error, set a switch for automatic correction of dynamic dead pixels:%d", status);
                 }
                 break;
 
@@ -1531,6 +1559,55 @@ bool SVBONYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             IDSetSwitch(&CoolerSP, NULL);
             return true;
         }
+
+        // a switch for automatic correction of dynamic dead pixels
+        if (!strcmp(name, CorrectDDPSP.name))
+        {
+            SVB_ERROR_CODE ret;
+            long tmpCorrectDDPEnable = 0;
+            SVB_BOOL bAuto;
+
+            // Find out which state is requested by the client
+            const char *actionName = IUFindOnSwitchName(states, names, n);
+            // If same state as actionName, then we do nothing
+            tmpCorrectDDPEnable = IUFindOnSwitchIndex(&CorrectDDPSP);
+            if (!strcmp(actionName, CorrectDDPS[tmpCorrectDDPEnable].name))
+            {
+                LOGF_INFO("Automatic correction of dynamic dead pixels is already %s", CorrectDDPS[tmpCorrectDDPEnable].label);
+                CorrectDDPSP.s = IPS_IDLE;
+                IDSetSwitch(&CorrectDDPSP, NULL);
+                return true;
+            }
+
+            // Otherwise, let us update the switch state
+            IUUpdateSwitch(&CorrectDDPSP, states, names, n);
+            tmpCorrectDDPEnable = IUFindOnSwitchIndex(&CorrectDDPSP);
+
+            LOGF_INFO("Automatic correction of dynamic dead pixels %s", CorrectDDPS[tmpCorrectDDPEnable].label);
+
+            correctDDPEnable = tmpCorrectDDPEnable;
+
+            // Change switch for automatic correction of dynamic dead pixels
+            if (SVB_SUCCESS != (ret = SVBSetControlValue(cameraID, SVB_BAD_PIXEL_CORRECTION_ENABLE, (correctDDPEnable == CORRECT_DDP_ENABLE ? 1 : 0), SVB_FALSE)))
+            {
+                LOGF_INFO("Setting automatic correction of dynamic dead pixels is fail.(SVB_BAD_PIXEL_CORRECTION_ENABLE:%d)", ret);
+            }
+
+            CorrectDDPSP.s = IPS_OK;
+            IDSetSwitch(&CorrectDDPSP, NULL);
+
+            // Get switch for automatic correction of dynamic dead pixels
+            if (SVB_SUCCESS == (ret = SVBGetControlValue(cameraID, SVB_BAD_PIXEL_CORRECTION_ENABLE, &tmpCorrectDDPEnable, &bAuto)))
+            {
+                LOGF_INFO("Automatic correction of dynamic dead pixels:%ld", tmpCorrectDDPEnable);                
+            } 
+            else
+            {
+                LOGF_INFO("Getting automatic correction of dynamic dead pixels is fail.(SVB_BAD_PIXEL_CORRECTION_ENABLE:%d)", ret);
+            }
+
+            return true;
+        }
     }
 
     // If we did not process the switch, let us pass it to the parent class to process it
@@ -1601,6 +1678,7 @@ bool SVBONYCCD::saveConfigItems(FILE * fp)
     IUSaveConfigNumber(fp, &ControlsNP[CCD_WBB_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_GAMMA_N]);
     IUSaveConfigNumber(fp, &ControlsNP[CCD_DOFFSET_N]);
+    IUSaveConfigSwitch(fp, &CorrectDDPSP);
 
     IUSaveConfigSwitch(fp, &SpeedSP);
 
