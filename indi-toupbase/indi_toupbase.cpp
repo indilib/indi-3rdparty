@@ -222,8 +222,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Exposure
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_AutoExposureS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_ON);
-    IUFillSwitch(&m_AutoExposureS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_OFF);
+    IUFillSwitch(&m_AutoExposureS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_AutoExposureS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
     IUFillSwitchVector(&m_AutoExposureSP, m_AutoExposureS, 2, getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     if (m_MonoCamera == false)
@@ -240,7 +240,7 @@ bool ToupBase::initProperties()
         /// Auto White Balance
         ///////////////////////////////////////////////////////////////////////////////////
         IUFillSwitch(&m_WBAutoS, "TC_AUTO_WB", "Auto", ISS_OFF);
-        IUFillSwitchVector(&m_WBAutoSP, &m_WBAutoS, 1, getDeviceName(), "TC_AUTO_WB", "Auto White Balance", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        IUFillSwitchVector(&m_WBAutoSP, &m_WBAutoS, 1, getDeviceName(), "TC_AUTO_WB", "Auto White Balance", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -252,7 +252,7 @@ bool ToupBase::initProperties()
     if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
     {
         ///////////////////////////////////////////////////////////////////////////////////
-        /// Conversion Gain 
+        /// Conversion Gain
         ///////////////////////////////////////////////////////////////////////////////////
         int nsp = 2;
         IUFillSwitch(&m_GainConversionS[GAIN_LOW], "GAIN_LOW", "Low", ISS_OFF);
@@ -304,7 +304,7 @@ bool ToupBase::initProperties()
         /// RGB Mode with RGB24 color
         IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RGB], "TC_VIDEO_COLOR_RGB", "RGB", ISS_OFF);
         /// Raw mode (8 to 16 bit)
-        IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", "Raw", ISS_OFF);
+        IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", "RAW", ISS_OFF);
         IUFillSwitchVector(&m_VideoFormatSP, m_VideoFormatS, 2, getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
     
@@ -316,19 +316,20 @@ bool ToupBase::initProperties()
         char label[MAXINDILABEL] = {0};
         snprintf(label, MAXINDILABEL, "%d x %d", m_Instance->model->res[i].width, m_Instance->model->res[i].height);
         IUFillSwitch(&m_ResolutionS[i], label, label, ISS_OFF);
-    }   
+    }
     IUFillSwitchVector(&m_ResolutionSP, m_ResolutionS, m_Instance->model->preview, getDeviceName(), "CCD_RESOLUTION", "Resolution", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     IUGetConfigOnSwitchIndex(getDeviceName(), m_ResolutionSP.name, &m_ConfigResolutionIndex);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
-    ///////////////////////////////////////////////////////////////////////////////////
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_SN], "SN", "SN", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_FW_VERSION], "FIRMWAREVERSION", "Firmware Version", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], "HARDWAREVERSION", "Hardware Version", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_DATE], "PRODUCTIONDATE", "Production Date", nullptr);
-    IUFillText(&m_FirmwareT[TC_FIRMWARE_REV], "REVISION", "Revision", nullptr);
-    IUFillTextVector(&m_FirmwareTP, m_FirmwareT, 5, getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
+    /////////////////////////////////////////////////////////////////////////////////// 
+    IUFillText(&m_CameraT[TC_CAMERA_MODEL], "MODEL", "Model", m_Instance->model->name);
+    IUFillText(&m_CameraT[TC_CAMERA_DATE], "PRODUCTIONDATE", "Production Date", nullptr);
+    IUFillText(&m_CameraT[TC_CAMERA_SN], "SN", "SN", nullptr);
+    IUFillText(&m_CameraT[TC_CAMERA_FW_VERSION], "FIRMWAREVERSION", "Firmware Version", nullptr);
+    IUFillText(&m_CameraT[TC_CAMERA_HW_VERSION], "HARDWAREVERSION", "Hardware Version", nullptr);
+    IUFillText(&m_CameraT[TC_CAMERA_REV], "REVISION", "Revision", nullptr);
+    IUFillTextVector(&m_CameraTP, m_CameraT, 6, getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
     IUFillText(&m_SDKVersionT, "VERSION", "Version", nullptr);
     IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
@@ -373,9 +374,6 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & CP(FLAG_FAN))
             defineProperty(&m_FanSpeedSP);
 
-        if (m_MonoCamera == false)
-            defineProperty(&m_WBAutoSP);
-
         defineProperty(&m_TimeoutFactorNP);
         defineProperty(&m_ControlNP);
         defineProperty(&m_AutoExposureSP);
@@ -397,18 +395,19 @@ bool ToupBase::updateProperties()
 
         // Binning mode
         defineProperty(&m_BinningModeSP);
+        if (m_MonoCamera == false)
+		{
+			defineProperty(&m_WBNP);
+			defineProperty(&m_WBAutoSP);
+		}
+        defineProperty(&m_BlackBalanceNP);
+        defineProperty(&m_BBAutoSP);
         // Levels
         defineProperty(&m_LevelRangeNP);
-        defineProperty(&m_BBAutoSP);
-        defineProperty(&m_BlackBalanceNP);
         defineProperty(&m_BlackLevelNP);
 
-        // Balance
-        if (m_MonoCamera == false)
-            defineProperty(&m_WBNP);
-
         // Firmware
-        defineProperty(&m_FirmwareTP);
+        defineProperty(&m_CameraTP);
         defineProperty(&m_SDKVersionTP);
     }
     else
@@ -426,9 +425,6 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & CP(FLAG_FAN))
             deleteProperty(m_FanSpeedSP.name);
 
-        if (m_MonoCamera == false)
-            deleteProperty(m_WBAutoSP.name);
-        
         deleteProperty(m_TimeoutFactorNP.name);
         deleteProperty(m_ControlNP.name);
         deleteProperty(m_AutoExposureSP.name);
@@ -449,15 +445,17 @@ bool ToupBase::updateProperties()
             deleteProperty(m_GainConversionSP.name);
 
         deleteProperty(m_BinningModeSP.name);
-        deleteProperty(m_LevelRangeNP.name);
-        deleteProperty(m_BBAutoSP.name);
+        if (m_MonoCamera == false)
+		{
+            deleteProperty(m_WBNP.name);
+			deleteProperty(m_WBAutoSP.name);
+		}
         deleteProperty(m_BlackBalanceNP.name);
+        deleteProperty(m_BBAutoSP.name);
+		deleteProperty(m_LevelRangeNP.name);
         deleteProperty(m_BlackLevelNP.name);
 
-        if (m_MonoCamera == false)
-            deleteProperty(m_WBNP.name);
-
-        deleteProperty(m_FirmwareTP.name);
+        deleteProperty(m_CameraTP.name);
         deleteProperty(m_SDKVersionTP.name);
     }
 
@@ -496,15 +494,8 @@ bool ToupBase::Connect()
     FP(get_ExpTimeRange(m_CameraHandle, &min, &max, &current));
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", min / 1000000.0, max / 1000000.0, 0, false);
 
-    // Auto Exposure
-    int autoExposure = 0;
-    FP(get_AutoExpoEnable(m_CameraHandle, &autoExposure));
-    m_AutoExposureS[INDI_ENABLED].s = autoExposure ? ISS_ON : ISS_OFF;
-    m_AutoExposureS[INDI_DISABLED].s = autoExposure ? ISS_OFF : ISS_ON;
-    m_AutoExposureSP.s = IPS_OK;
-
     PrimaryCCD.setBin(1, 1);
-	
+    
     LOGF_INFO("%s connect", getDeviceName());
     return true;
 }
@@ -537,7 +528,7 @@ void ToupBase::setupParams()
         ///////////////////////////////////////////////////////////////////////////////////
         int maxval = 0, curval = 0;
         FP(get_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), &maxval));
-		FP(get_Option(m_CameraHandle, CP(OPTION_HEAT), &curval));
+        FP(get_Option(m_CameraHandle, CP(OPTION_HEAT), &curval));
 
         m_HeatUpS = new ISwitch[maxval + 1];
         IUFillSwitch(&m_HeatUpS[0], "INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
@@ -546,28 +537,29 @@ void ToupBase::setupParams()
         else
         {
             for (int i = 1; i <= maxval; ++i)
-				IUFillSwitch(&m_HeatUpS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(), (i == curval) ? ISS_ON : ISS_OFF);
+                IUFillSwitch(&m_HeatUpS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(), (i == curval) ? ISS_ON : ISS_OFF);
         }
         IUFillSwitchVector(&m_HeatUpSP, m_HeatUpS, maxval + 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
+    FP(put_AutoExpoEnable(m_CameraHandle, 0));
     FP(put_Option(m_CameraHandle, CP(OPTION_NOFRAME_TIMEOUT), 1));
 
     // Get Firmware Info
     char tmpBuffer[64] = {0};
     uint16_t pRevision = 0;
     FP(get_SerialNumber(m_CameraHandle, tmpBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_SN], tmpBuffer);
+    IUSaveText(&m_CameraT[TC_CAMERA_SN], tmpBuffer);
     FP(get_ProductionDate(m_CameraHandle, tmpBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_DATE], tmpBuffer); 
+    IUSaveText(&m_CameraT[TC_CAMERA_DATE], tmpBuffer); 
     FP(get_FwVersion(m_CameraHandle, tmpBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_FW_VERSION], tmpBuffer);
+    IUSaveText(&m_CameraT[TC_CAMERA_FW_VERSION], tmpBuffer);
     FP(get_HwVersion(m_CameraHandle, tmpBuffer));
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_HW_VERSION], tmpBuffer);
+    IUSaveText(&m_CameraT[TC_CAMERA_HW_VERSION], tmpBuffer);
     FP(get_Revision(m_CameraHandle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
-    IUSaveText(&m_FirmwareT[TC_FIRMWARE_REV], tmpBuffer);
-    m_FirmwareTP.s = IPS_OK;
+    IUSaveText(&m_CameraT[TC_CAMERA_REV], tmpBuffer);
+    m_CameraTP.s = IPS_OK;
 
     // SDK Version
     IUSaveText(&m_SDKVersionT, FP(Version()));
@@ -590,12 +582,12 @@ void ToupBase::setupParams()
     
     if (m_MonoCamera)// Check if mono camera
     {
-        CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
+        CaptureFormat mono16 = {"INDI_MONO_16", (std::string("Mono ") + std::to_string(m_maxBitDepth)).c_str(), 16, false};
         CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
         if (m_maxBitDepth > 8)
         {
             IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_8], "TC_VIDEO_MONO_8", "Mono 8", ISS_OFF);
-            IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", "Mono 16", ISS_OFF);
+            IUFillSwitch(&m_VideoFormatS[TC_VIDEO_MONO_16], "TC_VIDEO_MONO_16", (std::string("Mono ") + std::to_string(m_maxBitDepth)).c_str(), ISS_OFF);
             m_VideoFormatS[TC_VIDEO_MONO_16].s = ISS_ON;
             m_CurrentVideoFormat = TC_VIDEO_MONO_16;
             mono16.isDefault = true;
@@ -613,14 +605,14 @@ void ToupBase::setupParams()
         addCaptureFormat(mono8);
         if (m_maxBitDepth > 8)
             addCaptureFormat(mono16);
-    }    
+    }
     else// Color Camera
     {
         CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
         CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
     
         // Color RAW
-        m_VideoFormatS[TC_VIDEO_COLOR_RAW].s = ISS_ON;
+		IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str(), ISS_ON);
         m_Channels = 1;
         IUSaveText(&BayerT[2], getBayerString());// Get RAW Format
 
@@ -636,8 +628,8 @@ void ToupBase::setupParams()
         int fan = 0;
         FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
         IUResetSwitch(&m_FanSpeedSP);
-		for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-			m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+        for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
+            m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
     }
 
     // Get active resolution index
@@ -663,7 +655,7 @@ void ToupBase::setupParams()
     // Set trigger mode to software
     rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
     if (FAILED(rc))
-		LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
 
     // Get CCD Controls values
     int conversionGain = 0;
@@ -676,7 +668,7 @@ void ToupBase::setupParams()
     m_ControlN[TC_GAIN].max = nMax;
     m_ControlN[TC_GAIN].value = nDef;
     
-	int nVal = 0;
+    int nVal = 0;
     // Contrast
     FP(get_Contrast(m_CameraHandle, &nVal));
     m_ControlN[TC_CONTRAST].value = nVal;
@@ -1057,7 +1049,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
 
             IDSetNumber(&TemperatureNP, nullptr);
             return true;
-        }       
+        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1075,7 +1067,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IUUpdateSwitch(&m_BinningModeSP, states, names, n);
             auto mode = (m_BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
             m_BinningMode = mode;
-            updateBinningMode(PrimaryCCD.getBinX(), mode);			
+            updateBinningMode(PrimaryCCD.getBinX(), mode);          
             return true;
         }
 
@@ -1097,19 +1089,19 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 m_CoolerS[prevIndex].s = ISS_ON;
             }
 
-			/* turn on TEC may force to turn on the fan */
-			if (m_CoolerS[INDI_ENABLED].s && (m_Instance->model->flag & CP(FLAG_FAN)))
-			{
-				int fan = 0;
-				FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
-				IUResetSwitch(&m_FanSpeedSP);
-				for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-					m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
-				IDSetSwitch(&m_FanSpeedSP, nullptr);
-			}
-	
+            /* turn on TEC may force to turn on the fan */
+            if (m_CoolerS[INDI_ENABLED].s && (m_Instance->model->flag & CP(FLAG_FAN)))
+            {
+                int fan = 0;
+                FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
+                IUResetSwitch(&m_FanSpeedSP);
+                for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
+                    m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+                IDSetSwitch(&m_FanSpeedSP, nullptr);
+            }
+    
             IDSetSwitch(&m_CoolerSP, nullptr);
-			saveConfig(true, m_CoolerSP.name);
+            saveConfig(true, m_CoolerSP.name);
             return true;
         }
 
@@ -1298,14 +1290,14 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IDSetSwitch(&m_BBAutoSP, nullptr);
             return true;
         }
-		
+        
         //////////////////////////////////////////////////////////////////////
         /// Fan Speed
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_FanSpeedSP.name))
         {
             IUUpdateSwitch(&m_FanSpeedSP, states, names, n);
-			int targetIndex = IUFindOnSwitchIndex(&m_FanSpeedSP);
+            int targetIndex = IUFindOnSwitchIndex(&m_FanSpeedSP);
             HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FAN), targetIndex));
             if (SUCCEEDED(rc))
                 m_FanSpeedSP.s = IPS_OK;
@@ -1324,7 +1316,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_HeatUpSP.name))
         {
             IUUpdateSwitch(&m_HeatUpSP, states, names, n);
-			int targetIndex = IUFindOnSwitchIndex(&m_HeatUpSP);
+            int targetIndex = IUFindOnSwitchIndex(&m_HeatUpSP);
             HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), targetIndex));
             if (SUCCEEDED(rc))
                 m_HeatUpSP.s = IPS_OK;
@@ -1335,7 +1327,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
             IDSetSwitch(&m_HeatUpSP, nullptr);
             return true;
-        }		
+        }
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -1344,9 +1336,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 bool ToupBase::StartStreaming()
 {
     HRESULT rc = 0;
-    // Always disable Auto Exposure on streaming
-    FP(put_AutoExpoEnable(m_CameraHandle, 0));
-
     if (m_ExposureRequest != 1.0 / Streamer->getTargetFPS())
     {
         m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
@@ -1380,10 +1369,6 @@ bool ToupBase::StopStreaming()
         return false;
     }
     m_CurrentTriggerMode = TRIGGER_SOFTWARE;
-
-    // Return auto exposure to what it was
-    FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
-
     return true;
 }
 
@@ -2044,7 +2029,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
 {
     m_Channels = 1;
     m_BitsPerPixel = 8;
-	
+    
     if (m_MonoCamera)
     {
         // We need to stop camera first
@@ -2068,7 +2053,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
         }
 
         m_BitsPerPixel = (index == TC_VIDEO_MONO_8) ? 8 : 16;
-    }    
+    }
     else// Color
     {
         // We need to stop camera first
@@ -2088,7 +2073,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             if (FAILED(rc))
                 LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
             return false;
-        }            
+        }
 
         if (index == TC_VIDEO_COLOR_RGB)
         {

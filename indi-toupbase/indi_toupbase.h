@@ -336,15 +336,16 @@ class ToupBase : public INDI::CCD
         ISwitch *m_HeatUpS { nullptr };
 
         // Firmware Info
-        ITextVectorProperty m_FirmwareTP;
-        IText m_FirmwareT[5];
+        ITextVectorProperty m_CameraTP;
+        IText m_CameraT[6];
         enum
         {
-            TC_FIRMWARE_SN,
-            TC_FIRMWARE_FW_VERSION,
-            TC_FIRMWARE_HW_VERSION,
-            TC_FIRMWARE_DATE,
-            TC_FIRMWARE_REV
+			TC_CAMERA_MODEL,
+            TC_CAMERA_DATE,
+            TC_CAMERA_SN,
+            TC_CAMERA_FW_VERSION,
+            TC_CAMERA_HW_VERSION,
+            TC_CAMERA_REV
         };
 
         // SDK Version
