@@ -132,7 +132,7 @@ bool ToupBase::initProperties()
     IUFillSwitchVector(&m_BinningModeSP, m_BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
-    {
+    {        
         TemperatureN[0].min = CP(TEC_TARGET_MIN);
         TemperatureN[0].max = CP(TEC_TARGET_MAX);
         TemperatureN[0].value = CP(TEC_TARGET_DEF);
@@ -363,7 +363,9 @@ bool ToupBase::updateProperties()
         {
             defineProperty(&m_CoolerSP);
             defineProperty(&m_CoolerTP);
+	    deleteProperty(TemperatureRampNP.getName());
         }
+
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -396,10 +398,10 @@ bool ToupBase::updateProperties()
         // Binning mode
         defineProperty(&m_BinningModeSP);
         if (m_MonoCamera == false)
-		{
-			defineProperty(&m_WBNP);
-			defineProperty(&m_WBAutoSP);
-		}
+        {
+            defineProperty(&m_WBNP);
+            defineProperty(&m_WBAutoSP);
+        }
         defineProperty(&m_BlackBalanceNP);
         defineProperty(&m_BBAutoSP);
         // Levels
@@ -446,13 +448,13 @@ bool ToupBase::updateProperties()
 
         deleteProperty(m_BinningModeSP.name);
         if (m_MonoCamera == false)
-		{
+        {
             deleteProperty(m_WBNP.name);
-			deleteProperty(m_WBAutoSP.name);
-		}
+            deleteProperty(m_WBAutoSP.name);
+        }
         deleteProperty(m_BlackBalanceNP.name);
         deleteProperty(m_BBAutoSP.name);
-		deleteProperty(m_LevelRangeNP.name);
+        deleteProperty(m_LevelRangeNP.name);
         deleteProperty(m_BlackLevelNP.name);
 
         deleteProperty(m_CameraTP.name);
@@ -612,7 +614,7 @@ void ToupBase::setupParams()
         CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
     
         // Color RAW
-		IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str(), ISS_ON);
+        IUFillSwitch(&m_VideoFormatS[TC_VIDEO_COLOR_RAW], "TC_VIDEO_COLOR_RAW", (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str(), ISS_ON);
         m_Channels = 1;
         IUSaveText(&BayerT[2], getBayerString());// Get RAW Format
 
@@ -1038,7 +1040,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 return false;
             }
 
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TECTARGET), static_cast<int>(TemperatureN[0].value)));
+            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TECTARGET), static_cast<int>(TemperatureN[0].value * 10)));
             if (SUCCEEDED(rc))
                 TemperatureNP.s = IPS_OK;
             else
