@@ -138,7 +138,7 @@ class ToupBase : public INDI::CCD
 
     private:
         static std::map<HRESULT, std::string> errCodes;
-		static std::string errorCodes(HRESULT rc);
+        static std::string errorCodes(HRESULT rc);
 
         enum eGUIDEDIRECTION
         {
@@ -259,7 +259,7 @@ class ToupBase : public INDI::CCD
         };
         IText m_CoolerT;
         ITextVectorProperty m_CoolerTP;
-		int32_t m_maxTecVoltage { -1 };
+        int32_t m_maxTecVoltage { -1 };
 
         INumberVectorProperty m_ControlNP;
         INumber m_ControlN[8];
@@ -329,8 +329,8 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_WBAutoSP;
 
         // Fan Speed
-        INumber m_FanSpeedS;
-        INumberVectorProperty m_FanSpeedSP;
+        ISwitch *m_FanSpeedS { nullptr };
+        ISwitchVectorProperty m_FanSpeedSP;
 
         // Video Format
         ISwitch m_VideoFormatS[2];
@@ -352,12 +352,12 @@ class ToupBase : public INDI::CCD
         ISwitch m_LowNoiseS[2];
 
         // Heat Up
-        INumberVectorProperty m_HeatUpSP;
-        INumber m_HeatUpS;
+        ISwitchVectorProperty m_HeatUpSP;
+        ISwitch *m_HeatUpS { nullptr };
 
         // Firmware Info
         ITextVectorProperty m_FirmwareTP;
-        IText m_FirmwareT[5] = {};
+        IText m_FirmwareT[5];
         enum
         {
             TC_FIRMWARE_SERIAL,
@@ -399,10 +399,10 @@ class ToupBase : public INDI::CCD
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
-		
-		uint8_t* getRgbBuffer();
-		uint8_t *m_rgbBuffer { nullptr };
-		int32_t m_rgbBufferSize { 0 };
+        
+        uint8_t* getRgbBuffer();
+        uint8_t *m_rgbBuffer { nullptr };
+        int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
 
