@@ -93,7 +93,7 @@ public:
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {   
-    LOGF_DEBUG("model: %s, maxspeed: %d, preview: %d, still: %d, maxfanspeed: %d", m_Instance->model->name, m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->still, m_Instance->model->maxfanspeed);
+    LOGF_DEBUG("model: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->maxfanspeed);
     
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
@@ -1255,12 +1255,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IUResetSwitch(&m_WBAutoSP);
             if (SUCCEEDED(rc))
             {
-                LOG_INFO("Executing auto white balance");
+                LOG_INFO("Auto white balance once");
                 m_WBAutoSP.s = IPS_OK;
             }
             else
             {
-                LOGF_ERROR("Executing auto white balance failed. %s", errorCodes(rc).c_str());
+                LOGF_ERROR("Failed to auto white balance. %s", errorCodes(rc).c_str());
                 m_WBAutoSP.s = IPS_ALERT;
             }
 
@@ -1278,12 +1278,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IUResetSwitch(&m_BBAutoSP);
             if (SUCCEEDED(rc))
             {
-                LOG_INFO("Executing auto black balance");
+                LOG_INFO("Auto black balance once");
                 m_BBAutoSP.s = IPS_OK;
             }
             else
             {
-                LOGF_ERROR("Executing auto black balance failed. %s", errorCodes(rc).c_str());
+                LOGF_ERROR("Failed to auto black balance. %s", errorCodes(rc).c_str());
                 m_BBAutoSP.s = IPS_ALERT;
             }
 
@@ -1340,11 +1340,11 @@ bool ToupBase::StartStreaming()
     {
         m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
-        uint32_t uSecs = static_cast<uint32_t>(m_ExposureRequest * 1000000.0f);
+        const uint32_t uSecs = static_cast<uint32_t>(m_ExposureRequest * 1000000.0f);
         rc = FP(put_ExpoTime(m_CameraHandle, uSecs));
         if (FAILED(rc))
         {
-            LOGF_ERROR("Failed to set video exposure time. %s", errorCodes(rc).c_str());
+            LOGF_ERROR("Failed to set streaming exposure time. %s", errorCodes(rc).c_str());
             return false;
         }
     }
@@ -1352,7 +1352,7 @@ bool ToupBase::StartStreaming()
     rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 0));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Failed to set video trigger mode. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("Failed to set trigger mode. %s", errorCodes(rc).c_str());
         return false;
     }
     m_CurrentTriggerMode = TRIGGER_VIDEO;
@@ -1365,7 +1365,7 @@ bool ToupBase::StopStreaming()
     HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Failed to set video trigger mode. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("Failed to set trigger mode. %s", errorCodes(rc).c_str());
         return false;
     }
     m_CurrentTriggerMode = TRIGGER_SOFTWARE;
@@ -1410,25 +1410,11 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-    bool capturedStarted = false;
-
-    // Snap still image
-    if (m_Instance->model->still)
+    // Trigger an exposure
+    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
     {
-        if (SUCCEEDED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
-            capturedStarted = true;
-        else
-            LOGF_WARN("Failed to snap exposure. %s. Switching to regular exposure", errorCodes(rc).c_str());
-    }
-
-    if (!capturedStarted)
-    {
-        // Trigger an exposure
-        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
-        {
-            LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
-            return false;
-        }
+        LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
+        return false;
     }
 
     // Timeout 500ms after expected duration
@@ -1462,20 +1448,11 @@ void ToupBase::captureTimeoutHandler()
     }
     
     HRESULT rc = 0;
-    // Snap still image
-    if (m_Instance->model->still && FAILED(rc = FP(Snap(m_CameraHandle, IUFindOnSwitchIndex(&m_ResolutionSP)))))
+    // Trigger an exposure
+    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
     {
-        LOGF_ERROR("Failed to snap exposure. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return;
-    }
-    else
-    {
-        // Trigger an exposure
-        if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
-        {
-            LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
-            return;
-        }
     }
 
     LOG_DEBUG("Capture timed out, restart exposure");
@@ -1885,70 +1862,6 @@ void ToupBase::eventCallBack(unsigned event)
                     buffer = getRgbBuffer();
 
                 HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
-                if (FAILED(rc))
-                {
-                    LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
-                    PrimaryCCD.setExposureFailed();
-                }
-                else
-                {
-                    if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                    {
-                        uint8_t *image  = PrimaryCCD.getFrameBuffer();
-                        uint32_t width  = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
-                        uint32_t height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
-
-                        uint8_t *subR = image;
-                        uint8_t *subG = image + width * height;
-                        uint8_t *subB = image + width * height * 2;
-                        int size      = width * height * 3 - 3;
-
-                        // RGB to three sepearate R-frame, G-frame, and B-frame for color FITS
-                        for (int i = 0; i <= size; i += 3)
-                        {
-                            *subR++ = buffer[i];
-                            *subG++ = buffer[i + 1];
-                            *subB++ = buffer[i + 2];
-                        }
-                    }
-
-                    LOGF_DEBUG("Image received. Width: %d, Height: %d, flag: %d, timestamp: %ld", info.width, info.height, info.flag, info.timestamp);
-                    ExposureComplete(&PrimaryCCD);
-                }
-            }
-            else
-            {
-                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FLUSH), 3));
-                if (FAILED(rc))
-                    LOGF_ERROR("Failed to flush image. %s", errorCodes(rc).c_str());
-            }
-        }
-        break;
-        case CP(EVENT_STILLIMAGE):
-        {
-            m_CaptureTimeoutCounter = 0;
-            m_CaptureTimeout.stop();
-            XP(FrameInfoV2) info;
-            memset(&info, 0, sizeof(XP(FrameInfoV2)));
-
-            int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
-
-            if (Streamer->isStreaming() || Streamer->isRecording())
-            {
-                HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
-                if (SUCCEEDED(rc))
-                    Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
-            }
-            else if (InExposure)
-            {
-                InExposure = false;
-                PrimaryCCD.setExposureLeft(0);
-                uint8_t *buffer = PrimaryCCD.getFrameBuffer();
-
-                if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
-                    buffer = getRgbBuffer();
-
-                HRESULT rc = FP(PullStillImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
