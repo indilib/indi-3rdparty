@@ -110,8 +110,8 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 ToupBase::~ToupBase()
 {
     m_CaptureTimeout.stop();
-    delete[] m_FanSpeedS;
-    delete[] m_HeatUpS;
+    delete[] m_FanS;
+    delete[] m_HeatS;
 }
 
 const char *ToupBase::getDefaultName()
@@ -282,18 +282,18 @@ bool ToupBase::initProperties()
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
         ///////////////////////////////////////////////////////////////////////////////////
-        /// Fan Speed
+        /// Fan
         ///////////////////////////////////////////////////////////////////////////////////
-        m_FanSpeedS = new ISwitch[m_Instance->model->maxfanspeed + 1];
-        IUFillSwitch(&m_FanSpeedS[0], "INDI_DISABLED", "OFF", ISS_OFF);
+        m_FanS = new ISwitch[m_Instance->model->maxfanspeed + 1];
+        IUFillSwitch(&m_FanS[0], "INDI_DISABLED", "OFF", ISS_OFF);
         if (m_Instance->model->maxfanspeed <= 1)
-            IUFillSwitch(&m_FanSpeedS[1], "INDI_ENABLED", "ON", ISS_OFF);
+            IUFillSwitch(&m_FanS[1], "INDI_ENABLED", "ON", ISS_OFF);
         else
         {
             for (uint32_t i = 1; i <= m_Instance->model->maxfanspeed; ++i)
-                IUFillSwitch(&m_FanSpeedS[i], (std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
+                IUFillSwitch(&m_FanS[i], (std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
         }
-        IUFillSwitchVector(&m_FanSpeedSP, m_FanSpeedS, m_Instance->model->maxfanspeed + 1, getDeviceName(), "TC_FAN_SPEED", "Fan Speed", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        IUFillSwitchVector(&m_FanSP, m_FanS, m_Instance->model->maxfanspeed + 1, getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     if ((m_Instance->model->flag & BITDEPTH_FLAG) || (m_MonoCamera == false))
@@ -372,7 +372,7 @@ bool ToupBase::updateProperties()
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-            defineProperty(&m_FanSpeedSP);
+            defineProperty(&m_FanSP);
 
         defineProperty(&m_TimeoutFactorNP);
         defineProperty(&m_ControlNP);
@@ -388,7 +388,7 @@ bool ToupBase::updateProperties()
             defineProperty(&m_LowNoiseSP);
 
         if (m_Instance->model->flag & CP(FLAG_HEAT))
-            defineProperty(&m_HeatUpSP);
+            defineProperty(&m_HeatSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             defineProperty(&m_GainConversionSP);
@@ -423,7 +423,7 @@ bool ToupBase::updateProperties()
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-            deleteProperty(m_FanSpeedSP.name);
+            deleteProperty(m_FanSP.name);
 
         deleteProperty(m_TimeoutFactorNP.name);
         deleteProperty(m_ControlNP.name);
@@ -439,7 +439,7 @@ bool ToupBase::updateProperties()
             deleteProperty(m_HighFullwellSP.name);
 
         if (m_Instance->model->flag & CP(FLAG_HEAT))
-            deleteProperty(m_HeatUpSP.name);
+            deleteProperty(m_HeatSP.name);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             deleteProperty(m_GainConversionSP.name);
@@ -530,16 +530,16 @@ void ToupBase::setupParams()
         FP(get_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), &maxval));
         FP(get_Option(m_CameraHandle, CP(OPTION_HEAT), &curval));
 
-        m_HeatUpS = new ISwitch[maxval + 1];
-        IUFillSwitch(&m_HeatUpS[0], "INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
+        m_HeatS = new ISwitch[maxval + 1];
+        IUFillSwitch(&m_HeatS[0], "INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
         if (maxval <= 1)
-            IUFillSwitch(&m_HeatUpS[1], "INDI_ENABLED", "ON", (1 == curval) ? ISS_ON : ISS_OFF);
+            IUFillSwitch(&m_HeatS[1], "INDI_ENABLED", "ON", (1 == curval) ? ISS_ON : ISS_OFF);
         else
         {
             for (int i = 1; i <= maxval; ++i)
-                IUFillSwitch(&m_HeatUpS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(), (i == curval) ? ISS_ON : ISS_OFF);
+                IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(), (i == curval) ? ISS_ON : ISS_OFF);
         }
-        IUFillSwitchVector(&m_HeatUpSP, m_HeatUpS, maxval + 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        IUFillSwitchVector(&m_HeatSP, m_HeatS, maxval + 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     FP(put_AutoExpoEnable(m_CameraHandle, 0));
@@ -622,14 +622,14 @@ void ToupBase::setupParams()
 
     PrimaryCCD.setNAxis(m_Channels == 1 ? 2 : 3);
 
-    // Fan Speed
+    // Fan
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
         int fan = 0;
         FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
-        IUResetSwitch(&m_FanSpeedSP);
+        IUResetSwitch(&m_FanSP);
         for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-            m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+            m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
     }
 
     // Get active resolution index
@@ -1094,10 +1094,10 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             {
                 int fan = 0;
                 FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
-                IUResetSwitch(&m_FanSpeedSP);
+                IUResetSwitch(&m_FanSP);
                 for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-                    m_FanSpeedS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
-                IDSetSwitch(&m_FanSpeedSP, nullptr);
+                    m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+                IDSetSwitch(&m_FanSP, nullptr);
             }
     
             IDSetSwitch(&m_CoolerSP, nullptr);
@@ -1292,40 +1292,40 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
         
         //////////////////////////////////////////////////////////////////////
-        /// Fan Speed
+        /// Fan
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_FanSpeedSP.name))
+        if (!strcmp(name, m_FanSP.name))
         {
-            IUUpdateSwitch(&m_FanSpeedSP, states, names, n);
-            int targetIndex = IUFindOnSwitchIndex(&m_FanSpeedSP);
+            IUUpdateSwitch(&m_FanSP, states, names, n);
+            int targetIndex = IUFindOnSwitchIndex(&m_FanSP);
             HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FAN), targetIndex));
             if (SUCCEEDED(rc))
-                m_FanSpeedSP.s = IPS_OK;
+                m_FanSP.s = IPS_OK;
             else
             {
-                m_FanSpeedSP.s = IPS_ALERT;
+                m_FanSP.s = IPS_ALERT;
                 LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
             }
-            IDSetSwitch(&m_FanSpeedSP, nullptr);
+            IDSetSwitch(&m_FanSP, nullptr);
             return true;
         }
         
         //////////////////////////////////////////////////////////////////////
         /// Heat
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_HeatUpSP.name))
+        if (!strcmp(name, m_HeatSP.name))
         {
-            IUUpdateSwitch(&m_HeatUpSP, states, names, n);
-            int targetIndex = IUFindOnSwitchIndex(&m_HeatUpSP);
+            IUUpdateSwitch(&m_HeatSP, states, names, n);
+            int targetIndex = IUFindOnSwitchIndex(&m_HeatSP);
             HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), targetIndex));
             if (SUCCEEDED(rc))
-                m_HeatUpSP.s = IPS_OK;
+                m_HeatSP.s = IPS_OK;
             else
             {
                 LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
-                m_HeatUpSP.s = IPS_ALERT;
+                m_HeatSP.s = IPS_ALERT;
             }
-            IDSetSwitch(&m_HeatUpSP, nullptr);
+            IDSetSwitch(&m_HeatSP, nullptr);
             return true;
         }
     }

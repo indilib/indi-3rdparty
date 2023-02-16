@@ -308,9 +308,9 @@ class ToupBase : public INDI::CCD
         ISwitch m_WBAutoS;
         ISwitchVectorProperty m_WBAutoSP;
 
-        // Fan Speed
-        ISwitch *m_FanSpeedS { nullptr };
-        ISwitchVectorProperty m_FanSpeedSP;
+        // Fan
+        ISwitch *m_FanS { nullptr };
+        ISwitchVectorProperty m_FanSP;
 
         // Video Format
         ISwitch m_VideoFormatS[2];
@@ -331,11 +331,11 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_LowNoiseSP;
         ISwitch m_LowNoiseS[2];
 
-        // Heat Up
-        ISwitchVectorProperty m_HeatUpSP;
-        ISwitch *m_HeatUpS { nullptr };
+        // Heat
+        ISwitchVectorProperty m_HeatSP;
+        ISwitch *m_HeatS { nullptr };
 
-        // Firmware Info
+        // Camera Info
         ITextVectorProperty m_CameraTP;
         IText m_CameraT[6];
         enum
