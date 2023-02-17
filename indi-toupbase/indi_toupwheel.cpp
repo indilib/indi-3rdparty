@@ -126,8 +126,10 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             if (SUCCEEDED(rc))
             {
                 m_SlotSP.s = IPS_OK;
+				
                 FilterSlotN[0].max = val;
                 FilterSlotN[0].value = QueryFilter();
+				IDSetSwitch(&FilterSlotNP, nullptr);
             }
             else
             {
