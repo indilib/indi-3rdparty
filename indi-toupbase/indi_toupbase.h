@@ -1,5 +1,5 @@
 /*
- INDI Altair Driver
+ Toupcam CCD Driver
 
  Copyright (C) 2018-2019 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
@@ -21,76 +21,9 @@
 
 #pragma once
 
-#include <map>
 #include <indiccd.h>
 #include <inditimer.h>
-
-#ifdef BUILD_TOUPCAM
-#include <toupcam.h>
-#define FP(x) Toupcam_##x
-#define CP(x) TOUPCAM_##x
-#define XP(x) Toupcam##x
-#define THAND HToupcam
-#define DNAME "ToupTek"
-#elif BUILD_ALTAIRCAM
-#include <altaircam.h>
-#define FP(x) Altaircam_##x
-#define CP(x) ALTAIRCAM_##x
-#define XP(x) Altaircam##x
-#define THAND HAltaircam
-#define DNAME "Altair"
-#elif BUILD_BRESSERCAM
-#include <bressercam.h>
-#define FP(x) Bressercam_##x
-#define CP(x) BRESSERCAM_##x
-#define XP(x) Bressercam##x
-#define THAND HBressercam
-#define DNAME "Bresser"
-#elif BUILD_MALLINCAM
-#include <mallincam.h>
-#define FP(x) Mallincam_##x
-#define CP(x) MALLINCAM_##x
-#define XP(x) Mallincam##x
-#define THAND HMallincam
-#define DNAME "MALLINCAM"
-#elif BUILD_NNCAM
-#include <nncam.h>
-#define FP(x) Nncam_##x
-#define CP(x) NNCAM_##x
-#define XP(x) Nncam##x
-#define THAND HNncam
-#define DNAME "Nn"
-#elif BUILD_OGMACAM
-#include <ogmacam.h>
-#define FP(x) Ogmacam_##x
-#define CP(x) OGMACAM_##x
-#define XP(x) Ogmacam##x
-#define THAND HOgmacam
-#define DNAME "OGMAVision"
-#elif BUILD_OMEGONPROCAM
-#include <omegonprocam.h>
-#define FP(x) Omegonprocam_##x
-#define CP(x) OMEGONPROCAM_##x
-#define XP(x) Omegonprocam##x
-#define THAND HOmegonprocam
-#define DNAME "Astroshop"
-#elif BUILD_STARSHOOTG
-#include <starshootg.h>
-#define FP(x) Starshootg_##x
-#define CP(x) STARSHOOTG_##x
-#define XP(x) Starshootg##x
-#define THAND HStarshootg
-#define DNAME "Orion"
-#elif BUILD_TSCAM
-#include <tscam.h>
-#define FP(x) Tscam_##x
-#define CP(x) TSCAM_##x
-#define XP(x) Tscam##x
-#define THAND HTscam
-#define DNAME "Teleskop"
-#endif
-
-#define BITDEPTH_FLAG   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
+#include "libtoupbase.h"
 
 class ToupBase : public INDI::CCD
 {
@@ -137,9 +70,6 @@ class ToupBase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
     private:
-        static std::map<HRESULT, std::string> errCodes;
-        static std::string errorCodes(HRESULT rc);
-
         enum eGUIDEDIRECTION
         {
             TOUPBASE_NORTH,
@@ -220,9 +150,8 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Camera Handle & Instance
         //#############################################################################
-        THAND m_CameraHandle { nullptr };
+        THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
-        // Camera Display Name
         char m_name[MAXINDIDEVICE];
 
         //#############################################################################
@@ -240,10 +169,10 @@ class ToupBase : public INDI::CCD
         ISwitch m_HighFullwellS[2];
 
         bool activateCooler(bool enable);
-		
+        
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
-		
+        
         IText m_CoolerT;
         ITextVectorProperty m_CoolerTP;
         int32_t m_maxTecVoltage { -1 };
@@ -342,7 +271,7 @@ class ToupBase : public INDI::CCD
         IText m_CameraT[6];
         enum
         {
-			TC_CAMERA_MODEL,
+            TC_CAMERA_MODEL,
             TC_CAMERA_DATE,
             TC_CAMERA_SN,
             TC_CAMERA_FW_VERSION,
@@ -383,7 +312,7 @@ class ToupBase : public INDI::CCD
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
         
-        uint8_t* getRgbBuffer();
+        uint8_t *getRgbBuffer();
         uint8_t *m_rgbBuffer { nullptr };
         int32_t m_rgbBufferSize { 0 };
 

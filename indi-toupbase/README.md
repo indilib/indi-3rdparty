@@ -1,4 +1,4 @@
-This is the INDI driver for the Touptek cameras.
+This is the INDI driver for the Touptek cameras and filterwheels.
 
 COMPILING
 

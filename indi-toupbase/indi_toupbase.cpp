@@ -22,13 +22,12 @@
 #include "indi_toupbase.h"
 #include "config.h"
 #include <stream/streammanager.h>
-#include <math.h>
 #include <unistd.h>
 #include <deque>
-#include <memory>
 
+#define BITDEPTH_FLAG       (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
 #define VERBOSE_EXPOSURE    3
-#define CONTROL_TAB         "Controls"
+#define CONTROL_TAB         "Control"
 
 #ifndef MAKEFOURCC
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) \
@@ -38,37 +37,6 @@
     | (static_cast<uint32_t>(static_cast<uint8_t>(ch3)) << 24))
 #endif /* defined(MAKEFOURCC) */
 
-std::map<HRESULT, std::string> ToupBase::errCodes =
-{
-    {0x00000000, "Success"},
-    {0x00000001, "Yet another success"},
-    {0x8000ffff, "Catastrophic failure"},
-    {0x80004001, "Not supported or not implemented"},
-    {0x80070005, "Permission denied"},
-    {0x8007000e, "Out of memory"},
-    {0x80070057, "One or more arguments are not valid"},
-    {0x80004003, "Pointer that is not valid"},
-    {0x80004005, "Generic failure"},
-    {0x8001010e, "Call function in the wrong thread"},
-    {0x8007001f, "Device not functioning"},
-    {0x800700aa, "The requested resource is in use"},
-    {0x8000000a, "The data necessary to complete this operation is not yet available"},
-    {0x8001011f, "This operation returned because the timeout period expired"}
-};
-
-std::string ToupBase::errorCodes(HRESULT rc)
-{
-    const std::map<HRESULT, std::string>::iterator it = errCodes.find(rc);
-    if (it != errCodes.end())
-        return it->second;
-    else
-    {
-        char str[256];
-        sprintf(str, "Unknown error: 0x%08x", rc);
-        return std::string(str);
-    }
-}
-
 static class Loader
 {
     std::deque<std::unique_ptr<ToupBase>> cameras;
@@ -76,24 +44,23 @@ static class Loader
 public:
     Loader()
     {
-        int iConnectedCamerasCount = FP(EnumV2(pCameraInfo));
-        if (iConnectedCamerasCount <= 0)
-        {
-            IDLog("No Toupcam detected. Power on?");
-            return;
-        }
-
-        for (int i = 0; i < iConnectedCamerasCount; i++)
+        const int iConnectedCount = FP(EnumV2(pCameraInfo));
+        for (int i = 0; i < iConnectedCount; i++)
         {
             if (0 == (CP(FLAG_FILTERWHEEL) & pCameraInfo[i].model->flag))
                 cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+        }
+        if (cameras.empty())
+        {
+            IDLog("No camera detected");
+            return;
         }
     }
 } loader;
 
 ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
 {   
-    LOGF_DEBUG("model: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->maxfanspeed);
+    IDLog("model: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->maxfanspeed);
     
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
@@ -104,7 +71,7 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
     m_CaptureTimeout.setSingleShot(true);
     
     if (m_Instance->model->flag & CP(FLAG_MONO))
-        m_MonoCamera = true;    
+        m_MonoCamera = true;
 }
 
 ToupBase::~ToupBase()
@@ -472,10 +439,10 @@ bool ToupBase::Connect()
         if (m_MonoCamera == false)
             fullID = "@" + fullID;
 
-        m_CameraHandle = FP(Open(fullID.c_str()));
+        m_Handle = FP(Open(fullID.c_str()));
     }
 
-    if (m_CameraHandle == nullptr)
+    if (m_Handle == nullptr)
     {
         LOG_ERROR("Error connecting to the camera");
         return false;
@@ -492,7 +459,7 @@ bool ToupBase::Connect()
 
     // Get min/max exposures
     uint32_t min = 0, max = 0, current = 0;
-    FP(get_ExpTimeRange(m_CameraHandle, &min, &max, &current));
+    FP(get_ExpTimeRange(m_Handle, &min, &max, &current));
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", min / 1000000.0, max / 1000000.0, 0, false);
 
     PrimaryCCD.setBin(1, 1);
@@ -506,7 +473,7 @@ bool ToupBase::Disconnect()
     stopTimerNS();
     stopTimerWE();
 
-    FP(Close(m_CameraHandle));
+    FP(Close(m_Handle));
 
     if (m_rgbBuffer)
     {
@@ -528,8 +495,8 @@ void ToupBase::setupParams()
         /// Heat Control
         ///////////////////////////////////////////////////////////////////////////////////
         int maxval = 0, curval = 0;
-        FP(get_Option(m_CameraHandle, CP(OPTION_HEAT_MAX), &maxval));
-        FP(get_Option(m_CameraHandle, CP(OPTION_HEAT), &curval));
+        FP(get_Option(m_Handle, CP(OPTION_HEAT_MAX), &maxval));
+        FP(get_Option(m_Handle, CP(OPTION_HEAT), &curval));
 
         m_HeatS = new ISwitch[maxval + 1];
         IUFillSwitch(&m_HeatS[0], "INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
@@ -543,21 +510,21 @@ void ToupBase::setupParams()
         IUFillSwitchVector(&m_HeatSP, m_HeatS, maxval + 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
-    FP(put_AutoExpoEnable(m_CameraHandle, 0));
-    FP(put_Option(m_CameraHandle, CP(OPTION_NOFRAME_TIMEOUT), 1));
+    FP(put_AutoExpoEnable(m_Handle, 0));
+    FP(put_Option(m_Handle, CP(OPTION_NOFRAME_TIMEOUT), 1));
 
     // Get Firmware Info
     char tmpBuffer[64] = {0};
     uint16_t pRevision = 0;
-    FP(get_SerialNumber(m_CameraHandle, tmpBuffer));
+    FP(get_SerialNumber(m_Handle, tmpBuffer));
     IUSaveText(&m_CameraT[TC_CAMERA_SN], tmpBuffer);
-    FP(get_ProductionDate(m_CameraHandle, tmpBuffer));
+    FP(get_ProductionDate(m_Handle, tmpBuffer));
     IUSaveText(&m_CameraT[TC_CAMERA_DATE], tmpBuffer); 
-    FP(get_FwVersion(m_CameraHandle, tmpBuffer));
+    FP(get_FwVersion(m_Handle, tmpBuffer));
     IUSaveText(&m_CameraT[TC_CAMERA_FW_VERSION], tmpBuffer);
-    FP(get_HwVersion(m_CameraHandle, tmpBuffer));
+    FP(get_HwVersion(m_Handle, tmpBuffer));
     IUSaveText(&m_CameraT[TC_CAMERA_HW_VERSION], tmpBuffer);
-    FP(get_Revision(m_CameraHandle, &pRevision));
+    FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     IUSaveText(&m_CameraT[TC_CAMERA_REV], tmpBuffer);
     m_CameraTP.s = IPS_OK;
@@ -567,19 +534,19 @@ void ToupBase::setupParams()
     m_SDKVersionTP.s = IPS_OK;
 
     // Max supported bit depth
-    m_maxBitDepth = FP(get_MaxBitDepth(m_CameraHandle));
+    m_maxBitDepth = FP(get_MaxBitDepth(m_Handle));
     
-    FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE_MAX), &m_maxTecVoltage));
+    FP(get_Option(m_Handle, CP(OPTION_TEC_VOLTAGE_MAX), &m_maxTecVoltage));
 
     m_BitsPerPixel = 8;
     
     if (m_maxBitDepth > 8)
     {
-        FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
+        FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
         m_BitsPerPixel = 16;
     }
 
-    FP(put_Option(m_CameraHandle, CP(OPTION_RAW), 1));
+    FP(put_Option(m_Handle, CP(OPTION_RAW), 1));
     
     if (m_MonoCamera)// Check if mono camera
     {
@@ -627,7 +594,7 @@ void ToupBase::setupParams()
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
         int fan = 0;
-        FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
+        FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
         IUResetSwitch(&m_FanSP);
         for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
             m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
@@ -635,7 +602,7 @@ void ToupBase::setupParams()
 
     // Get active resolution index
     uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
-    FP(get_eSize(m_CameraHandle, &currentResolutionIndex));
+    FP(get_eSize(m_Handle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
     finalResolutionIndex = (m_ConfigResolutionIndex >= 0 && m_ConfigResolutionIndex < m_ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
     // In case there is NO previous resolution set
@@ -649,83 +616,83 @@ void ToupBase::setupParams()
     m_ResolutionS[finalResolutionIndex].s = ISS_ON;
     // If final resolution index different from current, let's set it.
     if (finalResolutionIndex != currentResolutionIndex)
-        FP(put_eSize(m_CameraHandle, finalResolutionIndex));
+        FP(put_eSize(m_Handle, finalResolutionIndex));
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height, m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
 
     // Set trigger mode to software
-    rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
+    rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
     if (FAILED(rc))
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
 
     // Get CCD Controls values
     int conversionGain = 0;
-    FP(get_Option(m_CameraHandle, CP(OPTION_CG), &conversionGain));
+    FP(get_Option(m_Handle, CP(OPTION_CG), &conversionGain));
     m_GainConversionS[conversionGain].s = ISS_ON;
 
     uint16_t nMax = 0, nDef = 0;
     // Gain
-    FP(get_ExpoAGainRange(m_CameraHandle, nullptr, &nMax, &nDef));
+    FP(get_ExpoAGainRange(m_Handle, nullptr, &nMax, &nDef));
     m_ControlN[TC_GAIN].max = nMax;
     m_ControlN[TC_GAIN].value = nDef;
     
     int nVal = 0;
     // Contrast
-    FP(get_Contrast(m_CameraHandle, &nVal));
+    FP(get_Contrast(m_Handle, &nVal));
     m_ControlN[TC_CONTRAST].value = nVal;
 
     if (m_MonoCamera == false)
     {
         // Hue
-        FP(get_Hue(m_CameraHandle, &nVal));
+        FP(get_Hue(m_Handle, &nVal));
         m_ControlN[TC_HUE].value = nVal;
 
         // Saturation
-        FP(get_Saturation(m_CameraHandle, &nVal));
+        FP(get_Saturation(m_Handle, &nVal));
         m_ControlN[TC_SATURATION].value = nVal;
     }
 
     // Brightness
-    FP(get_Brightness(m_CameraHandle, &nVal));
+    FP(get_Brightness(m_Handle, &nVal));
     m_ControlN[TC_BRIGHTNESS].value = nVal;
 
     // Gamma
-    FP(get_Gamma(m_CameraHandle, &nVal));
+    FP(get_Gamma(m_Handle, &nVal));
     m_ControlN[TC_GAMMA].value = nVal;
 
     // Speed
     // JM 2020-05-06: Reduce speed on ARM for all resolutions
 #if defined(__arm__) || defined (__aarch64__)
     m_ControlN[TC_SPEED].value = 0;
-    FP(put_Speed(m_CameraHandle, 0));
+    FP(put_Speed(m_Handle, 0));
 #else
-    rc = FP(get_Speed(m_CameraHandle, &nDef));
+    rc = FP(get_Speed(m_Handle, &nDef));
     m_ControlN[TC_SPEED].value = nDef;
 #endif
 
     // Frame Rate
     int frameRateLimit = 0;
-    FP(get_Option(m_CameraHandle, CP(OPTION_FRAMERATE), &frameRateLimit));
+    FP(get_Option(m_Handle, CP(OPTION_FRAMERATE), &frameRateLimit));
     // JM 2019-08-19: On ARM, set frame limit to max (63) instead of 0 (unlimited)
     // since that results in failure to capture from large sensors
 #ifdef __arm__
     frameRateLimit = m_ControlN[TC_FRAMERATE_LIMIT].max;
-    FP(put_Option(m_CameraHandle, CP(OPTION_FRAMERATE), frameRateLimit));
+    FP(put_Option(m_Handle, CP(OPTION_FRAMERATE), frameRateLimit));
 #endif
     m_ControlN[TC_FRAMERATE_LIMIT].value = frameRateLimit;
 
     // Set Bin more for better quality over skip
     if (m_Instance->model->flag & CP(FLAG_BINSKIP_SUPPORTED))
     {
-        FP(put_Mode(m_CameraHandle, 0));
+        FP(put_Mode(m_Handle, 0));
     }
-    FP(put_HZ(m_CameraHandle, 2));
+    FP(put_HZ(m_Handle, 2));
 
     if (m_MonoCamera == false)
     {
         // Get White Balance Gain
         int aGain[3] = {0};
-        rc = FP(get_WhiteBalanceGain(m_CameraHandle, aGain));
+        rc = FP(get_WhiteBalanceGain(m_Handle, aGain));
         if (SUCCEEDED(rc))
         {
             m_WBN[TC_WB_R].value = aGain[TC_WB_R];
@@ -736,7 +703,7 @@ void ToupBase::setupParams()
 
     // Get Level Ranges
     uint16_t aLow[4] = {0}, aHigh[4] = {255, 255, 255, 255};
-    rc = FP(get_LevelRange(m_CameraHandle, aLow, aHigh));
+    rc = FP(get_LevelRange(m_Handle, aLow, aHigh));
     if (SUCCEEDED(rc))
     {
         if (m_MonoCamera)
@@ -760,7 +727,7 @@ void ToupBase::setupParams()
 
     // Get Black Balance
     uint16_t aSub[3] = {0};
-    rc = FP(get_BlackBalance(m_CameraHandle, aSub));
+    rc = FP(get_BlackBalance(m_Handle, aSub));
     if (SUCCEEDED(rc))
     {
         m_BlackBalanceN[TC_BLACK_R].value = aSub[0];
@@ -781,7 +748,7 @@ void ToupBase::setupParams()
     // Allocate memory
     allocateFrameBuffer();
 
-    rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+    rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
     if (FAILED(rc))
         LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
     SetTimer(getCurrentPollingPeriod());
@@ -855,35 +822,35 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 switch (i)
                 {
                     case TC_GAIN:
-                        FP(put_ExpoAGain(m_CameraHandle, value));
+                        FP(put_ExpoAGain(m_Handle, value));
                         break;
 
                     case TC_CONTRAST:
-                        FP(put_Contrast(m_CameraHandle, value));
+                        FP(put_Contrast(m_Handle, value));
                         break;
 
                     case TC_HUE:
-                        FP(put_Hue(m_CameraHandle, value));
+                        FP(put_Hue(m_Handle, value));
                         break;
 
                     case TC_SATURATION:
-                        FP(put_Saturation(m_CameraHandle, value));
+                        FP(put_Saturation(m_Handle, value));
                         break;
 
                     case TC_BRIGHTNESS:
-                        FP(put_Brightness(m_CameraHandle, value));
+                        FP(put_Brightness(m_Handle, value));
                         break;
 
                     case TC_GAMMA:
-                        FP(put_Gamma(m_CameraHandle, value));
+                        FP(put_Gamma(m_Handle, value));
                         break;
 
                     case TC_SPEED:
-                        FP(put_Speed(m_CameraHandle, value));
+                        FP(put_Speed(m_Handle, value));
                         break;
 
                     case TC_FRAMERATE_LIMIT:
-                        FP(put_Option(m_CameraHandle, CP(OPTION_FRAMERATE), value));
+                        FP(put_Option(m_Handle, CP(OPTION_FRAMERATE), value));
                         if (value == 0)
                             LOG_INFO("FPS rate limit is set to unlimited");
                         else
@@ -924,7 +891,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 hi[3] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_Y].value);
             };
 
-            HRESULT rc = FP(put_LevelRange(m_CameraHandle, lo, hi));
+            HRESULT rc = FP(put_LevelRange(m_Handle, lo, hi));
             if (SUCCEEDED(rc))
                 m_LevelRangeNP.s = IPS_OK;
             else
@@ -953,7 +920,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 aSub[2] = static_cast<uint16_t>(m_BlackBalanceN[TC_BLACK_B].value);
             };
 
-            HRESULT rc = FP(put_BlackBalance(m_CameraHandle, aSub));
+            HRESULT rc = FP(put_BlackBalance(m_Handle, aSub));
             if (SUCCEEDED(rc))
                 m_BlackBalanceNP.s = IPS_OK;
             else
@@ -974,7 +941,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             IUUpdateNumber(&m_BlackLevelNP, values, names, n);
             int bLevel = static_cast<uint16_t>(m_BlackLevelN.value);
 
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BLACKLEVEL), bLevel));
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), bLevel));
             if (FAILED(rc))
             {
                 m_BlackLevelNP.s = IPS_ALERT;
@@ -1003,7 +970,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 static_cast<int>(m_WBN[TC_WB_B].value),
             };
 
-            HRESULT rc = FP(put_WhiteBalanceGain(m_CameraHandle, aSub));
+            HRESULT rc = FP(put_WhiteBalanceGain(m_Handle, aSub));
             if (SUCCEEDED(rc))
                 m_WBNP.s = IPS_OK;
             else
@@ -1052,8 +1019,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_CoolerSP.name))
         {
-			IUUpdateSwitch(&m_CoolerSP, states, names, n);
-			activateCooler(m_CoolerS[INDI_ENABLED].s == ISS_ON);
+            IUUpdateSwitch(&m_CoolerSP, states, names, n);
+            activateCooler(m_CoolerS[INDI_ENABLED].s == ISS_ON);
             saveConfig(true, m_CoolerSP.name);
             return true;
         }
@@ -1065,12 +1032,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             int prevIndex = IUFindOnSwitchIndex(&m_HighFullwellSP);
             IUUpdateSwitch(&m_HighFullwellSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellS[INDI_ENABLED].s));
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellS[INDI_ENABLED].s));
             if (SUCCEEDED(rc))
                 m_HighFullwellSP.s = IPS_OK;
             else
             {
-                LOGF_ERROR("Failed to set low noise mode %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
                 m_HighFullwellSP.s = IPS_ALERT;
                 IUResetSwitch(&m_HighFullwellSP);
                 m_HighFullwellS[prevIndex].s = ISS_ON;
@@ -1087,12 +1054,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             int prevIndex = IUFindOnSwitchIndex(&m_LowNoiseSP);
             IUUpdateSwitch(&m_LowNoiseSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_LOW_NOISE), m_LowNoiseS[INDI_ENABLED].s));
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_LOW_NOISE), m_LowNoiseS[INDI_ENABLED].s));
             if (SUCCEEDED(rc))
                 m_LowNoiseSP.s = IPS_OK;
             else
             {
-                LOGF_ERROR("Failed to set low noise mode %s. %s", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
                 m_LowNoiseSP.s = IPS_ALERT;
                 IUResetSwitch(&m_LowNoiseSP);
                 m_LowNoiseS[prevIndex].s = ISS_ON;
@@ -1127,7 +1094,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             IUUpdateSwitch(&m_AutoExposureSP, states, names, n);
             m_AutoExposureSP.s = IPS_OK;
-            FP(put_AutoExpoEnable(m_CameraHandle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
+            FP(put_AutoExpoEnable(m_Handle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
             IDSetSwitch(&m_AutoExposureSP, nullptr);
             return true;
         }
@@ -1139,7 +1106,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         {
             IUUpdateSwitch(&m_GainConversionSP, states, names, n);
             m_GainConversionSP.s = IPS_OK;
-            FP(put_Option(m_CameraHandle, CP(OPTION_CG), IUFindOnSwitchIndex(&m_GainConversionSP)));
+            FP(put_Option(m_Handle, CP(OPTION_CG), IUFindOnSwitchIndex(&m_GainConversionSP)));
             IDSetSwitch(&m_GainConversionSP, nullptr);
             return true;
         }
@@ -1169,9 +1136,9 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
 
             // Stop capture
-            FP(Stop(m_CameraHandle));
+            FP(Stop(m_Handle));
 
-            HRESULT rc = FP(put_eSize(m_CameraHandle, targetIndex));
+            HRESULT rc = FP(put_eSize(m_Handle, targetIndex));
             if (FAILED(rc))
             {
                 m_ResolutionSP.s = IPS_ALERT;
@@ -1192,7 +1159,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IDSetSwitch(&m_ResolutionSP, nullptr);
 
             // Restart capture
-            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+            rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
             if (FAILED(rc))
                 LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
             return true;
@@ -1204,7 +1171,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_WBAutoSP.name))
         {
             IUUpdateSwitch(&m_WBAutoSP, states, names, n);
-            HRESULT rc = FP(AwbInit(m_CameraHandle, nullptr, nullptr));
+            HRESULT rc = FP(AwbInit(m_Handle, nullptr, nullptr));
             IUResetSwitch(&m_WBAutoSP);
             if (SUCCEEDED(rc))
             {
@@ -1227,7 +1194,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_BBAutoSP.name))
         {
             IUUpdateSwitch(&m_BBAutoSP, states, names, n);
-            HRESULT rc = FP(AbbOnce(m_CameraHandle, nullptr, nullptr));
+            HRESULT rc = FP(AbbOnce(m_Handle, nullptr, nullptr));
             IUResetSwitch(&m_BBAutoSP);
             if (SUCCEEDED(rc))
             {
@@ -1250,8 +1217,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_FanSP.name))
         {
             IUUpdateSwitch(&m_FanSP, states, names, n);
-            int targetIndex = IUFindOnSwitchIndex(&m_FanSP);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FAN), targetIndex));
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FAN), IUFindOnSwitchIndex(&m_FanSP)));
             if (SUCCEEDED(rc))
                 m_FanSP.s = IPS_OK;
             else
@@ -1269,8 +1235,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, m_HeatSP.name))
         {
             IUUpdateSwitch(&m_HeatSP, states, names, n);
-            int targetIndex = IUFindOnSwitchIndex(&m_HeatSP);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_HEAT), targetIndex));
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HEAT), IUFindOnSwitchIndex(&m_HeatSP)));
             if (SUCCEEDED(rc))
                 m_HeatSP.s = IPS_OK;
             else
@@ -1294,7 +1259,7 @@ bool ToupBase::StartStreaming()
         m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
 
         const uint32_t uSecs = static_cast<uint32_t>(m_ExposureRequest * 1000000.0f);
-        rc = FP(put_ExpoTime(m_CameraHandle, uSecs));
+        rc = FP(put_ExpoTime(m_Handle, uSecs));
         if (FAILED(rc))
         {
             LOGF_ERROR("Failed to set streaming exposure time. %s", errorCodes(rc).c_str());
@@ -1302,7 +1267,7 @@ bool ToupBase::StartStreaming()
         }
     }
 
-    rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 0));
+    rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), 0));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set trigger mode. %s", errorCodes(rc).c_str());
@@ -1315,7 +1280,7 @@ bool ToupBase::StartStreaming()
 
 bool ToupBase::StopStreaming()
 {
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
+    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), 1));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set trigger mode. %s", errorCodes(rc).c_str());
@@ -1333,7 +1298,7 @@ int ToupBase::SetTemperature(double temperature)
         return -1;
     }
 
-    HRESULT rc = FP(put_Temperature(m_CameraHandle, static_cast<int16_t>(temperature * 10.0)));
+    HRESULT rc = FP(put_Temperature(m_Handle, static_cast<int16_t>(temperature * 10.0)));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set temperature. %s", errorCodes(rc).c_str());
@@ -1346,7 +1311,7 @@ int ToupBase::SetTemperature(double temperature)
 
 bool ToupBase::activateCooler(bool enable)
 {
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TEC), enable ? 1 : 0));
+    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
     IUResetSwitch(&m_CoolerSP);
     if (FAILED(rc))
     {
@@ -1361,18 +1326,18 @@ bool ToupBase::activateCooler(bool enable)
         m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
         m_CoolerSP.s = IPS_OK;
         IDSetSwitch(&m_CoolerSP, nullptr);
-		
-		/* turn on TEC may force to turn on the fan */
-		if (enable && (m_Instance->model->flag & CP(FLAG_FAN)))
-		{
+        
+        /* turn on TEC may force to turn on the fan */
+        if (enable && (m_Instance->model->flag & CP(FLAG_FAN)))
+        {
             int fan = 0;
-            FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
+            FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
             IUResetSwitch(&m_FanSP);
             for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
                 m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
             IDSetSwitch(&m_FanSP, nullptr);
-		}
-		
+        }
+        
         return true;
     }
 }
@@ -1389,7 +1354,7 @@ bool ToupBase::StartExposure(float duration)
     {
         m_ExposureRequest = duration;
 
-        if (FAILED(rc = FP(put_ExpoTime(m_CameraHandle, uSecs))))
+        if (FAILED(rc = FP(put_ExpoTime(m_Handle, uSecs))))
         {
             LOGF_ERROR("Failed to set exposure time. %s", errorCodes(rc).c_str());
             return false;
@@ -1409,14 +1374,14 @@ bool ToupBase::StartExposure(float duration)
 
     if (m_CurrentTriggerMode != TRIGGER_SOFTWARE)
     {
-        rc = FP(put_Option(m_CameraHandle, CP(OPTION_TRIGGER), 1));
+        rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), 1));
         if (FAILED(rc))
             LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
     // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+    if (FAILED(rc = FP(Trigger(m_Handle, 1))))
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return false;
@@ -1430,7 +1395,7 @@ bool ToupBase::StartExposure(float duration)
 
 bool ToupBase::AbortExposure()
 {
-    FP(Trigger(m_CameraHandle, 0));
+    FP(Trigger(m_Handle, 0));
     InExposure = false;
     m_CaptureTimeoutCounter = 0;
     m_CaptureTimeout.stop();
@@ -1454,7 +1419,7 @@ void ToupBase::captureTimeoutHandler()
     
     HRESULT rc = 0;
     // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_CameraHandle, 1))))
+    if (FAILED(rc = FP(Trigger(m_Handle, 1))))
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return;
@@ -1485,7 +1450,7 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
 
     LOGF_DEBUG("Camera ROI. X: %d, Y: %d, W: %d, H: %d. Binning %dx%d", x, y, w, h, PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
 
-    HRESULT rc = FP(put_Roi(m_CameraHandle, x, y, w, h));
+    HRESULT rc = FP(put_Roi(m_Handle, x, y, w, h));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set camera ROI: %d", rc);
@@ -1516,7 +1481,7 @@ bool ToupBase::updateBinningMode(int binx, int mode)
     if ((mode == TC_BINNING_AVG) && (binx > 1))
         binningMode = binx | 0x80;
 
-    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BINNING), binningMode));
+    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BINNING), binningMode));
     if (FAILED(rc))
     {
         LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode, errorCodes(rc).c_str());
@@ -1566,7 +1531,7 @@ void ToupBase::TimerHit()
     {
         int16_t currentTemperature = (int16_t)(TemperatureN[0].value * 10);
         int16_t nTemperature = currentTemperature;
-        HRESULT rc = FP(get_Temperature(m_CameraHandle, &nTemperature));
+        HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
             LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
@@ -1596,27 +1561,27 @@ void ToupBase::TimerHit()
     if (HasCooler() && (m_maxTecVoltage > 0))
     {
         int val = 0;
-		HRESULT rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC), &val));
+        HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
             m_CoolerTP.s = IPS_ALERT;
         else if (0 == val)
-		{
-			IUSaveText(&m_CoolerT, "0.0% (OFF)");
-			IDSetText(&m_CoolerTP, nullptr);			
-		}
-		else
-		{
-			rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE), &val));
-			if (FAILED(rc))
-				m_CoolerTP.s = IPS_ALERT;
-			else if (val <= m_maxTecVoltage)
-			{
-				char str[32];
-				sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
-				IUSaveText(&m_CoolerT, str);
-				IDSetText(&m_CoolerTP, nullptr);
-			}
-		}
+        {
+            IUSaveText(&m_CoolerT, "0.0% (OFF)");
+            IDSetText(&m_CoolerTP, nullptr);            
+        }
+        else
+        {
+            rc = FP(get_Option(m_Handle, CP(OPTION_TEC_VOLTAGE), &val));
+            if (FAILED(rc))
+                m_CoolerTP.s = IPS_ALERT;
+            else if (val <= m_maxTecVoltage)
+            {
+                char str[32];
+                sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
+                IUSaveText(&m_CoolerT, str);
+                IDSetText(&m_CoolerTP, nullptr);
+            }
+        }
     }
 
     SetTimer(getCurrentPollingPeriod());
@@ -1655,7 +1620,7 @@ IPState ToupBase::guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dir
 
     // If pulse < 50ms, we wait. Otherwise, we schedule it.
     int uSecs = ms * 1000;
-    HRESULT rc = FP(ST4PlusGuide(m_CameraHandle, dir, ms));
+    HRESULT rc = FP(ST4PlusGuide(m_Handle, dir, ms));
     if (FAILED(rc))
     {
         LOGF_ERROR("%s pulse guiding failed: %s", dirName, errorCodes(rc).c_str());
@@ -1714,7 +1679,7 @@ IPState ToupBase::guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dir
 
     // If pulse < 50ms, we wait. Otherwise, we schedule it.
     int uSecs = ms * 1000;
-    HRESULT rc = FP(ST4PlusGuide(m_CameraHandle, dir, ms));
+    HRESULT rc = FP(ST4PlusGuide(m_Handle, dir, ms));
     if (FAILED(rc))
     {
         LOGF_ERROR("%s pulse guiding failed: %s", dirName, errorCodes(rc).c_str());
@@ -1744,7 +1709,7 @@ IPState ToupBase::GuideWest(uint32_t ms)
 const char *ToupBase::getBayerString()
 {
     uint32_t nFourCC = 0, nBitDepth = 0;
-    FP(get_RawFormat(m_CameraHandle, &nFourCC, &nBitDepth));
+    FP(get_RawFormat(m_Handle, &nFourCC, &nBitDepth));
 
     // 8, 10, 12, 14, or 16
     m_RawBitsPerPixel = nBitDepth;
@@ -1776,14 +1741,14 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     fitsKeywords.push_back({"GAIN", m_ControlN[TC_GAIN].value, 3, "Gain"});
-	if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-		fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
-	if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-		fitsKeywords.push_back({"FULLWELL", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "High Fullwell"});	
-	fitsKeywords.push_back({"SN", m_CameraT[TC_CAMERA_SN].text, "Serial Number"});
-	fitsKeywords.push_back({"PRODATE", m_CameraT[TC_CAMERA_DATE].text, "Production Date"});
-	fitsKeywords.push_back({"FIRMVER", m_CameraT[TC_CAMERA_FW_VERSION].text, "Firmware Version"});
-	fitsKeywords.push_back({"HARDVER", m_CameraT[TC_CAMERA_HW_VERSION].text, "Hardware Version"});
+    if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
+        fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
+    if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
+        fitsKeywords.push_back({"FULLWELL", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "High Fullwell"});    
+    fitsKeywords.push_back({"SN", m_CameraT[TC_CAMERA_SN].text, "Serial Number"});
+    fitsKeywords.push_back({"PRODATE", m_CameraT[TC_CAMERA_DATE].text, "Production Date"});
+    fitsKeywords.push_back({"FIRMVER", m_CameraT[TC_CAMERA_FW_VERSION].text, "Firmware Version"});
+    fitsKeywords.push_back({"HARDVER", m_CameraT[TC_CAMERA_HW_VERSION].text, "Hardware Version"});
 }
 
 bool ToupBase::saveConfigItems(FILE *fp)
@@ -1836,7 +1801,7 @@ void ToupBase::eventCallBack(unsigned event)
             m_CaptureTimeout.stop();
             
             uint16_t expoGain = CP(EXPOGAIN_MIN);
-            FP(get_ExpoAGain(m_CameraHandle, &expoGain));           
+            FP(get_ExpoAGain(m_Handle, &expoGain));           
             m_ControlN[TC_GAIN].value = expoGain;
             m_ControlNP.s = IPS_OK;
             IDSetNumber(&m_ControlNP, nullptr);
@@ -1866,7 +1831,7 @@ void ToupBase::eventCallBack(unsigned event)
 
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
-                HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
             }
@@ -1879,7 +1844,7 @@ void ToupBase::eventCallBack(unsigned event)
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     buffer = getRgbBuffer();
 
-                HRESULT rc = FP(PullImageWithRowPitchV2(m_CameraHandle, buffer, captureBits * m_Channels, -1, &info));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, buffer, captureBits * m_Channels, -1, &info));
                 if (FAILED(rc))
                 {
                     LOGF_ERROR("Failed to pull image. %s", errorCodes(rc).c_str());
@@ -1913,7 +1878,7 @@ void ToupBase::eventCallBack(unsigned event)
             }
             else
             {
-                HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_FLUSH), 3));
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FLUSH), 3));
                 if (FAILED(rc))
                     LOGF_ERROR("Failed to flush image. %s", errorCodes(rc).c_str());
             }
@@ -1922,7 +1887,7 @@ void ToupBase::eventCallBack(unsigned event)
         case CP(EVENT_WBGAIN):
         {
             int aGain[3] = { 0 };
-            FP(get_WhiteBalanceGain)(m_CameraHandle, aGain);
+            FP(get_WhiteBalanceGain)(m_Handle, aGain);
             m_WBN[TC_WB_R].value = aGain[TC_WB_R];
             m_WBN[TC_WB_G].value = aGain[TC_WB_G];
             m_WBN[TC_WB_B].value = aGain[TC_WB_B];
@@ -1933,7 +1898,7 @@ void ToupBase::eventCallBack(unsigned event)
         case CP(EVENT_BLACK):
         {
             unsigned short aSub[3] = { 0 };
-            FP(get_BlackBalance)(m_CameraHandle, aSub);
+            FP(get_BlackBalance)(m_Handle, aSub);
             m_BlackBalanceN[TC_BLACK_R].value = aSub[TC_BLACK_R];
             m_BlackBalanceN[TC_BLACK_G].value = aSub[TC_BLACK_G];
             m_BlackBalanceN[TC_BLACK_B].value = aSub[TC_BLACK_B];
@@ -1964,9 +1929,9 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     if (m_MonoCamera)
     {
         // We need to stop camera first
-        FP(Stop(m_CameraHandle));
+        FP(Stop(m_Handle));
 
-        HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_BITDEPTH), index));
+        HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), index));
         if (FAILED(rc))
         {
             LOGF_ERROR("Failed to set high bit depth. %s", errorCodes(rc).c_str());
@@ -1976,7 +1941,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             IDSetSwitch(&m_VideoFormatSP, nullptr);
 
             // Restart Capture
-            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+            rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
             if (FAILED(rc))
                 LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
 
@@ -1988,9 +1953,9 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     else// Color
     {
         // We need to stop camera first
-        FP(Stop(m_CameraHandle));
+        FP(Stop(m_Handle));
 
-        HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_RAW), index));
+        HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_RAW), index));
         if (FAILED(rc))
         {
             LOGF_ERROR("Failed to set raw mode. %s", errorCodes(rc).c_str());
@@ -2000,7 +1965,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             IDSetSwitch(&m_VideoFormatSP, nullptr);
 
             // Restart Capture
-            rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+            rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
             if (FAILED(rc))
                 LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
             return false;
@@ -2034,7 +1999,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     IDSetSwitch(&m_VideoFormatSP, nullptr);
 
     // Restart Capture
-    HRESULT rc = FP(StartPullModeWithCallback(m_CameraHandle, &ToupBase::eventCB, this));
+    HRESULT rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
     if (FAILED(rc))
         LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
     saveConfig(true, m_VideoFormatSP.name);
