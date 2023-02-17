@@ -80,8 +80,9 @@ bool ToupWheel::updateProperties()
         for (int i = 0; i < SLOT_NUM; ++i)
             m_SlotS[i].s = (SlotNum[i] == val) ? ISS_ON : ISS_OFF;
         
+		TargetFilter = 1;
         FilterSlotN[0].max = val;
-        FilterSlotN[0].value = QueryFilter();
+		updateFilter();
     }
 
     INDI::FilterWheel::updateProperties();
@@ -92,6 +93,18 @@ bool ToupWheel::updateProperties()
         deleteProperty(m_SlotSP.name);
 
     return true;
+}
+
+void ToupWheel::updateFilter()
+{
+    CurrentFilter = QueryFilter();
+    if (TargetFilter == CurrentFilter)
+        SelectFilterDone(CurrentFilter);
+	else if (FilterSlotNP.s != IPS_BUSY)
+	{
+		FilterSlotNP.s = IPS_BUSY;
+		IDSetNumber(&FilterSlotNP, nullptr);
+	}
 }
 
 bool ToupWheel::Connect()
@@ -127,9 +140,9 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             {
                 m_SlotSP.s = IPS_OK;
 				
+				TargetFilter = 1;
                 FilterSlotN[0].max = val;
-                FilterSlotN[0].value = QueryFilter();
-				IDSetSwitch(&FilterSlotNP, nullptr);
+				updateFilter();
             }
             else
             {
