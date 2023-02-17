@@ -106,7 +106,7 @@ class ToupBase : public INDI::CCD
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        virtual void checkTemperatureTarget() override {}
+        virtual int SetTemperature(double temperature) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 
@@ -201,7 +201,7 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_ResolutionSP;
 
         //#############################################################################
-        // Misc.
+        // Misc
         //#############################################################################
         // Get the current Bayer string used
         const char *getBayerString();
@@ -239,6 +239,8 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_HighFullwellSP;
         ISwitch m_HighFullwellS[2];
 
+        bool activateCooler(bool enable);
+		
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
 		

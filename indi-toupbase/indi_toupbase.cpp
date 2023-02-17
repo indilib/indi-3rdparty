@@ -97,7 +97,7 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
     
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
-    snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), instance->displayname);
+    snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), m_Instance->model->name);
     setDeviceName(this->m_name);
 
     m_CaptureTimeout.callOnTimeout(std::bind(&ToupBase::captureTimeoutHandler, this));
@@ -140,8 +140,8 @@ bool ToupBase::initProperties()
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillSwitch(&m_CoolerS[0], "INDI_ENABLED", "ON", ISS_ON);
-        IUFillSwitch(&m_CoolerS[1], "INDI_DISABLED", "OFF", ISS_OFF);
+        IUFillSwitch(&m_CoolerS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_ON);
+        IUFillSwitch(&m_CoolerS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_OFF);
         IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_BUSY);
         
         IUFillText(&m_CoolerT, "COOLER_POWER", "Percent", nullptr);
@@ -268,15 +268,15 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Low Noise
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_LowNoiseS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&m_LowNoiseS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitch(&m_LowNoiseS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_LowNoiseS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
     IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_HighFullwellS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&m_HighFullwellS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitch(&m_HighFullwellS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_HighFullwellS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
     IUFillSwitchVector(&m_HighFullwellSP, m_HighFullwellS, 2, getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_FAN))
@@ -363,7 +363,6 @@ bool ToupBase::updateProperties()
         {
             defineProperty(&m_CoolerSP);
             defineProperty(&m_CoolerTP);
-	    deleteProperty(TemperatureRampNP.getName());
         }
 
         // Even if there is no cooler, we define temperature property as READ ONLY
@@ -1027,31 +1026,6 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             IDSetNumber(&m_TimeoutFactorNP, nullptr);
             return true;
         }
-        
-        // CCD TEMPERATURE
-        if (!strcmp(name, TemperatureNP.name))
-        {
-            IUUpdateNumber(&TemperatureNP, values, names, n);
-            if (TemperatureN[0].value < TemperatureN[0].min || TemperatureN[0].value > TemperatureN[0].max)
-            {
-                TemperatureNP.s = IPS_ALERT;
-                LOGF_ERROR("Error: Bad temperature value. Range is [%.1f, %.1f]C", TemperatureN[0].min, TemperatureN[0].max);
-                IDSetNumber(&TemperatureNP, nullptr);
-                return false;
-            }
-
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TECTARGET), static_cast<int>(TemperatureN[0].value * 10)));
-            if (SUCCEEDED(rc))
-                TemperatureNP.s = IPS_OK;
-            else
-            {
-                LOGF_ERROR("Failed to set tec target. %s", errorCodes(rc).c_str());
-                TemperatureNP.s = IPS_ALERT;
-            }
-
-            IDSetNumber(&TemperatureNP, nullptr);
-            return true;
-        }
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1078,31 +1052,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_CoolerSP.name))
         {
-            int prevIndex = IUFindOnSwitchIndex(&m_CoolerSP);
-            IUUpdateSwitch(&m_CoolerSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TEC), m_CoolerS[INDI_ENABLED].s));
-            if (SUCCEEDED(rc))
-                m_CoolerSP.s = IPS_OK;
-            else
-            {
-                LOGF_ERROR("Failed to cooler %s. %s", m_CoolerS[INDI_ENABLED].s ? "ON" : "OFF", errorCodes(rc).c_str());
-                m_CoolerSP.s = IPS_ALERT;
-                IUResetSwitch(&m_CoolerSP);
-                m_CoolerS[prevIndex].s = ISS_ON;
-            }
-
-            /* turn on TEC may force to turn on the fan */
-            if (m_CoolerS[INDI_ENABLED].s && (m_Instance->model->flag & CP(FLAG_FAN)))
-            {
-                int fan = 0;
-                FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
-                IUResetSwitch(&m_FanSP);
-                for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-                    m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
-                IDSetSwitch(&m_FanSP, nullptr);
-            }
-    
-            IDSetSwitch(&m_CoolerSP, nullptr);
+			IUUpdateSwitch(&m_CoolerSP, states, names, n);
+			activateCooler(m_CoolerS[INDI_ENABLED].s == ISS_ON);
             saveConfig(true, m_CoolerSP.name);
             return true;
         }
@@ -1374,6 +1325,58 @@ bool ToupBase::StopStreaming()
     return true;
 }
 
+int ToupBase::SetTemperature(double temperature)
+{
+    if (activateCooler(true) == false)
+    {
+        LOG_ERROR("Failed to activate cooler");
+        return -1;
+    }
+
+    HRESULT rc = FP(put_Temperature(m_CameraHandle, static_cast<int16_t>(temperature * 10.0)));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Failed to set temperature. %s", errorCodes(rc).c_str());
+        return -1;
+    }
+
+    LOGF_INFO("Set CCD temperature to %.1fC", temperature);
+    return 0;
+}
+
+bool ToupBase::activateCooler(bool enable)
+{
+    HRESULT rc = FP(put_Option(m_CameraHandle, CP(OPTION_TEC), enable ? 1 : 0));
+    IUResetSwitch(&m_CoolerSP);
+    if (FAILED(rc))
+    {
+        m_CoolerS[enable ? INDI_DISABLED : INDI_ENABLED].s = ISS_ON;
+        m_CoolerSP.s = IPS_ALERT;
+        LOGF_ERROR("Failed to turn cooler %s. %s", enable ? "ON" : "OFF", errorCodes(rc).c_str());
+        IDSetSwitch(&m_CoolerSP, nullptr);
+        return false;
+    }
+    else
+    {
+        m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
+        m_CoolerSP.s = IPS_OK;
+        IDSetSwitch(&m_CoolerSP, nullptr);
+		
+		/* turn on TEC may force to turn on the fan */
+		if (enable && (m_Instance->model->flag & CP(FLAG_FAN)))
+		{
+            int fan = 0;
+            FP(get_Option(m_CameraHandle, CP(OPTION_FAN), &fan));
+            IUResetSwitch(&m_FanSP);
+            for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
+                m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+            IDSetSwitch(&m_FanSP, nullptr);
+		}
+		
+        return true;
+    }
+}
+
 bool ToupBase::StartExposure(float duration)
 {
     PrimaryCCD.setExposureDuration(static_cast<double>(duration));
@@ -1593,19 +1596,27 @@ void ToupBase::TimerHit()
     if (HasCooler() && (m_maxTecVoltage > 0))
     {
         int val = 0;
-        HRESULT rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE), &val));
+		HRESULT rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
-        {
-            LOGF_ERROR("Failed to get tec voltage. %s", errorCodes(rc).c_str());
             m_CoolerTP.s = IPS_ALERT;
-        }
-        else if (val <= m_maxTecVoltage)
-        {
-            char str[32];
-            sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
-            IUSaveText(&m_CoolerT, str);
-            IDSetText(&m_CoolerTP, nullptr);
-        }
+        else if (0 == val)
+		{
+			IUSaveText(&m_CoolerT, "0.0% (OFF)");
+			IDSetText(&m_CoolerTP, nullptr);			
+		}
+		else
+		{
+			rc = FP(get_Option(m_CameraHandle, CP(OPTION_TEC_VOLTAGE), &val));
+			if (FAILED(rc))
+				m_CoolerTP.s = IPS_ALERT;
+			else if (val <= m_maxTecVoltage)
+			{
+				char str[32];
+				sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
+				IUSaveText(&m_CoolerT, str);
+				IDSetText(&m_CoolerTP, nullptr);
+			}
+		}
     }
 
     SetTimer(getCurrentPollingPeriod());
@@ -1764,10 +1775,15 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
-    INumber *gainNP = IUFindNumber(&m_ControlNP, m_ControlN[TC_GAIN].name);
-
-    if (gainNP)
-        fitsKeywords.push_back({"GAIN", gainNP->value, 3, "Gain"});
+    fitsKeywords.push_back({"GAIN", m_ControlN[TC_GAIN].value, 3, "Gain"});
+	if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
+		fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
+	if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
+		fitsKeywords.push_back({"FULLWELL", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "High Fullwell"});	
+	fitsKeywords.push_back({"SN", m_CameraT[TC_CAMERA_SN].text, "Serial Number"});
+	fitsKeywords.push_back({"PRODATE", m_CameraT[TC_CAMERA_DATE].text, "Production Date"});
+	fitsKeywords.push_back({"FIRMVER", m_CameraT[TC_CAMERA_FW_VERSION].text, "Firmware Version"});
+	fitsKeywords.push_back({"HARDVER", m_CameraT[TC_CAMERA_HW_VERSION].text, "Hardware Version"});
 }
 
 bool ToupBase::saveConfigItems(FILE *fp)
