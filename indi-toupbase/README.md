@@ -2,20 +2,20 @@ This is the INDI driver for the Touptek cameras and filterwheels.
 
 COMPILING
 
-Go to the directory where  you unpacked indi_asi sources and do:
+Go to the directory where you unpacked indi_toupbase sources and do:
 
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ..
 make
 
-should build the indi_touptek_ccd executable.
+should build the indi_toupcam_ccd executable.
 
 RUNNING
 
 The Driver can run multiple devices if required, to run the driver:
 
-indiserver -v indi_touptek_ccd
+indiserver -v indi_toupcam_ccd
 
 AVAILABLE CONTROLS
 
