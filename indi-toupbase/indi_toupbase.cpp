@@ -1,5 +1,5 @@
 /*
- Toupcam CCD Driver
+ Toupcam & oem CCD Driver
 
  Copyright (C) 2018-2019 Jasem Mutlaq (mutlaqja@ikarustech.com)
 

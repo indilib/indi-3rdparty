@@ -1,5 +1,5 @@
 /*
- ATIK Filter Wheel Driver
+ Toupcam & oem Filter Wheel Driver
 
  Copyright (C) 2018 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
