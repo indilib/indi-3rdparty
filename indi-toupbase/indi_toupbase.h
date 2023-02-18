@@ -90,15 +90,13 @@
 #define DNAME "Tscam"
 #endif
 
-#define RAW_SUPPORTED   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
-
-typedef unsigned long   ulong;            /* Short for unsigned long */
+#define BITDEPTH_FLAG   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
 
 class ToupBase : public INDI::CCD
 {
     public:
         explicit ToupBase(const XP(DeviceV2) *instance);
-        ~ToupBase() override;
+        virtual ~ToupBase() override;
 
         virtual const char *getDefaultName() override;
 
@@ -139,174 +137,8 @@ class ToupBase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
     private:
-        typedef enum ImageState
-        {
-            StateNone = 0,
-            StateIdle,
-            StateStream,
-            StateExposure,
-            StateRestartExposure,
-            StateAbort,
-            StateTerminate,
-            StateTerminated
-        } ImageState;
-
-        enum
-        {
-            S_OK            = 0x00000000,
-            S_FALSE         = 0x00000001,
-            E_FAIL          = 0x80004005,
-            E_INVALIDARG    = 0x80070057,
-            E_NOTIMPL       = 0x80004001,
-            E_NOINTERFACE   = 0x80004002,
-            E_POINTER       = 0x80004003,
-            E_UNEXPECTED    = 0x8000FFFF,
-            E_OUTOFMEMORY   = 0x8007000E,
-            E_WRONG_THREAD  = 0x8001010E,
-        };
-        static std::map<int, std::string> errorCodes;
-
-
-        enum eFLAG
-        {
-            FLAG_CMOS                = 0x00000001,   /* cmos sensor */
-            FLAG_CCD_PROGRESSIVE     = 0x00000002,   /* progressive ccd sensor */
-            FLAG_CCD_INTERLACED      = 0x00000004,   /* interlaced ccd sensor */
-            FLAG_ROI_HARDWARE        = 0x00000008,   /* support hardware ROI */
-            FLAG_MONO                = 0x00000010,   /* monochromatic */
-            FLAG_BINSKIP_SUPPORTED   = 0x00000020,   /* support bin/skip mode */
-            FLAG_USB30               = 0x00000040,   /* usb3.0 */
-            FLAG_TEC                 = 0x00000080,   /* Thermoelectric Cooler */
-            FLAG_USB30_OVER_USB20    = 0x00000100,   /* usb3.0 camera connected to usb2.0 port */
-            FLAG_ST4                 = 0x00000200,   /* ST4 */
-            FLAG_GETTEMPERATURE      = 0x00000400,   /* support to get the temperature of the sensor */
-            FLAG_HIGH_FULLWELL       = 0x00000800,   /* high full well supported , was in driver v 50: support to put the target temperature of the sensor */
-            FLAG_RAW10               = 0x00001000,   /* pixel format, RAW 10bits */
-            FLAG_RAW12               = 0x00002000,   /* pixel format, RAW 12bits */
-            FLAG_RAW14               = 0x00004000,   /* pixel format, RAW 14bits*/
-            FLAG_RAW16               = 0x00008000,   /* pixel format, RAW 16bits */
-            FLAG_FAN                 = 0x00010000,   /* cooling fan */
-            FLAG_TEC_ONOFF           = 0x00020000,   /* Thermoelectric Cooler can be turn on or off, support to set the target temperature of TEC */
-            FLAG_ISP                 = 0x00040000,   /* ISP (Image Signal Processing) chip */
-            FLAG_TRIGGER_SOFTWARE    = 0x00080000,   /* support software trigger */
-            FLAG_TRIGGER_EXTERNAL    = 0x00100000,   /* support external trigger */
-            FLAG_TRIGGER_SINGLE      = 0x00200000,   /* only support trigger single: one trigger, one image */
-            FLAG_BLACKLEVEL          = 0x00400000,   /* support set and get the black level */
-            FLAG_AUTO_FOCUS          = 0x00800000,   /* support auto focus */
-            FLAG_BUFFER              = 0x01000000,   /* frame buffer */
-            FLAG_DDR                 = 0x02000000,   /* use very large capacity DDR (Double Data Rate SDRAM) for frame buffer */
-            FLAG_CG                  = 0x04000000,   /* support Conversion Gain mode: HCG, LCG */
-            FLAG_YUV411              = 0x08000000,   /* pixel format, yuv411 */
-            FLAG_VUYY                = 0x10000000,   /* pixel format, yuv422, VUYY */
-            FLAG_YUV444              = 0x20000000,   /* pixel format, yuv444 */
-            FLAG_RGB888              = 0x40000000,   /* pixel format, RGB888 */
-            FLAG_RAW8                = 0x80000000,   /* pixel format, RAW 8 bits */
-            FLAG_GMCY8               = 0x0000000100000000,  /* pixel format, GMCY, 8 bits */
-            FLAG_GMCY12              = 0x0000000200000000,  /* pixel format, GMCY, 12 bits */
-            FLAG_UYVY                = 0x0000000400000000,  /* pixel format, yuv422, UYVY */
-            FLAG_CGHDR               = 0x0000000800000000   /* Conversion Gain: HCG, LCG, HDR */
-        };
-
-        enum eEVENT
-        {
-            EVENT_EXPOSURE             = 0x0001, /* exposure time changed */
-            EVENT_TEMPTINT             = 0x0002, /* white balance changed, Temp/Tint mode */
-            EVENT_IMAGE                = 0x0004, /* live image arrived, use Toupcam_PullImage to get this image */
-            EVENT_STILLIMAGE           = 0x0005, /* snap (still) frame arrived, use Toupcam_PullStillImage to get this frame */
-            EVENT_WBGAIN               = 0x0006, /* white balance changed, RGB Gain mode */
-            EVENT_TRIGGERFAIL          = 0x0007, /* trigger failed */
-            EVENT_BLACK                = 0x0008, /* black balance changed */
-            EVENT_FFC                  = 0x0009, /* flat field correction status changed */
-            EVENT_DFC                  = 0x000a, /* dark field correction status changed */
-            EVENT_ERROR                = 0x0080, /* generic error */
-            EVENT_DISCONNECTED         = 0x0081, /* camera disconnected */
-            EVENT_NOFRAMETIMEOUT       = 0x0082, /* no frame timeout error */
-            EVENT_AFFEEDBACK           = 0x0083, /* auto focus feedback information */
-            EVENT_AFPOSITION           = 0x0084, /* auto focus sensor board positon */
-            EVENT_NOPACKETTIMEOUT      = 0x0085, /* no packet timeout */
-            EVENT_FACTORY              = 0x8001  /* restore factory settings */
-        };
-
-        enum ePROCESSMODE
-        {
-            PROCESSMODE_FULL = 0x00, /* better image quality, more cpu usage. this is the default value */
-            PROCESSMODE_FAST = 0x01 /* lower image quality, less cpu usage */
-        };
-
-        enum eOPTION
-        {
-            OPTION_NOFRAME_TIMEOUT = 0x01,    /* 1 = enable; 0 = disable. default: disable */
-            OPTION_THREAD_PRIORITY = 0x02,    /* set the priority of the internal thread which grab data from the usb device. iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; default: 0; see: msdn SetThreadPriority */
-            OPTION_PROCESSMODE     = 0x03,    /* 0 = better image quality, more cpu usage. this is the default value
-                                                     1 = lower image quality, less cpu usage */
-            OPTION_RAW             = 0x04,    /* raw data mode, read the sensor "raw" data. This can be set only BEFORE Toupcam_StartXXX(). 0 = rgb, 1 = raw, default value: 0 */
-            OPTION_HISTOGRAM       = 0x05,    /* 0 = only one, 1 = continue mode */
-            OPTION_BITDEPTH        = 0x06,    /* 0 = 8 bits mode, 1 = 16 bits mode */
-            OPTION_FAN             = 0x07,    /* 0 = turn off the cooling fan, [1, max] = fan speed */
-            OPTION_TEC             = 0x08,    /* 0 = turn off the thermoelectric cooler, 1 = turn on the thermoelectric cooler */
-            OPTION_LINEAR          = 0x09,    /* 0 = turn off the builtin linear tone mapping, 1 = turn on the builtin linear tone mapping, default value: 1 */
-            OPTION_CURVE           = 0x0a,    /* 0 = turn off the builtin curve tone mapping, 1 = turn on the builtin polynomial curve tone mapping, 2 = logarithmic curve tone mapping, default value: 2 */
-            OPTION_TRIGGER         = 0x0b,    /* 0 = video mode, 1 = software or simulated trigger mode, 2 = external trigger mode, default value = 0 */
-            OPTION_RGB             = 0x0c,    /* 0 => RGB24; 1 => enable RGB48 format when bitdepth > 8; 2 => RGB32; 3 => 8 Bits Gray (only for mono camera); 4 => 16 Bits Gray (only for mono camera when bitdepth > 8) */
-            OPTION_COLORMATIX      = 0x0d,    /* enable or disable the builtin color matrix, default value: 1 */
-            OPTION_WBGAIN          = 0x0e,    /* enable or disable the builtin white balance gain, default value: 1 */
-            OPTION_TECTARGET       = 0x0f,    /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius */
-            OPTION_AGAIN           = 0x10,    /* enable or disable adjusting the analog gain when auto exposure is enabled. default value: enable */
-            OPTION_FRAMERATE       = 0x11,    /* limit the frame rate, range=[0, 63], the default value 0 means no limit */
-            OPTION_DEMOSAIC        = 0x12,    /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients interpolation) = 1, PPG(Patterned Pixel Grouping interpolation) = 2, AHD(Adaptive Homogeneity-Directed interpolation) = 3, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
-            OPTION_DEMOSAIC_VIDEO  = 0x13,    /* demosaic method for video */
-            OPTION_DEMOSAIC_STILL  = 0x14,    /* demosaic method for still image */
-            OPTION_BLACKLEVEL      = 0x15,    /* black level */
-            OPTION_MULTITHREAD     = 0x16,    /* multithread image processing */
-            OPTION_BINNING         = 0x17,    /* binning, 0x01 (no binning), 0x02 (add, 2*2), 0x03 (add, 3*3), 0x04 (add, 4*4), 0x82 (average, 2*2), 0x83 (average, 3*3), 0x84 (average, 4*4) */
-            OPTION_ROTATE          = 0x18,    /* rotate clockwise: 0, 90, 180, 270 */
-            OPTION_CG              = 0x19,    /* Conversion Gain mode: 0 = LCG, 1 = HCG, 2 = HDR */
-            OPTION_PIXEL_FORMAT    = 0x1a,    /* pixel format */
-            OPTION_FFC             = 0x1b,    /* flat field correction
-                                                        set:
-                                                             0: disable
-                                                             1: enable
-                                                            -1: reset
-                                                            (0xff000000 | n): set the average number to n, [1~255]
-                                                        get:
-                                                             (val & 0xff): 0 -> disable, 1 -> enable, 2 -> inited
-                                                             ((val & 0xff00) >> 8): sequence
-                                                             ((val & 0xff0000) >> 8): average number
-                                                  */
-            OPTION_DDR_DEPTH       = 0x1c,    /* the number of the frames that DDR can cache
-                                                         1: DDR cache only one frame
-                                                         0: Auto:
-                                                                 ->one for video mode when auto exposure is enabled
-                                                                 ->full capacity for others
-                                                         1: DDR can cache frames to full capacity
-                                                  */
-            OPTION_DFC             = 0x1d,    /* dark field correction
-                                                        set:
-                                                             0: disable
-                                                             1: enable
-                                                            -1: reset
-                                                            (0xff000000 | n): set the average number to n, [1~255]
-                                                        get:
-                                                             (val & 0xff): 0 -> disable, 1 -> enable, 2 -> inited
-                                                             ((val & 0xff00) >> 8): sequence
-                                                             ((val & 0xff0000) >> 8): average number
-                                                  */
-            OPTION_SHARPENING      = 0x1e,    /* Sharpening: (threshold << 24) | (radius << 16) | strength)
-                                                            strength: [0, 500], default: 0 (disable)
-                                                            radius: [1, 10]
-                                                            threshold: [0, 255]
-                                                  */
-            OPTION_FACTORY         = 0x1f,    /* restore the factory settings */
-            OPTION_TEC_VOLTAGE     = 0x20,    /* get the current TEC voltage in 0.1V, 59 mean 5.9V; readonly */
-            OPTION_TEC_VOLTAGE_MAX = 0x21,    /* get the TEC maximum voltage in 0.1V; readonly */
-            OPTION_DEVICE_RESET    = 0x22,    /* reset usb device, simulate a replug */
-
-            OPTION_DENOISE         = 0x35,     /* denoise, strength range: [0, 100], 0 means disable */
-            OPTION_HEAT_MAX        = 0x36,     /* maximum level: heat to prevent fogging up */
-            OPTION_HEAT            = 0x37,     /* heat to prevent fogging up */
-            OPTION_LOW_NOISE       = 0x38,     /* low noise mode: 1 => enable */
-            OPTION_HIGH_FULLWELL   = 0x55
-        };
+        static std::map<int, std::string> errCodes;
+		static std::string errorCodes(int rc);
 
         enum eGUIDEDIRECTION
         {
@@ -317,22 +149,6 @@ class ToupBase : public INDI::CCD
             TOUPBASE_STOP,
         };
 
-        enum ePIXELFORMAT
-        {
-            PIXELFORMAT_RAW8       = 0x00,
-            PIXELFORMAT_RAW10      = 0x01,
-            PIXELFORMAT_RAW12      = 0x02,
-            PIXELFORMAT_RAW14      = 0x03,
-            PIXELFORMAT_RAW16      = 0x04,
-            PIXELFORMAT_YUV411     = 0x05,
-            PIXELFORMAT_VUYY       = 0x06,
-            PIXELFORMAT_YUV444     = 0x07,
-            PIXELFORMAT_RGB888     = 0x08,
-            PIXELFORMAT_GMCY8      = 0x09,
-            PIXELFORMAT_GMCY12     = 0x0a,
-            PIXELFORMAT_UYVY       = 0x0b
-        };
-
         enum eTriggerMode
         {
             TRIGGER_VIDEO,
@@ -340,48 +156,12 @@ class ToupBase : public INDI::CCD
             TRIGGER_EXTERNAL,
         };
 
-        struct Resolution
-        {
-            uint width;
-            uint height;
-        };
-
-        struct ModelV2
-        {
-            std::string name;
-            ulong flag;
-            uint maxspeed;
-            uint preview;
-            uint still;
-            uint maxfanspeed;
-            uint ioctrol;
-            float xpixsz;
-            float ypixsz;
-            XP(Resolution) res[CP(MAX)];
-        };
-
-        struct InstanceV2
-        {
-            std::string displayname; /* display name */
-            std::string id; /* unique and opaque id of a connected camera */
-            ModelV2 model;
-        };
-
-        struct FrameInfoV2
-        {
-            uint  width;
-            uint  height;
-            uint  flag;      /* FRAMEINFO_FLAG_xxxx */
-            uint  seq;       /* sequence number */
-            ulong timestamp; /* microsecond */
-        };
-
         //#############################################################################
         // Capture
         //#############################################################################
         void allocateFrameBuffer();
-        struct timeval ExposureEnd;
-        double ExposureRequest;
+        timeval m_ExposureEnd;
+        double m_ExposureRequest;
 
         //#############################################################################
         // Video Format & Streaming
@@ -397,26 +177,19 @@ class ToupBase : public INDI::CCD
         void TimerNS();
         void stopTimerNS();
         IPState guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        struct timeval NSPulseEnd;
-        int NStimerID;
-        eGUIDEDIRECTION NSDir;
-        const char *NSDirName;
+        int m_NStimerID { -1 };
 
         // W/E Guiding
         static void TimerHelperWE(void *context);
         void TimerWE();
         void stopTimerWE();
         IPState guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName);
-        struct timeval WEPulseEnd;
-        int WEtimerID;
-        eGUIDEDIRECTION WEDir;
-        const char *WEDirName;
+        int m_WEtimerID { -1 };
 
         //#############################################################################
         // Temperature Control & Cooling
         //#############################################################################
         bool activateCooler(bool enable);
-        double TemperatureRequest;
 
         //#############################################################################
         // Setup & Controls
@@ -429,17 +202,10 @@ class ToupBase : public INDI::CCD
         void refreshControls();
 
         //#############################################################################
-        // Dual conversion Gain
-        //#############################################################################
-        bool dualGainEnabled();
-        double setDualGainMode(double gain);
-        void setDualGainRange();
-
-        //#############################################################################
         // Resolution
         //#############################################################################
-        ISwitch ResolutionS[CP(MAX)];
-        ISwitchVectorProperty ResolutionSP;
+        ISwitch m_ResolutionS[CP(MAX)];
+        ISwitchVectorProperty m_ResolutionSP;
 
         //#############################################################################
         // Misc.
@@ -452,23 +218,8 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Callbacks
         //#############################################################################
-        static void pushCB(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap, void* pCallbackCtx);
-        void pushCallback(const void* pData, const XP(FrameInfoV2)* pInfo, int bSnap);
-
         static void eventCB(unsigned event, void* pCtx);
-        void eventPullCallBack(unsigned event);
-
-        static void TempTintCB(const int nTemp, const int nTint, void* pCtx);
-        void TempTintChanged(const int nTemp, const int nTint);
-
-        static void WhiteBalanceCB(const int aGain[3], void* pCtx);
-        void WhiteBalanceChanged(const int aGain[3]);
-
-        static void BlackBalanceCB(const unsigned short aSub[3], void* pCtx);
-        void BlackBalanceChanged(const unsigned short aSub[3]);
-
-        static void AutoExposureCB(void* pCtx);
-        void AutoExposureChanged();
+        void eventCallBack(unsigned event);
 
         // Handle capture timeout
         void captureTimeoutHandler();
@@ -479,37 +230,40 @@ class ToupBase : public INDI::CCD
         THAND m_CameraHandle { nullptr };
         const XP(DeviceV2) *m_Instance;
         // Camera Display Name
-        char name[MAXINDIDEVICE];
+        char m_name[MAXINDIDEVICE];
 
         //#############################################################################
         // Properties
         //#############################################################################
-        ISwitchVectorProperty BinningModeSP;
-        ISwitch BinningModeS[2];
+        ISwitchVectorProperty m_BinningModeSP;
+        ISwitch m_BinningModeS[2];
         typedef enum
         {
             TC_BINNING_AVG,
             TC_BINNING_ADD,
         } BINNING_MODE;
 
-        ISwitchVectorProperty HighFullwellModeSP;
-        ISwitch HighFullwellModeS[2];
+        ISwitchVectorProperty m_HighFullwellSP;
+        ISwitch m_HighFullwellS[2];
         typedef enum
         {
             TC_HIGHFULLWELL_ON,
             TC_HIGHFULLWELL_OFF,
         } HIGHFULLWELL_MODE;
 
-        ISwitchVectorProperty CoolerSP;
-        ISwitch CoolerS[2];
+        ISwitchVectorProperty m_CoolerSP;
+        ISwitch m_CoolerS[2];
         enum
         {
             TC_COOLER_ON,
             TC_COOLER_OFF,
         };
+        IText m_CoolerT;
+        ITextVectorProperty m_CoolerTP;
+		int32_t m_maxTecVoltage { -1 };
 
-        INumberVectorProperty ControlNP;
-        INumber ControlN[8];
+        INumberVectorProperty m_ControlNP;
+        INumber m_ControlN[8];
         enum
         {
             TC_GAIN,
@@ -522,24 +276,19 @@ class ToupBase : public INDI::CCD
             TC_FRAMERATE_LIMIT,
         };
 
-        ISwitch AutoControlS[3];
-        ISwitchVectorProperty AutoControlSP;
-        enum
-        {
-            TC_AUTO_TINT,
-            TC_AUTO_WB,
-            TC_AUTO_BB,
-        };
+        // Auto Black Balance
+        ISwitch m_BBAutoS;
+        ISwitchVectorProperty m_BBAutoSP;
 
-        ISwitch AutoExposureS[2];
-        ISwitchVectorProperty AutoExposureSP;
+        ISwitch m_AutoExposureS[2];
+        ISwitchVectorProperty m_AutoExposureSP;
         enum
         {
             TC_AUTO_EXPOSURE_ON,
             TC_AUTO_EXPOSURE_OFF,
         };
 
-        INumber BlackBalanceN[3];
+        INumber m_BlackBalanceN[3];
         INumberVectorProperty BlackBalanceNP;
         enum
         {
@@ -548,16 +297,12 @@ class ToupBase : public INDI::CCD
             TC_BLACK_B,
         };
 
-        INumberVectorProperty OffsetNP;
-        INumber OffsetN[1];
-        enum
-        {
-            TC_OFFSET,
-        };
+        INumberVectorProperty m_OffsetNP;
+        INumber m_OffsetN;
 
         // R/G/B/Gray low/high levels
-        INumber LevelRangeN[8];
-        INumberVectorProperty LevelRangeNP;
+        INumber m_LevelRangeN[8];
+        INumberVectorProperty m_LevelRangeNP;
         enum
         {
             TC_LO_R,
@@ -570,18 +315,9 @@ class ToupBase : public INDI::CCD
             TC_HI_Y,
         };
 
-        // Temp/Tint White Balance
-        INumber WBTempTintN[2];
-        INumberVectorProperty WBTempTintNP;
-        enum
-        {
-            TC_WB_TEMP,
-            TC_WB_TINT,
-        };
-
-        // RGB White Balance
-        INumber WBRGBN[3];
-        INumberVectorProperty WBRGBNP;
+        // White Balance
+        INumber m_WBN[3];
+        INumberVectorProperty m_WBNP;
         enum
         {
             TC_WB_R,
@@ -589,31 +325,17 @@ class ToupBase : public INDI::CCD
             TC_WB_B,
         };
 
-        // Auto Balance Mode
-        ISwitch WBAutoS[2];
-        ISwitchVectorProperty WBAutoSP;
-        enum
-        {
-            TC_AUTO_WB_TT,
-            TC_AUTO_WB_RGB
-        };
-
-        // Fan control
-        ISwitch FanControlS[2];
-        ISwitchVectorProperty FanControlSP;
-        enum
-        {
-            TC_FAN_ON,
-            TC_FAN_OFF,
-        };
+        // Auto White Balance
+        ISwitch m_WBAutoS;
+        ISwitchVectorProperty m_WBAutoSP;
 
         // Fan Speed
-        ISwitch *FanSpeedS = nullptr;
-        ISwitchVectorProperty FanSpeedSP;
+        INumber m_FanSpeedS;
+        INumberVectorProperty m_FanSpeedSP;
 
         // Video Format
-        ISwitch VideoFormatS[2];
-        ISwitchVectorProperty VideoFormatSP;
+        ISwitch m_VideoFormatS[2];
+        ISwitchVectorProperty m_VideoFormatSP;
         enum
         {
             TC_VIDEO_COLOR_RGB,
@@ -627,23 +349,16 @@ class ToupBase : public INDI::CCD
         };
 
         // Low Noise
-        ISwitchVectorProperty LowNoiseSP;
-        ISwitch LowNoiseS[2];
+        ISwitchVectorProperty m_LowNoiseSP;
+        ISwitch m_LowNoiseS[2];
 
         // Heat Up
-        ISwitchVectorProperty HeatUpSP;
-        ISwitch HeatUpS[3];
-        enum
-        {
-            TC_HEAT_OFF,
-            TC_HEAT_ON,
-            TC_HEAT_MAX,
-        };
-
+        INumberVectorProperty m_HeatUpSP;
+        INumber m_HeatUpS;
 
         // Firmware Info
-        ITextVectorProperty FirmwareTP;
-        IText FirmwareT[5] = {};
+        ITextVectorProperty m_FirmwareTP;
+        IText m_FirmwareT[5] = {};
         enum
         {
             TC_FIRMWARE_SERIAL,
@@ -654,28 +369,15 @@ class ToupBase : public INDI::CCD
         };
 
         // SDK Version
-        ITextVectorProperty SDKVersionTP;
-        IText SDKVersionT[1] = {};
-
-        // ADC / Max Bitdepth
-        INumberVectorProperty ADCNP;
-        INumber ADCN[1];
+        ITextVectorProperty m_SDKVersionTP;
+        IText m_SDKVersionT;
 
         // Timeout factor
-        INumberVectorProperty TimeoutFactorNP;
-        INumber TimeoutFactorN[1];
+        INumberVectorProperty m_TimeoutFactorNP;
+        INumber m_TimeoutFactorN;
 
-        // Gain Conversion
-        INumberVectorProperty GainConversionNP;
-        INumber GainConversionN[2];
-        enum
-        {
-            TC_HCG_THRESHOLD,
-            TC_HCG_LCG_RATIO,
-        };
-
-        ISwitchVectorProperty GainConversionSP;
-        ISwitch GainConversionS[3];
+        ISwitchVectorProperty m_GainConversionSP;
+        ISwitch m_GainConversionS[3];
         enum
         {
             GAIN_LOW,
@@ -688,15 +390,7 @@ class ToupBase : public INDI::CCD
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
         eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;
 
-        bool m_CanSnap { false };
-        bool m_RAWFormatSupport { false };
-        bool m_RAWHighDepthSupport { false };
         bool m_MonoCamera { false };
-        bool m_hasDualGain { false };
-        bool m_HasLowNoise { false };
-        bool m_HasHighFullwellMode { false };
-        bool m_HasHeatUp { false };
-
         INDI::Timer m_CaptureTimeout;
         uint32_t m_CaptureTimeoutCounter {0};
         // Download estimation in ms after exposure duration finished.
@@ -706,21 +400,12 @@ class ToupBase : public INDI::CCD
         uint8_t m_RawBitsPerPixel { 8 };
         uint8_t m_MaxBitDepth { 8 };
         uint8_t m_Channels { 1 };
-        uint8_t m_TimeoutRetries { 0 };
-
-        uint32_t m_MaxGainNative { 0 };
-        uint32_t m_MaxGainHCG { 0 };
-        uint32_t m_NativeGain { 0 };
+		
+		uint8_t* getRgbBuffer();
+		uint8_t *m_rgbBuffer { nullptr };
+		int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
 
-        friend void ::ISGetProperties(const char *dev);
-        friend void ::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num);
-        friend void ::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int num);
-        friend void ::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num);
-        friend void ::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                                char *formats[], char *names[], int n);
-
-        static const uint8_t MAX_RETRIES { 5 };
         static const uint32_t MIN_DOWNLOAD_ESTIMATION { 1000 };
 };

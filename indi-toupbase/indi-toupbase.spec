@@ -40,7 +40,6 @@ BuildRequires: pkgconfig(cfitsio)
 BuildRequires: pkgconfig(libcurl)
 BuildRequires: pkgconfig(gsl)
 BuildRequires: pkgconfig(libjpeg)
-BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
 BuildRequires: libtoupcam
