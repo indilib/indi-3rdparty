@@ -30,9 +30,7 @@ The driver supports single framing and streaming.
 ### Known issues (mostly firmware related):
 
 - Intensive configuration changes could lead to a crash
-- If Sub frame is enabled when auto focus is executed, it may not be possible to retrieve shooting data or cooling information.
 - The driver crashes when Native file format is selected and exposed.
-- Binning that the camera does not support can be selected.
 
 ## Operation
 

@@ -172,6 +172,12 @@ class SVBONYCCD : public INDI::CCD
         INumber CoolerN[1];
         INumberVectorProperty CoolerNP;
 
+        // a switch for automatic correction of dynamic dead pixels
+        ISwitch CorrectDDPS[2];
+        ISwitchVectorProperty CorrectDDPSP;
+        enum { CORRECT_DDP_ENABLE = 0, CORRECT_DDP_DISABLE = 1 };
+        int correctDDPEnable; // 0:Enable, 1:Disable
+
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI
         // -> ignored
