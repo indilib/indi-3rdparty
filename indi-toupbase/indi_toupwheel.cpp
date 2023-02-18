@@ -189,5 +189,8 @@ int ToupWheel::QueryFilter()
         LOGF_ERROR("Failed to query filter wheel. %s", errorCodes(rc).c_str());
         return -1;
     }
-    return val + 1;
+	else if (val < 0)
+		return val;
+    else
+		return (val + 1);
 }
