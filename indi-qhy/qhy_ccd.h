@@ -342,8 +342,8 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint16_t height = 0;
 
             // Location
-            uint32_t latitude = 0;
-            uint32_t longitude = 0;
+            double latitude = 0;
+            double longitude = 0;
 
             // Start Time
             uint8_t start_flag = 0;

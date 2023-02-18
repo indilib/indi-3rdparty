@@ -2797,10 +2797,10 @@ void QHYCCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRe
         //fitsKeywords.push_back({"GPS_DSTB", GPSHeader.max_clock, "Time Offset Stable for (s)"});
 
         // Longitude
-        fitsKeywords.push_back({"GPS_LONG", GPSHeader.longitude, "GPS Longitude"});
+        fitsKeywords.push_back({"GPS_LONG", GPSHeader.longitude, 7, "GPS Longitude"});
 
         // Latitude
-        fitsKeywords.push_back({"GPS_LAT", GPSHeader.latitude, "GPS Latitude"});
+        fitsKeywords.push_back({"GPS_LAT", GPSHeader.latitude, 7, "GPS Latitude"});
 
         // Sequence Number
         fitsKeywords.push_back({"GPS_SEQ", GPSHeader.seqNumber, "Sequence Number"});
@@ -2846,13 +2846,21 @@ void QHYCCD::decodeGPSHeader()
     IUSaveText(&GPSDataHeaderT[GPS_DATA_HEIGHT], data);
 
     // Latitude
-    GPSHeader.latitude = gpsarray[9] << 24 | gpsarray[10] << 16 | gpsarray[11] << 8 | gpsarray[12];
-    snprintf(data, 64, "%u", GPSHeader.latitude);
+    uint32_t latitude = gpsarray[9] << 24 | gpsarray[10] << 16 | gpsarray[11] << 8 | gpsarray[12];
+    // convert SDDMMMMMMM to DD.DDDDDDD
+    GPSHeader.latitude = (latitude % 1000000000) / 10000000;
+    GPSHeader.latitude += (latitude % 10000000) / 6000000.0;
+    GPSHeader.latitude *= latitude > 1000000000 ? -1.0 : 1.0;
+    snprintf(data, 64, "%f", GPSHeader.latitude);
     IUSaveText(&GPSDataHeaderT[GPS_DATA_LATITUDE], data);
 
     // Longitude
-    GPSHeader.longitude = gpsarray[13] << 24 | gpsarray[14] << 16 | gpsarray[15] << 8 | gpsarray[16];
-    snprintf(data, 64, "%u", GPSHeader.longitude);
+    uint32_t longitude = gpsarray[13] << 24 | gpsarray[14] << 16 | gpsarray[15] << 8 | gpsarray[16];
+    // convert SDDDMMMMMM to DDD.DDDDDDD
+    GPSHeader.longitude = (longitude % 1000000000) / 1000000;
+    GPSHeader.longitude += (longitude % 1000000) / 600000.0;
+    GPSHeader.longitude *= longitude > 1000000000 ? -1.0 : 1.0;
+    snprintf(data, 64, "%f", GPSHeader.longitude);
     IUSaveText(&GPSDataHeaderT[GPS_DATA_LONGITUDE], data);
 
     // Start Flag
