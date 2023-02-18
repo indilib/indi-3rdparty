@@ -2598,7 +2598,7 @@ void QHYCCD::streamVideo()
             {
                 decodeGPSHeader();
                 timestamp = (uint64_t)GPSHeader.start_sec * 1e6;
-                timestamp += GPSHeader.start_us;
+                timestamp += GPSHeader.start_us + QHY_SER_US_EPOCH;
             }
 
             Streamer->newFrame(buffer, w * h * bpp / 8 * channels, timestamp);

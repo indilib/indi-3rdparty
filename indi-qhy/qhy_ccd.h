@@ -497,4 +497,5 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
         static constexpr const char * GPS_CONTROL_TAB = "GPS Control";
         static constexpr const char * GPS_DATA_TAB = "GPS Data";
+        static constexpr uint64_t QHY_SER_US_EPOCH = 62948880000000000; // offset to SER epoch January 1, 1 AD
 };
