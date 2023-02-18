@@ -3,13 +3,13 @@ This is the INDI driver for the Touptek & oem cameras and filterwheels.
 COMPILING
 
 Go to the directory where you unpacked indi-toupbase sources and do:
-
+```
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug {path_to_indi-toupbase}
 make
 make install
-
+```
 should build and install indi_toupcam_ccd/wheel and oem executables.
 
 RUNNING
