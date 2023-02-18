@@ -144,20 +144,20 @@ endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 install(TARGETS
     indi_toupcam_ccd
     indi_altair_ccd
-	indi_bressercam_ccd
+    indi_bressercam_ccd
     indi_mallincam_ccd
     indi_nncam_ccd
-	indi_ogmacam_ccd
-	indi_omegonprocam_ccd
+    indi_ogmacam_ccd
+    indi_omegonprocam_ccd
     indi_starshootg_ccd
     indi_tscam_ccd
     indi_toupcam_wheel
     indi_altair_wheel
-	indi_bressercam_wheel
+    indi_bressercam_wheel
     indi_mallincam_wheel
     indi_nncam_wheel
-	indi_ogmacam_wheel
-	indi_omegonprocam_wheel
+    indi_ogmacam_wheel
+    indi_omegonprocam_wheel
     indi_starshootg_wheel
     indi_tscam_wheel
     RUNTIME DESTINATION bin)
