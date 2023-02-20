@@ -58,7 +58,7 @@ class ToupWheel : public INDI::FilterWheel
             TC_FW_VERSION,
             TC_HW_VERSION,
             TC_REV,
-			TC_SDK
+            TC_SDK
         };
         
         THAND m_Handle { nullptr };

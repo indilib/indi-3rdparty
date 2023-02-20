@@ -1983,6 +1983,12 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
 
     m_CurrentVideoFormat = index;
     m_BitsPerPixel = (m_BitsPerPixel > 8) ? 16 : 8;
+    
+    int bLevelStep = 1;
+    if (m_BitsPerPixel > 8)
+        bLevelStep = 1 << (m_maxBitDepth - 8);
+    m_BlackLevelN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    IUUpdateMinMax(&m_BlackLevelNP);
 
     LOGF_DEBUG("Video Format: %d, BitsPerPixel: %d", index, m_BitsPerPixel);
 

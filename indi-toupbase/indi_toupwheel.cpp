@@ -68,9 +68,9 @@ bool ToupWheel::initProperties()
         IUFillSwitch(&m_SlotS[i], std::to_string(SlotNum[i]).c_str(), std::to_string(SlotNum[i]).c_str(), ISS_OFF);
     IUFillSwitchVector(&m_SlotSP, m_SlotS, SLOT_NUM, getDeviceName(), "SLOTNUMBER", "Slot Number", FILTER_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-	IUFillText(&m_VersionT[TC_FW_VERSION], "FIRMWARE", "Firmware", nullptr);
-	IUFillText(&m_VersionT[TC_HW_VERSION], "HARDWARE", "Hardware", nullptr);
-	IUFillText(&m_VersionT[TC_REV], "REVISION", "Revision", nullptr);
+    IUFillText(&m_VersionT[TC_FW_VERSION], "FIRMWARE", "Firmware", nullptr);
+    IUFillText(&m_VersionT[TC_HW_VERSION], "HARDWARE", "Hardware", nullptr);
+    IUFillText(&m_VersionT[TC_REV], "REVISION", "Revision", nullptr);
     IUFillText(&m_VersionT[TC_SDK], "SDK", "SDK", FP(Version()));
     IUFillTextVector(&m_VersionTP, m_VersionT, 4, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 0, IPS_IDLE);
     
@@ -81,16 +81,16 @@ bool ToupWheel::updateProperties()
 {
     if (isConnected())
     {
-		char tmpBuffer[64] = {0};
-		uint16_t pRevision = 0;
-		FP(get_FwVersion(m_Handle, tmpBuffer));
-		IUSaveText(&m_VersionT[TC_FW_VERSION], tmpBuffer);
-		FP(get_HwVersion(m_Handle, tmpBuffer));
-		IUSaveText(&m_VersionT[TC_HW_VERSION], tmpBuffer);
-		FP(get_Revision(m_Handle, &pRevision));
-		snprintf(tmpBuffer, 32, "%d", pRevision);
-		IUSaveText(&m_VersionT[TC_REV], tmpBuffer);
-	
+        char tmpBuffer[64] = {0};
+        uint16_t pRevision = 0;
+        FP(get_FwVersion(m_Handle, tmpBuffer));
+        IUSaveText(&m_VersionT[TC_FW_VERSION], tmpBuffer);
+        FP(get_HwVersion(m_Handle, tmpBuffer));
+        IUSaveText(&m_VersionT[TC_HW_VERSION], tmpBuffer);
+        FP(get_Revision(m_Handle, &pRevision));
+        snprintf(tmpBuffer, 32, "%d", pRevision);
+        IUSaveText(&m_VersionT[TC_REV], tmpBuffer);
+    
         int val = 0;
         FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &val));
         for (int i = 0; i < SLOT_NUM; ++i)
@@ -162,8 +162,6 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 m_SlotSP.s = IPS_OK;
                 FilterSlotN[0].max = val;
                 IUUpdateMinMax(&FilterSlotNP);
-                deleteProperty(FilterNameTP->name);
-                defineProperty(FilterNameTP);
                 
                 TargetFilter = 1;
                 updateFilter();
