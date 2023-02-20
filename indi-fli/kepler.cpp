@@ -326,6 +326,7 @@ bool Kepler::initProperties()
     GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_NOT_DETECTED)].fill("FPRO_GPS_NOT_DETECTED", "Not detected", IPS_IDLE);
     GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_NO_SAT_LOCK)].fill("FPRO_GPS_DETECTED_NO_SAT_LOCK", "No Sat lock", IPS_IDLE);
     GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_AND_SAT_LOCK)].fill("FPRO_GPS_DETECTED_AND_SAT_LOCK", "Sat locked", IPS_IDLE);
+    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_SAT_LOCK_TIME_ERROR)].fill("FPRO_GPS_DETECTED_SAT_LOCK_TIME_ERROR", "Lock error", IPS_IDLE);
     GPSStateLP.fill(getDeviceName(), "GPS_STATE", "GPS", GPS_TAB, IPS_IDLE);
 
     // Request Stats
@@ -823,6 +824,13 @@ bool Kepler::setup()
         BlackLevelNP[0].setValue(blackLevel);
         BlackLevelNP.setState(IPS_OK);
     }
+
+#ifdef LEGACY_MODE
+    EncodeFormatSP.reset();
+    EncodeFormatSP[FORMAT_NATIVE].setState(ISS_ON);
+    EncodeFormatSP.apply();
+    PrimaryCCD.setImageExtension("fits");
+#endif
 
     m_TemperatureTimer.start();
     m_GPSTimer.start();

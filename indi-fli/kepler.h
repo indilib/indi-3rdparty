@@ -93,7 +93,7 @@ class Kepler : public INDI::CCD
         INDI::PropertyNumber BlackLevelNP {1};
 
         // GPS State
-        INDI::PropertyLight GPSStateLP {3};
+        INDI::PropertyLight GPSStateLP {4};
 
 #ifdef LEGACY_MODE
         //****************************************************************************************
