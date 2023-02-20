@@ -37,6 +37,8 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
+BuildRequires: opencv-core
+BuildRequires: opencv-devel
 
 BuildRequires: gmock
 
