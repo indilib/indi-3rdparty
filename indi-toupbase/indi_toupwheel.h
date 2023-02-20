@@ -51,9 +51,15 @@ class ToupWheel : public INDI::FilterWheel
         ISwitch m_SlotS[SLOT_NUM];
         ISwitchVectorProperty m_SlotSP;
         
-        // SDK Version
-        ITextVectorProperty m_SDKVersionTP;
-        IText m_SDKVersionT;
+        ITextVectorProperty m_VersionTP;
+        IText m_VersionT[4];
+        enum
+        {
+            TC_FW_VERSION,
+            TC_HW_VERSION,
+            TC_REV,
+			TC_SDK
+        };
         
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;

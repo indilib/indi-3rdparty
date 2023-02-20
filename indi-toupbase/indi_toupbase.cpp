@@ -527,7 +527,6 @@ void ToupBase::setupParams()
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     IUSaveText(&m_CameraT[TC_CAMERA_REV], tmpBuffer);
-    m_CameraTP.s = IPS_OK;
 
     // Max supported bit depth
     m_maxBitDepth = FP(get_MaxBitDepth(m_Handle));
