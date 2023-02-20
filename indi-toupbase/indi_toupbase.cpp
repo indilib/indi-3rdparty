@@ -298,7 +298,7 @@ bool ToupBase::initProperties()
     IUFillText(&m_CameraT[TC_CAMERA_REV], "REVISION", "Revision", nullptr);
     IUFillTextVector(&m_CameraTP, m_CameraT, 6, getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillText(&m_SDKVersionT, "VERSION", "Version", nullptr);
+    IUFillText(&m_SDKVersionT, "VERSION", "Version", FP(Version()));
     IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
@@ -528,10 +528,6 @@ void ToupBase::setupParams()
     snprintf(tmpBuffer, 32, "%d", pRevision);
     IUSaveText(&m_CameraT[TC_CAMERA_REV], tmpBuffer);
     m_CameraTP.s = IPS_OK;
-
-    // SDK Version
-    IUSaveText(&m_SDKVersionT, FP(Version()));
-    m_SDKVersionTP.s = IPS_OK;
 
     // Max supported bit depth
     m_maxBitDepth = FP(get_MaxBitDepth(m_Handle));

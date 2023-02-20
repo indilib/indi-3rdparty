@@ -68,6 +68,9 @@ bool ToupWheel::initProperties()
         IUFillSwitch(&m_SlotS[i], std::to_string(SlotNum[i]).c_str(), std::to_string(SlotNum[i]).c_str(), ISS_OFF);
     IUFillSwitchVector(&m_SlotSP, m_SlotS, SLOT_NUM, getDeviceName(), "SLOTNUMBER", "Slot Number", FILTER_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    IUFillText(&m_SDKVersionT, "VERSION", "Version", FP(Version()));
+    IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
+    
     return true;
 }
 
@@ -88,9 +91,15 @@ bool ToupWheel::updateProperties()
     INDI::FilterWheel::updateProperties();
 
     if (isConnected())
+    {
         defineProperty(&m_SlotSP);
+        defineProperty(&m_SDKVersionTP);
+    }
     else
+    {
         deleteProperty(m_SlotSP.name);
+        deleteProperty(m_SDKVersionTP.name);
+    }
 
     return true;
 }
@@ -100,9 +109,10 @@ void ToupWheel::updateFilter()
     CurrentFilter = QueryFilter();
     if (TargetFilter == CurrentFilter)
         SelectFilterDone(CurrentFilter);
-    else if (FilterSlotNP.s != IPS_BUSY)
+    else
     {
-        FilterSlotNP.s = IPS_BUSY;
+        if (FilterSlotNP.s != IPS_BUSY)
+            FilterSlotNP.s = IPS_BUSY;
         IDSetNumber(&FilterSlotNP, nullptr);
     }
 }

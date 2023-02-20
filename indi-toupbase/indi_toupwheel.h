@@ -51,6 +51,10 @@ class ToupWheel : public INDI::FilterWheel
         ISwitch m_SlotS[SLOT_NUM];
         ISwitchVectorProperty m_SlotSP;
         
+        // SDK Version
+        ITextVectorProperty m_SDKVersionTP;
+        IText m_SDKVersionT;
+        
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
         char m_name[MAXINDIDEVICE];
