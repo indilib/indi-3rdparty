@@ -38,10 +38,7 @@ public:
                 wheels.push_back(std::unique_ptr<ToupWheel>(new ToupWheel(&pWheelInfo[i])));
         }
         if (wheels.empty())
-        {
             IDLog("No filterwheel detected");
-            return;
-        }
     }
 } loader;
 

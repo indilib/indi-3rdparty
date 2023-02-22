@@ -50,10 +50,7 @@ public:
                 cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
         }
         if (cameras.empty())
-        {
             IDLog("No camera detected");
-            return;
-        }
     }
 } loader;
 
