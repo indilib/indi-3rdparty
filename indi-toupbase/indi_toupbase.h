@@ -304,8 +304,6 @@ class ToupBase : public INDI::CCD
         bool m_MonoCamera { false };
         INDI::Timer m_CaptureTimeout;
         uint32_t m_CaptureTimeoutCounter {0};
-        // Download estimation in ms after exposure duration finished.
-        double m_DownloadEstimation {5000};
 
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_RawBitsPerPixel { 8 };

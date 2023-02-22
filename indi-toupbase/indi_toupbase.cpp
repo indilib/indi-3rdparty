@@ -26,7 +26,6 @@
 #include <deque>
 
 #define BITDEPTH_FLAG       (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
-#define VERBOSE_EXPOSURE    3
 #define CONTROL_TAB         "Control"
 
 #ifndef MAKEFOURCC
@@ -213,7 +212,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.f", 1, 10, 1, 1.2);
+    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.2, 0.01, 1.02);
     IUFillNumberVector(&m_TimeoutFactorNP, &m_TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
 
     if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
@@ -1248,18 +1247,12 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
 bool ToupBase::StartStreaming()
 {
-    HRESULT rc = 0;
-    if (m_ExposureRequest != 1.0 / Streamer->getTargetFPS())
+    const uint32_t uSecs = static_cast<uint32_t>(1000000.0f / Streamer->getTargetFPS());
+    HRESULT rc = FP(put_ExpoTime(m_Handle, uSecs));
+    if (FAILED(rc))
     {
-        m_ExposureRequest = 1.0 / Streamer->getTargetFPS();
-
-        const uint32_t uSecs = static_cast<uint32_t>(m_ExposureRequest * 1000000.0f);
-        rc = FP(put_ExpoTime(m_Handle, uSecs));
-        if (FAILED(rc))
-        {
-            LOGF_ERROR("Failed to set streaming exposure time. %s", errorCodes(rc).c_str());
-            return false;
-        }
+        LOGF_ERROR("Failed to set streaming exposure time. %s", errorCodes(rc).c_str());
+        return false;
     }
 
     rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), 0));
@@ -1344,28 +1337,12 @@ bool ToupBase::StartExposure(float duration)
     HRESULT rc = 0;
     uint32_t uSecs = static_cast<uint32_t>(duration * 1000000.0f);
 
-    // Only update exposure when necessary
-    if (m_ExposureRequest != duration)
+    m_ExposureRequest = duration;
+    if (FAILED(rc = FP(put_ExpoTime(m_Handle, uSecs))))
     {
-        m_ExposureRequest = duration;
-
-        if (FAILED(rc = FP(put_ExpoTime(m_Handle, uSecs))))
-        {
-            LOGF_ERROR("Failed to set exposure time. %s", errorCodes(rc).c_str());
-            return false;
-        }
+        LOGF_ERROR("Failed to set exposure time. %s", errorCodes(rc).c_str());
+        return false;
     }
-
-    timeval exposure_time, current_time;
-    gettimeofday(&current_time, nullptr);
-    exposure_time.tv_sec = uSecs / 1000000;
-    exposure_time.tv_usec = uSecs % 1000000;
-    timeradd(&current_time, &exposure_time, &m_ExposureEnd);
-
-    if (m_ExposureRequest > VERBOSE_EXPOSURE)
-        LOGF_INFO("Taking a %g seconds frame", static_cast<double>(m_ExposureRequest));
-
-    InExposure = true;
 
     if (m_CurrentTriggerMode != TRIGGER_SOFTWARE)
     {
@@ -1374,7 +1351,12 @@ bool ToupBase::StartExposure(float duration)
             LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
-
+    
+    timeval current_time, exposure_time = { uSecs / 1000000, uSecs % 1000000 };
+    gettimeofday(&current_time, nullptr);
+    timeradd(&current_time, &exposure_time, &m_ExposureEnd);
+    
+    InExposure = true;
     // Trigger an exposure
     if (FAILED(rc = FP(Trigger(m_Handle, 1))))
     {
@@ -1382,8 +1364,7 @@ bool ToupBase::StartExposure(float duration)
         return false;
     }
 
-    // Timeout 500ms after expected duration
-    m_CaptureTimeout.start(duration * 1000 + m_DownloadEstimation * m_TimeoutFactorN.value);
+    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value + 4.0);
 
     return true;
 }
@@ -1402,12 +1383,10 @@ void ToupBase::captureTimeoutHandler()
     if (!isConnected())
         return;
 
-    m_CaptureTimeoutCounter++;
-
-    if (m_CaptureTimeoutCounter >= 3)
+    if (++m_CaptureTimeoutCounter >= 3)
     {
         m_CaptureTimeoutCounter = 0;
-        LOG_ERROR("Camera timed out multiple times. Exposure failed");
+        LOGF_ERROR("Camera time out %d times. Exposure failed", m_CaptureTimeoutCounter);
         PrimaryCCD.setExposureFailed();
         return;
     }
@@ -1420,8 +1399,8 @@ void ToupBase::captureTimeoutHandler()
         return;
     }
 
-    LOG_DEBUG("Capture timed out, restart exposure");
-    m_CaptureTimeout.start(m_ExposureRequest * 1000 + m_DownloadEstimation * m_TimeoutFactorN.value);
+    LOG_DEBUG("Capture time out, restart exposure");
+    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value + 4.0);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -1454,10 +1433,6 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
 
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
-
-    // As proposed by Max in INDI forum, increase download estimation after changing ROI since next
-    // frame may take longer to download.
-    m_DownloadEstimation = 10000;
 
     // Total bytes required for image buffer
     uint32_t nbuf = (w * h * PrimaryCCD.getBPP() / 8) * m_Channels;
@@ -1807,26 +1782,10 @@ void ToupBase::eventCallBack(unsigned event)
             m_CaptureTimeoutCounter = 0;
             m_CaptureTimeout.stop();
 
-            // Estimate download time
-            timeval curtime, diff;
-            gettimeofday(&curtime, nullptr);
-            timersub(&curtime, &m_ExposureEnd, &diff);
-            m_DownloadEstimation = diff.tv_sec * 1000 + diff.tv_usec / 1e3;
-
-            if (m_DownloadEstimation < MIN_DOWNLOAD_ESTIMATION)
-            {
-                m_DownloadEstimation = MIN_DOWNLOAD_ESTIMATION;
-                LOGF_DEBUG("Too low download estimate. Bumping to %.f ms", m_DownloadEstimation);
-            }
-
-            XP(FrameInfoV2) info;
-            memset(&info, 0, sizeof(XP(FrameInfoV2)));
-
             int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
-
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
-                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, &info));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, nullptr));
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
             }
@@ -1834,8 +1793,11 @@ void ToupBase::eventCallBack(unsigned event)
             {
                 InExposure = false;
                 PrimaryCCD.setExposureLeft(0);
-                uint8_t *buffer = PrimaryCCD.getFrameBuffer();
 
+                XP(FrameInfoV2) info;
+                memset(&info, 0, sizeof(XP(FrameInfoV2)));
+                
+                uint8_t *buffer = PrimaryCCD.getFrameBuffer();
                 if (m_MonoCamera == false && m_CurrentVideoFormat == TC_VIDEO_COLOR_RGB)
                     buffer = getRgbBuffer();
 
