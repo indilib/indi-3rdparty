@@ -26,15 +26,15 @@ macro(FIX_LIBRARY_LINK PACKAGE_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME 
 		if (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
 			if (FIX_MACOS_LIBS)
 				execute_process(COMMAND bash "-c" "install_name_tool -change ${LINK} @rpath/${PACKAGE_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-				message(WARNING "The mac library ${CURRENT_DYLIB_FILENAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to ${PACKAGE_NAME}.dylib that says ${LINK}"
+				message(WARNING "The mac library ${CURRENT_DYLIB_FILENAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to ${PACKAGE_NAME}.dylib that says ${LINK}. "
 					"The issue is now fixed by changing the link to @rpath/${PACKAGE_NAME}.dylib for better compatibility."
 					"Please push the changes to INDI 3rd party repository if you have write access, make a pull request, or let the maintainer know to fix the issue. "
 				)
 			else(FIX_MACOS_LIBS)
 				message (FATAL_ERROR
-					"The mac library ${CURRENT_DYLIB_FILENAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to ${PACKAGE_NAME}.dylib that says ${LINK}"
+					"The mac library ${CURRENT_DYLIB_FILENAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to ${PACKAGE_NAME}.dylib that says ${LINK}. "
 					"This could cause issues if ${PACKAGE_NAME}.dylib is not actually at that location. "
-					"If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option."
+					"If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option. "
 				)
 			endif(FIX_MACOS_LIBS)
 		endif (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
@@ -51,14 +51,15 @@ macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
      if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
          if (FIX_MACOS_LIBS)
              execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-             message(WARNING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed by changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
-            	"Please push the changes to INDI 3rd party repository if you have write access, make a pull request, or let the maintainer know to fix the issue."
+             message(WARNING  "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder had the ID ${DYLIB_ID} which could cause linking problems. "
+             	"The issue is now fixed by changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths. "
+            	"Please push the changes to INDI 3rd party repository if you have write access, make a pull request, or let the maintainer know to fix the issue. "
              )
          else(FIX_MACOS_LIBS)
              message (FATAL_ERROR
-                 "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
+                 "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems. "
                  "Please let the maintainer for ${LIBRARY_DISPLAY_NAME} know about the issue."
-                 "If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option."
+                 "If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option. "
              )
      	endif(FIX_MACOS_LIBS)
      endif (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
