@@ -12,7 +12,6 @@ find_package(ZLIB REQUIRED)
 find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(OpenCV REQUIRED core imgproc highgui)
 
 set(INDI_QHY_VERSION_MAJOR 2)
 set(INDI_QHY_VERSION_MINOR 8)
@@ -27,7 +26,6 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${QHY_INCLUDE_DIR})
 include_directories( ${USB1_INCLUDE_DIRS})
 include_directories( ${NOVA_INCLUDE_DIRS})
-include_directories( ${OpenCV_INCLUDE_DIRS})
 
 add_definitions(-DCALLBACK_MODE_SUPPORT)
 
@@ -62,7 +60,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml DESTINATION ${INDI_DATA_D
 
 ########### qhy_test_ccd ###########
 add_executable(qhy_ccd_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_test.cpp)
-target_link_libraries(qhy_ccd_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(qhy_ccd_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_ccd_test rt)
 endif()
@@ -71,7 +69,7 @@ install(TARGETS qhy_ccd_test RUNTIME DESTINATION bin )
 
 ########### qhy_video_test ###########
 add_executable(qhy_video_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_video_test.cpp)
-target_link_libraries(qhy_video_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(qhy_video_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_video_test rt)
 endif()
