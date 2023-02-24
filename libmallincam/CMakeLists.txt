@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET mallincam PROPERTY IMPORTED_LOCATION "mac/libmallincam.bin")
 
-  FIX_LIBRARY_ID("libmallincam" "mac/libmallincam.bin" "MALLINCAM")
+  FIX_MACOS_LIBRARIES("libmallincam" "mac/libmallincam.bin" "MALLINCAM")
 
 elseif (UNIX AND NOT WIN32)
 

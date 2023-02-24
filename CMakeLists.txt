@@ -17,7 +17,49 @@ include_directories( "/usr/local/include")
     ## This one is needed for Craft
 include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
+# FIX_LIBRARY_LINK Macro
+# This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems 
+# If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
+# This macro should be called by the FIX_MACOS_LIBRARIES macro below
+macro(FIX_LIBRARY_LINK PACKAGE_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME LINK)
+	if("${LINK}" MATCHES "${PACKAGE_NAME}")
+		if (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
+			if (FIX_MACOS_LIBS)
+				execute_process(COMMAND bash "-c" "install_name_tool -change ${LINK} @rpath/${PACKAGE_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
+				message(WARING "The Mac library link ${PACKAGE_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
+			else(FIX_MACOS_LIBS)
+				message (FATAL_ERROR
+					"The mac library ${PACKAGE_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to "
+					"${LINK} which could cause issues if ${PACKAGE_NAME}.dylib is not actually at that location. "
+					"Changing the link to @rpath/${PACKAGE_NAME}.dylib for better compatibility."
+				)
+			endif(FIX_MACOS_LIBS)
+		endif (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
+    endif("${LINK}" MATCHES "${PACKAGE_NAME}")
+endmacro(FIX_LIBRARY_LINK)
+
+
 # FIX_LIBRARY_ID Macro
+# This macro will check MacOS Binary Libraries provided by third parties for Install IDs that cold cause linking and packaging problems
+# If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
+# This macro should be called by the FIX_MACOS_LIBRARIES macro below
+macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
+	execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | tail -n 1 | tr -d '\n'" OUTPUT_VARIABLE DYLIB_ID)
+     if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
+         if (FIX_MACOS_LIBS)
+             execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
+             message(WARING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
+         else(FIX_MACOS_LIBS)
+             message (FATAL_ERROR
+                 "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
+                 "Please let the maintainer for ${LIBRARY_DISPLAY_NAME} know about the issue."
+                 "Changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
+             )
+     	endif(FIX_MACOS_LIBS)
+     endif (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
+endmacro(FIX_LIBRARY_ID)
+
+# FIX_MACOS_LIBRARIES Macro
 # On MacOS, the Install ID of the library is used for linking with the programs that need them.
 # If a version number is used in the install ID, linking could fail.  (Example: @rpath/libqhyccd.20.dylib)
 # If @loader_path, @executable_path, or an absolute path are used and the library is installed or packaged differently than that,
@@ -25,43 +67,30 @@ include_directories("${CMAKE_INSTALL_PREFIX}/include")
 # It is easiest to make the Install ID with just rpath and the name of the library (Examples: @rpath/libqhyccd.dylib and @rpath/libASICamera2.dylib).
 # Then when linking, it will use that path for linking, and the program just has to have the right rpath.
 # It will not matter then if the library is located in /usr/local/lib or bundled in an app bundle.
-# This code will check the library for these errors, correct them and give warnings.
-macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
-    # JM 2022.11.09: Disabling macro since it causes build issues on KDE's Binary Factory
-    # Once the issue is resolved, we can renable the the macro
-     execute_process(COMMAND bash "-c" "otool -D ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | tail -n 1 | tr -d '\n'" OUTPUT_VARIABLE DYLIB_ID)
-     if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
-         if (FIX_MACOS_LIBS)
-             execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-             message(WARING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
-         else()
-             message (FATAL_ERROR
-                 "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
-                 "Please let the maintainer for ${LIBRARY_DISPLAY_NAME} know about the issue."
-                 "Changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
-             )
-     endif()
-     endif (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
+# This code will check the library for these errors, correct them or give warnings asking that they get fixed.
+# The warnings do have to be fatal errors because if this problem does not get fixed, it will appear to be right, but linking will have failed and it won't work.
+
+macro(FIX_MACOS_LIBRARIES DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
+
+	 # This section will use the FIX_LIBRARY_ID macro to check and optionally fix Install IDs that could cause linking issues.
+	 FIX_LIBRARY_ID(${DYLIB_NAME} ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME})
      
-     # # This section corrects absolute or bad links to libusb
-     if (FIX_MACOS_LIBS)
-         execute_process(COMMAND bash "-c" "otool -L ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | cut -d ' ' -f1" OUTPUT_VARIABLE LINKS_LIST)
-         string (REPLACE "\t" "" LINKS_LIST "${LINKS_LIST}")
-         string (REPLACE "\n" ";" LINKS_LIST "${LINKS_LIST}")
-         foreach(LINK IN LISTS LINKS_LIST)
-             if("${LINK}" MATCHES "libusb-1.0.0")
-                 if (NOT "${LINK}" STREQUAL "@rpath/libusb-1.0.0.dylib")
-                     message (WARNING
-                         "The mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to "
-                         "${LINK} which could cause issues if libusb-1.0.0 is not actually at that location. "
-                         "Changing the link to @rpath/libusb-1.0.0.dylib for better compatibility."
-                     )
-                     execute_process(COMMAND bash "-c" "install_name_tool -change ${LINK} @rpath/libusb-1.0.0.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-                 endif (NOT "${LINK}" STREQUAL "@rpath/libusb-1.0.0.dylib")
-             endif("${LINK}" MATCHES "libusb-1.0.0")
-         endforeach(LINK IN LISTS LINKS_LIST)
-  endif(FIX_MACOS_LIBS)
-endmacro(FIX_LIBRARY_ID)
+     # This section gets all the current links to other libraries then checks and optionally corrects absolute or bad links to libraries including libusb and opencv
+	 execute_process(COMMAND bash "-c" "otool -L ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | cut -d ' ' -f1" OUTPUT_VARIABLE LINKS_LIST)
+	 string (REPLACE "\t" "" LINKS_LIST "${LINKS_LIST}")
+	 string (REPLACE "\n" ";" LINKS_LIST "${LINKS_LIST}")
+	 foreach(LINK IN LISTS LINKS_LIST)
+	 	if(NOT ${LINK} STREQUAL "")
+	 		FIX_LIBRARY_LINK("libusb-1.0.0" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+			FIX_LIBRARY_LINK("libopencv_highgui" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+			FIX_LIBRARY_LINK("libopencv_videoio" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+			FIX_LIBRARY_LINK("libopencv_imgcodecs" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+			FIX_LIBRARY_LINK("libopencv_imgproc" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+			FIX_LIBRARY_LINK("libopencv_core" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
+		endif(NOT ${LINK} STREQUAL "")
+	 endforeach(LINK IN LISTS LINKS_LIST)
+  
+endmacro(FIX_MACOS_LIBRARIES)
 
 endif(APPLE)
 

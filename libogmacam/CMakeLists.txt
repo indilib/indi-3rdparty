@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "mac/libogmacam.bin")
 
-  FIX_LIBRARY_ID("libogmacam" "mac/libogmacam.bin" "OGMACAM")
+  FIX_MACOS_LIBRARIES("libogmacam" "mac/libogmacam.bin" "OGMACAM")
 
 elseif (UNIX AND NOT WIN32)
 

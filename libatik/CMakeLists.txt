@@ -21,7 +21,7 @@ if (APPLE)
 
   set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "mac/libatikcameras.bin")
 
-  FIX_LIBRARY_ID("libatikcameras" "mac/libatikcameras.bin" "ATIK")
+  FIX_MACOS_LIBRARIES("libatikcameras" "mac/libatikcameras.bin" "ATIK")
   
   # Install library
   install_imported (TARGETS atikcameras DESTINATION ${CMAKE_INSTALL_LIBDIR})

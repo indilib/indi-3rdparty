@@ -21,7 +21,7 @@ elseif (APPLE)
 
     set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_mac64.bin")
 
-    FIX_LIBRARY_ID("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
+    FIX_MACOS_LIBRARIES("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
 
 elseif (UNIX)
 

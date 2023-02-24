@@ -26,8 +26,8 @@ if (APPLE)
   set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "mac/libPlayerOneCamera.bin")
   set_property (TARGET PlayerOnePW      PROPERTY IMPORTED_LOCATION "mac/libPlayerOnePW.bin")
     
-  FIX_LIBRARY_ID("libPlayerOneCamera" "mac/libPlayerOneCamera.bin" "PLAYER ONE")
-  FIX_LIBRARY_ID("libPlayerOnePW"     "mac/libPlayerOnePW.bin" "PLAYER ONE")
+  FIX_MACOS_LIBRARIES("libPlayerOneCamera" "mac/libPlayerOneCamera.bin" "PLAYER ONE")
+  FIX_MACOS_LIBRARIES("libPlayerOnePW"     "mac/libPlayerOnePW.bin" "PLAYER ONE")
 
 elseif (UNIX AND NOT WIN32)
 
