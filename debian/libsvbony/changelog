@@ -1,3 +1,12 @@
+libsvbony (1.10.2) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.10.2 :
+  * Solve the problem that SV405CC soft trigger does not plot
+  * Export SVBRestoreDefaultParam on Linux and MacOS
+  * libSVBCameraSDK.dylib under MacOS sets rpath
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Thu, 24 Feb 2023 07:00:00 +0900
+
 libsvbony (1.10.1) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.10.1 :
