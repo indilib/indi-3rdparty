@@ -26,12 +26,14 @@ macro(FIX_LIBRARY_LINK PACKAGE_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME 
 		if (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
 			if (FIX_MACOS_LIBS)
 				execute_process(COMMAND bash "-c" "install_name_tool -change ${LINK} @rpath/${PACKAGE_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-				message(WARING "The Mac library link ${PACKAGE_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
+				message(WARNING "The Mac library link ${PACKAGE_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed by changing the link to @rpath/${PACKAGE_NAME}.dylib for better compatibility."
+					"Please push the changes to INDI 3rd party repository if you have write access, make a pull request, or let the maintainer know to fix the issue. "
+				)
 			else(FIX_MACOS_LIBS)
 				message (FATAL_ERROR
 					"The mac library ${PACKAGE_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has a link to "
 					"${LINK} which could cause issues if ${PACKAGE_NAME}.dylib is not actually at that location. "
-					"Changing the link to @rpath/${PACKAGE_NAME}.dylib for better compatibility."
+					"If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option."
 				)
 			endif(FIX_MACOS_LIBS)
 		endif (NOT "${LINK}" STREQUAL "@rpath/${PACKAGE_NAME}.dylib")
@@ -40,7 +42,7 @@ endmacro(FIX_LIBRARY_LINK)
 
 
 # FIX_LIBRARY_ID Macro
-# This macro will check MacOS Binary Libraries provided by third parties for Install IDs that cold cause linking and packaging problems
+# This macro will check MacOS Binary Libraries provided by third parties for Install IDs that cold cause linking and packaging problems.
 # If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
 # This macro should be called by the FIX_MACOS_LIBRARIES macro below
 macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
@@ -48,12 +50,14 @@ macro(FIX_LIBRARY_ID DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME)
      if (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
          if (FIX_MACOS_LIBS)
              execute_process(COMMAND bash "-c" "install_name_tool -id @rpath/${DYLIB_NAME}.dylib ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME}")
-             message(WARING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed. Please push the changes to INDI 3rd party repository")
+             message(WARNING "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder is now fixed by changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
+            	"Please push the changes to INDI 3rd party repository if you have write access, make a pull request, or let the maintainer know to fix the issue."
+             )
          else(FIX_MACOS_LIBS)
              message (FATAL_ERROR
                  "The Mac library ${DYLIB_NAME}.dylib in the ${LIBRARY_DISPLAY_NAME} source folder has the ID ${DYLIB_ID} which could cause linking problems."
                  "Please let the maintainer for ${LIBRARY_DISPLAY_NAME} know about the issue."
-                 "Changing the library ${DYLIB_NAME}.dylib to have the id @rpath/${DYLIB_NAME}.dylib so it links properly with rpaths."
+                 "If you would like to attempt to fix the problem on your machine and continue the build, please enable the FIX_MACOS_LIBS option."
              )
      	endif(FIX_MACOS_LIBS)
      endif (NOT ${DYLIB_ID} STREQUAL "@rpath/${DYLIB_NAME}.dylib")
@@ -61,7 +65,7 @@ endmacro(FIX_LIBRARY_ID)
 
 # FIX_MACOS_LIBRARIES Macro
 # On MacOS, the Install ID of the library is used for linking with the programs that need them.
-# If a version number is used in the install ID, linking could fail.  (Example: @rpath/libqhyccd.20.dylib)
+# If a version number is used in the install ID, linking could fail because sometimes the numbers don't match.  (Example: @rpath/libqhyccd.20.dylib)
 # If @loader_path, @executable_path, or an absolute path are used and the library is installed or packaged differently than that,
 # linking could fail (Example: @loader_path/libASICamera2.dylib or /usr/local/lib/libsbig.dylib).
 # It is easiest to make the Install ID with just rpath and the name of the library (Examples: @rpath/libqhyccd.dylib and @rpath/libASICamera2.dylib).
