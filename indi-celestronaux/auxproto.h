@@ -34,6 +34,7 @@ enum AUXCommands
     MC_GET_POSITION      = 0x01,
     MC_GOTO_FAST         = 0x02,
     MC_SET_POSITION      = 0x04,
+    MC_GET_MODEL         = 0x05,
     MC_SET_POS_GUIDERATE = 0x06,
     MC_SET_NEG_GUIDERATE = 0x07,
     MC_LEVEL_START       = 0x0b,

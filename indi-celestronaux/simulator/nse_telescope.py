@@ -36,7 +36,7 @@ commands={
           'MC_GET_POSITION':0x01,
           'MC_GOTO_FAST':0x02,
           'MC_SET_POSITION':0x04,
-          'MC_GET_???':0x05,
+          'MC_GET_MODEL':0x05,
           'MC_SET_POS_GUIDERATE':0x06,
           'MC_SET_NEG_GUIDERATE':0x07,
           'MC_LEVEL_START':0x0b,
@@ -235,7 +235,7 @@ class NexStarScope:
           0x01 : NexStarScope.get_position,
           0x02 : NexStarScope.goto_fast,
           0x04 : NexStarScope.set_position,
-          0x05 : NexStarScope.cmd_0x05,
+          0x05 : NexStarScope.get_model,
           0x06 : NexStarScope.set_pos_guiderate,
           0x07 : NexStarScope.set_neg_guiderate,
           0x0b : NexStarScope.level_start,
@@ -373,8 +373,8 @@ class NexStarScope:
     def set_position(self,data, snd, rcv):
         return b''
 
-    def cmd_0x05(self, data, snd, rcv):
-        return bytes.fromhex('1685')
+    def get_model(self, data, snd, rcv):
+        return bytes.fromhex('1485') # AVX
 
     def set_pos_guiderate(self, data, snd, rcv):
         # The 1.1 factor is experimental to fit the actual hardware

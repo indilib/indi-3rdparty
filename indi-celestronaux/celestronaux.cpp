@@ -344,6 +344,7 @@ bool CelestronAUX::initProperties()
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Firmware Info
+    FirmwareTP[FW_MODEL].fill("Model", "", nullptr);
     FirmwareTP[FW_HC].fill("HC version", "", nullptr);
     FirmwareTP[FW_MB].fill("Mother Board version", "", nullptr);
     FirmwareTP[FW_AZM].fill("Ra/AZM version", "", nullptr);
@@ -385,6 +386,49 @@ bool CelestronAUX::initProperties()
         setActiveConnection(tcpConnection);
 
     return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::formatModelString(char *s, int n, uint16_t model)
+{
+    if (model == MountVersion::GPS_Nexstar)
+        snprintf(s, n, "Nexstar GPS");
+    else if (model == MountVersion::SLT_Nexstar)
+        snprintf(s, n, "Nexstar SLT");
+    else if (model == MountVersion::SE_5_4)
+        snprintf(s, n, "4/5SE");
+    else if (model == MountVersion::SE_8_6)
+        snprintf(s, n, "6/8SE");
+    else if (model == MountVersion::CPC_Deluxe)
+        snprintf(s, n, "CPC Deluxe");
+    else if (model == MountVersion::Series_GT)
+        snprintf(s, n, "GT Series");
+    else if (model == MountVersion::AVX)
+        snprintf(s, n, "AVX");
+    else if (model == MountVersion::Evolution_Nexstar)
+        snprintf(s, n, "Nexstar Evolution");
+    else if (model == MountVersion::CGX)
+        snprintf(s, n, "CGX");
+    else
+        snprintf(s, n, "Unknown");
+    /* TODO: Missing xx needs to be infered.
+      0x05xx : 'CGE',
+      0x06xx : 'Advanced GT'
+      0x09xx : 'CPC',
+      0x0axx : 'GT',
+      0x0dxx : 'CGE Pro',
+      0x0exx : 'CGEM DX',
+      0x0fxx : 'LCM',
+      0x10xx : 'Skyprodigy',
+      0x13xx : 'Starseeker',
+      0x15xx : 'Cosmos',
+      0x18xx : 'CGXL',
+      0x19xx : 'Astrofi',
+      0x1axx : 'SkyWatcher'
+      and more ...
+     */
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -447,9 +491,12 @@ bool CelestronAUX::updateProperties()
             defineProperty(Axis2PIDNP);
         }
 
+        getModel(AZM);
         getVersions();
         // display firmware versions
         char fwText[16] = {0};
+        formatModelString(fwText, sizeof(fwText), m_ModelVersion);
+        FirmwareTP[FW_MODEL].setText(fwText);
         formatVersionString(fwText, 10, m_HCVersion);
         FirmwareTP[FW_HC].setText(fwText);
         formatVersionString(fwText, 10, m_MainBoardVersion);
@@ -1989,6 +2036,19 @@ bool CelestronAUX::isHomingDone(INDI_HO_AXIS axis)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getModel(AUXTargets target)
+{
+    AUXCommand firmver(MC_GET_MODEL, APP, target);
+    if (! sendAUXCommand(firmver))
+        return false;
+    if (! readAUXResponse(firmver))
+        return false;
+    return true;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::getVersion(AUXTargets target)
 {
     AUXCommand firmver(GET_VER, APP, target);
@@ -2501,6 +2561,20 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 }
                 break;
 
+            case MC_GET_MODEL:
+            {
+                switch (m.source())
+                {
+                    case AZM:
+                        m_ModelVersion = m.getData();
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            }
+            break;
+
             case GET_VER:
             {
                 uint8_t *verBuf = nullptr;
@@ -3003,4 +3077,3 @@ void CelestronAUX::hex_dump(char *buf, AUXBuffer data, size_t size)
     if (size > 0)
         buf[3 * size - 1] = '\0';
 }
-
