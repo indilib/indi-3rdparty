@@ -1,7 +1,7 @@
 #ifndef __tscam_h__
 #define __tscam_h__
 
-/* Version: 53.22081.20230207 */
+/* Version: 53.22149.20230223 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -12,7 +12,7 @@
        (2) WinRT: x64, x86, arm64, arm; Win10 or above
        (3) macOS:
               (a) x64+x86: macOS 10.10 or above
-              (b) x64+arm64: macOS 12 or above, support x64 and Apple silicon (such as M1, M2, etc)
+              (b) x64+arm64: macOS 11.0 or above, support x64 and Apple silicon (such as M1, M2, etc)
        (4) Linux: kernel 2.6.27 or above
               (a) x64: GLIBC 2.14 or above
               (b) x86: CPU supports SSE3 instruction set or above; GLIBC 2.8 or above
@@ -104,6 +104,7 @@ extern "C" {
 #define E_FAIL              0x80004005 /* Generic failure */
 #define E_WRONG_THREAD      0x8001010e /* Call function in the wrong thread */
 #define E_GEN_FAILURE       0x8007001f /* Device not functioning */
+#define E_BUSY              0x800700aa /* The requested resource is in use */
 #define E_PENDING           0x8000000a /* The data necessary to complete this operation is not yet available */
 #define E_TIMEOUT           0x8001011f /* This operation returned because the timeout period expired */
 #endif
@@ -262,7 +263,7 @@ typedef struct {
 } TscamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22081.20230207
+    get the version of this dll/so/dylib, which is: 53.22149.20230223
 */
 #if defined(_WIN32)
 TSCAM_API(const wchar_t*)   Tscam_Version();
@@ -450,6 +451,14 @@ TSCAM_API(HRESULT)  Tscam_SnapR(HTscam h, unsigned nResolutionIndex, unsigned nN
                 others:     number of images to be triggered
 */
 TSCAM_API(HRESULT)  Tscam_Trigger(HTscam h, unsigned short nNumber);
+
+/* 
+    trigger synchronously
+    nTimeout:   0:              by default, exposure * 102% + 4000 milliseconds
+                0xffffffff:     wait infinite
+                other:          milliseconds to wait
+*/
+TSCAM_API(HRESULT)  Tscam_TriggerSync(HTscam h, unsigned nTimeout, void* pImageData, int bits, int rowPitch, TscamFrameInfoV3* pInfo);
 
 /*
     put_Size, put_eSize, can be used to set the video output resolution BEFORE Tscam_StartXXXX.
