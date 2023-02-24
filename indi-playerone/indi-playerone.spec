@@ -74,6 +74,11 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Fri Feb 24 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- Add single camera driver for multi threading
+- Add flip property with bayer compensation
+- Add nickname property for multi camera driver
+- Update PlayerOneCamera SDK to v3.2.0
 * Sun Feb 05 2023 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOnePW SDK to v1.1.0
 * Wed Jan 18 2023 Hiroshi Saito <hiro3110g@gmail.com>

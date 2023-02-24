@@ -1,3 +1,9 @@
+v1.2
+* Add: single camera driver for multi threading
+* Add: flip property with bayer compensation
+* Add: nickname property for multi camera driver
+* Update: PlayerOneCamera SDK to v3.2.0
+
 v1.1
 * Update: PlayerOnePW SDK to v1.1.0
 
