@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET bressercam PROPERTY IMPORTED_LOCATION "mac/libbressercam.bin")
 
-  FIX_LIBRARY_ID("libbressercam" "mac/libbressercam.bin" "BRESSERCAM")
+  FIX_MACOS_LIBRARIES("libbressercam" "mac/libbressercam.bin" "BRESSERCAM")
 
 elseif (UNIX AND NOT WIN32)
 

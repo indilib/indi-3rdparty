@@ -193,17 +193,30 @@ When submitting a new driver, the driver user **documentation** is required as p
   * Etc: Any other tabs created by the driver.
 * Issues: Any problems or issues or warnings the users should be aware about when using this driver.
 
-# MacOS Libraries
+# MacOS 3rd Party Binary Libraries and the FIX_MACOS_LIBS option
 
-Some binary files are dynamic libraries provided by various manufacturers and/or are built by various people who are volunteers.
-The binary library files have install names that are then used when building and installing software on MacOS to properly link the
-libraries to the programs or to each other. The problem is that for various reasons, the install names sometimes are based on
-the build folders or install methods that those individuals used on their own computers and when the software is built by others,
-built using different methods. linked in different ways, or is built on craft servers, the install names cause the linking to fail.
+Some binary files in this repository are dynamic libraries provided by various manufacturers and/or are built by various people who are volunteers.  
+The binary library files have install names that are then used when building and installing software on MacOS to properly link the 
+libraries to the programs or to each other. The problem is that for various reasons, the install names sometimes are based on 
+the build folders or install methods that those individuals used on their own computers and when the software is built by others, or 
+built using different methods such as craft, the incorrect install names cause the linking to fail.
 
-This will make the software look like it built and installed correctly, but when it is used, it completely fails to work.
-The install names were changed in the binary files so that they are more consistent across the indi 3rd party libraries and will work
-using other building and linking methods on more people's computers.
+In addition, some of these libraries were built on computers that have other libraries those libraries depend on, such as libusb and opencv, 
+and they have already been linked to these libraries in the locations on those people's computers.  Often those links are to homebrew versions or to build folders on those people's computers 
+and those libraries might not exist in those same locations on the craft binary server or computer on which someone is using this repository to build and install indi libraries.  
+
+Both of these issues would cause the libraries to fail to be installed and linked properly, even if it appears to have succeeded.  
+This will cause them to not function correctly and possibly cause crashes of INDI or KStars.  
+Often the issue would not be revealed until the packaging step or even when someone tries to use the drivers. 
+
+The Fix MacOS Libraries Macro will try to detect both of these issues and if it finds a problem, it will cause a fatal error.
+This way, the issue will get flagged so that the managers of this repository will be alerted to the issue either by people who use this repository or by the craft binary server.
+If this happens to you, please report the issue as soon as possible so that the repository can be updated.
+
+The FIX_MACOS_LIBS option can be enabled to fix the problems immediately when they are detected. If you enable this option, the build will continue after the problem is fixed so 
+you can fully build the software.  If you have the rights to update the INDI 3rd Party Repository, please fix the problem by just doing a commit and pushing the changes the script made 
+to the libraries.  If not, again, please report the problem.  This build option cannot be enabled on the craft binary server because it will leave the repository on the server in a modified 
+state and the next time the 3rd Party Repository gets modified, it will fail to do a "git pull" due to the modifications.
 
 # Unit tests
 

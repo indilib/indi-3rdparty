@@ -20,7 +20,7 @@ if (APPLE)
 
   set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd.dylib")
 
-  FIX_LIBRARY_ID("libqhyccd" "libqhyccd.dylib" "QHY")
+  FIX_MACOS_LIBRARIES("libqhyccd" "libqhyccd.dylib" "QHY")
 
 elseif (UNIX AND NOT WIN32)
 

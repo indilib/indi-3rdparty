@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET tscam PROPERTY IMPORTED_LOCATION "mac/libtscam.bin")
 
-  FIX_LIBRARY_ID("libtscam" "mac/libtscam.bin" "TSCAM")
+  FIX_MACOS_LIBRARIES("libtscam" "mac/libtscam.bin" "TSCAM")
 
 elseif (UNIX AND NOT WIN32)
 

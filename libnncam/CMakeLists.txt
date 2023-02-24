@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "mac/libnncam.bin")
 
-  FIX_LIBRARY_ID("libnncam" "mac/libnncam.bin" "NNCAM")
+  FIX_MACOS_LIBRARIES("libnncam" "mac/libnncam.bin" "NNCAM")
 
 elseif (UNIX AND NOT WIN32)
 
