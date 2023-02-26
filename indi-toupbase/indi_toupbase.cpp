@@ -1376,7 +1376,11 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
+#ifdef __APPLE__
+    timeval current_time, exposure_time = { uSecs / 1000000, static_cast<__darwin_suseconds_t>(uSecs % 1000000) };
+#else
     timeval current_time, exposure_time = { uSecs / 1000000, uSecs % 1000000 };
+#endif
     gettimeofday(&current_time, nullptr);
     timeradd(&current_time, &exposure_time, &m_ExposureEnd);
 
