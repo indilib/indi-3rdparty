@@ -10,9 +10,7 @@ Build-Depends: debhelper (>= 5),
                libindi-dev,
                zlib1g-dev,
                libnova-dev,
-               libqhy,
-               libopencv-imgproc-dev,
-               libopencv-highgui-dev
+               libqhy
 Standards-Version: 3.9.2
 
 Package: indi-qhy
