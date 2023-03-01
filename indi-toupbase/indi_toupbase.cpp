@@ -1376,18 +1376,20 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-    timeval current_time, exposure_time = { uSecs / 1000000, uSecs % 1000000 };
+    timeval current_time, exposure_time;
+	exposure_time.tv_sec = uSecs / 1000000;
+	exposure_time.tv_usec = uSecs % 1000000;
     gettimeofday(&current_time, nullptr);
     timeradd(&current_time, &exposure_time, &m_ExposureEnd);
 
-    InExposure = true;    
+    InExposure = true;
     if (FAILED(rc = FP(Trigger(m_Handle, 1))))// Trigger an exposure
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return false;
     }
 
-    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0 + 4000.0);
+    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
 
     return true;
 }
@@ -1422,7 +1424,7 @@ void ToupBase::captureTimeoutHandler()
     }
 
     LOG_DEBUG("Capture time out, restart exposure");
-    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0 + 4000.0);
+    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
