@@ -315,6 +315,4 @@ class ToupBase : public INDI::CCD
         int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
-
-        static const uint32_t MIN_DOWNLOAD_ESTIMATION { 1000 };
 };
