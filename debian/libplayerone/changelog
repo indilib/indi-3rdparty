@@ -1,8 +1,14 @@
+libplayerone (1.1) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.2.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 2 Mar 2023 08:00:00 +0900
+
 libplayerone (1.0) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.2.0
 
- -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 24 Fri 2023 08:00:00 +0900
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Fri, 24 Feb 2023 08:00:00 +0900
 
 libplayerone (0.9) bionic; urgency=low
 
