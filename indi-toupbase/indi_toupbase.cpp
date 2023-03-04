@@ -1376,23 +1376,20 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
-#ifdef __APPLE__
-    timeval current_time, exposure_time = { uSecs / 1000000, static_cast<__darwin_suseconds_t>(uSecs % 1000000) };
-#else
-    timeval current_time, exposure_time = { uSecs / 1000000, uSecs % 1000000 };
-#endif
+    timeval current_time, exposure_time;
+	exposure_time.tv_sec = uSecs / 1000000;
+	exposure_time.tv_usec = uSecs % 1000000;
     gettimeofday(&current_time, nullptr);
     timeradd(&current_time, &exposure_time, &m_ExposureEnd);
 
     InExposure = true;
-    // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_Handle, 1))))
+    if (FAILED(rc = FP(Trigger(m_Handle, 1))))// Trigger an exposure
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return false;
     }
 
-    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value + 4.0);
+    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
 
     return true;
 }
@@ -1413,22 +1410,21 @@ void ToupBase::captureTimeoutHandler()
 
     if (++m_CaptureTimeoutCounter >= 3)
     {
-        m_CaptureTimeoutCounter = 0;
         LOGF_ERROR("Camera time out %d times. Exposure failed", m_CaptureTimeoutCounter);
+        m_CaptureTimeoutCounter = 0;
         PrimaryCCD.setExposureFailed();
         return;
     }
 
-    HRESULT rc = 0;
-    // Trigger an exposure
-    if (FAILED(rc = FP(Trigger(m_Handle, 1))))
+    HRESULT rc = 0;    
+    if (FAILED(rc = FP(Trigger(m_Handle, 1))))// Trigger an exposure
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return;
     }
 
     LOG_DEBUG("Capture time out, restart exposure");
-    m_CaptureTimeout.start(m_ExposureRequest * m_TimeoutFactorN.value + 4.0);
+    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
