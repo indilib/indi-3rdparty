@@ -456,7 +456,6 @@ bool ToupBase::Connect()
     uint32_t min = 0, max = 0, current = 0;
     FP(get_ExpTimeRange(m_Handle, &min, &max, &current));
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", min / 1000000.0, max / 1000000.0, 0, false);
-
     PrimaryCCD.setBin(1, 1);
 
     LOGF_INFO("%s connect", getDeviceName());
@@ -1118,6 +1117,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             {
                 m_ResolutionSP.s = IPS_OK;
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+				PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", m_ResolutionS[targetIndex].label);
                 allocateFrameBuffer();
                 m_ConfigResolutionIndex = targetIndex;
