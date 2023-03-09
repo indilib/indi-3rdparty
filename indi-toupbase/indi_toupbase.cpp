@@ -64,16 +64,12 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
     snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), m_Instance->model->name);
     setDeviceName(this->m_name);
 
-    m_CaptureTimeout.callOnTimeout(std::bind(&ToupBase::captureTimeoutHandler, this));
-    m_CaptureTimeout.setSingleShot(true);
-
     if (m_Instance->model->flag & CP(FLAG_MONO))
         m_MonoCamera = true;
 }
 
 ToupBase::~ToupBase()
 {
-    m_CaptureTimeout.stop();
     delete[] m_FanS;
     delete[] m_HeatS;
 }
@@ -1343,8 +1339,6 @@ bool ToupBase::StartExposure(float duration)
         return false;
     }
 
-    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
-
     return true;
 }
 
@@ -1352,33 +1346,7 @@ bool ToupBase::AbortExposure()
 {
     FP(Trigger(m_Handle, 0));
     InExposure = false;
-    m_CaptureTimeoutCounter = 0;
-    m_CaptureTimeout.stop();
     return true;
-}
-
-void ToupBase::captureTimeoutHandler()
-{
-    if (!isConnected())
-        return;
-
-    if (++m_CaptureTimeoutCounter >= 3)
-    {
-        LOGF_ERROR("Camera time out %d times. Exposure failed", m_CaptureTimeoutCounter);
-        m_CaptureTimeoutCounter = 0;
-        PrimaryCCD.setExposureFailed();
-        return;
-    }
-
-    HRESULT rc = 0;    
-    if (FAILED(rc = FP(Trigger(m_Handle, 1))))// Trigger an exposure
-    {
-        LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
-        return;
-    }
-
-    LOG_DEBUG("Capture time out, restart exposure");
-    m_CaptureTimeout.start(static_cast<int>(m_ExposureRequest * m_TimeoutFactorN.value * 1000.0) + 4000);
 }
 
 bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
@@ -1738,9 +1706,6 @@ void ToupBase::eventCallBack(unsigned event)
     {
         case CP(EVENT_EXPOSURE):
         {
-            m_CaptureTimeoutCounter = 0;
-            m_CaptureTimeout.stop();
-
             uint16_t expoGain = CP(EXPOGAIN_MIN);
             FP(get_ExpoAGain(m_Handle, &expoGain));
             m_ControlN[TC_GAIN].value = expoGain;
@@ -1750,9 +1715,6 @@ void ToupBase::eventCallBack(unsigned event)
         break;
         case CP(EVENT_IMAGE):
         {
-            m_CaptureTimeoutCounter = 0;
-            m_CaptureTimeout.stop();
-
             int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
             if (Streamer->isStreaming() || Streamer->isRecording())
             {

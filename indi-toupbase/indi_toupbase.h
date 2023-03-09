@@ -144,9 +144,6 @@ class ToupBase : public INDI::CCD
         static void eventCB(unsigned event, void* pCtx);
         void eventCallBack(unsigned event);
 
-        // Handle capture timeout
-        void captureTimeoutHandler();
-
         //#############################################################################
         // Camera Handle & Instance
         //#############################################################################
@@ -287,9 +284,6 @@ class ToupBase : public INDI::CCD
         eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
-        INDI::Timer m_CaptureTimeout;
-        uint32_t m_CaptureTimeoutCounter {0};
-
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
