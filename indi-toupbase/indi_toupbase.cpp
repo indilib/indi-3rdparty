@@ -1117,7 +1117,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             {
                 m_ResolutionSP.s = IPS_OK;
                 PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
-				PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+                PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                 LOGF_INFO("Resolution changed to %s", m_ResolutionS[targetIndex].label);
                 allocateFrameBuffer();
                 m_ConfigResolutionIndex = targetIndex;
@@ -1864,7 +1864,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
             IUSaveText(&BayerT[2], getBayerString());
             IDSetText(&BayerTP, nullptr);            
-			m_BitsPerPixel = (m_maxBitDepth > 8) ? 16 : 8;
+            m_BitsPerPixel = (m_maxBitDepth > 8) ? 16 : 8;
         }
     }
 
