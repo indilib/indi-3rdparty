@@ -226,11 +226,11 @@ class CelestronAUX :
         {
             return m_Location.latitude >= 0;
         }
+        void startupWithoutHC();
         bool getModel(AUXTargets target);
         bool getVersion(AUXTargets target);
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
-
 
         double AzimuthToDegrees(double degree);
         double DegreesToAzimuth(double degree);
