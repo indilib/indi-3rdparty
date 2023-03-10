@@ -58,52 +58,74 @@ void Raw12ToBayer16Pipeline::reset()
 void Raw12ToBayer16Pipeline::data_received(uint8_t *data,  uint32_t length)
 {
     uint8_t byte;
+    uint8_t byte2;
+    uint8_t byte3;
 
-    assert(bcm_pipe->header.omx_data.raw_width == 6112); 
+    assert(bcm_pipe->header.omx_data.raw_width == 6112);
     assert(ccd->getXRes() == 4056);
     assert(ccd->getYRes() == 3040);
 
     int maxX = ccd->getSubW();
     int maxY = ccd->getSubH();
 
-    for(;length; data++, length--)
+    for(; length; data++, length--)
     {
         byte = *data;
 
-        if (raw_x >= bcm_pipe->header.omx_data.raw_width) {
+        if (raw_x >= bcm_pipe->header.omx_data.raw_width)
+        {
             x = 0;
             raw_x = 0;
             state = 0;
 
             raw_y++;
-            if (raw_y > ccd->getSubY()) {
+            if (raw_y > ccd->getSubY())
+            {
                 y += 1;
             }
         }
 
-        if (raw_x >= startRawX && raw_y >= ccd->getSubY() && x < maxX && y < maxY) {
+        if (raw_x >= startRawX && raw_y >= ccd->getSubY() && x < maxX && y < maxY)
+        {
             uint16_t *cur_row = reinterpret_cast<uint16_t *>(ccd->getFrameBuffer()) + y * ccd->getSubW();
 
-            // RAW according to experiment.
-            switch(state)
+            // Is it safe to optimize?
+            if (state == 0 && length > 3 && raw_x <= bcm_pipe->header.omx_data.raw_width - 3)
             {
-            case 0:
-                // FIXME: Optimize, if at least 3 bytes remaining here, all data can be calculated faster in one step.
-                cur_row[x] = byte << 8;
-                state = 1;
-                break;
-
-            case 1:
-                cur_row[x+1] = byte << 8;
-                state = 2;
-                break;
-
-            case 2:
-                cur_row[x+0] |= static_cast<uint16_t>((byte & 0x0F) << 4);
-                cur_row[x+1] |= static_cast<uint16_t>((byte & 0xF0) << 0);
+                byte2 = *data++;
+                byte3 = *data++;
+                raw_x += 2;
+                length -= 2;
+                cur_row[x + 0] = byte  << 8;
+                cur_row[x + 1] = byte2 << 8;
+                cur_row[x + 0] |= static_cast<uint16_t>((byte3 & 0x0F) << 4);
+                cur_row[x + 1] |= static_cast<uint16_t>((byte3 & 0xF0) << 0);
                 x += 2;
-                state = 0;
-                break;
+
+            }
+            else
+            {
+
+                // RAW according to experiment.
+                switch(state)
+                {
+                    case 0:
+                        cur_row[x] = byte << 8;
+                        state = 1;
+                        break;
+
+                    case 1:
+                        cur_row[x + 1] = byte << 8;
+                        state = 2;
+                        break;
+
+                    case 2:
+                        cur_row[x + 0] |= static_cast<uint16_t>((byte & 0x0F) << 4);
+                        cur_row[x + 1] |= static_cast<uint16_t>((byte & 0xF0) << 0);
+                        x += 2;
+                        state = 0;
+                        break;
+                }
             }
         }
 
