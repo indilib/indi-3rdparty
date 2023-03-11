@@ -57,7 +57,8 @@ MMALEncoder::MMALEncoder() : MMALComponent(MMAL_COMPONENT_DEFAULT_IMAGE_ENCODER)
     status = mmal_port_format_commit(output);
     MMALException::throw_if(status, "Failed to commit encoder output");
 
-    status = mmal_port_parameter_set_uint32(output, MMAL_PARAMETER_JPEG_Q_FACTOR, 85);
+    // Set the quality to 1 because the JPEG data will be skipped anyway
+    status = mmal_port_parameter_set_uint32(output, MMAL_PARAMETER_JPEG_Q_FACTOR, 1);
     MMALException::throw_if(status, "Failed to set JPEG quality");
 
     status = mmal_port_parameter_set_uint32(output, MMAL_PARAMETER_JPEG_RESTART_INTERVAL, 0);
