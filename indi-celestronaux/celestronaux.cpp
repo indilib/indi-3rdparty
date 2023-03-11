@@ -514,15 +514,15 @@ bool CelestronAUX::updateProperties()
         defineProperty(FirmwareTP);
 
         // When no HC is attached, the following three commands needs to be send
-	// to the motor controller (MC): MC_SET_POSITION, MC_SET_CORDWRAP_POSITION
-	// and MC_CORDWRAP_ON. These three commands are also send by the HC
-	// to the MC during HC startup and quick align process.
+        // to the motor controller (MC): MC_SET_POSITION, MC_SET_CORDWRAP_POSITION
+        // and MC_CORDWRAP_ON. These three commands are also send by the HC
+        // to the MC during HC startup and quick align process.
         // TODO: One can set the HC in pass through mode, that is,
         // the HC relays the AUX commands only and does not interfere in the communication.
-	if (!m_isHandController && m_MountType == EQ_GEM)
-	{
-	    startupWithoutHC();
-	}
+        if (!m_isHandController)
+        {
+            startupWithoutHC();
+        }
 
         if (InitPark())
         {
@@ -2050,34 +2050,26 @@ bool CelestronAUX::isHomingDone(INDI_HO_AXIS axis)
 void CelestronAUX::startupWithoutHC()
 {
     AUXBuffer data(3);
-    data[0] = 0x40;
+    // EQ GEM start with 0x40 and other modes at zero index.
+    data[0] = (m_MountType == EQ_GEM) ? 0x40 : 00;
     data[1] = 0x00;
     data[2] = 0x00;
 
-    AUXCommand command(MC_SET_POSITION, APP, AZM, data);
-    sendAUXCommand(command);
-    readAUXResponse(command);
-
-    command = AUXCommand(MC_SET_POSITION, APP, ALT, data);
-    sendAUXCommand(command);
-    readAUXResponse(command);
-
     data[0] = 0xc0;
-    command = AUXCommand(MC_SET_CORDWRAP_POS, APP, AZM, data);
-    sendAUXCommand(command);
-    readAUXResponse(command);
+    for (int i = 0; i < 2; i++)
+    {
+        AUXCommand command(MC_SET_POSITION, APP, i == AXIS_AZ ? AZM : ALT, data);
+        sendAUXCommand(command);
+        readAUXResponse(command);
 
-    command = AUXCommand(MC_SET_CORDWRAP_POS, APP, ALT, data);
-    sendAUXCommand(command);
-    readAUXResponse(command);
+        command = AUXCommand(MC_SET_CORDWRAP_POS, APP, i == AXIS_AZ ? AZM : ALT, data);
+        sendAUXCommand(command);
+        readAUXResponse(command);
 
-    command = AUXCommand(MC_ENABLE_CORDWRAP, APP, AZM);
-    sendAUXCommand(command);
-    readAUXResponse(command);
-
-    command = AUXCommand(MC_ENABLE_CORDWRAP, APP, ALT);
-    sendAUXCommand(command);
-    readAUXResponse(command);
+        command = AUXCommand(MC_ENABLE_CORDWRAP, APP, i == AXIS_AZ ? AZM : ALT);
+        sendAUXCommand(command);
+        readAUXResponse(command);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
