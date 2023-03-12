@@ -6,12 +6,12 @@ indi-aok (2.0) bionic; urgency=low (overhaul for firmware 21 of TCS)
   * augmented global JSON buffer to 256 chars
   * augmented JSON return buffer of helperfunctions to 32 chars
 
--- T. Schriber <escribana@bluewin.ch> Thu, 9 Dec 2021 16:44 +0200 
+ -- T. Schriber <escribana@bluewin.ch> Thu, 9 Dec 2021 16:44:00 +0200 
 
 indi-aok (1.1) bionic; urgency=low
   * removed obsolete "Use PulsCmd"-switch and corresponding programming code
   
--- T. Schriber <escribana@bluewin.ch> Tue, 11 May 2021 08:56:32 +0200 
+ -- T. Schriber <escribana@bluewin.ch> Tue, 11 May 2021 08:56:32 +0200 
 
 indi-aok (1.0) bionic; urgency=low
   * cleared up the handling of notification of mountlock & trackstate
