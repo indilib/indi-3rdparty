@@ -133,27 +133,6 @@ bool RTKLIB::is_rtkrcv()
     return true;
 }
 
-bool RTKLIB::setSystemTime(time_t& raw_time)
-{
-    #ifdef __linux__
-        #if defined(__GNU_LIBRARY__)
-            #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ > 30)
-                timespec sTime = {};
-                sTime.tv_sec = raw_time;
-                clock_settime(CLOCK_REALTIME, &sTime);
-            #else
-                stime(&raw_time);
-            #endif
-        #else
-            stime(&raw_time);
-        #endif
-        return true;
-    #else
-        (void)raw_time;
-        return false;
-    #endif
-}
-
 void* RTKLIB::parse_rtkrcv_helper(void *obj)
 {
     static_cast<RTKLIB*>(obj)->parse_rtkrcv();
