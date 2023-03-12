@@ -36,7 +36,6 @@ class GPSNMEA : public INDI::GPS
     ITextVectorProperty GPSstatusTP;
 
     static void* parseNMEAHelper(void *);
-    virtual bool setSystemTime(time_t& raw_time);
 
   protected:    
     //  Generic indi device entries
