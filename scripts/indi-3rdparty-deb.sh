@@ -40,5 +40,5 @@ for driver in ${DRIVER_LIST}; do
 done
 
 echo
-echo "Avaliable packages:"
+echo "Available packages:"
 ls -l build/*.deb
