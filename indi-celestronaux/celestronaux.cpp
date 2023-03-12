@@ -521,7 +521,14 @@ bool CelestronAUX::updateProperties()
         // the HC relays the AUX commands only and does not interfere in the communication.
         if (!m_isHandController)
         {
-            startupWithoutHC();
+            if (startupWithoutHC())
+            {
+                LOG_INFO("successfully sent no-HC startup AUX commands");
+            }
+            else
+            {
+                LOG_ERROR("failed to sent no-HC startup AUX commands");
+            }
         }
 
         if (InitPark())
@@ -2047,29 +2054,41 @@ bool CelestronAUX::isHomingDone(INDI_HO_AXIS axis)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-void CelestronAUX::startupWithoutHC()
+bool CelestronAUX::startupWithoutHC()
 {
     AUXBuffer data(3);
     // EQ GEM start with 0x40 and other modes at zero index.
-    data[0] = (m_MountType == EQ_GEM) ? 0x40 : 00;
+    data[0] = (m_MountType == EQ_GEM) ? 0x40 : 0x00;
     data[1] = 0x00;
     data[2] = 0x00;
+
+    AUXCommand command;
+    for (int i = 0; i < 2; i++)
+    {
+        command = AUXCommand(MC_SET_POSITION, APP, i == AXIS_AZ ? AZM : ALT, data);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
+    }
 
     data[0] = 0xc0;
     for (int i = 0; i < 2; i++)
     {
-        AUXCommand command(MC_SET_POSITION, APP, i == AXIS_AZ ? AZM : ALT, data);
-        sendAUXCommand(command);
-        readAUXResponse(command);
-
         command = AUXCommand(MC_SET_CORDWRAP_POS, APP, i == AXIS_AZ ? AZM : ALT, data);
-        sendAUXCommand(command);
-        readAUXResponse(command);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
 
         command = AUXCommand(MC_ENABLE_CORDWRAP, APP, i == AXIS_AZ ? AZM : ALT);
-        sendAUXCommand(command);
-        readAUXResponse(command);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
     }
+
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////

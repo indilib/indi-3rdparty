@@ -226,7 +226,7 @@ class CelestronAUX :
         {
             return m_Location.latitude >= 0;
         }
-        void startupWithoutHC();
+        bool startupWithoutHC();
         bool getModel(AUXTargets target);
         bool getVersion(AUXTargets target);
         void getVersions();
