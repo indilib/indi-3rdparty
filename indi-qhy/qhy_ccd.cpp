@@ -972,6 +972,13 @@ bool QHYCCD::Connect()
                 if (m_MaxFilterCount > 0)
                 {
                     HasFilters = true;
+                    char currentPos[MAXINDINAME] = {0};
+                    if (GetQHYCCDCFWStatus(m_CameraHandle, currentPos) == QHYCCD_SUCCESS)
+                    {
+                        CurrentFilter = strtol(currentPos, nullptr, 16) + 1;
+                        FilterSlotN[0].value = CurrentFilter;
+                    }
+
                     updateFilterProperties();
                     LOGF_INFO("Filter Count (CONTROL_CFWSLOTSNUM): %d", m_MaxFilterCount);
                 }
