@@ -255,7 +255,8 @@ enum CONTROL_ID
 
 //TEST id name list
 /*1024*/ CONTROL_AUTOWHITEBALANCE=1024, //!<auto white balance  eg.CONTROL_TEST=1024
-/*1025*/ CONTROL_AUTOEXPOSURE			//!<auto exposure
+/*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
+/*1026*/ CONTROL_ImageStabilization		//!<image stabilization
 };
 
 /**
