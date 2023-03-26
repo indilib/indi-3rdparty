@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 53.22149.20230223 */
+/* Version: 53.22328.20230326 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -160,7 +160,9 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define STARSHOOTG_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
 #define STARSHOOTG_FLAG_GIGE                0x0000200000000000  /* GigE */
-#define STARSHOOTG_FLAG_10GIGE              0x0000400000000000  /* 10 Gige */
+#define STARSHOOTG_FLAG_10GIGE              0x0000400000000000  /* 10 GigE */
+#define STARSHOOTG_FLAG_5GIGE               0x0000800000000000  /* 5 GigE */
+#define STARSHOOTG_FLAG_25GIGE              0x0001000000000000  /* 2.5 GigE */
 
 #define STARSHOOTG_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define STARSHOOTG_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -225,6 +227,18 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_AE_PERCENT_DEF           10
 #define STARSHOOTG_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define STARSHOOTG_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MAX    100
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_DEF    13
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MIN    0
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MAX    100
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_DEF    100
+#define STARSHOOTG_HDR_K_MIN                1       /* HDR synthesize */
+#define STARSHOOTG_HDR_K_MAX                25500
+#define STARSHOOTG_HDR_B_MIN                0
+#define STARSHOOTG_HDR_B_MAX                65535
+#define STARSHOOTG_HDR_THRESHOLD_MIN        0
+#define STARSHOOTG_HDR_THRESHOLD_MAX        4094
 
 typedef struct {
     unsigned    width;
@@ -263,7 +277,7 @@ typedef struct {
 } StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22149.20230223
+    get the version of this dll/so/dylib, which is: 53.22328.20230326
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -549,6 +563,8 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AutoExpoTarget(HStarshootg h, unsigned s
 STARSHOOTG_API(HRESULT)  Starshootg_put_AutoExpoTarget(HStarshootg h, unsigned short Target);
 
 /*set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
+STARSHOOTG_API(HRESULT)  Starshootg_put_AutoExpoRange(HStarshootg h, unsigned maxTime, unsigned minTime, unsigned short maxGain, unsigned short minGain);
+STARSHOOTG_API(HRESULT)  Starshootg_get_AutoExpoRange(HStarshootg h, unsigned* maxTime, unsigned* minTime, unsigned short* maxGain, unsigned short* minGain);
 STARSHOOTG_API(HRESULT)  Starshootg_put_MaxAutoExpoTimeAGain(HStarshootg h, unsigned maxTime, unsigned short maxGain);
 STARSHOOTG_API(HRESULT)  Starshootg_get_MaxAutoExpoTimeAGain(HStarshootg h, unsigned* maxTime, unsigned short* maxGain);
 STARSHOOTG_API(HRESULT)  Starshootg_put_MinAutoExpoTimeAGain(HStarshootg h, unsigned minTime, unsigned short minGain);
@@ -774,7 +790,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
                                                          */
 #define STARSHOOTG_OPTION_PROCESSMODE            0x03       /* obsolete & useless, noop. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
-#define STARSHOOTG_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only BEFORE Starshootg_StartXXX(). 0 = rgb, 1 = raw, default value: 0 */
+#define STARSHOOTG_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only while camea is NOT running. 0 = rgb, 1 = raw, default value: 0 */
 #define STARSHOOTG_OPTION_HISTOGRAM              0x05       /* 0 = only one, 1 = continue mode */
 #define STARSHOOTG_OPTION_BITDEPTH               0x06       /* 0 = 8 bits mode, 1 = 16 bits mode, subset of STARSHOOTG_OPTION_PIXEL_FORMAT */
 #define STARSHOOTG_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed */
@@ -857,7 +873,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
 #define STARSHOOTG_OPTION_AFZONE                 0x26       /* auto focus zone */
 #define STARSHOOTG_OPTION_AFFEEDBACK             0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
 #define STARSHOOTG_OPTION_TESTPATTERN            0x28       /* test pattern:
-                                                            0: TestPattern Off
+                                                            0: off
                                                             3: monochrome diagonal stripes
                                                             5: monochrome vertical stripes
                                                             7: monochrome horizontal stripes
@@ -948,6 +964,21 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                                 low 16 bits: min
                                                          */
 #define STARSHOOTG_OPTION_HIGH_FULLWELL          0x55       /* high fullwell capacity: 0 => disable, 1 => enable */
+#define STARSHOOTG_OPTION_DYNAMIC_DEFECT         0x56       /* dynamic defect pixel correction:
+                                                            threshold:
+                                                                 t1 (high 16 bits): [1, 100]
+                                                                 t2 (low 16 bits): [0, 100]
+                                                         */
+#define STARSHOOTG_OPTION_HDR_KB                 0x57       /* HDR synthesize
+                                                                K (high 16 bits): [1, 25500]
+                                                                B (low 16 bits): [0, 65535]
+                                                                0xffffffff => set to default
+                                                         */
+#define STARSHOOTG_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize 
+                                                                threshold: [1, 4095]
+                                                                0xffffffff => set to default
+                                                         */
+#define STARSHOOTG_OPTION_ISP                    0x59       /* hardware ISP: on => 1, off => 0 */
 
 /* pixel format */
 #define STARSHOOTG_PIXELFORMAT_RAW8              0x00

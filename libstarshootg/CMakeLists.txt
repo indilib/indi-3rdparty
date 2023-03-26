@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (libstarshootg)
 
-set (LIBSTARSHOOTG_VERSION "53.22149")
+set (LIBSTARSHOOTG_VERSION "53.22328")
 set (LIBSTARSHOOTG_SOVERSION "53")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
