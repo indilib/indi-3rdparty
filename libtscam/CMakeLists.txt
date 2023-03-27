@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (libtscam)
 
-set (LIBTSCAM_VERSION "53.22149")
+set (LIBTSCAM_VERSION "53.22328")
 set (LIBTSCAM_SOVERSION "53")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

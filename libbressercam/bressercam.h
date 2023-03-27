@@ -1,7 +1,7 @@
 #ifndef __bressercam_h__
 #define __bressercam_h__
 
-/* Version: 53.22149.20230223 */
+/* Version: 53.22328.20230326 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -160,7 +160,9 @@ typedef struct Bressercam_t { int unused; } *HBressercam;
 #define BRESSERCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define BRESSERCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
 #define BRESSERCAM_FLAG_GIGE                0x0000200000000000  /* GigE */
-#define BRESSERCAM_FLAG_10GIGE              0x0000400000000000  /* 10 Gige */
+#define BRESSERCAM_FLAG_10GIGE              0x0000400000000000  /* 10 GigE */
+#define BRESSERCAM_FLAG_5GIGE               0x0000800000000000  /* 5 GigE */
+#define BRESSERCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 GigE */
 
 #define BRESSERCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define BRESSERCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -225,6 +227,18 @@ typedef struct Bressercam_t { int unused; } *HBressercam;
 #define BRESSERCAM_AE_PERCENT_DEF           10
 #define BRESSERCAM_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define BRESSERCAM_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
+#define BRESSERCAM_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction */
+#define BRESSERCAM_DYNAMIC_DEFECT_T1_MAX    100
+#define BRESSERCAM_DYNAMIC_DEFECT_T1_DEF    13
+#define BRESSERCAM_DYNAMIC_DEFECT_T2_MIN    0
+#define BRESSERCAM_DYNAMIC_DEFECT_T2_MAX    100
+#define BRESSERCAM_DYNAMIC_DEFECT_T2_DEF    100
+#define BRESSERCAM_HDR_K_MIN                1       /* HDR synthesize */
+#define BRESSERCAM_HDR_K_MAX                25500
+#define BRESSERCAM_HDR_B_MIN                0
+#define BRESSERCAM_HDR_B_MAX                65535
+#define BRESSERCAM_HDR_THRESHOLD_MIN        0
+#define BRESSERCAM_HDR_THRESHOLD_MAX        4094
 
 typedef struct {
     unsigned    width;
@@ -263,7 +277,7 @@ typedef struct {
 } BressercamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22149.20230223
+    get the version of this dll/so/dylib, which is: 53.22328.20230326
 */
 #if defined(_WIN32)
 BRESSERCAM_API(const wchar_t*)   Bressercam_Version();
@@ -549,6 +563,8 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_AutoExpoTarget(HBressercam h, unsigned s
 BRESSERCAM_API(HRESULT)  Bressercam_put_AutoExpoTarget(HBressercam h, unsigned short Target);
 
 /*set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
+BRESSERCAM_API(HRESULT)  Bressercam_put_AutoExpoRange(HBressercam h, unsigned maxTime, unsigned minTime, unsigned short maxGain, unsigned short minGain);
+BRESSERCAM_API(HRESULT)  Bressercam_get_AutoExpoRange(HBressercam h, unsigned* maxTime, unsigned* minTime, unsigned short* maxGain, unsigned short* minGain);
 BRESSERCAM_API(HRESULT)  Bressercam_put_MaxAutoExpoTimeAGain(HBressercam h, unsigned maxTime, unsigned short maxGain);
 BRESSERCAM_API(HRESULT)  Bressercam_get_MaxAutoExpoTimeAGain(HBressercam h, unsigned* maxTime, unsigned short* maxGain);
 BRESSERCAM_API(HRESULT)  Bressercam_put_MinAutoExpoTimeAGain(HBressercam h, unsigned minTime, unsigned short minGain);
@@ -774,7 +790,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
                                                          */
 #define BRESSERCAM_OPTION_PROCESSMODE            0x03       /* obsolete & useless, noop. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
-#define BRESSERCAM_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only BEFORE Bressercam_StartXXX(). 0 = rgb, 1 = raw, default value: 0 */
+#define BRESSERCAM_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only while camea is NOT running. 0 = rgb, 1 = raw, default value: 0 */
 #define BRESSERCAM_OPTION_HISTOGRAM              0x05       /* 0 = only one, 1 = continue mode */
 #define BRESSERCAM_OPTION_BITDEPTH               0x06       /* 0 = 8 bits mode, 1 = 16 bits mode, subset of BRESSERCAM_OPTION_PIXEL_FORMAT */
 #define BRESSERCAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed */
@@ -857,7 +873,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
 #define BRESSERCAM_OPTION_AFZONE                 0x26       /* auto focus zone */
 #define BRESSERCAM_OPTION_AFFEEDBACK             0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
 #define BRESSERCAM_OPTION_TESTPATTERN            0x28       /* test pattern:
-                                                            0: TestPattern Off
+                                                            0: off
                                                             3: monochrome diagonal stripes
                                                             5: monochrome vertical stripes
                                                             7: monochrome horizontal stripes
@@ -948,6 +964,21 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
                                                                 low 16 bits: min
                                                          */
 #define BRESSERCAM_OPTION_HIGH_FULLWELL          0x55       /* high fullwell capacity: 0 => disable, 1 => enable */
+#define BRESSERCAM_OPTION_DYNAMIC_DEFECT         0x56       /* dynamic defect pixel correction:
+                                                            threshold:
+                                                                 t1 (high 16 bits): [1, 100]
+                                                                 t2 (low 16 bits): [0, 100]
+                                                         */
+#define BRESSERCAM_OPTION_HDR_KB                 0x57       /* HDR synthesize
+                                                                K (high 16 bits): [1, 25500]
+                                                                B (low 16 bits): [0, 65535]
+                                                                0xffffffff => set to default
+                                                         */
+#define BRESSERCAM_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize 
+                                                                threshold: [1, 4095]
+                                                                0xffffffff => set to default
+                                                         */
+#define BRESSERCAM_OPTION_ISP                    0x59       /* hardware ISP: on => 1, off => 0 */
 
 /* pixel format */
 #define BRESSERCAM_PIXELFORMAT_RAW8              0x00
