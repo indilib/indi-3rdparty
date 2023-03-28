@@ -1,3 +1,9 @@
+indi-asi (2.3) jammy; urgency=medium
+
+  * Added support to EAF extended step range in firmware version 3.3.7.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Tue, 28 Mar 2023 21:56:27 +0300
+
 indi-asi (2.2) bionic; urgency=medium
 
   * Added temperature compensation on focuser.
