@@ -1,7 +1,7 @@
 #ifndef __tscam_h__
 #define __tscam_h__
 
-/* Version: 53.22328.20230326 */
+/* Version: 53.22376.20230402 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -277,7 +277,7 @@ typedef struct {
 } TscamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22328.20230326
+    get the version of this dll/so/dylib, which is: 53.22376.20230402
 */
 #if defined(_WIN32)
 TSCAM_API(const wchar_t*)   Tscam_Version();
@@ -1044,7 +1044,7 @@ TSCAM_API(HRESULT)  Tscam_get_AfParam(HTscam h, TscamAfParam* pAfParam);
 #define TSCAM_IOCONTROLTYPE_SET_FORMAT                  0x06
 #define TSCAM_IOCONTROLTYPE_GET_OUTPUTINVERTER          0x07 /* boolean, only support output signal */
 #define TSCAM_IOCONTROLTYPE_SET_OUTPUTINVERTER          0x08
-#define TSCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Positive, 0x01 => Negative */
+#define TSCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge */
 #define TSCAM_IOCONTROLTYPE_SET_INPUTACTIVATION         0x0a
 #define TSCAM_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, [0, 20000] */
 #define TSCAM_IOCONTROLTYPE_SET_DEBOUNCERTIME           0x0c
