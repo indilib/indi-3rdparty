@@ -1,7 +1,7 @@
 #ifndef __altaircam_h__
 #define __altaircam_h__
 
-/* Version: 53.22328.20230326 */
+/* Version: 53.22376.20230402 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -277,7 +277,7 @@ typedef struct {
 } AltaircamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22328.20230326
+    get the version of this dll/so/dylib, which is: 53.22376.20230402
 */
 #if defined(_WIN32)
 ALTAIRCAM_API(const wchar_t*)   Altaircam_Version();
@@ -1044,7 +1044,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_AfParam(HAltaircam h, AltaircamAfParam* pA
 #define ALTAIRCAM_IOCONTROLTYPE_SET_FORMAT                  0x06
 #define ALTAIRCAM_IOCONTROLTYPE_GET_OUTPUTINVERTER          0x07 /* boolean, only support output signal */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_OUTPUTINVERTER          0x08
-#define ALTAIRCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Positive, 0x01 => Negative */
+#define ALTAIRCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_INPUTACTIVATION         0x0a
 #define ALTAIRCAM_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, [0, 20000] */
 #define ALTAIRCAM_IOCONTROLTYPE_SET_DEBOUNCERTIME           0x0c
