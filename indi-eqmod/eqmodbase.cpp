@@ -175,12 +175,9 @@ bool EQMod::isStandardSync()
 
 void EQMod::setStepperSimulation(bool enable)
 {
-    if ((enable && !isSimulation()) || (!enable && isSimulation()))
-    {
-        mount->setSimulation(enable);
-        if (not simulator->updateProperties(enable))
-            LOG_WARN("setStepperSimulator: Disable/Enable error");
-    }
+    mount->setSimulation(enable);
+    if (!simulator->updateProperties(enable))
+        LOG_WARN("setStepperSimulator: Disable/Enable error");
     INDI::Telescope::setSimulation(enable);
 }
 
@@ -383,7 +380,6 @@ void EQMod::ISGetProperties(const char *dev)
             horizon->ISGetProperties();
         }
 #endif
-
         simulator->updateProperties(isSimulation());
     }
 }
@@ -501,7 +497,7 @@ bool EQMod::updateProperties()
         {
             mount->InquireBoardVersion(MountInformationTP);
 
-            for (const auto &it: MountInformationTP)
+            for (const auto &it : MountInformationTP)
             {
                 LOGF_DEBUG("Got Board Property %s: %s", it.getName(), it.getText());
             }
@@ -509,7 +505,7 @@ bool EQMod::updateProperties()
             mount->InquireRAEncoderInfo(SteppersNP);
             mount->InquireDEEncoderInfo(SteppersNP);
 
-            for (const auto &it: SteppersNP)
+            for (const auto &it : SteppersNP)
             {
                 LOGF_DEBUG("Got Encoder Property %s: %.0f", it.getLabel(), it.getValue());
             }
@@ -683,6 +679,7 @@ bool EQMod::updateProperties()
     }
 #endif
 
+    mount->setSimulation(isSimulation());
     simulator->updateProperties(isSimulation());
 
     return true;
@@ -2637,10 +2634,7 @@ bool EQMod::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                 return false;
             }
 
-            if (sp->isNameMatch("ENABLE"))
-                setStepperSimulation(true);
-            else
-                setStepperSimulation(false);
+            setStepperSimulation(sp->isNameMatch("ENABLE"));
             return true;
         }
 
