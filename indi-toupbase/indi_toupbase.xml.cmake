@@ -26,7 +26,7 @@
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="OmegonPro" mdpd="true" manufacturer="Omegon">
-                <driver name="OmegonPro">indi_omegonprocam_ccd</driver>
+                <driver name="Astroshop">indi_omegonprocam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="StartshootG" mdpd="true" manufacturer="Orion">
@@ -64,7 +64,7 @@
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="OmegonPro" mdpd="true" manufacturer="Omegon">
-                <driver name="OmegonPro">indi_omegonprocam_wheel</driver>
+                <driver name="Astroshop">indi_omegonprocam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="StartshootG" mdpd="true" manufacturer="Orion">
