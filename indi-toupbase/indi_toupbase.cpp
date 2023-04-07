@@ -162,8 +162,8 @@ bool ToupBase::initProperties()
     // Black Level (Offset)
     // JM 2023.04.07 DO NOT NAME IT BLACK LEVEL, it must remain as OFFSET
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_OffsetN, "OFFSET", "Value", "%.f", 0, 255, 1, 0);
-    IUFillNumberVector(&m_OffsetNP, &m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW,
+    IUFillNumber(&m_OffsetN[0], "OFFSET", "Value", "%.f", 0, 255, 1, 0);
+    IUFillNumberVector(&m_OffsetNP, m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -732,7 +732,7 @@ void ToupBase::setupParams()
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_OffsetN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
 
     // Allocate memory
     allocateFrameBuffer();
@@ -924,7 +924,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         if (!strcmp(name, m_OffsetNP.name))
         {
             IUUpdateNumber(&m_OffsetNP, values, names, n);
-            int bLevel = static_cast<uint16_t>(m_OffsetN.value);
+            int bLevel = static_cast<uint16_t>(m_OffsetN[0].value);
 
             HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), bLevel));
             if (FAILED(rc))
@@ -1654,6 +1654,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     fitsKeywords.push_back({"GAIN", m_ControlN[TC_GAIN].value, 3, "Gain"});
+    fitsKeywords.push_back({"OFFSET", m_OffsetN[0].value, 3, "Offset"});
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
         fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
@@ -1874,7 +1875,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)
         bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_OffsetN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
     IUUpdateMinMax(&m_OffsetNP);
 
     LOGF_DEBUG("Video Format: %d, BitsPerPixel: %d", index, m_BitsPerPixel);

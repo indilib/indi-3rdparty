@@ -206,7 +206,7 @@ class ToupBase : public INDI::CCD
 
         // Offset (Black Level)
         INumberVectorProperty m_OffsetNP;
-        INumber m_OffsetN;
+        INumber m_OffsetN [1];
 
         // R/G/B/Gray low/high levels
         INumber m_LevelRangeN[8];
