@@ -22,6 +22,4 @@ code are provided for modification to define Relay and pin
 assignments.
 
 Additional information is in the doc/rolloffino file.
-[test relative html](doc/rolloffino.html)
-Additional information is in the doc/rolloffino file.
 [test relative doc](doc/rolloffino.md)
