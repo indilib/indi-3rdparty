@@ -23,7 +23,7 @@ Provided as an INDI third party driver. The driver is derived from the Ekos roll
 ## Observatory interface.
 The observatory interface will be the normal way to park and unpark the roof.
 ![Observatory](roof_obs.png)
-![Components](components.png)
+
 
 ## INDI control panels.
 The INDI Control panels provide the detail and setup interfaces.
@@ -69,7 +69,7 @@ This is some test code to control a 12 volt motor using a SyRen motor driver. Th
 ### rolloff.ino.wifi.
 This is some test code for using WiFi to connect to the driver. It requires an Arduino model that supports the WIFININA library such as the Uno WiFi Rev2. The code is the rolloff.ino.standard modified to use WiFi instead of USB. Might be useful if the observatory computer is located on or next to the telescope. As coded it works on WiFi networks using WPA2 for security. If using an open or WEP secured network changes as outlined in the Arduino WIFININA documentation will be needed. It uses a permanently defined internet address and port that matches the definition in the rolloffino driver. The changes are identified by the conditional #USE_WIFI. If it was wanted to use WiFi with one of the other examples similar edits could be made. As with the rolloff.ino.motor it is example code without user feedback. 
 
-# Arduin Code Overview
+# Arduino Code Overview
 
 Overview of the code used in the rolloffino.standard example.
 
