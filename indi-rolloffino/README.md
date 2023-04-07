@@ -1,25 +1,5 @@
-INDI observatory rolloff roof driver for a DIY automation project.
+An Observatory rolloff roof driver to automate the opening and closing of a roll off roof in the INDI environment. When installed it will interact with the INDI Observatory Dome, Mount and Weather capabilities. The driver communicates with an Aurdino microcontroller using a USB or WiFi connection. The driver sends open or close commands and requests from the Arduino to know whether the roof is opened or closed. The driver does not know how the roof is being operated.
 
-The driver is intended to be installed and used without the need
-for coding in the INDI environment. The driver can interface to
-an Arduino using USB or WiFi. Several code examples of Arduino
-code are provided for modification to define Relay and pin
-assignments.
+It is the Arduino that will need to provide the appropriate code to match the hardware that controls the roof. Some Arduino source examples are provided. A common approach is to use a commercial gate or garage door opener to contol the roof. These openers provide the capability to sense when the roof is fully open or fully closed and can stop the motion at that point. They usually have a button or buttons to manually open and close the roof. Then a relay can be used instead of, or in addition to, the button to automate the operation. The standard Arduino Uno example can be used for this kind of controller. If the default selection of Arduino pins for operating the relay are used then no source editing would be needed.
 
-If the driver is running on a Raspberry Pi and a direct wired
-connection to a roof controller is viable, the INDI driver can
-conditionally be built to use the Raspberry Pi GPIO pins directly.
-
-Additional information is in the html/rolloffino.html and
-html/rpi-gpio-note.html files.
-
-INDI observatory rolloff roof driver for a DIY automation project.
-
-The driver is intended to be installed and used without the need
-for coding in the INDI environment. The driver can interface to
-an Arduino using USB or WiFi. Several code examples of Arduino
-code are provided for modification to define Relay and pin
-assignments.
-
-Additional information is in the doc/rolloffino file.
-[test relative doc](doc/rolloffino.md)
+[More detailed information is in the documentation file.](doc/rolloffino.md)
