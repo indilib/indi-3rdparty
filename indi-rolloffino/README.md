@@ -22,4 +22,4 @@ code are provided for modification to define Relay and pin
 assignments.
 
 Additional information is in the doc/rolloffino.md file.
-[testing](https://github.com/wotalota/indi-3rdparty/doc/rolloffino.html)
+[testing](https://github.com/wotalota/indi-3rdparty/indi-rolloffino/doc/rolloffino.html)
