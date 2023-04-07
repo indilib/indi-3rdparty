@@ -21,6 +21,7 @@ an Arduino using USB or WiFi. Several code examples of Arduino
 code are provided for modification to define Relay and pin
 assignments.
 
-Additional information is in the doc/rolloffino.md file.
-[test full html](https://github.com/wotalota/indi-3rdparty/tree/master/indi-rolloffino/doc/rolloffino.html)
-[test full doc](https://github.com/wotalota/indi-3rdparty/tree/master/indi-rolloffino/doc/rolloffino.md)
+Additional information is in the doc/rolloffino file.
+[test relative html](doc/rolloffino.html)
+Additional information is in the doc/rolloffino file.
+[test relative doc](doc/rolloffino.md)
