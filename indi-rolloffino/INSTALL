@@ -1,4 +1,17 @@
-Modified Nov 3, 2021 to be more explicit.
+Modified April 7, 2023 to be more explicit.
+
+[
+
+Some drivers omit or have brief directions: 
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr . ../
+sudo make install
+
+When in place in the 3rdparty driver area try that. See what assumptions might be
+made for a non-technical user who has only done a standard install. 
+
+
 
 To build the rolloffino roof driver, development libraries and
 3rdparty driver build files are needed. If you do not already have the
@@ -40,15 +53,15 @@ Before running the cmake command. Confirm that the following is true.
 - Your present default directory is ~/Project/indi_3rdparty/indi-rolloffino/build
 
 $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
-$ make -j4
+$ make
 $ sudo make install 
 
 This will build and install the indi_rolloffino roof driver. If it completes
 without error the following files can be found.
 - /usr/bin/indi_rolloffino The driver executable          
-- /usr/share/indi/indi_rolloffino.xml Identifying the roof driver to Ekos. 
-The driver will then be available for selection in the Ekos profile editor 
-Dome section.
+- /usr/share/indi/indi_rolloffino.xml Identifying the roof driver to Ekos.
+If the xml file is not there see if it is in /usr/local/share/indi/ and copy it to /usr/share/indi/ 
+The driver will then be available for selection in the Ekos profile editor Dome section.
 
 
 

@@ -8,7 +8,8 @@ It is the Arduino that will need to provide the appropriate code to match the ha
 
 ### Installation
 
-
+The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers.
+If you are building from source Refer to the general documentation in the parent directory for building 3rdparty libraries and drivers https://github.com/indilib/indi-3rdparty/README.md. See the local INSTALL file for individual build directions. 
 
 
 ### Usage
@@ -19,3 +20,6 @@ It is the Arduino that will need to provide the appropriate code to match the ha
 
 ### Obtaining Source Files
 
+Refer to the general documentation in the parent directory for 3rdparty drivers https://github.com/indilib/indi-3rdparty/README.md
+
+If you are building from source, the source files can best be obtained by cloning the 3rdparty repo as describedin the github parent directory. If you already have an installed rolloffino driver from an indi_full install. Then you do not need to do a local build. Perhaps you are just looking for one of the Arduino examples to start working on the Arduino side. If so you can just pull that or other files, or zip up the repository from https://github.com/indilib/indi-3rdparty/indi-rolloffino/ 
