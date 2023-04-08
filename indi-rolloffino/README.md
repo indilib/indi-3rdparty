@@ -8,7 +8,7 @@ It is the Arduino that will need to provide the appropriate code to match the ha
 
 ### Installation
 
-The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers. If you want to build it from source refer to the general documentation in the parent directory for building 3rdparty libraries and drivers https://github.com/indilib/indi-3rdparty/README.md. The local INSTALL file has the steps for doing a build and reinstalling the driver. 
+The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers. If you want to build it from source refer to the general documentation in the parent directory under Building. https://github.com/indilib/indi-3rdparty. In the section "Building individual 3rd Party Drivers" replace references to indi-eqmod with indi-rolloffino. 
 
 
 ### Usage
@@ -21,4 +21,4 @@ The driver will have been built and installed from having done a indi-full insta
 
 Refer to the general documentation in the parent directory for 3rdparty drivers https://github.com/indilib/indi-3rdparty/README.md
 
-If you are building from source, the source files can best be obtained by cloning the 3rdparty repo as describedin the github parent directory. If you already have an installed rolloffino driver from an indi_full install. Then you do not need to do a local build. Perhaps you are just looking for one of the Arduino examples to start working on the Arduino side. If so you can just pull that or other files, or zip up the repository from https://github.com/indilib/indi-3rdparty/indi-rolloffino/ 
+If you are building from source, the source files can best be obtained by cloning the 3rdparty repo as described in the INSTALL file. If you already have an installed rolloffino driver from an indi_full install. Then you do not need to do a local build. Perhaps you are just looking for one of the Arduino examples to start working on the Arduino side. If so you can just pull that or other files, or zip up the repository from https://github.com/indilib/indi-3rdparty/indi-rolloffino/ 
