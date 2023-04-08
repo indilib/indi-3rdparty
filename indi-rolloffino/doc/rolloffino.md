@@ -6,17 +6,11 @@ A roof driver for a DIY automation project that uses an Arduino to provide the i
 
 The driver as with other INDI drivers can be on the same host as the Ekos client or remote on a different computer located in the observatory. The Arduino can be local to the roll-off roof driver using a USB connection. The Arduino can optionally be connected to the roll-off roof driver using a WiFi connection. The Arduino activates the circuits that control the roof motor. The motor control can be provided by a re-purposed commercial opener, or a controller suitably built or bought to match requirements for the selected motor.
 
-# Source Files
-Where are they?
 
 # The driver
 
-```
-Driver:
-RollOff ino
-Executable:	indi_rolloffino
-INDI:	1.8.1
-```
+When installed, the RollOff ino driver will be available for selection under Domes in the Ekos profile definition editor.
+![Ekos Profile](ekos_profile.png)
 
 Provided as an INDI third party driver. The driver is derived from the Ekos roll-off roof simulator driver. USB is the normal connection method, and it uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Park and Unpark requests, these are sent to the Arduino in the form of open and close requests. The Arduino uses these requests to open or close relays in order to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed sensors to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code.
 

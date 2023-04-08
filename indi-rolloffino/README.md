@@ -6,6 +6,13 @@ It is the Arduino that will need to provide the appropriate code to match the ha
 
 [More information is in the documentation file.](doc/rolloffino.md)
 
+## Driver
+```
+Driver:       RollOff ino
+Executable:   indi_rolloffino
+Minimum INDI: 1.8.1
+```
+
 ### Installation
 
 The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers. If you want to build it from source refer to the general documentation in the parent directory under Building. https://github.com/indilib/indi-3rdparty. In the section "Building individual 3rd Party Drivers" replace references to indi-eqmod with indi-rolloffino. 
