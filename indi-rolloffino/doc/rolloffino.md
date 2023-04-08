@@ -133,10 +133,8 @@ This is the Arduino loop that waits for driver input.
 
 # Communication Protocol
 Outline of the communication between the roof driver and the Arduino
-The communication uses a simple text protocol, lines of text are sent and received
-A Command is from the rolloffino driver to the Arduino sketch.
-A Response is from the Arduino sketch to the rolloffino driver.
-These commands and responses the driver will log to a file when debug logging is enabled.
+The communication uses a simple text protocol, lines of text are sent and received.
+A Command is from the rolloffino driver to the Arduino sketch. A Response is from the Arduino sketch to the rolloffino driver. The driver will log these commands and responses to a file when debug logging is enabled.
 
 ```
 Command Format:  (command:target|state:value)
@@ -181,6 +179,7 @@ An Arduino Uno with a relay shield would make for a cleaner install here. With i
 
 
 The Aleko controller board. The AC power supply comes in at the top. To the lower left is the red and black wires feeding back to the Arduino relay. An adjustable potentiometer is visible around the midlle to control how much power is applied to overcome resistance before a blockage is declared.
+
 ![Aleko Controller](aleko_controller.jpg)
 
 

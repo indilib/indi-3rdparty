@@ -1,4 +1,3 @@
-Modified April 7, 2023 to be more explicit.
 
 [
 
@@ -11,6 +10,7 @@ sudo make install
 When in place in the 3rdparty driver area try that. See what assumptions might be
 made for a non-technical user who has only done a standard install. 
 
+]
 
 
 To build the rolloffino roof driver, development libraries and
@@ -33,36 +33,54 @@ Section 3 With your default directory set to ~/Projects or whatever you are
 
 In addition to the libraries already installed, install libindi-dev.
 
-There should now be two subdirectories of ~/Projects indi and the indi-3rdparty
-tree of drivers. These directories should be from the same version of INDI
-and match the version you are running.
+-----------------
 
-$ cd ~/Projects/indi-3rdparty
-$ git clone https://github.com/wotalota/indi-rolloffino.git
+Set default to a working directory, for example ~/Projects/work
 
-This obtains the rolloffino sources and puts them in
-~/Projects/indi-3rdparty/indi-rolloffino
-Make a directory below this and set it as your default in which to do the build.
+```
+mkdir -p ~/Projects/work
+cd ~/Projects/work
 
-$ mkdir indi-rolloffino/build
-$ cd indi-rolloffino/build
+```
 
-Before running the cmake command. Confirm that the following is true.
-- Within the ~/Projects there are 2 sub directories  that have been populated "indi" and "indi_3rdparty".
-- In ~/Project/indi_3rdparty/indi-rolloffino/ are the files from the wotalota github.
-- Your present default directory is ~/Project/indi_3rdparty/indi-rolloffino/build
+Clone the github 3rdparty repository.
+When cloning you need to obtain source files that match the INDI version you are have installed. For example if you are running the nightly release
 
-$ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
-$ make
-$ sudo make install 
+```
 
+git clone --depth=1 https://github.com/indilib/indi-3rdparty.git
+
+```
+Or if running a stable release, use the -b switch to match the installed stable release tag for the INDI version
+
+```
+
+git clone --depth=1 -b v2.0.1 https://github.com/indilib/indi-3rdparty.git
+
+```
+The 3rdparty source tree will now be in your ~/Projects/work directory. Create a build directory for rolloffino and set default there.
+
+```
+mkdir ~/Projects/work/indi-rolloffino/build
+cd ~/Projects/work/indi-rolloffino/build
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
+make
+sudo make install 
+
+```
 This will build and install the indi_rolloffino roof driver. If it completes
 without error the following files can be found.
-- /usr/bin/indi_rolloffino The driver executable          
-- /usr/share/indi/indi_rolloffino.xml Identifying the roof driver to Ekos.
+
+```
+/usr/bin/indi_rolloffino The driver executable          
+
+/usr/share/indi/indi_rolloffino.xml Identifying the roof driver to Ekos.
+
+```
 If the xml file is not there see if it is in /usr/local/share/indi/ and copy it to /usr/share/indi/ 
 The driver will then be available for selection in the Ekos profile editor Dome section.
 
+When this is done the RollOffino driver should be available for selection under "Domes" In the Ekos profile definition user interface.
 
 
 
