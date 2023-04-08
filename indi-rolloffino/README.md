@@ -15,18 +15,14 @@ Minimum INDI: 1.8.1
 
 ### Installation
 
-The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers. If you want to build it from source refer to the general documentation in the parent directory under Building. https://github.com/indilib/indi-3rdparty. In the section "Building individual 3rd Party Drivers" replace references to indi-eqmod with indi-rolloffino. 
+The driver will have been built and installed from having done a indi-full install which includes the 3rdparty drivers. If you want to build it from source refer to the general documentation in the parent directory under Building. https://github.com/indilib/indi-3rdparty. It will direct you to first obtain the indilib core Library sources. https://github.com/indilib/indi. In both repository areas pay attention regarding the pre-requisite installations. After returning to the 3rdparty area, in the section "Building individual 3rd Party Drivers" replace references to indi-eqmod with indi-rolloffino. 
 
 ### Usage
 
-Available from KStars/Ekos or compatible INDI client. It requires successful communication to the Arduino to complete the on-line connection stage.
+Available for use in the KStars/Ekos INDI client. The driver requires successful communication to an already running Arduino to complete the on-line connection stage.
 
-It can be manually started from the command line by the indiserver:
+The driver can be manually started from the command line by the indiserver:
 `$ indiserver indi_rolloffino`.
-
-### Requirements
-
-
 
 ### Obtaining Source Files
 
