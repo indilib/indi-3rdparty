@@ -33,10 +33,10 @@
 #include <ctime>
 #include <memory>
 
-#define ROLLOFF_DURATION 15               // Seconds until Roof is fully opened or closed
+#define ROLLOFF_DURATION 30               // Seconds until Roof is fully opened or closed
 #define INACTIVE_STATUS  5                // Seconds between updating status lights
 #define ROR_D_PRESS      1000             // Milliseconds after issuing command before expecting response
-#define MAX_CNTRL_COM_ERR 10             // Maximum consecutive errors communicating with Arduino
+#define MAX_CNTRL_COM_ERR 10              // Maximum consecutive errors communicating with Arduino
 // Read only
 #define ROOF_OPENED_SWITCH "OPENED"
 #define ROOF_CLOSED_SWITCH "CLOSED"
@@ -188,7 +188,8 @@ bool RollOffIno::initProperties()
 bool RollOffIno::Handshake()
 {
     bool status = false;
-
+    
+    LOG_INFO("Documentation: https://github.com/indilib/indi-3rdparty [indi-rolloffino]");
     LOGF_DEBUG("Driver id: %s", VERSION_ID);
     if (PortFD <= 0)
         DEBUG(INDI::Logger::DBG_WARNING, "The connection port has not been established");
