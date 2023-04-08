@@ -58,10 +58,8 @@ without error the following files can be found.
 /usr/bin/indi_rolloffino The driver executable          
 /usr/share/indi/indi_rolloffino.xml Identifying the roof driver to Ekos.
 
-If the xml file is not there see if it is in /usr/local/share/indi/ and copy it to /usr/share/indi/ 
 The driver will then be available for selection in the Ekos profile editor Dome section.
 
-When this is done the RollOffino driver should be available for selection under "Domes" In the Ekos profile definition user interface.
 
 
 
