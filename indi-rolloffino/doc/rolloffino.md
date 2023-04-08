@@ -2,6 +2,7 @@
 
 RollOffino roof driver using an Arduino to open and close the roof.
 A roof driver for a DIY automation project that uses an Arduino to provide the interface with a roof motor or roof controller. The driver is intended to be installed and used without the need for coding in the INDI environment. It is the Arduino code that works from a standard interface with the driver that requires adaptation to control the selected motor. There is project, hardware and coding help available online for the Arduino. The driver provides an interface sufficient to open, close and determine if the roof is fully opened or fully closed for a roll-off or similar roof.
+
 ![Components](components.png)
 
 The driver as with other INDI drivers can be on the same host as the Ekos client or remote on a different computer located in the observatory. The Arduino can be local to the roll-off roof driver using a USB connection. The Arduino can optionally be connected to the roll-off roof driver using a WiFi connection. The Arduino activates the circuits that control the roof motor. The motor control can be provided by a re-purposed commercial opener, or a controller suitably built or bought to match requirements for the selected motor.
@@ -10,12 +11,14 @@ The driver as with other INDI drivers can be on the same host as the Ekos client
 # The driver
 
 When installed, the RollOff ino driver will be available for selection under Domes in the Ekos profile definition editor.
+
 ![Ekos Profile](ekos_profile.png)
 
 Provided as an INDI third party driver. The driver is derived from the Ekos roll-off roof simulator driver. USB is the normal connection method, and it uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Park and Unpark requests, these are sent to the Arduino in the form of open and close requests. The Arduino uses these requests to open or close relays in order to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed sensors to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code.
 
 ## Observatory interface.
 The observatory interface will be the normal way to park and unpark the roof.
+
 ![Observatory](roof_obs.png)
 
 
@@ -24,14 +27,17 @@ The INDI Control panels provide the detail and setup interfaces.
 
 ### The Main Panel
 The main panel's periodic monitoring of the roof status as provided by the Arduino code is reflected in the status lights. The Park/Unpark provides local replication of the Observatory functions. The Open/Close buttons might be of use, if for some reason there is a discrepancy between the drivers notion of where the roof is versus the actual position.
+
 ![Main Panel](roof_main.png)
 
 ### The Connection Panel
 The connection panel is where the USB connection baud rate can be set to match the Arduino code. It is where the USB used for the connection is established.
+
 ![Connection Panel](roof_connection.png)
 
 ### The Options Panel
 The options panel is for the setting of the standard driver INDI options and for specifying roof's view of interactions with the telescope mount.
+
 ![Options Panel](roof_options.png)
 
 ## Weather protection.
@@ -160,6 +166,7 @@ Set a relay     (SET:CLOSE:ON|OFF) >
 The images match with the rolloffino.ino.ar1450 install.
 
 The pin connections. The baloon looking things next to the pull-down resistors are meant to be the fully open/closed switches. With the pull-down resistors an open switch would return LOW when the pin is read. The connection to the Aleko controller to act in place of the single push button comes off of the Normally Open relay NO connection.
+
 ![Due Wiring](layout_due.jpg)
 
 
@@ -169,6 +176,7 @@ The Arduino Due with a relay board. The additional DC supply is to provide the h
 
 
 An Arduino Uno with a relay shield would make for a cleaner install here. With its 5 volt power and built in pull-up resistors it can be a more straight forward installation.
+
 ![Uno Shield](uno_shield.png)
 
 
@@ -178,14 +186,17 @@ The Aleko controller board. The AC power supply comes in at the top. To the lowe
 
 
 Just an image showing the Aleko positioning magnet that the controller detects when the roof has reached the fully opened or fully closed position. It shows the track used to drive the roof. The roof will roll a little past where the detector is placed.
+
 ![Aleko Magnet](aleko_magnet.jpg)
 
 
 Example of a fully closed detection switch feeding to an Arduino pin.
+
 ![Motor Wiring](switch_closed.jpg)
 
 
 From Arduino rolloff.ino.motor, wiring for controlling a motor using a SyRen driver. The fused power distribution box supplies 12V to the SyRen which in turn feeds 12V to the motor. The switches are used for the open and closed switches. Uno pin 11 white wire is controlling the SyRen. The black and red wires from the SyRen provides ground and 5 volts to power the Uno.
+
 ![Motor Control](motor.jpg)
 
 

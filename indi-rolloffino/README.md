@@ -6,7 +6,7 @@ It is the Arduino that will need to provide the appropriate code to match the ha
 
 [More information is in the documentation file.](doc/rolloffino.md)
 
-## Driver
+### Driver
 ```
 Driver:       RollOff ino
 Executable:   indi_rolloffino
