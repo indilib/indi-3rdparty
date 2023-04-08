@@ -51,8 +51,7 @@ It is the Arduino code along with hardware build that is responsible for control
 Using a commercial controller of some kind can simplify the design of the Arduino project. A controller can provide proper sizing of the motor for the size and weight of the roof. Provide obstruction protection, enforce range limits, variable force adjustments, slow start and slow stop to lessen the impact of sudden activation to get the roof moving. Some models will run off solar power and the choice of chain or track. With a controller that can be activated by a single or a pair of on/off button it is a simple job to wire a relay in parallel to emulate the pushing of a button. There is built in support in the example relay code to temporarily close a relay for a particular length of time. Such controllers have their own way of detecting the end of roof travel in order to stop movement. Additional switches are required to notify the Arduino when the roof is fully opened or fully closed. The Arduino can then relay that information to the driver when requested.
 
 ## Arduino Examples
-Example Arduino code is provided as a starting point in the directory used to do the install of the driver. The Arduino code examples provides communication with the driver and template code for reading switches and setting relays. The selected starting code will need to be moved to a directory for development. The name of the directory and the name of the Arduino sketch should be the same. The code name must have a .ino extension. For example ~/Projects/my-arduino/my-arduino.ino Then you work in the Arduino IDE to edit and load the code onto your Arduino device. The IDE can be downloaded and installed from the arduino.cc web site. 
-There are five examples of Arduino code that work with the protocol used by the driver.
+Example Arduino code is provided as a starting point. The Arduino code examples provides communication with the driver and template code for reading switches and setting relays. The selected starting code will need to be moved to a directory for development. The name of the directory and the name of the Arduino sketch should be the same. The code name must have a .ino extension. For example ~/Projects/arduino/roof/roof.ino Then you work in the Arduino IDE to edit and load the code onto your Arduino device. The IDE can be downloaded and installed from the arduino.cc web site. You use the IDE to select the type of Arduino board you are working with and define the USB port connecting it. The IDE can be used to edit the code, run builds and load the built sketch onto the Arduino board. https://www.arduino.cc/en/software. Use the most recent Arduino IDE 2 release.
 
 ### rolloff.ino.standard.
 This is a non specific general example as a starting point. It is close to the AR1450 example. But without the Arduino Due specific code and the pull-down resistor orientation in the specific implementation. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This might be the Arduino code to use as a starting point.
@@ -184,18 +183,16 @@ The Aleko controller board. The AC power supply comes in at the top. To the lowe
 
 ![Aleko Controller](aleko_controller.jpg)
 
-
 Just an image showing the Aleko positioning magnet that the controller detects when the roof has reached the fully opened or fully closed position. It shows the track used to drive the roof. The roof will roll a little past where the detector is placed.
 
 ![Aleko Magnet](aleko_magnet.jpg)
-
 
 Example of a fully closed detection switch feeding to an Arduino pin.
 
 ![Motor Wiring](switch_closed.jpg)
 
-
-From Arduino rolloff.ino.motor, wiring for controlling a motor using a SyRen driver. The fused power distribution box supplies 12V to the SyRen which in turn feeds 12V to the motor. The switches are used for the open and closed switches. Uno pin 11 white wire is controlling the SyRen. The black and red wires from the SyRen provides ground and 5 volts to power the Uno.
+From Arduino rolloff.ino.motor, wiring for controlling a DC motor using a SyRen driver. The fused power distribution box supplies 12V to the SyRen which in turn feeds 12V to the motor. The switches are used for the open and closed switches. Uno pin 11 white wire is controlling the SyRen. The black and red wires from the SyRen provides ground and 5 volts to power the Uno.
+In addition to the 25A model shown here, there is also a SyRen 50A. SyRen recommends the use of a battery with the source power to cope with the surges. When building from components care will be needed to matching the motor power and torque to the roof requirements. If a gear motor is used, there should be a way to disengage a clutch to allow the roof to be moved manually if needed. Matching the spindle to the drive mechanics might also be a challenge. 
 
 ![Motor Control](motor.jpg)
 
