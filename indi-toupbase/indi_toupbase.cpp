@@ -159,10 +159,11 @@ bool ToupBase::initProperties()
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
-    // Black Level
+    // Black Level (Offset)
+    // JM 2023.04.07 DO NOT NAME IT BLACK LEVEL, it must remain as OFFSET
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_BlackLevelN, "BLACKLEVEL", "Value", "%.f", 0, 255, 1, 0);
-    IUFillNumberVector(&m_BlackLevelNP, &m_BlackLevelN, 1, getDeviceName(), "CCD_BLACKLEVEL", "Black Level", CONTROL_TAB, IP_RW,
+    IUFillNumber(&m_OffsetN[0], "OFFSET", "Value", "%.f", 0, 255, 1, 0);
+    IUFillNumberVector(&m_OffsetNP, m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW,
                        60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -369,7 +370,7 @@ bool ToupBase::updateProperties()
         defineProperty(&m_BBAutoSP);
         // Levels
         defineProperty(&m_LevelRangeNP);
-        defineProperty(&m_BlackLevelNP);
+        defineProperty(&m_OffsetNP);
 
         // Firmware
         defineProperty(&m_CameraTP);
@@ -416,7 +417,7 @@ bool ToupBase::updateProperties()
         deleteProperty(m_BlackBalanceNP.name);
         deleteProperty(m_BBAutoSP.name);
         deleteProperty(m_LevelRangeNP.name);
-        deleteProperty(m_BlackLevelNP.name);
+        deleteProperty(m_OffsetNP.name);
 
         deleteProperty(m_CameraTP.name);
         deleteProperty(m_SDKVersionTP.name);
@@ -731,7 +732,7 @@ void ToupBase::setupParams()
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_BlackLevelN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
 
     // Allocate memory
     allocateFrameBuffer();
@@ -918,25 +919,25 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         }
 
         //////////////////////////////////////////////////////////////////////
-        /// Black Level
+        /// Offset (Black Level)
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_BlackLevelNP.name))
+        if (!strcmp(name, m_OffsetNP.name))
         {
-            IUUpdateNumber(&m_BlackLevelNP, values, names, n);
-            int bLevel = static_cast<uint16_t>(m_BlackLevelN.value);
+            IUUpdateNumber(&m_OffsetNP, values, names, n);
+            int bLevel = static_cast<uint16_t>(m_OffsetN[0].value);
 
             HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), bLevel));
             if (FAILED(rc))
             {
-                m_BlackLevelNP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set black level. %s", errorCodes(rc).c_str());
+                m_OffsetNP.s = IPS_ALERT;
+                LOGF_ERROR("Failed to set offset. %s", errorCodes(rc).c_str());
             }
             else
             {
-                m_BlackLevelNP.s = IPS_OK;
+                m_OffsetNP.s = IPS_OK;
             }
 
-            IDSetNumber(&m_BlackLevelNP, nullptr);
+            IDSetNumber(&m_OffsetNP, nullptr);
             return true;
         }
 
@@ -1653,6 +1654,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
     fitsKeywords.push_back({"GAIN", m_ControlN[TC_GAIN].value, 3, "Gain"});
+    fitsKeywords.push_back({"OFFSET", m_OffsetN[0].value, 3, "Offset"});
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
         fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
@@ -1672,7 +1674,7 @@ bool ToupBase::saveConfigItems(FILE *fp)
         IUSaveConfigSwitch(fp, &m_CoolerSP);
 
     IUSaveConfigNumber(fp, &m_ControlNP);
-    IUSaveConfigNumber(fp, &m_BlackLevelNP);
+    IUSaveConfigNumber(fp, &m_OffsetNP);
     IUSaveConfigSwitch(fp, &m_ResolutionSP);
     IUSaveConfigSwitch(fp, &m_BinningModeSP);
 
@@ -1863,7 +1865,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
         {
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
             IUSaveText(&BayerT[2], getBayerString());
-            IDSetText(&BayerTP, nullptr);            
+            IDSetText(&BayerTP, nullptr);
             m_BitsPerPixel = (m_maxBitDepth > 8) ? 16 : 8;
         }
     }
@@ -1873,8 +1875,8 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)
         bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_BlackLevelN.max = CP(BLACKLEVEL8_MAX) * bLevelStep;
-    IUUpdateMinMax(&m_BlackLevelNP);
+    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    IUUpdateMinMax(&m_OffsetNP);
 
     LOGF_DEBUG("Video Format: %d, BitsPerPixel: %d", index, m_BitsPerPixel);
 
