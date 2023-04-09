@@ -1827,8 +1827,10 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
         ha = range24(haEncoder / 15.0);
+        pierSide = PIER_EAST;
         if (deEncoder < 90 || deEncoder > 270)
         {
+            pierSide = PIER_WEST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
