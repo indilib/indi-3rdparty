@@ -744,6 +744,11 @@ if (WITH_NUT)
 add_subdirectory(indi-nut)
 endif()
 
+# OCS
+if (WITH_OCS)
+add_subdirectory(indi-ocs)
+endif()
+
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
 message(STATUS "############################################################################")
