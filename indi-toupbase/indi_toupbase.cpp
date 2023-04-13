@@ -101,8 +101,8 @@ bool ToupBase::initProperties()
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillSwitch(&m_CoolerS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_ON);
-        IUFillSwitch(&m_CoolerS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_OFF);
+        IUFillSwitch(&m_CoolerS[INDI_ENABLED], "COOLER_ON", "ON", ISS_ON);
+        IUFillSwitch(&m_CoolerS[INDI_DISABLED], "COOLER_OFF", "OFF", ISS_OFF);
         IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY,
                            0, IPS_BUSY);
 
