@@ -1468,7 +1468,7 @@ bool CelestronAUX::Sync(double ra, double dec)
            NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination, NewEntry.TelescopeDirection.x,
            NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
-    if (!CheckForDuplicateSyncPoint(NewEntry))
+    if (!CheckForDuplicateSyncPoint(NewEntry, 0.01))
     {
         GetAlignmentDatabase().push_back(NewEntry);
 
