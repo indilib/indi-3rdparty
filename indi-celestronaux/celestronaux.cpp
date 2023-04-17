@@ -1468,7 +1468,7 @@ bool CelestronAUX::Sync(double ra, double dec)
            NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination, NewEntry.TelescopeDirection.x,
            NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
-    if (!CheckForDuplicateSyncPoint(NewEntry))
+    if (!CheckForDuplicateSyncPoint(NewEntry, 0.01))
     {
         GetAlignmentDatabase().push_back(NewEntry);
 
@@ -1827,8 +1827,10 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
         ha = range24(haEncoder / 15.0);
+        pierSide = PIER_EAST;
         if (deEncoder < 90 || deEncoder > 270)
         {
+            pierSide = PIER_WEST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
