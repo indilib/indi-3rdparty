@@ -26,7 +26,7 @@ set(indirolloffino_SRCS
 
 add_executable(indi_rolloffino ${indirolloffino_SRCS})
 
-target_link_libraries(indi_rolloffino ${INDI_LIBRARIES} crypt)
+target_link_libraries(indi_rolloffino ${INDI_LIBRARIES})
 
 install(TARGETS indi_rolloffino RUNTIME DESTINATION bin )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_rolloffino.xml DESTINATION ${INDI_DATA_DIR})
