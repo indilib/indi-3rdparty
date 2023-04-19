@@ -1468,28 +1468,27 @@ bool CelestronAUX::Sync(double ra, double dec)
            NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination, NewEntry.TelescopeDirection.x,
            NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
-    if (!CheckForDuplicateSyncPoint(NewEntry, 0.01))
-    {
-        GetAlignmentDatabase().push_back(NewEntry);
+    if (CheckForDuplicateSyncPoint(NewEntry, 0.01))
+        RemoveSyncPoint(NewEntry, 0.01);
 
-        // Tell the client about size change
-        UpdateSize();
+    GetAlignmentDatabase().push_back(NewEntry);
 
-        // Tell the math plugin to reinitialise
-        Initialise(this);
+    // Tell the client about size change
+    UpdateSize();
 
-        // Force read before restarting
-        ReadScopeStatus();
+    // Tell the math plugin to reinitialise
+    Initialise(this);
 
-        // Sync cord wrap
-        syncCoordWrapPosition();
+    // Force read before restarting
+    ReadScopeStatus();
 
-        // The tracking seconds should be reset to restart the drift compensation
-        resetTracking();
+    // Sync cord wrap
+    syncCoordWrapPosition();
 
-        return true;
-    }
-    return false;
+    // The tracking seconds should be reset to restart the drift compensation
+    resetTracking();
+
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
