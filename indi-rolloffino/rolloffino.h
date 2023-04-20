@@ -28,26 +28,24 @@ class RollOffIno : public INDI::Dome
     RollOffIno();
     virtual ~RollOffIno() override = default;
 
-    virtual bool initProperties();
+    virtual bool initProperties() override;
     virtual void ISGetProperties(const char *dev) override;
-    virtual bool ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n);
-    const char *getDefaultName();
-    bool updateProperties();
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-    virtual bool saveConfigItems(FILE *fp);
-    virtual bool ISSnoopDevice(XMLEle *root);
-    virtual bool Handshake();
+    virtual bool ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n) override;
+    const char *getDefaultName() override;
+    bool updateProperties() override;
+    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    virtual bool saveConfigItems(FILE *fp) override;
+    virtual bool ISSnoopDevice(XMLEle *root) override;
+    virtual bool Handshake() override;
 
   protected:
-    bool Connect();
-    bool Disconnect();
-
-    void TimerHit();
-
-    virtual IPState Move(DomeDirection dir, DomeMotionCommand operation);
-    virtual IPState Park();
-    virtual IPState UnPark();
-    virtual bool Abort();
+    bool Connect() override;
+    bool Disconnect() override;
+    void TimerHit() override;
+    virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
+    virtual IPState Park() override;
+    virtual IPState UnPark() override;
+    virtual bool Abort() override;
 
     virtual bool getFullOpenedLimitSwitch(bool*);
     virtual bool getFullClosedLimitSwitch(bool*);
