@@ -1612,9 +1612,11 @@ POAErrors POABase::POASetROIFormat(int cameraID, int width, int height, int bin,
 {
     POAErrors ret;
 
-    if ((ret = POASetImageSize(cameraID, width, height)) != POA_OK)
-        return ret;
+    // ImageBin should be set first
     if ((ret = POASetImageBin(cameraID, bin)) != POA_OK)
+        return ret;
+    // then, ImageSize can be set
+    if ((ret = POASetImageSize(cameraID, width, height)) != POA_OK)
         return ret;
     if ((ret = POASetImageFormat(cameraID, imgType)) != POA_OK)
         return ret;

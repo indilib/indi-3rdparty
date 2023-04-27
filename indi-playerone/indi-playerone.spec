@@ -74,6 +74,8 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Thu Apr 27 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- BugFix: top quarter noise on bin2 image
 * Wed Mar 15 2023 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOneCamera SDK to v3.2.2
 * Thu Mar 2 2023 Hiroshi Saito <hiro3110g@gmail.com>
