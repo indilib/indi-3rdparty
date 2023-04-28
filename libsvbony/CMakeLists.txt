@@ -3,7 +3,6 @@ project (libsvbony)
 
 set (SVBCAMERASDK_VERSION "1.11.1")
 set (SVBCAMERASDK_SOVERSION "1")
-set (FIX_MACOS_LIBS "")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
