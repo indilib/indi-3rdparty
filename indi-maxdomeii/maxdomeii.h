@@ -57,6 +57,8 @@ class MaxDomeII : public INDI::Dome
   protected:
     // Parking
     IPState ConfigurePark(int nCSBP, double ParkAzimuth);
+    virtual IPState Park() override;
+    virtual IPState UnPark() override;
     virtual bool SetCurrentPark() override;
     virtual bool SetDefaultPark() override;
     virtual IPState ControlShutter(ShutterOperation operation) override;

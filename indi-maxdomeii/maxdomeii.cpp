@@ -47,7 +47,7 @@ MaxDomeII::MaxDomeII()
     nTargetAzimuth              = -1; //Target azimuth not established
     nTimeSinceLastCommunication = 0;
 
-    SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_HAS_SHUTTER);
+    SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_ABS_MOVE | DOME_HAS_SHUTTER | DOME_CAN_PARK);
 
     setVersion(INDI_MAXDOMEII_VERSION_MAJOR, INDI_MAXDOMEII_VERSION_MINOR);
 }
@@ -962,5 +962,41 @@ IPState MaxDomeII::ControlShutter(ShutterOperation operation)
         }
     }
 
+    return IPS_ALERT;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+IPState MaxDomeII::Park()
+{
+    targetAz = GetAxis1Park();
+    if (setParkAz(targetAz))
+    {
+        LOGF_INFO("Parking to %.2f azimuth...", targetAz);
+        MoveAbs(targetAz);
+        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
+    }
+
+    return IPS_ALERT;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+IPState MaxDomeII::UnPark()
+{
+    int error;
+    int nRetry = 3;
+
+    while (nRetry)
+    {
+        error = driver.HomeAzimuth();
+        handle_driver_error(&error, &nRetry);
+    }
+    nTimeSinceAzimuthStart = 0;
+    nTargetAzimuth         = -1;
+    SetParked(false);
+    
     return IPS_ALERT;
 }
