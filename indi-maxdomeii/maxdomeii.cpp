@@ -970,13 +970,11 @@ IPState MaxDomeII::ControlShutter(ShutterOperation operation)
 /////////////////////////////////////////////////////////////////////////////
 IPState MaxDomeII::Park()
 {
-    targetAz = GetAxis1Park();
-    if (setParkAz(targetAz))
-    {
-        LOGF_INFO("Parking to %.2f azimuth...", targetAz);
-        MoveAbs(targetAz);
-        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
-    }
+    int targetAz = GetAxis1Park();
+    
+    LOGF_INFO("Parking to %.2f azimuth...", targetAz);
+    MoveAbs(targetAz);
+    ControlShutter(ShutterOperation::SHUTTER_CLOSE);
 
     return IPS_ALERT;
 }
