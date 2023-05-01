@@ -673,7 +673,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         nVal = values[0];
         if (nVal >= 0 && nVal < 360)
         {
-            error = ConfigurePark(nMoveDomeBeforeOperateShutter, nVal);
+            error = ConfigureShutterOperation(nMoveDomeBeforeOperateShutter, nVal);
 
             if (error == IPS_OK)
             {
@@ -751,7 +751,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             return false;
 
         int nCSBP = ShutterConflictS[0].s == ISS_ON ? 1 : 0;
-        int error = ConfigurePark(nCSBP, nShutterOperationPosition);
+        int error = ConfigureShutterOperation(nCSBP, nShutterOperationPosition);
 
         if (error == IPS_OK)
         {
