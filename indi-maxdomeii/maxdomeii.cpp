@@ -38,10 +38,10 @@ MaxDomeII::MaxDomeII()
 {
     nTicksPerTurn               = 360;
     nCurrentTicks               = 0;
-    nParkPosition               = 0.0;
+    nShutterOperationPosition   = 0.0;
     nHomeAzimuth                = 0.0;
     nHomeTicks                  = 0;
-    nCloseShutterBeforePark     = 0;
+    nMoveDomeBeforeOperateShutter = 0;
     nTimeSinceShutterStart      = -1; // No movement has started
     nTimeSinceAzimuthStart      = -1; // No movement has started
     nTargetAzimuth              = -1; //Target azimuth not established
@@ -84,22 +84,22 @@ bool MaxDomeII::initProperties()
 {
     INDI::Dome::initProperties();
 
+    SetParkDataType(PARK_AZ);
+    
     IUFillNumber(&HomeAzimuthN[0], "HOME_AZIMUTH", "Home azimuth", "%5.2f", 0., 360., 0., nHomeAzimuth);
-    IUFillNumberVector(&HomeAzimuthNP, HomeAzimuthN, NARRAY(HomeAzimuthN), getDeviceName(), "HOME_AZIMUTH",
-                       "Home azimuth", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&HomeAzimuthNP, HomeAzimuthN, NARRAY(HomeAzimuthN), getDeviceName(), "HOME_AZIMUTH", "Home azimuth", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     // Ticks per turn
     IUFillNumber(&TicksPerTurnN[0], "TICKS_PER_TURN", "Ticks per turn", "%5.2f", 100., 2000., 0., nTicksPerTurn);
-    IUFillNumberVector(&TicksPerTurnNP, TicksPerTurnN, NARRAY(TicksPerTurnN), getDeviceName(), "TICKS_PER_TURN",
-                       "Ticks per turn", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+    IUFillNumberVector(&TicksPerTurnNP, TicksPerTurnN, NARRAY(TicksPerTurnN), getDeviceName(), "TICKS_PER_TURN", "Ticks per turn", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
-    // Park position
-    IUFillNumber(&ShutterOperationAzimuthN[0], "SOp_AZIMUTH", "Azimuth", "%5.2f", 0., 360., 0., nParkPosition);
+    // Shutter operation position
+    IUFillNumber(&ShutterOperationAzimuthN[0], "SOp_AZIMUTH", "Azimuth", "%5.2f", 0., 360., 0., nShutterOperationPosition);
     IUFillNumberVector(&ShutterOperationAzimuthNP, ShutterOperationAzimuthN, NARRAY(ShutterOperationAzimuthN),
                        getDeviceName(), "SHUTTER_OPERATION_AZIMUTH", "Shutter operation azimuth", OPTIONS_TAB, IP_RW, 0,
                        IPS_IDLE);
 
-    // Park on shutter
+    // Move to a shutter operation position before moving shutter?
     IUFillSwitch(&ShutterConflictS[0], "MOVE", "Move", ISS_ON);
     IUFillSwitch(&ShutterConflictS[1], "NO_MOVE", "No move", ISS_OFF);
     IUFillSwitchVector(&ShutterConflictSP, ShutterConflictS, NARRAY(ShutterConflictS), getDeviceName(),
@@ -673,11 +673,11 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         nVal = values[0];
         if (nVal >= 0 && nVal < 360)
         {
-            error = ConfigurePark(nCloseShutterBeforePark, nVal);
+            error = ConfigurePark(nMoveDomeBeforeOperateShutter, nVal);
 
             if (error == IPS_OK)
             {
-                nParkPosition                         = nVal;
+                nShutterOperationPosition             = nVal;
                 ShutterOperationAzimuthNP.s           = IPS_OK;
                 ShutterOperationAzimuthNP.np[0].value = nVal;
                 IDSetNumber(&ShutterOperationAzimuthNP, "New shutter operation azimuth set");
@@ -751,7 +751,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             return false;
 
         int nCSBP = ShutterConflictS[0].s == ISS_ON ? 1 : 0;
-        int error = ConfigurePark(nCSBP, nParkPosition);
+        int error = ConfigurePark(nCSBP, nShutterOperationPosition);
 
         if (error == IPS_OK)
         {
@@ -855,24 +855,24 @@ int MaxDomeII::handle_driver_error(int *error, int *nRetry)
 /************************************************************************************
 *
 * ***********************************************************************************/
-IPState MaxDomeII::ConfigurePark(int nCSBP, double ParkAzimuth)
+IPState MaxDomeII::ConfigureShutterOperation(int nMDBOS, double ShutterOperationAzimuth)
 {
     int error  = 0;
     int nRetry = 3;
 
-    // Only update park position if there is change
-    if (ParkAzimuth != nParkPosition || nCSBP != nCloseShutterBeforePark)
+    // Only update shutter operating position if there is change
+    if (ShutterOperationAzimuth != nShutterOperationPosition || nMDBOS != nMoveDomeBeforeOperateShutter)
     {
         while (nRetry)
         {
-            error = driver.SetPark(nCSBP, AzimuthToTicks(ParkAzimuth));
+            error = driver.SetPark(nMDBOS, AzimuthToTicks(ShutterOperationAzimuth));
             handle_driver_error(&error, &nRetry);
         }
         if (error >= 0)
         {
-            nParkPosition           = ParkAzimuth;
-            nCloseShutterBeforePark = nCSBP;
-            LOGF_INFO("New park position set. %d %d", nCSBP, AzimuthToTicks(ParkAzimuth));
+            nShutterOperationPosition = ShutterOperationAzimuth;
+            nMoveDomeBeforeOperateShutter = nMDBOS;
+            LOGF_INFO("New shutter operatig position set. %d %d", nMDBOS, AzimuthToTicks(ShutterOperationAzimuth));
         }
         else
         {
@@ -974,9 +974,17 @@ IPState MaxDomeII::Park()
     
     LOGF_INFO("Parking to %.2f azimuth...", targetAz);
     MoveAbs(targetAz);
-    ControlShutter(ShutterOperation::SHUTTER_CLOSE);
 
-    return IPS_ALERT;
+    if (HasShutter() && ShutterParkPolicyS[SHUTTER_CLOSE_ON_PARK].s == ISS_ON)
+    {
+        LOG_INFO("Closing shutter on parking...");
+        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
+        DomeShutterS[SHUTTER_OPEN].s = ISS_OFF;
+        DomeShutterS[SHUTTER_CLOSE].s = ISS_ON;
+        setShutterState(SHUTTER_MOVING);
+    }
+
+    return IPS_BUSY;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -994,7 +1002,19 @@ IPState MaxDomeII::UnPark()
     }
     nTimeSinceAzimuthStart = 0;
     nTargetAzimuth         = -1;
-    SetParked(false);
     
-    return IPS_ALERT;
+    if (HasShutter() && ShutterParkPolicyS[SHUTTER_OPEN_ON_UNPARK].s == ISS_ON)
+    {
+        LOG_INFO("Opening shutter on unparking...");
+        ControlShutter(ShutterOperation::SHUTTER_OPEN);
+        DomeShutterS[SHUTTER_OPEN].s = ISS_ON;
+        DomeShutterS[SHUTTER_CLOSE].s = ISS_OFF;
+        setShutterState(SHUTTER_MOVING);
+        return IPS_BUSY;
+    }
+    else
+    {
+        SetParked(false);
+        return IPS_OK;
+    }
 }
