@@ -58,6 +58,18 @@ bool MaxDomeII::SetupParms()
 
     IDSetNumber(&DomeAbsPosNP, nullptr);
     IDSetNumber(&DomeParamNP, nullptr);
+    
+    if (InitPark())
+    {
+        // If loading parking data is successful, we just set the default parking values.
+        SetAxis1ParkDefault(180);
+    }
+    else
+    {
+        // Otherwise, we set all parking data to default in case no parking data is found.
+        SetAxis1Park(0);
+        SetAxis1ParkDefault(180);
+    }
 
     return true;
 }
@@ -388,6 +400,15 @@ void MaxDomeII::TimerHit()
                             HomeSP.s               = IPS_OK;
                             nTimeSinceAzimuthStart = -1;
                             IDSetSwitch(&HomeSP, "Dome is homed");
+                        }
+                        if (ParkS[0].s == ISS_ON)
+                        {
+                            SetParked(true);
+                            
+                        }
+                        if (ParkS[1].s == ISS_ON)
+                        {
+                            SetParked(false);
                         }
                     }
                 }
@@ -1010,11 +1031,6 @@ IPState MaxDomeII::UnPark()
         DomeShutterS[SHUTTER_OPEN].s = ISS_ON;
         DomeShutterS[SHUTTER_CLOSE].s = ISS_OFF;
         setShutterState(SHUTTER_MOVING);
-        return IPS_BUSY;
     }
-    else
-    {
-        SetParked(false);
-        return IPS_OK;
-    }
+    return IPS_BUSY;
 }
