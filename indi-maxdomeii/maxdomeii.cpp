@@ -401,7 +401,7 @@ void MaxDomeII::TimerHit()
                             nTimeSinceAzimuthStart = -1;
                             IDSetSwitch(&HomeSP, "Dome is homed");
                         }
-                        if (ParkNP.s != IPS_OK)
+                        if (ParkSP.s != IPS_OK)
                         {
                             if (ParkS[0].s == ISS_ON)
                             {
