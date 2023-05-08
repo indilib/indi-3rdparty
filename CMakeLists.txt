@@ -200,6 +200,7 @@ option(WITH_SVBONY "Install SVBONY Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
+option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -411,6 +412,11 @@ endif(WITH_NEXDOME)
 if (WITH_TALON6)
 add_subdirectory(indi-talon6)
 endif(WITH_TALON6)
+
+## Rolloffino
+if (WITH_ROLLOFFINO)
+add_subdirectory(indi-rolloffino)
+endif(WITH_ROLLOFFINO)
 
 ## SpectraCyber
 if (WITH_SPECTRACYBER)
