@@ -21,6 +21,7 @@
 */
 
 #include "oasis_focuser.h"
+#include "config.h"
 #include "AOFocus.h"
 #include "indicom.h"
 
@@ -36,7 +37,7 @@ static class Loader
 
 OasisFocuser::OasisFocuser()
 {
-    setVersion(1, 0);
+    setVersion(ASTROASIS_VERSION_MAJOR, ASTROASIS_VERSION_MINOR);
 
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
                       FOCUSER_CAN_REL_MOVE |
