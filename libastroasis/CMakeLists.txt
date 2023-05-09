@@ -30,7 +30,7 @@ elseif (UNIX AND NOT WIN32)
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
     set_property (TARGET oasisfocuser PROPERTY IMPORTED_LOCATION "x64/liboasisfocuser.bin")
   else ()
-    set_property (TARGET oasisfocuser PROPERTY IMPORTED_LOCATION "x86/liboasisfocuser.bin")
+    message (FATAL_ERROR "x86-32 architecture is not supported.")
   endif ()
 
   # Install udev rules
