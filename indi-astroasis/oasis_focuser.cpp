@@ -54,10 +54,21 @@ bool OasisFocuser::initProperties()
 {
     INDI::Focuser::initProperties();
 
-    // Focuser temperature
-    TemperatureNP[0].fill("TEMPERATURE", "Celsius", "%.2f", -50, 70., 0., 0.);
-    TemperatureNP.fill(getDeviceName(), "FOCUS_TEMPERATURE", "Temperature",
+    // Focuser board temperature
+    TemperatureBoardNP[0].fill("TEMPERATURE", "Board", "%.2f", -100, 100, 0., 0.);
+    TemperatureBoardNP.fill(getDeviceName(), "FOCUS_TEMPERATURE_BOARD", "Temperature",
                        MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    // Focuser ambient temperature
+    TemperatureAmbientNP[0].fill("TEMPERATURE", "Ambient", "%.2f", -100, 100, 0., 0.);
+    TemperatureAmbientNP.fill(getDeviceName(), "FOCUS_TEMPERATURE_AMBIENT", "Temperature",
+                       MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    // Backlash compensation direction
+    BacklashDirSP[INDI_ENABLED].fill("ON", "IN", ISS_ON);
+    BacklashDirSP[INDI_DISABLED].fill("OFF", "OUT", ISS_OFF);
+    BacklashDirSP.fill(getDeviceName(), "FOCUS_BACKLASH_DIRECTION", "Backlash Compensation Dir (Overshoot)",
+                       MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     // Focus motion beep
     BeepOnMoveSP[INDI_ENABLED].fill("ON", "On", ISS_ON);
@@ -102,24 +113,28 @@ bool OasisFocuser::updateProperties()
         GetConfig();
         GetStatus();
 
-        TemperatureNP.setState(IPS_OK);
-        defineProperty(TemperatureNP);
+        TemperatureBoardNP.setState(IPS_OK);
+        defineProperty(TemperatureBoardNP);
 
+        TemperatureAmbientNP.setState(IPS_OK);
+        defineProperty(TemperatureAmbientNP);
+
+        defineProperty(BacklashDirSP);
         defineProperty(BeepOnMoveSP);
 
         // Update version info
         AOFocuserVersion version;
-        char ver[AO_FOCUSER_VERSION_LEN];
+        char ver[100];
 
         if (AOFocuserGetVersion(mID, &version) == AO_SUCCESS)
         {
             unsigned int firmware = version.firmware;
 
-            snprintf(ver, sizeof(ver), "%d.%d.%d",
-                    firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff);
+            snprintf(ver, sizeof(ver), "%d.%d.%d built %s",
+                    firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff, version.built);
 
             VersionSP[0].setText(ver);
-	}
+        }
 
         AOFocuserGetSDKVersion(ver);
         VersionSP[1].setText(ver);
@@ -136,7 +151,9 @@ bool OasisFocuser::updateProperties()
     }
     else
     {
-        deleteProperty(TemperatureNP);
+        deleteProperty(TemperatureBoardNP);
+        deleteProperty(TemperatureAmbientNP);
+        deleteProperty(BacklashDirSP);
         deleteProperty(BeepOnMoveSP);
         deleteProperty(VersionSP);
     }
@@ -171,6 +188,54 @@ bool OasisFocuser::Disconnect()
     return true;
 }
 
+bool OasisFocuser::SetConfig(unsigned int mask, int value)
+{
+    AOFocuserConfig config;
+
+    config.mask = mask;
+
+    switch (mask)
+    {
+        case MASK_MAX_STEP:
+            config.maxStep = value;
+            break;
+        case MASK_BACKLASH:
+            config.backlash = value;
+            break;
+		case MASK_BACKLASH_DIRECTION:
+            config.backlashDirection = value;
+            break;
+        case MASK_REVERSE_DIRECTION:
+            config.reverseDirection = value;
+            break;
+        case MASK_SPEED:
+            config.speed = value;
+            break;
+        case MASK_BEEP_ON_MOVE:
+            config.beepOnMove = value;
+            break;
+        case MASK_BEEP_ON_STARTUP:
+            config.beepOnStartup = value;
+            break;
+        case MASK_BLUETOOTH:
+            config.bluetoothOn = value;
+            break;
+		default:
+            LOGF_ERROR("Invalid Oasis Focuser configuration mask %08X\n", mask);
+            return false;
+    }
+
+    AOReturn ret = AOFocuserSetConfig(mID, &config);
+
+    if (ret != AO_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set Oasis Focuser configuration, ret = %d\n", ret);
+        return false;
+    }
+
+    return true;
+}
+
 bool OasisFocuser::GetConfig()
 {
     AOFocuserConfig config;
@@ -195,6 +260,11 @@ bool OasisFocuser::GetConfig()
     FocusBacklashN[0].value = config.backlash;
     FocusBacklashNP.s = IPS_OK;
 
+    // Update backlash compensation direction settings
+    BacklashDirSP[INDI_ENABLED].setState(config.backlashDirection ? ISS_OFF : ISS_ON);
+    BacklashDirSP[INDI_DISABLED].setState(config.reverseDirection ? ISS_ON : ISS_OFF);
+    BacklashDirSP.setState(IPS_OK);
+
     // Update beep settings
     BeepOnMoveSP[INDI_ENABLED].setState(config.beepOnMove ? ISS_ON : ISS_OFF);
     BeepOnMoveSP[INDI_DISABLED].setState(config.beepOnMove ? ISS_OFF : ISS_ON);
@@ -216,63 +286,29 @@ bool OasisFocuser::GetStatus()
     }
 
     FocusAbsPosN[0].value = status.position;
-    TemperatureNP[0].setValue(status.temperatureExt / 100.0);
+    TemperatureBoardNP[0].setValue(status.temperatureInt / 100.0);
+
+    if (!status.temperatureDetection || (status.temperatureExt == (int)TEMPERATURE_INVALID))
+        TemperatureAmbientNP[0].setValue(-273.15);
+    else
+        TemperatureAmbientNP[0].setValue(status.temperatureExt / 100.0);
 
     return true;
 }
 
 bool OasisFocuser::SetFocuserMaxPosition(uint32_t ticks)
 {
-    AOFocuserConfig config;
-
-    config.mask = MASK_MAX_STEP;
-    config.maxStep = ticks;
-
-    AOReturn ret = AOFocuserSetConfig(mID, &config);
-
-    if (ret != AO_SUCCESS)
-    {
-        LOGF_ERROR("Failed to set Oasis Focuser max position, ret = %d\n", ret);
-        return false;
-    }
-
-    return true;
+    return SetConfig(MASK_MAX_STEP, ticks);
 }
 
 bool OasisFocuser::SetFocuserBacklash(int32_t steps)
 {
-    AOFocuserConfig config;
-
-    config.mask = MASK_BACKLASH;
-    config.backlash = steps;
-
-    AOReturn ret = AOFocuserSetConfig(mID, &config);
-
-    if (ret != AO_SUCCESS)
-    {
-        LOGF_ERROR("Failed to set Oasis Focuser backlash, ret = %d\n", ret);
-        return false;
-    }
-
-    return true;
+    return SetConfig(MASK_BACKLASH, steps);
 }
 
 bool OasisFocuser::ReverseFocuser(bool enabled)
 {
-    AOFocuserConfig config;
-
-    config.mask = MASK_REVERSE_DIRECTION;
-    config.reverseDirection = enabled ? 1 : 0;
-
-    AOReturn ret = AOFocuserSetConfig(mID, &config);
-
-    if (ret != AO_SUCCESS)
-    {
-        LOGF_ERROR("Failed to set Oasis Focuser direction, ret = %d\n", ret);
-        return false;
-    }
-
-    return true;
+    return SetConfig(MASK_REVERSE_DIRECTION, enabled ? 1 : 0);
 }
 
 bool OasisFocuser::isMoving()
@@ -315,24 +351,32 @@ bool OasisFocuser::ISNewSwitch(const char * dev, const char * name, ISState * st
     {
         BeepOnMoveSP.update(states, names, n);
 
-        AOFocuserConfig config;
-
-        config.mask = MASK_BEEP_ON_MOVE;
-        config.beepOnMove = (BeepOnMoveSP.findOnSwitchIndex() == INDI_ENABLED) ? 1 : 0;
-
-        AOReturn ret = AOFocuserSetConfig(mID, &config);
-
-        if (ret == AO_SUCCESS)
-        {
+        int on = (BeepOnMoveSP.findOnSwitchIndex() == INDI_ENABLED) ? 1 : 0;
+	
+        if (SetConfig(MASK_BEEP_ON_MOVE, on))
             BeepOnMoveSP.setState(IPS_OK);
-        }
         else
-        {
             BeepOnMoveSP.setState(IPS_ALERT);
-            LOGF_ERROR("Failed to set Oasis Focuser BeepOnMove, ret = %d\n", ret);
-        }
 
         BeepOnMoveSP.apply();
+
+        return true;
+    }
+
+    // Set backlash compensation direction
+    if (BacklashDirSP.isNameMatch(name))
+    {
+        BacklashDirSP.update(states, names, n);
+
+        // 0 - IN, 1 - OUT
+        int dir = (BacklashDirSP.findOnSwitchIndex() == INDI_ENABLED) ? 0 : 1;
+	
+        if (SetConfig(MASK_BACKLASH_DIRECTION, dir))
+            BacklashDirSP.setState(IPS_OK);
+        else
+            BacklashDirSP.setState(IPS_ALERT);
+
+        BacklashDirSP.apply();
 
         return true;
     }
@@ -395,8 +439,11 @@ void OasisFocuser::TimerHit()
     {
         IDSetNumber(&FocusAbsPosNP, nullptr);
 
-        if (TemperatureNP.getState() != IPS_IDLE)
-            TemperatureNP.apply();
+        if (TemperatureBoardNP.getState() != IPS_IDLE)
+            TemperatureBoardNP.apply();
+
+        if (TemperatureAmbientNP.getState() != IPS_IDLE)
+            TemperatureAmbientNP.apply();
     }
 
     if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)

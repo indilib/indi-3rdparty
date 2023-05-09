@@ -72,14 +72,21 @@ class OasisFocuser : public INDI::Focuser
     private:
         uint8_t mID;
 
+        bool SetConfig(unsigned int mask, int value);
         bool GetConfig();
         bool GetStatus();
 
         // Are we moving?
         bool isMoving();
 
-        // Read Only Temperature Reporting
-        INDI::PropertyNumber TemperatureNP{1};
+        // Read Only Board Temperature Reporting
+        INDI::PropertyNumber TemperatureBoardNP{1};
+
+        // Read Only Ambient Temperature Reporting
+        INDI::PropertyNumber TemperatureAmbientNP{1};
+
+        // Backlash compensation direction (overshoot method)
+        INDI::PropertySwitch BacklashDirSP{2};
 
         // Beep on move setting
         INDI::PropertySwitch BeepOnMoveSP{2};
