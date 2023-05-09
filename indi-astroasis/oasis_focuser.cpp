@@ -100,28 +100,28 @@ bool OasisFocuser::updateProperties()
     if (isConnected())
     {
         GetConfig();
-	GetStatus();
+        GetStatus();
 
         TemperatureNP.setState(IPS_OK);
         defineProperty(TemperatureNP);
 
         defineProperty(BeepOnMoveSP);
 
-	// Update version info
+        // Update version info
         AOFocuserVersion version;
         char ver[AO_FOCUSER_VERSION_LEN];
 
-	if (AOFocuserGetVersion(mID, &version) == AO_SUCCESS)
-	{
-	    unsigned int firmware = version.firmware;
+        if (AOFocuserGetVersion(mID, &version) == AO_SUCCESS)
+        {
+            unsigned int firmware = version.firmware;
 
             snprintf(ver, sizeof(ver), "%d.%d.%d",
-                firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff);
+                    firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff);
 
             VersionSP[0].setText(ver);
 	}
 
-	AOFocuserGetSDKVersion(ver);
+        AOFocuserGetSDKVersion(ver);
         VersionSP[1].setText(ver);
 
         defineProperty(VersionSP);
@@ -315,14 +315,14 @@ bool OasisFocuser::ISNewSwitch(const char * dev, const char * name, ISState * st
     {
         BeepOnMoveSP.update(states, names, n);
 
-	AOFocuserConfig config;
+        AOFocuserConfig config;
 
-	config.mask = MASK_BEEP_ON_MOVE;
-	config.beepOnMove = (BeepOnMoveSP.findOnSwitchIndex() == INDI_ENABLED) ? 1 : 0;
+        config.mask = MASK_BEEP_ON_MOVE;
+        config.beepOnMove = (BeepOnMoveSP.findOnSwitchIndex() == INDI_ENABLED) ? 1 : 0;
 
-	AOReturn ret = AOFocuserSetConfig(mID, &config);
+        AOReturn ret = AOFocuserSetConfig(mID, &config);
 
-	if (ret == AO_SUCCESS)
+        if (ret == AO_SUCCESS)
         {
             BeepOnMoveSP.setState(IPS_OK);
         }
@@ -334,7 +334,7 @@ bool OasisFocuser::ISNewSwitch(const char * dev, const char * name, ISState * st
 
         BeepOnMoveSP.apply();
 
-	return true;
+        return true;
     }
 
     return INDI::Focuser::ISNewSwitch(dev, name, states, names, n);
