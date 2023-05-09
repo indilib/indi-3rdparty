@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (libastroasis)
 
-set (OASISFOCUSER_VERSION "1.0.3")
+set (OASISFOCUSER_VERSION "1.0.5")
 set (OASISFOCUSER_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
