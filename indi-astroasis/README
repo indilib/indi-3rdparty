@@ -1,0 +1,7 @@
+Astroasis Oasis Focuser INDI Driver
+By Frank Chen
+
+Description
+INDI driver to control the Oasis Focuser.
+
+For installation instructions please follow the instructions from INSTALL.

@@ -1,3 +1,21 @@
+indi-playerone (1.7) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.3.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 9 Feb 2023 12:00:00 +0900
+
+indi-playerone (1.6) bionic; urgency=low
+
+  * Update libplayerone with PlayerOnePW SDK v1.2.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 6 Feb 2023 12:00:00 +0900
+
+indi-playerone (1.5) bionic; urgency=low
+
+  * BugFix: top quarter noise on bin2 image
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 27 Apr 2023 12:00:00 +0900
+
 indi-playerone (1.4) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.2.2
