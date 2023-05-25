@@ -1,7 +1,7 @@
 #ifndef __nncam_h__
 #define __nncam_h__
 
-/* Version: 53.22376.20230402 */
+/* Version: 54.22587.20230516 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -159,10 +159,10 @@ typedef struct Nncam_t { int unused; } *HNncam;
 #define NNCAM_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 #define NNCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define NNCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
-#define NNCAM_FLAG_GIGE                0x0000200000000000  /* GigE */
-#define NNCAM_FLAG_10GIGE              0x0000400000000000  /* 10 GigE */
-#define NNCAM_FLAG_5GIGE               0x0000800000000000  /* 5 GigE */
-#define NNCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 GigE */
+#define NNCAM_FLAG_GIGE                0x0000200000000000  /* 1 Gigabit GigE */
+#define NNCAM_FLAG_10GIGE              0x0000400000000000  /* 10 Gigabit GigE */
+#define NNCAM_FLAG_5GIGE               0x0000800000000000  /* 5 Gigabit GigE */
+#define NNCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 Gigabit GigE */
 
 #define NNCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define NNCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -217,7 +217,7 @@ typedef struct Nncam_t { int unused; } *HNncam;
 #define NNCAM_DENOISE_DEF              0       /* denoise */
 #define NNCAM_DENOISE_MIN              0       /* denoise */
 #define NNCAM_DENOISE_MAX              100     /* denoise */
-#define NNCAM_TEC_TARGET_MIN           (-300)  /* TEC target: -30.0 degrees Celsius */
+#define NNCAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
 #define NNCAM_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
 #define NNCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define NNCAM_HEARTBEAT_MIN            100     /* millisecond */
@@ -277,7 +277,7 @@ typedef struct {
 } NncamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22376.20230402
+    get the version of this dll/so/dylib, which is: 54.22587.20230516
 */
 #if defined(_WIN32)
 NNCAM_API(const wchar_t*)   Nncam_Version();
@@ -978,7 +978,14 @@ NNCAM_API(HRESULT)  Nncam_feed_Pipe(HNncam h, unsigned pipeId);
                                                                 threshold: [1, 4095]
                                                                 0xffffffff => set to default
                                                          */
-#define NNCAM_OPTION_ISP                    0x59       /* hardware ISP: on => 1, off => 0 */
+#define NNCAM_OPTION_GIGETIMEOUT            0x5a       /* For GigE cameras, the application periodically sends heartbeat signals to the camera to keep the connection to the camera alive.
+                                                            If the camera doesn't receive heartbeat signals within the time period specified by the heartbeat timeout counter, the camera resets the connection.
+                                                            When the application is stopped by the debugger, the application cannot create the heartbeat signals
+                                                                0 => auto: when the camera is opened, disable if debugger is present or enable if no debugger is present
+                                                                1 => enable
+                                                                2 => disable
+                                                                default: auto
+                                                         */
 
 /* pixel format */
 #define NNCAM_PIXELFORMAT_RAW8              0x00
@@ -1126,6 +1133,11 @@ NNCAM_API(HRESULT)  Nncam_IoControl(HNncam h, unsigned ioLineNumber, unsigned nT
 #define NNCAM_FLASH_READ      0x04    /* read */
 #define NNCAM_FLASH_WRITE     0x05    /* write */
 #define NNCAM_FLASH_ERASE     0x06    /* erase */
+/* Flash:
+ action = NNCAM_FLASH_XXXX: read, write, erase, query total size, query read/write block size, query erase block size
+ addr = address
+ see democpp
+*/
 NNCAM_API(HRESULT)  Nncam_rwc_Flash(HNncam h, unsigned action, unsigned addr, unsigned len, void* pData);
 
 NNCAM_API(HRESULT)  Nncam_write_UART(HNncam h, const unsigned char* pData, unsigned nDataLen);
@@ -1285,8 +1297,10 @@ NNCAM_API(HRESULT)  Nncam_AwbOnePush(HNncam h, PINNCAM_TEMPTINT_CALLBACK funTT, 
 NNCAM_DEPRECATED
 NNCAM_API(HRESULT)  Nncam_AbbOnePush(HNncam h, PINNCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
+typedef void (__stdcall* PNNCAM_HOTPLUG)(void* ctxHotPlug);
+NNCAM_API(HRESULT)  Nncam_GigeEnable(PNNCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 /*
-Only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
        (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
        (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
@@ -1296,7 +1310,6 @@ Only available on macOS and Linux, it's unnecessary on Windows & Android. To pro
   (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
 Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
 */
-typedef void (*PNNCAM_HOTPLUG)(void* ctxHotPlug);
 #if !defined(_WIN32) && !defined(__ANDROID__)
 NNCAM_API(void)   Nncam_HotPlug(PNNCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif

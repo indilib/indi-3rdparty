@@ -513,6 +513,17 @@ EXPORTC uint32_t STDCALL GetQHYCCDOverScanArea(qhyccd_handle *h,uint32_t *startX
 
 EXPORTC uint32_t STDCALL GetQHYCCDCurrentROI(qhyccd_handle *handle, uint32_t *startX, uint32_t *startY, uint32_t *sizeX, uint32_t *sizeY);
 
+/** @fn uint32_t GetQHYCCDImageStabilizationGravity(qhyccd_handle *h,uint32_t *startX, uint32_t *startY)
+      @brief The position coordinate of the target center of gravity in the chip in image stabilization
+      @param h camera control handle
+      @param  Gravity CenterX of the chipsize
+      @param  Gravity CenterY of the chipsize
+	  @return
+	  on success,return QHYCCD_SUCCESS \n
+	  another QHYCCD_ERROR code on other failures
+  */
+EXPORTC uint32_t STDCALL GetQHYCCDImageStabilizationGravity(qhyccd_handle *handle, int *GravityX, int *GravityY);
+
 /** @fn uint32_t SetQHYCCDFocusSetting(qhyccd_handle *h,uint32_t focusCenterX, uint32_t focusCenterY)
       @brief Set the camera on focus mode
       @param h camera control handle

@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 53.22376.20230402 */
+/* Version: 54.22587.20230516 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -159,10 +159,10 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 #define TOUPCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define TOUPCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
-#define TOUPCAM_FLAG_GIGE                0x0000200000000000  /* GigE */
-#define TOUPCAM_FLAG_10GIGE              0x0000400000000000  /* 10 GigE */
-#define TOUPCAM_FLAG_5GIGE               0x0000800000000000  /* 5 GigE */
-#define TOUPCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 GigE */
+#define TOUPCAM_FLAG_GIGE                0x0000200000000000  /* 1 Gigabit GigE */
+#define TOUPCAM_FLAG_10GIGE              0x0000400000000000  /* 10 Gigabit GigE */
+#define TOUPCAM_FLAG_5GIGE               0x0000800000000000  /* 5 Gigabit GigE */
+#define TOUPCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 Gigabit GigE */
 
 #define TOUPCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define TOUPCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -217,7 +217,7 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_DENOISE_DEF              0       /* denoise */
 #define TOUPCAM_DENOISE_MIN              0       /* denoise */
 #define TOUPCAM_DENOISE_MAX              100     /* denoise */
-#define TOUPCAM_TEC_TARGET_MIN           (-300)  /* TEC target: -30.0 degrees Celsius */
+#define TOUPCAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
 #define TOUPCAM_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
 #define TOUPCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define TOUPCAM_HEARTBEAT_MIN            100     /* millisecond */
@@ -277,7 +277,7 @@ typedef struct {
 } ToupcamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22376.20230402
+    get the version of this dll/so/dylib, which is: 54.22587.20230516
 */
 #if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -978,7 +978,14 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                                 threshold: [1, 4095]
                                                                 0xffffffff => set to default
                                                          */
-#define TOUPCAM_OPTION_ISP                    0x59       /* hardware ISP: on => 1, off => 0 */
+#define TOUPCAM_OPTION_GIGETIMEOUT            0x5a       /* For GigE cameras, the application periodically sends heartbeat signals to the camera to keep the connection to the camera alive.
+                                                            If the camera doesn't receive heartbeat signals within the time period specified by the heartbeat timeout counter, the camera resets the connection.
+                                                            When the application is stopped by the debugger, the application cannot create the heartbeat signals
+                                                                0 => auto: when the camera is opened, disable if debugger is present or enable if no debugger is present
+                                                                1 => enable
+                                                                2 => disable
+                                                                default: auto
+                                                         */
 
 /* pixel format */
 #define TOUPCAM_PIXELFORMAT_RAW8              0x00
@@ -1126,6 +1133,11 @@ TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLineNumber, unsig
 #define TOUPCAM_FLASH_READ      0x04    /* read */
 #define TOUPCAM_FLASH_WRITE     0x05    /* write */
 #define TOUPCAM_FLASH_ERASE     0x06    /* erase */
+/* Flash:
+ action = TOUPCAM_FLASH_XXXX: read, write, erase, query total size, query read/write block size, query erase block size
+ addr = address
+ see democpp
+*/
 TOUPCAM_API(HRESULT)  Toupcam_rwc_Flash(HToupcam h, unsigned action, unsigned addr, unsigned len, void* pData);
 
 TOUPCAM_API(HRESULT)  Toupcam_write_UART(HToupcam h, const unsigned char* pData, unsigned nDataLen);
@@ -1285,8 +1297,10 @@ TOUPCAM_API(HRESULT)  Toupcam_AwbOnePush(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_AbbOnePush(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
+typedef void (__stdcall* PTOUPCAM_HOTPLUG)(void* ctxHotPlug);
+TOUPCAM_API(HRESULT)  Toupcam_GigeEnable(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 /*
-Only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
        (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
        (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
@@ -1296,7 +1310,6 @@ Only available on macOS and Linux, it's unnecessary on Windows & Android. To pro
   (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
 Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
 */
-typedef void (*PTOUPCAM_HOTPLUG)(void* ctxHotPlug);
 #if !defined(_WIN32) && !defined(__ANDROID__)
 TOUPCAM_API(void)   Toupcam_HotPlug(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif

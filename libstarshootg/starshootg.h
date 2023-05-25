@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 53.22376.20230402 */
+/* Version: 54.22587.20230516 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -159,10 +159,10 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
 #define STARSHOOTG_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
 #define STARSHOOTG_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
-#define STARSHOOTG_FLAG_GIGE                0x0000200000000000  /* GigE */
-#define STARSHOOTG_FLAG_10GIGE              0x0000400000000000  /* 10 GigE */
-#define STARSHOOTG_FLAG_5GIGE               0x0000800000000000  /* 5 GigE */
-#define STARSHOOTG_FLAG_25GIGE              0x0001000000000000  /* 2.5 GigE */
+#define STARSHOOTG_FLAG_GIGE                0x0000200000000000  /* 1 Gigabit GigE */
+#define STARSHOOTG_FLAG_10GIGE              0x0000400000000000  /* 10 Gigabit GigE */
+#define STARSHOOTG_FLAG_5GIGE               0x0000800000000000  /* 5 Gigabit GigE */
+#define STARSHOOTG_FLAG_25GIGE              0x0001000000000000  /* 2.5 Gigabit GigE */
 
 #define STARSHOOTG_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define STARSHOOTG_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -217,7 +217,7 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_DENOISE_DEF              0       /* denoise */
 #define STARSHOOTG_DENOISE_MIN              0       /* denoise */
 #define STARSHOOTG_DENOISE_MAX              100     /* denoise */
-#define STARSHOOTG_TEC_TARGET_MIN           (-300)  /* TEC target: -30.0 degrees Celsius */
+#define STARSHOOTG_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
 #define STARSHOOTG_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
 #define STARSHOOTG_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define STARSHOOTG_HEARTBEAT_MIN            100     /* millisecond */
@@ -277,7 +277,7 @@ typedef struct {
 } StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 53.22376.20230402
+    get the version of this dll/so/dylib, which is: 54.22587.20230516
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -978,7 +978,14 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                                 threshold: [1, 4095]
                                                                 0xffffffff => set to default
                                                          */
-#define STARSHOOTG_OPTION_ISP                    0x59       /* hardware ISP: on => 1, off => 0 */
+#define STARSHOOTG_OPTION_GIGETIMEOUT            0x5a       /* For GigE cameras, the application periodically sends heartbeat signals to the camera to keep the connection to the camera alive.
+                                                            If the camera doesn't receive heartbeat signals within the time period specified by the heartbeat timeout counter, the camera resets the connection.
+                                                            When the application is stopped by the debugger, the application cannot create the heartbeat signals
+                                                                0 => auto: when the camera is opened, disable if debugger is present or enable if no debugger is present
+                                                                1 => enable
+                                                                2 => disable
+                                                                default: auto
+                                                         */
 
 /* pixel format */
 #define STARSHOOTG_PIXELFORMAT_RAW8              0x00
@@ -1126,6 +1133,11 @@ STARSHOOTG_API(HRESULT)  Starshootg_IoControl(HStarshootg h, unsigned ioLineNumb
 #define STARSHOOTG_FLASH_READ      0x04    /* read */
 #define STARSHOOTG_FLASH_WRITE     0x05    /* write */
 #define STARSHOOTG_FLASH_ERASE     0x06    /* erase */
+/* Flash:
+ action = STARSHOOTG_FLASH_XXXX: read, write, erase, query total size, query read/write block size, query erase block size
+ addr = address
+ see democpp
+*/
 STARSHOOTG_API(HRESULT)  Starshootg_rwc_Flash(HStarshootg h, unsigned action, unsigned addr, unsigned len, void* pData);
 
 STARSHOOTG_API(HRESULT)  Starshootg_write_UART(HStarshootg h, const unsigned char* pData, unsigned nDataLen);
@@ -1285,8 +1297,10 @@ STARSHOOTG_API(HRESULT)  Starshootg_AwbOnePush(HStarshootg h, PISTARSHOOTG_TEMPT
 STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_AbbOnePush(HStarshootg h, PISTARSHOOTG_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
+typedef void (__stdcall* PSTARSHOOTG_HOTPLUG)(void* ctxHotPlug);
+STARSHOOTG_API(HRESULT)  Starshootg_GigeEnable(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
 /*
-Only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
        (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
        (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
@@ -1296,7 +1310,6 @@ Only available on macOS and Linux, it's unnecessary on Windows & Android. To pro
   (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
 Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
 */
-typedef void (*PSTARSHOOTG_HOTPLUG)(void* ctxHotPlug);
 #if !defined(_WIN32) && !defined(__ANDROID__)
 STARSHOOTG_API(void)   Starshootg_HotPlug(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif
