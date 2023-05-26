@@ -255,6 +255,7 @@ bool OasisFocuser::GetConfig()
 
     // Update max step
     FocusAbsPosN[0].max = config.maxStep;
+    FocusMaxPosN[0].value = config.maxStep;
 
     // Update backlash
     FocusBacklashN[0].value = config.backlash;
