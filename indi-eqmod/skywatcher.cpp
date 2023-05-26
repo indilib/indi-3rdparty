@@ -98,15 +98,17 @@ bool Skywatcher::Disconnect()
 {
     if (PortFD < 0)
         return true;
-    StopMotor(Axis1);
-    StopMotor(Axis2);
-    // Deactivate motor (for geehalel mount only)
-    /*
-    if (MountCode == 0xF0) {
-    dispatch_command(Deactivate, Axis1, nullptr);
-    //read_eqmod();
+
+    try
+    {
+        StopMotor(Axis1);
+        StopMotor(Axis2);
     }
-    */
+    catch (EQModError)
+    {
+        // Ignore error
+    }
+
     return true;
 }
 
@@ -2003,7 +2005,8 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
             {
                 if (i > 0)
                 {
-                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__, (i*EQMOD_TIMEOUT)/1000, i);
+                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__,
+                              (i * EQMOD_TIMEOUT) / 1000, i);
                 }
                 return true;
             }
