@@ -2011,8 +2011,9 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
                 return true;
             }
         }
-        catch (EQModError)
+        catch (EQModError ex)
         {
+            DEBUGF(telescope->DBG_COMM, "read_eqmod() failed: %s (attempt %i)", ex.message, i);
             // By this time, we just rethrow the error
             // JM 2018-05-07 immediately rethrow if GET_FEATURES_CMD
             if (i == EQMOD_MAX_RETRY - 1 || cmd == GetFeatureCmd)
@@ -2058,6 +2059,15 @@ bool Skywatcher::read_eqmod()
     switch (response[0])
     {
         case '=':
+	    //check if response is valid
+	    for (const char *p = &response[1]; *p != '\0'; ++p)
+	    {
+		//only allow uppercase hex chars
+		if (!(isxdigit(*p) && !islower(*p)))
+		{
+            		throw EQModError(EQModError::ErrInvalidCmd, "Invalid response to command %s - Reply %s (response contains non-hex character)", command, response);
+		}
+	    }
             break;
         case '!':
             throw EQModError(EQModError::ErrCmdFailed, "Failed command %s - Reply %s", command, response);
