@@ -1,3 +1,14 @@
+libsvbony (1.11.2) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.11.1 :
+  * *** Note: The following changes were made both 1.11.0 and 1.11.1 ***
+  * Support camera SV305C
+  * Fix the problem that the first line and the last line of the image are incorrect when the mono camera is in 16-bit mode
+  * SV305C supports saturation
+  * Improve the frame rate of SV305C in small ROI
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 26 Apr 2023 11:00:00 +0900
+
 libsvbony (1.10.2) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.10.2 :

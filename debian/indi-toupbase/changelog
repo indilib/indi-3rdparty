@@ -1,3 +1,9 @@
+indi-toupbase (2.1) jammy; urgency=low
+
+  * Updated driver.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 13 May 2023 09:00:00 +0300
+
 indi-toupbase (2.0) jammy; urgency=low
 
   * Updated driver.

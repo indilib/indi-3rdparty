@@ -1,0 +1,2 @@
+# Astroasis devices
+SUBSYSTEMS=="usb", ATTR{idVendor}=="338f", MODE="0666"

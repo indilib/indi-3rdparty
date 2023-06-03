@@ -1,0 +1,16 @@
+Installation instructions
+=========================
+
+Compile Instructions
+  - Assumption: INDI package installed (see https://indilib.org/download.html)
+  - Retrieve the sources for the Astroasis driver
+    git clone https://github.com/astroasis/indi-3rdparty.git
+  - cd indi-3rdparty
+    checkout branch "master"
+  - mkdir -p build/indi-astroasis
+  - cd build/indi-astroasis
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../../indi-astroasis
+  - sudo make install
+
+And now start the INDI server and kstars.
+

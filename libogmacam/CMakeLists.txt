@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libogmacam)
 
-set (LIBOGMACAM_VERSION "53.22376")
-set (LIBOGMACAM_SOVERSION "53")
+set (LIBOGMACAM_VERSION "54.22587")
+set (LIBOGMACAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
