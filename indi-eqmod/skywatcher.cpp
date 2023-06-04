@@ -443,6 +443,57 @@ void Skywatcher::Init()
     }
 }
 
+// deprecated
+void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
+{
+    unsigned nprop             = 0;
+    char *boardinfo[3];
+    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
+
+    InquireBoardVersion(boardinfo);
+    nprop             = 3;
+    // should test this is ok
+    IUUpdateText(boardTP, boardinfo, (char **)boardinfopropnames, nprop);
+    IDSetText(boardTP, nullptr);
+    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
+               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
+    /* Check supported mounts here */
+    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
+
+    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
+             boardinfo[0], MountCode);
+    }
+    */
+    free(boardinfo[0]);
+    free(boardinfo[1]);
+    free(boardinfo[2]);
+}
+
+void Skywatcher::InquireBoardVersion(INDI::PropertyText boardTP)
+{
+    unsigned nprop             = 0;
+    char *boardinfo[3];
+    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
+
+    InquireBoardVersion(boardinfo);
+    nprop             = 3;
+    // should test this is ok
+    boardTP.update(boardinfo, (char **)boardinfopropnames, nprop);
+    boardTP.apply();
+    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
+               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
+    /* Check supported mounts here */
+    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
+
+    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
+             boardinfo[0], MountCode);
+    }
+    */
+    free(boardinfo[0]);
+    free(boardinfo[1]);
+    free(boardinfo[2]);
+}
+
 void Skywatcher::InquireBoardVersion(char **boardinfo)
 {
 
@@ -528,56 +579,6 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
     boardinfo[2] = (char *)malloc(5);
     sprintf(boardinfo[2], "0x%02X", MountCode);
     boardinfo[2][4] = '\0';
-}
-// deprecated
-void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
-{
-    unsigned nprop             = 0;
-    char *boardinfo[3];
-    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
-
-    InquireBoardVersion(boardinfo);
-    nprop             = 3;
-    // should test this is ok
-    IUUpdateText(boardTP, boardinfo, (char **)boardinfopropnames, nprop);
-    IDSetText(boardTP, nullptr);
-    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
-               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
-    /* Check supported mounts here */
-    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
-
-    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
-             boardinfo[0], MountCode);
-    }
-    */
-    free(boardinfo[0]);
-    free(boardinfo[1]);
-    free(boardinfo[2]);
-}
-
-void Skywatcher::InquireBoardVersion(INDI::PropertyText boardTP)
-{
-    unsigned nprop             = 0;
-    char *boardinfo[3];
-    const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
-
-    InquireBoardVersion(boardinfo);
-    nprop             = 3;
-    // should test this is ok
-    boardTP.update(boardinfo, (char **)boardinfopropnames, nprop);
-    boardTP.apply();
-    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
-               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
-    /* Check supported mounts here */
-    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
-
-    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
-             boardinfo[0], MountCode);
-    }
-    */
-    free(boardinfo[0]);
-    free(boardinfo[1]);
-    free(boardinfo[2]);
 }
 
 void Skywatcher::InquireFeatures()
@@ -684,6 +685,27 @@ void Skywatcher::InquireRAEncoderInfo(INDI::PropertyNumber encoderNP)
     encoderNP.apply();
 }
 
+// deprecated
+void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
+{
+    double steppersvalues[3];
+    const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
+    InquireEncoderInfo(Axis2, steppersvalues);
+    IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
+    IDSetNumber(encoderNP, nullptr);
+}
+
+void Skywatcher::InquireDEEncoderInfo(INDI::PropertyNumber encoderNP)
+{
+    double steppersvalues[3];
+    const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
+    InquireEncoderInfo(Axis2, steppersvalues);
+    // should test this is ok
+    encoderNP.update(steppersvalues, (char **)steppersnames, 3);
+    encoderNP.apply();
+}
+
+
 void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
 {
     
@@ -754,25 +776,6 @@ void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
     else
       backlashperiod[Axis2] =
         (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / SKYWATCHER_BACKLASH_SPEED_DE);
-}
-// deprecated
-void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
-{
-    double steppersvalues[3];
-    const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
-    InquireEncoderInfo(Axis2, steppersvalues);
-    IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
-    IDSetNumber(encoderNP, nullptr);
-}
-
-void Skywatcher::InquireDEEncoderInfo(INDI::PropertyNumber encoderNP)
-{
-    double steppersvalues[3];
-    const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
-    InquireEncoderInfo(Axis2, steppersvalues);
-    // should test this is ok
-    encoderNP.update(steppersvalues, (char **)steppersnames, 3);
-    encoderNP.apply();
 }
 
 bool Skywatcher::IsRARunning()
