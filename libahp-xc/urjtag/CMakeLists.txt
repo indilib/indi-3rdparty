@@ -20,13 +20,13 @@ set_target_properties (urjtag PROPERTIES VERSION ${AHPXC_VERSION} SOVERSION ${AH
 if (UNIX AND NOT WIN32 AND NOT APPLE)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "libURJTAG.so.armhf")
+    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "liburjtag.so.armhf")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "libURJTAG.so.arm64")
+    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "liburjtag.so.arm64")
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "libURJTAG.so.amd64")
+    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "liburjtag.so.amd64")
   else (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "libURJTAG.so.i386")
+    set_property (TARGET urjtag PROPERTY IMPORTED_LOCATION "liburjtag.so.i386")
   endif ()
 
 endif ()

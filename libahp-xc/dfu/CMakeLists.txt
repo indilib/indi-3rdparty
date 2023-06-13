@@ -20,13 +20,13 @@ set_target_properties (dfu PROPERTIES VERSION ${AHPXC_VERSION} SOVERSION ${AHPXC
 if (UNIX AND NOT WIN32 AND NOT APPLE)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libDFU.so.armhf")
+    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libdfu.so.armhf")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libDFU.so.arm64")
+    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libdfu.so.arm64")
   elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libDFU.so.amd64")
+    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libdfu.so.amd64")
   else (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libDFU.so.i386")
+    set_property (TARGET dfu PROPERTY IMPORTED_LOCATION "libdfu.so.i386")
   endif ()
 
 endif ()
