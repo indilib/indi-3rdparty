@@ -1,4 +1,17 @@
-libsvbony (1.11.2) bionic; urgency=low
+libsvbony (1.11.4) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.11.4 :
+  * *** Note: The following changes were made both 1.11.2 and 1.11.4 ***
+  * Support image flip
+  * Modify SV605CC gain setting
+  * Modify the gain setting of SV605CC/SV605MC
+  * Fix up the problem that the image cannot be obtained when the SV905C is exposed for a long time
+  * Remove the x86 version library in MacOS
+  * Fix up the problem that the last exposure image may be read in soft trigger mode
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 14 Jun 2023 11:00:00 +0900
+
+libsvbony (1.11.1) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.11.1 :
   * *** Note: The following changes were made both 1.11.0 and 1.11.1 ***
