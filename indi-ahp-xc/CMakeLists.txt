@@ -9,6 +9,10 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 
 find_package(AHPXC REQUIRED)
+find_package(DFU REQUIRED)
+find_package(URJTAG REQUIRED)
+find_package(FTDI REQUIRED)
+find_package(USB REQUIRED)
 find_package(Nova REQUIRED)
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
@@ -36,7 +40,7 @@ set(AHP_XC_SRCS
 
 add_executable(indi_ahp_xc ${AHP_XC_SRCS})
 
-target_link_libraries(indi_ahp_xc ${INDI_LIBRARIES} ${AHP_XC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_ahp_xc ${INDI_LIBRARIES} ${AHP_XC_LIBRARIES} ${USB_LIBRARIES} ${FTDI_LIBRARIES} ${DFU_LIBRARIES} ${URJTAG_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_ahp_xc RUNTIME DESTINATION bin)
 
