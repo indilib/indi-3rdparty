@@ -15,6 +15,9 @@ jobs:
       image: ghcr.io/indilib/${{ matrix.container }}
 
     steps:
+      - name: Install Pre-requisites
+        run:  indi-3rdparty/scripts/requisites-install.sh
+
       - name: Get INDI 3rd Party Sources
         uses: actions/checkout@v2
         with:
