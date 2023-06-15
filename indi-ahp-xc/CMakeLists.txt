@@ -23,7 +23,7 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${NOVA_INCLUDE_DIR})
-include_directories( ${AHPXC_INCLUDE_DIR})
+include_directories( ${AHP_XC_INCLUDE_DIR})
 
 include(CMakeCommon)
 

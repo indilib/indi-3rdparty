@@ -709,11 +709,11 @@ endif(WITH_PENTAX)
 # AHP
 if (WITH_AHP_XC)
 find_package(AHPXC)
-if(AHPXC_FOUND)
+if(AHP_XC_FOUND)
 add_subdirectory(indi-ahp-xc)
-else(AHPXC_FOUND)
+else(AHP_XC_FOUND)
 add_subdirectory(libahp-xc)
-endif(AHPXC_FOUND)
+endif(AHP_XC_FOUND)
 endif(WITH_AHP_XC)
 
 # svbony
