@@ -1,6 +1,12 @@
 cmake_minimum_required (VERSION 3.0)
 project (libahp_xc)
 
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
+
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(AHP_XC_VERSION_MAJOR 1)
 set(AHP_XC_VERSION_MINOR 2)
@@ -8,13 +14,6 @@ set(AHP_XC_VERSION_RELEASE 5)
 set(AHPXC_VERSION "${AHP_XC_VERSION_MAJOR}.${AHP_XC_VERSION_MINOR}.${AHP_XC_VERSION_RELEASE}")
 set(AHPXC_SOVERSION ${AHP_XC_VERSION_MAJOR})
 
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
-include (GNUInstallDirs)
-include (InstallImported)
-
-find_package(M REQUIRED)
 find_package(Threads REQUIRED)
 find_package(URJTAG REQUIRED)
 find_package(USB REQUIRED)

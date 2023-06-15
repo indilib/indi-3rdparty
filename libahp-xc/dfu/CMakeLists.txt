@@ -1,18 +1,18 @@
 cmake_minimum_required (VERSION 3.0)
 project (libdfu)
 
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
+
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(DFU_VERSION_MAJOR 1)
 set(DFU_VERSION_MINOR 0)
 set(DFU_VERSION_RELEASE 0)
 set(AHPXC_VERSION "${DFU_VERSION_MAJOR}.${DFU_VERSION_MINOR}.${DFU_VERSION_RELEASE}")
 set(AHPXC_SOVERSION ${DFU_VERSION_MAJOR})
-
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
-include (GNUInstallDirs)
-include (InstallImported)
 
 add_library (dfu SHARED IMPORTED)
 

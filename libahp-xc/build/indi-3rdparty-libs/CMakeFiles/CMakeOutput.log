@@ -492,3 +492,31 @@ gmake[1]: Leaving directory '/home/plato/dev/github/indi-3rdparty/libahp-xc/buil
 Source file was:
 #include <libusb.h> 
     int main() { libusb_error_name(0); return 0; }
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_f89ef/fast && /usr/bin/gmake -f CMakeFiles/cmTC_f89ef.dir/build.make CMakeFiles/cmTC_f89ef.dir/build
+gmake[1]: Entering directory '/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f89ef.dir/CheckIncludeFile.c.o
+/usr/bin/cc   -D_FORTIFY_SOURCE=2 -fstack-protector-all -fPIE -O1 -Wa,--noexecstack  -Wall -Wextra -Werror -Wno-unused-but-set-variable -Wno-format-truncation -g  -fPIE   -o CMakeFiles/cmTC_f89ef.dir/CheckIncludeFile.c.o   -c /home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_f89ef
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f89ef.dir/link.txt --verbose=1
+/usr/bin/cc  -D_FORTIFY_SOURCE=2 -fstack-protector-all -fPIE -O1 -Wa,--noexecstack  -Wall -Wextra -Werror -Wno-unused-but-set-variable -Wno-format-truncation -g     -rdynamic CMakeFiles/cmTC_f89ef.dir/CheckIncludeFile.c.o  -o cmTC_f89ef 
+gmake[1]: Leaving directory '/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp'
+
+
+
+Determining if the function pthread_create exists in the pthread passed with the following output:
+Change Dir: /home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_0d1e8/fast && /usr/bin/gmake -f CMakeFiles/cmTC_0d1e8.dir/build.make CMakeFiles/cmTC_0d1e8.dir/build
+gmake[1]: Entering directory '/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_0d1e8.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -D_FORTIFY_SOURCE=2 -fstack-protector-all -fPIE -O1 -Wa,--noexecstack  -Wall -Wextra -Werror -Wno-unused-but-set-variable -Wno-format-truncation -g -DCHECK_FUNCTION_EXISTS=pthread_create -fPIE   -o CMakeFiles/cmTC_0d1e8.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_0d1e8
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0d1e8.dir/link.txt --verbose=1
+/usr/bin/cc  -D_FORTIFY_SOURCE=2 -fstack-protector-all -fPIE -O1 -Wa,--noexecstack  -Wall -Wextra -Werror -Wno-unused-but-set-variable -Wno-format-truncation -g -DCHECK_FUNCTION_EXISTS=pthread_create    -rdynamic CMakeFiles/cmTC_0d1e8.dir/CheckFunctionExists.c.o  -o cmTC_0d1e8  -lpthread 
+gmake[1]: Leaving directory '/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/CMakeFiles/CMakeTmp'
+
+
+

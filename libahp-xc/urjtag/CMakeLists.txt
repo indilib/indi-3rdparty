@@ -1,18 +1,18 @@
 cmake_minimum_required (VERSION 3.0)
 project (liburjtag)
 
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
+include (GNUInstallDirs)
+include (InstallImported)
+
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(URJTAG_VERSION_MAJOR 0)
 set(URJTAG_VERSION_MINOR 0)
 set(URJTAG_VERSION_RELEASE 0)
 set(AHPXC_VERSION "${URJTAG_VERSION_MAJOR}.${URJTAG_VERSION_MINOR}.${URJTAG_VERSION_RELEASE}")
 set(AHPXC_SOVERSION ${URJTAG_VERSION_MAJOR})
-
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
-include (GNUInstallDirs)
-include (InstallImported)
 
 find_package(FTDI REQUIRED)
 find_package(USB REQUIRED)

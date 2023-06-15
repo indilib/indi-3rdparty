@@ -282,6 +282,12 @@ CURL_LIBRARY_DEBUG:FILEPATH=CURL_LIBRARY_DEBUG-NOTFOUND
 CURL_LIBRARY_RELEASE:FILEPATH=/usr/lib/x86_64-linux-gnu/libcurl.so
 
 //Path to a file.
+DFU_INCLUDE_DIR:PATH=/usr/include/dfu
+
+//Path to a library.
+DFU_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/libdfu.so
+
+//Path to a file.
 FFMPEG_INCLUDE_DIR:PATH=/usr/include/x86_64-linux-gnu
 
 //Path to a library.
@@ -316,6 +322,12 @@ FTDI1_INCLUDE_DIR:PATH=/usr/include/libftdi1
 
 //Path to a library.
 FTDI1_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/libftdi1.so
+
+//Path to a file.
+FTDI_INCLUDE_DIR:PATH=/usr/include/libftdi1
+
+//Path to a library.
+FTDI_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/libftdi.so
 
 //No help, variable specified on the command line.
 INDI_BUILD_UNITTESTS:UNINITIALIZED=ON
@@ -354,10 +366,22 @@ QHY_FIRMWARE_INSTALL_DIR:STRING=/lib/firmware/qhy
 UDEVRULES_INSTALL_DIR:STRING=/lib/udev/rules.d
 
 //Path to a file.
+URJTAG_INCLUDE_DIR:PATH=/usr/include/urjtag
+
+//Path to a library.
+URJTAG_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/liburjtag.so
+
+//Path to a file.
 USB1_INCLUDE_DIR:PATH=/usr/include/libusb-1.0
 
 //Path to a library.
 USB1_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libusb-1.0.so
+
+//Path to a file.
+USB_INCLUDE_DIR:PATH=/usr/include
+
+//Path to a library.
+USB_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libusb.so
 
 //Path to a file.
 WEBSOCKET_HEADER:PATH=WEBSOCKET_HEADER-NOTFOUND
@@ -546,10 +570,22 @@ fishcamp_LIB_DEPENDS:STATIC=general;/usr/lib/x86_64-linux-gnu/libusb-1.0.so;
 fli_LIB_DEPENDS:STATIC=general;/usr/lib/x86_64-linux-gnu/libusb-1.0.so;general;-lm;general;-lpthread;
 
 //Value Computed by CMake
+libahp_gt_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libahp-gt
+
+//Value Computed by CMake
+libahp_gt_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-gt
+
+//Value Computed by CMake
 libahp_xc_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libahp-xc/ahp_xc
 
 //Value Computed by CMake
 libahp_xc_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/ahp_xc
+
+//Value Computed by CMake
+libaltaircam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libaltaircam
+
+//Value Computed by CMake
+libaltaircam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libaltaircam
 
 //Value Computed by CMake
 libapogee_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libapogee
@@ -564,10 +600,28 @@ libasi_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/in
 libasi_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libasi
 
 //Value Computed by CMake
+libastroasis_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libastroasis
+
+//Value Computed by CMake
+libastroasis_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libastroasis
+
+//Value Computed by CMake
 libatik_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libatik
 
 //Value Computed by CMake
 libatik_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libatik
+
+//Value Computed by CMake
+libbressercam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libbressercam
+
+//Value Computed by CMake
+libbressercam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libbressercam
+
+//Value Computed by CMake
+libdfu_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libahp-xc/dfu
+
+//Value Computed by CMake
+libdfu_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/dfu
 
 //Value Computed by CMake
 libfishcamp_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libfishcamp
@@ -594,16 +648,46 @@ libinovasdk_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/bui
 libinovasdk_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libinovasdk
 
 //Value Computed by CMake
+libmallincam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libmallincam
+
+//Value Computed by CMake
+libmallincam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libmallincam
+
+//Value Computed by CMake
 libmicam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libmicam
 
 //Value Computed by CMake
 libmicam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libmicam
 
 //Value Computed by CMake
+libnncam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libnncam
+
+//Value Computed by CMake
+libnncam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libnncam
+
+//Value Computed by CMake
+libogmacam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libogmacam
+
+//Value Computed by CMake
+libogmacam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libogmacam
+
+//Value Computed by CMake
+libomegonprocam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libomegonprocam
+
+//Value Computed by CMake
+libomegonprocam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libomegonprocam
+
+//Value Computed by CMake
 libpktriggercord_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libpktriggercord
 
 //Value Computed by CMake
 libpktriggercord_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libpktriggercord
+
+//Value Computed by CMake
+libplayerone_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libplayerone
+
+//Value Computed by CMake
+libplayerone_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libplayerone
 
 //Value Computed by CMake
 libqhy_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libqhy
@@ -628,6 +712,36 @@ libsbig_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/i
 
 //Value Computed by CMake
 libsbig_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libsbig
+
+//Value Computed by CMake
+libstarshootg_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libstarshootg
+
+//Value Computed by CMake
+libstarshootg_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libstarshootg
+
+//Value Computed by CMake
+libsvbony_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libsvbony
+
+//Value Computed by CMake
+libsvbony_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libsvbony
+
+//Value Computed by CMake
+libtoupcam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libtoupcam
+
+//Value Computed by CMake
+libtoupcam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libtoupcam
+
+//Value Computed by CMake
+libtscam_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libtscam
+
+//Value Computed by CMake
+libtscam_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libtscam
+
+//Value Computed by CMake
+liburjtag_BINARY_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/build/indi-3rdparty-libs/libahp-xc/urjtag
+
+//Value Computed by CMake
+liburjtag_SOURCE_DIR:STATIC=/home/plato/dev/github/indi-3rdparty/libahp-xc/urjtag
 
 //Path to a library.
 pkgcfg_lib_AVCODEC_avcodec:FILEPATH=/usr/lib/x86_64-linux-gnu/libavcodec.so
@@ -882,6 +996,14 @@ CMAKE_GENERATOR_INSTANCE:INTERNAL=
 CMAKE_GENERATOR_PLATFORM:INTERNAL=
 //Name of generator toolset.
 CMAKE_GENERATOR_TOOLSET:INTERNAL=
+//Test CMAKE_HAVE_LIBC_PTHREAD
+CMAKE_HAVE_LIBC_PTHREAD:INTERNAL=
+//Have library pthreads
+CMAKE_HAVE_PTHREADS_CREATE:INTERNAL=
+//Have library pthread
+CMAKE_HAVE_PTHREAD_CREATE:INTERNAL=1
+//Have include pthread.h
+CMAKE_HAVE_PTHREAD_H:INTERNAL=1
 //Source directory with the top level CMakeLists.txt file for this
 // project
 CMAKE_HOME_DIRECTORY:INTERNAL=/home/plato/dev/github/indi-3rdparty
@@ -936,7 +1058,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=15
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=30
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -987,18 +1109,28 @@ CURL_INCLUDE_DIR-ADVANCED:INTERNAL=1
 CURL_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CURL_LIBRARY_RELEASE
 CURL_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: DFU_INCLUDE_DIR
+DFU_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: DFU_LIBRARIES
+DFU_LIBRARIES-ADVANCED:INTERNAL=1
 //Details about finding CURL
 FIND_PACKAGE_MESSAGE_DETAILS_CURL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libcurl.so][/usr/include/x86_64-linux-gnu][c ][v7.68.0()]
 //Details about finding INDI
 FIND_PACKAGE_MESSAGE_DETAILS_INDI:INTERNAL=[/usr/lib/x86_64-linux-gnu/libindidriver.so;/usr/lib/x86_64-linux-gnu/libindiAlignmentDriver.so][/usr/include/libindi][v2.0.1()]
 //Details about finding PkgConfig
 FIND_PACKAGE_MESSAGE_DETAILS_PkgConfig:INTERNAL=[/usr/bin/pkg-config][v0.29.1()]
+//Details about finding Threads
+FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //Details about finding USB1
 FIND_PACKAGE_MESSAGE_DETAILS_USB1:INTERNAL=[/usr/lib/x86_64-linux-gnu/libusb-1.0.so][/usr/include/libusb-1.0][v1.0.23()]
 //ADVANCED property for variable: FTDI1_INCLUDE_DIR
 FTDI1_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: FTDI1_LIBRARIES
 FTDI1_LIBRARIES-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: FTDI_INCLUDE_DIR
+FTDI_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: FTDI_LIBRARIES
+FTDI_LIBRARIES-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: INDI_INCLUDE_DIR
 INDI_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: NUTCLIENT_INCLUDE_DIR
@@ -1112,6 +1244,10 @@ SWSCALE_libswscale_INCLUDEDIR:INTERNAL=
 SWSCALE_libswscale_LIBDIR:INTERNAL=
 SWSCALE_libswscale_PREFIX:INTERNAL=
 SWSCALE_libswscale_VERSION:INTERNAL=
+//ADVANCED property for variable: URJTAG_INCLUDE_DIR
+URJTAG_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: URJTAG_LIBRARIES
+URJTAG_LIBRARIES-ADVANCED:INTERNAL=1
 //Test USB1_HAS_LIBUSB_ERROR_NAME
 USB1_HAS_LIBUSB_ERROR_NAME:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
