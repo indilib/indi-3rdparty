@@ -15,10 +15,8 @@ set(AHPXC_VERSION "${AHP_XC_VERSION_MAJOR}.${AHP_XC_VERSION_MINOR}.${AHP_XC_VERS
 set(AHPXC_SOVERSION ${AHP_XC_VERSION_MAJOR})
 
 find_package(Threads REQUIRED)
-find_package(URJTAG REQUIRED)
 find_package(USB REQUIRED)
 find_package(USB1 REQUIRED)
-find_package(DFU REQUIRED)
 find_package(FTDI REQUIRED)
 
 add_library (ahp_xc SHARED IMPORTED)
