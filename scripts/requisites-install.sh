@@ -36,8 +36,8 @@ case "$OS" in
                     \
                     libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
                     libgps-dev libraw-dev libdc1394-*-dev libgphoto2-dev \
-                    libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc \
-                    libopencv-highgui libftdi-dev libusb-dev
+                    libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc-dev \
+                    libopencv-highgui-dev libftdi-dev libusb-dev
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
