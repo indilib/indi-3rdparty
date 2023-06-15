@@ -102,14 +102,14 @@ endif(WITH_SCOPE_LIMITS)
 ########### AHP GT controllers ###############
 if(WITH_AHP_GT)
     find_package(AHPGT REQUIRED)
-    if(AHPGT_FOUND)
-        include_directories( ${AHPGT_INCLUDE_DIR})
+    if(AHP_GT_FOUND)
+        include_directories( ${AHP_GT_INCLUDE_DIR})
         set(ahp_gt_CXX_SRCS
-            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgt.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgtbase.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahp-gt/ahpgt.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahp-gt/ahpgtbase.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
 
         if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
           set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
@@ -142,14 +142,14 @@ if(WITH_AHP_GT)
           target_link_libraries(indi_ahpgt_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
         endif(WITH_ALIGN)
 
-        target_link_libraries(indi_ahpgt_telescope ${AHPGT_LIBRARIES})
+        target_link_libraries(indi_ahpgt_telescope ${AHP_GT_LIBRARIES})
 
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
         target_link_libraries(indi_ahpgt_telescope rt)
         endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
         install(TARGETS indi_ahpgt_telescope RUNTIME DESTINATION bin )
-    endif(AHPGT_FOUND)
+    endif(AHP_GT_FOUND)
 endif(WITH_AHP_GT)
 
 ########### AZ GTi ###############
