@@ -10,10 +10,11 @@ set(AHPXC_SOVERSION ${AHP_XC_VERSION_MAJOR})
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
-ind_package(M REQUIRED)
+find_package(M REQUIRED)
 find_package(Threads REQUIRED)
 find_package(URJTAG REQUIRED)
 find_package(USB REQUIRED)
