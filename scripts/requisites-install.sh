@@ -37,7 +37,7 @@ case "$OS" in
                     libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
                     libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev \
                     libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc \
-                    libopencv-highgui
+                    libopencv-highgui libftdi-dev libusb-dev
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
@@ -45,7 +45,7 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel opencv-devel \
+                    gsl-devel libjpeg-devel fftw-devel opencv-devel ftdi-devel usb-devel \
                     \
                     https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
                     https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
@@ -65,7 +65,7 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel opencv-devel
+                    gsl-devel libjpeg-devel fftw-devel opencv-devel libftdi-devel libusb-devel
                 ;;
             opensuse-tumbleweed)
                 # broken git/openssh package

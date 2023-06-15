@@ -13,6 +13,9 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
+find_package(FTDI REQUIRED)
+find_package(USB REQUIRED)
+
 add_library (urjtag SHARED IMPORTED)
 
 set_target_properties (urjtag PROPERTIES VERSION ${AHPXC_VERSION} SOVERSION ${AHPXC_SOVERSION})

@@ -13,6 +13,14 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
+ind_package(M REQUIRED)
+find_package(Threads REQUIRED)
+find_package(URJTAG REQUIRED)
+find_package(USB REQUIRED)
+find_package(USB1 REQUIRED)
+find_package(DFU REQUIRED)
+find_package(FTDI REQUIRED)
+
 add_library (ahp_xc SHARED IMPORTED)
 
 set_target_properties (ahp_xc PROPERTIES VERSION ${AHPXC_VERSION} SOVERSION ${AHPXC_SOVERSION})
