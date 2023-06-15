@@ -32,7 +32,7 @@
 
 // WORKAROUND for bug #655
 // If defined following symbol, get buffered image data before calling StartExposure()
-#define WORKAROUND_latest_image_can_be_getten_next_time
+//#define WORKAROUND_latest_image_can_be_getten_next_time
 
 using namespace std;
 
