@@ -23,7 +23,7 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${NOVA_INCLUDE_DIR})
-include_directories( ${AHPXC_INCLUDE_DIR})
+include_directories( ${AHP_XC_INCLUDE_DIR})
 
 include(CMakeCommon)
 
@@ -36,7 +36,7 @@ set(AHP_XC_SRCS
 
 add_executable(indi_ahp_xc ${AHP_XC_SRCS})
 
-target_link_libraries(indi_ahp_xc ${INDI_LIBRARIES} ${AHPXC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_ahp_xc ${INDI_LIBRARIES} ${AHP_XC_LIBRARIES} ${NOVA_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_ahp_xc RUNTIME DESTINATION bin)
 

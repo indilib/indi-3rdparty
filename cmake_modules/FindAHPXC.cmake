@@ -1,50 +1,50 @@
-# - Try to find AHPXC Universal Library
+# - Try to find AHP_XC Universal Library
 # Once done this will define
 #
-#  AHPXC_FOUND - system has AHPXC
-#  AHPXC_INCLUDE_DIR - the AHPXC include directory
-#  AHPXC_LIBRARIES - Link these to use AHPXC
+#  AHP_XC_FOUND - system has AHP_XC
+#  AHP_XC_INCLUDE_DIR - the AHP_XC include directory
+#  AHP_XC_LIBRARIES - Link these to use AHP_XC
 
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
-if (AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
+if (AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
 
       # in cache already
-      set(AHPXC_FOUND TRUE)
-      message(STATUS "Found libahp_xc: ${AHPXC_LIBRARIES}")
+      set(AHP_XC_FOUND TRUE)
+      message(STATUS "Found libahp_xc: ${AHP_XC_LIBRARIES}")
 
-else (AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
+else (AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
 
-      find_path(AHPXC_INCLUDE_DIR ahp_xc.h
+      find_path(AHP_XC_INCLUDE_DIR ahp_xc.h
         PATH_SUFFIXES ahp
         ${_obIncDir}
         ${GNUWIN32_DIR}/include
       )
 
-      find_library(AHPXC_LIBRARIES NAMES ahp_xc
+      find_library(AHP_XC_LIBRARIES NAMES ahp_xc
         PATHS
         ${_obLinkDir}
         ${GNUWIN32_DIR}/lib
       )
 
-      if(AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
-        set(AHPXC_FOUND TRUE)
-      else (AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
-        set(AHPXC_FOUND FALSE)
-      endif(AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
+      if(AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
+        set(AHP_XC_FOUND TRUE)
+      else (AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
+        set(AHP_XC_FOUND FALSE)
+      endif(AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
 
 
-      if (AHPXC_FOUND)
-        if (NOT AHPXC_FIND_QUIETLY)
-          message(STATUS "Found AHP XC: ${AHPXC_LIBRARIES}")
-        endif (NOT AHPXC_FIND_QUIETLY)
-      else (AHPXC_FOUND)
-        if (AHPXC_FIND_REQUIRED)
+      if (AHP_XC_FOUND)
+        if (NOT AHP_XC_FIND_QUIETLY)
+          message(STATUS "Found AHP XC: ${AHP_XC_LIBRARIES}")
+        endif (NOT AHP_XC_FIND_QUIETLY)
+      else (AHP_XC_FOUND)
+        if (AHP_XC_FIND_REQUIRED)
           message(FATAL_ERROR "AHP XC not found. Please install libahp_xc http://www.indilib.org")
-        endif (AHPXC_FIND_REQUIRED)
-      endif (AHPXC_FOUND)
+        endif (AHP_XC_FIND_REQUIRED)
+      endif (AHP_XC_FOUND)
 
-      mark_as_advanced(AHPXC_INCLUDE_DIR AHPXC_LIBRARIES)
+      mark_as_advanced(AHP_XC_INCLUDE_DIR AHP_XC_LIBRARIES)
 
-endif (AHPXC_INCLUDE_DIR AND AHPXC_LIBRARIES)
+endif (AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
