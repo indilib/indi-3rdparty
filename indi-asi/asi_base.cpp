@@ -356,6 +356,20 @@ bool ASIBase::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, maxBin, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, maxBin, 1, false);
 
+    // Log camera capabilities.
+    LOGF_DEBUG("Camera: %s", mCameraInfo.Name);
+    LOGF_DEBUG("ID: %d", mCameraInfo.CameraID);
+    LOGF_DEBUG("MaxWidth: %d MaxHeight: %d", mCameraInfo.MaxWidth, mCameraInfo.MaxHeight);
+    LOGF_DEBUG("PixelSize: %.2f", mCameraInfo.PixelSize);
+    LOGF_DEBUG("IsColorCamera: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
+    LOGF_DEBUG("MechanicalShutter: %s", mCameraInfo.MechanicalShutter ? "True" : "False");
+    LOGF_DEBUG("ST4Port: %s", mCameraInfo.ST4Port ? "True" : "False");
+    LOGF_DEBUG("IsCoolerCam: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
+    LOGF_DEBUG("IsUSB3Camera: %s", mCameraInfo.IsUSB3Camera ? "True" : "False");
+    LOGF_DEBUG("ElecPerADU: %.2f", mCameraInfo.ElecPerADU);
+    LOGF_DEBUG("BitDepth: %d", mCameraInfo.BitDepth);
+    LOGF_DEBUG("IsTriggerCam: %s", mCameraInfo.IsTriggerCam ? "True" : "False");
+
     uint32_t cap = 0;
 
     if (maxBin > 1)
