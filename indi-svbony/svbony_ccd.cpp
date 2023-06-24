@@ -76,7 +76,7 @@ SVBONYCCD::SVBONYCCD(int numCamera)
     setVersion(SVBONY_VERSION_MAJOR, SVBONY_VERSION_MINOR);
 
     // Get camera informations
-    status = SVBGetCameraInfo(&cameraInfo, num);
+    SVB_ERROR_CODE status = SVBGetCameraInfo(&cameraInfo, num);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, can't get camera's informations\n");
@@ -211,7 +211,7 @@ bool SVBONYCCD::Connect()
     pthread_mutex_lock(&cameraID_mutex);
 
     // open camera
-    status = SVBOpenCamera(cameraID);
+    SVB_ERROR_CODE status = SVBOpenCamera(cameraID);
     if (status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, open camera failed.\n");
@@ -688,7 +688,7 @@ bool SVBONYCCD::Disconnect()
     //pthread_mutex_lock(&cameraID_mutex); // *1
 
     // stop camera
-    status = SVBStopVideoCapture(cameraID);
+    SVB_ERROR_CODE status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
@@ -810,7 +810,7 @@ bool SVBONYCCD::StartExposure(float duration)
     discardVideoData();
 #endif
     // set exposure time (s -> us)
-    status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(duration * 1000000L), SVB_FALSE);
+    SVB_ERROR_CODE status = SVBSetControlValue(cameraID, SVB_EXPOSURE, (long)(duration * 1000000L), SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera set exposure failed\n");
@@ -865,7 +865,7 @@ bool SVBONYCCD::AbortExposure()
     // *********
 
     // stop camera
-    status = SVBStopVideoCapture(cameraID);
+    SVB_ERROR_CODE status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
@@ -914,7 +914,7 @@ bool SVBONYCCD::StartStreaming()
     pthread_mutex_lock(&cameraID_mutex);
 
     // stop camera
-    status = SVBStopVideoCapture(cameraID);
+    SVB_ERROR_CODE status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
@@ -981,7 +981,7 @@ bool SVBONYCCD::StopStreaming()
     pthread_mutex_lock(&cameraID_mutex);
 
     // stop camera
-    status = SVBStopVideoCapture(cameraID);
+    SVB_ERROR_CODE status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
@@ -1065,7 +1065,10 @@ void* SVBONYCCD::streamVideo()
         pthread_mutex_lock(&cameraID_mutex);
 
         // get the frame
-        status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 1000 );
+        // Note.
+        // The original code continues the same process as when it succeeded, regardless of any errors in SVBGetVideoData.
+        // The code that assigns the return value to "status" raises a "warning" at compile time, so it should be commented out.
+        /* SVB_ERROR_CODE status = */ SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(), 1000 );
 
         pthread_mutex_unlock(&cameraID_mutex);
 
@@ -1117,7 +1120,7 @@ bool SVBONYCCD::UpdateCCDFrame(int x, int y, int w, int h)
     pthread_mutex_lock(&cameraID_mutex);
 
     // stop framing
-    status = SVBStopVideoCapture(cameraID);
+    SVB_ERROR_CODE status = SVBStopVideoCapture(cameraID);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, stop camera failed\n");
@@ -1232,7 +1235,7 @@ void SVBONYCCD::TimerHit()
 
                     pthread_mutex_lock(&cameraID_mutex);
                     unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
-                    status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
+                    SVB_ERROR_CODE status = SVBGetVideoData(cameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
                     pthread_mutex_unlock(&cameraID_mutex);
                     LOGF_DEBUG("SVBGetVideoData:result=%d", status);
 
@@ -1341,7 +1344,7 @@ bool SVBONYCCD::updateControl(int ControlType, SVB_CONTROL_TYPE SVB_Control, dou
     pthread_mutex_lock(&cameraID_mutex);
 
     // set control
-    status = SVBSetControlValue(cameraID, SVB_Control, ControlsN[ControlType].value, SVB_FALSE);
+    SVB_ERROR_CODE status = SVBSetControlValue(cameraID, SVB_Control, ControlsN[ControlType].value, SVB_FALSE);
     if(status != SVB_SUCCESS)
     {
         LOGF_ERROR("Error, camera set control %d failed\n", ControlType);
@@ -1485,7 +1488,7 @@ bool SVBONYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             pthread_mutex_lock(&cameraID_mutex);
 
             // set new frame rate
-            status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE, tmpSpeed, SVB_FALSE);
+            SVB_ERROR_CODE status = SVBSetControlValue(cameraID, SVB_FRAME_SPEED_MODE, tmpSpeed, SVB_FALSE);
             if(status != SVB_SUCCESS)
             {
                 LOG_ERROR("Error, camera set frame rate failed\n");
@@ -1628,7 +1631,7 @@ bool SVBONYCCD::SetCaptureFormat(uint8_t index)
     SVB_IMG_TYPE newFrameFormat = switch2frameFormatDefinitionsIndex[index];
 
     pthread_mutex_lock(&cameraID_mutex);
-    status = SVBSetOutputImageType(cameraID, newFrameFormat);
+    SVB_ERROR_CODE status = SVBSetOutputImageType(cameraID, newFrameFormat);
     pthread_mutex_unlock(&cameraID_mutex);
 
     if(status != SVB_SUCCESS)
@@ -1723,7 +1726,7 @@ IPState SVBONYCCD::GuideNorth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, SVB_GUIDE_NORTH, ms);
+    SVB_ERROR_CODE status = SVBPulseGuide(cameraID, SVB_GUIDE_NORTH, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide North failed\n");
@@ -1743,7 +1746,7 @@ IPState SVBONYCCD::GuideSouth(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, SVB_GUIDE_SOUTH, ms);
+    SVB_ERROR_CODE status = SVBPulseGuide(cameraID, SVB_GUIDE_SOUTH, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide South failed\n");
@@ -1763,7 +1766,7 @@ IPState SVBONYCCD::GuideEast(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, SVB_GUIDE_EAST, ms);
+    SVB_ERROR_CODE status = SVBPulseGuide(cameraID, SVB_GUIDE_EAST, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide East failed\n");
@@ -1782,7 +1785,7 @@ IPState SVBONYCCD::GuideWest(uint32_t ms)
 {
     pthread_mutex_lock(&cameraID_mutex);
 
-    status = SVBPulseGuide(cameraID, SVB_GUIDE_WEST, ms);
+    SVB_ERROR_CODE status = SVBPulseGuide(cameraID, SVB_GUIDE_WEST, ms);
     if(status != SVB_SUCCESS)
     {
         LOG_ERROR("Error, camera guide West failed\n");
