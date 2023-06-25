@@ -298,9 +298,13 @@ bool Kepler::initProperties()
                                IPS_IDLE);
 
     // Merge Planes
-    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)", "Both", ISS_ON);
-    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)", "Low Only", ISS_OFF);
-    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)].fill("HWMERGE_FRAME_HIGHONLYE", "High Only", ISS_OFF);
+    MergePlanesSP[to_underlying(
+                      FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)", "Both", ISS_ON);
+    MergePlanesSP[to_underlying(
+                      FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)", "Low Only",
+                              ISS_OFF);
+    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)].fill("HWMERGE_FRAME_HIGHONLYE", "High Only",
+            ISS_OFF);
     MergePlanesSP.fill(getDeviceName(), "MERGE_PLANES", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Calibration Frames (for MERGE_HARDWARE)
@@ -324,8 +328,12 @@ bool Kepler::initProperties()
 
     // GPS
     GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_NOT_DETECTED)].fill("FPRO_GPS_NOT_DETECTED", "Not detected", IPS_IDLE);
-    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_NO_SAT_LOCK)].fill("FPRO_GPS_DETECTED_NO_SAT_LOCK", "No Sat lock", IPS_IDLE);
-    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_AND_SAT_LOCK)].fill("FPRO_GPS_DETECTED_AND_SAT_LOCK", "Sat locked", IPS_IDLE);
+    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_NO_SAT_LOCK)].fill("FPRO_GPS_DETECTED_NO_SAT_LOCK", "No Sat lock",
+            IPS_IDLE);
+    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_AND_SAT_LOCK)].fill("FPRO_GPS_DETECTED_AND_SAT_LOCK", "Sat locked",
+            IPS_IDLE);
+    GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_DETECTED_SAT_LOCK_TIME_ERROR)].fill("FPRO_GPS_DETECTED_SAT_LOCK_TIME_ERROR",
+            "Lock error", IPS_IDLE);
     GPSStateLP.fill(getDeviceName(), "GPS_STATE", "GPS", GPS_TAB, IPS_IDLE);
 
     // Request Stats
@@ -515,25 +523,30 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             MergePlanesSP.setState(IPS_OK);
 
             int index = MergePlanesSP.findOnSwitchIndex();
-            fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-            fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
+                                            || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
+                                             || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
             fproUnpacked.bMergedImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
             fproUnpacked.bMetaDataRequest = true;
-            fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-            fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
+                                    || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
+                                     || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
             fproStats.bMergedRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
 
             MergePlanesSP.apply();
             saveConfig(MergePlanesSP);
             return true;
-        }        
+        }
 
         // Low Gain
         if (LowGainSP.isNameMatch(name))
         {
             LowGainSP.update(states, names, n);
             int index = LowGainSP.findOnSwitchIndex();
-            if (FPROSensor_SetGainIndex(m_CameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_LOW_CHANNEL, m_LowGainTable[index].uiDeviceIndex) >= 0)
+            if (FPROSensor_SetGainIndex(m_CameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_LOW_CHANNEL,
+                                        m_LowGainTable[index].uiDeviceIndex) >= 0)
                 LowGainSP.setState(IPS_OK);
             else
                 LowGainSP.setState(IPS_ALERT);
@@ -547,7 +560,8 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
         {
             HighGainSP.update(states, names, n);
             int index = HighGainSP.findOnSwitchIndex();
-            if (FPROSensor_SetGainIndex(m_CameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_HIGH_CHANNEL, m_HighGainTable[index].uiDeviceIndex) >= 0)
+            if (FPROSensor_SetGainIndex(m_CameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_HIGH_CHANNEL,
+                                        m_HighGainTable[index].uiDeviceIndex) >= 0)
                 HighGainSP.setState(IPS_OK);
             else
                 HighGainSP.setState(IPS_ALERT);
@@ -653,16 +667,13 @@ bool Kepler::Connect()
         CommunicationMethodSP.setState(IPS_OK);
         CommunicationMethodSP.apply();
 
-        // For fiber connection, enable hardware level merging over PCIe.
-        if (isFiber)
-        {
-            mergeEnables.bMergeEnable = true;
-            mergeEnables.eMergeFrames = FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH;
-            // N.B. Need to check later which format is more suitable
-            //mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_RCD;
-            mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
-            FPROAlgo_SetHardwareMergeEnables(m_CameraHandle, mergeEnables);
-        }
+        // Enable hardware level merging over PCIe.
+        mergeEnables.bMergeEnable = true;
+        mergeEnables.eMergeFrames = FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH;
+        // N.B. Need to check later which format is more suitable
+        //mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_RCD;
+        mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
+        FPROAlgo_SetHardwareMergeEnables(m_CameraHandle, mergeEnables);
 
         LOGF_INFO("Established connection to camera via %s", isFiber ? "Fiber" : "USB");
 
@@ -720,7 +731,8 @@ bool Kepler::setup()
 
     pixelDepth = (pixelDepth > 8) ? 16 : 8;
 
-    auto pixelSize = SensorPixelSize[static_cast<FPRODEVICETYPE>(m_CameraCapabilitiesList[to_underlying(FPROCAPS::FPROCAP_DEVICE_TYPE)])];
+    auto pixelSize = SensorPixelSize[static_cast<FPRODEVICETYPE>(m_CameraCapabilitiesList[to_underlying(
+                                         FPROCAPS::FPROCAP_DEVICE_TYPE)])];
 
     if (pixelSize > 90)
         LOG_WARN("Pixel size is unkown for this camera model! Contact INDI to supply correct pixel information.");
@@ -824,6 +836,13 @@ bool Kepler::setup()
         BlackLevelNP.setState(IPS_OK);
     }
 
+#ifdef LEGACY_MODE
+    EncodeFormatSP.reset();
+    EncodeFormatSP[FORMAT_NATIVE].setState(ISS_ON);
+    EncodeFormatSP.apply();
+    PrimaryCCD.setImageExtension("fit");
+#endif
+
     m_TemperatureTimer.start();
     m_GPSTimer.start();
     return true;
@@ -838,14 +857,18 @@ void Kepler::prepareUnpacked()
 
     // Merging Planes
     int index = MergePlanesSP.findOnSwitchIndex();
-    fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-    fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+    fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
+                                    || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+    fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
+                                     || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
     fproUnpacked.bMergedImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
     fproUnpacked.bMetaDataRequest = true;
 
     // Statistics
-    fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-    fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY) || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+    fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
+                            || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+    fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
+                             || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
     fproStats.bMergedRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
 
     // Merging Method

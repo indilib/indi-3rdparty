@@ -163,8 +163,8 @@ enum CONTROL_ID
 {
 /*0*/  CONTROL_BRIGHTNESS = 0, //!< image brightness
 /*1*/  CONTROL_CONTRAST,       //!< image contrast
-/*2*/  CONTROL_WBR,            //!< red of white balance
-/*3*/  CONTROL_WBB,            //!< blue of white balance
+/*2*/  CONTROL_WBR,            //!< the red of white balance
+/*3*/  CONTROL_WBB,            //!< the blue of white balance
 /*4*/  CONTROL_WBG,            //!< the green of white balance
 /*5*/  CONTROL_GAMMA,          //!< screen gamma
 /*6*/  CONTROL_GAIN,           //!< camera gain
@@ -202,8 +202,8 @@ enum CONTROL_ID
 
 /*37*/  CAM_IGNOREOVERSCAN_INTERFACE,            //!< ignore overscan area
 
-/*38*/  QHYCCD_3A_AUTOBALANCE,					 //!< auto white balance
-/*39*/  QHYCCD_3A_AUTOEXPOSURE,					 //!< auto exposure
+/*38*/  //QHYCCD_3A_AUTOBALANCE,					 //!< auto white balance//lyl move to 1024
+/*39*/  QHYCCD_3A_AUTOEXPOSURE=39,					 //!< auto exposure
 /*40*/  QHYCCD_3A_AUTOFOCUS,
 /*41*/  CONTROL_AMPV,                            //!< ccd or cmos ampv
 /*42*/  CONTROL_VCAM,                            //!< Virtual Camera on off
@@ -243,15 +243,23 @@ enum CONTROL_ID
 /*73*/  CAM_SPEAKER_LED_ALARM, // for OEM-600
 /*74*/  CAM_WATCH_DOG_FPGA, // for _QHY5III178C Celestron, SDK have to feed this dog or it go reset
 
-/*75*/  CAM_BIN6X6MODE,         //!< check if camera has bin4x4 mode
-/*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin4x4 mode
+/*75*/  CAM_BIN6X6MODE,         //!< check if camera has bin6x6 mode
+/*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin8x8 mode
 /*77*/  CAM_GlobalSensorGPSLED,         ///Show GPS LED tab on sharpCap
 /*78*/  CONTROL_ImgProc,   /// Process image
 /*79*/  CONTROL_RemoveRBI,   /// Remove single RBI
+/*80*/  CONTROL_GlobalReset,		//!<image stabilization
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
-/*Last One */  CONTROL_MAX_ID
+/*Last One */  CONTROL_MAX_ID,
+
+//TEST id name list
+/*1024*/ CONTROL_AUTOWHITEBALANCE=1024, //!<auto white balance  eg.CONTROL_TEST=1024
+/*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
+/*1026*/ CONTROL_ImageStabilization		//!<image stabilization
+/*1027*/ //TEST_GAIN,//20230330
+/*1028*/ //TEST_OFFSET//20230330
 };
 
 /**

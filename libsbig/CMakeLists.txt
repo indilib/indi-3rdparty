@@ -19,7 +19,7 @@ if (APPLE)
 
   set_property (TARGET sbig PROPERTY IMPORTED_LOCATION "SBIGUDrvOSX.bin")
 
-  FIX_LIBRARY_ID("libsbig" "SBIGUDrvOSX.bin" "SBIG")
+  FIX_MACOS_LIBRARIES("libsbig" "SBIGUDrvOSX.bin" "SBIG")
 
 elseif (UNIX AND NOT WIN32)
 

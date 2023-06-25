@@ -1,12 +1,12 @@
 cmake_minimum_required (VERSION 3.0)
 project (libasi)
 
-# Using ASI Camera SDK Version 1.28 updated on 2023-02-07
+# Using ASI Camera SDK Version 1.29 updated on 2023-05-03
 # Using ASI EFW SDK Version 1.7 updated on 2021-05-17
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
-# Using ASI EAF SDK Version 1.4 updated on 2021-05-17
+# Using ASI EAF SDK Version 1.6 updated on 2023-03-16
 
-set (ASICAM_VERSION "1.28")
+set (ASICAM_VERSION "1.29")
 set (ASICAM_SOVERSION "1")
 
 set (ASIEFW_VERSION "1.7")
@@ -15,7 +15,7 @@ set (ASIEFW_SOVERSION "1")
 set (ASIST4_VERSION "1.0")
 set (ASIST4_SOVERSION "1")
 
-set (ASIEAF_VERSION "1.4")
+set (ASIEAF_VERSION "1.6")
 set (ASIEAF_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -40,10 +40,10 @@ if (APPLE)
   set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "mac/libUSB2ST4Conv.bin")
   set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "mac/libEAFFocuser.bin")
 
-  FIX_LIBRARY_ID("libASICamera2" "mac/libASICamera2.bin" "ASI/ZWO")
-  FIX_LIBRARY_ID("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
-  FIX_LIBRARY_ID("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
-  FIX_LIBRARY_ID("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libASICamera2" "mac/libASICamera2.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
 
 elseif (UNIX AND NOT WIN32)
 

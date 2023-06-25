@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
+  Copyright(c) 2015-2023 Jasem Mutlaq. All rights reserved.
   Copyright(c) 2015 Paweł T. Jochym  <jochym AT gmail DOT com>
 ..Copyright(c) 2014 Radek Kaczorek  <rkaczorek AT gmail DOT com>
   Based on Simple GPS Simulator by Jasem Mutlaq
@@ -41,7 +41,6 @@ class GPSD : public INDI::GPS
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-        virtual bool setSystemTime(time_t &raw_time);
     protected:
         virtual bool Connect() override;
         virtual bool Disconnect() override;

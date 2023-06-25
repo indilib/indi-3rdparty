@@ -1,3 +1,48 @@
+libsvbony (1.11.4) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.11.4 :
+  * *** Note: The following changes were made both 1.11.2 and 1.11.4 ***
+  * Support image flip
+  * Modify SV605CC gain setting
+  * Modify the gain setting of SV605CC/SV605MC
+  * Fix up the problem that the image cannot be obtained when the SV905C is exposed for a long time
+  * Remove the x86 version library in MacOS
+  * Fix up the problem that the last exposure image may be read in soft trigger mode
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 14 Jun 2023 11:00:00 +0900
+
+libsvbony (1.11.1) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.11.1 :
+  * *** Note: The following changes were made both 1.11.0 and 1.11.1 ***
+  * Support camera SV305C
+  * Fix the problem that the first line and the last line of the image are incorrect when the mono camera is in 16-bit mode
+  * SV305C supports saturation
+  * Improve the frame rate of SV305C in small ROI
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 26 Apr 2023 11:00:00 +0900
+
+libsvbony (1.10.2) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.10.2 :
+  * Solve the problem that SV405CC soft trigger does not plot
+  * Export SVBRestoreDefaultParam on Linux and MacOS
+  * libSVBCameraSDK.dylib under MacOS sets rpath
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Thu, 24 Feb 2023 07:00:00 +0900
+
+libsvbony (1.10.1) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.10.1 :
+  * Support SV605MC camera
+  * Fixed the issue that SV605CC triggers the photo time
+  * Fix some bugs
+  * Add new API interface functions SVBGetCameraFirmwareVersion and SVBIsCameraNeedToUpgrade
+  * Added a switch for automatic correction of dynamic dead pixels
+  * Add the API interface function SVBRestoreDefaultParam, which can restore the default parameters of the camera
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Thu, 16 Feb 2023 12:00:00 +0900
+
 libsvbony (1.9.8) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.9.8 :

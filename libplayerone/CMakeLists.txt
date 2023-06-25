@@ -1,13 +1,13 @@
 cmake_minimum_required (VERSION 3.0)
 project (libplayerone)
 
-# Using PlayerOne Camera SDK Version 3.1.1 updated on 2023-1-18
-# Using PlayerOne EFW    SDK Version 1.1.0 updated on 2023-2-2
+# Using PlayerOne Camera SDK Version 3.3.0 updated on 2023-5-06
+# Using PlayerOne EFW    SDK Version 1.2.0 updated on 2023-3-30
 
-set (POACAM_VERSION "3.1.1")
+set (POACAM_VERSION "3.3.0")
 set (POACAM_SOVERSION "3")
 
-set (POAEFW_VERSION "1.1.0")
+set (POAEFW_VERSION "1.2.0")
 set (POAEFW_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -26,8 +26,8 @@ if (APPLE)
   set_property (TARGET PlayerOneCamera  PROPERTY IMPORTED_LOCATION "mac/libPlayerOneCamera.bin")
   set_property (TARGET PlayerOnePW      PROPERTY IMPORTED_LOCATION "mac/libPlayerOnePW.bin")
     
-  FIX_LIBRARY_ID("libPlayerOneCamera" "mac/libPlayerOneCamera.bin" "PLAYER ONE")
-  FIX_LIBRARY_ID("libPlayerOnePW"     "mac/libPlayerOnePW.bin" "PLAYER ONE")
+  FIX_MACOS_LIBRARIES("libPlayerOneCamera" "mac/libPlayerOneCamera.bin" "PLAYER ONE")
+  FIX_MACOS_LIBRARIES("libPlayerOnePW"     "mac/libPlayerOnePW.bin" "PLAYER ONE")
 
 elseif (UNIX AND NOT WIN32)
 
@@ -54,7 +54,7 @@ endif ()
 
 # Install header files
 install (
-  FILES PlayerOneCamera.h PlayerOnePW.h
+  FILES PlayerOneCamera.h PlayerOnePW.h ConvFuncs.h
   DESTINATION include/libplayerone
 )
 

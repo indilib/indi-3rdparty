@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libomegonprocam)
 
-set (LIBOMEGONPROCAM_VERSION "53.22081")
-set (LIBOMEGONPROCAM_SOVERSION "53")
+set (LIBOMEGONPROCAM_VERSION "54.22587")
+set (LIBOMEGONPROCAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET omegonprocam PROPERTY IMPORTED_LOCATION "mac/libomegonprocam.bin")
 
-  FIX_LIBRARY_ID("libomegonprocam" "mac/libomegonprocam.bin" "OMEGON")
+  FIX_MACOS_LIBRARIES("libomegonprocam" "mac/libomegonprocam.bin" "OMEGON")
 
 elseif (UNIX AND NOT WIN32)
 

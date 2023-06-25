@@ -1,3 +1,9 @@
+indi-gpsd (0.6) jammy; urgency=medium
+
+  * Let INDI::GPS handle setting system-wide time.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 05 Mar 2023 11:40:00 +0300
+
 indi-gpsd (0.5) bionic; urgency=medium
 
   * Use switch to select between GPS raw time and system time.

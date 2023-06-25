@@ -1,3 +1,24 @@
+v1.7
+* Update: PlayerOneCamera SDK to v3.3.0
+
+v1.6
+* Update: PlayerOnePW SDK to v1.2.0
+
+v1.5
+* BugFix: top quarter noise on bin2 image
+
+v1.4
+* Update: PlayerOneCamera SDK to v3.2.2
+
+v1.3
+* Update: PlayerOneCamera SDK to v3.2.1
+
+v1.2
+* Add: single camera driver for multi threading
+* Add: flip property with bayer compensation
+* Add: nickname property for multi camera driver
+* Update: PlayerOneCamera SDK to v3.2.0
+
 v1.1
 * Update: PlayerOnePW SDK to v1.1.0
 

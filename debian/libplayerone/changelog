@@ -1,3 +1,33 @@
+libplayerone (1.4) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.3.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 9 May 2023 08:00:00 +0900
+
+libplayerone (1.3) bionic; urgency=low
+
+  * Update PlayerOnePW SDK to v1.2.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 6 May 2023 08:00:00 +0900
+
+libplayerone (1.2) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.2.2
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 15 Mar 2023 08:00:00 +0900
+
+libplayerone (1.1) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.2.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 2 Mar 2023 08:00:00 +0900
+
+libplayerone (1.0) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.2.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Fri, 24 Feb 2023 08:00:00 +0900
+
 libplayerone (0.9) bionic; urgency=low
 
   * Update PlayerOnePW SDK to v1.1.0
@@ -6,7 +36,7 @@ libplayerone (0.9) bionic; urgency=low
 
 libplayerone (0.8) bionic; urgency=low
 
-  * Add PlayerOne Filter Wheel driver
+  * Add PlayerOnePW SDK v1.0.0
   * Update PlayerOneCamera SDK to v3.1.1
 
  -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 18 Jan 2023 08:00:00 +0900

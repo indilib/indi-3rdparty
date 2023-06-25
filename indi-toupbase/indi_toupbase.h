@@ -1,5 +1,5 @@
 /*
- INDI Altair Driver
+ Toupcam & oem CCD Driver
 
  Copyright (C) 2018-2019 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
@@ -21,76 +21,9 @@
 
 #pragma once
 
-#include <map>
 #include <indiccd.h>
 #include <inditimer.h>
-
-#ifdef BUILD_TOUPCAM
-#include <toupcam.h>
-#define FP(x) Toupcam_##x
-#define CP(x) TOUPCAM_##x
-#define XP(x) Toupcam##x
-#define THAND HToupcam
-#define DNAME "Toupcam"
-#elif BUILD_ALTAIRCAM
-#include <altaircam.h>
-#define FP(x) Altaircam_##x
-#define CP(x) ALTAIRCAM_##x
-#define XP(x) Altaircam##x
-#define THAND HAltaircam
-#define DNAME "Altair"
-#elif BUILD_BRESSERCAM
-#include <bressercam.h>
-#define FP(x) Bressercam_##x
-#define CP(x) BRESSERCAM_##x
-#define XP(x) Bressercam##x
-#define THAND HBressercam
-#define DNAME "Bressercam"
-#elif BUILD_MALLINCAM
-#include <mallincam.h>
-#define FP(x) Mallincam_##x
-#define CP(x) MALLINCAM_##x
-#define XP(x) Mallincam##x
-#define THAND HMallincam
-#define DNAME "Mallincam"
-#elif BUILD_NNCAM
-#include <nncam.h>
-#define FP(x) Nncam_##x
-#define CP(x) NNCAM_##x
-#define XP(x) Nncam##x
-#define THAND HNncam
-#define DNAME "Nn"
-#elif BUILD_OGMACAM
-#include <ogmacam.h>
-#define FP(x) Ogmacam_##x
-#define CP(x) OGMACAM_##x
-#define XP(x) Ogmacam##x
-#define THAND HOgmacam
-#define DNAME "Ogmacam"
-#elif BUILD_OMEGONPROCAM
-#include <omegonprocam.h>
-#define FP(x) Omegonprocam_##x
-#define CP(x) OMEGONPROCAM_##x
-#define XP(x) Omegonprocam##x
-#define THAND HOmegonprocam
-#define DNAME "OmegonProCam"
-#elif BUILD_STARSHOOTG
-#include <starshootg.h>
-#define FP(x) Starshootg_##x
-#define CP(x) STARSHOOTG_##x
-#define XP(x) Starshootg##x
-#define THAND HStarshootg
-#define DNAME "StarshootG"
-#elif BUILD_TSCAM
-#include <tscam.h>
-#define FP(x) Tscam_##x
-#define CP(x) TSCAM_##x
-#define XP(x) Tscam##x
-#define THAND HTscam
-#define DNAME "Tscam"
-#endif
-
-#define BITDEPTH_FLAG   (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
+#include "libtoupbase.h"
 
 class ToupBase : public INDI::CCD
 {
@@ -137,9 +70,6 @@ class ToupBase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
     private:
-        static std::map<int, std::string> errCodes;
-		static std::string errorCodes(int rc);
-
         enum eGUIDEDIRECTION
         {
             TOUPBASE_NORTH,
@@ -152,8 +82,7 @@ class ToupBase : public INDI::CCD
         enum eTriggerMode
         {
             TRIGGER_VIDEO,
-            TRIGGER_SOFTWARE,
-            TRIGGER_EXTERNAL,
+            TRIGGER_SOFTWARE
         };
 
         //#############################################################################
@@ -167,7 +96,6 @@ class ToupBase : public INDI::CCD
         // Video Format & Streaming
         //#############################################################################
         void getVideoImage();
-        bool setVideoFormat(uint8_t index);
 
         //#############################################################################
         // Guiding
@@ -187,11 +115,6 @@ class ToupBase : public INDI::CCD
         int m_WEtimerID { -1 };
 
         //#############################################################################
-        // Temperature Control & Cooling
-        //#############################################################################
-        bool activateCooler(bool enable);
-
-        //#############################################################################
         // Setup & Controls
         //#############################################################################
         // Get initial parameters from camera
@@ -208,7 +131,7 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_ResolutionSP;
 
         //#############################################################################
-        // Misc.
+        // Misc
         //#############################################################################
         // Get the current Bayer string used
         const char *getBayerString();
@@ -221,15 +144,11 @@ class ToupBase : public INDI::CCD
         static void eventCB(unsigned event, void* pCtx);
         void eventCallBack(unsigned event);
 
-        // Handle capture timeout
-        void captureTimeoutHandler();
-
         //#############################################################################
         // Camera Handle & Instance
         //#############################################################################
-        THAND m_CameraHandle { nullptr };
+        THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
-        // Camera Display Name
         char m_name[MAXINDIDEVICE];
 
         //#############################################################################
@@ -245,22 +164,15 @@ class ToupBase : public INDI::CCD
 
         ISwitchVectorProperty m_HighFullwellSP;
         ISwitch m_HighFullwellS[2];
-        typedef enum
-        {
-            TC_HIGHFULLWELL_ON,
-            TC_HIGHFULLWELL_OFF,
-        } HIGHFULLWELL_MODE;
 
+        bool activateCooler(bool enable);
+        
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
-        enum
-        {
-            TC_COOLER_ON,
-            TC_COOLER_OFF,
-        };
+        
         IText m_CoolerT;
         ITextVectorProperty m_CoolerTP;
-		int32_t m_maxTecVoltage { -1 };
+        int32_t m_maxTecVoltage { -1 };
 
         INumberVectorProperty m_ControlNP;
         INumber m_ControlN[8];
@@ -268,12 +180,12 @@ class ToupBase : public INDI::CCD
         {
             TC_GAIN,
             TC_CONTRAST,
-            TC_HUE,
-            TC_SATURATION,
             TC_BRIGHTNESS,
             TC_GAMMA,
             TC_SPEED,
             TC_FRAMERATE_LIMIT,
+            TC_HUE,
+            TC_SATURATION
         };
 
         // Auto Black Balance
@@ -282,14 +194,9 @@ class ToupBase : public INDI::CCD
 
         ISwitch m_AutoExposureS[2];
         ISwitchVectorProperty m_AutoExposureSP;
-        enum
-        {
-            TC_AUTO_EXPOSURE_ON,
-            TC_AUTO_EXPOSURE_OFF,
-        };
 
         INumber m_BlackBalanceN[3];
-        INumberVectorProperty BlackBalanceNP;
+        INumberVectorProperty m_BlackBalanceNP;
         enum
         {
             TC_BLACK_R,
@@ -297,8 +204,9 @@ class ToupBase : public INDI::CCD
             TC_BLACK_B,
         };
 
+        // Offset (Black Level)
         INumberVectorProperty m_OffsetNP;
-        INumber m_OffsetN;
+        INumber m_OffsetN [1];
 
         // R/G/B/Gray low/high levels
         INumber m_LevelRangeN[8];
@@ -329,43 +237,29 @@ class ToupBase : public INDI::CCD
         ISwitch m_WBAutoS;
         ISwitchVectorProperty m_WBAutoSP;
 
-        // Fan Speed
-        INumber m_FanSpeedS;
-        INumberVectorProperty m_FanSpeedSP;
-
-        // Video Format
-        ISwitch m_VideoFormatS[2];
-        ISwitchVectorProperty m_VideoFormatSP;
-        enum
-        {
-            TC_VIDEO_COLOR_RGB,
-            TC_VIDEO_COLOR_RAW,
-        };
-        enum
-        {
-
-            TC_VIDEO_MONO_8,
-            TC_VIDEO_MONO_16,
-        };
+        // Fan
+        ISwitch *m_FanS { nullptr };
+        ISwitchVectorProperty m_FanSP;
 
         // Low Noise
         ISwitchVectorProperty m_LowNoiseSP;
         ISwitch m_LowNoiseS[2];
 
-        // Heat Up
-        INumberVectorProperty m_HeatUpSP;
-        INumber m_HeatUpS;
+        // Heat
+        ISwitchVectorProperty m_HeatSP;
+        ISwitch *m_HeatS { nullptr };
 
-        // Firmware Info
-        ITextVectorProperty m_FirmwareTP;
-        IText m_FirmwareT[5] = {};
+        // Camera Info
+        ITextVectorProperty m_CameraTP;
+        IText m_CameraT[6];
         enum
         {
-            TC_FIRMWARE_SERIAL,
-            TC_FIRMWARE_SW_VERSION,
-            TC_FIRMWARE_HW_VERSION,
-            TC_FIRMWARE_DATE,
-            TC_FIRMWARE_REV
+            TC_CAMERA_MODEL,
+            TC_CAMERA_DATE,
+            TC_CAMERA_SN,
+            TC_CAMERA_FW_VERSION,
+            TC_CAMERA_HW_VERSION,
+            TC_CAMERA_REV
         };
 
         // SDK Version
@@ -386,26 +280,18 @@ class ToupBase : public INDI::CCD
         };
 
         BINNING_MODE m_BinningMode = TC_BINNING_ADD;
-        uint8_t m_CurrentVideoFormat = TC_VIDEO_COLOR_RGB;
+        uint8_t m_CurrentVideoFormat = 0;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
-        eTriggerMode m_CurrentTriggerMode = TRIGGER_VIDEO;
+        eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
-        INDI::Timer m_CaptureTimeout;
-        uint32_t m_CaptureTimeoutCounter {0};
-        // Download estimation in ms after exposure duration finished.
-        double m_DownloadEstimation {5000};
-
         uint8_t m_BitsPerPixel { 8 };
-        uint8_t m_RawBitsPerPixel { 8 };
-        uint8_t m_MaxBitDepth { 8 };
+        uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
-		
-		uint8_t* getRgbBuffer();
-		uint8_t *m_rgbBuffer { nullptr };
-		int32_t m_rgbBufferSize { 0 };
+        
+        uint8_t *getRgbBuffer();
+        uint8_t *m_rgbBuffer { nullptr };
+        int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
-
-        static const uint32_t MIN_DOWNLOAD_ESTIMATION { 1000 };
 };

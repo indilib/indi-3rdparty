@@ -36,7 +36,6 @@ class RTKLIB : public INDI::GPS
     ITextVectorProperty GPSstatusTP;
 
     static void* parse_rtkrcv_helper(void *);
-    virtual bool setSystemTime(time_t& raw_time);
 
   protected:    
     //  Generic indi device entries

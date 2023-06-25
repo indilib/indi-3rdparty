@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (libsvbony)
 
-set (SVBCAMERASDK_VERSION "1.9.8")
+set (SVBCAMERASDK_VERSION "1.11.4")
 set (SVBCAMERASDK_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -21,7 +21,7 @@ elseif (APPLE)
 
     set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_mac64.bin")
 
-    FIX_LIBRARY_ID("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
+    FIX_MACOS_LIBRARIES("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
 
 elseif (UNIX)
 

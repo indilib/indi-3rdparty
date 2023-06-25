@@ -19,7 +19,7 @@ case "$OS" in
             git \
             cfitsio libnova libusb curl \
             gsl jpeg fftw \
-            ffmpeg libftdi libraw libdc1394 libgphoto2
+            ffmpeg libftdi libraw libdc1394 libgphoto2 opencv
         ;;
     Linux)
         . /etc/os-release
@@ -36,7 +36,8 @@ case "$OS" in
                     \
                     libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
                     libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev \
-                    libboost-dev libboost-regex-dev liblimesuite-dev
+                    libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc \
+                    libopencv-highgui
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
@@ -44,7 +45,7 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel \
+                    gsl-devel libjpeg-devel fftw-devel opencv-devel \
                     \
                     https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
                     https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
@@ -64,7 +65,7 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel
+                    gsl-devel libjpeg-devel fftw-devel opencv-devel
                 ;;
             opensuse-tumbleweed)
                 # broken git/openssh package
@@ -74,7 +75,7 @@ case "$OS" in
                     openssh git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel libtheora-devel
+                    gsl-devel libjpeg-devel fftw-devel libtheora-devel opencv-devel
                 ;;
             *)
                 echo "Unknown Linux Distribution: $ID"

@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libnncam)
 
-set (LIBNNCAM_VERSION "53.22081")
-set (LIBNNCAM_SOVERSION "53")
+set (LIBNNCAM_VERSION "54.22587")
+set (LIBNNCAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "mac/libnncam.bin")
 
-  FIX_LIBRARY_ID("libnncam" "mac/libnncam.bin" "NNCAM")
+  FIX_MACOS_LIBRARIES("libnncam" "mac/libnncam.bin" "NNCAM")
 
 elseif (UNIX AND NOT WIN32)
 

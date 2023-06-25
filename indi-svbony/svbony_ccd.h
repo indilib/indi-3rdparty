@@ -30,6 +30,9 @@
 
 #include "libsvbony/SVBCameraSDK.h"
 
+// WORKAROUND for bug #655
+// If defined following symbol, get buffered image data before calling StartExposure()
+//#define WORKAROUND_latest_image_can_be_getten_next_time
 
 using namespace std;
 
@@ -90,8 +93,6 @@ class SVBONYCCD : public INDI::CCD
         int num;
         // camera name
         char name[32];
-        // camera API return status
-        SVB_ERROR_CODE status;
         // camera infos
         SVB_CAMERA_INFO cameraInfo;
         // camera API handler
@@ -171,6 +172,12 @@ class SVBONYCCD : public INDI::CCD
         // cooler power
         INumber CoolerN[1];
         INumberVectorProperty CoolerNP;
+
+        // a switch for automatic correction of dynamic dead pixels
+        ISwitch CorrectDDPS[2];
+        ISwitchVectorProperty CorrectDDPSP;
+        enum { CORRECT_DDP_ENABLE = 0, CORRECT_DDP_DISABLE = 1 };
+        int correctDDPEnable; // 0:Enable, 1:Disable
 
         // output frame format
         // the camera is able to output RGB24, but not supported by INDI

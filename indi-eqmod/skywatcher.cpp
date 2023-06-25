@@ -98,15 +98,17 @@ bool Skywatcher::Disconnect()
 {
     if (PortFD < 0)
         return true;
-    StopMotor(Axis1);
-    StopMotor(Axis2);
-    // Deactivate motor (for geehalel mount only)
-    /*
-    if (MountCode == 0xF0) {
-    dispatch_command(Deactivate, Axis1, nullptr);
-    //read_eqmod();
+
+    try
+    {
+        StopMotor(Axis1);
+        StopMotor(Axis2);
     }
-    */
+    catch (EQModError)
+    {
+        // Ignore error
+    }
+
     return true;
 }
 
@@ -448,89 +450,8 @@ void Skywatcher::InquireBoardVersion(ITextVectorProperty *boardTP)
     char *boardinfo[3];
     const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
 
-    /*
-    uint32_t tmpMCVersion = 0;
-
-    dispatch_command(InquireMotorBoardVersion, Axis1, nullptr);
-    //read_eqmod();
-    tmpMCVersion=Revu24str2long(response+1);
-    MCVersion = ((tmpMCVersion & 0xFF) << 16) | ((tmpMCVersion & 0xFF00)) | ((tmpMCVersion & 0xFF0000) >> 16);
-    MountCode=MCVersion & 0xFF;
-    */
-    minperiods[Axis1] = 6;
-    minperiods[Axis2] = 6;
+    InquireBoardVersion(boardinfo);
     nprop             = 3;
-    //  strcpy(boardinfopropnames[0],"MOUNT_TYPE");
-    boardinfo[0] = (char *)malloc(20 * sizeof(char));
-    switch (MountCode)
-    {
-        case 0x00:
-            strcpy(boardinfo[0], "EQ6");
-            break;
-        case 0x01:
-            strcpy(boardinfo[0], "HEQ5");
-            break;
-        case 0x02:
-            strcpy(boardinfo[0], "EQ5");
-            break;
-        case 0x03:
-            strcpy(boardinfo[0], "EQ3");
-            break;
-        case 0x04:
-            strcpy(boardinfo[0], "EQ8");
-            break;
-        case 0x05:
-            strcpy(boardinfo[0], "AZEQ6");
-            break;
-        case 0x06:
-            strcpy(boardinfo[0], "AZEQ5");
-            break;
-        case 0x0A:
-            strcpy(boardinfo[0], "Star Adventurer");
-            break;
-        case 0x20:
-            strcpy(boardinfo[0], "EQ8-R Pro");
-            break;
-        case 0x22:
-            strcpy(boardinfo[0], "AZEQ6 Pro");
-            break;
-        case 0x23:
-            strcpy(boardinfo[0], "EQ6-R Pro");
-            break;
-        case 0x31:
-            strcpy(boardinfo[0], "EQ5 Pro");
-            break;
-        case 0x80:
-            strcpy(boardinfo[0], "GT");
-            break;
-        case 0x81:
-            strcpy(boardinfo[0], "MF");
-            break;
-        case 0x82:
-            strcpy(boardinfo[0], "114GT");
-            break;
-        case 0x90:
-            strcpy(boardinfo[0], "DOB");
-            break;
-        case 0xA5:
-            strcpy(boardinfo[0], "AZ-GTi");
-            break;
-        case 0xF0:
-            strcpy(boardinfo[0], "GEEHALEL");
-            minperiods[Axis1] = 13;
-            minperiods[Axis2] = 16;
-            break;
-        default:
-            strcpy(boardinfo[0], "CUSTOM");
-            break;
-    }
-
-    boardinfo[1] = (char *)malloc(5);
-    sprintf(boardinfo[1], "%04x", (MCVersion >> 8));
-    boardinfo[1][4] = '\0';
-    boardinfo[2] = (char *)malloc(5);
-    sprintf(boardinfo[2], "0x%02X", MountCode);
-    boardinfo[2][4] = '\0';
     // should test this is ok
     IUUpdateText(boardTP, boardinfo, (char **)boardinfopropnames, nprop);
     IDSetText(boardTP, nullptr);
@@ -554,6 +475,28 @@ void Skywatcher::InquireBoardVersion(INDI::PropertyText boardTP)
     char *boardinfo[3];
     const char *boardinfopropnames[] = { "MOUNT_TYPE", "MOTOR_CONTROLLER", "MOUNT_CODE" };
 
+    InquireBoardVersion(boardinfo);
+    nprop             = 3;
+    // should test this is ok
+    boardTP.update(boardinfo, (char **)boardinfopropnames, nprop);
+    boardTP.apply();
+    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
+               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
+    /* Check supported mounts here */
+    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
+
+    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
+             boardinfo[0], MountCode);
+    }
+    */
+    free(boardinfo[0]);
+    free(boardinfo[1]);
+    free(boardinfo[2]);
+}
+
+void Skywatcher::InquireBoardVersion(char **boardinfo)
+{
+
     /*
     uint32_t tmpMCVersion = 0;
 
@@ -565,7 +508,6 @@ void Skywatcher::InquireBoardVersion(INDI::PropertyText boardTP)
     */
     minperiods[Axis1] = 6;
     minperiods[Axis2] = 6;
-    nprop             = 3;
     //  strcpy(boardinfopropnames[0],"MOUNT_TYPE");
     boardinfo[0] = (char *)malloc(20 * sizeof(char));
     switch (MountCode)
@@ -637,21 +579,6 @@ void Skywatcher::InquireBoardVersion(INDI::PropertyText boardTP)
     boardinfo[2] = (char *)malloc(5);
     sprintf(boardinfo[2], "0x%02X", MountCode);
     boardinfo[2][4] = '\0';
-    // should test this is ok
-    boardTP.update(boardinfo, (char **)boardinfopropnames, nprop);
-    boardTP.apply();
-    LOGF_DEBUG("%s(): MountCode = %d, MCVersion = %lx, setting minperiods Axis1=%d Axis2=%d",
-               __FUNCTION__, MountCode, MCVersion, minperiods[Axis1], minperiods[Axis2]);
-    /* Check supported mounts here */
-    /*if ((MountCode == 0x80) || (MountCode == 0x81) || (MountCode == 0x82) || (MountCode == 0x90)) {
-
-    throw EQModError(EQModError::ErrDisconnect, "Mount not supported %s (mount code %d)",
-             boardinfo[0], MountCode);
-    }
-    */
-    free(boardinfo[0]);
-    free(boardinfo[1]);
-    free(boardinfo[2]);
 }
 
 void Skywatcher::InquireFeatures()
@@ -742,108 +669,20 @@ void Skywatcher::InquireRAEncoderInfo(INumberVectorProperty *encoderNP)
 {
     double steppersvalues[3];
     const char *steppersnames[] = { "RASteps360", "RAStepsWorm", "RAHighspeedRatio" };
-    // Steps per 360 degrees
-    dispatch_command(InquireGridPerRevolution, Axis1, nullptr);
-    //read_eqmod();
-    RASteps360        = Revu24str2long(response + 1);
-    steppersvalues[0] = (double)RASteps360;
-
-    // Steps per Worm
-    dispatch_command(InquireTimerInterruptFreq, Axis1, nullptr);
-    //read_eqmod();
-    RAStepsWorm = Revu24str2long(response + 1);
-    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
-    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
-    if ((MCVersion & 0x0000FF) == 0x80)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x162B97, RAStepsWorm);
-        RAStepsWorm = 0x162B97; // for 80GT mount
-    }
-    if ((MCVersion & 0x0000FF) == 0x82)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x205318, RAStepsWorm);
-        RAStepsWorm = 0x205318; // for 114GT mount
-    }
-    // Correct drift of 4.1 arcsec per minute with HEQ5 firmware 106
-    // drift correction = 1.00455,  64935/1.00455 = 64640 = 0xFC80
-    if (MCVersion == 0x10601)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-                  0xFC80, RAStepsWorm);
-        RAStepsWorm = 0xFC80;
-    }
-
-    steppersvalues[1] = static_cast<double>(RAStepsWorm);
-
-    // Highspeed Ratio
-    dispatch_command(InquireHighSpeedRatio, Axis1, nullptr);
-    //read_eqmod();
-    //RAHighspeedRatio=Revu24str2long(response+1);
-    RAHighspeedRatio = Highstr2long(response + 1);
-
-    steppersvalues[2] = static_cast<double>(RAHighspeedRatio);
+    InquireEncoderInfo(Axis1, steppersvalues);
     // should test this is ok
     IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
     IDSetNumber(encoderNP, nullptr);
-
-    backlashperiod[Axis1] = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * RAStepsWorm) / static_cast<double>
-                            (RASteps360)) / SKYWATCHER_BACKLASH_SPEED_RA);
 }
 
 void Skywatcher::InquireRAEncoderInfo(INDI::PropertyNumber encoderNP)
 {
     double steppersvalues[3];
     const char *steppersnames[] = { "RASteps360", "RAStepsWorm", "RAHighspeedRatio" };
-    // Steps per 360 degrees
-    dispatch_command(InquireGridPerRevolution, Axis1, nullptr);
-    //read_eqmod();
-    RASteps360        = Revu24str2long(response + 1);
-    steppersvalues[0] = (double)RASteps360;
-
-    // Steps per Worm
-    dispatch_command(InquireTimerInterruptFreq, Axis1, nullptr);
-    //read_eqmod();
-    RAStepsWorm = Revu24str2long(response + 1);
-    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
-    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
-    if ((MCVersion & 0x0000FF) == 0x80)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x162B97, RAStepsWorm);
-        RAStepsWorm = 0x162B97; // for 80GT mount
-    }
-    if ((MCVersion & 0x0000FF) == 0x82)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x205318, RAStepsWorm);
-        RAStepsWorm = 0x205318; // for 114GT mount
-    }
-    // Correct drift of 4.1 arcsec per minute with HEQ5 firmware 106
-    // drift correction = 1.00455,  64935/1.00455 = 64640 = 0xFC80
-    if (MCVersion == 0x10601)
-    {
-        LOGF_WARN("%s: forcing RAStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-                  0xFC80, RAStepsWorm);
-        RAStepsWorm = 0xFC80;
-    }
-
-    steppersvalues[1] = static_cast<double>(RAStepsWorm);
-
-    // Highspeed Ratio
-    dispatch_command(InquireHighSpeedRatio, Axis1, nullptr);
-    //read_eqmod();
-    //RAHighspeedRatio=Revu24str2long(response+1);
-    RAHighspeedRatio = Highstr2long(response + 1);
-
-    steppersvalues[2] = static_cast<double>(RAHighspeedRatio);
+    InquireEncoderInfo(Axis1, steppersvalues);
     // should test this is ok
     encoderNP.update(steppersvalues, (char **)steppersnames, 3);
     encoderNP.apply();
-
-    backlashperiod[Axis1] = static_cast<uint32_t>(((SKYWATCHER_STELLAR_DAY * RAStepsWorm) / static_cast<double>
-                            (RASteps360)) / SKYWATCHER_BACKLASH_SPEED_RA);
 }
 
 // deprecated
@@ -851,103 +690,91 @@ void Skywatcher::InquireDEEncoderInfo(INumberVectorProperty *encoderNP)
 {
     double steppersvalues[3];
     const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
-    // Steps per 360 degrees
-    dispatch_command(InquireGridPerRevolution, Axis2, nullptr);
-    //read_eqmod();
-    DESteps360        = Revu24str2long(response + 1);
-    steppersvalues[0] = (double)DESteps360;
-
-    // Steps per Worm
-    dispatch_command(InquireTimerInterruptFreq, Axis2, nullptr);
-    //read_eqmod();
-    DEStepsWorm = Revu24str2long(response + 1);
-    // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
-    // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
-    if ((MCVersion & 0x0000FF) == 0x80)
-    {
-        LOGF_WARN("%s: forcing DEStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x162B97, DEStepsWorm);
-        DEStepsWorm = 0x162B97; // for 80GT mount
-    }
-    if ((MCVersion & 0x0000FF) == 0x82)
-    {
-        LOGF_WARN("%s: forcing DEStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x205318, DEStepsWorm);
-        DEStepsWorm = 0x205318; // for 114GT mount
-    }
-    // HEQ5 with firmware 106, use same rate as RA
-    // drift correction = 1.00455,  64935/1.00455 = 64640 = 0xFC80
-    if (MCVersion == 0x10601)
-    {
-        LOGF_WARN("%s: forcing DEStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-                  0xFC80, DEStepsWorm);
-        DEStepsWorm = 0xFC80;
-    }
-
-    steppersvalues[1] = static_cast<double>(DEStepsWorm);
-
-    // Highspeed Ratio
-    dispatch_command(InquireHighSpeedRatio, Axis2, nullptr);
-    //read_eqmod();
-    //DEHighspeedRatio=Revu24str2long(response+1);
-    DEHighspeedRatio  = Highstr2long(response + 1);
-    steppersvalues[2] = static_cast<double>(DEHighspeedRatio);
-    // should test this is ok
+    InquireEncoderInfo(Axis2, steppersvalues);
     IUUpdateNumber(encoderNP, steppersvalues, (char **)steppersnames, 3);
     IDSetNumber(encoderNP, nullptr);
-    backlashperiod[Axis2] =
-        (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / SKYWATCHER_BACKLASH_SPEED_DE);
 }
 
 void Skywatcher::InquireDEEncoderInfo(INDI::PropertyNumber encoderNP)
 {
     double steppersvalues[3];
     const char *steppersnames[] = { "DESteps360", "DEStepsWorm", "DEHighspeedRatio" };
+    InquireEncoderInfo(Axis2, steppersvalues);
+    // should test this is ok
+    encoderNP.update(steppersvalues, (char **)steppersnames, 3);
+    encoderNP.apply();
+}
+
+
+void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
+{
+    
+    uint32_t * Steps360       = nullptr;
+    uint32_t * StepsWorm      = nullptr;
+    uint32_t * HighspeedRatio = nullptr;
+    
+    if (axis == Axis1)
+    {
+      Steps360 = &RASteps360;
+      StepsWorm = &RAStepsWorm;
+      HighspeedRatio = &RAHighspeedRatio;
+    }
+    else
+    {
+      Steps360 = &DESteps360;
+      StepsWorm = &DEStepsWorm;
+      HighspeedRatio = &DEHighspeedRatio;
+    }
+
     // Steps per 360 degrees
-    dispatch_command(InquireGridPerRevolution, Axis2, nullptr);
+    dispatch_command(InquireGridPerRevolution, axis, nullptr);
     //read_eqmod();
-    DESteps360        = Revu24str2long(response + 1);
-    steppersvalues[0] = (double)DESteps360;
+    *Steps360        = Revu24str2long(response + 1);
 
     // Steps per Worm
-    dispatch_command(InquireTimerInterruptFreq, Axis2, nullptr);
+    dispatch_command(InquireTimerInterruptFreq, axis, nullptr);
     //read_eqmod();
-    DEStepsWorm = Revu24str2long(response + 1);
+    *StepsWorm = Revu24str2long(response + 1);
     // There is a bug in the earlier version firmware(Before 2.00) of motor controller MC001.
     // Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
     if ((MCVersion & 0x0000FF) == 0x80)
     {
-        LOGF_WARN("%s: forcing DEStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x162B97, DEStepsWorm);
-        DEStepsWorm = 0x162B97; // for 80GT mount
+        LOGF_WARN("%s: forcing %sStepsWorm for 80GT Mount (%x in place of %x)", __FUNCTION__,
+                  axis == Axis1 ? "RA" : "DE", 0x162B97, *StepsWorm);
+        *StepsWorm = 0x162B97; // for 80GT mount
     }
     if ((MCVersion & 0x0000FF) == 0x82)
     {
-        LOGF_WARN("%s: forcing DEStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
-                  0x205318, DEStepsWorm);
-        DEStepsWorm = 0x205318; // for 114GT mount
+        LOGF_WARN("%s: forcing %sStepsWorm for 114GT Mount (%x in place of %x)", __FUNCTION__,
+                  axis == Axis1 ? "RA" : "DE", 0x205318, *StepsWorm);
+        *StepsWorm = 0x205318; // for 114GT mount
     }
     // HEQ5 with firmware 106, use same rate as RA
     // drift correction = 1.00455,  64935/1.00455 = 64640 = 0xFC80
     if (MCVersion == 0x10601)
     {
-        LOGF_WARN("%s: forcing DEStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
-                  0xFC80, DEStepsWorm);
-        DEStepsWorm = 0xFC80;
+        LOGF_WARN("%s: forcing %sStepsWorm for HEQ5 with firmware 106 (%x in place of %x)", __FUNCTION__,
+                  axis == Axis1 ? "RA" : "DE", 0xFC80, *StepsWorm);
+        *StepsWorm = 0xFC80;
     }
 
-    steppersvalues[1] = static_cast<double>(DEStepsWorm);
 
     // Highspeed Ratio
-    dispatch_command(InquireHighSpeedRatio, Axis2, nullptr);
+    dispatch_command(InquireHighSpeedRatio, axis, nullptr);
     //read_eqmod();
-    //DEHighspeedRatio=Revu24str2long(response+1);
-    DEHighspeedRatio  = Highstr2long(response + 1);
-    steppersvalues[2] = static_cast<double>(DEHighspeedRatio);
-    // should test this is ok
-    encoderNP.update(steppersvalues, (char **)steppersnames, 3);
-    encoderNP.apply();
-    backlashperiod[Axis2] =
+    //HighspeedRatio=Revu24str2long(response+1);
+    *HighspeedRatio  = Highstr2long(response + 1);
+
+    steppersvalues[0] = (double)(*Steps360);
+    steppersvalues[1] = static_cast<double>(*StepsWorm);
+    steppersvalues[2] = static_cast<double>(*HighspeedRatio);
+
+
+    if (axis == Axis1)
+      backlashperiod[Axis1] =
+        (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / SKYWATCHER_BACKLASH_SPEED_RA);
+    else
+      backlashperiod[Axis2] =
         (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / SKYWATCHER_BACKLASH_SPEED_DE);
 }
 
@@ -2003,13 +1830,15 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
             {
                 if (i > 0)
                 {
-                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__, (i*EQMOD_TIMEOUT)/1000, i);
+                    LOGF_WARN("%s() : serial port read failed for %dms (%d retries), verify mount link.", __FUNCTION__,
+                              (i * EQMOD_TIMEOUT) / 1000, i);
                 }
                 return true;
             }
         }
-        catch (EQModError)
+        catch (EQModError ex)
         {
+            DEBUGF(telescope->DBG_COMM, "read_eqmod() failed: %s (attempt %i)", ex.message, i);
             // By this time, we just rethrow the error
             // JM 2018-05-07 immediately rethrow if GET_FEATURES_CMD
             if (i == EQMOD_MAX_RETRY - 1 || cmd == GetFeatureCmd)
@@ -2055,6 +1884,15 @@ bool Skywatcher::read_eqmod()
     switch (response[0])
     {
         case '=':
+	    //check if response is valid
+	    for (const char *p = &response[1]; *p != '\0'; ++p)
+	    {
+		//only allow uppercase hex chars
+		if (!(isxdigit(*p) && !islower(*p)))
+		{
+            		throw EQModError(EQModError::ErrInvalidCmd, "Invalid response to command %s - Reply %s (response contains non-hex character)", command, response);
+		}
+	    }
             break;
         case '!':
             throw EQModError(EQModError::ErrCmdFailed, "Failed command %s - Reply %s", command, response);

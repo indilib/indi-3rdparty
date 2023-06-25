@@ -150,6 +150,18 @@ EXPORTC uint32_t STDCALL InitQHYCCD(qhyccd_handle *handle);
   */
 EXPORTC uint32_t STDCALL IsQHYCCDControlAvailable(qhyccd_handle *handle,CONTROL_ID controlId);
 
+/** @fn uint32_t GetQHYCCDControlName(qhyccd_handle *handle,CONTROL_ID controlId,char *IDname)
+    @brief get the specified ControlName from camera
+    @param handle camera control handle
+    @param controlId function type
+	@param IDname the name of current controlId
+    @return
+	  on have,return QHYCCD_SUCCESS \n
+	  on do not have,return QHYCCD_ERROR_NOTSUPPORT \n
+	  another QHYCCD_ERROR code on other failures
+  */
+EXPORTC uint32_t STDCALL GetQHYCCDControlName(qhyccd_handle *handle,CONTROL_ID controlId,char *IDname);
+
 /** \fn uint32_t SetQHYCCDParam(qhyccd_handle *handle,CONTROL_ID controlId,double value)
       \brief set params to camera
       \param handle camera control handle
@@ -161,6 +173,7 @@ EXPORTC uint32_t STDCALL IsQHYCCDControlAvailable(qhyccd_handle *handle,CONTROL_
 	  QHYCCD_ERROR_SETPARAMS,if set params to camera failed \n
 	  another QHYCCD_ERROR code on other failures
   */
+
 EXPORTC uint32_t STDCALL SetQHYCCDParam(qhyccd_handle *handle,CONTROL_ID controlId, double value);
 
 /** \fn double GetQHYCCDParam(qhyccd_handle *handle,CONTROL_ID controlId)
@@ -499,6 +512,17 @@ EXPORTC uint32_t STDCALL GetQHYCCDEffectiveArea(qhyccd_handle *h,uint32_t *start
 EXPORTC uint32_t STDCALL GetQHYCCDOverScanArea(qhyccd_handle *h,uint32_t *startX, uint32_t *startY, uint32_t *sizeX, uint32_t *sizeY);
 
 EXPORTC uint32_t STDCALL GetQHYCCDCurrentROI(qhyccd_handle *handle, uint32_t *startX, uint32_t *startY, uint32_t *sizeX, uint32_t *sizeY);
+
+/** @fn uint32_t GetQHYCCDImageStabilizationGravity(qhyccd_handle *h,uint32_t *startX, uint32_t *startY)
+      @brief The position coordinate of the target center of gravity in the chip in image stabilization
+      @param h camera control handle
+      @param  Gravity CenterX of the chipsize
+      @param  Gravity CenterY of the chipsize
+	  @return
+	  on success,return QHYCCD_SUCCESS \n
+	  another QHYCCD_ERROR code on other failures
+  */
+EXPORTC uint32_t STDCALL GetQHYCCDImageStabilizationGravity(qhyccd_handle *handle, int *GravityX, int *GravityY);
 
 /** @fn uint32_t SetQHYCCDFocusSetting(qhyccd_handle *h,uint32_t focusCenterX, uint32_t focusCenterY)
       @brief Set the camera on focus mode
@@ -912,7 +936,7 @@ EXPORTFUNC void STDCALL QHYCCDResetFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDTestFlashULVOError(qhyccd_handle *handle);
 EXPORTFUNC void STDCALL QHYCCDSetFlashInitPWM(qhyccd_handle *handle,uint8_t pwm);
 EXPORTFUNC void STDCALL QHYCCDGetDebugDataD3(qhyccd_handle *handle, char* debugData_raw64);
-EXPORTFUNC uint32_t STDCALL QHYCCDSolve(const std::string filePath,int timeout_s, float scale_l, float  scale_h,float center_ra, float center_dec,float center_r, float& s_ra, float& s_dec,float& s_size_x,float& s_size_y, float& s_rotation);
+EXPORTFUNC uint32_t STDCALL QHYCCDSolve(int timeout_s, float scale_l, float  scale_h,float center_ra, float center_dec,float center_r, float& s_ra, float& s_dec,float& s_size_x,float& s_size_y, float& s_rotation);
 EXPORTFUNC void STDCALL QHYCCDEqualizeHistogram(uint8_t * pdata, int width, int height, int bpp);
 void  QHYCCDGetDebugControlID(CONTROL_ID controlId, bool hasValue, bool isSetValue, double value);
 

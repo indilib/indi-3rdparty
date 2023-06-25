@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libogmacam)
 
-set (LIBOGMACAM_VERSION "53.22081")
-set (LIBOGMACAM_SOVERSION "53")
+set (LIBOGMACAM_VERSION "54.22587")
+set (LIBOGMACAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "mac/libogmacam.bin")
 
-  FIX_LIBRARY_ID("libogmacam" "mac/libogmacam.bin" "OGMACAM")
+  FIX_MACOS_LIBRARIES("libogmacam" "mac/libogmacam.bin" "OGMACAM")
 
 elseif (UNIX AND NOT WIN32)
 

@@ -80,6 +80,19 @@ class CelestronAUX :
             REVERSE
         };
 
+        enum MountVersion
+        {
+            GPS_Nexstar       = 0x0001,
+            SLT_Nexstar       = 0x0783,
+            SE_5_4            = 0x0b83,
+            SE_8_6            = 0x0c82,
+            CPC_Deluxe        = 0x1189,
+            Series_GT         = 0x1283,
+            AVX               = 0x1485,
+            Evolution_Nexstar = 0x1687,
+            CGX               = 0x1788
+        };
+
         // Previous motion direction
         // TODO: Switch to AltAz from N-S/W-E
         typedef enum
@@ -213,10 +226,11 @@ class CelestronAUX :
         {
             return m_Location.latitude >= 0;
         }
+        bool startupWithoutHC();
+        bool getModel(AUXTargets target);
         bool getVersion(AUXTargets target);
         void getVersions();
         void hex_dump(char *buf, AUXBuffer data, size_t size);
-
 
         double AzimuthToDegrees(double degree);
         double DegreesToAzimuth(double degree);
@@ -288,12 +302,14 @@ class CelestronAUX :
         bool readAUXResponse(AUXCommand c);
         bool processResponse(AUXCommand &cmd);
         int sendBuffer(AUXBuffer buf);
+        void formatModelString(char *s, int n, uint16_t model);
         void formatVersionString(char *s, int n, uint8_t *verBuf);
 
         // GPS Emulation
         bool m_GPSEmulation {false};
 
         // Firmware
+        uint16_t m_ModelVersion {0};
         uint8_t m_MainBoardVersion[4] {0};
         uint8_t m_AltitudeVersion[4] {0};
         uint8_t m_AzimuthVersion[4] {0};
@@ -336,8 +352,8 @@ class CelestronAUX :
         ///////////////////////////////////////////////////////////////////////////////
 
         // Firmware
-        INDI::PropertyText FirmwareTP {7};
-        enum {FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS};
+        INDI::PropertyText FirmwareTP {8};
+        enum {FW_MODEL, FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS};
         // Mount type
         //INDI::PropertySwitch MountTypeSP {3};
 

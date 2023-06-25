@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libtscam)
 
-set (LIBTSCAM_VERSION "53.22081")
-set (LIBTSCAM_SOVERSION "53")
+set (LIBTSCAM_VERSION "54.22587")
+set (LIBTSCAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET tscam PROPERTY IMPORTED_LOCATION "mac/libtscam.bin")
 
-  FIX_LIBRARY_ID("libtscam" "mac/libtscam.bin" "TSCAM")
+  FIX_MACOS_LIBRARIES("libtscam" "mac/libtscam.bin" "TSCAM")
 
 elseif (UNIX AND NOT WIN32)
 

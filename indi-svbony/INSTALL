@@ -7,4 +7,4 @@ You must have CMake >= 2.4.7 in order to build this package.
 2) $ make
 3) $ su -c 'make install' or sudo make install
 
-You will need the 'libsvbony' libraries (1.9.6 or higher)
+You will need the 'libsvbony' libraries (1.10.1 or higher)

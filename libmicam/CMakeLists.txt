@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libmicam)
 
-set (MICAM_VERSION "0.7.2")
-set (MICAM_VERSION_MAC "0.6.2")
+set (MICAM_VERSION "0.8.0")
+set (MICAM_VERSION_MAC "0.7.0")
 set (MICAM_SOVERSION "0")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -20,7 +20,7 @@ if (APPLE)
 
   set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdmac.bin")
 
-  FIX_LIBRARY_ID("libgxccd" "libgxccdmac.bin" "Moravian/GXCCD")
+  FIX_MACOS_LIBRARIES("libgxccd" "libgxccdmac.bin" "Moravian/GXCCD")
 
 elseif (UNIX AND NOT WIN32)
 

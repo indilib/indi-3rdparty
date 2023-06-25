@@ -134,7 +134,7 @@ bool CelestronAUX::Handshake()
 
                 LOG_INFO("Setting serial speed to 9600 baud.");
 
-                // detect if connectd to HC port or to mount USB port
+                // detect if connected to HC port or to mount USB port
                 // ask for HC version
                 char version[10];
                 if ((m_isHandController = detectHC(version, 10)))
@@ -344,6 +344,7 @@ bool CelestronAUX::initProperties()
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Firmware Info
+    FirmwareTP[FW_MODEL].fill("Model", "", nullptr);
     FirmwareTP[FW_HC].fill("HC version", "", nullptr);
     FirmwareTP[FW_MB].fill("Mother Board version", "", nullptr);
     FirmwareTP[FW_AZM].fill("Ra/AZM version", "", nullptr);
@@ -385,6 +386,49 @@ bool CelestronAUX::initProperties()
         setActiveConnection(tcpConnection);
 
     return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+void CelestronAUX::formatModelString(char *s, int n, uint16_t model)
+{
+    if (model == MountVersion::GPS_Nexstar)
+        snprintf(s, n, "Nexstar GPS");
+    else if (model == MountVersion::SLT_Nexstar)
+        snprintf(s, n, "Nexstar SLT");
+    else if (model == MountVersion::SE_5_4)
+        snprintf(s, n, "4/5SE");
+    else if (model == MountVersion::SE_8_6)
+        snprintf(s, n, "6/8SE");
+    else if (model == MountVersion::CPC_Deluxe)
+        snprintf(s, n, "CPC Deluxe");
+    else if (model == MountVersion::Series_GT)
+        snprintf(s, n, "GT Series");
+    else if (model == MountVersion::AVX)
+        snprintf(s, n, "AVX");
+    else if (model == MountVersion::Evolution_Nexstar)
+        snprintf(s, n, "Nexstar Evolution");
+    else if (model == MountVersion::CGX)
+        snprintf(s, n, "CGX");
+    else
+        snprintf(s, n, "Unknown");
+    /* TODO: Missing xx needs to be infered.
+      0x05xx : 'CGE',
+      0x06xx : 'Advanced GT'
+      0x09xx : 'CPC',
+      0x0axx : 'GT',
+      0x0dxx : 'CGE Pro',
+      0x0exx : 'CGEM DX',
+      0x0fxx : 'LCM',
+      0x10xx : 'Skyprodigy',
+      0x13xx : 'Starseeker',
+      0x15xx : 'Cosmos',
+      0x18xx : 'CGXL',
+      0x19xx : 'Astrofi',
+      0x1axx : 'SkyWatcher'
+      and more ...
+     */
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -447,9 +491,12 @@ bool CelestronAUX::updateProperties()
             defineProperty(Axis2PIDNP);
         }
 
+        getModel(AZM);
         getVersions();
         // display firmware versions
         char fwText[16] = {0};
+        formatModelString(fwText, sizeof(fwText), m_ModelVersion);
+        FirmwareTP[FW_MODEL].setText(fwText);
         formatVersionString(fwText, 10, m_HCVersion);
         FirmwareTP[FW_HC].setText(fwText);
         formatVersionString(fwText, 10, m_MainBoardVersion);
@@ -465,6 +512,24 @@ bool CelestronAUX::updateProperties()
         formatVersionString(fwText, 10, m_GPSVersion);
         FirmwareTP[FW_GPS].setText(fwText);
         defineProperty(FirmwareTP);
+
+        // When no HC is attached, the following three commands needs to be send
+        // to the motor controller (MC): MC_SET_POSITION, MC_SET_CORDWRAP_POSITION
+        // and MC_CORDWRAP_ON. These three commands are also send by the HC
+        // to the MC during HC startup and quick align process.
+        // TODO: One can set the HC in pass through mode, that is,
+        // the HC relays the AUX commands only and does not interfere in the communication.
+        if (!m_isHandController)
+        {
+            if (startupWithoutHC())
+            {
+                LOG_INFO("successfully sent no-HC startup AUX commands");
+            }
+            else
+            {
+                LOG_ERROR("failed to sent no-HC startup AUX commands");
+            }
+        }
 
         if (InitPark())
         {
@@ -1403,28 +1468,27 @@ bool CelestronAUX::Sync(double ra, double dec)
            NewEntry.ObservationJulianDate, NewEntry.RightAscension, NewEntry.Declination, NewEntry.TelescopeDirection.x,
            NewEntry.TelescopeDirection.y, NewEntry.TelescopeDirection.z);
 
-    if (!CheckForDuplicateSyncPoint(NewEntry))
-    {
-        GetAlignmentDatabase().push_back(NewEntry);
+    if (CheckForDuplicateSyncPoint(NewEntry, 0.01))
+        RemoveSyncPoint(NewEntry, 0.01);
 
-        // Tell the client about size change
-        UpdateSize();
+    GetAlignmentDatabase().push_back(NewEntry);
 
-        // Tell the math plugin to reinitialise
-        Initialise(this);
+    // Tell the client about size change
+    UpdateSize();
 
-        // Force read before restarting
-        ReadScopeStatus();
+    // Tell the math plugin to reinitialise
+    Initialise(this);
 
-        // Sync cord wrap
-        syncCoordWrapPosition();
+    // Force read before restarting
+    ReadScopeStatus();
 
-        // The tracking seconds should be reset to restart the drift compensation
-        resetTracking();
+    // Sync cord wrap
+    syncCoordWrapPosition();
 
-        return true;
-    }
-    return false;
+    // The tracking seconds should be reset to restart the drift compensation
+    resetTracking();
+
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1762,8 +1826,10 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
         ha = range24(haEncoder / 15.0);
+        pierSide = PIER_EAST;
         if (deEncoder < 90 || deEncoder > 270)
         {
+            pierSide = PIER_WEST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
@@ -1985,6 +2051,59 @@ bool CelestronAUX::isHomingDone(INDI_HO_AXIS axis)
     readAUXResponse(command);
     return true;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::startupWithoutHC()
+{
+    AUXBuffer data(3);
+    // EQ GEM start with 0x40 and other modes at zero index.
+    data[0] = (m_MountType == EQ_GEM) ? 0x40 : 0x00;
+    data[1] = 0x00;
+    data[2] = 0x00;
+
+    AUXCommand command;
+    for (int i = 0; i < 2; i++)
+    {
+        command = AUXCommand(MC_SET_POSITION, APP, i == AXIS_AZ ? AZM : ALT, data);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
+    }
+
+    data[0] = 0xc0;
+    for (int i = 0; i < 2; i++)
+    {
+        command = AUXCommand(MC_SET_CORDWRAP_POS, APP, i == AXIS_AZ ? AZM : ALT, data);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
+
+        command = AUXCommand(MC_ENABLE_CORDWRAP, APP, i == AXIS_AZ ? AZM : ALT);
+        if (!sendAUXCommand(command))
+            return false;
+        if (!readAUXResponse(command))
+            return false;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getModel(AUXTargets target)
+{
+    AUXCommand firmver(MC_GET_MODEL, APP, target);
+    if (! sendAUXCommand(firmver))
+        return false;
+    if (! readAUXResponse(firmver))
+        return false;
+    return true;
+};
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
@@ -2501,6 +2620,20 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 }
                 break;
 
+            case MC_GET_MODEL:
+            {
+                switch (m.source())
+                {
+                    case AZM:
+                        m_ModelVersion = m.getData();
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            }
+            break;
+
             case GET_VER:
             {
                 uint8_t *verBuf = nullptr;
@@ -3003,4 +3136,3 @@ void CelestronAUX::hex_dump(char *buf, AUXBuffer data, size_t size)
     if (size > 0)
         buf[3 * size - 1] = '\0';
 }
-

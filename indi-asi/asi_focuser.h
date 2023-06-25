@@ -1,6 +1,7 @@
 /*
-    ZWO EFA Focuser
+    ZWO EAF Focuser
     Copyright (C) 2019 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2023 Jarno Paananen (jarno.paananen@gmail.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -24,8 +25,6 @@
 
 #include "indifocuser.h"
 
-#include <chrono>
-
 class ASIEAF : public INDI::Focuser
 {
     public:
@@ -36,8 +35,8 @@ class ASIEAF : public INDI::Focuser
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
-	virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
-	// save settings
+        virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
+        // save settings
         virtual bool saveConfigItems(FILE *fp) override;
 
     protected:
@@ -73,15 +72,6 @@ class ASIEAF : public INDI::Focuser
         virtual void TimerHit() override;
 
     private:
-        /**
-         * @brief sendCommand Send a string command to ASIEAF.
-         * @param cmd Command to be sent, must already have the necessary delimeter ('#')
-         * @param res If not nullptr, the function will read until it detects the default delimeter ('#') up to ML_RES length.
-         *        if nullptr, no read back is done and the function returns true.
-         * @return True if successful, false otherwise.
-         */
-        bool sendCommand(const char * cmd, char * res = nullptr);
-
         // Get initial focuser parameter when we first connect
         void GetFocusParams();
         // Read and update Temperature
@@ -104,53 +94,47 @@ class ASIEAF : public INDI::Focuser
         double targetPos { 0 }, lastPos { 0 }, lastTemperature { 0 };
 
         // Read Only Temperature Reporting
-        INumber TemperatureN[1];
-        INumberVectorProperty TemperatureNP;
+        INDI::PropertyNumber TemperatureNP{1};
 
         // Beep
-        ISwitch BeepS[2];
-        ISwitchVectorProperty BeepSP;
+        INDI::PropertySwitch BeepSP{2};
         enum
         {
             BEEP_ON,
-            BEEL_OFF
+            BEEP_OFF
         };
 
-	//
-	// Temperature compensation
-	static constexpr const char * TEMPC_TAB = "Temperature compensation";
+        //
+        // Temperature compensation
+        static constexpr const char * TEMPC_TAB = "Temperature compensation";
 
-	// enabling switch
-	ISwitch TempCS[2];
-	ISwitchVectorProperty TempCSP;
+        // enabling switch
+        INDI::PropertySwitch TempCSP{2};
         enum
         {
             TEMPC_ON,
             TEMPC_OFF
         };
-	bool TempCEnabled=false;
+        bool TempCEnabled = false;
 
-	// settings
-	INumber TempCN[4];
-        INumberVectorProperty TempCNP[4];
-	enum
-	{
+        // settings
+        INDI::PropertyNumber TempCNP{4};
+        enum
+        {
             TEMPC_STEPS,
             TEMPC_HYSTER,
-	    TEMPC_SAMPLES,
-	    TEMPC_MEAN
+            TEMPC_SAMPLES,
+            TEMPC_MEAN
         };
-	int TempCSteps=0;
-	double TempCHyster=1;
-	int TempCSamples=5;
-	double TempCTotalTemp=0;
-	double TempCLastTemp=-274; // should never reach 0 Kelvin
-	int TempCCounter=0;
-	//
+        int TempCSteps = 0;
+        double TempCHyster = 1;
+        int TempCSamples = 5;
+        double TempCTotalTemp = 0;
+        double TempCLastTemp = -274; // should never reach 0 Kelvin
+        int TempCCounter = 0;
 
-	// firm version
-        IText VersionInfoS[1] = {};
-        ITextVectorProperty VersionInfoSP;
+        // firmware and SDK versions
+        INDI::PropertyText VersionInfoSP{2};
 
         const uint8_t m_ID;
         const int m_MaxSteps;

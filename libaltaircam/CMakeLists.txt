@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libaltaircam)
 
-set (LIBALTAIRCAM_VERSION "53.22081")
-set (LIBALTAIRCAM_SOVERSION "53")
+set (LIBALTAIRCAM_VERSION "54.22587")
+set (LIBALTAIRCAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET altaircam PROPERTY IMPORTED_LOCATION "mac/libaltaircam.bin")
 
-  FIX_LIBRARY_ID("libaltaircam" "mac/libaltaircam.bin" "ALTAIR")
+  FIX_MACOS_LIBRARIES("libaltaircam" "mac/libaltaircam.bin" "ALTAIR")
 
 elseif (UNIX AND NOT WIN32)
 

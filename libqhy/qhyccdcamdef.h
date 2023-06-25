@@ -419,6 +419,19 @@
 #define DEVICETYPE_QHY5III585C              4122
 #define DEVICETYPE_QHY10768              4123
 #define DEVICETYPE_QHY6060Pro              4124
+
+#define DEVICETYPE_QHY5III678              4125
+#define DEVICETYPE_QHY5III678C             4126
+#define DEVICETYPE_QHY5III678M             4127
+
+#define DEVICETYPE_QHY342PRO              4128
+
+#define DEVICETYPE_QHY5III715              4129
+#define DEVICETYPE_QHY5III715C             4130
+#define DEVICETYPE_QHY5III715M             4131
+
+#define DEVICETYPE_QHY630T                 4132
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -588,6 +601,7 @@
 #define DEVICETYPE_QHY990PCIE      		0X6618c991
 #define DEVICETYPE_QHY991PCIE      		0X6618d992
 #define DEVICETYPE_QHY461PCIE      		0X6618c462
+#define DEVICETYPE_QHY342PCIE      		0X66180345
 
 
 
@@ -1070,6 +1084,9 @@
 #define QHY4040PRO_MAX_WIDTH        	4096
 #define QHY4040PRO_MAX_HEIGHT        	4118
 
+#define QHY342PRO_MAX_WIDTH        	6488
+#define QHY342PRO_MAX_HEIGHT        	4870
+
 
 #define QHY550_MAX_WIDTH        	2496
 #define QHY550_MAX_HEIGHT        	2080
@@ -1350,7 +1367,7 @@
 
 #define		MAX_CAMERA_NUMBER		200
 #define		CAMERA_ID_LENGTH		64   //(CAMERA_ID_LENGTH and ID_STR_LEN) more like a full ID length: QHY178-xxxxx(Mode included)
-#define   	MAXDEVICES 				10
+#define   	MAXDEVICES 				15
 
 
 #define		MAX_READMODE_NAME			256

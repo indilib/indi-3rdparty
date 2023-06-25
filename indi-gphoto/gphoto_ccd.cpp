@@ -1028,9 +1028,9 @@ bool GPhotoCCD::AbortExposure()
 
 bool GPhotoCCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON)
+    if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON && EncodeFormatSP[FORMAT_XISF].getState() != ISS_ON)
     {
-        LOG_ERROR("Subframing is only supported in FITS encode mode.");
+        LOG_ERROR("Subframing is only supported in FITS/XISF encode mode.");
         return false;
     }
 
@@ -1049,9 +1049,9 @@ bool GPhotoCCD::UpdateCCDBin(int hor, int ver)
     else
     {
         // only for fits output
-        if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON)
+        if (EncodeFormatSP[FORMAT_FITS].getState() != ISS_ON && EncodeFormatSP[FORMAT_XISF].getState() != ISS_ON)
         {
-            LOG_ERROR("Binning is only supported in FITS transport mode.");
+            LOG_ERROR("Binning is only supported in FITS/XISF transport mode.");
             return false;
         }
 
@@ -1171,7 +1171,7 @@ bool GPhotoCCD::grabImage()
         ExposureComplete(&PrimaryCCD);
         gphoto_read_exposure_fd(gphotodrv, -1);
     }
-    else if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
+    else if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON || EncodeFormatSP[FORMAT_XISF].getState() == ISS_ON)
     {
         char filename[MAXRBUF] = "/tmp/indi_XXXXXX";
         const char *extension = "unknown";
@@ -1261,7 +1261,10 @@ bool GPhotoCCD::grabImage()
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
-        PrimaryCCD.setImageExtension("fits");
+        if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
+            PrimaryCCD.setImageExtension("fits");
+        else
+            PrimaryCCD.setImageExtension("xisf");
 
         uint16_t subW = PrimaryCCD.getSubW();
         uint16_t subH = PrimaryCCD.getSubH();

@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libbressercam)
 
-set (LIBBRESSERCAM_VERSION "53.22081")
-set (LIBBRESSERCAM_SOVERSION "53")
+set (LIBBRESSERCAM_VERSION "54.22587")
+set (LIBBRESSERCAM_SOVERSION "54")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -17,7 +17,7 @@ if (APPLE)
 
   set_property (TARGET bressercam PROPERTY IMPORTED_LOCATION "mac/libbressercam.bin")
 
-  FIX_LIBRARY_ID("libbressercam" "mac/libbressercam.bin" "BRESSERCAM")
+  FIX_MACOS_LIBRARIES("libbressercam" "mac/libbressercam.bin" "BRESSERCAM")
 
 elseif (UNIX AND NOT WIN32)
 
