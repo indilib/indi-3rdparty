@@ -770,6 +770,7 @@ bool GPhotoCCD::ISNewNumber(const char * dev, const char * name, double values[]
             IUUpdateNumber(&mMirrorLockNP, values, names, n);
             mMirrorLockNP.s = IPS_OK;
             IDSetNumber(&mMirrorLockNP, nullptr);
+            saveConfig(true, mMirrorLockNP.name);
             return true;
         }
 
