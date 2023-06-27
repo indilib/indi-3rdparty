@@ -1249,9 +1249,10 @@ bool POABase::isMonoBinActive()
 {
     long monoBin = 0;
 
-#if 0   // MONO_BIN is not supported by PlayerOne Cameras
-    POABool isAuto;
-    POAErrors ret = POAGetConfig(mCameraInfo.cameraID, ASI_MONO_BIN, &monoBin, &isAuto);
+#if 1   // MONO_BIN has supported since SDK v3.4.0
+    POABool isAuto = POA_FALSE;
+    POAConfigValue confVal;
+    POAErrors ret = POAGetConfig(mCameraInfo.cameraID, POA_MONO_BIN, &confVal, &isAuto);
     if (ret != POA_OK)
     {
         if (ret != POA_ERROR_INVALID_CONFIG)
@@ -1260,6 +1261,7 @@ bool POABase::isMonoBinActive()
         }
         return false;
     }
+    monoBin = confVal.boolValue;
 #endif
 
     if (monoBin == 0)
@@ -1269,7 +1271,6 @@ bool POABase::isMonoBinActive()
 
     int width = 0, height = 0, bin = 1;
     POAImgFormat imgType = POA_RAW8;
-    POAErrors ret;
     ret = POAGetROIFormat(mCameraInfo.cameraID, &width, &height, &bin, &imgType);
     if (ret != POA_OK)
     {
