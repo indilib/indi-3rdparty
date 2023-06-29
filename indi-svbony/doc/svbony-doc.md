@@ -23,14 +23,16 @@ The driver supports single framing and streaming.
 - ROI (snapshot and liveview)
 - Binning (software, snapshot and liveview)
 - Slow, medium and fast framing
-- RAW8, RAW16 and YUV8 frame format
+- RAW8, RAW16, YUV8 and YUV16 frame format
 - Color bayer pattern
 - Cooling Support with Cooling Camera
 
 ### Known issues (mostly firmware related):
 
-- Intensive configuration changes could lead to a crash
+- Intensive configuration changes could lead to a crash.
 - The driver crashes when Native file format is selected and exposed.
+- "Correct Dead Pixel" switch is alway turn off.
+- "Banding noise" is likely to occur.
 
 ## Operation
 

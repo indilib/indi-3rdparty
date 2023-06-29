@@ -58,6 +58,8 @@ Known issues
 
 	+ Intensive configuration changes could lead to a crash
 	+ The driver crashes when Native file format is selected and exposed.
+	+ "Correct Dead Pixel" switch is alway turn off.
+	+ "Banding noise" is likely to occur.
 
 Limitations
 ===========
@@ -67,6 +69,9 @@ Limitations
 Changelog
 =========
 
+	+ 1.3.7 : Fixed Conflict of private variables in SVBONYCCD class.
+	+ 1.3.6 : Disabled workaround code for bug #666 "the problem that the last exposure image may be read in soft trigger mode".
+	+ 1.3.5 : Added process to initialize Camera parameters when Camera is connected.
 	+ 1.3.4 : Switch for dead pixels corrector added
 	+ 1.3.3 : Generalization of driver names. Some issues and improvements below:
         + Support for format selection in Capture Module

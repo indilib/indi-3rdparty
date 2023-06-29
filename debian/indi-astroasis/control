@@ -1,0 +1,23 @@
+Source: indi-astroasis
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libindi-dev, zlib1g-dev, libnova-dev, libastroasis
+Standards-Version: 3.9.1
+
+Package: indi-astroasis
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libastroasis
+Description: INDI Driver for Astroasis focusers 
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-astroasis-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-astroasis (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for Astroasis focusers  
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

@@ -32,7 +32,7 @@
 
 // WORKAROUND for bug #655
 // If defined following symbol, get buffered image data before calling StartExposure()
-#define WORKAROUND_latest_image_can_be_getten_next_time
+//#define WORKAROUND_latest_image_can_be_getten_next_time
 
 using namespace std;
 
@@ -93,8 +93,6 @@ class SVBONYCCD : public INDI::CCD
         int num;
         // camera name
         char name[32];
-        // camera API return status
-        SVB_ERROR_CODE status;
         // camera infos
         SVB_CAMERA_INFO cameraInfo;
         // camera API handler

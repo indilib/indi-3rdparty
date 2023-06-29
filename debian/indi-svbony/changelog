@@ -1,3 +1,15 @@
+indi-svbony (1.3.7) bionic; urgency=low
+
+  * Fixed Conflict of private variables in SVBONYCCD class.
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 25 Jun 2023 00:00:00 +0900
+
+indi-svbony (1.3.6) bionic; urgency=low
+
+  * Disabled workaround code for bug #666 "the problem that the last exposure image may be read in soft trigger mode".
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 14 Jun 2023 11:00:00 +0900
+
 indi-svbony (1.3.5) bionic; urgency=low
 
   * Added process to initialize Camera parameters when Camera is connected.

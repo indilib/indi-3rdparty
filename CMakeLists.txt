@@ -709,11 +709,11 @@ endif(WITH_PENTAX)
 # AHP
 if (WITH_AHP_XC)
 find_package(AHPXC)
-if(AHPXC_FOUND)
+if(AHP_XC_FOUND)
 add_subdirectory(indi-ahp-xc)
-else(AHPXC_FOUND)
+else(AHP_XC_FOUND)
 add_subdirectory(libahp-xc)
-endif(AHPXC_FOUND)
+endif(AHP_XC_FOUND)
 endif(WITH_AHP_XC)
 
 # svbony
@@ -862,13 +862,13 @@ if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
 endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
-if (WITH_AHPXC AND NOT AHPXC_FOUND)
+if (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 message(STATUS "libahp-xc was not found and will now be built. Please install libahp-xc first before running cmake again to install indi-ahp-xc.")
-endif (WITH_AHPXC AND NOT AHPXC_FOUND)
+endif (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 
-if (WITH_AHPGT AND NOT AHPGT_FOUND)
+if (WITH_AHP_GT AND NOT AHP_GT_FOUND)
 message(STATUS "libahp-gt was not found and will now be built. Please install libahp-gt first before running cmake again to install indi-ahpgt.")
-endif (WITH_AHPGT AND NOT AHPGT_FOUND)
+endif (WITH_AHP_GT AND NOT AHP_GT_FOUND)
 
 if (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
 message(STATUS "libastroasis was not found and will now be built. Please install libastroasis first before running cmake again to install indi-astroasis.")
