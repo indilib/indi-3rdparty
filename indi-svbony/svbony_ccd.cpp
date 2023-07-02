@@ -226,7 +226,7 @@ bool SVBONYCCD::Connect()
         LOGF_INFO("Camera Firmware Version:%s", cameraFirmwareVersion);
     }
     else {
-        LOG_ERROR("Error, getting Camera Firmware Version failed.\n");
+        LOG_ERROR("Error, getting Camera Firmware Version failed.");
     }
     // Get SVBONY Camera SDK Version
     SDKVersion = SVBGetSDKVersion();
