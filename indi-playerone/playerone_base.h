@@ -53,7 +53,7 @@ class POABase : public INDI::CCD
         virtual bool AbortExposure() override;
 
     protected:
-    
+
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
@@ -77,7 +77,7 @@ class POABase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         virtual bool SetCaptureFormat(uint8_t index) override;
-    
+
         /** Get the current Bayer string used */
         const char *getBayerString() const;
 
@@ -146,10 +146,12 @@ class POABase : public INDI::CCD
         INDI::PropertySwitch  ControlSP {0};
         INDI::PropertySwitch  VideoFormatSP {0};
 
-        INDI::PropertyNumber  ADCDepthNP   {1};
+        INDI::PropertyNumber  ADCDepthNP {1};
         INDI::PropertyText    SDKVersionSP {1};
         INDI::PropertyText    SerialNumberTP {1};
         INDI::PropertyText    NicknameTP {1};
+
+        INDI::PropertySwitch  SensorModeSP {0};
 
         INDI::PropertyNumber  BlinkNP {2};
         enum
@@ -157,7 +159,7 @@ class POABase : public INDI::CCD
             BLINK_COUNT,
             BLINK_DURATION
         };
-    
+
         INDI::PropertySwitch  FlipSP {2};
         enum
         {

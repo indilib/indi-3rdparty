@@ -5,6 +5,7 @@
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
     Copyright (C) 2021 Hiroshi Saito (hiro3110g@gmail.com)
+    Copyright (C) 2023 Jarno Paananen (jarno.paananen@gmail.com)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -75,15 +76,15 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
     while (!isAbortToQuit)
     {
         POABool pIsReady = POA_FALSE;
-		while (pIsReady == POA_FALSE)
-	    {
-		    //if (isAbortToQuit) //Triggered by external conditions
-			//    break;
+        while (pIsReady == POA_FALSE)
+        {
+            //if (isAbortToQuit) //Triggered by external conditions
+            //    break;
 
-			//usleep(ExposureRequest / 10);
-			POAImageReady(mCameraInfo.cameraID, &pIsReady);
-		}
-		
+            //usleep(ExposureRequest / 10);
+            POAImageReady(mCameraInfo.cameraID, &pIsReady);
+        }
+
         ret = POAGetImageData(mCameraInfo.cameraID, targetFrame, totalBytes, waitMS);
         if (ret != POA_OK)
         {
@@ -93,7 +94,7 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
                 LOGF_ERROR("Failed to read video data (%s).", Helpers::toString(ret));
                 break;
             }
-            
+
             usleep(100);
             continue;
         }
@@ -187,12 +188,12 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
     }
-    
+
     // Try exposure for 3 times
     // isDark is for mechanical shutter control
     // However, PlayerOne Cameras doesn't have mechanical shutter
     //POABool isDark = (PrimaryCCD.getFrameType() == INDI::CCDChip::DARK_FRAME) ? POA_TRUE : POA_FALSE;
-    
+
     for (int i = 0; i < 3; i++)
     {
         //ret = POAStartExposure(mCameraInfo.cameraID, isDark);
@@ -243,14 +244,14 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }
-        
+
         usleep(delay * 1000 * 1000);
 
         POAErrors ret = POAGetCameraState(mCameraInfo.cameraID, &status);
 
         if (isAbortToQuit)
             return;
-        
+
         if (ret != POA_OK)
         {
             LOGF_DEBUG("Failed to get exposure status (%s)", Helpers::toString(ret));
@@ -280,7 +281,7 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
             PrimaryCCD.setExposureFailed();
             return;
         }
-        
+
         POAImageReady(mCameraInfo.cameraID, &pIsReady);
     }
     while (!pIsReady);
@@ -343,7 +344,7 @@ bool POABase::initProperties()
     FlipSP[FLIP_HORIZONTAL].fill("FLIP_HORIZONTAL", "Horizontal", ISS_OFF);
     FlipSP[FLIP_VERTICAL].fill("FLIP_VERTICAL", "Vertical", ISS_OFF);
     FlipSP.fill(getDeviceName(), "FLIP", "Flip", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
-    
+
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     BlinkNP[BLINK_COUNT   ].fill("BLINK_COUNT",    "Blinks before exposure", "%2.0f", 0, 100, 1.000, 0);
@@ -363,7 +364,7 @@ bool POABase::initProperties()
 
     NicknameTP[0].fill("nickname", "nickname", mNickname);
     NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
-    
+
     int maxBin = 1;
 
     for (const auto &supportedBin : mCameraInfo.bins)
@@ -444,7 +445,7 @@ bool POABase::updateProperties()
             defineProperty(ControlSP);
             loadConfig(true, ControlSP.getName());
         }
-        
+
         if (hasFlipControl())
         {
             defineProperty(FlipSP);
@@ -482,39 +483,48 @@ bool POABase::updateProperties()
             defineProperty(SerialNumberTP);
             defineProperty(NicknameTP);
         }
+        if (!SensorModeSP.isEmpty())
+        {
+            defineProperty(SensorModeSP);
+        }
     }
     else
     {
         if (HasCooler())
         {
-            deleteProperty(CoolerNP.getName());
-            deleteProperty(CoolerSP.getName());
+            deleteProperty(CoolerNP);
+            deleteProperty(CoolerSP);
         }
         else
             deleteProperty(TemperatureNP.name);
 
         if (!ControlNP.isEmpty())
-            deleteProperty(ControlNP.getName());
+            deleteProperty(ControlNP);
 
         if (!ControlSP.isEmpty())
-            deleteProperty(ControlSP.getName());
+            deleteProperty(ControlSP);
 
         if (hasFlipControl())
         {
-            deleteProperty(FlipSP.getName());
+            deleteProperty(FlipSP);
         }
-        
-        if (!VideoFormatSP.isEmpty())
-            deleteProperty(VideoFormatSP.getName());
 
-        deleteProperty(BlinkNP.getName());
-        deleteProperty(SDKVersionSP.getName());
+        if (!VideoFormatSP.isEmpty())
+            deleteProperty(VideoFormatSP);
+
+        deleteProperty(BlinkNP);
+        deleteProperty(SDKVersionSP);
         if (!mSerialNumber.empty())
         {
-            deleteProperty(SerialNumberTP.getName());
-            deleteProperty(NicknameTP.getName());
+            deleteProperty(SerialNumberTP);
+            deleteProperty(NicknameTP);
         }
-        deleteProperty(ADCDepthNP.getName());
+        deleteProperty(ADCDepthNP);
+
+        if (!SensorModeSP.isEmpty())
+        {
+            deleteProperty(SensorModeSP);
+        }
     }
 
     return true;
@@ -581,8 +591,8 @@ bool POABase::Disconnect()
     }
 
     LOG_INFO("Camera is offline.");
-    
-    
+
+
     setConnected(false, IPS_IDLE);
     return true;
 }
@@ -605,6 +615,28 @@ void POABase::setupParams()
         {
             CoolerNP[0].setMinMax(pCtrlCaps.minValue.intValue, pCtrlCaps.maxValue.intValue);
             CoolerNP[0].setValue(pCtrlCaps.defaultValue.intValue);
+        }
+    }
+
+    int modeCount = 0;
+    if (POA_OK == POAGetSensorModeCount(mCameraInfo.cameraID, &modeCount) && modeCount > 0)
+    {
+        SensorModeSP.resize(modeCount);
+        char propertyName[16] = {0};
+        for (int i = 0; i < modeCount; ++i)
+        {
+            POASensorModeInfo info;
+            POAGetSensorModeInfo(mCameraInfo.cameraID, i, &info);
+            snprintf(propertyName, sizeof(propertyName) - 1, "MODE_%d", i);
+            SensorModeSP[i].fill(propertyName, info.name, ISS_OFF);
+        }
+        SensorModeSP.fill(getDeviceName(), "SENSOR_MODE", "Sensor Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+        int mode;
+        if (POA_OK == POAGetSensorMode(mCameraInfo.cameraID, &mode) && mode >= 0 && mode < modeCount - 1)
+        {
+            SensorModeSP[mode].setState(ISS_ON);
+            SensorModeSP.setState(IPS_OK);
         }
     }
 
@@ -869,11 +901,11 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             {
                 if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
                 {
-                    flip = POA_FLIP_BOTH;                  
+                    flip = POA_FLIP_BOTH;
                 }
                 else
                 {
-                    flip = POA_FLIP_HORI;                 
+                    flip = POA_FLIP_HORI;
                 }
             }
             else
@@ -883,7 +915,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                     flip = POA_FLIP_VERT;
                 }
             }
-            
+
             POAConfigValue confVal; // confValue will be ignored by POASetConfig()
             POAErrors ret = POASetConfig(mCameraInfo.cameraID, flip, confVal, POA_FALSE);
             if (ret != POA_OK)
@@ -896,14 +928,14 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             // Compensate bayer pattern (effective for RAW data format)
             char bayer[5];
-            POABayerCompensationByFlip(flip, bayer); 
+            POABayerCompensationByFlip(flip, bayer);
             IUSaveText(&BayerT[2], bayer);
 
             FlipSP.setState(IPS_OK);
             FlipSP.apply();
             return true;
         }
-        
+
         /* Cooler */
         if (CoolerSP.isNameMatch(name))
         {
@@ -948,6 +980,21 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 VideoFormatSP.setState(IPS_OK);
                 VideoFormatSP.apply();
             }
+            return true;
+        }
+
+        if (SensorModeSP.isNameMatch(name))
+        {
+            if (SensorModeSP.update(states, names, n) == false)
+            {
+                SensorModeSP.setState(IPS_ALERT);
+                SensorModeSP.apply();
+                return true;
+            }
+
+            int mode = SensorModeSP.findOnSwitchIndex();
+            SensorModeSP.setState(POASetSensorMode(mCameraInfo.cameraID, mode) == POA_OK ? IPS_OK : IPS_ALERT);
+            SensorModeSP.apply();
             return true;
         }
     }
@@ -1438,7 +1485,7 @@ void POABase::createControls(int piNumberOfControls)
         }
 
         LOGF_DEBUG("Control #%d: name (%s), Descp (%s), Min (%ld), Max (%ld), Default Value (%ld), isSupportAuto (%s), "
-                   "isWritale (%s) ",
+                   "isWritable (%s) ",
                    i, cap.szConfName, cap.szDescription, cap.minValue.intValue, cap.maxValue.intValue,
                    cap.defaultValue.intValue, cap.isSupportAuto ? "True" : "False",
                    cap.isWritable ? "True" : "False");
@@ -1595,9 +1642,12 @@ bool POABase::saveConfigItems(FILE *fp)
 
     if (hasFlipControl())
         FlipSP.save(fp);
-    
+
     if (!VideoFormatSP.isEmpty())
         VideoFormatSP.save(fp);
+
+    if (!SensorModeSP.isEmpty())
+        SensorModeSP.save(fp);
 
     BlinkNP.save(fp);
 
@@ -1657,7 +1707,7 @@ POAErrors POABase::POAPulseGuideOff(int cameraID, POAConfig dir)
 POAErrors POABase::POABayerCompensationByFlip(POAConfig flip, char *dest)
 {
     const char *src = getBayerString();
-    
+
     switch (flip)
     {
         case POA_FLIP_NONE:
@@ -1675,6 +1725,6 @@ POAErrors POABase::POABayerCompensationByFlip(POAConfig flip, char *dest)
         default:
             return POA_ERROR_INVALID_ARGU;
     }
-    
+
     return POA_OK;
 }
