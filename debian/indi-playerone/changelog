@@ -1,3 +1,9 @@
+indi-playerone (1.9) bionic; urgency=low
+
+  * Add sensor mode control for cameras that support it
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Thu, 20 Jul 2023 01:16:17 +0300
+
 indi-playerone (1.8) bionic; urgency=low
 
   * Update PlayerOneCamera SDK v3.4.0
