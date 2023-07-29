@@ -1,3 +1,9 @@
+v1.10
+* Update: PlayerOneCamera SDK to v3.4.1
+
+v1.9
+* Add: sensor mode control for cameras that support it
+
 v1.8
 * Update: PlayerOneCamera SDK to v3.4.0
 
