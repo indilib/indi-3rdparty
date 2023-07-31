@@ -1,7 +1,7 @@
 #ifndef __tscam_h__
 #define __tscam_h__
 
-/* Version: 54.22587.20230516 */
+/* Version: 54.23041.20230731 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -157,12 +157,16 @@ typedef struct Tscam_t { int unused; } *HTscam;
 #define TSCAM_FLAG_LOW_NOISE           0x0000010000000000  /* support low noise mode (Higher signal noise ratio, lower frame rate) */
 #define TSCAM_FLAG_LEVELRANGE_HARDWARE 0x0000020000000000  /* hardware level range, put(get)_LevelRangeV2 */
 #define TSCAM_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
-#define TSCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
-#define TSCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
+#define TSCAM_FLAG_LIGHTSOURCE         0x0000080000000000  /* embedded light source */
+#define TSCAM_FLAG_FILTERWHEEL         0x0000100000000000  /* astro filter wheel */
 #define TSCAM_FLAG_GIGE                0x0000200000000000  /* 1 Gigabit GigE */
 #define TSCAM_FLAG_10GIGE              0x0000400000000000  /* 10 Gigabit GigE */
 #define TSCAM_FLAG_5GIGE               0x0000800000000000  /* 5 Gigabit GigE */
 #define TSCAM_FLAG_25GIGE              0x0001000000000000  /* 2.5 Gigabit GigE */
+#define TSCAM_FLAG_AUTOFOCUSER         0x0002000000000000  /* astro auto focuser */
+#define TSCAM_FLAG_LIGHT_SOURCE        0x0004000000000000  /* stand alone light source */
+#define TSCAM_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
+#define TSCAM_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
 
 #define TSCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define TSCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -218,7 +222,7 @@ typedef struct Tscam_t { int unused; } *HTscam;
 #define TSCAM_DENOISE_MIN              0       /* denoise */
 #define TSCAM_DENOISE_MAX              100     /* denoise */
 #define TSCAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
-#define TSCAM_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
+#define TSCAM_TEC_TARGET_DEF           100     /* 0.0 degrees Celsius */
 #define TSCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define TSCAM_HEARTBEAT_MIN            100     /* millisecond */
 #define TSCAM_HEARTBEAT_MAX            10000   /* millisecond */
@@ -260,8 +264,8 @@ typedef struct {
     unsigned            still;       /* number of still resolution, same as Tscam_get_StillResolutionNumber() */
     unsigned            maxfanspeed; /* maximum fan speed, fan speed range = [0, max], closed interval */
     unsigned            ioctrol;     /* number of input/output control */
-    float               xpixsz;      /* physical pixel size */
-    float               ypixsz;      /* physical pixel size */
+    float               xpixsz;      /* physical pixel size in micrometer */
+    float               ypixsz;      /* physical pixel size in micrometer */
     TscamResolution   res[16];
 } TscamModelV2; /* camera model v2 */
 
@@ -277,7 +281,7 @@ typedef struct {
 } TscamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.22587.20230516
+    get the version of this dll/so/dylib, which is: 54.23041.20230731
 */
 #if defined(_WIN32)
 TSCAM_API(const wchar_t*)   Tscam_Version();
@@ -298,14 +302,14 @@ TSCAM_API(const char*)      Tscam_Version();
 */
 TSCAM_API(unsigned) Tscam_EnumV2(TscamDeviceV2 arr[TSCAM_MAX]);
 
-/* use the id of TscamDeviceV2, which is enumerated by Tscam_EnumV2.
-    if id is NULL, Tscam_Open will open the first enumerated camera.
+/* use the camId of TscamDeviceV2, which is enumerated by Tscam_EnumV2.
+    if camId is NULL, Tscam_Open will open the first enumerated camera.
     For the issue of opening the camera on Android, please refer to the documentation
 */
 #if defined(_WIN32)
-TSCAM_API(HTscam) Tscam_Open(const wchar_t* id);
+TSCAM_API(HTscam) Tscam_Open(const wchar_t* camId);
 #else
-TSCAM_API(HTscam) Tscam_Open(const char* id);
+TSCAM_API(HTscam) Tscam_Open(const char* camId);
 #endif
 
 /*
@@ -549,6 +553,15 @@ typedef void (__stdcall* PITSCAM_HISTOGRAM_CALLBACK)(const float aHistY[256], co
 typedef void (__stdcall* PITSCAM_CHROME_CALLBACK)(void* ctxChrome);
 typedef void (__stdcall* PITSCAM_PROGRESS)(int percent, void* ctxProgress);
 #endif
+/*
+* nFlag & 0x00008000: mono or color
+* nFlag & 0x0f: bitdepth
+* so the size of aHist is:
+    int arraySize = 1 << (nFlag & 0x0f);
+    if ((nFlag & 0x00008000) == 0)
+        arraySize *= 3;
+*/
+typedef void (__stdcall* PITSCAM_HISTOGRAM_CALLBACKV2)(const unsigned* aHist, unsigned nFlag, void* ctxHistogramV2);
 
 /*
 * bAutoExposure:
@@ -769,6 +782,7 @@ TSCAM_API(HRESULT)  Tscam_get_LevelRangeV2(HTscam h, unsigned short* pMode, RECT
 */
 TSCAM_API(HRESULT)  Tscam_LevelRangeAuto(HTscam h);  /* software level range */
 TSCAM_API(HRESULT)  Tscam_GetHistogram(HTscam h, PITSCAM_HISTOGRAM_CALLBACK funHistogram, void* ctxHistogram);
+TSCAM_API(HRESULT)  Tscam_GetHistogramV2(HTscam h, PITSCAM_HISTOGRAM_CALLBACKV2 funHistogramV2, void* ctxHistogramV2);
 
 /* led state:
     iLed: Led index, (0, 1, 2, ...)
@@ -818,7 +832,7 @@ TSCAM_API(HRESULT)  Tscam_feed_Pipe(HTscam h, unsigned pipeId);
 #define TSCAM_OPTION_BINNING                0x17       /* binning
                                                                 0x01: (no binning)
                                                                 n: (saturating add, n*n), 0x02(2*2), 0x03(3*3), 0x04(4*4), 0x05(5*5), 0x06(6*6), 0x07(7*7), 0x08(8*8). The Bitdepth of the data remains unchanged.
-                                                                0x40 | n: (unsaturated add in RAW mode, n*n), 0x42(2*2), 0x43(3*3), 0x44(4*4), 0x45(5*5), 0x46(6*6), 0x47(7*7), 0x48(8*8). The Bitdepth of the data is increased. For example, the original data with bitdepth of 12 will increase the bitdepth by 2 bits and become 14 after 2*2 binning.
+                                                                0x40 | n: (unsaturated add, n*n, works only in RAW mode), 0x42(2*2), 0x43(3*3), 0x44(4*4), 0x45(5*5), 0x46(6*6), 0x47(7*7), 0x48(8*8). The Bitdepth of the data is increased. For example, the original data with bitdepth of 12 will increase the bitdepth by 2 bits and become 14 after 2*2 binning.
                                                                 0x80 | n: (average, n*n), 0x82(2*2), 0x83(3*3), 0x84(4*4), 0x85(5*5), 0x86(6*6), 0x87(7*7), 0x88(8*8). The Bitdepth of the data remains unchanged.
                                                             The final image size is rounded down to an even number, such as 640/3 to get 212
                                                          */
@@ -905,7 +919,7 @@ TSCAM_API(HRESULT)  Tscam_feed_Pipe(HTscam h, unsigned pipeId);
 #define TSCAM_OPTION_LOW_NOISE              0x38       /* low noise mode (Higher signal noise ratio, lower frame rate): 1 => enable */
 #define TSCAM_OPTION_POWER                  0x39       /* get power consumption, unit: milliwatt */
 #define TSCAM_OPTION_GLOBAL_RESET_MODE      0x3a       /* global reset mode */
-#define TSCAM_OPTION_OPEN_USB_ERRORCODE     0x3b       /* get the open usb error code */
+#define TSCAM_OPTION_OPEN_ERRORCODE         0x3b       /* get the open camera error code */
 #define TSCAM_OPTION_FLUSH                  0x3d       /* 1 = hard flush, discard frames cached by camera DDR (if any)
                                                             2 = soft flush, discard frames cached by tscam.dll (if any)
                                                             3 = both flush
@@ -986,6 +1000,10 @@ TSCAM_API(HRESULT)  Tscam_feed_Pipe(HTscam h, unsigned pipeId);
                                                                 2 => disable
                                                                 default: auto
                                                          */
+#define TSCAM_OPTION_EEPROM_SIZE            0x5b       /* get EEPROM size */
+#define TSCAM_OPTION_OVERCLOCK_MAX          0x5c       /* get overclock range: [0, max] */
+#define TSCAM_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
+#define TSCAM_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
 
 /* pixel format */
 #define TSCAM_PIXELFORMAT_RAW8              0x00
@@ -1017,9 +1035,9 @@ TSCAM_API(HRESULT)  Tscam_get_Roi(HTscam h, unsigned* pxOffset, unsigned* pyOffs
     for each device found, it will take about 3 seconds
 */
 #if defined(_WIN32)
-TSCAM_API(HRESULT) Tscam_Replug(const wchar_t* id);
+TSCAM_API(HRESULT) Tscam_Replug(const wchar_t* camId);
 #else
-TSCAM_API(HRESULT) Tscam_Replug(const char* id);
+TSCAM_API(HRESULT) Tscam_Replug(const char* camId);
 #endif
 
 #ifndef __TSCAMAFPARAM_DEFINED__
@@ -1051,9 +1069,9 @@ TSCAM_API(HRESULT)  Tscam_get_AfParam(HTscam h, TscamAfParam* pAfParam);
 #define TSCAM_IOCONTROLTYPE_SET_FORMAT                  0x06
 #define TSCAM_IOCONTROLTYPE_GET_OUTPUTINVERTER          0x07 /* boolean, only support output signal */
 #define TSCAM_IOCONTROLTYPE_SET_OUTPUTINVERTER          0x08
-#define TSCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge */
+#define TSCAM_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge, 0x02 => Level high, 0x03 => Level low */
 #define TSCAM_IOCONTROLTYPE_SET_INPUTACTIVATION         0x0a
-#define TSCAM_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, [0, 20000] */
+#define TSCAM_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, range: [0, 20000] */
 #define TSCAM_IOCONTROLTYPE_SET_DEBOUNCERTIME           0x0c
 #define TSCAM_IOCONTROLTYPE_GET_TRIGGERSOURCE           0x0d /*
                                                                   0x00 => Opto-isolated input
@@ -1064,7 +1082,7 @@ TSCAM_API(HRESULT)  Tscam_get_AfParam(HTscam h, TscamAfParam* pAfParam);
                                                                   0x05 => Software
                                                                */
 #define TSCAM_IOCONTROLTYPE_SET_TRIGGERSOURCE           0x0e
-#define TSCAM_IOCONTROLTYPE_GET_TRIGGERDELAY            0x0f /* Trigger delay time in microseconds, [0, 5000000] */
+#define TSCAM_IOCONTROLTYPE_GET_TRIGGERDELAY            0x0f /* Trigger delay time in microseconds, range: [0, 5000000] */
 #define TSCAM_IOCONTROLTYPE_SET_TRIGGERDELAY            0x10
 #define TSCAM_IOCONTROLTYPE_GET_BURSTCOUNTER            0x11 /* Burst Counter, range: [1 ~ 65535] */
 #define TSCAM_IOCONTROLTYPE_SET_BURSTCOUNTER            0x12
@@ -1084,13 +1102,15 @@ TSCAM_API(HRESULT)  Tscam_get_AfParam(HTscam h, TscamAfParam* pAfParam);
                                                                   0x01 => Exposure Active
                                                                   0x02 => Strobe
                                                                   0x03 => User output
+                                                                  0x04 => Counter Output
+                                                                  0x05 => Timer Output
                                                                */
 #define TSCAM_IOCONTROLTYPE_SET_OUTPUTMODE              0x20
 #define TSCAM_IOCONTROLTYPE_GET_STROBEDELAYMODE         0x21 /* boolean, 0 => pre-delay, 1 => delay; compared to exposure active signal */
 #define TSCAM_IOCONTROLTYPE_SET_STROBEDELAYMODE         0x22
-#define TSCAM_IOCONTROLTYPE_GET_STROBEDELAYTIME         0x23 /* Strobe delay or pre-delay time in microseconds, [0, 5000000] */
+#define TSCAM_IOCONTROLTYPE_GET_STROBEDELAYTIME         0x23 /* Strobe delay or pre-delay time in microseconds, range: [0, 5000000] */
 #define TSCAM_IOCONTROLTYPE_SET_STROBEDELAYTIME         0x24
-#define TSCAM_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, [0, 5000000] */
+#define TSCAM_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, range: [0, 5000000] */
 #define TSCAM_IOCONTROLTYPE_SET_STROBEDURATION          0x26
 #define TSCAM_IOCONTROLTYPE_GET_USERVALUE               0x27 /*
                                                                   bit0 => Opto-isolated output
@@ -1114,6 +1134,8 @@ TSCAM_API(HRESULT)  Tscam_get_AfParam(HTscam h, TscamAfParam* pAfParam);
 #define TSCAM_IOCONTROLTYPE_SET_EXPO_END_LINE           0x34
 #define TSCAM_IOCONTROLTYPE_GET_EXEVT_ACTIVE_MODE       0x35 /* exposure event: 0 => specified line, 1 => common exposure time */
 #define TSCAM_IOCONTROLTYPE_SET_EXEVT_ACTIVE_MODE       0x36
+#define TSCAM_IOCONTROLTYPE_GET_OUTPUTCOUNTERVALUE      0x37 /* Output Counter Value, range: [0 ~ 65535] */
+#define TSCAM_IOCONTROLTYPE_SET_OUTPUTCOUNTERVALUE      0x38
 
 #define TSCAM_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
@@ -1160,10 +1182,10 @@ TSCAM_API(HRESULT)  Tscam_Update(const wchar_t* camId, const wchar_t* filePath, 
 TSCAM_API(HRESULT)  Tscam_Update(const char* camId, const char* filePath, PITSCAM_PROGRESS funProgress, void* ctxProgress);
 #endif
 
-TSCAM_API(HRESULT)  Tscam_put_Linear(HTscam h, const unsigned char* v8, const unsigned short* v16);
-TSCAM_API(HRESULT)  Tscam_put_Curve(HTscam h, const unsigned char* v8, const unsigned short* v16);
-TSCAM_API(HRESULT)  Tscam_put_ColorMatrix(HTscam h, const double v[9]);
-TSCAM_API(HRESULT)  Tscam_put_InitWBGain(HTscam h, const unsigned short v[3]);
+TSCAM_API(HRESULT)  Tscam_put_Linear(HTscam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+TSCAM_API(HRESULT)  Tscam_put_Curve(HTscam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+TSCAM_API(HRESULT)  Tscam_put_ColorMatrix(HTscam h, const double v[9]); /* null => revert to model default */
+TSCAM_API(HRESULT)  Tscam_put_InitWBGain(HTscam h, const unsigned short v[3]); /* null => revert to model default */
 
 /*
     get the frame rate: framerate (fps) = Frame * 1000.0 / nTime
@@ -1181,6 +1203,8 @@ TSCAM_API(HRESULT)  Tscam_ST4PlusGuide(HTscam h, unsigned nDirect, unsigned nDur
 */
 TSCAM_API(HRESULT)  Tscam_ST4PlusGuideState(HTscam h);
 
+TSCAM_API(HRESULT)  Tscam_Gain2TempTint(const int gain[3], int* temp, int* tint);
+TSCAM_API(void)     Tscam_TempTint2Gain(const int temp, const int tint, int gain[3]);
 /*
     calculate the clarity factor:
     pImageData: pointer to the image data
@@ -1297,8 +1321,10 @@ TSCAM_API(HRESULT)  Tscam_AwbOnePush(HTscam h, PITSCAM_TEMPTINT_CALLBACK funTT, 
 TSCAM_DEPRECATED
 TSCAM_API(HRESULT)  Tscam_AbbOnePush(HTscam h, PITSCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
+/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
 typedef void (__stdcall* PTSCAM_HOTPLUG)(void* ctxHotPlug);
 TSCAM_API(HRESULT)  Tscam_GigeEnable(PTSCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+
 /*
 USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
@@ -1313,6 +1339,34 @@ Recommendation: for better rubustness, when notify of device insertion arrives, 
 #if !defined(_WIN32) && !defined(__ANDROID__)
 TSCAM_API(void)   Tscam_HotPlug(PTSCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif
+
+/* AAF: Astro Auto Focuser */
+#define TSCAM_AAF_SETPOSITION     0x01
+#define TSCAM_AAF_GETPOSITION     0x02
+#define TSCAM_AAF_SETZERO         0x03
+#define TSCAM_AAF_GETZERO         0x04
+#define TSCAM_AAF_SETDIRECTION    0x05
+#define TSCAM_AAF_GETDIRECTION    0x06
+#define TSCAM_AAF_SETMAXINCREMENT 0x07
+#define TSCAM_AAF_GETMAXINCREMENT 0x08
+#define TSCAM_AAF_SETFINE         0x09
+#define TSCAM_AAF_GETFINE         0x0a
+#define TSCAM_AAF_SETCOARSE       0x0b
+#define TSCAM_AAF_GETCOARSE       0x0c
+#define TSCAM_AAF_SETBUZZER       0x0d
+#define TSCAM_AAF_GETBUZZER       0x0e
+#define TSCAM_AAF_SETBACKLASH     0x0f
+#define TSCAM_AAF_GETBACKLASH     0x10
+#define TSCAM_AAF_GETAMBIENTTEMP  0x12
+#define TSCAM_AAF_GETTEMP         0x14
+#define TSCAM_AAF_ISMOVING        0x16
+#define TSCAM_AAF_HALT            0x17
+#define TSCAM_AAF_SETMAXSTEP      0x1b
+#define TSCAM_AAF_GETMAXSTEP      0x1c
+#define TSCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
+#define TSCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
+#define TSCAM_AAF_RANGEDEF        0xff  /* Range: default value */
+TSCAM_API(HRESULT) Tscam_AAF(HTscam h, int action, int outVal, int* inVal);
 
 #if defined(_WIN32)
 /* Tscam_put_TempTintInit is obsolete, recommend using Tscam_AwbOnce. */
@@ -1361,13 +1415,13 @@ TSCAM_API(HRESULT)  Tscam_get_VignetMidPointInt(HTscam h, int* nMidPoint);
 #if defined(_WIN32)
 TSCAM_API(HRESULT)  Tscam_set_Name(HTscam h, const char* name);
 TSCAM_API(HRESULT)  Tscam_query_Name(HTscam h, char name[64]);
-TSCAM_API(HRESULT)  Tscam_put_Name(const wchar_t* id, const char* name);
-TSCAM_API(HRESULT)  Tscam_get_Name(const wchar_t* id, char name[64]);
+TSCAM_API(HRESULT)  Tscam_put_Name(const wchar_t* camId, const char* name);
+TSCAM_API(HRESULT)  Tscam_get_Name(const wchar_t* camId, char name[64]);
 #else
 TSCAM_API(HRESULT)  Tscam_set_Name(HTscam h, const char* name);
 TSCAM_API(HRESULT)  Tscam_query_Name(HTscam h, char name[64]);
-TSCAM_API(HRESULT)  Tscam_put_Name(const char* id, const char* name);
-TSCAM_API(HRESULT)  Tscam_get_Name(const char* id, char name[64]);
+TSCAM_API(HRESULT)  Tscam_put_Name(const char* camId, const char* name);
+TSCAM_API(HRESULT)  Tscam_get_Name(const char* camId, char name[64]);
 #endif
 TSCAM_API(unsigned) Tscam_EnumWithName(TscamDeviceV2 pti[TSCAM_MAX]);
 
