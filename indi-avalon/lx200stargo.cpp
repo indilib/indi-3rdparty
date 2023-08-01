@@ -516,7 +516,6 @@ bool LX200StarGo::ReadScopeStatus()
         mountSim();
         return true;
     }
-
     LOG_DEBUG("################################ ReadScopeStatus (start) ################################");
     int x, y;
 
@@ -738,7 +737,7 @@ void LX200StarGo::getStarGoBasicData()
         else
             IDSetText(&MountFirmwareInfoTP, nullptr);
 
-        char parkHomeStatus[1] = {0};
+        char parkHomeStatus[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
         if (getParkHomeStatus(parkHomeStatus))
         {
             SetParked(strcmp(parkHomeStatus, "2") == 0);
@@ -1434,7 +1433,7 @@ bool LX200StarGo::getParkHomeStatus (char* status)
 
     LOGF_DEBUG("%s: response: %s", __FUNCTION__, response);
 
-    if (! sscanf(response, "p%32s[012AB]", status))
+    if (! sscanf(response, "p%1[012AB]", status))
     {
         LOGF_ERROR("Unexpected park home status response '%s'.", response);
         return false;
