@@ -499,7 +499,19 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
 
             if (IUUpdateText(&opt->prop.text, texts, names, n) < 0)
                 return false;
-            gphoto_set_widget_text(gphotodrv, opt->widget, texts[0]);
+            char *text = texts[0];
+            char buf[256];
+            if(strcmp("eoszoomposition", name) == 0) {
+                int x = 0, y = 0;
+                LOGF_DEBUG("%s %s", name, text);
+                sscanf(text, "%d,%d", &x, &y);
+                x *= 5;
+                y *= 5;
+                sprintf(buf, "%d,%d", x, y);
+                text = buf;
+                LOGF_DEBUG("%s adjusted %s %s (%d,%d)", name, text, buf, x, y);
+            }
+            gphoto_set_widget_text(gphotodrv, opt->widget, text);
             opt->prop.num.s = IPS_OK;
             IDSetText(&opt->prop.text, nullptr);
             return true;
