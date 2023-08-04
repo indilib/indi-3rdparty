@@ -7,7 +7,7 @@ Standards-Version: 3.9.1
 
 Package: indi-astroasis
 Architecture: amd64 armhf arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libastroasis
 Description: INDI Driver for Astroasis focusers 
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
