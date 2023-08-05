@@ -1,3 +1,9 @@
+indi-avalon (1.13.1) jammy; urgency=medium
+
+  * Bug fix for updated version numbers
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 05 Aug 2023 12:07:19 +0200
+
 indi-avalon (1.13) jammy; urgency=medium
 
   * Bug fix for MacOS crash reading ParkHomeStatus
