@@ -530,7 +530,7 @@ bool LX200StarGo::ReadScopeStatus()
         }
     }
 
-    char parkHomeStatus[1] = {0};
+    char parkHomeStatus[AVALON_RESPONSE_BUFFER_LENGTH] = {0};
     if (! getParkHomeStatus(parkHomeStatus))
     {
         LOG_ERROR("Cannot determine scope status, failed to determine park/sync state.");
