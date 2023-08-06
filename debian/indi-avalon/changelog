@@ -1,3 +1,9 @@
+indi-avalon (1.13.2) jammy; urgency=medium
+
+  * Second code position needed to be corrected to fix the MacOS crash
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 06 Aug 2023 14:42:39 +0200
+
 indi-avalon (1.13.1) jammy; urgency=medium
 
   * Bug fix for updated version numbers
