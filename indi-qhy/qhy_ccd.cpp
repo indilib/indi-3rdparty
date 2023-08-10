@@ -2688,7 +2688,8 @@ void QHYCCD::debugTriggered(bool enable)
 {
     // For some reason QHYSDK does not define this for MacOS! Needs to be fixed
 #ifdef __linux__
-    SetQHYCCDLogFunction(m_QHYLogCallback);
+    // JM QHY removed this function on 2023.07.16
+    //SetQHYCCDLogFunction(m_QHYLogCallback);
 #endif
     if (enable)
         SetQHYCCDLogLevel(5);
