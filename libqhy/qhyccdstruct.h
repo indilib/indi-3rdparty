@@ -248,6 +248,7 @@ enum CONTROL_ID
 /*77*/  CAM_GlobalSensorGPSLED,         ///Show GPS LED tab on sharpCap
 /*78*/  CONTROL_ImgProc,   /// Process image
 /*79*/  CONTROL_RemoveRBI,   /// Remove single RBI
+/*80*/  CONTROL_GlobalReset,		//!<image stabilization
 
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
@@ -256,7 +257,9 @@ enum CONTROL_ID
 //TEST id name list
 /*1024*/ CONTROL_AUTOWHITEBALANCE=1024, //!<auto white balance  eg.CONTROL_TEST=1024
 /*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
-/*1026*/ CONTROL_ImageStabilization		//!<image stabilization
+/*1026*/ CONTROL_ImageStabilization,	//!<image stabilization
+/*1027*/ CONTROL_GAINdB				//!<set gain with dB  //CONTROL_dB_TO_GAIN
+/*1028*/ //TEST_OFFSET//20230330
 };
 
 /**

@@ -499,7 +499,19 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
 
             if (IUUpdateText(&opt->prop.text, texts, names, n) < 0)
                 return false;
-            gphoto_set_widget_text(gphotodrv, opt->widget, texts[0]);
+            char *text = texts[0];
+            char buf[256];
+            if(strcmp("eoszoomposition", name) == 0) {
+                int x = 0, y = 0;
+                LOGF_DEBUG("%s %s", name, text);
+                sscanf(text, "%d,%d", &x, &y);
+                x *= 5;
+                y *= 5;
+                sprintf(buf, "%d,%d", x, y);
+                text = buf;
+                LOGF_DEBUG("%s adjusted %s %s (%d,%d)", name, text, buf, x, y);
+            }
+            gphoto_set_widget_text(gphotodrv, opt->widget, text);
             opt->prop.num.s = IPS_OK;
             IDSetText(&opt->prop.text, nullptr);
             return true;
@@ -770,6 +782,7 @@ bool GPhotoCCD::ISNewNumber(const char * dev, const char * name, double values[]
             IUUpdateNumber(&mMirrorLockNP, values, names, n);
             mMirrorLockNP.s = IPS_OK;
             IDSetNumber(&mMirrorLockNP, nullptr);
+            saveConfig(true, mMirrorLockNP.name);
             return true;
         }
 
@@ -1241,8 +1254,23 @@ bool GPhotoCCD::grabImage()
         else
         {
             char bayer_pattern[8] = {};
+            auto libraw_ok = false;
 
-            if (read_libraw(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+            // In case the file read operation fails due to some disk delay (unlikely)
+            // Try again before giving up.
+            for (int i = 0; i < 2; i++)
+            {
+                // On error, try again in 500ms
+                if (read_libraw(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+                    usleep(500000);
+                else
+                {
+                    libraw_ok = true;
+                    break;
+                }
+            }
+
+            if (libraw_ok == false)
             {
                 LOG_ERROR("Exposure failed to parse raw image.");
                 if (!isSimulation())

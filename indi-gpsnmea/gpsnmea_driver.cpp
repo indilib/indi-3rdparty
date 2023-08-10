@@ -212,6 +212,7 @@ void GPSNMEA::parseNEMA()
                             break;
 
                         raw_time = timesp.tv_sec;
+                        m_GPSTime = raw_time;
                         utc = gmtime(&raw_time);
                         strftime(ts, 32, "%Y-%m-%dT%H:%M:%S", utc);
                         TimeTP[0].setText(ts);

@@ -175,7 +175,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
     initOptions(false);
     options->shutter = duration * 1e6;
-    options->framerate = 1/duration;
+    options->framerate = 1 / duration;
 
     unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
 
@@ -203,7 +203,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     else if (isAboutToQuit)
         return;
 
-    bool raw = IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG;
+    bool raw = CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG;
     auto stream = raw ? m_CameraApp->RawStream() : m_CameraApp->StillStream();
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
     StreamInfo info = m_CameraApp->GetStreamInfo(stream);
@@ -236,7 +236,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
         if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
         {
-            if (IUFindOnSwitchIndex(&CaptureFormatSP) == CAPTURE_DNG)
+            if (CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG)
             {
                 if (!processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
                 {
@@ -384,8 +384,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
                 // Release mmap memory
                 munmap(mmap_mem, memsize);
-            } 
-            else 
+            }
+            else
             {
                 read(fd, memptr, memsize);
             }
@@ -472,7 +472,8 @@ void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char
 {
 
     switchSP.resize(n);
-    for (size_t i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++)
+    {
         switchSP[i].fill(names[i], names[i], ISS_OFF);
     }
 
@@ -609,7 +610,8 @@ void INDILibCamera::detectCameras()
     }
 
     CameraSP.resize(cameras.size());
-    for (size_t i = 0; i < cameras.size(); i++) {
+    for (size_t i = 0; i < cameras.size(); i++)
+    {
         CameraSP[i].fill(cameras[i]->id().c_str(), cameras[i]->id().c_str(), ISS_OFF);
     }
 
@@ -651,7 +653,7 @@ bool INDILibCamera::Connect()
         options->camera = CameraSP.findOnSwitchIndex();
         if(REOPEN__CAMERA) m_CameraApp->OpenCamera();
         const libcamera::ControlList props = m_CameraApp->GetCameraManager()->cameras()[options->camera]->properties();
-        
+
         auto pas = props.get(properties::PixelArraySize);
         // no idea why the IMX290 returns an uneven number of pixels, so just round down
         int width = 2.0 * (pas->width / 2);
@@ -659,14 +661,14 @@ bool INDILibCamera::Connect()
         PrimaryCCD.setResolution(width, height);
         UpdateCCDFrame(0, 0, width, height);
         LOGF_INFO("PixelArraySize %i x %i (actual %i x %i)", pas->width, pas->height, width, height);
-        
+
         auto ucs = props.get(properties::UnitCellSize);
         auto ucsWidth = ucs->width / 1000.0;
         auto ucsHeight = ucs->height / 1000.0;
         PrimaryCCD.setPixelSize(ucsWidth, ucsHeight);
         PrimaryCCD.setBPP(8);
         LOGF_INFO("UnitCellSize %f x %f", ucsWidth, ucsHeight);
-        
+
         // Get resolution from indi:ccd (whatever is settled when we are connecting), and update libcamera driver resolution
         options->width = PrimaryCCD.getXRes();
         options->height = PrimaryCCD.getYRes();
@@ -678,11 +680,11 @@ bool INDILibCamera::Connect()
 
         options->denoise = "cdn_off";
 
-/*
-        options->metering_index = 4;
-        options->exposure_index = 4;
-        options->awb_index = 8;
-*/
+        /*
+                options->metering_index = 4;
+                options->exposure_index = 4;
+                options->awb_index = 8;
+        */
 
         if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
         return true;
@@ -709,31 +711,31 @@ bool INDILibCamera::Disconnect()
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::setup()
 {
-/* TODO: use these to fill out the controls
-    ControlList controls_ = m_CameraApp.get().GetControls();
-	if (!controls_.get(controls::ExposureTime) && options_->shutter)
-		controls_.set(controls::ExposureTime, options_->shutter);
-	if (!controls_.get(controls::AnalogueGain) && options_->gain)
-		controls_.set(controls::AnalogueGain, options_->gain);
-	if (!controls_.get(controls::AeMeteringMode))
-		controls_.set(controls::AeMeteringMode, options_->metering_index);
-	if (!controls_.get(controls::AeExposureMode))
-		controls_.set(controls::AeExposureMode, options_->exposure_index);
-	if (!controls_.get(controls::ExposureValue))
-		controls_.set(controls::ExposureValue, options_->ev);
-	if (!controls_.get(controls::AwbMode))
-		controls_.set(controls::AwbMode, options_->awb_index);
-	if (!controls_.get(controls::ColourGains) && options_->awb_gain_r && options_->awb_gain_b)
-		controls_.set(controls::ColourGains,  libcamera::Span<const float, 2>({ options_->awb_gain_r, options_->awb_gain_b }));
-	if (!controls_.get(controls::Brightness))
-		controls_.set(controls::Brightness, options_->brightness);
-	if (!controls_.get(controls::Contrast))
-		controls_.set(controls::Contrast, options_->contrast);
-	if (!controls_.get(controls::Saturation))
-		controls_.set(controls::Saturation, options_->saturation);
-	if (!controls_.get(controls::Sharpness))
-		controls_.set(controls::Sharpness, options_->sharpness);
-*/
+    /* TODO: use these to fill out the controls
+        ControlList controls_ = m_CameraApp.get().GetControls();
+        if (!controls_.get(controls::ExposureTime) && options_->shutter)
+                controls_.set(controls::ExposureTime, options_->shutter);
+        if (!controls_.get(controls::AnalogueGain) && options_->gain)
+                controls_.set(controls::AnalogueGain, options_->gain);
+        if (!controls_.get(controls::AeMeteringMode))
+                controls_.set(controls::AeMeteringMode, options_->metering_index);
+        if (!controls_.get(controls::AeExposureMode))
+                controls_.set(controls::AeExposureMode, options_->exposure_index);
+        if (!controls_.get(controls::ExposureValue))
+                controls_.set(controls::ExposureValue, options_->ev);
+        if (!controls_.get(controls::AwbMode))
+                controls_.set(controls::AwbMode, options_->awb_index);
+        if (!controls_.get(controls::ColourGains) && options_->awb_gain_r && options_->awb_gain_b)
+                controls_.set(controls::ColourGains,  libcamera::Span<const float, 2>({ options_->awb_gain_r, options_->awb_gain_b }));
+        if (!controls_.get(controls::Brightness))
+                controls_.set(controls::Brightness, options_->brightness);
+        if (!controls_.get(controls::Contrast))
+                controls_.set(controls::Contrast, options_->contrast);
+        if (!controls_.get(controls::Saturation))
+                controls_.set(controls::Saturation, options_->saturation);
+        if (!controls_.get(controls::Sharpness))
+                controls_.set(controls::Sharpness, options_->sharpness);
+    */
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -742,8 +744,8 @@ void INDILibCamera::setup()
 bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
-    {        
-        for(int i = 0; i < n; i++) 
+    {
+        for(int i = 0; i < n; i++)
         {
             LOGF_INFO("%s.%s -> %f", name, names[i], values[i]);
         }
@@ -951,7 +953,7 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<FITSRecord> &fitsKeywords)
+void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
@@ -964,13 +966,13 @@ bool INDILibCamera::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    IUSaveConfigSwitch(fp, &CameraSP);
-    IUSaveConfigNumber(fp, &AdjustmentNP);
-    IUSaveConfigNumber(fp, &GainNP);
-    IUSaveConfigSwitch(fp, &AdjustExposureModeSP);
-    IUSaveConfigSwitch(fp, &AdjustAwbModeSP);
-    IUSaveConfigSwitch(fp, &AdjustMeteringModeSP);
-    IUSaveConfigSwitch(fp, &AdjustDenoiseModeSP);
+    CameraSP.save(fp);
+    AdjustmentNP.save(fp);
+    GainNP.save(fp);
+    AdjustExposureModeSP.save(fp);
+    AdjustAwbModeSP.save(fp);
+    AdjustMeteringModeSP.save(fp);
+    AdjustDenoiseModeSP.save(fp);
 
     return true;
 }

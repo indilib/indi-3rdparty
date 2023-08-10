@@ -56,7 +56,9 @@ class MaxDomeII : public INDI::Dome
 
   protected:
     // Parking
-    IPState ConfigurePark(int nCSBP, double ParkAzimuth);
+    IPState ConfigureShutterOperation(int nMDBOS, double ShutterOperationAzimuth);
+    virtual IPState Park() override;
+    virtual IPState UnPark() override;
     virtual bool SetCurrentPark() override;
     virtual bool SetDefaultPark() override;
     virtual IPState ControlShutter(ShutterOperation operation) override;
@@ -96,8 +98,8 @@ class MaxDomeII : public INDI::Dome
   private:
     int nTicksPerTurn;           // Number of ticks per turn of azimuth dome
     unsigned nCurrentTicks;      // Position as reported by the MaxDome II
-    int nCloseShutterBeforePark; // 0 no close shutter
-    double nParkPosition;        // Park position
+    int nMoveDomeBeforeOperateShutter; // 0 no move
+    double nShutterOperationPosition;        // Go to this position before operate the shutter. Controlled by the MaxDomeII firmware, in conjuntion to nMoveDomeBeforeOperateShutter
     double nHomeAzimuth;         // Azimuth of home position
     int nHomeTicks;              // Ticks from 0 azimuth to home
     int nTimeSinceShutterStart;  // Timer since shutter movement has started, in order to check timeouts

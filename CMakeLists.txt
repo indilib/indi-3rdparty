@@ -166,7 +166,7 @@ option(WITH_SBIG "Install SBIG Driver" On)
 option(WITH_INOVAPLX "Install i.Nova PLx Driver" On)
 option(WITH_APOGEE "Install Apogee Driver" On)
 option(WITH_FFMV "Install Point Grey FireFly MV Driver" On)
-#option(WITH_QHY "Install QHY Driver" On)
+option(WITH_QHY "Install QHY Driver" On)
 option(WITH_GPHOTO "Install GPhoto Driver" On)
 option(WITH_QSI "Install QSI Driver" On)
 option(WITH_DUINO "Install Ariduino Driver" On)
@@ -200,6 +200,8 @@ option(WITH_SVBONY "Install SVBONY Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
+option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
+option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 
 # FFMPEG required for INDI Webcam driver
@@ -241,6 +243,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_GPSD Off)
     set(WITH_AHP_XC Off)
     set(WITH_AHP_GT Off)
+    set(WITH_ASTROASIS Off)
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -268,6 +271,7 @@ if (NO_PRE_BUILT)
     SET(WITH_SBIG Off)
     SET(WITH_SVBONY Off)
     SET(WITH_TOUPBASE Off)
+    SET(WITH_ASTROASIS Off)
 endif(NO_PRE_BUILT)
 
 # If the Build Libs option is selected, it will just build the required libraries.
@@ -365,6 +369,11 @@ if (WITH_PLAYERONE)
 add_subdirectory(libplayerone)
 endif(WITH_PLAYERONE)
 
+#libastroasis
+if (WITH_ASTROASIS)
+add_subdirectory(libastroasis)
+endif(WITH_ASTROASIS)
+
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
 
@@ -412,6 +421,11 @@ endif(WITH_NEXDOME)
 if (WITH_TALON6)
 add_subdirectory(indi-talon6)
 endif(WITH_TALON6)
+
+## Rolloffino
+if (WITH_ROLLOFFINO)
+add_subdirectory(indi-rolloffino)
+endif(WITH_ROLLOFFINO)
 
 ## SpectraCyber
 if (WITH_SPECTRACYBER)
@@ -696,11 +710,11 @@ endif(WITH_PENTAX)
 # AHP
 if (WITH_AHP_XC)
 find_package(AHPXC)
-if(AHPXC_FOUND)
+if(AHP_XC_FOUND)
 add_subdirectory(indi-ahp-xc)
-else(AHPXC_FOUND)
+else(AHP_XC_FOUND)
 add_subdirectory(libahp-xc)
-endif(AHPXC_FOUND)
+endif(AHP_XC_FOUND)
 endif(WITH_AHP_XC)
 
 # svbony
@@ -744,6 +758,17 @@ endif(WITH_PLAYERONE)
 if (WITH_NUT)
 add_subdirectory(indi-nut)
 endif()
+
+# Astroasis
+if (WITH_ASTROASIS)
+find_package(ASTROASIS)
+if (ASTROASIS_FOUND)
+add_subdirectory(indi-astroasis)
+else (ASTROASIS_FOUND)
+add_subdirectory(libastroasis)
+SET(LIBRARIES_FOUND FALSE)
+endif(ASTROASIS_FOUND)
+endif(WITH_ASTROASIS)
 
 # OCS
 if (WITH_OCS)
@@ -843,13 +868,17 @@ if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
 endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
-if (WITH_AHPXC AND NOT AHPXC_FOUND)
+if (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 message(STATUS "libahp-xc was not found and will now be built. Please install libahp-xc first before running cmake again to install indi-ahp-xc.")
-endif (WITH_AHPXC AND NOT AHPXC_FOUND)
+endif (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 
-if (WITH_AHPGT AND NOT AHPGT_FOUND)
+if (WITH_AHP_GT AND NOT AHP_GT_FOUND)
 message(STATUS "libahp-gt was not found and will now be built. Please install libahp-gt first before running cmake again to install indi-ahpgt.")
-endif (WITH_AHPGT AND NOT AHPGT_FOUND)
+endif (WITH_AHP_GT AND NOT AHP_GT_FOUND)
+
+if (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
+message(STATUS "libastroasis was not found and will now be built. Please install libastroasis first before running cmake again to install indi-astroasis.")
+endif (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
 
 message(STATUS "####################################################################################################################################")
 endif (LIBRARIES_FOUND)

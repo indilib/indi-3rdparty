@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project (libatik)
 
-# Built November 11th, 2021 - SDK API 2021.11.02.862
-set (ATIK_VERSION "2.2.10")
+# Built with SDK API 2023.07.14.1456
+set (ATIK_VERSION "2.2.11")
 set (ATIK_SOVERSION "2")
 
 set (FLYCAPTURE_VERSION "2.13.3.31")
@@ -54,4 +54,4 @@ elseif (UNIX AND NOT WIN32)
 endif ()
 
 # Install header files
-install (FILES AtikCameras.h DESTINATION include/libatik)
+install (FILES AtikCameras.h AtikDefs.h DESTINATION include/libatik)

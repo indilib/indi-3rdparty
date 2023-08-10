@@ -1,3 +1,21 @@
+v1.10
+* Update: PlayerOneCamera SDK to v3.4.1
+
+v1.9
+* Add: sensor mode control for cameras that support it
+
+v1.8
+* Update: PlayerOneCamera SDK to v3.4.0
+
+v1.7
+* Update: PlayerOneCamera SDK to v3.3.0
+
+v1.6
+* Update: PlayerOnePW SDK to v1.2.0
+
+v1.5
+* BugFix: top quarter noise on bin2 image
+
 v1.4
 * Update: PlayerOneCamera SDK to v3.2.2
 

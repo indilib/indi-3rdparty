@@ -59,7 +59,7 @@ extern "C" {
 * visit https://www.iliaplatone.com/gt1 for more informations and purchase options.
 *
 * \author Ilia Platone
-* \version 1.6.2
+* \version 1.6.3
 * \date 2017-2021
 * \copyright MIT License.
 */
@@ -376,7 +376,7 @@ double timestamp;
  * \defgroup Defines Defines
  *\{*/
 ///AHP_GT_VERSION This library version
-#define AHP_GT_VERSION 0x162
+#define AHP_GT_VERSION 0x163
 
 /**\}
  * \defgroup Conn Connection
@@ -909,6 +909,19 @@ DLL_EXPORT void ahp_gt_set_time(double seconds);
 * \return Current time
 */
 DLL_EXPORT double ahp_gt_get_time();
+
+
+/**
+* \brief Set current time offset
+* \param seconds Current time offset
+*/
+DLL_EXPORT void ahp_gt_set_time_offset(double offset);
+
+/**
+* \brief Get current time offset
+* \return Current time offset
+*/
+DLL_EXPORT double ahp_gt_get_time_offset();
 
 /**
 * \brief Set geographic coordinates
