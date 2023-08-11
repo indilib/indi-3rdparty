@@ -13,7 +13,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(PLAYERONE_VERSION_MAJOR 1)
-set(PLAYERONE_VERSION_MINOR 7)
+set(PLAYERONE_VERSION_MINOR 10)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)

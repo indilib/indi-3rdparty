@@ -109,6 +109,11 @@ class SVBONYCCD : public INDI::CCD
         // pixel size
         float pixelSize;
 
+        // Camera Firmware version number
+        char cameraFirmwareVersion[65];
+        // SVBONY Camera SDK version number
+        const char* SDKVersion;
+
         // hCamera mutex protection
         pthread_mutex_t cameraID_mutex;
 

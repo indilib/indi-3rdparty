@@ -69,6 +69,7 @@ Limitations
 Changelog
 =========
 
+	+ 1.3.8 : SVBONY CCD firmware and SDK version information logs added.
 	+ 1.3.7 : Fixed Conflict of private variables in SVBONYCCD class.
 	+ 1.3.6 : Disabled workaround code for bug #666 "the problem that the last exposure image may be read in soft trigger mode".
 	+ 1.3.5 : Added process to initialize Camera parameters when Camera is connected.

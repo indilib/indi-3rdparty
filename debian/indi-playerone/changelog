@@ -1,3 +1,21 @@
+indi-playerone (1.10) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.4.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 29 Jul 2023 12:00:00 +0900
+
+indi-playerone (1.9) bionic; urgency=low
+
+  * Add sensor mode control for cameras that support it
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Thu, 20 Jul 2023 01:16:17 +0300
+
+indi-playerone (1.8) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.4.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 27 Jun 2023 12:00:00 +0900
+
 indi-playerone (1.7) bionic; urgency=low
 
   * Update PlayerOneCamera SDK v3.3.0

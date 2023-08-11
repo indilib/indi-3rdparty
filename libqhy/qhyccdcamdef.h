@@ -432,6 +432,10 @@
 
 #define DEVICETYPE_QHY630T                 4132
 
+#define DEVICETYPE_QHY268_OEM              4133
+#define DEVICETYPE_QHY268M_OEM             4134
+#define DEVICETYPE_QHY268C_OEM             4135
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999

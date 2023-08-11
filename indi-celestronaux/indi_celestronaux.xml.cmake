@@ -9,35 +9,35 @@
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="Evolution WiFi" manufacturer="Celestron">
+   <device label="Celestron Evolution WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="Evolution WiFi Wedge" manufacturer="Celestron">
+   <device label="Celestron Evolution WiFi Wedge" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="CGEM II Wired" manufacturer="Celestron">
+   <device label="Celestron CGEM II Wired" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="CGEM II WiFi" manufacturer="Celestron">
+   <device label="Celestron CGEM II WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="CGX Wired" manufacturer="Celestron">
+   <device label="Celestron CGX Wired" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="CGX WiFi" manufacturer="Celestron">
+   <device label="Celestron CGX WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="Advanced VX Wired" manufacturer="Celestron">
+   <device label="Celestron Advanced VX Wired" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
-   <device label="Advanced VX WiFi" manufacturer="Celestron">
+   <device label="Celestron Advanced VX WiFi" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>

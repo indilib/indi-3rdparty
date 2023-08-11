@@ -6,7 +6,6 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 find_package(ASTROASIS REQUIRED)
-find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(USB1 REQUIRED)
@@ -23,7 +22,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_astroasis.xml.cmake ${CMAKE_CURR
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
-include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${ASTROASIS_INCLUDE_DIR})
 
 include(CMakeCommon)
