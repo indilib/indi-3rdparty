@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 54.23041.20230731 */
+/* Version: 54.23231.20230823 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -231,11 +231,11 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_AE_PERCENT_DEF           10
 #define STARSHOOTG_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define STARSHOOTG_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction */
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_MAX    100
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_DEF    13
-#define STARSHOOTG_DYNAMIC_DEFECT_T2_MIN    0
-#define STARSHOOTG_DYNAMIC_DEFECT_T2_MAX    100
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction, threshold, means: 1.0 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MAX    100     /* means: 10.0 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_DEF    13      /* means: 1.3 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MIN    0       /* dynamic defect pixel correction, value, means: 0.00 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MAX    100     /* means: 1.00 */
 #define STARSHOOTG_DYNAMIC_DEFECT_T2_DEF    100
 #define STARSHOOTG_HDR_K_MIN                1       /* HDR synthesize */
 #define STARSHOOTG_HDR_K_MAX                25500
@@ -281,7 +281,7 @@ typedef struct {
 } StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.23041.20230731
+    get the version of this dll/so/dylib, which is: 54.23231.20230823
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -379,6 +379,8 @@ typedef struct {
 } StarshootgFrameInfoV3;
 
 /*
+    nWaitMS: The timeout interval, in milliseconds. If a nonzero value is specified, the function waits until the image is ok or the interval elapses.
+             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Starshootg_PullImageV3.
     bStill: to pull still image, set to 1, otherwise 0
     bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Grey), 16 (Grey), 64 (RGB64).
           In RAW mode, this parameter is ignored.
@@ -419,6 +421,7 @@ typedef struct {
             |-----------|------------------------|-------------------------------|-----------------------|
 */
 STARSHOOTG_API(HRESULT)  Starshootg_PullImageV3(HStarshootg h, void* pImageData, int bStill, int bits, int rowPitch, StarshootgFrameInfoV3* pInfo);
+STARSHOOTG_API(HRESULT)  Starshootg_WaitImageV3(HStarshootg h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, StarshootgFrameInfoV3* pInfo);
 
 typedef struct {
     unsigned            width;
@@ -800,7 +803,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                              
 #define STARSHOOTG_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 => disable, positive value (>= STARSHOOTG_NOFRAME_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define STARSHOOTG_OPTION_THREAD_PRIORITY        0x02       /* set the priority of the internal thread which grab data from the usb device.
-                                                             Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+                                                             Win: iValue: 0 => THREAD_PRIORITY_NORMAL; 1 => THREAD_PRIORITY_ABOVE_NORMAL; 2 => THREAD_PRIORITY_HIGHEST; 3 => THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
                                                          */
 #define STARSHOOTG_OPTION_PROCESSMODE            0x03       /* obsolete & useless, noop. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
@@ -979,17 +982,16 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                          */
 #define STARSHOOTG_OPTION_HIGH_FULLWELL          0x55       /* high fullwell capacity: 0 => disable, 1 => enable */
 #define STARSHOOTG_OPTION_DYNAMIC_DEFECT         0x56       /* dynamic defect pixel correction:
-                                                            threshold:
-                                                                 t1 (high 16 bits): [1, 100]
-                                                                 t2 (low 16 bits): [0, 100]
+                                                                threshold, t1: (high 16 bits): [10, 100], means: [1.0, 10.0]
+                                                                value, t2: (low 16 bits): [0, 100], means: [0.00, 1.00]
                                                          */
 #define STARSHOOTG_OPTION_HDR_KB                 0x57       /* HDR synthesize
                                                                 K (high 16 bits): [1, 25500]
                                                                 B (low 16 bits): [0, 65535]
                                                                 0xffffffff => set to default
                                                          */
-#define STARSHOOTG_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize 
-                                                                threshold: [1, 4095]
+#define STARSHOOTG_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize
+                                                                threshold: [1, 4094]
                                                                 0xffffffff => set to default
                                                          */
 #define STARSHOOTG_OPTION_GIGETIMEOUT            0x5a       /* For GigE cameras, the application periodically sends heartbeat signals to the camera to keep the connection to the camera alive.
@@ -1004,6 +1006,13 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
 #define STARSHOOTG_OPTION_OVERCLOCK_MAX          0x5c       /* get overclock range: [0, max] */
 #define STARSHOOTG_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
 #define STARSHOOTG_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
+#define STARSHOOTG_OPTION_ADC                    0x08000000 /* Analog-Digital Conversion:
+                                                                get:
+                                                                    (option | 'C'): get the current value
+                                                                    (option | 'N'): get the supported ADC number
+                                                                    (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
+                                                                set: val = ADC value, such as 11bits, 12bits, etc
+                                                         */
 
 /* pixel format */
 #define STARSHOOTG_PIXELFORMAT_RAW8              0x00
@@ -1136,6 +1145,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AfParam(HStarshootg h, StarshootgAfParam
 #define STARSHOOTG_IOCONTROLTYPE_SET_EXEVT_ACTIVE_MODE       0x36
 #define STARSHOOTG_IOCONTROLTYPE_GET_OUTPUTCOUNTERVALUE      0x37 /* Output Counter Value, range: [0 ~ 65535] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUTCOUNTERVALUE      0x38
+#define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUT_PAUSE            0x3a /* Output pause: 1 => puase, 0 => unpause */
 
 #define STARSHOOTG_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
