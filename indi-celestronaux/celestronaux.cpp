@@ -1894,9 +1894,10 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
                 de = 360 + coords.declination;
 
             if (dHA < 0)
-                ha = 360 - ((dHA / -24.0) * 360.0);
+                ha = (dHA / -24.0) * 360.0;
             else
-                ha = (dHA / 24.0) * 360.0;
+                ha = 360 - ((dHA / 24.0) * 360.0);
+
         }
 
         haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
