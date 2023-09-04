@@ -519,7 +519,7 @@ bool CelestronAUX::updateProperties()
         // to the MC during HC startup and quick align process.
         // TODO: One can set the HC in pass through mode, that is,
         // the HC relays the AUX commands only and does not interfere in the communication.
-        if (!m_isHandController)
+        if (PortTypeSP[PORT_HC_USB].getState() == ISS_ON && !m_isHandController)
         {
             if (startupWithoutHC())
             {
@@ -1825,11 +1825,22 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
         auto deEncoder = (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
-        ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((haEncoder + 180.) / 15.0);
+        ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((180 - haEncoder) / 15.0);
         pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
-        if (deEncoder < 90 || deEncoder > 270)
+
+        // North Hemisphere
+        if (LocationN[LOCATION_LATITUDE].value >= 0 && (deEncoder < 90 || deEncoder > 270))
         {
-            pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_WEST : PIER_EAST;
+            // "Normal" Pointing State (West, looking East)
+            pierSide = PIER_WEST;
+            de = rangeDec(180 - de);
+            ha = rangeHA(ha + 12);
+        }
+        // South Hemisphere
+        else if (LocationN[LOCATION_LATITUDE].value < 0 && deEncoder > 90 && deEncoder < 270)
+        {
+            // "Normal" Pointing State (East, looking West)
+            pierSide = PIER_EAST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
@@ -1929,18 +1940,14 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
             // "Normal" Pointing State (West, looking East)
             if (dHA < 0)
             {
-                if (coords.declination < 0)
-                    de = std::abs(coords.declination);
-                else
-                    de = 360.0 - coords.declination;
-
-                ha = rangeHA(dHA + 12) * 15.0;
+                de = 90 + (90 + coords.declination);
+                ha = -dHA * 15.0;
             }
             // "Reversed" Pointing State (East, looking West)
             else
             {
-                de = 90 + (90 + coords.declination);
-                ha = dHA * 15.0;
+                de = coords.declination * -1;
+                ha = rangeHA(12 - dHA) * 15.0;
             }
         }
 
