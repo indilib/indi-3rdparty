@@ -1825,11 +1825,11 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
         auto deEncoder = (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
-        ha = range24(haEncoder / 15.0);
-        pierSide = PIER_EAST;
+        ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((haEncoder + 180.) / 15.0);
+        pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
         if (deEncoder < 90 || deEncoder > 270)
         {
-            pierSide = PIER_WEST;
+            pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_WEST : PIER_EAST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
@@ -1894,9 +1894,10 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
                 de = 360 + coords.declination;
 
             if (dHA < 0)
-                ha = 360 - ((dHA / -24.0) * 360.0);
+                ha = (dHA / -24.0) * 360.0;
             else
-                ha = (dHA / 24.0) * 360.0;
+                ha = 360 - ((dHA / 24.0) * 360.0);
+
         }
 
         haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
@@ -1925,19 +1926,20 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
         }
         else
         {
-            // "Normal" Pointing State (East, looking West)
-            if (dHA >= 0)
+            // "Normal" Pointing State (West, looking East)
+            if (dHA < 0)
             {
-                de = coords.declination;
-                if (de < 0)
-                    de += 360;
+                if (coords.declination < 0)
+                    de = std::abs(coords.declination);
+                else
+                    de = 360.0 - coords.declination;
 
                 ha = rangeHA(dHA + 12) * 15.0;
             }
-            // "Reversed" Pointing State (West, looking East)
+            // "Reversed" Pointing State (East, looking West)
             else
             {
-                de = 90 + (90 - coords.declination);
+                de = 90 + (90 + coords.declination);
                 ha = dHA * 15.0;
             }
         }
