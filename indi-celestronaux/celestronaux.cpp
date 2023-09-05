@@ -519,15 +519,23 @@ bool CelestronAUX::updateProperties()
         // to the MC during HC startup and quick align process.
         // TODO: One can set the HC in pass through mode, that is,
         // the HC relays the AUX commands only and does not interfere in the communication.
-        if (PortTypeSP[PORT_HC_USB].getState() == ISS_ON && !m_isHandController)
+        if (!m_isHandController)
         {
-            if (startupWithoutHC())
+            getEncoder(AXIS_AZ);
+            getEncoder(AXIS_ALT);
+
+            // Only reset if both encoders report zero
+            // If mount was initialized before, then we shouldn't reset the value.
+            if (EncoderNP[AXIS_AZ].getValue() == 0 && EncoderNP[AXIS_ALT].getValue() == 0)
             {
-                LOG_INFO("successfully sent no-HC startup AUX commands");
-            }
-            else
-            {
-                LOG_ERROR("failed to sent no-HC startup AUX commands");
+                if (startupWithoutHC())
+                {
+                    LOG_INFO("successfully sent no-HC startup AUX commands");
+                }
+                else
+                {
+                    LOG_ERROR("failed to sent no-HC startup AUX commands");
+                }
             }
         }
 
