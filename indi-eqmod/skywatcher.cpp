@@ -536,6 +536,9 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
         case 0x0A:
             strcpy(boardinfo[0], "Star Adventurer");
             break;
+	case 0x0C:
+            strcpy(boardinfo[0], "Star Adventurer GTi");
+            break;
         case 0x20:
             strcpy(boardinfo[0], "EQ8-R Pro");
             break;
@@ -650,7 +653,7 @@ bool Skywatcher::HasPPEC()
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x23
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x0C || MountCode == 0x23
            || MountCode == 0xA5;
 }
 
