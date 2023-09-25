@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libindi-dev, zli
 Standards-Version: 3.9.1
 
 Package: indi-astroasis
-Architecture: any
+Architecture: amd64 armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}, libastroasis
 Description: INDI Driver for Astroasis focusers 
  .
@@ -15,7 +15,7 @@ Description: INDI Driver for Astroasis focusers
 Package: indi-astroasis-dbg
 Priority: extra
 Section: debug
-Architecture: any
+Architecture: amd64 armhf arm64
 Depends: indi-astroasis (= ${binary:Version}), ${misc:Depends}
 Description: INDI Driver for Astroasis focusers  
  .

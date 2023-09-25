@@ -1,3 +1,9 @@
+indi-svbony (1.3.8) bionic; urgency=low
+
+  * SVBONY CCD firmware and SDK version information logs added
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 2 Jul 2023 06:00:00 +0900
+
 indi-svbony (1.3.7) bionic; urgency=low
 
   * Fixed Conflict of private variables in SVBONYCCD class.

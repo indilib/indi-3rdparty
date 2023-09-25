@@ -71,7 +71,7 @@ Family :		CCDs
 Manufacturer :		SVBONY  
 Platforms :		Linux (Intel, ARM),Mac OS X 64 bits  
 Author :		Blaise-Florentin Collin & Tetsuya Kakura  
-Version :		1.3.3  
+Version :		1.3.8  
 
 ![SV305 camera](./SV305.jpg)
 

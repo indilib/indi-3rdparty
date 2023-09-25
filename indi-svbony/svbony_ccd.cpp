@@ -219,6 +219,19 @@ bool SVBONYCCD::Connect()
         return false;
     }
 
+    // Get Camera Firmware Version
+    status = SVBGetCameraFirmwareVersion(cameraID, cameraFirmwareVersion);
+    if (status == SVB_SUCCESS)
+    {
+        LOGF_INFO("Camera Firmware Version:%s", cameraFirmwareVersion);
+    }
+    else {
+        LOG_ERROR("Error, getting Camera Firmware Version failed.");
+    }
+    // Get SVBONY Camera SDK Version
+    SDKVersion = SVBGetSDKVersion();
+    LOGF_INFO("SVBONY Camera SDK Version:%s", SDKVersion);
+
     // wait a bit for the camera to get ready
     usleep(0.5 * 1e6);
 

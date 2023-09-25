@@ -74,6 +74,14 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Wed Sep 20 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- Update PlayerOneCamera SDK to v3.6.0
+* Sat Sep 02 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- Update PlayerOneCamera SDK to v3.5.0
+* Sat Jul 29 2023 Hiroshi Saito <hiro3110g@gmail.com>
+- Update PlayerOneCamera SDK to v3.4.1
+* Thu Jul 20 2023 Jarno Paananen <jarno.paananen@gmail.com>
+- Add sensor mode control for cameras that support it
 * Tue Jun 27 2023 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOneCamera SDK to v3.4.0
 * Tue May 09 2023 Hiroshi Saito <hiro3110g@gmail.com>

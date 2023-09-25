@@ -8,7 +8,7 @@ include(GNUInstallDirs)
 
 set (SVBONY_VERSION_MAJOR 1)
 set (SVBONY_VERSION_MINOR 3)
-set (SVBONY_VERSION_PATCH 7)
+set (SVBONY_VERSION_PATCH 8)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)

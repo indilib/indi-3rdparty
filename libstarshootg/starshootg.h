@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 54.22587.20230516 */
+/* Version: 54.23231.20230823 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -157,12 +157,16 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_FLAG_LOW_NOISE           0x0000010000000000  /* support low noise mode (Higher signal noise ratio, lower frame rate) */
 #define STARSHOOTG_FLAG_LEVELRANGE_HARDWARE 0x0000020000000000  /* hardware level range, put(get)_LevelRangeV2 */
 #define STARSHOOTG_FLAG_EVENT_HARDWARE      0x0000040000000000  /* hardware event, such as exposure start & stop */
-#define STARSHOOTG_FLAG_LIGHTSOURCE         0x0000080000000000  /* light source */
-#define STARSHOOTG_FLAG_FILTERWHEEL         0x0000100000000000  /* filter wheel */
+#define STARSHOOTG_FLAG_LIGHTSOURCE         0x0000080000000000  /* embedded light source */
+#define STARSHOOTG_FLAG_FILTERWHEEL         0x0000100000000000  /* astro filter wheel */
 #define STARSHOOTG_FLAG_GIGE                0x0000200000000000  /* 1 Gigabit GigE */
 #define STARSHOOTG_FLAG_10GIGE              0x0000400000000000  /* 10 Gigabit GigE */
 #define STARSHOOTG_FLAG_5GIGE               0x0000800000000000  /* 5 Gigabit GigE */
 #define STARSHOOTG_FLAG_25GIGE              0x0001000000000000  /* 2.5 Gigabit GigE */
+#define STARSHOOTG_FLAG_AUTOFOCUSER         0x0002000000000000  /* astro auto focuser */
+#define STARSHOOTG_FLAG_LIGHT_SOURCE        0x0004000000000000  /* stand alone light source */
+#define STARSHOOTG_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
+#define STARSHOOTG_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
 
 #define STARSHOOTG_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define STARSHOOTG_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -218,7 +222,7 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_DENOISE_MIN              0       /* denoise */
 #define STARSHOOTG_DENOISE_MAX              100     /* denoise */
 #define STARSHOOTG_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
-#define STARSHOOTG_TEC_TARGET_DEF           0       /* 0.0 degrees Celsius */
+#define STARSHOOTG_TEC_TARGET_DEF           100     /* 0.0 degrees Celsius */
 #define STARSHOOTG_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define STARSHOOTG_HEARTBEAT_MIN            100     /* millisecond */
 #define STARSHOOTG_HEARTBEAT_MAX            10000   /* millisecond */
@@ -227,11 +231,11 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_AE_PERCENT_DEF           10
 #define STARSHOOTG_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define STARSHOOTG_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction */
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_MAX    100
-#define STARSHOOTG_DYNAMIC_DEFECT_T1_DEF    13
-#define STARSHOOTG_DYNAMIC_DEFECT_T2_MIN    0
-#define STARSHOOTG_DYNAMIC_DEFECT_T2_MAX    100
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction, threshold, means: 1.0 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_MAX    100     /* means: 10.0 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T1_DEF    13      /* means: 1.3 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MIN    0       /* dynamic defect pixel correction, value, means: 0.00 */
+#define STARSHOOTG_DYNAMIC_DEFECT_T2_MAX    100     /* means: 1.00 */
 #define STARSHOOTG_DYNAMIC_DEFECT_T2_DEF    100
 #define STARSHOOTG_HDR_K_MIN                1       /* HDR synthesize */
 #define STARSHOOTG_HDR_K_MAX                25500
@@ -260,8 +264,8 @@ typedef struct {
     unsigned            still;       /* number of still resolution, same as Starshootg_get_StillResolutionNumber() */
     unsigned            maxfanspeed; /* maximum fan speed, fan speed range = [0, max], closed interval */
     unsigned            ioctrol;     /* number of input/output control */
-    float               xpixsz;      /* physical pixel size */
-    float               ypixsz;      /* physical pixel size */
+    float               xpixsz;      /* physical pixel size in micrometer */
+    float               ypixsz;      /* physical pixel size in micrometer */
     StarshootgResolution   res[16];
 } StarshootgModelV2; /* camera model v2 */
 
@@ -277,7 +281,7 @@ typedef struct {
 } StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.22587.20230516
+    get the version of this dll/so/dylib, which is: 54.23231.20230823
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -298,14 +302,14 @@ STARSHOOTG_API(const char*)      Starshootg_Version();
 */
 STARSHOOTG_API(unsigned) Starshootg_EnumV2(StarshootgDeviceV2 arr[STARSHOOTG_MAX]);
 
-/* use the id of StarshootgDeviceV2, which is enumerated by Starshootg_EnumV2.
-    if id is NULL, Starshootg_Open will open the first enumerated camera.
+/* use the camId of StarshootgDeviceV2, which is enumerated by Starshootg_EnumV2.
+    if camId is NULL, Starshootg_Open will open the first enumerated camera.
     For the issue of opening the camera on Android, please refer to the documentation
 */
 #if defined(_WIN32)
-STARSHOOTG_API(HStarshootg) Starshootg_Open(const wchar_t* id);
+STARSHOOTG_API(HStarshootg) Starshootg_Open(const wchar_t* camId);
 #else
-STARSHOOTG_API(HStarshootg) Starshootg_Open(const char* id);
+STARSHOOTG_API(HStarshootg) Starshootg_Open(const char* camId);
 #endif
 
 /*
@@ -375,6 +379,8 @@ typedef struct {
 } StarshootgFrameInfoV3;
 
 /*
+    nWaitMS: The timeout interval, in milliseconds. If a nonzero value is specified, the function waits until the image is ok or the interval elapses.
+             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Starshootg_PullImageV3.
     bStill: to pull still image, set to 1, otherwise 0
     bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Grey), 16 (Grey), 64 (RGB64).
           In RAW mode, this parameter is ignored.
@@ -415,6 +421,7 @@ typedef struct {
             |-----------|------------------------|-------------------------------|-----------------------|
 */
 STARSHOOTG_API(HRESULT)  Starshootg_PullImageV3(HStarshootg h, void* pImageData, int bStill, int bits, int rowPitch, StarshootgFrameInfoV3* pInfo);
+STARSHOOTG_API(HRESULT)  Starshootg_WaitImageV3(HStarshootg h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, StarshootgFrameInfoV3* pInfo);
 
 typedef struct {
     unsigned            width;
@@ -549,6 +556,15 @@ typedef void (__stdcall* PISTARSHOOTG_HISTOGRAM_CALLBACK)(const float aHistY[256
 typedef void (__stdcall* PISTARSHOOTG_CHROME_CALLBACK)(void* ctxChrome);
 typedef void (__stdcall* PISTARSHOOTG_PROGRESS)(int percent, void* ctxProgress);
 #endif
+/*
+* nFlag & 0x00008000: mono or color
+* nFlag & 0x0f: bitdepth
+* so the size of aHist is:
+    int arraySize = 1 << (nFlag & 0x0f);
+    if ((nFlag & 0x00008000) == 0)
+        arraySize *= 3;
+*/
+typedef void (__stdcall* PISTARSHOOTG_HISTOGRAM_CALLBACKV2)(const unsigned* aHist, unsigned nFlag, void* ctxHistogramV2);
 
 /*
 * bAutoExposure:
@@ -769,6 +785,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_LevelRangeV2(HStarshootg h, unsigned sho
 */
 STARSHOOTG_API(HRESULT)  Starshootg_LevelRangeAuto(HStarshootg h);  /* software level range */
 STARSHOOTG_API(HRESULT)  Starshootg_GetHistogram(HStarshootg h, PISTARSHOOTG_HISTOGRAM_CALLBACK funHistogram, void* ctxHistogram);
+STARSHOOTG_API(HRESULT)  Starshootg_GetHistogramV2(HStarshootg h, PISTARSHOOTG_HISTOGRAM_CALLBACKV2 funHistogramV2, void* ctxHistogramV2);
 
 /* led state:
     iLed: Led index, (0, 1, 2, ...)
@@ -786,7 +803,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                              
 #define STARSHOOTG_OPTION_NOFRAME_TIMEOUT        0x01       /* no frame timeout: 0 => disable, positive value (>= STARSHOOTG_NOFRAME_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define STARSHOOTG_OPTION_THREAD_PRIORITY        0x02       /* set the priority of the internal thread which grab data from the usb device.
-                                                             Win: iValue: 0 = THREAD_PRIORITY_NORMAL; 1 = THREAD_PRIORITY_ABOVE_NORMAL; 2 = THREAD_PRIORITY_HIGHEST; 3 = THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+                                                             Win: iValue: 0 => THREAD_PRIORITY_NORMAL; 1 => THREAD_PRIORITY_ABOVE_NORMAL; 2 => THREAD_PRIORITY_HIGHEST; 3 => THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
                                                              Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
                                                          */
 #define STARSHOOTG_OPTION_PROCESSMODE            0x03       /* obsolete & useless, noop. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
@@ -818,7 +835,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
 #define STARSHOOTG_OPTION_BINNING                0x17       /* binning
                                                                 0x01: (no binning)
                                                                 n: (saturating add, n*n), 0x02(2*2), 0x03(3*3), 0x04(4*4), 0x05(5*5), 0x06(6*6), 0x07(7*7), 0x08(8*8). The Bitdepth of the data remains unchanged.
-                                                                0x40 | n: (unsaturated add in RAW mode, n*n), 0x42(2*2), 0x43(3*3), 0x44(4*4), 0x45(5*5), 0x46(6*6), 0x47(7*7), 0x48(8*8). The Bitdepth of the data is increased. For example, the original data with bitdepth of 12 will increase the bitdepth by 2 bits and become 14 after 2*2 binning.
+                                                                0x40 | n: (unsaturated add, n*n, works only in RAW mode), 0x42(2*2), 0x43(3*3), 0x44(4*4), 0x45(5*5), 0x46(6*6), 0x47(7*7), 0x48(8*8). The Bitdepth of the data is increased. For example, the original data with bitdepth of 12 will increase the bitdepth by 2 bits and become 14 after 2*2 binning.
                                                                 0x80 | n: (average, n*n), 0x82(2*2), 0x83(3*3), 0x84(4*4), 0x85(5*5), 0x86(6*6), 0x87(7*7), 0x88(8*8). The Bitdepth of the data remains unchanged.
                                                             The final image size is rounded down to an even number, such as 640/3 to get 212
                                                          */
@@ -905,7 +922,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
 #define STARSHOOTG_OPTION_LOW_NOISE              0x38       /* low noise mode (Higher signal noise ratio, lower frame rate): 1 => enable */
 #define STARSHOOTG_OPTION_POWER                  0x39       /* get power consumption, unit: milliwatt */
 #define STARSHOOTG_OPTION_GLOBAL_RESET_MODE      0x3a       /* global reset mode */
-#define STARSHOOTG_OPTION_OPEN_USB_ERRORCODE     0x3b       /* get the open usb error code */
+#define STARSHOOTG_OPTION_OPEN_ERRORCODE         0x3b       /* get the open camera error code */
 #define STARSHOOTG_OPTION_FLUSH                  0x3d       /* 1 = hard flush, discard frames cached by camera DDR (if any)
                                                             2 = soft flush, discard frames cached by starshootg.dll (if any)
                                                             3 = both flush
@@ -965,17 +982,16 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                          */
 #define STARSHOOTG_OPTION_HIGH_FULLWELL          0x55       /* high fullwell capacity: 0 => disable, 1 => enable */
 #define STARSHOOTG_OPTION_DYNAMIC_DEFECT         0x56       /* dynamic defect pixel correction:
-                                                            threshold:
-                                                                 t1 (high 16 bits): [1, 100]
-                                                                 t2 (low 16 bits): [0, 100]
+                                                                threshold, t1: (high 16 bits): [10, 100], means: [1.0, 10.0]
+                                                                value, t2: (low 16 bits): [0, 100], means: [0.00, 1.00]
                                                          */
 #define STARSHOOTG_OPTION_HDR_KB                 0x57       /* HDR synthesize
                                                                 K (high 16 bits): [1, 25500]
                                                                 B (low 16 bits): [0, 65535]
                                                                 0xffffffff => set to default
                                                          */
-#define STARSHOOTG_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize 
-                                                                threshold: [1, 4095]
+#define STARSHOOTG_OPTION_HDR_THRESHOLD          0x58       /* HDR synthesize
+                                                                threshold: [1, 4094]
                                                                 0xffffffff => set to default
                                                          */
 #define STARSHOOTG_OPTION_GIGETIMEOUT            0x5a       /* For GigE cameras, the application periodically sends heartbeat signals to the camera to keep the connection to the camera alive.
@@ -985,6 +1001,17 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                                 1 => enable
                                                                 2 => disable
                                                                 default: auto
+                                                         */
+#define STARSHOOTG_OPTION_EEPROM_SIZE            0x5b       /* get EEPROM size */
+#define STARSHOOTG_OPTION_OVERCLOCK_MAX          0x5c       /* get overclock range: [0, max] */
+#define STARSHOOTG_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
+#define STARSHOOTG_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
+#define STARSHOOTG_OPTION_ADC                    0x08000000 /* Analog-Digital Conversion:
+                                                                get:
+                                                                    (option | 'C'): get the current value
+                                                                    (option | 'N'): get the supported ADC number
+                                                                    (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
+                                                                set: val = ADC value, such as 11bits, 12bits, etc
                                                          */
 
 /* pixel format */
@@ -1017,9 +1044,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_Roi(HStarshootg h, unsigned* pxOffset, u
     for each device found, it will take about 3 seconds
 */
 #if defined(_WIN32)
-STARSHOOTG_API(HRESULT) Starshootg_Replug(const wchar_t* id);
+STARSHOOTG_API(HRESULT) Starshootg_Replug(const wchar_t* camId);
 #else
-STARSHOOTG_API(HRESULT) Starshootg_Replug(const char* id);
+STARSHOOTG_API(HRESULT) Starshootg_Replug(const char* camId);
 #endif
 
 #ifndef __STARSHOOTGAFPARAM_DEFINED__
@@ -1051,9 +1078,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AfParam(HStarshootg h, StarshootgAfParam
 #define STARSHOOTG_IOCONTROLTYPE_SET_FORMAT                  0x06
 #define STARSHOOTG_IOCONTROLTYPE_GET_OUTPUTINVERTER          0x07 /* boolean, only support output signal */
 #define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUTINVERTER          0x08
-#define STARSHOOTG_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge */
+#define STARSHOOTG_IOCONTROLTYPE_GET_INPUTACTIVATION         0x09 /* 0x00 => Rising edge, 0x01 => Falling edge, 0x02 => Level high, 0x03 => Level low */
 #define STARSHOOTG_IOCONTROLTYPE_SET_INPUTACTIVATION         0x0a
-#define STARSHOOTG_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, [0, 20000] */
+#define STARSHOOTG_IOCONTROLTYPE_GET_DEBOUNCERTIME           0x0b /* debouncer time in microseconds, range: [0, 20000] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_DEBOUNCERTIME           0x0c
 #define STARSHOOTG_IOCONTROLTYPE_GET_TRIGGERSOURCE           0x0d /*
                                                                   0x00 => Opto-isolated input
@@ -1064,7 +1091,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AfParam(HStarshootg h, StarshootgAfParam
                                                                   0x05 => Software
                                                                */
 #define STARSHOOTG_IOCONTROLTYPE_SET_TRIGGERSOURCE           0x0e
-#define STARSHOOTG_IOCONTROLTYPE_GET_TRIGGERDELAY            0x0f /* Trigger delay time in microseconds, [0, 5000000] */
+#define STARSHOOTG_IOCONTROLTYPE_GET_TRIGGERDELAY            0x0f /* Trigger delay time in microseconds, range: [0, 5000000] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_TRIGGERDELAY            0x10
 #define STARSHOOTG_IOCONTROLTYPE_GET_BURSTCOUNTER            0x11 /* Burst Counter, range: [1 ~ 65535] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_BURSTCOUNTER            0x12
@@ -1084,13 +1111,15 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AfParam(HStarshootg h, StarshootgAfParam
                                                                   0x01 => Exposure Active
                                                                   0x02 => Strobe
                                                                   0x03 => User output
+                                                                  0x04 => Counter Output
+                                                                  0x05 => Timer Output
                                                                */
 #define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUTMODE              0x20
 #define STARSHOOTG_IOCONTROLTYPE_GET_STROBEDELAYMODE         0x21 /* boolean, 0 => pre-delay, 1 => delay; compared to exposure active signal */
 #define STARSHOOTG_IOCONTROLTYPE_SET_STROBEDELAYMODE         0x22
-#define STARSHOOTG_IOCONTROLTYPE_GET_STROBEDELAYTIME         0x23 /* Strobe delay or pre-delay time in microseconds, [0, 5000000] */
+#define STARSHOOTG_IOCONTROLTYPE_GET_STROBEDELAYTIME         0x23 /* Strobe delay or pre-delay time in microseconds, range: [0, 5000000] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_STROBEDELAYTIME         0x24
-#define STARSHOOTG_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, [0, 5000000] */
+#define STARSHOOTG_IOCONTROLTYPE_GET_STROBEDURATION          0x25 /* Strobe duration time in microseconds, range: [0, 5000000] */
 #define STARSHOOTG_IOCONTROLTYPE_SET_STROBEDURATION          0x26
 #define STARSHOOTG_IOCONTROLTYPE_GET_USERVALUE               0x27 /*
                                                                   bit0 => Opto-isolated output
@@ -1114,6 +1143,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_AfParam(HStarshootg h, StarshootgAfParam
 #define STARSHOOTG_IOCONTROLTYPE_SET_EXPO_END_LINE           0x34
 #define STARSHOOTG_IOCONTROLTYPE_GET_EXEVT_ACTIVE_MODE       0x35 /* exposure event: 0 => specified line, 1 => common exposure time */
 #define STARSHOOTG_IOCONTROLTYPE_SET_EXEVT_ACTIVE_MODE       0x36
+#define STARSHOOTG_IOCONTROLTYPE_GET_OUTPUTCOUNTERVALUE      0x37 /* Output Counter Value, range: [0 ~ 65535] */
+#define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUTCOUNTERVALUE      0x38
+#define STARSHOOTG_IOCONTROLTYPE_SET_OUTPUT_PAUSE            0x3a /* Output pause: 1 => puase, 0 => unpause */
 
 #define STARSHOOTG_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
@@ -1160,10 +1192,10 @@ STARSHOOTG_API(HRESULT)  Starshootg_Update(const wchar_t* camId, const wchar_t* 
 STARSHOOTG_API(HRESULT)  Starshootg_Update(const char* camId, const char* filePath, PISTARSHOOTG_PROGRESS funProgress, void* ctxProgress);
 #endif
 
-STARSHOOTG_API(HRESULT)  Starshootg_put_Linear(HStarshootg h, const unsigned char* v8, const unsigned short* v16);
-STARSHOOTG_API(HRESULT)  Starshootg_put_Curve(HStarshootg h, const unsigned char* v8, const unsigned short* v16);
-STARSHOOTG_API(HRESULT)  Starshootg_put_ColorMatrix(HStarshootg h, const double v[9]);
-STARSHOOTG_API(HRESULT)  Starshootg_put_InitWBGain(HStarshootg h, const unsigned short v[3]);
+STARSHOOTG_API(HRESULT)  Starshootg_put_Linear(HStarshootg h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+STARSHOOTG_API(HRESULT)  Starshootg_put_Curve(HStarshootg h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+STARSHOOTG_API(HRESULT)  Starshootg_put_ColorMatrix(HStarshootg h, const double v[9]); /* null => revert to model default */
+STARSHOOTG_API(HRESULT)  Starshootg_put_InitWBGain(HStarshootg h, const unsigned short v[3]); /* null => revert to model default */
 
 /*
     get the frame rate: framerate (fps) = Frame * 1000.0 / nTime
@@ -1181,6 +1213,8 @@ STARSHOOTG_API(HRESULT)  Starshootg_ST4PlusGuide(HStarshootg h, unsigned nDirect
 */
 STARSHOOTG_API(HRESULT)  Starshootg_ST4PlusGuideState(HStarshootg h);
 
+STARSHOOTG_API(HRESULT)  Starshootg_Gain2TempTint(const int gain[3], int* temp, int* tint);
+STARSHOOTG_API(void)     Starshootg_TempTint2Gain(const int temp, const int tint, int gain[3]);
 /*
     calculate the clarity factor:
     pImageData: pointer to the image data
@@ -1297,8 +1331,10 @@ STARSHOOTG_API(HRESULT)  Starshootg_AwbOnePush(HStarshootg h, PISTARSHOOTG_TEMPT
 STARSHOOTG_DEPRECATED
 STARSHOOTG_API(HRESULT)  Starshootg_AbbOnePush(HStarshootg h, PISTARSHOOTG_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
+/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
 typedef void (__stdcall* PSTARSHOOTG_HOTPLUG)(void* ctxHotPlug);
 STARSHOOTG_API(HRESULT)  Starshootg_GigeEnable(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
+
 /*
 USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
   (1) On Windows, please refer to the MSDN
@@ -1313,6 +1349,34 @@ Recommendation: for better rubustness, when notify of device insertion arrives, 
 #if !defined(_WIN32) && !defined(__ANDROID__)
 STARSHOOTG_API(void)   Starshootg_HotPlug(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
 #endif
+
+/* AAF: Astro Auto Focuser */
+#define STARSHOOTG_AAF_SETPOSITION     0x01
+#define STARSHOOTG_AAF_GETPOSITION     0x02
+#define STARSHOOTG_AAF_SETZERO         0x03
+#define STARSHOOTG_AAF_GETZERO         0x04
+#define STARSHOOTG_AAF_SETDIRECTION    0x05
+#define STARSHOOTG_AAF_GETDIRECTION    0x06
+#define STARSHOOTG_AAF_SETMAXINCREMENT 0x07
+#define STARSHOOTG_AAF_GETMAXINCREMENT 0x08
+#define STARSHOOTG_AAF_SETFINE         0x09
+#define STARSHOOTG_AAF_GETFINE         0x0a
+#define STARSHOOTG_AAF_SETCOARSE       0x0b
+#define STARSHOOTG_AAF_GETCOARSE       0x0c
+#define STARSHOOTG_AAF_SETBUZZER       0x0d
+#define STARSHOOTG_AAF_GETBUZZER       0x0e
+#define STARSHOOTG_AAF_SETBACKLASH     0x0f
+#define STARSHOOTG_AAF_GETBACKLASH     0x10
+#define STARSHOOTG_AAF_GETAMBIENTTEMP  0x12
+#define STARSHOOTG_AAF_GETTEMP         0x14
+#define STARSHOOTG_AAF_ISMOVING        0x16
+#define STARSHOOTG_AAF_HALT            0x17
+#define STARSHOOTG_AAF_SETMAXSTEP      0x1b
+#define STARSHOOTG_AAF_GETMAXSTEP      0x1c
+#define STARSHOOTG_AAF_RANGEMIN        0xfd  /* Range: min value */
+#define STARSHOOTG_AAF_RANGEMAX        0xfe  /* Range: max value */
+#define STARSHOOTG_AAF_RANGEDEF        0xff  /* Range: default value */
+STARSHOOTG_API(HRESULT) Starshootg_AAF(HStarshootg h, int action, int outVal, int* inVal);
 
 #if defined(_WIN32)
 /* Starshootg_put_TempTintInit is obsolete, recommend using Starshootg_AwbOnce. */
@@ -1361,13 +1425,13 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_VignetMidPointInt(HStarshootg h, int* nM
 #if defined(_WIN32)
 STARSHOOTG_API(HRESULT)  Starshootg_set_Name(HStarshootg h, const char* name);
 STARSHOOTG_API(HRESULT)  Starshootg_query_Name(HStarshootg h, char name[64]);
-STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const wchar_t* id, const char* name);
-STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const wchar_t* id, char name[64]);
+STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const wchar_t* camId, const char* name);
+STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const wchar_t* camId, char name[64]);
 #else
 STARSHOOTG_API(HRESULT)  Starshootg_set_Name(HStarshootg h, const char* name);
 STARSHOOTG_API(HRESULT)  Starshootg_query_Name(HStarshootg h, char name[64]);
-STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const char* id, const char* name);
-STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const char* id, char name[64]);
+STARSHOOTG_API(HRESULT)  Starshootg_put_Name(const char* camId, const char* name);
+STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const char* camId, char name[64]);
 #endif
 STARSHOOTG_API(unsigned) Starshootg_EnumWithName(StarshootgDeviceV2 pti[STARSHOOTG_MAX]);
 
