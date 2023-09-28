@@ -388,6 +388,20 @@ bool SVBONYBase::Connect()
         return false;
     }
 
+    // Restore settings
+    ret = SVBRestoreDefaultParam(mCameraInfo.CameraID);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_WARN("Error Initializing the CCD (%s).", Helpers::toString(ret));
+    }
+
+    ret = SVBSetAutoSaveParam(mCameraInfo.CameraID, SVB_FALSE);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_WARN("Error Initializing the CCD (%s).", Helpers::toString(ret));
+    }
+
+    // Get Camera Property
     ret = SVBGetCameraProperty(mCameraInfo.CameraID, &mCameraProperty);
     if (ret != SVB_SUCCESS)
     {
