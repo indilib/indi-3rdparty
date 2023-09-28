@@ -90,7 +90,8 @@ class SVBONYBase : public INDI::CCD
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
         /** Get image from CCD and send it to client */
-        int grabImage(float duration);
+        int grabImage(float duration, bool send = true);
+        void sendImage(SVB_IMG_TYPE type, float duration);
 
     protected:
         double mTargetTemperature;

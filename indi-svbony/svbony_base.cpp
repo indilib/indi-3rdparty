@@ -139,6 +139,13 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     SVB_ERROR_CODE status = SVB_ERROR_END;
     do
     {
+        if (isAboutToQuit)
+        {
+            // Discard from buffer but do not send
+            grabImage(0, false);
+            return;
+        }
+
         float delay = 0.1;
         float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
 
@@ -161,8 +168,6 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }
-        else if (isAboutToQuit)
-            return;
         else
         {
             auto imageBuffer = PrimaryCCD.getFrameBuffer();
@@ -988,7 +993,7 @@ bool SVBONYBase::UpdateCCDBin(int binx, int biny)
 
 /* Downloads the image from the CCD.
  N.B. No processing is done on the image */
-int SVBONYBase::grabImage(float duration)
+int SVBONYBase::grabImage(float duration, bool send)
 {
     SVB_ERROR_CODE ret = SVB_SUCCESS;
 
@@ -1044,10 +1049,17 @@ int SVBONYBase::grabImage(float duration)
     }
     guard.unlock();
 
+    if (send)
+        sendImage(type, duration);
+    return 0;
+}
+
+void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
+{
     PrimaryCCD.setNAxis(type == SVB_IMG_RGB24 ? 3 : 2);
 
     // If mono camera or we're sending Luma or RGB, turn off bayering
-    if (mCameraProperty.IsColorCam == false || type == SVB_IMG_Y8 || type == SVB_IMG_RGB24)
+    if (mCameraProperty.IsColorCam == false || type >= SVB_IMG_Y8)
         SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
     else
     {
@@ -1065,7 +1077,6 @@ int SVBONYBase::grabImage(float duration)
         LOG_INFO("Download complete.");
 
     ExposureComplete(&PrimaryCCD);
-    return 0;
 }
 
 /* The timer call back is used for temperature monitoring */
