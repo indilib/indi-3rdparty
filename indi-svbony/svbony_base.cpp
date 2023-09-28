@@ -1,9 +1,10 @@
 /*
-    SVB Camera Base
+    SVBony Camera Driver
 
-    Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2023 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
+    Copyright (C) 2020 Blaise-Florentin Collin (thx8411@yahoo.fr)
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -252,8 +253,6 @@ bool SVBONYBase::initProperties()
 
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-    IUSaveText(&BayerT[2], getBayerString());
-
     ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, 16);
     ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
 
@@ -380,7 +379,6 @@ bool SVBONYBase::updateProperties()
 bool SVBONYBase::Connect()
 {
     LOGF_DEBUG("Attempting to open %s...", mCameraName.c_str());
-
 
     auto ret = SVBOpenCamera(mCameraInfo.CameraID);
 
@@ -1038,7 +1036,16 @@ int SVBONYBase::grabImage(float duration)
     if (mCameraProperty.IsColorCam == false || type == SVB_IMG_Y8 || type == SVB_IMG_RGB24)
         SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
     else
+    {
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+        auto bayerString = getBayerString();
+        // Send if different
+        if (strcmp(bayerString, BayerT[2].text))
+        {
+            IUSaveText(&BayerT[2], bayerString);
+            IDSetText(&BayerTP, nullptr);
+        }
+    }
 
     if (duration > VERBOSE_EXPOSURE)
         LOG_INFO("Download complete.");

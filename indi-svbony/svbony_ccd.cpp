@@ -1,7 +1,7 @@
 /*
-    SVB CCD Driver
+    SVBony Camera Driver
 
-    Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2023 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
     Copyright (C) 2020 Blaise-Florentin Collin (thx8411@yahoo.fr)
