@@ -1,5 +1,5 @@
 %define __cmake_in_source_build %{_vpath_builddir}
-Name: indi-toupbase
+Name: libmeadecam
 Version:2.0.2.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
@@ -9,6 +9,9 @@ License: LGPLv2
 
 URL: https://indilib.org
 Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
+
+%global debug_package %{nil}
+%define __find_requires %{nil}
 
 BuildRequires: cmake
 BuildRequires: libfli-devel
@@ -31,7 +34,6 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
-BuildRequires: libasi
 
 BuildRequires: gmock
 
@@ -42,16 +44,8 @@ BuildRequires: pkgconfig(gsl)
 BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(zlib)
 
-BuildRequires: libtoupcam
-BuildRequires: libaltaircam
-BuildRequires: libbressercam
-BuildRequires: libmallincam
-BuildRequires: libmeadecam
-BuildRequires: libnncam
-BuildRequires: libogmacam
-BuildRequires: libomegonprocam
-BuildRequires: libstarshootg
-BuildRequires: libtscam
+Provides: libmeadecam.so()(64bit)
+Provides: libmeadecam.so
 
 
 %description
@@ -70,20 +64,21 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 # Disable LTO
 %define _lto_cflags %{nil}
 
-cd indi-toupbase
-%cmake -DINDI_DATA_DIR=/usr/share/indi .
+cd libmeadecam
+%cmake .
 make VERBOSE=1 %{?_smp_mflags} -j4
 
 %install
-cd indi-toupbase
+cd libmeadecam
+find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
 make DESTDIR=%{buildroot} install
 
 %files
-%{_bindir}/*
-%{_datadir}/indi
+%{_libdir}/*
+%{_includedir}/libmeadecam
+/lib/udev/rules.d/99-meadecam.rules
+
 
 %changelog
-* Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.7.git-1
-- update to build from git for copr, credit to Sergio Pascual and Christian Dersch for prior work on spec files
-- added Omegon SDK based toupcam driver. 2022-05-27 
+* initial release 2022-05-27
 
