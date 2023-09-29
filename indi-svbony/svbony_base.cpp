@@ -192,6 +192,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         PrimaryCCD.setExposureFailed();
                         return;
                     }
+                    delay = 100;
                     break;
                 default:
                     PrimaryCCD.setExposureLeft(0);
