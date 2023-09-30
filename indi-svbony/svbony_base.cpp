@@ -990,10 +990,10 @@ bool SVBONYBase::grabImage(float duration, bool send)
         }
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 5; i++)
     {
-        ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 100);
-        // Sleep for 100 ms and try up to three times
+        ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 1000);
+        // Sleep for 100 ms and try up to five times
         if (ret == SVB_ERROR_TIMEOUT)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -1012,10 +1012,19 @@ bool SVBONYBase::grabImage(float duration, bool send)
             break;
     }
 
-    if (ret != SVB_SUCCESS)
+    PrimaryCCD.setExposureLeft(0);
+
+    // Duration 0 means aborted so we just need to discard the frame.
+    if (duration == 0)
+    {
+        PrimaryCCD.setExposureFailed();
+        if (type == SVB_IMG_RGB24)
+            free(buffer);
+        return true;
+    }
+    else if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).", subW, subH, nChannels, Helpers::toString(ret));
-        PrimaryCCD.setExposureLeft(0);
         PrimaryCCD.setExposureFailed();
         if (type == SVB_IMG_RGB24)
             free(buffer);
@@ -1023,7 +1032,6 @@ bool SVBONYBase::grabImage(float duration, bool send)
     }
     else
     {
-        PrimaryCCD.setExposureLeft(0.0);
         if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
             LOG_INFO("Exposure done, downloading image...");
     }
