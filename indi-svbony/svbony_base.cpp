@@ -135,9 +135,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
-    auto counter = 0;
-    SVB_ERROR_CODE status = SVB_ERROR_END;
-    do
+    while (1)
     {
         if (isAboutToQuit)
         {
@@ -170,42 +168,12 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         }
         else
         {
-            auto imageBuffer = PrimaryCCD.getFrameBuffer();
-            auto size = PrimaryCCD.getFrameBufferSize();
-            status = SVBGetVideoData(mCameraInfo.CameraID, imageBuffer, size,  1000);
-            switch (status)
-            {
-                case SVB_SUCCESS:
-                    mExposureRetry = 0;
-                    PrimaryCCD.setExposureLeft(0.0);
-                    if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
-                        LOG_INFO("Exposure done, downloading image...");
-
-                    grabImage(duration);
-                    return;
-                    break;
-                case SVB_ERROR_TIMEOUT:
-                    counter++;
-                    if (counter > 10)
-                    {
-                        PrimaryCCD.setExposureLeft(0);
-                        PrimaryCCD.setExposureFailed();
-                        return;
-                    }
-                    delay = 100;
-                    break;
-                default:
-                    PrimaryCCD.setExposureLeft(0);
-                    PrimaryCCD.setExposureFailed();
-                    return;
-            }
+            grabImage(duration);
+            return;
         }
 
         usleep(delay * 1000 * 1000);
-
     }
-    while (status != SVB_SUCCESS);
-
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -477,6 +445,10 @@ bool SVBONYBase::Connect()
         mTimerTemperature.start(TEMP_TIMER_MS);
     }
 
+    // fix for SDK gain error issue
+    // set exposure time
+    SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, static_cast<long>(1 * 1000000L), SVB_FALSE);
+
     /* Success! */
     LOG_INFO("Camera is online. Retrieving configuration.");
 
@@ -514,7 +486,6 @@ void SVBONYBase::setupParams()
 {
     int piNumberOfControls = 0;
     SVB_ERROR_CODE ret;
-
 
     ret = SVBGetNumOfControls(mCameraInfo.CameraID, &piNumberOfControls);
 
@@ -994,7 +965,7 @@ bool SVBONYBase::UpdateCCDBin(int binx, int biny)
 
 /* Downloads the image from the CCD.
  N.B. No processing is done on the image */
-int SVBONYBase::grabImage(float duration, bool send)
+bool SVBONYBase::grabImage(float duration, bool send)
 {
     SVB_ERROR_CODE ret = SVB_SUCCESS;
 
@@ -1019,15 +990,42 @@ int SVBONYBase::grabImage(float duration, bool send)
         }
     }
 
-    ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 1000);
+    for (int i = 0; i < 3; i++)
+    {
+        ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 100);
+        // Sleep for 100 ms and try up to three times
+        if (ret == SVB_ERROR_TIMEOUT)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+        else if (ret != SVB_SUCCESS)
+        {
+            LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).", subW, subH, nChannels, Helpers::toString(ret));
+            PrimaryCCD.setExposureLeft(0);
+            PrimaryCCD.setExposureFailed();
+            if (type == SVB_IMG_RGB24)
+                free(buffer);
+            return false;
+        }
+        else
+            break;
+    }
+
     if (ret != SVB_SUCCESS)
     {
-        LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).",
-                   subW, subH, nChannels, Helpers::toString(ret)
-                  );
+        LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).", subW, subH, nChannels, Helpers::toString(ret));
+        PrimaryCCD.setExposureLeft(0);
+        PrimaryCCD.setExposureFailed();
         if (type == SVB_IMG_RGB24)
             free(buffer);
-        return -1;
+        return false;
+    }
+    else
+    {
+        PrimaryCCD.setExposureLeft(0.0);
+        if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
+            LOG_INFO("Exposure done, downloading image...");
     }
 
     if (type == SVB_IMG_RGB24)
@@ -1052,7 +1050,7 @@ int SVBONYBase::grabImage(float duration, bool send)
 
     if (send)
         sendImage(type, duration);
-    return 0;
+    return true;
 }
 
 void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
