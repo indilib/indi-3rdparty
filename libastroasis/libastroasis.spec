@@ -47,6 +47,8 @@ BuildRequires: pkgconfig(zlib)
 
 Provides: liboasisfocuser.so()(64bit)
 Provides: liboasisfocuser.so
+Provides: liboasisfilterwheel.so()(64bit)
+Provides: liboasisfilterwheel.so
 
 %description
 INDI is a distributed control protocol designed to operate
