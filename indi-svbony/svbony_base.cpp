@@ -125,7 +125,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         if (ret == SVB_SUCCESS)
             break;
 
-        LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
+        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
     }
@@ -135,12 +135,44 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
+    /*
+        Prepare a read buffer for SVB_IMG_RGB24.
+    */
+    SVB_IMG_TYPE type = getImageType();
+
+    std::unique_lock<std::mutex> guard(ccdBufferLock);
+    uint8_t *image = PrimaryCCD.getFrameBuffer();
+    uint8_t *buffer = image;
+
+    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+    int nChannels = (type == SVB_IMG_RGB24) ? 3 : 1;
+    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
+
+    if (type == SVB_IMG_RGB24)
+    {
+        buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
+        if (buffer == nullptr)
+        {
+            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName(), nTotalBytes);
+            return;
+        }
+    }
+
+    /*
+        Perform exposure and image data reading
+    */
+   int nRetry = 100; // Number of retries when ret is SVB_ERROR_TIMEOUT
     while (1)
     {
         if (isAboutToQuit)
         {
-            // Discard from buffer but do not send
-            grabImage(0, false);
+            ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes,  1000);
+            LOGF_DEBUG("Discard unretrieved exposure data: SVBGetVideoData(%s)", Helpers::toString(ret));
+            if (type == SVB_IMG_RGB24)
+                free(buffer);
+            guard.unlock();
+            PrimaryCCD.setExposureLeft(0);
             return;
         }
 
@@ -161,17 +193,63 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
             delay = std::max(timeLeft - std::trunc(timeLeft), 0.005f);
             timeLeft = std::round(timeLeft);
         }
-
         if (timeLeft > 0)
         {
             PrimaryCCD.setExposureLeft(timeLeft);
         }
         else
         {
-            grabImage(duration);
-            return;
-        }
+            ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 1000);
+            LOGF_DEBUG("Retrieved exposure data: SVBGetVideoData(%s)", Helpers::toString(ret));
+            switch (ret)
+            {
+                case SVB_SUCCESS:
+                    if (type == SVB_IMG_RGB24)
+                    {
+                        uint8_t *dstR = image;
+                        uint8_t *dstG = image + subW * subH;
+                        uint8_t *dstB = image + subW * subH * 2;
 
+                        const uint8_t *src = buffer;
+                        const uint8_t *end = buffer + subW * subH * 3;
+
+                        while (src != end)
+                        {
+                            *dstB++ = *src++;
+                            *dstG++ = *src++;
+                            *dstR++ = *src++;
+                        }
+                        free(buffer);
+                    }
+                    guard.unlock();
+                    sendImage(type, duration);
+
+                    mExposureRetry = 0;
+                    PrimaryCCD.setExposureLeft(0.0);
+                    if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
+                        LOG_INFO("Exposure done, downloading image...");
+
+                    return;
+                    break;
+                case SVB_ERROR_TIMEOUT:
+                    --nRetry;
+                    LOGF_DEBUG("Remaining retry count for SVBGetVideoData:%d", nRetry);
+                    if (nRetry)
+                    {
+                        // No image data is prepared in the buffer yet. Retry next step of while loop.
+                        delay = 0.5f;
+                        break;
+                    }
+                    //fall through
+                default: // Cannot continue to retrive image data when ret is any error except timeout.
+                    if (type == SVB_IMG_RGB24)
+                        free(buffer);
+                    guard.unlock();
+                    PrimaryCCD.setExposureLeft(0);
+                    PrimaryCCD.setExposureFailed();
+                    return;
+            }
+        }
         usleep(delay * 1000 * 1000);
     }
 }
@@ -961,104 +1039,6 @@ bool SVBONYBase::UpdateCCDBin(int binx, int biny)
     PrimaryCCD.setBin(binx, binx);
 
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
-}
-
-/* Downloads the image from the CCD.
- N.B. No processing is done on the image */
-bool SVBONYBase::grabImage(float duration, bool send)
-{
-    SVB_ERROR_CODE ret = SVB_SUCCESS;
-
-    SVB_IMG_TYPE type = getImageType();
-
-    std::unique_lock<std::mutex> guard(ccdBufferLock);
-    uint8_t *image = PrimaryCCD.getFrameBuffer();
-    uint8_t *buffer = image;
-
-    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
-    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-    int nChannels = (type == SVB_IMG_RGB24) ? 3 : 1;
-    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
-
-    if (type == SVB_IMG_RGB24)
-    {
-        buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
-        if (buffer == nullptr)
-        {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName());
-            return -1;
-        }
-    }
-
-    for (int i = 0; i < 5; i++)
-    {
-        ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes, 1000);
-        // Sleep for 100 ms and try up to five times
-        if (ret == SVB_ERROR_TIMEOUT)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue;
-        }
-        else if (ret != SVB_SUCCESS)
-        {
-            LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).", subW, subH, nChannels, Helpers::toString(ret));
-            PrimaryCCD.setExposureLeft(0);
-            PrimaryCCD.setExposureFailed();
-            if (type == SVB_IMG_RGB24)
-                free(buffer);
-            return false;
-        }
-        else
-            break;
-    }
-
-    PrimaryCCD.setExposureLeft(0);
-
-    // Duration 0 means aborted so we just need to discard the frame.
-    if (duration == 0)
-    {
-        PrimaryCCD.setExposureFailed();
-        if (type == SVB_IMG_RGB24)
-            free(buffer);
-        return true;
-    }
-    else if (ret != SVB_SUCCESS)
-    {
-        LOGF_ERROR("Failed to get data after exposure (%dx%d #%d channels) (%s).", subW, subH, nChannels, Helpers::toString(ret));
-        PrimaryCCD.setExposureFailed();
-        if (type == SVB_IMG_RGB24)
-            free(buffer);
-        return false;
-    }
-    else
-    {
-        if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
-            LOG_INFO("Exposure done, downloading image...");
-    }
-
-    if (type == SVB_IMG_RGB24)
-    {
-        uint8_t *dstR = image;
-        uint8_t *dstG = image + subW * subH;
-        uint8_t *dstB = image + subW * subH * 2;
-
-        const uint8_t *src = buffer;
-        const uint8_t *end = buffer + subW * subH * 3;
-
-        while (src != end)
-        {
-            *dstB++ = *src++;
-            *dstG++ = *src++;
-            *dstR++ = *src++;
-        }
-
-        free(buffer);
-    }
-    guard.unlock();
-
-    if (send)
-        sendImage(type, duration);
-    return true;
 }
 
 void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
