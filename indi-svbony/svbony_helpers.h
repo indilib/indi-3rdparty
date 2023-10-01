@@ -87,6 +87,7 @@ const char *toString(SVB_IMG_TYPE type)
     case SVB_IMG_RGB24:  return "SVB_IMG_RGB24";
     case SVB_IMG_RAW16:  return "SVB_IMG_RAW16";
     case SVB_IMG_Y8:     return "SVB_IMG_Y8";
+    case SVB_IMG_Y16:    return "SVB_IMG_Y16";
     case SVB_IMG_END:    return "SVB_IMG_END";
     default:             return "UNKNOWN";
     }
@@ -99,7 +100,8 @@ const char *toPrettyString(SVB_IMG_TYPE type)
     case SVB_IMG_RAW8:   return "Raw 8 bit";
     case SVB_IMG_RGB24:  return "RGB 24";
     case SVB_IMG_RAW16:  return "Raw 16 bit";
-    case SVB_IMG_Y8:     return "Luma";
+    case SVB_IMG_Y8:     return "Luma 8 bit";
+    case SVB_IMG_Y16:    return "Luma 16 bit";
     case SVB_IMG_END:    return "END";
     default:             return "UNKNOWN";
     }
@@ -114,6 +116,7 @@ INDI_PIXEL_FORMAT pixelFormat(SVB_IMG_TYPE type, SVB_BAYER_PATTERN pattern, bool
     {
     case SVB_IMG_RGB24: return INDI_RGB;
     case SVB_IMG_Y8:    return INDI_MONO;
+    case SVB_IMG_Y16:    return INDI_MONO;
     default:;           // see below
     }
 
