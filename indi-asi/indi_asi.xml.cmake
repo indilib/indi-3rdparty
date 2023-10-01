@@ -4,14 +4,6 @@
         <device label="ZWO CCD" mdpd="true" manufacturer="ZWO">
                 <driver name="ZWO CCD">indi_asi_ccd</driver>
                 <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-	</device>
-        <device label="ZWO Camera 1" manufacturer="ZWO">
-                <driver name="ZWO Camera">indi_asi_single_ccd</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-        </device>
-        <device label="ZWO Camera 2" manufacturer="ZWO">
-                <driver name="ZWO Camera">indi_asi_single_ccd</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
         </device>
 </devGroup>
 <devGroup group="Filter Wheels">
