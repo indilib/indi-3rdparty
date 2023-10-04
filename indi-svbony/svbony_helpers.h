@@ -45,7 +45,8 @@ const char *toString(SVB_BAYER_PATTERN pattern)
     case SVB_BAYER_BG: return "BGGR";
     case SVB_BAYER_GR: return "GRBG";
     case SVB_BAYER_GB: return "GBRG";
-    default:           return "RGGB";
+    case SVB_BAYER_RG: return "RGGB";
+    default:           return "GRBG";  // default bayer pattern for SVBONY OSC camera.
     }
 }
 
@@ -84,8 +85,12 @@ const char *toString(SVB_IMG_TYPE type)
     switch (type)
     {
     case SVB_IMG_RAW8:   return "SVB_IMG_RAW8";
-    case SVB_IMG_RGB24:  return "SVB_IMG_RGB24";
+	case SVB_IMG_RAW10:  return "SVB_IMG_RAW10";
+	case SVB_IMG_RAW12:  return "SVB_IMG_RAW12";
+	case SVB_IMG_RAW14:  return "SVB_IMG_RAW14";
     case SVB_IMG_RAW16:  return "SVB_IMG_RAW16";
+    case SVB_IMG_RGB24:  return "SVB_IMG_RGB24";
+	case SVB_IMG_RGB32:  return "SVB_IMG_RGB32";
     case SVB_IMG_Y8:     return "SVB_IMG_Y8";
     case SVB_IMG_Y16:    return "SVB_IMG_Y16";
     case SVB_IMG_END:    return "SVB_IMG_END";
@@ -98,15 +103,26 @@ const char *toPrettyString(SVB_IMG_TYPE type)
     switch (type)
     {
     case SVB_IMG_RAW8:   return "Raw 8 bit";
-    case SVB_IMG_RGB24:  return "RGB 24";
+    case SVB_IMG_RAW10:  return "Raw 10 bit";
+    case SVB_IMG_RAW12:  return "Raw 12 bit";
+    case SVB_IMG_RAW14:  return "Raw 14 bit";
     case SVB_IMG_RAW16:  return "Raw 16 bit";
     case SVB_IMG_Y8:     return "Luma 8 bit";
     case SVB_IMG_Y16:    return "Luma 16 bit";
+    case SVB_IMG_RGB24:  return "RGB 24";
+    case SVB_IMG_RGB32:  return "RGB 32";
     case SVB_IMG_END:    return "END";
     default:             return "UNKNOWN";
     }
 }
 
+/*
+    Determine the arguments in the following order:
+        isColor: not color -> mono
+        type: RGB* -> rgb, Y* -> mono 
+        pattern: bayer pattern
+        other -> mono
+*/
 INDI_PIXEL_FORMAT pixelFormat(SVB_IMG_TYPE type, SVB_BAYER_PATTERN pattern, bool isColor)
 {
     if (isColor == false)
@@ -115,8 +131,9 @@ INDI_PIXEL_FORMAT pixelFormat(SVB_IMG_TYPE type, SVB_BAYER_PATTERN pattern, bool
     switch (type)
     {
     case SVB_IMG_RGB24: return INDI_RGB;
+    case SVB_IMG_RGB32: return INDI_RGB;
     case SVB_IMG_Y8:    return INDI_MONO;
-    case SVB_IMG_Y16:    return INDI_MONO;
+    case SVB_IMG_Y16:   return INDI_MONO;
     default:;           // see below
     }
 
@@ -131,4 +148,102 @@ INDI_PIXEL_FORMAT pixelFormat(SVB_IMG_TYPE type, SVB_BAYER_PATTERN pattern, bool
     return INDI_MONO;
 }
 
+int getBPP(SVB_IMG_TYPE type)
+{
+    switch (type)
+    {
+    case SVB_IMG_RAW8:   return 8;
+	case SVB_IMG_RAW10:  return 16;
+	case SVB_IMG_RAW12:  return 16;
+	case SVB_IMG_RAW14:  return 16;
+    case SVB_IMG_RAW16:  return 16;
+    case SVB_IMG_RGB24:  return 8;
+	case SVB_IMG_RGB32:  return 8;
+    case SVB_IMG_Y8:     return 8;
+    case SVB_IMG_Y16:    return 16;
+    case SVB_IMG_END:    return 8;
+    default:             return 8;
+    }
 }
+
+int getNChannels(SVB_IMG_TYPE type)
+{
+    switch (type)
+    {
+    case SVB_IMG_RAW8:   return 1;
+	case SVB_IMG_RAW10:  return 1;
+	case SVB_IMG_RAW12:  return 1;
+	case SVB_IMG_RAW14:  return 1;
+    case SVB_IMG_RAW16:  return 1;
+    case SVB_IMG_RGB24:  return 3;
+	case SVB_IMG_RGB32:  return 4;
+    case SVB_IMG_Y8:     return 1;
+    case SVB_IMG_Y16:    return 1;
+    case SVB_IMG_END:    return 1;
+    default:             return 1;
+    }
+}
+
+int getNAxis(SVB_IMG_TYPE type)
+{
+    switch (type)
+    {
+    case SVB_IMG_RAW8:   return 2;
+	case SVB_IMG_RAW10:  return 2;
+	case SVB_IMG_RAW12:  return 2;
+	case SVB_IMG_RAW14:  return 2;
+    case SVB_IMG_RAW16:  return 2;
+    case SVB_IMG_RGB24:  return 3;
+	case SVB_IMG_RGB32:  return 3;
+    case SVB_IMG_Y8:     return 2;
+    case SVB_IMG_Y16:    return 2;
+    case SVB_IMG_END:    return 2;
+    default:             return 2;
+    }
+}
+
+bool isRGB(SVB_IMG_TYPE type)
+{
+    return (type == SVB_IMG_RGB24) || (type == SVB_IMG_RGB32);
+}
+
+bool isColor(SVB_IMG_TYPE type)
+{
+    switch (type)
+    {
+    case SVB_IMG_RAW8:
+	case SVB_IMG_RAW10:
+	case SVB_IMG_RAW12:
+	case SVB_IMG_RAW14:
+    case SVB_IMG_RAW16:
+    case SVB_IMG_RGB24:
+	case SVB_IMG_RGB32:
+        return true;
+    case SVB_IMG_Y8:
+    case SVB_IMG_Y16:
+    default:
+        return false;
+    }
+}
+
+bool hasBayer(SVB_IMG_TYPE type)
+{
+    switch (type)
+    {
+    case SVB_IMG_RAW8:
+	case SVB_IMG_RAW10:
+	case SVB_IMG_RAW12:
+	case SVB_IMG_RAW14:
+    case SVB_IMG_RAW16:
+        return true;
+    case SVB_IMG_RGB24:
+	case SVB_IMG_RGB32:
+    case SVB_IMG_Y8:
+    case SVB_IMG_Y16:
+    default:
+        return false;
+    }
+}
+
+}
+
