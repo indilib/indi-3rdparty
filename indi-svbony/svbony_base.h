@@ -89,8 +89,7 @@ class SVBONYBase : public INDI::CCD
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-        /** Get image from CCD and send it to client */
-        bool grabImage(float duration, bool send = true);
+        /** Send CCD image to client */
         void sendImage(SVB_IMG_TYPE type, float duration);
 
     protected:
