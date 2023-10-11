@@ -10,4 +10,10 @@
         <version>@INDI_QHY_VERSION_MAJOR@.@INDI_QHY_VERSION_MINOR@</version>
     </device>
 </devGroup>
+<devGroup group="Focusers">
+    <device label="QFocuser" manufacturer="QHY">
+        <driver name="QFocuser">indi_qhy_focuser</driver>
+        <version>@INDI_QHY_VERSION_MAJOR@.@INDI_QHY_VERSION_MINOR@</version>
+    </device>
+</devGroup>
 </driversList>

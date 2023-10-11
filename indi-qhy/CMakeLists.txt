@@ -12,6 +12,7 @@ find_package(ZLIB REQUIRED)
 find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(OpenCV REQUIRED)
 
 set(INDI_QHY_VERSION_MAJOR 2)
 set(INDI_QHY_VERSION_MINOR 8)
@@ -26,6 +27,7 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 include_directories( ${QHY_INCLUDE_DIR})
 include_directories( ${USB1_INCLUDE_DIRS})
 include_directories( ${NOVA_INCLUDE_DIRS})
+include_directories( ${OpenCV_INCLUDE_DIRS})
 
 add_definitions(-DCALLBACK_MODE_SUPPORT)
 
@@ -48,7 +50,7 @@ ENDIF ()
 
 add_executable(indi_qhy_ccd ${indiqhy_SRCS})
 
-target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OpenCV_LIBS})
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(indi_qhy_ccd rt)
@@ -60,7 +62,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml DESTINATION ${INDI_DATA_D
 
 ########### qhy_test_ccd ###########
 add_executable(qhy_ccd_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_test.cpp)
-target_link_libraries(qhy_ccd_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(qhy_ccd_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OpenCV_LIBS})
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_ccd_test rt)
 endif()
@@ -69,9 +71,18 @@ install(TARGETS qhy_ccd_test RUNTIME DESTINATION bin )
 
 ########### qhy_video_test ###########
 add_executable(qhy_video_test ${CMAKE_CURRENT_SOURCE_DIR}/qhy_video_test.cpp)
-target_link_libraries(qhy_video_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(qhy_video_test ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OpenCV_LIBS})
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(qhy_video_test rt)
 endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )
+
+########### qhy_focuser ###########
+add_executable(indi_qhy_focuser ${CMAKE_CURRENT_SOURCE_DIR}/cJSON.c ${CMAKE_CURRENT_SOURCE_DIR}/cJSON_Utils.c ${CMAKE_CURRENT_SOURCE_DIR}/qhy_focuser.cpp)
+target_link_libraries(indi_qhy_focuser ${INDI_LIBRARIES} )
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(indi_qhy_focuser rt)
+endif()
+
+install(TARGETS indi_qhy_focuser RUNTIME DESTINATION bin )
