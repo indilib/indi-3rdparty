@@ -557,6 +557,24 @@ bool SVBONYBase::Connect()
     LOGF_DEBUG("IsCoolerCam: %s", mCameraPropertyExtended.bSupportControlTemp ? "True" : "False");
     LOGF_DEBUG("BitDepth: %d", mCameraProperty.MaxBitDepth);
     LOGF_DEBUG("IsTriggerCam: %s", mCameraProperty.IsTriggerCam ? "True" : "False");
+    LOGF_DEBUG("BayerPattern:%s", Helpers::toString(mCameraProperty.BayerPattern));
+
+    // Output camera properties to log
+    if (isDebug())
+    {
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedBins) / sizeof(mCameraProperty.SupportedBins[0]))) && mCameraProperty.SupportedBins[i] != 0; i++)
+        {
+            LOGF_DEBUG(" Bin %d", mCameraProperty.SupportedBins[i]);
+        }
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedVideoFormat) / sizeof(mCameraProperty.SupportedVideoFormat[0]))) && mCameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
+        {
+            LOGF_DEBUG(" Supported Video Format: %s", Helpers::toString(mCameraProperty.SupportedVideoFormat[i]));
+        }
+    }
+
+    // output camera properties ex to log
+    LOGF_DEBUG("SupportPulseGuide: %s", mCameraPropertyExtended.bSupportPulseGuide ? "True" : "False");
+    LOGF_DEBUG("SupportControlTemp: %s", mCameraPropertyExtended.bSupportControlTemp ? "True" : "False");
 
     uint32_t cap = 0;
 
@@ -570,7 +588,11 @@ bool SVBONYBase::Connect()
         cap |= CCD_HAS_ST4_PORT;
 
     if (mCameraProperty.IsColorCam)
+    {
         cap |= CCD_HAS_BAYER;
+        IUSaveText(&BayerT[2], getBayerString());
+        IDSetText(&BayerTP, nullptr);
+    }
 
     cap |= CCD_CAN_ABORT;
     cap |= CCD_CAN_SUBFRAME;
@@ -701,7 +723,7 @@ void SVBONYBase::setupParams()
     SetCCDParams(maxWidth, maxHeight, bpp, pixelSize, pixelSize);
 
     // Let's calculate required buffer
-    int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    int nbuf = (PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8) * Helpers::getNChannels(mCurrentVideoFormat);
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     long value      = 0;
@@ -1094,9 +1116,7 @@ void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
     PrimaryCCD.setNAxis(Helpers::getNAxis(type));
 
     // If mono camera or we're sending Luma or RGB, turn off bayering
-    if (mCameraProperty.IsColorCam == false || type >= SVB_IMG_Y8)
-        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-    else
+    if (Helpers::hasBayer(type))
     {
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         auto bayerString = getBayerString();
@@ -1106,6 +1126,10 @@ void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
             IUSaveText(&BayerT[2], bayerString);
             IDSetText(&BayerTP, nullptr);
         }
+    }
+    else
+    {
+        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
     }
 
     if (duration > VERBOSE_EXPOSURE)
