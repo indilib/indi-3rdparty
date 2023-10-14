@@ -50,6 +50,35 @@ const char *SVBONYBase::getBayerString() const
     return Helpers::toString(mCameraProperty.BayerPattern);
 }
 
+// Set ROI and Binning
+bool SVBONYBase::SetROIFormat(int x, int y, int w, int h, int bin)
+{
+    SVB_ERROR_CODE ret;
+    int currentX = 0, currentY = 0, currentW = 0, currentH = 0, currentBin = 0;
+
+    ret = SVBGetROIFormat(mCameraInfo.CameraID, &currentY, &currentY, &currentW, &currentH, &currentBin);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to get ROI format (%s).", Helpers::toString(ret));
+    }
+    LOGF_DEBUG("SVBGetROIFormat (%d,%d-%d,%d,  bin:%d)", currentX, currentY, currentW, currentH, currentBin);
+
+    if (currentX == x && currentY == y && currentW == w && currentH == h && currentBin == bin)
+    {
+        LOG_DEBUG("SetROIFormat: Both the requested ROI and Bin are same as current ones. So don't need to change it to what are requested.");
+        return true; // both the requested ROI and Bin are same as current ones. So don't need to change it to what are requested.
+    }
+
+    LOGF_DEBUG("SVBSetROIFormat (%d,%d-%d,%d,  bin:%d)", x, y, w, h, bin);
+    ret = SVBSetROIFormat(mCameraInfo.CameraID, x, y, w, h, bin);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set ROI (%s).", Helpers::toString(ret));
+        return false;
+    }
+    return true;
+}
+
 void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 {
     SVB_ERROR_CODE ret;
@@ -614,6 +643,11 @@ bool SVBONYBase::Connect()
     // set exposure time
     SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, static_cast<long>(1 * 1000000L), SVB_FALSE);
 
+    // workaround for SDK cooling fan stopping issue
+    // The cooling fan stops when SVBSetCameraMode is changed.
+    // Set to Soft Trigger Mode for taking still pictures to reduce the impact of this problem.
+    SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_TRIG_SOFT);
+
     /* Success! */
     LOG_INFO("Camera is online. Retrieving configuration.");
 
@@ -743,8 +777,7 @@ void SVBONYBase::setupParams()
     if (ret != SVB_SUCCESS)
         LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
 
-    LOGF_DEBUG("setupParams SVBSetROIFormat (%dx%d,  bin %d, type %d)", maxWidth, maxHeight, 1, mCurrentVideoFormat);
-    SVBSetROIFormat(mCameraInfo.CameraID, 0, 0, maxWidth, maxHeight, 1);
+    SetROIFormat(0, 0, maxWidth, maxHeight, 1);
 
     updateRecorderFormat();
     Streamer->setSize(maxWidth, maxHeight);
@@ -973,7 +1006,7 @@ int SVBONYBase::SetTemperature(double temperature)
 
     SVB_ERROR_CODE ret;
 
-    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature), SVB_TRUE);
+    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature * 10.0), SVB_TRUE); // For SVB_TARGET_TEMPERATURE, 1 unit is set as 0.1 degree.
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to set temperature (%s).", Helpers::toString(ret));
@@ -1072,13 +1105,8 @@ bool SVBONYBase::UpdateCCDFrame(int x, int y, int w, int h)
     subH -= subH % 2;
 
     LOGF_DEBUG("Frame ROI x:%d y:%d w:%d h:%d", subX, subY, subW, subH);
-
-    SVB_ERROR_CODE ret;
-
-    ret = SVBSetROIFormat(mCameraInfo.CameraID, subX, subY, subW, subH, binX);
-    if (ret != SVB_SUCCESS)
+    if  (false == SetROIFormat(subX, subY, subW, subH, binX))
     {
-        LOGF_ERROR("Failed to set ROI (%s).", Helpers::toString(ret));
         return false;
     }
 
@@ -1167,6 +1195,10 @@ void SVBONYBase::temperatureTimerTimeout()
         TemperatureNP.s = newState;
         TemperatureN[0].value = mCurrentTemperature;
         IDSetNumber(&TemperatureNP, nullptr);
+/*
+        This log should be commented out except when investigating bugs, etc., as it outputs very frequently.
+        LOGF_DEBUG("Current Temperature %.2f degree", mCurrentTemperature);
+*/
     }
 
     if (HasCooler())
