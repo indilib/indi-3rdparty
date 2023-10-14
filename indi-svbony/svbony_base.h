@@ -84,6 +84,9 @@ class SVBONYBase : public INDI::CCD
         /** Get the current Bayer string used */
         const char *getBayerString() const;
 
+        // Set ROI and Binning
+        bool SetROIFormat(int x, int y, int w, int h, int bin);
+
     protected:
         INDI::SingleThreadPool mWorker;
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
