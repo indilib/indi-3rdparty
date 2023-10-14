@@ -162,7 +162,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     /*
         Perform exposure and image data reading
     */
-   int nRetry = 100; // Number of retries when ret is SVB_ERROR_TIMEOUT
+    int nRetry = 100; // Number of retries when ret is SVB_ERROR_TIMEOUT
     while (1)
     {
         if (isAboutToQuit)
@@ -240,7 +240,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         delay = 0.5f;
                         break;
                     }
-                    //fall through
+                //fall through
                 default: // Cannot continue to retrive image data when ret is any error except timeout.
                     if (type == SVB_IMG_RGB24)
                         free(buffer);
@@ -316,6 +316,8 @@ bool SVBONYBase::initProperties()
 
     NicknameTP[0].fill("nickname", "nickname", mNickname);
     NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
+
+    IUSaveText(&BayerT[2], "GRBG");
 
     addAuxControls();
 
