@@ -409,6 +409,8 @@ bool SVBONYBase::initProperties()
     NicknameTP[0].fill("nickname", "nickname", mNickname);
     NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
 
+    IUSaveText(&BayerT[2], "GRBG");
+
     addAuxControls();
 
     return true;
