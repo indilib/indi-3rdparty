@@ -1,7 +1,7 @@
 #ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 54.23231.20230823 */
+/* Version: 54.23585.20231015 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -167,6 +167,7 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_FLAG_LIGHT_SOURCE        0x0004000000000000  /* stand alone light source */
 #define STARSHOOTG_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
 #define STARSHOOTG_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
+#define STARSHOOTG_FLAG_RAW12PACK           0x0020000000000000  /* pixel format, RAW 12bits packed */
 
 #define STARSHOOTG_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define STARSHOOTG_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -198,11 +199,11 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_WBGAIN_MIN               (-127)  /* white balance gain */
 #define STARSHOOTG_WBGAIN_MAX               127     /* white balance gain */
 #define STARSHOOTG_BLACKLEVEL_MIN           0       /* minimum black level */
-#define STARSHOOTG_BLACKLEVEL8_MAX          31              /* maximum black level for bit depth = 8 */
-#define STARSHOOTG_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bit depth = 10 */
-#define STARSHOOTG_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bit depth = 12 */
-#define STARSHOOTG_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bit depth = 14 */
-#define STARSHOOTG_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bit depth = 16 */
+#define STARSHOOTG_BLACKLEVEL8_MAX          31              /* maximum black level for bitdepth = 8 */
+#define STARSHOOTG_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bitdepth = 10 */
+#define STARSHOOTG_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bitdepth = 12 */
+#define STARSHOOTG_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bitdepth = 14 */
+#define STARSHOOTG_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bitdepth = 16 */
 #define STARSHOOTG_SHARPENING_STRENGTH_DEF  0       /* sharpening strength */
 #define STARSHOOTG_SHARPENING_STRENGTH_MIN  0       /* sharpening strength */
 #define STARSHOOTG_SHARPENING_STRENGTH_MAX  500     /* sharpening strength */
@@ -215,6 +216,9 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define STARSHOOTG_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
+#define STARSHOOTG_AUTOEXPO_STEP_DEF        1000    /* auto exposure step: thousandths */
+#define STARSHOOTG_AUTOEXPO_STEP_MIN        1       /* auto exposure step: thousandths */
+#define STARSHOOTG_AUTOEXPO_STEP_MAX        1000    /* auto exposure step: thousandths */
 #define STARSHOOTG_BANDWIDTH_DEF            100     /* bandwidth */
 #define STARSHOOTG_BANDWIDTH_MIN            1       /* bandwidth */
 #define STARSHOOTG_BANDWIDTH_MAX            100     /* bandwidth */
@@ -281,7 +285,7 @@ typedef struct {
 } StarshootgDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.23231.20230823
+    get the version of this dll/so/dylib, which is: 54.23585.20231015
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -358,13 +362,13 @@ STARSHOOTG_API(HRESULT)  Starshootg_StartPullModeWithWndMsg(HStarshootg h, HWND 
 typedef void (__stdcall* PSTARSHOOTG_EVENT_CALLBACK)(unsigned nEvent, void* ctxEvent);
 STARSHOOTG_API(HRESULT)  Starshootg_StartPullModeWithCallback(HStarshootg h, PSTARSHOOTG_EVENT_CALLBACK funEvent, void* ctxEvent);
 
-#define STARSHOOTG_FRAMEINFO_FLAG_SEQ          0x0001 /* frame sequence number */
-#define STARSHOOTG_FRAMEINFO_FLAG_TIMESTAMP    0x0002 /* timestamp */
-#define STARSHOOTG_FRAMEINFO_FLAG_EXPOTIME     0x0004 /* exposure time */
-#define STARSHOOTG_FRAMEINFO_FLAG_EXPOGAIN     0x0008 /* exposure gain */
-#define STARSHOOTG_FRAMEINFO_FLAG_BLACKLEVEL   0x0010 /* black level */
-#define STARSHOOTG_FRAMEINFO_FLAG_SHUTTERSEQ   0x0020 /* sequence shutter counter */
-#define STARSHOOTG_FRAMEINFO_FLAG_STILL        0x8000 /* still image */
+#define STARSHOOTG_FRAMEINFO_FLAG_SEQ          0x00000001 /* frame sequence number */
+#define STARSHOOTG_FRAMEINFO_FLAG_TIMESTAMP    0x00000002 /* timestamp */
+#define STARSHOOTG_FRAMEINFO_FLAG_EXPOTIME     0x00000004 /* exposure time */
+#define STARSHOOTG_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
+#define STARSHOOTG_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
+#define STARSHOOTG_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define STARSHOOTG_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
     unsigned            width;
@@ -401,7 +405,7 @@ typedef struct {
             | bits = 8           | Convert to 8  |       NA      | Convert to 8  |       8       |       NA      |       NA      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 16          |      NA       | Convert to 16 |       NA      |       NA      |       16      | Convert to 16 |
-            |--------------------|---------------|-----------|-------------------|---------------|---------------|---------------|
+            |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 64          |      NA       | Convert to 64 |       NA      |       NA      | Convert to 64 |       64      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
 
@@ -663,7 +667,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_MaxSpeed(HStarshootg h); /* get the maxi
 
 STARSHOOTG_API(HRESULT)  Starshootg_get_FanMaxSpeed(HStarshootg h); /* get the maximum fan speed, the fan speed range = [0, max], closed interval */
 
-STARSHOOTG_API(HRESULT)  Starshootg_get_MaxBitDepth(HStarshootg h); /* get the max bit depth of this camera, such as 8, 10, 12, 14, 16 */
+STARSHOOTG_API(HRESULT)  Starshootg_get_MaxBitDepth(HStarshootg h); /* get the max bitdepth of this camera, such as 8, 10, 12, 14, 16 */
 
 /* power supply of lighting:
         0 => 60HZ AC
@@ -1013,6 +1017,14 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
                                                                     (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
                                                                 set: val = ADC value, such as 11bits, 12bits, etc
                                                          */
+#define STARSHOOTG_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
+#define STARSHOOTG_OPTION_AUTOEXP_EXPOTIME_STEP  0x60       /* Auto exposure: time step (thousandths) */
+#define STARSHOOTG_OPTION_AUTOEXP_GAIN_STEP      0x61       /* Auto exposure: gain step (thousandths) */
+#define STARSHOOTG_OPTION_MOTOR_NUMBER           0x62       /* range: [1, 20] */
+#define STARSHOOTG_OPTION_MOTOR_POS              0x10000000 /* range: [1, 702] */
+#define STARSHOOTG_OPTION_PSEUDO_COLOR_START     0x63       /* Pseudo: start color, BGR format */
+#define STARSHOOTG_OPTION_PSEUDO_COLOR_END       0x64       /* Pseudo: end color, BGR format */
+#define STARSHOOTG_OPTION_PSEUDO_COLOR_ENABLE    0x65       /* Pseudo: 1 => enable, 0 => disable */
 
 /* pixel format */
 #define STARSHOOTG_PIXELFORMAT_RAW8              0x00
@@ -1027,6 +1039,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_feed_Pipe(HStarshootg h, unsigned pipeId);
 #define STARSHOOTG_PIXELFORMAT_GMCY8             0x09   /* map to RGGB 8 bits */
 #define STARSHOOTG_PIXELFORMAT_GMCY12            0x0a   /* map to RGGB 12 bits */
 #define STARSHOOTG_PIXELFORMAT_UYVY              0x0b
+#define STARSHOOTG_PIXELFORMAT_RAW12PACK         0x0c
 
 STARSHOOTG_API(HRESULT)  Starshootg_put_Option(HStarshootg h, unsigned iOption, int iValue);
 STARSHOOTG_API(HRESULT)  Starshootg_get_Option(HStarshootg h, unsigned iOption, int* piValue);

@@ -1,7 +1,7 @@
 #ifndef __altaircam_h__
 #define __altaircam_h__
 
-/* Version: 54.23231.20230823 */
+/* Version: 54.23585.20231015 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -167,6 +167,7 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_FLAG_LIGHT_SOURCE        0x0004000000000000  /* stand alone light source */
 #define ALTAIRCAM_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
 #define ALTAIRCAM_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
+#define ALTAIRCAM_FLAG_RAW12PACK           0x0020000000000000  /* pixel format, RAW 12bits packed */
 
 #define ALTAIRCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define ALTAIRCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -198,11 +199,11 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_WBGAIN_MIN               (-127)  /* white balance gain */
 #define ALTAIRCAM_WBGAIN_MAX               127     /* white balance gain */
 #define ALTAIRCAM_BLACKLEVEL_MIN           0       /* minimum black level */
-#define ALTAIRCAM_BLACKLEVEL8_MAX          31              /* maximum black level for bit depth = 8 */
-#define ALTAIRCAM_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bit depth = 10 */
-#define ALTAIRCAM_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bit depth = 12 */
-#define ALTAIRCAM_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bit depth = 14 */
-#define ALTAIRCAM_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bit depth = 16 */
+#define ALTAIRCAM_BLACKLEVEL8_MAX          31              /* maximum black level for bitdepth = 8 */
+#define ALTAIRCAM_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bitdepth = 10 */
+#define ALTAIRCAM_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bitdepth = 12 */
+#define ALTAIRCAM_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bitdepth = 14 */
+#define ALTAIRCAM_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bitdepth = 16 */
 #define ALTAIRCAM_SHARPENING_STRENGTH_DEF  0       /* sharpening strength */
 #define ALTAIRCAM_SHARPENING_STRENGTH_MIN  0       /* sharpening strength */
 #define ALTAIRCAM_SHARPENING_STRENGTH_MAX  500     /* sharpening strength */
@@ -215,6 +216,9 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define ALTAIRCAM_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define ALTAIRCAM_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
+#define ALTAIRCAM_AUTOEXPO_STEP_DEF        1000    /* auto exposure step: thousandths */
+#define ALTAIRCAM_AUTOEXPO_STEP_MIN        1       /* auto exposure step: thousandths */
+#define ALTAIRCAM_AUTOEXPO_STEP_MAX        1000    /* auto exposure step: thousandths */
 #define ALTAIRCAM_BANDWIDTH_DEF            100     /* bandwidth */
 #define ALTAIRCAM_BANDWIDTH_MIN            1       /* bandwidth */
 #define ALTAIRCAM_BANDWIDTH_MAX            100     /* bandwidth */
@@ -281,7 +285,7 @@ typedef struct {
 } AltaircamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.23231.20230823
+    get the version of this dll/so/dylib, which is: 54.23585.20231015
 */
 #if defined(_WIN32)
 ALTAIRCAM_API(const wchar_t*)   Altaircam_Version();
@@ -358,13 +362,13 @@ ALTAIRCAM_API(HRESULT)  Altaircam_StartPullModeWithWndMsg(HAltaircam h, HWND hWn
 typedef void (__stdcall* PALTAIRCAM_EVENT_CALLBACK)(unsigned nEvent, void* ctxEvent);
 ALTAIRCAM_API(HRESULT)  Altaircam_StartPullModeWithCallback(HAltaircam h, PALTAIRCAM_EVENT_CALLBACK funEvent, void* ctxEvent);
 
-#define ALTAIRCAM_FRAMEINFO_FLAG_SEQ          0x0001 /* frame sequence number */
-#define ALTAIRCAM_FRAMEINFO_FLAG_TIMESTAMP    0x0002 /* timestamp */
-#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOTIME     0x0004 /* exposure time */
-#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOGAIN     0x0008 /* exposure gain */
-#define ALTAIRCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x0010 /* black level */
-#define ALTAIRCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x0020 /* sequence shutter counter */
-#define ALTAIRCAM_FRAMEINFO_FLAG_STILL        0x8000 /* still image */
+#define ALTAIRCAM_FRAMEINFO_FLAG_SEQ          0x00000001 /* frame sequence number */
+#define ALTAIRCAM_FRAMEINFO_FLAG_TIMESTAMP    0x00000002 /* timestamp */
+#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOTIME     0x00000004 /* exposure time */
+#define ALTAIRCAM_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
+#define ALTAIRCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
+#define ALTAIRCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define ALTAIRCAM_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
     unsigned            width;
@@ -401,7 +405,7 @@ typedef struct {
             | bits = 8           | Convert to 8  |       NA      | Convert to 8  |       8       |       NA      |       NA      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 16          |      NA       | Convert to 16 |       NA      |       NA      |       16      | Convert to 16 |
-            |--------------------|---------------|-----------|-------------------|---------------|---------------|---------------|
+            |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 64          |      NA       | Convert to 64 |       NA      |       NA      | Convert to 64 |       64      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
 
@@ -663,7 +667,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_MaxSpeed(HAltaircam h); /* get the maximum
 
 ALTAIRCAM_API(HRESULT)  Altaircam_get_FanMaxSpeed(HAltaircam h); /* get the maximum fan speed, the fan speed range = [0, max], closed interval */
 
-ALTAIRCAM_API(HRESULT)  Altaircam_get_MaxBitDepth(HAltaircam h); /* get the max bit depth of this camera, such as 8, 10, 12, 14, 16 */
+ALTAIRCAM_API(HRESULT)  Altaircam_get_MaxBitDepth(HAltaircam h); /* get the max bitdepth of this camera, such as 8, 10, 12, 14, 16 */
 
 /* power supply of lighting:
         0 => 60HZ AC
@@ -1013,6 +1017,14 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
                                                                     (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
                                                                 set: val = ADC value, such as 11bits, 12bits, etc
                                                          */
+#define ALTAIRCAM_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
+#define ALTAIRCAM_OPTION_AUTOEXP_EXPOTIME_STEP  0x60       /* Auto exposure: time step (thousandths) */
+#define ALTAIRCAM_OPTION_AUTOEXP_GAIN_STEP      0x61       /* Auto exposure: gain step (thousandths) */
+#define ALTAIRCAM_OPTION_MOTOR_NUMBER           0x62       /* range: [1, 20] */
+#define ALTAIRCAM_OPTION_MOTOR_POS              0x10000000 /* range: [1, 702] */
+#define ALTAIRCAM_OPTION_PSEUDO_COLOR_START     0x63       /* Pseudo: start color, BGR format */
+#define ALTAIRCAM_OPTION_PSEUDO_COLOR_END       0x64       /* Pseudo: end color, BGR format */
+#define ALTAIRCAM_OPTION_PSEUDO_COLOR_ENABLE    0x65       /* Pseudo: 1 => enable, 0 => disable */
 
 /* pixel format */
 #define ALTAIRCAM_PIXELFORMAT_RAW8              0x00
@@ -1027,6 +1039,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
 #define ALTAIRCAM_PIXELFORMAT_GMCY8             0x09   /* map to RGGB 8 bits */
 #define ALTAIRCAM_PIXELFORMAT_GMCY12            0x0a   /* map to RGGB 12 bits */
 #define ALTAIRCAM_PIXELFORMAT_UYVY              0x0b
+#define ALTAIRCAM_PIXELFORMAT_RAW12PACK         0x0c
 
 ALTAIRCAM_API(HRESULT)  Altaircam_put_Option(HAltaircam h, unsigned iOption, int iValue);
 ALTAIRCAM_API(HRESULT)  Altaircam_get_Option(HAltaircam h, unsigned iOption, int* piValue);
