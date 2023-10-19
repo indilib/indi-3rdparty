@@ -50,6 +50,35 @@ const char *SVBONYBase::getBayerString() const
     return Helpers::toString(mCameraProperty.BayerPattern);
 }
 
+// Set ROI and Binning
+bool SVBONYBase::SetROIFormat(int x, int y, int w, int h, int bin)
+{
+    SVB_ERROR_CODE ret;
+    int currentX = 0, currentY = 0, currentW = 0, currentH = 0, currentBin = 0;
+
+    ret = SVBGetROIFormat(mCameraInfo.CameraID, &currentY, &currentY, &currentW, &currentH, &currentBin);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to get ROI format (%s).", Helpers::toString(ret));
+    }
+    LOGF_DEBUG("SVBGetROIFormat (%d,%d-%d,%d,  bin:%d)", currentX, currentY, currentW, currentH, currentBin);
+
+    if (currentX == x && currentY == y && currentW == w && currentH == h && currentBin == bin)
+    {
+        LOG_DEBUG("SetROIFormat: Both the requested ROI and Bin are same as current ones. So don't need to change it to what are requested.");
+        return true; // both the requested ROI and Bin are same as current ones. So don't need to change it to what are requested.
+    }
+
+    LOGF_DEBUG("SVBSetROIFormat (%d,%d-%d,%d,  bin:%d)", x, y, w, h, bin);
+    ret = SVBSetROIFormat(mCameraInfo.CameraID, x, y, w, h, bin);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set ROI (%s).", Helpers::toString(ret));
+        return false;
+    }
+    return true;
+}
+
 void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 {
     SVB_ERROR_CODE ret;
@@ -60,47 +89,85 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        return;
     }
 
+    // set camera normal mode
+    ret = SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_NORMAL);
+    if(ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set normal mode (%s).", Helpers::toString(ret));
+        return;
+    }
+    LOG_INFO("Camera normal mode");
+
     ret = SVBStartVideoCapture(mCameraInfo.CameraID);
-    if (ret != SVB_SUCCESS)
+    if (ret == SVB_SUCCESS)
+    {
+        while (!isAboutToQuit)
+        {
+            uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
+            uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
+            int waitMS           = static_cast<int>((ExposureRequest * 2000.0) + 500);
+
+            ret = SVBGetVideoData(mCameraInfo.CameraID, targetFrame, totalBytes, waitMS);
+            if (ret != SVB_SUCCESS)
+            {
+                if (ret != SVB_ERROR_TIMEOUT)
+                {
+                    Streamer->setStream(false);
+                    LOGF_ERROR("Failed to read video data (%s).", Helpers::toString(ret));
+                    break;
+                }
+
+                usleep(100);
+                continue;
+            }
+
+            /*
+                RGB channel data align in targetFrame: 24bit:BGR, 32bit:BGRA
+                RGB channel data align in file: 24bit:RGB, 32bit:RGBA
+            */
+            if (Helpers::isRGB(mCurrentVideoFormat)) {
+                int nChannels = Helpers::getNChannels(mCurrentVideoFormat);
+                for (uint32_t i = 0; i < totalBytes; i += nChannels)
+                    std::swap(targetFrame[i], targetFrame[i + 2]); // swap R and B channel.
+            }
+        
+            Streamer->newFrame(targetFrame, totalBytes);
+        }
+
+        SVBStopVideoCapture(mCameraInfo.CameraID);
+    }
+    else
     {
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
     }
 
-    while (!isAboutToQuit)
+    // set camera soft trigger mode
+    ret = SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_TRIG_SOFT);
+    if(ret != SVB_SUCCESS)
     {
-        uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
-        uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
-        int waitMS           = static_cast<int>((ExposureRequest * 2000.0) + 500);
-
-        ret = SVBGetVideoData(mCameraInfo.CameraID, targetFrame, totalBytes, waitMS);
-        if (ret != SVB_SUCCESS)
-        {
-            if (ret != SVB_ERROR_TIMEOUT)
-            {
-                Streamer->setStream(false);
-                LOGF_ERROR("Failed to read video data (%s).", Helpers::toString(ret));
-                break;
-            }
-
-            usleep(100);
-            continue;
-        }
-
-        if (mCurrentVideoFormat == SVB_IMG_RGB24)
-            for (uint32_t i = 0; i < totalBytes; i += 3)
-                std::swap(targetFrame[i], targetFrame[i + 2]);
-
-        Streamer->newFrame(targetFrame, totalBytes);
+        LOGF_ERROR("Failed to set soft trigger mode (%s).", Helpers::toString(ret));
     }
-
-    SVBStopVideoCapture(mCameraInfo.CameraID);
+    else
+    {
+        LOG_DEBUG("Camera soft trigger mode");
+    }
 }
 
 void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     SVB_ERROR_CODE ret;
+
+    // set camera soft trigger mode
+    ret = SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_TRIG_SOFT);
+    if(ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set soft trigger mode (%s).", Helpers::toString(ret));
+        return;
+    }
+    LOG_DEBUG("Camera soft trigger mode");
 
     ret = SVBStartVideoCapture(mCameraInfo.CameraID);
     if (ret != SVB_SUCCESS)
@@ -119,7 +186,8 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     }
 
     // Try exposure for 3 times
-    for (int i = 0; i < 3; i++)
+    int nRetry = 3; // Number of retries to start exposure
+    while (nRetry--)
     {
         ret = SVBSendSoftTrigger(mCameraInfo.CameraID);
         if (ret == SVB_SUCCESS)
@@ -129,6 +197,11 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         // Wait 100ms before trying again
         usleep(100 * 1000);
     }
+    if (!nRetry)
+    {
+        LOG_ERROR("Failed to start exposure three times.");
+        return;
+    }
 
     INDI::ElapsedTimer exposureTimer;
 
@@ -136,7 +209,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
     /*
-        Prepare a read buffer for SVB_IMG_RGB24.
+        Prepare a read buffer for SVB_IMG_RGB24 and SVB_IMG_RGB32
     */
     SVB_IMG_TYPE type = getImageType();
 
@@ -146,15 +219,16 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
 
     uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-    int nChannels = (type == SVB_IMG_RGB24) ? 3 : 1;
+    int nChannels = Helpers::getNChannels(type);
     size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
 
-    if (type == SVB_IMG_RGB24)
+    if (Helpers::isRGB(type))
     {
         buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
         if (buffer == nullptr)
         {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName(), nTotalBytes);
+            LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
+            guard.unlock();
             return;
         }
     }
@@ -162,14 +236,14 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     /*
         Perform exposure and image data reading
     */
-    int nRetry = 100; // Number of retries when ret is SVB_ERROR_TIMEOUT
+    nRetry = 50; // Number of retries when ret is SVB_ERROR_TIMEOUT
     while (1)
     {
         if (isAboutToQuit)
         {
             ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes,  1000);
             LOGF_DEBUG("Discard unretrieved exposure data: SVBGetVideoData(%s)", Helpers::toString(ret));
-            if (type == SVB_IMG_RGB24)
+            if (Helpers::isRGB(type))
                 free(buffer);
             guard.unlock();
             PrimaryCCD.setExposureLeft(0);
@@ -204,20 +278,38 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
             switch (ret)
             {
                 case SVB_SUCCESS:
-                    if (type == SVB_IMG_RGB24)
+                    if (Helpers::isRGB(type))
                     {
                         uint8_t *dstR = image;
                         uint8_t *dstG = image + subW * subH;
                         uint8_t *dstB = image + subW * subH * 2;
 
                         const uint8_t *src = buffer;
-                        const uint8_t *end = buffer + subW * subH * 3;
 
-                        while (src != end)
+                        /*
+                            To optimize execution speed, RGB32 and RGB24 are discriminated outside of while loop.
+                        */
+                        if (type == SVB_IMG_RGB32)
                         {
-                            *dstB++ = *src++;
-                            *dstG++ = *src++;
-                            *dstR++ = *src++;
+                            const uint8_t *end = buffer + subW * subH * 4;
+                            uint8_t *dstA = image + subW * subH * 3; // Alpha channel destination address
+                            while (src != end)
+                            {
+                                *dstB++ = *src++;
+                                *dstG++ = *src++;
+                                *dstR++ = *src++;
+                                *dstA++ = *src++;
+                            }
+                        }
+                        else
+                        {
+                            const uint8_t *end = buffer + subW * subH * 3;
+                            while (src != end)
+                            {
+                                *dstB++ = *src++;
+                                *dstG++ = *src++;
+                                *dstR++ = *src++;
+                            }
                         }
                         free(buffer);
                     }
@@ -230,7 +322,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         LOG_INFO("Exposure done, downloading image...");
 
                     return;
-                    break;
+
                 case SVB_ERROR_TIMEOUT:
                     --nRetry;
                     LOGF_DEBUG("Remaining retry count for SVBGetVideoData:%d", nRetry);
@@ -240,9 +332,9 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         delay = 0.5f;
                         break;
                     }
-                //fall through
+                    //fall through
                 default: // Cannot continue to retrive image data when ret is any error except timeout.
-                    if (type == SVB_IMG_RGB24)
+                    if (Helpers::isRGB(type))
                         free(buffer);
                     guard.unlock();
                     PrimaryCCD.setExposureLeft(0);
@@ -369,7 +461,7 @@ bool SVBONYBase::updateProperties()
         {
             defineProperty(VideoFormatSP);
 
-            // Try to set 16bit RAW by default.
+            // Try to set 16bit RAW or 16bit Y by default.
             // It can get be overwritten by config value.
             // If config fails, we try to set 16 if exists.
             if (loadConfig(true, VideoFormatSP.getName()) == false)
@@ -377,7 +469,9 @@ bool SVBONYBase::updateProperties()
                 for (size_t i = 0; i < VideoFormatSP.size(); i++)
                 {
                     CaptureFormatSP[i].setState(ISS_OFF);
-                    if (mCameraProperty.SupportedVideoFormat[i] == SVB_IMG_RAW16)
+                    // In most cases, monochrome cameras will be Y16 and color cameras will be RAW16.
+                    // Cameras that support both Y16 and RAW16 will be in the format that matches whichever comes first.
+                    if (mCameraProperty.SupportedVideoFormat[i] == SVB_IMG_RAW16 || mCameraProperty.SupportedVideoFormat[i] == SVB_IMG_Y16)
                     {
                         setVideoFormat(i);
                         CaptureFormatSP[i].setState(ISS_ON);
@@ -494,6 +588,24 @@ bool SVBONYBase::Connect()
     LOGF_DEBUG("IsCoolerCam: %s", mCameraPropertyExtended.bSupportControlTemp ? "True" : "False");
     LOGF_DEBUG("BitDepth: %d", mCameraProperty.MaxBitDepth);
     LOGF_DEBUG("IsTriggerCam: %s", mCameraProperty.IsTriggerCam ? "True" : "False");
+    LOGF_DEBUG("BayerPattern:%s", Helpers::toString(mCameraProperty.BayerPattern));
+
+    // Output camera properties to log
+    if (isDebug())
+    {
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedBins) / sizeof(mCameraProperty.SupportedBins[0]))) && mCameraProperty.SupportedBins[i] != 0; i++)
+        {
+            LOGF_DEBUG(" Bin %d", mCameraProperty.SupportedBins[i]);
+        }
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedVideoFormat) / sizeof(mCameraProperty.SupportedVideoFormat[0]))) && mCameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
+        {
+            LOGF_DEBUG(" Supported Video Format: %s", Helpers::toString(mCameraProperty.SupportedVideoFormat[i]));
+        }
+    }
+
+    // output camera properties ex to log
+    LOGF_DEBUG("SupportPulseGuide: %s", mCameraPropertyExtended.bSupportPulseGuide ? "True" : "False");
+    LOGF_DEBUG("SupportControlTemp: %s", mCameraPropertyExtended.bSupportControlTemp ? "True" : "False");
 
     uint32_t cap = 0;
 
@@ -507,7 +619,11 @@ bool SVBONYBase::Connect()
         cap |= CCD_HAS_ST4_PORT;
 
     if (mCameraProperty.IsColorCam)
+    {
         cap |= CCD_HAS_BAYER;
+        IUSaveText(&BayerT[2], getBayerString());
+        IDSetText(&BayerTP, nullptr);
+    }
 
     cap |= CCD_CAN_ABORT;
     cap |= CCD_CAN_SUBFRAME;
@@ -528,6 +644,11 @@ bool SVBONYBase::Connect()
     // fix for SDK gain error issue
     // set exposure time
     SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, static_cast<long>(1 * 1000000L), SVB_FALSE);
+
+    // workaround for SDK cooling fan stopping issue
+    // The cooling fan stops when SVBSetCameraMode is changed.
+    // Set to Soft Trigger Mode for taking still pictures to reduce the impact of this problem.
+    SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_TRIG_SOFT);
 
     /* Success! */
     LOG_INFO("Camera is online. Retrieving configuration.");
@@ -603,20 +724,12 @@ void SVBONYBase::setupParams()
                mCurrentVideoFormat);
 
     // Get video format and bit depth
-    int bit_depth = 8;
-    switch (mCurrentVideoFormat)
-    {
-        case SVB_IMG_RAW16:
-            bit_depth = 16;
-            break;
-
-        default:
-            break;
-    }
+    int bpp = Helpers::getBPP(mCurrentVideoFormat); // getBPP will retuen 8,16,24 or 32
 
     VideoFormatSP.resize(0);
     for (const auto &videoFormat : mCameraProperty.SupportedVideoFormat)
     {
+        LOGF_DEBUG("Supported Video Format %d:%s", videoFormat, Helpers::toString(videoFormat));
         if (videoFormat == SVB_IMG_END)
             break;
 
@@ -631,7 +744,7 @@ void SVBONYBase::setupParams()
         VideoFormatSP.push(std::move(node));
         CaptureFormat format = {Helpers::toString(videoFormat),
                                 Helpers::toPrettyString(videoFormat),
-                                static_cast<uint8_t>((videoFormat == SVB_IMG_RAW16) ? 16 : 8),
+                                static_cast<uint8_t>(Helpers::getBPP(videoFormat)),
                                 videoFormat == mCurrentVideoFormat
                                };
         addCaptureFormat(format);
@@ -643,10 +756,10 @@ void SVBONYBase::setupParams()
     uint32_t maxWidth = mCameraProperty.MaxWidth;
     uint32_t maxHeight = mCameraProperty.MaxHeight;
 
-    SetCCDParams(maxWidth, maxHeight, bit_depth, pixelSize, pixelSize);
+    SetCCDParams(maxWidth, maxHeight, bpp, pixelSize, pixelSize);
 
     // Let's calculate required buffer
-    int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
+    int nbuf = (PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8) * Helpers::getNChannels(mCurrentVideoFormat);
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     long value      = 0;
@@ -666,8 +779,7 @@ void SVBONYBase::setupParams()
     if (ret != SVB_SUCCESS)
         LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
 
-    LOGF_DEBUG("setupParams SVBSetROIFormat (%dx%d,  bin %d, type %d)", maxWidth, maxHeight, 1, mCurrentVideoFormat);
-    SVBSetROIFormat(mCameraInfo.CameraID, 0, 0, maxWidth, maxHeight, 1);
+    SetROIFormat(0, 0, maxWidth, maxHeight, 1);
 
     updateRecorderFormat();
     Streamer->setSize(maxWidth, maxHeight);
@@ -896,7 +1008,7 @@ int SVBONYBase::SetTemperature(double temperature)
 
     SVB_ERROR_CODE ret;
 
-    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature), SVB_TRUE);
+    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature * 10.0), SVB_TRUE); // For SVB_TARGET_TEMPERATURE, 1 unit is set as 0.1 degree.
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to set temperature (%s).", Helpers::toString(ret));
@@ -995,27 +1107,13 @@ bool SVBONYBase::UpdateCCDFrame(int x, int y, int w, int h)
     subH -= subH % 2;
 
     LOGF_DEBUG("Frame ROI x:%d y:%d w:%d h:%d", subX, subY, subW, subH);
-
-    SVB_ERROR_CODE ret;
-
-    ret = SVBSetROIFormat(mCameraInfo.CameraID, subX, subY, subW, subH, binX);
-    if (ret != SVB_SUCCESS)
+    if  (false == SetROIFormat(subX, subY, subW, subH, binX))
     {
-        LOGF_ERROR("Failed to set ROI (%s).", Helpers::toString(ret));
         return false;
     }
 
     mCurrentVideoFormat = getImageType();
-    switch (mCurrentVideoFormat)
-    {
-        case SVB_IMG_RAW16:
-            PrimaryCCD.setBPP(16);
-            break;
-
-        default:
-            PrimaryCCD.setBPP(8);
-            break;
-    }
+    PrimaryCCD.setBPP(Helpers::getBPP(mCurrentVideoFormat));
 
     SVBSetOutputImageType(mCameraInfo.CameraID, mCurrentVideoFormat);
 
@@ -1023,7 +1121,7 @@ bool SVBONYBase::UpdateCCDFrame(int x, int y, int w, int h)
     PrimaryCCD.setFrame(subX * binX, subY * binY, subW * binX, subH * binY);
 
     // Total bytes required for image buffer
-    auto nbuf = (subW * subH * static_cast<uint32_t>(PrimaryCCD.getBPP()) / 8) * ((getImageType() == SVB_IMG_RGB24) ? 3 : 1);
+    auto nbuf = (subW * subH * static_cast<uint32_t>(PrimaryCCD.getBPP()) / 8) * (Helpers::getNChannels(getImageType()));
 
     LOGF_DEBUG("Setting frame buffer size to %d bytes.", nbuf);
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -1045,12 +1143,10 @@ bool SVBONYBase::UpdateCCDBin(int binx, int biny)
 
 void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
 {
-    PrimaryCCD.setNAxis(type == SVB_IMG_RGB24 ? 3 : 2);
+    PrimaryCCD.setNAxis(Helpers::getNAxis(type));
 
     // If mono camera or we're sending Luma or RGB, turn off bayering
-    if (mCameraProperty.IsColorCam == false || type >= SVB_IMG_Y8)
-        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
-    else
+    if (Helpers::hasBayer(type))
     {
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         auto bayerString = getBayerString();
@@ -1060,6 +1156,10 @@ void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
             IUSaveText(&BayerT[2], bayerString);
             IDSetText(&BayerTP, nullptr);
         }
+    }
+    else
+    {
+        SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
     }
 
     if (duration > VERBOSE_EXPOSURE)
@@ -1097,6 +1197,10 @@ void SVBONYBase::temperatureTimerTimeout()
         TemperatureNP.s = newState;
         TemperatureN[0].value = mCurrentTemperature;
         IDSetNumber(&TemperatureNP, nullptr);
+/*
+        This log should be commented out except when investigating bugs, etc., as it outputs very frequently.
+        LOGF_DEBUG("Current Temperature %.2f degree", mCurrentTemperature);
+*/
     }
 
     if (HasCooler())
@@ -1310,9 +1414,9 @@ void SVBONYBase::updateRecorderFormat()
         Helpers::pixelFormat(
             mCurrentVideoFormat,
             mCameraProperty.BayerPattern,
-            mCameraProperty.IsColorCam
-        ),
-        mCurrentVideoFormat == SVB_IMG_RAW16 ? 16 : 8
+            Helpers::isColor(mCurrentVideoFormat)
+            ),
+        Helpers::getBPP(mCurrentVideoFormat)
     );
 }
 
