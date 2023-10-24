@@ -54,7 +54,7 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    setVersion(0, 1);
+    setVersion(0, 2);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -312,7 +312,7 @@ void OCS::GetCapabilites()
         }
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
                                                                                 measurement_command);
-        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") != 0) {
+        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") && strcmp(measurement_reponse, "0") != 0) {
             weather_enabled[measurement] = 1;
         } else {
             weather_enabled[measurement] = 0;
@@ -462,7 +462,7 @@ bool OCS::initProperties()
     IUFillSwitchVector(&Power_Device3SP, Power_Device3S, SWITCH_TOGGLE_COUNT, getDeviceName(), "POWER_DEVICE3", "Device 3",
                        POWER_TAB, IP_RW, ISR_1OFMANY, 60, IPS_OK);
     IUFillSwitch(&Power_Device3S[ON_SWITCH], "POWER_DEVICE3_ON", "ON", ISS_OFF);
-    IUFillSwitch(&Power_Device3S[OFF_SWITCH], "POWER_DEVICE3_ON", "OFF", ISS_ON);
+    IUFillSwitch(&Power_Device3S[OFF_SWITCH], "POWER_DEVICE3_OFF", "OFF", ISS_ON);
     IUFillTextVector(&Power_Device_Name3TP, Power_Device_Name3T, 1, getDeviceName(), "POWER_DEVICE_3_NAME", "Device 3",
                POWER_TAB, IP_RO, 60, IPS_OK);
     IUFillText(&Power_Device_Name3T[0], "DEVICE_3_NAME", "Name", "");
@@ -1635,6 +1635,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
         // Power devices
         //--------------
         if (strcmp(Power_Device1SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device1SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
                     char set_power_dev_1_on_cmd[CMD_MAX_LEN];
@@ -1651,6 +1652,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&Power_Device1SP, nullptr);
             return false;
         } else if (strcmp(Power_Device2SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device2SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE2_ON") == 0) {
                     char set_power_dev_2_on_cmd[CMD_MAX_LEN];
@@ -1667,13 +1669,14 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&Power_Device2SP, nullptr);
             return false;
         } else if (strcmp(Power_Device3SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device3SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE3_ON") == 0) {
                     char set_power_dev_3_on_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_3_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
                     IDSetSwitch(&Power_Device3SP, nullptr);
                     return sendOCSCommand(set_power_dev_3_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE1_OFF") == 0) {
+                } else if (strcmp(names[i], "POWER_DEVICE3_OFF") == 0) {
                     char set_power_dev_3_off_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_3_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
                     IDSetSwitch(&Power_Device3SP, nullptr);
@@ -1683,13 +1686,14 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&Power_Device3SP, nullptr);
             return false;
         } else if (strcmp(Power_Device4SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device4SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE4_ON") == 0) {
                     char set_power_dev_4_on_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_4_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
                     IDSetSwitch(&Power_Device4SP, nullptr);
                     return sendOCSCommand(set_power_dev_4_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE1_OFF") == 0) {
+                } else if (strcmp(names[i], "POWER_DEVICE4_OFF") == 0) {
                     char set_power_dev_4_off_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_4_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
                     IDSetSwitch(&Power_Device4SP, nullptr);
@@ -1699,6 +1703,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&Power_Device4SP, nullptr);
             return false;
         } else if (strcmp(Power_Device5SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device5SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE5_ON") == 0) {
                     char set_power_dev_5_on_cmd[CMD_MAX_LEN];
@@ -1715,13 +1720,14 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&Power_Device5SP, nullptr);
             return false;
         } else if (strcmp(Power_Device6SP.name, name) == 0) {
+            IUUpdateSwitch(&Power_Device6SP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
                     char set_power_dev_6_on_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_6_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
                     IDSetSwitch(&Power_Device6SP, nullptr);
                     return sendOCSCommand(set_power_dev_6_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE1_OFF") == 0) {
+                } else if (strcmp(names[i], "POWER_DEVICE6_OFF") == 0) {
                     char set_power_dev_6_off_cmd[CMD_MAX_LEN];
                     sprintf(set_power_dev_6_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
                     IDSetSwitch(&Power_Device6SP, nullptr);
@@ -1734,6 +1740,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
         // Lights
         //-------
         } else if (strcmp(LIGHT_WRWSP.name, name) == 0) {
+            IUUpdateSwitch(&LIGHT_WRWSP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "WRW_ON") == 0) {
                     char set_light_wrw_on_cmd[CMD_MAX_LEN];
@@ -1750,6 +1757,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&LIGHT_WRWSP, nullptr);
             return false;
         } else if (strcmp(LIGHT_WRRSP.name, name) == 0) {
+            IUUpdateSwitch(&LIGHT_WRRSP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "WRR_ON") == 0) {
                     char set_light_wrr_on_cmd[CMD_MAX_LEN];
@@ -1766,6 +1774,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&LIGHT_WRRSP, nullptr);
             return false;
         } else if (strcmp(LIGHT_ORWSP.name, name) == 0) {
+            IUUpdateSwitch(&LIGHT_ORWSP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "ORW_ON") == 0) {
                     char set_light_orw_on_cmd[CMD_MAX_LEN];
@@ -1782,6 +1791,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&LIGHT_ORWSP, nullptr);
             return false;
         } else if (strcmp(LIGHT_ORRSP.name, name) == 0) {
+            IUUpdateSwitch(&LIGHT_ORRSP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "ORR_ON") == 0) {
                     char set_light_orr_on_cmd[CMD_MAX_LEN];
@@ -1798,6 +1808,7 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             IDSetSwitch(&LIGHT_ORRSP, nullptr);
             return false;
         } else if (strcmp(LIGHT_OUTSIDESP.name, name) == 0) {
+            IUUpdateSwitch(&LIGHT_OUTSIDESP, states, names, n);
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "OUTSIDE_ON") == 0) {
                     char set_light_outside_on_cmd[CMD_MAX_LEN];
@@ -1817,12 +1828,14 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
         // Safety Override
         //----------------
         } else if (strcmp(Safety_Interlock_OverrideSP.name, name) == 0) {
+            IUUpdateSwitch(&Safety_Interlock_OverrideSP, states, names, n);
             IUResetSwitch(&Safety_Interlock_OverrideSP);
             return sendOCSCommand(OCS_roof_safety_override);
 
         // Roof max power
         //---------------
         } else if (strcmp(Roof_High_PowerSP.name, name) == 0) {
+            IUUpdateSwitch(&Roof_High_PowerSP, states, names, n);
             IUResetSwitch(&Roof_High_PowerSP);
             return sendOCSCommand(OCS_roof_high_power_mode);
 
