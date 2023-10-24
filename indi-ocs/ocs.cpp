@@ -28,12 +28,6 @@ Hardware communication is via a simple text protocol similar to the LX200.
 USB and network connections supported.
 *******************************************************************************/
 
-// To do:
-
-// Roof opening status
-// Weather - safety status, and separate tab?
-// Test, test, test
-
 #include "ocs.h"
 #include "termios.h"
 
@@ -397,6 +391,8 @@ bool OCS::initProperties()
 {
     INDI::Dome::initProperties();
 
+    setDriverInterface(DOME_INTERFACE | WEATHER_INTERFACE);
+
     // Main control tab controls
     //--------------------------
     IUFillTextVector(&ShutterStatusTP, ShutterStatusT, 1, getDeviceName(), "SHUTTER_STATUS", "Status",
@@ -573,14 +569,15 @@ bool OCS::initProperties()
 bool OCS::updateProperties()
 {
     INDI::Dome::updateProperties();
+    WI::updateProperties();
 
     // Remove unsupported derived controls
     //------------------------------------
     deleteProperty(DomeMotionSP.name);
 
-    if (weather_tab_enabled) {
-        WI::updateProperties();
-    }
+//    if (weather_tab_enabled) {
+//        WI::updateProperties();
+//    }
     if (isConnected()) {
         defineProperty(&ShutterStatusTP);
         defineProperty(&DomeControlsSP);
@@ -1335,7 +1332,18 @@ IPState OCS::updateWeather() {
                 }
             }
         }
+        if (WI::syncCriticalParameters())
+        {
+            IDSetLight(&critialParametersLP, nullptr);
+
+            LOG_DEBUG("SyncCriticalParameters = true");
+        } else {
+            LOG_DEBUG("SyncCriticalParameters = false");
+        }
+        ParametersNP.s = IPS_OK;
+        IDSetNumber(&ParametersNP, nullptr);
     }
+
 
     return IPS_OK;
 }
@@ -1598,26 +1606,6 @@ bool OCS::Disconnect()
 //******************/
 void ISPoll(void *p);
 
-void ISGetProperties(const char *dev)
-{
-    ocs->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    ocs->ISNewSwitch(dev, name, states, names, n);
-}
-
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    ocs->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    ocs->ISNewNumber(dev, name, values, names, n);
-}
-
 void ISSnoopDevice(XMLEle *root)
 {
     ocs->ISSnoopDevice(root);
@@ -1634,10 +1622,6 @@ bool OCS::saveConfigItems(FILE *fp)
     WI::saveConfigItems(fp);
     return true;
 }
-
-/**************************************************
- * Now our actual functions that the overrides call
- * ************************************************/
 
 /**************************************************
  * Client has changed the state of a switch, update
@@ -1937,11 +1921,15 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
         }
     }
 
-    if (INDI::Dome::ISNewNumber(dev, name, values, names, n)) {
-        return true;
-    } else {
+    if (strstr(name, "WEATHER_")) {
         return WI::processNumber(dev, name, values, names, n);
     }
+
+    if (INDI::Dome::ISNewNumber(dev, name, values, names, n)) {
+        return true;
+    }
+
+    return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
 /*****************************************

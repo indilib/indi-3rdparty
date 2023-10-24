@@ -643,8 +643,8 @@ private:
     ISwitchVectorProperty LIGHT_OUTSIDESP;
     ISwitch LIGHT_OUTSIDES[SWITCH_TOGGLE_COUNT];
 
-    // Weater tab controls
-    //--------------------
+    // Weather tab controls
+    //---------------------
     bool weather_tab_enabled = false;
     int wind_speed_threshold = 0;
     int diff_temp_threshold = 0;
