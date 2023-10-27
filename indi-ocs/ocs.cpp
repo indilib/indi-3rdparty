@@ -357,23 +357,23 @@ void OCS::GetCapabilites()
         // as only these are usable for safety status with limits
         for (int measurements = 0; measurements < 6; measurements ++) {
             if (measurements == WEATHER_TEMPERATURE && weather_enabled[WEATHER_TEMPERATURE] == 1) {
-                addParameter("WI_TEMPERATURE", "Temperature °C", -10, 40, 15);
-                setCriticalParameter("WI_TEMPERATURE");
+                addParameter("WEATHER_TEMPERATURE", "Temperature °C", -10, 40, 15);
+                setCriticalParameter("WEATHER_TEMPERATURE");
             } else if (measurements == WEATHER_PRESSURE && weather_enabled[WEATHER_PRESSURE] == 1) {
-                addParameter("WI_PRESSURE", "Pressure mbar", 970, 1050, 10);
-                setCriticalParameter("WI_PRESSURE");
+                addParameter("WEATHER_PRESSURE", "Pressure mbar", 970, 1050, 10);
+                setCriticalParameter("WEATHER_PRESSURE");
             } else if (measurements == WEATHER_HUMIDITY && weather_enabled[WEATHER_HUMIDITY] == 1) {
-                addParameter("WI_HUMIDITY", "Humidity %", 0, 95, 15);
-                setCriticalParameter("WI_HUMIDITY");
+                addParameter("WEATHER_HUMIDITY", "Humidity %", 0, 95, 15);
+                setCriticalParameter("WEATHER_HUMIDITY");
             } else if (measurements == WEATHER_WIND && weather_enabled[WEATHER_WIND] == 1) {
-                addParameter("WI_WIND", "Wind kph", 0, wind_speed_threshold, 15);
-                setCriticalParameter("WI_WIND");
+                addParameter("WEATHER_WIND", "Wind kph", 0, wind_speed_threshold, 15);
+                setCriticalParameter("WEATHER_WIND");
             } else if (measurements == WEATHER_RAIN && weather_enabled[WEATHER_RAIN] == 1) {
-                addParameter("WI_RAIN", "Rain state", 3, 3, 67);
-                setCriticalParameter("WI_RAIN");
+                addParameter("WEATHER_RAIN", "Rain state", 3, 3, 67);
+                setCriticalParameter("WEATHER_RAIN");
             } else if (measurements == WEATHER_DIFF_SKY_TEMP && weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1) {
-                addParameter("WI_SKY_DIFF_TEMP", "Sky vs Cloud °C", -50, diff_temp_threshold, 15);
-                setCriticalParameter("WI_SKY_DIFF_TEMP");
+                addParameter("WEATHER_SKY_DIFF_TEMP", "Sky vs Cloud °C", -50, diff_temp_threshold, 15);
+                setCriticalParameter("WEATHER_SKY_DIFF_TEMP");
             }
         }
     } else {
@@ -1310,15 +1310,15 @@ IPState OCS::updateWeather() {
                                                                          measurement_command);
                 if (measurement_error_or_fail >= 0 && value != conversion_error) {
                      if (measurement == WEATHER_TEMPERATURE && weather_enabled[WEATHER_TEMPERATURE] == 1) {
-                        setParameterValue("WI_TEMPERATURE", value);
+                        setParameterValue("WEATHER_TEMPERATURE", value);
                     } else if (measurement == WEATHER_PRESSURE && weather_enabled[WEATHER_PRESSURE] == 1) {
-                        setParameterValue("WI_PRESSURE", value);
+                        setParameterValue("WEATHER_PRESSURE", value);
                     } else if (measurement == WEATHER_HUMIDITY && weather_enabled[WEATHER_HUMIDITY] == 1) {
-                        setParameterValue("WI_HUMIDITY", value);
+                        setParameterValue("WEATHER_HUMIDITY", value);
                     } else if (measurement == WEATHER_WIND && weather_enabled[WEATHER_WIND] == 1) {
-                        setParameterValue("WI_WIND", value);
+                        setParameterValue("WEATHER_WIND", value);
                     } else if (measurement == WEATHER_DIFF_SKY_TEMP && weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1) {
-                        setParameterValue("WI_SKY_DIFF_TEMP", value);
+                        setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
                     } else if (measurement == WEATHER_CLOUD && weather_enabled[WEATHER_CLOUD] ==1) {
                         IUSaveText(&Weather_CloudT[0], measurement_reponse);
                         IDSetText(&Weather_CloudTP, nullptr);
@@ -1884,6 +1884,9 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
 bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *names[],int n)
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0) {
+
+        LOGF_DEBUG("Got an IsNewNumber for: %s", name);
+
         if (!strcmp(Thermostat_setpointsNP.name, name)) {
             if (THERMOSTAT_SETPOINT_COUNT == n) {
                 for (int parameter = THERMOSTAT_HEAT_SETPOINT; parameter < THERMOSTAT_SETPOINT_COUNT; parameter++) {
