@@ -244,6 +244,8 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         static constexpr double FOCUS_HIGH_MED_RATIO = 7.33;
         // Ratio from far 2 to far 1
         static constexpr double FOCUS_MED_LOW_RATIO = 6.36;
+        // Do not accept switches more than this
+        static constexpr uint8_t MAX_SWITCHES = 200;
 
         friend void ::ISSnoopDevice(XMLEle * root);
         friend void ::ISGetProperties(const char * dev);

@@ -84,6 +84,13 @@
 #define XP(x) Tscam##x
 #define THAND HTscam
 #define DNAME "Teleskop"
+#elif BUILD_MEADECAM
+#include <meadecam.h>
+#define FP(x) Toupcam_##x
+#define CP(x) TOUPCAM_##x
+#define XP(x) Toupcam##x
+#define THAND HToupcam
+#define DNAME "Meade"
 #endif
 
 extern std::string errorCodes(HRESULT rc);
