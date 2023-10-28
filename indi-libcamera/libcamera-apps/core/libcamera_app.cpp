@@ -152,7 +152,7 @@ void LibcameraApp::ConfigureViewfinder()
 	bool have_lores_stream = options_->lores_width && options_->lores_height;
 	bool have_raw_stream = options_->viewfinder_mode.bit_depth;
 
-	StreamRoles stream_roles = { StreamRole::Viewfinder };
+	std::vector<StreamRole>  stream_roles = { StreamRole::Viewfinder };
 	int stream_num = 1;
 	if (have_lores_stream)
 		stream_roles.push_back(StreamRole::Viewfinder), lores_stream_num = stream_num++;
@@ -236,7 +236,7 @@ void LibcameraApp::ConfigureStill(unsigned int flags)
 
 	// Always request a raw stream as this forces the full resolution capture mode.
 	// (options_->mode can override the choice of camera mode, however.)
-	StreamRoles stream_roles = { StreamRole::StillCapture, StreamRole::Raw };
+	auto stream_roles = { StreamRole::StillCapture, StreamRole::Raw };
 	configuration_ = camera_->generateConfiguration(stream_roles);
 	if (!configuration_)
 		throw std::runtime_error("failed to generate still capture configuration");
@@ -285,7 +285,7 @@ void LibcameraApp::ConfigureVideo(unsigned int flags)
 
 	bool have_raw_stream = (flags & FLAG_VIDEO_RAW) || options_->mode.bit_depth;
 	bool have_lores_stream = options_->lores_width && options_->lores_height;
-	StreamRoles stream_roles = { StreamRole::VideoRecording };
+	std::vector<StreamRole> stream_roles = { StreamRole::VideoRecording };
 	int lores_index = 1;
 	if (have_raw_stream)
 	{
