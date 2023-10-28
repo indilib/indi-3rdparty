@@ -1,3 +1,9 @@
+libasi (1.31) jammy; urgency=medium
+
+  * ASI Camera SDK 1.31 release. No change log posted.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Sat, 28 Oct 2023 15:02:26 +0300
+
 libasi (1.30) jammy; urgency=medium
 
   * ASI Camera SDK 1.30 release. No change log posted.
