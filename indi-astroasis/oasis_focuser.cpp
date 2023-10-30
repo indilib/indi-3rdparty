@@ -57,12 +57,12 @@ bool OasisFocuser::initProperties()
     // Focuser board temperature
     TemperatureBoardNP[0].fill("TEMPERATURE", "Board", "%.2f", -100, 100, 0., 0.);
     TemperatureBoardNP.fill(getDeviceName(), "FOCUS_TEMPERATURE_BOARD", "Temperature",
-                       MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+                            MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Focuser ambient temperature
     TemperatureAmbientNP[0].fill("TEMPERATURE", "Ambient", "%.2f", -100, 100, 0., 0.);
     TemperatureAmbientNP.fill(getDeviceName(), "FOCUS_TEMPERATURE_AMBIENT", "Temperature",
-                       MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+                              MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Backlash compensation direction
     BacklashDirSP[INDI_ENABLED].fill("ON", "IN", ISS_ON);
@@ -131,7 +131,7 @@ bool OasisFocuser::updateProperties()
             unsigned int firmware = version.firmware;
 
             snprintf(ver, sizeof(ver), "%d.%d.%d built %s",
-                    firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff, version.built);
+                     firmware >> 24, (firmware >> 16) & 0xff, (firmware >> 8) & 0xff, version.built);
 
             VersionSP[0].setText(ver);
         }
@@ -202,7 +202,7 @@ bool OasisFocuser::SetConfig(unsigned int mask, int value)
         case MASK_BACKLASH:
             config.backlash = value;
             break;
-		case MASK_BACKLASH_DIRECTION:
+        case MASK_BACKLASH_DIRECTION:
             config.backlashDirection = value;
             break;
         case MASK_REVERSE_DIRECTION:
@@ -220,7 +220,7 @@ bool OasisFocuser::SetConfig(unsigned int mask, int value)
         case MASK_BLUETOOTH:
             config.bluetoothOn = value;
             break;
-		default:
+        default:
             LOGF_ERROR("Invalid Oasis Focuser configuration mask %08X\n", mask);
             return false;
     }
@@ -353,7 +353,7 @@ bool OasisFocuser::ISNewSwitch(const char * dev, const char * name, ISState * st
         BeepOnMoveSP.update(states, names, n);
 
         int on = (BeepOnMoveSP.findOnSwitchIndex() == INDI_ENABLED) ? 1 : 0;
-	
+
         if (SetConfig(MASK_BEEP_ON_MOVE, on))
             BeepOnMoveSP.setState(IPS_OK);
         else
@@ -371,7 +371,7 @@ bool OasisFocuser::ISNewSwitch(const char * dev, const char * name, ISState * st
 
         // 0 - IN, 1 - OUT
         int dir = (BacklashDirSP.findOnSwitchIndex() == INDI_ENABLED) ? 0 : 1;
-	
+
         if (SetConfig(MASK_BACKLASH_DIRECTION, dir))
             BacklashDirSP.setState(IPS_OK);
         else

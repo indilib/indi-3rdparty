@@ -781,28 +781,35 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             bool enabled = (CoolerS[COOLER_ON].s == ISS_ON);
 
-            // If user turns on cooler, but the requested temperature is higher than current temperature
-            // then we set temperature to zero degrees. If that was still higher than current temperature
-            // we return an error
-            if (enabled && TemperatureRequest > TemperatureN[0].value)
+            // If user turns on cooler, but the requested temperature is higher than current temperature by more
+            // than five degrees, then we consider this endangers the device and we alter the temperature target.
+            // The five degrees tolerance is there to adapt to cooling overshoot.
+            if (enabled && TemperatureN[0].value + 5.0f < TemperatureRequest)
             {
-                TemperatureRequest = 0;
-                // If current temperature is still lower than zero, then we shouldn't risk
-                // setting temperature to any arbitrary value. Instead, we report an error and ask
-                // user to explicitly set the requested temperature.
-                if (TemperatureRequest > TemperatureN[0].value)
+                LOGF_WARN("Current temperature is %.2f, refusing to set %.2f (5 degrees warming tolerance). "
+                          "To control cooler, request a lower temperature or let the device warm above %.2f.",
+                          TemperatureN[0].value, TemperatureRequest, TemperatureRequest - 5.0f);
+
+                // If current temperature is lower than zero, then we shouldn't risk
+                // setting temperature to any arbitrary value. Instead, we turn the cooler off and ask
+                // user to explicitly set a new temperature.
+                if (TemperatureN[0].value < 0)
                 {
                     CoolerS[COOLER_ON].s = ISS_OFF;
-                    CoolerS[COOLER_OFF].s = ISS_OFF;
+                    CoolerS[COOLER_OFF].s = ISS_ON;
                     CoolerSP.s = IPS_ALERT;
-                    LOGF_WARN("Cannot manually activate cooler since current temperature is %.2f. To activate cooler, request a lower temperature.",
-                              TemperatureN[0].value);
+                    LOGF_WARN("Stopping cooler. "
+                              "To re-activate, request a lower temperature or let the device warm above %.2f.",
+                              TemperatureRequest);
                     IDSetSwitch(&CoolerSP, nullptr);
-                    return true;
                 }
-
-                SetTemperature(0);
-                return true;
+                // Else we consider we should stabilise at a safe temperature, and set the target to zero degrees.
+                else
+                {
+                    LOG_WARN("Keeping cooler activated, but setting temperature to 0 degrees. "
+                             "To proceed, wait for the device to stabilise or stop the cooler.");
+                    SetTemperature(0);
+                }
             }
 
             return activateCooler(enabled);

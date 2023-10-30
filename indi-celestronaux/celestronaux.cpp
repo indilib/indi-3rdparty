@@ -521,13 +521,21 @@ bool CelestronAUX::updateProperties()
         // the HC relays the AUX commands only and does not interfere in the communication.
         if (!m_isHandController)
         {
-            if (startupWithoutHC())
+            getEncoder(AXIS_AZ);
+            getEncoder(AXIS_ALT);
+
+            // Only reset if both encoders report zero
+            // If mount was initialized before, then we shouldn't reset the value.
+            if (EncoderNP[AXIS_AZ].getValue() == 0 && EncoderNP[AXIS_ALT].getValue() == 0)
             {
-                LOG_INFO("successfully sent no-HC startup AUX commands");
-            }
-            else
-            {
-                LOG_ERROR("failed to sent no-HC startup AUX commands");
+                if (startupWithoutHC())
+                {
+                    LOG_INFO("successfully sent no-HC startup AUX commands");
+                }
+                else
+                {
+                    LOG_ERROR("failed to sent no-HC startup AUX commands");
+                }
             }
         }
 
@@ -1825,11 +1833,22 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
         auto deEncoder = (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
-        ha = range24(haEncoder / 15.0);
-        pierSide = PIER_EAST;
-        if (deEncoder < 90 || deEncoder > 270)
+        ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((180 - haEncoder) / 15.0);
+        pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
+
+        // North Hemisphere
+        if (LocationN[LOCATION_LATITUDE].value >= 0 && (deEncoder < 90 || deEncoder > 270))
         {
+            // "Normal" Pointing State (West, looking East)
             pierSide = PIER_WEST;
+            de = rangeDec(180 - de);
+            ha = rangeHA(ha + 12);
+        }
+        // South Hemisphere
+        else if (LocationN[LOCATION_LATITUDE].value < 0 && deEncoder > 90 && deEncoder < 270)
+        {
+            // "Normal" Pointing State (East, looking West)
+            pierSide = PIER_EAST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
@@ -1894,9 +1913,10 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
                 de = 360 + coords.declination;
 
             if (dHA < 0)
-                ha = 360 - ((dHA / -24.0) * 360.0);
+                ha = (dHA / -24.0) * 360.0;
             else
-                ha = (dHA / 24.0) * 360.0;
+                ha = 360 - ((dHA / 24.0) * 360.0);
+
         }
 
         haEncoder =  (range360(ha) / 360.0) * STEPS_PER_REVOLUTION;
@@ -1925,20 +1945,17 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
         }
         else
         {
-            // "Normal" Pointing State (East, looking West)
-            if (dHA >= 0)
+            // "Normal" Pointing State (West, looking East)
+            if (dHA < 0)
             {
-                de = coords.declination;
-                if (de < 0)
-                    de += 360;
-
-                ha = rangeHA(dHA + 12) * 15.0;
+                de = 90 + (90 + coords.declination);
+                ha = -dHA * 15.0;
             }
-            // "Reversed" Pointing State (West, looking East)
+            // "Reversed" Pointing State (East, looking West)
             else
             {
-                de = 90 + (90 - coords.declination);
-                ha = dHA * 15.0;
+                de = coords.declination * -1;
+                ha = rangeHA(12 - dHA) * 15.0;
             }
         }
 
