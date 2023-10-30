@@ -11,10 +11,10 @@
 #define LIBTOUPCAM_NAME "libtoupcam.so"
 #endif
 
-void *libtoupcam;
+static void *libtoupcam;
 
 /* Create a function pointer for a given toupcam function. */
-#define C_PTR(RET, DEC, PARAM, ARG) TOUPCAM_API(RET) (*Meade_ ## DEC) PARAM;
+#define C_PTR(RET, DEC, PARAM, ARG) static TOUPCAM_API(RET) (*Meade_ ## DEC) PARAM;
 
 /* Define a function that calls the corresponding toupcam function */
 #define C_DEF(RET, DEC, PARAM, ARG) TOUPCAM_API(RET)  DEC PARAM \
