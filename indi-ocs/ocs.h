@@ -466,6 +466,7 @@ private:
     //---------------------
     int ROOF_TIME_PRE_MOTION = 0;
     int ROOF_TIME_POST_MOTION = 0;
+    char last_shutter_status[RB_MAX_LEN];
     char last_shutter_error[RB_MAX_LEN];
     IPState ControlShutter(ShutterOperation operation) override;
 

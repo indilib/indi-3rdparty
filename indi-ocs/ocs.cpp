@@ -739,6 +739,10 @@ void OCS::TimerHit()
     int roof_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_status_response,
                                                                              OCS_get_roof_status);
     if (roof_status_error_or_fail > 1) {
+        bool roof_was_in_error = (getShutterState() == SHUTTER_ERROR);
+
+        LOGF_DEBUG("roof_was_in_error, %d", roof_was_in_error);
+
         char *split;
         char roof_message[30];
         split = strtok(roof_status_response, ",");
@@ -748,14 +752,12 @@ void OCS::TimerHit()
             }
             split = strtok(NULL, ",");
             sprintf(roof_message, "Opening, travel %s", split);
-            LOGF_DEBUG("Roof/shutter is %s", roof_message);
         } else if (strcmp(split, "c") == 0) {
             if (getShutterState() != SHUTTER_MOVING) {
                 setShutterState(SHUTTER_MOVING);
             }
             split = strtok(NULL, ",");
             sprintf(roof_message, "Closing, travel %s", split);
-            LOGF_DEBUG("Roof/shutter is  %s", roof_message);
         } else if (strcmp(split, "i") == 0) {
             split = strtok(NULL, ",");
             if (strcmp(split, "OPEN") == 0) {
@@ -763,28 +765,36 @@ void OCS::TimerHit()
                     setShutterState(SHUTTER_OPENED);
                 }
                 sprintf(roof_message, "Idle - Open");
-                LOGF_DEBUG("Roof/shutter is %s", roof_message);
             } else if (strcmp(split, "CLOSED") == 0) {
                 if (getShutterState() != SHUTTER_CLOSED) {
                     setShutterState(SHUTTER_CLOSED);
                 }
                 sprintf(roof_message, "Idle - Closed");
-                LOGF_DEBUG("Roof/shutter is %s", roof_message);
             } else if (strcmp(split, "No Error") == 0) {
                 sprintf(roof_message, "Idle - No Error");
-                LOGF_DEBUG("Roof/shutter is %s", roof_message);
             } else if (strcmp(split, "Waiting for mount to park") == 0) {
                 sprintf(roof_message, "Waiting for mount to park");
-                LOGF_DEBUG("Roof/shutter is %s", roof_message);
             } else {
                 // Must be an error message
                 sprintf(roof_message, "Roof/shutter: %s", split);
                 if (getShutterState() != SHUTTER_ERROR) {
                     setShutterState(SHUTTER_ERROR);
                 }
-                LOGF_ERROR("Roof/shutter error - %s", roof_message);
             }
         }
+
+        if (strcmp(last_shutter_status, roof_message) != 0) {
+            if (getShutterState() == SHUTTER_ERROR) {
+                LOGF_ERROR("Roof/shutter error - %s", roof_message);
+            } else {
+                LOGF_DEBUG("Roof/shutter is %s", roof_message);
+                if (roof_was_in_error) {
+                    LOG_INFO("Roof/shutter error cleared");
+                }
+            }
+            sprintf(last_shutter_status, "%s", roof_message);
+        }
+
         IUSaveText(&ShutterStatusT[0], roof_message);
         IDSetText(&ShutterStatusTP, nullptr);
     }
