@@ -54,7 +54,7 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    setVersion(0, 4);
+    setVersion(0, 5);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -414,6 +414,7 @@ bool OCS::initProperties()
     IUFillText(&Status_ItemsT[STATUS_FIRMWARE], "FIRMWARE_VERSION", "Firmware version", "---");
     IUFillText(&Status_ItemsT[STATUS_ROOF_LAST_ERROR], "ROOF_LAST_ERROR", "Roof last error", "---");
     IUFillText(&Status_ItemsT[STATUS_MAINS], "MAINS_STATUS", "Mains status", "---");
+    IUFillText(&Status_ItemsT[STATUS_OCS_SAFETY], "OCS_SAFETY_STATUS", "OCS safety", "---");
     IUFillText(&Status_ItemsT[STATUS_MCU_TEMPERATURE], "MCU_TEMPERATURE", "MCU temperature °C", "---");
 
     // Thermostat tab controls
@@ -894,7 +895,17 @@ void OCS::SlowTimerHit()
         IUSaveText(&Status_ItemsT[STATUS_MAINS], power_status_response);
         IDSetText(&Status_ItemsTP, nullptr);
     } else {
-        LOGF_WARN("Communication error on get Power Status %s, this update aborted, will try again...", OCS_get_thermostat_status);
+        LOGF_WARN("Communication error on get Power Status %s, this update aborted, will try again...", OCS_get_power_status);
+    }
+
+    char safety_status_response[RB_MAX_LEN] = {0};
+    int safety_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, safety_status_response,
+                                                                                     OCS_get_safety_status);
+    if (safety_status_error_or_fail > 1) {
+        IUSaveText(&Status_ItemsT[STATUS_OCS_SAFETY], safety_status_response);
+        IDSetText(&Status_ItemsTP, nullptr);
+    } else {
+        LOGF_WARN("Communication error on get OCS Safety Status %s, this update aborted, will try again...", OCS_get_safety_status);
     }
 
     char MCU_temp_response[RB_MAX_LEN] = {0};

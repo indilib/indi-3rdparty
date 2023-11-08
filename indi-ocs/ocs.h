@@ -53,9 +53,9 @@ An unterminated 0 is returned from unconfigured items
 // Returns: n.n,m.m#
 // where n.n is ROOF_TIME_PRE_MOTION and m.m ROOF_TIME_POST_MOTION
 
-// Unused, Indi generates it's own
 // Get safety status
-// #define OCS_get_safety_status ":Gs#"
+// Info only, Indi generates it's own saety status
+#define OCS_get_safety_status ":Gs#"
 // Returns: SAFE#, UNSAFE#
 
 // Set the watchdog reset flag - forces OCS software reboot
@@ -508,6 +508,7 @@ private:
         STATUS_FIRMWARE,
         STATUS_ROOF_LAST_ERROR,
         STATUS_MAINS,
+        STATUS_OCS_SAFETY,
         STATUS_MCU_TEMPERATURE,
         STATUS_ITEMS_COUNT
     };
