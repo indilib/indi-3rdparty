@@ -187,6 +187,7 @@ option(WITH_ATIK "Install Atik Driver" On)
 option(WITH_TOUPBASE "Install Toupbase Driver" On)
 option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
+option(WITH_AVALONUD "Install AvalonUD Drivers" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
@@ -695,6 +696,11 @@ endif()
 if (WITH_AVALON)
 add_subdirectory(indi-avalon)
 endif(WITH_AVALON)
+
+# AvalonUD
+if (WITH_AVALONUD)
+add_subdirectory(indi-avalonud)
+endif(WITH_AVALONUD)
 
 # Pentax
 if (WITH_PENTAX)
