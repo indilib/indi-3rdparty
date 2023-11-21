@@ -1268,7 +1268,7 @@ bool ToupBase::StopStreaming()
 int ToupBase::SetTemperature(double temperature)
 {
     // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
-    if (activateCooler(temperature < TemperatureN[0].value) == false)
+    if (temperature < TemperatureN[0].value && activateCooler(true) == false)
     {
         LOG_ERROR("Failed to toggle cooler.");
         return -1;
