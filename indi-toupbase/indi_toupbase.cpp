@@ -1267,9 +1267,10 @@ bool ToupBase::StopStreaming()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 int ToupBase::SetTemperature(double temperature)
 {
-    if (activateCooler(true) == false)
+    // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
+    if (activateCooler(temperature < TemperatureN[0].value) == false)
     {
-        LOG_ERROR("Failed to activate cooler");
+        LOG_ERROR("Failed to toggle cooler.");
         return -1;
     }
 
@@ -1289,7 +1290,17 @@ int ToupBase::SetTemperature(double temperature)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::activateCooler(bool enable)
 {
-    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
+    int val = 0;
+    auto isCoolerOn = false;
+    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
+    if (SUCCEEDED(rc))
+        isCoolerOn = (val != 0);
+
+    // If no state change, return.
+    if ( (enable && isCoolerOn) || (!enable && !isCoolerOn))
+        return true;
+
+    rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
     IUResetSwitch(&m_CoolerSP);
     if (FAILED(rc))
     {
