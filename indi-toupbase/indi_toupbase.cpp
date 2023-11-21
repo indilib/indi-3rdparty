@@ -1313,7 +1313,7 @@ bool ToupBase::activateCooler(bool enable)
     else
     {
         m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
-        m_CoolerSP.s = IPS_OK;
+        m_CoolerSP.s = enable ? IPS_BUSY : IPS_IDLE;
         IDSetSwitch(&m_CoolerSP, nullptr);
 
         /* turn on TEC may force to turn on the fan */
@@ -1526,6 +1526,7 @@ void ToupBase::TimerHit()
             m_CoolerTP.s = IPS_ALERT;
         else if (0 == val)
         {
+            m_CoolerTP.s = IPS_IDLE;
             IUSaveText(&m_CoolerT, "0.0% (OFF)");
             IDSetText(&m_CoolerTP, nullptr);
         }
@@ -1539,6 +1540,7 @@ void ToupBase::TimerHit()
                 char str[32];
                 sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
                 IUSaveText(&m_CoolerT, str);
+                m_CoolerTP.s = IPS_BUSY;
                 IDSetText(&m_CoolerTP, nullptr);
             }
         }
