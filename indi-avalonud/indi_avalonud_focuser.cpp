@@ -1,21 +1,21 @@
 /*
-  Avalon Unified Driver Focuser
+    Avalon Unified Driver Focuser
 
-  Copyright(c) 2019 Jasem Mutlaq. All rights reserved.
+    Copyright (C) 2020,2023
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "config.h"
@@ -39,12 +39,12 @@
 
 using json = nlohmann::json;
 
+const int IPport = 5450;
 
 static char device_str[MAXINDIDEVICE] = "AvalonUD Focuser";
 
 
 static std::unique_ptr<AUDFOCUSER> focuser(new AUDFOCUSER());
-
 
 void ISGetProperties(const char *dev)
 {
@@ -105,21 +105,21 @@ bool AUDFOCUSER::initProperties()
 {
     INDI::Focuser::initProperties();
 
-    IUFillText(&ConfigT[0], "ADDRESS", "Address", "127.0.0.1");
-    IUFillTextVector(&ConfigTP, ConfigT, 1, getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
+    ConfigTP[0].fill("ADDRESS", "Address", "127.0.0.1");
+    ConfigTP.fill(getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
 
     // HW type
-    IUFillText(&HWTypeT[0], "HW_TYPE", "Controller Type", "");
-    IUFillTextVector(&HWTypeTP, HWTypeT, 1, getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWTypeTP[0].fill("HW_TYPE", "Controller Type", "");
+    HWTypeTP.fill(getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // HW identifier
-    IUFillText(&HWIdentifierT[0], "HW_IDENTIFIER", "HW Identifier", "");
-    IUFillTextVector(&HWIdentifierTP, HWIdentifierT, 1, getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWIdentifierTP[0].fill("HW_IDENTIFIER", "HW Identifier", "");
+    HWIdentifierTP.fill(getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // low level SW info
-    IUFillText(&LowLevelSWT[0], "LLSW_NAME", "Name", "");
-    IUFillText(&LowLevelSWT[1], "LLSW_VERSION", "Version", "--");
-    IUFillTextVector(&LowLevelSWTP, LowLevelSWT, 2, getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    LowLevelSWTP[LLSW_NAME].fill("LLSW_NAME", "Name", "");
+    LowLevelSWTP[LLSW_VERSION].fill("LLSW_VERSION", "Version", "--");
+    LowLevelSWTP.fill(getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     addDebugControl();
 
@@ -145,8 +145,8 @@ void AUDFOCUSER::ISGetProperties(const char *dev)
 {
     INDI::Focuser::ISGetProperties(dev);
 
-    defineProperty(&ConfigTP);
-    loadConfig(true,ConfigTP.name);
+    defineProperty(ConfigTP);
+    loadConfig(true,ConfigTP.getName());
 }
 
 bool AUDFOCUSER::updateProperties()
@@ -162,17 +162,17 @@ bool AUDFOCUSER::updateProperties()
     if (isConnected())
     {
         // Settings
-        defineProperty(&HWTypeTP);
-        defineProperty(&HWIdentifierTP);
-        defineProperty(&LowLevelSWTP);
+        defineProperty(HWTypeTP);
+        defineProperty(HWIdentifierTP);
+        defineProperty(LowLevelSWTP);
 
         LOG_INFO("Focuser is ready");
     }
     else
     {
-        deleteProperty(HWTypeTP.name);
-        deleteProperty(HWIdentifierTP.name);
-        deleteProperty(LowLevelSWTP.name);
+        deleteProperty(HWTypeTP);
+        deleteProperty(HWIdentifierTP);
+        deleteProperty(LowLevelSWTP);
     }
 
     return true;
@@ -183,13 +183,15 @@ bool AUDFOCUSER::ISNewText(const char *dev, const char *name, char *texts[], cha
     if (!strcmp(dev,getDeviceName()))
     {
         // TCP Server settings
-        if (!strcmp(name, ConfigTP.name))
+        if (ConfigTP.isNameMatch(name))
         {
-            IUUpdateText(&ConfigTP, texts, names, n);
-            ConfigTP.s = IPS_OK;
-            IDSetText(&ConfigTP, nullptr);
-            if (isConnected() && strcmp(IPaddress,ConfigT[0].text) )
-                DEBUG(INDI::Logger::DBG_WARNING, "Disconnect and reconnect to make IP address change effective!");
+            if ( isConnected() && strcmp(IPaddress,texts[0]) ) {
+                DEBUG(INDI::Logger::DBG_WARNING, "Please Disconnect before changing IP address");
+                return false;
+            }
+            ConfigTP.update(texts, names, n);
+            ConfigTP.setState(IPS_OK);
+            ConfigTP.apply();
             return true;
         }
     }
@@ -210,13 +212,13 @@ bool AUDFOCUSER::Connect()
     if (isConnected())
         return true;
 
-    IPaddress = strdup(ConfigT[0].text);
+    IPaddress = strdup(ConfigTP[0].text);
 
     DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to connect %s focuser...",IPaddress);
 
     requester = zmq_socket(context, ZMQ_REQ);
     zmq_setsockopt(requester, ZMQ_RCVTIMEO, &timeout, sizeof(timeout) );
-    snprintf( addr, sizeof(addr), "tcp://%s:5450", IPaddress);
+    snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
     zmq_connect(requester, addr);
 
     answer = sendRequest("DISCOVER");
@@ -226,7 +228,7 @@ bool AUDFOCUSER::Connect()
             answer = sendRequest("INFOALL");
             if ( answer ) {
                 json j;
-                std::string sHWt,sHWi,sFW;
+                std::string sHWt,sHWi,sFWv;
 
                 j = json::parse(answer,nullptr,false);
                 free(answer);
@@ -243,16 +245,16 @@ bool AUDFOCUSER::Connect()
                 }
 
                 j["HWType"].get_to(sHWt);
-                IUSaveText(&HWTypeT[0], sHWt.c_str());
-                IDSetText(&HWTypeTP, nullptr);
+                HWTypeTP[0].setText(sHWt);
+                HWTypeTP.apply();
                 j["HWFeatures"].get_to(features);
                 j["HWIdentifier"].get_to(sHWi);
-                IUSaveText(&HWIdentifierT[0], sHWi.c_str());
-                IDSetText(&HWIdentifierTP, nullptr);
-                IUSaveText(&LowLevelSWT[0], "stepMachine");
-                j["firmwareVersion"].get_to(sFW);
-                IUSaveText(&LowLevelSWT[1], sFW.c_str());
-                IDSetText(&LowLevelSWTP, nullptr);
+                HWIdentifierTP[0].setText(sHWi);
+                HWIdentifierTP.apply();
+                LowLevelSWTP[LLSW_NAME].setText("stepMachine");
+                j["firmwareVersion"].get_to(sFWv);
+                LowLevelSWTP[LLSW_VERSION].setText(sFWv);
+                LowLevelSWTP.apply();
             }
             if ( !(features & 0x0100) ) {
                 zmq_close(requester);
@@ -330,7 +332,10 @@ IPState AUDFOCUSER::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     }
 
     DEBUGF(INDI::Logger::DBG_SESSION,"Start moving focuser of %ustep ...",ticks);
-    answer = sendCommand("RELATIVE %d %ld 0 0",STEPMACHINE_DRIVER_NUM,((dir==FOCUS_INWARD)?-ticks:ticks));
+    if ( dir == FOCUS_INWARD )
+        answer = sendCommand("RELATIVE %d -%lu 0 0",STEPMACHINE_DRIVER_NUM,ticks);
+    else
+        answer = sendCommand("RELATIVE %d %lu 0 0",STEPMACHINE_DRIVER_NUM,ticks);
     if ( !answer ) {
         DEBUGF(INDI::Logger::DBG_SESSION,"Start moving focuser of %ustep completed",ticks);
         return IPS_BUSY;
@@ -366,7 +371,7 @@ bool AUDFOCUSER::AbortFocuser()
 
     if (isConnected()) {
         char *answer;
-        answer = sendCommand("SPEED %d 0 0",STEPMACHINE_DRIVER_NUM);
+        answer = sendCommand("STOP %d",STEPMACHINE_DRIVER_NUM);
         free(answer);
     } else {
         DEBUG(INDI::Logger::DBG_WARNING,"Abort required before driver connection");
@@ -391,8 +396,8 @@ void AUDFOCUSER::TimerHit()
     if ( (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY) && ( statusCode >= STILL ) )
     {
         FocusAbsPosNP.s = IPS_OK;
-        FocusRelPosNP.s = IPS_OK;
         IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusRelPosNP.s = IPS_OK;
         IDSetNumber(&FocusRelPosNP, nullptr);
     }
     // If there was a different between last and current positions, let's update all clients
@@ -434,7 +439,7 @@ bool AUDFOCUSER::saveConfigItems(FILE *fp)
 {
     // We need to reserve and save address mode
     // so that the next time the driver is loaded, it is remembered and applied.
-    IUSaveConfigText(fp, &ConfigTP);
+    ConfigTP.save(fp);
 
     return INDI::Focuser::saveConfigItems(fp);
 }
@@ -476,7 +481,7 @@ char* AUDFOCUSER::sendCommand(const char *fmt, ... )
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress );
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
@@ -512,7 +517,7 @@ char* AUDFOCUSER::sendRequest(const char *fmt, ... )
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress );
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );

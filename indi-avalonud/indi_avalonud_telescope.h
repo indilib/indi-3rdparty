@@ -1,7 +1,7 @@
 /*
-    INDI Driver AVALON INSTRUMENTS StartGo2
+    Avalon Unified Driver Telescope
 
-    Copyright (C) 2020
+    Copyright (C) 2020,2023
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -16,7 +16,6 @@
     You should have received a copy of the GNU Lesser General Public
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
 */
 
 #ifndef AUDTELESCOPE_H
@@ -53,6 +52,7 @@ public:
     // Standard INDI interface functions
     virtual bool Connect();
     virtual bool Disconnect();
+
     const char *getDefaultName();
     virtual bool initProperties();
     virtual bool updateProperties();
@@ -100,44 +100,61 @@ private:
     double simulatedRA;
     double simulatedDEC;
 
-    ISwitch MountTypeS[2];
-    ISwitchVectorProperty MountTypeSP;
+    enum {
+        MM_EQUATORIAL,
+        MM_ALTAZ,
+        MM_N
+    };
+    INDI::PropertySwitch MountModeSP {MM_N};
+    INDI::PropertyText ConfigTP {1};
+    enum {
+        LEQ_HA,
+        LEQ_DEC,
+        LEQ_N
+    };
+    INDI::PropertyNumber LocalEqNP {LEQ_N};
+    enum {
+        ALTAZ_AZ,
+        ALTAZ_ALT,
+        ALTAZ_N
+    };
+    INDI::PropertyNumber AltAzNP {ALTAZ_N};
+    enum {
+        TTIME_JD,
+        TTIME_UTC,
+        TTIME_LST,
+        TTIME_N
+    };
+    INDI::PropertyNumber TTimeNP {TTIME_N};
+    enum {
+        HOME_SYNC,
+        HOME_SLEW,
+        HOME_N
+    };
+    INDI::PropertySwitch HomeSP {HOME_N};
+    enum {
+        MFLIP_ON,
+        MFLIP_OFF,
+        MFLIP_N
+    };
+    INDI::PropertySwitch MeridianFlipSP {MFLIP_N};
+    INDI::PropertyNumber MeridianFlipHANP {1};
 
-    IText ConfigT[1];
-    ITextVectorProperty ConfigTP;
-
-    INumber LocalEqN[2];
-    INumberVectorProperty LocalEqNP;
-
-    INumber AzAltN[2];
-    INumberVectorProperty AzAltNP;
-
-    INumber TimeN[3];
-    INumberVectorProperty TimeNP;
-
-    ISwitch HomeS[2];
-    ISwitchVectorProperty HomeSP;
-
-    ISwitch MeridianFlipS[2];
-    ISwitchVectorProperty MeridianFlipSP;
-
-    INumber MeridianFlipHAN[1];
-    INumberVectorProperty MeridianFlipHANP;
-
-    IText HWTypeT[1];
-    ITextVectorProperty HWTypeTP;
-
-    IText HWModelT[1];
-    ITextVectorProperty HWModelTP;
-
-    IText HWIdentifierT[1];
-    ITextVectorProperty HWIdentifierTP;
-
-    IText LowLevelSWT[2];
-    ITextVectorProperty LowLevelSWTP;
-
-    IText HighLevelSWT[2];
-    ITextVectorProperty HighLevelSWTP;
+    INDI::PropertyText HWTypeTP {1};
+    INDI::PropertyText HWModelTP {1};
+    INDI::PropertyText HWIdentifierTP {1};
+    enum {
+        LLSW_NAME,
+        LLSW_VERSION,
+        LLSW_N
+    };
+    INDI::PropertyText LowLevelSWTP {LLSW_N};
+    enum {
+        HLSW_NAME,
+        HLSW_VERSION,
+        HLSW_N
+    };
+    INDI::PropertyText HighLevelSWTP {HLSW_N};
 
     bool Slew(double, double, int);
     bool meridianFlipEnable(int);

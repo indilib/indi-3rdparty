@@ -1,21 +1,21 @@
 /*
-  Avalon Unified Driver AUX
+    Avalon Unified Driver Aux
 
-  Copyright(c) 2019 Jasem Mutlaq. All rights reserved.
+    Copyright (C) 2020,2023
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "config.h"
@@ -36,6 +36,8 @@
 
 
 using json = nlohmann::json;
+
+const int IPport = 5450;
 
 static char device_str[MAXINDIDEVICE] = "AvalonUD AUX";
 
@@ -101,67 +103,67 @@ bool AUDAUX::initProperties()
 {
     INDI::DefaultDevice::initProperties();
 
-    IUFillText(&ConfigT[0], "ADDRESS", "Address", "127.0.0.1");
-    IUFillTextVector(&ConfigTP, ConfigT, 1, getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
+    ConfigTP[0].fill("ADDRESS", "Address", "127.0.0.1");
+    ConfigTP.fill(getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
 
-    IUFillText(&HWTypeT[0], "HW_TYPE", "Controller Type", "");
-    IUFillTextVector(&HWTypeTP, HWTypeT, 1, getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWTypeTP[0].fill("HW_TYPE", "Controller Type", "");
+    HWTypeTP.fill(getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillText(&HWIdentifierT[0], "HW_IDENTIFIER", "HW Identifier", "");
-    IUFillTextVector(&HWIdentifierTP, HWIdentifierT, 1, getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWIdentifierTP[0].fill("HW_IDENTIFIER", "HW Identifier", "");
+    HWIdentifierTP.fill(getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillText(&LowLevelSWT[0], "LLSW_NAME", "Name", "");
-    IUFillText(&LowLevelSWT[1], "LLSW_VERSION", "Version", "--");
-    IUFillTextVector(&LowLevelSWTP, LowLevelSWT, 2, getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    LowLevelSWTP[LLSW_NAME].fill("LLSW_NAME", "Name", "");
+    LowLevelSWTP[LLSW_VERSION].fill("LLSW_VERSION", "Version", "--");
+    LowLevelSWTP.fill(getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillSwitch(&SystemManagementS[0],"SHUTDOWN","Shutdown",ISS_OFF);
-    IUFillSwitch(&SystemManagementS[1],"REBOOT","Reboot",ISS_OFF);
-    IUFillSwitchVector(&SystemManagementSP, SystemManagementS, 2, getDeviceName(), "SYSTEM_MANAGEMENT", "System Mngm", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    SystemManagementSP[SMNT_SHUTDOWN].fill("SHUTDOWN","Shutdown",ISS_OFF);
+    SystemManagementSP[SMNT_REBOOT].fill("REBOOT","Reboot",ISS_OFF);
+    SystemManagementSP.fill(getDeviceName(), "SYSTEM_MANAGEMENT", "System Mngm", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    IUFillSwitch(&OUTPort1S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&OUTPort1S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&OUTPort1SP, OUTPort1S, 2, getDeviceName(), "OUT_PORT1", "OUT Port #1", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    OUTPort1SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    OUTPort1SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    OUTPort1SP.fill(getDeviceName(), "OUT_PORT1", "OUT Port #1", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillSwitch(&OUTPort2S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&OUTPort2S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&OUTPort2SP, OUTPort2S, 2, getDeviceName(), "OUT_PORT2", "OUT Port #2", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    OUTPort2SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    OUTPort2SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    OUTPort2SP.fill(getDeviceName(), "OUT_PORT2", "OUT Port #2", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillNumber(&OUTPortPWMDUTYCYCLEN[0], "DUTYCYCLE", "Output [%]", "%.f", 40.0, 100.0, 1.0, 50.0);
-    IUFillNumberVector(&OUTPortPWMDUTYCYCLENP, OUTPortPWMDUTYCYCLEN, 1, getDeviceName(), "OUT_PORTPWM_DUTYCYCLE", "OUT Port PWM", MAIN_CONTROL_TAB, IP_RW, 60, IPS_OK);
+    OUTPortPWMDUTYCYCLENP[0].fill("DUTYCYCLE", "Output [%]", "%.f", 40.0, 100.0, 1.0, 50.0);
+    OUTPortPWMDUTYCYCLENP.fill(getDeviceName(), "OUT_PORTPWM_DUTYCYCLE", "OUT Port PWM", MAIN_CONTROL_TAB, IP_RW, 60, IPS_OK);
 
-    IUFillSwitch(&OUTPortPWMS[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&OUTPortPWMS[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&OUTPortPWMSP, OUTPortPWMS, 2, getDeviceName(), "OUT_PORTPWM", "OUT Port PWM", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    OUTPortPWMSP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    OUTPortPWMSP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    OUTPortPWMSP.fill(getDeviceName(), "OUT_PORTPWM", "OUT Port PWM", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillSwitch(&USBPort1S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&USBPort1S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&USBPort1SP, USBPort1S, 2, getDeviceName(), "USB_PORT1", "USB3 Port #1", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    USBPort1SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    USBPort1SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    USBPort1SP.fill(getDeviceName(), "USB_PORT1", "USB3 Port #1", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillSwitch(&USBPort2S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&USBPort2S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&USBPort2SP, USBPort2S, 2, getDeviceName(), "USB_PORT2", "USB3 Port #2", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    USBPort2SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    USBPort2SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    USBPort2SP.fill(getDeviceName(), "USB_PORT2", "USB3 Port #2", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillSwitch(&USBPort3S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&USBPort3S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&USBPort3SP, USBPort3S, 2, getDeviceName(), "USB_PORT3", "USB2 Port #3", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    USBPort3SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    USBPort3SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    USBPort3SP.fill(getDeviceName(), "USB_PORT3", "USB2 Port #3", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillSwitch(&USBPort4S[0],"POWER_ON","On",ISS_OFF);
-    IUFillSwitch(&USBPort4S[1],"POWER_OFF","Off",ISS_OFF);
-    IUFillSwitchVector(&USBPort4SP, USBPort4S, 2, getDeviceName(), "USB_PORT4", "USB2 Port #4", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+    USBPort4SP[POWER_ON].fill("POWER_ON","On",ISS_OFF);
+    USBPort4SP[POWER_OFF].fill("POWER_OFF","Off",ISS_OFF);
+    USBPort4SP.fill(getDeviceName(), "USB_PORT4", "USB2 Port #4", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
 
-    IUFillNumber(&PSUN[0],"VOLTAGE","Voltage (V)","%.2f",0,0,0,0);
-    IUFillNumber(&PSUN[1],"CURRENT","Current (A)","%.2f",0,0,0,0);
-    IUFillNumber(&PSUN[2],"POWER","Power (W)","%.2f",0,0,0,0);
-    IUFillNumber(&PSUN[3],"CHARGE","Charge (Ah)","%.3f",0,0,0,0);
-    IUFillNumberVector(&PSUNP, PSUN, 4, getDeviceName(), "PSU","Power Supply", STATUS_TAB, IP_RO, 60, IPS_IDLE);
+    PSUNP[PSU_VOLTAGE].fill("VOLTAGE","Voltage (V)","%.2f",0,0,0,0);
+    PSUNP[PSU_CURRENT].fill("CURRENT","Current (A)","%.2f",0,0,0,0);
+    PSUNP[PSU_POWER].fill("POWER","Power (W)","%.2f",0,0,0,0);
+    PSUNP[PSU_CHARGE].fill("CHARGE","Charge (Ah)","%.3f",0,0,0,0);
+    PSUNP.fill(getDeviceName(), "PSU","Power Supply", STATUS_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillNumber(&SMN[0],"FEEDTIME","Feed Time (%)","%.1f",0,0,0,0);
-    IUFillNumber(&SMN[1],"BUFFERLOAD","Buffer Load (%)","%.1f",0,0,0,0);
-    IUFillNumber(&SMN[2],"UPTIME","Up Time (s)","%.0f",0,0,0,0);
-    IUFillNumberVector(&SMNP, SMN, 3, getDeviceName(), "STEPMACHINE","stepMachine", STATUS_TAB, IP_RO, 60, IPS_IDLE);
+    SMNP[SM_FEEDTIME].fill("FEEDTIME","Feed Time (%)","%.1f",0,0,0,0);
+    SMNP[SM_BUFFERLOAD].fill("BUFFERLOAD","Buffer Load (%)","%.1f",0,0,0,0);
+    SMNP[SM_UPTIME].fill("UPTIME","Up Time (s)","%.0f",0,0,0,0);
+    SMNP.fill(getDeviceName(), "STEPMACHINE","stepMachine", STATUS_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillNumber(&CPUN[0],"TEMPERATURE","Temperature (Cel)","%.1f",0,0,0,0);
-    IUFillNumberVector(&CPUNP, CPUN, 1, getDeviceName(), "CPU","CPU", STATUS_TAB, IP_RO, 60, IPS_IDLE);
+    CPUNP[0].fill("TEMPERATURE","Temperature (Cel)","%.1f",0,0,0,0);
+    CPUNP.fill(getDeviceName(), "CPU","CPU", STATUS_TAB, IP_RO, 60, IPS_IDLE);
 
     addDebugControl();
     setDefaultPollingPeriod(5000);
@@ -176,8 +178,8 @@ void AUDAUX::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
 
-    defineProperty(&ConfigTP);
-    loadConfig(true,ConfigTP.name);
+    defineProperty(ConfigTP);
+    loadConfig(true,ConfigTP.getName());
 }
 
 bool AUDAUX::updateProperties()
@@ -192,57 +194,57 @@ bool AUDAUX::updateProperties()
     if (isConnected())
     {
         // Settings
-        defineProperty(&SystemManagementSP);
+        defineProperty(SystemManagementSP);
         if ( features & 0x0010 ) {
-            defineProperty(&OUTPort1SP);
+            defineProperty(OUTPort1SP);
         }
         if ( features & 0x0020 ) {
-            defineProperty(&OUTPort2SP);
+            defineProperty(OUTPort2SP);
         }
         if ( features & 0x0040 ) {
-            defineProperty(&OUTPortPWMDUTYCYCLENP);
-            defineProperty(&OUTPortPWMSP);
+            defineProperty(OUTPortPWMDUTYCYCLENP);
+            defineProperty(OUTPortPWMSP);
         }
-        defineProperty(&USBPort1SP);
-        defineProperty(&USBPort2SP);
-        defineProperty(&USBPort3SP);
-        defineProperty(&USBPort4SP);
-        defineProperty(&HWTypeTP);
-        defineProperty(&HWIdentifierTP);
-        defineProperty(&LowLevelSWTP);
+        defineProperty(USBPort1SP);
+        defineProperty(USBPort2SP);
+        defineProperty(USBPort3SP);
+        defineProperty(USBPort4SP);
+        defineProperty(HWTypeTP);
+        defineProperty(HWIdentifierTP);
+        defineProperty(LowLevelSWTP);
         if ( features & 0x0004 ) {
-            defineProperty(&PSUNP);
+            defineProperty(PSUNP);
         }
-        defineProperty(&SMNP);
-        defineProperty(&CPUNP);
+        defineProperty(SMNP);
+        defineProperty(CPUNP);
 
         LOG_INFO("AUX is ready");
     }
     else
     {
-        deleteProperty(SystemManagementSP.name);
+        deleteProperty(SystemManagementSP);
         if ( features & 0x0010 ) {
-            deleteProperty(OUTPort1SP.name);
+            deleteProperty(OUTPort1SP);
         }
         if ( features & 0x0020 ) {
-            deleteProperty(OUTPort2SP.name);
+            deleteProperty(OUTPort2SP);
         }
         if ( features & 0x0040 ) {
-            deleteProperty(OUTPortPWMDUTYCYCLENP.name);
-            deleteProperty(OUTPortPWMSP.name);
+            deleteProperty(OUTPortPWMDUTYCYCLENP);
+            deleteProperty(OUTPortPWMSP);
         }
-        deleteProperty(USBPort1SP.name);
-        deleteProperty(USBPort2SP.name);
-        deleteProperty(USBPort3SP.name);
-        deleteProperty(USBPort4SP.name);
-        deleteProperty(HWTypeTP.name);
-        deleteProperty(HWIdentifierTP.name);
-        deleteProperty(LowLevelSWTP.name);
+        deleteProperty(USBPort1SP);
+        deleteProperty(USBPort2SP);
+        deleteProperty(USBPort3SP);
+        deleteProperty(USBPort4SP);
+        deleteProperty(HWTypeTP);
+        deleteProperty(HWIdentifierTP);
+        deleteProperty(LowLevelSWTP);
         if ( features & 0x0004 ) {
-            deleteProperty(PSUNP.name);
+            deleteProperty(PSUNP);
         }
-        deleteProperty(SMNP.name);
-        deleteProperty(CPUNP.name);
+        deleteProperty(SMNP);
+        deleteProperty(CPUNP);
     }
 
     return true;
@@ -253,13 +255,15 @@ bool AUDAUX::ISNewText(const char *dev, const char *name, char *texts[], char *n
     if (!strcmp(dev,getDeviceName()))
     {
         // TCP Server settings
-        if (!strcmp(name, ConfigTP.name))
+        if (ConfigTP.isNameMatch(name))
         {
-            IUUpdateText(&ConfigTP, texts, names, n);
-            ConfigTP.s = IPS_OK;
-            IDSetText(&ConfigTP, nullptr);
-            if (isConnected() && strcmp(IPaddress,ConfigT[0].text) )
-                DEBUG(INDI::Logger::DBG_WARNING, "Disconnect and reconnect to make IP address change effective!");
+            if ( isConnected() && strcmp(IPaddress,texts[0]) ) {
+                DEBUG(INDI::Logger::DBG_WARNING, "Please Disconnect before changing IP address");
+                return false;
+            }
+            ConfigTP.update(texts, names, n);
+            ConfigTP.setState(IPS_OK);
+            ConfigTP.apply();
             return true;
         }
     }
@@ -274,202 +278,210 @@ bool AUDAUX::ISNewSwitch(const char * dev, const char * name, ISState * states, 
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         // Shutdown/Reboot
-        if (!strcmp(name, SystemManagementSP.name))
+        if (SystemManagementSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&SystemManagementSP, states, names, n);
-            int index = IUFindOnSwitchIndex(&SystemManagementSP);
+            SystemManagementSP.update(states, names, n);
+            int index = SystemManagementSP.findOnSwitchIndex();
 
-            SystemManagementSP.s = IPS_BUSY;
-            IUResetSwitch(&SystemManagementSP);
+            SystemManagementSP.setState(IPS_BUSY);
+            SystemManagementSP.reset();
+            SystemManagementSP.apply();
 
             if ( isConnected() )
             {
                 switch (index) {
-                case 0 :
+                case SMNT_SHUTDOWN :
                     if ( time(NULL) - shutdown_time <= 10 ) {
                         sendCommand("SHUTDOWN");
-                        SystemManagementSP.s = IPS_ALERT;
+                        SystemManagementSP.setState(IPS_ALERT);
                     } else {
                         DEBUG(INDI::Logger::DBG_WARNING, "Are you sure you want to shutdown?");
                         DEBUG(INDI::Logger::DBG_WARNING, "After shutdown only power cycling could restart the controller!");
                         DEBUG(INDI::Logger::DBG_WARNING, "To proceed press again within 10 seconds...");
-                        SystemManagementSP.s = IPS_BUSY;
+                        SystemManagementSP.setState(IPS_BUSY);
                     }
                     reboot_time = 0;
                     shutdown_time = time(NULL);
                     break;
-                case 1 :
+                case SMNT_REBOOT :
                     if ( time(NULL) - reboot_time <= 10 ) {
                         sendCommand("REBOOT");
-                        SystemManagementSP.s = IPS_ALERT;
+                        SystemManagementSP.setState(IPS_ALERT);
                     } else {
                         DEBUG(INDI::Logger::DBG_WARNING, "Are you sure you want to reboot?");
                         DEBUG(INDI::Logger::DBG_WARNING, "To proceed press again within 10 seconds...");
-                        SystemManagementSP.s = IPS_BUSY;
+                        SystemManagementSP.setState(IPS_BUSY);
                     }
                     reboot_time = time(NULL);
                     shutdown_time = 0;
                     break;
                 }
             }
-            IDSetSwitch(&SystemManagementSP,NULL);
+            SystemManagementSP.apply();
             return true;
         }
 
         // AUX Ports power
-        if (!strcmp(name, OUTPort1SP.name))
+        if (OUTPort1SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&OUTPort1SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&OUTPort1SP);
+            OUTPort1SP.update(states, names, n);
+            int index = OUTPort1SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                OUTPort1SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    OUTPort1SP.setState(IPS_BUSY);
+                    OUTPort1SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_OUT1 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port OUT1 switch completed");
-                        OUTPort1SP.s = IPS_OK;
+                        OUTPort1SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port OUT1 switch failed due to %s",answer);
                         free(answer);
-                        OUTPort1SP.s = IPS_ALERT;
+                        OUTPort1SP.setState(IPS_ALERT);
                     }
+                    OUTPort1SP.apply();
                 }
-                IDSetSwitch(&OUTPort1SP,NULL);
             }
             return true;
         }
-        if (!strcmp(name, OUTPort2SP.name))
+        if (OUTPort2SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&OUTPort2SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&OUTPort2SP);
+            OUTPort2SP.update(states, names, n);
+            int index = OUTPort2SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                OUTPort2SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    OUTPort2SP.setState(IPS_BUSY);
+                    OUTPort2SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_OUT2 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port OUT2 switch completed");
-                        OUTPort2SP.s = IPS_OK;
+                        OUTPort2SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port OUT2 switch failed due to %s",answer);
                         free(answer);
-                        OUTPort2SP.s = IPS_ALERT;
+                        OUTPort2SP.setState(IPS_ALERT);
                     }
+                    OUTPort2SP.apply();
                 }
-                IDSetSwitch(&OUTPort2SP,NULL);
             }
             return true;
         }
-        if (!strcmp(name, OUTPortPWMSP.name))
+        if (OUTPortPWMSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&OUTPortPWMSP, states, names, n);
-            int index = IUFindOnSwitchIndex(&OUTPortPWMSP);
+            OUTPortPWMSP.update(states, names, n);
+            int index = OUTPortPWMSP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                OUTPortPWMSP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    OUTPortPWMSP.setState(IPS_BUSY);
+                    OUTPortPWMSP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_OUTPWM %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port OUTPWM switch completed");
-                        OUTPortPWMSP.s = IPS_OK;
+                        OUTPortPWMSP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port OUTPWM switch failed due to %s",answer);
                         free(answer);
-                        OUTPortPWMSP.s = IPS_ALERT;
+                        OUTPortPWMSP.setState(IPS_ALERT);
                     }
+                    OUTPortPWMSP.apply();
                 }
-                IDSetSwitch(&OUTPortPWMSP,NULL);
             }
             return true;
         }
 
         // USB Ports power
-        if (!strcmp(name, USBPort1SP.name))
+        if (USBPort1SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&USBPort1SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&USBPort1SP);
+            USBPort1SP.update(states, names, n);
+            int index = USBPort1SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                USBPort1SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    USBPort1SP.setState(IPS_BUSY);
+                    USBPort1SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_USB1 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port USB #1 switch completed");
-                        USBPort1SP.s = IPS_OK;
+                        USBPort1SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port USB #1 switch failed due to %s",answer);
                         free(answer);
-                        USBPort1SP.s = IPS_ALERT;
+                        USBPort1SP.setState(IPS_ALERT);
                     }
+                    USBPort1SP.apply();
                 }
-                IDSetSwitch(&USBPort1SP,NULL);
             }
             return true;
         }
-        if (!strcmp(name, USBPort2SP.name))
+        if (USBPort2SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&USBPort2SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&USBPort2SP);
+            USBPort2SP.update(states, names, n);
+            int index = USBPort2SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                USBPort2SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    USBPort2SP.setState(IPS_BUSY);
+                    USBPort2SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_USB2 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port USB #2 switch completed");
-                        USBPort2SP.s = IPS_OK;
+                        USBPort2SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port USB #2 switch failed due to %s",answer);
                         free(answer);
-                        USBPort2SP.s = IPS_ALERT;
+                        USBPort2SP.setState(IPS_ALERT);
                     }
+                    USBPort2SP.apply();
                 }
-                IDSetSwitch(&USBPort2SP,NULL);
             }
             return true;
         }
-        if (!strcmp(name, USBPort3SP.name))
+        if (USBPort3SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&USBPort3SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&USBPort3SP);
+            USBPort3SP.update(states, names, n);
+            int index = USBPort3SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                USBPort3SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    USBPort3SP.setState(IPS_BUSY);
+                    USBPort3SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_USB3 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port USB #3 switch completed");
-                        USBPort3SP.s = IPS_OK;
+                        USBPort3SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port USB #3 switch failed due to %s",answer);
                         free(answer);
-                        USBPort3SP.s = IPS_ALERT;
+                        USBPort3SP.setState(IPS_ALERT);
                     }
+                    USBPort3SP.apply();
                 }
-                IDSetSwitch(&USBPort3SP,NULL);
             }
             return true;
         }
-        if (!strcmp(name, USBPort4SP.name))
+        if (USBPort4SP.isNameMatch(name))
         {
-            IUUpdateSwitch(&USBPort4SP, states, names, n);
-            int index = IUFindOnSwitchIndex(&USBPort4SP);
+            USBPort4SP.update(states, names, n);
+            int index = USBPort4SP.findOnSwitchIndex();
 
             if ( index != -1 ) {
-                USBPort4SP.s = IPS_BUSY;
                 if ( isConnected() ) {
+                    USBPort4SP.setState(IPS_BUSY);
+                    USBPort4SP.apply();
                     answer = sendCommand("SETPARAM POWER_PORT_USB4 %d", (1-index) );
                     if ( !answer ) {
                         DEBUG(INDI::Logger::DBG_SESSION, "Port USB #4 switch completed");
-                        USBPort4SP.s = IPS_OK;
+                        USBPort4SP.setState(IPS_OK);
                     } else {
                         DEBUGF(INDI::Logger::DBG_WARNING, "Port USB #4 switch failed due to %s",answer);
                         free(answer);
-                        USBPort4SP.s = IPS_ALERT;
+                        USBPort4SP.setState(IPS_ALERT);
                     }
+                    USBPort4SP.apply();
                 }
-                IDSetSwitch(&USBPort4SP,NULL);
             }
             return true;
         }
@@ -487,16 +499,16 @@ bool AUDAUX::ISNewNumber(const char * dev, const char * name, double values[], c
     //  first check if it's for our device
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        if (!strcmp(name, OUTPortPWMDUTYCYCLENP.name))
+        if (OUTPortPWMDUTYCYCLENP.isNameMatch(name))
         {
-            IUUpdateNumber(&OUTPortPWMDUTYCYCLENP, values, names, n);
+            OUTPortPWMDUTYCYCLENP.update(values, names, n);
 
-            OUTPortPWMDUTYCYCLENP.s = IPS_BUSY;
+            OUTPortPWMDUTYCYCLENP.setState(IPS_BUSY);
             if ( isConnected() )
-                sendCommand("SETPARAM POWER_PORT_OUTPWM_DUTYCYCLE %.0f", OUTPortPWMDUTYCYCLEN[0].value/100.0*255.0 );
-            OUTPortPWMDUTYCYCLENP.s = IPS_OK;
+                sendCommand("SETPARAM POWER_PORT_OUTPWM_DUTYCYCLE %.0f", OUTPortPWMDUTYCYCLENP[0].value/100.0*255.0 );
+            OUTPortPWMDUTYCYCLENP.setState(IPS_OK);
 
-            IDSetNumber(&OUTPortPWMDUTYCYCLENP,NULL);
+            OUTPortPWMDUTYCYCLENP.apply();
             return true;
         }
     }
@@ -504,11 +516,6 @@ bool AUDAUX::ISNewNumber(const char * dev, const char * name, double values[], c
     return DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
-
-bool AUDAUX::Handshake()
-{
-    return aux->Connect();
-}
 
 bool AUDAUX::Connect()
 {
@@ -518,13 +525,13 @@ bool AUDAUX::Connect()
     if (isConnected())
         return true;
 
-    IPaddress = strdup(ConfigT[0].text);
+    IPaddress = strdup(ConfigTP[0].text);
 
     DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to connect %s aux...",IPaddress);
 
     requester = zmq_socket(context, ZMQ_REQ);
     zmq_setsockopt(requester, ZMQ_RCVTIMEO, &timeout, sizeof(timeout) );
-    snprintf( addr, sizeof(addr), "tcp://%s:5450", IPaddress);
+    snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
     zmq_connect(requester, addr);
 
     answer = sendRequest("DISCOVER");
@@ -534,7 +541,7 @@ bool AUDAUX::Connect()
             answer = sendRequest("INFOALL");
             if ( answer ) {
                 json j;
-                std::string sHWt,sHWi,sFW;
+                std::string sHWt,sHWi,sFWv;
 
                 j = json::parse(answer,nullptr,false);
                 free(answer);
@@ -551,16 +558,16 @@ bool AUDAUX::Connect()
                 }
 
                 j["HWType"].get_to(sHWt);
-                IUSaveText(&HWTypeT[0], sHWt.c_str());
-                IDSetText(&HWTypeTP, nullptr);
+                HWTypeTP[0].setText(sHWt);
+                HWTypeTP.apply();
                 j["HWFeatures"].get_to(features);
                 j["HWIdentifier"].get_to(sHWi);
-                IUSaveText(&HWIdentifierT[0], sHWi.c_str());
-                IDSetText(&HWIdentifierTP, nullptr);
-                IUSaveText(&LowLevelSWT[0], "stepMachine");
-                j["firmwareVersion"].get_to(sFW);
-                IUSaveText(&LowLevelSWT[1], sFW.c_str());
-                IDSetText(&LowLevelSWTP, nullptr);
+                HWIdentifierTP[0].setText(sHWi);
+                HWIdentifierTP.apply();
+                LowLevelSWTP[LLSW_NAME].setText("stepMachine");
+                j["firmwareVersion"].get_to(sFWv);
+                LowLevelSWTP[LLSW_VERSION].setText(sFWv);
+                LowLevelSWTP.apply();
             }
             if ( !(features & 0x0074) ) {
                 zmq_close(requester);
@@ -616,10 +623,10 @@ void AUDAUX::TimerHit()
     // Read the current status
     readStatus();
 
-    if ( SystemManagementSP.s == IPS_BUSY ) {
+    if ( SystemManagementSP.getState() == IPS_BUSY ) {
         if ( ( time(NULL) - reboot_time > 10 ) && ( time(NULL) - shutdown_time > 10 ) ) {
-            SystemManagementSP.s = IPS_OK;
-            IDSetSwitch(&SystemManagementSP,NULL);
+            SystemManagementSP.setState(IPS_OK);
+            SystemManagementSP.apply();
             DEBUG(INDI::Logger::DBG_SESSION, "Reboot/Shutdown command cleared");
         }
     }
@@ -630,11 +637,11 @@ void AUDAUX::TimerHit()
 bool AUDAUX::readStatus()
 {
     char *answer;
-    int value;
 
     answer = sendRequest("HOUSEKEEPINGS");
     if ( answer ) {
         json j;
+        int value;
 
         j = json::parse(answer,nullptr,false);
         free(answer);
@@ -644,79 +651,79 @@ bool AUDAUX::readStatus()
 
         if ( features & 0x0004 ) {
             if ( j.contains("voltage_V") )
-                j["voltage_V"].get_to(PSUN[0].value);
+                j["voltage_V"].get_to(PSUNP[PSU_VOLTAGE].value);
             if ( j.contains("current_A") )
-                j["current_A"].get_to(PSUN[1].value);
+                j["current_A"].get_to(PSUNP[PSU_CURRENT].value);
             if ( j.contains("power_W") )
-                j["power_W"].get_to(PSUN[2].value);
+                j["power_W"].get_to(PSUNP[PSU_POWER].value);
             if ( j.contains("charge_Ah") )
-                j["charge_Ah"].get_to(PSUN[3].value);
-            IDSetNumber(&PSUNP, nullptr);
+                j["charge_Ah"].get_to(PSUNP[PSU_CHARGE].value);
+            PSUNP.apply();
         }
         if ( j.contains("feedtime_perc") )
-            j["feedtime_perc"].get_to(SMN[0].value);
+            j["feedtime_perc"].get_to(SMNP[SM_FEEDTIME].value);
         if ( j.contains("bufferload_perc") )
-            j["bufferload_perc"].get_to(SMN[1].value);
+            j["bufferload_perc"].get_to(SMNP[SM_BUFFERLOAD].value);
         if ( j.contains("uptime_sec") )
-            j["uptime_sec"].get_to(SMN[2].value);
-        IDSetNumber(&SMNP, nullptr);
+            j["uptime_sec"].get_to(SMNP[SM_UPTIME].value);
+        SMNP.apply();
         if ( j.contains("cputemp_celsius") )
-            j["cputemp_celsius"].get_to(CPUN[0].value);
-        IDSetNumber(&CPUNP, nullptr);
+            j["cputemp_celsius"].get_to(CPUNP[0].value);
+        CPUNP.apply();
 
         if ( features & 0x0010 ) {
             if ( j.contains("POWER_PORT_OUT1") ) {
                 j["POWER_PORT_OUT1"].get_to(value);
-                OUTPort1S[0].s = (value?ISS_ON:ISS_OFF);
-                OUTPort1S[1].s = (value?ISS_OFF:ISS_ON);
-                IDSetSwitch(&OUTPort1SP, nullptr);
+                OUTPort1SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+                OUTPort1SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+                OUTPort1SP.apply();
             }
         }
         if ( features & 0x0020 ) {
             if ( j.contains("POWER_PORT_OUT2") ) {
                 j["POWER_PORT_OUT2"].get_to(value);
-                OUTPort2S[0].s = (value?ISS_ON:ISS_OFF);
-                OUTPort2S[1].s = (value?ISS_OFF:ISS_ON);
-                IDSetSwitch(&OUTPort2SP, nullptr);
+                OUTPort2SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+                OUTPort2SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+                OUTPort2SP.apply();
             }
         }
         if ( features & 0x0040 ) {
             if ( j.contains("POWER_PORT_OUTPWM_DUTYCYCLE") ) {
-                j["POWER_PORT_OUTPWM_DUTYCYCLE"].get_to(OUTPortPWMDUTYCYCLEN[0].value);
-                OUTPortPWMDUTYCYCLEN[0].value *= 100.0 / 255.0;
-                IDSetNumber(&OUTPortPWMDUTYCYCLENP, nullptr);
+                j["POWER_PORT_OUTPWM_DUTYCYCLE"].get_to(OUTPortPWMDUTYCYCLENP[0].value);
+                OUTPortPWMDUTYCYCLENP[0].value *= 100.0 / 255.0;
+                OUTPortPWMDUTYCYCLENP.apply();
             }
             if ( j.contains("POWER_PORT_OUTPWM") ) {
                 j["POWER_PORT_OUTPWM"].get_to(value);
-                OUTPortPWMS[0].s = (value?ISS_ON:ISS_OFF);
-                OUTPortPWMS[1].s = (value?ISS_OFF:ISS_ON);
-                IDSetSwitch(&OUTPortPWMSP, nullptr);
+                OUTPortPWMSP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+                OUTPortPWMSP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+                OUTPortPWMSP.apply();
             }
         }
 
         if ( j.contains("POWER_PORT_USB1") ) {
             j["POWER_PORT_USB1"].get_to(value);
-            USBPort1S[0].s = (value?ISS_ON:ISS_OFF);
-            USBPort1S[1].s = (value?ISS_OFF:ISS_ON);
-            IDSetSwitch(&USBPort1SP, nullptr);
+            USBPort1SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+            USBPort1SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+            USBPort1SP.apply();
         }
         if ( j.contains("POWER_PORT_USB2") ) {
             j["POWER_PORT_USB2"].get_to(value);
-            USBPort2S[0].s = (value?ISS_ON:ISS_OFF);
-            USBPort2S[1].s = (value?ISS_OFF:ISS_ON);
-            IDSetSwitch(&USBPort2SP, nullptr);
+            USBPort2SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+            USBPort2SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+            USBPort2SP.apply();
         }
         if ( j.contains("POWER_PORT_USB3") ) {
             j["POWER_PORT_USB3"].get_to(value);
-            USBPort3S[0].s = (value?ISS_ON:ISS_OFF);
-            USBPort3S[1].s = (value?ISS_OFF:ISS_ON);
-            IDSetSwitch(&USBPort3SP, nullptr);
+            USBPort3SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+            USBPort3SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+            USBPort3SP.apply();
         }
         if ( j.contains("POWER_PORT_USB4") ) {
             j["POWER_PORT_USB4"].get_to(value);
-            USBPort4S[0].s = (value?ISS_ON:ISS_OFF);
-            USBPort4S[1].s = (value?ISS_OFF:ISS_ON);
-            IDSetSwitch(&USBPort4SP, nullptr);
+            USBPort4SP[POWER_ON].setState((value?ISS_ON:ISS_OFF));
+            USBPort4SP[POWER_OFF].setState((value?ISS_OFF:ISS_ON));
+            USBPort4SP.apply();
         }
         return true;
     }
@@ -728,7 +735,7 @@ bool AUDAUX::saveConfigItems(FILE *fp)
 {
     // We need to reserve and save address mode
     // so that the next time the driver is loaded, it is remembered and applied.
-    IUSaveConfigText(fp, &ConfigTP);
+    ConfigTP.save(fp);
 
     return INDI::DefaultDevice::saveConfigItems(fp);
 }
@@ -770,7 +777,7 @@ char* AUDAUX::sendCommand(const char *fmt, ... )
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress );
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
@@ -806,7 +813,7 @@ char* AUDAUX::sendRequest(const char *fmt, ... )
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress );
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );

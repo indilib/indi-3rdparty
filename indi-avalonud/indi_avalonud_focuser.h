@@ -1,28 +1,21 @@
 /*
-  Skeleton Focuser Driver
+    Avalon Unified Driver Focuser
 
-  Modify this driver when developing new absolute position
-  based focusers. This driver uses serial communication by default
-  but it can be changed to use networked TCP/UDP connection as well.
+    Copyright (C) 2020,2023
 
-  Copyright(c) 2019 Jasem Mutlaq. All rights reserved.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-  Thanks to Rigel Systems, especially Gene Nolan and Leon Palmer,
-  for their support in writing this driver.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #pragma once
@@ -66,17 +59,15 @@ private:
     int tid;
     unsigned int features;
 
-    IText ConfigT[1];
-    ITextVectorProperty ConfigTP;
-
-    IText LowLevelSWT[2];
-    ITextVectorProperty LowLevelSWTP;
-
-    IText HWTypeT[1];
-    ITextVectorProperty HWTypeTP;
-
-    IText HWIdentifierT[1];
-    ITextVectorProperty HWIdentifierTP;
+    INDI::PropertyText ConfigTP {1};
+    enum {
+        LLSW_NAME,
+        LLSW_VERSION,
+        LLSW_N
+    };
+    INDI::PropertyText LowLevelSWTP {LLSW_N};
+    INDI::PropertyText HWTypeTP {1};
+    INDI::PropertyText HWIdentifierTP {1};
 
     bool readPosition();
 

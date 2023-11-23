@@ -1,7 +1,7 @@
 /*
     Avalon Unified Driver Telescope
 
-    Copyright (C) 2020
+    Copyright (C) 2020,2023
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -44,12 +44,12 @@
 
 using json = nlohmann::json;
 
+const int IPport = 5451;
 
 static char device_str[MAXINDIDEVICE] = "AvalonUD Telescope";
 
 
 static std::unique_ptr<AUDTELESCOPE> telescope(new AUDTELESCOPE());
-
 
 void ISInit()
 {
@@ -140,29 +140,29 @@ bool AUDTELESCOPE::initProperties()
 {
     INDI::Telescope::initProperties();
 
-    IUFillText(&ConfigT[0], "ADDRESS", "Address", "127.0.0.1");
-    IUFillTextVector(&ConfigTP, ConfigT, 1, getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
+    ConfigTP[0].fill("ADDRESS", "Address", "127.0.0.1");
+    ConfigTP.fill(getDeviceName(), "DEVICE_ADDRESS", "Server", CONNECTION_TAB, IP_RW, 60, IPS_IDLE);
 
-    IUFillSwitch(&MountTypeS[MOUNT_EQUATORIAL], "MOUNT_EQUATORIAL", "Equatorial", ISS_OFF);
-    IUFillSwitch(&MountTypeS[MOUNT_ALTAZ], "MOUNT_ALTAZ", "AltAz", ISS_OFF);
-    IUFillSwitchVector(&MountTypeSP, MountTypeS, 2, getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
+    MountModeSP[MM_EQUATORIAL].fill("MOUNT_EQUATORIAL", "Equatorial", ISS_OFF);
+    MountModeSP[MM_ALTAZ].fill("MOUNT_ALTAZ", "AltAz", ISS_OFF);
+    MountModeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillNumber(&LocalEqN[0],"HA","HA (hh:mm:ss)","%010.6m",-12,12,0,0);
-    IUFillNumber(&LocalEqN[1],"DEC","DEC (dd:mm:ss)","%010.6m",-90,90,0,0);
-    IUFillNumberVector(&LocalEqNP, LocalEqN,2, getDeviceName(), "LOCAL_EQUATORIAL_EOD_COORD","Local Eq. Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    LocalEqNP[LEQ_HA].fill("HA","HA (hh:mm:ss)","%010.6m",-12,12,0,0);
+    LocalEqNP[LEQ_DEC].fill("DEC","DEC (dd:mm:ss)","%010.6m",-90,90,0,0);
+    LocalEqNP.fill(getDeviceName(), "LOCAL_EQUATORIAL_EOD_COORD","Local Eq. Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillNumber(&AzAltN[0],"Az","Az (deg)","%.2f",-180,180,0,0);
-    IUFillNumber(&AzAltN[1],"Alt","Alt (deg)","%.2f",-90,90,0,0);
-    IUFillNumberVector(&AzAltNP, AzAltN, 2, getDeviceName(), "AZALT_EOD_COORD", "Azimuthal Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    AltAzNP[ALTAZ_AZ].fill("Az","Az (deg)","%.2f",-180,180,0,0);
+    AltAzNP[ALTAZ_ALT].fill("Alt","Alt (deg)","%.2f",-90,90,0,0);
+    AltAzNP.fill(getDeviceName(), "AZALT_EOD_COORD", "Azimuthal Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillSwitch(&HomeS[0],"SYNCHOME","Sync Home position",ISS_OFF);
-    IUFillSwitch(&HomeS[1],"SLEWHOME","Slew to Home position",ISS_OFF);
-    IUFillSwitchVector(&HomeSP, HomeS, 2, getDeviceName(), "TELESCOPE_HOME","Home", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    HomeSP[HOME_SYNC].fill("SYNCHOME","Sync Home position",ISS_OFF);
+    HomeSP[HOME_SLEW].fill("SLEWHOME","Slew to Home position",ISS_OFF);
+    HomeSP.fill(getDeviceName(), "TELESCOPE_HOME","Home", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    IUFillNumber(&TimeN[0],"JD","JD (days)","%.6f",0,0,0,0);
-    IUFillNumber(&TimeN[1],"UTC","UTC (hh:mm:ss)","%09.6m",0,24,0,0);
-    IUFillNumber(&TimeN[2],"LST","LST (hh:mm:ss)","%09.6m",0,24,0,0);
-    IUFillNumberVector(&TimeNP, TimeN, 3, getDeviceName(), "TELESCOPE_TIME","Time", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    TTimeNP[TTIME_JD].fill("JD","JD (days)","%.6f",0,0,0,0);
+    TTimeNP[TTIME_UTC].fill("UTC","UTC (hh:mm:ss)","%09.6m",0,24,0,0);
+    TTimeNP[TTIME_LST].fill("LST","LST (hh:mm:ss)","%09.6m",0,24,0,0);
+    TTimeNP.fill(getDeviceName(), "TELESCOPE_TIME","Time", SITE_TAB, IP_RO, 60, IPS_IDLE);
 
     IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Set Park (Current)", ISS_OFF);
     IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Restore Park (Default)", ISS_OFF);
@@ -182,35 +182,35 @@ bool AUDTELESCOPE::initProperties()
     AddTrackMode("TRACK_CUSTOM", "Custom");
 
     // Mount Meridian Flip
-    IUFillSwitch(&MeridianFlipS[FLIP_ON], "FLIP_ON", "On", ISS_OFF);
-    IUFillSwitch(&MeridianFlipS[FLIP_OFF], "FLIP_OFF", "Off", ISS_ON);
-    IUFillSwitchVector(&MeridianFlipSP, MeridianFlipS, 2, getDeviceName(), "MOUNT_MERIDIAN_FLIP", "Mount Meridian Flip", SITE_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    MeridianFlipSP[MFLIP_ON].fill("FLIP_ON", "On", ISS_OFF);
+    MeridianFlipSP[MFLIP_OFF].fill("FLIP_OFF", "Off", ISS_ON);
+    MeridianFlipSP.fill(getDeviceName(), "MOUNT_MERIDIAN_FLIP", "Mount Meridian Flip", SITE_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Mount Meridian Flip HA
-    IUFillNumber(&MeridianFlipHAN[0], "FLIP_HA", "Flip HA (deg)", "%.2f", -30.0, 30.0, 0.1, 0.0);
-    IUFillNumberVector(&MeridianFlipHANP, MeridianFlipHAN, 1, getDeviceName(), "MOUNT_MERIDIAN_FLIP_HA", "Mount Meridian Flip HA", SITE_TAB, IP_RW, 60, IPS_IDLE);
+    MeridianFlipHANP[0].fill("FLIP_HA", "Flip HA (deg)", "%.2f", -30.0, 30.0, 0.1, 0.0);
+    MeridianFlipHANP.fill(getDeviceName(), "MOUNT_MERIDIAN_FLIP_HA", "Mount Meridian Flip HA", SITE_TAB, IP_RW, 60, IPS_IDLE);
 
     // HW type
-    IUFillText(&HWTypeT[0], "HW_TYPE", "Controller Type", "");
-    IUFillTextVector(&HWTypeTP, HWTypeT, 1, getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWTypeTP[0].fill("HW_TYPE", "Controller Type", "");
+    HWTypeTP.fill(getDeviceName(), "HW_TYPE_INFO", "Type", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // HW info
-    IUFillText(&HWModelT[0], "HW_MODEL", "Mount Model", "");
-    IUFillTextVector(&HWModelTP, HWModelT, 1, getDeviceName(), "HW_MODEL_INFO", "Model", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWModelTP[0].fill("HW_MODEL", "Mount Model", "");
+    HWModelTP.fill(getDeviceName(), "HW_MODEL_INFO", "Model", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // HW identifier
-    IUFillText(&HWIdentifierT[0], "HW_IDENTIFIER", "HW Identifier", "");
-    IUFillTextVector(&HWIdentifierTP, HWIdentifierT, 1, getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HWIdentifierTP[0].fill("HW_IDENTIFIER", "HW Identifier", "");
+    HWIdentifierTP.fill(getDeviceName(), "HW_IDENTIFIER_INFO", "Identifier", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // high level info
-    IUFillText(&HighLevelSWT[0], "HLSW_NAME", "Name", "");
-    IUFillText(&HighLevelSWT[1], "HLSW_VERSION", "Version", "--");
-    IUFillTextVector(&HighLevelSWTP, HighLevelSWT, 2, getDeviceName(), "HLSW_INFO", "HighLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    HighLevelSWTP[HLSW_NAME].fill("HLSW_NAME", "Name", "");
+    HighLevelSWTP[HLSW_VERSION].fill("HLSW_VERSION", "Version", "--");
+    HighLevelSWTP.fill(getDeviceName(), "HLSW_INFO", "HighLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     // low level SW info
-    IUFillText(&LowLevelSWT[0], "LLSW_NAME", "Name", "");
-    IUFillText(&LowLevelSWT[1], "LLSW_VERSION", "Version", "--");
-    IUFillTextVector(&LowLevelSWTP, LowLevelSWT, 2, getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    LowLevelSWTP[LLSW_NAME].fill("LLSW_NAME", "Name", "");
+    LowLevelSWTP[LLSW_VERSION].fill("LLSW_VERSION", "Version", "--");
+    LowLevelSWTP.fill(getDeviceName(), "LLSW_INFO", "LowLevel SW", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     TrackState = SCOPE_IDLE;
     previousTrackState = SCOPE_IDLE;
@@ -218,7 +218,7 @@ bool AUDTELESCOPE::initProperties()
     fFirstTime = true;
     lastErrorMsg = NULL;
 
-    SetTrackMode(TRACK_SIDEREAL);
+//    SetTrackMode(TRACK_SIDEREAL);
     trackspeedra = TRACKRATE_SIDEREAL;
     trackspeeddec = 0;
 
@@ -241,8 +241,8 @@ void AUDTELESCOPE::ISGetProperties(const char *dev)
 {
     INDI::Telescope::ISGetProperties(dev);
 
-    defineProperty(&ConfigTP);
-    loadConfig(true,ConfigTP.name);
+    defineProperty(ConfigTP);
+    loadConfig(true,ConfigTP.getName());
 
     deleteProperty(ParkOptionS[2].name);
     deleteProperty(ParkOptionS[3].name);
@@ -256,47 +256,47 @@ bool AUDTELESCOPE::updateProperties()
 {
     if (isConnected())
     {
-        defineProperty(&HomeSP);
+        defineProperty(HomeSP);
     }
     else
     {
-        deleteProperty(HomeSP.name);
+        deleteProperty(HomeSP.getName());
     }
 
     INDI::Telescope::updateProperties();
     if (isConnected())
     {
-        defineProperty(&MountTypeSP);
+        defineProperty(MountModeSP);
         defineProperty(&GuideNSNP);
         defineProperty(&GuideWENP);
 
-        defineProperty(&LocalEqNP);
-        defineProperty(&AzAltNP);
-        defineProperty(&TimeNP);
-        defineProperty(&MeridianFlipSP);
-        defineProperty(&MeridianFlipHANP);
-        defineProperty(&HWTypeTP);
-        defineProperty(&HWModelTP);
-        defineProperty(&HWIdentifierTP);
-        defineProperty(&HighLevelSWTP);
-        defineProperty(&LowLevelSWTP);
+        defineProperty(LocalEqNP);
+        defineProperty(AltAzNP);
+        defineProperty(TTimeNP);
+        defineProperty(MeridianFlipSP);
+        defineProperty(MeridianFlipHANP);
+        defineProperty(HWTypeTP);
+        defineProperty(HWModelTP);
+        defineProperty(HWIdentifierTP);
+        defineProperty(HighLevelSWTP);
+        defineProperty(LowLevelSWTP);
     }
     else
     {
-        deleteProperty(MountTypeSP.name);
+        deleteProperty(MountModeSP);
         deleteProperty(GuideNSNP.name);
         deleteProperty(GuideWENP.name);
 
-        deleteProperty(LocalEqNP.name);
-        deleteProperty(AzAltNP.name);
-        deleteProperty(TimeNP.name);
-        deleteProperty(MeridianFlipSP.name);
-        deleteProperty(MeridianFlipHANP.name);
-        deleteProperty(HWTypeTP.name);
-        deleteProperty(HWModelTP.name);
-        deleteProperty(HWIdentifierTP.name);
-        deleteProperty(HighLevelSWTP.name);
-        deleteProperty(LowLevelSWTP.name);
+        deleteProperty(LocalEqNP);
+        deleteProperty(AltAzNP);
+        deleteProperty(TTimeNP);
+        deleteProperty(MeridianFlipSP);
+        deleteProperty(MeridianFlipHANP);
+        deleteProperty(HWTypeTP);
+        deleteProperty(HWModelTP);
+        deleteProperty(HWIdentifierTP);
+        deleteProperty(HighLevelSWTP);
+        deleteProperty(LowLevelSWTP);
     }
 
     return true;
@@ -316,13 +316,13 @@ bool AUDTELESCOPE::Connect()
     if (isConnected())
         return true;
 
-    IPaddress = strdup(ConfigT[0].text);
+    IPaddress = strdup(ConfigTP[0].text);
 
     DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to connect %s telescope...",IPaddress);
 
     requester = zmq_socket(context, ZMQ_REQ);
     zmq_setsockopt(requester, ZMQ_RCVTIMEO, &timeout, sizeof(timeout) );
-    snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress);
+    snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
     zmq_connect(requester, addr);
 
     answer = sendRequest("ASTRO_INFO");
@@ -348,24 +348,24 @@ bool AUDTELESCOPE::Connect()
         }
 
         j["HWType"].get_to(sHWt);
-        IUSaveText(&HWTypeT[0], sHWt.c_str());
-        IDSetText(&HWTypeTP, nullptr);
+        HWTypeTP[0].setText(sHWt);
+        HWTypeTP.apply();
         j["HWModel"].get_to(sHWm);
-        IUSaveText(&HWModelT[0], sHWm.c_str());
-        IDSetText(&HWModelTP, nullptr);
+        HWModelTP[0].setText(sHWm);
+        HWModelTP.apply();
         j["HWIdentifier"].get_to(sHWi);
-        IUSaveText(&HWIdentifierT[0], sHWi.c_str());
-        IDSetText(&HWIdentifierTP, nullptr);
+        HWIdentifierTP[0].setText(sHWi);
+        HWIdentifierTP.apply();
         j["lowLevelSW"].get_to(sLLSW);
-        IUSaveText(&LowLevelSWT[0], sLLSW.c_str());
+        LowLevelSWTP[LLSW_NAME].setText(sLLSW);
         j["lowLevelSWVersion"].get_to(sLLSWv);
-        IUSaveText(&LowLevelSWT[1], sLLSWv.c_str());
-        IDSetText(&LowLevelSWTP, nullptr);
+        LowLevelSWTP[LLSW_VERSION].setText(sLLSWv);
+        LowLevelSWTP.apply();
         j["highLevelSW"].get_to(sHLSW);
-        IUSaveText(&HighLevelSWT[0], sHLSW.c_str());
+        HighLevelSWTP[HLSW_NAME].setText(sHLSW);
         j["highLevelSWVersion"].get_to(sHLSWv);
-        IUSaveText(&HighLevelSWT[1], sHLSWv.c_str());
-        IDSetText(&HighLevelSWTP, nullptr);
+        HighLevelSWTP[HLSW_VERSION].setText(sHLSWv);
+        HighLevelSWTP.apply();
     } else {
         zmq_close(requester);
         DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
@@ -375,9 +375,9 @@ bool AUDTELESCOPE::Connect()
 
     answer = sendRequest("ASTRO_GETMERIDIANFLIPHA");
     if ( answer && !strncmp(answer,"OK:",3) ) {
-        MeridianFlipHAN[0].value = atof(answer+3);
+        MeridianFlipHANP[0].value = atof(answer+3);
         free( answer );
-        IDSetNumber(&MeridianFlipHANP, nullptr);
+        MeridianFlipHANP.apply();
     } else {
         zmq_close(requester);
         DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
@@ -388,15 +388,15 @@ bool AUDTELESCOPE::Connect()
     answer = sendRequest("ASTRO_GETMOUNTMODE");
     if ( answer && !strncmp(answer,"OK:",3) ) {
         if ( !strcmp(answer,"OK:ALTAZ") )
-            mounttype = 1;
+            mounttype = MM_ALTAZ;
         else
-            mounttype = 0;
+            mounttype = MM_EQUATORIAL;
         free( answer );
-        MountTypeS[mounttype].s = ISS_ON;
-        MountTypeS[(mounttype?0:1)].s = ISS_OFF;
-        MountTypeSP.s = IPS_OK;
-        MountTypeSP.p = IP_RO;
-        IDSetSwitch(&MountTypeSP, nullptr);
+        MountModeSP[mounttype].setState(ISS_ON);
+        MountModeSP[(mounttype?0:1)].setState(ISS_OFF);
+        MountModeSP.setState(IPS_OK);
+        MountModeSP.setPermission(IP_RO);
+        MountModeSP.apply();
     } else {
         zmq_close(requester);
         DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
@@ -472,13 +472,15 @@ bool AUDTELESCOPE::ISNewText(const char *dev, const char *name, char *texts[], c
     if (!strcmp(dev,getDeviceName()))
     {
         // TCP Server settings
-        if (!strcmp(name, ConfigTP.name))
+        if (ConfigTP.isNameMatch(name))
         {
-            IUUpdateText(&ConfigTP, texts, names, n);
-            ConfigTP.s = IPS_OK;
-            IDSetText(&ConfigTP, nullptr);
-            if (isConnected() && strcmp(IPaddress,ConfigT[0].text) )
-                DEBUG(INDI::Logger::DBG_WARNING, "Disconnect and reconnect to make IP address change effective!");
+            if ( isConnected() && strcmp(IPaddress,texts[0]) ) {
+                DEBUG(INDI::Logger::DBG_WARNING, "Please Disconnect before changing IP address");
+                return false;
+            }
+            ConfigTP.update(texts, names, n);
+            ConfigTP.setState(IPS_OK);
+            ConfigTP.apply();
             return true;
         }
     }
@@ -493,19 +495,19 @@ bool AUDTELESCOPE::ISNewNumber (const char *dev, const char *name, double values
     {
 
         // Meridian Flip HourAngle
-        if(!strcmp(MeridianFlipHANP.name,name))
+        if(MeridianFlipHANP.isNameMatch(name))
         {
-            MeridianFlipHANP.s = IPS_BUSY;
-            IUUpdateNumber(&MeridianFlipHANP, values, names, n);
+            MeridianFlipHANP.setState(IPS_BUSY);
+            MeridianFlipHANP.update(values, names, n);
 
             if ( isConnected() )
             {
                 if ( setMeridianFlipHA(values[0]) )
-                    MeridianFlipHANP.s = IPS_OK;
+                    MeridianFlipHANP.setState(IPS_OK);
                 else
-                    MeridianFlipHANP.s = IPS_ALERT;
+                    MeridianFlipHANP.setState(IPS_ALERT);
             }
-            IDSetNumber(&MeridianFlipHANP, nullptr);
+            MeridianFlipHANP.apply();
             return true;
         }
 
@@ -526,50 +528,51 @@ bool AUDTELESCOPE::ISNewSwitch (const char *dev, const char *name, ISState *stat
     {
 
         // Home
-        if (!strcmp(HomeSP.name, name))
+        if (HomeSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&HomeSP, states, names, n);
-            int index = IUFindOnSwitchIndex(&HomeSP);
+            HomeSP.update(states, names, n);
+            int index = HomeSP.findOnSwitchIndex();
 
-            HomeSP.s = IPS_BUSY;
-            IUResetSwitch(&HomeSP);
+            HomeSP.setState(IPS_BUSY);
+            HomeSP.reset();
+            HomeSP.apply();
 
             if ( isConnected() )
             {
                 switch (index) {
-                case 0 :
+                case HOME_SYNC :
                     if ( SyncHome() )
-                        HomeSP.s = IPS_OK;
+                        HomeSP.setState(IPS_OK);
                     else
-                        HomeSP.s = IPS_ALERT;
+                        HomeSP.setState(IPS_ALERT);
                     break;
-                case 1 :
+                case HOME_SLEW :
                     if ( SlewToHome() )
-                        HomeSP.s = IPS_OK;
+                        HomeSP.setState(IPS_OK);
                     else
-                        HomeSP.s = IPS_ALERT;
+                        HomeSP.setState(IPS_ALERT);
                     break;
                 }
             }
-            IDSetSwitch(&HomeSP,NULL);
+            HomeSP.apply();
             return true;
         }
 
         // Meridian flip
-        if (!strcmp(MeridianFlipSP.name, name))
+        if (MeridianFlipSP.isNameMatch(name))
         {
-            MeridianFlipSP.s = IPS_BUSY;
-            IUUpdateSwitch(&MeridianFlipSP, states, names, n);
+            MeridianFlipSP.setState(IPS_BUSY);
+            MeridianFlipSP.update(states, names, n);
 
             if ( isConnected() )
             {
-                int targetState = IUFindOnSwitchIndex(&MeridianFlipSP);
+                int targetState = MeridianFlipSP.findOnSwitchIndex();
                 if ( meridianFlipEnable((targetState==0)?true:false) )
-                    MeridianFlipSP.s = IPS_OK;
+                    MeridianFlipSP.setState(IPS_OK);
                 else
-                    MeridianFlipSP.s = IPS_ALERT;
+                    MeridianFlipSP.setState(IPS_ALERT);
             }
-            IDSetSwitch(&MeridianFlipSP,NULL);
+            MeridianFlipSP.apply();
             return true;
         }
     }
@@ -719,47 +722,47 @@ bool AUDTELESCOPE::ReadScopeStatus()
         }
 
         if ( pierside >= 0 ) {
-            if ( meridianflip && ( MeridianFlipS[0].s == ISS_OFF ) ) {
-                MeridianFlipS[0].s = ISS_ON;
-                MeridianFlipS[1].s = ISS_OFF;
+            if ( meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_OFF ) ) {
+                MeridianFlipSP[MFLIP_ON].setState(ISS_ON);
+                MeridianFlipSP[MFLIP_OFF].setState(ISS_OFF);
             }
-            if ( !meridianflip && ( MeridianFlipS[0].s == ISS_ON ) ) {
-                MeridianFlipS[0].s = ISS_OFF;
-                MeridianFlipS[1].s = ISS_ON;
+            if ( !meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_ON ) ) {
+                MeridianFlipSP[MFLIP_ON].setState(ISS_OFF);
+                MeridianFlipSP[MFLIP_OFF].setState(ISS_ON);
             }
         } else {
-            MeridianFlipS[0].s = ISS_OFF;
-            MeridianFlipS[1].s = ISS_ON;
+            MeridianFlipSP[MFLIP_ON].setState(ISS_OFF);
+            MeridianFlipSP[MFLIP_OFF].setState(ISS_ON);
         }
-        IDSetSwitch(&MeridianFlipSP, NULL);
+        MeridianFlipSP.apply();
 
-        MeridianFlipHAN[0].value = meridianflipha;
-        IDSetNumber(&MeridianFlipHANP, NULL);
+        MeridianFlipHANP[0].value = meridianflipha;
+        MeridianFlipHANP.apply();
         setPierSide((TelescopePierSide)pierside);
 
-        if (LocalEqN[0].value != ha || LocalEqN[1].value != dec || LocalEqNP.s != EqNP.s)
+        if (LocalEqNP[LEQ_HA].value != ha || LocalEqNP[LEQ_DEC].value != dec || LocalEqNP.getState() != EqNP.s)
         {
-            LocalEqN[0].value=ha;
-            LocalEqN[1].value=dec;
-            LocalEqNP.s = slewState;
-            IDSetNumber(&LocalEqNP, NULL);
+            LocalEqNP[LEQ_HA].value = ha;
+            LocalEqNP[LEQ_DEC].value = dec;
+            LocalEqNP.setState(slewState);
+            LocalEqNP.apply();
         }
 
-        if (AzAltN[0].value != az || AzAltN[1].value != alt || AzAltNP.s != EqNP.s)
+        if (AltAzNP[ALTAZ_AZ].value != az || AltAzNP[ALTAZ_ALT].value != alt || AltAzNP.getState() != EqNP.s)
         {
-            AzAltN[0].value=az;
-            AzAltN[1].value=alt;
-            AzAltNP.s = slewState;
-            IDSetNumber(&AzAltNP, NULL);
+            AltAzNP[ALTAZ_AZ].value = az;
+            AltAzNP[ALTAZ_ALT].value = alt;
+            AltAzNP.setState(slewState);
+            AltAzNP.apply();
         }
 
-        if (TimeN[0].value != utc || TimeN[1].value != jd || TimeN[2].value != lst)
+        if (TTimeNP[TTIME_JD].value != utc || TTimeNP[TTIME_UTC].value != jd || TTimeNP[TTIME_LST].value != lst)
         {
-            TimeN[0].value=jd;
-            TimeN[1].value=utc;
-            TimeN[2].value=lst;
-            TimeNP.s = IPS_IDLE;
-            IDSetNumber(&TimeNP, NULL);
+            TTimeNP[TTIME_JD].value = jd;
+            TTimeNP[TTIME_UTC].value = utc;
+            TTimeNP[TTIME_LST].value = lst;
+            TTimeNP.setState(IPS_OK);
+            TTimeNP.apply();
         }
 
         return true;
@@ -842,11 +845,13 @@ bool AUDTELESCOPE::Park()
     answer = sendCommand("ASTRO_PARK");
     if ( !answer ) {
         ParkSP.s = IPS_BUSY;
+        IDSetSwitch(&ParkSP, NULL);
         TrackState = SCOPE_PARKING;
         DEBUG(INDI::Logger::DBG_SESSION,"Start telescope park completed");
         return true;
     }
     ParkSP.s = IPS_ALERT;
+    IDSetSwitch(&ParkSP, NULL);
     TrackState = SCOPE_IDLE;
     DEBUGF(INDI::Logger::DBG_WARNING,"Start telescope park failed due to %s",answer);
     free(answer);
@@ -943,13 +948,13 @@ bool AUDTELESCOPE::SlewToHome()
         return false;
     }
 
-    LOG_INFO("Slew to home position...");
+    LOG_INFO("Start slew to home position...");
     answer = sendCommand("ASTRO_POINTHOME");
     if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Slew to home position completed");
+        DEBUG(INDI::Logger::DBG_SESSION,"Start slew to home position completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Slew to home position failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING,"Start slew to home position failed due to %s",answer);
     free(answer);
     return false;
 }
@@ -1288,10 +1293,7 @@ bool AUDTELESCOPE::Abort()
 void AUDTELESCOPE::TimerHit()
 {
     if (isConnected() == false)
-    {
-        SetTimer(getCurrentPollingPeriod());
         return;
-    }
 
     ReadScopeStatus();
     IDSetNumber(&EqNP, NULL);
@@ -1301,9 +1303,9 @@ void AUDTELESCOPE::TimerHit()
 
 bool AUDTELESCOPE::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigText(fp, &ConfigTP);
-    IUSaveConfigSwitch(fp, &MeridianFlipSP);
-    IUSaveConfigNumber(fp, &MeridianFlipHANP);
+    ConfigTP.save(fp);
+    MeridianFlipSP.save(fp);
+    MeridianFlipHANP.save(fp);
 
     return INDI::Telescope::saveConfigItems(fp);
 }
@@ -1345,7 +1347,7 @@ char* AUDTELESCOPE::sendCommand(const char *fmt, ...)
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress);
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
@@ -1383,7 +1385,7 @@ char* AUDTELESCOPE::sendCommandOnce(const char *fmt, ...)
     }
     zmq_close(requester);
     requester = zmq_socket(context, ZMQ_REQ);
-    snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress);
+    snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
     zmq_connect(requester, addr);
     pthread_mutex_unlock( &connectionmutex );
     DEBUG(INDI::Logger::DBG_WARNING, "No answer from driver");
@@ -1418,7 +1420,7 @@ char* AUDTELESCOPE::sendRequest(const char *fmt, ...)
         }
         zmq_close(requester);
         requester = zmq_socket(context, ZMQ_REQ);
-        snprintf( addr, sizeof(addr), "tcp://%s:5451", IPaddress);
+        snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
     } while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
