@@ -1267,9 +1267,10 @@ bool ToupBase::StopStreaming()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 int ToupBase::SetTemperature(double temperature)
 {
-    if (activateCooler(true) == false)
+    // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
+    if (temperature < TemperatureN[0].value && activateCooler(true) == false)
     {
-        LOG_ERROR("Failed to activate cooler");
+        LOG_ERROR("Failed to toggle cooler.");
         return -1;
     }
 
@@ -1289,7 +1290,17 @@ int ToupBase::SetTemperature(double temperature)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::activateCooler(bool enable)
 {
-    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
+    int val = 0;
+    auto isCoolerOn = false;
+    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
+    if (SUCCEEDED(rc))
+        isCoolerOn = (val != 0);
+
+    // If no state change, return.
+    if ( (enable && isCoolerOn) || (!enable && !isCoolerOn))
+        return true;
+
+    rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
     IUResetSwitch(&m_CoolerSP);
     if (FAILED(rc))
     {
@@ -1302,7 +1313,7 @@ bool ToupBase::activateCooler(bool enable)
     else
     {
         m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
-        m_CoolerSP.s = IPS_OK;
+        m_CoolerSP.s = enable ? IPS_BUSY : IPS_IDLE;
         IDSetSwitch(&m_CoolerSP, nullptr);
 
         /* turn on TEC may force to turn on the fan */
@@ -1515,6 +1526,7 @@ void ToupBase::TimerHit()
             m_CoolerTP.s = IPS_ALERT;
         else if (0 == val)
         {
+            m_CoolerTP.s = IPS_IDLE;
             IUSaveText(&m_CoolerT, "0.0% (OFF)");
             IDSetText(&m_CoolerTP, nullptr);
         }
@@ -1528,6 +1540,7 @@ void ToupBase::TimerHit()
                 char str[32];
                 sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
                 IUSaveText(&m_CoolerT, str);
+                m_CoolerTP.s = IPS_BUSY;
                 IDSetText(&m_CoolerTP, nullptr);
             }
         }
