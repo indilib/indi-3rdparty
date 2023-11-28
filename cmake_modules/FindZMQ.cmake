@@ -20,7 +20,7 @@ else (ZMQ_INCLUDE_DIR AND ZMQ_LIBRARIES)
   )
 
   find_library(ZMQ_LIBRARIES
-    NAMES libzmq3
+    NAMES zmq
     PATHS
     ${_obLinkDir}
     ${GNUWIN32_DIR}/lib
