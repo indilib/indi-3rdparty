@@ -35,7 +35,7 @@ case "$OS" in
                     libgsl-dev libjpeg-dev libfftw3-dev libczmq-dev \
                     \
                     libftdi1-dev libavcodec-dev libavdevice-dev libavformat-dev libswscale-dev \
-                    libgps-dev libraw-dev libdc1394-22-dev libgphoto2-dev \
+                    libgps-dev libraw-dev libdc1394-dev libgphoto2-dev \
                     libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc \
                     libopencv-highgui
                 ;;
