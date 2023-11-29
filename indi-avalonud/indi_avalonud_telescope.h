@@ -97,8 +97,6 @@ private:
 
     double targetRA;
     double targetDEC;
-    double simulatedRA;
-    double simulatedDEC;
 
     enum {
         MM_EQUATORIAL,
