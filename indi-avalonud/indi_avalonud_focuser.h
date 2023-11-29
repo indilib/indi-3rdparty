@@ -31,8 +31,8 @@ public:
     AUDFOCUSER();
     ~AUDFOCUSER();
 
-    virtual bool Connect();
-    virtual bool Disconnect();
+    virtual bool Connect() override;
+    virtual bool Disconnect() override;
 
     const char *getDefaultName() override;
 
@@ -40,7 +40,7 @@ public:
     virtual bool updateProperties() override;
     virtual void ISGetProperties(const char *dev) override;
 
-    virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
+    virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n) override;
     virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
 protected:
