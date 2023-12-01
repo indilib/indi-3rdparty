@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <stream/streammanager.h>
 
+#include <sharedblob.h>
 #include <deque>
 #include <memory>
 #include <math.h>
