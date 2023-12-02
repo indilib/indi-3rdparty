@@ -24,6 +24,7 @@
 
 #include <stream/streammanager.h>
 #include <indielapsedtimer.h>
+#include <sharedblob.h>
 
 #include "image/image.hpp"
 #include "core/still_options.hpp"
