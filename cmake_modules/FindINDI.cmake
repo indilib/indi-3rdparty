@@ -16,6 +16,7 @@
 # The following variables will be defined for your use:
 #   - INDI_FOUND             : were all of your specified components found (include dependencies)?
 #   - INDI_WEBSOCKET         : was INDI compiled with websocket support?
+#   - INDI_JSONLIB           : was INDI compiled with bundled json library?
 #   - INDI_INCLUDE_DIR       : INDI include directory
 #   - INDI_DATA_DIR          : INDI include directory
 #   - INDI_LIBRARIES         : INDI libraries
@@ -197,6 +198,21 @@ if (WEBSOCKET_HEADER)
     SET(INDI_WEBSOCKET TRUE)
 else()
     SET(INDI_WEBSOCKET FALSE)
+endif()
+
+find_path(
+    BUNDLED_JSONLIB
+    indijson.hpp
+    PATH_SUFFIXES libindi
+    ${PC_INDI_INCLUDE_DIR}
+    ${_obIncDir}
+    ${GNUWIN32_DIR}/include
+)
+
+if (BUNDLED_JSONLIB)
+    SET(INDI_JSONLIB TRUE)
+else()
+    SET(INDI_JSONLIB FALSE)
 endif()
 
 find_path(${INDI_PUBLIC_VAR_NS}_DATA_DIR

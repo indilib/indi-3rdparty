@@ -25,7 +25,11 @@
 #include <cstring>
 #include <termios.h>
 #include <stdarg.h>
-#include <json.h>
+#ifdef _USE_SYSTEM_JSONLIB
+#include <nlohmann/json.hpp>
+#else
+#include <indijson.hpp>
+#endif
 #include <memory>
 #include <time.h>
 #include <chrono>
