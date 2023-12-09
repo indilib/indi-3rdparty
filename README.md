@@ -6,6 +6,8 @@ INDI 3rd party drivers include all the drivers not included by default in the IN
 
 # Which drivers are in 3rd party?
 
+**This change must not be merged.**
+
 Check the [Device Driver documentation](https://www.indilib.org/devices.html) for detailed information on how to operate each device driver.
 
 All the driver documentation is community-contributed. Any updates or correction to the documentation in INDI library is greatly appreciated.
