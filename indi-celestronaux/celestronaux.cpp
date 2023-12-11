@@ -1230,8 +1230,13 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::AbortFocuser(){
 
-    focusByRate(0);
-    m_FocusStatus = STOPPED;
+    if (focusByRate(0)){
+        m_FocusStatus = STOPPED;
+        return true;
+    }
+    else
+        return false;
+    
 }
 
 IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
