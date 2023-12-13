@@ -340,6 +340,7 @@ class CelestronAUX :
 
         // Focus
         bool m_FocusEnabled {false};
+        uint32_t m_FocusTarget {0};
         uint32_t m_FocusPosition {0};
         uint32_t m_FocusLimitMax {0};
         uint32_t m_FocusLimitMin {0xffffffff};

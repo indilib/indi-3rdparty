@@ -568,6 +568,8 @@ bool CelestronAUX::updateProperties()
                 syncDriverInfo();
 
                 getFocusPosition();
+                FocusAbsPosN->value = m_FocusTarget = m_FocusPosition - m_FocusLimitMin;
+                FocusAbsPosNP.s = IPS_OK;
 
                 m_FocusEnabled = true;
                 LOG_INFO("AUX focuser enabled");
@@ -1241,29 +1243,19 @@ bool CelestronAUX::AbortFocuser(){
 
 IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
 {
-    uint32_t position = targetTicks + m_FocusLimitMin;
-
     if (!m_FocusEnabled)
     {
         LOG_ERROR("Move is not allowed because the focuser is not calibrated");
         return IPS_ALERT;
     }
 
-    // implement backlash
-    // int delta = static_cast<int>(targetTicks - FocusAbsPosN[0].value);
-
-    // if ((FocusBacklashN[0].value < 0 && delta > 0) ||
-    //         (FocusBacklashN[0].value > 0 && delta < 0))
-    // {
-    //     focusBacklashMove = true;
-    //     focusPosition = position;
-    //     position -= FocusBacklashN[0].value;
-    // }
-
-    // LOGF_INFO("Focus %s move %d", focusBacklashMove ? "backlash" : "direct", position);
-
-    focusTo(position);
+    getFocusPosition();
+    if (targetTicks == m_FocusPosition - m_FocusLimitMin)
+        return IPS_OK;
+    else{
+        focusTo(m_FocusTarget = targetTicks + m_FocusLimitMin);
     return IPS_BUSY;
+    }
 }
 
 
@@ -1844,20 +1836,23 @@ void CelestronAUX::TimerHit()
     }
 
     // update Focus
-    if(m_FocusEnabled){
+    if(m_FocusEnabled && isConnected()){
 
-        // polling abs position to detect any changes due to HC or motor overrun after abort
+        // poll position to detect changes due to HC use or motor overrun (e.g. after abort)
         getFocusPosition();
-        FocusAbsPosN->value = m_FocusPosition - m_FocusLimitMin;
+
+        // update client only if changed to reduce traffic
+        uint32_t newFocusAbsPos = m_FocusPosition - m_FocusLimitMin;
+        if (newFocusAbsPos != FocusAbsPosN->value){
+            FocusAbsPosN->value = newFocusAbsPos;
+            IDSetNumber(&FocusAbsPosNP, nullptr);
+        }
 
         if(m_FocusStatus == SLEWING){
             getFocusStatus();
             FocusAbsPosNP.s = m_FocusStatus == STOPPED ? IPS_OK : IPS_BUSY;
+            IDSetNumber(&FocusAbsPosNP, nullptr);
         }
-
-        IDSetNumber(&FocusAbsPosNP, nullptr);
-
-
     }
 }
 
