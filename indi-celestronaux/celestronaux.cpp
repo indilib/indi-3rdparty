@@ -563,7 +563,7 @@ bool CelestronAUX::updateProperties()
                 FocusAbsPosN->max = FocusMaxPosN->value;
                 IUUpdateMinMax(&FocusAbsPosNP);
 
-                FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_ABORT );
+                FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
                 setDriverInterface(getDriverInterface() | FOCUSER_INTERFACE);
                 syncDriverInfo();
 
@@ -594,7 +594,6 @@ bool CelestronAUX::updateProperties()
             }
 
             FI::updateProperties();
-            m_defaultDevice->deleteProperty(FocusMotionSP.name);
 
         }
 
@@ -1241,6 +1240,12 @@ bool CelestronAUX::AbortFocuser(){
     
 }
 
+IPState CelestronAUX::MoveRelFocuser(FocusDirection dir, uint32_t ticks){
+
+    return MoveAbsFocuser(dir == FOCUS_OUTWARD ? FocusAbsPosN->value + ticks: FocusAbsPosN->value - ticks);
+    
+}
+
 IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
 {
     if (!m_FocusEnabled)
@@ -1850,8 +1855,19 @@ void CelestronAUX::TimerHit()
 
         if(m_FocusStatus == SLEWING){
             getFocusStatus();
-            FocusAbsPosNP.s = m_FocusStatus == STOPPED ? IPS_OK : IPS_BUSY;
+
+            if (m_FocusStatus == STOPPED){
+
+                if (FocusAbsPosNP.s == IPS_BUSY){
+                    FocusAbsPosNP.s = IPS_OK;
             IDSetNumber(&FocusAbsPosNP, nullptr);
+                }
+                if (FocusRelPosNP.s == IPS_BUSY){
+                    FocusRelPosNP.s = IPS_OK;
+                    FocusRelPosN->value = 0;
+                    IDSetNumber(&FocusRelPosNP, nullptr);
+                }
+            }            
         }
     }
 }

@@ -135,6 +135,7 @@ class CelestronAUX :
         virtual IPState GuideEast(uint32_t ms) override;
         virtual IPState GuideWest(uint32_t ms) override;
 
+        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
         virtual IPState MoveAbsFocuser (uint32_t targetTicks) override;
         virtual bool AbortFocuser () override;
 
