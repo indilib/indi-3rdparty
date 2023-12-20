@@ -1436,6 +1436,13 @@ void ASIBase::createControls(int piNumberOfControls)
         ASI_BOOL isAuto = ASI_FALSE;
         ASIGetControlValue(mCameraInfo.CameraID, cap.ControlType, &value, &isAuto);
 
+        // Workaround for apparent ASI SDK 1.31 and 1.32 bug that gives bogus default values for GPS
+        // controls on cameras that don't have GPS and fails to complete exposures if the value is written back.
+        if (cap.ControlType == ASI_GPS_START_LINE || cap.ControlType == ASI_GPS_END_LINE)
+        {
+            value = 0;
+        }
+
         if (cap.IsWritable)
         {
             LOGF_DEBUG("Adding above control as writable control number %d.", ControlNP.size());
