@@ -284,7 +284,7 @@ class CelestronAUX :
 
         // Guiding offset in steps
         // For each pulse, we modify the offset so that we can add it to our current tracking traget
-        int32_t m_GuideOffset[2] = {0, 0};
+        double m_GuideOffset[2] = {0, 0};
         double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
         // approach distance

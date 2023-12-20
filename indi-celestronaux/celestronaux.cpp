@@ -1220,8 +1220,7 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
     else if (TrackState == SCOPE_TRACKING)
     {
         double arcsecs = TRACKRATE_SIDEREAL * ms / 1000.0 * rate / 100.;
-        double steps = arcsecs * STEPS_PER_ARCSEC;
-        m_GuideOffset[axis] += steps;
+        m_GuideOffset[axis] += arcsecs / 3600;
     }
 
     return true;
