@@ -179,6 +179,8 @@ class CelestronAUX :
         bool isHomingDone(INDI_HO_AXIS axis);
         bool m_HomingProgress[2] = {false, false};
 
+        bool enforceSlewLimits();
+
         /////////////////////////////////////////////////////////////////////////////////////
         /// Tracking
         /////////////////////////////////////////////////////////////////////////////////////
@@ -368,6 +370,13 @@ class CelestronAUX :
         // Use 0-encoders / Sky directions as base for parking and cordwrap
         INDI::PropertySwitch CordWrapBaseSP {2};
         enum {CW_BASE_ENC, CW_BASE_SKY};
+
+        // Slew limits
+        INDI::PropertySwitch Axis1LimitToggleSP {2};
+        INDI::PropertySwitch Axis2LimitToggleSP {2};
+        INDI::PropertyNumber SlewLimitPositionNP {4};
+        enum { SLEW_LIMIT_AXIS1_MIN, SLEW_LIMIT_AXIS1_MAX, SLEW_LIMIT_AXIS2_MIN, SLEW_LIMIT_AXIS2_MAX };
+
 
         // GPS emulator
         INDI::PropertySwitch GPSEmuSP {2};
