@@ -1036,6 +1036,7 @@ bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
     m_AxisStatus[AXIS_ALT] = (command == MOTION_START) ? SLEWING : STOPPED;
     ScopeStatus      = SLEWING_MANUAL;
     TrackState       = SCOPE_SLEWING;
+    m_ManualMotionActive |= (command == MOTION_START);
     if (command == MOTION_START)
     {
         return slewByRate(AXIS_ALT, ((m_AxisDirection[AXIS_ALT] == FORWARD) ? 1 : -1) * rate);
@@ -1057,6 +1058,7 @@ bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
     m_AxisStatus[AXIS_AZ] = (command == MOTION_START) ? SLEWING : STOPPED;
     ScopeStatus      = SLEWING_MANUAL;
     TrackState       = SCOPE_SLEWING;
+    m_ManualMotionActive |= (command == MOTION_START);
     if (command == MOTION_START)
     {
         return slewByRate(AXIS_AZ, ((m_AxisDirection[AXIS_AZ] == FORWARD) ? 1 : -1) * rate);
