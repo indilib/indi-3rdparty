@@ -1,7 +1,7 @@
 #ifndef __mallincam_h__
 #define __mallincam_h__
 
-/* Version: 54.23926.20231119 */
+/* Version: 55.24239.20231224 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -168,6 +168,9 @@ typedef struct Mallincam_t { int unused; } *HMallincam;
 #define MALLINCAM_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
 #define MALLINCAM_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
 #define MALLINCAM_FLAG_RAW12PACK           0x0020000000000000  /* pixel format, RAW 12bits packed */
+#define MALLINCAM_FLAG_SELFTRIGGER         0x0040000000000000  /* self trigger */
+#define MALLINCAM_FLAG_RAW11               0x0080000000000000  /* pixel format, RAW 11bits */
+#define MALLINCAM_FLAG_GHOPTO              0x0100000000000000  /* ghopto sensor */
 
 #define MALLINCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define MALLINCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -201,6 +204,7 @@ typedef struct Mallincam_t { int unused; } *HMallincam;
 #define MALLINCAM_BLACKLEVEL_MIN           0       /* minimum black level */
 #define MALLINCAM_BLACKLEVEL8_MAX          31              /* maximum black level for bitdepth = 8 */
 #define MALLINCAM_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bitdepth = 10 */
+#define MALLINCAM_BLACKLEVEL11_MAX         (31 * 8)        /* maximum black level for bitdepth = 11 */
 #define MALLINCAM_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bitdepth = 12 */
 #define MALLINCAM_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bitdepth = 14 */
 #define MALLINCAM_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bitdepth = 16 */
@@ -285,7 +289,7 @@ typedef struct {
 } MallincamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.23926.20231119
+    get the version of this dll/so/dylib, which is: 55.24239.20231224
 */
 #if defined(_WIN32)
 MALLINCAM_API(const wchar_t*)   Mallincam_Version();
@@ -818,7 +822,7 @@ MALLINCAM_API(HRESULT)  Mallincam_feed_Pipe(HMallincam h, unsigned pipeId);
 #define MALLINCAM_OPTION_TEC                    0x08       /* 0 = turn off the thermoelectric cooler, 1 = turn on the thermoelectric cooler */
 #define MALLINCAM_OPTION_LINEAR                 0x09       /* 0 = turn off the builtin linear tone mapping, 1 = turn on the builtin linear tone mapping, default value: 1 */
 #define MALLINCAM_OPTION_CURVE                  0x0a       /* 0 = turn off the builtin curve tone mapping, 1 = turn on the builtin polynomial curve tone mapping, 2 = logarithmic curve tone mapping, default value: 2 */
-#define MALLINCAM_OPTION_TRIGGER                0x0b       /* 0 = video mode, 1 = software or simulated trigger mode, 2 = external trigger mode, 3 = external + software trigger, default value = 0 */
+#define MALLINCAM_OPTION_TRIGGER                0x0b       /* 0 = video mode, 1 = software or simulated trigger mode, 2 = external trigger mode, 3 = external + software trigger, 4 = self trigger, default value = 0 */
 #define MALLINCAM_OPTION_RGB                    0x0c       /* 0 => RGB24; 1 => enable RGB48 format when bitdepth > 8; 2 => RGB32; 3 => 8 Bits Grey (only for mono camera); 4 => 16 Bits Grey (only for mono camera when bitdepth > 8); 5 => 64(RGB64) */
 #define MALLINCAM_OPTION_COLORMATIX             0x0d       /* enable or disable the builtin color matrix, default value: 1 */
 #define MALLINCAM_OPTION_WBGAIN                 0x0e       /* enable or disable the builtin white balance gain, default value: 1 */
@@ -844,7 +848,12 @@ MALLINCAM_API(HRESULT)  Mallincam_feed_Pipe(HMallincam h, unsigned pipeId);
                                                             The final image size is rounded down to an even number, such as 640/3 to get 212
                                                          */
 #define MALLINCAM_OPTION_ROTATE                 0x18       /* rotate clockwise: 0, 90, 180, 270 */
-#define MALLINCAM_OPTION_CG                     0x19       /* Conversion Gain: 0 = LCG, 1 = HCG, 2 = HDR */
+#define MALLINCAM_OPTION_CG                     0x19       /* Conversion Gain:
+                                                                0 = LCG
+                                                                1 = HCG
+                                                                2 = HDR (for camera with flag MALLINCAM_FLAG_CGHDR)
+                                                                2 = MCG (for camera with flag MALLINCAM_FLAG_GHOPTO)
+                                                         */
 #define MALLINCAM_OPTION_PIXEL_FORMAT           0x1a       /* pixel format, MALLINCAM_PIXELFORMAT_xxxx */
 #define MALLINCAM_OPTION_FFC                    0x1b       /* flat field correction
                                                              set:
@@ -1010,13 +1019,6 @@ MALLINCAM_API(HRESULT)  Mallincam_feed_Pipe(HMallincam h, unsigned pipeId);
 #define MALLINCAM_OPTION_OVERCLOCK_MAX          0x5c       /* get overclock range: [0, max] */
 #define MALLINCAM_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
 #define MALLINCAM_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
-#define MALLINCAM_OPTION_ADC                    0x08000000 /* Analog-Digital Conversion:
-                                                                get:
-                                                                    (option | 'C'): get the current value
-                                                                    (option | 'N'): get the supported ADC number
-                                                                    (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
-                                                                set: val = ADC value, such as 11bits, 12bits, etc
-                                                         */
 #define MALLINCAM_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
 #define MALLINCAM_OPTION_AUTOEXP_EXPOTIME_STEP  0x60       /* Auto exposure: time step (thousandths) */
 #define MALLINCAM_OPTION_AUTOEXP_GAIN_STEP      0x61       /* Auto exposure: gain step (thousandths) */
@@ -1050,6 +1052,7 @@ MALLINCAM_API(HRESULT)  Mallincam_feed_Pipe(HMallincam h, unsigned pipeId);
                                                                     22 => twilight_shifted
                                                                     23 => turbo
                                                          */
+#define MALLINCAM_OPTION_LOW_POWERCONSUMPTION   0x66       /* Low Power Consumption: 0 => disable, 1 => enable */
 
 /* pixel format */
 #define MALLINCAM_PIXELFORMAT_RAW8              0x00
@@ -1065,6 +1068,21 @@ MALLINCAM_API(HRESULT)  Mallincam_feed_Pipe(HMallincam h, unsigned pipeId);
 #define MALLINCAM_PIXELFORMAT_GMCY12            0x0a   /* map to RGGB 12 bits */
 #define MALLINCAM_PIXELFORMAT_UYVY              0x0b
 #define MALLINCAM_PIXELFORMAT_RAW12PACK         0x0c
+#define MALLINCAM_PIXELFORMAT_RAW11             0x0d
+#define MALLINCAM_PIXELFORMAT_HDR8HL            0x0e   /* HDR, Bitdepth: 8, Conversion Gain: High + Low */
+#define MALLINCAM_PIXELFORMAT_HDR10HL           0x0f   /* HDR, Bitdepth: 10, Conversion Gain: High + Low */
+#define MALLINCAM_PIXELFORMAT_HDR11HL           0x10   /* HDR, Bitdepth: 11, Conversion Gain: High + Low */
+#define MALLINCAM_PIXELFORMAT_HDR12HL           0x11   /* HDR, Bitdepth: 12, Conversion Gain: High + Low */
+#define MALLINCAM_PIXELFORMAT_HDR14HL           0x12   /* HDR, Bitdepth: 14, Conversion Gain: High + Low */
+
+/*
+* cmd: input
+*   -1:         query the number
+*   0~number:   query the nth pixel format
+* piValue: output, MALLINCAM_PIXELFORMAT_xxxx
+*/
+MALLINCAM_API(HRESULT)     Mallincam_get_PixelFormatSupport(HMallincam h, char cmd, int* piValue);
+MALLINCAM_API(const char*) Mallincam_get_PixelFormatName(int val);
 
 MALLINCAM_API(HRESULT)  Mallincam_put_Option(HMallincam h, unsigned iOption, int iValue);
 MALLINCAM_API(HRESULT)  Mallincam_get_Option(HMallincam h, unsigned iOption, int* piValue);
@@ -1075,32 +1093,7 @@ MALLINCAM_API(HRESULT)  Mallincam_get_Option(HMallincam h, unsigned iOption, int
 MALLINCAM_API(HRESULT)  Mallincam_put_Roi(HMallincam h, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
 MALLINCAM_API(HRESULT)  Mallincam_get_Roi(HMallincam h, unsigned* pxOffset, unsigned* pyOffset, unsigned* pxWidth, unsigned* pyHeight);
 
-/*  simulate replug:
-    return > 0, the number of device has been replug
-    return = 0, no device found
-    return E_ACCESSDENIED if without UAC Administrator privileges
-    for each device found, it will take about 3 seconds
-*/
-#if defined(_WIN32)
-MALLINCAM_API(HRESULT) Mallincam_Replug(const wchar_t* camId);
-#else
-MALLINCAM_API(HRESULT) Mallincam_Replug(const char* camId);
-#endif
-
-#ifndef __MALLINCAMAFPARAM_DEFINED__
-#define __MALLINCAMAFPARAM_DEFINED__
-typedef struct {
-    int imax;    /* maximum auto focus sensor board positon */
-    int imin;    /* minimum auto focus sensor board positon */
-    int idef;    /* conjugate calibration positon */
-    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int zoneh;   /* zone horizontal */
-    int zonev;   /* zone vertical */
-} MallincamAfParam;
-#endif
-
-MALLINCAM_API(HRESULT)  Mallincam_get_AfParam(HMallincam h, MallincamAfParam* pAfParam);
+MALLINCAM_API(HRESULT)  Mallincam_put_XY(HMallincam h, int x, int y);
 
 #define MALLINCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE           0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
 #define MALLINCAM_IOCONTROLTYPE_GET_GPIODIR                 0x03 /* 0x00 => Input, 0x01 => Output */
@@ -1196,6 +1189,20 @@ MALLINCAM_API(HRESULT)  Mallincam_get_AfParam(HMallincam h, MallincamAfParam* pA
 */
 MALLINCAM_API(HRESULT)  Mallincam_IoControl(HMallincam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
 
+#ifndef __MALLINCAMSELFTRIGGER_DEFINED__
+#define __MALLINCAMSELFTRIGGER_DEFINED__
+typedef struct {
+    unsigned sensingLeft, sensingTop, sensingWidth, sensingHeight; /* Sensing Area */
+    unsigned hThreshold, lThreshold; /* threshold High side, threshold Low side */
+    unsigned expoTime; /* Exposure Time */
+    unsigned short expoGain; /* Exposure Gain */
+    unsigned short hCount, lCount; /* Count threshold High side, Count threshold Low side, thousandths of Sensing Area */
+    unsigned short reserved;
+} MallincamSelfTrigger;
+#endif
+MALLINCAM_API(HRESULT)  Mallincam_put_SelfTrigger(HMallincam h, const MallincamSelfTrigger* pSt);
+MALLINCAM_API(HRESULT)  Mallincam_get_SelfTrigger(HMallincam h, MallincamSelfTrigger* pSt);
+
 #define MALLINCAM_FLASH_SIZE      0x00    /* query total size */
 #define MALLINCAM_FLASH_EBLOCK    0x01    /* query erase block size */
 #define MALLINCAM_FLASH_RWBLOCK   0x02    /* query read/write block size */
@@ -1212,6 +1219,33 @@ MALLINCAM_API(HRESULT)  Mallincam_rwc_Flash(HMallincam h, unsigned action, unsig
 
 MALLINCAM_API(HRESULT)  Mallincam_write_UART(HMallincam h, const unsigned char* pData, unsigned nDataLen);
 MALLINCAM_API(HRESULT)  Mallincam_read_UART(HMallincam h, unsigned char* pBuffer, unsigned nBufferLen);
+
+/*  simulate replug:
+    return > 0, the number of device has been replug
+    return = 0, no device found
+    return E_ACCESSDENIED if without UAC Administrator privileges
+    for each device found, it will take about 3 seconds
+*/
+#if defined(_WIN32)
+MALLINCAM_API(HRESULT) Mallincam_Replug(const wchar_t* camId);
+#else
+MALLINCAM_API(HRESULT) Mallincam_Replug(const char* camId);
+#endif
+
+#ifndef __MALLINCAMAFPARAM_DEFINED__
+#define __MALLINCAMAFPARAM_DEFINED__
+typedef struct {
+    int imax;    /* maximum auto focus sensor board positon */
+    int imin;    /* minimum auto focus sensor board positon */
+    int idef;    /* conjugate calibration positon */
+    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int zoneh;   /* zone horizontal */
+    int zonev;   /* zone vertical */
+} MallincamAfParam;
+#endif
+
+MALLINCAM_API(HRESULT)  Mallincam_get_AfParam(HMallincam h, MallincamAfParam* pAfParam);
 
 MALLINCAM_API(const MallincamModelV2**) Mallincam_all_Model(); /* return all supported USB model array */
 MALLINCAM_API(const MallincamModelV2*) Mallincam_query_Model(HMallincam h);
@@ -1230,8 +1264,8 @@ MALLINCAM_API(HRESULT)  Mallincam_Update(const wchar_t* camId, const wchar_t* fi
 MALLINCAM_API(HRESULT)  Mallincam_Update(const char* camId, const char* filePath, PIMALLINCAM_PROGRESS funProgress, void* ctxProgress);
 #endif
 
-MALLINCAM_API(HRESULT)  Mallincam_put_Linear(HMallincam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
-MALLINCAM_API(HRESULT)  Mallincam_put_Curve(HMallincam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+MALLINCAM_API(HRESULT)  Mallincam_put_Linear(HMallincam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid while camera running */
+MALLINCAM_API(HRESULT)  Mallincam_put_Curve(HMallincam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid while camera running */
 MALLINCAM_API(HRESULT)  Mallincam_put_ColorMatrix(HMallincam h, const double v[9]); /* null => revert to model default */
 MALLINCAM_API(HRESULT)  Mallincam_put_InitWBGain(HMallincam h, const unsigned short v[3]); /* null => revert to model default */
 
@@ -1406,11 +1440,12 @@ MALLINCAM_API(void)   Mallincam_HotPlug(PMALLINCAM_HOTPLUG funHotPlug, void* ctx
 #define MALLINCAM_AAF_SETBACKLASH     0x0f
 #define MALLINCAM_AAF_GETBACKLASH     0x10
 #define MALLINCAM_AAF_GETAMBIENTTEMP  0x12
-#define MALLINCAM_AAF_GETTEMP         0x14
+#define MALLINCAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
 #define MALLINCAM_AAF_ISMOVING        0x16
 #define MALLINCAM_AAF_HALT            0x17
 #define MALLINCAM_AAF_SETMAXSTEP      0x1b
 #define MALLINCAM_AAF_GETMAXSTEP      0x1c
+#define MALLINCAM_AAF_GETSTEPSIZE     0x1e
 #define MALLINCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
 #define MALLINCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
 #define MALLINCAM_AAF_RANGEDEF        0xff  /* Range: default value */
