@@ -1,3 +1,12 @@
+libasi (1.33) jammy; urgency=medium
+
+  * ASI Camera SDK 1.33 release. Change log:
+
+    Bug fix
+    1. Fixed the issue where some camera's fans do not rotate when they are cooling.
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Tue, 26 Dec 2023 03:27:56 +0200
+
 libasi (1.32) jammy; urgency=medium
 
   * ASI Camera SDK 1.32 release. Change log for this and couple of
