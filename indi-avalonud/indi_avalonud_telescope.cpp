@@ -34,7 +34,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <memory>
-#include <json.h>
+#ifdef _USE_SYSTEM_JSONLIB
+#include <nlohmann/json.hpp>
+#else
+#include <indijson.hpp>
+#endif
 #include <chrono>
 #include <pthread.h>
 #include <zmq.h>

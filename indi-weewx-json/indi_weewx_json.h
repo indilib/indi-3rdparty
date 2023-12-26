@@ -27,7 +27,11 @@
 
 #include <libindi/indiweather.h>
 #include <libindi/indipropertytext.h>
-#include <libindi/json.h>
+#ifdef _USE_SYSTEM_JSONLIB
+#include <nlohmann/json.hpp>
+#else
+#include <indijson.hpp>
+#endif
 
 using json = nlohmann::json;
 
