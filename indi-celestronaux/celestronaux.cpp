@@ -291,6 +291,25 @@ bool CelestronAUX::initProperties()
     CordWrapBaseSP.fill(getDeviceName(), "CW_BASE", "CW Position Base", CORDWRAP_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     /////////////////////////////////////////////////////////////////////////////////////
+    /// Slew Limits
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MIN].fill("SLEW_LIMIT_AXIS1_MIN", "Axis1 Min", "%.1f", -180, 0, 1, -180);
+    SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MAX].fill("SLEW_LIMIT_AXIS1_MAX", "Axis1 Max", "%.1f", 0, 180, 1, 180);
+    SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MIN].fill("SLEW_LIMIT_AXIS2_MIN", "Axis2 Min", "%.1f", -90, 0, 1, -90);
+    SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MAX].fill("SLEW_LIMIT_AXIS2_MAX", "Axis2 Max", "%.1f", 0, 90, 1, 90);
+    SlewLimitPositionNP.fill(getDeviceName(), "LIMIT_POS", "Axis Angle Limits", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
+
+    Axis1LimitToggleSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_OFF);
+    Axis1LimitToggleSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
+    Axis1LimitToggleSP.fill(getDeviceName(), "AXIS1_LIMIT", "Axis1 Limits", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    Axis2LimitToggleSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_OFF);
+    Axis2LimitToggleSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
+    Axis2LimitToggleSP.fill(getDeviceName(), "AXIS2_LIMIT", "Axis2 Limits", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+
+    /////////////////////////////////////////////////////////////////////////////////////
     /// Options
     /////////////////////////////////////////////////////////////////////////////////////
     // GPS Emulation
@@ -480,6 +499,12 @@ bool CelestronAUX::updateProperties()
             defineProperty(CordWrapBaseSP);
         }
 
+        // Slew limits
+        defineProperty(SlewLimitPositionNP);
+        defineProperty(Axis1LimitToggleSP);
+        defineProperty(Axis2LimitToggleSP);
+
+
         defineProperty(GPSEmuSP);
 
         // Encoders
@@ -572,6 +597,11 @@ bool CelestronAUX::updateProperties()
             deleteProperty(CordWrapBaseSP.getName());
         }
 
+        // Slew limits
+        deleteProperty(Axis1LimitToggleSP.getName());
+        deleteProperty(Axis2LimitToggleSP.getName());
+        deleteProperty(SlewLimitPositionNP.getName());
+
         deleteProperty(GPSEmuSP.getName());
 
         deleteProperty(EncoderNP.getName());
@@ -583,7 +613,7 @@ bool CelestronAUX::updateProperties()
             deleteProperty(Axis2PIDNP.getName());
         }
 
-        deleteProperty(FirmwareTP.getName());
+    deleteProperty(FirmwareTP.getName());
     }
 
     return true;
@@ -604,12 +634,15 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     CordWrapBaseSP.save(fp);
     GPSEmuSP.save(fp);
 
+    Axis1LimitToggleSP.save(fp);
+    Axis2LimitToggleSP.save(fp);
+    SlewLimitPositionNP.save(fp);
+
     if (m_MountType == ALT_AZ)
     {
         Axis1PIDNP.save(fp);
         Axis2PIDNP.save(fp);
     }
-
     return true;
 }
 
@@ -666,6 +699,16 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
             Axis2PIDNP.setState(IPS_OK);
             Axis2PIDNP.apply();
             saveConfig(true, Axis2PIDNP.getName());
+            return true;
+        }
+
+        // Slew limits
+        if (SlewLimitPositionNP.isNameMatch(name))
+        {
+            SlewLimitPositionNP.update(values, names, n);
+            SlewLimitPositionNP.setState(IPS_OK);
+            SlewLimitPositionNP.apply();
+            saveConfig(true, SlewLimitPositionNP.getName());
             return true;
         }
 
@@ -836,6 +879,28 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             syncCoordWrapPosition();
             return true;
         }
+
+        // Slew limits
+        if (Axis1LimitToggleSP.isNameMatch(name)){
+            Axis1LimitToggleSP.update(states, names, n);
+            if (Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON)
+                Axis1LimitToggleSP.setState(IPS_OK);
+            else
+                Axis1LimitToggleSP.setState(IPS_IDLE);
+            Axis1LimitToggleSP.apply();
+            return true;
+        }
+
+        if (Axis2LimitToggleSP.isNameMatch(name)){
+            Axis2LimitToggleSP.update(states, names, n);
+            if (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON)
+                Axis2LimitToggleSP.setState(IPS_OK);
+            else
+                Axis2LimitToggleSP.setState(IPS_IDLE);
+            Axis2LimitToggleSP.apply();
+            return true;
+        }
+
 
         // Park position base
         if (CordWrapBaseSP.isNameMatch(name))
@@ -1557,6 +1622,76 @@ bool CelestronAUX::mountToSkyCoords()
     return true;
 }
 
+
+double range180(double r)
+{
+    double res = r;
+    while (res < -180.0)
+        res += 360.0;
+    while (res > 180.0)
+        res -= 360.0;
+    return res;
+}
+
+bool CelestronAUX::enforceSlewLimits(){  
+
+    double axis1_angle = range180(AngleNP[AXIS_AZ].value);
+    double axis2_angle = range180(AngleNP[AXIS_ALT].value);
+ 
+    if ((Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis1_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MAX].value) && m_AxisDirection[AXIS_AZ] == FORWARD) ||
+        (Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis1_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MIN].value) && m_AxisDirection[AXIS_AZ] == REVERSE) || 
+        (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MAX].value) && m_AxisDirection[AXIS_ALT] == FORWARD) ||
+        (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MIN].value) && m_AxisDirection[AXIS_ALT] == REVERSE)){
+
+            // set HorizontalCoords state before calling Abort()
+            // it will be cleared in the Abort() call, but it at least flashes briefly
+            if (HorizontalCoordsNP.getState() != IPS_IDLE){
+                HorizontalCoordsNP.setState(IPS_ALERT);
+                HorizontalCoordsNP.apply();
+            }
+
+            Abort();
+
+            if (EqNP.s != IPS_IDLE){
+                EqNP.s = IPS_ALERT;
+                IDSetNumber(&EqNP, nullptr);
+            }
+                
+            if (HorizontalCoordsNP.getState() != IPS_IDLE){
+                HorizontalCoordsNP.setState(IPS_ALERT);
+                HorizontalCoordsNP.apply();
+            }
+
+            if (HomeSP.getState() != IPS_IDLE){
+                HomeSP.setState(IPS_ALERT);
+                HomeSP.apply();
+            }
+
+            if (MovementNSSP.s != IPS_IDLE){
+                MovementNSSP.s = IPS_ALERT;
+                IDSetSwitch(&MovementNSSP, nullptr);
+            }
+
+            if (MovementWESP.s != IPS_IDLE){
+                MovementWESP.s = IPS_ALERT;
+                IDSetSwitch(&MovementWESP, nullptr);
+            }
+
+
+            if (TrackStateSP.s != IPS_IDLE){
+                TrackStateSP.s = IPS_ALERT;
+                IDSetSwitch(&TrackStateSP, nullptr);
+            }
+
+            return false;
+        }
+    else
+        return true;
+}
+
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1564,10 +1699,13 @@ void CelestronAUX::TimerHit()
 {
     INDI::Telescope::TimerHit();
 
+    if(!enforceSlewLimits())
+        return;
+
     switch (TrackState)
     {
         case SCOPE_SLEWING:
-            break;
+            break;           
 
         case SCOPE_TRACKING:
         {
