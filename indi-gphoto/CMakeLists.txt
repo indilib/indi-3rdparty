@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_gphoto C CXX)
 
 set(INDI_GPHOTO_VERSION_MAJOR 3)

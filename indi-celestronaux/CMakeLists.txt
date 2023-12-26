@@ -1,6 +1,6 @@
 ########### Celestron AUX INDI driver ##############
 PROJECT(indi-celestronaux C CXX)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 include(GNUInstallDirs)
 

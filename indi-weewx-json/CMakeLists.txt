@@ -1,5 +1,5 @@
 PROJECT(indi_weewx_json C CXX)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 set (WEEWX_VERSION_MAJOR 1)
 set (WEEWX_VERSION_MINOR 0)

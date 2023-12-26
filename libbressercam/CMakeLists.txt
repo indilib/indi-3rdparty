@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libbressercam)
 
 set (LIBBRESSERCAM_VERSION "55.24239")

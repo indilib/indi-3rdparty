@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libsvbony)
 
 set (SVBCAMERASDK_VERSION "1.12.1")

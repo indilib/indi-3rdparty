@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libasi)
 
 # Using ASI Camera SDK Version 1.33 updated on 2023-12-26

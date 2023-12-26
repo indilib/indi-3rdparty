@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libplayerone)
 
 # Using PlayerOne Camera SDK Version 3.6.0 updated on 2023-9-16
