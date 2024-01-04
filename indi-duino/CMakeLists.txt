@@ -44,7 +44,7 @@ set (firmata_SRCS
 )
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/src/firmata.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/src/arduino.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
-add_library(firmata ${firmata_SRCS})
+add_library(firmata STATIC ${firmata_SRCS})
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/examples/blink_pin.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
 add_executable(blink_pin ${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/examples/blink_pin.cpp)
 target_link_libraries (blink_pin firmata)
