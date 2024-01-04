@@ -42,7 +42,7 @@
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>
-<devGroup group="FilterWheels">
+<devGroup group="Filter Wheels">
         <device label="Toupcam" mdpd="true" manufacturer="Toupcam">
                 <driver name="Touptek">indi_toupcam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
