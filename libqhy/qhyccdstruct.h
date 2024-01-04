@@ -247,9 +247,14 @@ enum CONTROL_ID
 /*76*/  CAM_BIN8X8MODE,         //!< check if camera has bin8x8 mode
 /*77*/  CAM_GlobalSensorGPSLED,         ///Show GPS LED tab on sharpCap
 /*78*/  CONTROL_ImgProc,   /// Process image
-/*79*/  CONTROL_RemoveRBI,   /// Remove single RBI
+/*79*/  CONTROL_RemoveRBI,   /// RBI, Remove single residual image
 /*80*/  CONTROL_GlobalReset,		//!<image stabilization
-
+/*81*/  CONTROL_FrameDetect,
+/*82*/  CAM_GainDBConversion, //!<Supports the conversion between db and gain
+/*83*/  CAM_CurveSystemGain,  //!
+/*84*/	CAM_CurveFullWell,
+/*85*/	CAM_CurveReadoutNoise,
+/*86*/	CAM_UseAverageBinning,
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
 /*Last One */  CONTROL_MAX_ID,
@@ -257,9 +262,12 @@ enum CONTROL_ID
 //TEST id name list
 /*1024*/ CONTROL_AUTOWHITEBALANCE=1024, //!<auto white balance  eg.CONTROL_TEST=1024
 /*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
-/*1026*/ CONTROL_ImageStabilization,	//!<image stabilization
-/*1027*/ CONTROL_GAINdB				//!<set gain with dB  //CONTROL_dB_TO_GAIN
-/*1028*/ //TEST_OFFSET//20230330
+/*1026*/ CONTROL_AUTOEXPmessureValue,	
+/*1027*/ CONTROL_AUTOEXPmessureMethod,
+/*1028*/ CONTROL_ImageStabilization,   //!<image stabilization
+/*1029*/ CONTROL_GAINdB,			//!<uesed to test dBGain control  //CONTROL_dB_TO_GAIN
+/*1030*/ CONTROL_DPC,            //!<Turn on or off the image DPC function(Remove thermal noise)
+/*1031*/ CONTROL_DPC_value       //!<value the image DPC function(Remove thermal noise)
 };
 
 /**

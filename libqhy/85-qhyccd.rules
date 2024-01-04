@@ -113,6 +113,7 @@ ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0200", RUN+="/sbin/fxload -t fx3 -I 
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0585", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III585.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0678", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III678.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0715", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III715.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0568", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III568.img -D $env{DEVNAME}"
 
 #QHYCCD Scientific Camera (7:QHY42,QHY42PRO,QHY2020,QHY4040,QHY4040PRO,QHY6060,QHY411,QHY461)
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="4200", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY42.img -D $env{DEVNAME}"
@@ -174,5 +175,6 @@ ATTRS{idVendor}=="0547", MODE="0666"
 
 # QHYCCD
 ATTRS{idVendor}=="1618", MODE="0666"
+ATTRS{idVendor}=="706d", MODE="0666"
 
 LABEL="qhy_end"
