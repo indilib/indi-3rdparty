@@ -170,8 +170,8 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
         
-        IText m_CoolerT;
-        ITextVectorProperty m_CoolerTP;
+        INDI::PropertyNumber m_CoolerNP {1};
+
         int32_t m_maxTecVoltage { -1 };
 
         INumberVectorProperty m_ControlNP;

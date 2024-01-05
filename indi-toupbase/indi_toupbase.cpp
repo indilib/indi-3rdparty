@@ -106,10 +106,8 @@ bool ToupBase::initProperties()
         IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY,
                            0, IPS_BUSY);
 
-        IUFillText(&m_CoolerT, "COOLER_POWER", "Percent", nullptr);
-        IUFillTextVector(&m_CoolerTP, &m_CoolerT, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO,
-                         0,
-                         IPS_IDLE);
+        m_CoolerNP[0].fill("COOLER_POWER", "Percent", "%.f", 0, 100, 10, 0);
+        m_CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -330,7 +328,7 @@ bool ToupBase::updateProperties()
         if (HasCooler())
         {
             defineProperty(&m_CoolerSP);
-            defineProperty(&m_CoolerTP);
+            defineProperty(m_CoolerNP);
         }
 
         // Even if there is no cooler, we define temperature property as READ ONLY
@@ -382,7 +380,7 @@ bool ToupBase::updateProperties()
         if (HasCooler())
         {
             deleteProperty(m_CoolerSP.name);
-            deleteProperty(m_CoolerTP.name);
+            deleteProperty(m_CoolerNP);
         }
         else
         {
@@ -1524,25 +1522,23 @@ void ToupBase::TimerHit()
         int val = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
-            m_CoolerTP.s = IPS_ALERT;
+            m_CoolerNP.setState(IPS_ALERT);
         else if (0 == val)
         {
-            m_CoolerTP.s = IPS_IDLE;
-            IUSaveText(&m_CoolerT, "0.0% (OFF)");
-            IDSetText(&m_CoolerTP, nullptr);
+            m_CoolerNP.setState(IPS_IDLE);
+            m_CoolerNP[0].setValue(0);
+            m_CoolerNP.apply();
         }
         else
         {
             rc = FP(get_Option(m_Handle, CP(OPTION_TEC_VOLTAGE), &val));
             if (FAILED(rc))
-                m_CoolerTP.s = IPS_ALERT;
+                m_CoolerNP.setState(IPS_ALERT);
             else if (val <= m_maxTecVoltage)
             {
-                char str[32];
-                sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
-                IUSaveText(&m_CoolerT, str);
-                m_CoolerTP.s = IPS_BUSY;
-                IDSetText(&m_CoolerTP, nullptr);
+                m_CoolerNP[0].setValue(val * 100.0 / m_maxTecVoltage);
+                m_CoolerNP.setState(IPS_BUSY);
+                m_CoolerNP.apply();
             }
         }
     }
