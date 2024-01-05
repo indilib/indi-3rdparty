@@ -107,7 +107,8 @@ bool ToupBase::initProperties()
                            0, IPS_BUSY);
 
         IUFillText(&m_CoolerT, "COOLER_POWER", "Percent", nullptr);
-        IUFillTextVector(&m_CoolerTP, &m_CoolerT, 1, getDeviceName(), "COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO, 0,
+        IUFillTextVector(&m_CoolerTP, &m_CoolerT, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO,
+                         0,
                          IPS_IDLE);
     }
 
