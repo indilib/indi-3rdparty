@@ -613,7 +613,7 @@ bool CelestronAUX::updateProperties()
             deleteProperty(Axis2PIDNP.getName());
         }
 
-    deleteProperty(FirmwareTP.getName());
+        deleteProperty(FirmwareTP.getName());
     }
 
     return true;
@@ -881,7 +881,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         }
 
         // Slew limits
-        if (Axis1LimitToggleSP.isNameMatch(name)){
+        if (Axis1LimitToggleSP.isNameMatch(name))
+        {
             Axis1LimitToggleSP.update(states, names, n);
             if (Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON)
                 Axis1LimitToggleSP.setState(IPS_OK);
@@ -891,7 +892,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             return true;
         }
 
-        if (Axis2LimitToggleSP.isNameMatch(name)){
+        if (Axis2LimitToggleSP.isNameMatch(name))
+        {
             Axis2LimitToggleSP.update(states, names, n);
             if (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON)
                 Axis2LimitToggleSP.setState(IPS_OK);
@@ -1633,58 +1635,71 @@ double range180(double r)
     return res;
 }
 
-bool CelestronAUX::enforceSlewLimits(){  
+bool CelestronAUX::enforceSlewLimits()
+{
 
     double axis1_angle = range180(AngleNP[AXIS_AZ].value);
     double axis2_angle = range180(AngleNP[AXIS_ALT].value);
- 
-    if ((Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis1_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MAX].value) && m_AxisDirection[AXIS_AZ] == FORWARD) ||
-        (Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis1_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MIN].value) && m_AxisDirection[AXIS_AZ] == REVERSE) || 
-        (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MAX].value) && m_AxisDirection[AXIS_ALT] == FORWARD) ||
-        (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MIN].value) && m_AxisDirection[AXIS_ALT] == REVERSE)){
 
-            // set HorizontalCoords state before calling Abort()
-            // it will be cleared in the Abort() call, but it at least flashes briefly
-            if (HorizontalCoordsNP.getState() != IPS_IDLE){
-                HorizontalCoordsNP.setState(IPS_ALERT);
-                HorizontalCoordsNP.apply();
-            }
+    if ((Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON
+            && axis1_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MAX].value) && m_AxisDirection[AXIS_AZ] == FORWARD) ||
+            (Axis1LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis1_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS1_MIN].value)
+             && m_AxisDirection[AXIS_AZ] == REVERSE) ||
+            (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle > range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MAX].value)
+             && m_AxisDirection[AXIS_ALT] == FORWARD) ||
+            (Axis2LimitToggleSP[INDI_ENABLED].s == ISS_ON && axis2_angle < range180(SlewLimitPositionNP[SLEW_LIMIT_AXIS2_MIN].value)
+             && m_AxisDirection[AXIS_ALT] == REVERSE))
+    {
 
-            Abort();
-
-            if (EqNP.s != IPS_IDLE){
-                EqNP.s = IPS_ALERT;
-                IDSetNumber(&EqNP, nullptr);
-            }
-                
-            if (HorizontalCoordsNP.getState() != IPS_IDLE){
-                HorizontalCoordsNP.setState(IPS_ALERT);
-                HorizontalCoordsNP.apply();
-            }
-
-            if (HomeSP.getState() != IPS_IDLE){
-                HomeSP.setState(IPS_ALERT);
-                HomeSP.apply();
-            }
-
-            if (MovementNSSP.s != IPS_IDLE){
-                MovementNSSP.s = IPS_ALERT;
-                IDSetSwitch(&MovementNSSP, nullptr);
-            }
-
-            if (MovementWESP.s != IPS_IDLE){
-                MovementWESP.s = IPS_ALERT;
-                IDSetSwitch(&MovementWESP, nullptr);
-            }
-
-
-            if (TrackStateSP.s != IPS_IDLE){
-                TrackStateSP.s = IPS_ALERT;
-                IDSetSwitch(&TrackStateSP, nullptr);
-            }
-
-            return false;
+        // set HorizontalCoords state before calling Abort()
+        // it will be cleared in the Abort() call, but it at least flashes briefly
+        if (HorizontalCoordsNP.getState() != IPS_IDLE)
+        {
+            HorizontalCoordsNP.setState(IPS_ALERT);
+            HorizontalCoordsNP.apply();
         }
+
+        Abort();
+
+        if (EqNP.s != IPS_IDLE)
+        {
+            EqNP.s = IPS_ALERT;
+            IDSetNumber(&EqNP, nullptr);
+        }
+
+        if (HorizontalCoordsNP.getState() != IPS_IDLE)
+        {
+            HorizontalCoordsNP.setState(IPS_ALERT);
+            HorizontalCoordsNP.apply();
+        }
+
+        if (HomeSP.getState() != IPS_IDLE)
+        {
+            HomeSP.setState(IPS_ALERT);
+            HomeSP.apply();
+        }
+
+        if (MovementNSSP.s != IPS_IDLE)
+        {
+            MovementNSSP.s = IPS_ALERT;
+            IDSetSwitch(&MovementNSSP, nullptr);
+        }
+
+        if (MovementWESP.s != IPS_IDLE)
+        {
+            MovementWESP.s = IPS_ALERT;
+            IDSetSwitch(&MovementWESP, nullptr);
+        }
+
+
+        if (TrackStateSP.s != IPS_IDLE)
+        {
+            TrackStateSP.s = IPS_ALERT;
+            IDSetSwitch(&TrackStateSP, nullptr);
+        }
+
+        return false;
+    }
     else
         return true;
 }
@@ -1705,7 +1720,7 @@ void CelestronAUX::TimerHit()
     switch (TrackState)
     {
         case SCOPE_SLEWING:
-            break;           
+            break;
 
         case SCOPE_TRACKING:
         {
@@ -1973,21 +1988,14 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 
         de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
         ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((180 - haEncoder) / 15.0);
-        pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
+        //pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
+        pierSide = PIER_EAST;
 
-        // North Hemisphere
-        if (LocationN[LOCATION_LATITUDE].value >= 0 && (deEncoder < 90 || deEncoder > 270))
+        // "Normal" Pointing State (West, looking East)
+        if ( (LocationN[LOCATION_LATITUDE].value >= 0 && (deEncoder < 90 || deEncoder > 270)) ||
+                (LocationN[LOCATION_LATITUDE].value < 0 && deEncoder > 90 && deEncoder < 270))
         {
-            // "Normal" Pointing State (West, looking East)
             pierSide = PIER_WEST;
-            de = rangeDec(180 - de);
-            ha = rangeHA(ha + 12);
-        }
-        // South Hemisphere
-        else if (LocationN[LOCATION_LATITUDE].value < 0 && deEncoder > 90 && deEncoder < 270)
-        {
-            // "Normal" Pointing State (East, looking West)
-            pierSide = PIER_EAST;
             de = rangeDec(180 - de);
             ha = rangeHA(ha + 12);
         }
