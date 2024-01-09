@@ -26,6 +26,7 @@
 
 #include <indicom.h>
 #include <indiguiderinterface.h>
+#include <indifocuserinterface.h>
 #include <inditelescope.h>
 #include <indielapsedtimer.h>
 #include <inditimer.h>
@@ -43,6 +44,7 @@
 class CelestronAUX :
     public INDI::Telescope,
     public INDI::GuiderInterface,
+    public INDI::FocuserInterface,
     public INDI::AlignmentSubsystem::AlignmentSubsystemForDrivers
 {
     public:
@@ -133,6 +135,10 @@ class CelestronAUX :
         virtual IPState GuideEast(uint32_t ms) override;
         virtual IPState GuideWest(uint32_t ms) override;
 
+        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
+        virtual IPState MoveAbsFocuser (uint32_t targetTicks) override;
+        virtual bool AbortFocuser () override;
+
         //virtual bool HandleGetAutoguideRate(INDI_HO_AXIS axis, uint8_t rate);
         //virtual bool HandleSetAutoguideRate(INDI_EQ_AXIS axis);
         //virtual bool HandleGuidePulse(INDI_EQ_AXIS axis);
@@ -218,6 +224,15 @@ class CelestronAUX :
         bool getCordWrapEnabled();
         bool setCordWrapPosition(uint32_t steps);
         uint32_t getCordWrapPosition();
+
+        /////////////////////////////////////////////////////////////////////////////////////
+        /// Focus
+        /////////////////////////////////////////////////////////////////////////////////////
+        bool getFocusLimits();
+        bool getFocusPosition();
+        bool getFocusStatus();
+        bool focusTo(uint32_t steps);
+        bool focusByRate(int8_t rate);
 
     private:
         /////////////////////////////////////////////////////////////////////////////////////
@@ -319,11 +334,21 @@ class CelestronAUX :
         uint8_t m_BATVersion[4] {0};
         uint8_t m_WiFiVersion[4] {0};
         uint8_t m_GPSVersion[4] {0};
+        uint8_t m_FocusVersion[4] {0};
 
         // Coord Wrap
         bool m_CordWrapActive {false};
         int32_t m_CordWrapPosition {0};
         uint32_t m_RequestedCordwrapPos;
+
+        // Focus
+        bool m_FocusEnabled {false};
+        uint32_t m_FocusTarget {0};
+        uint32_t m_FocusPosition {0};
+        uint32_t m_FocusLimitMax {0};
+        uint32_t m_FocusLimitMin {0xffffffff};
+        AxisStatus m_FocusStatus {STOPPED};
+        
 
         // Manual Slewing NSWE
         bool m_ManualMotionActive { false };
@@ -354,8 +379,8 @@ class CelestronAUX :
         ///////////////////////////////////////////////////////////////////////////////
 
         // Firmware
-        INDI::PropertyText FirmwareTP {8};
-        enum {FW_MODEL, FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS};
+        INDI::PropertyText FirmwareTP {9};
+        enum {FW_MODEL, FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS, FW_FOCUS};
         // Mount type
         //INDI::PropertySwitch MountTypeSP {3};
 
