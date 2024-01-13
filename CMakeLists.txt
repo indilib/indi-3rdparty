@@ -203,6 +203,7 @@ option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
+option(WITH_TICFOCUSER "Install Pololu TicFocuser Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -767,6 +768,11 @@ add_subdirectory(libastroasis)
 SET(LIBRARIES_FOUND FALSE)
 endif(ASTROASIS_FOUND)
 endif(WITH_ASTROASIS)
+
+# Pololu Tic Focuser (depends on https://github.com/pololu/pololu-tic-software)
+if (WITH_TICFOCUSER)
+add_subdirectory(indi-ticfocuser)
+endif(WITH_TICFOCUSER)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
