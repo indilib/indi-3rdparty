@@ -48,6 +48,7 @@ static class Loader
             }
 
             int iAvailableFocusersCount_ok = 0;
+            char *envDev = getenv("INDIDEV");
             for (int i = 0; i < iAvailableFocusersCount; i++)
             {
                 int id;
@@ -76,17 +77,13 @@ static class Loader
                 EAFClose(id);
 
                 std::string name = "ASI EAF";
+                if (envDev && envDev[0])
+                    name = envDev;
 
                 // If we only have a single device connected
                 // then favor the INDIDEV driver label over the auto-generated name above
-                if (iAvailableFocusersCount == 1)
-                {
-                    char *envDev = getenv("INDIDEV");
-                    if (envDev && envDev[0])
-                        name = envDev;
-                }
-                else
-                    name += " " + std::to_string(i);
+                if (iAvailableFocusersCount > 1)
+                    name += " " + std::to_string(i + 1);
 
                 focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
                 iAvailableFocusersCount_ok++;
@@ -99,7 +96,7 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
     : m_ID(info.ID)
     , m_MaxSteps(info.MaxStep)
 {
-    setVersion(1, 1);
+    setVersion(1, 2);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |

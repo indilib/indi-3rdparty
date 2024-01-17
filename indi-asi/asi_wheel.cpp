@@ -62,6 +62,7 @@ static class Loader
                 return;
             }
             int num_wheels_ok = 0;
+            char *envDev = getenv("INDIDEV");
             for (int i = 0; i < num_wheels; i++)
             {
                 int id;
@@ -79,17 +80,14 @@ static class Loader
                     continue;
                 }
                 std::string name = "ASI " + std::string(info.Name);
+                if (envDev && envDev[0])
+                    name = envDev;
 
                 // If we only have a single device connected
                 // then favor the INDIDEV driver label over the auto-generated name above
-                if (num_wheels == 1)
-                {
-                    char *envDev = getenv("INDIDEV");
-                    if (envDev && envDev[0])
-                        name = envDev;
-                }
-                else
-                    name += " " + std::to_string(i);
+                if (num_wheels > 1)
+                    name += " " + std::to_string(i + 1);
+
                 wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
                 num_wheels_ok++;
             }
