@@ -769,7 +769,7 @@ SET(LIBRARIES_FOUND FALSE)
 endif(ASTROASIS_FOUND)
 endif(WITH_ASTROASIS)
 
-# Pololu Tic Focuser (depends on https://github.com/pololu/pololu-tic-software)
+# Pololu Tic Focuser
 if (WITH_TICFOCUSER)
 add_subdirectory(indi-ticfocuser)
 endif(WITH_TICFOCUSER)
