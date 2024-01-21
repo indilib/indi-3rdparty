@@ -43,7 +43,7 @@ static class Loader
 
             if (iAvailableFocusersCount <= 0)
             {
-                IDLog("No ASI EAF detected.");
+                IDLog("No ZWO EAF detected.");
                 return;
             }
 
@@ -55,7 +55,7 @@ static class Loader
                 EAF_ERROR_CODE result = EAFGetID(i, &id);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d EAFGetID error %d.", i + 1, result);
                     continue;
                 }
 
@@ -63,7 +63,7 @@ static class Loader
                 result = EAFOpen(id);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d Failed to open device %d.", i + 1, result);
                     continue;
                 }
 
@@ -71,12 +71,12 @@ static class Loader
                 result = EAFGetProperty(id, &info);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d EAFGetProperty error %d.", i + 1, result);
                     continue;
                 }
                 EAFClose(id);
 
-                std::string name = "ASI EAF";
+                std::string name = "ZWO EAF";
                 if (envDev && envDev[0])
                     name = envDev;
 
@@ -88,7 +88,7 @@ static class Loader
                 focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
                 iAvailableFocusersCount_ok++;
             }
-            IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
+            IDLog("%d ZWO EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
         }
 } loader;
 
@@ -207,7 +207,7 @@ bool ASIEAF::updateProperties()
 
         GetFocusParams();
 
-        LOG_INFO("ASI EAF parameters updated, focuser ready for use.");
+        LOG_INFO("ZWO EAF parameters updated, focuser ready for use.");
 
         SetTimer(getCurrentPollingPeriod());
     }
@@ -239,7 +239,7 @@ bool ASIEAF::Connect()
 
     if (rc != EAF_SUCCESS)
     {
-        LOGF_ERROR("Failed to connect to ASI EAF focuser ID: %d (%d)", m_ID, rc);
+        LOGF_ERROR("Failed to connect to ZWO EAF focuser ID: %d (%d)", m_ID, rc);
         return false;
     }
     AbortFocuser();

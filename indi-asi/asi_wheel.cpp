@@ -79,7 +79,7 @@ static class Loader
                     IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
                     continue;
                 }
-                std::string name = "ASI " + std::string(info.Name);
+                std::string name = "ZWO " + std::string(info.Name);
                 if (envDev && envDev[0])
                     name = envDev;
 
@@ -91,7 +91,7 @@ static class Loader
                 wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
                 num_wheels_ok++;
             }
-            IDLog("%d ASI EFW attached out of %d detected.", num_wheels_ok, num_wheels);
+            IDLog("%d ZWO EFW attached out of %d detected.", num_wheels_ok, num_wheels);
 #endif
         }
 } loader;
