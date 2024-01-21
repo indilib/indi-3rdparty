@@ -230,7 +230,7 @@ bool ASIEAF::updateProperties()
 
 const char * ASIEAF::getDefaultName()
 {
-    return "ASI EAF";
+    return "ZWO EAF";
 }
 
 bool ASIEAF::Connect()

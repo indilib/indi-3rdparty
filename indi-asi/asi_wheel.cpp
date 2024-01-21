@@ -113,7 +113,7 @@ ASIWHEEL::~ASIWHEEL()
 
 const char *ASIWHEEL::getDefaultName()
 {
-    return "ASI EFW";
+    return "ZWO EFW";
 }
 
 bool ASIWHEEL::Connect()
