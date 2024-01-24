@@ -866,7 +866,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                     LOGF_DEBUG("Setting %s=%.2f...", num.label, num.value);
 
                     POAConfigValue confVal;
-                    confVal.floatValue = num.value;
+                    confVal.intValue = num.value;
                     POAErrors ret = POASetConfig(mCameraInfo.cameraID, numCtrlCap->configID, confVal, swAuto);
                     if (ret != POA_OK)
                     {
