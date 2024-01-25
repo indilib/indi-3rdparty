@@ -593,7 +593,7 @@ bool CelestronAUX::updateProperties()
                 syncDriverInfo();
 
                 getFocusPosition();
-                FocusAbsPosN->value = m_FocusTarget = m_FocusPosition - m_FocusLimitMin;
+                FocusAbsPosN->value = m_FocusLimitMax - m_FocusPosition;
                 FocusAbsPosNP.s = IPS_OK;
 
                 m_FocusEnabled = true;
@@ -1323,10 +1323,10 @@ IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
     }
 
     getFocusPosition();
-    if (targetTicks == m_FocusPosition - m_FocusLimitMin)
+    if (targetTicks == m_FocusLimitMax - m_FocusPosition)
         return IPS_OK;
     else{
-        focusTo(m_FocusTarget = targetTicks + m_FocusLimitMin);
+        focusTo(m_FocusLimitMax - targetTicks);
     return IPS_BUSY;
     }
 }
@@ -2001,7 +2001,7 @@ void CelestronAUX::TimerHit()
         getFocusPosition();
 
         // update client only if changed to reduce traffic
-        uint32_t newFocusAbsPos = m_FocusPosition - m_FocusLimitMin;
+        uint32_t newFocusAbsPos = m_FocusLimitMax - m_FocusPosition;
         if (newFocusAbsPos != FocusAbsPosN->value){
             FocusAbsPosN->value = newFocusAbsPos;
             IDSetNumber(&FocusAbsPosNP, nullptr);
