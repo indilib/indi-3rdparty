@@ -1,77 +1,49 @@
 # - Try to find LIBCAMERAAPPS Library
 # Once done this will define
 #
-#  LIBCAMERAAPPS_FOUND - system has LIBCAMERAAPPS
-#  LIBCAMERAAPPS_APPS - Link these to use Apps
-#  LIBCAMERAAPPS_ENCODERS - Link these to use Encoders
-#  LIBCAMERAAPPS_IMAGES - Link these to use Images
-#  LIBCAMERAAPPS_OUTPUTS - Link these to use Outputs
-#  LIBCAMERAAPPS_PREVIEW - Link these to use Preview
-#  LIBCAMERAAPPS_POST - Link these to use Post Processing Stages
+#  LibCameraApps_FOUND - system has LIBCAMERAAPPS
+#  LibCameraApps_LIBRARY - Link these to use LibCameraApps
+#  LibCameraApps_INCLUDE_DIR - LibcameraApps include Dir
 
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
-if (LIBCAMERAAPPS_APPS)
+if (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
   # in cache already
-  set(LIBCAMERAAPPS_FOUND TRUE)
-  message(STATUS "Found LIBCAMERAAPPS: ${LIBCAMERAAPPS_APPS}")
+  set(LibCameraApps_FOUND TRUE)
+  message(STATUS "Found LIBCAMERAAPPS: ${LibCameraApps_INCLUDE_DIR}")
 
-else (LIBCAMERAAPPS_APPS)
+else (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
-    find_library(LIBCAMERAAPPS_APPS NAMES camera_app
+    find_library(LibCameraApps_LIBRARY NAMES camera_app
       PATHS
       ${_obLinkDir}
       ${GNUWIN32_DIR}/lib
-    )
+    )    
 
-    find_library(LIBCAMERAAPPS_ENCODERS NAMES encoders
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
+    find_path(LibCameraApps_INCLUDE_DIR core/rpicam_app.hpp
+    PATH_SUFFIXES rpicam-apps
+    ${_obIncDir}
+    ${GNUWIN32_DIR}/include
+  )  
 
-    find_library(LIBCAMERAAPPS_IMAGES NAMES images
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
+  if (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
+    set(LibCameraApps_FOUND TRUE)
+  else(LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
+    set(LibCameraApps_FOUND FALSE)
+  endif(LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
-    find_library(LIBCAMERAAPPS_OUTPUTS NAMES outputs
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
+  if (LibCameraApps_FOUND)
+    if (NOT LibCameraApps_FIND_QUIETLY)
+      message(STATUS "Found LIBCAMERAAPPS Library: ${LibCameraApps_LIBRARY}")
+    endif (NOT LibCameraApps_FIND_QUIETLY)
+  else (LibCameraApps_FOUND)
+    if (LibCameraApps_FIND_REQUIRED)
+      message(FATAL_ERROR "LIBCAMERAAPPS Library not found. Please install rpicam-apps")
+    endif (LibCameraApps_FIND_REQUIRED)
+  endif (LibCameraApps_FOUND)
 
-    find_library(LIBCAMERAAPPS_POST NAMES post_processing_stages
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
-
-    find_library(LIBCAMERAAPPS_PREVIEW NAMES preview
-      PATHS
-      ${_obLinkDir}
-      ${GNUWIN32_DIR}/lib
-    )
-
-  if(LIBCAMERAAPPS_APPS)
-    set(LIBCAMERAAPPS_FOUND TRUE)
-  else (LIBCAMERAAPPS_APPS)
-    set(LIBCAMERAAPPS_FOUND FALSE)
-  endif(LIBCAMERAAPPS_APPS)
-
-  if (LIBCAMERAAPPS_FOUND)
-    if (NOT LIBCAMERAAPPS_FIND_QUIETLY)
-      message(STATUS "Found LIBCAMERAAPPS Library: ${LIBCAMERAAPPS_APPS}")
-    endif (NOT LIBCAMERAAPPS_FIND_QUIETLY)
-  else (LIBCAMERAAPPS_FOUND)
-    if (LIBCAMERAAPPS_FIND_REQUIRED)
-      message(FATAL_ERROR "LIBCAMERAAPPS Library not found. Please install libcamera-apps")
-    endif (LIBCAMERAAPPS_FIND_REQUIRED)
-  endif (LIBCAMERAAPPS_FOUND)
-
-  mark_as_advanced(LIBCAMERAAPPS_APPS LIBCAMERAAPPS_ENCODERS LIBCAMERAAPPS_IMAGES LIBCAMERAAPPS_OUTPUTS LIBCAMERAAPPS_POST LIBCAMERAAPPS_PREVIEW)
+  mark_as_advanced(LibCameraApps_LIBRARY LibCameraApps_INCLUDE_DIR)
   
-endif (LIBCAMERAAPPS_APPS)
+endif (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
