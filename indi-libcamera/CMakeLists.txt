@@ -17,7 +17,6 @@ find_package(JPEG REQUIRED)
 find_package(Boost COMPONENTS program_options)
 find_package(PkgConfig REQUIRED)
 find_library(EXIF_LIBRARY exif REQUIRED)
-find_library(TIFF_LIBRARY tiff REQUIRED)
 
 
 set(LIBCAMERA_VERSION_MAJOR 1)
