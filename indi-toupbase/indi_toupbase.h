@@ -285,6 +285,8 @@ class ToupBase : public INDI::CCD
         eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
+        double m_LastTemperature {-100};
+        double m_LastCoolerPower {-1};
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };

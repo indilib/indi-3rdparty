@@ -1486,59 +1486,85 @@ void ToupBase::TimerHit()
             timeleft = 0;
         PrimaryCCD.setExposureLeft(timeleft);
     }
+
     if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
-        int16_t currentTemperature = (int16_t)(TemperatureN[0].value * 10);
-        int16_t nTemperature = currentTemperature;
+        int16_t nTemperature = 0;
         HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
-            LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
-            TemperatureNP.s = IPS_ALERT;
+            if (TemperatureNP.s != IPS_ALERT)
+            {
+                TemperatureNP.s = IPS_ALERT;
+                IDSetNumber(&TemperatureNP, nullptr);
+                LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
+            }
         }
+        else if (TemperatureNP.s == IPS_ALERT)
+            TemperatureNP.s = IPS_OK;
+
+        TemperatureN[0].value = nTemperature / 10.0;
+
+        auto threshold = HasCooler() ? 0.1 : 0.2;
 
         switch (TemperatureNP.s)
         {
             case IPS_IDLE:
             case IPS_OK:
-                if (currentTemperature != nTemperature)
+            case IPS_BUSY:
+                if (std::abs(TemperatureN[0].value - m_LastTemperature) > threshold)
                 {
-                    TemperatureN[0].value = static_cast<double>(nTemperature / 10.0);
+                    m_LastTemperature = TemperatureN[0].value;
                     IDSetNumber(&TemperatureNP, nullptr);
                 }
                 break;
 
             case IPS_ALERT:
                 break;
-
-            case IPS_BUSY:
-                TemperatureN[0].value = static_cast<double>(nTemperature / 10.0);
-                IDSetNumber(&TemperatureNP, nullptr);
-                break;
         }
     }
+
     if (HasCooler() && (m_maxTecVoltage > 0))
     {
         int val = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
-            m_CoolerNP.setState(IPS_ALERT);
+        {
+            if (m_CoolerNP.getState() != IPS_ALERT)
+            {
+                m_CoolerNP.setState(IPS_ALERT);
+                m_CoolerNP.apply();
+            }
+        }
         else if (0 == val)
         {
-            m_CoolerNP.setState(IPS_IDLE);
-            m_CoolerNP[0].setValue(0);
-            m_CoolerNP.apply();
+            if (m_CoolerNP.getState() != IPS_IDLE)
+            {
+                m_CoolerNP.setState(IPS_IDLE);
+                m_CoolerNP[0].setValue(0);
+                m_CoolerNP.apply();
+            }
         }
         else
         {
             rc = FP(get_Option(m_Handle, CP(OPTION_TEC_VOLTAGE), &val));
             if (FAILED(rc))
-                m_CoolerNP.setState(IPS_ALERT);
+            {
+                if (m_CoolerNP.getState() != IPS_ALERT)
+                {
+                    m_CoolerNP.setState(IPS_ALERT);
+                    m_CoolerNP.apply();
+                }
+            }
             else if (val <= m_maxTecVoltage)
             {
                 m_CoolerNP[0].setValue(val * 100.0 / m_maxTecVoltage);
-                m_CoolerNP.setState(IPS_BUSY);
-                m_CoolerNP.apply();
+                if (std::abs(m_CoolerNP[0].getValue() - m_LastCoolerPower) > 1)
+                {
+                    m_LastCoolerPower = m_CoolerNP[0].getValue();
+                    m_CoolerNP.setState(IPS_BUSY);
+                    m_CoolerNP.apply();
+                }
             }
         }
     }
@@ -1721,7 +1747,7 @@ void ToupBase::refreshControls()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
+void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
@@ -1740,7 +1766,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupBase::saveConfigItems(FILE *fp)
+bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
