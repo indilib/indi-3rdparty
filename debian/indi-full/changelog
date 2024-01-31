@@ -1,3 +1,9 @@
+indi-full (2.0.6) jammy; urgency=medium
+
+  * Minor release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 1 Feb 2024 09:00:00 +0300
+
 indi-full (2.0.5) jammy; urgency=medium
 
   * Minor release.
