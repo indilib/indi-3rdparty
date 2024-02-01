@@ -3,6 +3,12 @@ with IMX219. It is still under heavy development and not ready for production.
 
 COMPILING
 
+Install additional build dependency:
+
+```
+sudo apt-get install libboost-program-options1.74-dev
+```
+
 Go to the directory where  you unpacked indi_asi sources and do:
 
 ```
