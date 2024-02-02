@@ -1,12 +1,16 @@
 #pragma once
 
 #include "libindi/indifocuser.h"
-#define USB_CDC_RX_LEN      64
 
-// namespace Connection
-// {
-//     class Serial;
-// }
+#include <memory>
+#include <cstring>
+#include <termios.h>
+#include <fstream>
+#include <libindi/json.h>
+
+#define USB_CDC_RX_LEN      128
+
+using json = nlohmann::json;
 
 class QFocuser : public INDI::Focuser
 {
@@ -29,47 +33,57 @@ public:
     virtual void TimerHit() override;
 
 private:
-  // Connection::Serial *serialConnection{nullptr};
   int SendCommand(char *cmd_line);
   int ReadResponse(char *buf);
   void GetFocusParams();
 
   int updatePosition(double *value);
   int updateTemperature(double *value);
-  int updateBacklash(double *value);
-  int updateMotorSettings(double *duty, double *delay, double *ticks);
   int updatePositionRelativeInward(double value);
   int updatePositionRelativeOutward(double value);
   int updatePositionAbsolute(double value);
 
-  int updateMaxPosition(double *value);
   int updateSetPosition(int value);
 
-  int updateSetSpeed(int value);
+  int updateSetReverse(int value);
 
-  int ReadUntilComplete(char *buf, int timeout);
+  int updateSetSpeed(int value);
 
   int timerID { -1 };
   bool initTargetPos = true;
   double targetPos{ 0 };
   double simulatedTemperature{ 0 };
   double simulatedPosition{ 0 };
+  bool isReboot = false;
+  int RebootTimes = 0;
 
   uint8_t buff[USB_CDC_RX_LEN];
 
+  int32_t cmd_version;
+  int32_t cmd_version_board;
   int32_t cmd_position;
   int32_t cmd_out_temp;
   int32_t cmd_chip_temp;
+  int32_t cmd_voltage;
+
 
   ISwitch ResetPosS[1];
   ISwitchVectorProperty ResetPosSP;
-  ISwitch RevertDirS[2];
-  ISwitchVectorProperty RevertDirSP;
+  // ISwitch RevertDirS[2];
+  // ISwitchVectorProperty RevertDirSP;
 
   INumber TemperatureChip[1];
   INumberVectorProperty TemperatureChipVP;
   INumber TemperatureN[1];
   INumberVectorProperty TemperatureNP;
+  INumber Voltage[1];
+  INumberVectorProperty VoltageVP;
+
+  INumber FOCUSVersion[1];
+  INumberVectorProperty FOCUSVersionVP;
+
+  INumber BOARDVersion[1];
+  INumberVectorProperty BOARDVersionVP;
 
   INumber SettingsN[3];
   INumberVectorProperty SettingsNP;
@@ -91,6 +105,11 @@ private:
 
   INumber FocusSpeedN[1];
   INumberVectorProperty FocusSpeedNP;
+
+  // Reverse Focuser
+  ISwitch FocusReverseS[2];
+  ISwitchVectorProperty FocusReverseSP;
+  
         
 
 protected:
@@ -104,5 +123,5 @@ protected:
     virtual bool SetFocuserSpeed(int speed);
     virtual bool SyncFocuser(uint32_t ticks);
     virtual bool AbortFocuser();
+    virtual bool ReverseFocuser(bool enabled);
 };
-

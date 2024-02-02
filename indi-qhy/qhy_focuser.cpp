@@ -4,13 +4,13 @@
 #include <memory>
 #include <cstring>
 #include <termios.h>
+#include <iostream>
+#include <thread>
 
 #include "libindi/indicom.h"
 #include "libindi/connectionplugins/connectionserial.h"
 
-#include "cJSON.h"
-
-#define MAX_CMD 64
+#define MAX_CMD 128
 #define TIMEOUT 3
 
 #define currentPosition         FocusAbsPosN[0].value
@@ -23,13 +23,14 @@ static std::unique_ptr<QFocuser> qFocus(new QFocuser());
 
 QFocuser::QFocuser()
 {
-    setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MAJOR);
+    setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
 
     // Here we tell the base Focuser class what types of connections we can support
     setSupportedConnections(CONNECTION_SERIAL);
 
     // And here we tell the base class about our focuser's capabilities.
-    SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT | FOCUSER_CAN_REVERSE | FOCUSER_CAN_SYNC | FOCUSER_HAS_BACKLASH); //FOCUSER_HAS_VARIABLE_SPEED | 
+    SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT | FOCUSER_CAN_REVERSE |
+                  FOCUSER_CAN_SYNC); //FOCUSER_HAS_VARIABLE_SPEED | FOCUSER_HAS_BACKLASH
 }
 
 const char *QFocuser::getDefaultName()
@@ -43,7 +44,7 @@ bool QFocuser::initProperties()
     INDI::Focuser::initProperties();
 
     // TODO: Add any custom properties you need here.
-    IUFillNumber(&FocusSpeedN[0], "FOCUS_SPEED_VALUE", "Focus Speed", "%3.0f", 0.0, 8.0, 1.0, 0.0);
+    IUFillNumber(&FocusSpeedN[0], "FOCUS_SPEED_VALUE", "Focus Speed", "%0.0f", 0.0, 8.0, 1.0, 0.0);
     IUFillNumberVector(&FocusSpeedNP, FocusSpeedN, 1, getDeviceName(), "FOCUS_SPEED", "Speed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_OK);
 
     IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
@@ -51,6 +52,15 @@ bool QFocuser::initProperties()
 
     IUFillNumber(&TemperatureChip[0], "TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
     IUFillNumberVector(&TemperatureChipVP, TemperatureChip, 1, getDeviceName(), "CHIP_TEMPERATURE", "Chip Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    IUFillNumber(&Voltage[0], "VOLTAGE", "Volt", "%0.0f", 0, 12., 0., 0.);
+    IUFillNumberVector(&VoltageVP, Voltage, 1, getDeviceName(), "FOCUS_VOLTAGE", "Voltage", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
+    IUFillNumber(&FOCUSVersion[0], "VERSION", "Version", "%0.0f", 0, 99999999., 0., 0.);
+    IUFillNumberVector(&FOCUSVersionVP, FOCUSVersion, 1, getDeviceName(), "FOCUS_VERSION", "Focus", CONNECTION_TAB, IP_RO, 60, IPS_OK);
+
+    IUFillNumber(&BOARDVersion[0], "VERSION", "Version", "%0.0f", 0, 65000., 0., 0.);
+    IUFillNumberVector(&BOARDVersionVP, BOARDVersion, 1, getDeviceName(), "BOARD_VERSION", "Board", CONNECTION_TAB, IP_RO, 60, IPS_OK);
 
     FocusAbsPosN[0].min   = -64000.;
     FocusAbsPosN[0].max   = 64000.;
@@ -63,11 +73,6 @@ bool QFocuser::initProperties()
     simulatedTemperature = 600.0;
     simulatedPosition    = 20000;
 
-    // serialConnection = new Connection::Serial(this);
-    // serialConnection->registerHandshake([&]() { return Handshake(); });
-    // serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
-    // serialConnection->setDefaultPort("/dev/ttyACM0");
-    // registerConnection(serialConnection);
 
     return true;
 }
@@ -89,8 +94,9 @@ bool QFocuser::updateProperties()
         defineProperty(&TemperatureNP);
         defineProperty(&TemperatureChipVP);
         defineProperty(&FocusSpeedNP);
-
-        // GetFocusParams();
+        defineProperty(&VoltageVP);
+        defineProperty(&FOCUSVersionVP);
+        defineProperty(&BOARDVersionVP);
     }
     else
     {
@@ -98,72 +104,84 @@ bool QFocuser::updateProperties()
         deleteProperty(TemperatureNP.name);
         deleteProperty(TemperatureChipVP.name);
         deleteProperty(FocusSpeedNP.name);
+        deleteProperty(VoltageVP.name);
+        deleteProperty(FOCUSVersionVP.name);
+        deleteProperty(BOARDVersionVP.name);
     }
 
     return true;
 }
 
-char *create_cmd(int cmd_idx, bool dir, int value)
+std::string create_cmd(int cmd_idx, bool dir, int value)
 {
-    char *string    = NULL;
-    cJSON *response = cJSON_CreateObject();
-    cJSON *cmd_item = cJSON_CreateNumber(cmd_idx);
-    cJSON_AddItemToObject(response, "cmd_id", cmd_item);
+    json response;
+    response["cmd_id"] = cmd_idx;
 
     switch (cmd_idx)
     {
-        case 1:
+        case 1:     // Get version
         {
             break;
         }
-        case 2:
+
+        case 2:     // Relative Move
         {
-            cJSON *number_dir         = cJSON_CreateNumber(dir ? 1 : -1);
-            cJSON *number_target_step = cJSON_CreateNumber(value);
-            cJSON_AddItemToObject(response, "dir", number_dir);
-            cJSON_AddItemToObject(response, "step", number_target_step);
+            response["dir"]  = dir ? 1 : -1;
+            response["step"] = value;
             break;
         }
-        case 6:
-        {
-            cJSON *number_target_step = cJSON_CreateNumber(value);
-            cJSON_AddItemToObject(response, "tar", number_target_step);
-            break;
-        }
-        case 3:
+
+        case 3:     // AbortFocuser
         {
             break;
         }
-        case 4:
+
+        case 4:     // Temperature
         {
             break;
         }
-        case 5:
+
+        case 5:     // Get Position
         {
             break;
         }
-        case 11:
+
+        case 6:     // Absolute Move
         {
-            cJSON *number_target_init = cJSON_CreateNumber(value);
-            cJSON_AddItemToObject(response,"init_val",number_target_init);
+            response["tar"] = value;
             break;
         }
-        case 13:
+
+        case 7:     // Set Reverse
         {
-            cJSON *number_target_speed = cJSON_CreateNumber(value);
-            cJSON_AddItemToObject(response,"speed",number_target_speed);
+            response["rev"] = value;
             break;
         }
+
+        case 11:    // Set Position
+        {
+            response["init_val"] = value;
+            break;
+        }
+
+        case 13:    // Set Speed
+        {
+            response["speed"] = value;
+            break;
+        }
+
+        case 16:    // Set Hold
+        {
+            response["ihold"] = 0;
+            response["irun"] = 5;
+            break;
+        }
+
         default:
-        {
             break;
-        }
     }
 
-    string = cJSON_PrintUnformatted(response);
-
-    cJSON_Delete(response);
-    return string;
+    return response.dump();
 }
 
 int QFocuser::SendCommand(char *cmd_line)
@@ -203,80 +221,79 @@ int QFocuser::ReadResponse(char *buf)
         memset(buff, 0, USB_CDC_RX_LEN);
         memcpy(buff, buf, bytesRead);
 
-        cJSON *cmd_json = cJSON_Parse((const char *)buff);
-        if (cmd_json == NULL)
+        try
         {
-            const char *error_ptr = cJSON_GetErrorPtr();
-            if (error_ptr != NULL)
+            json cmd_json = json::parse(buff);
+
+            cmd_index = -1;
+
+            if (cmd_json.find("idx") != cmd_json.end())
             {
-                LOGF_ERROR("TTY parse read error detected: %s", error_ptr);
-                continue;
-            }
-        }
-        if (cmd_json != NULL)
-        {
-            cmd_index     = -1;
-            cJSON *cmd_id = cJSON_GetObjectItemCaseSensitive(cmd_json, "idx");
-            if (cmd_id == NULL)
-            {
-                LOGF_ERROR("TTY idx parse error detected: %s", "null");
-                continue;
+                int cmd_id = cmd_json["idx"];
+                if (cmd_id == 2 || cmd_id == 3 || cmd_id == 6 || cmd_id == 7 || cmd_id == 11 || cmd_id == 16)
+                {
+                    LOGF_INFO("ReadResponse: %s.", cmd_json.dump().c_str());
+                    return bytesRead;
+                }
+                else if (cmd_id == 1)
+                {
+                    LOGF_INFO("ReadResponse: %s.", cmd_json.dump().c_str());
+                    if (cmd_json.find("id") != cmd_json.end() && cmd_json.find("version") != cmd_json.end() && cmd_json.find("bv") != cmd_json.end())
+                    {
+                        cmd_version  = cmd_json["version"];
+                        cmd_version_board  = cmd_json["bv"];
+
+                        return bytesRead;
+                    }
+                }
+                else if (cmd_id == 4)
+                {
+                    if (cmd_json.find("o_t") != cmd_json.end() && cmd_json.find("c_t") != cmd_json.end() && cmd_json.find("c_r") != cmd_json.end())
+                    {
+                        cmd_out_temp  = cmd_json["o_t"];
+                        cmd_chip_temp = cmd_json["c_t"];
+                        cmd_voltage = cmd_json["c_r"];
+                        return bytesRead;
+                    }
+                }
+                else if (cmd_id == 5)
+                {
+                    if (cmd_json.find("pos") != cmd_json.end())
+                    {
+                        cmd_position = cmd_json["pos"];
+                        return bytesRead;
+                    }
+                }
+                else if (cmd_id == -1)
+                {
+                    isReboot = true;
+                    // LOG_INFO("Reboot over");
+                    return bytesRead;
+                }
             }
 
-            if (cmd_id->valueint == 1)
-            {
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 2)
-            {
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 3)
-            {
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 4)
-            {
-                cJSON *out_temp  = cJSON_GetObjectItemCaseSensitive(cmd_json, "o_t");
-                cJSON *chip_temp = cJSON_GetObjectItemCaseSensitive(cmd_json, "c_t");
-                cmd_out_temp     = out_temp->valueint;
-                cmd_chip_temp    = chip_temp->valueint;
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 5)
-            {
-                cJSON *pos   = cJSON_GetObjectItemCaseSensitive(cmd_json, "pos");
-                cmd_position = pos->valueint;
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 6)
-            {
-                return bytesRead;
-            }
-            else if (cmd_id->valueint == 11)
-            {
-                return bytesRead;
-            }
-            else
-            {
-                return bytesRead;
-            }
+            LOGF_INFO("r ----cmd_index pass  %f", 2.9);
         }
-        LOGF_INFO("r ----cmd_index pass  %f", 2.9);
-        cJSON_Delete(cmd_json);
+        catch (const json::parse_error &e)
+        {
+            LOGF_ERROR("TTY parse read error detected: %s", e.what());
+            return -1;
+        }
+
         break;
     }
+
     LOGF_INFO("r -------------------------------x  %f", 2.10);
     return -1;
 }
 
 bool QFocuser::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    LOGF_INFO("ISNewNumber ---------%s", name);
+    LOGF_INFO("ISNewNumber:[%s]", name);
     // Make sure it is for us.
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        // TODO: Check to see if this is for any of my custom Number properties. 
+        // TODO: Check to see if this is for any of my custom Number properties.
     }
 
     // Set variable focus speed
@@ -304,6 +321,7 @@ bool QFocuser::ISNewNumber(const char *dev, const char *name, double values[], c
 
 bool QFocuser::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    LOGF_INFO("ISNewSwitch:[%s]", name);
     // Make sure it is for us.
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
@@ -316,6 +334,7 @@ bool QFocuser::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
 bool QFocuser::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    LOGF_INFO("ISNewText:[%s]", name);
     // Make sure it is for us.
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
@@ -344,36 +363,55 @@ bool QFocuser::saveConfigItems(FILE *fp)
 
 bool QFocuser::Handshake()
 {
+    LOG_INFO("Hello QFocuser!");
     if (isSimulation())
     {
         LOGF_INFO("Connected successfuly to simulated %s.", getDeviceName());
         return true;
     }
 
-    // NOTE: PortFD is set by the base class.
-    // PortFD = serialConnection->getPortFD();
-
     // TODO: Any initial communciation needed with our focuser, we have an active connection.
     int ret_chk;
     char ret_cmd[MAX_CMD];
 
-    char *cmd_str = create_cmd(1, true, 0);
-    ret_chk       = SendCommand(cmd_str);
-    free(cmd_str);
+    std::string command = create_cmd(1, true, 0);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk             = SendCommand(const_cast<char *>(command.c_str()));
+    // free(cmd_str);
     if (ret_chk < 0)
     {
-        LOGF_ERROR(" handshake send error %s", "");
+        LOGF_ERROR("handshake send error %s", "");
         return false;
     }
 
     ret_chk = ReadResponse(ret_cmd);
     if (ret_chk < 0)
     {
-        LOGF_ERROR(" handshake read error %s", "");
+        LOGF_ERROR("handshake read error %s", "");
         return false;
     }
 
-    LOGF_INFO(" handshake  pass %s", "");
+    int value = (int)cmd_version;
+
+    LOGF_INFO("version: %d", value);
+
+    FOCUSVersion[0].value = (int)cmd_version;
+    BOARDVersion[0].value = (int)cmd_version_board;
+
+    updateTemperature(0);
+
+    if(cmd_voltage == 0)
+    {
+        std::string command_ = create_cmd(16, true, 0);
+        LOGF_INFO("SendCommand: %s", command_.c_str());
+        ret_chk             = SendCommand(const_cast<char *>(command_.c_str()));
+        
+        if (ret_chk < 0)
+        {
+            LOGF_ERROR("Hold set error %s", "");
+            return false;
+        }
+    }
 
     return true;
 }
@@ -382,10 +420,6 @@ void QFocuser::TimerHit()
 {
     if (!isConnected())
         return;
-
-    // TODO: Poll your device if necessary. Otherwise delete this method and it's declaration in the header file.
-
-    // LOG_INFO("timer hit---------1");
 
     double prevPos = currentPosition;
     double newPos  = 0;
@@ -398,37 +432,33 @@ void QFocuser::TimerHit()
             IDSetNumber(&FocusAbsPosNP, nullptr);
     }
 
-    if(initTargetPos == true)
+    if (initTargetPos == true)
     {
-        targetPos = currentPosition;
+        targetPos     = currentPosition;
         initTargetPos = false;
     }
 
-    // LOG_INFO("timer hit---------2");
-    // LOGF_INFO("TimerHit----pos: %f , %f",currentPosition,targetPos);
     if (currentPosition == targetPos)
     {
         FocusAbsPosNP.s = IPS_OK;
-        // LOG_INFO("timer hit---------2.1");
+
         if (FocusRelPosNP.s == IPS_BUSY)
         {
             FocusRelPosNP.s = IPS_OK;
             IDSetNumber(&FocusRelPosNP, nullptr);
         }
     }
-    // LOG_INFO("timer hit---------3");
+
     IDSetNumber(&FocusAbsPosNP, nullptr);
     if (FocusAbsPosNP.s == IPS_BUSY)
     {
         timerID = SetTimer(1000);
         return;
     }
-    // LOG_INFO("timer hit---------4");
+
     GetFocusParams();
 
     timerID = SetTimer(getCurrentPollingPeriod());
-
-    // LOGF_INFO("getCurrentPollingPeriod: %d",getCurrentPollingPeriod());
 
     // If you don't call SetTimer, we'll never get called again, until we disconnect and reconnect.
     SetTimer(POLLMS);
@@ -446,8 +476,6 @@ IPState QFocuser::MoveFocuser(FocusDirection dir, int speed, uint16_t duration)
 
 IPState QFocuser::MoveAbsFocuser(uint32_t targetTicks)
 {
-    // NOTE: This is needed if we do specify FOCUSER_CAN_ABS_MOVE
-    // TODO: Actual code to move the focuser.
     LOGF_INFO("MoveAbsFocuser: %d", targetTicks);
 
     targetPos = targetTicks;
@@ -471,10 +499,38 @@ IPState QFocuser::MoveAbsFocuser(uint32_t targetTicks)
     return IPS_BUSY;
 }
 
+bool QFocuser::ReverseFocuser(bool enabled)
+{
+    int ret = -1;
+    int val = 0;
+    if (enabled)
+    {
+        val = 1;
+    }
+
+    if ((ret = updateSetReverse(val)) < 0)
+    {
+        LOGF_DEBUG("updateSetReverse failed %3d", ret);
+
+        return false;
+    }
+
+    if (enabled)
+    {
+        FocusReverseS[0].s = ISS_ON;
+        IDSetSwitch(&FocusReverseSP, nullptr);
+    }
+    else
+    {
+        FocusReverseS[0].s = ISS_OFF;
+        IDSetSwitch(&FocusReverseSP, nullptr);
+    }
+
+    return true;
+}
+
 IPState QFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 {
-    // NOTE: This is needed if we do specify FOCUSER_CAN_REL_MOVE
-    // TODO: Actual code to move the focuser.
     LOGF_INFO("MoveRelFocuser: %d %d", dir, ticks);
 
     int ret = -1;
@@ -498,14 +554,12 @@ IPState QFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     }
 
     RemoveTimer(timerID);
-    timerID = SetTimer(250);     // Set a timer to call the function TimerHit after 250 milliseconds
+    timerID = SetTimer(250); // Set a timer to call the function TimerHit after 250 milliseconds
     return IPS_BUSY;
 }
 
-bool QFocuser::SetFocuserSpeed(int speed)           // Max:8  Min:0 (The fastest speed is 0, the slowest is 8)
+bool QFocuser::SetFocuserSpeed(int speed) // Max:8  Min:0 (The fastest speed is 0, the slowest is 8)
 {
-    // NOTE: This is needed if we do specify FOCUSER_HAS_VARIABLE_SPEED
-    // TODO: Actual code to stop the focuser.
     LOGF_INFO("SetFocuserSpeed: %d", speed);
 
     if (speed < FocusSpeedN[0].min || speed > FocusSpeedN[0].max)
@@ -522,8 +576,6 @@ bool QFocuser::SetFocuserSpeed(int speed)           // Max:8  Min:0 (The fastest
         return false;
     }
 
-    // RemoveTimer(timerID);
-    // timerID = SetTimer(250);
     return true;
 }
 
@@ -535,7 +587,8 @@ bool QFocuser::SyncFocuser(uint32_t ticks)
 
     if (ticks < FocusAbsPosN[0].min || ticks > FocusAbsPosN[0].max)
     {
-        LOGF_DEBUG("Error, requested ticks value is out of range(Max: %d, Min: %d).",FocusAbsPosN[0].max,FocusAbsPosN[0].min);
+        LOGF_DEBUG("Error, requested ticks value is out of range(Max: %d, Min: %d).", FocusAbsPosN[0].max,
+                   FocusAbsPosN[0].min);
         return false;
     }
 
@@ -546,25 +599,34 @@ bool QFocuser::SyncFocuser(uint32_t ticks)
     }
 
     targetPos = ticks;
-    
+
     return true;
 }
 
 bool QFocuser::AbortFocuser()
 {
-    // NOTE: This is needed if we do specify FOCUSER_CAN_ABORT
-    // TODO: Actual code to stop the focuser.
     LOG_INFO("AbortFocuser");
 
     int ret_chk;
-    char *cmd_str = create_cmd(3, false, 0);
-    ret_chk       = SendCommand(cmd_str);
-    free(cmd_str);
+
+    char ret_cmd[MAX_CMD];
+
+    std::string command = create_cmd(3, false, 0);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk             = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" abort send error %s", "");
         return false;
     }
+
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("abort read error %s", "");
+        return false;
+    }
+
     LOGF_INFO("%s : pass", "abort");
     return true;
 }
@@ -573,72 +635,90 @@ bool QFocuser::AbortFocuser()
 //--------------------------------------Update State to Focuser--------------------------------------
 //---------------------------------------------------------------------------------------------------
 
-int QFocuser::updatePositionAbsolute(double value)          //MoveAbsFocuser
+int QFocuser::updatePositionAbsolute(double value) //MoveAbsFocuser
 {
     int ret_chk;
 
+    char ret_cmd[MAX_CMD];
+
     LOGF_INFO("Run abs... %f", value);
 
-    char *cmd_str = create_cmd(6, true, value);
-
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
+    std::string command = create_cmd(6, true, value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" run abs send error %s", "");
         return false;
     }
-    /***
+
     ret_chk = ReadResponse(ret_cmd);
-    if(ret_chk<0){
-        LOGF_ERROR(" run abs read error %s","");
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("run abs read error %s", "");
         return false;
     }
-***/
+
     LOGF_INFO("Run abs: %g", value);
     return 0;
 }
 
-int QFocuser::updateSetSpeed(int value)           //SetFocuserSpeed
+int QFocuser::updateSetSpeed(int value) //SetFocuserSpeed
 {
     int ret_chk;
 
-    LOGF_INFO("Set speed... %d", 4 - value );
+    char ret_cmd[MAX_CMD];
 
-    char *cmd_str = create_cmd(13, true, 4 - value );
+    LOGF_INFO("Set speed... %d", 4 - value);
 
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
+    std::string command = create_cmd(13, true, 4 - value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" Set speed send error %s", "");
         return false;
     }
 
-    LOGF_INFO("Set speed: %d", 4 - value );
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("Set speed read error %s", "");
+        return false;
+    }
+
+    LOGF_INFO("Set speed: %d", 4 - value);
     return 0;
 }
 
-int QFocuser::updatePositionRelativeInward(double value)    //MoveRelFocuser
+int QFocuser::updatePositionRelativeInward(double value) //MoveRelFocuser
 {
     int ret_chk;
-    bool dir_param = true;
+    bool dir_param = false;
+
+    char ret_cmd[MAX_CMD];
 
     LOGF_INFO("Run in...%f", value);
 
-    if (RevertDirS[0].s == ISS_ON)
-    {
-        dir_param = !dir_param;
-        LOGF_INFO("Run in  Reverse...%d", dir_param);
-    }
-    LOGF_INFO("............Run in  Reverse...%d", dir_param);
-    char *cmd_str = create_cmd(2, dir_param, value);
-
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
+    // if (FocusReverseS[0].s == ISS_ON)
+    // {
+    //     dir_param = !dir_param;
+    //     LOGF_INFO("Run in  Reverse: %d", dir_param);
+    // }
+    
+    std::string command = create_cmd(2, dir_param, value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" run in send error %s", "");
+        return false;
+    }
+
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("run in read error %s", "");
         return false;
     }
 
@@ -646,24 +726,34 @@ int QFocuser::updatePositionRelativeInward(double value)    //MoveRelFocuser
     return 0;
 }
 
-int QFocuser::updatePositionRelativeOutward(double value)   //MoveRelFocuser
+int QFocuser::updatePositionRelativeOutward(double value) //MoveRelFocuser
 {
     int ret_chk;
-    bool dir_param = false;
+    bool dir_param = true;
+
+    char ret_cmd[MAX_CMD];
 
     LOGF_INFO("Run out...%f", value);
 
-    if (RevertDirS[0].s == ISS_ON)
-    {
-        dir_param = !dir_param;
-    }
-    char *cmd_str = create_cmd(2, dir_param, value);
+    // if (FocusReverseS[0].s == ISS_ON)
+    // {
+    //     dir_param = !dir_param;
+    //     LOGF_INFO("Run in  Reverse: %d", dir_param);
+    // }
 
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
+    std::string command = create_cmd(2, dir_param, value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" run out send error %s", "");
+        return false;
+    }
+
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("run out read error %s", "");
         return false;
     }
 
@@ -676,7 +766,6 @@ int QFocuser::updatePosition(double *value)
     int ret_chk;
 
     char ret_cmd[MAX_CMD];
-  
 
     LOG_DEBUG("get pos ");
 
@@ -685,26 +774,23 @@ int QFocuser::updatePosition(double *value)
         *value = simulatedPosition;
         return 0;
     }
-    char* cmd_str = create_cmd(5,true,0);
-
-
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
-    if(ret_chk<0){
-        LOGF_ERROR(" pos send error %s","");
+    std::string command = create_cmd(5, true, 0);
+    // LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR(" pos send error %s", "");
         return false;
     }
 
     ret_chk = ReadResponse(ret_cmd);
-    if(ret_chk<0){
-        LOGF_ERROR(" pos read error %s","");
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR(" pos read error %s", "");
         return false;
     }
 
-   
     *value = (double)cmd_position;
-
-    // LOGF_INFO("pos: %g", *value);
 
     return 0;
 }
@@ -713,56 +799,85 @@ int QFocuser::updateTemperature(double *value)
 {
     int ret_chk;
     char ret_cmd[MAX_CMD];
-    // LOGF_INFO("get temp...%s","");
 
     if (isSimulation())
     {
         *value = simulatedPosition;
         return 0;
     }
-    char* cmd_str = create_cmd(4,true,0);
-
-
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
-    if(ret_chk<0){
-        LOGF_ERROR(" temp send error %s","");
+    std::string command = create_cmd(4, true, 0);
+    // LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR(" temp send error %s", "");
         return false;
     }
 
     ret_chk = ReadResponse(ret_cmd);
-    if(ret_chk<0){
-        LOGF_ERROR(" temp read error %s","");
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR(" temp read error %s", "");
         return false;
     }
 
-   
-    // *value = ((double)cmd_out_temp)/1000;
-    TemperatureN[0].value = ((double)cmd_out_temp)/1000;
-    TemperatureChip[0].value = ((double)cmd_chip_temp)/1000;
-
-    // LOGF_INFO("get temp: %g", TemperatureN[0].value);
+    TemperatureN[0].value    = ((double)cmd_out_temp) / 1000;
+    TemperatureChip[0].value = ((double)cmd_chip_temp) / 1000;
+    Voltage[0].value = ((int)cmd_voltage) / 10;
+    
 
     return 0;
 }
 
 int QFocuser::updateSetPosition(int value)
 {
-     int ret_chk;
+    int ret_chk;
 
-    LOGF_INFO("Set Position... %d", value);
+    char ret_cmd[MAX_CMD];
 
-    char *cmd_str = create_cmd(11, true, value);
-
-    ret_chk = SendCommand(cmd_str);
-    free(cmd_str);
+    std::string command = create_cmd(11, true, value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
         LOGF_ERROR(" Set Position send error %s", "");
         return false;
     }
 
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("Set position read error %s", "");
+        return false;
+    }
+
     LOGF_INFO("Set Position: %d", value);
+    return 0;
+}
+
+int QFocuser::updateSetReverse(int value)
+{
+    int ret_chk;
+
+    char ret_cmd[MAX_CMD];
+
+    std::string command = create_cmd(7, true, value);
+    LOGF_INFO("SendCommand: %s", command.c_str());
+    ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR(" Set Reverse send error %s", "");
+        return false;
+    }
+
+    ret_chk = ReadResponse(ret_cmd);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("Set Reverse read error %s", "");
+        return false;
+    }
+
+    LOGF_INFO("Set Reverse: %d", value);
     return 0;
 }
 
@@ -783,16 +898,28 @@ void QFocuser::GetFocusParams()
 
     if ((ret = updateTemperature(&currentTemperature)) < 0)
     {
-        TemperatureNP.s = IPS_ALERT;
+        TemperatureNP.s     = IPS_ALERT;
         TemperatureChipVP.s = IPS_ALERT;
+        VoltageVP.s = IPS_ALERT;
+        FOCUSVersionVP.s = IPS_ALERT;
+        BOARDVersionVP.s = IPS_ALERT;
         LOG_ERROR("Unknown error while reading temperature.");
         IDSetNumber(&TemperatureNP, nullptr);
         IDSetNumber(&TemperatureChipVP, nullptr);
+        IDSetNumber(&VoltageVP, nullptr);
+        IDSetNumber(&FOCUSVersionVP, nullptr);
+        IDSetNumber(&BOARDVersionVP, nullptr);
         return;
     }
-    // LOGF_INFO("TemperatureNP.name: %s", TemperatureNP.name);
+
     TemperatureNP.s = IPS_OK;
     IDSetNumber(&TemperatureNP, nullptr);
     TemperatureChipVP.s = IPS_OK;
     IDSetNumber(&TemperatureChipVP, nullptr);
+    VoltageVP.s = IPS_OK;
+    IDSetNumber(&VoltageVP, nullptr);
+    FOCUSVersionVP.s = IPS_OK;
+    IDSetNumber(&FOCUSVersionVP, nullptr);
+    BOARDVersionVP.s = IPS_OK;
+    IDSetNumber(&BOARDVersionVP, nullptr);
 }
