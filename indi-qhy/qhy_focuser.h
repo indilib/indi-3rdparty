@@ -1,6 +1,8 @@
 #pragma once
 
-#include "libindi/indifocuser.h"
+// #include "libindi/indifocuser.h"
+#include "indifocuser.h"
+#include <indipropertynumber.h>
 
 #include <memory>
 #include <cstring>
@@ -57,6 +59,9 @@ private:
   bool isReboot = false;
   int RebootTimes = 0;
 
+  int FocusSpeedMin = 0;
+  int FocusSpeedMax = 8;
+
   uint8_t buff[USB_CDC_RX_LEN];
 
   int32_t cmd_version;
@@ -66,51 +71,17 @@ private:
   int32_t cmd_chip_temp;
   int32_t cmd_voltage;
 
+  INDI::PropertyNumber TemperatureNP{1};
 
-  ISwitch ResetPosS[1];
-  ISwitchVectorProperty ResetPosSP;
-  // ISwitch RevertDirS[2];
-  // ISwitchVectorProperty RevertDirSP;
+  INDI::PropertyNumber TemperatureChipNP{1};
 
-  INumber TemperatureChip[1];
-  INumberVectorProperty TemperatureChipVP;
-  INumber TemperatureN[1];
-  INumberVectorProperty TemperatureNP;
-  INumber Voltage[1];
-  INumberVectorProperty VoltageVP;
+  INDI::PropertyNumber VoltageNP{1};
 
-  INumber FOCUSVersion[1];
-  INumberVectorProperty FOCUSVersionVP;
+  INDI::PropertyNumber FOCUSVersionNP{1};
 
-  INumber BOARDVersion[1];
-  INumberVectorProperty BOARDVersionVP;
+  INDI::PropertyNumber BOARDVersionNP{1};
 
-  INumber SettingsN[3];
-  INumberVectorProperty SettingsNP;
-
-  INumber MinMaxPositionN[2];
-  INumberVectorProperty MinMaxPositionNP;
-
-  INumber MaxTravelN[1];
-  INumberVectorProperty MaxTravelNP;
-
-  INumber SetRegisterPositionN[1];
-  INumberVectorProperty SetRegisterPositionNP;
-
-  INumber RelMovementN[1];
-  INumberVectorProperty RelMovementNP;
-
-  INumber AbsMovementN[1];
-  INumberVectorProperty AbsMovementNP;
-
-  INumber FocusSpeedN[1];
-  INumberVectorProperty FocusSpeedNP;
-
-  // Reverse Focuser
-  ISwitch FocusReverseS[2];
-  ISwitchVectorProperty FocusReverseSP;
-  
-        
+  INDI::PropertyNumber FocusSpeedNP{1};
 
 protected:
     virtual bool saveConfigItems(FILE *fp) override;

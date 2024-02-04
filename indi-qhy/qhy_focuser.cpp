@@ -1,5 +1,6 @@
 #include "config.h"
 #include "qhy_focuser.h"
+#include <indipropertynumber.h>
 
 #include <memory>
 #include <cstring>
@@ -14,7 +15,7 @@
 #define TIMEOUT 3
 
 #define currentPosition         FocusAbsPosN[0].value
-#define currentTemperature      TemperatureN[0].value
+#define currentTemperature      //TemperatureNP[0].getValue()
 #define currentRelativeMovement FocusRelPosN[0].value
 #define currentAbsoluteMovement FocusAbsPosN[0].value
 
@@ -35,7 +36,7 @@ QFocuser::QFocuser()
 
 const char *QFocuser::getDefaultName()
 {
-    return "QFocuser";
+    return "QFocuser"; 
 }
 
 bool QFocuser::initProperties()
@@ -43,32 +44,31 @@ bool QFocuser::initProperties()
     // initialize the parent's properties first
     INDI::Focuser::initProperties();
 
-    // TODO: Add any custom properties you need here.
-    IUFillNumber(&FocusSpeedN[0], "FOCUS_SPEED_VALUE", "Focus Speed", "%0.0f", 0.0, 8.0, 1.0, 0.0);
-    IUFillNumberVector(&FocusSpeedNP, FocusSpeedN, 1, getDeviceName(), "FOCUS_SPEED", "Speed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_OK);
+    TemperatureNP[0].fill("TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
+    TemperatureNP.fill(getDeviceName(), "FOCUS_TEMPERATURE", "Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
-    IUFillNumberVector(&TemperatureNP, TemperatureN, 1, getDeviceName(), "FOCUS_TEMPERATURE", "Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    TemperatureChipNP[0].fill("TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
+    TemperatureChipNP.fill(getDeviceName(), "CHIP_TEMPERATURE", "Chip Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillNumber(&TemperatureChip[0], "TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
-    IUFillNumberVector(&TemperatureChipVP, TemperatureChip, 1, getDeviceName(), "CHIP_TEMPERATURE", "Chip Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    VoltageNP[0].fill("VOLTAGE", "Volt", "%0.0f", 0, 12., 0., 0.);
+    VoltageNP.fill(getDeviceName(), "FOCUS_VOLTAGE", "Voltage", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillNumber(&Voltage[0], "VOLTAGE", "Volt", "%0.0f", 0, 12., 0., 0.);
-    IUFillNumberVector(&VoltageVP, Voltage, 1, getDeviceName(), "FOCUS_VOLTAGE", "Voltage", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    FOCUSVersionNP[0].fill("VERSION", "Version", "%0.0f", 0, 99999999., 0., 0.);
+    FOCUSVersionNP.fill(getDeviceName(), "FOCUS_VERSION", "Focus", CONNECTION_TAB, IP_RO, 60, IPS_OK);
 
-    IUFillNumber(&FOCUSVersion[0], "VERSION", "Version", "%0.0f", 0, 99999999., 0., 0.);
-    IUFillNumberVector(&FOCUSVersionVP, FOCUSVersion, 1, getDeviceName(), "FOCUS_VERSION", "Focus", CONNECTION_TAB, IP_RO, 60, IPS_OK);
+    BOARDVersionNP[0].fill("VERSION", "Version", "%0.0f", 0, 65000., 0., 0.);
+    BOARDVersionNP.fill(getDeviceName(), "BOARD_VERSION", "Board", CONNECTION_TAB, IP_RO, 60, IPS_OK);
 
-    IUFillNumber(&BOARDVersion[0], "VERSION", "Version", "%0.0f", 0, 65000., 0., 0.);
-    IUFillNumberVector(&BOARDVersionVP, BOARDVersion, 1, getDeviceName(), "BOARD_VERSION", "Board", CONNECTION_TAB, IP_RO, 60, IPS_OK);
+    FocusSpeedNP[0].fill("FOCUS_SPEED_VALUE", "Focus Speed", "%0.0f", 0.0, 8.0, 1.0, 0.0);
+    FocusSpeedNP.fill(getDeviceName(), "FOCUS_SPEED", "Speed", MAIN_CONTROL_TAB, IP_RW, 60, IPS_OK);
 
     FocusAbsPosN[0].min   = -64000.;
     FocusAbsPosN[0].max   = 64000.;
     FocusAbsPosN[0].value = 0;
     FocusAbsPosN[0].step  = 1000;
 
-    FocusSpeedN[0].min = 0;
-    FocusSpeedN[0].max = 8;
+    FocusSpeedMin = 0;
+    FocusSpeedMax = 8;
 
     simulatedTemperature = 600.0;
     simulatedPosition    = 20000;
@@ -91,22 +91,22 @@ bool QFocuser::updateProperties()
     if (isConnected())
     {
         // TODO: Call define* for any custom properties only visible when connected.
-        defineProperty(&TemperatureNP);
-        defineProperty(&TemperatureChipVP);
-        defineProperty(&FocusSpeedNP);
-        defineProperty(&VoltageVP);
-        defineProperty(&FOCUSVersionVP);
-        defineProperty(&BOARDVersionVP);
+        defineProperty(TemperatureNP);
+        defineProperty(TemperatureChipNP);
+        defineProperty(FocusSpeedNP);
+        defineProperty(VoltageNP);
+        defineProperty(FOCUSVersionNP);
+        defineProperty(BOARDVersionNP);
     }
     else
     {
         // TODO: Call deleteProperty for any custom properties only visible when connected.
-        deleteProperty(TemperatureNP.name);
-        deleteProperty(TemperatureChipVP.name);
-        deleteProperty(FocusSpeedNP.name);
-        deleteProperty(VoltageVP.name);
-        deleteProperty(FOCUSVersionVP.name);
-        deleteProperty(BOARDVersionVP.name);
+        deleteProperty(TemperatureNP);
+        deleteProperty(TemperatureChipNP);
+        deleteProperty(FocusSpeedNP);
+        deleteProperty(VoltageNP);
+        deleteProperty(FOCUSVersionNP);
+        deleteProperty(BOARDVersionNP);
     }
 
     return true;
@@ -230,7 +230,7 @@ int QFocuser::ReadResponse(char *buf)
             if (cmd_json.find("idx") != cmd_json.end())
             {
                 int cmd_id = cmd_json["idx"];
-                if (cmd_id == 2 || cmd_id == 3 || cmd_id == 6 || cmd_id == 7 || cmd_id == 11 || cmd_id == 16)
+                if (cmd_id == 2 || cmd_id == 3 || cmd_id == 6 || cmd_id == 7 || cmd_id == 11 || cmd_id == 13|| cmd_id == 16)
                 {
                     LOGF_INFO("ReadResponse: %s.", cmd_json.dump().c_str());
                     return bytesRead;
@@ -294,25 +294,29 @@ bool QFocuser::ISNewNumber(const char *dev, const char *name, double values[], c
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         // TODO: Check to see if this is for any of my custom Number properties.
-    }
 
-    // Set variable focus speed
-    if (!strcmp(name, FocusSpeedNP.name))
-    {
-        FocusSpeedNP.s    = IPS_OK;
-        int current_speed = FocusSpeedN[0].value;
-        IUUpdateNumber(&FocusSpeedNP, values, names, n);
-
-        if (SetFocuserSpeed(FocusSpeedN[0].value) == false)
+        if (FocusSpeedNP.isNameMatch(name))
         {
-            FocusSpeedN[0].value = current_speed;
-            FocusSpeedNP.s       = IPS_ALERT;
-            saveConfig(true, FocusSpeedNP.name);
+            FocusSpeedNP.update(values, names, n);
+            int current_speed = FocusSpeedNP[0].getValue();
+
+            // LOGF_INFO("FocusSpeedNP: %d", FocusSpeedNP[0].getValue());
+
+            if (SetFocuserSpeed(FocusSpeedNP[0].getValue()) == false)
+            {
+                FocusSpeedNP[0].setValue(current_speed);
+                FocusSpeedNP.setState(IPS_ALERT);
+                FocusSpeedNP.apply();
+                saveConfig(true, FocusSpeedNP.getName());
+                return false;
+            }
+
+            FocusSpeedNP.setState(IPS_OK);
+            FocusSpeedNP.apply();
+            saveConfig(true, FocusSpeedNP.getName());
+            return true;
         }
 
-        //  Update client display
-        IDSetNumber(&FocusSpeedNP, nullptr);
-        return true;
     }
 
     // Nobody has claimed this, so let the parent handle it
@@ -395,8 +399,11 @@ bool QFocuser::Handshake()
 
     LOGF_INFO("version: %d", value);
 
-    FOCUSVersion[0].value = (int)cmd_version;
-    BOARDVersion[0].value = (int)cmd_version_board;
+    FOCUSVersionNP[0].setValue((int)cmd_version);
+    BOARDVersionNP[0].setValue((int)cmd_version_board);
+
+    LOGF_INFO("FOCUSVersionNP: %d", FOCUSVersionNP[0].getValue());
+    LOGF_INFO("BOARDVersionNP: %d", BOARDVersionNP[0].getValue());
 
     updateTemperature(0);
 
@@ -562,7 +569,7 @@ bool QFocuser::SetFocuserSpeed(int speed) // Max:8  Min:0 (The fastest speed is 
 {
     LOGF_INFO("SetFocuserSpeed: %d", speed);
 
-    if (speed < FocusSpeedN[0].min || speed > FocusSpeedN[0].max)
+    if (speed < FocusSpeedMin || speed > FocusSpeedMax)
     {
         LOG_DEBUG("Error, requested speed value is out of range(Min:0, Max:8).");
         return false;
@@ -821,9 +828,9 @@ int QFocuser::updateTemperature(double *value)
         return false;
     }
 
-    TemperatureN[0].value    = ((double)cmd_out_temp) / 1000;
-    TemperatureChip[0].value = ((double)cmd_chip_temp) / 1000;
-    Voltage[0].value = ((int)cmd_voltage) / 10;
+    TemperatureNP[0].setValue(((double)cmd_out_temp) / 1000);
+    TemperatureChipNP[0].setValue(((double)cmd_chip_temp) / 1000);
+    VoltageNP[0].setValue(((int)cmd_voltage) / 10);
     
 
     return 0;
@@ -896,30 +903,30 @@ void QFocuser::GetFocusParams()
     FocusAbsPosNP.s = IPS_OK;
     IDSetNumber(&FocusAbsPosNP, nullptr);
 
-    if ((ret = updateTemperature(&currentTemperature)) < 0)
-    {
-        TemperatureNP.s     = IPS_ALERT;
-        TemperatureChipVP.s = IPS_ALERT;
-        VoltageVP.s = IPS_ALERT;
-        FOCUSVersionVP.s = IPS_ALERT;
-        BOARDVersionVP.s = IPS_ALERT;
-        LOG_ERROR("Unknown error while reading temperature.");
-        IDSetNumber(&TemperatureNP, nullptr);
-        IDSetNumber(&TemperatureChipVP, nullptr);
-        IDSetNumber(&VoltageVP, nullptr);
-        IDSetNumber(&FOCUSVersionVP, nullptr);
-        IDSetNumber(&BOARDVersionVP, nullptr);
-        return;
-    }
+    // if ((ret = updateTemperature(&currentTemperature)) < 0)
+    // {
+    //     TemperatureNP.setState(IPS_ALERT);
+    //     TemperatureChipNP.setState(IPS_ALERT);
+    //     VoltageNP.setState(IPS_ALERT);
+    //     FOCUSVersionNP.setState(IPS_ALERT);
+    //     BOARDVersionNP.setState(IPS_ALERT);
+    //     LOG_ERROR("Unknown error while reading temperature.");
+    //     TemperatureNP.apply();
+    //     TemperatureChipNP.apply();
+    //     VoltageNP.apply();
+    //     FOCUSVersionNP.apply();
+    //     BOARDVersionNP.apply();
+    //     return;
+    // }
 
-    TemperatureNP.s = IPS_OK;
-    IDSetNumber(&TemperatureNP, nullptr);
-    TemperatureChipVP.s = IPS_OK;
-    IDSetNumber(&TemperatureChipVP, nullptr);
-    VoltageVP.s = IPS_OK;
-    IDSetNumber(&VoltageVP, nullptr);
-    FOCUSVersionVP.s = IPS_OK;
-    IDSetNumber(&FOCUSVersionVP, nullptr);
-    BOARDVersionVP.s = IPS_OK;
-    IDSetNumber(&BOARDVersionVP, nullptr);
+    TemperatureNP.setState(IPS_OK);
+    TemperatureChipNP.setState(IPS_OK);
+    VoltageNP.setState(IPS_OK);
+    FOCUSVersionNP.setState(IPS_OK);
+    BOARDVersionNP.setState(IPS_OK);
+    TemperatureNP.apply();
+    TemperatureChipNP.apply();
+    VoltageNP.apply();
+    FOCUSVersionNP.apply();
+    BOARDVersionNP.apply();
 }
