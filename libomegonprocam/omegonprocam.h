@@ -1,7 +1,7 @@
 #ifndef __omegonprocam_h__
 #define __omegonprocam_h__
 
-/* Version: 55.24239.20231224 */
+/* Version: 55.24621.20240204 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -220,9 +220,9 @@ typedef struct Omegonprocam_t { int unused; } *HOmegonprocam;
 #define OMEGONPROCAM_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define OMEGONPROCAM_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define OMEGONPROCAM_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
-#define OMEGONPROCAM_AUTOEXPO_STEP_DEF        1000    /* auto exposure step: thousandths */
-#define OMEGONPROCAM_AUTOEXPO_STEP_MIN        1       /* auto exposure step: thousandths */
-#define OMEGONPROCAM_AUTOEXPO_STEP_MAX        1000    /* auto exposure step: thousandths */
+#define OMEGONPROCAM_AUTOEXPO_DAMP_DEF        0      /* auto exposure damp: thousandths */
+#define OMEGONPROCAM_AUTOEXPO_DAMP_MIN        0       /* auto exposure damp: thousandths */
+#define OMEGONPROCAM_AUTOEXPO_DAMP_MAX        1000    /* auto exposure damp: thousandths */
 #define OMEGONPROCAM_BANDWIDTH_DEF            100     /* bandwidth */
 #define OMEGONPROCAM_BANDWIDTH_MIN            1       /* bandwidth */
 #define OMEGONPROCAM_BANDWIDTH_MAX            100     /* bandwidth */
@@ -230,7 +230,7 @@ typedef struct Omegonprocam_t { int unused; } *HOmegonprocam;
 #define OMEGONPROCAM_DENOISE_MIN              0       /* denoise */
 #define OMEGONPROCAM_DENOISE_MAX              100     /* denoise */
 #define OMEGONPROCAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
-#define OMEGONPROCAM_TEC_TARGET_DEF           100     /* 0.0 degrees Celsius */
+#define OMEGONPROCAM_TEC_TARGET_DEF           100     /* 10.0 degrees Celsius */
 #define OMEGONPROCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define OMEGONPROCAM_HEARTBEAT_MIN            100     /* millisecond */
 #define OMEGONPROCAM_HEARTBEAT_MAX            10000   /* millisecond */
@@ -289,7 +289,7 @@ typedef struct {
 } OmegonprocamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 55.24239.20231224
+    get the version of this dll/so/dylib, which is: 55.24621.20240204
 */
 #if defined(_WIN32)
 OMEGONPROCAM_API(const wchar_t*)   Omegonprocam_Version();
@@ -344,10 +344,10 @@ OMEGONPROCAM_API(void)     Omegonprocam_Close(HOmegonprocam h);
 #define OMEGONPROCAM_EVENT_LEVELRANGE        0x000c    /* level range changed */
 #define OMEGONPROCAM_EVENT_AUTOEXPO_CONV     0x000d    /* auto exposure convergence */
 #define OMEGONPROCAM_EVENT_AUTOEXPO_CONVFAIL 0x000e    /* auto exposure once mode convergence failed */
+#define OMEGONPROCAM_EVENT_FPNC              0x000f    /* fix pattern noise correction status changed */
 #define OMEGONPROCAM_EVENT_ERROR             0x0080    /* generic error */
 #define OMEGONPROCAM_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define OMEGONPROCAM_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
-#define OMEGONPROCAM_EVENT_AFFEEDBACK        0x0083    /* auto focus feedback information */
 #define OMEGONPROCAM_EVENT_FOCUSPOS          0x0084    /* focus positon */
 #define OMEGONPROCAM_EVENT_NOPACKETTIMEOUT   0x0085    /* no packet timeout */
 #define OMEGONPROCAM_EVENT_EXPO_START        0x4000    /* hardware event: exposure start */
@@ -481,7 +481,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_SnapR(HOmegonprocam h, unsigned nResolut
 */
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_Trigger(HOmegonprocam h, unsigned short nNumber);
 
-/* 
+/*
     trigger synchronously
     nTimeout:   0:              by default, exposure * 102% + 4000 milliseconds
                 0xffffffff:     wait infinite
@@ -564,6 +564,7 @@ typedef void (__stdcall* PIOMEGONPROCAM_HISTOGRAM_CALLBACK)(const float aHistY[2
 typedef void (__stdcall* PIOMEGONPROCAM_CHROME_CALLBACK)(void* ctxChrome);
 typedef void (__stdcall* PIOMEGONPROCAM_PROGRESS)(int percent, void* ctxProgress);
 #endif
+
 /*
 * nFlag & 0x00008000: mono or color
 * nFlag & 0x0f: bitdepth
@@ -586,7 +587,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AutoExpoEnable(HOmegonprocam h, int 
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_AutoExpoTarget(HOmegonprocam h, unsigned short* Target);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AutoExpoTarget(HOmegonprocam h, unsigned short Target);
 
-/*set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
+/* set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AutoExpoRange(HOmegonprocam h, unsigned maxTime, unsigned minTime, unsigned short maxGain, unsigned short minGain);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_AutoExpoRange(HOmegonprocam h, unsigned* maxTime, unsigned* minTime, unsigned short* maxGain, unsigned short* minGain);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_MaxAutoExpoTimeAGain(HOmegonprocam h, unsigned maxTime, unsigned short maxGain);
@@ -641,6 +642,17 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_DfcImport(HOmegonprocam h, const wchar_t
 #else
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_DfcExport(HOmegonprocam h, const char* filepath);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_DfcImport(HOmegonprocam h, const char* filepath);
+#endif
+
+/* Fix Pattern Noise Correction */
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_FpncOnce(HOmegonprocam h);
+
+#if defined(_WIN32)
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_FpncExport(HOmegonprocam h, const wchar_t* filepath);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_FpncImport(HOmegonprocam h, const wchar_t* filepath);
+#else
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_FpncExport(HOmegonprocam h, const char* filepath);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_FpncImport(HOmegonprocam h, const char* filepath);
 #endif
 
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_Hue(HOmegonprocam h, int Hue);
@@ -737,6 +749,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_Flush(HOmegonprocam h);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_Temperature(HOmegonprocam h, short* pTemperature);
 
 /* set the target temperature of the sensor or TEC, in 0.1 degrees Celsius (32 means 3.2 degrees Celsius, -35 means -3.5 degree Celsius)
+    set "-2730" or below means using the default value of this model
     return E_NOTIMPL if not supported
 */
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_Temperature(HOmegonprocam h, short nTemperature);
@@ -818,7 +831,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
 #define OMEGONPROCAM_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only while camea is NOT running. 0 = rgb, 1 = raw, default value: 0 */
 #define OMEGONPROCAM_OPTION_HISTOGRAM              0x05       /* 0 = only one, 1 = continue mode */
 #define OMEGONPROCAM_OPTION_BITDEPTH               0x06       /* 0 = 8 bits mode, 1 = 16 bits mode, subset of OMEGONPROCAM_OPTION_PIXEL_FORMAT */
-#define OMEGONPROCAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed */
+#define OMEGONPROCAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed, , set to "-1" means to use default fan speed */
 #define OMEGONPROCAM_OPTION_TEC                    0x08       /* 0 = turn off the thermoelectric cooler, 1 = turn on the thermoelectric cooler */
 #define OMEGONPROCAM_OPTION_LINEAR                 0x09       /* 0 = turn off the builtin linear tone mapping, 1 = turn on the builtin linear tone mapping, default value: 1 */
 #define OMEGONPROCAM_OPTION_CURVE                  0x0a       /* 0 = turn off the builtin curve tone mapping, 1 = turn on the builtin polynomial curve tone mapping, 2 = logarithmic curve tone mapping, default value: 2 */
@@ -826,7 +839,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
 #define OMEGONPROCAM_OPTION_RGB                    0x0c       /* 0 => RGB24; 1 => enable RGB48 format when bitdepth > 8; 2 => RGB32; 3 => 8 Bits Grey (only for mono camera); 4 => 16 Bits Grey (only for mono camera when bitdepth > 8); 5 => 64(RGB64) */
 #define OMEGONPROCAM_OPTION_COLORMATIX             0x0d       /* enable or disable the builtin color matrix, default value: 1 */
 #define OMEGONPROCAM_OPTION_WBGAIN                 0x0e       /* enable or disable the builtin white balance gain, default value: 1 */
-#define OMEGONPROCAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius */
+#define OMEGONPROCAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius. Set "-2730" or below means using the default for that model */
 #define OMEGONPROCAM_OPTION_AUTOEXP_POLICY         0x10       /* auto exposure policy:
                                                              0: Exposure Only
                                                              1: Exposure Preferred
@@ -899,9 +912,8 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
                                                              default: 1 (win), 0 (linux/macos)
                                                          */
 #define OMEGONPROCAM_OPTION_FOCUSPOS               0x24       /* focus positon */
-#define OMEGONPROCAM_OPTION_AFMODE                 0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:once focus; 3:conjugate calibration) */
-#define OMEGONPROCAM_OPTION_AFZONE                 0x26       /* auto focus zone */
-#define OMEGONPROCAM_OPTION_AFFEEDBACK             0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
+#define OMEGONPROCAM_OPTION_AFMODE                 0x25       /* auto focus mode, see OmegonprocamAFMode */
+#define OMEGONPROCAM_OPTION_AFSTATUS               0x27       /* auto focus status, see OmegonprocamAFStaus */
 #define OMEGONPROCAM_OPTION_TESTPATTERN            0x28       /* test pattern:
                                                             0: off
                                                             3: monochrome diagonal stripes
@@ -916,7 +928,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
 #define OMEGONPROCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
 #define OMEGONPROCAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
 #define OMEGONPROCAM_OPTION_RELOAD                 0x2f       /* reload the last frame in trigger mode */
-#define OMEGONPROCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback */
+#define OMEGONPROCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback: 0 => disable, 1 => enable, default: 0 */
 #define OMEGONPROCAM_OPTION_FRONTEND_DEQUE_LENGTH  0x31       /* frontend (raw) frame buffer deque length, range: [2, 1024], default: 4
                                                             All the memory will be pre-allocated when the camera starts, so, please attention to memory usage
                                                          */
@@ -1020,8 +1032,8 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
 #define OMEGONPROCAM_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
 #define OMEGONPROCAM_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
 #define OMEGONPROCAM_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
-#define OMEGONPROCAM_OPTION_AUTOEXP_EXPOTIME_STEP  0x60       /* Auto exposure: time step (thousandths) */
-#define OMEGONPROCAM_OPTION_AUTOEXP_GAIN_STEP      0x61       /* Auto exposure: gain step (thousandths) */
+#define OMEGONPROCAM_OPTION_AUTOEXP_EXPOTIME_DAMP  0x60       /* Auto exposure damp: time (thousandths) */
+#define OMEGONPROCAM_OPTION_AUTOEXP_GAIN_DAMP      0x61       /* Auto exposure damp: gain (thousandths) */
 #define OMEGONPROCAM_OPTION_MOTOR_NUMBER           0x62       /* range: [1, 20] */
 #define OMEGONPROCAM_OPTION_MOTOR_POS              0x10000000 /* range: [1, 702] */
 #define OMEGONPROCAM_OPTION_PSEUDO_COLOR_START     0x63       /* Pseudo: start color, BGR format */
@@ -1053,6 +1065,25 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_feed_Pipe(HOmegonprocam h, unsigned pipe
                                                                     23 => turbo
                                                          */
 #define OMEGONPROCAM_OPTION_LOW_POWERCONSUMPTION   0x66       /* Low Power Consumption: 0 => disable, 1 => enable */
+#define OMEGONPROCAM_OPTION_FPNC                   0x67       /* Fix Pattern Noise Correction
+                                                             set:
+                                                                 0: disable
+                                                                 1: enable
+                                                                -1: reset
+                                                                 (0xff000000 | n): set the average number to n, [1~255]
+                                                             get:
+                                                                 (val & 0xff): 0 => disable, 1 => enable, 2 => inited
+                                                                 ((val & 0xff00) >> 8): sequence
+                                                                 ((val & 0xff0000) >> 16): average number
+                                                         */
+#define OMEGONPROCAM_OPTION_OVEREXP_POLICY         0x68       /* Auto exposure over exposure policy: when overexposed,
+                                                                0 => directly reduce the exposure time/gain to the minimum value; or
+                                                                1 => reduce exposure time/gain in proportion to current and target brightness.
+                                                            The advantage of policy 0 is that the convergence speed is faster, but there is black screen.
+                                                            Policy 1 avoids the black screen, but the convergence speed is slower.
+                                                            Default: 0
+                                                         */
+#define OMEGONPROCAM_OPTION_READOUT_MODE           0x69       /* Readout mode: 0 = IWR (Integrate While Read), 1 = ITR (Integrate Then Read) */
 
 /* pixel format */
 #define OMEGONPROCAM_PIXELFORMAT_RAW8              0x00
@@ -1220,6 +1251,93 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_rwc_Flash(HOmegonprocam h, unsigned acti
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_write_UART(HOmegonprocam h, const unsigned char* pData, unsigned nDataLen);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_read_UART(HOmegonprocam h, unsigned char* pBuffer, unsigned nBufferLen);
 
+/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
+typedef void (__stdcall* POMEGONPROCAM_HOTPLUG)(void* ctxHotPlug);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_GigeEnable(POMEGONPROCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+
+/*
+USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+  (1) On Windows, please refer to the MSDN
+       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
+       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
+  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
+  (3) On Linux / macOS, please call this function to register the callback function.
+      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Omegonprocam_EnumV2(...) again to enum the cameras.
+  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
+Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
+*/
+#if !defined(_WIN32) && !defined(__ANDROID__)
+OMEGONPROCAM_API(void)   Omegonprocam_HotPlug(POMEGONPROCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+#endif
+
+typedef struct
+{
+    unsigned short lensID;
+    unsigned char  lensType;
+    unsigned char  statusAfmf;      /* LENS_AF = 0x00,  LENS_MF = 0x80 */
+
+    unsigned short maxFocalLength;
+    unsigned short curFocalLength;
+    unsigned short minFocalLength;
+
+    short          farFM;           /* focus motor, absolute value */
+    short          curFM;           /* current focus motor */
+    short          nearFM;
+
+    unsigned short maxFocusDistance;
+    unsigned short minFocusDistance;
+
+    char           curAM;
+    unsigned char  maxAM;           /* maximum Aperture, mimimum F# */
+    unsigned char  minAM;           /* mimimum Aperture, maximum F# */
+    unsigned char  posAM;           /* used for set aperture motor to posAM, it is an index */
+    int            posFM;           /* used for set focus motor to posFM */
+
+    unsigned       sizeFN;
+    const char**   arrayFN;
+} OmegonprocamLensInfo;
+
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_LensInfo(HOmegonprocam h, OmegonprocamLensInfo* pInfo);
+
+typedef enum
+{
+    OmegonprocamAFMode_CALIBRATE = 0x0,/* lens calibration mode */
+    OmegonprocamAFMode_MANUAL    = 0x1,/* manual focus mode */
+    OmegonprocamAFMode_ONCE      = 0x2,/* onepush focus mode */
+    OmegonprocamAFMode_AUTO      = 0x3,/* autofocus mode */
+    OmegonprocamAFMode_NONE      = 0x4,/* no active selection of focus mode */
+    OmegonprocamAFMode_IDLE      = 0x5,
+    OmegonprocamAFMode_UNUSED    = 0xffffffff
+} OmegonprocamAFMode;
+
+typedef enum
+{
+    OmegonprocamAFStatus_PEAKPOINT    = 0x1,/* Focus completed, find the focus position */
+    OmegonprocamAFStatus_DEFOCUS      = 0x2,/* End of focus, defocus */
+    OmegonprocamAFStatus_NEAR         = 0x3,/* Focusing ended, object too close */
+    OmegonprocamAFStatus_FAR          = 0x4,/* Focusing ended, object too far */
+    OmegonprocamAFStatus_ROICHANGED   = 0x5,/* Focusing ends, roi changes */
+    OmegonprocamAFStatus_SCENECHANGED = 0x6,/* Focusing ends, scene changes */
+    OmegonprocamAFStatus_MODECHANGED  = 0x7,/* The end of focusing and the change in focusing mode is usually determined by the user moderator */
+    OmegonprocamAFStatus_UNFINISH     = 0x8,/* The focus is not complete. At the beginning of focusing, it will be set as incomplete */
+    OmegonprocamAfStatus_UNUSED       = 0xffffffff
+} OmegonprocamAFStatus;/* Focus Status */
+
+typedef struct {
+    OmegonprocamAFMode    AF_Mode;
+    OmegonprocamAFStatus  AF_Status;
+    unsigned char    AF_LensAP_Update_Flag;  /* mark for whether the lens aperture is calibrated */
+    unsigned char    AF_LensManual_Flag;     /* if true, allows manual operation */
+    unsigned char    Reserved[2];
+} OmegonprocamAFState;
+
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_AFState(HOmegonprocam h, OmegonprocamAFState* pState);
+
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AFMode(HOmegonprocam h, OmegonprocamAFMode mode);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AFRoi(HOmegonprocam h, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AFAperture(HOmegonprocam h, int iAperture);
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_AFFMPos(HOmegonprocam h, int iFMPos);
+
 /*  simulate replug:
     return > 0, the number of device has been replug
     return = 0, no device found
@@ -1231,21 +1349,6 @@ OMEGONPROCAM_API(HRESULT) Omegonprocam_Replug(const wchar_t* camId);
 #else
 OMEGONPROCAM_API(HRESULT) Omegonprocam_Replug(const char* camId);
 #endif
-
-#ifndef __OMEGONPROCAMAFPARAM_DEFINED__
-#define __OMEGONPROCAMAFPARAM_DEFINED__
-typedef struct {
-    int imax;    /* maximum auto focus sensor board positon */
-    int imin;    /* minimum auto focus sensor board positon */
-    int idef;    /* conjugate calibration positon */
-    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int zoneh;   /* zone horizontal */
-    int zonev;   /* zone vertical */
-} OmegonprocamAfParam;
-#endif
-
-OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_AfParam(HOmegonprocam h, OmegonprocamAfParam* pAfParam);
 
 OMEGONPROCAM_API(const OmegonprocamModelV2**) Omegonprocam_all_Model(); /* return all supported USB model array */
 OMEGONPROCAM_API(const OmegonprocamModelV2*) Omegonprocam_query_Model(HOmegonprocam h);
@@ -1273,6 +1376,35 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_InitWBGain(HOmegonprocam h, const un
     get the frame rate: framerate (fps) = Frame * 1000.0 / nTime
 */
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_FrameRate(HOmegonprocam h, unsigned* nFrame, unsigned* nTime, unsigned* nTotalFrame);
+
+/* AAF: Astro Auto Focuser */
+#define OMEGONPROCAM_AAF_SETPOSITION     0x01
+#define OMEGONPROCAM_AAF_GETPOSITION     0x02
+#define OMEGONPROCAM_AAF_SETZERO         0x03
+#define OMEGONPROCAM_AAF_GETZERO         0x04
+#define OMEGONPROCAM_AAF_SETDIRECTION    0x05
+#define OMEGONPROCAM_AAF_GETDIRECTION    0x06
+#define OMEGONPROCAM_AAF_SETMAXINCREMENT 0x07
+#define OMEGONPROCAM_AAF_GETMAXINCREMENT 0x08
+#define OMEGONPROCAM_AAF_SETFINE         0x09
+#define OMEGONPROCAM_AAF_GETFINE         0x0a
+#define OMEGONPROCAM_AAF_SETCOARSE       0x0b
+#define OMEGONPROCAM_AAF_GETCOARSE       0x0c
+#define OMEGONPROCAM_AAF_SETBUZZER       0x0d
+#define OMEGONPROCAM_AAF_GETBUZZER       0x0e
+#define OMEGONPROCAM_AAF_SETBACKLASH     0x0f
+#define OMEGONPROCAM_AAF_GETBACKLASH     0x10
+#define OMEGONPROCAM_AAF_GETAMBIENTTEMP  0x12
+#define OMEGONPROCAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
+#define OMEGONPROCAM_AAF_ISMOVING        0x16
+#define OMEGONPROCAM_AAF_HALT            0x17
+#define OMEGONPROCAM_AAF_SETMAXSTEP      0x1b
+#define OMEGONPROCAM_AAF_GETMAXSTEP      0x1c
+#define OMEGONPROCAM_AAF_GETSTEPSIZE     0x1e
+#define OMEGONPROCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
+#define OMEGONPROCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
+#define OMEGONPROCAM_AAF_RANGEDEF        0xff  /* Range: default value */
+OMEGONPROCAM_API(HRESULT) Omegonprocam_AAF(HOmegonprocam h, int action, int outVal, int* inVal);
 
 /* astronomy: for ST4 guide, please see: ASCOM Platform Help ICameraV2.
     nDirect: 0 = North, 1 = South, 2 = East, 3 = West, 4 = Stop
@@ -1309,6 +1441,23 @@ OMEGONPROCAM_API(double)   Omegonprocam_calc_ClarityFactorV2(const void* pImageD
                     64 => RGB64
 */
 OMEGONPROCAM_API(void)     Omegonprocam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+
+
+#ifndef __OMEGONPROCAMFOCUSMOTOR_DEFINED__
+#define __OMEGONPROCAMFOCUSMOTOR_DEFINED__
+typedef struct {
+    int imax;    /* maximum auto focus sensor board positon */
+    int imin;    /* minimum auto focus sensor board positon */
+    int idef;    /* conjugate calibration positon */
+    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int zoneh;   /* zone horizontal */
+    int zonev;   /* zone vertical */
+} OmegonprocamFocusMotor;
+#endif
+
+OMEGONPROCAM_DEPRECATED
+OMEGONPROCAM_API(HRESULT)  Omegonprocam_get_FocusMotor(HOmegonprocam h, OmegonprocamFocusMotor* pFocusMotor);
 
 /*
     obsolete, please use Omegonprocam_deBayerV2
@@ -1403,56 +1552,8 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_AwbOnePush(HOmegonprocam h, PIOMEGONPROC
 OMEGONPROCAM_DEPRECATED
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_AbbOnePush(HOmegonprocam h, PIOMEGONPROCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
-/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
-typedef void (__stdcall* POMEGONPROCAM_HOTPLUG)(void* ctxHotPlug);
-OMEGONPROCAM_API(HRESULT)  Omegonprocam_GigeEnable(POMEGONPROCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-
-/*
-USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
-  (1) On Windows, please refer to the MSDN
-       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
-       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
-  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
-  (3) On Linux / macOS, please call this function to register the callback function.
-      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Omegonprocam_EnumV2(...) again to enum the cameras.
-  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
-Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
-*/
-#if !defined(_WIN32) && !defined(__ANDROID__)
-OMEGONPROCAM_API(void)   Omegonprocam_HotPlug(POMEGONPROCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-#endif
-
-/* AAF: Astro Auto Focuser */
-#define OMEGONPROCAM_AAF_SETPOSITION     0x01
-#define OMEGONPROCAM_AAF_GETPOSITION     0x02
-#define OMEGONPROCAM_AAF_SETZERO         0x03
-#define OMEGONPROCAM_AAF_GETZERO         0x04
-#define OMEGONPROCAM_AAF_SETDIRECTION    0x05
-#define OMEGONPROCAM_AAF_GETDIRECTION    0x06
-#define OMEGONPROCAM_AAF_SETMAXINCREMENT 0x07
-#define OMEGONPROCAM_AAF_GETMAXINCREMENT 0x08
-#define OMEGONPROCAM_AAF_SETFINE         0x09
-#define OMEGONPROCAM_AAF_GETFINE         0x0a
-#define OMEGONPROCAM_AAF_SETCOARSE       0x0b
-#define OMEGONPROCAM_AAF_GETCOARSE       0x0c
-#define OMEGONPROCAM_AAF_SETBUZZER       0x0d
-#define OMEGONPROCAM_AAF_GETBUZZER       0x0e
-#define OMEGONPROCAM_AAF_SETBACKLASH     0x0f
-#define OMEGONPROCAM_AAF_GETBACKLASH     0x10
-#define OMEGONPROCAM_AAF_GETAMBIENTTEMP  0x12
-#define OMEGONPROCAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
-#define OMEGONPROCAM_AAF_ISMOVING        0x16
-#define OMEGONPROCAM_AAF_HALT            0x17
-#define OMEGONPROCAM_AAF_SETMAXSTEP      0x1b
-#define OMEGONPROCAM_AAF_GETMAXSTEP      0x1c
-#define OMEGONPROCAM_AAF_GETSTEPSIZE     0x1e
-#define OMEGONPROCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
-#define OMEGONPROCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
-#define OMEGONPROCAM_AAF_RANGEDEF        0xff  /* Range: default value */
-OMEGONPROCAM_API(HRESULT) Omegonprocam_AAF(HOmegonprocam h, int action, int outVal, int* inVal);
-
 #if defined(_WIN32)
-/* Omegonprocam_put_TempTintInit is obsolete, recommend using Omegonprocam_AwbOnce. */
+/* Omegonprocam_put_TempTintInit is obsolete, recommend using Omegonprocam_AwbOnce */
 OMEGONPROCAM_DEPRECATED
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_put_TempTintInit(HOmegonprocam h, PIOMEGONPROCAM_TEMPTINT_CALLBACK funTT, void* ctxTT);
 
@@ -1516,8 +1617,7 @@ OMEGONPROCAM_API(HRESULT)  Omegonprocam_log_File(const
 #else
                                        char*
 #endif
-                                       filepath
-);
+                                       filepath);
 OMEGONPROCAM_API(HRESULT)  Omegonprocam_log_Level(unsigned level); /* 0 => none; 1 => error; 2 => debug; 3 => verbose */
 
 #if defined(_WIN32)

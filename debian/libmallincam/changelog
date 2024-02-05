@@ -1,3 +1,9 @@
+libmallincam (55.24621.20240204) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom; Mon, 05 Feb 2024 08:24:08 +0800
+
 libmallincam (1.54.2) jammy; urgency=medium
 
   * Upstream release
