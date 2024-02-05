@@ -1,7 +1,7 @@
 #ifndef __ogmacam_h__
 #define __ogmacam_h__
 
-/* Version: 55.24239.20231224 */
+/* Version: 55.24621.20240204 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -220,9 +220,9 @@ typedef struct Ogmacam_t { int unused; } *HOgmacam;
 #define OGMACAM_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define OGMACAM_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define OGMACAM_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
-#define OGMACAM_AUTOEXPO_STEP_DEF        1000    /* auto exposure step: thousandths */
-#define OGMACAM_AUTOEXPO_STEP_MIN        1       /* auto exposure step: thousandths */
-#define OGMACAM_AUTOEXPO_STEP_MAX        1000    /* auto exposure step: thousandths */
+#define OGMACAM_AUTOEXPO_DAMP_DEF        0      /* auto exposure damp: thousandths */
+#define OGMACAM_AUTOEXPO_DAMP_MIN        0       /* auto exposure damp: thousandths */
+#define OGMACAM_AUTOEXPO_DAMP_MAX        1000    /* auto exposure damp: thousandths */
 #define OGMACAM_BANDWIDTH_DEF            100     /* bandwidth */
 #define OGMACAM_BANDWIDTH_MIN            1       /* bandwidth */
 #define OGMACAM_BANDWIDTH_MAX            100     /* bandwidth */
@@ -230,7 +230,7 @@ typedef struct Ogmacam_t { int unused; } *HOgmacam;
 #define OGMACAM_DENOISE_MIN              0       /* denoise */
 #define OGMACAM_DENOISE_MAX              100     /* denoise */
 #define OGMACAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
-#define OGMACAM_TEC_TARGET_DEF           100     /* 0.0 degrees Celsius */
+#define OGMACAM_TEC_TARGET_DEF           100     /* 10.0 degrees Celsius */
 #define OGMACAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define OGMACAM_HEARTBEAT_MIN            100     /* millisecond */
 #define OGMACAM_HEARTBEAT_MAX            10000   /* millisecond */
@@ -289,7 +289,7 @@ typedef struct {
 } OgmacamDeviceV2; /* camera instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 55.24239.20231224
+    get the version of this dll/so/dylib, which is: 55.24621.20240204
 */
 #if defined(_WIN32)
 OGMACAM_API(const wchar_t*)   Ogmacam_Version();
@@ -344,10 +344,10 @@ OGMACAM_API(void)     Ogmacam_Close(HOgmacam h);
 #define OGMACAM_EVENT_LEVELRANGE        0x000c    /* level range changed */
 #define OGMACAM_EVENT_AUTOEXPO_CONV     0x000d    /* auto exposure convergence */
 #define OGMACAM_EVENT_AUTOEXPO_CONVFAIL 0x000e    /* auto exposure once mode convergence failed */
+#define OGMACAM_EVENT_FPNC              0x000f    /* fix pattern noise correction status changed */
 #define OGMACAM_EVENT_ERROR             0x0080    /* generic error */
 #define OGMACAM_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define OGMACAM_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
-#define OGMACAM_EVENT_AFFEEDBACK        0x0083    /* auto focus feedback information */
 #define OGMACAM_EVENT_FOCUSPOS          0x0084    /* focus positon */
 #define OGMACAM_EVENT_NOPACKETTIMEOUT   0x0085    /* no packet timeout */
 #define OGMACAM_EVENT_EXPO_START        0x4000    /* hardware event: exposure start */
@@ -481,7 +481,7 @@ OGMACAM_API(HRESULT)  Ogmacam_SnapR(HOgmacam h, unsigned nResolutionIndex, unsig
 */
 OGMACAM_API(HRESULT)  Ogmacam_Trigger(HOgmacam h, unsigned short nNumber);
 
-/* 
+/*
     trigger synchronously
     nTimeout:   0:              by default, exposure * 102% + 4000 milliseconds
                 0xffffffff:     wait infinite
@@ -564,6 +564,7 @@ typedef void (__stdcall* PIOGMACAM_HISTOGRAM_CALLBACK)(const float aHistY[256], 
 typedef void (__stdcall* PIOGMACAM_CHROME_CALLBACK)(void* ctxChrome);
 typedef void (__stdcall* PIOGMACAM_PROGRESS)(int percent, void* ctxProgress);
 #endif
+
 /*
 * nFlag & 0x00008000: mono or color
 * nFlag & 0x0f: bitdepth
@@ -586,7 +587,7 @@ OGMACAM_API(HRESULT)  Ogmacam_put_AutoExpoEnable(HOgmacam h, int bAutoExposure);
 OGMACAM_API(HRESULT)  Ogmacam_get_AutoExpoTarget(HOgmacam h, unsigned short* Target);
 OGMACAM_API(HRESULT)  Ogmacam_put_AutoExpoTarget(HOgmacam h, unsigned short Target);
 
-/*set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
+/* set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
 OGMACAM_API(HRESULT)  Ogmacam_put_AutoExpoRange(HOgmacam h, unsigned maxTime, unsigned minTime, unsigned short maxGain, unsigned short minGain);
 OGMACAM_API(HRESULT)  Ogmacam_get_AutoExpoRange(HOgmacam h, unsigned* maxTime, unsigned* minTime, unsigned short* maxGain, unsigned short* minGain);
 OGMACAM_API(HRESULT)  Ogmacam_put_MaxAutoExpoTimeAGain(HOgmacam h, unsigned maxTime, unsigned short maxGain);
@@ -641,6 +642,17 @@ OGMACAM_API(HRESULT)  Ogmacam_DfcImport(HOgmacam h, const wchar_t* filepath);
 #else
 OGMACAM_API(HRESULT)  Ogmacam_DfcExport(HOgmacam h, const char* filepath);
 OGMACAM_API(HRESULT)  Ogmacam_DfcImport(HOgmacam h, const char* filepath);
+#endif
+
+/* Fix Pattern Noise Correction */
+OGMACAM_API(HRESULT)  Ogmacam_FpncOnce(HOgmacam h);
+
+#if defined(_WIN32)
+OGMACAM_API(HRESULT)  Ogmacam_FpncExport(HOgmacam h, const wchar_t* filepath);
+OGMACAM_API(HRESULT)  Ogmacam_FpncImport(HOgmacam h, const wchar_t* filepath);
+#else
+OGMACAM_API(HRESULT)  Ogmacam_FpncExport(HOgmacam h, const char* filepath);
+OGMACAM_API(HRESULT)  Ogmacam_FpncImport(HOgmacam h, const char* filepath);
 #endif
 
 OGMACAM_API(HRESULT)  Ogmacam_put_Hue(HOgmacam h, int Hue);
@@ -737,6 +749,7 @@ OGMACAM_API(HRESULT)  Ogmacam_Flush(HOgmacam h);
 OGMACAM_API(HRESULT)  Ogmacam_get_Temperature(HOgmacam h, short* pTemperature);
 
 /* set the target temperature of the sensor or TEC, in 0.1 degrees Celsius (32 means 3.2 degrees Celsius, -35 means -3.5 degree Celsius)
+    set "-2730" or below means using the default value of this model
     return E_NOTIMPL if not supported
 */
 OGMACAM_API(HRESULT)  Ogmacam_put_Temperature(HOgmacam h, short nTemperature);
@@ -818,7 +831,7 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
 #define OGMACAM_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only while camea is NOT running. 0 = rgb, 1 = raw, default value: 0 */
 #define OGMACAM_OPTION_HISTOGRAM              0x05       /* 0 = only one, 1 = continue mode */
 #define OGMACAM_OPTION_BITDEPTH               0x06       /* 0 = 8 bits mode, 1 = 16 bits mode, subset of OGMACAM_OPTION_PIXEL_FORMAT */
-#define OGMACAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed */
+#define OGMACAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed, , set to "-1" means to use default fan speed */
 #define OGMACAM_OPTION_TEC                    0x08       /* 0 = turn off the thermoelectric cooler, 1 = turn on the thermoelectric cooler */
 #define OGMACAM_OPTION_LINEAR                 0x09       /* 0 = turn off the builtin linear tone mapping, 1 = turn on the builtin linear tone mapping, default value: 1 */
 #define OGMACAM_OPTION_CURVE                  0x0a       /* 0 = turn off the builtin curve tone mapping, 1 = turn on the builtin polynomial curve tone mapping, 2 = logarithmic curve tone mapping, default value: 2 */
@@ -826,7 +839,7 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
 #define OGMACAM_OPTION_RGB                    0x0c       /* 0 => RGB24; 1 => enable RGB48 format when bitdepth > 8; 2 => RGB32; 3 => 8 Bits Grey (only for mono camera); 4 => 16 Bits Grey (only for mono camera when bitdepth > 8); 5 => 64(RGB64) */
 #define OGMACAM_OPTION_COLORMATIX             0x0d       /* enable or disable the builtin color matrix, default value: 1 */
 #define OGMACAM_OPTION_WBGAIN                 0x0e       /* enable or disable the builtin white balance gain, default value: 1 */
-#define OGMACAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius */
+#define OGMACAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius. Set "-2730" or below means using the default for that model */
 #define OGMACAM_OPTION_AUTOEXP_POLICY         0x10       /* auto exposure policy:
                                                              0: Exposure Only
                                                              1: Exposure Preferred
@@ -899,9 +912,8 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
                                                              default: 1 (win), 0 (linux/macos)
                                                          */
 #define OGMACAM_OPTION_FOCUSPOS               0x24       /* focus positon */
-#define OGMACAM_OPTION_AFMODE                 0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:once focus; 3:conjugate calibration) */
-#define OGMACAM_OPTION_AFZONE                 0x26       /* auto focus zone */
-#define OGMACAM_OPTION_AFFEEDBACK             0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
+#define OGMACAM_OPTION_AFMODE                 0x25       /* auto focus mode, see OgmacamAFMode */
+#define OGMACAM_OPTION_AFSTATUS               0x27       /* auto focus status, see OgmacamAFStaus */
 #define OGMACAM_OPTION_TESTPATTERN            0x28       /* test pattern:
                                                             0: off
                                                             3: monochrome diagonal stripes
@@ -916,7 +928,7 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
 #define OGMACAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
 #define OGMACAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
 #define OGMACAM_OPTION_RELOAD                 0x2f       /* reload the last frame in trigger mode */
-#define OGMACAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback */
+#define OGMACAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback: 0 => disable, 1 => enable, default: 0 */
 #define OGMACAM_OPTION_FRONTEND_DEQUE_LENGTH  0x31       /* frontend (raw) frame buffer deque length, range: [2, 1024], default: 4
                                                             All the memory will be pre-allocated when the camera starts, so, please attention to memory usage
                                                          */
@@ -1020,8 +1032,8 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
 #define OGMACAM_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
 #define OGMACAM_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
 #define OGMACAM_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
-#define OGMACAM_OPTION_AUTOEXP_EXPOTIME_STEP  0x60       /* Auto exposure: time step (thousandths) */
-#define OGMACAM_OPTION_AUTOEXP_GAIN_STEP      0x61       /* Auto exposure: gain step (thousandths) */
+#define OGMACAM_OPTION_AUTOEXP_EXPOTIME_DAMP  0x60       /* Auto exposure damp: time (thousandths) */
+#define OGMACAM_OPTION_AUTOEXP_GAIN_DAMP      0x61       /* Auto exposure damp: gain (thousandths) */
 #define OGMACAM_OPTION_MOTOR_NUMBER           0x62       /* range: [1, 20] */
 #define OGMACAM_OPTION_MOTOR_POS              0x10000000 /* range: [1, 702] */
 #define OGMACAM_OPTION_PSEUDO_COLOR_START     0x63       /* Pseudo: start color, BGR format */
@@ -1053,6 +1065,25 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
                                                                     23 => turbo
                                                          */
 #define OGMACAM_OPTION_LOW_POWERCONSUMPTION   0x66       /* Low Power Consumption: 0 => disable, 1 => enable */
+#define OGMACAM_OPTION_FPNC                   0x67       /* Fix Pattern Noise Correction
+                                                             set:
+                                                                 0: disable
+                                                                 1: enable
+                                                                -1: reset
+                                                                 (0xff000000 | n): set the average number to n, [1~255]
+                                                             get:
+                                                                 (val & 0xff): 0 => disable, 1 => enable, 2 => inited
+                                                                 ((val & 0xff00) >> 8): sequence
+                                                                 ((val & 0xff0000) >> 16): average number
+                                                         */
+#define OGMACAM_OPTION_OVEREXP_POLICY         0x68       /* Auto exposure over exposure policy: when overexposed,
+                                                                0 => directly reduce the exposure time/gain to the minimum value; or
+                                                                1 => reduce exposure time/gain in proportion to current and target brightness.
+                                                            The advantage of policy 0 is that the convergence speed is faster, but there is black screen.
+                                                            Policy 1 avoids the black screen, but the convergence speed is slower.
+                                                            Default: 0
+                                                         */
+#define OGMACAM_OPTION_READOUT_MODE           0x69       /* Readout mode: 0 = IWR (Integrate While Read), 1 = ITR (Integrate Then Read) */
 
 /* pixel format */
 #define OGMACAM_PIXELFORMAT_RAW8              0x00
@@ -1220,6 +1251,93 @@ OGMACAM_API(HRESULT)  Ogmacam_rwc_Flash(HOgmacam h, unsigned action, unsigned ad
 OGMACAM_API(HRESULT)  Ogmacam_write_UART(HOgmacam h, const unsigned char* pData, unsigned nDataLen);
 OGMACAM_API(HRESULT)  Ogmacam_read_UART(HOgmacam h, unsigned char* pBuffer, unsigned nBufferLen);
 
+/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
+typedef void (__stdcall* POGMACAM_HOTPLUG)(void* ctxHotPlug);
+OGMACAM_API(HRESULT)  Ogmacam_GigeEnable(POGMACAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+
+/*
+USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+  (1) On Windows, please refer to the MSDN
+       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
+       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
+  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
+  (3) On Linux / macOS, please call this function to register the callback function.
+      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Ogmacam_EnumV2(...) again to enum the cameras.
+  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
+Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
+*/
+#if !defined(_WIN32) && !defined(__ANDROID__)
+OGMACAM_API(void)   Ogmacam_HotPlug(POGMACAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+#endif
+
+typedef struct
+{
+    unsigned short lensID;
+    unsigned char  lensType;
+    unsigned char  statusAfmf;      /* LENS_AF = 0x00,  LENS_MF = 0x80 */
+
+    unsigned short maxFocalLength;
+    unsigned short curFocalLength;
+    unsigned short minFocalLength;
+
+    short          farFM;           /* focus motor, absolute value */
+    short          curFM;           /* current focus motor */
+    short          nearFM;
+
+    unsigned short maxFocusDistance;
+    unsigned short minFocusDistance;
+
+    char           curAM;
+    unsigned char  maxAM;           /* maximum Aperture, mimimum F# */
+    unsigned char  minAM;           /* mimimum Aperture, maximum F# */
+    unsigned char  posAM;           /* used for set aperture motor to posAM, it is an index */
+    int            posFM;           /* used for set focus motor to posFM */
+
+    unsigned       sizeFN;
+    const char**   arrayFN;
+} OgmacamLensInfo;
+
+OGMACAM_API(HRESULT)  Ogmacam_get_LensInfo(HOgmacam h, OgmacamLensInfo* pInfo);
+
+typedef enum
+{
+    OgmacamAFMode_CALIBRATE = 0x0,/* lens calibration mode */
+    OgmacamAFMode_MANUAL    = 0x1,/* manual focus mode */
+    OgmacamAFMode_ONCE      = 0x2,/* onepush focus mode */
+    OgmacamAFMode_AUTO      = 0x3,/* autofocus mode */
+    OgmacamAFMode_NONE      = 0x4,/* no active selection of focus mode */
+    OgmacamAFMode_IDLE      = 0x5,
+    OgmacamAFMode_UNUSED    = 0xffffffff
+} OgmacamAFMode;
+
+typedef enum
+{
+    OgmacamAFStatus_PEAKPOINT    = 0x1,/* Focus completed, find the focus position */
+    OgmacamAFStatus_DEFOCUS      = 0x2,/* End of focus, defocus */
+    OgmacamAFStatus_NEAR         = 0x3,/* Focusing ended, object too close */
+    OgmacamAFStatus_FAR          = 0x4,/* Focusing ended, object too far */
+    OgmacamAFStatus_ROICHANGED   = 0x5,/* Focusing ends, roi changes */
+    OgmacamAFStatus_SCENECHANGED = 0x6,/* Focusing ends, scene changes */
+    OgmacamAFStatus_MODECHANGED  = 0x7,/* The end of focusing and the change in focusing mode is usually determined by the user moderator */
+    OgmacamAFStatus_UNFINISH     = 0x8,/* The focus is not complete. At the beginning of focusing, it will be set as incomplete */
+    OgmacamAfStatus_UNUSED       = 0xffffffff
+} OgmacamAFStatus;/* Focus Status */
+
+typedef struct {
+    OgmacamAFMode    AF_Mode;
+    OgmacamAFStatus  AF_Status;
+    unsigned char    AF_LensAP_Update_Flag;  /* mark for whether the lens aperture is calibrated */
+    unsigned char    AF_LensManual_Flag;     /* if true, allows manual operation */
+    unsigned char    Reserved[2];
+} OgmacamAFState;
+
+OGMACAM_API(HRESULT)  Ogmacam_get_AFState(HOgmacam h, OgmacamAFState* pState);
+
+OGMACAM_API(HRESULT)  Ogmacam_put_AFMode(HOgmacam h, OgmacamAFMode mode);
+OGMACAM_API(HRESULT)  Ogmacam_put_AFRoi(HOgmacam h, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
+OGMACAM_API(HRESULT)  Ogmacam_put_AFAperture(HOgmacam h, int iAperture);
+OGMACAM_API(HRESULT)  Ogmacam_put_AFFMPos(HOgmacam h, int iFMPos);
+
 /*  simulate replug:
     return > 0, the number of device has been replug
     return = 0, no device found
@@ -1231,21 +1349,6 @@ OGMACAM_API(HRESULT) Ogmacam_Replug(const wchar_t* camId);
 #else
 OGMACAM_API(HRESULT) Ogmacam_Replug(const char* camId);
 #endif
-
-#ifndef __OGMACAMAFPARAM_DEFINED__
-#define __OGMACAMAFPARAM_DEFINED__
-typedef struct {
-    int imax;    /* maximum auto focus sensor board positon */
-    int imin;    /* minimum auto focus sensor board positon */
-    int idef;    /* conjugate calibration positon */
-    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int zoneh;   /* zone horizontal */
-    int zonev;   /* zone vertical */
-} OgmacamAfParam;
-#endif
-
-OGMACAM_API(HRESULT)  Ogmacam_get_AfParam(HOgmacam h, OgmacamAfParam* pAfParam);
 
 OGMACAM_API(const OgmacamModelV2**) Ogmacam_all_Model(); /* return all supported USB model array */
 OGMACAM_API(const OgmacamModelV2*) Ogmacam_query_Model(HOgmacam h);
@@ -1273,6 +1376,35 @@ OGMACAM_API(HRESULT)  Ogmacam_put_InitWBGain(HOgmacam h, const unsigned short v[
     get the frame rate: framerate (fps) = Frame * 1000.0 / nTime
 */
 OGMACAM_API(HRESULT)  Ogmacam_get_FrameRate(HOgmacam h, unsigned* nFrame, unsigned* nTime, unsigned* nTotalFrame);
+
+/* AAF: Astro Auto Focuser */
+#define OGMACAM_AAF_SETPOSITION     0x01
+#define OGMACAM_AAF_GETPOSITION     0x02
+#define OGMACAM_AAF_SETZERO         0x03
+#define OGMACAM_AAF_GETZERO         0x04
+#define OGMACAM_AAF_SETDIRECTION    0x05
+#define OGMACAM_AAF_GETDIRECTION    0x06
+#define OGMACAM_AAF_SETMAXINCREMENT 0x07
+#define OGMACAM_AAF_GETMAXINCREMENT 0x08
+#define OGMACAM_AAF_SETFINE         0x09
+#define OGMACAM_AAF_GETFINE         0x0a
+#define OGMACAM_AAF_SETCOARSE       0x0b
+#define OGMACAM_AAF_GETCOARSE       0x0c
+#define OGMACAM_AAF_SETBUZZER       0x0d
+#define OGMACAM_AAF_GETBUZZER       0x0e
+#define OGMACAM_AAF_SETBACKLASH     0x0f
+#define OGMACAM_AAF_GETBACKLASH     0x10
+#define OGMACAM_AAF_GETAMBIENTTEMP  0x12
+#define OGMACAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
+#define OGMACAM_AAF_ISMOVING        0x16
+#define OGMACAM_AAF_HALT            0x17
+#define OGMACAM_AAF_SETMAXSTEP      0x1b
+#define OGMACAM_AAF_GETMAXSTEP      0x1c
+#define OGMACAM_AAF_GETSTEPSIZE     0x1e
+#define OGMACAM_AAF_RANGEMIN        0xfd  /* Range: min value */
+#define OGMACAM_AAF_RANGEMAX        0xfe  /* Range: max value */
+#define OGMACAM_AAF_RANGEDEF        0xff  /* Range: default value */
+OGMACAM_API(HRESULT) Ogmacam_AAF(HOgmacam h, int action, int outVal, int* inVal);
 
 /* astronomy: for ST4 guide, please see: ASCOM Platform Help ICameraV2.
     nDirect: 0 = North, 1 = South, 2 = East, 3 = West, 4 = Stop
@@ -1309,6 +1441,23 @@ OGMACAM_API(double)   Ogmacam_calc_ClarityFactorV2(const void* pImageData, int b
                     64 => RGB64
 */
 OGMACAM_API(void)     Ogmacam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+
+
+#ifndef __OGMACAMFOCUSMOTOR_DEFINED__
+#define __OGMACAMFOCUSMOTOR_DEFINED__
+typedef struct {
+    int imax;    /* maximum auto focus sensor board positon */
+    int imin;    /* minimum auto focus sensor board positon */
+    int idef;    /* conjugate calibration positon */
+    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int zoneh;   /* zone horizontal */
+    int zonev;   /* zone vertical */
+} OgmacamFocusMotor;
+#endif
+
+OGMACAM_DEPRECATED
+OGMACAM_API(HRESULT)  Ogmacam_get_FocusMotor(HOgmacam h, OgmacamFocusMotor* pFocusMotor);
 
 /*
     obsolete, please use Ogmacam_deBayerV2
@@ -1403,56 +1552,8 @@ OGMACAM_API(HRESULT)  Ogmacam_AwbOnePush(HOgmacam h, PIOGMACAM_TEMPTINT_CALLBACK
 OGMACAM_DEPRECATED
 OGMACAM_API(HRESULT)  Ogmacam_AbbOnePush(HOgmacam h, PIOGMACAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
-/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
-typedef void (__stdcall* POGMACAM_HOTPLUG)(void* ctxHotPlug);
-OGMACAM_API(HRESULT)  Ogmacam_GigeEnable(POGMACAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-
-/*
-USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
-  (1) On Windows, please refer to the MSDN
-       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
-       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
-  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
-  (3) On Linux / macOS, please call this function to register the callback function.
-      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Ogmacam_EnumV2(...) again to enum the cameras.
-  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
-Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
-*/
-#if !defined(_WIN32) && !defined(__ANDROID__)
-OGMACAM_API(void)   Ogmacam_HotPlug(POGMACAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-#endif
-
-/* AAF: Astro Auto Focuser */
-#define OGMACAM_AAF_SETPOSITION     0x01
-#define OGMACAM_AAF_GETPOSITION     0x02
-#define OGMACAM_AAF_SETZERO         0x03
-#define OGMACAM_AAF_GETZERO         0x04
-#define OGMACAM_AAF_SETDIRECTION    0x05
-#define OGMACAM_AAF_GETDIRECTION    0x06
-#define OGMACAM_AAF_SETMAXINCREMENT 0x07
-#define OGMACAM_AAF_GETMAXINCREMENT 0x08
-#define OGMACAM_AAF_SETFINE         0x09
-#define OGMACAM_AAF_GETFINE         0x0a
-#define OGMACAM_AAF_SETCOARSE       0x0b
-#define OGMACAM_AAF_GETCOARSE       0x0c
-#define OGMACAM_AAF_SETBUZZER       0x0d
-#define OGMACAM_AAF_GETBUZZER       0x0e
-#define OGMACAM_AAF_SETBACKLASH     0x0f
-#define OGMACAM_AAF_GETBACKLASH     0x10
-#define OGMACAM_AAF_GETAMBIENTTEMP  0x12
-#define OGMACAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
-#define OGMACAM_AAF_ISMOVING        0x16
-#define OGMACAM_AAF_HALT            0x17
-#define OGMACAM_AAF_SETMAXSTEP      0x1b
-#define OGMACAM_AAF_GETMAXSTEP      0x1c
-#define OGMACAM_AAF_GETSTEPSIZE     0x1e
-#define OGMACAM_AAF_RANGEMIN        0xfd  /* Range: min value */
-#define OGMACAM_AAF_RANGEMAX        0xfe  /* Range: max value */
-#define OGMACAM_AAF_RANGEDEF        0xff  /* Range: default value */
-OGMACAM_API(HRESULT) Ogmacam_AAF(HOgmacam h, int action, int outVal, int* inVal);
-
 #if defined(_WIN32)
-/* Ogmacam_put_TempTintInit is obsolete, recommend using Ogmacam_AwbOnce. */
+/* Ogmacam_put_TempTintInit is obsolete, recommend using Ogmacam_AwbOnce */
 OGMACAM_DEPRECATED
 OGMACAM_API(HRESULT)  Ogmacam_put_TempTintInit(HOgmacam h, PIOGMACAM_TEMPTINT_CALLBACK funTT, void* ctxTT);
 
@@ -1516,8 +1617,7 @@ OGMACAM_API(HRESULT)  Ogmacam_log_File(const
 #else
                                        char*
 #endif
-                                       filepath
-);
+                                       filepath);
 OGMACAM_API(HRESULT)  Ogmacam_log_Level(unsigned level); /* 0 => none; 1 => error; 2 => debug; 3 => verbose */
 
 #if defined(_WIN32)
