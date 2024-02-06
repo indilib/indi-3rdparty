@@ -293,6 +293,18 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                 return false;
             }
         }
+        else if (!strcmp(name, TrackingAutoAdjustmentSP.name))
+        {
+            if (IUUpdateSwitch(&TrackingAutoAdjustmentSP, states, names, n) < 0)
+                return false;
+
+            LOGF_INFO("Automatic tracking adjustment %s", isTrackingAutoAdjustmentEnabled() ? "enabled" : "disabled");
+
+            // The tracking state is stored directly in the property
+            TrackingAutoAdjustmentSP.s = IPS_OK;
+            IDSetSwitch(&TrackingAutoAdjustmentSP, nullptr);
+            return true;
+        }
     }
 
     bool result = true;
@@ -428,6 +440,10 @@ bool LX200StarGo::initProperties()
     IUFillNumber(&TrackingAdjustment[0], "ADJUSTMENT_RA", "Adj. (max +/- 5%)", "%.2f", -5.0, 5.0, 0.01, 0.0);
     IUFillNumberVector(&TrackingAdjustmentNP, TrackingAdjustment, 1, getDeviceName(), "TRACKING_ADJUSTMENT", "Tracking",
                        RA_DEC_TAB, IP_RW, 60.0, IPS_IDLE);
+    IUFillSwitch(&TrackingAutoAdjustmentS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&TrackingAutoAdjustmentS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitchVector(&TrackingAutoAdjustmentSP, TrackingAutoAdjustmentS, 2, getDeviceName(), "TRACKING_AUTO_ADJUSTMENT",
+                       "Tracking Auto Adj.", RA_DEC_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // meridian flip
     IUFillSwitch(&MeridianFlipModeS[0], "MERIDIAN_FLIP_AUTO", "auto", ISS_OFF);
@@ -461,6 +477,7 @@ bool LX200StarGo::updateProperties()
         defineProperty(&KeypadStatusSP);
         defineProperty(&SystemSpeedSlewSP);
         defineProperty(&TrackingAdjustmentNP);
+        defineProperty(&TrackingAutoAdjustmentSP);
         defineProperty(&MeridianFlipModeSP);
         defineProperty(&MountRequestDelayNP);
         defineProperty(&MountFirmwareInfoTP);
@@ -475,6 +492,7 @@ bool LX200StarGo::updateProperties()
         deleteProperty(GuidingSpeedNP.name);
         deleteProperty(ST4StatusSP.name);
         deleteProperty(KeypadStatusSP.name);
+        deleteProperty(TrackingAutoAdjustmentSP.name);
         deleteProperty(TrackingAdjustmentNP.name);
         deleteProperty(SystemSpeedSlewSP.name);
         deleteProperty(MeridianFlipModeSP.name);
@@ -1135,6 +1153,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
+    IUSaveConfigSwitch(fp, &TrackingAutoAdjustmentSP);
 
     if (loader.isFocuserAux1Activated())
         loader.getFocuserAux1()->saveConfigItems(fp);
@@ -2350,6 +2369,10 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
 
 void LX200StarGo::updateGuidingStatistics(TDirection direction, uint32_t ms)
 {
+    // skip if automatic tracking adjustment is disabled
+    if (!isTrackingAutoAdjustmentEnabled())
+        return;
+
     switch (direction)
     {
         case LX200_WEST:
@@ -2815,7 +2838,7 @@ void LX200StarGo::TimerHit()
 
     // update regularly the evaluation of the guiding statistics
     // and optimize the tracking
-    if (isConnected() && n >= 60)
+    if (isTrackingAutoAdjustmentEnabled() && isConnected() && n >= 60)
     {
         // sort the list first
         raPulsesList.sort();

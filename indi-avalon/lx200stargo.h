@@ -143,6 +143,8 @@ class LX200StarGo : public LX200Telescope
         // tracking adjustment setting
         INumberVectorProperty TrackingAdjustmentNP;
         INumber TrackingAdjustment[1];
+        ISwitchVectorProperty TrackingAutoAdjustmentSP;
+        ISwitch TrackingAutoAdjustmentS[2];
 
         // meridian flip
         ISwitchVectorProperty MeridianFlipModeSP;
@@ -267,6 +269,15 @@ class LX200StarGo : public LX200Telescope
         void updateGuidingStatistics(TDirection direction, uint32_t ms);
         // list holding all recent pulses
         std::list<int32_t> raPulsesList;
+
+        /**
+         * @brief isTrackingAutoAdjustmentEnabled helper function checking if the automatic
+         * tracking adjustment is enabled
+         */
+        bool isTrackingAutoAdjustmentEnabled()
+        {
+            return (IUFindOnSwitchIndex(&TrackingAutoAdjustmentSP) == DefaultDevice::INDI_ENABLED);
+        }
 
 };
 inline bool LX200StarGo::sendQuery(const char* cmd, char* response, int wait)
