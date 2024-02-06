@@ -27,6 +27,7 @@
 #include <memory>
 #include <cstring>
 #include <unistd.h>
+#include <numeric>
 #ifndef _WIN32
 #include <termios.h>
 #endif
@@ -2284,6 +2285,9 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
         MoveWE(DIRECTION_EAST, MOTION_START);
     }
 
+    // update statistics for tracking optimization
+    updateGuidingStatistics(LX200_EAST, ms);
+
     // Set slew to guiding
     IUResetSwitch(&SlewRateSP);
     SlewRateS[SLEW_GUIDE].s = ISS_ON;
@@ -2332,6 +2336,8 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
         MovementWES[DIRECTION_WEST].s = ISS_ON;
         MoveWE(DIRECTION_WEST, MOTION_START);
     }
+    // update statistics for tracking optimization
+    updateGuidingStatistics(LX200_WEST, ms);
 
     // Set slew to guiding
     IUResetSwitch(&SlewRateSP);
@@ -2340,6 +2346,21 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
     guide_direction_we = LX200_WEST;
     GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
+}
+
+void LX200StarGo::updateGuidingStatistics(TDirection direction, uint32_t ms)
+{
+    switch (direction)
+    {
+        case LX200_WEST:
+            raPulsesList.push_back(ms);
+            break;
+        case LX200_EAST:
+            raPulsesList.push_back(-ms);
+            break;
+        default:
+            break;
+    }
 }
 
 int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
@@ -2786,6 +2807,36 @@ bool LX200StarGo::getUTFOffset(double *offset)
     // LX200 TimeT Offset is defined at the number of hours added to LOCAL TIME to get TimeT. This is contrary to the normal definition.
     *offset = lx200_utc_offset * -1;
     return true;
+}
+
+void LX200StarGo::TimerHit()
+{
+    const int n = raPulsesList.size();
+
+    // update regularly the evaluation of the guiding statistics
+    // and optimize the tracking
+    if (isConnected() && n >= 60)
+    {
+        // sort the list first
+        raPulsesList.sort();
+
+        const int delta = n / 10;
+        auto start = raPulsesList.begin();
+        auto end = raPulsesList.end();
+        // skip first and last 10%
+        start.operator++(delta);
+        end.operator--(delta);
+
+        // take the average value of the pulses, cutting off 10% min and max values
+        int average = accumulate(start, end, 0) / (n - 2 * delta);
+        LOGF_INFO("Average RA pulse duration: %dms", average);
+
+        // reset values
+        raPulsesList.clear();
+    }
+
+    // hand over to base class
+    Telescope::TimerHit();
 }
 
 bool LX200StarGo::getTrackFrequency(double *value)

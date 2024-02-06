@@ -32,6 +32,8 @@
 #include <cstring>
 #include <string>
 #include <unistd.h>
+#include <queue>
+#include <list>
 
 #define LX200_TIMEOUT 5 /* FD timeout in seconds */
 #define RB_MAX_LEN    64
@@ -241,6 +243,7 @@ class LX200StarGo : public LX200Telescope
         virtual bool getLocalTime(char *timeString) override;
         virtual bool getLocalDate(char *dateString) override;
         virtual bool getUTFOffset(double *offset) override;
+        virtual void TimerHit() override;
 
         // Abort ALL motion
         virtual bool Abort() override;
@@ -254,6 +257,16 @@ class LX200StarGo : public LX200Telescope
 
         // AUX1 focuser
         bool activateFocuserAux1(bool activate);
+
+        /**
+         * @brief updateGuidingStatistics Update guiding statistics for optimizing the
+         * tracking adustments.
+         * @param direction direction of the guiding pulse
+         * @param ms pulse duration in milliseconds
+         */
+        void updateGuidingStatistics(TDirection direction, uint32_t ms);
+        // list holding all recent pulses
+        std::list<int32_t> raPulsesList;
 
 };
 inline bool LX200StarGo::sendQuery(const char* cmd, char* response, int wait)
