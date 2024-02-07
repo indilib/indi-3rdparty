@@ -1540,6 +1540,18 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
     {
         fitsKeywords.push_back({"OFFSET", np->value, 3, "Offset"});
     }
+
+    np = ControlNP.findWidgetByName("WB_R");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_R", np->value, 3, "White Balance - Red"});
+    }
+
+    np = ControlNP.findWidgetByName("WB_B");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
+    }
 }
 
 bool ASIBase::saveConfigItems(FILE *fp)
