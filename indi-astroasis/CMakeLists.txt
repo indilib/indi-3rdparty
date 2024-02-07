@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_astroasis CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -12,7 +12,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(ASTROASIS_VERSION_MAJOR 1)
-set(ASTROASIS_VERSION_MINOR 0)
+set(ASTROASIS_VERSION_MINOR 1)
 
 set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
 
@@ -35,11 +35,22 @@ ELSE()
 target_link_libraries(indi_oasis_focuser ${INDI_LIBRARIES} ${ASTROASIS_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
+########### indi_oasis_filter_wheel ###########
+add_executable(indi_oasis_filter_wheel ${CMAKE_CURRENT_SOURCE_DIR}/oasis_filter_wheel.cpp)
+IF (APPLE)
+set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
+target_link_libraries(indi_oasis_filter_wheel ${INDI_LIBRARIES} ${ASTROASIS_LIBRARIES} ${LIBUSB_LIBRARIES})
+ELSE()
+target_link_libraries(indi_oasis_filter_wheel ${INDI_LIBRARIES} ${ASTROASIS_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+ENDIF()
+
 #####################################
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_oasis_focuser rt)
+target_link_libraries(indi_oasis_filter_wheel rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_oasis_focuser RUNTIME DESTINATION bin)
+install(TARGETS indi_oasis_filter_wheel RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_astroasis.xml DESTINATION ${INDI_DATA_DIR})

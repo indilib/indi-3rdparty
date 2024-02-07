@@ -24,9 +24,12 @@
 
 #include <stream/streammanager.h>
 #include <indielapsedtimer.h>
+#include <sharedblob.h>
 
 #include "image/image.hpp"
 #include "core/still_options.hpp"
+#include "core/rpicam_encoder.hpp"
+#include "output/output.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -42,39 +45,100 @@
 
 
 #define CONTROL_TAB "Controls"
-// to test if we can re-open without crashing instead of just opening once
-#define REOPEN__CAMERA 1
 
-static std::unique_ptr<INDILibCamera> m_Camera(new INDILibCamera());
+static class Loader
+{
+    std::map<int, std::shared_ptr<INDILibCamera>> cameras;
+public:
+    Loader()
+    {
+        load();
+    }
 
+public:
+public:
+    void load()
+    {
+        RPiCamINDIApp app;
+        int argc = 0;
+        char *argv[] = {};
+        auto options = app.GetOptions();
+        if (options->Parse(argc, argv))
+        {
+            auto new_cameras = app.GetCameras();
+
+            if (new_cameras.size() == 0)
+            {
+                IDLog("No cameras detected.");
+                return;
+            }
+
+            for (size_t i = 0; i < new_cameras.size(); i++)
+            {
+                auto newCamera = new INDILibCamera(i, new_cameras[i]->properties());
+                cameras[i] = std::shared_ptr<INDILibCamera>(newCamera);
+            }
+        }
+    }
+
+} loader;
+
+///////////////////////////////////////////////////////////////////////
+/// Generic constructor
+///////////////////////////////////////////////////////////////////////
+INDILibCamera::INDILibCamera(uint8_t index, const libcamera::ControlList &list) : m_CameraIndex(index), m_ControlList(list)
+{
+    setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
+    signal(SIGBUS, default_signal_handler);
+    auto fullName = std::string("LibCamera ") + list.get(properties::Model).value();
+    setDeviceName(fullName.c_str());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+const char *INDILibCamera::getDefaultName()
+{
+    return "LibCamera";
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::shutdownVideo()
 {
-    m_CameraApp->StopCamera();
-    m_CameraApp->StopEncoder();
-    m_CameraApp->Teardown();
-    if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
     Streamer->setStream(false);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+int INDILibCamera::getColorspaceFlags(std::string const &codec)
+{
+    if (codec == "mjpeg" || codec == "yuv420")
+        return RPiCamEncoder::FLAG_VIDEO_JPEG_COLOURSPACE;
+    else
+        return RPiCamEncoder::FLAG_VIDEO_NONE;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate)
 {
-    m_CameraApp->SetEncodeOutputReadyCallback(std::bind(&INDILibCamera::outputReady, this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3,
-            std::placeholders::_4));
-
-    VideoOptions* options = m_CameraApp->GetOptions();
-    initOptions(true);
-    options->codec = "mjpeg";
-    options->framerate = framerate;
+    RPiCamEncoder app;
+    auto options = app.GetOptions();
+    configureVideoOptions(options, framerate);
+    std::unique_ptr<Output> output = std::unique_ptr<Output>(Output::Create(options));
+    app.SetEncodeOutputReadyCallback(std::bind(&INDILibCamera::outputReady, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    app.SetMetadataReadyCallback(std::bind(&Output::MetadataReady, output.get(), std::placeholders::_1));
 
     try
     {
-        if(REOPEN__CAMERA) m_CameraApp->OpenCamera();
-        m_CameraApp->ConfigureVideo(LibcameraEncoder::FLAG_VIDEO_JPEG_COLOURSPACE);
-        m_CameraApp->StartEncoder();
-        m_CameraApp->StartCamera();
+        app.OpenCamera();
+        app.ConfigureVideo(getColorspaceFlags(options->codec));
+        app.StartEncoder();
+        app.StartCamera();
     }
     catch (std::exception &e)
     {
@@ -85,29 +149,31 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
 
     while (!isAboutToQuit)
     {
-        LibcameraEncoder::Msg msg = m_CameraApp->Wait();
-        if (msg.type == LibcameraEncoder::MsgType::Quit)
+        RPiCamEncoder::Msg msg = app.Wait();
+        if (msg.type == RPiCamEncoder::MsgType::Quit)
         {
-            shutdownVideo();
             return;
         }
-        else if (msg.type != LibcameraEncoder::MsgType::RequestComplete)
+        else if (msg.type != RPiCamEncoder::MsgType::RequestComplete)
         {
             LOGF_ERROR("Video Streaming failed: %d", msg.type);
             shutdownVideo();
             return;
         }
 
-        auto completed_request = std::get<CompletedRequestPtr>(msg.payload);
-        m_CameraApp->EncodeBuffer(completed_request, m_CameraApp->VideoStream());
+        CompletedRequestPtr &completed_request = std::get<CompletedRequestPtr>(msg.payload);
+        //auto completed_request = std::get<CompletedRequestPtr>(msg.payload);
+        app.EncodeBuffer(completed_request, app.VideoStream());
     }
 
-    m_CameraApp->StopCamera();
-    m_CameraApp->StopEncoder();
-    m_CameraApp->Teardown();
-    if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
+    app.StopCamera();
+    app.StopEncoder();
+    app.Teardown();
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe)
 {
     INDI_UNUSED(timestamp_us);
@@ -115,75 +181,48 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
     uint8_t * cameraBuffer = PrimaryCCD.getFrameBuffer();
     size_t cameraBufferSize = 0;
     int w = 0, h = 0, naxis = 0;
+    int bitsperpixel;
+    char bayer_pattern[8] = {};
 
-    // Read jpeg from memory
+    // Read buffer from memory
     std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-
-    if (m_LiveVideoWidth <= 0)
-    {
-        auto info = m_CameraApp->GetStreamInfo(m_CameraApp->VideoStream());
-        m_LiveVideoWidth = info.width;
-        m_LiveVideoHeight = info.height;
-        PrimaryCCD.setBin(1, 1);
-        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
-        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
-    }
-
-    if (CaptureFormatSP.findOnSwitchIndex() == CAPTURE_JPG)
-    {
-        // We are done with writing to CCD buffer
-        ccdguard.unlock();
-        Streamer->newFrame(static_cast<uint8_t*>(mem), size);
-        return;
-    }
-
-    int rc = processJPEGMemory(reinterpret_cast<uint8_t*>(mem), size, &cameraBuffer, &cameraBufferSize, &naxis, &w, &h);
-
-    if (rc != 0)
-    {
-        LOG_ERROR("Error getting live video frame.");
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        return;
-    }
-
-    PrimaryCCD.setFrameBuffer(cameraBuffer);
-    if (naxis != PrimaryCCD.getNAxis())
-    {
-        if (naxis == 1)
-            Streamer->setPixelFormat(INDI_MONO);
-
-        PrimaryCCD.setNAxis(naxis);
-    }
-    if (PrimaryCCD.getFrameBufferSize() != static_cast<int>(cameraBufferSize))
-        PrimaryCCD.setFrameBufferSize(cameraBufferSize, false);
 
     // We are done with writing to CCD buffer
     ccdguard.unlock();
-    Streamer->newFrame(cameraBuffer, cameraBufferSize);
+
+    if (m_LiveVideoWidth <= 0)
+    {
+        PrimaryCCD.setBin(1, 1);
+        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
+        Streamer->setPixelFormat(INDI_JPG);
+        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
+    }
+    Streamer->newFrame(static_cast<uint8_t*>(mem), size);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::shutdownExposure()
 {
-    m_CameraApp->StopCamera();
-    m_CameraApp->Teardown();
-    if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
     PrimaryCCD.setExposureFailed();
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
-    auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-    initOptions(false);
-    options->shutter = duration * 1e6;
-    options->framerate = 1 / duration;
-
-    unsigned int still_flags = LibcameraApp::FLAG_STILL_RAW;
+    RPiCamINDIApp app;
+    auto options = app.GetOptions();
+    configureStillOptions(options, duration);
+    unsigned int still_flags = RPiCamApp::FLAG_STILL_RAW;
 
     try
     {
-        if(REOPEN__CAMERA) m_CameraApp->OpenCamera();
-        m_CameraApp->ConfigureStill(still_flags);
-        m_CameraApp->StartCamera();
+        app.OpenCamera();
+        app.ConfigureStill(still_flags);
+        app.StartCamera();
     }
     catch (std::exception &e)
     {
@@ -192,8 +231,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         return;
     }
 
-    LibcameraApp::Msg msg = m_CameraApp->Wait();
-    if (msg.type != LibcameraApp::MsgType::RequestComplete)
+    RPiCamApp::Msg msg = app.Wait();
+    if (msg.type != RPiCamApp::MsgType::RequestComplete)
     {
         PrimaryCCD.setExposureFailed();
         shutdownExposure();
@@ -204,29 +243,25 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         return;
 
     bool raw = CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG;
-    auto stream = raw ? m_CameraApp->RawStream() : m_CameraApp->StillStream();
+    auto stream = raw ? app.RawStream() : app.StillStream();
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
-    StreamInfo info = m_CameraApp->GetStreamInfo(stream);
-    const std::vector<libcamera::Span<uint8_t>> mem = m_CameraApp->Mmap(payload->buffers[stream]);
+    StreamInfo info = app.GetStreamInfo(stream);
+    BufferReadSync r(&app, payload->buffers[stream]);
+    const std::vector<libcamera::Span<uint8_t>> mem = r.Get();
 
     try
     {
         char filename[MAXINDIFORMAT] {0};
-        StillOptions stillOptions = StillOptions();
 
         if (raw)
         {
             strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
-            // stillOptions isn't actually used there, but I don't want to gove it nullptr
-            dng_save(mem, info, payload->metadata, filename, m_CameraApp->CameraId(), &stillOptions);
+            dng_save(mem, info, payload->metadata, filename, app.CameraId(), options);
         }
         else
         {
             strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
-            stillOptions.quality = 100;
-            stillOptions.restart = true;
-            stillOptions.thumb_quality = 0;
-            jpeg_save(mem, info, payload->metadata, filename, m_CameraApp->CameraId(), &stillOptions);
+            jpeg_save(mem, info, payload->metadata, filename, app.CameraId(), options);
         }
 
         char bayer_pattern[8] = {};
@@ -399,40 +434,15 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
 
         ExposureComplete(&PrimaryCCD);
 
-        m_CameraApp->StopCamera();
-        m_CameraApp->Teardown();
-        if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
+        app.StopCamera();
+        app.Teardown();
+        app.CloseCamera();
     }
     catch (std::exception &e)
     {
         LOGF_ERROR("Error saving image: %s", e.what());
         shutdownExposure();
     }
-}
-
-///////////////////////////////////////////////////////////////////////
-/// Generic constructor
-///////////////////////////////////////////////////////////////////////
-INDILibCamera::INDILibCamera()
-{
-    setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
-    signal(SIGBUS, default_signal_handler);
-    m_CameraApp.reset(new LibcameraEncoder());
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-INDILibCamera::~INDILibCamera()
-{
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-const char *INDILibCamera::getDefaultName()
-{
-    return "LibCamera";
 }
 
 /*
@@ -464,10 +474,6 @@ AeConstraintMode : [0..3]
 */
 
 /////////////////////////////////////////////////////////////////////////////
-///
-
-/////////////////////////////////////////////////////////////////////////////
-
 void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char **names)
 {
 
@@ -492,13 +498,6 @@ bool INDILibCamera::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 3600, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
-
-    // Cameras
-    CameraSP.fill(getDeviceName(), "CAMERAS", "Cameras", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-
-    m_CameraApp->OpenCamera();
-    detectCameras();
-    if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
 
     const char *IMAGE_CONTROLS_TAB = MAIN_CONTROL_TAB;
     AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
@@ -550,21 +549,6 @@ bool INDILibCamera::initProperties()
     return true;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
-void INDILibCamera::ISGetProperties(const char *dev)
-{
-    INDI::CCD::ISGetProperties(dev);
-
-    defineProperty(CameraSP);
-    defineProperty(AdjustmentNP);
-    defineProperty(GainNP);
-    defineProperty(AdjustExposureModeSP);
-    defineProperty(AdjustAwbModeSP);
-    defineProperty(AdjustMeteringModeSP);
-    defineProperty(AdjustDenoiseModeSP);
-}
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -577,10 +561,22 @@ bool INDILibCamera::updateProperties()
     {
         // Setup camera
         setup();
+
+        defineProperty(AdjustmentNP);
+        defineProperty(GainNP);
+        defineProperty(AdjustExposureModeSP);
+        defineProperty(AdjustAwbModeSP);
+        defineProperty(AdjustMeteringModeSP);
+        defineProperty(AdjustDenoiseModeSP);
     }
     else
     {
-
+        deleteProperty(AdjustmentNP);
+        deleteProperty(GainNP);
+        deleteProperty(AdjustExposureModeSP);
+        deleteProperty(AdjustAwbModeSP);
+        deleteProperty(AdjustMeteringModeSP);
+        deleteProperty(AdjustDenoiseModeSP);
     }
 
     return true;
@@ -589,37 +585,62 @@ bool INDILibCamera::updateProperties()
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-
-void INDILibCamera::detectCameras()
+void INDILibCamera::configureStillOptions(StillOptions *options, double duration)
 {
-    libcamera::CameraManager *cameraManager = m_CameraApp->GetCameraManager();
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(duration * 1000000));
+    TimeVal<std::chrono::microseconds> tv;
+    tv.set(std::to_string(duration) + "s");
 
-    auto cameras = cameraManager->cameras();
-    // Do not show USB webcams as these are not supported in libcamera-apps!
-    auto rem = std::remove_if(cameras.begin(), cameras.end(),
-                              [](auto & cam)
-    {
-        return cam->id().find("/usb") != std::string::npos;
-    });
-    cameras.erase(rem, cameras.end());
+    options->camera = m_CameraIndex;
+    options->nopreview = true;
+    options->immediate = true;
+    options->quality = 100;
+    options->restart = true;
+    options->thumb_quality = 0;
+    options->shutter = tv;
 
-    if (cameras.size() == 0)
-    {
-        LOG_ERROR("No cameras detected.");
-        return;
-    }
+    options->brightness = AdjustmentNP[AdjustBrightness].getValue();
+    options->contrast = AdjustmentNP[AdjustContrast].getValue();
+    options->saturation = AdjustmentNP[AdjustSaturation].getValue();
+    options->sharpness = AdjustmentNP[AdjustSharpness].getValue();
+    options->quality = AdjustmentNP[AdjustQuality].getValue();
+    options->ev = AdjustmentNP[AdjustExposureValue].getValue();
+    options->awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    options->awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
 
-    CameraSP.resize(cameras.size());
-    for (size_t i = 0; i < cameras.size(); i++)
-    {
-        CameraSP[i].fill(cameras[i]->id().c_str(), cameras[i]->id().c_str(), ISS_OFF);
-    }
+    options->gain = GainNP[0].getValue();
 
-    int onIndex = -1;
-    if (IUGetConfigOnSwitchIndex(getDeviceName(), "CAMERAS", &onIndex) == 0)
-        CameraSP[onIndex].setState(ISS_ON);
-    else
-        CameraSP[0].setState(ISS_ON);
+    options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+    options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
+    options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
+    options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
+
+    options->width = PrimaryCCD.getSubW();
+    options->height = PrimaryCCD.getSubH();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerate)
+{
+    options->camera = m_CameraIndex;
+    options->codec = "mjpeg";
+    options->brightness = AdjustmentNP[AdjustBrightness].getValue();
+    options->contrast = AdjustmentNP[AdjustContrast].getValue();
+    options->saturation = AdjustmentNP[AdjustSaturation].getValue();
+    options->sharpness = AdjustmentNP[AdjustSharpness].getValue();
+    options->quality = AdjustmentNP[AdjustQuality].getValue();
+    options->ev = AdjustmentNP[AdjustExposureValue].getValue();
+    options->awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    options->awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
+
+    options->gain = GainNP[0].getValue();
+
+    options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+    options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
+    options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
+    options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -630,71 +651,27 @@ void INDILibCamera::default_signal_handler(int signal_number)
     INDI_UNUSED(signal_number);
 }
 
-
-void INDILibCamera::initOptions(bool video)
-{
-    auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-    options->nopreview = true;
-    options->framerate = 0.0;
-    options->shutter = 0.0;
-    options->timeout = 1;
-}
-
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::Connect()
 {
-    try
-    {
 
-        auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-        options->nopreview = true;
-        options->camera = CameraSP.findOnSwitchIndex();
-        if(REOPEN__CAMERA) m_CameraApp->OpenCamera();
-        const libcamera::ControlList props = m_CameraApp->GetCameraManager()->cameras()[options->camera]->properties();
+    auto pas = m_ControlList.get(properties::PixelArraySize);
+    // no idea why the IMX290 returns an uneven number of pixels, so just round down
+    auto width = 2.0 * (pas->width / 2);
+    auto height = pas->height;
 
-        auto pas = props.get(properties::PixelArraySize);
-        // no idea why the IMX290 returns an uneven number of pixels, so just round down
-        int width = 2.0 * (pas->width / 2);
-        int height = pas->height;// 2.0 * (pas->height / 2);
-        PrimaryCCD.setResolution(width, height);
-        UpdateCCDFrame(0, 0, width, height);
-        LOGF_INFO("PixelArraySize %i x %i (actual %i x %i)", pas->width, pas->height, width, height);
+    PrimaryCCD.setResolution(width, height);
+    UpdateCCDFrame(0, 0, width, height);
 
-        auto ucs = props.get(properties::UnitCellSize);
-        auto ucsWidth = ucs->width / 1000.0;
-        auto ucsHeight = ucs->height / 1000.0;
-        PrimaryCCD.setPixelSize(ucsWidth, ucsHeight);
-        PrimaryCCD.setBPP(8);
-        LOGF_INFO("UnitCellSize %f x %f", ucsWidth, ucsHeight);
+    auto ucs = m_ControlList.get(properties::UnitCellSize);
+    auto ucsWidth = ucs->width / 1000.0;
+    auto ucsHeight = ucs->height / 1000.0;
+    PrimaryCCD.setPixelSize(ucsWidth, ucsHeight);
+    PrimaryCCD.setBPP(8);
 
-        // Get resolution from indi:ccd (whatever is settled when we are connecting), and update libcamera driver resolution
-        options->width = PrimaryCCD.getXRes();
-        options->height = PrimaryCCD.getYRes();
-        options->brightness = 0.0;
-        options->contrast = 1.0;
-        options->saturation = 1.0;
-        options->sharpness = 1.0;
-        options->quality = 100.0;
-
-        options->denoise = "cdn_off";
-
-        /*
-                options->metering_index = 4;
-                options->exposure_index = 4;
-                options->awb_index = 8;
-        */
-
-        if(REOPEN__CAMERA) m_CameraApp->CloseCamera();
-        return true;
-    }
-    catch (std::exception &e)
-    {
-        LOGF_ERROR("Error opening camera: %s", e.what());
-    }
-
-    return false;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -702,7 +679,7 @@ bool INDILibCamera::Connect()
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::Disconnect()
 {
-    if(!REOPEN__CAMERA) m_CameraApp->CloseCamera();
+    m_Worker.quit();
     return true;
 }
 
@@ -745,11 +722,6 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        for(int i = 0; i < n; i++)
-        {
-            LOGF_INFO("%s.%s -> %f", name, names[i], values[i]);
-        }
-        auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
         if (AdjustmentNP.isNameMatch(name))
         {
             AdjustmentNP.update(values, names, n);
@@ -757,15 +729,7 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             AdjustmentNP.apply();
             saveConfig(AdjustmentNP);
 
-            options->brightness = values[AdjustBrightness];
-            options->contrast = values[AdjustContrast];
-            options->saturation = values[AdjustSaturation];
-            options->sharpness = values[AdjustSharpness];
-            options->quality = values[AdjustQuality];
 
-            options->ev = values[AdjustExposureValue];
-            options->awb_gain_r = values[AdjustAwbRed];
-            options->awb_gain_b = values[AdjustAwbBlue];
 
             return true;
         }
@@ -775,8 +739,6 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
             GainNP.setState(IPS_OK);
             GainNP.apply();
             saveConfig(GainNP);
-
-            options->gain = values[0];
             return true;
         }
     }
@@ -791,58 +753,43 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (CameraSP.isNameMatch(name))
-        {
-            CameraSP.update(states, names, n);
-            CameraSP.setState(IPS_OK);
-            CameraSP.apply();
-            saveConfig(CameraSP);
-            return true;
-        }
-        auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-        for(int i = 0; i < n; i++)
-        {
-            LOGF_INFO("%s.%s -> %d", name, names[i], states[i]);
-        }
+        // Adjust Exposure Mode
         if (AdjustExposureModeSP.isNameMatch(name))
         {
             AdjustExposureModeSP.update(states, names, n);
             AdjustExposureModeSP.setState(IPS_OK);
             AdjustExposureModeSP.apply();
             saveConfig(AdjustExposureModeSP);
-
-            options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
             return true;
         }
+
+        // Adjust AWB Mode
         if (AdjustAwbModeSP.isNameMatch(name))
         {
             AdjustAwbModeSP.update(states, names, n);
             AdjustAwbModeSP.setState(IPS_OK);
             AdjustAwbModeSP.apply();
             saveConfig(AdjustAwbModeSP);
-
-            options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
             return true;
         }
+
+        // Adjust Metering MOde
         if (AdjustMeteringModeSP.isNameMatch(name))
         {
             AdjustMeteringModeSP.update(states, names, n);
             AdjustMeteringModeSP.setState(IPS_OK);
             AdjustMeteringModeSP.apply();
             saveConfig(AdjustMeteringModeSP);
-
-            options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
             return true;
         }
+
+        // Denoise
         if (AdjustDenoiseModeSP.isNameMatch(name))
         {
             AdjustDenoiseModeSP.update(states, names, n);
             AdjustDenoiseModeSP.setState(IPS_OK);
             AdjustDenoiseModeSP.apply();
             saveConfig(AdjustDenoiseModeSP);
-
-            //options->denoise = "cdn_off";
-            options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
             return true;
         }
     }
@@ -927,10 +874,6 @@ bool INDILibCamera::UpdateCCDFrame(int x, int y, int w, int h)
     LOGF_INFO("Setting frame buffer size to %d bytes.", nbuf);
     PrimaryCCD.setFrameBufferSize(nbuf);
 
-    auto options = static_cast<VideoOptions *>(m_CameraApp->GetOptions());
-    options->width = w;
-    options->height = h;
-
     // Always set BINNED size
     Streamer->setSize(subW, subH);
 
@@ -944,9 +887,7 @@ bool INDILibCamera::UpdateCCDFrame(int x, int y, int w, int h)
 bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 {
     INDI_UNUSED(biny);
-
     PrimaryCCD.setBin(binx, binx);
-
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 }
 
@@ -956,7 +897,7 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
-
+    // TODO Add Gain
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -966,7 +907,7 @@ bool INDILibCamera::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    CameraSP.save(fp);
+
     AdjustmentNP.save(fp);
     GainNP.save(fp);
     AdjustExposureModeSP.save(fp);
@@ -1041,6 +982,94 @@ bool INDILibCamera::processRAW(const char *filename, uint8_t **memptr, size_t *m
     bayer_pattern[2] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 0)];
     bayer_pattern[3] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 1)];
     bayer_pattern[4] = '\0';
+
+    int first_visible_pixel = RawProcessor.imgdata.rawdata.sizes.raw_width * RawProcessor.imgdata.sizes.top_margin +
+                              RawProcessor.imgdata.sizes.left_margin;
+
+    LOGF_DEBUG("read_libraw: raw_width: %d top_margin %d left_margin %d first_visible_pixel %d",
+               RawProcessor.imgdata.rawdata.sizes.raw_width, RawProcessor.imgdata.sizes.top_margin,
+               RawProcessor.imgdata.sizes.left_margin, first_visible_pixel);
+
+    *memsize = RawProcessor.imgdata.rawdata.sizes.width * RawProcessor.imgdata.rawdata.sizes.height * sizeof(uint16_t);
+    *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
+    if (*memptr == nullptr)
+        *memptr = static_cast<uint8_t *>(IDSharedBlobAlloc(*memsize));
+    if (*memptr == nullptr)
+    {
+        LOGF_ERROR("%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        return false;
+    }
+
+    LOGF_DEBUG("read_libraw: rawdata.sizes.width: %d rawdata.sizes.height %d memsize %d bayer_pattern %s",
+               RawProcessor.imgdata.rawdata.sizes.width, RawProcessor.imgdata.rawdata.sizes.height, *memsize,
+               bayer_pattern);
+
+    uint16_t *image = reinterpret_cast<uint16_t *>(*memptr);
+    uint16_t *src   = RawProcessor.imgdata.rawdata.raw_image + first_visible_pixel;
+
+    for (int i = 0; i < RawProcessor.imgdata.rawdata.sizes.height; i++)
+    {
+        memcpy(image, src, RawProcessor.imgdata.rawdata.sizes.width * 2);
+        image += RawProcessor.imgdata.rawdata.sizes.width;
+        src += RawProcessor.imgdata.rawdata.sizes.raw_width;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool INDILibCamera::processRAWMemory(unsigned char *inBuffer, unsigned long inSize, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h,
+                                     int *bitsperpixel, char *bayer_pattern)
+{
+    int ret = 0;
+    // Creation of image processing object
+    LibRaw RawProcessor;
+
+    // Let us open the file
+    if ((ret = RawProcessor.open_buffer(inBuffer, inSize)) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR("Cannot open buffer %s", libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    // Let us unpack the image
+    if ((ret = RawProcessor.unpack()) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR( "Cannot unpack buffer %s", libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    // Covert to image
+    if ((ret = RawProcessor.raw2image()) != LIBRAW_SUCCESS)
+    {
+        LOGF_ERROR("Cannot convert %s", libraw_strerror(ret));
+        RawProcessor.recycle();
+        return false;
+    }
+
+    *n_axis       = 2;
+    *w            = RawProcessor.imgdata.rawdata.sizes.width;
+    *h            = RawProcessor.imgdata.rawdata.sizes.height;
+    *bitsperpixel = 16;
+    // cdesc contains counter-clock wise e.g. RGBG CFA pattern while we want it sequential as RGGB
+    bayer_pattern[0] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(0, 0)];
+    bayer_pattern[1] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(0, 1)];
+    bayer_pattern[2] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 0)];
+    bayer_pattern[3] = RawProcessor.imgdata.idata.cdesc[RawProcessor.COLOR(1, 1)];
+    bayer_pattern[4] = '\0';
+
+    if (m_LiveVideoWidth <= 0)
+    {
+        m_LiveVideoWidth = *w;
+        m_LiveVideoHeight = *h;
+        PrimaryCCD.setBin(1, 1);
+        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
+        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
+    }
 
     int first_visible_pixel = RawProcessor.imgdata.rawdata.sizes.raw_width * RawProcessor.imgdata.sizes.top_margin +
                               RawProcessor.imgdata.sizes.left_margin;
@@ -1193,6 +1222,15 @@ int INDILibCamera::processJPEGMemory(unsigned char *inBuffer, unsigned long inSi
     /* Start decompression jpeg here */
     jpeg_start_decompress(&cinfo);
 
+    if (m_LiveVideoWidth <= 0)
+    {
+        m_LiveVideoWidth = cinfo.output_width;
+        m_LiveVideoHeight = cinfo.output_height;
+        PrimaryCCD.setBin(1, 1);
+        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
+        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
+    }
+
     *memsize = cinfo.output_width * cinfo.output_height * cinfo.num_components;
     *memptr  = static_cast<uint8_t *>(IDSharedBlobRealloc(*memptr, *memsize));
     if (*memptr == nullptr)
@@ -1229,4 +1267,18 @@ int INDILibCamera::processJPEGMemory(unsigned char *inBuffer, unsigned long inSi
         free(row_pointer[0]);
 
     return 0;
+}
+
+INDI_PIXEL_FORMAT INDILibCamera::bayerToPixelFormat(const char *bayer)
+{
+    if (!strcmp(bayer, "RGGB"))
+        return INDI_BAYER_RGGB;
+    else if (!strcmp(bayer, "GRBG"))
+        return INDI_BAYER_GRBG;
+    else if (!strcmp(bayer, "GBRG"))
+        return INDI_BAYER_GBRG;
+    else if (!strcmp(bayer, "BGGR"))
+        return INDI_BAYER_BGGR;
+
+    return INDI_MONO;
 }

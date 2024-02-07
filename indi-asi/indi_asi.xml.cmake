@@ -4,43 +4,23 @@
         <device label="ZWO CCD" mdpd="true" manufacturer="ZWO">
                 <driver name="ZWO CCD">indi_asi_ccd</driver>
                 <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-	</device>
-        <device label="ZWO Camera 1" manufacturer="ZWO">
-                <driver name="ZWO Camera">indi_asi_single_ccd</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-        </device>
-        <device label="ZWO Camera 2" manufacturer="ZWO">
-                <driver name="ZWO Camera">indi_asi_single_ccd</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
         </device>
 </devGroup>
 <devGroup group="Filter Wheels">
-        <device label="ASI EFW" mdpd="true" manufacturer="ZWO">
-                <driver name="ASI EFW">indi_asi_wheel</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-        </device>
         <device label="ZWO EFW" mdpd="true" manufacturer="ZWO">
                 <driver name="ZWO EFW">indi_asi_wheel</driver>
                 <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
         </device>
 </devGroup>
 <devGroup group="Focusers">
-        <device label="ASI EAF" manufacturer="ZWO">
-                <driver name="ASI EAF">indi_asi_focuser</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-        </device>
         <device label="ZWO EAF" manufacturer="ZWO">
                 <driver name="ZWO EAF">indi_asi_focuser</driver>
                 <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
         </device>
 </devGroup>
 <devGroup group="Auxiliary">
-        <device label="ASI ST4" manufacturer="ZWO">
-                <driver name="ASI ST4">indi_asi_st4</driver>
-                <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
-        </device>
         <device label="ZWO ST4" manufacturer="ZWO">
-                <driver name="ASI ST4">indi_asi_st4</driver>
+                <driver name="ZWO ST4">indi_asi_st4</driver>
                 <version>@ASI_VERSION_MAJOR@.@ASI_VERSION_MINOR@</version>
         </device>
 </devGroup>

@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <stream/streammanager.h>
 
+#include <sharedblob.h>
 #include <deque>
 #include <memory>
 #include <math.h>
@@ -501,7 +502,8 @@ bool GPhotoCCD::ISNewText(const char * dev, const char * name, char * texts[], c
                 return false;
             char *text = texts[0];
             char buf[256];
-            if(strcmp("eoszoomposition", name) == 0) {
+            if(strcmp("eoszoomposition", name) == 0)
+            {
                 int x = 0, y = 0;
                 LOGF_DEBUG("%s %s", name, text);
                 sscanf(text, "%d,%d", &x, &y);
@@ -1569,7 +1571,7 @@ void GPhotoCCD::AddWidget(gphoto_widget * widget)
 {
     IPerm perm;
 
-    if (!widget)
+    if (!widget || ((widget->type == GP_WIDGET_RADIO || widget->type == GP_WIDGET_MENU) && widget->choice_cnt > MAX_SWITCHES))
         return;
 
     perm = widget->readonly ? IP_RO : IP_RW;

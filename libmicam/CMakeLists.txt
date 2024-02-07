@@ -1,8 +1,8 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libmicam)
 
-set (MICAM_VERSION "0.8.0")
-set (MICAM_VERSION_MAC "0.7.0")
+set (MICAM_VERSION "0.9.0")
+set (MICAM_VERSION_MAC "0.8.0")
 set (MICAM_SOVERSION "0")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

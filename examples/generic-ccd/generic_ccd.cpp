@@ -95,6 +95,11 @@ bool GenericCCD::initProperties()
     uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_COOLER | CCD_HAS_SHUTTER | CCD_HAS_ST4_PORT;
     SetCCDCapability(cap);
 
+    // Simulate Crash
+    IUFillSwitch(&CrashS[0], "CRASH", "Crash driver", ISS_OFF);
+    IUFillSwitchVector(&CrashSP, CrashS, 1, getDeviceName(), "CCD_SIMULATE_CRASH", "Crash", OPTIONS_TAB, IP_WO,
+                       ISR_ATMOST1, 0, IPS_IDLE);
+
     // Add configuration for Debug
     addDebugControl();
 
@@ -114,6 +119,7 @@ bool GenericCCD::updateProperties()
     {
         // Let's get parameters now from CCD
         setupParams();
+        defineProperty(&CrashSP);
         SetTimer(getCurrentPollingPeriod());
     }
 
@@ -658,3 +664,20 @@ IPState GenericCCD::GuideWest(uint32_t ms)
 
     return IPS_OK;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////
+/// Crash simulation
+///////////////////////////////////////////////////////////////////////////////////////
+bool GenericCCD::ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (strcmp(name, CrashSP.name) == 0)
+        {
+            abort();
+        }
+    }
+
+    return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+

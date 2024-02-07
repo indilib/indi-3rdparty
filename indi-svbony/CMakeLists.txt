@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_svbony_ccd CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -7,8 +7,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (SVBONY_VERSION_MAJOR 1)
-set (SVBONY_VERSION_MINOR 3)
-set (SVBONY_VERSION_PATCH 8)
+set (SVBONY_VERSION_MINOR 4)
+set (SVBONY_VERSION_PATCH 0)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
@@ -22,11 +22,13 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
+include_directories( ${SVBONY_INCLUDE_DIR})
 
 include(CMakeCommon)
 
 ############# SVBONY SVBONY CCD ###############
 set(svbonyccd_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/svbony_base.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/svbony_ccd.cpp
 )
 

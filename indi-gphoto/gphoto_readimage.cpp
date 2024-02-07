@@ -2,6 +2,7 @@
 #include "gphoto_readimage.h"
 
 #include <indilogger.h>
+#include <sharedblob.h>
 
 #include <jpeglib.h>
 #include <fitsio.h>

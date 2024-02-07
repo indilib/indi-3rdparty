@@ -170,8 +170,8 @@ class ToupBase : public INDI::CCD
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
         
-        IText m_CoolerT;
-        ITextVectorProperty m_CoolerTP;
+        INDI::PropertyNumber m_CoolerNP {1};
+
         int32_t m_maxTecVoltage { -1 };
 
         INumberVectorProperty m_ControlNP;
@@ -285,6 +285,8 @@ class ToupBase : public INDI::CCD
         eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
+        double m_LastTemperature {-100};
+        double m_LastCoolerPower {-1};
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };

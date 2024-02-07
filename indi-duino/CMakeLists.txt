@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_duino CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -44,7 +44,7 @@ set (firmata_SRCS
 )
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/src/firmata.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/src/arduino.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
-add_library(firmata ${firmata_SRCS})
+add_library(firmata STATIC ${firmata_SRCS})
 SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/examples/blink_pin.cpp PROPERTIES COMPILE_FLAGS "-Wno-error")
 add_executable(blink_pin ${CMAKE_CURRENT_SOURCE_DIR}/libfirmata/examples/blink_pin.cpp)
 target_link_libraries (blink_pin firmata)
