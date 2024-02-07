@@ -1069,7 +1069,7 @@ bool EQMod::ReadScopeStatus()
                 currentDEEncoder = mount->GetDEEncoder();
                 parkRAEncoder    = GetAxis1Park();
                 parkDEEncoder    = GetAxis2Park();
-                if((std::abs(parkRAEncoder - currentRAEncoder) > 10 )|| (std::abs(parkDEEncoder - currentDEEncoder) > 10)) {
+                if((std::abs(static_cast<int32_t>(parkRAEncoder - currentRAEncoder)) > 10 )|| (std::abs(static_cast<int32_t>(parkDEEncoder - currentDEEncoder)) > 10)) {
                     // Start slewing
                     LOGF_INFO("Motors while parking stopped, reparking mount: RA increment = %d, DE increment = %d",
                             static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
