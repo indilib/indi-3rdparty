@@ -57,7 +57,7 @@ static std::unique_ptr<AUDTELESCOPE> telescope(new AUDTELESCOPE());
 
 void ISInit()
 {
-    static int isInit =0;
+    static int isInit = 0;
 
     if (isInit == 1)
         return;
@@ -86,7 +86,8 @@ void ISNewNumber(const char *dev, const char *name, double values[], char *names
     telescope->ISNewNumber(dev, name, values, names, num);
 }
 
-void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int num)
+void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
+                char *names[], int num)
 {
     INDI_UNUSED(dev);
     INDI_UNUSED(name);
@@ -109,7 +110,7 @@ void ISSnoopDevice (XMLEle *root)
 *****************************************************************/
 AUDTELESCOPE::AUDTELESCOPE()
 {
-    setVersion(AVALONUD_VERSION_MAJOR,AVALONUD_VERSION_MINOR);
+    setVersion(AVALONUD_VERSION_MAJOR, AVALONUD_VERSION_MINOR);
 
     context = zmq_ctx_new();
     setTelescopeConnection( CONNECTION_NONE );
@@ -133,7 +134,7 @@ AUDTELESCOPE::AUDTELESCOPE()
 *****************************************************************/
 AUDTELESCOPE::~AUDTELESCOPE()
 {
-//    zmq_ctx_term(context);
+    //    zmq_ctx_term(context);
 }
 
 /****************************************************************
@@ -151,33 +152,35 @@ bool AUDTELESCOPE::initProperties()
     MountModeSP[MM_ALTAZ].fill("MOUNT_ALTAZ", "AltAz", ISS_OFF);
     MountModeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    LocalEqNP[LEQ_HA].fill("HA","HA (hh:mm:ss)","%010.6m",-12,12,0,0);
-    LocalEqNP[LEQ_DEC].fill("DEC","DEC (dd:mm:ss)","%010.6m",-90,90,0,0);
-    LocalEqNP.fill(getDeviceName(), "LOCAL_EQUATORIAL_EOD_COORD","Local Eq. Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
+    LocalEqNP[LEQ_HA].fill("HA", "HA (hh:mm:ss)", "%010.6m", -12, 12, 0, 0);
+    LocalEqNP[LEQ_DEC].fill("DEC", "DEC (dd:mm:ss)", "%010.6m", -90, 90, 0, 0);
+    LocalEqNP.fill(getDeviceName(), "LOCAL_EQUATORIAL_EOD_COORD", "Local Eq. Coordinates", MAIN_CONTROL_TAB, IP_RO, 60,
+                   IPS_IDLE);
 
-    AltAzNP[ALTAZ_AZ].fill("Az","Az (deg)","%.2f",-180,180,0,0);
-    AltAzNP[ALTAZ_ALT].fill("Alt","Alt (deg)","%.2f",-90,90,0,0);
+    AltAzNP[ALTAZ_AZ].fill("Az", "Az (deg)", "%.2f", -180, 180, 0, 0);
+    AltAzNP[ALTAZ_ALT].fill("Alt", "Alt (deg)", "%.2f", -90, 90, 0, 0);
     AltAzNP.fill(getDeviceName(), "AZALT_EOD_COORD", "Azimuthal Coordinates", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    HomeSP[HOME_SYNC].fill("SYNCHOME","Sync Home position",ISS_OFF);
-    HomeSP[HOME_SLEW].fill("SLEWHOME","Slew to Home position",ISS_OFF);
-    HomeSP.fill(getDeviceName(), "TELESCOPE_HOME","Home", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    HomeSP[HOME_SYNC].fill("SYNCHOME", "Sync Home position", ISS_OFF);
+    HomeSP[HOME_SLEW].fill("SLEWHOME", "Slew to Home position", ISS_OFF);
+    HomeSP.fill(getDeviceName(), "TELESCOPE_HOME", "Home", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-    TTimeNP[TTIME_JD].fill("JD","JD (days)","%.6f",0,0,0,0);
-    TTimeNP[TTIME_UTC].fill("UTC","UTC (hh:mm:ss)","%09.6m",0,24,0,0);
-    TTimeNP[TTIME_LST].fill("LST","LST (hh:mm:ss)","%09.6m",0,24,0,0);
-    TTimeNP.fill(getDeviceName(), "TELESCOPE_TIME","Time", SITE_TAB, IP_RO, 60, IPS_IDLE);
+    TTimeNP[TTIME_JD].fill("JD", "JD (days)", "%.6f", 0, 0, 0, 0);
+    TTimeNP[TTIME_UTC].fill("UTC", "UTC (hh:mm:ss)", "%09.6m", 0, 24, 0, 0);
+    TTimeNP[TTIME_LST].fill("LST", "LST (hh:mm:ss)", "%09.6m", 0, 24, 0, 0);
+    TTimeNP.fill(getDeviceName(), "TELESCOPE_TIME", "Time", SITE_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Set Park (Current)", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Restore Park (Default)", ISS_OFF);
-    IUFillSwitchVector(&ParkOptionSP, ParkOptionS, 2, getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    ParkOptionSP[PARK_CURRENT].fill("PARK_CURRENT", "Set Park (Current)", ISS_OFF);
+    ParkOptionSP[PARK_DEFAULT].fill("PARK_DEFAULT", "Restore Park (Default)", ISS_OFF);
+    ParkOptionSP.fill(getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     // Since we have 4 slew rates, let's fill them out
     IUFillSwitch(&SlewRateS[SLEW_GUIDE], "SLEW_GUIDE", "Guide", ISS_OFF);
     IUFillSwitch(&SlewRateS[SLEW_CENTERING], "SLEW_CENTER", "Center", ISS_OFF);
     IUFillSwitch(&SlewRateS[SLEW_FIND], "SLEW_FIND", "Find", ISS_OFF);
     IUFillSwitch(&SlewRateS[SLEW_MAX], "SLEW_MAX", "Max", ISS_ON);
-    IUFillSwitchVector(&SlewRateSP, SlewRateS, 4, getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&SlewRateSP, SlewRateS, 4, getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     // Add Tracking Modes. If you have SOLAR, LUNAR..etc, add them here as well.
     AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
@@ -188,7 +191,8 @@ bool AUDTELESCOPE::initProperties()
     // Mount Meridian Flip
     MeridianFlipSP[MFLIP_ON].fill("FLIP_ON", "On", ISS_OFF);
     MeridianFlipSP[MFLIP_OFF].fill("FLIP_OFF", "Off", ISS_ON);
-    MeridianFlipSP.fill(getDeviceName(), "MOUNT_MERIDIAN_FLIP", "Mount Meridian Flip", SITE_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    MeridianFlipSP.fill(getDeviceName(), "MOUNT_MERIDIAN_FLIP", "Mount Meridian Flip", SITE_TAB, IP_RW, ISR_1OFMANY, 60,
+                        IPS_IDLE);
 
     // Mount Meridian Flip HA
     MeridianFlipHANP[0].fill("FLIP_HA", "Flip HA (deg)", "%.2f", -30.0, 30.0, 0.1, 0.0);
@@ -222,7 +226,7 @@ bool AUDTELESCOPE::initProperties()
     fFirstTime = true;
     lastErrorMsg = NULL;
 
-//    SetTrackMode(TRACK_SIDEREAL);
+    //    SetTrackMode(TRACK_SIDEREAL);
     trackspeedra = TRACKRATE_SIDEREAL;
     trackspeeddec = 0;
 
@@ -246,10 +250,7 @@ void AUDTELESCOPE::ISGetProperties(const char *dev)
     INDI::Telescope::ISGetProperties(dev);
 
     defineProperty(ConfigTP);
-    loadConfig(true,ConfigTP.getName());
-
-    deleteProperty(ParkOptionS[2].name);
-    deleteProperty(ParkOptionS[3].name);
+    loadConfig(true, ConfigTP.getName());
 }
 
 /****************************************************************
@@ -322,7 +323,7 @@ bool AUDTELESCOPE::Connect()
 
     IPaddress = strdup(ConfigTP[0].text);
 
-    DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to connect %s telescope...",IPaddress);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Attempting to connect %s telescope...", IPaddress);
 
     requester = zmq_socket(context, ZMQ_REQ);
     zmq_setsockopt(requester, ZMQ_RCVTIMEO, &timeout, sizeof(timeout) );
@@ -330,11 +331,12 @@ bool AUDTELESCOPE::Connect()
     zmq_connect(requester, addr);
 
     answer = sendRequest("ASTRO_INFO");
-    if ( answer ) {
+    if ( answer )
+    {
         json j;
-        std::string sHWt,sHWm,sHWi,sLLSW,sLLSWv,sHLSW,sHLSWv;
+        std::string sHWt, sHWm, sHWi, sLLSW, sLLSWv, sHLSW, sHLSWv;
 
-        j = json::parse(answer,nullptr,false);
+        j = json::parse(answer, nullptr, false);
         free(answer);
         if ( j.is_discarded() ||
                 !j.contains("HWType") ||
@@ -346,7 +348,7 @@ bool AUDTELESCOPE::Connect()
                 !j.contains("highLevelSWVersion") )
         {
             zmq_close(requester);
-            DEBUGF(INDI::Logger::DBG_ERROR, "Communication with %s telescope failed",IPaddress);
+            DEBUGF(INDI::Logger::DBG_ERROR, "Communication with %s telescope failed", IPaddress);
             free(IPaddress);
             return false;
         }
@@ -370,49 +372,58 @@ bool AUDTELESCOPE::Connect()
         j["highLevelSWVersion"].get_to(sHLSWv);
         HighLevelSWTP[HLSW_VERSION].setText(sHLSWv);
         HighLevelSWTP.apply();
-    } else {
+    }
+    else
+    {
         zmq_close(requester);
-        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
+        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope", IPaddress);
         free(IPaddress);
         return false;
     }
 
     answer = sendRequest("ASTRO_GETMERIDIANFLIPHA");
-    if ( answer && !strncmp(answer,"OK:",3) ) {
-        MeridianFlipHANP[0].value = atof(answer+3);
+    if ( answer && !strncmp(answer, "OK:", 3) )
+    {
+        MeridianFlipHANP[0].value = atof(answer + 3);
         free( answer );
         MeridianFlipHANP.apply();
-    } else {
+    }
+    else
+    {
         zmq_close(requester);
-        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
+        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope", IPaddress);
         free(IPaddress);
         return false;
     }
 
     answer = sendRequest("ASTRO_GETMOUNTMODE");
-    if ( answer && !strncmp(answer,"OK:",3) ) {
-        if ( !strcmp(answer,"OK:ALTAZ") )
+    if ( answer && !strncmp(answer, "OK:", 3) )
+    {
+        if ( !strcmp(answer, "OK:ALTAZ") )
             mounttype = MM_ALTAZ;
         else
             mounttype = MM_EQUATORIAL;
         free( answer );
         MountModeSP[mounttype].setState(ISS_ON);
-        MountModeSP[(mounttype?0:1)].setState(ISS_OFF);
+        MountModeSP[(mounttype ? 0 : 1)].setState(ISS_OFF);
         MountModeSP.setState(IPS_OK);
         MountModeSP.setPermission(IP_RO);
         MountModeSP.apply();
-    } else {
+    }
+    else
+    {
         zmq_close(requester);
-        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
+        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope", IPaddress);
         free(IPaddress);
         return false;
     }
 
     answer = sendRequest("ASTRO_GETLOCATION");
-    if ( answer ) {
+    if ( answer )
+    {
         json j;
 
-        j = json::parse(answer,nullptr,false);
+        j = json::parse(answer, nullptr, false);
         free(answer);
         if ( j.is_discarded() ||
                 !j.contains("longitude") ||
@@ -420,7 +431,7 @@ bool AUDTELESCOPE::Connect()
                 !j.contains("elevation") )
         {
             zmq_close(requester);
-            DEBUGF(INDI::Logger::DBG_ERROR, "Communication with %s telescope failed",IPaddress);
+            DEBUGF(INDI::Logger::DBG_ERROR, "Communication with %s telescope failed", IPaddress);
             free(IPaddress);
             return false;
         }
@@ -428,9 +439,11 @@ bool AUDTELESCOPE::Connect()
         j["latitude"].get_to(LocationN[LOCATION_LATITUDE].value);
         j["elevation"].get_to(LocationN[LOCATION_ELEVATION].value);
         IDSetNumber(&LocationNP, nullptr);
-    } else {
+    }
+    else
+    {
         zmq_close(requester);
-        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope",IPaddress);
+        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to connect %s telescope", IPaddress);
         free(IPaddress);
         return false;
     }
@@ -441,7 +454,7 @@ bool AUDTELESCOPE::Connect()
 
     tid = SetTimer(getCurrentPollingPeriod());
 
-    DEBUGF(INDI::Logger::DBG_SESSION, "Successfully connected %s telescope",IPaddress);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Successfully connected %s telescope", IPaddress);
     return true;
 }
 
@@ -473,12 +486,13 @@ bool AUDTELESCOPE::Disconnect()
 *****************************************************************/
 bool AUDTELESCOPE::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    if (!strcmp(dev,getDeviceName()))
+    if (!strcmp(dev, getDeviceName()))
     {
         // TCP Server settings
         if (ConfigTP.isNameMatch(name))
         {
-            if ( isConnected() && strcmp(IPaddress,texts[0]) ) {
+            if ( isConnected() && strcmp(IPaddress, texts[0]) )
+            {
                 DEBUG(INDI::Logger::DBG_WARNING, "Please Disconnect before changing IP address");
                 return false;
             }
@@ -495,7 +509,7 @@ bool AUDTELESCOPE::ISNewText(const char *dev, const char *name, char *texts[], c
 bool AUDTELESCOPE::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
     //  first check if it's for our device
-    if(!strcmp(dev,getDeviceName()))
+    if(!strcmp(dev, getDeviceName()))
     {
 
         // Meridian Flip HourAngle
@@ -528,7 +542,7 @@ bool AUDTELESCOPE::ISNewNumber (const char *dev, const char *name, double values
 
 bool AUDTELESCOPE::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    if(!strcmp(dev,getDeviceName()))
+    if(!strcmp(dev, getDeviceName()))
     {
 
         // Home
@@ -543,19 +557,20 @@ bool AUDTELESCOPE::ISNewSwitch (const char *dev, const char *name, ISState *stat
 
             if ( isConnected() )
             {
-                switch (index) {
-                case HOME_SYNC :
-                    if ( SyncHome() )
-                        HomeSP.setState(IPS_OK);
-                    else
-                        HomeSP.setState(IPS_ALERT);
-                    break;
-                case HOME_SLEW :
-                    if ( SlewToHome() )
-                        HomeSP.setState(IPS_OK);
-                    else
-                        HomeSP.setState(IPS_ALERT);
-                    break;
+                switch (index)
+                {
+                    case HOME_SYNC :
+                        if ( SyncHome() )
+                            HomeSP.setState(IPS_OK);
+                        else
+                            HomeSP.setState(IPS_ALERT);
+                        break;
+                    case HOME_SLEW :
+                        if ( SlewToHome() )
+                            HomeSP.setState(IPS_OK);
+                        else
+                            HomeSP.setState(IPS_ALERT);
+                        break;
                 }
             }
             HomeSP.apply();
@@ -571,7 +586,7 @@ bool AUDTELESCOPE::ISNewSwitch (const char *dev, const char *name, ISState *stat
             if ( isConnected() )
             {
                 int targetState = MeridianFlipSP.findOnSwitchIndex();
-                if ( meridianFlipEnable((targetState==0)?true:false) )
+                if ( meridianFlipEnable((targetState == 0) ? true : false) )
                     MeridianFlipSP.setState(IPS_OK);
                 else
                     MeridianFlipSP.setState(IPS_ALERT);
@@ -588,18 +603,20 @@ bool AUDTELESCOPE::updateLocation(double latitude, double longitude, double elev
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Location update called before driver connection");
         return false;
     }
 
-    DEBUG(INDI::Logger::DBG_SESSION,"Location update ..." );
-    answer = sendCommand("ASTRO_SETLOCATION %.8f %.8f %.1f",longitude,latitude,elevation);
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Location update completed" );
+    DEBUG(INDI::Logger::DBG_SESSION, "Location update ..." );
+    answer = sendCommand("ASTRO_SETLOCATION %.8f %.8f %.1f", longitude, latitude, elevation);
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Location update completed" );
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Location update failed due to %s", answer );
+    DEBUGF(INDI::Logger::DBG_WARNING, "Location update failed due to %s", answer );
     free(answer);
     return false;
 }
@@ -608,21 +625,24 @@ bool AUDTELESCOPE::updateTime(ln_date *utc, double utc_offset)
 {
     char *answer, buffer[256];
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Time update called before driver connection");
         return false;
     }
 
     INDI_UNUSED(utc_offset);
 
-    snprintf( buffer, sizeof(buffer), "%04d-%02d-%02dT%02d:%02d:%08.6fZ", utc->years, utc->months, utc->days, utc->hours, utc->minutes, utc->seconds );
-    DEBUGF(INDI::Logger::DBG_SESSION,"Time update to %s ...", buffer );
-    answer = sendCommandOnce("ASTRO_SETUTCDATE %s",buffer);
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Time update completed" );
+    snprintf( buffer, sizeof(buffer), "%04d-%02d-%02dT%02d:%02d:%08.6fZ", utc->years, utc->months, utc->days, utc->hours,
+              utc->minutes, utc->seconds );
+    DEBUGF(INDI::Logger::DBG_SESSION, "Time update to %s ...", buffer );
+    answer = sendCommandOnce("ASTRO_SETUTCDATE %s", buffer);
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Time update completed" );
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Time update to %s failed due to %s", buffer, answer );
+    DEBUGF(INDI::Logger::DBG_WARNING, "Time update to %s failed due to %s", buffer, answer );
     free(answer);
     return false;
 }
@@ -630,15 +650,16 @@ bool AUDTELESCOPE::updateTime(ln_date *utc, double utc_offset)
 bool AUDTELESCOPE::ReadScopeStatus()
 {
     char *answer;
-    int sts,pierside,exposureready,meridianflip;
-    double utc,lst,jd,ha,ra,dec,az,alt,meridianflipha;
+    int sts, pierside, exposureready, meridianflip;
+    double utc, lst, jd, ha, ra, dec, az, alt, meridianflipha;
 
 
     answer = sendRequest("ASTRO_STATUS");
-    if ( answer ) {
+    if ( answer )
+    {
         json j;
 
-        j = json::parse(answer,nullptr,false);
+        j = json::parse(answer, nullptr, false);
         free(answer);
         if ( j.is_discarded() ||
                 !j.contains("UTC") ||
@@ -655,7 +676,7 @@ bool AUDTELESCOPE::ReadScopeStatus()
                 !j.contains("meridianFlipHA") ||
                 !j.contains("exposureReady") )
         {
-            DEBUG(INDI::Logger::DBG_WARNING,"Status communication error");
+            DEBUG(INDI::Logger::DBG_WARNING, "Status communication error");
             return false;
         }
         j["UTC"].get_to(utc);
@@ -671,23 +692,30 @@ bool AUDTELESCOPE::ReadScopeStatus()
         j["pierSide"].get_to(pierside);
         j["meridianFlipHA"].get_to(meridianflipha);
         j["exposureReady"].get_to(exposureready);
-        if ( j.contains("errorMsg") ) {
+        if ( j.contains("errorMsg") )
+        {
             std::string msg;
             j["errorMsg"].get_to(msg);
-            if ( msg.length() > 0 ) {
-                if ( !lastErrorMsg || ( lastErrorMsg && strcmp(msg.c_str(),lastErrorMsg) ) ) {
+            if ( msg.length() > 0 )
+            {
+                if ( !lastErrorMsg || ( lastErrorMsg && strcmp(msg.c_str(), lastErrorMsg) ) )
+                {
                     // the error message is written only once until it changes
-                    DEBUGF(INDI::Logger::DBG_WARNING,"Failed due to %s",msg.c_str());
+                    DEBUGF(INDI::Logger::DBG_WARNING, "Failed due to %s", msg.c_str());
                     if ( lastErrorMsg )
                         free( lastErrorMsg );
                     lastErrorMsg = strdup(msg.c_str());
                 }
-            } else {
+            }
+            else
+            {
                 if ( lastErrorMsg )
                     free( lastErrorMsg );
                 lastErrorMsg = NULL;
             }
-        } else {
+        }
+        else
+        {
             if ( lastErrorMsg )
                 free( lastErrorMsg );
             lastErrorMsg = NULL;
@@ -696,45 +724,54 @@ bool AUDTELESCOPE::ReadScopeStatus()
         previousTrackState = TrackState;
 
         NewRaDec( ra, dec );
-        switch ( sts ) {
-        case 0 :
-            TrackState = SCOPE_IDLE;
-            break;
-        case 1 :
-            TrackState = SCOPE_SLEWING;
-            break;
-        case 2 :
-            TrackState = SCOPE_TRACKING;
-            slewState = IPS_IDLE;
-            break;
-        case 3 :
-            TrackState = SCOPE_PARKING;
-            break;
-        case 4 :
-            TrackState = SCOPE_PARKED;
-            break;
+        switch ( sts )
+        {
+            case 0 :
+                TrackState = SCOPE_IDLE;
+                break;
+            case 1 :
+                TrackState = SCOPE_SLEWING;
+                break;
+            case 2 :
+                TrackState = SCOPE_TRACKING;
+                slewState = IPS_IDLE;
+                break;
+            case 3 :
+                TrackState = SCOPE_PARKING;
+                break;
+            case 4 :
+                TrackState = SCOPE_PARKED;
+                break;
         }
 
-        if ( fFirstTime ) {
-            SetParked( (TrackState==SCOPE_PARKED) );
+        if ( fFirstTime )
+        {
+            SetParked( (TrackState == SCOPE_PARKED) );
             fFirstTime = false;
-        } else if ( previousTrackState != TrackState ) {
+        }
+        else if ( previousTrackState != TrackState )
+        {
             if ( TrackState == SCOPE_PARKED )
                 SetParked(true);
             else if ( previousTrackState == SCOPE_PARKED )
                 SetParked(false);
         }
 
-        if ( pierside >= 0 ) {
-            if ( meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_OFF ) ) {
+        if ( pierside >= 0 )
+        {
+            if ( meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_OFF ) )
+            {
                 MeridianFlipSP[MFLIP_ON].setState(ISS_ON);
                 MeridianFlipSP[MFLIP_OFF].setState(ISS_OFF);
             }
-            if ( !meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_ON ) ) {
+            if ( !meridianflip && ( MeridianFlipSP[MFLIP_ON].getState() == ISS_ON ) )
+            {
                 MeridianFlipSP[MFLIP_ON].setState(ISS_OFF);
                 MeridianFlipSP[MFLIP_OFF].setState(ISS_ON);
             }
-        } else {
+        }
+        else
+        {
             MeridianFlipSP[MFLIP_ON].setState(ISS_OFF);
             MeridianFlipSP[MFLIP_OFF].setState(ISS_ON);
         }
@@ -779,18 +816,20 @@ bool AUDTELESCOPE::meridianFlipEnable(int enable)
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Set meridian flip called before driver connection");
         return false;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Set meridian flip to %s ...",(enable?"ENABLED":"DISABLED"));
-    answer = sendCommand("ASTRO_SETMERIDIANFLIP %d",enable);
-    if ( !answer ) {
-        DEBUGF(INDI::Logger::DBG_SESSION,"Set meridian flip to %s completed",(enable?"ENABLED":"DISABLED"));
+    DEBUGF(INDI::Logger::DBG_SESSION, "Set meridian flip to %s ...", (enable ? "ENABLED" : "DISABLED"));
+    answer = sendCommand("ASTRO_SETMERIDIANFLIP %d", enable);
+    if ( !answer )
+    {
+        DEBUGF(INDI::Logger::DBG_SESSION, "Set meridian flip to %s completed", (enable ? "ENABLED" : "DISABLED"));
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Set meridian flip to %s failed due to %s",(enable?"ENABLED":"DISABLED"),answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Set meridian flip to %s failed due to %s", (enable ? "ENABLED" : "DISABLED"), answer);
     free(answer);
     return false;
 }
@@ -799,18 +838,20 @@ bool AUDTELESCOPE::setMeridianFlipHA(double angle)
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Set meridian flip HA called before driver connection");
         return false;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Set meridian flip HA to %.3fdeg ...",angle);
-    answer = sendCommand("ASTRO_SETMERIDIANFLIPHA %.4f",angle);
-    if ( !answer ) {
-        DEBUGF(INDI::Logger::DBG_SESSION,"Set meridian flip HA to %.3fdeg completed",angle);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Set meridian flip HA to %.3fdeg ...", angle);
+    answer = sendCommand("ASTRO_SETMERIDIANFLIPHA %.4f", angle);
+    if ( !answer )
+    {
+        DEBUGF(INDI::Logger::DBG_SESSION, "Set meridian flip HA to %.3fdeg completed", angle);
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Set meridian flip HA to %.3fdeg failed due to %s",angle,answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Set meridian flip HA to %.3fdeg failed due to %s", angle, answer);
     free(answer);
     return false;
 }
@@ -819,18 +860,20 @@ bool AUDTELESCOPE::Sync(double ra, double dec)
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Sync called before driver connection");
         return false;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Sync to RA:%.3fhours Dec:%.3fdeg ...",ra,dec);
-    answer = sendCommand("ASTRO_SYNC %.8f %.8f",ra,dec);
-    if ( !answer ) {
-        DEBUGF(INDI::Logger::DBG_SESSION,"Sync to RA:%.3fhours Dec:%.3fdeg completed",ra,dec);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Sync to RA:%.3fhours Dec:%.3fdeg ...", ra, dec);
+    answer = sendCommand("ASTRO_SYNC %.8f %.8f", ra, dec);
+    if ( !answer )
+    {
+        DEBUGF(INDI::Logger::DBG_SESSION, "Sync to RA:%.3fhours Dec:%.3fdeg completed", ra, dec);
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Sync to RA:%.3fhours Dec:%.3fdeg failed due to %s",ra,dec,answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Sync to RA:%.3fhours Dec:%.3fdeg failed due to %s", ra, dec, answer);
     free(answer);
     return false;
 }
@@ -839,7 +882,8 @@ bool AUDTELESCOPE::Park()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Start telescope park called before driver connection");
         return false;
     }
@@ -847,17 +891,18 @@ bool AUDTELESCOPE::Park()
     TrackState = SCOPE_PARKING;
     LOG_INFO("Start telescope park...");
     answer = sendCommand("ASTRO_PARK");
-    if ( !answer ) {
+    if ( !answer )
+    {
         ParkSP.s = IPS_BUSY;
         IDSetSwitch(&ParkSP, NULL);
         TrackState = SCOPE_PARKING;
-        DEBUG(INDI::Logger::DBG_SESSION,"Start telescope park completed");
+        DEBUG(INDI::Logger::DBG_SESSION, "Start telescope park completed");
         return true;
     }
     ParkSP.s = IPS_ALERT;
     IDSetSwitch(&ParkSP, NULL);
     TrackState = SCOPE_IDLE;
-    DEBUGF(INDI::Logger::DBG_WARNING,"Start telescope park failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Start telescope park failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -866,19 +911,21 @@ bool AUDTELESCOPE::UnPark()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Unparking telescope called before driver connection");
         return false;
     }
 
     LOG_INFO("Unparking telescope...");
     answer = sendCommand("ASTRO_UNPARK");
-    if ( !answer ) {
+    if ( !answer )
+    {
         SetParked( false );
-        DEBUG(INDI::Logger::DBG_SESSION,"Unparking telescope completed");
+        DEBUG(INDI::Logger::DBG_SESSION, "Unparking telescope completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Unparking telescope failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Unparking telescope failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -887,18 +934,20 @@ bool AUDTELESCOPE::SetCurrentPark()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Set park position called before driver connection");
         return false;
     }
 
     LOG_INFO("Set park position...");
     answer = sendCommand("ASTRO_SETPARK");
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Set park position completed");
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Set park position completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Set park position failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Set park position failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -907,18 +956,20 @@ bool AUDTELESCOPE::SetDefaultPark()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Restore park position called before driver connection");
         return false;
     }
 
     LOG_INFO("Restore park position...");
     answer = sendCommand("ASTRO_RESTOREPARK");
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Restore park position completed");
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Restore park position completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Restore park position failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Restore park position failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -927,18 +978,20 @@ bool AUDTELESCOPE::SyncHome()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Sync home position called before driver connection");
         return false;
     }
 
     LOG_INFO("Sync home position...");
     answer = sendCommand("ASTRO_SYNCHOME");
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Sync home position completed");
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Sync home position completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Sync home position failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Sync home position failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -947,96 +1000,111 @@ bool AUDTELESCOPE::SlewToHome()
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Slew to home position called before driver connection");
         return false;
     }
 
     LOG_INFO("Start slew to home position...");
     answer = sendCommand("ASTRO_POINTHOME");
-    if ( !answer ) {
-        DEBUG(INDI::Logger::DBG_SESSION,"Start slew to home position completed");
+    if ( !answer )
+    {
+        DEBUG(INDI::Logger::DBG_SESSION, "Start slew to home position completed");
         return true;
     }
-    DEBUGF(INDI::Logger::DBG_WARNING,"Start slew to home position failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Start slew to home position failed due to %s", answer);
     free(answer);
     return false;
 }
 
-bool AUDTELESCOPE::Goto(double ra,double dec)
+bool AUDTELESCOPE::Goto(double ra, double dec)
 {
     ISwitch *sw;
 
     sw = IUFindSwitch(&CoordSP, "TRACK");
-    if ((sw != nullptr) && (sw->s == ISS_ON)) {
-        return Slew(ra,dec,true);
-    } else {
-        return Slew(ra,dec,false);
+    if ((sw != nullptr) && (sw->s == ISS_ON))
+    {
+        return Slew(ra, dec, true);
+    }
+    else
+    {
+        return Slew(ra, dec, false);
     }
 }
 
-bool AUDTELESCOPE::Slew(double ra,double dec,int track)
+bool AUDTELESCOPE::Slew(double ra, double dec, int track)
 {
     char *answer = NULL;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Start telescope slew called before driver connection");
         return false;
     }
 
     slewState = IPS_BUSY;
-    DEBUGF(INDI::Logger::DBG_SESSION,"Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking ...",ra,dec,(track?"":"NO "));
-    if ( track ) {
+    DEBUGF(INDI::Logger::DBG_SESSION, "Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking ...", ra, dec,
+           (track ? "" : "NO "));
+    if ( track )
+    {
         // point and track
-        answer = sendCommand("ASTRO_POINT %.8f %.8f %.8f %.8f",ra,dec,trackspeedra/3600.0,trackspeeddec/3600.0);
-    } else {
-        // point only
-        answer = sendCommand("ASTRO_POINT %.8f %.8f 0 0",ra,dec);
+        answer = sendCommand("ASTRO_POINT %.8f %.8f %.8f %.8f", ra, dec, trackspeedra / 3600.0, trackspeeddec / 3600.0);
     }
-    if ( !answer ) {
+    else
+    {
+        // point only
+        answer = sendCommand("ASTRO_POINT %.8f %.8f 0 0", ra, dec);
+    }
+    if ( !answer )
+    {
         targetRA = ra;
         targetDEC = dec;
         TrackState = SCOPE_SLEWING;
         slewState = IPS_OK;
-        DEBUGF(INDI::Logger::DBG_SESSION,"Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking completed",ra,dec,(track?"":"NO "));
+        DEBUGF(INDI::Logger::DBG_SESSION, "Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking completed", ra, dec,
+               (track ? "" : "NO "));
         return true;
     }
     TrackState = SCOPE_IDLE;
     slewState = IPS_ALERT;
-    DEBUGF(INDI::Logger::DBG_WARNING,"Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking failed due to %s",ra,dec,(track?"":"NO "),answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Start telescope slew to RA:%.4fhours Dec:%.3fdeg and %stracking failed due to %s", ra,
+           dec, (track ? "" : "NO "), answer);
     free(answer);
     return false;
 }
 
 bool AUDTELESCOPE::SetTrackMode(uint8_t mode)
 {
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Set tracking mode called before driver connection");
         return false;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Set tracking mode to %d...",mode);
-    switch (mode) {
-    case TRACK_SIDEREAL:
-        trackspeedra = TRACKRATE_SIDEREAL;
-        trackspeeddec = 0;
-        break;
-    case TRACK_SOLAR:
-        trackspeedra = TRACKRATE_SOLAR;
-        trackspeeddec = 0;
-        break;
-    case TRACK_LUNAR:
-        trackspeedra = TRACKRATE_LUNAR;
-        trackspeeddec = 0;
-        break;
-    case TRACK_CUSTOM:
-        trackspeedra = TrackRateN[AXIS_RA].value;
-        trackspeeddec = TrackRateN[AXIS_DE].value;
-        break;
+    DEBUGF(INDI::Logger::DBG_SESSION, "Set tracking mode to %d...", mode);
+    switch (mode)
+    {
+        case TRACK_SIDEREAL:
+            trackspeedra = TRACKRATE_SIDEREAL;
+            trackspeeddec = 0;
+            break;
+        case TRACK_SOLAR:
+            trackspeedra = TRACKRATE_SOLAR;
+            trackspeeddec = 0;
+            break;
+        case TRACK_LUNAR:
+            trackspeedra = TRACKRATE_LUNAR;
+            trackspeeddec = 0;
+            break;
+        case TRACK_CUSTOM:
+            trackspeedra = TrackRateN[AXIS_RA].value;
+            trackspeeddec = TrackRateN[AXIS_DE].value;
+            break;
     }
     if ( TrackState == SCOPE_TRACKING )
         SetTrackRate( trackspeedra, trackspeeddec );
-    DEBUGF(INDI::Logger::DBG_SESSION,"Set tracking mode to %d completed",mode);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Set tracking mode to %d completed", mode);
 
     return true;
 }
@@ -1045,24 +1113,26 @@ bool AUDTELESCOPE::SetTrackRate(double raRate, double deRate)
 {
     char *answer;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Tracking change called before driver connection");
         return false;
     }
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Tracking change to RA:%f\"/s Dec:%f\"/s ...",raRate,deRate);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Tracking change to RA:%f\"/s Dec:%f\"/s ...", raRate, deRate);
     TrackStateSP.s = IPS_BUSY;
-    answer = sendCommand("ASTRO_TRACK %.8f %.8f",raRate/3600.0,deRate/3600.0);
-    if ( !answer ) {
+    answer = sendCommand("ASTRO_TRACK %.8f %.8f", raRate / 3600.0, deRate / 3600.0);
+    if ( !answer )
+    {
         if ( ( raRate == 0 ) && ( deRate == 0 ) )
             TrackStateSP.s = IPS_IDLE;
         else
             TrackStateSP.s = IPS_OK;
-        DEBUGF(INDI::Logger::DBG_SESSION,"Tracking change to RA:%f\"/s Dec:%f\"/s completed",raRate,deRate);
+        DEBUGF(INDI::Logger::DBG_SESSION, "Tracking change to RA:%f\"/s Dec:%f\"/s completed", raRate, deRate);
         return true;
     }
     TrackStateSP.s = IPS_ALERT;
-    DEBUGF(INDI::Logger::DBG_WARNING,"Tracking change to RA:%f\"/s Dec:%f\"/s failed due to %s",raRate,deRate,answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "Tracking change to RA:%f\"/s Dec:%f\"/s failed due to %s", raRate, deRate, answer);
     free(answer);
     return false;
 }
@@ -1071,49 +1141,57 @@ bool AUDTELESCOPE::SetTrackEnabled(bool enabled)
 {
     int rc;
 
-    DEBUGF(INDI::Logger::DBG_SESSION,"Change tracking to %s...",((enabled)?"ENABLED":"DISABLED"));
-    if ( enabled ) {
+    DEBUGF(INDI::Logger::DBG_SESSION, "Change tracking to %s...", ((enabled) ? "ENABLED" : "DISABLED"));
+    if ( enabled )
+    {
         int mode = IUFindOnSwitchIndex(&TrackModeSP);
         SetTrackMode(mode);
         if ( TrackState != SCOPE_TRACKING )
             rc = SetTrackRate( trackspeedra, trackspeeddec );
         else
             rc = true;
-    } else {
+    }
+    else
+    {
         rc = SetTrackRate( 0, 0 );
     }
-    DEBUGF(INDI::Logger::DBG_SESSION,"Change tracking to %s completed",((enabled)?"ENABLED":"DISABLED"));
+    DEBUGF(INDI::Logger::DBG_SESSION, "Change tracking to %s completed", ((enabled) ? "ENABLED" : "DISABLED"));
     return rc;
 }
 
 bool AUDTELESCOPE::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
     char *answer = NULL;
-    string speed[] = {"SLEWGUIDE","SLEWCENTER","SLEWFIND","SLEWMAX"};
+    string speed[] = {"SLEWGUIDE", "SLEWCENTER", "SLEWFIND", "SLEWMAX"};
     int speedIndex;
 
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "MoveNS called before driver connection");
         return false;
     }
 
     speedIndex = IUFindOnSwitchIndex(&SlewRateSP);
     MovementNSSP.s = IPS_BUSY;
-    if ( command == MOTION_START ) {
+    if ( command == MOTION_START )
+    {
         // force tracking after motion
         fTracking = true;
         if ( dir == DIRECTION_NORTH )
-            answer = sendCommand("ASTRO_SLEW * (%.8f+%s)",trackspeeddec/3600.0,speed[speedIndex].c_str());
+            answer = sendCommand("ASTRO_SLEW * (%.8f+%s)", trackspeeddec / 3600.0, speed[speedIndex].c_str());
         else
-            answer = sendCommand("ASTRO_SLEW * (%.8f-%s)",trackspeeddec/3600.0,speed[speedIndex].c_str());
-    } else {
+            answer = sendCommand("ASTRO_SLEW * (%.8f-%s)", trackspeeddec / 3600.0, speed[speedIndex].c_str());
+    }
+    else
+    {
         if ( fTracking )
-            answer = sendCommand("ASTRO_TRACK * %.8f",trackspeeddec/3600.0);
+            answer = sendCommand("ASTRO_TRACK * %.8f", trackspeeddec / 3600.0);
         else
             answer = sendCommand("ASTRO_SLEW * 0");
     }
-    if ( !answer ) {
+    if ( !answer )
+    {
         if ( command == MOTION_START )
             MovementNSSP.s = IPS_OK;
         else
@@ -1121,7 +1199,7 @@ bool AUDTELESCOPE::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
         return true;
     }
     MovementNSSP.s = IPS_ALERT;
-    DEBUGF(INDI::Logger::DBG_WARNING,"MoveNS command failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "MoveNS command failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -1129,31 +1207,36 @@ bool AUDTELESCOPE::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 bool AUDTELESCOPE::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
     char *answer = NULL;
-    string speed[] = {"SLEWGUIDE","SLEWCENTER","SLEWFIND","SLEWMAX"};
+    string speed[] = {"SLEWGUIDE", "SLEWCENTER", "SLEWFIND", "SLEWMAX"};
     int speedIndex;
 
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "MoveWE called before driver connection");
         return false;
     }
 
     speedIndex = IUFindOnSwitchIndex(&SlewRateSP);
     MovementWESP.s = IPS_BUSY;
-    if ( command == MOTION_START ) {
+    if ( command == MOTION_START )
+    {
         // force tracking after motion
         fTracking = true;
         if ( dir == DIRECTION_WEST )
-            answer = sendCommand("ASTRO_SLEW (%.8f+%s) *",trackspeedra/3600.0,speed[speedIndex].c_str());
+            answer = sendCommand("ASTRO_SLEW (%.8f+%s) *", trackspeedra / 3600.0, speed[speedIndex].c_str());
         else
-            answer = sendCommand("ASTRO_SLEW (%.8f-%s) *",trackspeedra/3600.0,speed[speedIndex].c_str());
-    } else {
+            answer = sendCommand("ASTRO_SLEW (%.8f-%s) *", trackspeedra / 3600.0, speed[speedIndex].c_str());
+    }
+    else
+    {
         if ( fTracking )
-            answer = sendCommand("ASTRO_TRACK %.8f *",trackspeedra/3600.0);
+            answer = sendCommand("ASTRO_TRACK %.8f *", trackspeedra / 3600.0);
         else
             answer = sendCommand("ASTRO_SLEW 0 *");
     }
-    if ( !answer ) {
+    if ( !answer )
+    {
         if ( command == MOTION_START )
             MovementWESP.s = IPS_OK;
         else
@@ -1161,7 +1244,7 @@ bool AUDTELESCOPE::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
         return true;
     }
     MovementWESP.s = IPS_ALERT;
-    DEBUGF(INDI::Logger::DBG_WARNING,"MoveWE command failed due to %s",answer);
+    DEBUGF(INDI::Logger::DBG_WARNING, "MoveWE command failed due to %s", answer);
     free(answer);
     return false;
 }
@@ -1171,7 +1254,8 @@ IPState AUDTELESCOPE::GuideNorth(uint32_t ms)
     char *answer = NULL;
     IPState rc;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "GuideNorth called before driver connection");
         return IPS_ALERT;
     }
@@ -1179,12 +1263,15 @@ IPState AUDTELESCOPE::GuideNorth(uint32_t ms)
     if ( ms == 0 )
         return IPS_OK;
 
-    answer = sendCommand("ASTRO_GUIDE * %u",ms);
-    if ( !answer ) {
+    answer = sendCommand("ASTRO_GUIDE * %u", ms);
+    if ( !answer )
+    {
         rc = IPS_OK;
-    } else {
+    }
+    else
+    {
         rc = IPS_ALERT;
-        DEBUGF(INDI::Logger::DBG_WARNING,"GuideNorth command failed due to %s",answer);
+        DEBUGF(INDI::Logger::DBG_WARNING, "GuideNorth command failed due to %s", answer);
         free(answer);
     }
     GuideComplete(INDI_EQ_AXIS::AXIS_DE);
@@ -1196,7 +1283,8 @@ IPState AUDTELESCOPE::GuideSouth(uint32_t ms)
     char *answer = NULL;
     IPState rc;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "GuideSouth called before driver connection");
         return IPS_ALERT;
     }
@@ -1204,12 +1292,15 @@ IPState AUDTELESCOPE::GuideSouth(uint32_t ms)
     if ( ms == 0 )
         return IPS_OK;
 
-    answer = sendCommand("ASTRO_GUIDE * -%u",ms);
-    if ( !answer ) {
+    answer = sendCommand("ASTRO_GUIDE * -%u", ms);
+    if ( !answer )
+    {
         rc = IPS_OK;
-    } else {
+    }
+    else
+    {
         rc = IPS_ALERT;
-        DEBUGF(INDI::Logger::DBG_WARNING,"GuideSouth command failed due to %s",answer);
+        DEBUGF(INDI::Logger::DBG_WARNING, "GuideSouth command failed due to %s", answer);
         free(answer);
     }
     GuideComplete(INDI_EQ_AXIS::AXIS_DE);
@@ -1221,7 +1312,8 @@ IPState AUDTELESCOPE::GuideEast(uint32_t ms)
     char *answer = NULL;
     IPState rc;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "GuideEast called before driver connection");
         return IPS_ALERT;
     }
@@ -1229,12 +1321,15 @@ IPState AUDTELESCOPE::GuideEast(uint32_t ms)
     if ( ms == 0 )
         return IPS_OK;
 
-    answer = sendCommand("ASTRO_GUIDE %u *",ms);
-    if ( !answer ) {
+    answer = sendCommand("ASTRO_GUIDE %u *", ms);
+    if ( !answer )
+    {
         rc = IPS_OK;
-    } else {
+    }
+    else
+    {
         rc = IPS_ALERT;
-        DEBUGF(INDI::Logger::DBG_WARNING,"GuideEast command failed due to %s",answer);
+        DEBUGF(INDI::Logger::DBG_WARNING, "GuideEast command failed due to %s", answer);
         free(answer);
     }
     GuideComplete(INDI_EQ_AXIS::AXIS_RA);
@@ -1246,7 +1341,8 @@ IPState AUDTELESCOPE::GuideWest(uint32_t ms)
     char *answer = NULL;
     IPState rc;
 
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "GuideWest called before driver connection");
         return IPS_ALERT;
     }
@@ -1254,12 +1350,15 @@ IPState AUDTELESCOPE::GuideWest(uint32_t ms)
     if ( ms == 0 )
         return IPS_OK;
 
-    answer = sendCommand("ASTRO_GUIDE -%u *",ms);
-    if ( !answer ) {
+    answer = sendCommand("ASTRO_GUIDE -%u *", ms);
+    if ( !answer )
+    {
         rc = IPS_OK;
-    } else {
+    }
+    else
+    {
         rc = IPS_ALERT;
-        DEBUGF(INDI::Logger::DBG_WARNING,"GuideWest command failed due to %s",answer);
+        DEBUGF(INDI::Logger::DBG_WARNING, "GuideWest command failed due to %s", answer);
         free(answer);
     }
     GuideComplete(INDI_EQ_AXIS::AXIS_RA);
@@ -1268,7 +1367,8 @@ IPState AUDTELESCOPE::GuideWest(uint32_t ms)
 
 bool AUDTELESCOPE::Abort()
 {
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         DEBUG(INDI::Logger::DBG_WARNING, "Abort called before driver connection");
         return false;
     }
@@ -1277,7 +1377,8 @@ bool AUDTELESCOPE::Abort()
 
     DEBUG(INDI::Logger::DBG_SESSION, "Telescope abort ...");
 
-    if (isConnected()) {
+    if (isConnected())
+    {
         char *answer;
         answer = sendCommand("ASTRO_STOP");
         free(answer);
@@ -1323,7 +1424,7 @@ char* AUDTELESCOPE::sendCommand(const char *fmt, ...)
 {
     va_list ap;
     char buffer[4096], answer[4096], addr[1024];
-    int rc,retries;
+    int rc, retries;
     zmq_pollitem_t item;
 
     va_start( ap, fmt );
@@ -1332,20 +1433,23 @@ char* AUDTELESCOPE::sendCommand(const char *fmt, ...)
 
     pthread_mutex_lock( &connectionmutex );
     retries = 3;
-    do {
+    do
+    {
         zmq_send(requester, buffer, strlen(buffer), 0);
         item = { requester, 0, ZMQ_POLLIN, 0 };
         rc = zmq_poll( &item, 1, 500 ); // ms
-        if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) ) {
+        if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) )
+        {
             // communication succeeded
             rc = zmq_recv(requester, answer, sizeof(answer), 0);
-            if ( rc >= 0 ) {
+            if ( rc >= 0 )
+            {
                 pthread_mutex_unlock( &connectionmutex );
-                answer[MIN(rc,(int)sizeof(answer)-1)] = '\0';
-                if ( !strncmp(answer,"OK",2) )
+                answer[MIN(rc, (int)sizeof(answer) - 1)] = '\0';
+                if ( !strncmp(answer, "OK", 2) )
                     return NULL;
-                if ( !strncmp(answer,"ERROR:",6) )
-                    return strdup(answer+6);
+                if ( !strncmp(answer, "ERROR:", 6) )
+                    return strdup(answer + 6);
                 return strdup("SYNTAXERROR");
             }
         }
@@ -1353,7 +1457,8 @@ char* AUDTELESCOPE::sendCommand(const char *fmt, ...)
         requester = zmq_socket(context, ZMQ_REQ);
         snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
-    } while ( --retries );
+    }
+    while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
     DEBUG(INDI::Logger::DBG_WARNING, "No answer from driver");
     return strdup("COMMUNICATIONERROR");
@@ -1374,16 +1479,18 @@ char* AUDTELESCOPE::sendCommandOnce(const char *fmt, ...)
     zmq_send(requester, buffer, strlen(buffer), 0);
     item = { requester, 0, ZMQ_POLLIN, 0 };
     rc = zmq_poll( &item, 1, 500 ); // ms
-    if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) ) {
+    if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) )
+    {
         // communication succeeded
         rc = zmq_recv(requester, answer, sizeof(answer), 0);
-        if ( rc >= 0 ) {
+        if ( rc >= 0 )
+        {
             pthread_mutex_unlock( &connectionmutex );
-            answer[MIN(rc,(int)sizeof(answer)-1)] = '\0';
-            if ( !strncmp(answer,"OK",2) )
+            answer[MIN(rc, (int)sizeof(answer) - 1)] = '\0';
+            if ( !strncmp(answer, "OK", 2) )
                 return NULL;
-            if ( !strncmp(answer,"ERROR:",6) )
-                return strdup(answer+6);
+            if ( !strncmp(answer, "ERROR:", 6) )
+                return strdup(answer + 6);
             return strdup("SYNTAXERROR");
         }
     }
@@ -1400,7 +1507,7 @@ char* AUDTELESCOPE::sendRequest(const char *fmt, ...)
 {
     va_list ap;
     char buffer[4096], answer[4096], addr[1024];
-    int rc,retries;
+    int rc, retries;
     zmq_pollitem_t item;
 
     va_start( ap, fmt );
@@ -1409,16 +1516,19 @@ char* AUDTELESCOPE::sendRequest(const char *fmt, ...)
 
     pthread_mutex_lock( &connectionmutex );
     retries = 3;
-    do {
+    do
+    {
         zmq_send(requester, buffer, strlen(buffer), 0);
         item = { requester, 0, ZMQ_POLLIN, 0 };
         rc = zmq_poll( &item, 1, 500 ); // ms
-        if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) ) {
+        if ( ( rc >= 0 ) && ( item.revents & ZMQ_POLLIN ) )
+        {
             // communication succeeded
             rc = zmq_recv(requester, answer, sizeof(answer), 0);
-            if ( rc >= 0 ) {
+            if ( rc >= 0 )
+            {
                 pthread_mutex_unlock( &connectionmutex );
-                answer[MIN(rc,(int)sizeof(answer)-1)] = '\0';
+                answer[MIN(rc, (int)sizeof(answer) - 1)] = '\0';
                 return strdup(answer);
             }
         }
@@ -1426,7 +1536,8 @@ char* AUDTELESCOPE::sendRequest(const char *fmt, ...)
         requester = zmq_socket(context, ZMQ_REQ);
         snprintf( addr, sizeof(addr), "tcp://%s:%d", IPaddress, IPport );
         zmq_connect(requester, addr);
-    } while ( --retries );
+    }
+    while ( --retries );
     pthread_mutex_unlock( &connectionmutex );
     DEBUG(INDI::Logger::DBG_WARNING, "No answer from driver");
     return strdup("COMMUNICATIONERROR");
