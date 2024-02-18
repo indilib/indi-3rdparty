@@ -222,9 +222,23 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             PrimaryCCD.setExposureLeft(timeLeft);
         }
 
-        usleep(delay * 1000 * 1000);
-
-        ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        ASI_ERROR_CODE ret;
+        if (timeLeft < 0.2)
+        {
+            int i = 0;
+            // exposure can fail in some cases if we don't call this fast enough
+            do
+            {
+                ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+                usleep(1000);
+                i++;
+            }while(i<300 && status == ASI_EXP_WORKING);
+        }
+        else
+        {
+            usleep(delay * 1000 * 1000);
+            ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        }
         // 2021-09-11 <sterne-jaeger@openfuture.de>: Fix for
         // https://www.indilib.org/forum/development/10346-asi-driver-sends-image-after-abort.html
         // Aborting an exposure also returns ASI_SUCCESS here, therefore
