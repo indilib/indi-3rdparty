@@ -22,7 +22,6 @@
 #include <math.h>
 #include <config.h>
 #include <chrono>
-#include <pigpiod_if2.h>
 #include <asipower.h>
 
 static class Loader
@@ -55,34 +54,34 @@ IndiAsiPower::~IndiAsiPower()
         deleteProperty(OnOffSP[i].name);
         deleteProperty(DutyCycleNP[i].name);
     }
-    deleteProperty(DslrSP.name);
-    deleteProperty(DslrExpNP.name);
+    deleteProperty(DslrSP.getName());
+    deleteProperty(DslrExpNP.getName());
 }
 bool IndiAsiPower::Connect()
 {
     // Init GPIO
-    DEBUGF(INDI::Logger::DBG_DEBUG, "pigpiod_if2 version %lu.", pigpiod_if_version());
-    m_piId = pigpio_start(NULL,NULL);
+//    DEBUGF(INDI::Logger::DBG_DEBUG, "pigpiod_if2 version %lu.", pigpiod_if_version());
+//    m_piId = pigpio_start(NULL,NULL);
 
-    if (m_piId < 0)
-    {
-        DEBUGF(INDI::Logger::DBG_ERROR, "pigpio initialisation failed: %d", m_piId);
-        return false;
-    }
-    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Hardware revision %x.", get_hardware_revision(m_piId));
-    for(int i=0; i<n_gpio_pin; i++)
-    {
-        set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
-    }
+//    if (m_piId < 0)
+//    {
+//        DEBUGF(INDI::Logger::DBG_ERROR, "pigpio initialisation failed: %d", m_piId);
+//        return false;
+//    }
+//    DEBUGF(INDI::Logger::DBG_SESSION, "pigpio version %lu.", get_pigpio_version(m_piId));
+//    DEBUGF(INDI::Logger::DBG_DEBUG, "Hardware revision %x.", get_hardware_revision(m_piId));
+//    for(int i=0; i<n_gpio_pin; i++)
+//    {
+//        set_pull_up_down(m_piId, gpio_pin[i], PI_PUD_DOWN);
+//    }
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power connected successfully.");
 
-    have_sensor = true;
-    for(int i=0; i<n_i2c; i++)
-    {
-        i2c_handle[i] = i2c_open(m_piId, 10, i2c_addr[i], 0);
-        have_sensor &= (i2c_handle[i] >=  0);
-    }
+//    have_sensor = true;
+//    for(int i=0; i<n_i2c; i++)
+//    {
+//        i2c_handle[i] = i2c_open(m_piId, 10, i2c_addr[i], 0);
+//        have_sensor &= (i2c_handle[i] >=  0);
+//    }
     if(have_sensor) SetTimer(0);
 
     return true;
@@ -93,13 +92,13 @@ bool IndiAsiPower::Disconnect()
     // Close GPIO
     for(int i=0; i<n_i2c; i++)
     {
-        if(i2c_handle[i] >= 0)
-        {
-            i2c_close(m_piId, i2c_handle[i]);
-        }
+//        if(i2c_handle[i] >= 0)
+//        {
+//            i2c_close(m_piId, i2c_handle[i]);
+//        }
     }
 
-    pigpio_stop(m_piId);
+//    pigpio_stop(m_piId);
     DEBUG(INDI::Logger::DBG_SESSION, "ASI Power disconnected successfully.");
     return true;
 }
@@ -134,14 +133,14 @@ bool IndiAsiPower::initProperties()
         IUFillNumber(&DutyCycleN[i][0], (dutyc + std::to_string(i)).c_str(), "Duty Cycle %", "%0.0f", 0, max_pwm_duty, 1, 0);
         IUFillNumberVector(&DutyCycleNP[i], DutyCycleN[i], 1, getDeviceName(), (dutyc + std::to_string(i)).c_str(), "Duty Cycle", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     }
-    IUFillSwitch(&DslrS[0], "DSLR_START", "Start", ISS_OFF);
-    IUFillSwitch(&DslrS[1], "DSLR_STOP", "Stop", ISS_ON);
-    IUFillSwitchVector(&DslrSP, DslrS, 2, getDeviceName(), "DSLR_CTRL", "DSLR ", "DSLR", IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    DslrSP[DSLR_START].fill("DSLR_START", "Start", ISS_OFF);
+    DslrSP[DSLR_STOP].fill("DSLR_STOP", "Stop", ISS_ON);
+    DslrSP.fill(getDeviceName(), "DSLR_CTRL", "DSLR ", "DSLR", IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillNumber(&DslrExpN[0], "DSLR_DUR", "Duration (s)", "%1.1f", 0, 3600, 1, 1);
-    IUFillNumber(&DslrExpN[1], "DSLR_COUNT", "Count", "%0.0f", 1, 500, 1, 1);
-    IUFillNumber(&DslrExpN[2], "DSLR_DELAY", "Delay (s)", "%1.1f", 0, 60, 1, 0);
-    IUFillNumberVector(&DslrExpNP, DslrExpN, 3, getDeviceName(), "DSLR_EXP", "Exposure", "DSLR", IP_RW, 0, IPS_IDLE);
+    DslrExpNP[DSLR_DUR].fill("DSLR_DUR", "Duration (s)", "%1.1f", 0, 3600, 1, 1);
+    DslrExpNP[DSLR_COUNT].fill("DSLR_COUNT", "Count", "%0.0f", 1, 500, 1, 1);
+    DslrExpNP[DSLR_DELAY].fill("DSLR_DELAY", "Delay (s)", "%1.1f", 0, 60, 1, 0);
+    DslrExpNP.fill(getDeviceName(), "DSLR_EXP", "Exposure", "DSLR", IP_RW, 0, IPS_IDLE);
 
     for(int i=0; i<n_sensor; i++)
     {
@@ -168,8 +167,8 @@ bool IndiAsiPower::updateProperties()
             defineProperty(&OnOffSP[i]);
             defineProperty(&DutyCycleNP[i]);
         }
-        defineProperty(&DslrSP);
-        defineProperty(&DslrExpNP);
+        defineProperty(DslrSP);
+        defineProperty(DslrExpNP);
 
         if(have_sensor)
         {
@@ -188,8 +187,8 @@ bool IndiAsiPower::updateProperties()
             deleteProperty(OnOffSP[i].name);
             deleteProperty(DutyCycleNP[i].name);
         }
-        deleteProperty(DslrSP.name);
-        deleteProperty(DslrExpNP.name);
+        deleteProperty(DslrSP.getName());
+        deleteProperty(DslrExpNP.getName());
 
         if(have_sensor)
         {
@@ -248,7 +247,7 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
                 if(OnOffS[i][1].s == ISS_ON && dev_pwm[m_type[i]])
                 {
                     DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
-                    set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
+//                    set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                 }
                 DutyCycleNP[i].s = IPS_OK;
                 IDSetNumber(&DutyCycleNP[i], nullptr);
@@ -256,34 +255,34 @@ bool IndiAsiPower::ISNewNumber (const char *dev, const char *name, double values
             }
         }
         // handle Exposure settings: Duration, Count, Delay
-        if (!strcmp(name, DslrExpNP.name))
+        if (!strcmp(name, DslrExpNP.getName()))
         {
-            if( DslrS[0].s == ISS_ON )
+            if( DslrSP[DSLR_DUR].getState() == ISS_ON )
             {
-                DslrExpNP.s = IPS_ALERT;
-                IDSetNumber(&DslrExpNP, nullptr);
+                DslrExpNP.setState(IPS_ALERT);
+                DslrExpNP.apply();
                 DEBUG(INDI::Logger::DBG_ERROR, "DSLR Cannot change settings during an exposure");
                 return false;
             }
             double intpart;
-            IUUpdateNumber(&DslrExpNP,values,names,n);
-            if(DslrExpN[0].value > 5 && modf(DslrExpN[0].value, &intpart) > 0)
+            DslrExpNP.update(values,names,n);
+            if(DslrExpNP[DSLR_DUR].value > 5 && modf(DslrExpNP[DSLR_DUR].value, &intpart) > 0)
             {
-                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Duration %0.2f > 5.0 s rounded to nearest integer", DslrExpN[0].value);
-                DslrExpN[0].value = round(DslrExpN[0].value);
+                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Duration %0.2f > 5.0 s rounded to nearest integer", DslrExpNP[DSLR_DUR].value);
+                DslrExpNP[DSLR_DUR].value = round(DslrExpNP[DSLR_DUR].value);
             }
-            if(DslrExpN[1].value < 1)
+            if(DslrExpNP[DSLR_COUNT].value < 1)
             {
-                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Count %0.0f is less than 1", DslrExpN[1].value);
+                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Count %0.0f is less than 1", DslrExpNP[DSLR_COUNT].value);
             }
-            if(DslrExpN[2].value > 5 && modf(DslrExpN[2].value, &intpart) > 0)
+            if(DslrExpNP[DSLR_DELAY].value > 5 && modf(DslrExpNP[DSLR_DELAY].value, &intpart) > 0)
             {
-                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Delay %0.2f > 5.0 rounded to nearest integer", DslrExpN[2].value);
-                DslrExpN[2].value = round(DslrExpN[2].value);
+                DEBUGF(INDI::Logger::DBG_WARNING, "DSLR Delay %0.2f > 5.0 rounded to nearest integer", DslrExpNP[DSLR_DELAY].value);
+                DslrExpNP[DSLR_DELAY].value = round(DslrExpNP[DSLR_DELAY].value);
             }
-            DEBUGF(INDI::Logger::DBG_SESSION, "DSLR Duration %0.2f s Count %0.0f Delay %0.2f s", DslrExpN[0].value, DslrExpN[1].value, DslrExpN[2].value);
-            DslrExpNP.s = IPS_OK;
-            IDSetNumber(&DslrExpNP, nullptr);
+            DEBUGF(INDI::Logger::DBG_SESSION, "DSLR Duration %0.2f s Count %0.0f Delay %0.2f s", DslrExpNP[DSLR_DUR].value, DslrExpNP[DSLR_COUNT].value, DslrExpNP[DSLR_DELAY].value);
+            DslrExpNP.setState(IPS_OK);
+            DslrExpNP.apply();
             return true;
         }
     }
@@ -305,8 +304,8 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                 if(dev_pwm[m_type[i]])
                 {
                     DutyCycleNP[i].s = IPS_OK;
-                    set_PWM_frequency(m_piId, gpio_pin[i], pwm_freq);
-                    set_PWM_range(m_piId, gpio_pin[i], max_pwm_duty);
+//                    set_PWM_frequency(m_piId, gpio_pin[i], pwm_freq);
+//                    set_PWM_range(m_piId, gpio_pin[i], max_pwm_duty);
                     IDSetNumber(&DutyCycleNP[i], nullptr);
                     DEBUGF(INDI::Logger::DBG_SESSION, "PWM device selected on %s %s", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
                 }
@@ -321,7 +320,7 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                         OnOffS[i][0].s = ISS_ON;          // Switch off if type None
                         OnOffS[i][1].s = ISS_OFF;         // Switch off if type None
                         IDSetSwitch(&OnOffSP[i], NULL);
-                        gpio_write(m_piId, gpio_pin[i], PI_LOW);
+//                        gpio_write(m_piId, gpio_pin[i], PI_LOW);
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s disabled", DeviceSP[i].label, dev_type[m_type[i]].c_str());
                     }
                     DEBUGF(INDI::Logger::DBG_SESSION, "%d%% duty cycle set on %s %s", max_pwm_duty, DeviceSP[i].label, dev_type[m_type[i]].c_str() );
@@ -348,12 +347,12 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     if(!dev_pwm[m_type[i]])
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str());
-                        gpio_write(m_piId, gpio_pin[i], PI_LOW);
+//                        gpio_write(m_piId, gpio_pin[i], PI_LOW);
                     }
                     else
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM OFF", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
-                        set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
+//                        set_PWM_dutycycle(m_piId, gpio_pin[i], 0);
                     }
                     OnOffSP[i].s = IPS_IDLE;
                     IDSetSwitch(&OnOffSP[i], NULL);
@@ -365,12 +364,12 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
                     if(!dev_pwm[m_type[i]])
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s set to ON", DeviceSP[i].label, dev_type[m_type[i]].c_str() );
-                        gpio_write(m_piId, gpio_pin[i], PI_HIGH);
+//                        gpio_write(m_piId, gpio_pin[i], PI_HIGH);
                     }
                     else
                     {
                         DEBUGF(INDI::Logger::DBG_SESSION, "%s %s PWM ON %0.0f\%", DeviceSP[i].label, dev_type[m_type[i]].c_str(), DutyCycleN[i][0].value);
-                        set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
+//                        set_PWM_dutycycle(m_piId, gpio_pin[i], DutyCycleN[i][0].value);
                     }
                     OnOffSP[i].s = IPS_OK;
                     IDSetSwitch(&OnOffSP[i], NULL);
@@ -382,31 +381,31 @@ bool IndiAsiPower::ISNewSwitch (const char *dev, const char *name, ISState *stat
             }
         }
         // Start and stop exposures
-        if (!strcmp(name, DslrSP.name))
+        if (DslrSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&DslrSP, states, names, n);
-            if( DslrS[0].s == ISS_ON )
+            DslrSP.update(states, names, n);
+            if( DslrSP[DSLR_START].getState() == ISS_ON )
             {
-                DslrSP.s = IPS_OK;
-                IDSetSwitch(&DslrSP, nullptr);
-                DEBUGF(INDI::Logger::DBG_SESSION, "DSLR Start Exposure: Duration %0.2f s Count %0.0f Delay %0.2f s", DslrExpN[0].value, DslrExpN[1].value, DslrExpN[2].value);
+                DslrSP.setState(IPS_OK);
+                DslrSP.apply();
+                DEBUGF(INDI::Logger::DBG_SESSION, "DSLR Start Exposure: Duration %0.2f s Count %0.0f Delay %0.2f s", DslrExpNP[DSLR_DUR].value, DslrExpNP[DSLR_COUNT].value, DslrExpNP[DSLR_DELAY].value);
                 DslrChange(true);
-                DslrExpNP.s = IPS_BUSY;
-                IDSetNumber(&DslrExpNP, nullptr);
+                DslrExpNP.setState(IPS_BUSY);
+                DslrExpNP.apply();
                 return true;
             }
-            if( DslrS[1].s == ISS_ON )
+            if( DslrSP[DSLR_STOP].getState() == ISS_ON )
             {
-                DslrSP.s = IPS_IDLE;
-                IDSetSwitch(&DslrSP, nullptr);
+                DslrSP.setState(IPS_IDLE);
+                DslrSP.apply();
                 DslrChange(false, true);
                 DEBUG(INDI::Logger::DBG_SESSION, "DSLR Stop exposure");
-                DslrExpNP.s = IPS_IDLE;
-                IDSetNumber(&DslrExpNP, nullptr);
+                DslrExpNP.setState(IPS_IDLE);
+                DslrExpNP.apply();
                 return true;
             }
-            DslrSP.s = IPS_ALERT;
-            IDSetSwitch(&DslrSP, nullptr);
+            DslrSP.setState(IPS_ALERT);
+            DslrSP.apply();
             return false;
         }
     }
@@ -432,18 +431,18 @@ bool IndiAsiPower::saveConfigItems(FILE *fp)
         IUSaveConfigSwitch(fp, &OnOffSP[i]);
         IUSaveConfigNumber(fp, &DutyCycleNP[i]);
     }
-    IUSaveConfigNumber(fp, &DslrExpNP);
+    DslrExpNP.save(fp);
     return true;
 }
 
 void IndiAsiPower::DslrChange(bool isInit, bool abort)
 {
-    gpio_write(m_piId, dslr_pin, PI_LOW);
+//    gpio_write(m_piId, dslr_pin, PI_LOW);
     timer.stop();
     auto now = std::chrono::system_clock::now();
     if (isInit)
     {
-        dslr_counter = DslrExpN[1].value + 1;
+        dslr_counter = DslrExpNP[DSLR_COUNT].value + 1;
         DEBUGF(INDI::Logger::DBG_DEBUG, "DSLR SEQ INIT: Counter %d", dslr_counter);
         dslr_isexp = true;
     }
@@ -467,20 +466,20 @@ void IndiAsiPower::DslrChange(bool isInit, bool abort)
     if (dslr_counter <= 0)
     {
         DEBUGF(INDI::Logger::DBG_SESSION, "DSLR SEQ END: %s Counter %d", dslr_isexp ? "Expose":"Delay", dslr_counter);
-        DslrS[0].s = ISS_OFF;
-        DslrS[1].s = ISS_ON;
-        DslrSP.s = IPS_IDLE;
-        IDSetSwitch(&DslrSP, nullptr);
-        DslrExpNP.s = IPS_IDLE;
-        IDSetNumber(&DslrExpNP, nullptr);
+        DslrSP[DSLR_START].setState(ISS_OFF);
+        DslrSP[DSLR_STOP].setState(ISS_ON);
+        DslrSP.setState(IPS_IDLE);
+        DslrSP.apply();
+        DslrExpNP.setState(IPS_IDLE);
+        DslrExpNP.apply();
         return;
     }
-    uint32_t l_duration = (dslr_isexp ? DslrExpN[0].value : DslrExpN[2].value)*1000;
+    uint32_t l_duration = (dslr_isexp ? DslrExpNP[DSLR_DUR].value : DslrExpNP[DSLR_DELAY].value)*1000;
 
     if (l_duration > 0) // non-zero duration
     {
         if(l_duration > max_timer_ms) l_duration = max_timer_ms;
-        gpio_write(m_piId, dslr_pin, dslr_isexp ? PI_HIGH: PI_LOW);
+//        gpio_write(m_piId, dslr_pin, dslr_isexp ? PI_HIGH: PI_LOW);
         timer.start(l_duration);
         dslr_start = std::chrono::system_clock::now();
         DEBUGF(INDI::Logger::DBG_SESSION, "DSLR START %s timer: Duration %d ms", dslr_isexp ? "Expose":"Delay", l_duration);
@@ -511,21 +510,21 @@ void IndiAsiPower::ReadSensor()
 {
     if(!have_sensor) return;
 
-    for(int i=0; i<(n_sensor*n_va); i++) {
-        int r = i2c_write_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x1, p_sensors[i].addr);
-        if(r < 0)
-        {
-                DEBUGF(INDI::Logger::DBG_ERROR, "power sensor %d access write error", i);
-                PowerSensorNP[p_sensors[i].sensor_id].s = IPS_ALERT;
-                PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = -1;
-                continue;
-        }
-        nanosleep(&sensor_read_wait, NULL);
-        uint16_t d = i2c_read_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x0);
-        d = d << 4 | d >> 12;
-        PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = (double)d * p_sensors[i].adjust;
-        PowerSensorNP[p_sensors[i].sensor_id].s = IPS_OK;
-    }
+//    for(int i=0; i<(n_sensor*n_va); i++) {
+//        int r = i2c_write_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x1, p_sensors[i].addr);
+//        if(r < 0)
+//        {
+//                DEBUGF(INDI::Logger::DBG_ERROR, "power sensor %d access write error", i);
+//                PowerSensorNP[p_sensors[i].sensor_id].s = IPS_ALERT;
+//                PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = -1;
+//                continue;
+//        }
+//        nanosleep(&sensor_read_wait, NULL);
+//        uint16_t d = i2c_read_word_data(m_piId, i2c_handle[p_sensors[i].i2c_id], 0x0);
+//        d = d << 4 | d >> 12;
+//        PowerSensorN[p_sensors[i].sensor_id][p_sensors[i].va].value = (double)d * p_sensors[i].adjust;
+//        PowerSensorNP[p_sensors[i].sensor_id].s = IPS_OK;
+//    }
 
     for(int i=0; i<(n_sensor); i++) {
         IDSetNumber(&PowerSensorNP[i], nullptr);

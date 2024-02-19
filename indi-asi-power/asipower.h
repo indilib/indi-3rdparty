@@ -94,10 +94,21 @@ private:
     int m_piId;
 
 // DSLR properties: DurationN, DelayN, CountN, StartS, AbortS
-    ISwitch DslrS[2];
-    ISwitchVectorProperty DslrSP;
-    INumber DslrExpN[3];
-    INumberVectorProperty DslrExpNP;
+    INDI::PropertySwitch DslrSP {2};
+    enum
+    {
+        DSLR_START,
+        DSLR_STOP
+    };
+
+//    INumber DslrExpN[3];
+    INDI::PropertyNumber DslrExpNP {3};
+    enum
+    {
+        DSLR_DUR,
+        DSLR_COUNT,
+        DSLR_DELAY
+    };
     
     std::chrono::time_point<std::chrono::system_clock> dslr_start;
     bool dslr_isexp;
