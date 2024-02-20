@@ -28,6 +28,14 @@
 #include <iostream>
 #include <thread>
 
+#ifdef _USE_SYSTEM_JSONLIB
+#include <nlohmann/json.hpp>
+#else
+#include <indijson.hpp>
+#endif
+
+using json = nlohmann::json;
+
 #include <indicom.h>
 #include <connectionplugins/connectionserial.h>
 
@@ -376,7 +384,7 @@ bool QFocuser::Handshake()
     LOGF_INFO("FOCUSVersionNP: %d", FOCUSVersionNP[0].getValue());
     LOGF_INFO("BOARDVersionNP: %d", BOARDVersionNP[0].getValue());
 
-    updateTemperature(0);
+    updateTemperature();
 
     if(cmd_voltage == 0)
     {
@@ -724,7 +732,7 @@ int QFocuser::updatePosition(double *value)
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-int QFocuser::updateTemperature(double *value)
+int QFocuser::updateTemperature()
 {
     char ret_cmd[MAX_CMD] = {0};
     std::string command = create_cmd(4, true, 0);

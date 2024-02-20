@@ -28,11 +28,8 @@
 #include <cstring>
 #include <termios.h>
 #include <fstream>
-#include <json.h>
 
 #define USB_CDC_RX_LEN      128
-
-using json = nlohmann::json;
 
 class QFocuser : public INDI::Focuser
 {
@@ -53,7 +50,7 @@ private:
   void GetFocusParams();
 
   int updatePosition(double *value);
-  int updateTemperature(double *value);
+  int updateTemperature();
   int updatePositionRelativeInward(double value);
   int updatePositionRelativeOutward(double value);
   int updatePositionAbsolute(double value);
@@ -95,9 +92,7 @@ private:
   INDI::PropertyNumber FocusSpeedNP{1};
 
 protected:
-    virtual bool saveConfigItems(FILE *fp) override;
     virtual bool Handshake() override;
-
     virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
     virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
     virtual bool SetFocuserSpeed(int speed) override;
