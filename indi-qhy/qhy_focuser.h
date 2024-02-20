@@ -1,6 +1,26 @@
+/*
+    QHY QFocuser
+
+    Copyright (C) 2024 Chen Jiaqi (cjq@qhyccd.com)
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+*/
+
 #pragma once
 
-// #include "libindi/indifocuser.h"
 #include "indifocuser.h"
 #include <indipropertynumber.h>
 
@@ -8,7 +28,7 @@
 #include <cstring>
 #include <termios.h>
 #include <fstream>
-#include <libindi/json.h>
+#include <json.h>
 
 #define USB_CDC_RX_LEN      128
 
@@ -20,18 +40,11 @@ public:
     QFocuser();
     virtual ~QFocuser() = default;
 
-    // You must override this method in your class.
     virtual const char *getDefaultName() override;
     
     virtual bool initProperties() override;
     virtual bool updateProperties() override;
-
-    virtual void ISGetProperties(const char *dev) override;
     virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
-    virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-    virtual bool ISSnoopDevice(XMLEle *root) override;
-
     virtual void TimerHit() override;
 
 private:
@@ -54,8 +67,6 @@ private:
   int timerID { -1 };
   bool initTargetPos = true;
   double targetPos{ 0 };
-  double simulatedTemperature{ 0 };
-  double simulatedPosition{ 0 };
   bool isReboot = false;
   int RebootTimes = 0;
 
@@ -85,14 +96,12 @@ private:
 
 protected:
     virtual bool saveConfigItems(FILE *fp) override;
-
     virtual bool Handshake() override;
 
-    virtual IPState MoveFocuser(FocusDirection dir, int speed, uint16_t duration);
-    virtual IPState MoveAbsFocuser(uint32_t targetTicks);
-    virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
-    virtual bool SetFocuserSpeed(int speed);
-    virtual bool SyncFocuser(uint32_t ticks);
-    virtual bool AbortFocuser();
-    virtual bool ReverseFocuser(bool enabled);
+    virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
+    virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
+    virtual bool SetFocuserSpeed(int speed) override;
+    virtual bool SyncFocuser(uint32_t ticks) override;
+    virtual bool AbortFocuser() override;
+    virtual bool ReverseFocuser(bool enabled) override;
 };
