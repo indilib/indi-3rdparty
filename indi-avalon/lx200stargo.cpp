@@ -2838,7 +2838,7 @@ void LX200StarGo::TimerHit()
 
     // update regularly the evaluation of the guiding statistics
     // and optimize the tracking
-    if (isTrackingAutoAdjustmentEnabled() && isConnected() && n >= 60)
+    if (isTrackingAutoAdjustmentEnabled() && isConnected() && n >= 15)
     {
         // sort the list first
         raPulsesList.sort();
@@ -2854,6 +2854,18 @@ void LX200StarGo::TimerHit()
         int average = accumulate(start, end, 0) / (n - 2 * delta);
         LOGF_INFO("Average RA pulse duration: %dms", average);
 
+        if (TrackingAdjustmentNP.s == IPS_OK)
+        {
+            // adjustment of the tracking speed
+            // 100ms --> 1% adjustment
+            // We take only 50%
+            double diff = 0.5 * static_cast<double>(average) / 100.0;
+            double adj = TrackingAdjustment[0].value + diff;
+            // ensure that -5 <= adj <= 5
+            adj = std::min(adj, 5.0);
+            adj = std::max(adj, -5.0);
+            setTrackingAdjustment(adj);
+        }
         // reset values
         raPulsesList.clear();
     }
@@ -2862,7 +2874,7 @@ void LX200StarGo::TimerHit()
     Telescope::TimerHit();
 }
 
-bool LX200StarGo::getTrackFrequency(double *value)
+bool LX200StarGo::getTrackFrequency(double * value)
 {
     LOG_DEBUG(__FUNCTION__);
     float Freq;
