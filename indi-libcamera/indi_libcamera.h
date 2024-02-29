@@ -32,6 +32,17 @@
 #include <indiccd.h>
 #include <inditimer.h>
 
+class RPiCamINDIApp : public RPiCamApp
+{
+public:
+    RPiCamINDIApp() : RPiCamApp(std::make_unique<StillOptions>()) {}
+
+    StillOptions *GetOptions() const
+    {
+        return static_cast<StillOptions *>(options_.get());
+    }
+};
+
 class SingleWorker;
 class INDILibCamera : public INDI::CCD
 {
@@ -105,7 +116,6 @@ protected:
     int processJPEGMemory(unsigned char *inBuffer, unsigned long inSize, uint8_t **memptr, size_t *memsize, int *naxis, int *w, int *h);
 
     void shutdownVideo();
-    void shutdownExposure();
 
 private:
 
@@ -127,15 +137,4 @@ private:
     uint8_t m_CameraIndex;
     libcamera::ControlList m_ControlList;
 
-};
-
-class RPiCamINDIApp : public RPiCamApp
-{
-public:
-    RPiCamINDIApp() : RPiCamApp(std::make_unique<StillOptions>()) {}
-
-    StillOptions *GetOptions() const
-    {
-        return static_cast<StillOptions *>(options_.get());
-    }
 };

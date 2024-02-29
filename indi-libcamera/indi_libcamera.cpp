@@ -203,14 +203,6 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-void INDILibCamera::shutdownExposure()
-{
-    PrimaryCCD.setExposureFailed();
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     RPiCamINDIApp app;
@@ -227,20 +219,29 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     catch (std::exception &e)
     {
         LOGF_ERROR("Error opening camera: %s", e.what());
-        shutdownExposure();
-        return;
+        PrimaryCCD.setExposureFailed();
+        app.StopCamera();
+        app.Teardown();
+        app.CloseCamera();
     }
 
     RPiCamApp::Msg msg = app.Wait();
     if (msg.type != RPiCamApp::MsgType::RequestComplete)
     {
         PrimaryCCD.setExposureFailed();
-        shutdownExposure();
+        app.StopCamera();
+        app.Teardown();
+        app.CloseCamera();
         LOGF_ERROR("Exposure failed: %d", msg.type);
         return;
     }
     else if (isAboutToQuit)
+    {
+        app.StopCamera();
+        app.Teardown();
+        app.CloseCamera();
         return;
+    }
 
     bool raw = CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG;
     auto stream = raw ? app.RawStream() : app.StillStream();
@@ -276,7 +277,10 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 if (!processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
                 {
                     LOG_ERROR("Exposure failed to parse raw image.");
-                    shutdownExposure();
+                    PrimaryCCD.setExposureFailed();
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
                     unlink(filename);
                     return;
                 }
@@ -290,7 +294,10 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 if (!processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
                 {
                     LOG_ERROR("Exposure failed to parse jpeg.");
-                    shutdownExposure();
+                    PrimaryCCD.setExposureFailed();
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
                     unlink(filename);
                     return;
                 }
@@ -386,7 +393,10 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             if (fstat(fd, &sb) == -1)
             {
                 LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
-                shutdownExposure();
+                PrimaryCCD.setExposureFailed();
+                app.StopCamera();
+                app.Teardown();
+                app.CloseCamera();
                 close(fd);
                 return;
             }
@@ -409,7 +419,10 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 if (mmap_mem == nullptr)
                 {
                     LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
-                    shutdownExposure();
+                    PrimaryCCD.setExposureFailed();
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
                     close(fd);
                     return;
                 }
@@ -433,16 +446,16 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         }
 
         ExposureComplete(&PrimaryCCD);
-
-        app.StopCamera();
-        app.Teardown();
-        app.CloseCamera();
     }
     catch (std::exception &e)
     {
         LOGF_ERROR("Error saving image: %s", e.what());
-        shutdownExposure();
+        PrimaryCCD.setExposureFailed();
     }
+
+    app.StopCamera();
+    app.Teardown();
+    app.CloseCamera();
 }
 
 /*
@@ -590,6 +603,10 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(duration * 1000000));
     TimeVal<std::chrono::microseconds> tv;
     tv.set(std::to_string(duration) + "s");
+
+    int argc = 0;
+    char *argv[] = {};
+    options->Parse(argc, argv);
 
     options->camera = m_CameraIndex;
     options->nopreview = true;

@@ -58,6 +58,25 @@ target_link_libraries(indi_libcamera_ccd
 
 #####################################
 
+########### rpicam_test ###########
+set(rpicam_test_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/rpicam_test.cpp
+)
+
+add_executable(rpicam_test ${rpicam_test_SRCS})
+
+target_link_libraries(rpicam_test 
+    ${LibCameraApps_LIBRARY}
+    ${LibCamera_LIBRARY}
+    ${Boost_LIBRARIES}
+    ${USB1_LIBRARIES}
+    ${LibRaw_LIBRARIES}
+    ${JPEG_LIBRARIES}
+    ${ZLIB_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT})
+
+#####################################
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_libcamera_ccd rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
