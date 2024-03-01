@@ -641,6 +641,10 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerate)
 {
+    int argc = 0;
+    char *argv[] = {};
+    options->Parse(argc, argv);
+
     options->camera = m_CameraIndex;
     options->codec = "mjpeg";
     options->brightness = AdjustmentNP[AdjustBrightness].getValue();
