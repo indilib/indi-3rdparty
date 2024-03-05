@@ -116,7 +116,8 @@ MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
     else
     {
         rtrim(sp);
-        snprintf(name, MAXINDINAME, "MI %s", sp);
+        strncpy(name, "MI ", MAXINDINAME);
+        strncat(name, sp, MAXINDINAME - 3);
         IDLog("Detected camera: %s.\n", name);
     }
 
