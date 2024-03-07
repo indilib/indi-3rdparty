@@ -48,38 +48,38 @@
 
 static class Loader
 {
-    std::map<int, std::shared_ptr<INDILibCamera>> cameras;
-public:
-    Loader()
-    {
-        load();
-    }
-
-public:
-public:
-    void load()
-    {
-        RPiCamINDIApp app;
-        int argc = 0;
-        char *argv[] = {};
-        auto options = app.GetOptions();
-        if (options->Parse(argc, argv))
+        std::map<int, std::shared_ptr<INDILibCamera>> cameras;
+    public:
+        Loader()
         {
-            auto new_cameras = app.GetCameras();
+            load();
+        }
 
-            if (new_cameras.size() == 0)
+    public:
+    public:
+        void load()
+        {
+            RPiCamINDIApp app;
+            int argc = 0;
+            char *argv[] = {};
+            auto options = app.GetOptions();
+            if (options->Parse(argc, argv))
             {
-                IDLog("No cameras detected.");
-                return;
-            }
+                auto new_cameras = app.GetCameras();
 
-            for (size_t i = 0; i < new_cameras.size(); i++)
-            {
-                auto newCamera = new INDILibCamera(i, new_cameras[i]->properties());
-                cameras[i] = std::shared_ptr<INDILibCamera>(newCamera);
+                if (new_cameras.size() == 0)
+                {
+                    IDLog("No cameras detected.");
+                    return;
+                }
+
+                for (size_t i = 0; i < new_cameras.size(); i++)
+                {
+                    auto newCamera = new INDILibCamera(i, new_cameras[i]->properties());
+                    cameras[i] = std::shared_ptr<INDILibCamera>(newCamera);
+                }
             }
         }
-    }
 
 } loader;
 
@@ -90,7 +90,7 @@ INDILibCamera::INDILibCamera(uint8_t index, const libcamera::ControlList &list) 
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
-    auto fullName = std::string("LibCamera ") + list.get(properties::Model).value();
+    auto fullName = std::string("LibCamera ") + list.get(properties::Model).value() + "-" + std::to_string(index);
     setDeviceName(fullName.c_str());
 }
 
