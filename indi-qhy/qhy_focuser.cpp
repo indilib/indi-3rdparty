@@ -100,6 +100,8 @@ bool QFocuser::initProperties()
     FocusAbsPosN[0].value = 0;
     FocusAbsPosN[0].step  = 1000;
 
+    FocusMaxPosN[0].max = 2e6;
+
     FocusSpeedMin = 0;
     FocusSpeedMax = 8;
 
@@ -268,7 +270,7 @@ int QFocuser::ReadResponse(char *buf)
                 }
                 else if (cmd_id == 1)
                 {
-                    LOGF_INFO("<RES> %s", cmd_json.dump().c_str());
+                    LOGF_DEBUG("<RES> %s", cmd_json.dump().c_str());
                     if (cmd_json.find("id") != cmd_json.end() && cmd_json.find("version") != cmd_json.end() && cmd_json.find("bv") != cmd_json.end())
                     {
                         cmd_version  = cmd_json["version"];
@@ -381,15 +383,15 @@ bool QFocuser::Handshake()
     FOCUSVersionNP[0].setValue(cmd_version);
     BOARDVersionNP[0].setValue(cmd_version_board);
 
-    LOGF_INFO("FOCUSVersionNP: %d", FOCUSVersionNP[0].getValue());
-    LOGF_INFO("BOARDVersionNP: %d", BOARDVersionNP[0].getValue());
+    LOGF_DEBUG("FOCUSVersionNP: %d", FOCUSVersionNP[0].getValue());
+    LOGF_DEBUG("BOARDVersionNP: %d", BOARDVersionNP[0].getValue());
 
     updateTemperature();
 
     if(cmd_voltage == 0)
     {
         std::string command_ = create_cmd(16, true, 0);
-        LOGF_INFO("<CMD> %s", command_.c_str());
+        LOGF_DEBUG("<CMD> %s", command_.c_str());
         ret_chk = SendCommand(const_cast<char *>(command_.c_str()));
 
         if (ret_chk < 0)
@@ -741,14 +743,14 @@ int QFocuser::updateTemperature()
     auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
     if (ret_chk < 0)
     {
-        LOGF_ERROR("updateTemperature error %d", ret_chk);
+        LOGF_ERROR("updateTemperature Send error %d", ret_chk);
         return false;
     }
 
     ret_chk = ReadResponse(ret_cmd);
     if (ret_chk < 0)
     {
-        LOGF_ERROR("updateTemperature error %d", ret_chk);
+        LOGF_ERROR("updateTemperature Read error %d", ret_chk);
         return false;
     }
 
@@ -823,6 +825,16 @@ void QFocuser::GetFocusParams()
         FocusAbsPosNP.s = IPS_ALERT;
         LOGF_ERROR("Unknown error while reading  position: %d", ret);
         IDSetNumber(&FocusAbsPosNP, nullptr);
+        return;
+    }
+
+    if ((ret = updateTemperature()) < 0)
+    {
+        TemperatureNP.setState(IPS_ALERT);
+        TemperatureChipNP.setState(IPS_ALERT);
+        LOG_ERROR("Unknown error while reading temperature.");
+        TemperatureNP.apply();
+        TemperatureChipNP.apply();
         return;
     }
 
