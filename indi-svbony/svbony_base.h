@@ -35,6 +35,10 @@
 #include <indiccd.h>
 #include <inditimer.h>
 
+// WORKAROUND for bug #655
+// If defined following symbol, get buffered image data before to set exposure duration.
+#define WORKAROUND_latest_image_can_be_getten_next_time
+
 class SingleWorker;
 class SVBONYBase : public INDI::CCD
 {
@@ -95,6 +99,10 @@ class SVBONYBase : public INDI::CCD
         /** Send CCD image to client */
         void sendImage(SVB_IMG_TYPE type, float duration);
 
+#ifdef WORKAROUND_latest_image_can_be_getten_next_time
+        // Discard unretrieved exposure data
+        void discardVideoData();
+#endif
     protected:
         double mTargetTemperature;
         double mCurrentTemperature;

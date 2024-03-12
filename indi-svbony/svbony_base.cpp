@@ -79,6 +79,16 @@ bool SVBONYBase::SetROIFormat(int x, int y, int w, int h, int bin)
     return true;
 }
 
+#ifdef WORKAROUND_latest_image_can_be_getten_next_time
+// Discard unretrieved exposure data
+void SVBONYBase::discardVideoData()
+{
+    unsigned char* imageBuffer = PrimaryCCD.getFrameBuffer();
+    SVB_ERROR_CODE status = SVBGetVideoData(mCameraInfo.CameraID, imageBuffer, PrimaryCCD.getFrameBufferSize(),  1000);
+    LOGF_DEBUG("Discard unretrieved exposure data: SVBGetVideoData:result=%d", status);
+}
+#endif
+
 void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 {
     SVB_ERROR_CODE ret;
@@ -175,6 +185,11 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
         return;
     }
+
+#ifdef WORKAROUND_latest_image_can_be_getten_next_time
+    // Discard unretrieved exposure data
+    discardVideoData();
+#endif
 
     PrimaryCCD.setExposureDuration(duration);
 
