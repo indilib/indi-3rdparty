@@ -1,6 +1,6 @@
 indi-svbony (1.4.1) bionic; urgency=low
 
-	* SVBONYCCD: Workaround for an issue that rarely retrieves the previous image.
+  * SVBONYCCD: Workaround for an issue that rarely retrieves the previous image.
 
  -- Tetsuya Kakura <jcpgm@outlook.jp>  Tue, 12 Mar. 2024 14:00:00 +0900
 
