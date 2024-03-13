@@ -355,29 +355,6 @@ bool WeatherRadio::updateProperties()
 
         result = INDI::Weather::updateProperties();
 
-        // clean up weather interface parameters to avoid doubling when reconnecting
-        for (int i = 0; i < WeatherInterface::ParametersNP.nnp; i++)
-        {
-            free(WeatherInterface::ParametersN[i].aux0);
-            free(WeatherInterface::ParametersN[i].aux1);
-            free(WeatherInterface::ParametersRangeNP[i].np);
-        }
-
-        free(WeatherInterface::ParametersN);
-        WeatherInterface::ParametersN = nullptr;
-        WeatherInterface::ParametersNP.nnp = 0;
-        if (WeatherInterface::ParametersRangeNP != nullptr)
-        {
-            WeatherInterface::ParametersRangeNP->nnp = 0;
-            free(WeatherInterface::ParametersRangeNP);
-            WeatherInterface::ParametersRangeNP = nullptr;
-        }
-        WeatherInterface::nRanges = 0;
-
-        free(WeatherInterface::critialParametersL);
-        WeatherInterface::critialParametersL = nullptr;
-        WeatherInterface::critialParametersLP.nlp = 0;
-
         // clear firmware configuration so that #handleFirmwareVersion() recongnizes an initialisation
         FirmwareConfigTP.tp = nullptr;
         free(FirmwareConfigT);
@@ -1137,9 +1114,10 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         double elevation = LocationN[LOCATION_ELEVATION].value;
 
         double temp = 15.0; // default value
-        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
-        if (temperatureParameter != nullptr)
-            temp = temperatureParameter->value;
+
+        auto temperatureParameter = ParametersNP.findWidgetByName(WEATHER_TEMPERATURE);
+        if (temperatureParameter)
+            temp = temperatureParameter->getValue();
 
         double pressure_normalized = weatherCalculator->sealevelPressure(value, elevation, temp);
         setParameterValue(WEATHER_PRESSURE, pressure_normalized);
@@ -1149,10 +1127,10 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         double humidity = weatherCalculator->calibrate(weatherCalculator->humidityCalibration, value);
 
         setParameterValue(WEATHER_HUMIDITY, humidity);
-        INumber *temperatureParameter = getWeatherParameter(WEATHER_TEMPERATURE);
-        if (temperatureParameter != nullptr)
+        auto temperatureParameter = ParametersNP.findWidgetByName(WEATHER_TEMPERATURE);
+        if (temperatureParameter)
         {
-            double dp =  weatherCalculator->dewPoint(humidity, temperatureParameter->value);
+            double dp =  weatherCalculator->dewPoint(humidity, temperatureParameter->getValue());
             setParameterValue(WEATHER_DEWPOINT, dp);
         }
     }
@@ -1275,10 +1253,7 @@ bool WeatherRadio::saveConfigItems(FILE *fp)
     IUSaveConfigSwitch(fp, &rainDropsSensorSP);
     IUSaveConfigSwitch(fp, &rainVolumeSensorSP);
     IUSaveConfigSwitch(fp, &wetnessSensorSP);
-    if (ParametersRangeNP != nullptr)
-        IUSaveConfigNumber(fp, ParametersRangeNP);
     IUSaveConfigNumber(fp, &ttyTimeoutNP);
-
 
     return INDI::Weather::saveConfigItems(fp);
 }
@@ -1308,18 +1283,6 @@ INumber *WeatherRadio::findRawSensorProperty(WeatherRadio::sensor_name sensor)
 
     return sensorProp;
 }
-
-INumber *WeatherRadio::getWeatherParameter(std::string name)
-{
-    for (int i = 0; i < ParametersNP.nnp; i++)
-    {
-        if (!strcmp(ParametersN[i].name, name.c_str()))
-            return &ParametersN[i];
-    }
-    // not found
-    return nullptr;
-}
-
 
 /**************************************************************************************
 **
