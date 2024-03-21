@@ -31,12 +31,10 @@ USB and network connections supported.
 #include "ocs.h"
 #include "termios.h"
 
-#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <memory>
 #include <mutex>
-#include <climits>
 
 // Custom tabs
 #define STATUS_TAB "Status"
@@ -54,7 +52,7 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    setVersion(0, 5);
+    setVersion(0, 6);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
