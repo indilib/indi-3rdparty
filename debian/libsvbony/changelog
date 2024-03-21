@@ -1,3 +1,15 @@
+libsvbony (1.12.1) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.12.1 :
+  * *** Note: The following changes were made both 1.12.1 and 1.12.1 ***
+  * Support SC432M camera
+  * Add the SVB_BAD_PIXEL_CORRECTION_THRESHOLD parameter to set the threshold for bad pixel correction. 
+  * If the difference with surrounding pixels exceeds the threshold, it will be dynamically corrected. 
+  * It takes effect only when the SVB_BAD_PIXEL_CORRECTION_ENABLE parameter is turned on
+  * The cooling camera will no longer turn off cooling and fan when certain parameters are set
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Fri, 1 Dec 2023 12:00:00 +0900
+
 libsvbony (1.11.4) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.11.4 :

@@ -1065,7 +1065,24 @@ bool EQMod::ReadScopeStatus()
         {
             if (!(mount->IsRARunning()) && !(mount->IsDERunning()))
             {
-                SetParked(true);
+                currentRAEncoder = mount->GetRAEncoder();
+                currentDEEncoder = mount->GetDEEncoder();
+                parkRAEncoder    = GetAxis1Park();
+                parkDEEncoder    = GetAxis2Park();
+                if (std::abs(static_cast<int32_t>(parkRAEncoder - currentRAEncoder)) > PARKING_THRESHOLD )
+                {
+                    // Start slewing
+                    LOGF_INFO("Motors while parking stopped, reparking mount: RA increment = %d, DE increment = %d",
+                              static_cast<int32_t>(parkRAEncoder - currentRAEncoder), static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
+                    mount->SlewTo(static_cast<int32_t>(parkRAEncoder - currentRAEncoder),
+                                  static_cast<int32_t>(parkDEEncoder - currentDEEncoder));
+
+                    TrackState = SCOPE_PARKING;
+                }
+                else
+                {
+                    SetParked(true);
+                }
             }
         }
 

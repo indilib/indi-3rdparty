@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_qhy CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -48,7 +48,7 @@ ENDIF ()
 
 add_executable(indi_qhy_ccd ${indiqhy_SRCS})
 
-target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(indi_qhy_ccd rt)
@@ -75,3 +75,12 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
 endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )
+
+########### qhy_focuser ###########
+add_executable(indi_qhy_focuser ${CMAKE_CURRENT_SOURCE_DIR}/qhy_focuser.cpp)
+target_link_libraries(indi_qhy_focuser ${INDI_LIBRARIES} )
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(indi_qhy_focuser rt)
+endif()
+
+install(TARGETS indi_qhy_focuser RUNTIME DESTINATION bin )

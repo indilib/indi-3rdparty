@@ -288,4 +288,6 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int DBG_SCOPE_STATUS {0};
         int DBG_COMM {0};
         int DBG_MOUNT {0};
+
+        static constexpr int PARKING_THRESHOLD {10};
 };

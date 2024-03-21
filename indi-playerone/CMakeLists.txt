@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_playerone CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -13,7 +13,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(PLAYERONE_VERSION_MAJOR 1)
-set(PLAYERONE_VERSION_MINOR 12)
+set(PLAYERONE_VERSION_MINOR 13)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)

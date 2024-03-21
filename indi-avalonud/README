@@ -1,0 +1,42 @@
+Avalon Unified Drivers
+======================
+
+This package provides the INDI driver for mounts equipped with AvalonInstruments StarGO+ and StarGO2 controllers
+
+Requirements
+============
+
++ libindi1 >= v1.9.6
+
+	You need to install both libindi1 and libindi-dev to build this package.
+
+
++ libzmq >= v4.3.1
+
+	You need to install libzmq3-dev to build this package.
+
+Installation
+============
+
+	See INSTALL
+
+How to Use
+==========
+
+	You can use the AvalonUD Drivers in any INDI-compatible client such as KStars or Stellarium.
+
+	To run the driver for the telescope from the command line:
+
+	$ indiserver indi_avalonud_telescope
+
+	or to start also the drivers for the focuser and the auxiliaries:
+
+	$ indiserver indi_avalonud_telescope indi_avalonud_focuser indi_avalonud_aux
+
+	You can then connect to the drivers from any client.
+	If you're using KStars, the drivers will be automatically listed in KStars' Device Manager
+	and the only configuration required is to enter the controller IP address in the Connection tab
+	of each driver before connecting.
+
+	The drivers sonnects to ports 5450 and 5451 on the controller.
+

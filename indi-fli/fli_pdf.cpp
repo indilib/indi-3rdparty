@@ -1,21 +1,25 @@
 #if 0
-    FLI PDF
-    INDI Interface for Finger Lakes Instrument Focusers
-    Copyright (C) 2003-2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
+FLI PDF
+INDI Interface for Finger Lakes Instrument Focusers
+Copyright (C) 2003 - 2012 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+    This library is free software;
+you can redistribute it and / or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation;
+either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY;
+without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library;
+if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #endif
 
@@ -157,7 +161,7 @@ bool FLIPDF::Connect()
 
     if ((err = FLIOpen(&fli_dev, FLIFocus.name, FLIDEVICE_FOCUSER | FLIFocus.domain)))
     {
-        LOGF_ERROR("Error: FLIOpen() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("Error: FLIOpen() failed. %s.", strerror((int) - err));
         return false;
     }
 
@@ -175,7 +179,7 @@ bool FLIPDF::Disconnect()
 
     if ((err = FLIClose(fli_dev)))
     {
-        LOGF_ERROR("Error: FLIClose() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("Error: FLIClose() failed. %s.", strerror((int) - err));
 
         return false;
     }
@@ -195,7 +199,7 @@ bool FLIPDF::setupParams()
     //////////////////////
     if (!sim && (err = FLIGetModel(fli_dev, FLIFocus.model, 200))) //ToDo: lazy
     {
-        LOGF_ERROR("FLIGetModel() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIGetModel() failed. %s.", strerror((int) - err));
         return false;
     }
 
@@ -211,10 +215,10 @@ bool FLIPDF::setupParams()
         FLIFocus.HWRevision = 1;
     else if ((err = FLIGetHWRevision(fli_dev, &FLIFocus.HWRevision)))
     {
-        LOGF_ERROR("FLIGetHWRevision() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIGetHWRevision() failed. %s.", strerror((int) - err));
 
         if (isDebug())
-            IDLog("FLIGetHWRevision() failed. %s.\n", strerror((int)-err));
+            IDLog("FLIGetHWRevision() failed. %s.\n", strerror((int) - err));
 
         return false;
     }
@@ -229,7 +233,7 @@ bool FLIPDF::setupParams()
         FLIFocus.FWRevision = 1;
     else if ((err = FLIGetFWRevision(fli_dev, &FLIFocus.FWRevision)))
     {
-        LOGF_ERROR("FLIGetFWRevision() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIGetFWRevision() failed. %s.", strerror((int) - err));
         return false;
     }
 
@@ -244,7 +248,7 @@ bool FLIPDF::setupParams()
         FLIFocus.current_pos = 3500;
     else if ((err = FLIGetStepperPosition(fli_dev, &FLIFocus.current_pos)))
     {
-        LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int) - err));
         return false;
     }
 
@@ -255,7 +259,7 @@ bool FLIPDF::setupParams()
         FLIFocus.max_pos = 50000;
     else if ((err = FLIGetFocuserExtent(fli_dev, &FLIFocus.max_pos)))
     {
-        LOGF_ERROR("FLIGetFocuserExtent() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIGetFocuserExtent() failed. %s.", strerror((int) - err));
         return false;
     }
 
@@ -288,7 +292,7 @@ void FLIPDF::goHomePosition()
 
     if (!sim && (err = FLIHomeFocuser(fli_dev)))
     {
-        LOGF_ERROR("FLIHomeFocuser() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIHomeFocuser() failed. %s.", strerror((int) - err));
         return;
     }
 
@@ -325,7 +329,7 @@ void FLIPDF::TimerHit()
         // while moving, display the remaing steps
         else if ((err = FLIGetStepsRemaining(fli_dev, &FLIFocus.steps_remaing)))
         {
-            LOGF_ERROR("FLIGetStepsRemaining() failed. %s.", strerror((int)-err));
+            LOGF_ERROR("FLIGetStepsRemaining() failed. %s.", strerror((int) - err));
             SetTimer(getCurrentPollingPeriod());
             return;
         }
@@ -340,14 +344,20 @@ void FLIPDF::TimerHit()
             }
         }
 
-        FocusAbsPosN[0].value = FLIFocus.steps_remaing;
+        if ((err = FLIGetStepperPosition(fli_dev, &FLIFocus.current_pos)))
+        {
+            LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int) - err));
+            SetTimer(getCurrentPollingPeriod());
+            return;
+        }
+        FocusAbsPosN[0].value = FLIFocus.current_pos;
         IDSetNumber(&FocusAbsPosNP, nullptr);
     }
     else // we need to display the current position after move finished
     {
         if ((err = FLIGetStepperPosition(fli_dev, &FLIFocus.current_pos)))
         {
-            LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int)-err));
+            LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int) - err));
             return;
         }
         FocusAbsPosN[0].value = FLIFocus.current_pos;
@@ -371,13 +381,13 @@ IPState FLIPDF::MoveAbsFocuser(uint32_t targetTicks)
     long current;
     if ((err = FLIGetStepperPosition(fli_dev, &current)))
     {
-        LOGF_ERROR("FLIPDF::MoveAbsFocuser: FLIGetStepperPosition() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIPDF::MoveAbsFocuser: FLIGetStepperPosition() failed. %s.", strerror((int) - err));
         return IPS_ALERT;
     }
     err = FLIStepMotorAsync(fli_dev, (targetTicks - current));
     if (!sim && (err))
     {
-        LOGF_ERROR("FLIStepMotor() failed. %s.", strerror((int)-err));
+        LOGF_ERROR("FLIStepMotor() failed. %s.", strerror((int) - err));
         return IPS_ALERT;
     }
 
@@ -412,7 +422,7 @@ bool FLIPDF::findFLIPDF(flidomain_t domain)
 
     if ((err = FLIList(domain | FLIDEVICE_FOCUSER, &names)))
     {
-        LOGF_ERROR("FLIList() failed. %s", strerror((int)-err));
+        LOGF_ERROR("FLIList() failed. %s", strerror((int) - err));
         return false;
     }
 
@@ -456,7 +466,7 @@ bool FLIPDF::findFLIPDF(flidomain_t domain)
 
         if ((err = FLIFreeList(names)))
         {
-            LOGF_ERROR("FLIFreeList() failed. %s.", strerror((int)-err));
+            LOGF_ERROR("FLIFreeList() failed. %s.", strerror((int) - err));
             return false;
         }
 
@@ -465,7 +475,7 @@ bool FLIPDF::findFLIPDF(flidomain_t domain)
     {
         if ((err = FLIFreeList(names)))
         {
-            LOGF_ERROR("FLIFreeList() failed. %s.", strerror((int)-err));
+            LOGF_ERROR("FLIFreeList() failed. %s.", strerror((int) - err));
             return false;
         }
 

@@ -5,8 +5,8 @@
                 <driver name="EQMod Mount">indi_eqmod_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
-        <device label="SkyAdventurer GTi" manufacturer="SkyWatcher">
-                <driver name="SkyAdventurer GTi">indi_skyadventurergti_telescope</driver>
+        <device label="Star Adventurer GTi" manufacturer="SkyWatcher">
+                <driver name="Star Adventurer GTi">indi_staradventurergti_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
         <device label="AZ-GTi Equatorial WiFi" manufacturer="SkyWatcher">

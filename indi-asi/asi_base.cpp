@@ -222,9 +222,23 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             PrimaryCCD.setExposureLeft(timeLeft);
         }
 
-        usleep(delay * 1000 * 1000);
-
-        ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        ASI_ERROR_CODE ret;
+        if (timeLeft < 0.2)
+        {
+            int i = 0;
+            // exposure can fail in some cases if we don't call this fast enough
+            do
+            {
+                ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+                usleep(1000);
+                i++;
+            }while(i<300 && status == ASI_EXP_WORKING);
+        }
+        else
+        {
+            usleep(delay * 1000 * 1000);
+            ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        }
         // 2021-09-11 <sterne-jaeger@openfuture.de>: Fix for
         // https://www.indilib.org/forum/development/10346-asi-driver-sends-image-after-abort.html
         // Aborting an exposure also returns ASI_SUCCESS here, therefore
@@ -1436,6 +1450,13 @@ void ASIBase::createControls(int piNumberOfControls)
         ASI_BOOL isAuto = ASI_FALSE;
         ASIGetControlValue(mCameraInfo.CameraID, cap.ControlType, &value, &isAuto);
 
+        // Workaround for apparent ASI SDK 1.31 and 1.32 bug that gives bogus default values for GPS
+        // controls on cameras that don't have GPS and fails to complete exposures if the value is written back.
+        if (cap.ControlType == ASI_GPS_START_LINE || cap.ControlType == ASI_GPS_END_LINE)
+        {
+            value = 0;
+        }
+
         if (cap.IsWritable)
         {
             LOGF_DEBUG("Adding above control as writable control number %d.", ControlNP.size());
@@ -1532,6 +1553,18 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
     if (np)
     {
         fitsKeywords.push_back({"OFFSET", np->value, 3, "Offset"});
+    }
+
+    np = ControlNP.findWidgetByName("WB_R");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_R", np->value, 3, "White Balance - Red"});
+    }
+
+    np = ControlNP.findWidgetByName("WB_B");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
     }
 }
 

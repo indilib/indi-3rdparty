@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libricohcamerasdk)
 
 set (LIBPENTAX_VERSION "1.1.0")

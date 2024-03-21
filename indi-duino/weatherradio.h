@@ -136,12 +136,7 @@ protected:
     /**
      * @brief find the matching sensor INDI property
      */
-    INumber *findRawSensorProperty(const sensor_name sensor);
-
-    /**
-     * @brief Find a given weather parameter.
-     */
-    INumber *getWeatherParameter(std::string name);
+    INumber *findRawSensorProperty(const sensor_name sensor);    
 
     /**
      * @brief TTY interface timeout

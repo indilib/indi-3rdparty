@@ -169,7 +169,7 @@ bool QHYCCD::initProperties()
                        ISR_1OFMANY, 0, IPS_IDLE);
 
     // CCD Regulation power
-    IUFillNumber(&CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 5, 0.0);
+    IUFillNumber(&CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%.2f", 0., 100., 5, 0.0);
     IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB,
                        IP_RO, 60, IPS_IDLE);
 

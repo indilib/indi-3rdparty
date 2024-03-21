@@ -197,7 +197,8 @@ bool IndiAstrolink4::initProperties()
     // Auto pwm
     IUFillSwitch(&AutoPWMDefaultOnS[0], "PWMA_A_DEF_ON", "A", ISS_OFF);
     IUFillSwitch(&AutoPWMDefaultOnS[1], "PWMA_B_DEF_ON", "B", ISS_OFF);
-    IUFillSwitchVector(&AutoPWMDefaultOnSP, AutoPWMDefaultOnS, 2, getDeviceName(), "AUTO_PWM_DEF_ON", "Auto PWM default ON", SETTINGS_TAB,
+    IUFillSwitchVector(&AutoPWMDefaultOnSP, AutoPWMDefaultOnS, 2, getDeviceName(), "AUTO_PWM_DEF_ON", "Auto PWM default ON",
+                       SETTINGS_TAB,
                        IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
 
     ISState pwmAutoA = ISS_OFF;
@@ -853,12 +854,12 @@ bool IndiAstrolink4::sensorRead()
                 setParameterValue("WEATHER_TEMPERATURE", std::stod(result[Q_SENS1_TEMP]));
                 setParameterValue("WEATHER_HUMIDITY", std::stod(result[Q_SENS1_HUM]));
                 setParameterValue("WEATHER_DEWPOINT", std::stod(result[Q_SENS1_DEW]));
-                ParametersNP.s = IPS_OK;
-                IDSetNumber(&ParametersNP, nullptr);
+                ParametersNP.setState(IPS_OK);
+                ParametersNP.apply();
             }
             else
             {
-                ParametersNP.s = IPS_IDLE;
+                ParametersNP.setState(IPS_IDLE);
             }
 
             if(std::stod(result[Q_SENS2_TYPE]) > 0)

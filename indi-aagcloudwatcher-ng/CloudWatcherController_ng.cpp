@@ -66,7 +66,7 @@ bool CloudWatcherController::checkCloudWatcher()
 {
     sendCloudwatcherCommand("A!");
 
-    char inputBuffer[BLOCK_SIZE * 2];
+    char inputBuffer[BLOCK_SIZE * 2] = {0};
 
     int r = getCloudWatcherAnswer(inputBuffer, 2);
 
@@ -75,17 +75,11 @@ bool CloudWatcherController::checkCloudWatcher()
         return false;
     }
 
-    const char *internalNameBlock = "!N CloudWatcher";
+    std::string internalNameBlock = "!N CloudWatcher";
+    std::string pocketNameBlock = "!N PocketCW";
+    std::string detectedName = std::string(inputBuffer);
 
-    for (int i = 0; i < 15; i++)
-    {
-        if (inputBuffer[i] != internalNameBlock[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return (detectedName == internalNameBlock || detectedName == pocketNameBlock);
 }
 
 bool CloudWatcherController::getSwitchStatus(int *switchStatus)
@@ -163,7 +157,8 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
             return false;
         }
 
-        check = getValues(&internalSupplyVoltage[i], &ambientTemperature[i], &ldrValue[i], &ldrFreqValue[i], &rainSensorTemperature[i]);
+        check = getValues(&internalSupplyVoltage[i], &ambientTemperature[i], &ldrValue[i], &ldrFreqValue[i],
+                          &rainSensorTemperature[i]);
 
         if (!check)
         {
@@ -682,10 +677,12 @@ bool CloudWatcherController::getHumidity(int *humidity)
             if (h == 100)
                 return false;
 
-            if( h == 65535 ) {
+            if( h == 65535 )
+            {
                 *humidity = 0;
             }
-            else {
+            else
+            {
                 *humidity = h * 125 / 65536 - 6;
             }
 
@@ -721,10 +718,12 @@ bool CloudWatcherController::getPressure(int *pressure)
         int p = 0;
         int res = sscanf(inputBuffer, "!p       %d", &p);
 
-        if( p == 65535 ) {
+        if( p == 65535 )
+        {
             *pressure = 0;
         }
-        else {
+        else
+        {
             *pressure = p / 16;
         }
 
@@ -741,7 +740,8 @@ bool CloudWatcherController::getPressure(int *pressure)
     return true;
 }
 
-bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue, int *ldrFreqValue,
+bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue,
+                                       int *ldrFreqValue,
                                        int *rainSensorTemperature)
 {
     sendCloudwatcherCommand("C!");
@@ -763,7 +763,8 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientT
             return false;
         }
 
-        int res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq, &rainSensTemp);
+        int res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq,
+                         &rainSensTemp);
 
         if (res != 4)
         {
@@ -975,7 +976,8 @@ bool CloudWatcherController::getCloudWatcherAnswer(char *buffer, int nBlocks)
         return false;
     }
 
-    if( buffer[0] == '!' && ( buffer[1] == 'f' || buffer[1] == 'd' ) ) {
+    if( buffer[0] == '!' && ( buffer[1] == 'f' || buffer[1] == 'd' ) )
+    {
         LOGF_DEBUG( "skip answer %s %i", buffer, nBlocks );
         return getCloudWatcherAnswer(buffer, nBlocks);
     }

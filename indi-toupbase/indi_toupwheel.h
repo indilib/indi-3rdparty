@@ -29,7 +29,7 @@
 class ToupWheel : public INDI::FilterWheel
 {
     public:
-        explicit ToupWheel(const XP(DeviceV2) *instance);
+        explicit ToupWheel(const XP(DeviceV2) *instance, const char *name);
 
         virtual const char *getDefaultName() override;
 
@@ -63,5 +63,4 @@ class ToupWheel : public INDI::FilterWheel
         
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
-        char m_name[MAXINDIDEVICE];
 };

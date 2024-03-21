@@ -1,3 +1,9 @@
+libnncam (55.24621.20240204) jammy; urgency=medium
+
+  * Upstream release
+
+ -- nn; Mon, 05 Feb 2024 08:24:22 +0800
+
 libnncam (1.54.2) jammy; urgency=medium
 
   * Upstream release

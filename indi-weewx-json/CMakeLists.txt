@@ -1,5 +1,5 @@
 PROJECT(indi_weewx_json C CXX)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 set (WEEWX_VERSION_MAJOR 1)
 set (WEEWX_VERSION_MINOR 0)
@@ -14,6 +14,16 @@ set(CMAKE_CXX_FLAGS "-g -std=c++0x ${CMAKE_CXX_FLAGS}")
 
 find_package(INDI REQUIRED)
 find_package(CURL REQUIRED)
+
+if(INDI_JSONLIB)
+    set(JSONLIB "")
+    message(STATUS "Using indi bundled json library")
+else(INDI_JSONLIB)
+    find_package(nlohmann_json REQUIRED)
+    add_definitions(-D_USE_SYSTEM_JSONLIB)
+    set(JSONLIB nlohmann_json::nlohmann_json)
+    message(STATUS "Using system provided Niels Lohmann's json library")
+endif(INDI_JSONLIB)
 
 if (CMAKE_VERSION VERSION_LESS 3.12.0)
 set(CURL ${CURL_LIBRARIES})
@@ -38,7 +48,7 @@ set(weewx_SRCS
 
 add_executable(indi_weewx_json ${weewx_SRCS})
 
-target_link_libraries(indi_weewx_json ${INDI_LIBRARIES} ${INDI_DRIVER_LIBRARIES} ${CURL})
+target_link_libraries(indi_weewx_json ${INDI_LIBRARIES} ${INDI_DRIVER_LIBRARIES} ${CURL} ${JSONLIB})
 
 install(TARGETS indi_weewx_json RUNTIME DESTINATION bin )
 
