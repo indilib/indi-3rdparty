@@ -90,6 +90,7 @@ protected:
     void workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate);
     void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
     void outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe);
+    void metadataReady(libcamera::ControlList &metadata);
     bool SetCaptureFormat(uint8_t index) override;
     void initSwitch(INDI::PropertySwitch &switchSP, int n, const char **names);
 

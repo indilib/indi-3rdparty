@@ -131,7 +131,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
     configureVideoOptions(options, framerate);
     std::unique_ptr<Output> output = std::unique_ptr<Output>(Output::Create(options));
     app.SetEncodeOutputReadyCallback(std::bind(&INDILibCamera::outputReady, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-    app.SetMetadataReadyCallback(std::bind(&Output::MetadataReady, output.get(), std::placeholders::_1));
+    app.SetMetadataReadyCallback(std::bind(&INDILibCamera::metadataReady, this, std::placeholders::_1));
 
     try
     {
@@ -147,15 +147,33 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
         return;
     }
 
+    if (m_LiveVideoWidth <= 0)
+    {
+        m_LiveVideoWidth = PrimaryCCD.getSubW();
+        m_LiveVideoHeight = PrimaryCCD.getSubH();
+        PrimaryCCD.setBin(1, 1);
+        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
+        Streamer->setPixelFormat(INDI_JPG);
+        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
+    }
+
     while (!isAboutToQuit)
     {
         RPiCamEncoder::Msg msg = app.Wait();
-        if (msg.type == RPiCamEncoder::MsgType::Quit)
+
+        if (msg.type == RPiCamApp::MsgType::Timeout)
+		{
+			LOG_WARN("Device timeout detected, attempting a restart!");
+			app.StopCamera();
+			app.StartCamera();
+			continue;
+		}
+        else if (msg.type == RPiCamEncoder::MsgType::Quit)
         {
             return;
         }
         else if (msg.type != RPiCamEncoder::MsgType::RequestComplete)
-        {
+        {            
             LOGF_ERROR("Video Streaming failed: %d", msg.type);
             shutdownVideo();
             return;
@@ -177,27 +195,26 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
 void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe)
 {
     INDI_UNUSED(timestamp_us);
-    INDI_UNUSED(keyframe);
-    uint8_t * cameraBuffer = PrimaryCCD.getFrameBuffer();
-    size_t cameraBufferSize = 0;
-    int w = 0, h = 0, naxis = 0;
-    int bitsperpixel;
-    char bayer_pattern[8] = {};
+    
+    if (!keyframe)
+        return;
 
     // Read buffer from memory
     std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
+    
+    Streamer->newFrame(static_cast<uint8_t*>(mem), size);
 
     // We are done with writing to CCD buffer
     ccdguard.unlock();
+}
 
-    if (m_LiveVideoWidth <= 0)
-    {
-        PrimaryCCD.setBin(1, 1);
-        PrimaryCCD.setFrame(0, 0, m_LiveVideoWidth, m_LiveVideoHeight);
-        Streamer->setPixelFormat(INDI_JPG);
-        Streamer->setSize(m_LiveVideoWidth, m_LiveVideoHeight);
-    }
-    Streamer->newFrame(static_cast<uint8_t*>(mem), size);
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+void INDILibCamera::metadataReady(libcamera::ControlList &metadata)
+{    
+    // TODO could this metadata be useful?
+    INDI_UNUSED(metadata);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -646,6 +663,8 @@ void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerat
     options->Parse(argc, argv);
 
     options->camera = m_CameraIndex;
+    options->nopreview = true;
+
     options->codec = "mjpeg";
     options->brightness = AdjustmentNP[AdjustBrightness].getValue();
     options->contrast = AdjustmentNP[AdjustContrast].getValue();
