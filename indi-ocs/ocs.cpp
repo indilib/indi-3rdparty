@@ -1355,16 +1355,11 @@ IPState OCS::updateWeather() {
         }
         if (WI::syncCriticalParameters())
         {
-            IDSetLight(&critialParametersLP, nullptr);
-
             LOG_DEBUG("SyncCriticalParameters = true");
         } else {
             LOG_DEBUG("SyncCriticalParameters = false");
         }
-        ParametersNP.s = IPS_OK;
-        IDSetNumber(&ParametersNP, nullptr);
     }
-
 
     return IPS_OK;
 }
