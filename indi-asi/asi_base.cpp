@@ -335,12 +335,14 @@ bool ASIBase::initProperties()
     FlipSP[FLIP_HORIZONTAL].fill("FLIP_HORIZONTAL", "Horizontal", ISS_OFF);
     FlipSP[FLIP_VERTICAL].fill("FLIP_VERTICAL", "Vertical", ISS_OFF);
     FlipSP.fill(getDeviceName(), "FLIP", "Flip", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
+    FlipSP.load();
 
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     BlinkNP[BLINK_COUNT   ].fill("BLINK_COUNT",    "Blinks before exposure", "%2.0f", 0, 100, 1.000, 0);
     BlinkNP[BLINK_DURATION].fill("BLINK_DURATION", "Blink duration",         "%2.3f", 0,  60, 0.001, 0);
     BlinkNP.fill(getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    BlinkNP.load();
 
     IUSaveText(&BayerT[2], getBayerString());
 
@@ -442,19 +444,16 @@ bool ASIBase::updateProperties()
         if (!ControlNP.isEmpty())
         {
             defineProperty(ControlNP);
-            loadConfig(true, ControlNP.getName());
         }
 
         if (!ControlSP.isEmpty())
         {
             defineProperty(ControlSP);
-            loadConfig(true, ControlSP.getName());
         }
 
         if (hasFlipControl())
         {
             defineProperty(FlipSP);
-            loadConfig(true, FlipSP.getName());
         }
 
         if (!VideoFormatSP.isEmpty())
@@ -566,11 +565,6 @@ bool ASIBase::Connect()
 
 bool ASIBase::Disconnect()
 {
-    // Save all config before shutdown
-    saveConfig(true);
-
-    LOGF_DEBUG("Closing %s...", mCameraName.c_str());
-
     stopGuidePulse(mTimerNS);
     stopGuidePulse(mTimerWE);
     mTimerTemperature.stop();
@@ -788,6 +782,7 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
 
             ControlNP.setState(IPS_OK);
             ControlNP.apply();
+            saveConfig(ControlNP);
             return true;
         }
 
@@ -795,6 +790,7 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             BlinkNP.setState(BlinkNP.update(values, names, n) ? IPS_OK : IPS_ALERT);
             BlinkNP.apply();
+            saveConfig(BlinkNP);
             return true;
         }
     }
@@ -846,6 +842,7 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             ControlSP.setState(IPS_OK);
             ControlSP.apply();
+            saveConfig(ControlSP);
             return true;
         }
 
@@ -875,6 +872,7 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             FlipSP.setState(IPS_OK);
             FlipSP.apply();
+            saveConfig(FlipSP);
             return true;
         }
 
@@ -922,6 +920,8 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 VideoFormatSP.setState(IPS_OK);
                 VideoFormatSP.apply();
             }
+
+            saveConfig(VideoFormatSP);
             return true;
         }
     }
