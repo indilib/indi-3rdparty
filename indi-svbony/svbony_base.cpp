@@ -138,12 +138,13 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
                 RGB channel data align in targetFrame: 24bit:BGR, 32bit:BGRA
                 RGB channel data align in file: 24bit:RGB, 32bit:RGBA
             */
-            if (Helpers::isRGB(mCurrentVideoFormat)) {
+            if (Helpers::isRGB(mCurrentVideoFormat))
+            {
                 int nChannels = Helpers::getNChannels(mCurrentVideoFormat);
                 for (uint32_t i = 0; i < totalBytes; i += nChannels)
                     std::swap(targetFrame[i], targetFrame[i + 2]); // swap R and B channel.
             }
-        
+
             Streamer->newFrame(targetFrame, totalBytes);
         }
 
@@ -347,7 +348,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         delay = 0.5f;
                         break;
                     }
-                    //fall through
+                //fall through
                 default: // Cannot continue to retrive image data when ret is any error except timeout.
                     if (Helpers::isRGB(type))
                         free(buffer);
@@ -382,11 +383,6 @@ SVBONYBase::~SVBONYBase()
 const char *SVBONYBase::getDefaultName()
 {
     return "SVBONY CCD";
-}
-
-void SVBONYBase::ISGetProperties(const char *dev)
-{
-    INDI::CCD::ISGetProperties(dev);
 }
 
 bool SVBONYBase::initProperties()
@@ -443,33 +439,22 @@ bool SVBONYBase::updateProperties()
         if (HasCooler())
         {
             defineProperty(CoolerNP);
-            loadConfig(true, CoolerNP.getName());
             defineProperty(CoolerSP);
-            loadConfig(true, CoolerSP.getName());
         }
-        //        // Even if there is no cooler, we define temperature property as READ ONLY
-        //        else
-        //        {
-        //            TemperatureNP.p = IP_RO;
-        //            defineProperty(&TemperatureNP);
-        //        }
 
         if (!ControlNP.isEmpty())
         {
             defineProperty(ControlNP);
-            loadConfig(true, ControlNP.getName());
         }
 
         if (!ControlSP.isEmpty())
         {
             defineProperty(ControlSP);
-            loadConfig(true, ControlSP.getName());
         }
 
         if (hasFlipControl())
         {
             defineProperty(FlipSP);
-            loadConfig(true, FlipSP.getName());
         }
 
         if (!VideoFormatSP.isEmpty())
@@ -608,11 +593,13 @@ bool SVBONYBase::Connect()
     // Output camera properties to log
     if (isDebug())
     {
-        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedBins) / sizeof(mCameraProperty.SupportedBins[0]))) && mCameraProperty.SupportedBins[i] != 0; i++)
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedBins) / sizeof(mCameraProperty.SupportedBins[0])))
+                && mCameraProperty.SupportedBins[i] != 0; i++)
         {
             LOGF_DEBUG(" Bin %d", mCameraProperty.SupportedBins[i]);
         }
-        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedVideoFormat) / sizeof(mCameraProperty.SupportedVideoFormat[0]))) && mCameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
+        for (int i = 0; (i < (int)(sizeof(mCameraProperty.SupportedVideoFormat) / sizeof(mCameraProperty.SupportedVideoFormat[0])))
+                && mCameraProperty.SupportedVideoFormat[i] != SVB_IMG_END; i++)
         {
             LOGF_DEBUG(" Supported Video Format: %s", Helpers::toString(mCameraProperty.SupportedVideoFormat[i]));
         }
@@ -774,7 +761,8 @@ void SVBONYBase::setupParams()
     SetCCDParams(maxWidth, maxHeight, bpp, pixelSize, pixelSize);
 
     // Let's calculate required buffer
-    int nbuf = (PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8) * Helpers::getNChannels(mCurrentVideoFormat);
+    int nbuf = (PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8) * Helpers::getNChannels(
+                   mCurrentVideoFormat);
     PrimaryCCD.setFrameBufferSize(nbuf);
 
     long value      = 0;
@@ -1023,7 +1011,8 @@ int SVBONYBase::SetTemperature(double temperature)
 
     SVB_ERROR_CODE ret;
 
-    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature * 10.0), SVB_TRUE); // For SVB_TARGET_TEMPERATURE, 1 unit is set as 0.1 degree.
+    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_TARGET_TEMPERATURE, std::round(temperature * 10.0),
+                             SVB_TRUE); // For SVB_TARGET_TEMPERATURE, 1 unit is set as 0.1 degree.
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to set temperature (%s).", Helpers::toString(ret));
@@ -1212,10 +1201,10 @@ void SVBONYBase::temperatureTimerTimeout()
         TemperatureNP.s = newState;
         TemperatureN[0].value = mCurrentTemperature;
         IDSetNumber(&TemperatureNP, nullptr);
-/*
-        This log should be commented out except when investigating bugs, etc., as it outputs very frequently.
-        LOGF_DEBUG("Current Temperature %.2f degree", mCurrentTemperature);
-*/
+        /*
+                This log should be commented out except when investigating bugs, etc., as it outputs very frequently.
+                LOGF_DEBUG("Current Temperature %.2f degree", mCurrentTemperature);
+        */
     }
 
     if (HasCooler())
@@ -1430,7 +1419,7 @@ void SVBONYBase::updateRecorderFormat()
             mCurrentVideoFormat,
             mCameraProperty.BayerPattern,
             Helpers::isColor(mCurrentVideoFormat)
-            ),
+        ),
         Helpers::getBPP(mCurrentVideoFormat)
     );
 }
