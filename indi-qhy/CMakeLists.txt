@@ -13,6 +13,16 @@ find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
+if(INDI_JSONLIB)
+    set(JSONLIB "")
+    message(STATUS "Using indi bundled json library")
+else(INDI_JSONLIB)
+    find_package(nlohmann_json REQUIRED)
+    add_definitions(-D_USE_SYSTEM_JSONLIB)
+    set(JSONLIB nlohmann_json::nlohmann_json)
+    message(STATUS "Using system provided Niels Lohmann's json library")
+endif(INDI_JSONLIB)
+
 set(INDI_QHY_VERSION_MAJOR 2)
 set(INDI_QHY_VERSION_MINOR 8)
 
