@@ -75,8 +75,8 @@ bool CloudWatcherController::checkCloudWatcher()
         return false;
     }
 
-    std::string internalNameBlock = "!N CloudWatcher";
-    std::string pocketNameBlock = "!N PocketCW";
+    std::string internalNameBlock = "!N CloudWatcher!";
+    std::string pocketNameBlock = "!N PocketCW!";
     std::string detectedName = std::string(inputBuffer);
 
     return (detectedName == internalNameBlock || detectedName == pocketNameBlock);
@@ -923,6 +923,27 @@ int CloudWatcherController::aggregateInts(int values[], int numberOfValues)
     return (int)aggregateFloats(newValues, numberOfValues);
 }
 
+void CloudWatcherController::trimString(char *str)
+{
+    char *read_ptr = str;
+    char *write_ptr = str;
+
+    // Loop through the string
+    while (*read_ptr != '\0')
+    {
+        // Check for literal "\0"
+        if (*read_ptr != '\\' || *(read_ptr + 1) != '0')
+        {
+            // Not literal "\0", copy the character
+            *write_ptr++ = *read_ptr;
+        }
+        read_ptr++; // Move read pointer regardless
+    }
+
+    // Null terminate the modified string
+    *write_ptr = '\0';
+}
+
 bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks)
 {
     int length = nBlocks * BLOCK_SIZE;
@@ -937,6 +958,8 @@ bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks)
         }
     }
 
+    trimString(buffer);
+
     return true;
 }
 
@@ -944,12 +967,12 @@ bool CloudWatcherController::sendCloudwatcherCommand(const char *command, int si
 {
     int rc = -1;
     int n = 0;
-    char errstr[MAXRBUF];
 
     LOGF_DEBUG( "sendCloudwatcherCommand(%s,%i)", command, size );
 
     if ((rc = tty_write(PortFD, command, size, &n)) != TTY_OK)
     {
+        char errstr[MAXRBUF];
         tty_error_msg(rc, errstr, MAXRBUF);
         LOGF_ERROR("%s write error: %s", __FUNCTION__, errstr);
         return false;
@@ -967,10 +990,10 @@ bool CloudWatcherController::getCloudWatcherAnswer(char *buffer, int nBlocks)
 {
     int rc = -1;
     int n = 0;
-    char errstr[MAXRBUF];
 
     if ((rc = tty_read(PortFD, buffer, nBlocks * BLOCK_SIZE, READ_TIMEOUT, &n)) != TTY_OK)
     {
+        char errstr[MAXRBUF];
         tty_error_msg(rc, errstr, MAXRBUF);
         LOGF_ERROR("%s read error: %s", __FUNCTION__, errstr);
         return false;
@@ -982,16 +1005,11 @@ bool CloudWatcherController::getCloudWatcherAnswer(char *buffer, int nBlocks)
         return getCloudWatcherAnswer(buffer, nBlocks);
     }
 
-    int valid = checkValidMessage(buffer, nBlocks);
+    auto valid = checkValidMessage(buffer, nBlocks);
 
     LOGF_DEBUG( "getCloudWatcherAnswer(%s,%i) = %s", buffer, nBlocks, valid ? "valid" : "invalid" );
 
-    if (!valid)
-    {
-        return false;
-    }
-
-    return true;
+    return valid;
 }
 
 void CloudWatcherController::printMessage(const char *fmt, ...)
