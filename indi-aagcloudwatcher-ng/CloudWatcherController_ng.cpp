@@ -925,23 +925,18 @@ int CloudWatcherController::aggregateInts(int values[], int numberOfValues)
 
 void CloudWatcherController::trimString(char *str)
 {
-    char *read_ptr = str;
     char *write_ptr = str;
-
     // Loop through the string
-    while (*read_ptr != '\0')
+    while (*write_ptr != '\0')
     {
-        // Check for literal "\0"
-        if (*read_ptr != '\\' || *(read_ptr + 1) != '0')
+        if (*write_ptr == 17)
         {
-            // Not literal "\0", copy the character
-            *write_ptr++ = *read_ptr;
+            *write_ptr = 0;
+            break;
         }
-        read_ptr++; // Move read pointer regardless
+        else
+            write_ptr++;
     }
-
-    // Null terminate the modified string
-    *write_ptr = '\0';
 }
 
 bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks)
