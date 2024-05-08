@@ -245,9 +245,23 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
             PrimaryCCD.setExposureLeft(timeLeft);
         }
 
-        usleep(delay * 1000 * 1000);
-
-        POAErrors ret = POAGetCameraState(mCameraInfo.cameraID, &status);
+        POAErrors ret;
+        if (timeLeft < 0.2)
+        {
+            int i = 0;
+            // exposure can fail in some cases if we don't call this fast enough
+            do
+            {
+                ret = POAGetCameraState(mCameraInfo.cameraID, &status);
+                usleep(1000);
+                i++;
+            }while(i<300 && status == STATE_EXPOSING);
+        }
+        else
+        {
+            usleep(delay * 1000 * 1000);
+            ret = POAGetCameraState(mCameraInfo.cameraID, &status);
+        }
 
         if (isAbortToQuit)
             return;
