@@ -352,7 +352,7 @@ bool ASIBase::initProperties()
     SDKVersionSP[0].fill("VERSION", "Version", ASIGetSDKVersion());
     SDKVersionSP.fill(getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    SerialNumberTP[0].fill("SN#", "SN#", mSerialNumber);
+    SerialNumberTP[0].fill("SN", "SN", mSerialNumber);
     SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     NicknameTP[0].fill("nickname", "nickname", mNickname);
