@@ -74,6 +74,8 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Sun May 12 2024 Hiroshi Saito <hiro3110g@gmail.com>
+- Update PlayerOneCamera SDK to v3.6.2
 * Thu Jan 4 2024 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOneCamera SDK to v3.6.1
 * Wed Sep 20 2023 Hiroshi Saito <hiro3110g@gmail.com>
