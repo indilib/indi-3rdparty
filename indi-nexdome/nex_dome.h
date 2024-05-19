@@ -75,31 +75,24 @@ class NexDome : public INDI::Dome
         /////////////////////////////////////////////////////////////////////////////
         /// Properties
         /////////////////////////////////////////////////////////////////////////////
-        ISwitchVectorProperty GoHomeSP;
-        ISwitch GoHomeS[2];
+        INDI::PropertySwitch GoHomeSP {2};
         enum
         {
             HOME_FIND,
             HOME_GOTO,
         };
 
-        INumberVectorProperty HomePositionNP;
-        INumber HomePositionN[1];
+        INDI::PropertyNumber HomePositionNP {1};
 
-        INumberVectorProperty ShutterBatteryLevelNP;
-        INumber ShutterBatteryLevelN[1];
+        INDI::PropertyNumber ShutterBatteryLevelNP {1};
 
-        ITextVectorProperty RotatorFirmwareVersionTP;
-        IText RotatorFirmwareVersionT[1] {};
+        INDI::PropertyText RotatorFirmwareVersionTP {1};
 
-        ITextVectorProperty ShutterFirmwareVersionTP;
-        IText ShutterFirmwareVersionT[1] {};
+        INDI::PropertyText ShutterFirmwareVersionTP {1};
 
-        ISwitchVectorProperty RotatorFactorySP;
-        ISwitch RotatorFactoryS[3];
+        INDI::PropertySwitch RotatorFactorySP {3};
 
-        ISwitchVectorProperty ShutterFactorySP;
-        ISwitch ShutterFactoryS[3];
+        INDI::PropertySwitch ShutterFactorySP {3};
         enum
         {
             FACTORY_DEFAULTS,
@@ -116,17 +109,13 @@ class NexDome : public INDI::Dome
             S_RANGE
         };
 
-        INumberVectorProperty RotatorSettingsNP;
-        INumber RotatorSettingsN[4];
+        INDI::PropertyNumber RotatorSettingsNP {4};
 
-        INumberVectorProperty ShutterSettingsNP;
-        INumber ShutterSettingsN[2];
+        INDI::PropertyNumber ShutterSettingsNP {2};
 
-        INumberVectorProperty RotatorSyncNP;
-        INumber RotatorSyncN[1];
+        INDI::PropertyNumber RotatorSyncNP {1};
 
-        INumberVectorProperty ShutterSyncNP;
-        INumber ShutterSyncN[1];
+        INDI::PropertyNumber ShutterSyncNP {1};
 
     private:
         ///////////////////////////////////////////////////////////////////////////////
