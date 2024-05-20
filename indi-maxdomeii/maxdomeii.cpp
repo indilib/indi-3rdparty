@@ -588,7 +588,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         int error;
         int nRetry = 3;
 
-        if (TicksPerTurnNP.update(values, names, n) < 0)
+        if (TicksPerTurnNP.update(values, names, n) == false)
             return false;
 
         nVal = values[0];
@@ -622,7 +622,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
 
         // Incorrect value.
         TicksPerTurnNP.setState(IPS_ALERT);
-        LOG_INFO("Invalid Ticks Per Turn");
+        LOG_ERROR("Invalid Ticks Per Turn");
         TicksPerTurnNP.apply();
 
         return false;
@@ -653,7 +653,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         }
         // Incorrect value.
         HomeAzimuthNP.setState(IPS_ALERT);
-        LOG_INFO("Invalid home azimuth");
+        LOG_ERROR("Invalid home azimuth");
         HomeAzimuthNP.apply();
 
         return false;
@@ -667,7 +667,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         double nVal;
         char cLog[255];
 
-        if (WatchDogNP.update(values, names, n) < 0)
+        if (WatchDogNP.update(values, names, n) == false)
             return false;
 
         nVal = values[0];
@@ -682,7 +682,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         }
         // Incorrect value.
         WatchDogNP.setState(IPS_ALERT);
-        LOG_INFO("Invalid watch dog time");
+        LOG_ERROR("Invalid watch dog time");
         WatchDogNP.apply();
 
         return false;
@@ -715,7 +715,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
             else
             {
                 ShutterOperationAzimuthNP.setState(IPS_ALERT);
-                LOGF_INFO("%s", ErrorMessages[-error]);
+                LOGF_ERROR("%s", ErrorMessages[-error]);
                 ShutterOperationAzimuthNP.apply();
             }
 
@@ -723,7 +723,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         }
         // Incorrect value.
         ShutterOperationAzimuthNP.setState(IPS_ALERT);
-        LOG_INFO("Invalid shutter operation azimuth position");
+        LOG_ERROR("Invalid shutter operation azimuth position");
         ShutterOperationAzimuthNP.apply();
 
         return false;
@@ -795,7 +795,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         else
         {
             ShutterConflictSP.setState(IPS_ALERT);
-            LOGF_INFO("%s", ErrorMessages[-error]);
+            LOGF_ERROR("%s", ErrorMessages[-error]);
             ShutterConflictSP.apply();
         }
         return true;
