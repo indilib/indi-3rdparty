@@ -153,6 +153,9 @@ bool DragonFlyDome::initProperties()
     FirmwareVersionTP.fill(getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
                      IP_RO, 0, IPS_IDLE);
 
+    // Load Configuration
+    PerPortSP.load();
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #5 Misc.
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,7 +172,6 @@ void DragonFlyDome::ISGetProperties(const char *dev)
     INDI::Dome::ISGetProperties(dev);
 
     defineProperty(PerPortSP);
-    loadConfig(true, PerPortSP.getName());
 }
 
 bool DragonFlyDome::updateProperties()
@@ -281,7 +283,7 @@ bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *stat
             PerPortSP.update(states, names, n);
             PerPortSP.setState(IPS_OK);
             PerPortSP.apply();
-            saveConfig(true, PerPortSP.getName());
+            saveConfig(PerPortSP);
             return true;
         }
         /////////////////////////////////////////////
@@ -333,7 +335,7 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
             DomeControlSensorNP.update(values, names, n);
             DomeControlSensorNP.setState(IPS_OK);
             DomeControlSensorNP.apply();
-            saveConfig(true, DomeControlSensorNP.getName());
+            saveConfig(DomeControlSensorNP);
             return true;
         }
     }
