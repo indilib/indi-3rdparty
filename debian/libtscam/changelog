@@ -1,3 +1,9 @@
+libtscam (55.25633.20240519) jammy; urgency=medium
+
+  * Upstream release
+
+ -- teleskop; Mon, 20 May 2024 08:38:18 +0800
+
 libtscam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release

@@ -1,3 +1,9 @@
+libbressercam (55.25633.20240519) jammy; urgency=medium
+
+  * Upstream release
+
+ -- bresser; Mon, 20 May 2024 08:37:37 +0800
+
 libbressercam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release
