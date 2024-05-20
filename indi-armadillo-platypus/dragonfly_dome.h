@@ -115,13 +115,11 @@ class DragonFlyDome : public INDI::Dome
         /// Properties
         ///////////////////////////////////////////////////////////////////////////////
         // Peripheral Ports
-        ISwitchVectorProperty PerPortSP;
-        ISwitch PerPortS[3];
+        INDI::PropertySwitch PerPortSP {3};
         enum { PORT_MAIN, PORT_EXP, PORT_THIRD };
 
         // Roof Control Relays
-        INumberVectorProperty DomeControlRelayNP;
-        INumber DomeControlRelayN[2];
+        INDI::PropertyNumber DomeControlRelayNP {2};
         enum
         {
             RELAY_OPEN,
@@ -132,8 +130,7 @@ class DragonFlyDome : public INDI::Dome
         std::vector<std::unique_ptr<Relay>> Relays;
 
         // Roof Control Sensors
-        INumberVectorProperty DomeControlSensorNP;
-        INumber DomeControlSensorN[2];
+        INDI::PropertyNumber DomeControlSensorNP {2};
         enum
         {
             SENSOR_UNPARKED,
@@ -145,8 +142,7 @@ class DragonFlyDome : public INDI::Dome
         INumber SensorN[8];
 
         // Firmware Version
-        IText FirmwareVersionT[1] {};
-        ITextVectorProperty FirmwareVersionTP;
+        INDI::PropertyText FirmwareVersionTP {1};
 
         ///////////////////////////////////////////////////////////////////////
         /// Private Variables
