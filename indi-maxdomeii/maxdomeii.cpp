@@ -209,16 +209,15 @@ void MaxDomeII::TimerHit()
 
     // Watch dog
     nTimeSinceLastCommunication++;
-    // FixMe
-    // if (WatchDogNP.np[0].value > 0 && WatchDogNP.np[0].value <= nTimeSinceLastCommunication)
-    // {
-    //     // Close Shutter if it is not
-    //     if (shutterSt != SS_CLOSED)
-    //     {
-    //         DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
-    //         IDSetSwitch(&DomeShutterSP, "Closing shutter due watch dog");
-    //     }
-    // }
+    if (WatchDogNP[0].getValue() > 0 && WatchDogNP[0].getValue() <= nTimeSinceLastCommunication)
+    {
+        // Close Shutter if it is not
+        if (shutterSt != SS_CLOSED)
+        {
+            DomeShutterSP.s = ControlShutter(SHUTTER_CLOSE);
+            IDSetSwitch(&DomeShutterSP, "Closing shutter due watch dog");
+        }
+    }
 
     //    if (getWeatherState() == IPS_ALERT)
     //    {
@@ -606,8 +605,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
                 nTicksPerTurn    = nVal;
                 nHomeTicks       = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0); // Calculate Home ticks again
                 TicksPerTurnNP.setState(IPS_OK);
-                // FixMe
-                // TicksPerTurnNP.np[0].value = nVal;
+                TicksPerTurnNP[0].setValue(nVal);
                 LOGF_INFO("%s", cLog);
                 TicksPerTurnNP.apply();
                 return true;
@@ -677,8 +675,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         {
             sprintf(cLog, "New watch dog set: %lf", nVal);
             WatchDogNP.setState(IPS_OK);
-            // FixMe
-            // WatchDogNP.np[0].value = nVal;
+            WatchDogNP[0].setValue(nVal);
             LOGF_INFO("%s", cLog);
             WatchDogNP.apply();
             return true;
@@ -711,8 +708,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
             {
                 nShutterOperationPosition             = nVal;
                 ShutterOperationAzimuthNP.setState(IPS_OK);
-                // FixMe
-                // ShutterOperationAzimuthNP.np[0].value = nVal;
+                ShutterOperationAzimuthNP[0].setValue(nVal);
                 LOG_INFO("New shutter operation azimuth set");
                 ShutterOperationAzimuthNP.apply();
             }
