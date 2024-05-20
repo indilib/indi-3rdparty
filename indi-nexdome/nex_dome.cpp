@@ -537,11 +537,11 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             std::vector<double> currentSettings(ShutterSettingsNP.count());
             std::vector<bool> rc(ShutterSettingsNP.count(), true);
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
                 currentSettings[i] = ShutterSettingsNP[i].getValue();
 
 
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
             {
                 if (std::fabs(values[i] - currentSettings[i]) > 0)
                 {
@@ -559,7 +559,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
 
             bool result = true;
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
                 result &= rc[i];
 
             if (result)
