@@ -533,12 +533,12 @@ void RollOffIno::TimerHit()
     {
         if (timeleft - 5 <= 0)           // Use timeout approaching to set faux switch indicator
         {
-            if (DomeMotionS[DOME_CW].s == ISS_ON)              // Opening
+            if (DomeMotionSP[DOME_CW].getState() == ISS_ON)              // Opening
             {
                 simRoofOpen = true;
                 simRoofClosed = false;
             }
-            else if (DomeMotionS[DOME_CCW].s == ISS_ON)        // Closing
+            else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)        // Closing
             {
                 simRoofClosed = true;
                 simRoofOpen = false;
@@ -548,7 +548,7 @@ void RollOffIno::TimerHit()
 
     updateRoofStatus();
 
-    if (DomeMotionSP.s == IPS_BUSY)
+    if (DomeMotionSP.getState() == IPS_BUSY)
     {
         // Abort called stop movement.
         if (MotionRequest < 0)
@@ -559,7 +559,7 @@ void RollOffIno::TimerHit()
         else
         {
             // Roll off is opening
-            if (DomeMotionS[DOME_CW].s == ISS_ON)
+            if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
             {
                 if (fullyOpenedLimitSwitch == ISS_ON)
                 {
@@ -580,7 +580,7 @@ void RollOffIno::TimerHit()
                 }
             }
             // Roll Off is closing
-            else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+            else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
             {
                 if (fullyClosedLimitSwitch == ISS_ON)
                 {
@@ -789,27 +789,27 @@ bool RollOffIno::Abort()
         return true;
     }
 
-    if (closeState && DomeMotionSP.s != IPS_BUSY)
+    if (closeState && DomeMotionSP.getState() != IPS_BUSY)
     {
         LOG_WARN("Roof appears to be closed and stationary, no action taken on abort request");
         return true;
     }
-    else if (openState && DomeMotionSP.s != IPS_BUSY)
+    else if (openState && DomeMotionSP.getState() != IPS_BUSY)
     {
         LOG_WARN("Roof appears to be open and stationary, no action taken on abort request");
         return true;
     }
-    else if (DomeMotionSP.s != IPS_BUSY)
+    else if (DomeMotionSP.getState() != IPS_BUSY)
     {
         LOG_WARN("Roof appears to be partially open and stationary, no action taken on abort request");
     }
-    else if (DomeMotionSP.s == IPS_BUSY)
+    else if (DomeMotionSP.getState() == IPS_BUSY)
     {
-        if (DomeMotionS[DOME_CW].s == ISS_ON)
+        if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
         {
             LOG_WARN("Abort roof action requested while the roof was opening. Direction correction may be needed on the next move request.");
         }
-        else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+        else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
         {
             LOG_WARN("Abort roof action requested while the roof was closing. Direction correction may be needed on the next move request.");
         }
@@ -822,9 +822,9 @@ bool RollOffIno::Abort()
     // If both limit switches are off, then we're neither parked nor unparked.
     if (fullyOpenedLimitSwitch == ISS_OFF && fullyClosedLimitSwitch == ISS_OFF)
     {
-        IUResetSwitch(&ParkSP);
-        ParkSP.s = IPS_IDLE;
-        IDSetSwitch(&ParkSP, nullptr);
+        ParkSP.reset();
+        ParkSP.setState(IPS_IDLE);
+        ParkSP.apply();
     }
     return true;
 }

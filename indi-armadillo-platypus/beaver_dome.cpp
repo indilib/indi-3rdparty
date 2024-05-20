@@ -287,12 +287,12 @@ IPState Beaver::MoveAbs(double az)
 //////////////////////////////////////////////////////////////////////////////
 IPState Beaver::MoveRel(double azDiff)
 {
-    m_TargetRotatorAz = DomeAbsPosN[0].value + azDiff;
+    m_TargetRotatorAz = DomeAbsPosNP[0].getValue() + azDiff;
 
-    if (m_TargetRotatorAz < DomeAbsPosN[0].min)
-        m_TargetRotatorAz += DomeAbsPosN[0].max;
-    if (m_TargetRotatorAz > DomeAbsPosN[0].max)
-        m_TargetRotatorAz -= DomeAbsPosN[0].max;
+    if (m_TargetRotatorAz < DomeAbsPosNP[0].getMin())
+        m_TargetRotatorAz += DomeAbsPosNP[0].getMax();
+    if (m_TargetRotatorAz > DomeAbsPosNP[0].getMax())
+        m_TargetRotatorAz -= DomeAbsPosNP[0].getMax();
 
     // It will take a few cycles to reach final position
     return MoveAbs(m_TargetRotatorAz);
@@ -378,7 +378,7 @@ bool Beaver::rotatorGetAz()
     double res = 0;
     if (sendCommand("!dome getaz#", res))
     {
-        DomeAbsPosN[0].value = res;
+        DomeAbsPosNP[0].setValue(res);
         return true;
     }
 

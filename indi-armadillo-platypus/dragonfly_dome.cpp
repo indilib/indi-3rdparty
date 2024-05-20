@@ -409,7 +409,7 @@ void DragonFlyDome::TimerHit()
     if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || getDomeState() == DOME_UNPARKING)
     {
         // Roll off is opening
-        if (DomeMotionS[DOME_CW].s == ISS_ON)
+        if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
         {
             if (isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue()))
             {
@@ -418,7 +418,7 @@ void DragonFlyDome::TimerHit()
             }
         }
         // Roll Off is closing
-        else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+        else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
         {
             if (isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
             {
