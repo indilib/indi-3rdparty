@@ -636,7 +636,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         double nVal;
         char cLog[255];
 
-        if (HomeAzimuthNP.update(values, names, n) < 0)
+        if (HomeAzimuthNP.update(values, names, n) == false)
             return false;
 
         nVal = values[0];
@@ -696,7 +696,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
         double nVal;
         IPState error;
 
-        if (ShutterOperationAzimuthNP.update(values, names, n) < 0)
+        if (ShutterOperationAzimuthNP.update(values, names, n) == false)
             return false;
 
         nVal = values[0];
@@ -748,7 +748,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
     // ===================================
     if (HomeSP.isNameMatch(name))
     {
-        if (HomeSP.update(states, names, n) < 0)
+        if (HomeSP.update(states, names, n) == false)
             return false;
 
         int error;
@@ -780,7 +780,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
     // ===================================
     if (ShutterConflictSP.isNameMatch(name))
     {
-        if (ShutterConflictSP.update(states, names, n) < 0)
+        if (ShutterConflictSP.update(states, names, n) == false)
             return false;
 
         int nCSBP = ShutterConflictSP[MOVE].getState() == ISS_ON ? 1 : 0;
@@ -803,7 +803,7 @@ bool MaxDomeII::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 
     if (ShutterModeSP.isNameMatch(name))
     {
-        if (ShutterModeSP.update(states, names, n) < 0)
+        if (ShutterModeSP.update(states, names, n) == false)
             return false;
 
         ShutterModeSP.setState(IPS_OK);
