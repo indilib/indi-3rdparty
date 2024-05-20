@@ -416,20 +416,20 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         /// Override INDI::Dome implementaion since we need to update dead-zone
         /// To be compatible with this.
         ///////////////////////////////////////////////////////////////////////////////
-        else if (!strcmp(name, DomeParamNP.name))
+        else if (DomeParamNP.isNameMatch(name))
         {
-            IUUpdateNumber(&DomeParamNP, values, names, n);
-            DomeParamNP.s = IPS_OK;
-            IDSetNumber(&DomeParamNP, nullptr);
+            DomeParamNP.update(values, names, n);
+            DomeParamNP.setState(IPS_OK);
+            DomeParamNP.apply();
 
-            double minDeadZone = round((DomeParamN[0].value - 0.1) * StepsPerDegree);
+            double minDeadZone = round((DomeParamNP[0].getValue() - 0.1) * StepsPerDegree);
             if (minDeadZone < RotatorSettingsNP[S_ZONE].getValue())
             {
                 if (setParameter(ND::DEAD_ZONE, ND::ROTATOR, minDeadZone))
                 {
                     RotatorSettingsNP[S_ZONE].setValue(minDeadZone);
                     LOGF_INFO("Updating dead-zone to %.f steps since autosync threshold was set to %.2f degrees.", minDeadZone,
-                              DomeParamN[0].value);
+                              DomeParamNP[0].getValue());
                     RotatorSettingsNP.apply();
                 }
             }
@@ -443,10 +443,10 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             std::vector<double> currentSettings(RotatorSettingsNP.count());
             std::vector<bool> rc(RotatorSettingsNP.count(), true);
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
                 currentSettings[i] = RotatorSettingsNP[i].getValue();
 
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
             {
                 if (std::fabs(values[i] - currentSettings[i]) > 0)
                 {
@@ -474,7 +474,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
 
             bool result = true;
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
                 result &= rc[i];
 
             if (result)
@@ -537,11 +537,11 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             std::vector<double> currentSettings(ShutterSettingsNP.count());
             std::vector<bool> rc(ShutterSettingsNP.count(), true);
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
                 currentSettings[i] = ShutterSettingsNP[i].getValue();
 
 
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
             {
                 if (std::fabs(values[i] - currentSettings[i]) > 0)
                 {
@@ -559,7 +559,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
 
             bool result = true;
-            for (int i = 0; i < ShutterSettingsNP.count(); i++)
+            for (size_t i = 0; i < ShutterSettingsNP.count(); i++)
                 result &= rc[i];
 
             if (result)
@@ -634,7 +634,7 @@ IPState NexDome::Move(DomeDirection dir, DomeMotionCommand operation)
 {
     if (operation == MOTION_START)
     {
-        double nextTarget = range360(DomeAbsPosN[0].value + (dir == DOME_CW ? 10 : -10));
+        double nextTarget = range360(DomeAbsPosNP[0].getValue() + (dir == DOME_CW ? 10 : -10));
         LOGF_INFO("Moving %s by 10 degrees...", (dir == DOME_CW ? "CW" : "CCW"));
         return MoveAbs(nextTarget);
     }
@@ -653,12 +653,12 @@ IPState NexDome::Park()
 
     LOGF_INFO("Parking to %.2f azimuth...", GetAxis1Park());
 
-    if (HasShutter() && ShutterParkPolicyS[SHUTTER_CLOSE_ON_PARK].s == ISS_ON)
+    if (HasShutter() && ShutterParkPolicySP[SHUTTER_CLOSE_ON_PARK].getState() == ISS_ON)
     {
         LOG_INFO("Closing shutter on parking...");
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
-        DomeShutterS[SHUTTER_OPEN].s = ISS_OFF;
-        DomeShutterS[SHUTTER_CLOSE].s = ISS_ON;
+        DomeShutterSP[SHUTTER_OPEN].setState(ISS_OFF);
+        DomeShutterSP[SHUTTER_CLOSE].setState(ISS_ON);
         setShutterState(SHUTTER_MOVING);
     }
 
@@ -670,12 +670,12 @@ IPState NexDome::Park()
 //////////////////////////////////////////////////////////////////////////////
 IPState NexDome::UnPark()
 {
-    if (HasShutter() && ShutterParkPolicyS[SHUTTER_OPEN_ON_UNPARK].s == ISS_ON)
+    if (HasShutter() && ShutterParkPolicySP[SHUTTER_OPEN_ON_UNPARK].getState() == ISS_ON)
     {
         LOG_INFO("Opening shutter on unparking...");
         ControlShutter(ShutterOperation::SHUTTER_OPEN);
-        DomeShutterS[SHUTTER_OPEN].s = ISS_ON;
-        DomeShutterS[SHUTTER_CLOSE].s = ISS_OFF;
+        DomeShutterSP[SHUTTER_OPEN].setState(ISS_ON);
+        DomeShutterSP[SHUTTER_CLOSE].setState(ISS_OFF);
         setShutterState(SHUTTER_MOVING);
         return IPS_BUSY;
     }
@@ -745,7 +745,7 @@ bool NexDome::Abort()
 //////////////////////////////////////////////////////////////////////////////
 bool NexDome::SetCurrentPark()
 {
-    SetAxis1Park(DomeAbsPosN[0].value);
+    SetAxis1Park(DomeAbsPosNP[0].getValue());
     return true;
 }
 
@@ -1032,10 +1032,10 @@ bool NexDome::processEvent(const std::string &event)
                 {
                     // 153 = full_steps_circumference / 360 = 55080 / 360
                     double newAngle = range360(std::stoi(value) / StepsPerDegree);
-                    if (std::fabs(DomeAbsPosN[0].value - newAngle) > 0.001)
+                    if (std::abs(DomeAbsPosNP[0].getValue() - newAngle) > 0.001)
                     {
-                        DomeAbsPosN[0].value = newAngle;
-                        IDSetNumber(&DomeAbsPosNP, nullptr);
+                        DomeAbsPosNP[0].setValue(newAngle);
+                        DomeAbsPosNP.apply();
                     }
                 }
                 catch (...)
@@ -1169,10 +1169,10 @@ bool NexDome::processRotatorReport(const std::string &report)
             }
 
             double posAngle = range360(position / StepsPerDegree);
-            if (std::fabs(posAngle - DomeAbsPosN[0].value) > 0.01)
+            if (std::fabs(posAngle - DomeAbsPosNP[0].getValue()) > 0.01)
             {
-                DomeAbsPosN[0].value = posAngle;
-                IDSetNumber(&DomeAbsPosNP, nullptr);
+                DomeAbsPosNP[0].setValue(posAngle);
+                DomeAbsPosNP.apply();
             }
 
             double homeAngle = range360(home_position / StepsPerDegree);

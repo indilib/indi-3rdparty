@@ -572,7 +572,7 @@ bool OCS::updateProperties()
 
     // Remove unsupported derived controls
     //------------------------------------
-    deleteProperty(DomeMotionSP.name);
+    deleteProperty(DomeMotionSP);
 
 //    if (weather_tab_enabled) {
 //        WI::updateProperties();
@@ -809,46 +809,46 @@ void OCS::TimerHit()
             if (strcmp(dome_status_response, "H") == 0) {
                 if (getDomeState() != DOME_IDLE) {
                     setDomeState(DOME_IDLE);
-                    ParkS[0].s = ISS_OFF;
-                    ParkS[1].s = ISS_ON;
-                    ParkSP.s = IPS_OK;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP[0].setState(ISS_OFF);
+                    ParkSP[1].setState(ISS_ON);
+                    ParkSP.setState(IPS_OK);
+                    ParkSP.apply();
                 }
                 sprintf(dome_message, "Home");
             } else if (strcmp(dome_status_response, "P") == 0) {
                 if (getDomeState() != DOME_PARKED) {
                     setDomeState(DOME_PARKED);
-                    ParkS[0].s = ISS_ON;
-                    ParkS[1].s = ISS_OFF;
-                    ParkSP.s = IPS_OK;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP[0].setState(ISS_ON);
+                    ParkSP[1].setState(ISS_OFF);
+                    ParkSP.setState(IPS_OK);
+                    ParkSP.apply();
                 }
                 sprintf(dome_message, "Parked");
             } else if (strcmp(dome_status_response, "K") == 0) {
                 if (getDomeState() != DOME_PARKING) {
                     setDomeState(DOME_PARKING);
-                    ParkS[0].s = ISS_OFF;
-                    ParkS[1].s = ISS_OFF;
-                    ParkSP.s = IPS_BUSY;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP[0].setState(ISS_OFF);
+                    ParkSP[1].setState(ISS_OFF);
+                    ParkSP.setState(IPS_BUSY);
+                    ParkSP.apply();
                 }
                 sprintf(dome_message, "Parking");
             } else if (strcmp(dome_status_response, "S") == 0) {
                 if (getDomeState() != DOME_MOVING) {
                     setDomeState(DOME_MOVING);
-                    ParkS[0].s = ISS_OFF;
-                    ParkS[1].s = ISS_ON;
-                    ParkSP.s = IPS_OK;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP[0].setState(ISS_OFF);
+                    ParkSP[1].setState(ISS_ON);
+                    ParkSP.setState(IPS_OK);
+                    ParkSP.apply();
                 }
                 sprintf(dome_message, "Slewing");
             } else if (strcmp(dome_status_response, "I") == 0) {
                 if (getDomeState() != DOME_IDLE) {
                     setDomeState(DOME_IDLE);
-                    ParkS[0].s = ISS_OFF;
-                    ParkS[1].s = ISS_ON;
-                    ParkSP.s = IPS_OK;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP[0].setState(ISS_OFF);
+                    ParkSP[1].setState(ISS_ON);
+                    ParkSP.setState(IPS_OK);
+                    ParkSP.apply();
                 }
                 sprintf(dome_message, "Idle");
             }
@@ -864,8 +864,9 @@ void OCS::TimerHit()
         int dome_position_error_or_fail = getCommandDoubleResponse(PortFD, &position, dome_position_response,
                                                                    OCS_get_dome_azimuth);
         if (dome_position_error_or_fail > 1 && position != conversion_error) {
-            DomeAbsPosN->value = position;
-            IDSetNumber(&DomeAbsPosNP, nullptr);
+            // DomeAbsPosN->value = position;
+            DomeAbsPosNP[0].setValue(position);
+            DomeAbsPosNP.apply();
         } else {
             LOGF_WARN("Communication error on get Dome position %s, this update aborted, will try again...", OCS_get_dome_azimuth);
         }
