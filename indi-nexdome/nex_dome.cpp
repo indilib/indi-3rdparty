@@ -443,10 +443,10 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             std::vector<double> currentSettings(RotatorSettingsNP.count());
             std::vector<bool> rc(RotatorSettingsNP.count(), true);
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
                 currentSettings[i] = RotatorSettingsNP[i].getValue();
 
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
             {
                 if (std::fabs(values[i] - currentSettings[i]) > 0)
                 {
@@ -474,7 +474,7 @@ bool NexDome::ISNewNumber(const char *dev, const char *name, double values[], ch
             }
 
             bool result = true;
-            for (int i = 0; i < RotatorSettingsNP.count(); i++)
+            for (size_t i = 0; i < RotatorSettingsNP.count(); i++)
                 result &= rc[i];
 
             if (result)
@@ -1032,7 +1032,7 @@ bool NexDome::processEvent(const std::string &event)
                 {
                     // 153 = full_steps_circumference / 360 = 55080 / 360
                     double newAngle = range360(std::stoi(value) / StepsPerDegree);
-                    if (std::fabs(DomeAbsPosNP[0].getValue() - newAngle) > 0.001)
+                    if (std::abs(DomeAbsPosNP[0].getValue() - newAngle) > 0.001)
                     {
                         DomeAbsPosNP[0].setValue(newAngle);
                         DomeAbsPosNP.apply();
