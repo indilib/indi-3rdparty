@@ -1,3 +1,9 @@
+libogmacam (55.25633.20240519) jammy; urgency=medium
+
+  * Upstream release
+
+ -- ogmavision; Mon, 20 May 2024 08:37:43 +0800
+
 libogmacam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release
