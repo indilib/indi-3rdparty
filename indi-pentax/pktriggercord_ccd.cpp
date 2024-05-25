@@ -879,7 +879,7 @@ const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format)
     }
     else if (format == USER_FILE_FORMAT_DNG)
     {
-        return "raw";
+        return "dng";
     }
     else
     {

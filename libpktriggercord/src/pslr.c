@@ -406,6 +406,7 @@ pslr_handle_t pslr_init( char *model, char *device ) {
             }
         } else {
             close_drive( &fd );
+            free(drives);
             continue;
         }
     }

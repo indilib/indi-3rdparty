@@ -1007,7 +1007,8 @@ ipslr_model_info_t camera_models[] = {
     { 0x13240, "K-1 II",      false, false, true,  true,  false, true,  456,  3, {36, 22, 12, 2}, 9, 8000, 100, 819200, 100, 819200, PSLR_JPEG_IMAGE_TONE_FLAT, true,  33, ipslr_status_parse_k1 },
     { 0x13222, "K-70",        false, false, true,  true,  true,  true,  456,  3, {24, 14, 6, 2}, 9, 6000, 100, 102400, 100, 102400, PSLR_JPEG_IMAGE_TONE_AUTO, true,  11, ipslr_status_parse_k70},
     { 0x1322c, "KP",          false, false, true,  true,  false, true,  456,   3, {24, 14, 6, 2}, 9, 6000, 100, 819200, 100, 819200, PSLR_JPEG_IMAGE_TONE_AUTO, true,  27, ipslr_status_parse_k70},
-    { 0x13010, "645Z",        false, false, true,  true,  false, false,  0,   3, {51, 32, 21, 3}, 9, 4000, 100, 204800, 100, 204800, PSLR_JPEG_IMAGE_TONE_CROSS_PROCESSING, true,  35, NULL}
+    { 0x13010, "645Z",        false, false, true,  true,  false, false,  0,   3, {51, 32, 21, 3}, 9, 4000, 100, 204800, 100, 204800, PSLR_JPEG_IMAGE_TONE_CROSS_PROCESSING, true,  35, NULL},
+    { 0x13254, "K-3III",      false, false, true,  true,  false, true,  452,  4, {24, 14, 6, 2}, 9, 8000, 100, 51200, 100, 51200, PSLR_JPEG_IMAGE_TONE_BLEACH_BYPASS, true,  27, ipslr_status_parse_k3}
 };
 
 ipslr_model_info_t *pslr_find_model_by_id( uint32_t id ) {
