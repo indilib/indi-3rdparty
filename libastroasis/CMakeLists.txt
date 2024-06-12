@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libastroasis)
 
-set (OASIS_FOCUSER_VERSION "1.0.5")
+set (OASIS_FOCUSER_VERSION "1.0.7")
 set (OASIS_FOCUSER_SOVERSION "1")
 
 set (OASIS_FILTER_WHEEL_VERSION "1.0.0")
