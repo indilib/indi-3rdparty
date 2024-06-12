@@ -71,26 +71,29 @@ class MaxDomeII : public INDI::Dome
     int AzimuthToTicks(double nAzimuth);
     int handle_driver_error(int *error, int *nRetry); // Handles errors returned by driver
 
-    ISwitch ShutterModeS[2];
-    ISwitchVectorProperty ShutterModeSP;
+    INDI::PropertySwitch ShutterModeSP {2};
+    enum
+    {
+        FULL,
+        UPPER
+    };
 
-    INumber ShutterOperationAzimuthN[1];
-    INumberVectorProperty ShutterOperationAzimuthNP;
+    INDI::PropertyNumber ShutterOperationAzimuthNP {1};
 
-    ISwitch ShutterConflictS[2];
-    ISwitchVectorProperty ShutterConflictSP;
+    INDI::PropertySwitch ShutterConflictSP {2};
+    enum
+    {
+      MOVE,
+      NO_MOVE
+    };
 
-    ISwitch HomeS[1];
-    ISwitchVectorProperty HomeSP;
+    INDI::PropertySwitch HomeSP {1};
 
-    INumber TicksPerTurnN[1];
-    INumberVectorProperty TicksPerTurnNP;
+    INDI::PropertyNumber TicksPerTurnNP {1};
 
-    INumber WatchDogN[1];
-    INumberVectorProperty WatchDogNP;
+    INDI::PropertyNumber WatchDogNP {1};
 
-    INumber HomeAzimuthN[1];
-    INumberVectorProperty HomeAzimuthNP;
+    INDI::PropertyNumber HomeAzimuthNP {1};
 
     INumber HomePosRN[1];
     INumberVectorProperty HomePosRNP;

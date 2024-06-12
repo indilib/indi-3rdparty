@@ -317,10 +317,13 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
         auto nickname = mNicknames[mSerialNumber];
         if (!nickname.empty())
         {
-            setDeviceName(nickname.c_str());
-            mCameraName = nickname;
+            auto finalName = nickname;
+            if (finalName.find("ZWO CCD") != 0)
+                finalName = "ZWO CCD " + finalName;
+            setDeviceName(finalName.c_str());
+            mCameraName = finalName;
             mNickname = nickname;
-            LOGF_INFO("Using nickname %s for serial number %s.", nickname.c_str(), mSerialNumber.c_str());
+            LOGF_INFO("Using nickname %s for serial number %s.", finalName.c_str(), mSerialNumber.c_str());
             return;
         }
     }

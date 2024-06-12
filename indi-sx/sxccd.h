@@ -88,7 +88,6 @@ class SXCCD : public INDI::CCD
         void GuideExposureTimerHit();
         void WEGuiderTimerHit();
         void NSGuiderTimerHit();
-        //bool saveConfigItems(FILE *fp);
         IPState GuideWest(uint32_t ms);
         IPState GuideEast(uint32_t ms);
         IPState GuideNorth(uint32_t ms);
@@ -104,7 +103,6 @@ class SXCCD : public INDI::CCD
         virtual ~SXCCD();
         void debugTriggered(bool enable);
         void simulationTriggered(bool enable);
-        void ISGetProperties(const char *dev);
         bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
 
         friend void ::ExposureTimerCallback(void *p);

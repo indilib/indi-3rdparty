@@ -43,18 +43,19 @@ static class Loader
 
             if (iAvailableFocusersCount <= 0)
             {
-                IDLog("No ASI EAF detected.");
+                IDLog("No ZWO EAF detected.");
                 return;
             }
 
             int iAvailableFocusersCount_ok = 0;
+            char *envDev = getenv("INDIDEV");
             for (int i = 0; i < iAvailableFocusersCount; i++)
             {
                 int id;
                 EAF_ERROR_CODE result = EAFGetID(i, &id);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d EAFGetID error %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d EAFGetID error %d.", i + 1, result);
                     continue;
                 }
 
@@ -62,7 +63,7 @@ static class Loader
                 result = EAFOpen(id);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d Failed to open device %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d Failed to open device %d.", i + 1, result);
                     continue;
                 }
 
@@ -70,28 +71,24 @@ static class Loader
                 result = EAFGetProperty(id, &info);
                 if (result != EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ASI EAF %d EAFGetProperty error %d.", i + 1, result);
+                    IDLog("ERROR: ZWO EAF %d EAFGetProperty error %d.", i + 1, result);
                     continue;
                 }
                 EAFClose(id);
 
-                std::string name = "ASI EAF";
+                std::string name = "ZWO EAF";
+                if (envDev && envDev[0])
+                    name = envDev;
 
                 // If we only have a single device connected
                 // then favor the INDIDEV driver label over the auto-generated name above
-                if (iAvailableFocusersCount == 1)
-                {
-                    char *envDev = getenv("INDIDEV");
-                    if (envDev && envDev[0])
-                        name = envDev;
-                }
-                else
-                    name += " " + std::to_string(i);
+                if (iAvailableFocusersCount > 1)
+                    name += " " + std::to_string(i + 1);
 
                 focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
                 iAvailableFocusersCount_ok++;
             }
-            IDLog("%d ASI EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
+            IDLog("%d ZWO EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
         }
 } loader;
 
@@ -99,7 +96,7 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
     : m_ID(info.ID)
     , m_MaxSteps(info.MaxStep)
 {
-    setVersion(1, 1);
+    setVersion(1, 2);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
@@ -210,7 +207,7 @@ bool ASIEAF::updateProperties()
 
         GetFocusParams();
 
-        LOG_INFO("ASI EAF parameters updated, focuser ready for use.");
+        LOG_INFO("ZWO EAF parameters updated, focuser ready for use.");
 
         SetTimer(getCurrentPollingPeriod());
     }
@@ -233,7 +230,7 @@ bool ASIEAF::updateProperties()
 
 const char * ASIEAF::getDefaultName()
 {
-    return "ASI EAF";
+    return "ZWO EAF";
 }
 
 bool ASIEAF::Connect()
@@ -242,7 +239,7 @@ bool ASIEAF::Connect()
 
     if (rc != EAF_SUCCESS)
     {
-        LOGF_ERROR("Failed to connect to ASI EAF focuser ID: %d (%d)", m_ID, rc);
+        LOGF_ERROR("Failed to connect to ZWO EAF focuser ID: %d (%d)", m_ID, rc);
         return false;
     }
     AbortFocuser();

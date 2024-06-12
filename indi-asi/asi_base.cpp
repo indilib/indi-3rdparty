@@ -222,9 +222,23 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             PrimaryCCD.setExposureLeft(timeLeft);
         }
 
-        usleep(delay * 1000 * 1000);
-
-        ASI_ERROR_CODE ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        ASI_ERROR_CODE ret;
+        if (timeLeft < 0.2)
+        {
+            int i = 0;
+            // exposure can fail in some cases if we don't call this fast enough
+            do
+            {
+                ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+                usleep(1000);
+                i++;
+            }while(i<300 && status == ASI_EXP_WORKING);
+        }
+        else
+        {
+            usleep(delay * 1000 * 1000);
+            ret = ASIGetExpStatus(mCameraInfo.CameraID, &status);
+        }
         // 2021-09-11 <sterne-jaeger@openfuture.de>: Fix for
         // https://www.indilib.org/forum/development/10346-asi-driver-sends-image-after-abort.html
         // Aborting an exposure also returns ASI_SUCCESS here, therefore
@@ -321,12 +335,14 @@ bool ASIBase::initProperties()
     FlipSP[FLIP_HORIZONTAL].fill("FLIP_HORIZONTAL", "Horizontal", ISS_OFF);
     FlipSP[FLIP_VERTICAL].fill("FLIP_VERTICAL", "Vertical", ISS_OFF);
     FlipSP.fill(getDeviceName(), "FLIP", "Flip", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
+    FlipSP.load();
 
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     BlinkNP[BLINK_COUNT   ].fill("BLINK_COUNT",    "Blinks before exposure", "%2.0f", 0, 100, 1.000, 0);
     BlinkNP[BLINK_DURATION].fill("BLINK_DURATION", "Blink duration",         "%2.3f", 0,  60, 0.001, 0);
     BlinkNP.fill(getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    BlinkNP.load();
 
     IUSaveText(&BayerT[2], getBayerString());
 
@@ -336,7 +352,7 @@ bool ASIBase::initProperties()
     SDKVersionSP[0].fill("VERSION", "Version", ASIGetSDKVersion());
     SDKVersionSP.fill(getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    SerialNumberTP[0].fill("SN#", "SN#", mSerialNumber);
+    SerialNumberTP[0].fill("SN", "SN", mSerialNumber);
     SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     NicknameTP[0].fill("nickname", "nickname", mNickname);
@@ -428,19 +444,16 @@ bool ASIBase::updateProperties()
         if (!ControlNP.isEmpty())
         {
             defineProperty(ControlNP);
-            loadConfig(true, ControlNP.getName());
         }
 
         if (!ControlSP.isEmpty())
         {
             defineProperty(ControlSP);
-            loadConfig(true, ControlSP.getName());
         }
 
         if (hasFlipControl())
         {
             defineProperty(FlipSP);
-            loadConfig(true, FlipSP.getName());
         }
 
         if (!VideoFormatSP.isEmpty())
@@ -552,11 +565,6 @@ bool ASIBase::Connect()
 
 bool ASIBase::Disconnect()
 {
-    // Save all config before shutdown
-    saveConfig(true);
-
-    LOGF_DEBUG("Closing %s...", mCameraName.c_str());
-
     stopGuidePulse(mTimerNS);
     stopGuidePulse(mTimerWE);
     mTimerTemperature.stop();
@@ -774,6 +782,7 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
 
             ControlNP.setState(IPS_OK);
             ControlNP.apply();
+            saveConfig(ControlNP);
             return true;
         }
 
@@ -781,6 +790,7 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
         {
             BlinkNP.setState(BlinkNP.update(values, names, n) ? IPS_OK : IPS_ALERT);
             BlinkNP.apply();
+            saveConfig(BlinkNP);
             return true;
         }
     }
@@ -832,6 +842,7 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             ControlSP.setState(IPS_OK);
             ControlSP.apply();
+            saveConfig(ControlSP);
             return true;
         }
 
@@ -861,6 +872,7 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             FlipSP.setState(IPS_OK);
             FlipSP.apply();
+            saveConfig(FlipSP);
             return true;
         }
 
@@ -908,6 +920,8 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 VideoFormatSP.setState(IPS_OK);
                 VideoFormatSP.apply();
             }
+
+            saveConfig(VideoFormatSP);
             return true;
         }
     }
@@ -1436,6 +1450,13 @@ void ASIBase::createControls(int piNumberOfControls)
         ASI_BOOL isAuto = ASI_FALSE;
         ASIGetControlValue(mCameraInfo.CameraID, cap.ControlType, &value, &isAuto);
 
+        // Workaround for apparent ASI SDK 1.31 and 1.32 bug that gives bogus default values for GPS
+        // controls on cameras that don't have GPS and fails to complete exposures if the value is written back.
+        if (cap.ControlType == ASI_GPS_START_LINE || cap.ControlType == ASI_GPS_END_LINE)
+        {
+            value = 0;
+        }
+
         if (cap.IsWritable)
         {
             LOGF_DEBUG("Adding above control as writable control number %d.", ControlNP.size());
@@ -1532,6 +1553,18 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
     if (np)
     {
         fitsKeywords.push_back({"OFFSET", np->value, 3, "Offset"});
+    }
+
+    np = ControlNP.findWidgetByName("WB_R");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_R", np->value, 3, "White Balance - Red"});
+    }
+
+    np = ControlNP.findWidgetByName("WB_B");
+    if (np)
+    {
+        fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
     }
 }
 

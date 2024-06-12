@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libsbig)
 
 set (SBIG_VERSION "4.9.9")

@@ -290,6 +290,12 @@ class CloudWatcherController
         bool checkValidMessage(char *buffer, int nBlocks);
 
         /**
+         * @brief trimString Required since cloudwatcher apparently sends back a literal \0 (slash followed by zero)
+         * @param str buffer to trim
+         */
+        void trimString(char *str);
+
+        /**
         * Sends a command to the AAG Cloud Watcher.
         * @param command a two byte array with the command to be sent
         * @return true if successfully sent. false otherwise

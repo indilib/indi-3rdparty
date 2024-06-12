@@ -26,30 +26,33 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ToupWheel>> wheels;
-    XP(DeviceV2) pWheelInfo[CP(MAX)];
-public:
-    Loader()
-    {
-        const int iConnectedCount = FP(EnumV2(pWheelInfo));
-        for (int i = 0; i < iConnectedCount; i++)
+        std::deque<std::unique_ptr<ToupWheel>> wheels;
+        XP(DeviceV2) pWheelInfo[CP(MAX)];
+    public:
+        Loader()
         {
-            if (CP(FLAG_FILTERWHEEL) & pWheelInfo[i].model->flag)
-                wheels.push_back(std::unique_ptr<ToupWheel>(new ToupWheel(&pWheelInfo[i])));
+            const int iConnectedCount = FP(EnumV2(pWheelInfo));
+            for (int i = 0; i < iConnectedCount; i++)
+            {
+                if (CP(FLAG_FILTERWHEEL) & pWheelInfo[i].model->flag)
+                {
+                    std::string name = std::string(DNAME) + " EFW";
+                    if (iConnectedCount > 1)
+                        name += " " + std::to_string(i + 1);
+                    wheels.push_back(std::unique_ptr<ToupWheel>(new ToupWheel(&pWheelInfo[i], name.c_str())));
+                }
+            }
+            if (wheels.empty())
+                IDLog("No filterwheel detected");
         }
-        if (wheels.empty())
-            IDLog("No filterwheel detected");
-    }
 } loader;
 
 static const int SlotNum[SLOT_NUM] = { 5, 7, 8 };
 
-ToupWheel::ToupWheel(const XP(DeviceV2) *instance) : m_Instance(instance)
+ToupWheel::ToupWheel(const XP(DeviceV2) *instance, const char *name) : m_Instance(instance)
 {
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
-
-    snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), m_Instance->model->name);
-    setDeviceName(this->m_name);
+    setDeviceName(name);
 }
 
 const char *ToupWheel::getDefaultName()
@@ -60,17 +63,18 @@ const char *ToupWheel::getDefaultName()
 bool ToupWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
-    
+
     for (int i = 0; i < SLOT_NUM; ++i)
         IUFillSwitch(&m_SlotS[i], std::to_string(SlotNum[i]).c_str(), std::to_string(SlotNum[i]).c_str(), ISS_OFF);
-    IUFillSwitchVector(&m_SlotSP, m_SlotS, SLOT_NUM, getDeviceName(), "SLOTNUMBER", "Slot Number", FILTER_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUFillSwitchVector(&m_SlotSP, m_SlotS, SLOT_NUM, getDeviceName(), "SLOTNUMBER", "Slot Number", FILTER_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
 
     IUFillText(&m_VersionT[TC_FW_VERSION], "FIRMWARE", "Firmware", nullptr);
     IUFillText(&m_VersionT[TC_HW_VERSION], "HARDWARE", "Hardware", nullptr);
     IUFillText(&m_VersionT[TC_REV], "REVISION", "Revision", nullptr);
     IUFillText(&m_VersionT[TC_SDK], "SDK", "SDK", FP(Version()));
     IUFillTextVector(&m_VersionTP, m_VersionT, 4, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 0, IPS_IDLE);
-    
+
     return true;
 }
 
@@ -87,13 +91,13 @@ bool ToupWheel::updateProperties()
         FP(get_Revision(m_Handle, &pRevision));
         snprintf(tmpBuffer, 32, "%d", pRevision);
         IUSaveText(&m_VersionT[TC_REV], tmpBuffer);
-    
+
         int val = 0;
         FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &val));
         for (int i = 0; i < SLOT_NUM; ++i)
             m_SlotS[i].s = (SlotNum[i] == val) ? ISS_ON : ISS_OFF;
-        
-        TargetFilter = 1;
+
+        TargetFilter = QueryFilter();
         FilterSlotN[0].max = val;
         updateFilter();
     }
@@ -132,7 +136,7 @@ bool ToupWheel::Connect()
         LOG_ERROR("Failed to connect filterwheel");
         return false;
     }
-    
+
     LOGF_INFO("%s connect", getDeviceName());
     return true;
 }
@@ -153,13 +157,13 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             int val = SlotNum[IUFindOnSwitchIndex(&m_SlotSP)];
             HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), val));
             if (SUCCEEDED(rc))
-            {               
+            {
                 LOGF_INFO("Set slot number: %d", val);
-                
+
                 m_SlotSP.s = IPS_OK;
                 FilterSlotN[0].max = val;
                 IUUpdateMinMax(&FilterSlotNP);
-                
+
                 TargetFilter = 1;
                 updateFilter();
             }
@@ -172,7 +176,7 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             return true;
         }
     }
-    
+
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
 }
 

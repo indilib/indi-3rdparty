@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 54.23231.20230823 */
+/* Version: 55.25633.20240519 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -167,6 +167,10 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_FLAG_LIGHT_SOURCE        0x0004000000000000  /* stand alone light source */
 #define TOUPCAM_FLAG_CAMERALINK          0x0008000000000000  /* camera link */
 #define TOUPCAM_FLAG_CXP                 0x0010000000000000  /* CXP: CoaXPress */
+#define TOUPCAM_FLAG_RAW12PACK           0x0020000000000000  /* pixel format, RAW 12bits packed */
+#define TOUPCAM_FLAG_SELFTRIGGER         0x0040000000000000  /* self trigger */
+#define TOUPCAM_FLAG_RAW11               0x0080000000000000  /* pixel format, RAW 11bits */
+#define TOUPCAM_FLAG_GHOPTO              0x0100000000000000  /* ghopto sensor */
 
 #define TOUPCAM_EXPOGAIN_DEF             100     /* exposure gain, default value */
 #define TOUPCAM_EXPOGAIN_MIN             100     /* exposure gain, minimum value */
@@ -183,11 +187,11 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_SATURATION_MIN           0       /* saturation */
 #define TOUPCAM_SATURATION_MAX           255     /* saturation */
 #define TOUPCAM_BRIGHTNESS_DEF           0       /* brightness */
-#define TOUPCAM_BRIGHTNESS_MIN           (-64)   /* brightness */
-#define TOUPCAM_BRIGHTNESS_MAX           64      /* brightness */
+#define TOUPCAM_BRIGHTNESS_MIN           (-128)  /* brightness */
+#define TOUPCAM_BRIGHTNESS_MAX           128     /* brightness */
 #define TOUPCAM_CONTRAST_DEF             0       /* contrast */
-#define TOUPCAM_CONTRAST_MIN             (-100)  /* contrast */
-#define TOUPCAM_CONTRAST_MAX             100     /* contrast */
+#define TOUPCAM_CONTRAST_MIN             (-150)  /* contrast */
+#define TOUPCAM_CONTRAST_MAX             150     /* contrast */
 #define TOUPCAM_GAMMA_DEF                100     /* gamma */
 #define TOUPCAM_GAMMA_MIN                20      /* gamma */
 #define TOUPCAM_GAMMA_MAX                180     /* gamma */
@@ -198,11 +202,12 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_WBGAIN_MIN               (-127)  /* white balance gain */
 #define TOUPCAM_WBGAIN_MAX               127     /* white balance gain */
 #define TOUPCAM_BLACKLEVEL_MIN           0       /* minimum black level */
-#define TOUPCAM_BLACKLEVEL8_MAX          31              /* maximum black level for bit depth = 8 */
-#define TOUPCAM_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bit depth = 10 */
-#define TOUPCAM_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bit depth = 12 */
-#define TOUPCAM_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bit depth = 14 */
-#define TOUPCAM_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bit depth = 16 */
+#define TOUPCAM_BLACKLEVEL8_MAX          31              /* maximum black level for bitdepth = 8 */
+#define TOUPCAM_BLACKLEVEL10_MAX         (31 * 4)        /* maximum black level for bitdepth = 10 */
+#define TOUPCAM_BLACKLEVEL11_MAX         (31 * 8)        /* maximum black level for bitdepth = 11 */
+#define TOUPCAM_BLACKLEVEL12_MAX         (31 * 16)       /* maximum black level for bitdepth = 12 */
+#define TOUPCAM_BLACKLEVEL14_MAX         (31 * 64)       /* maximum black level for bitdepth = 14 */
+#define TOUPCAM_BLACKLEVEL16_MAX         (31 * 256)      /* maximum black level for bitdepth = 16 */
 #define TOUPCAM_SHARPENING_STRENGTH_DEF  0       /* sharpening strength */
 #define TOUPCAM_SHARPENING_STRENGTH_MIN  0       /* sharpening strength */
 #define TOUPCAM_SHARPENING_STRENGTH_MAX  500     /* sharpening strength */
@@ -215,6 +220,9 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_AUTOEXPO_THRESHOLD_DEF   5       /* auto exposure threshold */
 #define TOUPCAM_AUTOEXPO_THRESHOLD_MIN   2       /* auto exposure threshold */
 #define TOUPCAM_AUTOEXPO_THRESHOLD_MAX   15      /* auto exposure threshold */
+#define TOUPCAM_AUTOEXPO_DAMP_DEF        0       /* auto exposure damping coefficient: thousandths */
+#define TOUPCAM_AUTOEXPO_DAMP_MIN        0       /* auto exposure damping coefficient: thousandths */
+#define TOUPCAM_AUTOEXPO_DAMP_MAX        1000    /* auto exposure damping coefficient: thousandths */
 #define TOUPCAM_BANDWIDTH_DEF            100     /* bandwidth */
 #define TOUPCAM_BANDWIDTH_MIN            1       /* bandwidth */
 #define TOUPCAM_BANDWIDTH_MAX            100     /* bandwidth */
@@ -222,13 +230,13 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_DENOISE_MIN              0       /* denoise */
 #define TOUPCAM_DENOISE_MAX              100     /* denoise */
 #define TOUPCAM_TEC_TARGET_MIN           (-500)  /* TEC target: -50.0 degrees Celsius */
-#define TOUPCAM_TEC_TARGET_DEF           100     /* 0.0 degrees Celsius */
+#define TOUPCAM_TEC_TARGET_DEF           100     /* 10.0 degrees Celsius */
 #define TOUPCAM_TEC_TARGET_MAX           400     /* TEC target: 40.0 degrees Celsius */
 #define TOUPCAM_HEARTBEAT_MIN            100     /* millisecond */
 #define TOUPCAM_HEARTBEAT_MAX            10000   /* millisecond */
-#define TOUPCAM_AE_PERCENT_MIN           0       /* auto exposure percent, 0 => full roi average */
+#define TOUPCAM_AE_PERCENT_MIN           0       /* auto exposure percent; 0 or 100 => full roi average, means "disabled" */
 #define TOUPCAM_AE_PERCENT_MAX           100
-#define TOUPCAM_AE_PERCENT_DEF           10
+#define TOUPCAM_AE_PERCENT_DEF           10      /* auto exposure percent: enabled, percentage = 10% */
 #define TOUPCAM_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define TOUPCAM_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
 #define TOUPCAM_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction, threshold, means: 1.0 */
@@ -267,21 +275,21 @@ typedef struct {
     float               xpixsz;      /* physical pixel size in micrometer */
     float               ypixsz;      /* physical pixel size in micrometer */
     ToupcamResolution   res[16];
-} ToupcamModelV2; /* camera model v2 */
+} ToupcamModelV2; /* device model v2 */
 
 typedef struct {
 #if defined(_WIN32)
-    wchar_t               displayname[64];    /* display name */
+    wchar_t               displayname[64];    /* display name: model name or user-defined name (if any and Toupcam_EnumWithName) */
     wchar_t               id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #else
-    char                  displayname[64];    /* display name */
+    char                  displayname[64];    /* display name: model name or user-defined name (if any and Toupcam_EnumWithName) */
     char                  id[64];             /* unique and opaque id of a connected camera, for Toupcam_Open */
 #endif
     const ToupcamModelV2* model;
-} ToupcamDeviceV2; /* camera instance for enumerating */
+} ToupcamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 54.23231.20230823
+    get the version of this dll/so/dylib, which is: 55.25633.20240519
 */
 #if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -336,10 +344,10 @@ TOUPCAM_API(void)     Toupcam_Close(HToupcam h);
 #define TOUPCAM_EVENT_LEVELRANGE        0x000c    /* level range changed */
 #define TOUPCAM_EVENT_AUTOEXPO_CONV     0x000d    /* auto exposure convergence */
 #define TOUPCAM_EVENT_AUTOEXPO_CONVFAIL 0x000e    /* auto exposure once mode convergence failed */
+#define TOUPCAM_EVENT_FPNC              0x000f    /* fix pattern noise correction status changed */
 #define TOUPCAM_EVENT_ERROR             0x0080    /* generic error */
 #define TOUPCAM_EVENT_DISCONNECTED      0x0081    /* camera disconnected */
 #define TOUPCAM_EVENT_NOFRAMETIMEOUT    0x0082    /* no frame timeout error */
-#define TOUPCAM_EVENT_AFFEEDBACK        0x0083    /* auto focus feedback information */
 #define TOUPCAM_EVENT_FOCUSPOS          0x0084    /* focus positon */
 #define TOUPCAM_EVENT_NOPACKETTIMEOUT   0x0085    /* no packet timeout */
 #define TOUPCAM_EVENT_EXPO_START        0x4000    /* hardware event: exposure start */
@@ -358,13 +366,13 @@ TOUPCAM_API(HRESULT)  Toupcam_StartPullModeWithWndMsg(HToupcam h, HWND hWnd, UIN
 typedef void (__stdcall* PTOUPCAM_EVENT_CALLBACK)(unsigned nEvent, void* ctxEvent);
 TOUPCAM_API(HRESULT)  Toupcam_StartPullModeWithCallback(HToupcam h, PTOUPCAM_EVENT_CALLBACK funEvent, void* ctxEvent);
 
-#define TOUPCAM_FRAMEINFO_FLAG_SEQ          0x0001 /* frame sequence number */
-#define TOUPCAM_FRAMEINFO_FLAG_TIMESTAMP    0x0002 /* timestamp */
-#define TOUPCAM_FRAMEINFO_FLAG_EXPOTIME     0x0004 /* exposure time */
-#define TOUPCAM_FRAMEINFO_FLAG_EXPOGAIN     0x0008 /* exposure gain */
-#define TOUPCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x0010 /* black level */
-#define TOUPCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x0020 /* sequence shutter counter */
-#define TOUPCAM_FRAMEINFO_FLAG_STILL        0x8000 /* still image */
+#define TOUPCAM_FRAMEINFO_FLAG_SEQ          0x00000001 /* frame sequence number */
+#define TOUPCAM_FRAMEINFO_FLAG_TIMESTAMP    0x00000002 /* timestamp */
+#define TOUPCAM_FRAMEINFO_FLAG_EXPOTIME     0x00000004 /* exposure time */
+#define TOUPCAM_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
+#define TOUPCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
+#define TOUPCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define TOUPCAM_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
     unsigned            width;
@@ -401,7 +409,7 @@ typedef struct {
             | bits = 8           | Convert to 8  |       NA      | Convert to 8  |       8       |       NA      |       NA      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 16          |      NA       | Convert to 16 |       NA      |       NA      |       16      | Convert to 16 |
-            |--------------------|---------------|-----------|-------------------|---------------|---------------|---------------|
+            |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
             | bits = 64          |      NA       | Convert to 64 |       NA      |       NA      | Convert to 64 |       64      |
             |--------------------|---------------|---------------|---------------|---------------|---------------|---------------|
 
@@ -473,13 +481,13 @@ TOUPCAM_API(HRESULT)  Toupcam_SnapR(HToupcam h, unsigned nResolutionIndex, unsig
 */
 TOUPCAM_API(HRESULT)  Toupcam_Trigger(HToupcam h, unsigned short nNumber);
 
-/* 
+/*
     trigger synchronously
-    nTimeout:   0:              by default, exposure * 102% + 4000 milliseconds
+    nWaitMS:    0:              by default, exposure * 102% + 4000 milliseconds
                 0xffffffff:     wait infinite
                 other:          milliseconds to wait
 */
-TOUPCAM_API(HRESULT)  Toupcam_TriggerSync(HToupcam h, unsigned nTimeout, void* pImageData, int bits, int rowPitch, ToupcamFrameInfoV3* pInfo);
+TOUPCAM_API(HRESULT)  Toupcam_TriggerSync(HToupcam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, ToupcamFrameInfoV3* pInfo);
 
 /*
     put_Size, put_eSize, can be used to set the video output resolution BEFORE Toupcam_StartXXXX.
@@ -534,10 +542,10 @@ TOUPCAM_API(HRESULT)  Toupcam_get_RawFormat(HToupcam h, unsigned* pFourCC, unsig
     |-----------------------------------------------------------------|
     | Auto Exposure Target    |   10~220      |   120                 |
     | Exposure Gain           |   100~        |   100                 |
-    | Temp                    |   2000~15000  |   6503                |
-    | Tint                    |   200~2500    |   1000                |
+    | Temp                    |   1000~25000  |   6503                |
+    | Tint                    |   100~2500    |   1000                |
     | LevelRange              |   0~255       |   Low = 0, High = 255 |
-    | Contrast                |   -100~100    |   0                   |
+    | Contrast                |   -150~150    |   0                   |
     | Hue                     |   -180~180    |   0                   |
     | Saturation              |   0~255       |   128                 |
     | Brightness              |   -64~64      |   0                   |
@@ -556,6 +564,7 @@ typedef void (__stdcall* PITOUPCAM_HISTOGRAM_CALLBACK)(const float aHistY[256], 
 typedef void (__stdcall* PITOUPCAM_CHROME_CALLBACK)(void* ctxChrome);
 typedef void (__stdcall* PITOUPCAM_PROGRESS)(int percent, void* ctxProgress);
 #endif
+
 /*
 * nFlag & 0x00008000: mono or color
 * nFlag & 0x0f: bitdepth
@@ -578,7 +587,7 @@ TOUPCAM_API(HRESULT)  Toupcam_put_AutoExpoEnable(HToupcam h, int bAutoExposure);
 TOUPCAM_API(HRESULT)  Toupcam_get_AutoExpoTarget(HToupcam h, unsigned short* Target);
 TOUPCAM_API(HRESULT)  Toupcam_put_AutoExpoTarget(HToupcam h, unsigned short Target);
 
-/*set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
+/* set the maximum/minimal auto exposure time and agin. The default maximum auto exposure time is 350ms */
 TOUPCAM_API(HRESULT)  Toupcam_put_AutoExpoRange(HToupcam h, unsigned maxTime, unsigned minTime, unsigned short maxGain, unsigned short minGain);
 TOUPCAM_API(HRESULT)  Toupcam_get_AutoExpoRange(HToupcam h, unsigned* maxTime, unsigned* minTime, unsigned short* maxGain, unsigned short* minGain);
 TOUPCAM_API(HRESULT)  Toupcam_put_MaxAutoExpoTimeAGain(HToupcam h, unsigned maxTime, unsigned short maxGain);
@@ -617,22 +626,33 @@ TOUPCAM_API(HRESULT)  Toupcam_get_BlackBalance(HToupcam h, unsigned short aSub[3
 /* Flat Field Correction */
 TOUPCAM_API(HRESULT)  Toupcam_FfcOnce(HToupcam h);
 #if defined(_WIN32)
-TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const wchar_t* filepath);
-TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const wchar_t* filepath);
+TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const wchar_t* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const wchar_t* filePath);
 #else
-TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const char* filepath);
-TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const char* filepath);
+TOUPCAM_API(HRESULT)  Toupcam_FfcExport(HToupcam h, const char* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_FfcImport(HToupcam h, const char* filePath);
 #endif
 
 /* Dark Field Correction */
 TOUPCAM_API(HRESULT)  Toupcam_DfcOnce(HToupcam h);
 
 #if defined(_WIN32)
-TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const wchar_t* filepath);
-TOUPCAM_API(HRESULT)  Toupcam_DfcImport(HToupcam h, const wchar_t* filepath);
+TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const wchar_t* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_DfcImport(HToupcam h, const wchar_t* filePath);
 #else
-TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const char* filepath);
-TOUPCAM_API(HRESULT)  Toupcam_DfcImport(HToupcam h, const char* filepath);
+TOUPCAM_API(HRESULT)  Toupcam_DfcExport(HToupcam h, const char* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_DfcImport(HToupcam h, const char* filePath);
+#endif
+
+/* Fix Pattern Noise Correction */
+TOUPCAM_API(HRESULT)  Toupcam_FpncOnce(HToupcam h);
+
+#if defined(_WIN32)
+TOUPCAM_API(HRESULT)  Toupcam_FpncExport(HToupcam h, const wchar_t* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_FpncImport(HToupcam h, const wchar_t* filePath);
+#else
+TOUPCAM_API(HRESULT)  Toupcam_FpncExport(HToupcam h, const char* filePath);
+TOUPCAM_API(HRESULT)  Toupcam_FpncImport(HToupcam h, const char* filePath);
 #endif
 
 TOUPCAM_API(HRESULT)  Toupcam_put_Hue(HToupcam h, int Hue);
@@ -663,7 +683,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_MaxSpeed(HToupcam h); /* get the maximum speed
 
 TOUPCAM_API(HRESULT)  Toupcam_get_FanMaxSpeed(HToupcam h); /* get the maximum fan speed, the fan speed range = [0, max], closed interval */
 
-TOUPCAM_API(HRESULT)  Toupcam_get_MaxBitDepth(HToupcam h); /* get the max bit depth of this camera, such as 8, 10, 12, 14, 16 */
+TOUPCAM_API(HRESULT)  Toupcam_get_MaxBitDepth(HToupcam h); /* get the max bitdepth of this camera, such as 8, 10, 12, 14, 16 */
 
 /* power supply of lighting:
         0 => 60HZ AC
@@ -729,6 +749,7 @@ TOUPCAM_API(HRESULT)  Toupcam_Flush(HToupcam h);
 TOUPCAM_API(HRESULT)  Toupcam_get_Temperature(HToupcam h, short* pTemperature);
 
 /* set the target temperature of the sensor or TEC, in 0.1 degrees Celsius (32 means 3.2 degrees Celsius, -35 means -3.5 degree Celsius)
+    set "-2730" or below means using the default value of this model
     return E_NOTIMPL if not supported
 */
 TOUPCAM_API(HRESULT)  Toupcam_put_Temperature(HToupcam h, short nTemperature);
@@ -810,15 +831,15 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
 #define TOUPCAM_OPTION_RAW                    0x04       /* raw data mode, read the sensor "raw" data. This can be set only while camea is NOT running. 0 = rgb, 1 = raw, default value: 0 */
 #define TOUPCAM_OPTION_HISTOGRAM              0x05       /* 0 = only one, 1 = continue mode */
 #define TOUPCAM_OPTION_BITDEPTH               0x06       /* 0 = 8 bits mode, 1 = 16 bits mode, subset of TOUPCAM_OPTION_PIXEL_FORMAT */
-#define TOUPCAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed */
+#define TOUPCAM_OPTION_FAN                    0x07       /* 0 = turn off the cooling fan, [1, max] = fan speed, , set to "-1" means to use default fan speed */
 #define TOUPCAM_OPTION_TEC                    0x08       /* 0 = turn off the thermoelectric cooler, 1 = turn on the thermoelectric cooler */
 #define TOUPCAM_OPTION_LINEAR                 0x09       /* 0 = turn off the builtin linear tone mapping, 1 = turn on the builtin linear tone mapping, default value: 1 */
 #define TOUPCAM_OPTION_CURVE                  0x0a       /* 0 = turn off the builtin curve tone mapping, 1 = turn on the builtin polynomial curve tone mapping, 2 = logarithmic curve tone mapping, default value: 2 */
-#define TOUPCAM_OPTION_TRIGGER                0x0b       /* 0 = video mode, 1 = software or simulated trigger mode, 2 = external trigger mode, 3 = external + software trigger, default value = 0 */
+#define TOUPCAM_OPTION_TRIGGER                0x0b       /* 0 = video mode, 1 = software or simulated trigger mode, 2 = external trigger mode, 3 = external + software trigger, 4 = self trigger, default value = 0 */
 #define TOUPCAM_OPTION_RGB                    0x0c       /* 0 => RGB24; 1 => enable RGB48 format when bitdepth > 8; 2 => RGB32; 3 => 8 Bits Grey (only for mono camera); 4 => 16 Bits Grey (only for mono camera when bitdepth > 8); 5 => 64(RGB64) */
 #define TOUPCAM_OPTION_COLORMATIX             0x0d       /* enable or disable the builtin color matrix, default value: 1 */
 #define TOUPCAM_OPTION_WBGAIN                 0x0e       /* enable or disable the builtin white balance gain, default value: 1 */
-#define TOUPCAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius */
+#define TOUPCAM_OPTION_TECTARGET              0x0f       /* get or set the target temperature of the thermoelectric cooler, in 0.1 degree Celsius. For example, 125 means 12.5 degree Celsius, -35 means -3.5 degree Celsius. Set "-2730" or below means using the default for that model */
 #define TOUPCAM_OPTION_AUTOEXP_POLICY         0x10       /* auto exposure policy:
                                                              0: Exposure Only
                                                              1: Exposure Preferred
@@ -840,7 +861,12 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                             The final image size is rounded down to an even number, such as 640/3 to get 212
                                                          */
 #define TOUPCAM_OPTION_ROTATE                 0x18       /* rotate clockwise: 0, 90, 180, 270 */
-#define TOUPCAM_OPTION_CG                     0x19       /* Conversion Gain: 0 = LCG, 1 = HCG, 2 = HDR */
+#define TOUPCAM_OPTION_CG                     0x19       /* Conversion Gain:
+                                                                0 = LCG
+                                                                1 = HCG
+                                                                2 = HDR (for camera with flag TOUPCAM_FLAG_CGHDR)
+                                                                2 = MCG (for camera with flag TOUPCAM_FLAG_GHOPTO)
+                                                         */
 #define TOUPCAM_OPTION_PIXEL_FORMAT           0x1a       /* pixel format, TOUPCAM_PIXELFORMAT_xxxx */
 #define TOUPCAM_OPTION_FFC                    0x1b       /* flat field correction
                                                              set:
@@ -886,9 +912,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                              default: 1 (win), 0 (linux/macos)
                                                          */
 #define TOUPCAM_OPTION_FOCUSPOS               0x24       /* focus positon */
-#define TOUPCAM_OPTION_AFMODE                 0x25       /* auto focus mode (0:manul focus; 1:auto focus; 2:once focus; 3:conjugate calibration) */
-#define TOUPCAM_OPTION_AFZONE                 0x26       /* auto focus zone */
-#define TOUPCAM_OPTION_AFFEEDBACK             0x27       /* auto focus information feedback; 0:unknown; 1:focused; 2:focusing; 3:defocus; 4:up; 5:down */
+#define TOUPCAM_OPTION_AFMODE                 0x25       /* auto focus mode, see ToupcamAFMode */
+#define TOUPCAM_OPTION_AFSTATUS               0x27       /* auto focus status, see ToupcamAFStaus */
 #define TOUPCAM_OPTION_TESTPATTERN            0x28       /* test pattern:
                                                             0: off
                                                             3: monochrome diagonal stripes
@@ -903,7 +928,7 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
 #define TOUPCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
 #define TOUPCAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
 #define TOUPCAM_OPTION_RELOAD                 0x2f       /* reload the last frame in trigger mode */
-#define TOUPCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback */
+#define TOUPCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback: 0 => disable, 1 => enable, default: 0 */
 #define TOUPCAM_OPTION_FRONTEND_DEQUE_LENGTH  0x31       /* frontend (raw) frame buffer deque length, range: [2, 1024], default: 4
                                                             All the memory will be pre-allocated when the camera starts, so, please attention to memory usage
                                                          */
@@ -962,9 +987,9 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                          */
 #define TOUPCAM_OPTION_AUTOEXPOSURE_PERCENT   0x4a       /* auto exposure percent to average:
                                                                 1~99: peak percent average
-                                                                0 or 100: full roi average
+                                                                0 or 100: full roi average, means "disabled"
                                                          */
-#define TOUPCAM_OPTION_ANTI_SHUTTER_EFFECT    0x4b       /* anti shutter effect: 1 => disable, 0 => disable; default: 1 */
+#define TOUPCAM_OPTION_ANTI_SHUTTER_EFFECT    0x4b       /* anti shutter effect: 1 => disable, 0 => disable; default: 0 */
 #define TOUPCAM_OPTION_CHAMBER_HT             0x4c       /* get chamber humidity & temperature:
                                                                 high 16 bits: humidity, in 0.1%, such as: 325 means humidity is 32.5%
                                                                 low 16 bits: temperature, in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius
@@ -1006,12 +1031,66 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
 #define TOUPCAM_OPTION_OVERCLOCK_MAX          0x5c       /* get overclock range: [0, max] */
 #define TOUPCAM_OPTION_OVERCLOCK              0x5d       /* overclock, default: 0 */
 #define TOUPCAM_OPTION_RESET_SENSOR           0x5e       /* reset sensor */
-#define TOUPCAM_OPTION_ADC                    0x08000000 /* Analog-Digital Conversion:
-                                                                get:
-                                                                    (option | 'C'): get the current value
-                                                                    (option | 'N'): get the supported ADC number
-                                                                    (option | n): get the nth supported ADC value, such as 11bits, 12bits, etc; the first value is the default
-                                                                set: val = ADC value, such as 11bits, 12bits, etc
+#define TOUPCAM_OPTION_ISP                    0x5f       /* Enable hardware ISP: 0 => auto (disable in RAW mode, otherwise enable), 1 => enable, -1 => disable; default: 0 */
+#define TOUPCAM_OPTION_AUTOEXP_EXPOTIME_DAMP  0x60       /* Auto exposure damping coefficient: time (thousandths). The larger the damping coefficient, the smoother and slower the exposure time changes */
+#define TOUPCAM_OPTION_AUTOEXP_GAIN_DAMP      0x61       /* Auto exposure damping coefficient: gain (thousandths). The larger the damping coefficient, the smoother and slower the gain changes */
+#define TOUPCAM_OPTION_MOTOR_NUMBER           0x62       /* range: [1, 20] */
+#define TOUPCAM_OPTION_MOTOR_POS              0x10000000 /* range: [1, 702] */
+#define TOUPCAM_OPTION_PSEUDO_COLOR_START     0x63       /* Pseudo: start color, BGR format */
+#define TOUPCAM_OPTION_PSEUDO_COLOR_END       0x64       /* Pseudo: end color, BGR format */
+#define TOUPCAM_OPTION_PSEUDO_COLOR_ENABLE    0x65       /* Pseudo: -1 => custom: use startcolor & endcolor to generate the colormap
+                                                                    0 => disable
+                                                                    1 => spot
+                                                                    2 => spring
+                                                                    3 => summer
+                                                                    4 => autumn
+                                                                    5 => winter
+                                                                    6 => bone
+                                                                    7 => jet
+                                                                    8 => rainbow
+                                                                    9 => deepgreen
+                                                                    10 => ocean
+                                                                    11 => cool
+                                                                    12 => hsv
+                                                                    13 => pink
+                                                                    14 => hot
+                                                                    15 => parula
+                                                                    16 => magma
+                                                                    17 => inferno
+                                                                    18 => plasma
+                                                                    19 => viridis
+                                                                    20 => cividis
+                                                                    21 => twilight
+                                                                    22 => twilight_shifted
+                                                                    23 => turbo
+                                                         */
+#define TOUPCAM_OPTION_LOW_POWERCONSUMPTION   0x66       /* Low Power Consumption: 0 => disable, 1 => enable */
+#define TOUPCAM_OPTION_FPNC                   0x67       /* Fix Pattern Noise Correction
+                                                             set:
+                                                                 0: disable
+                                                                 1: enable
+                                                                -1: reset
+                                                                 (0xff000000 | n): set the average number to n, [1~255]
+                                                             get:
+                                                                 (val & 0xff): 0 => disable, 1 => enable, 2 => inited
+                                                                 ((val & 0xff00) >> 8): sequence
+                                                                 ((val & 0xff0000) >> 16): average number
+                                                         */
+#define TOUPCAM_OPTION_OVEREXP_POLICY         0x68       /* Auto exposure over exposure policy: when overexposed,
+                                                                0 => directly reduce the exposure time/gain to the minimum value; or
+                                                                1 => reduce exposure time/gain in proportion to current and target brightness.
+                                                                n(n>1) => first adjust the exposure time to (maximum automatic exposure time * maximum automatic exposure gain) * n / 1000, and then adjust according to the strategy of 1
+                                                            The advantage of policy 0 is that the convergence speed is faster, but there is black screen.
+                                                            Policy 1 avoids the black screen, but the convergence speed is slower.
+                                                            Default: 0
+                                                         */
+#define TOUPCAM_OPTION_READOUT_MODE           0x69       /* Readout mode: 0 = IWR (Integrate While Read), 1 = ITR (Integrate Then Read) */
+#define TOUPCAM_OPTION_TAILLIGHT              0x6a       /* Turn on/off tail Led light: 0 => off, 1 => on; default: on */
+#define TOUPCAM_OPTION_LENSSTATE              0x6b       /* Load/Save lens state to EEPROM: 0 => load, 1 => save */
+#define TOUPCAM_OPTION_AWB_CONTINUOUS         0x6c       /* Auto White Balance: continuous mode
+                                                                0:  disable (default)
+                                                                n>0: every n millisecond(s)
+                                                                n<0: every -n frame
                                                          */
 
 /* pixel format */
@@ -1027,6 +1106,22 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
 #define TOUPCAM_PIXELFORMAT_GMCY8             0x09   /* map to RGGB 8 bits */
 #define TOUPCAM_PIXELFORMAT_GMCY12            0x0a   /* map to RGGB 12 bits */
 #define TOUPCAM_PIXELFORMAT_UYVY              0x0b
+#define TOUPCAM_PIXELFORMAT_RAW12PACK         0x0c
+#define TOUPCAM_PIXELFORMAT_RAW11             0x0d
+#define TOUPCAM_PIXELFORMAT_HDR8HL            0x0e   /* HDR, Bitdepth: 8, Conversion Gain: High + Low */
+#define TOUPCAM_PIXELFORMAT_HDR10HL           0x0f   /* HDR, Bitdepth: 10, Conversion Gain: High + Low */
+#define TOUPCAM_PIXELFORMAT_HDR11HL           0x10   /* HDR, Bitdepth: 11, Conversion Gain: High + Low */
+#define TOUPCAM_PIXELFORMAT_HDR12HL           0x11   /* HDR, Bitdepth: 12, Conversion Gain: High + Low */
+#define TOUPCAM_PIXELFORMAT_HDR14HL           0x12   /* HDR, Bitdepth: 14, Conversion Gain: High + Low */
+
+/*
+* cmd: input
+*   -1:         query the number
+*   0~number:   query the nth pixel format
+* piValue: output, TOUPCAM_PIXELFORMAT_xxxx
+*/
+TOUPCAM_API(HRESULT)     Toupcam_get_PixelFormatSupport(HToupcam h, char cmd, int* piValue);
+TOUPCAM_API(const char*) Toupcam_get_PixelFormatName(int val);
 
 TOUPCAM_API(HRESULT)  Toupcam_put_Option(HToupcam h, unsigned iOption, int iValue);
 TOUPCAM_API(HRESULT)  Toupcam_get_Option(HToupcam h, unsigned iOption, int* piValue);
@@ -1037,32 +1132,10 @@ TOUPCAM_API(HRESULT)  Toupcam_get_Option(HToupcam h, unsigned iOption, int* piVa
 TOUPCAM_API(HRESULT)  Toupcam_put_Roi(HToupcam h, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
 TOUPCAM_API(HRESULT)  Toupcam_get_Roi(HToupcam h, unsigned* pxOffset, unsigned* pyOffset, unsigned* pxWidth, unsigned* pyHeight);
 
-/*  simulate replug:
-    return > 0, the number of device has been replug
-    return = 0, no device found
-    return E_ACCESSDENIED if without UAC Administrator privileges
-    for each device found, it will take about 3 seconds
-*/
-#if defined(_WIN32)
-TOUPCAM_API(HRESULT) Toupcam_Replug(const wchar_t* camId);
-#else
-TOUPCAM_API(HRESULT) Toupcam_Replug(const char* camId);
-#endif
+/* multiple Roi */
+TOUPCAM_API(HRESULT)  Toupcam_put_RoiN(HToupcam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
-#ifndef __TOUPCAMAFPARAM_DEFINED__
-#define __TOUPCAMAFPARAM_DEFINED__
-typedef struct {
-    int imax;    /* maximum auto focus sensor board positon */
-    int imin;    /* minimum auto focus sensor board positon */
-    int idef;    /* conjugate calibration positon */
-    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
-    int zoneh;   /* zone horizontal */
-    int zonev;   /* zone vertical */
-} ToupcamAfParam;
-#endif
-
-TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
+TOUPCAM_API(HRESULT)  Toupcam_put_XY(HToupcam h, int x, int y);
 
 #define TOUPCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE           0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
 #define TOUPCAM_IOCONTROLTYPE_GET_GPIODIR                 0x03 /* 0x00 => Input, 0x01 => Output */
@@ -1146,6 +1219,13 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
 #define TOUPCAM_IOCONTROLTYPE_GET_OUTPUTCOUNTERVALUE      0x37 /* Output Counter Value, range: [0 ~ 65535] */
 #define TOUPCAM_IOCONTROLTYPE_SET_OUTPUTCOUNTERVALUE      0x38
 #define TOUPCAM_IOCONTROLTYPE_SET_OUTPUT_PAUSE            0x3a /* Output pause: 1 => puase, 0 => unpause */
+#define TOUPCAM_IOCONTROLTYPE_GET_INPUT_STATE             0x3c /* Input state: 0 (low level) or 1 (high level) */
+#define TOUPCAM_IOCONTROLTYPE_GET_USER_PULSE_HIGH         0x3e /* User pulse high level time: us */
+#define TOUPCAM_IOCONTROLTYPE_SET_USER_PULSE_HIGH         0x3f
+#define TOUPCAM_IOCONTROLTYPE_GET_USER_PULSE_LOW          0x40 /* User pulse low level time: us */
+#define TOUPCAM_IOCONTROLTYPE_SET_USER_PULSE_LOW          0x41
+#define TOUPCAM_IOCONTROLTYPE_GET_USER_PULSE_NUMBER       0x42 /* User pulse number: default 0 */
+#define TOUPCAM_IOCONTROLTYPE_SET_USER_PULSE_NUMBER       0x43
 
 #define TOUPCAM_IOCONTROL_DELAYTIME_MAX                   (5 * 1000 * 1000)
 
@@ -1157,6 +1237,20 @@ TOUPCAM_API(HRESULT)  Toupcam_get_AfParam(HToupcam h, ToupcamAfParam* pAfParam);
     3 => GPIO1
 */
 TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+
+#ifndef __TOUPCAMSELFTRIGGER_DEFINED__
+#define __TOUPCAMSELFTRIGGER_DEFINED__
+typedef struct {
+    unsigned sensingLeft, sensingTop, sensingWidth, sensingHeight; /* Sensing Area */
+    unsigned hThreshold, lThreshold; /* threshold High side, threshold Low side */
+    unsigned expoTime; /* Exposure Time */
+    unsigned short expoGain; /* Exposure Gain */
+    unsigned short hCount, lCount; /* Count threshold High side, Count threshold Low side, thousandths of Sensing Area */
+    unsigned short reserved;
+} ToupcamSelfTrigger;
+#endif
+TOUPCAM_API(HRESULT)  Toupcam_put_SelfTrigger(HToupcam h, const ToupcamSelfTrigger* pSt);
+TOUPCAM_API(HRESULT)  Toupcam_get_SelfTrigger(HToupcam h, ToupcamSelfTrigger* pSt);
 
 #define TOUPCAM_FLASH_SIZE      0x00    /* query total size */
 #define TOUPCAM_FLASH_EBLOCK    0x01    /* query erase block size */
@@ -1175,6 +1269,125 @@ TOUPCAM_API(HRESULT)  Toupcam_rwc_Flash(HToupcam h, unsigned action, unsigned ad
 TOUPCAM_API(HRESULT)  Toupcam_write_UART(HToupcam h, const unsigned char* pData, unsigned nDataLen);
 TOUPCAM_API(HRESULT)  Toupcam_read_UART(HToupcam h, unsigned char* pBuffer, unsigned nBufferLen);
 
+/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
+typedef void (__stdcall* PTOUPCAM_HOTPLUG)(void* ctxHotPlug);
+TOUPCAM_API(HRESULT)  Toupcam_GigeEnable(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+
+/*
+ filePath:
+    "*": export to EEPROM
+    "0x????" or "0X????": export to EEPROM specified address
+    file path: export to file in ini format
+*/
+TOUPCAM_API(HRESULT)  Toupcam_export_Cfg(HToupcam h, const char* filePath);
+
+/*
+This function is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
+  (1) On Windows, please refer to the MSDN
+       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
+       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
+  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
+  (3) On Linux / macOS, please call this function to register the callback function.
+      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Toupcam_EnumV2(...) again to enum the cameras.
+  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
+Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
+*/
+#if !defined(_WIN32) && !defined(__ANDROID__)
+TOUPCAM_API(void)   Toupcam_HotPlug(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
+#endif
+
+TOUPCAM_API(unsigned) Toupcam_EnumWithName(ToupcamDeviceV2 pti[TOUPCAM_MAX]);
+TOUPCAM_API(HRESULT)  Toupcam_set_Name(HToupcam h, const char* name);
+TOUPCAM_API(HRESULT)  Toupcam_query_Name(HToupcam h, char name[64]);
+#if defined(_WIN32)
+TOUPCAM_API(HRESULT)  Toupcam_put_Name(const wchar_t* camId, const char* name);
+TOUPCAM_API(HRESULT)  Toupcam_get_Name(const wchar_t* camId, char name[64]);
+#else
+TOUPCAM_API(HRESULT)  Toupcam_put_Name(const char* camId, const char* name);
+TOUPCAM_API(HRESULT)  Toupcam_get_Name(const char* camId, char name[64]);
+#endif
+
+typedef struct {
+    unsigned short lensID;
+    unsigned char  lensType;
+    unsigned char  statusAfmf;      /* LENS_AF = 0x00,  LENS_MF = 0x80 */
+
+    unsigned short maxFocalLength;
+    unsigned short curFocalLength;
+    unsigned short minFocalLength;
+
+    short          farFM;           /* focus motor, absolute value */
+    short          curFM;           /* current focus motor */
+    short          nearFM;
+
+    unsigned short maxFocusDistance;
+    unsigned short minFocusDistance;
+
+    char           curAM;
+    unsigned char  maxAM;           /* maximum Aperture, mimimum F# */
+    unsigned char  minAM;           /* mimimum Aperture, maximum F# */
+    unsigned char  posAM;           /* used for set aperture motor to posAM, it is an index */
+    int            posFM;           /* used for set focus motor to posFM */
+
+    unsigned       sizeFN;
+    const char**   arrayFN;
+    const char*    lensName;        /* lens Name */
+} ToupcamLensInfo;
+
+TOUPCAM_API(HRESULT)  Toupcam_get_LensInfo(HToupcam h, ToupcamLensInfo* pInfo);
+
+typedef enum
+{
+    ToupcamAFMode_CALIBRATE = 0x0,/* lens calibration mode */
+    ToupcamAFMode_MANUAL    = 0x1,/* manual focus mode */
+    ToupcamAFMode_ONCE      = 0x2,/* onepush focus mode */
+    ToupcamAFMode_AUTO      = 0x3,/* autofocus mode */
+    ToupcamAFMode_NONE      = 0x4,/* no active selection of focus mode */
+    ToupcamAFMode_IDLE      = 0x5,
+    ToupcamAFMode_UNUSED    = 0xffffffff
+} ToupcamAFMode;
+
+typedef enum
+{
+    ToupcamAFStatus_NA           = 0x0,/* Not available */
+    ToupcamAFStatus_PEAKPOINT    = 0x1,/* Focus completed, find the focus position */
+    ToupcamAFStatus_DEFOCUS      = 0x2,/* End of focus, defocus */
+    ToupcamAFStatus_NEAR         = 0x3,/* Focusing ended, object too close */
+    ToupcamAFStatus_FAR          = 0x4,/* Focusing ended, object too far */
+    ToupcamAFStatus_ROICHANGED   = 0x5,/* Focusing ends, roi changes */
+    ToupcamAFStatus_SCENECHANGED = 0x6,/* Focusing ends, scene changes */
+    ToupcamAFStatus_MODECHANGED  = 0x7,/* The end of focusing and the change in focusing mode is usually determined by the user moderator */
+    ToupcamAFStatus_UNFINISH     = 0x8,/* The focus is not complete. At the beginning of focusing, it will be set as incomplete */
+    ToupcamAfStatus_UNUSED       = 0xffffffff
+} ToupcamAFStatus;/* Focus Status */
+
+typedef struct {
+    ToupcamAFMode    AF_Mode;
+    ToupcamAFStatus  AF_Status;
+    unsigned char    AF_LensAP_Update_Flag;  /* mark for whether the lens aperture is calibrated */
+    unsigned char    Reserved[3];
+} ToupcamAFState;
+
+TOUPCAM_API(HRESULT)  Toupcam_get_AFState(HToupcam h, ToupcamAFState* pState);
+
+TOUPCAM_API(HRESULT)  Toupcam_put_AFMode(HToupcam h, ToupcamAFMode mode, int bFixedWD, unsigned uiNear, unsigned uiFar);
+TOUPCAM_API(HRESULT)  Toupcam_put_AFRoi(HToupcam h, unsigned xOffset, unsigned yOffset, unsigned xWidth, unsigned yHeight);
+TOUPCAM_API(HRESULT)  Toupcam_get_AFRoi(HToupcam h, unsigned* pxOffset, unsigned* pyOffset, unsigned* pxWidth, unsigned* pyHeight);
+TOUPCAM_API(HRESULT)  Toupcam_put_AFAperture(HToupcam h, int iAperture);
+TOUPCAM_API(HRESULT)  Toupcam_put_AFFMPos(HToupcam h, int iFMPos);
+
+/*  simulate replug:
+    return > 0, the number of device has been replug
+    return = 0, no device found
+    return E_ACCESSDENIED if without UAC Administrator privileges
+    for each device found, it will take about 3 seconds
+*/
+#if defined(_WIN32)
+TOUPCAM_API(HRESULT) Toupcam_Replug(const wchar_t* camId);
+#else
+TOUPCAM_API(HRESULT) Toupcam_Replug(const char* camId);
+#endif
+
 TOUPCAM_API(const ToupcamModelV2**) Toupcam_all_Model(); /* return all supported USB model array */
 TOUPCAM_API(const ToupcamModelV2*) Toupcam_query_Model(HToupcam h);
 TOUPCAM_API(const ToupcamModelV2*) Toupcam_get_Model(unsigned short idVendor, unsigned short idProduct);
@@ -1192,8 +1405,8 @@ TOUPCAM_API(HRESULT)  Toupcam_Update(const wchar_t* camId, const wchar_t* filePa
 TOUPCAM_API(HRESULT)  Toupcam_Update(const char* camId, const char* filePath, PITOUPCAM_PROGRESS funProgress, void* ctxProgress);
 #endif
 
-TOUPCAM_API(HRESULT)  Toupcam_put_Linear(HToupcam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
-TOUPCAM_API(HRESULT)  Toupcam_put_Curve(HToupcam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid */
+TOUPCAM_API(HRESULT)  Toupcam_put_Linear(HToupcam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid while camera running */
+TOUPCAM_API(HRESULT)  Toupcam_put_Curve(HToupcam h, const unsigned char* v8, const unsigned short* v16); /* v8, v16 pointer must remains valid while camera running */
 TOUPCAM_API(HRESULT)  Toupcam_put_ColorMatrix(HToupcam h, const double v[9]); /* null => revert to model default */
 TOUPCAM_API(HRESULT)  Toupcam_put_InitWBGain(HToupcam h, const unsigned short v[3]); /* null => revert to model default */
 
@@ -1201,6 +1414,34 @@ TOUPCAM_API(HRESULT)  Toupcam_put_InitWBGain(HToupcam h, const unsigned short v[
     get the frame rate: framerate (fps) = Frame * 1000.0 / nTime
 */
 TOUPCAM_API(HRESULT)  Toupcam_get_FrameRate(HToupcam h, unsigned* nFrame, unsigned* nTime, unsigned* nTotalFrame);
+
+/* AAF: Astro Auto Focuser */
+#define TOUPCAM_AAF_SETPOSITION     0x01
+#define TOUPCAM_AAF_GETPOSITION     0x02
+#define TOUPCAM_AAF_SETZERO         0x03
+#define TOUPCAM_AAF_SETDIRECTION    0x05
+#define TOUPCAM_AAF_GETDIRECTION    0x06
+#define TOUPCAM_AAF_SETMAXINCREMENT 0x07
+#define TOUPCAM_AAF_GETMAXINCREMENT 0x08
+#define TOUPCAM_AAF_SETFINE         0x09
+#define TOUPCAM_AAF_GETFINE         0x0a
+#define TOUPCAM_AAF_SETCOARSE       0x0b
+#define TOUPCAM_AAF_GETCOARSE       0x0c
+#define TOUPCAM_AAF_SETBUZZER       0x0d
+#define TOUPCAM_AAF_GETBUZZER       0x0e
+#define TOUPCAM_AAF_SETBACKLASH     0x0f
+#define TOUPCAM_AAF_GETBACKLASH     0x10
+#define TOUPCAM_AAF_GETAMBIENTTEMP  0x12
+#define TOUPCAM_AAF_GETTEMP         0x14  /* in 0.1 degrees Celsius, such as: 32 means 3.2 degrees Celsius */
+#define TOUPCAM_AAF_ISMOVING        0x16
+#define TOUPCAM_AAF_HALT            0x17
+#define TOUPCAM_AAF_SETMAXSTEP      0x1b
+#define TOUPCAM_AAF_GETMAXSTEP      0x1c
+#define TOUPCAM_AAF_GETSTEPSIZE     0x1e
+#define TOUPCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
+#define TOUPCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
+#define TOUPCAM_AAF_RANGEDEF        0xff  /* Range: default value */
+TOUPCAM_API(HRESULT) Toupcam_AAF(HToupcam h, int action, int outVal, int* inVal);
 
 /* astronomy: for ST4 guide, please see: ASCOM Platform Help ICameraV2.
     nDirect: 0 = North, 1 = South, 2 = East, 3 = West, 4 = Stop
@@ -1237,6 +1478,23 @@ TOUPCAM_API(double)   Toupcam_calc_ClarityFactorV2(const void* pImageData, int b
                     64 => RGB64
 */
 TOUPCAM_API(void)     Toupcam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+
+
+#ifndef __TOUPCAMFOCUSMOTOR_DEFINED__
+#define __TOUPCAMFOCUSMOTOR_DEFINED__
+typedef struct {
+    int imax;    /* maximum auto focus sensor board positon */
+    int imin;    /* minimum auto focus sensor board positon */
+    int idef;    /* conjugate calibration positon */
+    int imaxabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int iminabs; /* maximum absolute auto focus sensor board positon, micrometer */
+    int zoneh;   /* zone horizontal */
+    int zonev;   /* zone vertical */
+} ToupcamFocusMotor;
+#endif
+
+TOUPCAM_DEPRECATED
+TOUPCAM_API(HRESULT)  Toupcam_get_FocusMotor(HToupcam h, ToupcamFocusMotor* pFocusMotor);
 
 /*
     obsolete, please use Toupcam_deBayerV2
@@ -1331,55 +1589,8 @@ TOUPCAM_API(HRESULT)  Toupcam_AwbOnePush(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_AbbOnePush(HToupcam h, PITOUPCAM_BLACKBALANCE_CALLBACK funBB, void* ctxBB);
 
-/* Initialize support for GigE cameras. If online/offline notifications are not required, the callback function can be set to NULL */
-typedef void (__stdcall* PTOUPCAM_HOTPLUG)(void* ctxHotPlug);
-TOUPCAM_API(HRESULT)  Toupcam_GigeEnable(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-
-/*
-USB hotplug is only available on macOS and Linux, it's unnecessary on Windows & Android. To process the device plug in / pull out:
-  (1) On Windows, please refer to the MSDN
-       (a) Device Management, https://docs.microsoft.com/en-us/windows/win32/devio/device-management
-       (b) Detecting Media Insertion or Removal, https://docs.microsoft.com/en-us/windows/win32/devio/detecting-media-insertion-or-removal
-  (2) On Android, please refer to https://developer.android.com/guide/topics/connectivity/usb/host
-  (3) On Linux / macOS, please call this function to register the callback function.
-      When the device is inserted or pulled out, you will be notified by the callback funcion, and then call Toupcam_EnumV2(...) again to enum the cameras.
-  (4) On macOS, IONotificationPortCreate series APIs can also be used as an alternative.
-Recommendation: for better rubustness, when notify of device insertion arrives, don't open handle of this device immediately, but open it after delaying a short time (e.g., 200 milliseconds).
-*/
-#if !defined(_WIN32) && !defined(__ANDROID__)
-TOUPCAM_API(void)   Toupcam_HotPlug(PTOUPCAM_HOTPLUG funHotPlug, void* ctxHotPlug);
-#endif
-
-/* AAF: Astro Auto Focuser */
-#define TOUPCAM_AAF_SETPOSITION     0x01
-#define TOUPCAM_AAF_GETPOSITION     0x02
-#define TOUPCAM_AAF_SETZERO         0x03
-#define TOUPCAM_AAF_GETZERO         0x04
-#define TOUPCAM_AAF_SETDIRECTION    0x05
-#define TOUPCAM_AAF_GETDIRECTION    0x06
-#define TOUPCAM_AAF_SETMAXINCREMENT 0x07
-#define TOUPCAM_AAF_GETMAXINCREMENT 0x08
-#define TOUPCAM_AAF_SETFINE         0x09
-#define TOUPCAM_AAF_GETFINE         0x0a
-#define TOUPCAM_AAF_SETCOARSE       0x0b
-#define TOUPCAM_AAF_GETCOARSE       0x0c
-#define TOUPCAM_AAF_SETBUZZER       0x0d
-#define TOUPCAM_AAF_GETBUZZER       0x0e
-#define TOUPCAM_AAF_SETBACKLASH     0x0f
-#define TOUPCAM_AAF_GETBACKLASH     0x10
-#define TOUPCAM_AAF_GETAMBIENTTEMP  0x12
-#define TOUPCAM_AAF_GETTEMP         0x14
-#define TOUPCAM_AAF_ISMOVING        0x16
-#define TOUPCAM_AAF_HALT            0x17
-#define TOUPCAM_AAF_SETMAXSTEP      0x1b
-#define TOUPCAM_AAF_GETMAXSTEP      0x1c
-#define TOUPCAM_AAF_RANGEMIN        0xfd  /* Range: min value */
-#define TOUPCAM_AAF_RANGEMAX        0xfe  /* Range: max value */
-#define TOUPCAM_AAF_RANGEDEF        0xff  /* Range: default value */
-TOUPCAM_API(HRESULT) Toupcam_AAF(HToupcam h, int action, int outVal, int* inVal);
-
 #if defined(_WIN32)
-/* Toupcam_put_TempTintInit is obsolete, recommend using Toupcam_AwbOnce. */
+/* Toupcam_put_TempTintInit is obsolete, recommend using Toupcam_AwbOnce */
 TOUPCAM_DEPRECATED
 TOUPCAM_API(HRESULT)  Toupcam_put_TempTintInit(HToupcam h, PITOUPCAM_TEMPTINT_CALLBACK funTT, void* ctxTT);
 
@@ -1422,29 +1633,13 @@ TOUPCAM_API(HRESULT)  Toupcam_get_VignetMidPointInt(HToupcam h, int* nMidPoint);
 #define TOUPCAM_FLAG_BITDEPTH14    TOUPCAM_FLAG_RAW14  /* pixel format, RAW 14bits */
 #define TOUPCAM_FLAG_BITDEPTH16    TOUPCAM_FLAG_RAW16  /* pixel format, RAW 16bits */
 
-#if defined(_WIN32)
-TOUPCAM_API(HRESULT)  Toupcam_set_Name(HToupcam h, const char* name);
-TOUPCAM_API(HRESULT)  Toupcam_query_Name(HToupcam h, char name[64]);
-TOUPCAM_API(HRESULT)  Toupcam_put_Name(const wchar_t* camId, const char* name);
-TOUPCAM_API(HRESULT)  Toupcam_get_Name(const wchar_t* camId, char name[64]);
-#else
-TOUPCAM_API(HRESULT)  Toupcam_set_Name(HToupcam h, const char* name);
-TOUPCAM_API(HRESULT)  Toupcam_query_Name(HToupcam h, char name[64]);
-TOUPCAM_API(HRESULT)  Toupcam_put_Name(const char* camId, const char* name);
-TOUPCAM_API(HRESULT)  Toupcam_get_Name(const char* camId, char name[64]);
-#endif
-TOUPCAM_API(unsigned) Toupcam_EnumWithName(ToupcamDeviceV2 pti[TOUPCAM_MAX]);
-
-TOUPCAM_API(HRESULT)  Toupcam_put_RoiN(HToupcam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
-
 TOUPCAM_API(HRESULT)  Toupcam_log_File(const
 #if defined(_WIN32)
                                        wchar_t*
 #else
                                        char*
 #endif
-                                       filepath
-);
+                                       filePath);
 TOUPCAM_API(HRESULT)  Toupcam_log_Level(unsigned level); /* 0 => none; 1 => error; 2 => debug; 3 => verbose */
 
 #if defined(_WIN32)

@@ -256,7 +256,7 @@ int gphoto_read_widget(gphoto_widget *widget)
             if (!widget->choices)
             {
                 widget->choice_cnt = gp_widget_count_choices(widget->widget);
-                widget->choices    = (char **)calloc(sizeof(char *), widget->choice_cnt + 1);
+                widget->choices    = (char **)calloc(widget->choice_cnt + 1, sizeof(char *));
             }
 
             for (i = 0; i < widget->choice_cnt; i++)
@@ -286,7 +286,7 @@ int gphoto_read_widget(gphoto_widget *widget)
 
 static gphoto_widget *find_widget(gphoto_driver *gphoto, const char *name)
 {
-    gphoto_widget *widget = (gphoto_widget *)calloc(sizeof(gphoto_widget), 1);
+    gphoto_widget *widget = (gphoto_widget *)calloc(1, sizeof(gphoto_widget));
     int ret;
 
     widget->name = lookup_widget(gphoto->config, name, &widget->widget);
@@ -467,7 +467,7 @@ static double *parse_shutterspeed(gphoto_driver *gphoto, gphoto_widget *widget)
         gphoto->exposure_presets_count = widget->choice_cnt;
     }
 
-    exposure = (double *)calloc(sizeof(double), widget->choice_cnt);
+    exposure = (double *)calloc(widget->choice_cnt, sizeof(double));
 
     for (i = 0; i < widget->choice_cnt; i++)
     {
@@ -1690,7 +1690,7 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
         }
     }
 
-    gphoto                         = (gphoto_driver *)calloc(sizeof(gphoto_driver), 1);
+    gphoto                         = (gphoto_driver *)calloc(1, sizeof(gphoto_driver));
     gphoto->camera                 = camera;
     gphoto->context                = context;
     gphoto->exposure_presets       = nullptr;
@@ -2005,7 +2005,7 @@ static void find_all_widgets(gphoto_driver *gphoto, CameraWidget *widget, char *
             return;
         }
         list                 = (gphoto_widget_list *)calloc(1, sizeof(gphoto_widget_list));
-        list->widget         = (gphoto_widget *)calloc(sizeof(gphoto_widget), 1);
+        list->widget         = (gphoto_widget *)calloc(1, sizeof(gphoto_widget));
         list->widget->widget = widget;
         list->widget->type   = type;
         list->widget->name   = uselabel;

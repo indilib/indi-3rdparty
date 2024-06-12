@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_toupbase CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -15,6 +15,7 @@ find_package(TOUPCAM REQUIRED)
 find_package(ALTAIRCAM REQUIRED)
 find_package(BRESSERCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
+find_package(MEADECAM REQUIRED)
 find_package(NNCAM REQUIRED)
 find_package(OGMACAM REQUIRED)
 find_package(OMEGONPROCAM REQUIRED)
@@ -36,6 +37,7 @@ include_directories( ${ALTAIRCAM_INCLUDE_DIR})
 include_directories( ${STARSHOOTG_INCLUDE_DIR})
 include_directories( ${NNCAM_INCLUDE_DIR})
 include_directories( ${MALLINCAM_INCLUDE_DIR})
+include_directories( ${MEADECAM_INCLUDE_DIR})
 include_directories( ${OMEGONPROCAM_INCLUDE_DIR})
 include_directories( ${BRESSERCAM_INCLUDE_DIR})
 include_directories( ${OGMACAM_INCLUDE_DIR})
@@ -77,6 +79,14 @@ target_link_libraries(indi_mallincam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} 
 add_executable(indi_mallincam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_mallincam_wheel PRIVATE "-DBUILD_MALLINCAM")
 target_link_libraries(indi_mallincam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+########### indi_meadecam_* ###########
+add_executable(indi_meadecam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_meadecam_ccd PRIVATE "-DBUILD_MEADECAM")
+target_link_libraries(indi_meadecam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_meadecam_wheel ${indi_wheel_SRCS})
+target_compile_definitions(indi_meadecam_wheel PRIVATE "-DBUILD_MEADECAM")
+target_link_libraries(indi_meadecam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_nncam_* ###########
 add_executable(indi_nncam_ccd ${indi_toupbase_SRCS})
@@ -146,6 +156,7 @@ install(TARGETS
     indi_altair_ccd
     indi_bressercam_ccd
     indi_mallincam_ccd
+    indi_meadecam_ccd
     indi_nncam_ccd
     indi_ogmacam_ccd
     indi_omegonprocam_ccd

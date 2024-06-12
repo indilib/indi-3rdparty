@@ -28,7 +28,7 @@ EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
 #if (defined(__linux__ )&&!defined (__ANDROID__)) ||(defined (__APPLE__)&&defined( __MACH__)) ||(defined(__linux__ )&&defined (__ANDROID__))
 
-//EXPORTC void STDCALL SetQHYCCDLogFunction(std::function<void(const std::string &message)> logFunction);
+EXPORTC void STDCALL SetQHYCCDLogFunction(std::function<void(const std::string &message)> logFunction);
 EXPORTC void STDCALL SetQHYCCDBufferNumber(uint32_t BufNumber);
 
 #endif
@@ -948,6 +948,14 @@ EXPORTFUNC int STDCALL QHYCCD_fpga_send(int chnl, void * data, int len, int dest
 EXPORTFUNC int STDCALL QHYCCD_fpga_recv(int chnl, void * data, int len, uint64_t timeout);
 EXPORTFUNC void STDCALL QHYCCD_fpga_reset();
 
+EXPORTFUNC uint32_t STDCALL SetQHYCCDLoadCalibrationFrames(qhyccd_handle *handle, uint32_t ImgW, uint32_t ImgH, uint32_t ImgBits, uint32_t ImgChannel, char *DarkFile, char *FlatFile, char *BiasFile);
+EXPORTFUNC uint32_t STDCALL SetQHYCCDCalibrationOnOff(qhyccd_handle *handle, bool onoff);
+
+EXPORTFUNC uint32_t STDCALL SetQHYCCDFrameDetectPos(qhyccd_handle *handle, uint32_t pos);
+EXPORTFUNC uint32_t STDCALL SetQHYCCDFrameDetectCode(qhyccd_handle *handle, uint8_t code);
+EXPORTFUNC uint32_t STDCALL SetQHYCCDFrameDetectOnOff(qhyccd_handle *handle, bool onoff);
+
+EXPORTFUNC uint32_t STDCALL GetQHYCCDSensorName(qhyccd_handle *handle, char *name);
 
 #if 0//PCIE_MODE_TEST
 
@@ -1027,3 +1035,8 @@ EXPORTFUNC void RegisterPnpEventOut( void (*in_pnp_event_out_func)(char *id));
 EXPORTFUNC void RegisterTransferEventError( void (*transfer_event_error_func)());
 EXPORTFUNC uint32_t STDCALL PCIEClearDDR(qhyccd_handle *handle);
 EXPORTFUNC uint32_t STDCALL PCIEWriteCameraRegister2(qhyccd_handle *handle, unsigned char idx, unsigned char val);
+EXPORTFUNC uint32_t STDCALL QHYCCD_DbGainToGainValue(qhyccd_handle *h,double dbgain,double *gainvalue);
+EXPORTFUNC uint32_t STDCALL QHYCCD_GainValueToDbGain(qhyccd_handle *h,double gainvalue,double *dbgain);
+EXPORTFUNC uint32_t STDCALL QHYCCD_curveSystemGain(qhyccd_handle *handle,double gainV,double *systemgain);
+EXPORTFUNC uint32_t STDCALL QHYCCD_curveFullWell(qhyccd_handle *handle,double gainV,double *fullwell);
+EXPORTFUNC uint32_t STDCALL QHYCCD_curveReadoutNoise(qhyccd_handle *handle,double gainV,double *readoutnoise);

@@ -1,0 +1,21 @@
+#!/bin/bash
+# Parse a toupcam header file to get symbol info
+# This isn't perfect and the output requires some manual fixes
+
+while read line; do
+    if grep -q wchar <<< "$line"; then
+        continue
+    fi
+    args=$(echo $line | cut -d '(' -f2 | cut -d ')' -f1)
+    OLDIFS=$IFS
+    IFS=$'\n'
+    params=""
+    while read f; do
+        #echo f is $f
+        params+="$(echo $f | rev | cut -d' ' -f1 | rev | cut -d'[' -f1), "
+    done <<< $(echo $args | tr ',' '\n')
+    IFS=$OLDIFS
+    params=$(echo $params | sed 's/,$//')
+    line="$(echo $line | sed 's/^C /C(/' | cut -d';' -f1)"
+    echo "$line, ($params)) \\"
+done <<< $(grep -E "^TOUPCAM_API" $1 | sed 's/^TOUPCAM_API(/C /' | sed 's/) /, /' | sed 's/(/, (/')

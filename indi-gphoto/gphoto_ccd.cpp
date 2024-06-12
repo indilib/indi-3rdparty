@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <stream/streammanager.h>
 
+#include <sharedblob.h>
 #include <deque>
 #include <memory>
 #include <math.h>
@@ -1504,7 +1505,7 @@ bool GPhotoCCD::grabImage()
 ISwitch * GPhotoCCD::create_switch(const char * basestr, char ** options, int max_opts, int setidx)
 {
     int i;
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), max_opts));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(max_opts, sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];

@@ -1,3 +1,15 @@
+libstarshootg (55.25633.20240519) jammy; urgency=medium
+
+  * Upstream release
+
+ -- orion; Mon, 20 May 2024 08:37:49 +0800
+
+libstarshootg (55.24621.20240204) jammy; urgency=medium
+
+  * Upstream release
+
+ -- orion; Mon, 05 Feb 2024 08:24:03 +0800
+
 libstarshootg (1.48.1) bionic; urgency=medium
 
   * Upstream release

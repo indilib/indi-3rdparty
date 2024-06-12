@@ -37,16 +37,16 @@ const char *INFO_TAB = "Info";
 
 static class Loader
 {
-    std::unique_ptr<LX200Skywalker> telescope;
-public:
-    Loader()
-    {
-        if (telescope.get() == nullptr)
+        std::unique_ptr<LX200Skywalker> telescope;
+    public:
+        Loader()
         {
-            LX200Skywalker* myScope = new LX200Skywalker();
-            telescope.reset(myScope);
+            if (telescope.get() == nullptr)
+            {
+                LX200Skywalker* myScope = new LX200Skywalker();
+                telescope.reset(myScope);
+            }
         }
-    }
 } loader;
 
 /**************************************************
@@ -256,19 +256,19 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             else
                 return false;
         }
-        if (!strcmp(name, ParkOptionSP.name))
+        if (ParkOptionSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&ParkOptionSP, states, names, n);
-            int index = IUFindOnSwitchIndex(&ParkOptionSP);
+            ParkOptionSP.update(states, names, n);
+            int index = ParkOptionSP.findOnSwitchIndex();
             if (index == -1)
                 return false;
-            IUResetSwitch(&ParkOptionSP);
+            ParkOptionSP.reset();
             if ((TrackState != SCOPE_IDLE && TrackState != SCOPE_TRACKING) || MovementNSSP.s == IPS_BUSY ||
                     MovementWESP.s == IPS_BUSY)
             {
                 LOG_WARN("Mount slewing or already parked...");
-                ParkOptionSP.s = IPS_ALERT;
-                IDSetSwitch(&ParkOptionSP, nullptr);
+                ParkOptionSP.setState(IPS_ALERT);
+                ParkOptionSP.apply();
                 return false;
             }
             bool result = false;
@@ -359,11 +359,10 @@ bool LX200Skywalker::initProperties()
 
     // Setting the park position in the controller (with webinterface) evokes a restart of the very same!
     // 4th option "purge" of INDI::Telescope doesn't make any sense here, so it is not displayed
-    IUFillSwitch(&ParkOptionS[PARK_CURRENT], "PARK_CURRENT", "Copy", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_DEFAULT], "PARK_DEFAULT", "Read", ISS_OFF);
-    IUFillSwitch(&ParkOptionS[PARK_WRITE_DATA], "PARK_WRITE_DATA", "Write", ISS_OFF);
-    IUFillSwitchVector(&ParkOptionSP, ParkOptionS, 3, getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options",
-                       SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+    ParkOptionSP[PARK_CURRENT].fill("PARK_CURRENT", "Copy", ISS_OFF);
+    ParkOptionSP[PARK_DEFAULT].fill("PARK_DEFAULT", "Read", ISS_OFF);
+    ParkOptionSP[PARK_WRITE_DATA].fill("PARK_WRITE_DATA", "Write", ISS_OFF);
+    ParkOptionSP.fill(getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     return true;
 }
