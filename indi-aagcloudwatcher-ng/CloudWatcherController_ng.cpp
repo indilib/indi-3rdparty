@@ -766,9 +766,12 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientT
         int res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq,
                          &rainSensTemp);
 
+        // If SQM Light sensor is not installed, then we skip the !8 block and read the rest
         if (res != 4)
         {
-            return false;
+            int res = sscanf(inputBuffer, "!6         %d!4         %d!5         %d", &zenerV, &ldrRes, &rainSensTemp);
+            if (res != 3)
+                return false;
         }
     }
     else if (m_FirmwareVersion >= 3)
