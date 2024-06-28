@@ -2,7 +2,7 @@
     Driver type: GPhoto Camera INDI Driver
 
     Copyright (C) 2009 Geoffrey Hausheer
-    Copyright (C) 2013 Jasem Mutlaq (mutlaqja AT ikarustech DOT com)
+    Copyright (C) 2013-2024 Jasem Mutlaq (mutlaqja AT ikarustech DOT com)
 
     This library is free software; you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -79,8 +79,8 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         bool AbortExposure() override;
         bool UpdateCCDFrame(int x, int y, int w, int h) override;
 
-	// enable binning
-	bool UpdateCCDBin(int hor, int ver) override;
+        // enable binning
+        bool UpdateCCDBin(int hor, int ver) override;
 
         virtual bool ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n) override;
         virtual bool ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n) override;
@@ -132,14 +132,10 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
 
         std::mutex liveStreamMutex;
         bool m_RunLiveStream;
-        //bool stopLiveVideo();
-
-        // Preview
-        //bool startLivePreview();
-
 
     private:
-        ISwitch * create_switch(const char * basestr, char ** options, int max_opts, int setidx);
+        void createSwitch(INDI::PropertySwitch &property, const char *baseName, char ** options, int max_opts, int setidx);
+        ISwitch * createLegacySwitch(const char * basestr, char ** options, int max_opts, int setidx);
         void AddWidget(gphoto_widget * widget);
         void UpdateWidget(cam_opt * opt);
         void ShowExtendedOptions(void);
@@ -165,6 +161,7 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         int timerID;
         bool frameInitialized;
         bool isTemperatureSupported { false };
+        int m_CaptureTarget {-1};
 
         // Focus
         bool m_CanFocus { false };
@@ -173,33 +170,24 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         int liveVideoWidth  {-1};
         int liveVideoHeight {-1};
 
-	// binning ?
-	bool binning { false };
+        // binning ?
+        bool binning { false };
 
-        ISwitch mConnectS[2];
-        ISwitchVectorProperty mConnectSP;
-        IText mPortT[1] {};
-        ITextVectorProperty PortTP;
-
-        INumber mMirrorLockN[1];
-        INumberVectorProperty mMirrorLockNP;
-
-        INumber mExposureN[1];
-        INumberVectorProperty mExposureNP;
-
-        ISwitch * mIsoS = nullptr;
-        ISwitchVectorProperty mIsoSP;
-
-        ISwitch captureTargetS[2];
-        ISwitchVectorProperty captureTargetSP;
+        // Shutter Port
+        INDI::PropertyText PortTP {1};
+        // Mirror Lock Toggle
+        INDI::PropertyNumber MirrorLockNP {1};
+        // ISO List
+        INDI::PropertySwitch ISOSP {0};
+        // Capture Target selection
+        INDI::PropertySwitch CaptureTargetSP {2};
         enum
         {
             CAPTURE_INTERNAL_RAM,
             CAPTURE_SD_CARD
         };
-
-        ISwitch SDCardImageS[3];
-        ISwitchVectorProperty SDCardImageSP;
+        // What happens to SD card image?
+        INDI::PropertySwitch SDCardImageSP {3};
         enum
         {
             SD_CARD_SAVE_IMAGE,
@@ -207,34 +195,22 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
             SD_CARD_IGNORE_IMAGE,
 
         };
-
-        ISwitch autoFocusS[1];
-        ISwitchVectorProperty autoFocusSP;
-
-        ISwitch livePreviewS[2];
-        ISwitchVectorProperty livePreviewSP;
-
-        ISwitch * mExposurePresetS = nullptr;
-        ISwitchVectorProperty mExposurePresetSP;
-
-        ISwitch forceBULBS[2];
-        ISwitchVectorProperty forceBULBSP;
-        enum
-        {
-            FORCE_BULB_ON,
-            FORCE_BULB_OFF
-        };
-
+        // Autofocus Set
+        INDI::PropertySwitch AutoFocusSP {1};
+        // Live Preview Toggle
+        //INDI::PropertySwitch LivePreviewSP {2};
+        // Exposure Presets
+        INDI::PropertySwitch ExposurePresetSP {0};
+        // Force BULB mode (vs predefined exposure indexes) when capturing
+        INDI::PropertySwitch ForceBULBSP {2};
         // Upload file, used for testing purposes under simulation under native mode
-        ITextVectorProperty UploadFileTP;
-        IText UploadFileT[1] {};
-
+        INDI::PropertyText UploadFileTP {1};
         INDI::PropertyBlob imageBP {INDI::Property()};
 
         Camera * camera = nullptr;
 
         // Threading
-        std::thread liveViewThread;
+        std::thread m_LiveViewThread;
 
         std::map <uint8_t, uint8_t> m_CaptureFormatMap;
 
