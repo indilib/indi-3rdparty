@@ -308,6 +308,7 @@ void ipslr_status_parse_k20d(ipslr_handle_t *p, pslr_status *status) {
     status->lens_max_aperture.nom = get_uint32_be(&buf[0x148]);
     status->lens_max_aperture.denom = get_uint32_be(&buf[0x14B]);
     status->focused_af_point = get_uint32_be(&buf[0x160]); // unsure about it, a lot is changing when the camera focuses
+    status->battery_1 = get_uint32_be(&buf[0x168]); // unsure about it
     status->zoom.nom = get_uint32_be(&buf[0x180]);
     status->zoom.denom = get_uint32_be(&buf[0x184]);
     status->focus = get_int32_be(&buf[0x188]); // current focus ring position?
