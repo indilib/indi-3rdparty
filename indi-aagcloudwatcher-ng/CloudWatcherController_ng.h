@@ -266,6 +266,19 @@ class CloudWatcherController
         */
         int totalReadings = 0;
 
+
+        /**
+        * is SQM selector detected?
+        */
+        enum
+        {
+            SQM_UNKNOWN,
+            SQM_DETECTED,
+            SQM_UNDETECTED,
+        };
+        int sqmSensorStatus = SQM_UNKNOWN;
+
+
         /**
         * Print a buffer of chars. Just for debugging
         * @param buffer the buffer to be printed
@@ -379,7 +392,7 @@ class CloudWatcherController
         * and Rain Sensor Temperature values of the AAG Cloud Watcher
         * @param internalSupplyVoltage where the sensor value will be stored
         * @param ambientTemperature where the sensor value will be stored
-        * @param ldrValue where the sensor value will be 
+        * @param ldrValue where the sensor value will be
         * @param ldrFreqValue where the sensor value in K will be stored, if Firmware >= 5.88
         * @param rainSensorTemperature where the sensor value will be stored
         * @return true if succesfully read. false otherwise.

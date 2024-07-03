@@ -756,20 +756,22 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, int *ambientT
     {
         char inputBuffer[BLOCK_SIZE * 4] = {0};
 
-        int r = getCloudWatcherAnswer(inputBuffer, 5);
+        auto blocks = 4;
+        if (sqmSensorStatus == SQM_UNDETECTED)
+            blocks = 3;
 
-        if (!r)
+        getCloudWatcherAnswer(inputBuffer, blocks);
+
+        if (blocks == 4)
         {
-            return false;
+            auto res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq, &rainSensTemp);
+            // If SQM Light sensor is not installed, then we skip the !8 block and read the rest
+            sqmSensorStatus = (res == 4) ? SQM_DETECTED : SQM_UNDETECTED;
         }
-
-        int res = sscanf(inputBuffer, "!6         %d!4         %d!8         %d!5         %d", &zenerV, &ldrRes, &ldrFreq,
-                         &rainSensTemp);
-
-        // If SQM Light sensor is not installed, then we skip the !8 block and read the rest
-        if (res != 4)
+        // In case above fails due to undetected SQM, fallback here
+        if (blocks == 3 || sqmSensorStatus == SQM_UNDETECTED)
         {
-            int res = sscanf(inputBuffer, "!6         %d!4         %d!5         %d", &zenerV, &ldrRes, &rainSensTemp);
+            auto res = sscanf(inputBuffer, "!6         %d!4         %d!5         %d", &zenerV, &ldrRes, &rainSensTemp);
             if (res != 3)
                 return false;
         }
