@@ -168,16 +168,23 @@ void PkTriggerCordCCD::buildCaptureSwitches()
     else
         buildCaptureSettingSwitch(&mExpCompSP, exposurecomp1_3, NARRAY(exposurecomp1_3), "Exp Comp", "CCD_EC", string(current));
 
-    string f = "JPEG";
+    string current_format_name = "JPEG";
     if (uff == USER_FILE_FORMAT_DNG)
     {
-        f = "DNG";
+        current_format_name = "DNG";
     }
     else if (uff == USER_FILE_FORMAT_PEF)
     {
-        f = "PEF";
+        current_format_name = "PEF";
     }
-    buildCaptureSettingSwitch(&mFormatSP, imageformat, NARRAY(imageformat), "Format", "CAPTURE_FORMAT", f);
+    for (size_t i=0; i<(sizeof(imageformat)/sizeof(imageformat[0])); i++) {
+        auto isOn = false;
+        if (imageformat[i]==current_format_name) {
+            isOn = true;
+        }
+        CaptureFormat format = {imageformat[i], imageformat[i], 8, isOn};
+        addCaptureFormat(format);
+    }
 
     refreshBatteryStatus();
 
@@ -205,7 +212,6 @@ void PkTriggerCordCCD::deleteCaptureSwitches()
     if (mExpCompSP.nsp > 0) deleteProperty(mExpCompSP.name);
     if (mWhiteBalanceSP.nsp > 0) deleteProperty(mWhiteBalanceSP.name);
     if (mIQualitySP.nsp > 0) deleteProperty(mIQualitySP.name);
-    // if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
 }
 
 
@@ -787,24 +793,6 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         updateCaptureSettingSwitch(&mIQualitySP, states, names, n);
         pslr_set_jpeg_stars(device, atoi(IUFindOnSwitch(&mIQualitySP)->label));
     }
-    else if (!strcmp(name, mFormatSP.name))
-    {
-        updateCaptureSettingSwitch(&mFormatSP, states, names, n);
-        char *f = IUFindOnSwitch(&mFormatSP)->label;
-        if (!strcmp(f, "DNG"))
-        {
-            uff = USER_FILE_FORMAT_DNG;
-        }
-        else if (!strcmp(f, "PEF"))
-        {
-            uff = USER_FILE_FORMAT_PEF;
-        }
-        else
-        {
-            uff = USER_FILE_FORMAT_JPEG;
-        }
-        pslr_set_user_file_format(device, uff);
-    }
     else
     {
         return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -823,7 +811,7 @@ void PkTriggerCordCCD::updateCaptureSettingSwitch(ISwitchVectorProperty * sw, IS
 bool PkTriggerCordCCD::saveConfigItems(FILE * fp)
 {
 
-    for (auto sw : std::vector<ISwitchVectorProperty*> {&mIsoSP, &mApertureSP, &mExpCompSP, &mWhiteBalanceSP, &mIQualitySP, &mFormatSP})
+    for (auto sw : std::vector<ISwitchVectorProperty*> {&mIsoSP, &mApertureSP, &mExpCompSP, &mWhiteBalanceSP, &mIQualitySP})
     {
         if (sw->nsp > 0) IUSaveConfigSwitch(fp, sw);
     }
@@ -894,4 +882,23 @@ void PkTriggerCordCCD::refreshBatteryStatus()
             0.01 * status.battery_3, 0.01 * status.battery_4);
     IUSaveText(&DeviceInfoT[2], batterylevel);
     IDSetText(&DeviceInfoTP, nullptr);
+}
+
+bool PkTriggerCordCCD::SetCaptureFormat(uint8_t index)
+{
+    if (m_CaptureFormats[index].label == "DNG")
+    {
+        uff = USER_FILE_FORMAT_DNG;
+    }
+    else if (m_CaptureFormats[index].label == "PEF")
+    {
+        uff = USER_FILE_FORMAT_PEF;
+    }
+    else
+    {
+        uff = USER_FILE_FORMAT_JPEG;
+    }
+    pslr_set_user_file_format(device, uff);    
+
+    return true;
 }

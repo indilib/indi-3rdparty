@@ -60,7 +60,7 @@ class PkTriggerCordCCD : public INDI::CCD
 protected:
 
     void TimerHit();
-
+    bool SetCaptureFormat(uint8_t index) override;
     virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType);   
 
   private:
@@ -86,7 +86,7 @@ protected:
 
     bool getCaptureSettingsState();
 
-    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP,mFormatSP;
+    ISwitchVectorProperty mIsoSP,mApertureSP,mExpCompSP,mWhiteBalanceSP,mIQualitySP;
 
     ISwitch transferFormatS[2];
     ISwitchVectorProperty transferFormatSP;
