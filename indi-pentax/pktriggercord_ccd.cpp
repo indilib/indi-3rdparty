@@ -103,13 +103,13 @@ void PkTriggerCordCCD::ISGetProperties(const char *dev)
 
 bool PkTriggerCordCCD::updateProperties()
 {
-    INDI::CCD::updateProperties();
-
     if (isConnected())
     {
         setupParams();
 
         buildCaptureSwitches();
+
+        INDI::CCD::updateProperties();
 
         // defineProperty(&transferFormatSP);
         defineProperty(&autoFocusSP);
