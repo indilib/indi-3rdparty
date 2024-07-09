@@ -251,7 +251,7 @@ class ToupBase : public INDI::CCD
 
         // Tail Light
         ISwitchVectorProperty m_TailLightSP;
-        ISwitch *m_TailLightS[2];
+        ISwitch m_TailLightS[2];
 
         // Camera Info
         ITextVectorProperty m_CameraTP;
