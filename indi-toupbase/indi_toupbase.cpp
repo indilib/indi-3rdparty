@@ -412,7 +412,7 @@ bool ToupBase::updateProperties()
             deleteProperty(m_GainConversionSP.name);
 
         if (m_SupportTailLight)
-            deleteProperty(m_TailLightSP);
+            deleteProperty(m_TailLightSP.name);
 
         deleteProperty(m_BinningModeSP.name);
         if (m_MonoCamera == false)
@@ -520,7 +520,6 @@ void ToupBase::setupParams()
         else
         {
             for (int i = 1; i <= maxval; ++i)
-                IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
                 IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
                              (i == curval) ? ISS_ON : ISS_OFF);
         }
