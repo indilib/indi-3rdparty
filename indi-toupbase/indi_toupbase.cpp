@@ -94,10 +94,6 @@ bool ToupBase::initProperties()
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
-        TemperatureN[0].min = CP(TEC_TARGET_MIN);
-        TemperatureN[0].max = CP(TEC_TARGET_MAX);
-        TemperatureN[0].value = CP(TEC_TARGET_DEF);
-
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
@@ -247,6 +243,12 @@ bool ToupBase::initProperties()
     IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Tail Light
+    IUFillSwitch(&m_TailLightS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_TailLightS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
+    IUFillSwitchVector(&m_TailLightSP, m_TailLightS, 2, getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW,
+                                   ISR_1OFMANY, 60, IPS_IDLE);
+
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
@@ -330,7 +332,6 @@ bool ToupBase::updateProperties()
             defineProperty(&m_CoolerSP);
             defineProperty(m_CoolerNP);
         }
-
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -357,6 +358,9 @@ bool ToupBase::updateProperties()
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             defineProperty(&m_GainConversionSP);
+
+        if (m_SupportTailLight)
+            defineProperty(&m_TailLightSP);
 
         // Binning mode
         defineProperty(&m_BinningModeSP);
@@ -407,6 +411,9 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             deleteProperty(m_GainConversionSP.name);
 
+        if (m_SupportTailLight)
+            deleteProperty(m_TailLightSP);
+
         deleteProperty(m_BinningModeSP.name);
         if (m_MonoCamera == false)
         {
@@ -451,6 +458,20 @@ bool ToupBase::Connect()
     if (m_Instance->model->flag & CP(FLAG_ST4))
         cap |= CCD_HAS_ST4_PORT;
     SetCCDCapability(cap);
+
+    if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
+    {
+        int tecRange = 0;
+        FP(get_Option(m_Handle, CP(OPTION_TECTARGET_RANGE), &tecRange));
+        TemperatureN[0].min = TemperatureN[0].value = tecRange & 0xffff;
+        TemperatureN[0].max = (tecRange >> 16) & 0xffff;
+    }
+
+    {
+        int taillight = 0;
+        HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
+        m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+    }
 
     // Get min/max exposures
     uint32_t min = 0, max = 0, current = 0;
@@ -499,6 +520,7 @@ void ToupBase::setupParams()
         else
         {
             for (int i = 1; i <= maxval; ++i)
+                IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
                 IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
                              (i == curval) ? ISS_ON : ISS_OFF);
         }
@@ -1054,6 +1076,25 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             }
 
             IDSetSwitch(&m_LowNoiseSP, nullptr);
+            return true;
+        }
+
+        // Tail Light
+        if (!strcmp(name, m_TailLightSP.name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&m_TailLightSP);
+            IUUpdateSwitch(&m_TailLightSP, states, names, n);
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightS[INDI_ENABLED].s));
+            if (SUCCEEDED(rc))
+                m_TailLightSP.s = IPS_OK;
+            else
+            {
+                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                m_TailLightSP.s = IPS_ALERT;
+                IUResetSwitch(&m_TailLightSP);
+                m_TailLightS[prevIndex].s = ISS_ON;
+            }
+            IDSetSwitch(&m_TailLightSP, nullptr);
             return true;
         }
 
