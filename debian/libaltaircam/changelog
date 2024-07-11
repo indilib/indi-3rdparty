@@ -2,13 +2,13 @@ libaltaircam (55.25633.20240519) jammy; urgency=medium
 
   * Upstream release
 
- -- altair; Mon, 20 May 2024 08:37:31 +0800
+ -- altair <>  Mon, 20 May 2024 08:37:31 +0800
 
 libaltaircam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release
 
- -- altair; Mon, 05 Feb 2024 08:23:48 +0800
+ -- altair <>  Mon, 05 Feb 2024 08:23:48 +0800
 
 libaltaircam (1.54.2) jammy; urgency=medium
 
