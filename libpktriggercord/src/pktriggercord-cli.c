@@ -64,6 +64,7 @@ bool astrotracer_before=false;
 bool need_bulb_new_cleanup=false;
 bool need_one_push_bracketing_cleanup=false;
 
+#if 0 // UNUSED - INDI modification, reapply for next update
 #ifdef RAD10
 static option const longopts[] = {
 #else
@@ -117,6 +118,7 @@ static struct option const longopts[] = {
     {"settings", no_argument, NULL, 'S'},
     { NULL, 0, NULL, 0}
 };
+#endif // INDI modification, reapply for next update
 
 int save_buffer(pslr_handle_t camhandle, int bufno, int fd, pslr_status *status, user_file_format filefmt, int jpeg_stars) {
     pslr_buffer_type imagetype;
