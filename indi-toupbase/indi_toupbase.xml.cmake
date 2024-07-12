@@ -41,6 +41,10 @@
                 <driver name="Teleskop">indi_tscam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Meadecam" mdpd="true" manufacturer="Meade">
+                <driver name="Meade">indi_meadecam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 <devGroup group="Filter Wheels">
         <device label="Toupcam EFW" mdpd="true" manufacturer="Toupcam">
@@ -77,6 +81,10 @@
         </device>
         <device label="Tscam EFW" mdpd="true" manufacturer="Teleskop">
                 <driver name="Teleskop">indi_tscam_wheel</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Meadecam EFW" mdpd="true" manufacturer="Meade">
+                <driver name="Meade">indi_meadecam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>
