@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.0.2)
 project (libpktriggercord C)
 
-set (PK_VERSION 0.85.02)
+set (PK_VERSION 0.85.03)
 set (PK_SOVERSION 0)
 set (PK_DATADIR /usr/share/pktriggercord)
 set (PK_DEBUG true)
