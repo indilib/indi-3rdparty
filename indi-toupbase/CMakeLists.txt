@@ -82,14 +82,6 @@ add_executable(indi_mallincam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_mallincam_wheel PRIVATE "-DBUILD_MALLINCAM")
 target_link_libraries(indi_mallincam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
-########### indi_meadecam_* ###########
-add_executable(indi_meadecam_ccd ${indi_toupbase_SRCS})
-target_compile_definitions(indi_meadecam_ccd PRIVATE "-DBUILD_MEADECAM")
-target_link_libraries(indi_meadecam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-add_executable(indi_meadecam_wheel ${indi_wheel_SRCS})
-target_compile_definitions(indi_meadecam_wheel PRIVATE "-DBUILD_MEADECAM")
-target_link_libraries(indi_meadecam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-
 ########### indi_nncam_* ###########
 add_executable(indi_nncam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_nncam_ccd PRIVATE "-DBUILD_NNCAM")
@@ -168,7 +160,6 @@ install(TARGETS
     indi_altair_ccd
     indi_bressercam_ccd
     indi_mallincam_ccd
-    indi_meadecam_ccd
     indi_nncam_ccd
     indi_ogmacam_ccd
     indi_omegonprocam_ccd

@@ -46,7 +46,6 @@ BuildRequires: libtoupcam
 BuildRequires: libaltaircam
 BuildRequires: libbressercam
 BuildRequires: libmallincam
-BuildRequires: libmeadecam
 BuildRequires: libnncam
 BuildRequires: libogmacam
 BuildRequires: libomegonprocam
