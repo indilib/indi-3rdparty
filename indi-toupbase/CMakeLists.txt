@@ -21,7 +21,6 @@ find_package(OGMACAM REQUIRED)
 find_package(OMEGONPROCAM REQUIRED)
 find_package(STARSHOOTG REQUIRED)
 find_package(TSCAM REQUIRED)
-find_package(MEADECAM REQUIRED)
 
 set(TOUPBASE_VERSION_MAJOR 2)
 set(TOUPBASE_VERSION_MINOR 1)
@@ -43,7 +42,6 @@ include_directories( ${OMEGONPROCAM_INCLUDE_DIR})
 include_directories( ${BRESSERCAM_INCLUDE_DIR})
 include_directories( ${OGMACAM_INCLUDE_DIR})
 include_directories( ${TSCAM_INCLUDE_DIR})
-include_directories( $(MEADECAM_INCLUDE_DIR})
 
 include(CMakeCommon)
 
