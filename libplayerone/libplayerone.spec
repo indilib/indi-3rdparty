@@ -87,6 +87,8 @@ make DESTDIR=%{buildroot} install
 %license libplayerone/license.txt
 
 %changelog
+* Sun Jul 14 2024 Hiroshi Saito <hiro3110g@gmail.com>
+- update PlayerOneCamera SDK to v3.6.3
 * Sun May 12 2024 Hiroshi Saito <hiro3110g@gmail.com>
 - update PlayerOneCamera SDK to v3.6.2
 * Thu Jan 4 2024 Hiroshi Saito <hiro3110g@gmail.com>
