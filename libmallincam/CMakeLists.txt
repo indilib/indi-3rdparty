@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libmallincam)
 
-set (LIBMALLINCAM_VERSION "56.25996")
+set (LIBMALLINCAM_VERSION "56.26054")
 set (LIBMALLINCAM_SOVERSION "56")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

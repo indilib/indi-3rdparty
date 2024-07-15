@@ -1,7 +1,7 @@
 #ifndef __toupcam_h__
 #define __toupcam_h__
 
-/* Version: 56.25996.20240707 */
+/* Version: 56.26054.20240715 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -92,21 +92,21 @@ extern "C" {
 /*                                                                              */
 /********************************************************************************/
 #if defined(TOUPCAM_HRESULT_ERRORCODE_NEEDED)
-#define S_OK                0x00000000 /* Success */
-#define S_FALSE             0x00000001 /* Yet another success */
-#define E_UNEXPECTED        0x8000ffff /* Catastrophic failure */
-#define E_NOTIMPL           0x80004001 /* Not supported or not implemented */
-#define E_NOINTERFACE       0x80004002
-#define E_ACCESSDENIED      0x80070005 /* Permission denied */
-#define E_OUTOFMEMORY       0x8007000e /* Out of memory */
-#define E_INVALIDARG        0x80070057 /* One or more arguments are not valid */
-#define E_POINTER           0x80004003 /* Pointer that is not valid */
-#define E_FAIL              0x80004005 /* Generic failure */
-#define E_WRONG_THREAD      0x8001010e /* Call function in the wrong thread */
-#define E_GEN_FAILURE       0x8007001f /* Device not functioning */
-#define E_BUSY              0x800700aa /* The requested resource is in use */
-#define E_PENDING           0x8000000a /* The data necessary to complete this operation is not yet available */
-#define E_TIMEOUT           0x8001011f /* This operation returned because the timeout period expired */
+#define S_OK                (HRESULT)(0x00000000) /* Success */
+#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */
+#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */
+#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */
+#define E_NOINTERFACE       (HRESULT)(0x80004002)
+#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */
+#define E_OUTOFMEMORY       (HRESULT)(0x8007000e) /* Out of memory */
+#define E_INVALIDARG        (HRESULT)(0x80070057) /* One or more arguments are not valid */
+#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */
+#define E_FAIL              (HRESULT)(0x80004005) /* Generic failure */
+#define E_WRONG_THREAD      (HRESULT)(0x8001010e) /* Call function in the wrong thread */
+#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */
+#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */
+#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */
+#define E_TIMEOUT           (HRESULT)(0x8001011f) /* This operation returned because the timeout period expired */
 #endif
 
 /* handle */
@@ -236,12 +236,12 @@ typedef struct Toupcam_t { int unused; } *HToupcam, *HToupCam;
 #define TOUPCAM_AE_PERCENT_DEF           10      /* auto exposure percent: enabled, percentage = 10% */
 #define TOUPCAM_NOPACKET_TIMEOUT_MIN     500     /* no packet timeout minimum: 500ms */
 #define TOUPCAM_NOFRAME_TIMEOUT_MIN      500     /* no frame timeout minimum: 500ms */
-#define TOUPCAM_DYNAMIC_DEFECT_T1_MIN    10      /* dynamic defect pixel correction, threshold, means: 1.0 */
-#define TOUPCAM_DYNAMIC_DEFECT_T1_MAX    100     /* means: 10.0 */
-#define TOUPCAM_DYNAMIC_DEFECT_T1_DEF    13      /* means: 1.3 */
-#define TOUPCAM_DYNAMIC_DEFECT_T2_MIN    0       /* dynamic defect pixel correction, value, means: 0.00 */
-#define TOUPCAM_DYNAMIC_DEFECT_T2_MAX    100     /* means: 1.00 */
-#define TOUPCAM_DYNAMIC_DEFECT_T2_DEF    100
+#define TOUPCAM_DYNAMIC_DEFECT_T1_MIN    0       /* dynamic defect pixel correction, dead pixel ratio: the smaller the dead ratio is, the more stringent the conditions for processing dead pixels are, and fewer pixels will be processed */
+#define TOUPCAM_DYNAMIC_DEFECT_T1_MAX    100     /* means: 1.0 */
+#define TOUPCAM_DYNAMIC_DEFECT_T1_DEF    90      /* means: 0.9 */
+#define TOUPCAM_DYNAMIC_DEFECT_T2_MIN    0       /* dynamic defect pixel correction, hot pixel ratio: the smaller the hot ratio is, the more stringent the conditions for processing hot pixels are, and fewer pixels will be processed */
+#define TOUPCAM_DYNAMIC_DEFECT_T2_MAX    100
+#define TOUPCAM_DYNAMIC_DEFECT_T2_DEF    90
 #define TOUPCAM_HDR_K_MIN                1       /* HDR synthesize */
 #define TOUPCAM_HDR_K_MAX                25500
 #define TOUPCAM_HDR_B_MIN                0
@@ -286,7 +286,7 @@ typedef struct {
 } ToupcamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 56.25996.20240707
+    get the version of this dll/so/dylib, which is: 56.26054.20240715
 */
 #if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -1004,8 +1004,8 @@ TOUPCAM_API(HRESULT)  Toupcam_feed_Pipe(HToupcam h, unsigned pipeId);
                                                          */
 #define TOUPCAM_OPTION_HIGH_FULLWELL          0x55       /* high fullwell capacity: 0 => disable, 1 => enable */
 #define TOUPCAM_OPTION_DYNAMIC_DEFECT         0x56       /* dynamic defect pixel correction:
-                                                                threshold, t1: (high 16 bits): [10, 100], means: [1.0, 10.0]
-                                                                value, t2: (low 16 bits): [0, 100], means: [0.00, 1.00]
+                                                                dead pixel ratio, t1: (high 16 bits): [0, 100], means: [0.0, 1.0]
+                                                                hot pixel ratio, t2: (low 16 bits): [0, 100], means: [0.0, 1.0]
                                                          */
 #define TOUPCAM_OPTION_HDR_KB                 0x57       /* HDR synthesize
                                                                 K (high 16 bits): [1, 25500]
