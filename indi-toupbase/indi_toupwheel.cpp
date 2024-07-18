@@ -200,6 +200,7 @@ bool ToupWheel::SelectFilter(int targetFilter)
         LOGF_ERROR("Failed to select filter wheel %d. %s", targetFilter, errorCodes(rc).c_str());
         return false;
     }
+    SetTimer(getCurrentPollingPeriod());
     return true;
 }
 
