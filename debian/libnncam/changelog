@@ -1,3 +1,15 @@
+libnncam (56.26054.20240714) jammy; urgency=medium
+
+  * Upstream release
+
+ -- nn; Mon, 15 Jul 2024 09:57:51 +0800
+
+libnncam (56.25996.20240707) jammy; urgency=medium
+
+  * Upstream release
+
+ -- nn; Sun, 07 Jul 2024 20:31:36 +0800
+
 libnncam (55.25633.20240519) jammy; urgency=medium
 
   * Upstream release
