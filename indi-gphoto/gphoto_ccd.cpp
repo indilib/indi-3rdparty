@@ -143,6 +143,7 @@ static class Loader
                                 snprintf(name, MAXINDIDEVICE, "%s %s %d", prefix, model + strlen(camInfos[j].model) + 1,
                                          static_cast<int>(std::count(cameraNames.begin(), cameraNames.end(), camInfos[j].model)) + 1);
 
+                            IDLog("Creating a new driver with model %s on port %s\n", model, port);
                             std::unique_ptr<GPhotoCCD> camera(new GPhotoCCD(model, port));
                             camera->setDeviceName(name);
                             cameras.push_back(std::move(camera));
