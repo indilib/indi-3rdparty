@@ -149,9 +149,7 @@ bool ToupWheel::Connect()
     FilterSlotN[0].max = slot;
 
     FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
-    FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), -1));
-
-    QueryFilter();
+    SelectFilter(0);
 
     LOGF_INFO("%s is connected.", getDeviceName());
     return true;
