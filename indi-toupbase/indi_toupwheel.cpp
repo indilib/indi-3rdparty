@@ -169,6 +169,9 @@ bool ToupWheel::Disconnect()
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void ToupWheel::TimerHit()
 {
+    if (!isConnected())
+        return;
+
     QueryFilter();
 
     if (CurrentFilter != TargetFilter)
