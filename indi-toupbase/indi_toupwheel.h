@@ -32,6 +32,9 @@ class ToupWheel : public INDI::FilterWheel
 
         virtual const char *getDefaultName() override;
 
+        virtual void ISGetProperties(const char *dev) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
 
@@ -43,6 +46,9 @@ class ToupWheel : public INDI::FilterWheel
         virtual bool SelectFilter(int targetFilter) override;
         virtual int QueryFilter() override;
 
+        // Save config
+        virtual bool saveConfigItems(FILE *fp) override;
+
     private:
         INDI::PropertyText VersionTP {4};
         enum
@@ -51,6 +57,14 @@ class ToupWheel : public INDI::FilterWheel
             TC_HW_VERSION,
             TC_REV,
             TC_SDK
+        };
+
+        INDI::PropertySwitch SlotsSP {3};
+        enum
+        {
+            SLOTS_5,
+            SLOTS_7,
+            SLOTS_8
         };
 
         THAND m_Handle { nullptr };

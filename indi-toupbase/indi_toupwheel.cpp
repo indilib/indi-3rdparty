@@ -70,6 +70,15 @@ const char *ToupWheel::getDefaultName()
 //////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
+void ToupWheel::ISGetProperties(const char *dev)
+{
+    INDI::FilterWheel::ISGetProperties(dev);
+    defineProperty(SlotsSP);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
@@ -79,6 +88,12 @@ bool ToupWheel::initProperties()
     VersionTP[TC_REV].fill("REVISION", "Revision", nullptr);
     VersionTP[TC_SDK].fill("SDK", "SDK", FP(Version()));
     VersionTP.fill(getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 0, IPS_IDLE);
+
+    SlotsSP[SLOTS_5].fill("SLOTS_5", "5", ISS_ON);
+    SlotsSP[SLOTS_7].fill("SLOTS_7", "7", ISS_OFF);
+    SlotsSP[SLOTS_8].fill("SLOTS_8", "8", ISS_OFF);
+    SlotsSP.fill(getDeviceName(), "SLOTS", "Slots", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    SlotsSP.load();
 
     return true;
 }
@@ -125,19 +140,18 @@ bool ToupWheel::Connect()
         return false;
     }
 
-    int val = 5;
-    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &val));
-    if (SUCCEEDED(rc))
-    {
-        LOGF_INFO("Detected %d-slot filter wheel.", val);
+    auto currentSlot = SlotsSP.findOnSwitchIndex();
+    auto slot = 5;
+    if (currentSlot == SLOTS_7)
+        slot = 7;
+    else if (currentSlot == SLOTS_8)
+        slot = 8;
+    FilterSlotN[0].max = slot;
 
-        FilterSlotN[0].max = val;
-        QueryFilter();
-    }
-    else
-    {
-        LOGF_ERROR("Failed to get # of filter slots: %s", errorCodes(rc).c_str());
-    }
+    FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
+    FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), -1));
+
+    QueryFilter();
 
     LOGF_INFO("%s is connected.", getDeviceName());
     return true;
@@ -172,6 +186,30 @@ void ToupWheel::TimerHit()
 //////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
+bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if (dev != nullptr && !strcmp(dev, getDeviceName()))
+    {
+        if (SlotsSP.isNameMatch(name))
+        {
+            auto previousSlot = SlotsSP.findOnSwitchIndex();
+            SlotsSP.update(states, names, n);
+            SlotsSP.setState(IPS_OK);
+            SlotsSP.apply();
+            auto currentSlot = SlotsSP.findOnSwitchIndex();
+            if (previousSlot != currentSlot && isConnected())
+                LOG_INFO("Please disconnect and reconnect to apply settings.");
+            saveConfig(SlotsSP);
+            return true;
+        }
+    }
+
+    return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::SelectFilter(int targetFilter)
 {
     HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), targetFilter - 1));
@@ -189,14 +227,28 @@ bool ToupWheel::SelectFilter(int targetFilter)
 //////////////////////////////////////////////////////////////////////////////////////////////////
 int ToupWheel::QueryFilter()
 {
-    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), &CurrentFilter));
+    auto val = -1;
+    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), &val));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to query filter wheel. %s", errorCodes(rc).c_str());
-        return 0;
+        return -1;
     }
-    else
-        CurrentFilter++;
+
+    // Touptek uses 0 to N-1 positions.
+    if (val >= 0)
+        CurrentFilter = val + 1;
 
     return CurrentFilter;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+bool ToupWheel::saveConfigItems(FILE * fp)
+{
+    INDI::FilterWheel::saveConfigItems(fp);
+
+    SlotsSP.save(fp);
+    return true;
 }
