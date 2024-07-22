@@ -1,3 +1,16 @@
+indi-pentax (1.1) jammy; urgency=low
+
+  [ Dmitriy Galamaga]
+  * Fixed permissions: on a modern systems driver requires cap_sys_rawio
+
+  [ Karl Rees ]
+  * Can now change Pentax driver image format in Ekos
+  * DNG files now save as .dng files instead of .raw
+  * Fixed timing of UpdateProperties so Ekos is updated properly on init
+  * Added DNG support for PTP mode
+
+ -- Dmitriy Galamaga <graf2242@gmail.com>  Wed, 11 Jul 2024 13:00:00 +0300
+
 indi-pentax (1.0) bionic; urgency=low
 
   * New release

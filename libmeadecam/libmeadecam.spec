@@ -80,5 +80,5 @@ make DESTDIR=%{buildroot} install
 
 
 %changelog
-* initial release 2022-05-27
+* Touptek, xiangqianyong@hotmail.com
 

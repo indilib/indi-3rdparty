@@ -17,10 +17,6 @@
                 <driver name="MALLINCAM">indi_mallincam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
-        <device label="Meadecam" mdpd="true" manufacturer="Meade">
-                <driver name="Meade">indi_meadecam_ccd</driver>
-                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
-        </device>
         <device label="Nncam" mdpd="true" manufacturer="Nn">
                 <driver name="Nn">indi_nncam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
@@ -39,6 +35,10 @@
         </device>
         <device label="Tscam" mdpd="true" manufacturer="Teleskop">
                 <driver name="Teleskop">indi_tscam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Meadecam" mdpd="true" manufacturer="Meade">
+                <driver name="Meade">indi_meadecam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>
@@ -77,6 +77,10 @@
         </device>
         <device label="Tscam EFW" mdpd="true" manufacturer="Teleskop">
                 <driver name="Teleskop">indi_tscam_wheel</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Meadecam EFW" mdpd="true" manufacturer="Meade">
+                <driver name="Meade">indi_meadecam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>
