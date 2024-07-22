@@ -463,8 +463,10 @@ bool ToupBase::Connect()
     {
         int tecRange = 0;
         FP(get_Option(m_Handle, CP(OPTION_TECTARGET_RANGE), &tecRange));
-        TemperatureN[0].min = TemperatureN[0].value = tecRange & 0xffff;
-        TemperatureN[0].max = (tecRange >> 16) & 0xffff;
+        TemperatureN[0].min = (static_cast<short>(tecRange & 0xffff))/10.0;
+        TemperatureN[0].max
+                = (static_cast<short>((tecRange >> 16) & 0xffff)) / 10.0;
+        TemperatureN[0].value = 0; // reasonable default
     }
 
     {
