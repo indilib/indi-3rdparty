@@ -67,6 +67,14 @@ class ToupWheel : public INDI::FilterWheel
             SLOTS_8
         };
 
+        INDI::PropertySwitch SpinningDirectionSP {2};
+        enum
+        {
+            TCFW_SD_CLOCKWISE,
+            TCFW_SD_AUTO
+        };
+        int SpinningDirection = 0;
+
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
 };

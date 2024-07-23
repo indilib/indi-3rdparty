@@ -74,6 +74,7 @@ void ToupWheel::ISGetProperties(const char *dev)
 {
     INDI::FilterWheel::ISGetProperties(dev);
     defineProperty(SlotsSP);
+    defineProperty(SpinningDirectionSP);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,6 +83,9 @@ void ToupWheel::ISGetProperties(const char *dev)
 bool ToupWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
+
+    // Add Debug Control.
+    addDebugControl();
 
     VersionTP[TC_FW_VERSION].fill("FIRMWARE", "Firmware", nullptr);
     VersionTP[TC_HW_VERSION].fill("HARDWARE", "Hardware", nullptr);
@@ -118,10 +122,18 @@ bool ToupWheel::updateProperties()
         IUSaveText(&VersionTP[TC_REV], tmpBuffer);
 
         defineProperty(VersionTP);
+
+        SpinningDirectionSP[TCFW_SD_CLOCKWISE].fill("CLOCKWISE", "Clockwise", ISS_ON);
+        SpinningDirectionSP[TCFW_SD_AUTO].fill("AUTO", "Auto Direction", ISS_OFF);
+        SpinningDirectionSP.fill(getDeviceName(), "SPINNINGDIRECTION", "Spinning Direction", FILTER_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        SpinningDirectionSP.load();
+
+        defineProperty(SpinningDirectionSP);
     }
     else
     {
         deleteProperty(VersionTP);
+        deleteProperty(SpinningDirectionSP);
     }
 
     return true;
@@ -149,6 +161,7 @@ bool ToupWheel::Connect()
     FilterSlotN[0].max = slot;
 
     FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
+    TargetFilter = 1; // if desconnected during spinning, TargetFilter must be initialize when reconnect.
     SelectFilter(0);
 
     LOGF_INFO("%s is connected.", getDeviceName());
@@ -173,6 +186,8 @@ void ToupWheel::TimerHit()
         return;
 
     QueryFilter();
+
+    LOGF_DEBUG("TimerHit: CurrentFilter=%d, TargetFilter=%d", CurrentFilter, TargetFilter);
 
     if (CurrentFilter != TargetFilter)
     {
@@ -203,6 +218,21 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             saveConfig(SlotsSP);
             return true;
         }
+        else if (SpinningDirectionSP.isNameMatch(name))
+        {
+            SpinningDirectionSP.update(states, names, n);
+            SpinningDirectionSP.setState(IPS_OK);
+            SpinningDirectionSP.apply();
+
+            auto currentSpinningDirection = SpinningDirectionSP.findOnSwitchIndex();
+            if (currentSpinningDirection == TCFW_SD_AUTO)
+                SpinningDirection = 0x100; // auto direction spinning
+            else
+                SpinningDirection = 0; // clockwise spinning
+
+            saveConfig(SpinningDirectionSP);
+            return true;
+        }
     }
 
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
@@ -213,7 +243,7 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::SelectFilter(int targetFilter)
 {
-    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), targetFilter - 1));
+    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), SpinningDirection | (targetFilter - 1)));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to select filter wheel %d. %s", targetFilter, errorCodes(rc).c_str());
@@ -251,5 +281,6 @@ bool ToupWheel::saveConfigItems(FILE * fp)
     INDI::FilterWheel::saveConfigItems(fp);
 
     SlotsSP.save(fp);
+    SpinningDirectionSP.save(fp);
     return true;
 }
