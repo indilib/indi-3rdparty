@@ -22,13 +22,55 @@
 #include <indioutputinterface.h>
 #include <indiinputinterface.h>
 
+#include <gpiod.hpp>
+
 class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public INDI::OutputInterface
 {
     public:
         INDIGPIO();
         virtual ~INDIGPIO();
 
+        virtual const char *getDefaultName() override;
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
+        virtual void ISGetProperties(const char *dev);
+
     protected:
 
+        /**
+             * \brief Update all digital inputs
+             * \return True if operation is successful, false otherwise
+             */
+        virtual bool UpdateDigitalInputs() override;
+
+        /**
+         * \brief Update all analog inputs
+         * \return True if operation is successful, false otherwise
+         */
+        virtual bool UpdateAnalogInputs() override;
+
+        /**
+         * \brief Update all digital outputs
+         * \return True if operation is successful, false otherwise
+         * \note UpdateDigitalOutputs should either be called periodically in the child's TimerHit or custom timer function or when an
+         * interrupt or trigger warrants updating the digital outputs. Only updated properties that had a change in status since the last
+         * time this function was called should be sent to the clients to reduce unnecessary updates.
+         * Polling or Event driven implemetation depends on the concrete class hardware capabilities.
+         */
+        virtual bool UpdateDigitalOutputs() override;
+
+        /**
+         * \brief Send command to output
+         * \return True if operation is successful, false otherwise
+         */
+        virtual bool CommandOutput(uint32_t index, Command command) override;
+
+        virtual bool Connect() override;
+        virtual bool Disconnect() override;
+
+        virtual bool saveConfigItems(FILE *fp);
+
     private:
+        INDI::PropertyText ChipNameTP {1};
+        std::unique_ptr<gpiod::chip> m_GPIO;
 };

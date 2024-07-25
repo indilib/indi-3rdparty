@@ -10,7 +10,7 @@ set (VERSION_MINOR 1)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
-find_package(RT REQUIRED)
+find_package(GPIOD REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_gpio.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_gpio.xml)
@@ -18,6 +18,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_gpio.xml.cmake ${CMAKE_CURRENT_B
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${INDI_INCLUDE_DIR})
+include_directories(${GPIOD_INCLUDE_DIR})
 
 include(CMakeCommon)
 
@@ -27,7 +28,7 @@ set(indi_gpio_SRCS
    )
 
 add_executable(indi_gpio ${indi_gpio_SRCS})
-target_link_libraries(indi_gpio ${INDI_LIBRARIES})
+target_link_libraries(indi_gpio ${INDI_LIBRARIES} ${GPIOD_LIBRARIES})
 
 # Install
 install(TARGETS indi_gpio RUNTIME DESTINATION bin )
