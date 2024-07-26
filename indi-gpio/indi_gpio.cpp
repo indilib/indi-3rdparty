@@ -17,6 +17,7 @@
 *******************************************************************************/
 
 #include "indi_gpio.h"
+#include "config.h"
 
 static class Loader
 {
@@ -34,7 +35,7 @@ static class Loader
 ////////////////////////////////////////////////////////////////////////////////////////
 INDIGPIO::INDIGPIO() : INDI::InputInterface(this), INDI::OutputInterface(this)
 {
-    setVersion(0, 1);
+    setVersion(VERSION_MAJOR, VERSION_MINOR);
 
 }
 
@@ -84,10 +85,11 @@ void INDIGPIO::ISGetProperties(const char *dev)
 bool INDIGPIO::updateProperties()
 {
     INDI::DefaultDevice::updateProperties();
+    INDI::InputInterface::updateProperties();
+    INDI::OutputInterface::updateProperties();
 
     if (isConnected())
     {
-
     }
     else
     {
@@ -128,6 +130,12 @@ bool INDIGPIO::Connect()
     for (const auto &line : lines)
     {
         // Get line direction
+        auto name = line.name();
+
+        // Skip lines that are used or not GPIO
+        if (line.is_used() || name.find("GPIO") == std::string::npos)
+            continue;
+
         auto direction = line.direction();
 
         // Check if line is input or output and add to corresponding vector
@@ -139,30 +147,42 @@ bool INDIGPIO::Connect()
         {
             m_OutputOffsets.push_back(line.offset());
         }
+
+        line.release();
     }
 
-    // Initialize outputs
-    INDI::OutputInterface::initProperties("Outputs", m_OutputOffsets.size(), "GPIO");
-    // At this stage, all the labels and outputs are GPIO #1, GPIO #2 ..etc, but we
-    // need to update the number to matches to actual offsets
-    for (size_t i = 0; i < m_OutputOffsets.size(); i++)
-    {
-        auto label = "GPIO #" + std::to_string(m_OutputOffsets[i]);
-        DigitalOutputLabelsTP[i].setText(label);
-        DigitalOutputsSP[i].setLabel(label);
-    }
 
     // Initialize Inputs. We do not support Analog inputs
     INDI::InputInterface::initProperties("Inputs", m_InputOffsets.size(), 0, "GPIO");
     // At this stage, all the labels and outputs are GPIO #1, GPIO #2 ..etc, but we
     // need to update the number to matches to actual offsets
-    for (size_t i = 0; i < m_InputOffsets.size(); i++)
+    // We only do this if configuration is not loaded up
+    if (!m_DigitalLabelConfig)
     {
-        auto label = "GPIO #" + std::to_string(m_InputOffsets[i]);
-        DigitalInputLabelsTP[i].setText(label);
-        DigitalInputsSP[i].setLabel(label);
+        for (size_t i = 0; i < m_InputOffsets.size(); i++)
+        {
+            auto label = "DI #" + std::to_string(i + 1) + " (GPIO " + std::to_string(m_InputOffsets[i]) + ")";
+            DigitalInputLabelsTP[i].setText(label);
+            DigitalInputsSP[i].setLabel(label);
+        }
     }
 
+    // Initialize outputs
+    INDI::OutputInterface::initProperties("Outputs", m_OutputOffsets.size(), "GPIO");
+    // If config not loaded, use default values
+    if (!m_AnalogLabelConfig)
+    {
+        // At this stage, all the labels and outputs are GPIO #1, GPIO #2 ..etc, but we
+        // need to update the number to matches to actual offsets
+        for (size_t i = 0; i < m_OutputOffsets.size(); i++)
+        {
+            auto label = "DO #" + std::to_string(i + 1) + " (GPIO " + std::to_string(m_OutputOffsets[i]) + ")";
+            DigitalOutputLabelsTP[i].setText(label);
+            DigitalOutputsSP[i].setLabel(label);
+        }
+    }
+
+    SetTimer(getPollingPeriod());
     return true;
 }
 
@@ -202,7 +222,13 @@ bool INDIGPIO::UpdateDigitalInputs()
         {
             auto oldState = DigitalInputsSP[i].findOnSwitchIndex();
             auto line = m_GPIO->get_line(m_InputOffsets[i]);
+
+            gpiod::line_request config;
+            config.consumer = "indi-gpio";
+            config.request_type = gpiod::line_request::DIRECTION_INPUT;
+            line.request(config);
             auto newState = line.get_value();
+            line.release();
             if (oldState != newState)
             {
                 DigitalInputsSP[i].reset();
@@ -233,27 +259,29 @@ bool INDIGPIO::UpdateAnalogInputs()
 ////////////////////////////////////////////////////////////////////////////////////////
 bool INDIGPIO::UpdateDigitalOutputs()
 {
-    try
-    {
-        for (size_t i = 0; i < m_OutputOffsets.size(); i++)
-        {
-            auto oldState = DigitalOutputsSP[i].findOnSwitchIndex();
-            auto line = m_GPIO->get_line(m_OutputOffsets[i]);
-            auto newState = line.get_value();
-            if (oldState != newState)
-            {
-                DigitalOutputsSP[i].reset();
-                DigitalOutputsSP[i][newState].setState(ISS_ON);
-                DigitalOutputsSP[i].setState(IPS_OK);
-                DigitalOutputsSP[i].apply();
-            }
-        }
-    }
-    catch (const std::exception &e)
-    {
-        LOGF_ERROR("Failed to read digital outputs: %s", e.what());
-        return false;
-    }
+    // JM: Looks like we can't read outputs, they have to be set explicitly?
+    // Modern libgpiod 2.0+ has "as-is" direction so maybe that would work.
+    // try
+    // {
+    //     for (size_t i = 0; i < m_OutputOffsets.size(); i++)
+    //     {
+    //         auto oldState = DigitalOutputsSP[i].findOnSwitchIndex();
+    //         auto line = m_GPIO->get_line(m_OutputOffsets[i]);
+    //         auto newState = line.get_value();
+    //         if (oldState != newState)
+    //         {
+    //             DigitalOutputsSP[i].reset();
+    //             DigitalOutputsSP[i][newState].setState(ISS_ON);
+    //             DigitalOutputsSP[i].setState(IPS_OK);
+    //             DigitalOutputsSP[i].apply();
+    //         }
+    //     }
+    // }
+    // catch (const std::exception &e)
+    // {
+    //     LOGF_ERROR("Failed to read digital outputs: %s", e.what());
+    //     return false;
+    // }
     return true;
 }
 
@@ -270,9 +298,15 @@ bool INDIGPIO::CommandOutput(uint32_t index, OutputState command)
 
     try
     {
+        // N.B. this was not tested!
         auto offset = m_OutputOffsets[index];
         auto line = m_GPIO->get_line(offset);
+        gpiod::line_request config;
+        config.consumer = "indi-gpio";
+        config.request_type = gpiod::line_request::DIRECTION_OUTPUT;
+        line.request(config);
         line.set_value(command);
+        line.release();
     }
     catch (const std::exception &e)
     {
@@ -280,10 +314,19 @@ bool INDIGPIO::CommandOutput(uint32_t index, OutputState command)
         return false;
     }
 
-
     return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
+void INDIGPIO::TimerHit()
+{
+    if (!isConnected())
+        return;
+
+    UpdateDigitalInputs();
+    UpdateDigitalOutputs();
+
+    SetTimer(getPollingPeriod());
+}

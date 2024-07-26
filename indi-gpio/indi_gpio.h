@@ -68,7 +68,9 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        virtual bool saveConfigItems(FILE *fp);
+        virtual bool saveConfigItems(FILE *fp) override;
+
+        virtual void TimerHit() override;
 
     private:
         INDI::PropertyText ChipNameTP {1};

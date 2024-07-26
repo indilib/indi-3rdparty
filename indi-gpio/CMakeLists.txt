@@ -22,6 +22,8 @@ include_directories(${GPIOD_INCLUDE_DIR})
 
 include(CMakeCommon)
 
+set(CMAKE_CXX_STANDARD 17)
+
 ################ GPIO ################
 set(indi_gpio_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/indi_gpio.cpp
