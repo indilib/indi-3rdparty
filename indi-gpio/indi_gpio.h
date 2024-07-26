@@ -63,7 +63,7 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
          * \brief Send command to output
          * \return True if operation is successful, false otherwise
          */
-        virtual bool CommandOutput(uint32_t index, Command command) override;
+        virtual bool CommandOutput(uint32_t index, OutputState command) override;
 
         virtual bool Connect() override;
         virtual bool Disconnect() override;
@@ -73,4 +73,5 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
     private:
         INDI::PropertyText ChipNameTP {1};
         std::unique_ptr<gpiod::chip> m_GPIO;
+        std::vector<uint8_t> m_InputOffsets, m_OutputOffsets;
 };
