@@ -204,6 +204,7 @@ option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
+option(WITH_GPIO "Install GPIO Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -773,6 +774,14 @@ endif(WITH_ASTROASIS)
 # OCS
 if (WITH_OCS)
 add_subdirectory(indi-ocs)
+endif()
+
+# GPIO
+if (WITH_GPIO)
+find_package(GPIOD)
+if (GPIOD_FOUND)
+add_subdirectory(indi-gpio)
+endif(GPIOD_FOUND)
 endif()
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
