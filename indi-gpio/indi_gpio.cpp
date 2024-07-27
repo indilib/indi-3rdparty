@@ -330,3 +330,33 @@ void INDIGPIO::TimerHit()
 
     SetTimer(getPollingPeriod());
 }
+
+////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////
+bool INDIGPIO::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if (dev && !strcmp(dev, getDeviceName()))
+    {
+        if (INDI::OutputInterface::processSwitch(dev, name, states, names, n))
+            return true;
+    }
+
+    return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////
+bool INDIGPIO::ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n)
+{
+    if (dev && !strcmp(dev, getDeviceName()))
+    {
+        if (INDI::InputInterface::processText(dev, name, texts, names, n))
+            return true;
+        if (INDI::OutputInterface::processText(dev, name, texts, names, n))
+            return true;
+    }
+
+    return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
+}

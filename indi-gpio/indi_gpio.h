@@ -35,6 +35,9 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         virtual bool updateProperties() override;
         virtual void ISGetProperties(const char *dev);
 
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n) override;
+
     protected:
 
         /**
