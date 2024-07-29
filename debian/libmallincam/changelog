@@ -1,3 +1,33 @@
+libmallincam (56.26054.20240714) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <>  Mon, 15 Jul 2024 09:57:03 +0800
+
+libmallincam (56.25996.20240707) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <>  Sun, 07 Jul 2024 20:31:18 +0800
+
+libmallincam (55.25633.20240519) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <>  Mon, 20 May 2024 08:37:54 +0800
+
+libmallincam (55.24621.20240204) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <> Mon, 05 Feb 2024 08:24:08 +0800
+
+libmallincam (1.54.2) jammy; urgency=medium
+
+  * Upstream release
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 25 Aug 2023 15:00:00 +0300
+
 libmallincam (1.53.2) bullseye; urgency=medium
 
   * Upstream release

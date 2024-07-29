@@ -1,4 +1,49 @@
-libsvbony (1.11.2) bionic; urgency=low
+libsvbony (1.12.8) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.12.8 :
+  * Fixed the problem that the program occasionally exits abnormally under macOS
+  * Fixed the issue where the cooling power value obtained when cooling is turned off is greater than 0
+  * MaxBitDepth in SVB_CAMERA_PROPERTY returns the actual bit width of the sensor
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 24 Jun 2024 10:00:00 +0900
+
+libsvbony (1.12.6) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.12.6 :
+  * *** Note: The following changes are from 1.12.2 to 1.12.6 ***
+  * Optimizing the Long Exposure Setting of SC432M Camera
+  * Optimize SC432M camera software
+  * Solve the problem of cooling stopping briefly after the camera switches from long exposure to short exposure.
+  * Fixed the problem that SV905C small resolution offset does not take effect
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Fri, 19 Apr 2024 13:00:00 +0900
+
+libsvbony (1.12.1) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.12.1 :
+  * *** Note: The following changes were made both 1.12.1 and 1.12.1 ***
+  * Support SC432M camera
+  * Add the SVB_BAD_PIXEL_CORRECTION_THRESHOLD parameter to set the threshold for bad pixel correction. 
+  * If the difference with surrounding pixels exceeds the threshold, it will be dynamically corrected. 
+  * It takes effect only when the SVB_BAD_PIXEL_CORRECTION_ENABLE parameter is turned on
+  * The cooling camera will no longer turn off cooling and fan when certain parameters are set
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Fri, 1 Dec 2023 12:00:00 +0900
+
+libsvbony (1.11.4) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.11.4 :
+  * *** Note: The following changes were made both 1.11.2 and 1.11.4 ***
+  * Support image flip
+  * Modify SV605CC gain setting
+  * Modify the gain setting of SV605CC/SV605MC
+  * Fix up the problem that the image cannot be obtained when the SV905C is exposed for a long time
+  * Remove the x86 version library in MacOS
+  * Fix up the problem that the last exposure image may be read in soft trigger mode
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Wed, 14 Jun 2023 11:00:00 +0900
+
+libsvbony (1.11.1) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.11.1 :
   * *** Note: The following changes were made both 1.11.0 and 1.11.1 ***

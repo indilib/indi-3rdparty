@@ -1,3 +1,9 @@
+indi-eqmod (1.3) bionic; urgency=medium
+
+  * Update homing to be in line with INDI standards
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Mon, 29 Jul 2024 09:00:00 +0300
+
 indi-eqmod (1.0) bionic; urgency=medium
 
   * Add LED Brightness control.

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi-astrolink4 CXX C)
 
 set (ASTROLINK4_VERSION_MAJOR 0)

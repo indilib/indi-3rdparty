@@ -1,0 +1,13 @@
+Source: indi-rolloffino
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 6), cmake, cdbs, libindi-dev, libnova-dev, zlib1g-dev
+Standards-Version: 3.8.0
+
+Package: indi-rolloffino
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for Arduino-based roll off constroller.  
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.

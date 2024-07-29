@@ -1,7 +1,7 @@
 /*
  Toupcam & oem Filter Wheel Driver
 
- Copyright (C) 2018 Jasem Mutlaq (mutlaqja@ikarustech.com)
+ Copyright (C) 2018-2024 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -24,105 +24,124 @@
 #include <unistd.h>
 #include <deque>
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 static class Loader
 {
-    std::deque<std::unique_ptr<ToupWheel>> wheels;
-    XP(DeviceV2) pWheelInfo[CP(MAX)];
-public:
-    Loader()
-    {
-        const int iConnectedCount = FP(EnumV2(pWheelInfo));
-        for (int i = 0; i < iConnectedCount; i++)
+        std::deque<std::unique_ptr<ToupWheel>> wheels;
+        XP(DeviceV2) pWheelInfo[CP(MAX)];
+    public:
+        Loader()
         {
-            if (CP(FLAG_FILTERWHEEL) & pWheelInfo[i].model->flag)
-                wheels.push_back(std::unique_ptr<ToupWheel>(new ToupWheel(&pWheelInfo[i])));
+            const int iConnectedCount = FP(EnumV2(pWheelInfo));
+            for (int i = 0; i < iConnectedCount; i++)
+            {
+                if (CP(FLAG_FILTERWHEEL) & pWheelInfo[i].model->flag)
+                {
+                    std::string name = std::string(DNAME) + " EFW";
+                    if (iConnectedCount > 1)
+                        name += " " + std::to_string(i + 1);
+                    wheels.push_back(std::unique_ptr<ToupWheel>(new ToupWheel(&pWheelInfo[i], name.c_str())));
+                }
+            }
+            if (wheels.empty())
+                IDLog("No filter wheels detected.");
         }
-        if (wheels.empty())
-            IDLog("No filterwheel detected");
-    }
 } loader;
 
-static const int SlotNum[SLOT_NUM] = { 5, 7, 8 };
-
-ToupWheel::ToupWheel(const XP(DeviceV2) *instance) : m_Instance(instance)
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
+ToupWheel::ToupWheel(const XP(DeviceV2) *instance, const char *name) : m_Instance(instance)
 {
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
-
-    snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), m_Instance->model->name);
-    setDeviceName(this->m_name);
+    setDeviceName(name);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 const char *ToupWheel::getDefaultName()
 {
     return DNAME;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void ToupWheel::ISGetProperties(const char *dev)
+{
+    INDI::FilterWheel::ISGetProperties(dev);
+    defineProperty(SlotsSP);
+    defineProperty(SpinningDirectionSP);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
-    
-    for (int i = 0; i < SLOT_NUM; ++i)
-        IUFillSwitch(&m_SlotS[i], std::to_string(SlotNum[i]).c_str(), std::to_string(SlotNum[i]).c_str(), ISS_OFF);
-    IUFillSwitchVector(&m_SlotSP, m_SlotS, SLOT_NUM, getDeviceName(), "SLOTNUMBER", "Slot Number", FILTER_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
-    IUFillText(&m_VersionT[TC_FW_VERSION], "FIRMWARE", "Firmware", nullptr);
-    IUFillText(&m_VersionT[TC_HW_VERSION], "HARDWARE", "Hardware", nullptr);
-    IUFillText(&m_VersionT[TC_REV], "REVISION", "Revision", nullptr);
-    IUFillText(&m_VersionT[TC_SDK], "SDK", "SDK", FP(Version()));
-    IUFillTextVector(&m_VersionTP, m_VersionT, 4, getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 0, IPS_IDLE);
-    
+    // Add Debug Control.
+    addDebugControl();
+
+    VersionTP[TC_FW_VERSION].fill("FIRMWARE", "Firmware", nullptr);
+    VersionTP[TC_HW_VERSION].fill("HARDWARE", "Hardware", nullptr);
+    VersionTP[TC_REV].fill("REVISION", "Revision", nullptr);
+    VersionTP[TC_SDK].fill("SDK", "SDK", FP(Version()));
+    VersionTP.fill(getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 0, IPS_IDLE);
+
+    SlotsSP[SLOTS_5].fill("SLOTS_5", "5", ISS_ON);
+    SlotsSP[SLOTS_7].fill("SLOTS_7", "7", ISS_OFF);
+    SlotsSP[SLOTS_8].fill("SLOTS_8", "8", ISS_OFF);
+    SlotsSP.fill(getDeviceName(), "SLOTS", "Slots", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    SlotsSP.load();
+
     return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::updateProperties()
 {
+    INDI::FilterWheel::updateProperties();
+
     if (isConnected())
     {
         char tmpBuffer[64] = {0};
         uint16_t pRevision = 0;
         FP(get_FwVersion(m_Handle, tmpBuffer));
-        IUSaveText(&m_VersionT[TC_FW_VERSION], tmpBuffer);
+        IUSaveText(&VersionTP[TC_FW_VERSION], tmpBuffer);
         FP(get_HwVersion(m_Handle, tmpBuffer));
-        IUSaveText(&m_VersionT[TC_HW_VERSION], tmpBuffer);
+        IUSaveText(&VersionTP[TC_HW_VERSION], tmpBuffer);
         FP(get_Revision(m_Handle, &pRevision));
         snprintf(tmpBuffer, 32, "%d", pRevision);
-        IUSaveText(&m_VersionT[TC_REV], tmpBuffer);
-    
-        int val = 0;
-        FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &val));
-        for (int i = 0; i < SLOT_NUM; ++i)
-            m_SlotS[i].s = (SlotNum[i] == val) ? ISS_ON : ISS_OFF;
-        
-        TargetFilter = 1;
-        FilterSlotN[0].max = val;
-        updateFilter();
-    }
+        IUSaveText(&VersionTP[TC_REV], tmpBuffer);
 
-    INDI::FilterWheel::updateProperties();
+        defineProperty(VersionTP);
 
-    if (isConnected())
-    {
-        defineProperty(&m_SlotSP);
-        defineProperty(&m_VersionTP);
+        SpinningDirectionSP[TCFW_SD_CLOCKWISE].fill("CLOCKWISE", "Clockwise", ISS_ON);
+        SpinningDirectionSP[TCFW_SD_AUTO].fill("AUTO", "Auto Direction", ISS_OFF);
+        SpinningDirectionSP.fill(getDeviceName(), "SPINNINGDIRECTION", "Spinning Direction", FILTER_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        SpinningDirectionSP.load();
+
+        defineProperty(SpinningDirectionSP);
     }
     else
     {
-        deleteProperty(m_SlotSP.name);
-        deleteProperty(m_VersionTP.name);
+        deleteProperty(VersionTP);
+        deleteProperty(SpinningDirectionSP);
     }
 
     return true;
 }
 
-void ToupWheel::updateFilter()
-{
-    CurrentFilter = QueryFilter();
-    if (TargetFilter == CurrentFilter)
-        SelectFilterDone(CurrentFilter);
-    else if (FilterSlotNP.s != IPS_BUSY)
-        FilterSlotNP.s = IPS_BUSY;
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::Connect()
 {
     m_Handle = FP(Open(m_Instance->id));
@@ -132,84 +151,136 @@ bool ToupWheel::Connect()
         LOG_ERROR("Failed to connect filterwheel");
         return false;
     }
-    
-    LOGF_INFO("%s connect", getDeviceName());
+
+    auto currentSlot = SlotsSP.findOnSwitchIndex();
+    auto slot = 5;
+    if (currentSlot == SLOTS_7)
+        slot = 7;
+    else if (currentSlot == SLOTS_8)
+        slot = 8;
+    FilterSlotN[0].max = slot;
+
+    FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
+    TargetFilter = 1; // if desconnected during spinning, TargetFilter must be initialize when reconnect.
+    SelectFilter(0);
+
+    LOGF_INFO("%s is connected.", getDeviceName());
     return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::Disconnect()
 {
     FP(Close(m_Handle));
     return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void ToupWheel::TimerHit()
+{
+    if (!isConnected())
+        return;
+
+    QueryFilter();
+
+    LOGF_DEBUG("TimerHit: CurrentFilter=%d, TargetFilter=%d", CurrentFilter, TargetFilter);
+
+    if (CurrentFilter != TargetFilter)
+    {
+        SetTimer(getCurrentPollingPeriod());
+    }
+    else
+    {
+        SelectFilterDone(CurrentFilter);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, m_SlotSP.name))
+        if (SlotsSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_SlotSP, states, names, n);
-            int val = SlotNum[IUFindOnSwitchIndex(&m_SlotSP)];
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), val));
-            if (SUCCEEDED(rc))
-            {               
-                LOGF_INFO("Set slot number: %d", val);
-                
-                m_SlotSP.s = IPS_OK;
-                FilterSlotN[0].max = val;
-                IUUpdateMinMax(&FilterSlotNP);
-                
-                TargetFilter = 1;
-                updateFilter();
-            }
+            auto previousSlot = SlotsSP.findOnSwitchIndex();
+            SlotsSP.update(states, names, n);
+            SlotsSP.setState(IPS_OK);
+            SlotsSP.apply();
+            auto currentSlot = SlotsSP.findOnSwitchIndex();
+            if (previousSlot != currentSlot && isConnected())
+                LOG_INFO("Please disconnect and reconnect to apply settings.");
+            saveConfig(SlotsSP);
+            return true;
+        }
+        else if (SpinningDirectionSP.isNameMatch(name))
+        {
+            SpinningDirectionSP.update(states, names, n);
+            SpinningDirectionSP.setState(IPS_OK);
+            SpinningDirectionSP.apply();
+
+            auto currentSpinningDirection = SpinningDirectionSP.findOnSwitchIndex();
+            if (currentSpinningDirection == TCFW_SD_AUTO)
+                SpinningDirection = 0x100; // auto direction spinning
             else
-            {
-                LOGF_ERROR("Failed to set slot number. %s", errorCodes(rc).c_str());
-                m_SlotSP.s = IPS_ALERT;
-            }
-            IDSetSwitch(&m_SlotSP, nullptr);
+                SpinningDirection = 0; // clockwise spinning
+
+            saveConfig(SpinningDirectionSP);
             return true;
         }
     }
-    
+
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
 }
 
-void ToupWheel::TimerHit()
-{
-    if (FilterSlotNP.s == IPS_BUSY)
-    {
-        CurrentFilter = QueryFilter();
-        if (TargetFilter == CurrentFilter)
-            SelectFilterDone(CurrentFilter);
-    }
-
-    SetTimer(getCurrentPollingPeriod());
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupWheel::SelectFilter(int targetFilter)
 {
-    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), targetFilter - 1));
+    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), SpinningDirection | (targetFilter - 1)));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to select filter wheel %d. %s", targetFilter, errorCodes(rc).c_str());
         return false;
     }
+    SetTimer(getCurrentPollingPeriod());
     return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////
 int ToupWheel::QueryFilter()
 {
-    int val = -1;
+    auto val = -1;
     HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_POSITION), &val));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to query filter wheel. %s", errorCodes(rc).c_str());
         return -1;
     }
-    else if (val < 0)
-        return val;
-    else
-        return (val + 1);
+
+    // Touptek uses 0 to N-1 positions.
+    if (val >= 0)
+        CurrentFilter = val + 1;
+
+    return CurrentFilter;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+bool ToupWheel::saveConfigItems(FILE * fp)
+{
+    INDI::FilterWheel::saveConfigItems(fp);
+
+    SlotsSP.save(fp);
+    SpinningDirectionSP.save(fp);
+    return true;
 }

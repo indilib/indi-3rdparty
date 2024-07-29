@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi_qhy CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -12,6 +12,16 @@ find_package(ZLIB REQUIRED)
 find_package(Nova REQUIRED)
 find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
+
+if(INDI_JSONLIB)
+    set(JSONLIB "")
+    message(STATUS "Using indi bundled json library")
+else(INDI_JSONLIB)
+    find_package(nlohmann_json REQUIRED)
+    add_definitions(-D_USE_SYSTEM_JSONLIB)
+    set(JSONLIB nlohmann_json::nlohmann_json)
+    message(STATUS "Using system provided Niels Lohmann's json library")
+endif(INDI_JSONLIB)
 
 set(INDI_QHY_VERSION_MAJOR 2)
 set(INDI_QHY_VERSION_MINOR 8)
@@ -48,7 +58,7 @@ ENDIF ()
 
 add_executable(indi_qhy_ccd ${indiqhy_SRCS})
 
-target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(indi_qhy_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${NOVA_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
     target_link_libraries(indi_qhy_ccd rt)
@@ -75,3 +85,12 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
 endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )
+
+########### qhy_focuser ###########
+add_executable(indi_qhy_focuser ${CMAKE_CURRENT_SOURCE_DIR}/qhy_focuser.cpp)
+target_link_libraries(indi_qhy_focuser ${INDI_LIBRARIES} )
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(indi_qhy_focuser rt)
+endif()
+
+install(TARGETS indi_qhy_focuser RUNTIME DESTINATION bin )

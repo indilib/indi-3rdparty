@@ -62,16 +62,20 @@ AAGCloudWatcher::~AAGCloudWatcher()
 bool AAGCloudWatcher::Handshake()
 {
     cwc->setPortFD(PortFD);
-    int check = cwc->checkCloudWatcher();
+    auto check = cwc->checkCloudWatcher();
 
     if (check)
     {
         LOG_INFO("Connected to AAG Cloud Watcher");
         sendConstants();
 
-        if (m_FirmwareVersion >= 5.6) {
-            addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
-            setCriticalParameter("WEATHER_HUMIDITY");
+        if (m_FirmwareVersion >= 5.6)
+        {
+            // add humidity parameter, if not already present
+            if (!ParametersNP.findWidgetByName("WEATHER_HUMIDITY")) {
+                addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
+                setCriticalParameter("WEATHER_HUMIDITY");
+            }
         }
 
         return true;
@@ -102,7 +106,7 @@ bool AAGCloudWatcher::initProperties()
     setCriticalParameter("WEATHER_WIND_SPEED");
     setCriticalParameter("WEATHER_RAIN");
     setCriticalParameter("WEATHER_CLOUD");
-    
+
 
     addDebugControl();
 
@@ -650,14 +654,16 @@ bool AAGCloudWatcher::sendData()
     float ambientTemperature = data.ambient;
 
     float ambientLight;
-    if( data.ldrFreq >= 0 ) {
+    if( data.ldrFreq >= 0 )
+    {
         double sqm = ( 250000.0 / double(data.ldrFreq) );
 
         sqm = sqmLimit - 2.5 * log10( sqm );
 
         ambientLight = float( sqm );
     }
-    else {
+    else
+    {
         ambientLight = float(data.ldr);
         if (ambientLight > 1022.0)
         {

@@ -200,6 +200,8 @@ IPState GPSD::updateGPS()
 
         time(&raw_time);
 
+        m_GPSTime = raw_time;
+
         struct tm *utc = gmtime(&raw_time);
         strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%S", utc);
         TimeTP[0].setText(ts);
@@ -322,6 +324,7 @@ IPState GPSD::updateGPS()
         raw_time = gpsData->fix.time;
 #else
         raw_time = gpsData->fix.time.tv_sec;
+        m_GPSTime = raw_time;
 #endif
 
 #if GPSD_API_MAJOR_VERSION < 9

@@ -92,8 +92,6 @@ void PentaxCCD::ISGetProperties(const char *dev)
 
 bool PentaxCCD::updateProperties()
 {
-    INDI::CCD::updateProperties();
-
     if (isConnected())
     {
         setupParams();
@@ -109,6 +107,8 @@ bool PentaxCCD::updateProperties()
         }
 
         buildCaptureSwitches();
+        
+        INDI::CCD::updateProperties();
 
         defineProperty(&autoFocusSP);
         if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)

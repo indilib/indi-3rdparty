@@ -1,3 +1,51 @@
+indi-playerone (1.15) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.6.3
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 14 Jul 2024 12:00:00 +0900
+
+indi-playerone (1.14) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.6.2
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 12 May 2024 12:00:00 +0900
+
+indi-playerone (1.13) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.6.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 4 Jan 2024 12:00:00 +0900
+
+indi-playerone (1.12) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.6.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 20 Sep 2023 12:00:00 +0900
+
+indi-playerone (1.11) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.5.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 2 Sep 2023 12:00:00 +0900
+
+indi-playerone (1.10) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.4.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 29 Jul 2023 12:00:00 +0900
+
+indi-playerone (1.9) bionic; urgency=low
+
+  * Add sensor mode control for cameras that support it
+
+ -- Jarno Paananen <jarno.paananen@gmail.com>  Thu, 20 Jul 2023 01:16:17 +0300
+
+indi-playerone (1.8) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.4.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 27 Jun 2023 12:00:00 +0900
+
 indi-playerone (1.7) bionic; urgency=low
 
   * Update PlayerOneCamera SDK v3.3.0

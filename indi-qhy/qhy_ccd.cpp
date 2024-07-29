@@ -169,7 +169,7 @@ bool QHYCCD::initProperties()
                        ISR_1OFMANY, 0, IPS_IDLE);
 
     // CCD Regulation power
-    IUFillNumber(&CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 5, 0.0);
+    IUFillNumber(&CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%.2f", 0., 100., 5, 0.0);
     IUFillNumberVector(&CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB,
                        IP_RO, 60, IPS_IDLE);
 
@@ -2688,7 +2688,8 @@ void QHYCCD::debugTriggered(bool enable)
 {
     // For some reason QHYSDK does not define this for MacOS! Needs to be fixed
 #ifdef __linux__
-    SetQHYCCDLogFunction(m_QHYLogCallback);
+    // JM QHY removed this function on 2023.07.16
+    //SetQHYCCDLogFunction(m_QHYLogCallback);
 #endif
     if (enable)
         SetQHYCCDLogLevel(5);

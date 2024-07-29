@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.18)
 PROJECT(indi_pentax CXX C)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -7,7 +7,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (INDI_PENTAX_VERSION_MAJOR 1)
-set (INDI_PENTAX_VERSION_MINOR 1)
+set (INDI_PENTAX_VERSION_MINOR 2)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
@@ -49,5 +49,20 @@ add_executable(indi_pentax ${indipentax_SRCS})
 target_link_libraries(indi_pentax pthread ${PENTAX_LIBRARIES} ${INDI_LIBRARIES} ${JPEG_LIBRARIES} ${LibRaw_LIBRARIES} ${CFITSIO_LIBRARIES} ${ZLIB_LIBRARY})
 
 install(TARGETS indi_pentax RUNTIME DESTINATION bin)
+
+find_program(SUDO sudo)
+if(NOT SUDO)
+  message(WARNING "sudo must be available on the system in order to set permissions for the driver")
+else()
+  message("-- sudo command: ${SUDO}")
+endif()
+
+find_program(SETCAP setcap)
+if(NOT SETCAP)
+  message(WARNING "setcap not found, driver may not work because of lack of permissions")
+else()
+  message("-- setcap command: ${SETCAP}")
+  install(CODE "execute_process(COMMAND ${SUDO} -S ${SETCAP} cap_sys_rawio+ep ${CMAKE_INSTALL_PREFIX}/bin/indi_pentax)")
+endif()
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_pentax.xml DESTINATION ${INDI_DATA_DIR})

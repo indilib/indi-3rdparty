@@ -1,3 +1,45 @@
+libplayerone (1.11) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.6.3
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 14 Jul 2024 08:00:00 +0900
+
+libplayerone (1.10) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.6.2
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 12 May 2024 08:00:00 +0900
+
+libplayerone (1.9) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.6.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Thu, 4 Jan 2024 08:00:00 +0900
+
+libplayerone (1.8) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.6.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 20 Sep 2023 08:00:00 +0900
+
+libplayerone (1.7) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.5.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 2 Sep 2023 08:00:00 +0900
+
+libplayerone (1.6) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.4.1
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 29 Jul 2023 08:00:00 +0900
+
+libplayerone (1.5) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.4.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Tue, 27 Jun 2023 08:00:00 +0900
+
 libplayerone (1.4) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.3.0

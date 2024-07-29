@@ -1,7 +1,7 @@
 /*
  Toupcam & oem Filter Wheel Driver
 
- Copyright (C) 2018 Jasem Mutlaq (mutlaqja@ikarustech.com)
+ Copyright (C) 2018-2024 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -22,37 +22,35 @@
 #pragma once
 
 #include <indifilterwheel.h>
+#include <indipropertytext.h>
 #include "libtoupbase.h"
-
-#define SLOT_NUM    3
 
 class ToupWheel : public INDI::FilterWheel
 {
     public:
-        explicit ToupWheel(const XP(DeviceV2) *instance);
+        explicit ToupWheel(const XP(DeviceV2) *instance, const char *name);
 
         virtual const char *getDefaultName() override;
 
+        virtual void ISGetProperties(const char *dev) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
-        
+
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-    protected:  
-        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+    protected:
         virtual void TimerHit() override;
-
         virtual bool SelectFilter(int targetFilter) override;
         virtual int QueryFilter() override;
+
+        // Save config
+        virtual bool saveConfigItems(FILE *fp) override;
+
     private:
-        void updateFilter();
-        
-        ISwitch m_SlotS[SLOT_NUM];
-        ISwitchVectorProperty m_SlotSP;
-        
-        ITextVectorProperty m_VersionTP;
-        IText m_VersionT[4];
+        INDI::PropertyText VersionTP {4};
         enum
         {
             TC_FW_VERSION,
@@ -60,8 +58,23 @@ class ToupWheel : public INDI::FilterWheel
             TC_REV,
             TC_SDK
         };
-        
+
+        INDI::PropertySwitch SlotsSP {3};
+        enum
+        {
+            SLOTS_5,
+            SLOTS_7,
+            SLOTS_8
+        };
+
+        INDI::PropertySwitch SpinningDirectionSP {2};
+        enum
+        {
+            TCFW_SD_CLOCKWISE,
+            TCFW_SD_AUTO
+        };
+        int SpinningDirection = 0;
+
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
-        char m_name[MAXINDIDEVICE];
 };

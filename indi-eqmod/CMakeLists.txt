@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
 PROJECT(indi-eqmod C CXX)
-cmake_minimum_required(VERSION 3.0)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -13,7 +13,7 @@ find_package(ZLIB REQUIRED)
 find_package(GSL REQUIRED)
 
 set(EQMOD_VERSION_MAJOR 1)
-set(EQMOD_VERSION_MINOR 2)
+set(EQMOD_VERSION_MINOR 3)
 
 if (CYGWIN)
 add_definitions(-U__STRICT_ANSI__)
@@ -102,14 +102,14 @@ endif(WITH_SCOPE_LIMITS)
 ########### AHP GT controllers ###############
 if(WITH_AHP_GT)
     find_package(AHPGT REQUIRED)
-    if(AHPGT_FOUND)
-        include_directories( ${AHPGT_INCLUDE_DIR})
+    if(AHP_GT_FOUND)
+        include_directories( ${AHP_GT_INCLUDE_DIR})
         set(ahp_gt_CXX_SRCS
-            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgt.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/ahpgtbase.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
-           ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahp-gt/ahpgt.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ahp-gt/ahpgtbase.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
 
         if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
           set(ahp_gt_CXX_SRCS ${ahp_gt_CXX_SRCS}
@@ -142,14 +142,14 @@ if(WITH_AHP_GT)
           target_link_libraries(indi_ahpgt_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
         endif(WITH_ALIGN)
 
-        target_link_libraries(indi_ahpgt_telescope ${AHPGT_LIBRARIES})
+        target_link_libraries(indi_ahpgt_telescope ${AHP_GT_LIBRARIES})
 
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
         target_link_libraries(indi_ahpgt_telescope rt)
         endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
         install(TARGETS indi_ahpgt_telescope RUNTIME DESTINATION bin )
-    endif(AHPGT_FOUND)
+    endif(AHP_GT_FOUND)
 endif(WITH_AHP_GT)
 
 ########### AZ GTi ###############
@@ -198,49 +198,49 @@ endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 install(TARGETS indi_azgti_telescope RUNTIME DESTINATION bin )
 
 ########### Sky Adventurer GTi ###############
-set(skyadventurergti_CXX_SRCS
-   ${CMAKE_CURRENT_SOURCE_DIR}/skyadventurergti.cpp
-   ${CMAKE_CURRENT_SOURCE_DIR}/skyadventurergtibase.cpp
+set(staradventurergti_CXX_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/staradventurergti.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/staradventurergtibase.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/eqmodbase.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/eqmoderror.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/skywatcher.cpp)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(skyadventurergti_CXX_SRCS ${skyadventurergti_CXX_SRCS}
+  set(staradventurergti_CXX_SRCS ${staradventurergti_CXX_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/mach_gettime.cpp)
 endif()
 
-set(skyadventurergti_CXX_SRCS ${skyadventurergti_CXX_SRCS}
+set(staradventurergti_CXX_SRCS ${staradventurergti_CXX_SRCS}
    ${CMAKE_CURRENT_SOURCE_DIR}/simulator/simulator.cpp    ${CMAKE_CURRENT_SOURCE_DIR}/simulator/skywatcher-simulator.cpp)
 if(WITH_ALIGN_GEEHALEL)
-  set(skyadventurergti_CXX_SRCS ${skyadventurergti_CXX_SRCS}
+  set(staradventurergti_CXX_SRCS ${staradventurergti_CXX_SRCS}
    ${CMAKE_CURRENT_SOURCE_DIR}/align/align.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/pointset.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate.cpp ${CMAKE_CURRENT_SOURCE_DIR}/align/triangulate_chull.cpp)
-  set(skyadventurergti_C_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/align/htm.c ${CMAKE_CURRENT_SOURCE_DIR}/align/chull/chull.c)
+  set(staradventurergti_C_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/align/htm.c ${CMAKE_CURRENT_SOURCE_DIR}/align/chull/chull.c)
 endif(WITH_ALIGN_GEEHALEL)
 if(WITH_SCOPE_LIMITS)
-  set(skyadventurergti_CXX_SRCS ${skyadventurergti_CXX_SRCS}
+  set(staradventurergti_CXX_SRCS ${staradventurergti_CXX_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/scope-limits/scope-limits.cpp)
 endif(WITH_SCOPE_LIMITS)
 
 IF (UNITY_BUILD)
-    ENABLE_UNITY_BUILD(skyadventurergti_c skyadventurergti_C_SRCS 10 c)
-    ENABLE_UNITY_BUILD(skyadventurergti_cxx skyadventurergti_CXX_SRCS 10 cpp)
+    ENABLE_UNITY_BUILD(staradventurergti_c staradventurergti_C_SRCS 10 c)
+    ENABLE_UNITY_BUILD(staradventurergti_cxx staradventurergti_CXX_SRCS 10 cpp)
 ENDIF ()
 
-add_executable(indi_skyadventurergti_telescope ${skyadventurergti_C_SRCS} ${skyadventurergti_CXX_SRCS})
+add_executable(indi_staradventurergti_telescope ${staradventurergti_C_SRCS} ${staradventurergti_CXX_SRCS})
 
 if(WITH_ALIGN)
-  target_link_libraries(indi_skyadventurergti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
+  target_link_libraries(indi_staradventurergti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${INDI_ALIGN_LIBRARIES} ${GSL_LIBRARIES} ${ZLIB_LIBRARY})
 else(WITH_ALIGN)
-  target_link_libraries(indi_skyadventurergti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
+  target_link_libraries(indi_staradventurergti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
 endif(WITH_ALIGN)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-target_link_libraries(indi_skyadventurergti_telescope rt)
+target_link_libraries(indi_staradventurergti_telescope rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
-install(TARGETS indi_skyadventurergti_telescope RUNTIME DESTINATION bin )
+install(TARGETS indi_staradventurergti_telescope RUNTIME DESTINATION bin )
 
 ########### Star Adventurer 2i ###############
 set(staradventurer2i_CXX_SRCS

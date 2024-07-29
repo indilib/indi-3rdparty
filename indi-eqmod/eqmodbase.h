@@ -118,7 +118,6 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
         INDI::PropertySwitch   AlignSyncModeSP     {INDI::Property()};
 #endif
-        INDI::PropertySwitch   AutoHomeSP          {INDI::Property()};
         INDI::PropertySwitch   AuxEncoderSP        {INDI::Property()};
         INDI::PropertyNumber   AuxEncoderNP        {INDI::Property()};
 
@@ -212,36 +211,38 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         EQMod();
         virtual ~EQMod();
 
-        virtual const char *getDefaultName();
-        virtual bool Handshake();
-        virtual bool Disconnect();
-        virtual void TimerHit();
-        virtual bool ReadScopeStatus();
-        virtual bool initProperties();
-        virtual bool updateProperties();
-        virtual void ISGetProperties(const char *dev);
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n);
-        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n);
-        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n);
+        virtual const char *getDefaultName() override;
+        virtual bool Handshake() override;
+        virtual bool Disconnect() override;
+        virtual void TimerHit() override;
+        virtual bool ReadScopeStatus() override;
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
+        virtual void ISGetProperties(const char *dev) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 #ifdef WITH_ALIGN
         virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
-                               char *formats[], char *names[], int n);
+                               char *formats[], char *names[], int n) override;
 #endif
-        virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command);
-        virtual bool MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command);
-        virtual bool Abort();
+        virtual bool MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command) override;
+        virtual bool MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command) override;
+        virtual bool Abort() override;
 
-        virtual IPState GuideNorth(uint32_t ms);
-        virtual IPState GuideSouth(uint32_t ms);
-        virtual IPState GuideEast(uint32_t ms);
-        virtual IPState GuideWest(uint32_t ms);
+        virtual IPState GuideNorth(uint32_t ms) override;
+        virtual IPState GuideSouth(uint32_t ms) override;
+        virtual IPState GuideEast(uint32_t ms) override;
+        virtual IPState GuideWest(uint32_t ms) override;
 
-        bool Goto(double ra, double dec);
-        bool Park();
-        bool UnPark();
-        bool SetCurrentPark();
-        bool SetDefaultPark();
-        bool Sync(double ra, double dec);
+        bool Goto(double ra, double dec) override;
+        bool Park() override;
+        bool UnPark() override;
+        bool SetCurrentPark() override;
+        bool SetDefaultPark() override;
+        bool Sync(double ra, double dec) override;
+
+        IPState ExecuteHomeAction(TelescopeHomeAction action) override;
 
         // Call first time EQMod is run
         void saveInitialParkPosition();
@@ -251,14 +252,14 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         static void abnormalDisconnectCallback(void *userpointer);
 
         // Tracking
-        bool SetTrackMode(uint8_t mode);
-        bool SetTrackRate(double raRate, double deRate);
-        bool SetTrackEnabled(bool enabled);
+        bool SetTrackMode(uint8_t mode) override;
+        bool SetTrackRate(double raRate, double deRate) override;
+        bool SetTrackEnabled(bool enabled) override;
 
-        virtual bool saveConfigItems(FILE *fp);
+        virtual bool saveConfigItems(FILE *fp) override;
 
-        bool updateTime(ln_date *lndate_utc, double utc_offset);
-        bool updateLocation(double latitude, double longitude, double elevation);
+        bool updateTime(ln_date *lndate_utc, double utc_offset) override;
+        bool updateLocation(double latitude, double longitude, double elevation) override;
 
         double getLongitude();
         double getLatitude();
@@ -275,7 +276,6 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         enum AutoHomeStatus
         {
             AUTO_HOME_IDLE,
-            AUTO_HOME_CONFIRM,
             AUTO_HOME_WAIT_PHASE1,
             AUTO_HOME_WAIT_PHASE2,
             AUTO_HOME_WAIT_PHASE3,
@@ -288,4 +288,6 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         int DBG_SCOPE_STATUS {0};
         int DBG_COMM {0};
         int DBG_MOUNT {0};
+
+        static constexpr int PARKING_THRESHOLD {10};
 };

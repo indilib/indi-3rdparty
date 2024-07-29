@@ -61,7 +61,8 @@ enum AUXCommands
     GPS_GET_YEAR         = 0x04,
     GPS_GET_TIME         = 0x33,
     GPS_TIME_VALID       = 0x36,
-    GPS_LINKED           = 0x37
+    GPS_LINKED           = 0x37,
+    FOC_GET_HS_POSITIONS = 0x2c
 };
 
 enum AUXTargets
@@ -72,6 +73,7 @@ enum AUXTargets
     HCP   = 0x0d,
     AZM   = 0x10,
     ALT   = 0x11,
+    FOCUS = 0x12,
     APP   = 0x20,
     GPS   = 0xb0,
     WiFi  = 0xb5,

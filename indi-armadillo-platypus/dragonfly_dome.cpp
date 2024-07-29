@@ -104,9 +104,9 @@ bool DragonFlyDome::initProperties()
     // #1 Relays
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Dome Relays
-    IUFillNumber(&DomeControlRelayN[RELAY_OPEN], "RELAY_OPEN", "Open Relay", "%.f", 1., 8., 1., 1.);
-    IUFillNumber(&DomeControlRelayN[RELAY_CLOSE], "RELAY_CLOSE", "Close Relay", "%.f", 1., 8., 1., 1.);
-    IUFillNumberVector(&DomeControlRelayNP, DomeControlRelayN, 2, getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control",
+    DomeControlRelayNP[RELAY_OPEN].fill("RELAY_OPEN", "Open Relay", "%.f", 1., 8., 1., 1.);
+    DomeControlRelayNP[RELAY_CLOSE].fill("RELAY_CLOSE", "Close Relay", "%.f", 1., 8., 1., 1.);
+    DomeControlRelayNP.fill(getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control",
                        RELAYS_TAB, IP_RW, 0, IPS_OK);
 
     // All Relays
@@ -122,9 +122,9 @@ bool DragonFlyDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Dome Control Sensors
-    IUFillNumber(&DomeControlSensorN[SENSOR_UNPARKED], "SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
-    IUFillNumber(&DomeControlSensorN[SENSOR_PARKED], "SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
-    IUFillNumberVector(&DomeControlSensorNP, DomeControlSensorN, 2, getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
+    DomeControlSensorNP[SENSOR_UNPARKED].fill("SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
+    DomeControlSensorNP[SENSOR_PARKED].fill("SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
+    DomeControlSensorNP.fill(getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
                        SENSORS_TAB, IP_RW, 0, IPS_OK);
 
     // ALL Sensors
@@ -142,16 +142,19 @@ bool DragonFlyDome::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Peripheral Port
-    IUFillSwitch(&PerPortS[PORT_MAIN], "PORT_MAIN", "Main", ISS_ON );
-    IUFillSwitch(&PerPortS[PORT_EXP], "PORT_EXP", "Exp", ISS_OFF );
-    IUFillSwitch(&PerPortS[PORT_THIRD], "PORT_THIRD", "Third", ISS_OFF );
-    IUFillSwitchVector(&PerPortSP, PerPortS, 3, getDeviceName(), "DRAGONFLY_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
+    PerPortSP[PORT_MAIN].fill("PORT_MAIN", "Main", ISS_ON );
+    PerPortSP[PORT_EXP].fill("PORT_EXP", "Exp", ISS_OFF );
+    PerPortSP[PORT_THIRD].fill("PORT_THIRD", "Third", ISS_OFF );
+    PerPortSP.fill(getDeviceName(), "DRAGONFLY_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
                        0, IPS_IDLE);
 
     // Firmware Version
-    IUFillText(&FirmwareVersionT[0], "VERSION", "Version", "");
-    IUFillTextVector(&FirmwareVersionTP, FirmwareVersionT, 1, getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
+    FirmwareVersionTP[0].fill("VERSION", "Version", "");
+    FirmwareVersionTP.fill(getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
                      IP_RO, 0, IPS_IDLE);
+
+    // Load Configuration
+    PerPortSP.load();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #5 Misc.
@@ -168,8 +171,7 @@ void DragonFlyDome::ISGetProperties(const char *dev)
 {
     INDI::Dome::ISGetProperties(dev);
 
-    defineProperty(&PerPortSP);
-    loadConfig(true, PerPortSP.name);
+    defineProperty(PerPortSP);
 }
 
 bool DragonFlyDome::updateProperties()
@@ -184,8 +186,8 @@ bool DragonFlyDome::updateProperties()
         updateSensors();
 
         double parkedSensor = -1, unparkedSensor = -1;
-        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.name, DomeControlSensorN[SENSOR_UNPARKED].name, &unparkedSensor);
-        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.name, DomeControlSensorN[SENSOR_PARKED].name, &parkedSensor);
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_UNPARKED].getName(), &unparkedSensor);
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_PARKED].getName(), &parkedSensor);
         if (parkedSensor > 0 && unparkedSensor > 0)
         {
             if (isSensorOn(unparkedSensor) == isSensorOn(parkedSensor))
@@ -197,27 +199,27 @@ bool DragonFlyDome::updateProperties()
                 SetParked(isSensorOn(parkedSensor));
         }
 
-        defineProperty(&FirmwareVersionTP);
+        defineProperty(FirmwareVersionTP);
 
         // Relays
-        defineProperty(&DomeControlRelayNP);
+        defineProperty(DomeControlRelayNP);
         for (auto &oneRelay : Relays)
             oneRelay->define(this);
 
         // Sensors
-        defineProperty(&DomeControlSensorNP);
+        defineProperty(DomeControlSensorNP);
         defineProperty(&SensorNP);
 
     }
     else
     {
-        deleteProperty(FirmwareVersionTP.name);
+        deleteProperty(FirmwareVersionTP);
 
-        deleteProperty(DomeControlRelayNP.name);
+        deleteProperty(DomeControlRelayNP);
         for (auto &oneRelay : Relays)
             oneRelay->remove(this);
 
-        deleteProperty(DomeControlSensorNP.name);
+        deleteProperty(DomeControlSensorNP);
         deleteProperty(SensorNP.name);
     }
 
@@ -261,7 +263,7 @@ bool DragonFlyDome::echo()
         if ( strcmp( models[ model ], "Dragonfly" ) )
             LOGF_WARN("Detected model is %s while Dragonfly model is expected. This may lead to limited operability", models[model] );
 
-        IUSaveText( &FirmwareVersionT[0], txt );
+        FirmwareVersionTP[0].setText(txt);
         LOGF_INFO("Setting version to [%s]", txt );
 
         return true;
@@ -276,12 +278,12 @@ bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *stat
         /////////////////////////////////////////////
         // Peripheral Port
         /////////////////////////////////////////////
-        if (!strcmp(name, PerPortSP.name))
+        if (PerPortSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&PerPortSP, states, names, n);
-            PerPortSP.s = IPS_OK;
-            IDSetSwitch(&PerPortSP, nullptr);
-            saveConfig(true, PerPortSP.name);
+            PerPortSP.update(states, names, n);
+            PerPortSP.setState(IPS_OK);
+            PerPortSP.apply();
+            saveConfig(PerPortSP);
             return true;
         }
         /////////////////////////////////////////////
@@ -317,23 +319,23 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
         /////////////////////////////////////////////
         // Relay Control
         /////////////////////////////////////////////
-        if (!strcmp(name, DomeControlRelayNP.name))
+        if (DomeControlRelayNP.isNameMatch(name))
         {
-            IUUpdateNumber(&DomeControlRelayNP, values, names, n);
-            DomeControlRelayNP.s = IPS_OK;
-            IDSetNumber(&DomeControlRelayNP, nullptr);
+            DomeControlRelayNP.update(values, names, n);
+            DomeControlRelayNP.setState(IPS_OK);
+            DomeControlRelayNP.apply();
             return true;
         }
 
         /////////////////////////////////////////////
         // Sensor Control
         /////////////////////////////////////////////
-        if (!strcmp(name, DomeControlSensorNP.name))
+        if (DomeControlSensorNP.isNameMatch(name))
         {
-            IUUpdateNumber(&DomeControlSensorNP, values, names, n);
-            DomeControlSensorNP.s = IPS_OK;
-            IDSetNumber(&DomeControlSensorNP, nullptr);
-            saveConfig(true, DomeControlSensorNP.name);
+            DomeControlSensorNP.update(values, names, n);
+            DomeControlSensorNP.setState(IPS_OK);
+            DomeControlSensorNP.apply();
+            saveConfig(DomeControlSensorNP);
             return true;
         }
     }
@@ -407,18 +409,18 @@ void DragonFlyDome::TimerHit()
     if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || getDomeState() == DOME_UNPARKING)
     {
         // Roll off is opening
-        if (DomeMotionS[DOME_CW].s == ISS_ON)
+        if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
         {
-            if (isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value))
+            if (isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue()))
             {
                 setRoofOpen(false);
                 SetParked(false);
             }
         }
         // Roll Off is closing
-        else if (DomeMotionS[DOME_CCW].s == ISS_ON)
+        else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
         {
-            if (isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
+            if (isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
             {
                 setRoofClose(false);
                 SetParked(true);
@@ -447,11 +449,11 @@ bool DragonFlyDome::Abort()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::setRoofOpen(bool enabled)
 {
-    int id = DomeControlRelayN[RELAY_OPEN].value - 1;
+    int id = DomeControlRelayNP[RELAY_OPEN].getValue() - 1;
     if (id < 0)
         return false;
 
-    int closeRoofRelay = DomeControlRelayN[RELAY_CLOSE].value - 1;
+    int closeRoofRelay = DomeControlRelayNP[RELAY_CLOSE].getValue() - 1;
     if (closeRoofRelay < 0)
         return false;
     // Only proceed is RELAY_CLOSE is OFF
@@ -482,11 +484,11 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::setRoofClose(bool enabled)
 {
-    int id = DomeControlRelayN[RELAY_CLOSE].value - 1;
+    int id = DomeControlRelayNP[RELAY_CLOSE].getValue() - 1;
     if (id < 0)
         return false;
 
-    int openRoofRelay = DomeControlRelayN[RELAY_OPEN].value - 1;
+    int openRoofRelay = DomeControlRelayNP[RELAY_OPEN].getValue() - 1;
     if (openRoofRelay < 0)
         return false;
     // Only proceed is RELAY_OPEN is OFF
@@ -520,7 +522,7 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
     if (operation == MOTION_START)
     {
         // DOME_CW --> OPEN. If can we are ask to "open" while we are fully opened as the limit switch indicates, then we simply return false.
-        if (dir == DOME_CW && isSensorOn(DomeControlSensorN[SENSOR_UNPARKED].value))
+        if (dir == DOME_CW && isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue()))
         {
             LOG_WARN("Roof is already fully opened.");
             return IPS_ALERT;
@@ -530,7 +532,7 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
 //             LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
 //             return IPS_ALERT;
 //         }
-        else if (dir == DOME_CCW && isSensorOn(DomeControlSensorN[SENSOR_PARKED].value))
+        else if (dir == DOME_CCW && isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
         {
             LOG_WARN("Roof is already fully closed.");
             return IPS_ALERT;
@@ -589,9 +591,9 @@ bool DragonFlyDome::saveConfigItems(FILE *fp)
 {
     INDI::Dome::saveConfigItems(fp);
 
-    IUSaveConfigSwitch(fp, &PerPortSP);
-    IUSaveConfigNumber(fp, &DomeControlRelayNP);
-    IUSaveConfigNumber(fp, &DomeControlSensorNP);
+    PerPortSP.save(fp);
+    DomeControlRelayNP.save(fp);
+    DomeControlSensorNP.save(fp);
 
     return true;
 }

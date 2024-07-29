@@ -1,0 +1,12 @@
+COMPILE INSTRUCTIONS:
+
+> cmake .
+> make
+> sudo make install
+
+
+TEST INSTRUCTIONS:
+(Tested with Indi 2.0.1)
+
+indiserver ./indi_ocs
+

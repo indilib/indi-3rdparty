@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: libastroasis
-Version:2.0.2.git
+Version:2.0.7.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -47,6 +47,8 @@ BuildRequires: pkgconfig(zlib)
 
 Provides: liboasisfocuser.so()(64bit)
 Provides: liboasisfocuser.so
+Provides: liboasisfilterwheel.so()(64bit)
+Provides: liboasisfilterwheel.so
 
 %description
 INDI is a distributed control protocol designed to operate

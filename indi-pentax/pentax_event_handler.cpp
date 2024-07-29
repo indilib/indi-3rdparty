@@ -29,7 +29,7 @@ const char * getFormatFileExtension(ImageFormat format)
     }
     else if (format == ImageFormat::DNG)
     {
-        return "raw";
+        return "dng";
     }
     else
     {

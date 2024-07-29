@@ -1,0 +1,11 @@
+Source: indi-ocs
+Section: science
+Priority: extra
+Maintainer: Ed Lee <ed@thefamilee.co.uk>
+Build-Depends: dpkg (>= 1.13.19), debhelper (>= 5), cdbs, cmake, libindi-dev
+Standards-Version: 3.9.5
+
+Package: indi-ocs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for an Observatory Control System (OCS)

@@ -1,3 +1,27 @@
+indi-avalon (1.13.3) jammy; urgency=medium
+
+  * Manufacturer changed to Avalon-Instruments
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Thu, 30 Nov 2023 12:33:39 +0100
+
+indi-avalon (1.13.2) jammy; urgency=medium
+
+  * Second code position needed to be corrected to fix the MacOS crash
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 06 Aug 2023 14:42:39 +0200
+
+indi-avalon (1.13.1) jammy; urgency=medium
+
+  * Bug fix for updated version numbers
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sat, 05 Aug 2023 12:07:19 +0200
+
+indi-avalon (1.13) jammy; urgency=medium
+
+  * Bug fix for MacOS crash reading ParkHomeStatus
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Tue, 01 Aug 2023 07:58:23 +0200
+
 indi-avalon (1.12) bionic; urgency=medium
 
   * Adaptions to INDI 1.9 release

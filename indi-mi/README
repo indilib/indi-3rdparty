@@ -1,7 +1,7 @@
-Moravian Instruments CCD Driver
+Moravian Instruments INDI Driver
 ===============================
 
-This package provides Moravian Instruments CCD INDI driver for MI CCD cameras.
+This package provides Moravian Instruments INDI driver for MI cameras and standalone filter wheels.
 
 Requirements
 ============
@@ -29,13 +29,21 @@ How to Use
 
 	To run the driver from the command line:
 
-	USB variant:
+	Cameras (USB variant):
 
 	$ indiserver indi_mi_ccd_usb
 
-	ETH variant:
+	Cameras (ETH variant):
 
 	$ indiserver indi_mi_ccd_eth
+
+	SFW (USB variant):
+
+	$ indiserver indi_mi_sfw_usb
+
+	SFW (ETH variant):
+
+	$ indiserver indi_mi_sfw_eth
 
 	You can then connect to the driver from any client, the default port is 7624.
 	If you're using KStars, the driver will be automatically listed in KStars' Device Manager,

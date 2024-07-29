@@ -261,6 +261,8 @@ const char * AUXCommand::commandName(AUXCommands command) const
                 return "MC_SET_AUTOGUIDE_RATE";
             case MC_GET_AUTOGUIDE_RATE:
                 return "MC_GET_AUTOGUIDE_RATE";
+            case FOC_GET_HS_POSITIONS:
+                return "FOC_GET_HS_POSITIONS";
             default :
                 return nullptr;
         }
@@ -295,6 +297,8 @@ int AUXCommand::responseDataSize()
     {
         switch (m_Command)
         {
+            case FOC_GET_HS_POSITIONS:
+                return 8;
             case MC_GET_POSITION:
             case MC_GET_CORDWRAP_POS:
                 return 3;
@@ -354,6 +358,8 @@ const char * AUXCommand::moduleName(AUXTargets n)
             return "APP";
         case GPS :
             return "GPS";
+        case FOCUS :
+            return "FOCUS";
         case WiFi:
             return "WiFi";
         case BAT :

@@ -94,10 +94,6 @@ bool ToupBase::initProperties()
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
-        TemperatureN[0].min = CP(TEC_TARGET_MIN);
-        TemperatureN[0].max = CP(TEC_TARGET_MAX);
-        TemperatureN[0].value = CP(TEC_TARGET_DEF);
-
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
@@ -106,9 +102,8 @@ bool ToupBase::initProperties()
         IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY,
                            0, IPS_BUSY);
 
-        IUFillText(&m_CoolerT, "COOLER_POWER", "Percent", nullptr);
-        IUFillTextVector(&m_CoolerTP, &m_CoolerT, 1, getDeviceName(), "COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO, 0,
-                         IPS_IDLE);
+        m_CoolerNP[0].fill("COOLER_POWER", "Percent", "%.f", 0, 100, 10, 0);
+        m_CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -248,6 +243,12 @@ bool ToupBase::initProperties()
     IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Tail Light
+    IUFillSwitch(&m_TailLightS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_TailLightS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
+    IUFillSwitchVector(&m_TailLightSP, m_TailLightS, 2, getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW,
+                                   ISR_1OFMANY, 60, IPS_IDLE);
+
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
@@ -329,9 +330,8 @@ bool ToupBase::updateProperties()
         if (HasCooler())
         {
             defineProperty(&m_CoolerSP);
-            defineProperty(&m_CoolerTP);
+            defineProperty(m_CoolerNP);
         }
-
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
@@ -359,6 +359,9 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             defineProperty(&m_GainConversionSP);
 
+        if (m_SupportTailLight)
+            defineProperty(&m_TailLightSP);
+
         // Binning mode
         defineProperty(&m_BinningModeSP);
         if (m_MonoCamera == false)
@@ -381,7 +384,7 @@ bool ToupBase::updateProperties()
         if (HasCooler())
         {
             deleteProperty(m_CoolerSP.name);
-            deleteProperty(m_CoolerTP.name);
+            deleteProperty(m_CoolerNP);
         }
         else
         {
@@ -407,6 +410,9 @@ bool ToupBase::updateProperties()
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             deleteProperty(m_GainConversionSP.name);
+
+        if (m_SupportTailLight)
+            deleteProperty(m_TailLightSP.name);
 
         deleteProperty(m_BinningModeSP.name);
         if (m_MonoCamera == false)
@@ -452,6 +458,22 @@ bool ToupBase::Connect()
     if (m_Instance->model->flag & CP(FLAG_ST4))
         cap |= CCD_HAS_ST4_PORT;
     SetCCDCapability(cap);
+
+    if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
+    {
+        int tecRange = 0;
+        FP(get_Option(m_Handle, CP(OPTION_TECTARGET_RANGE), &tecRange));
+        TemperatureN[0].min = (static_cast<short>(tecRange & 0xffff))/10.0;
+        TemperatureN[0].max
+                = (static_cast<short>((tecRange >> 16) & 0xffff)) / 10.0;
+        TemperatureN[0].value = 0; // reasonable default
+    }
+
+    {
+        int taillight = 0;
+        HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
+        m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+    }
 
     // Get min/max exposures
     uint32_t min = 0, max = 0, current = 0;
@@ -1058,6 +1080,25 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             return true;
         }
 
+        // Tail Light
+        if (!strcmp(name, m_TailLightSP.name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&m_TailLightSP);
+            IUUpdateSwitch(&m_TailLightSP, states, names, n);
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightS[INDI_ENABLED].s));
+            if (SUCCEEDED(rc))
+                m_TailLightSP.s = IPS_OK;
+            else
+            {
+                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                m_TailLightSP.s = IPS_ALERT;
+                IUResetSwitch(&m_TailLightSP);
+                m_TailLightS[prevIndex].s = ISS_ON;
+            }
+            IDSetSwitch(&m_TailLightSP, nullptr);
+            return true;
+        }
+
         //////////////////////////////////////////////////////////////////////
         /// Auto Exposure
         //////////////////////////////////////////////////////////////////////
@@ -1267,9 +1308,10 @@ bool ToupBase::StopStreaming()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 int ToupBase::SetTemperature(double temperature)
 {
-    if (activateCooler(true) == false)
+    // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
+    if (temperature < TemperatureN[0].value && activateCooler(true) == false)
     {
-        LOG_ERROR("Failed to activate cooler");
+        LOG_ERROR("Failed to toggle cooler.");
         return -1;
     }
 
@@ -1289,7 +1331,17 @@ int ToupBase::SetTemperature(double temperature)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::activateCooler(bool enable)
 {
-    HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
+    int val = 0;
+    auto isCoolerOn = false;
+    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
+    if (SUCCEEDED(rc))
+        isCoolerOn = (val != 0);
+
+    // If no state change, return.
+    if ( (enable && isCoolerOn) || (!enable && !isCoolerOn))
+        return true;
+
+    rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
     IUResetSwitch(&m_CoolerSP);
     if (FAILED(rc))
     {
@@ -1302,7 +1354,7 @@ bool ToupBase::activateCooler(bool enable)
     else
     {
         m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
-        m_CoolerSP.s = IPS_OK;
+        m_CoolerSP.s = enable ? IPS_BUSY : IPS_IDLE;
         IDSetSwitch(&m_CoolerSP, nullptr);
 
         /* turn on TEC may force to turn on the fan */
@@ -1476,59 +1528,85 @@ void ToupBase::TimerHit()
             timeleft = 0;
         PrimaryCCD.setExposureLeft(timeleft);
     }
+
     if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
-        int16_t currentTemperature = (int16_t)(TemperatureN[0].value * 10);
-        int16_t nTemperature = currentTemperature;
+        int16_t nTemperature = 0;
         HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
-            LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
-            TemperatureNP.s = IPS_ALERT;
+            if (TemperatureNP.s != IPS_ALERT)
+            {
+                TemperatureNP.s = IPS_ALERT;
+                IDSetNumber(&TemperatureNP, nullptr);
+                LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
+            }
         }
+        else if (TemperatureNP.s == IPS_ALERT)
+            TemperatureNP.s = IPS_OK;
+
+        TemperatureN[0].value = nTemperature / 10.0;
+
+        auto threshold = HasCooler() ? 0.1 : 0.2;
 
         switch (TemperatureNP.s)
         {
             case IPS_IDLE:
             case IPS_OK:
-                if (currentTemperature != nTemperature)
+            case IPS_BUSY:
+                if (std::abs(TemperatureN[0].value - m_LastTemperature) > threshold)
                 {
-                    TemperatureN[0].value = static_cast<double>(nTemperature / 10.0);
+                    m_LastTemperature = TemperatureN[0].value;
                     IDSetNumber(&TemperatureNP, nullptr);
                 }
                 break;
 
             case IPS_ALERT:
                 break;
-
-            case IPS_BUSY:
-                TemperatureN[0].value = static_cast<double>(nTemperature / 10.0);
-                IDSetNumber(&TemperatureNP, nullptr);
-                break;
         }
     }
+
     if (HasCooler() && (m_maxTecVoltage > 0))
     {
         int val = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
-            m_CoolerTP.s = IPS_ALERT;
+        {
+            if (m_CoolerNP.getState() != IPS_ALERT)
+            {
+                m_CoolerNP.setState(IPS_ALERT);
+                m_CoolerNP.apply();
+            }
+        }
         else if (0 == val)
         {
-            IUSaveText(&m_CoolerT, "0.0% (OFF)");
-            IDSetText(&m_CoolerTP, nullptr);
+            if (m_CoolerNP.getState() != IPS_IDLE)
+            {
+                m_CoolerNP.setState(IPS_IDLE);
+                m_CoolerNP[0].setValue(0);
+                m_CoolerNP.apply();
+            }
         }
         else
         {
             rc = FP(get_Option(m_Handle, CP(OPTION_TEC_VOLTAGE), &val));
             if (FAILED(rc))
-                m_CoolerTP.s = IPS_ALERT;
+            {
+                if (m_CoolerNP.getState() != IPS_ALERT)
+                {
+                    m_CoolerNP.setState(IPS_ALERT);
+                    m_CoolerNP.apply();
+                }
+            }
             else if (val <= m_maxTecVoltage)
             {
-                char str[32];
-                sprintf(str, "%.1f%%", val * 100.0 / m_maxTecVoltage);
-                IUSaveText(&m_CoolerT, str);
-                IDSetText(&m_CoolerTP, nullptr);
+                m_CoolerNP[0].setValue(val * 100.0 / m_maxTecVoltage);
+                if (std::abs(m_CoolerNP[0].getValue() - m_LastCoolerPower) > 1)
+                {
+                    m_LastCoolerPower = m_CoolerNP[0].getValue();
+                    m_CoolerNP.setState(IPS_BUSY);
+                    m_CoolerNP.apply();
+                }
             }
         }
     }
@@ -1711,7 +1789,7 @@ void ToupBase::refreshControls()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
+void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
@@ -1730,7 +1808,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITS
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupBase::saveConfigItems(FILE *fp)
+bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 

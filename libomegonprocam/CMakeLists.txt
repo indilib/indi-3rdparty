@@ -1,8 +1,8 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 project (libomegonprocam)
 
-set (LIBOMEGONPROCAM_VERSION "54.22587")
-set (LIBOMEGONPROCAM_SOVERSION "54")
+set (LIBOMEGONPROCAM_VERSION "56.26054")
+set (LIBOMEGONPROCAM_SOVERSION "56")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")

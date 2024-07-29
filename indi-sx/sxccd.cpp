@@ -202,21 +202,19 @@ bool SXCCD::updateProperties()
 
 bool SXCCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    /* Add the X and Y offsets */
-    long x_1 = x / PrimaryCCD.getBinX();
-    long y_1 = y / PrimaryCCD.getBinY();
+    uint32_t binX = PrimaryCCD.getBinX();
+    uint32_t binY = PrimaryCCD.getBinY();
+    uint32_t subW = w / binX;
+    uint32_t subH = h / binY;
 
-    long x_2 = x_1 + (w / PrimaryCCD.getBinX());
-    long y_2 = y_1 + (h / PrimaryCCD.getBinY());
-
-    if (x_2 > PrimaryCCD.getXRes())
+    if (subW > static_cast<uint32_t>(PrimaryCCD.getXRes() / binX))
     {
-        LOGF_ERROR("Error: Requested image out of bounds (%ld, %ld)", x_2, y_2);
+        LOGF_INFO("Invalid width request %d", w);
         return false;
     }
-    else if (y_2 > PrimaryCCD.getYRes())
+    if (subH > static_cast<uint32_t>(PrimaryCCD.getYRes() / binY))
     {
-        LOGF_ERROR("Error: Requested image out of bounds (%ld, %ld)", x_2, y_2);
+        LOGF_INFO("Invalid height request %d", h);
         return false;
     }
 
@@ -753,13 +751,6 @@ void SXCCD::NSGuiderTimerHit()
     GuideComplete(AXIS_DE);
 }
 
-void SXCCD::ISGetProperties(const char *dev)
-{
-    INDI_UNUSED(dev);
-    INDI::CCD::ISGetProperties(name);
-    addDebugControl();
-}
-
 bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     bool result = false;
@@ -805,9 +796,3 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     return result;
 }
 
-//bool SXCCD::saveConfigItems(FILE *fp)
-//{
-//    INDI::CCD::saveConfigItems(fp);
-//    IUSaveConfigSwitch(fp, &BayerSP);
-//    return true;
-//}

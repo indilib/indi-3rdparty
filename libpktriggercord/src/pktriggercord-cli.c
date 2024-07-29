@@ -153,9 +153,9 @@ int save_buffer(pslr_handle_t camhandle, int bufno, int fd, pslr_status *status,
         ssize_t r = write(fd, buf, bytes);
         if (r == 0) {
             DPRINT("write(buf): Nothing has been written to buf.\n");
-        } else if (r < 0) { // r<0 - INDI modification, reapply for next update
+        } else if (r == -1) {
             perror("write(buf)");
-        } else if ((uint32_t)r < bytes) { 
+        } else if ((uint32_t)r < bytes) {
             DPRINT("write(buf): only write %zu bytes, should be %d bytes.\n", r, bytes);
         }
         current += bytes;
@@ -182,9 +182,9 @@ void save_memory(pslr_handle_t camhandle, int fd, uint32_t length) {
         ssize_t r = write(fd, buf, bytes);
         if (r == 0) {
             DPRINT("write(buf): Nothing has been written to buf.\n");
-        } else if (r < 0) { // r<0 - INDI modification, reapply for next update
+        } else if (r == -1) {
             perror("write(buf)");
-        } else if ((uint32_t)r < bytes) { 
+        } else if ((uint32_t)r < bytes) {
             DPRINT("write(buf): only write %zu bytes, should be %d bytes.\n", r, bytes);
         }
         current += bytes;
@@ -417,7 +417,7 @@ int main(int argc, char **argv) {
     int servermode_timeout = 30;
     int modify_debug_mode=0;
     char debug_mode=0;
-    bool dangerous=0;
+    //bool dangerous=0;
     bool read_datetime=false;
     bool read_firmware_version=false;
     bool settings_info = false;
@@ -712,7 +712,7 @@ int main(int argc, char **argv) {
                 break;
 
             case 25:
-                dangerous = true;
+                //dangerous = true;
                 break;
 
             case 26:

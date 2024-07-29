@@ -13,6 +13,8 @@ typedef int BOOL;
 typedef void * HINSTANCE;
 #endif
 
+#include "AtikDefs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #else
@@ -56,11 +58,11 @@ extern "C" {
 	enum ARTEMISPRECHARGEMODE
 	{
 		/// Precharge ignored
-		PRECHARGE_NONE = 0,		
+		PRECHARGE_NONE = 0,
 		/// In-camera precharge subtraction
-		PRECHARGE_ICPS,			
+		PRECHARGE_ICPS,
 		/// Precharge sent with image data
-		PRECHARGE_FULL,			
+		PRECHARGE_FULL,
 	};
 
 	/// @see ArtemisCameraState()
@@ -90,7 +92,7 @@ extern "C" {
 	enum ARTEMISPROCESSING
 	{
 		/// compensate for JFET nonlinearity
-		ARTEMIS_PROCESS_LINEARISE = 1,	
+		ARTEMIS_PROCESS_LINEARISE = 1,
 		/// adjust for 'Venetian Blind effect'
 		ARTEMIS_PROCESS_VBE = 2,
 	};
@@ -216,7 +218,7 @@ extern "C" {
 
 	/// @brief DLL handle set by ArtemisLoadDLL().
 	/// This is irrelevant if you are linking at compile time
-	static HINSTANCE hArtemisDLL = NULL;
+	extern HINSTANCE hArtemisDLL;
 
 	//////////////////////////////////////////////////////////////////////////
 	//
@@ -229,7 +231,7 @@ extern "C" {
 	#define artfn extern
 
 	// -------------------  DLL --------------------------
-		
+
 	/// @brief Get API version. This may be the same as the DLL version.
 	/// @return API version as an integer, such as: 20200904
 	artfn int  ArtemisAPIVersion();
@@ -275,7 +277,7 @@ extern "C" {
 	artfn void ArtemisShutdown();
 
 	// -------------------  Device --------------------------
-	
+
 	/// @brief Returns the number of connected and recognised devices.
 	/// The count does not include misconfigured devices (E.G. if drivers are missing).
 	/// @return The number of connected and recognised devices.
@@ -349,7 +351,7 @@ extern "C" {
 
 
 	// ------------------- Camera Info -----------------------------------
-	
+
 	/// @brief Retrieves the serial number of the connected device.
 	/// @param handle the connected device handle.
 	/// @param flags a pointer to an integer which will be set to internal device flags.
@@ -663,7 +665,7 @@ extern "C" {
 	/// @see ARTEMISERROR
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
 	artfn int   ArtemisClearVReg(				 ArtemisHandle handle);
-	
+
 	/// @brief Gets whether the device supports fast mode.
 	/// @param handle the connected Atik device handle.
 	/// @return TRUE if fast mode is supported, FALSE if not
@@ -682,28 +684,14 @@ extern "C" {
 	artfn BOOL ArtemisSetFastCallback(  ArtemisHandle handle, void(*callback)(ArtemisHandle handle, int x, int y, int w, int h, int binx, int biny, void * imageBuffer));
 
 	/// @brief Set the callback that will be invoked when a fast mode exposure is completed. This extension provides
-	/// an array of info as the last arguments. The first char in the info array is always the length of the array
-	/// -1
+	/// a pointer to extra info passed to the function. See AtikDefs.h for a description of the structure
+	/// passed via the info parameter. Cast the unsigned char pointer to a FastCallbackInfo pointer to
+	/// access the information.
+	///
 	/// @param handle the connected Atik device handle.
 	/// @param callback a pointer to a function which will be invoked when fast mode is completed.
 	/// @return TRUE on success, FALSE on failure.
 	artfn BOOL ArtemisSetFastCallbackEx(ArtemisHandle handle, void(*callback)(ArtemisHandle handle, int x, int y, int w, int h, int binx, int biny, void * imageBuffer, unsigned char * info));
-
-	/// @brief Returns a pointer to the formatted last exposure start time while using the fast mode callback.
-	/// The buffer is internal to the SDK and is overwritten every time this function is called.
-	/// Only works with our Horizon II and ACIS/Apx series cameras
-	/// Does not include milliseconds.
-	/// @param handle the connected Atik device handle.
-	/// @see ArtemisLastStartTimeMilliseconds()
-	/// @return pointer to a null terminated buffer containing the formatted time exposure was started at.
-	artfn char* ArtemisLastFastModeStartTime(ArtemisHandle handle);
-
-	/// @brief Returns the last fast mode callback exposure start time millisecond component.
-	/// Only works with our Horizon II and ACIS/Apx series cameras
-	/// @param handle the connected Atik device handle.
-	/// @see ArtemisLastStartTime
-	/// @return millisecond component of the last exposure time.
-	artfn int   ArtemisLastFastModeStartTimeMilliseconds(ArtemisHandle handle);
 
 	// ------------------- Amplifier -----------------------------------
 
@@ -727,7 +715,7 @@ extern "C" {
 	/// @see ARTEMISERROR, ArtemisAmplifier()
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
 	artfn int  ArtemisSetAmplifierSwitched(ArtemisHandle handle, bool bSwitched);
-		
+
 	// ------------ Camera Specific Options -------------
 
 	/// @brief Returns whether the specified option is available
@@ -755,7 +743,7 @@ extern "C" {
 	/// @return ARTEMIS_OK on success, ARTEMIS_INVALID_PARAM if the opton is not available or ARTEMISERROR on failure
 	artfn int  ArtemisCameraSpecificOptionSetData(ArtemisHandle handle, unsigned short id, unsigned char * data, int dataLength);
 
-	// ------------------- Column Repair ----------------------------------	
+	// ------------------- Column Repair ----------------------------------
 
 	/// @brief Set the columns on which column repair post processing is performed.
 	/// @param handle the connected Atik device handle.
@@ -827,7 +815,7 @@ extern "C" {
 	/// @param password password required to interact with the device.
 	/// @param address address of EEPROM
 	/// @param length length of the data
-	/// @param data pointer to the buffer containing the data	
+	/// @param data pointer to the buffer containing the data
 	/// @see ARTEMISERROR
 	/// @return ARTEMIS_OK on success, or ARTEMISERROR enumeration on failure
 	artfn int ArtemisReadFromEEPROM(	   ArtemisHandle handle, char * password, int address, int length,       unsigned char * data);
@@ -909,7 +897,7 @@ extern "C" {
 	/// @return
 	artfn int			ArtemisEFWGetPosition(ArtemisHandle handle, int * iPosition, bool * isMoving);
 
-	// ------------------- Firmware ----------------------------------------	
+	// ------------------- Firmware ----------------------------------------
 
 	/// @brief Returns whether firmware can be uploaded to the device.
 	/// This API is for internal use.
@@ -1095,7 +1083,7 @@ extern "C" {
 	/// @return ARTEMIS_OK on success, ARTEMIS_INVALID_PARAMETER if value out of limits, ARTEMIS_NOT_INITIALIZED if lens not initialised, or ARTEMISERROR enumeration on failure
 	artfn int ArtemisSetLensFocus(   ArtemisHandle handle, int focus);
 
-	// ------------------- Shutter ----------------------------------		
+	// ------------------- Shutter ----------------------------------
 
 	/// @brief Checks whether the shutter can be opened and closed on the device.
 	/// @param handle the connected Atik device handle.
@@ -1197,7 +1185,7 @@ extern "C" {
 	/// @see ARTEMISERROR, ArtemisGetWindowHeaterPower()
 	/// @return ARTEMIS_OK on success, ARTEMARTEMIS_INVALID_PARAMETER if the device does not have a window heater, or ARTEMISERROR enumeration on failure
 	artfn int ArtemisSetWindowHeaterPower( ArtemisHandle handle, int  windowHeaterPower);
-	
+
 	/// @brief Dynamically loads the Atik implementation DLL.
 	/// This method is only needed if the DLL is linked dynamically.
 	/// This method is part of the DLL example code.

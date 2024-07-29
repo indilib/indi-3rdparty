@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 PROJECT(libindi-3rdparty CXX C)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
@@ -187,6 +187,7 @@ option(WITH_ATIK "Install Atik Driver" On)
 option(WITH_TOUPBASE "Install Toupbase Driver" On)
 option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
+option(WITH_AVALONUD "Install AvalonUD Drivers" On)
 option(WITH_BEEFOCUS "Install Bee Focuser Driver" On)
 option(WITH_SHELYAK "Install Shelyak Spectrograph Driver" On)
 option(WITH_SKYWALKER "Install AOK SkyWalker Mount Driver" On)
@@ -202,6 +203,8 @@ option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
+option(WITH_OCS "Install OCS Driver" On)
+option(WITH_GPIO "Install GPIO Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -218,12 +221,6 @@ ENDIF(FFMPEG_FOUND)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 find_package(MMAL)
 endif()
-
-IF (MMAL_FOUND)
-option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" On)
-ELSE ()
-option(WITH_RPICAM "Install Raspberry Pi High Quality Camera Driver" Off)
-ENDIF(MMAL_FOUND)
 
 find_package(NUTClient)
 if (NUTCLIENT_FOUND)
@@ -347,6 +344,7 @@ endif(WITH_AHP_GT)
 
 #toupbase dependencies
 if (WITH_TOUPBASE)
+add_subdirectory(libmeadecam)
 add_subdirectory(libtoupcam)
 add_subdirectory(libaltaircam)
 add_subdirectory(libbressercam)
@@ -495,9 +493,10 @@ find_package(STARSHOOTG)
 find_package(NNCAM)
 find_package(MALLINCAM)
 find_package(OMEGONPROCAM)
-if (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND)
+find_package(MEADECAM)
+if (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND AND MEADECAM_FOUND)
 add_subdirectory(indi-toupbase)
-else (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND)
+else (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND AND MEADECAM_FOUND)
 if (NOT TOUPCAM_FOUND)
 add_subdirectory(libtoupcam)
 endif()
@@ -525,8 +524,11 @@ endif()
 if (NOT OMEGONPROCAM_FOUND)
 add_subdirectory(libomegonprocam)
 endif()
+if (NOT MEADECAM_FOUND)
+add_subdirectory(libmeadecam)
+endif()
 SET(LIBRARIES_FOUND FALSE)
-endif (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND)
+endif (TOUPCAM_FOUND AND ALTAIRCAM_FOUND AND BRESSERCAM_FOUND AND OGMACAM_FOUND AND TSCAM_FOUND AND STARSHOOTG_FOUND AND NNCAM_FOUND AND MALLINCAM_FOUND AND OMEGONPROCAM_FOUND AND MEADECAM_FOUND)
 endif (WITH_TOUPBASE)
 
 ## Bee Focuser
@@ -692,6 +694,11 @@ if (WITH_AVALON)
 add_subdirectory(indi-avalon)
 endif(WITH_AVALON)
 
+# AvalonUD
+if (WITH_AVALONUD)
+add_subdirectory(indi-avalonud)
+endif(WITH_AVALONUD)
+
 # Pentax
 if (WITH_PENTAX)
 find_package(PENTAX)
@@ -709,11 +716,11 @@ endif(WITH_PENTAX)
 # AHP
 if (WITH_AHP_XC)
 find_package(AHPXC)
-if(AHPXC_FOUND)
+if(AHP_XC_FOUND)
 add_subdirectory(indi-ahp-xc)
-else(AHPXC_FOUND)
+else(AHP_XC_FOUND)
 add_subdirectory(libahp-xc)
-endif(AHPXC_FOUND)
+endif(AHP_XC_FOUND)
 endif(WITH_AHP_XC)
 
 # svbony
@@ -726,11 +733,6 @@ add_subdirectory(libsvbony)
 SET(LIBRARIES_FOUND FALSE)
 endif(SVBONY_FOUND)
 endif(WITH_SVBONY)
-
-# rpi_cam
-if (WITH_RPICAM)
-add_subdirectory(indi-rpicam)
-endif(WITH_RPICAM)
 
 # Bresser Exos 2 GoTo
 if (WITH_BRESSEREXOS2)
@@ -768,6 +770,19 @@ add_subdirectory(libastroasis)
 SET(LIBRARIES_FOUND FALSE)
 endif(ASTROASIS_FOUND)
 endif(WITH_ASTROASIS)
+
+# OCS
+if (WITH_OCS)
+add_subdirectory(indi-ocs)
+endif()
+
+# GPIO
+if (WITH_GPIO)
+find_package(GPIOD)
+if (GPIOD_FOUND)
+add_subdirectory(indi-gpio)
+endif(GPIOD_FOUND)
+endif()
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
@@ -830,6 +845,10 @@ if (WITH_TOUPBASE AND NOT OMEGONPROCAM_FOUND)
 message(STATUS "libomegonprocam was not found and will now be built. Please install libomegonprocam first before running cmake again to install indi-toupbase.")
 endif (WITH_TOUPBASE AND NOT OMEGONPROCAM_FOUND)
 
+if (WITH_TOUPBASE AND NOT MEADECAM_FOUND)
+message(STATUS "libmeadecam was not found and will now be built. Please install libmeadecam first before running cmake again to install indi-toupbase.")
+endif (WITH_TOUPBASE AND NOT MEADECAM_FOUND)
+
 if (WITH_INOVAPLX AND NOT INOVASDK_FOUND)
 message(STATUS "libinovasdk was not found and will now be built. Please install libinovasdk first before running cmake again to install indi-inovaplx.")
 endif (WITH_INOVAPLX AND NOT INOVASDK_FOUND)
@@ -862,13 +881,13 @@ if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
 endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
-if (WITH_AHPXC AND NOT AHPXC_FOUND)
+if (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 message(STATUS "libahp-xc was not found and will now be built. Please install libahp-xc first before running cmake again to install indi-ahp-xc.")
-endif (WITH_AHPXC AND NOT AHPXC_FOUND)
+endif (WITH_AHP_XC AND NOT AHP_XC_FOUND)
 
-if (WITH_AHPGT AND NOT AHPGT_FOUND)
+if (WITH_AHP_GT AND NOT AHP_GT_FOUND)
 message(STATUS "libahp-gt was not found and will now be built. Please install libahp-gt first before running cmake again to install indi-ahpgt.")
-endif (WITH_AHPGT AND NOT AHPGT_FOUND)
+endif (WITH_AHP_GT AND NOT AHP_GT_FOUND)
 
 if (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
 message(STATUS "libastroasis was not found and will now be built. Please install libastroasis first before running cmake again to install indi-astroasis.")
