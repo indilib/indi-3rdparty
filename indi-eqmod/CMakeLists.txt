@@ -1,5 +1,5 @@
-PROJECT(indi-eqmod C CXX)
 cmake_minimum_required(VERSION 3.16)
+PROJECT(indi-eqmod C CXX)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -13,7 +13,7 @@ find_package(ZLIB REQUIRED)
 find_package(GSL REQUIRED)
 
 set(EQMOD_VERSION_MAJOR 1)
-set(EQMOD_VERSION_MINOR 2)
+set(EQMOD_VERSION_MINOR 3)
 
 if (CYGWIN)
 add_definitions(-U__STRICT_ANSI__)
