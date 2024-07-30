@@ -257,22 +257,22 @@ enum CONTROL_ID
 /*86*/	CAM_UseAverageBinning,
 /*87*/	CONTROL_OUTSIDE_PUMP_V2, // air pump outside
 
-///*88*/  CONTROL_AUTOEXPOSURE,           //!<auto exposure
-///*89*/  CONTROL_AUTOEXPTargetBrightness,	//!<auto exposure Target Brightness
-///*90*/  CONTROL_AUTOEXPSampleArea,   //!<auto exposure Sample Area
-///*91*/  CONTROL_AUTOEXPexpMaxMS,        //!<auto exposure max exp(ms)
-///*92*/  CONTROL_AUTOEXPgainMax,         //!<auto exposure max gain
+/*88*/  CONTROL_AUTOEXPOSURE,           //!<auto exposure
+/*89*/  CONTROL_AUTOEXPTargetBrightness,	//!<auto exposure Target Brightness
+/*90*/  CONTROL_AUTOEXPSampleArea,   //!<auto exposure Sample Area
+/*91*/  CONTROL_AUTOEXPexpMaxMS,        //!<auto exposure max exp(ms)
+/*92*/  CONTROL_AUTOEXPgainMax,         //!<auto exposure max gain
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
 /*Last One */  CONTROL_MAX_ID,
 
 //TEST id name list
 /*1024*/ CONTROL_AUTOWHITEBALANCE=1024, //!<auto white balance  eg.CONTROL_TEST=1024
-/*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
-/*1026*/ CONTROL_AUTOEXPTargetBrightness,//CONTROL_AUTOEXPmessureValue,
-/*1027*/ CONTROL_AUTOEXPSampleArea,//CONTROL_AUTOEXPmessureMethod,
-/*1028*/ CONTROL_AUTOEXPexpMaxMS,       //!<auto exposure max exp(ms)
-/*1029*/ CONTROL_AUTOEXPgainMax,        //!<auto exposure max gain
+///*1025*/ CONTROL_AUTOEXPOSURE,			//!<auto exposure
+///*1026*/ CONTROL_AUTOEXPTargetBrightness,//CONTROL_AUTOEXPmessureValue,
+///*1027*/ CONTROL_AUTOEXPSampleArea,//CONTROL_AUTOEXPmessureMethod,
+///*1028*/ CONTROL_AUTOEXPexpMaxMS,       //!<auto exposure max exp(ms)
+///*1029*/ CONTROL_AUTOEXPgainMax,        //!<auto exposure max gain
 /*1030*/ CONTROL_ImageStabilization,    //!<image stabilization      
 /*1031*/ CONTROL_GAINdB,                //!<uesed to test dBGain control  //CONTROL_dB_TO_GAIN
 /*1032*/ CONTROL_DPC,                   //!<Turn on or off the image DPC function(Remove thermal noise)
