@@ -13,10 +13,10 @@ When installed, the RollOff ino driver will be available for selection under Dom
 
 ![Ekos Profile](ekos_profile.png)
 
-Provided as an INDI third party driver. The driver is derived from the Ekos roll-off roof simulator driver. USB is the normal connection method, and it uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Park and Unpark commands from the Ekos Observatory panel. These are sent to the Arduino in the form of open and close requests. The Arduino uses the requests to open or close relays in order to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed sensors to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code.
+Provided as an INDI third party driver. The driver is derived from the Ekos roll-off roof simulator driver. USB is the normal connection method, and it uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Park and Unpark commands from the Ekos Observatory panel. These are sent to the Arduino in the form of open and close requests. The Arduino uses the requests to open or close relays in order to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed sensors to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code. Action switches that can be activated to most likely set relays have been added since the first driver release. The Actions are to provide more user implemented options in the Arduino.
 
 ## Observatory interface.
-The observatory interface will be the normal way to park and unpark the roof.
+The observatory interface's open and close buttons can used to open and close the roof.
 
 ![Observatory](roof_obs.png)
 
@@ -25,19 +25,24 @@ The observatory interface will be the normal way to park and unpark the roof.
 The INDI Control panels provide the detail and setup interfaces.
 
 ### The Main Panel
-The main panel's periodic monitoring of the roof status as provided by the Arduino code is reflected in the status lights. The Park/Unpark provides local replication of the Observatory functions. The Open/Close buttons might be of use, if for some reason there is a discrepancy between the drivers notion of where the roof is versus the actual position.
+The Main panel's periodic monitoring of the roof status as provided by the Arduino code is reflected in the status lights. The Park/Unpark provides local replication of the Observatory functions. The Open/Close buttons might be of use, if for some reason there is a discrepancy between the drivers notion of where the roof is versus the actual position.
 
 ![Main Panel](roof_main.png)
 
 ### The Connection Panel
-The connection panel is where the USB connection baud rate can be set to match the Arduino code. It is where the USB used for the connection is established.
+The Connection panel is where the USB connection baud rate can be set to match the Arduino code. It is where the USB used for the connection is established.
 
 ![Connection Panel](roof_connection.png)
 
 ### The Options Panel
-The options panel is for the setting of the standard driver INDI options and for specifying roof's view of interactions with the telescope mount.
+The Options panel is for the setting of the standard driver INDI options and for specifying roof's view of interactions with the telescope mount.
 
 ![Options Panel](roof_options.png)
+
+### The Action Panel
+The Actions panel is for sending Action requests to the Arduino..
+
+![Action Panel](action-controls.png)
 
 ## Weather protection.
 The driver will interact with the Ekos weather monitoring applications or DIY local sensors and the watchdog timer along with the other dome related drivers.
@@ -49,8 +54,21 @@ It is the Arduino code along with hardware build that is responsible for control
 
 Using a commercial controller of some kind can simplify the design of the Arduino project. A controller can provide proper sizing of the motor for the size and weight of the roof. Provide obstruction protection, enforce range limits, variable force adjustments, slow start and slow stop to lessen the impact of sudden activation to get the roof moving. Some models will run off solar power and the choice of chain or track. With a controller that can be activated by a single or a pair of on/off button it is a simple job to wire a relay in parallel to emulate the pushing of a button. There is built in support in the example relay code to temporarily close a relay for a particular length of time. Such controllers have their own way of detecting the end of roof travel in order to stop movement. Additional switches are required to notify the Arduino when the roof is fully opened or fully closed. The Arduino can then relay that information to the driver when requested.
 
+## Version Change
+With INDI release 2.0.10 extra Actions were added to the driver. The driver provides an interface for eight Actions. Arduino code written before the Actions were added can not support the action requests and would report errors if they were communicated from the driver. The driver will always show the extra actions in its Action panels. Whether the Actions can be used will be determined when the Arduino first connects to the rolloffino driver. If the Arduino code is older, the driver will suppress the actions preventing them from being sent to the Arduino. Current examples provided with the action code implemented will inform the driver how many it can support. Only the number of actions that are supported in software and hardware should be requested. This will reduce chances for errors and limit the communication trafic. The newer examples will have .ext added to their name.
+
 ## Arduino Examples
 Example Arduino code is provided as a starting point. The Arduino code examples provides communication with the driver and template code for reading switches and setting relays. The selected starting code will need to be moved to a directory for development. The name of the directory and the name of the Arduino sketch should be the same. The code name must have a .ino extension. For example ~/Projects/arduino/roof/roof.ino Then you work in the Arduino IDE to edit and load the code onto your Arduino device. The IDE can be downloaded and installed from the arduino.cc web site. You use the IDE to select the type of Arduino board you are working with and define the USB port connecting it. The IDE can be used to edit the code, run builds and load the built sketch onto the Arduino board. https://www.arduino.cc/en/software. Use the most recent Arduino IDE 2 release.
+
+### rolloff.ino.standard.ext
+Similar to the rolloff.ino.standard using a relay shield. Intended to be able to use it with a gate or garage door controller without the need for editing. Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions.
+
+### rolloff.ino.relay.ext
+Like the standard but uses both a relay shield and a four channel relay module. Provides two example Actions associated with the relay module.
+
+### rolloff.ino.linear.ext
+Meant to show some more flexible use for Actions.
+Use of a separate four channel relay module rather than a relay shield. Uses one relay for the usual sliding gate controller for the roof. Requests four additional Actions. Uses one action for two Linear Actuators operating in unison operated by a single switch in the driver. A LN298N motor controller is used to operate the linear actuators. The LN298N PWM option is used to compensate for differences in performance between the linear actuators. Like rolloff.ino.relay.ext uses other Actions to set a momentary relay (push button) and provide status feedback. The third action sets and holds a relay until manually released no status response provided. Ignores any driver activity for action number four.
 
 ### rolloff.ino.standard.
 This is a non specific general example as a starting point. It is close to the AR1450 example. But without the Arduino Due specific code and the pull-down resistor orientation in the specific implementation. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This might be the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1.
@@ -152,8 +170,8 @@ Command:   CON 	(CON:0:0)              Establish initial connection with Arduino
 	   GET	(GET:state:value)      Get state of a switch
 	   SET 	(SET:target:value)     Set relay closed or open
 
-           state:   OPENED | CLOSED | LOCKED | AUXSTATE
-           target:  OPEN | CLOSE | ABORT | LOCK | AUXSET
+           state:   OPENED | CLOSED | LOCKED | AUXSTATE | ACTnSTATE
+           target:  OPEN | CLOSE | ABORT | LOCK | AUXSET | ACTnSET
            value:   ON | OFF | 0 | text-message
 
 Response:  ACK       Success returned from Arduino
@@ -162,7 +180,7 @@ Response:  ACK       Success returned from Arduino
 Examples:        From the Driver      Response From the Arduino
                  ----------------     --------------------------
 Initial connect (CON:0:0)          >   	
-                                   <  (ACK:0:version) | (NAK:ERROR:message)
+                                   <  (ACK:0:version) | (ACK:0:version [actions]) | (NAK:ERROR:message)
 Read a switch   (GET:OPENED:0)     >
                                    <  (ACK:OPENED:ON|OFF) | (NAK:ERROR:message)
 Set a relay     (SET:CLOSE:ON|OFF) > 
@@ -172,11 +190,6 @@ Set a relay     (SET:CLOSE:ON|OFF) >
 # A project build example.
 
 The images match with the rolloffino.ino.ar1450 install.
-
-The pin connections. The baloon looking things next to the pull-down resistors are meant to be the fully open/closed switches. With the pull-down resistors an open switch would return LOW when the pin is read. The connection to the Aleko controller to act in place of the single push button comes off of the Normally Open relay NO connection.
-
-![Due Wiring](layout_due.jpg)
-
 
 The Arduino Due with a relay board. The additional DC supply is to provide the higher voltage required for the relays. The relay bank is opto-isolated from the protected 3.3V Arduino Due which has its own supply. Here only one of the two USB connections is in use. The other can be connected if debug logging is required. Just the single relay on the right is in use with the red and black wires routed to the Aleko controller. When the relay closes, then opens it will replace the action of a manual push button closing a connection.
 
