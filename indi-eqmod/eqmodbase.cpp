@@ -263,7 +263,7 @@ bool EQMod::initProperties()
 
     loadProperties();
 
-    initSlewRate();
+    initSlewRates();
 
     AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
     AddTrackMode("TRACK_SOLAR", "Solar");
