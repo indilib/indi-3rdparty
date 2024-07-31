@@ -12,14 +12,14 @@
  *
  * tg July 2024     Add additional Actions. Indicate to the driver during handshake
  *                  that they are supported and the driver can issue them. The driver needs 
- *                  to be INDI V2.0.10 or later. 
+ *                  to be later than INDI V2.0.9. 
  */
 
 /*
  * The driver can support up to 8 extra actions. The Arduino sketch indicates it can accept 
  * actions and how many during the initial connection. It does so in the following manner.
- *     Use version_id like "V1.3-0" which indicates the extra actions not supported.
- *     Use version_id like "V1.3-0 [ACT2]" if extra actions are supported.
+ *     Use version_id like "V1.3" which indicates the extra actions not supported.
+ *     Use version_id like "V1.3 [ACT2]" if extra actions are supported.
  * Additional actions will typically be used to set extra relays. But this depends on the
  * Arduino implementation. Only indicate support for the number of additional actions the 
  * sketch can recognise and support. For each additional action the Arduino requests it needs
@@ -52,8 +52,8 @@
 // Start of Definitions
 //////////////////////////////////////////////////////////
 
-//#define VERSION_ID "V1.3-0"        // Action relays not connected
-#define VERSION_ID "V1.3-0 [ACT4]"  // Action relay driver support enable
+//#define VERSION_ID "V1.3"        // Action relays not connected
+#define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
 
 // Switch definition, indicates when switch is open the voltage on the pin will be HIGH indicating off.
 // Changing to LOW requires installation of external pull-down resistors.
