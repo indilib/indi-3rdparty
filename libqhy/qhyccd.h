@@ -957,6 +957,9 @@ EXPORTFUNC uint32_t STDCALL SetQHYCCDFrameDetectOnOff(qhyccd_handle *handle, boo
 
 EXPORTFUNC uint32_t STDCALL GetQHYCCDSensorName(qhyccd_handle *handle, char *name);
 
+EXPORTFUNC uint8_t STDCALL GetCameraIsSuperSpeedFromID(char* id);
+
+EXPORTC void STDCALL EnableSupportOICamera(char* password);
 #if 0//PCIE_MODE_TEST
 
 #include "riffa.h"

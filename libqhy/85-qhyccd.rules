@@ -114,6 +114,7 @@ ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0585", RUN+="/sbin/fxload -t fx3 -I 
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0678", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III678.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0715", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III715.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0568", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY5III568.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0587", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/miniCam8.img -D $env{DEVNAME}"
 
 #QHYCCD Scientific Camera (7:QHY42,QHY42PRO,QHY2020,QHY4040,QHY4040PRO,QHY6060,QHY411,QHY461)
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="4200", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY42.img -D $env{DEVNAME}"
@@ -161,7 +162,8 @@ ATTRS{idVendor}=="1618", ATTRS{idProduct}=="d183", RUN+="/sbin/fxload -t fx3 -I 
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="d991", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY991.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c192", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY1920.img -D $env{DEVNAME}"
 ATTRS{idVendor}=="1618", ATTRS{idProduct}=="0768", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY10768.img -D $env{DEVNAME}"
-
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c992", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY992.img -D $env{DEVNAME}"
+ATTRS{idVendor}=="1618", ATTRS{idProduct}=="c487", RUN+="/sbin/fxload -t fx3 -I /lib/firmware/qhy/QHY487.img -D $env{DEVNAME}"
 
 #===============================================================================
 # 2. Make all devices accessible by the user by fixing the permission.
