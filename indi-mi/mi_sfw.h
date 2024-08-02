@@ -47,6 +47,9 @@ class MISFW : public INDI::FilterWheel
         ISwitch ReinitS[1];
         ISwitchVectorProperty ReinitSP;
 
+        IText InfoT[3];
+        ITextVectorProperty InfoTP;
+
     private:
         char name[MAXINDIDEVICE];
 
