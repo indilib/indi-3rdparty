@@ -356,6 +356,16 @@ bool INDIGPIO::ISNewText(const char * dev, const char * name, char * texts[], ch
             return true;
         if (INDI::OutputInterface::processText(dev, name, texts, names, n))
             return true;
+
+        // Chip name
+        if (ChipNameTP.isNameMatch(name))
+        {
+            ChipNameTP.update(texts, names, n);
+            ChipNameTP.setState(IPS_OK);
+            ChipNameTP.apply();
+            saveConfig(ChipNameTP);
+            return true;
+        }
     }
 
     return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
