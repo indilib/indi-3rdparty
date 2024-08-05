@@ -28,19 +28,13 @@
 
 /*  
  * This rolloff.ino example demonstates:
- * - Use of a separate four channel relay module rather than a relay shield.
- * - Request for four additional Actions.
- *   1. Two Linear Actuator operating in unison operated by a single switch inthe driver.
- *   2. An Action to set a momentary relay (push button) and provide status feedback.
- *   3. Set and hold on a relay until released no response provided.
- *   4. Ignore any driver activity for action #4.
+ * Two Linear Actuator operating in unison operated by the roof open and close buttons.
+ * Use of a separate four channel relay module rather than a relay shield.
+ * Request for two additional Actions.
+*    1. An Action to set a momentary relay (push button) and provide status feedback.
+ *   2. Another Action to set and hold on a relay until released no response provided.
  *
- * The linear actuators (LAs)are controlled by a single driver Action. "On" = Open, "Off" = Close.
- * They could just as well be controlled by the two Open and Close driver switches.
- * A single switch in the driver turned on or off to extend or retract the LAs.
- * The example assumes opening the observatory roof will be done by a one relay driven gate opener.
- * The gate opener controller will stop itself when end of travel is reached.
- * A single Action will activate two linear actuators controlled by a L298N motor controler. 
+ * The linear actuators (LAs) are controlled by a L298N motor controler.
  * It depends upon fully opened and fully closed switches to indicate the LA's end of travel positions.
  * Monitor those switches to stop movement at the limits and provide status information back 
  * to the driver. The L298N is a controller to operate two DC motors. The two LAs of the same model
@@ -52,8 +46,16 @@
 // Start of Definitions
 //////////////////////////////////////////////////////////
 
+//   Operation    Activation     Completion
+//
+//  Open          LA 100         SWITCH_OPENED SWITCH_1 A0
+//  Close         LA 100         SWITCH_CLOSED SWITCH_2 A1
+//  ACT1          RELAY_7 11     ACT1STATE     SWiTCH_4 A3
+//  ACT2          RELAY_8 12     ACT2STATE     SWiTCH_5 A4
+//
+
 //#define VERSION_ID "V1.3"        // Action relays not connected
-#define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
+#define VERSION_ID "V1.3 [ACT2]"  // Action relay driver support enable
 
 // Switch definition, indicates when switch is open the voltage on the pin will be HIGH indicating off.
 // Changing to LOW requires installation of external pull-down resistors.
@@ -66,20 +68,14 @@
 // requests will be ignored.
 // There are times when you might not want a status request to be automatically handled by a
 // status switch. Before responding with a status switch the switch info will be passed to
-// "requestReceived" routine for any special handling. For example a generic example does
-// not know what the Actions will be used for. So no provision for any specific operational
-// differences in the driver. The Linear Actuator example uses one switch in the driver. But 
-// it needs two sensors, one for fully opened and one for fully closed. It will be using ACT1 
-// to make the request and will default to look for ACT1STATE (SWITCH_3) for the response. Let that pass 
-// through the default code and extend it in the breakout routine "requestReceived". Also 
-// SWITCH_4 needs to be included in the setup routine.
+// "requestReceived" routine for any special handling. 
 
-// Define input switch pins, and a name to pin assignment
+// Define input switch pins (sensors), and a name to pin assignment
 #define SWITCH_1 A0  // white roof fully opened
 #define SWITCH_2 A1  // red   roof fully closed
-#define SWITCH_3 A2  // blue  LA fully opened    ACT1
-#define SWITCH_4 A3  // red   LA fully closed    ACT1  
-#define SWITCH_5 A4  // black ACT2 manual ON
+#define SWITCH_3 A2  // blue  unused             Temp local BUTTON_STOP for testing                 
+#define SWITCH_4 A3  // red      "
+#define SWITCH_5 A4  // black ACT1 manual ON momentary
 #define SWITCH_6 A5  // no switch provided       Temp  local BUTTON_OPEN for testing
 
 // For the normal roof position switches
@@ -89,7 +85,7 @@
 #define SWITCH_CLOSED SWITCH_2  // Fully closed roof is assigned to switch 2
 #define SWITCH_LOCKED 0         // External lock
 #define SWITCH_AUX 0            // Auxiliary switch
-#define ACT1STATE SWITCH_3      // Linear Actuator uses SW3 & SW4 (fully opened or fully closed)
+#define ACT1STATE SWITCH_4      // Action switch manual set
 #define ACT2STATE SWITCH_5      // Action switch manual set
 #define ACT3STATE 0             // Action switch no status switch provided
 #define ACT4STATE 0 
@@ -108,6 +104,8 @@
 #define INTERNAL_PWR RELAY_5  // Provide 12V power to L298N motor control
 #define BUTTON_OPEN SWITCH_6  // For off-line testing
 #define BUTTON_CLOSE 2
+#define BUTTON_STOP  SWITCH_3
+
 
 // Define output relays, name to pin assignments. The first 4 definitions match the
 // Arduino.cc standard Uno relay shield. It was removed for this test to free
@@ -119,7 +117,7 @@
 
 // 4 channel relay module
 #define RELAY_5 3   // LA PWR
-#define RELAY_6 4   // Main roof Open/Close
+#define RELAY_6 4   // 
 #define RELAY_7 11  // GP relay
 #define RELAY_8 12  // GP relay
 
@@ -139,21 +137,21 @@
 // their own relay, then choose between use of AUX or LOCK. Or extend the relay definitions.
 // Use 0 if function not supportd.  Set to 100 if there is special code added to handle it.
 //
-#define FUNC_OPEN RELAY_6
-#define FUNC_CLOSE RELAY_6  // For a single button controller might map this also to RELAY_1
-#define FUNC_STOP RELAY_6   // For a single button controller might map this also to RELAY_1
+#define FUNC_OPEN  100      //  
+#define FUNC_CLOSE 100      // For a single button controller might map this also to RELAY_1
+#define FUNC_STOP  100      // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK 0         // If automated roof lock is available.
 #define FUNC_AUX 0          // Relay to perform some unspecified function
 
 // Actions examples
-// Relay shield removed to free up pins for LA control. So open/close moved to relay module bank.
-// One relay used for main roof, and one for internal power to L298N controller. Leaving two relays
-// used by Action 2 & 3. Action 4 not used.
+// Relay shield previously removed to free up pins for LA control. 
+// One relay used for internal power to L298N controller. Leaving three relays
+// Two used by Action 1 & 2.
 // Define the additional functions as action relays
 // Use 0 if function not supported.  Set to 100 if there is special code added to handle it.
-#define FUNC_ACT1 100      // Open or Close Linear Actuators
-#define FUNC_ACT2 RELAY_7  // General purpose relay activation with status feedback (SWITCH5)
-#define FUNC_ACT3 RELAY_8  // General purpose relay activation without status feedback
+#define FUNC_ACT1 RELAY_7  // General purpose relay activation with status feedback (SWITCH5)
+#define FUNC_ACT2 RELAY_8  // General purpose relay activation without status feedback
+#define FUNC_ACT3 0
 #define FUNC_ACT4 0
 #define FUNC_ACT5 0
 #define FUNC_ACT6 0
@@ -176,10 +174,10 @@
 #define FUNC_STOP_HOLD 0
 #define FUNC_LOCK_HOLD 1
 #define FUNC_AUX_HOLD 1
-#define FUNC_ACT1_HOLD 1
-#define FUNC_ACT2_HOLD 0  // Action 2 push button
-#define FUNC_ACT3_HOLD 1  // Action 3 held on
-#define FUNC_ACT4_HOLD 1  // Action 4 not used
+#define FUNC_ACT1_HOLD 0  // Action 1 push button
+#define FUNC_ACT2_HOLD 1  // Action 2 held on
+#define FUNC_ACT3_HOLD 1
+#define FUNC_ACT4_HOLD 1
 #define FUNC_ACT5_HOLD 1
 #define FUNC_ACT6_HOLD 1
 #define FUNC_ACT7_HOLD 1
@@ -299,14 +297,14 @@ relay_control relay_info[cmd_len] = {
   { CMD_ACT8SET, "ACT8SET", FUNC_ACT8, FUNC_ACT8_HOLD, FUNC_ACT8_ACTIVE }
 };
 
-// Linear Actuator Action states
-enum a_state {
-  A_OPENED,
-  A_CLOSED,
-  A_PARTIAL,
-  A_OPENING,
-  A_CLOSING
-} action_state;
+// Roof state
+enum r_state {
+  R_OPENED,
+  R_CLOSED,
+  R_PARTIAL,
+  R_OPENING,
+  R_CLOSING
+} roof_state;
 
 
 //  Maximum length of messages = 63                                               *|
@@ -649,25 +647,11 @@ bool isStopAllowed() {
 
 void requestReceived(int sw) {
   char error[MAX_MESSAGE];
-  // Intervention if ACT1 for the linear actuator continues to be a single button in driver.
-  // In this case on = open, off = close. This requires fully opened and fully closed switches.
-  // When we receive "ACT1STATE" will have to decode which status it is wanting & return that.
-  if (strcmp(target, "ACT1STATE") == 0) {
-    if (getActCompletion(value)) {
-      sendAck(value);
-    } else {
-      strcpy(error, ERROR12);
-      strcat(error, target);
-      sendNak(error);
-    }
 
-  }
   // Normal status completion indicated by a sensor or switch being set if there is one
   // associated with the Action
-  else {
-    getSwitch(sw, value);
-    sendAck(value);  // Send result of reading pin associated with "target"
-  }
+  getSwitch(sw, value);
+  sendAck(value);  // Send result of reading pin associated with "target"
 }
 
 
@@ -690,42 +674,58 @@ void requestReceived(int sw) {
 void commandReceived(int relay, int activate, int hold, char* value) {
   // Intervene here
   char error[MAX_MESSAGE];
+
   if (relay != 100) {
     setRelay(relay, activate, hold, value);
     sendAck(value);  // Send acknowledgement pin associated with "target" was activated
     return;
   }
-  // Look for action command
-  if (command_input == CMD_ACT1SET) {
-    if (setAction(value, error)) {
+
+  if (command_input == CMD_OPEN || command_input == CMD_CLOSE || command_input == CMD_STOP) {
+  // Perform linear actuator related command
+    if (startCommand(command_input, error)) {    
       sendAck(value);
-    } else {
+    }
+    else {
       sendNak(error);
     }
-  } else
+  } 
+  else {
     sendNak(ERROR9);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Linear Actuator code  - Using a L298N motor controller
 ////////////////////////////////////////////////////////////////////////////////
 
-bool open = false;
+// Driver initiating Open, Close or Stop (Linear Actuator) 
+bool startCommand(cmd_input command, char* error) 
+{
+  bool open = false;
 
-// Driver initiating Open or Close Linear Actuator 
-bool setAction(char* value, char* error) {
-  open = false;
-  if (strcmp(value, "ON") == 0) {
+  if (command == CMD_STOP) {
+    if (isRoofOpening() || isRoofClosing()) {
+      digitalWrite(INTERNAL_PWR, HIGH);  // Remove power from the L298N controller
+      roof_state = R_PARTIAL;
+    }  
+    return true;
+  }
+  // Code shared for OPEN and CLOSE
+  if (command == CMD_OPEN) {
     open = true;
+  }
+  if (command == CMD_CLOSE) {
+    open = false;
   }
 
   // If already in requested state return error
-  if (open && isActionOpened()) {
+  if (open && isRoofOpened()) {
       strcpy(error, ERROR12);
       strcat(error, "OPENED");
     return false;
   }
-  else if (!open && isActionClosed()) {
+  else if (!open && isRoofClosed()) {
       strcpy(error, ERROR12);
       strcat(error, "CLOSED");
     return false;
@@ -733,8 +733,8 @@ bool setAction(char* value, char* error) {
 
   // If target already moving, example being an "ON" followed by a "OFF" or vice versa. 
   // Forcing command helps for recovery when fully traveled sensors not working.
-  if (action_state == A_OPENING) {
-    action_state = A_PARTIAL;
+  if (roof_state == R_OPENING) {
+    roof_state = R_PARTIAL;
     open = false;
     stopActuator();
     startActuator(open);
@@ -742,8 +742,8 @@ bool setAction(char* value, char* error) {
     strcat(error, "OPENING");
     return false;
   }
-  if (action_state == A_CLOSING) {
-    action_state = A_PARTIAL;
+  if (roof_state == R_CLOSING) {
+    roof_state = R_PARTIAL;
     open = false;
     stopActuator();
     startActuator(open);
@@ -755,75 +755,58 @@ bool setAction(char* value, char* error) {
   // Start Linear Actuator moving
   startActuator(open);
   if (open)
-    action_state = A_OPENING;
+    roof_state = R_OPENING;
   else
-    action_state = A_CLOSING;
-  return true;
-}
-
-// Driver requesting some earlier command's completion status
-// Special case one driver switch with individual fullyOpened and fullyClosed
-// sensors/switches. If query is for opened then value already holds 
-// ACT1STATE (SWITCH_3) state. If it is for closed then need to read 
-//     -     (SWITCH_4) instead.
-bool getActCompletion(char* value) {
-  if (!open) {
-    if (isSwitchOn(SWITCH_4)) {       
-      strcpy(value, "ON");
-    } 
-    else {
-      strcpy(value, "OFF");
-    }
-  }
+    roof_state = R_CLOSING;
   return true;
 }
 
 // Stop movement of LA if completion sensor/switch closed
 void monitorCompletions() {
-  if (action_state == A_OPENING) {
-    if (isActionOpened()) {
+  if (roof_state == R_OPENING) {
+    if (isRoofOpened()) {
       stopActuator();
-      action_state = A_OPENED;
+      roof_state = R_OPENED;
     }
   }
-  else if (action_state == A_CLOSING) {
-    if (isActionClosed()) {
+  else if (roof_state == R_CLOSING) {
+    if (isRoofClosed()) {
       stopActuator();
-      action_state = A_CLOSED;
+      roof_state = R_CLOSED;
     }
   }
-  else if (isActionOpened()) {
-    if (action_state != A_OPENED) {
+  else if (isRoofOpened()) {
+    if (roof_state != R_OPENED) {
       stopActuator();
-      action_state = A_OPENED;
+      roof_state = R_OPENED;
     }
   } 
-  else if (isActionClosed()) {
-    if (action_state != A_CLOSED) {
+  else if (isRoofClosed()) {
+    if (roof_state != R_CLOSED) {
       stopActuator();
-      action_state = A_CLOSED;
+      roof_state = R_CLOSED;
     }
   }
 }
 
-bool isActionOpened() {
-  return isSwitchOn(ACT1STATE);
+bool isRoofOpened() {
+  return isSwitchOn(SWITCH_OPENED);
 }
 
-bool isActionClosed() {
-  return isSwitchOn(SWITCH_4);  // special
+bool isRoofClosed() {
+  return isSwitchOn(SWITCH_CLOSED);
 }
 
-bool isActionOpening() {
-  return (!isActionOpened() && !isActionClosed() && action_state == A_OPENING);
+bool isRoofOpening() {
+  return (!isRoofOpened() && !isRoofClosed() && roof_state == R_OPENING);
 }
 
-bool isActionClosing() {
-  return (!isActionOpened() && !isActionClosed() && action_state == A_CLOSING);
+bool isRoofClosing() {
+  return (!isRoofOpened() && !isRoofClosed() && roof_state == R_CLOSING);
 }
 
-bool isActionPartial() {
-  return (!isActionOpened() && !isActionClosed() && action_state == A_PARTIAL);
+bool isRoofPartial() {
+  return (!isRoofOpened() && !isRoofClosed() && roof_state == R_PARTIAL);
 }
 
 // Dealing with two LAs, move them together
@@ -833,7 +816,7 @@ bool isActionPartial() {
 void startActuator(bool openAct) {
   digitalWrite(INTERNAL_PWR, LOW);   // Apply power to the L298N controller
   delay(100);
-  if ((open && LA_OPEN_EXTEND == 1) || (!openAct && LA_OPEN_EXTEND == 0)) {
+  if ((openAct && LA_OPEN_EXTEND == 1) || (!openAct && LA_OPEN_EXTEND == 0)) {
     analogWrite(INTERNAL_A_PWM, 220);  
     analogWrite(INTERNAL_B_PWM, 130);  
     digitalWrite(INTERNAL_A_FWD, LOW);
@@ -863,34 +846,31 @@ void stopActuator() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// For local testing
+// For local testing without the driver
 bool localButtons() {
-  char bval[MAX_MESSAGE];
   char error[MAX_MESSAGE];
-
-  if (isSwitchOn(BUTTON_OPEN)) {
-    delay(200);
-    strcpy(bval, "ON");
-  } 
-  else if (isSwitchOn(BUTTON_CLOSE)) {
-    delay(500);
-    strcpy(bval, "OFF");
-  } 
-  else 
-    return false;
-  
-  if (!setAction(bval, error)) {
-    Serial.println(error);
-    return false;
+  cmd_input cmd = CMD_NONE;
+  if (isSwitchOn(BUTTON_OPEN))
+    cmd = CMD_OPEN;
+  else if (isSwitchOn(BUTTON_CLOSE))
+    cmd = CMD_CLOSE;
+  else if (isSwitchOn(BUTTON_STOP))
+    cmd = CMD_STOP;
+  delay(1000);
+  if (cmd != CMD_NONE) {
+    if (startCommand(cmd, error))
+      return true;
   }
-  return true; 
+  return false;
 }
+
+// For local testing without the driver
 void track() {
-  if (action_state == A_PARTIAL) Serial.println("Partial"); 
-  if (action_state == A_OPENED) Serial.println("Opened"); 
-  if (action_state == A_CLOSED) Serial.println("Closed"); 
-  if (action_state == A_OPENING) Serial.println("Opening"); 
-  if (action_state == A_CLOSING) Serial.println("Closing"); 
+  if (roof_state == R_PARTIAL) Serial.println("Partial"); 
+  if (roof_state == R_OPENED) Serial.println("Opened"); 
+  if (roof_state == R_CLOSED) Serial.println("Closed"); 
+  if (roof_state == R_OPENING) Serial.println("Opening"); 
+  if (roof_state == R_CLOSING) Serial.println("Closing"); 
 }
 
 void setup() {
@@ -898,9 +878,9 @@ void setup() {
   for (int i = 0; i < switch_count; i++) {
     initInput(switch_info[i].source);
   }
-  initInput(SWITCH_4);  
   initInput(BUTTON_OPEN);  // Initialize the local input buttons
   initInput(BUTTON_CLOSE);
+  initInput(BUTTON_STOP);
 
   //initInput(INTERNAL_A_POT);      // Linear Actuator A feedback potentiometer
   //initInput(INTERNAL_B_POT);      // Linear Actuator B feedback potentiometer
@@ -920,15 +900,18 @@ void setup() {
   deactivateLA(INTERNAL_B_REV);
   // Establish initial state
 
-  if (isActionOpened())
-    action_state = A_OPENED;
-  else if (isActionClosed())
-    action_state = A_CLOSED;
-  else
-    action_state = A_PARTIAL;
+  if (isRoofOpened()) {
+    roof_state = R_OPENED;
+  }  
+  else if (isRoofClosed()) {
+    roof_state = R_CLOSED;
+  }
+  else {
+    roof_state = R_PARTIAL;
+  }
 
   Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
-  //Serial.begin(9600);
+  //Serial.begin(9600);     // For testing without the driver
 }
 
 void initInput(int pin) {
@@ -963,17 +946,14 @@ void loop() {
   while (Serial.available() <= 0) {
     for (int cnt = 0; cnt < 60; cnt++) {
       monitorCompletions();
-      if (localButtons()) {
-        delay(500);
-        break;
-      }
+      //localButtons()
       if (Serial.available() > 0)
         break;
       else
         delay(200);
-//    track();
     }
   }
+  track();
   readUSB();
 }  // end loop
 

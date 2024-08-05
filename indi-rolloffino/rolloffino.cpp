@@ -1393,7 +1393,7 @@ bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
     strcpy(inoVal, strtok(nullptr, ")"));
     if ((strcmp(inoCmd, "NAK")) == 0)
     {
-        LOGF_WARN("Negative response from roof controller error: %s", inoVal);
+        LOGF_WARN("Negative response from roof controller error: %s", inoTarget);
         return false;
     }
     // If it is in response to a connect request return result true
@@ -1402,7 +1402,13 @@ bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
         *result = true;
         return true;
     }
-    // Otherwise return result ON/OFF as true/false
+    if ((strcmp(inoCmd, "ACK")) != 0)
+    {
+        LOGF_ERROR("Unrecognized response from roof controller: %s", inoCmd);
+        return false;
+    }
+
+     // Otherwise return result ON/OFF as true/false
     *result = (strcmp(inoVal, "ON") == 0);
     return true;
 }
@@ -1410,41 +1416,62 @@ bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
 bool RollOffIno::readIno(char* retBuf)
 {
     bool stop = false;
-    bool start_found = false;
+    bool startFound = false;
+    bool endFound = false;
     int status;
     int retCount = 0;
     int totalCount = 0;
+    int delimCount = 0;
+    int cmdLen = MAXINOCMD - 5;
+    int targetLen = MAXINOTARGET + cmdLen - 5;
     char* bufPtr = retBuf;
     char errMsg[MAXINOERR];
-
+    const char* canned = "(NAK:NONE:OFF)";
     while (!stop)
     {
-        bufPtr = bufPtr + retCount;
+        if (startFound)
+            bufPtr = bufPtr + retCount;
         status = tty_read(PortFD, bufPtr, 1, MAXINOWAIT, &retCount);
         if (status != TTY_OK)
         {
             tty_error_msg(status, errMsg, MAXINOERR);
-            LOGF_DEBUG("Roof control connection error: %s", errMsg);
+            LOGF_WARN("Roof control connection error: %s", errMsg);
             communicationErrors++;
             return false;
         }
-        if (retCount > 0)
-        {
-            communicationErrors = 0;
-            if (*bufPtr == 0X28)             // '('   Start found
-                start_found = true;
-            if (!start_found)
-                retCount = 0;
+        if (retCount <= 0)
+            continue;
+        if (*bufPtr == 0X28)          // '('   Start found
+            startFound = true;
+        else if (*bufPtr == 0X3A)     // ':'   delim found
+            delimCount++;
+        else if (*bufPtr == 0X29)     // ')'   End found
+            endFound = true;
+        if (startFound)
             totalCount += retCount;
-            if ((*bufPtr == 0X29) || (totalCount >= MAXINOBUF - 2))  // ')'   End found
-            {
-                *(++bufPtr) = 0;
-                stop = true;
-            }
+
+        // Protect against input probes
+        if ((totalCount >= MAXINOVAL) || ((totalCount >= 2) && !startFound) ||
+            ((totalCount >= cmdLen) && (delimCount == 0)) ||
+            ((totalCount >= targetLen) && (delimCount < 2)) ||
+            (endFound && delimCount != 2))
+        {
+            communicationErrors++;
+            *(++bufPtr) = 0;
+            LOGF_ERROR("Received communication protocol not valid %s", retBuf);
+            strcpy(retBuf, canned);
+            return false;
+        }
+        else if (endFound)
+        {
+            *(++bufPtr) = 0;
+            stop = true;
         }
     }
     return true;
 }
+
+
 
 bool RollOffIno::writeIno(const char* msg)
 {
