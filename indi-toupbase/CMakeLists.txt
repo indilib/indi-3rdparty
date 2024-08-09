@@ -47,6 +47,7 @@ include(CMakeCommon)
 
 set(indi_toupbase_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.cpp ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp)
 set(indi_wheel_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/indi_toupwheel.cpp ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp)
+set(indi_focuser_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/indi_focuser.cpp ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp)
 
 ########### indi_toupcam_* ###########
 add_executable(indi_toupcam_ccd ${indi_toupbase_SRCS})
@@ -55,6 +56,9 @@ target_link_libraries(indi_toupcam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${
 add_executable(indi_toupcam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_toupcam_wheel PRIVATE "-DBUILD_TOUPCAM")
 target_link_libraries(indi_toupcam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TOUPCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_toupcam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_toupcam_focuser PRIVATE "-DBUILD_TOUPCAM")
+target_link_libraries(indi_toupcam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TOUPCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_altair_* ###########
 add_executable(indi_altair_ccd ${indi_toupbase_SRCS})
@@ -63,6 +67,9 @@ target_link_libraries(indi_altair_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${A
 add_executable(indi_altair_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_altair_wheel PRIVATE "-DBUILD_ALTAIRCAM")
 target_link_libraries(indi_altair_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ALTAIRCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_altair_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_altair_focuser PRIVATE "-DBUILD_ALTAIRCAM")
+target_link_libraries(indi_altair_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${ALTAIRCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_bressercam_* ###########
 add_executable(indi_bressercam_ccd ${indi_toupbase_SRCS})
@@ -71,6 +78,9 @@ target_link_libraries(indi_bressercam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES}
 add_executable(indi_bressercam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_bressercam_wheel PRIVATE "-DBUILD_BRESSERCAM")
 target_link_libraries(indi_bressercam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${BRESSERCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_bressercam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_bressercam_focuser PRIVATE "-DBUILD_BRESSERCAM")
+target_link_libraries(indi_bressercam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${BRESSERCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_mallincam_* ###########
 add_executable(indi_mallincam_ccd ${indi_toupbase_SRCS})
@@ -79,6 +89,9 @@ target_link_libraries(indi_mallincam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} 
 add_executable(indi_mallincam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_mallincam_wheel PRIVATE "-DBUILD_MALLINCAM")
 target_link_libraries(indi_mallincam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_mallincam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_mallincam_focuser PRIVATE "-DBUILD_MALLINCAM")
+target_link_libraries(indi_mallincam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MALLINCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_nncam_* ###########
 add_executable(indi_nncam_ccd ${indi_toupbase_SRCS})
@@ -87,6 +100,9 @@ target_link_libraries(indi_nncam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${NN
 add_executable(indi_nncam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_nncam_wheel PRIVATE "-DBUILD_NNCAM")
 target_link_libraries(indi_nncam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${NNCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_nncam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_nncam_focuser PRIVATE "-DBUILD_NNCAM")
+target_link_libraries(indi_nncam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${NNCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_ogmacam_* ###########
 add_executable(indi_ogmacam_ccd ${indi_toupbase_SRCS})
@@ -95,6 +111,9 @@ target_link_libraries(indi_ogmacam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${
 add_executable(indi_ogmacam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_ogmacam_wheel PRIVATE "-DBUILD_OGMACAM")
 target_link_libraries(indi_ogmacam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OGMACAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_ogmacam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_ogmacam_focuser PRIVATE "-DBUILD_OGMACAM")
+target_link_libraries(indi_ogmacam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OGMACAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_omegonprocam_* ###########
 add_executable(indi_omegonprocam_ccd ${indi_toupbase_SRCS})
@@ -103,6 +122,9 @@ target_link_libraries(indi_omegonprocam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIE
 add_executable(indi_omegonprocam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_omegonprocam_wheel PRIVATE "-DBUILD_OMEGONPROCAM")
 target_link_libraries(indi_omegonprocam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OMEGONPROCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_omegonprocam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_omegonprocam_focuser PRIVATE "-DBUILD_OMEGONPROCAM")
+target_link_libraries(indi_omegonprocam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${OMEGONPROCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_starshootg_* ###########
 add_executable(indi_starshootg_ccd ${indi_toupbase_SRCS})
@@ -111,6 +133,9 @@ target_link_libraries(indi_starshootg_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES}
 add_executable(indi_starshootg_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_starshootg_wheel PRIVATE "-DBUILD_STARSHOOTG")
 target_link_libraries(indi_starshootg_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${STARSHOOTG_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_starshootg_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_starshootg_focuser PRIVATE "-DBUILD_STARSHOOTG")
+target_link_libraries(indi_starshootg_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${STARSHOOTG_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_tscam_* ###########
 add_executable(indi_tscam_ccd ${indi_toupbase_SRCS})
@@ -119,6 +144,9 @@ target_link_libraries(indi_tscam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TS
 add_executable(indi_tscam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_tscam_wheel PRIVATE "-DBUILD_TSCAM")
 target_link_libraries(indi_tscam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TSCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_tscam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_tscam_focuser PRIVATE "-DBUILD_TSCAM")
+target_link_libraries(indi_tscam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TSCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_meadecam_* ###########
 add_executable(indi_meadecam_ccd ${indi_toupbase_SRCS})
@@ -127,6 +155,9 @@ target_link_libraries(indi_meadecam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} $
 add_executable(indi_meadecam_wheel ${indi_wheel_SRCS})
 target_compile_definitions(indi_meadecam_wheel PRIVATE "-DBUILD_MEADECAM")
 target_link_libraries(indi_meadecam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_meadecam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_meadecam_focuser PRIVATE "-DBUILD_MEADECAM")
+target_link_libraries(indi_meadecam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${MEADECAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 #####################################
 
@@ -151,6 +182,16 @@ target_link_libraries(indi_omegonprocam_wheel rt)
 target_link_libraries(indi_starshootg_wheel rt)
 target_link_libraries(indi_tscam_wheel rt)
 target_link_libraries(indi_meadecam_wheel rt)
+target_link_libraries(indi_toupcam_focuser rt)
+target_link_libraries(indi_altair_focuser rt)
+target_link_libraries(indi_bressercam_focuser rt)
+target_link_libraries(indi_mallincam_focuser rt)
+target_link_libraries(indi_nncam_focuser rt)
+target_link_libraries(indi_ogmacam_focuser rt)
+target_link_libraries(indi_omegonprocam_focuser rt)
+target_link_libraries(indi_starshootg_focuser rt)
+target_link_libraries(indi_tscam_focuser rt)
+target_link_libraries(indi_meadecam_focuser rt)
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS
@@ -174,6 +215,16 @@ install(TARGETS
     indi_starshootg_wheel
     indi_tscam_wheel
     indi_meadecam_wheel
+    indi_toupcam_focuser
+    indi_altair_focuser
+    indi_bressercam_focuser
+    indi_mallincam_focuser
+    indi_nncam_focuser
+    indi_ogmacam_focuser
+    indi_omegonprocam_focuser
+    indi_starshootg_focuser
+    indi_tscam_focuser
+    indi_meadecam_focuser
     RUNTIME DESTINATION bin)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml DESTINATION ${INDI_DATA_DIR})
