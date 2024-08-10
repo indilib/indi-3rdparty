@@ -1429,8 +1429,8 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                     return GP_OK;
                 }
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out #%d, retrying...", ++timeoutCounter);
-                // So retry for 5 seconds before giving up
-                if (timeoutCounter >= 10)
+                // So retry for 900 seconds before giving up to accomodate internal dark frame in new Canon DSLR
+                if (timeoutCounter >= 900)
                 {
                     pthread_mutex_unlock(&gphoto->mutex);
                     return -1;
