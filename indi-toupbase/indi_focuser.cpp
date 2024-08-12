@@ -49,6 +49,18 @@ static class Loader
 ToupAAF::ToupAAF(const XP(DeviceV2) *instance, const char *name) : m_Instance(instance)
 {
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
+	
+    // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
+    FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
+                      FOCUSER_CAN_REL_MOVE |
+                      FOCUSER_CAN_ABORT    |
+                      FOCUSER_CAN_REVERSE  |
+                      FOCUSER_CAN_SYNC     |
+                      FOCUSER_HAS_BACKLASH);
+
+    // Just USB
+    setSupportedConnections(CONNECTION_NONE);
+	
     setDeviceName(name);
 }
 
@@ -99,6 +111,15 @@ bool ToupAAF::updateProperties()
         IUSaveText(&VersionTP[TC_REV], tmpBuffer);
 
         defineProperty(VersionTP);
+		
+	    if (readPosition())
+			IDSetNumber(&FocusAbsPosNP, nullptr);
+		if (readReverse())
+			IDSetSwitch(&FocusReverseSP, nullptr);
+		if (readBeep())
+			BeepSP.apply();
+		if (readBacklash())
+			IDSetNumber(&FocusBacklashNP, nullptr);	
 
         SetTimer(getCurrentPollingPeriod());
     }
@@ -124,7 +145,7 @@ bool ToupAAF::Connect()
     }
 	
     LOGF_INFO("%s is connected.", getDeviceName());
-    return true;	
+	return readMaxPosition();
 }
 
 bool ToupAAF::Disconnect()
@@ -248,7 +269,7 @@ void ToupAAF::TimerHit()
         return;
     }
 
-    if (GetPosition())
+    if (readPosition())
         IDSetNumber(&FocusAbsPosNP, nullptr);
 
     if (TemperatureNP.getState() != IPS_IDLE)
@@ -264,7 +285,7 @@ void ToupAAF::TimerHit()
 
     if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
     {
-        if (!IsMoving())
+        if (!isMoving())
         {
             FocusAbsPosNP.s = IPS_OK;
             FocusRelPosNP.s = IPS_OK;
@@ -287,26 +308,95 @@ bool ToupAAF::AbortFocuser()
     return true;
 }
 
-bool ToupAAF::GetPosition()
+bool ToupAAF::readPosition()
 {
     int val = 0;
     HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETPOSITION), 0, &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("GetPosition failed. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("readPosition failed. %s", errorCodes(rc).c_str());
         return false;
     }
     FocusAbsPosN[0].value = val;
     return true;
 }
 
-bool ToupAAF::IsMoving()
+bool ToupAAF::readMaxPosition()
+{
+    int val = 0;
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETMAXSTEP), 0, &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("readMaxPosition failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+    FocusAbsPosN[0].max = val;
+
+    rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETMAXSTEP), &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Failed to read max step range. Error: %d", rc);
+        return false;
+    }
+    FocusMaxPosN[0].max = val;
+
+    return true;
+}
+
+bool ToupAAF::readReverse()
+{
+	int val = 0;
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETDIRECTION), 0, &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("readReverse failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+
+    FocusReverseS[INDI_ENABLED].s  = val ? ISS_ON : ISS_OFF;
+    FocusReverseS[INDI_DISABLED].s = val ? ISS_OFF : ISS_ON;
+    FocusReverseSP.s = IPS_OK;
+    return true;
+}
+
+bool ToupAAF::readBacklash()
+{
+	int val = 0;
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETBACKLASH), 0, &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("readBacklash failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+    FocusBacklashN[0].value = val;
+    FocusBacklashNP.s = IPS_OK;
+    return true;
+}
+
+bool ToupAAF::readBeep()
+{
+	int val = 0;
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETBUZZER), 0, &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("readBeep failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+
+    BeepSP[INDI_ENABLED].setState(val ? ISS_ON : ISS_OFF);
+    BeepSP[INDI_DISABLED].setState(val ? ISS_OFF : ISS_ON);
+    BeepSP.setState(IPS_OK);
+
+    return true;
+}
+
+bool ToupAAF::isMoving()
 {
 	int val = 0;
 	HRESULT rc = FP(AAF(m_Handle, CP(AAF_ISMOVING), 0, &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("IsMoving failed. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("isMoving failed. %s", errorCodes(rc).c_str());
         return false;
     }
     return (val ? true : false);
