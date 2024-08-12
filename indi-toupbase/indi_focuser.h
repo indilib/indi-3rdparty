@@ -67,6 +67,9 @@ class ToupAAF : public INDI::Focuser
         virtual void TimerHit() override;
 
     private:
+		bool IsMoving();
+		bool GetPosition();
+		
         // Read Only Temperature Reporting
         INDI::PropertyNumber TemperatureNP{1};
 
