@@ -327,18 +327,36 @@ bool ToupAAF::readMaxPosition()
     HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETMAXSTEP), 0, &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("readMaxPosition failed. %s", errorCodes(rc).c_str());
+        LOGF_ERROR("get max step failed. %s", errorCodes(rc).c_str());
         return false;
     }
+    FocusAbsPosN[0].min = 0.;
     FocusAbsPosN[0].max = val;
+    FocusAbsPosN[0].value = 0.;
+    FocusAbsPosN[0].step = 1.;
+    FocusRelPosN[0].min = 0.;
+    FocusRelPosN[0].max = val / 2.0;
+    FocusRelPosN[0].value = 0.;
+    FocusRelPosN[0].step  = 1.;
 
     rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETMAXSTEP), &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Failed to read max step range. Error: %d", rc);
+        LOGF_ERROR("get range max for max step failed. Error: %d", rc);
         return false;
     }
     FocusMaxPosN[0].max = val;
+	
+    rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETBACKLASH), &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Failed to read max step range. Error: %d", rc);
+        return false;
+    }	
+    FocusBacklashN[0].min = 0;
+    FocusBacklashN[0].max = val;
+    FocusBacklashN[0].step = 1;
+    FocusBacklashN[0].value = 0;
 
     return true;
 }
