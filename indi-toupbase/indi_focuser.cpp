@@ -38,10 +38,10 @@ static class Loader
                     std::string name = std::string(DNAME) + " AAF";
                     if (iConnectedCount > 1)
                         name += " " + std::to_string(i + 1);
-                    wheels.push_back(std::unique_ptr<ToupAAF>(new ToupAAF(&pAAFInfo[i], name.c_str())));
+                    focusers.push_back(std::unique_ptr<ToupAAF>(new ToupAAF(&pAAFInfo[i], name.c_str())));
                 }
             }
-            if (wheels.empty())
+            if (focusers.empty())
                 IDLog("No focuser detected.");
         }
 } loader;
@@ -76,11 +76,6 @@ bool ToupAAF::initProperties()
     BeepSP[BEEP_ON].fill("ON", "On", ISS_ON);
     BeepSP[BEEP_OFF].fill("OFF", "Off", ISS_OFF);
     BeepSP.fill(getDeviceName(), "FOCUS_BEEP", "Beep", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
-    // Firmware version
-    VersionInfoSP[0].fill("VERSION_FIRMWARE", "Firmware", "Unknown");
-    VersionInfoSP[1].fill("VERSION_SDK", "SDK", "Unknown");
-    VersionInfoSP.fill(getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     setDefaultPollingPeriod(500);
 
@@ -140,7 +135,7 @@ bool ToupAAF::Disconnect()
 
 bool ToupAAF::SetFocuserMaxPosition(uint32_t ticks)
 {
-    HRESULT rc = FP(AAF((m_Handle, AAF_SETMAXINCREMENT, ticks, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETMAXINCREMENT), ticks, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("SetFocuserMaxPosition failed. %s", errorCodes(rc).c_str());
@@ -151,7 +146,7 @@ bool ToupAAF::SetFocuserMaxPosition(uint32_t ticks)
 
 bool ToupAAF::SetFocuserBacklash(int32_t steps)
 {
-    HRESULT rc = FP(AAF((m_Handle, TOUPCAM_AAF_SETBACKLASH, steps, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETBACKLASH), steps, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("SetFocuserBacklash failed. %s", errorCodes(rc).c_str());
@@ -162,7 +157,7 @@ bool ToupAAF::SetFocuserBacklash(int32_t steps)
 
 bool ToupAAF::ReverseFocuser(bool enabled)
 {
-    HRESULT rc = FP(AAF((m_Handle, AAF_SETDIRECTION, enabled ? 1 : 0, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETDIRECTION), enabled ? 1 : 0, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("SyncFocuser failed. %s", errorCodes(rc).c_str());
@@ -173,7 +168,7 @@ bool ToupAAF::ReverseFocuser(bool enabled)
 
 bool ToupAAF::SyncFocuser(uint32_t ticks)
 {
-    HRESULT rc = FP(AAF((m_Handle, AAF_SETZERO, 0, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETZERO), ticks, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("SyncFocuser failed. %s", errorCodes(rc).c_str());
@@ -193,7 +188,7 @@ bool ToupAAF::ISNewSwitch(const char * dev, const char * name, ISState * states,
     if (BeepSP.isNameMatch(name))
     {
         BeepSP.update(states, names, n);
-        HRESULT rc = FP(AAF((m_Handle, AAF_SETBUZZER, (BeepSP.findOnSwitchIndex() == BEEP_ON) ? 1 : 0);
+        HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETBUZZER), (BeepSP.findOnSwitchIndex() == BEEP_ON) ? 1 : 0, nullptr));
         if (SUCCEEDED(rc))
             BeepSP.setState(IPS_OK);
         else
@@ -211,7 +206,7 @@ bool ToupAAF::ISNewSwitch(const char * dev, const char * name, ISState * states,
 
 IPState ToupAAF::MoveAbsFocuser(uint32_t targetTicks)
 {
-    HRESULT rc = FP(AAF((m_Handle, AAF_SETPOSITION, targetTicks, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETPOSITION), targetTicks, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("MoveAbsFocuser failed. %s", errorCodes(rc).c_str());
@@ -232,7 +227,7 @@ IPState ToupAAF::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 
     // Clamp
     newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosN[0].max), newPosition));
-    HRESULT rc = FP(AAF((m_Handle, AAF_SETPOSITION, newPosition, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETPOSITION), newPosition, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("MoveRelFocuser failed. %s", errorCodes(rc).c_str());
@@ -259,7 +254,7 @@ void ToupAAF::TimerHit()
     if (TemperatureNP.getState() != IPS_IDLE)
     {
 		int curTemperature = 0;
-        rc = FP(AAF((m_Handle, AAF_GETTEMP, 0, &curTemperature));
+        HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETTEMP), 0, &curTemperature));
         if (SUCCEEDED(rc))
         {
             if (fabs(curTemperature / 10.0 - TemperatureNP[0].getValue()) >= 0.1)
@@ -283,7 +278,7 @@ void ToupAAF::TimerHit()
 
 bool ToupAAF::AbortFocuser()
 {
-    HRESULT rc = FP(AAF((m_Handle, AAF_HALT, 0, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_HALT), 0, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("AbortFocuser failed. %s", errorCodes(rc).c_str());
@@ -292,11 +287,11 @@ bool ToupAAF::AbortFocuser()
     return true;
 }
 
-bool ASIEAF::GetPosition()
+bool ToupAAF::GetPosition()
 {
     int val = 0;
-    EAF_ERROR_CODE rc = FP(AAF((m_Handle, AAF_GETPOSITION, 0, &val));
-    if (FAIELD(rc))
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETPOSITION), 0, &val));
+    if (FAILED(rc))
     {
         LOGF_ERROR("GetPosition failed. %s", errorCodes(rc).c_str());
         return false;
@@ -308,8 +303,8 @@ bool ASIEAF::GetPosition()
 bool ToupAAF::IsMoving()
 {
 	int val = 0;
-	HRESULT rc = FP(AAF((m_Handle, AAF_ISMOVING, 0, &val));
-    if (FAIELD(rc))
+	HRESULT rc = FP(AAF(m_Handle, CP(AAF_ISMOVING), 0, &val));
+    if (FAILED(rc))
     {
         LOGF_ERROR("IsMoving failed. %s", errorCodes(rc).c_str());
         return false;
