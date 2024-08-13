@@ -111,6 +111,8 @@ bool ToupAAF::updateProperties()
         IUSaveText(&VersionTP[TC_REV], tmpBuffer);
 
         defineProperty(VersionTP);
+		defineProperty(BeepSP);
+		defineProperty(TemperatureNP);
 		
 	    if (readPosition())
 			IDSetNumber(&FocusAbsPosNP, nullptr);
