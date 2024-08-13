@@ -88,7 +88,11 @@ bool ToupAAF::initProperties()
     BeepSP[BEEP_ON].fill("ON", "On", ISS_ON);
     BeepSP[BEEP_OFF].fill("OFF", "Off", ISS_OFF);
     BeepSP.fill(getDeviceName(), "FOCUS_BEEP", "Beep", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
+	
+	FocusBacklashN[0].min = FocusRelPosN[0].min = FocusAbsPosN[0].min = 0.;
+	FocusBacklashN[0].value = FocusRelPosN[0].value = FocusAbsPosN[0].value = 0.;
+	FocusBacklashN[0].step = FocusRelPosN[0].step = FocusAbsPosN[0].step = 1.;	
+	
     setDefaultPollingPeriod(500);
 
     addDebugControl();
@@ -112,6 +116,9 @@ bool ToupAAF::updateProperties()
 
         defineProperty(VersionTP);
 		defineProperty(BeepSP);
+		
+		readTemperature();
+		TemperatureNP.setState(IPS_OK);
 		defineProperty(TemperatureNP);
 		
 	    if (readPosition())
@@ -121,7 +128,7 @@ bool ToupAAF::updateProperties()
 		if (readBeep())
 			BeepSP.apply();
 		if (readBacklash())
-			IDSetNumber(&FocusBacklashNP, nullptr);	
+			IDSetNumber(&FocusBacklashNP, nullptr);
 
         SetTimer(getCurrentPollingPeriod());
     }
@@ -158,7 +165,7 @@ bool ToupAAF::Disconnect()
 
 bool ToupAAF::SetFocuserMaxPosition(uint32_t ticks)
 {
-    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETMAXINCREMENT), ticks, nullptr));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETMAXSTEP), ticks, nullptr));
     if (FAILED(rc))
     {
         LOGF_ERROR("SetFocuserMaxPosition failed. %s", errorCodes(rc).c_str());
@@ -276,13 +283,8 @@ void ToupAAF::TimerHit()
 
     if (TemperatureNP.getState() != IPS_IDLE)
     {
-		int curTemperature = 0;
-        HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETTEMP), 0, &curTemperature));
-        if (SUCCEEDED(rc))
-        {
-            if (fabs(curTemperature / 10.0 - TemperatureNP[0].getValue()) >= 0.1)
-                TemperatureNP.apply();
-        }
+        if (readTemperature())
+            TemperatureNP.apply();
     }
 
     if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
@@ -326,39 +328,30 @@ bool ToupAAF::readPosition()
 bool ToupAAF::readMaxPosition()
 {
     int val = 0;
-    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETMAXSTEP), 0, &val));
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETMAXSTEP), &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("get max step failed. %s", errorCodes(rc).c_str());
-        return false;
-    }
-    FocusAbsPosN[0].min = 0.;
-    FocusAbsPosN[0].max = val;
-    FocusAbsPosN[0].value = 0.;
-    FocusAbsPosN[0].step = 1.;
-    FocusRelPosN[0].min = 0.;
-    FocusRelPosN[0].max = val / 2.0;
-    FocusRelPosN[0].value = 0.;
-    FocusRelPosN[0].step  = 1.;
-
-    rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETMAXSTEP), &val));
-    if (FAILED(rc))
-    {
-        LOGF_ERROR("get range max for max step failed. Error: %d", rc);
+        LOGF_ERROR("get range max for maxstep failed. %s", errorCodes(rc).c_str());
         return false;
     }
     FocusMaxPosN[0].max = val;
 	
+    rc = FP(AAF(m_Handle, CP(AAF_GETMAXSTEP), 0, &val));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("get maxstep failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+    FocusAbsPosN[0].max = FocusMaxPosN[0].value = val;
+    FocusRelPosN[0].max = val / 2.0;
+	
     rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETBACKLASH), &val));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Failed to read max step range. Error: %d", rc);
+        LOGF_ERROR("get range max for backlash failed. %s", errorCodes(rc).c_str());
         return false;
-    }	
-    FocusBacklashN[0].min = 0;
+    }
     FocusBacklashN[0].max = val;
-    FocusBacklashN[0].step = 1;
-    FocusBacklashN[0].value = 0;
 
     return true;
 }
@@ -407,6 +400,21 @@ bool ToupAAF::readBeep()
     BeepSP[INDI_DISABLED].setState(val ? ISS_OFF : ISS_ON);
     BeepSP.setState(IPS_OK);
 
+    return true;
+}
+
+bool ToupAAF::readTemperature()
+{
+	int curTemperature = 0;
+    HRESULT rc = FP(AAF(m_Handle, CP(AAF_GETTEMP), 0, &curTemperature));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("readTemperature failed. %s", errorCodes(rc).c_str());
+        return false;
+    }
+	
+	if (fabs(curTemperature / 10.0 - TemperatureNP[0].getValue()) >= 0.1)
+		TemperatureNP[0].setValue(curTemperature / 10.0);
     return true;
 }
 

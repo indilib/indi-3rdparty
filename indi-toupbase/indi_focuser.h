@@ -73,6 +73,7 @@ class ToupAAF : public INDI::Focuser
 		bool readBacklash();
 		bool readPosition();
 		bool readMaxPosition();
+		bool readTemperature();
 		
         // Read Only Temperature Reporting
         INDI::PropertyNumber TemperatureNP{1};
