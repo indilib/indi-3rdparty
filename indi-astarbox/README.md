@@ -27,6 +27,7 @@ cd ~/Projects
 git clone https://github.com/indilib/indi-3rdparty.git
 cd indi-3rdparty
 ```
+
 Compile and install the driver
 ```
 mkdir -p ~/Projects/build/indi-asi-power
