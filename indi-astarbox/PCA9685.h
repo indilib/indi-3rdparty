@@ -78,6 +78,7 @@ public:
     PCA9685();
     void init(int bus, int address);
     virtual ~PCA9685();
+	bool isPCA9685Present();
     int reset(void);
     int setPWMFreq(int freq);
 

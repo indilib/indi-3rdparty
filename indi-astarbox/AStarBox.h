@@ -19,8 +19,6 @@
 #include <ctime>
 #include <cmath>
 
-// #include "../../licensedinterfaces/sberrorx.h"
-
 #include "mcp3421.h"
 #include "PCA9685.h"
 #include "StopWatch.h"
@@ -48,7 +46,7 @@ enum portErrors {PLUGIN_OK, P_ERROR, P_UKNOWN, P_INVALID};
 enum methodErrors {OK, PORT_OPEN_ERROR, ERR_PARSE, ERR_FILE};
 
 // #define PLUGIN_DEBUG	3
-#define PLUGIN_VERSION	1.0
+#define PLUGIN_VERSION	1.01
 
 #define INTER_COMMAND_WAIT_MS 500	// ms
 
@@ -59,7 +57,7 @@ public:
 	~CAStarBoxPowerPorts();
 
     
-    virtual void connect();
+    virtual int connect();
     virtual void disconnect();
     
 	virtual int openAllPorts();

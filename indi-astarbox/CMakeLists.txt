@@ -5,8 +5,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
-set (VERSION_MAJOR 0)
-set (VERSION_MINOR 2)
+set (VERSION_MAJOR 1)
+set (VERSION_MINOR 0)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
@@ -23,8 +23,8 @@ include(CMakeCommon)
 
 ################ ASI Power ################
 set(indi_astarbox_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/astarbox.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/CAStarBox.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi-astarbox.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/AStarBox.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mcp3421.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/PCA9685.cpp
    )

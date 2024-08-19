@@ -28,7 +28,7 @@
 
 #include <vector>
 #include <stdint.h>
-#include "CAStarBox.h"
+#include "AStarBox.h"
 
 
 class AStarBox : public INDI::DefaultDevice

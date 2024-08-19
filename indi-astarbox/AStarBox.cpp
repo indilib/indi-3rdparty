@@ -1,4 +1,4 @@
-#include "CAStarBox.h"
+#include "AStarBox.h"
 
 CAStarBoxPowerPorts::CAStarBoxPowerPorts()
 {
@@ -32,9 +32,17 @@ CAStarBoxPowerPorts::~CAStarBoxPowerPorts()
     
 }
 
-void CAStarBoxPowerPorts::connect()
+int CAStarBoxPowerPorts::connect()
 {
+	int nErr = PLUGIN_OK;
+
+	if (!m_PortController.isPCA9685Present()) {
+		m_bLinked = false;
+		return P_ERROR;
+	}
+
     m_bLinked = true;
+	return PLUGIN_OK;
 }
 
 void CAStarBoxPowerPorts::disconnect()
@@ -156,7 +164,7 @@ int CAStarBoxPowerPorts::setPort(const int nPortID, const bool bOn)
             break;
     }
     if(nErr == -1)
-        nErr = P_ERROR;
+      nErr = P_ERROR;
 
     return nErr;
 }
@@ -215,7 +223,7 @@ int CAStarBoxPowerPorts::getPortStatus(const int nPortID, bool &bOn)
     }
 
     if(nErr == -1) {
-        return P_ERROR;
+      return P_ERROR;
     }
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2

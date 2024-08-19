@@ -50,6 +50,30 @@ PCA9685::PCA9685()
 PCA9685::~PCA9685()
 {
 }
+
+
+bool PCA9685::isPCA9685Present()
+{
+	int nErr;
+	int fd;
+	uint8_t nValue;
+	bool bPresent;
+
+	bPresent = true;
+
+	fd = openfd();
+	if(fd!=-1) {
+		nErr = read_byte(fd, PORT0_ON_L + PORT_MULTIPLYER , nValue);
+		if(nErr == -1)
+			bPresent = false;
+		close(fd);
+	}
+	else {
+		bPresent = false;
+	}
+	return bPresent;
+}
+
 //! Sets PCA9685 mode to 00
 int PCA9685::reset()
 {

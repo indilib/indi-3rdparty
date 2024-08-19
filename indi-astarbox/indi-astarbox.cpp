@@ -25,7 +25,7 @@
 
 *******************************************************************************/
 
-#include "astarbox.h"
+#include "indi-astarbox.h"
 #include "indicom.h"
 // #include "connectionplugins/connectionserial.h"
 
@@ -114,20 +114,24 @@ bool AStarBox::initProperties()
 bool AStarBox::Connect()
 {
   int n_err;
-  m_AStarBoxPort.connect();
+  // Need to do this first to connect - I suspect this is an error,
+  // at least of logic. Always returns true, so no need to test return code.
+  m_AStarBoxPort.openAllPorts();
 
-  n_err =   m_AStarBoxPort.openAllPorts();
-  if (n_err == PLUGIN_OK) {
-    // Turn on PWM ports - level will be set later
-    // If not turned on, the cycle level will not be set.
-    m_AStarBoxPort.setPort(PWM_1, true);
-    m_AStarBoxPort.setPort(PWM_2, true);
-    return true;
-  } else {
-    LOG_INFO("AStarBox not connected");
+  // Now can see if we can connect
+  n_err = m_AStarBoxPort.connect();
+  if (n_err != PLUGIN_OK) {
+    LOG_ERROR("Unable to connect AStarBox.");
+    LOG_ERROR("Ensure I2C is enabled and 12V input is connected.");
     m_AStarBoxPort.disconnect();
     return false;
   }
+
+  // Make sure PWM ports set to on. Level will be set later (and could be 0).
+  m_AStarBoxPort.setPort(PWM_1, true);
+  m_AStarBoxPort.setPort(PWM_2, true);
+
+  return true;
 }
 
  
