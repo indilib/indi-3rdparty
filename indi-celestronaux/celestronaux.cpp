@@ -59,8 +59,8 @@ double anglediff(double a, double b)
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 CelestronAUX::CelestronAUX()
-    : FI(this),
-      ScopeStatus(IDLE),      
+    : GI(this), FI(this),
+      ScopeStatus(IDLE),
       DBG_CAUX(INDI::Logger::getInstance().addDebugLevel("AUX", "CAUX")),
       DBG_SERIAL(INDI::Logger::getInstance().addDebugLevel("Serial", "CSER"))
 {
@@ -74,7 +74,7 @@ CelestronAUX::CelestronAUX()
                            TELESCOPE_CAN_CONTROL_TRACK |
                            TELESCOPE_HAS_TRACK_MODE |
                            TELESCOPE_HAS_TRACK_RATE
-                           , 8);    
+                           , 8);
 
     //Both communication available, Serial and network (tcp/ip).
     setTelescopeConnection(CONNECTION_TCP | CONNECTION_SERIAL);
@@ -82,17 +82,19 @@ CelestronAUX::CelestronAUX()
     m_GuideRATimer.setSingleShot(true);
     m_GuideRATimer.callOnTimeout([this]()
     {
-        GuideWEN[0].value = GuideWEN[1].value = 0;
-        GuideWENP.s = IPS_IDLE;
-        IDSetNumber(&GuideWENP, nullptr);
+        GuideWENP[0].setValue(0);
+        GuideWENP[1].setValue(0);
+        GuideWENP.setState(IPS_IDLE);
+        GuideWENP.apply();
     });
 
     m_GuideDETimer.setSingleShot(true);
     m_GuideDETimer.callOnTimeout([this]()
     {
-        GuideNSN[0].value = GuideNSN[1].value = 0;
-        GuideNSNP.s = IPS_IDLE;
-        IDSetNumber(&GuideNSNP, nullptr);
+        GuideNSNP[0].setValue(0);
+        GuideNSNP[1].setValue(0);
+        GuideNSNP.setState(IPS_IDLE);
+        GuideNSNP.apply();
     });
 }
 
@@ -323,7 +325,7 @@ bool CelestronAUX::initProperties()
     /////////////////////////////////////////////////////////////////////////////////////
 
     // Guide Properties
-    initGuiderProperties(getDeviceName(), GUIDE_TAB);
+    GI::initProperties(GUIDE_TAB);
     // Rate rate
     GuideRateNP[AXIS_AZ].fill("GUIDE_RATE_WE", "W/E Rate", "%.1f", 0, 1, .1, 0.5);
     GuideRateNP[AXIS_ALT].fill("GUIDE_RATE_NS", "N/S Rate", "%.1f", 0, 1, .1, 0.5);
@@ -346,7 +348,7 @@ bool CelestronAUX::initProperties()
     FocusMaxPosNP.s = IPS_IDLE;
 
     FocusAbsPosNP.s = IPS_IDLE;
-    
+
     FocusBacklashN[0].min = 0;
     FocusBacklashN[0].max = 1000;
     FocusBacklashN[0].step = 1;
@@ -502,8 +504,7 @@ bool CelestronAUX::updateProperties()
         defineProperty(HomeSP);
 
         // Guide
-        defineProperty(&GuideNSNP);
-        defineProperty(&GuideWENP);
+        GI::updateProperties();
         defineProperty(GuideRateNP);
 
         // Cord wrap Enabled?
@@ -565,23 +566,27 @@ bool CelestronAUX::updateProperties()
         defineProperty(FirmwareTP);
 
         bool hasFocuser = false;
-        for(size_t i = 0; i < sizeof(m_FocusVersion); i++){
-            if (m_FocusVersion[i]){
+        for(size_t i = 0; i < sizeof(m_FocusVersion); i++)
+        {
+            if (m_FocusVersion[i])
+            {
                 hasFocuser = true;
                 LOG_INFO("Detected AUX focuser");
                 break;
             }
         }
 
-        if(hasFocuser){
+        if(hasFocuser)
+        {
             m_FocusLimitMin = 0xffffffff;
             m_FocusLimitMax = 0;
             getFocusLimits();
 
-            if(m_FocusLimitMax > m_FocusLimitMin){
+            if(m_FocusLimitMax > m_FocusLimitMin)
+            {
 
                 LOGF_DEBUG("Received focuser calibration limits: max %i, min %i", m_FocusLimitMax, m_FocusLimitMin);
-                                
+
                 FocusMaxPosN->value = m_FocusLimitMax - m_FocusLimitMin;
                 FocusMaxPosNP.s = IPS_OK;
 
@@ -598,13 +603,14 @@ bool CelestronAUX::updateProperties()
 
                 m_FocusEnabled = true;
                 LOG_INFO("AUX focuser enabled");
-                
+
 
             }
-            else{
+            else
+            {
 
                 LOG_WARN("No valid focuser calibration received");
-                
+
 
                 // FocusMinPosNP[0].setValue(FocusMinPosNP[0].min);
                 // FocusMinPosNP.setState(IPS_ALERT);
@@ -613,9 +619,9 @@ bool CelestronAUX::updateProperties()
                 FocusMaxPosN->value = FocusMaxPosN->max;
                 FocusMaxPosNP.s = IPS_ALERT;
 
-                m_FocusEnabled = false; 
+                m_FocusEnabled = false;
                 LOG_INFO("AUX focuser disabled");
-                
+
             }
 
             FI::updateProperties();
@@ -623,7 +629,7 @@ bool CelestronAUX::updateProperties()
         }
 
 
-        
+
 
         // When no HC is attached, the following three commands needs to be send
         // to the motor controller (MC): MC_SET_POSITION, MC_SET_CORDWRAP_POSITION
@@ -673,8 +679,7 @@ bool CelestronAUX::updateProperties()
             deleteProperty(HorizontalCoordsNP.getName());
         deleteProperty(HomeSP.getName());
 
-        deleteProperty(GuideNSNP.name);
-        deleteProperty(GuideWENP.name);
+        GI::updateProperties();
         deleteProperty(GuideRateNP.getName());
 
         if (m_MountType == ALT_AZ)
@@ -769,6 +774,13 @@ bool CelestronAUX::ISNewBLOB(const char *dev, const char *name, int sizes[], int
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    // Check focuser interface
+    if (FI::processNumber(dev, name, values, names, n))
+        return true;
+    // Check guider interface
+    if (GI::processNumber(dev, name, values, names, n))
+        return true;
+
     if (strcmp(dev, getDeviceName()) == 0)
     {
         // Axis1 PID
@@ -871,17 +883,8 @@ bool CelestronAUX::ISNewNumber(const char *dev, const char *name, double values[
             return true;
         }
 
-        // Process Guide Properties
-        processGuiderProperties(name, values, names, n);
-
         // Process Alignment Properties
         ProcessAlignmentNumberProperties(this, name, values, names, n);
-
-        // Process Focus Properties
-        if (strstr(name, "FOCUS_"))
-        {
-            return FI::processNumber(dev, name, values, names, n);
-        }
 
     }
 
@@ -1297,21 +1300,24 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-bool CelestronAUX::AbortFocuser(){
+bool CelestronAUX::AbortFocuser()
+{
 
-    if (focusByRate(0)){
+    if (focusByRate(0))
+    {
         m_FocusStatus = STOPPED;
         return true;
     }
     else
         return false;
-    
+
 }
 
-IPState CelestronAUX::MoveRelFocuser(FocusDirection dir, uint32_t ticks){
+IPState CelestronAUX::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
+{
 
-    return MoveAbsFocuser(dir == FOCUS_OUTWARD ? FocusAbsPosN->value + ticks: FocusAbsPosN->value - ticks);
-    
+    return MoveAbsFocuser(dir == FOCUS_OUTWARD ? FocusAbsPosN->value + ticks : FocusAbsPosN->value - ticks);
+
 }
 
 IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
@@ -1325,9 +1331,10 @@ IPState CelestronAUX::MoveAbsFocuser(uint32_t targetTicks)
     getFocusPosition();
     if (targetTicks == m_FocusLimitMax - m_FocusPosition)
         return IPS_OK;
-    else{
+    else
+    {
         focusTo(m_FocusLimitMax - targetTicks);
-    return IPS_BUSY;
+        return IPS_BUSY;
     }
 }
 
@@ -1907,9 +1914,9 @@ void CelestronAUX::TimerHit()
                 targetMountAxisCoordinates.altitude += m_GuideOffset[AXIS_ALT];
 
                 // If we had guiding pulses active, mark them as complete
-                if (GuideWENP.s == IPS_BUSY)
+                if (GuideWENP.getState() == IPS_BUSY)
                     GuideComplete(AXIS_RA);
-                if (GuideNSNP.s == IPS_BUSY)
+                if (GuideNSNP.getState() == IPS_BUSY)
                     GuideComplete(AXIS_DE);
 
                 // Next get current alt-az
@@ -1995,33 +2002,39 @@ void CelestronAUX::TimerHit()
     }
 
     // update Focus
-    if(m_FocusEnabled && isConnected()){
+    if(m_FocusEnabled && isConnected())
+    {
 
         // poll position to detect changes due to HC use or motor overrun (e.g. after abort)
         getFocusPosition();
 
         // update client only if changed to reduce traffic
         uint32_t newFocusAbsPos = m_FocusLimitMax - m_FocusPosition;
-        if (newFocusAbsPos != FocusAbsPosN->value){
+        if (newFocusAbsPos != FocusAbsPosN->value)
+        {
             FocusAbsPosN->value = newFocusAbsPos;
             IDSetNumber(&FocusAbsPosNP, nullptr);
         }
 
-        if(m_FocusStatus == SLEWING){
+        if(m_FocusStatus == SLEWING)
+        {
             getFocusStatus();
 
-            if (m_FocusStatus == STOPPED){
+            if (m_FocusStatus == STOPPED)
+            {
 
-                if (FocusAbsPosNP.s == IPS_BUSY){
+                if (FocusAbsPosNP.s == IPS_BUSY)
+                {
                     FocusAbsPosNP.s = IPS_OK;
-            IDSetNumber(&FocusAbsPosNP, nullptr);
+                    IDSetNumber(&FocusAbsPosNP, nullptr);
                 }
-                if (FocusRelPosNP.s == IPS_BUSY){
+                if (FocusRelPosNP.s == IPS_BUSY)
+                {
                     FocusRelPosNP.s = IPS_OK;
                     FocusRelPosN->value = 0;
                     IDSetNumber(&FocusRelPosNP, nullptr);
                 }
-            }            
+            }
         }
     }
 }

@@ -108,7 +108,7 @@ void ISSnoopDevice (XMLEle *root)
 **
 **
 *****************************************************************/
-AUDTELESCOPE::AUDTELESCOPE()
+AUDTELESCOPE::AUDTELESCOPE() : GI(this)
 {
     setVersion(AVALONUD_VERSION_MAJOR, AVALONUD_VERSION_MINOR);
 
@@ -230,7 +230,7 @@ bool AUDTELESCOPE::initProperties()
     trackspeedra = TRACKRATE_SIDEREAL;
     trackspeeddec = 0;
 
-    initGuiderProperties(getDeviceName(), GUIDE_TAB);
+    GI::initProperties(GUIDE_TAB);
     setDriverInterface(getDriverInterface() | GUIDER_INTERFACE);
 
     addDebugControl();
@@ -272,8 +272,6 @@ bool AUDTELESCOPE::updateProperties()
     if (isConnected())
     {
         defineProperty(MountModeSP);
-        defineProperty(&GuideNSNP);
-        defineProperty(&GuideWENP);
 
         defineProperty(LocalEqNP);
         defineProperty(AltAzNP);
@@ -289,8 +287,6 @@ bool AUDTELESCOPE::updateProperties()
     else
     {
         deleteProperty(MountModeSP);
-        deleteProperty(GuideNSNP.name);
-        deleteProperty(GuideWENP.name);
 
         deleteProperty(LocalEqNP);
         deleteProperty(AltAzNP);
@@ -303,6 +299,8 @@ bool AUDTELESCOPE::updateProperties()
         deleteProperty(HighLevelSWTP);
         deleteProperty(LowLevelSWTP);
     }
+
+    GI::updateProperties();
 
     return true;
 }
@@ -508,6 +506,10 @@ bool AUDTELESCOPE::ISNewText(const char *dev, const char *name, char *texts[], c
 
 bool AUDTELESCOPE::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
+    // Check guider interface
+    if (GI::processNumber(dev, name, values, names, n))
+        return true;
+
     //  first check if it's for our device
     if(!strcmp(dev, getDeviceName()))
     {
@@ -526,13 +528,6 @@ bool AUDTELESCOPE::ISNewNumber (const char *dev, const char *name, double values
                     MeridianFlipHANP.setState(IPS_ALERT);
             }
             MeridianFlipHANP.apply();
-            return true;
-        }
-
-        // Guiding
-        if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
-        {
-            processGuiderProperties(name, values, names, n);
             return true;
         }
     }

@@ -51,7 +51,7 @@ static class Loader
         }
 } loader;
 
-ASIST4::ASIST4(int id)
+ASIST4::ASIST4(int id) : GI(this)
 {
     this->ID = id;
 
@@ -75,7 +75,7 @@ bool ASIST4::initProperties()
 {
     INDI::DefaultDevice::initProperties();
 
-    initGuiderProperties(getDeviceName(), MAIN_CONTROL_TAB);
+    GI::initProperties(MAIN_CONTROL_TAB);
 
     addDebugControl();
 
@@ -85,18 +85,7 @@ bool ASIST4::initProperties()
 bool ASIST4::updateProperties()
 {
     INDI::DefaultDevice::updateProperties();
-
-    if (isConnected())
-    {
-        defineProperty(&GuideNSNP);
-        defineProperty(&GuideWENP);
-    }
-    else
-    {
-        deleteProperty(GuideNSNP.name);
-        deleteProperty(GuideWENP.name);
-    }
-
+    GI::updateProperties();
     return true;
 }
 
@@ -127,14 +116,9 @@ bool ASIST4::Disconnect()
 
 bool ASIST4::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
-    {
-        if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
-        {
-            processGuiderProperties(name, values, names, n);
-            return true;
-        }
-    }
+    // Check guider interface
+    if (GI::processNumber(dev, name, values, names, n))
+        return true;
 
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
