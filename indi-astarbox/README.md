@@ -21,7 +21,6 @@ sudo apt install indi-astarbox
 ```
 
 To build from source you need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
-
 ...
 cd ~/Projects
 git clone https://github.com/indilib/indi-3rdparty.git
@@ -29,7 +28,6 @@ cd indi-3rdparty
 ```
 
 Compile and install the driver
-
 ```
 mkdir -p ~/Projects/build/indi-asi-power
 cd ~/Projects/build/indi-asi-power
