@@ -21,6 +21,7 @@ sudo apt install indi-astarbox
 ```
 
 To build from source you need to install required libraries and headers before compiling. See [INDI site](http://indilib.org/download.html) for more details.
+
 ...
 cd ~/Projects
 git clone https://github.com/indilib/indi-3rdparty.git
