@@ -36,7 +36,7 @@
 
 static std::unique_ptr<SXAO> sxao(new SXAO);
 
-SXAO::SXAO()
+SXAO::SXAO(): GI(this)
 {
     setVersion(VERSION_MAJOR, VERSION_MINOR);
 }
@@ -83,7 +83,7 @@ int SXAO::aoCommand(const char *request, char *response, int nbytes)
 bool SXAO::initProperties()
 {
     DefaultDevice::initProperties();
-    initGuiderProperties(getDeviceName(), GUIDE_CONTROL_TAB);
+    GI::initProperties(GUIDE_CONTROL_TAB);
 
     IUFillNumber(&AONS[0], "AO_N", "North (steps)", "%g", 0, 80, 1, 0);
     IUFillNumber(&AONS[1], "AO_S", "South (steps)", "%g", 0, 80, 1, 0);
@@ -156,8 +156,6 @@ bool SXAO::updateProperties()
 
     if (isConnected())
     {
-        defineProperty(&GuideNSNP);
-        defineProperty(&GuideWENP);
         defineProperty(&AONSNP);
         defineProperty(&AOWENP);
         defineProperty(&CenterP);
@@ -166,19 +164,23 @@ bool SXAO::updateProperties()
     }
     else
     {
-        deleteProperty(GuideNSNP.name);
-        deleteProperty(GuideWENP.name);
         deleteProperty(AONSNP.name);
         deleteProperty(AOWENP.name);
         deleteProperty(CenterP.name);
         deleteProperty(FWTP.name);
         deleteProperty(AtLimitLP.name);
     }
+
+    GI::updateProperties();
     return true;
 }
 
 bool SXAO::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    // Check guider interface
+    if (GI::processNumber(dev, name, values, names, n))
+        return true;
+
     if (strcmp(name, AONSNP.name) == 0)
     {
         AONSNP.s = IPS_BUSY;
@@ -215,11 +217,6 @@ bool SXAO::ISNewNumber(const char *dev, const char *name, double values[], char 
         }
         IDSetNumber(&AOWENP, nullptr);
         CheckLimit(false);
-        return true;
-    }
-    else if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
-    {
-        processGuiderProperties(name, values, names, n);
         return true;
     }
 

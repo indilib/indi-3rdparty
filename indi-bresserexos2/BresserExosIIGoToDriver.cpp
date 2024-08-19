@@ -39,7 +39,7 @@ static std::unique_ptr<BresserExosIIDriver> mount(new BresserExosIIDriver());
 
 //default constructor.
 //sets the scope abilities, and default settings.
-BresserExosIIDriver::BresserExosIIDriver() :
+BresserExosIIDriver::BresserExosIIDriver() : GI(this),
     mInterfaceWrapper(),
     mMountControl(mInterfaceWrapper)
 {
@@ -70,7 +70,7 @@ bool BresserExosIIDriver::initProperties()
 {
     INDI::Telescope::initProperties();
 
-    initGuiderProperties(getDeviceName(), MOTION_TAB);
+    GI::initProperties(MOTION_TAB);
 
     setTelescopeConnection(CONNECTION_SERIAL);
 
@@ -87,9 +87,6 @@ bool BresserExosIIDriver::initProperties()
 
     TrackState = SCOPE_IDLE;
 
-    defineProperty(&GuideNSNP);
-    defineProperty(&GuideWENP);
-
     addAuxControls();
 
     setDriverInterface(getDriverInterface() | GUIDER_INTERFACE);
@@ -101,6 +98,7 @@ bool BresserExosIIDriver::initProperties()
 bool BresserExosIIDriver::updateProperties()
 {
     bool rc = INDI::Telescope::updateProperties();
+    GI::updateProperties();
 
     return rc;
 }
@@ -205,14 +203,9 @@ bool BresserExosIIDriver::ReadScopeStatus()
 
 bool BresserExosIIDriver::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    if (!strcmp(dev, getDeviceName()))
-    {
-        if (!strcmp(name, GuideNSNP.name) || !strcmp(name, GuideWENP.name))
-        {
-            processGuiderProperties(name, values, names, n);
-            return true;
-        }
-    }
+    // Check guider interface
+    if (GI::processNumber(dev, name, values, names, n))
+        return true;
 
     return INDI::Telescope::ISNewNumber(dev, name, values, names, n);
 }
@@ -278,8 +271,8 @@ bool BresserExosIIDriver::Abort()
         GuideNSTID = 0;
     }
 
-    IDSetNumber(&GuideNSNP, nullptr);
-    IDSetNumber(&GuideWENP, nullptr);
+    GuideNSNP.apply();
+    GuideWENP.apply();
 
     return mMountControl.StopMotion();
 }
@@ -620,16 +613,16 @@ void BresserExosIIDriver::guideTimeout(SerialDeviceControl::SerialCommandID dire
             {
                 mGuideStateNS.remaining_messages--;
                 mMountControl.GuideNorth();
-                GuideNSNP.s = IPS_BUSY;
+                GuideNSNP.setState(IPS_BUSY);
                 GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperN, this);
             }
             else
             {
-                GuideNSNP.s = IPS_IDLE;
+                GuideNSNP.setState(IPS_IDLE);
                 GuideNSTID = 0;
                 mGuideStateNS.remaining_messages = 0;
                 mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-                IDSetNumber(&GuideNSNP, nullptr);
+                GuideNSNP.apply();
             }
             break;
 
@@ -640,16 +633,16 @@ void BresserExosIIDriver::guideTimeout(SerialDeviceControl::SerialCommandID dire
             {
                 mGuideStateNS.remaining_messages--;
                 mMountControl.GuideSouth();
-                GuideNSNP.s = IPS_BUSY;
+                GuideNSNP.setState(IPS_BUSY);
                 GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperS, this);
             }
             else
             {
-                GuideNSNP.s = IPS_IDLE;
+                GuideNSNP.setState(IPS_IDLE);
                 GuideNSTID = 0;
                 mGuideStateNS.remaining_messages = 0;
                 mGuideStateNS.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-                IDSetNumber(&GuideNSNP, nullptr);
+                GuideNSNP.apply();
             }
             break;
 
@@ -660,16 +653,16 @@ void BresserExosIIDriver::guideTimeout(SerialDeviceControl::SerialCommandID dire
             {
                 mGuideStateEW.remaining_messages--;
                 mMountControl.GuideWest();
-                GuideWENP.s = IPS_BUSY;
+                GuideWENP.setState(IPS_BUSY);
                 GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperW, this);
             }
             else
             {
-                GuideWENP.s = IPS_IDLE;
+                GuideWENP.setState(IPS_IDLE);
                 GuideWETID = 0;
                 mGuideStateEW.remaining_messages = 0;
                 mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-                IDSetNumber(&GuideWENP, nullptr);
+                GuideWENP.apply();
             }
             break;
 
@@ -680,27 +673,27 @@ void BresserExosIIDriver::guideTimeout(SerialDeviceControl::SerialCommandID dire
             {
                 mGuideStateEW.remaining_messages--;
                 mMountControl.GuideEast();
-                GuideWENP.s = IPS_BUSY;
+                GuideWENP.setState(IPS_BUSY);
                 GuideNSTID  = IEAddTimer(GUIDE_TIMEOUT, guideTimeoutHelperE, this);
             }
             else
             {
-                GuideWENP.s = IPS_IDLE;
+                GuideWENP.setState(IPS_IDLE);
                 GuideWETID = 0;
                 mGuideStateEW.remaining_messages = 0;
                 mGuideStateEW.direction = SerialDeviceControl::SerialCommandID::NULL_COMMAND_ID;
-                IDSetNumber(&GuideWENP, nullptr);
+                GuideWENP.apply();
             }
             break;
 
         default:
-            GuideWENP.s = IPS_IDLE;
+            GuideWENP.setState(IPS_IDLE);
             GuideWETID = 0;
-            IDSetNumber(&GuideWENP, nullptr);
+            GuideWENP.apply();
 
-            GuideNSNP.s = IPS_IDLE;
+            GuideNSNP.setState(IPS_IDLE);
             GuideNSTID = 0;
-            IDSetNumber(&GuideNSNP, nullptr);
+            GuideNSNP.apply();
             break;
     }
 }
