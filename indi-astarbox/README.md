@@ -30,9 +30,9 @@ cd indi-3rdparty
 
 Compile and install the driver
 ```
-mkdir -p ~/Projects/build/indi-asi-power
-cd ~/Projects/build/indi-asi-power
-cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-asi-power
+mkdir -p ~/Projects/build/indi-astarbox
+cd ~/Projects/build/indi-astarbox
+cmake -DCMAKE_INSTALL_PREFIX=/usr ~/Projects/indi-3rdparty/indi-astarbox
 make -j4
 sudo make install
 ```
