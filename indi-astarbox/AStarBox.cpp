@@ -36,7 +36,9 @@ int CAStarBoxPowerPorts::connect()
 {
   // Open up ports initiates connection and
   // sets m_PortController.isPCA9685Present() if can connect.
-  openAllPorts();
+  if(!m_bPortsOpen) {
+    openAllPorts();
+  }
   
   if (!m_PortController.isPCA9685Present()) {
     m_bLinked = false;
@@ -75,6 +77,8 @@ int CAStarBoxPowerPorts::openAllPorts()
         }
     }
     
+	m_bPortsOpen = true;
+
     return nErr;
 }
 
