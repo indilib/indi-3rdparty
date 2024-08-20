@@ -49,8 +49,8 @@ int CAStarBoxPowerPorts::connect()
   m_bLinked = true;
   
   // Get PWM duty cycle and store it
-  getPortPWM(5, m_nPwm1DutyCycle);
-  getPortPWM(6, m_nPwm2DutyCycle);
+  getPortPWM(PWM_1, m_nPwm1DutyCycle);
+  getPortPWM(PWM_2, m_nPwm2DutyCycle);
 
   return PLUGIN_OK;
 }
