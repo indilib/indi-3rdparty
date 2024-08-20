@@ -191,21 +191,20 @@ bool AStarBox::ISNewNumber(const char * dev, const char * name, double values[],
         // Dew PWM
         if (DewPWMNP.isNameMatch(name))
         {
-            bool rc1 = false, rc2 = false;
+	  int rc1 = PLUGIN_OK, rc2 = PLUGIN_OK;
             for (int i = 0; i < n; i++)
             {
 	      int percent = values[i];
 	      if (!strcmp(names[i], DewPWMNP[DEW_PWM_1].getName())) {
-		m_AStarBoxPort.setPort(PWM_1, percent > 0 );
 		rc1 =
 		      m_AStarBoxPort.setPortPWMDutyCyclePercent(PWM_1, percent) == PLUGIN_OK;
 	      }	else if (!strcmp(names[i], DewPWMNP[DEW_PWM_2].getName())) {
-		m_AStarBoxPort.setPort(PWM_2, percent > 0);
 		rc2 = m_AStarBoxPort.setPortPWMDutyCyclePercent(PWM_2, percent) == PLUGIN_OK;
 	      }
             }
 
-            DewPWMNP.setState((rc1 && rc2) ? IPS_OK : IPS_ALERT);
+            DewPWMNP.setState((rc1 != PLUGIN_OK || rc2 != PLUGIN_OK) ?
+			      IPS_OK : IPS_ALERT);
             if (DewPWMNP.getState() == IPS_OK)
                 DewPWMNP.update(values, names, n);
             DewPWMNP.apply();
