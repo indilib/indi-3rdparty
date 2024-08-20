@@ -114,9 +114,6 @@ bool AStarBox::initProperties()
 bool AStarBox::Connect()
 {
   int n_err;
-  // Need to do this first to connect - I suspect this is an error,
-  // at least of logic. Always returns true, so no need to test return code.
-  m_AStarBoxPort.openAllPorts();
 
   // Now can see if we can connect
   n_err = m_AStarBoxPort.connect();
@@ -271,7 +268,6 @@ void AStarBox::TimerHit()
         SetTimer(getCurrentPollingPeriod());
         return;
     }
-
     getSensorData();
     SetTimer(getCurrentPollingPeriod());
 }

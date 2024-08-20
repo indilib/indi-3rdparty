@@ -34,15 +34,23 @@ CAStarBoxPowerPorts::~CAStarBoxPowerPorts()
 
 int CAStarBoxPowerPorts::connect()
 {
-	int nErr = PLUGIN_OK;
+  // Open up ports initiates connection and
+  // sets m_PortController.isPCA9685Present() if can connect.
+  openAllPorts();
+  
+  if (!m_PortController.isPCA9685Present()) {
+    m_bLinked = false;
+    return P_ERROR;
+  }
 
-	if (!m_PortController.isPCA9685Present()) {
-		m_bLinked = false;
-		return P_ERROR;
-	}
+  // Set linked state - need this set before getting PWM duty cycles
+  m_bLinked = true;
+  
+  // Get PWM duty cycle and store it
+  getPortPWM(5, m_nPwm1DutyCycle);
+  getPortPWM(6, m_nPwm2DutyCycle);
 
-    m_bLinked = true;
-	return PLUGIN_OK;
+  return PLUGIN_OK;
 }
 
 void CAStarBoxPowerPorts::disconnect()
@@ -56,9 +64,6 @@ int CAStarBoxPowerPorts::openAllPorts()
     int nErr = PLUGIN_OK;
 
     m_PortController.init(1,0x40);   // bus id is 1 for /dev/i2c-1 ,  device address is 0x40
-
-    getPortPWM(5, m_nPwm1DutyCycle);
-    getPortPWM(6, m_nPwm2DutyCycle);
 
     m_mcp3421.setBusID(1); // /dev/i2c-1
     m_mcp3421Present = m_mcp3421.isMCP3421Present();
