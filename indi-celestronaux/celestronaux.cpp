@@ -1885,9 +1885,12 @@ void CelestronAUX::TimerHit()
             {
                 TelescopeDirectionVector TDV;
                 TelescopeDirectionVector futureTDV;
+                TelescopeDirectionVector pastTDV;
                 INDI::IHorizontalCoordinates targetMountAxisCoordinates { 0, 0 };
+                INDI::IHorizontalCoordinates pastMountAxisCoordinates { 0, 0 };
                 INDI::IHorizontalCoordinates futureMountAxisCoordinates { 0, 0 };
-                double JDoffset { 10.0/(60 * 60 * 24) } ; // ten seconds into the future
+                double timeStep { 5.0 }; // time step for tracking rate estimation in seconds
+                double JDoffset { timeStep/(60 * 60 * 24) } ; // The same in days
 
                 // Start by transforming tracking target celestial coordinates to telescope coordinates.
                 if (TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
@@ -1898,6 +1901,9 @@ void CelestronAUX::TimerHit()
                     TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
                                                   JDoffset, futureTDV);
                     AltitudeAzimuthFromTelescopeDirectionVector(futureTDV, futureMountAxisCoordinates);
+                    TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
+                                                  -JDoffset, pastTDV);
+                    AltitudeAzimuthFromTelescopeDirectionVector(pastTDV, pastMountAxisCoordinates);
 
                 }
                 // If transformation failed.
@@ -1909,13 +1915,16 @@ void CelestronAUX::TimerHit()
                     EquatorialCoordinates.declination = m_SkyTrackingTarget.declination;
                     INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, JDnow, &targetMountAxisCoordinates);
                     INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, JDnow+JDoffset, &futureMountAxisCoordinates);
+                    INDI::EquatorialToHorizontal(&EquatorialCoordinates, &m_Location, JDnow-JDoffset, &pastMountAxisCoordinates);
                 }
 
 
                 // Calculate expected tracking rates
                 double predRate[2] = {0, 0};
-                predRate[AXIS_AZ] = range180(AzimuthToDegrees(futureMountAxisCoordinates.azimuth - targetMountAxisCoordinates.azimuth))/10;
-                predRate[AXIS_ALT] = (futureMountAxisCoordinates.altitude - targetMountAxisCoordinates.altitude)/10;
+                // Central difference, error quadratic in timestep
+                // Rates in deg/s
+                predRate[AXIS_AZ] = range180(AzimuthToDegrees(futureMountAxisCoordinates.azimuth - pastMountAxisCoordinates.azimuth))/timeStep/2;
+                predRate[AXIS_ALT] = (futureMountAxisCoordinates.altitude - pastMountAxisCoordinates.altitude)/timeStep/2;
                 
                 LOGF_DEBUG("Predicted positions (AZ):  %9.4f  %9.4f (now, future, degs)", AzimuthToDegrees(targetMountAxisCoordinates.azimuth),
                                                                                           AzimuthToDegrees(futureMountAxisCoordinates.azimuth)) ;
@@ -1923,6 +1932,8 @@ void CelestronAUX::TimerHit()
                                                                                           futureMountAxisCoordinates.altitude);
                 LOGF_DEBUG("Predicted Rates (AZ, ALT): %9.4f  %9.4f (arcsec/s)", 3600*predRate[AXIS_AZ], 3600*predRate[AXIS_ALT]);
 
+                // Rates in units 1024 * arcsec/s
+                // This is specific to Celestron AUX protocol
                 predRate[AXIS_AZ] = 3600 * predRate[AXIS_AZ] * 1024;
                 predRate[AXIS_ALT] = 3600 * predRate[AXIS_ALT] * 1024;
 
@@ -1961,7 +1972,9 @@ void CelestronAUX::TimerHit()
                     m_OffsetSwitchSettle[AXIS_AZ] = 0;
                     m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
                     targetSteps[AXIS_AZ] = DegreesToEncoders(AzimuthToDegrees(targetMountAxisCoordinates.azimuth));
+                    // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
                     trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    
                     LOGF_DEBUG("Predicted AZ Rate: %8.2f", predRate[AXIS_AZ]);
                     LOGF_DEBUG("Tracking AZ Now: %8.f Target: %8d Offset: %8d Rate: %8.2f", EncoderNP[AXIS_AZ].getValue(), targetSteps[AXIS_AZ],
                                offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
@@ -1985,6 +1998,7 @@ void CelestronAUX::TimerHit()
                     m_OffsetSwitchSettle[AXIS_ALT] = 0;
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
                     targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
+                    // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
                     trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
 
                     LOGF_DEBUG("Predicted AL Rate: %8.2f", predRate[AXIS_ALT]);
