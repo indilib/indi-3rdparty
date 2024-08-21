@@ -953,7 +953,7 @@ void CloudWatcherController::printBuffer(char *buffer, int num)
 
 bool CloudWatcherController::matchBlock(const std::string &response, const std::string &prefix, int &value)
 {
-    std::regex rgx(prefix + R"(\s*(\d+))");
+    std::regex rgx(prefix + R"(\s*([-+]?\d+))");
     std::smatch match;
 
     if (std::regex_search(response, match, rgx))
