@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (AAG_VERSION_MAJOR 1)
-set (AAG_VERSION_MINOR 7)
+set (AAG_VERSION_MINOR 8)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)

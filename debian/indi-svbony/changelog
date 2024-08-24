@@ -1,3 +1,9 @@
+indi-svbony (1.4.2) bionic; urgency=low
+
+  * BUGFIX: SVBONYCCD: Stop cooling at disconnection
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Tue, 6 Aug. 2024 4:00:00 +0900
+
 indi-svbony (1.4.1) bionic; urgency=low
 
   * SVBONYCCD: Workaround for an issue that rarely retrieves the previous image.

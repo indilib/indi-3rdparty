@@ -24,6 +24,8 @@ Anemometer code contributed by Joao Bento.
 
 #pragma once
 
+#include <string>
+
 /**
  *  A struct to group and send all AAG Cloud Watcher constants
  */
@@ -344,7 +346,7 @@ class CloudWatcherController
         * @param serialNumber where the serial number will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getSerialNumber(int *serialNumber);
+        bool getSerialNumber(int &serialNumber);
 
         /**
         * Performs an aggregation of the values stored in a float array. It computes
@@ -371,21 +373,21 @@ class CloudWatcherController
         * @param temp where the sensor value will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getIRSkyTemperature(int *temp);
+        bool getIRSkyTemperature(int &temp);
 
         /**
         * Reads the current IR Sensor Temperature value of the AAG Cloud Watcher
         * @param temp where the sensor value will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getIRSensorTemperature(int *temp);
+        bool getIRSensorTemperature(int &temp);
 
         /**
         * Reads the current Rain Frequency value of the AAG Cloud Watcher
         * @param rainFreq where the sensor value will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getRainFrequency(int *rainFreq);
+        bool getRainFrequency(int &rainFreq);
 
         /**
         * Reads the current Internal Supply Voltage, Ambient Temperature, LDR Value
@@ -404,7 +406,7 @@ class CloudWatcherController
         * @param pwmDutyCycle where the sensor value will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getPWMDutyCycle(int *pwmDutyCycle);
+        bool getPWMDutyCycle(int &pwmDutyCycle);
 
         /**
         * Reads the current Error values of the AAG Cloud Watcher
@@ -435,26 +437,31 @@ class CloudWatcherController
         * @param anemometerStatus where the anemometer status will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getAnemometerStatus(int *anemomterStatus);
+        bool getAnemometerStatus(int &anemomterStatus);
 
         /**
         * Reads the wind speed from the anemomter
         * @param windSpeed where the wind speed will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getWindSpeed(int *windSpeed);
+        bool getWindSpeed(int &windSpeed);
 
         /**
         * Reads the humidity from external sensor
         * @param humidity where the humidity will be stored
         * @return true if succesfully read. false otherwise.
         */
-        bool getHumidity(int *humidity);
+        bool getHumidity(int &humidity);
 
         /**
         * Reads the pressure from external sensor
         * @param pressure where the pressure will be stored. Unit is Pa
         * @return true if succesfully read. false otherwise.
         */
-        bool getPressure(int *pressure);
+        bool getPressure(int &pressure);
+
+        /**
+         * Use regex to extract the block value, skipping any space
+         */
+        bool matchBlock(const std::string &response, const std::string &prefix, int &value);
 };

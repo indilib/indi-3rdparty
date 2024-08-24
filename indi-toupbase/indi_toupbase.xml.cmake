@@ -60,7 +60,7 @@
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="Nncam EFW" mdpd="true" manufacturer="Nn">
-                <driver name="Nn">indi_nncam_ccd</driver>
+                <driver name="Nn">indi_nncam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
         <device label="Ogmacam EFW" mdpd="true" manufacturer="OGMAVision">
@@ -81,6 +81,48 @@
         </device>
         <device label="Meadecam EFW" mdpd="true" manufacturer="Meade">
                 <driver name="Meade">indi_meadecam_wheel</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+</devGroup>
+<devGroup group="Focusers">
+        <device label="Toupcam AAF" mdpd="true" manufacturer="Toupcam">
+                <driver name="Touptek">indi_toupcam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Altair AAF" mdpd="true" manufacturer="Altair">
+                <driver name="Altair">indi_altair_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Bresser AAF" mdpd="true" manufacturer="Bresser">
+                <driver name="Bresser">indi_bressercam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Mallincam AAF" mdpd="true" manufacturer="Mallincam">
+                <driver name="MALLINCAM">indi_mallincam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Nncam AAF" mdpd="true" manufacturer="Nn">
+                <driver name="Nn">indi_nncam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Ogmacam AAF" mdpd="true" manufacturer="OGMAVision">
+                <driver name="OGMAVision">indi_ogmacam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="OmegonPro AAF" mdpd="true" manufacturer="Omegon">
+                <driver name="Astroshop">indi_omegonprocam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="StartshootG AAF" mdpd="true" manufacturer="Orion">
+                <driver name="Orion">indi_starshootg_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Tscam AAF" mdpd="true" manufacturer="Teleskop">
+                <driver name="Teleskop">indi_tscam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Meadecam AAF" mdpd="true" manufacturer="Meade">
+                <driver name="Meade">indi_meadecam_focuser</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>

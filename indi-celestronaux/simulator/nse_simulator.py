@@ -30,9 +30,10 @@ async def timer(seconds_to_sleep=1,telescope=None):
     t=time()
     while True :
         await asyncio.sleep(seconds_to_sleep)
+        cur_t = time()
         if telescope : 
-            telescope.tick(time()-t)
-        t=time()
+            telescope.tick(cur_t-t)
+        t=cur_t
 
 async def handle_port2000(reader, writer):
     '''

@@ -675,6 +675,9 @@ bool SVBONYBase::Disconnect()
     if (isSimulation() == false)
     {
         SVBStopVideoCapture(mCameraInfo.CameraID);
+        if (HasCooler()) {
+            activateCooler(false);
+        }
         SVBCloseCamera(mCameraInfo.CameraID);
     }
 

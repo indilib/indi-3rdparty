@@ -1,3 +1,9 @@
+libmicam (1.3) buster; urgency=low
+
+  * Updated MI library to version 0.11.1/0.10.1
+
+ -- Jakub Smutny <linux@gxccd.com>  Fri, 02 Aug 2024 13:00:00 +0100
+
 libmicam (1.2) buster; urgency=low
 
   * Updated MI library to version 0.10.0/0.9.0
