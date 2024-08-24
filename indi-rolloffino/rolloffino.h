@@ -51,8 +51,7 @@ private:
     bool getFullOpenedLimitSwitch(bool *);
     bool getFullClosedLimitSwitch(bool *);
     void updateRoofStatus();
-    void
-    updateActionStatus();
+    void updateActionStatus();
     bool getRoofLockedSwitch(bool *);
     bool getRoofAuxSwitch(bool *);
     bool getActionSwitch(const char *, bool *);
@@ -69,9 +68,10 @@ private:
     bool writeIno(const char *);
     bool readIno(char *);
     void msSleep(int);
-    bool setupConditions();
+    bool checkConditions();
     void restoreLabels();
     void storeLabels();
+    void getLabelFileName();
     float CalcTimeLeft(timeval);
     bool actionSwitchUsed(const char*);
     bool actionCmdUsed(const char*);
@@ -122,13 +122,13 @@ private:
 #define ACTION_ACT6_CMD   "ACT6SET"
 #define ACTION_ACT7_CMD   "ACT7SET"
 #define ACTION_ACT8_CMD   "ACT8SET"
+    const char* act_cmd_used[MAX_ACTIONS] = {ACTION_ACT1_CMD, ACTION_ACT2_CMD, ACTION_ACT3_CMD, ACTION_ACT4_CMD, ACTION_ACT5_CMD, ACTION_ACT6_CMD, ACTION_ACT7_CMD, ACTION_ACT8_CMD};
 
     const char *ACTION_CONTROL_TAB = "Action Controls";
-    const char* act_cmd_used[MAX_ACTIONS] = {ACTION_ACT1_CMD, ACTION_ACT2_CMD, ACTION_ACT3_CMD, ACTION_ACT4_CMD, ACTION_ACT5_CMD, ACTION_ACT6_CMD, ACTION_ACT7_CMD, ACTION_ACT8_CMD};
     enum {ACTION_ENABLE, ACTION_DISABLE};
     const char *actionSwitchesText[MAX_ACTIONS] = {"Act1", "Act2", "Act3", "Act4", "Act5", "Act6", "Act7", "Act8"};
     ISwitch *actionSwitches[MAX_ACTIONS] = {Act1S, Act2S, Act3S, Act4S, Act5S, Act6S, Act7S, Act8S};
-    ISwitchVectorProperty *actionSwitchesVP [MAX_ACTIONS] = {&Act1SP, &Act2SP, &Act3SP, &Act4SP, &Act5SP, &Act6SP, &Act7SP, &Act8SP};
+    ISwitchVectorProperty *actionSwitchesSP [MAX_ACTIONS] = {&Act1SP, &Act2SP, &Act3SP, &Act4SP, &Act5SP, &Act6SP, &Act7SP, &Act8SP};
     ISwitch Act1S[2];
     ISwitchVectorProperty Act1SP;
     ISwitch Act2S[2];
@@ -154,14 +154,11 @@ private:
 
 /////////////////
 // Action Labels.
-
-    // Some way to provide a meaningful description
 #define MAX_LABEL 32
-    const char *ACTION_LABEL_TAB = "Action Label";
+    const char *ACTION_LABEL_TAB = "Action Labels";
     const char* action_labels[MAX_ACTIONS] = {"LABEL1", "LABEL2", "LABEL3", "LABEL4", "LABEL5", "LABEL6", "LABEL7", "LABEL8"};
-    const char* label_names[MAX_ACTIONS] = {"Label 1", "Label 2", "Label 3", "Label 4", "Label 5", "Label 6", "Label 7", "Label 8"};
-    const char* label_init[MAX_ACTIONS] = {"Action 1", "Action 2", "Action 3", "Action 4", "Action 5", "Action 6", "Action 7", "Action 8"};
-    IText labelsT[MAX_ACTIONS] = {Label1T, Label2T, Label3T, Label4T};
+
+    IText labelsT[MAX_ACTIONS] = {Label1T, Label2T, Label3T, Label4T, Label5T, Label6T, Label7T, Label8T};
     IText Label1T {};
     IText Label2T {};
     IText Label3T {};
@@ -181,9 +178,6 @@ private:
     ITextVectorProperty Label7TP;
     ITextVectorProperty Label8TP;
 
-    char current_labels [MAX_ACTIONS][MAXINDILABEL];
-    const char *label_file = "rolloff-labels.txt";
-    const char *custom_name;
     double MotionRequest{0};
     struct timeval MotionStart{0, 0};
     bool contactEstablished = false;

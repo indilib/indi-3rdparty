@@ -113,7 +113,7 @@
 
 #define FUNC_OPEN RELAY_1
 #define FUNC_CLOSE RELAY_1  // For a single button controller might map this also to RELAY_1
-#define FUNC_STOP RELAY_1   // For a single button controller might map this also to RELAY_1
+#define FUNC_ABORT RELAY_1   // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK 0         // If automated roof lock is available.
 #define FUNC_AUX 0          // Relay to perform some unspecified function
 
@@ -141,7 +141,7 @@
 //
 #define FUNC_OPEN_HOLD 0
 #define FUNC_CLOSE_HOLD 0
-#define FUNC_STOP_HOLD 0
+#define FUNC_ABORT_HOLD 0
 #define FUNC_LOCK_HOLD 1
 #define FUNC_AUX_HOLD 1
 #define FUNC_ACT1_HOLD 1
@@ -156,7 +156,7 @@
 // For the relays define whether a HIGH or a LOW activates the relay.
 #define FUNC_OPEN_ACTIVE HIGH
 #define FUNC_CLOSE_ACTIVE HIGH
-#define FUNC_STOP_ACTIVE HIGH
+#define FUNC_ABORT_ACTIVE HIGH
 #define FUNC_LOCK_ACTIVE HIGH
 #define FUNC_AUX_ACTIVE HIGH
 #define FUNC_ACT1_ACTIVE LOW
@@ -216,7 +216,7 @@ enum cmd_input {
   CMD_NONE,
   CMD_OPEN,
   CMD_CLOSE,
-  CMD_STOP,
+  CMD_ABORT,
   CMD_LOCK,
   CMD_AUXSET,
   CMD_ACT1SET,
@@ -242,7 +242,7 @@ relay_control relay_info[cmd_len] = {
   { CMD_NONE, "None", 0, 0, FUNC_OPEN_ACTIVE },
   { CMD_OPEN, "OPEN", FUNC_OPEN, FUNC_OPEN_HOLD, FUNC_OPEN_ACTIVE },
   { CMD_CLOSE, "CLOSE", FUNC_CLOSE, FUNC_CLOSE_HOLD, FUNC_CLOSE_ACTIVE },
-  { CMD_STOP, "STOP", FUNC_STOP, FUNC_STOP_HOLD, FUNC_STOP_ACTIVE },
+  { CMD_ABORT, "ABORT", FUNC_ABORT, FUNC_ABORT_HOLD, FUNC_ABORT_ACTIVE },
   { CMD_LOCK, "LOCK", FUNC_LOCK, FUNC_LOCK_HOLD, FUNC_LOCK_ACTIVE },
   { CMD_AUXSET, "AUXSET", FUNC_AUX, FUNC_AUX_HOLD, FUNC_AUX_ACTIVE },
   { CMD_ACT1SET, "ACT1SET", FUNC_ACT1, FUNC_ACT1_HOLD, FUNC_ACT1_ACTIVE },
@@ -265,8 +265,8 @@ const char* ERROR6 = "Invalid command syntax, no end token found";
 const char* ERROR7 = "Roof controller unable to parse command";
 const char* ERROR8 = "Command must map to either set a relay or get a switch";
 const char* ERROR9 = "Request not implemented in controller";
-const char* ERROR10 = "Abort command ignored, roof already stationary";
-const char* ERROR11 = "Unknown input: ";
+const char* ERROR10 = "Abort ignored, roof already stationary, or time expired";
+const char* ERROR11 = "Unknown input, ";
 const char* ERROR12 = "Action directive incompatible with current state ";
 
 
@@ -305,8 +305,8 @@ void sendNak(const char* errorMsg) {
   if (strlen(errorMsg) > MAX_MESSAGE)
     sendNak(ERROR2);
   else {
-    strcpy(buffer, "(NAK:ERROR:");
-    strcat(buffer, value);
+    strcpy(buffer, "(NAK:");
+    strcat(buffer, target);
     strcat(buffer, ":");
     strcat(buffer, errorMsg);
     strcat(buffer, ")");
@@ -473,7 +473,7 @@ void readUSB() {
         for (int i = 0; i < cmd_len; i++) {
           if (strcmp(target, relay_info[i].function) == 0) {
             command_input = relay_info[i].cmd;
-            if (command_input == CMD_STOP) {
+            if (command_input == CMD_ABORT) {
               if (!isStopAllowed()) {
                 sendNak(ERROR10);
                 return;
@@ -585,7 +585,7 @@ bool isStopAllowed() {
 // Here after pin associations resolved and request known
 // The default is to set the associated relay to the requested state "ON" or "OFF" and
 // send acknowledgement to the host.
-// target is the name associated with the relay "OPEN", "CLOSE", "STOP", "LOCK", "AUXSET".
+// target is the name associated with the relay "OPEN", "CLOSE", "ABORT", "LOCK", "AUXSET".
 // It will be used when  sending the acknowledgement to the host. Find out if a particular
 // command is being processed using if (strcmp(target, "OPEN") == 0) {do something}
 //
@@ -622,6 +622,8 @@ void requestReceived(int sw) {
 
 // One time initialization
 void setup() {
+  // Establish USB port.
+  Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
 
   //////////////////////////
   // Initialize the switches
@@ -636,9 +638,6 @@ void setup() {
   for (int i = 1; i < cmd_len; i++) {
     initRelay(relay_info[i].relay, relay_info[i].activate);
   }
-
-  // Establish USB port.
-  Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
 }
 
 void initInput(int pin) {
@@ -665,12 +664,14 @@ void initRelay(unsigned int pin, unsigned int activate) {
 // Wait here for command or switch request from host
 void loop() {
   while (Serial.available() <= 0) {
+
     for (int cnt = 0; cnt < 60; cnt++) {
       if (Serial.available() > 0)
         break;
-      else
+      else {
         delay(100);
-    }
+      }  
+    } 
+    readUSB();
   }
-  readUSB();
-}  // end loop
+}
