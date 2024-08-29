@@ -146,16 +146,16 @@ INDIStarbookTen::initProperties()
     IUFillTextVector(&StateTP, StateT, MS_LAST, getDeviceName(), "MOUNT_STATE",
                      "Status", MOUNT_TAB, IP_RO, 60, IPS_IDLE);
 
-    IUFillSwitch(&SlewRateS[0], "0.5x", "0.5x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[1], "1x", "1x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[2], "2x", "2x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[3], "5x", "5x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[4], "10x", "10x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[5], "30x", "30x", ISS_ON);
-    IUFillSwitch(&SlewRateS[6], "100x", "100x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[7], "300x", "300x", ISS_OFF);
-    IUFillSwitch(&SlewRateS[8], "500x", "500x", ISS_OFF);
-    IUFillSwitchVector(&SlewRateSP, SlewRateS, 9, getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    SlewRateSP[0].fill("0.5x", "0.5x", ISS_OFF);
+    SlewRateSP[1].fill("1x", "1x", ISS_OFF);
+    SlewRateSP[2].fill("2x", "2x", ISS_OFF);
+    SlewRateSP[3].fill("5x", "5x", ISS_OFF);
+    SlewRateSP[4].fill("10x", "10x", ISS_OFF);
+    SlewRateSP[5].fill("30x", "30x", ISS_ON);
+    SlewRateSP[6].fill("100x", "100x", ISS_OFF);
+    SlewRateSP[7].fill("300x", "300x", ISS_OFF);
+    SlewRateSP[8].fill("500x", "500x", ISS_OFF);
+    SlewRateSP.fill(getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     IUFillNumber(&GuideRateN[GR_RA], "RA_GUIDE_RATE", "RA (arcsec/sec)", "%.0f", 0, 30, 1, 15);
     IUFillNumber(&GuideRateN[GR_DE], "DE_GUIDE_RATE", "DEC (arcsec/sec)", "%.0f", 0, 30, 1, 15);
@@ -342,22 +342,22 @@ INDIStarbookTen::fetchStartupInfo()
         IDSetText(&InfoTP, nullptr);
 
         double lon = std::get<1>(loc);
-        LocationN[LOCATION_LATITUDE].value  = std::get<0>(loc);
-        LocationN[LOCATION_LONGITUDE].value = (lon < 0) ? (lon + 360) : lon;
-        LocationNP.s = IPS_OK;
-        IDSetNumber(&LocationNP, nullptr);
+        LocationNP[LOCATION_LATITUDE].setValue(std::get<0>(loc));
+        LocationNP[LOCATION_LONGITUDE].setValue((lon < 0) ? (lon + 360) : lon);
+        LocationNP.setState(IPS_OK);
+        LocationNP.apply();
 
         char str[128];
         snprintf(str, sizeof(str) - 1, "%04d-%02d-%02dT%02d:%02d:%02d",
                  zdt.years, zdt.months, zdt.days,
                  zdt.hours, zdt.minutes, (int)zdt.seconds);
-        IUSaveText(&TimeT[0], str);
+        TimeTP[0].setText(str);
 
         snprintf(str, sizeof(str) - 1, "%.2f", (zdt.gmtoff / 3600.0));
-        IUSaveText(&TimeT[1], str);
+        TimeTP[1].setText(str);
 
-        TimeTP.s = IPS_OK;
-        IDSetText(&TimeTP, nullptr);
+        TimeTP.setState(IPS_OK);
+        TimeTP.apply();
 
         return updateStarbookState(stat);
     }
@@ -485,7 +485,7 @@ INDIStarbookTen::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
     {
         if (command == MOTION_START)
         {
-            double absrate = StarbookTen::slewRates[IUFindOnSwitchIndex(&SlewRateSP)];
+            double absrate = StarbookTen::slewRates[SlewRateSP.findOnSwitchIndex()];
             double rate = (dir == DIRECTION_NORTH) ? absrate : -absrate;
             return retry<bool>(2, &StarbookTen::move, starbook, StarbookTen::AXIS_SECONDARY, rate);
         }
@@ -509,7 +509,7 @@ INDIStarbookTen::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
     {
         if (command == MOTION_START)
         {
-            double absrate = StarbookTen::slewRates[IUFindOnSwitchIndex(&SlewRateSP)];
+            double absrate = StarbookTen::slewRates[SlewRateSP.findOnSwitchIndex()];
             double rate = (dir == DIRECTION_EAST) ? absrate : -absrate;
             return retry<bool>(2, &StarbookTen::move, starbook, StarbookTen::AXIS_PRIMARY, rate);
         }
