@@ -1771,17 +1771,6 @@ bool CelestronAUX::mountToSkyCoords()
     return true;
 }
 
-
-double range180(double r)
-{
-    double res = r;
-    while (res < -180.0)
-        res += 360.0;
-    while (res > 180.0)
-        res -= 360.0;
-    return res;
-}
-
 bool CelestronAUX::enforceSlewLimits()
 {
 
