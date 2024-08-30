@@ -189,8 +189,10 @@ const char *EQMod::getDefaultName()
 double EQMod::getLongitude()
 {
     auto number = LocationNP.findWidgetByName("LONG");
-    if(number)
+    if (number)
         return number->getValue();
+    else
+        return 0;
 }
 
 double EQMod::getLatitude()
@@ -198,6 +200,8 @@ double EQMod::getLatitude()
     auto number = LocationNP.findWidgetByName("LAT");
     if(number)
         return number->getValue();
+    else
+        return 0;
 }
 
 double EQMod::getJulianDate()
@@ -304,10 +308,10 @@ void EQMod::initSlewRates()
 
     // Since last item is NOT maximum (but custom), let's set item before custom to SLEWMAX
     SlewRateSP[SlewRateSP.count() - 2].setState(ISS_ON);
-    SlewRateSP[SlewRateSP.count() -2].setName("SLEW_MAX");
+    SlewRateSP[SlewRateSP.count() - 2].setName("SLEW_MAX");
     // Last is custom
-    SlewRateSP[SlewRateSP.count() -1].setName("SLEWCUSTOM");
-    SlewRateSP[SlewRateSP.count() -1].setLabel("Custom");
+    SlewRateSP[SlewRateSP.count() - 1].setName("SLEWCUSTOM");
+    SlewRateSP[SlewRateSP.count() - 1].setLabel("Custom");
 
 }
 
