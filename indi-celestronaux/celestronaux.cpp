@@ -1364,7 +1364,7 @@ void CelestronAUX::resetTracking()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::isTrackingRequested()
 {
-    return (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
+    return CoordSP.isSwitchOn("TRACK");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -2212,7 +2212,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 
         // "Normal" Pointing State (West, looking East)
         if ( (LocationNP[LOCATION_LATITUDE].getValue() >= 0 && (deEncoder < 90 || deEncoder > 270)) ||
-            (LocationNP[LOCATION_LATITUDE].getValue() < 0 && deEncoder > 90 && deEncoder < 270))
+                (LocationNP[LOCATION_LATITUDE].getValue() < 0 && deEncoder > 90 && deEncoder < 270))
         {
             pierSide = PIER_WEST;
             de = rangeDec(180 - de);

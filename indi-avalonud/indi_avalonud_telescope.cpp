@@ -180,7 +180,7 @@ bool AUDTELESCOPE::initProperties()
     SlewRateSP[SLEW_FIND].fill("SLEW_FIND", "Find", ISS_OFF);
     SlewRateSP[SLEW_MAX].fill( "SLEW_MAX", "Max", ISS_ON);
     SlewRateSP.fill(getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+                    ISR_1OFMANY, 60, IPS_IDLE);
 
     // Add Tracking Modes. If you have SOLAR, LUNAR..etc, add them here as well.
     AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
@@ -1015,10 +1015,7 @@ bool AUDTELESCOPE::SlewToHome()
 
 bool AUDTELESCOPE::Goto(double ra, double dec)
 {
-    ISwitch *sw;
-
-    sw = IUFindSwitch(&CoordSP, "TRACK");
-    if ((sw != nullptr) && (sw->s == ISS_ON))
+    if (CoordSP.isSwitchOn("TRACK"))
     {
         return Slew(ra, dec, true);
     }

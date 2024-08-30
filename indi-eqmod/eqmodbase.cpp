@@ -1000,8 +1000,6 @@ bool EQMod::ReadScopeStatus()
                 }
                 else
                 {
-                    ISwitch *sw;
-                    sw = IUFindSwitch(&CoordSP, "TRACK");
                     if ((gotoparams.iterative_count > GOTO_ITERATIVE_LIMIT) &&
                             (((3600 * fabs(gotoparams.ratarget - currentRA)) > RAGOTORESOLUTION) ||
                              ((3600 * fabs(gotoparams.detarget - currentDEC)) > DEGOTORESOLUTION)))
@@ -1016,21 +1014,19 @@ bool EQMod::ReadScopeStatus()
                     // For AstroEQ (needs an explicit :G command at the end of gotos)
                     mount->ResetMotions();
 
-                    if ((RememberTrackState == SCOPE_TRACKING) || ((sw != nullptr) && (sw->s == ISS_ON)))
+                    if ((RememberTrackState == SCOPE_TRACKING) || CoordSP.isSwitchOn("TRACK"))
                     {
-                        char *name;
+                        std::string name;
 
                         if (RememberTrackState == SCOPE_TRACKING)
                         {
-                            sw   = TrackModeSP.findOnSwitch();
-                            name = sw->name;
+                            name = TrackModeSP.findOnSwitchName();;
                             mount->StartRATracking(GetRATrackRate());
                             mount->StartDETracking(GetDETrackRate());
                         }
                         else
                         {
-                            sw    = TrackDefaultSP.findOnSwitch();
-                            name  = sw->name;
+                            name = TrackDefaultSP.findOnSwitchName();
                             mount->StartRATracking(GetDefaultRATrackRate());
                             mount->StartDETracking(GetDefaultDETrackRate());
 
@@ -1049,7 +1045,7 @@ bool EQMod::ReadScopeStatus()
                         TrackModeSP->s = IPS_BUSY;
                         IDSetSwitch(TrackModeSP, nullptr);
 #endif
-                        LOGF_INFO("Telescope slew is complete. Tracking %s...", name);
+                        LOGF_INFO("Telescope slew is complete. Tracking %s...", name.c_str());
                     }
                     else
                     {
@@ -1058,7 +1054,6 @@ bool EQMod::ReadScopeStatus()
                         LOG_INFO("Telescope slew is complete. Stopping...");
                     }
                     gotoparams.completed = true;
-                    //EqNP.s               = IPS_OK;
                 }
             }
         }
@@ -2164,7 +2159,7 @@ bool EQMod::Sync(double ra, double dec)
             SyncPolarAlignNP.findWidgetByName("SYNCPOLARALIGN_ALT")->setValue(tpa_alt);
             SyncPolarAlignNP.findWidgetByName("SYNCPOLARALIGN_AZ")->setValue(tpa_az);
             SyncPolarAlignNP.apply();
-            IDLog("computePolarAlign: Telescope Polar Axis: alt = %g, az = %g\n", tpa_alt, tpa_az);
+            LOGF_DEBUG("computePolarAlign: Telescope Polar Axis: alt = %g, az = %g", tpa_alt, tpa_az);
         }
     }
     return true;
