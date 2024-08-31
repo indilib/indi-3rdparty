@@ -504,7 +504,7 @@ bool PentaxCCD::StopStreaming()
 ISwitch * PentaxCCD::create_switch(const char * basestr, std::vector<string> options, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), options.size()));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(options.size(), sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];

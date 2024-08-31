@@ -706,7 +706,7 @@ bool PkTriggerCordCCD::grabImage()
 ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, string options[], size_t numOptions, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), numOptions));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(numOptions, sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];
