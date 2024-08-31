@@ -55,6 +55,11 @@ add_library(apogee SHARED ${libapogee_SRCS})
 
 set_target_properties(apogee PROPERTIES VERSION ${APOGEE_VERSION} SOVERSION ${APOGEE_SOVERSION})
 
+if (APPLE)
+  include_directories( "/usr/local/include")
+  target_include_directories(apogee PRIVATE ${USB1_INCLUDE_DIRS})
+endif (APPLE)
+
 target_link_libraries(apogee ${USB1_LIBRARIES} ${CURL})
 
 install(TARGETS apogee LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
