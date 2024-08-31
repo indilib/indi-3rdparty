@@ -36,6 +36,10 @@ ADD_LIBRARY(fishcamp SHARED ${fishcamp_LIB_SRCS})
 
 set_target_properties(fishcamp PROPERTIES VERSION ${LIBFISHCAMP_VERSION} SOVERSION ${LIBFISHCAMP_SOVERSION})
 
+if (APPLE)
+  target_include_directories(fishcamp PRIVATE ${USB1_INCLUDE_DIRS})
+endif (APPLE)
+
 target_link_libraries(fishcamp ${USB1_LIBRARIES})
 
 INSTALL(FILES fishcamp.h fishcamp_common.h DESTINATION include/libfishcamp)
