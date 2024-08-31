@@ -14,6 +14,8 @@ command -v nproc >/dev/null 2>&1 || function nproc {
 
 SRCS=$(dirname $(realpath $0))/..
 
+ls -al /usr/local/include || true
+
 mkdir -p build/indi-3rdparty-libs
 pushd build/indi-3rdparty-libs
 cmake \
