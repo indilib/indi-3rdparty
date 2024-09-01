@@ -259,7 +259,7 @@ bool GPhotoCCD::initProperties()
 
     FI::initProperties(FOCUS_TAB);
 
-    PortTP[0].fill("PORT", "Port", "");
+    PortTP[0].fill("PORT", "Port", port);
     PortTP.fill(getDeviceName(), "DEVICE_PORT", "Shutter Release", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     PortTP.load();
 
