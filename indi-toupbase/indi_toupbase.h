@@ -28,7 +28,7 @@
 class ToupBase : public INDI::CCD
 {
     public:
-        explicit ToupBase(const XP(DeviceV2) *instance);
+        explicit ToupBase(const XP(DeviceV2) *instance, const std::string &name);
         virtual ~ToupBase() override;
 
         virtual const char *getDefaultName() override;
@@ -149,7 +149,6 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
-        char m_name[MAXINDIDEVICE];
 
         //#############################################################################
         // Properties
@@ -166,10 +165,10 @@ class ToupBase : public INDI::CCD
         ISwitch m_HighFullwellS[2];
 
         bool activateCooler(bool enable);
-        
+
         ISwitchVectorProperty m_CoolerSP;
         ISwitch m_CoolerS[2];
-        
+
         INDI::PropertyNumber m_CoolerNP {1};
 
         int32_t m_maxTecVoltage { -1 };
@@ -286,7 +285,8 @@ class ToupBase : public INDI::CCD
         BINNING_MODE m_BinningMode = TC_BINNING_ADD;
         uint8_t m_CurrentVideoFormat = 0;
         INDI_PIXEL_FORMAT m_CameraPixelFormat = INDI_RGB;
-        eTriggerMode m_CurrentTriggerMode = TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
+        eTriggerMode m_CurrentTriggerMode =
+            TRIGGER_SOFTWARE; /* By default, we start the camera with software trigger mode, make it standby */
 
         bool m_MonoCamera { false };
         bool m_SupportTailLight { false };
@@ -295,7 +295,7 @@ class ToupBase : public INDI::CCD
         uint8_t m_BitsPerPixel { 8 };
         uint8_t m_maxBitDepth { 8 };
         uint8_t m_Channels { 1 };
-        
+
         uint8_t *getRgbBuffer();
         uint8_t *m_rgbBuffer { nullptr };
         int32_t m_rgbBufferSize { 0 };
