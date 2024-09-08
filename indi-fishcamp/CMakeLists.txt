@@ -8,6 +8,7 @@ include(GNUInstallDirs)
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(USB1 REQUIRED)
 find_package(FISHCAMP REQUIRED)
 
 set (FISHCAMP_VERSION_MAJOR 1)
