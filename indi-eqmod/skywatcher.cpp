@@ -209,7 +209,7 @@ uint32_t Skywatcher::GetDEPeriod()
 
 uint32_t Skywatcher::GetlastreadRAIndexer()
 {
-    if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20)
+    if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20 && MountCode != 0x25)
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
     DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis1]));
     return lastreadIndexer[Axis1];
@@ -217,7 +217,7 @@ uint32_t Skywatcher::GetlastreadRAIndexer()
 
 uint32_t Skywatcher::GetlastreadDEIndexer()
 {
-    if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20)
+    if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20 && MountCode != 0x25)
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
     DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis2]));
     return lastreadIndexer[Axis2];
@@ -547,6 +547,9 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
             break;
         case 0x23:
             strcpy(boardinfo[0], "EQ6-R Pro");
+            break;
+        case 0x25:
+            strcpy(boardinfo[0], "CQ350 Pro");
             break;
         case 0x31:
             strcpy(boardinfo[0], "EQ5 Pro");
