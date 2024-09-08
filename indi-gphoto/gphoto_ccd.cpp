@@ -814,7 +814,8 @@ bool GPhotoCCD::Connect()
     LOGF_DEBUG("Mirror lock value: %f", MirrorLockNP[0].getValue());
 
     const auto port = PortTP[0].getText();
-    if (port && strlen(port))
+    // Do not set automatically detected USB device ids as the shutter port
+    if (port && strlen(port) && strstr(port, "USB:") == nullptr)
     {
         shutter_release_port = port;
     }
