@@ -44,7 +44,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <stdbool.h>
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #define MAXRBUF 512
 

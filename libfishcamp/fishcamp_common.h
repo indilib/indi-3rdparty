@@ -34,7 +34,7 @@
 #ifndef FISHCAMP_COMMON
 #define FISHCAMP_COMMON
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 typedef unsigned char  UInt8;
 typedef signed char    SInt8;

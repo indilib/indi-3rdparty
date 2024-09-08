@@ -26,7 +26,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 #include "ezusb.h"
 
 //extern void logerror(const char *format, ...)
