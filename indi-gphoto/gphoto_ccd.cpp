@@ -815,7 +815,7 @@ bool GPhotoCCD::Connect()
 
     const auto port = PortTP[0].getText();
     // Do not set automatically detected USB device ids as the shutter port
-    if (port && strlen(port) && strstr(port, "USB:") == nullptr)
+    if (port && strlen(port) && strstr(port, "usb:") == nullptr)
     {
         shutter_release_port = port;
     }
