@@ -131,9 +131,9 @@ bool EQModSimulator::updateProperties(bool enable)
 
         defined = true;
         /*
-      AlignDataFileTP=telescope->getText("ALIGNDATAFILE");
-      AlignDataBP=telescope->getBLOB("ALIGNDATA");
-      */
+        AlignDataFileTP=telescope->getText("ALIGNDATAFILE");
+        AlignDataBP=telescope->getBLOB("ALIGNDATA");
+        */
     }
     else if (defined)
     {
@@ -155,7 +155,7 @@ bool EQModSimulator::ISNewNumber(const char *dev, const char *name, double value
     if (strcmp(dev, telescope->getDeviceName()) == 0)
     {
         auto nvp = telescope->getNumber(name);
-        if ((nvp != SimWormNP) && (nvp != SimRatioNP) & (nvp != SimMotorNP))
+        if (nvp != SimWormNP && nvp != SimRatioNP && nvp != SimMotorNP)
             return false;
         if (telescope->isConnected())
         {
