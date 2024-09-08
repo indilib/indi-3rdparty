@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 typedef unsigned char UInt8;
 typedef signed char SInt8;
@@ -20,7 +20,8 @@ typedef unsigned long UInt32;
 typedef signed long SInt32;
 
 // list of USB command codes
-typedef enum {
+typedef enum
+{
 
     fcNOP,
     fcRST,
@@ -60,7 +61,8 @@ typedef enum {
 } fc_cmd;
 
 // progress codes for the fcUsb_FindCameras routine
-typedef enum {
+typedef enum
+{
 
     fcFindCam_notYetStarted,
     fcFindCam_looking4supported, // @"Looking for supported cameras"
@@ -86,7 +88,8 @@ typedef struct
 } fc_camInfo;
 
 // list of relays
-typedef enum {
+typedef enum
+{
 
     fcRELAYNORTH,
     fcRELAYSOUTH,
@@ -96,7 +99,8 @@ typedef enum {
 } fc_relay;
 
 // list of data formats
-typedef enum {
+typedef enum
+{
 
     fc_8b_data,
     fc_10b_data,
@@ -107,7 +111,8 @@ typedef enum {
 } fc_dataFormat;
 
 // list of data transfer modes
-typedef enum {
+typedef enum
+{
 
     fc_classicDataXfr,
     fc_DMAwFBDataXfr,
@@ -116,7 +121,8 @@ typedef enum {
 } fc_dataXfrModes;
 
 // list of image filters
-typedef enum {
+typedef enum
+{
 
     fc_filter_none,
     fc_filter_3x3,
@@ -127,7 +133,8 @@ typedef enum {
 
 // properties that we have defined so far.  First camera that
 // supports properties is the StarfishPRO 4M with the KAI-04022 chip
-typedef enum {
+typedef enum
+{
 
     fcPROP_NUMSAMPLES,
     fcPROP_PATTERNENABLE,

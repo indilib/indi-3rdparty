@@ -165,11 +165,11 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
             return setParkPosition(states, names, n);
         }
         // tracking mode
-        else if (!strcmp(name, TrackModeSP.name))
+        else if (TrackModeSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
+            if (TrackModeSP.update(states, names, n) == false)
                 return false;
-            uint8_t trackMode = static_cast<uint8_t>(IUFindOnSwitchIndex(&TrackModeSP));
+            uint8_t trackMode = static_cast<uint8_t>(TrackModeSP.findOnSwitchIndex());
 
             bool result = SetTrackMode(trackMode);
 
@@ -185,9 +185,9 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                     LOG_INFO("Lunar tracking rate selected");
                     break;
             }
-            TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
+            TrackModeSP.setState(result ? IPS_OK : IPS_ALERT);
 
-            IDSetSwitch(&TrackModeSP, nullptr);
+            TrackModeSP.apply();
             return result;
         }
         else if (!strcmp(name, ST4StatusSP.name))
@@ -923,13 +923,13 @@ bool LX200StarGo::sendScopeLocation()
         LOG_WARN("Failed to get site longitude from device.");
         return false;
     }
-    LocationNP.np[LOCATION_LATITUDE].value = siteLat;
-    LocationNP.np[LOCATION_LONGITUDE].value = siteLong;
+    LocationNP[LOCATION_LATITUDE].setValue(siteLat);
+    LocationNP[LOCATION_LONGITUDE].setValue(siteLong);
 
-    LOGF_DEBUG("Mount Controller Latitude: %lg Longitude: %lg", LocationN[LOCATION_LATITUDE].value,
-               LocationN[LOCATION_LONGITUDE].value);
+    LOGF_DEBUG("Mount Controller Latitude: %lg Longitude: %lg", LocationNP[LOCATION_LATITUDE].getValue(),
+               LocationNP[LOCATION_LONGITUDE].getValue());
 
-    IDSetNumber(&LocationNP, nullptr);
+    LocationNP.apply();
     if(!setLocalSiderealTime(siteLong))
     {
         LOG_ERROR("Error setting local sidereal time");
@@ -1967,13 +1967,14 @@ bool LX200StarGo::SetSlewRate(int index)
 
     if (!isSimulation() && !setSlewMode(index))
     {
-        SlewRateSP.s = IPS_ALERT;
-        IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+        SlewRateSP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting slew mode.");
+        SlewRateSP.apply();
         return false;
     }
 
-    SlewRateSP.s = IPS_OK;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.setState(IPS_OK);
+    SlewRateSP.apply();
     return true;
 }
 bool LX200StarGo::setSlewMode(int slewMode)
@@ -2169,16 +2170,16 @@ bool LX200StarGo::GetMeridianFlipMode(int* index)
 IPState LX200StarGo::GuideNorth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+        int dir = MovementNSSP.findOnSwitchIndex();
 
         MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
     }
@@ -2197,19 +2198,20 @@ IPState LX200StarGo::GuideNorth(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementNSS[DIRECTION_NORTH].s = ISS_ON;
+        MovementNSSP[DIRECTION_NORTH].setState(ISS_ON);
         MoveNS(DIRECTION_NORTH, MOTION_START);
     }
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_ns = LX200_NORTH;
     GuideNSTID      = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
@@ -2218,16 +2220,16 @@ IPState LX200StarGo::GuideNorth(uint32_t ms)
 IPState LX200StarGo::GuideSouth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+        int dir = MovementNSSP.findOnSwitchIndex();
 
         MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
     }
@@ -2246,19 +2248,20 @@ IPState LX200StarGo::GuideSouth(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementNSS[DIRECTION_SOUTH].s = ISS_ON;
+        MovementNSSP[DIRECTION_SOUTH].setState(ISS_ON);
         MoveNS(DIRECTION_SOUTH, MOTION_START);
     }
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_ns = LX200_SOUTH;
     GuideNSTID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
@@ -2267,16 +2270,16 @@ IPState LX200StarGo::GuideSouth(uint32_t ms)
 IPState LX200StarGo::GuideEast(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
+    if (MovementWESP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
+        int dir = MovementWESP.findOnSwitchIndex();
 
         MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
     }
@@ -2295,12 +2298,13 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementWES[DIRECTION_EAST].s = ISS_ON;
+        MovementWESP[DIRECTION_EAST].setState(ISS_ON);
         MoveWE(DIRECTION_EAST, MOTION_START);
     }
 
@@ -2308,9 +2312,9 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
     updateGuidingStatistics(LX200_EAST, ms);
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_we = LX200_EAST;
     GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
@@ -2319,16 +2323,16 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
 IPState LX200StarGo::GuideWest(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
+    if (MovementWESP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
+        int dir = MovementWESP.findOnSwitchIndex();
 
         MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
     }
@@ -2347,21 +2351,22 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementWES[DIRECTION_WEST].s = ISS_ON;
+        MovementWESP[DIRECTION_WEST].setState(ISS_ON);
         MoveWE(DIRECTION_WEST, MOTION_START);
     }
     // update statistics for tracking optimization
     updateGuidingStatistics(LX200_WEST, ms);
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_we = LX200_WEST;
     GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
@@ -2459,10 +2464,10 @@ void LX200StarGo::ISGetProperties(const char *dev)
     LX200Telescope::ISGetProperties(dev);
     if (isConnected())
     {
-        if (HasTrackMode() && TrackModeS != nullptr)
-            defineProperty(&TrackModeSP);
+        if (HasTrackMode() && TrackModeSP)
+            defineProperty(TrackModeSP);
         if (CanControlTrack())
-            defineProperty(&TrackStateSP);
+            defineProperty(TrackStateSP);
         //        if (HasTrackRate())
         //            defineProperty(&TrackRateNP);
     }
@@ -2509,28 +2514,31 @@ bool LX200StarGo::Goto(double ra, double dec)
     //    fs_sexa(DecStr, targetDEC, 2, fracbase);
 
     // If moving, let's stop it first.
-    if (EqNP.s == IPS_BUSY)
+    if (EqNP.getState() == IPS_BUSY)
     {
         if (!isSimulation() && !Abort())
         {
-            AbortSP.s = IPS_ALERT;
-            IDSetSwitch(&AbortSP, "Abort slew failed.");
+            AbortSP.setState(IPS_ALERT);
+            LOG_ERROR("Abort slew failed.");
+            SlewRateSP.apply();
             return false;
         }
 
-        AbortSP.s = IPS_OK;
-        EqNP.s    = IPS_IDLE;
-        IDSetSwitch(&AbortSP, "Slew aborted.");
-        IDSetNumber(&EqNP, nullptr);
+        AbortSP.setState(IPS_OK);
+        EqNP.setState(IPS_IDLE);
+        LOG_ERROR("Slew aborted.");
+        SlewRateSP.apply();
+        EqNP.apply();
 
-        if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+        if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
         {
-            MovementNSSP.s = MovementWESP.s = IPS_IDLE;
-            EqNP.s                          = IPS_IDLE;
-            IUResetSwitch(&MovementNSSP);
-            IUResetSwitch(&MovementWESP);
-            IDSetSwitch(&MovementNSSP, nullptr);
-            IDSetSwitch(&MovementWESP, nullptr);
+            MovementNSSP.setState(IPS_IDLE);
+            MovementWESP.setState(IPS_IDLE);
+            EqNP.setState(IPS_IDLE);
+            MovementNSSP.reset();
+            MovementWESP.reset();
+            MovementNSSP.apply();
+            MovementWESP.apply();
         }
 
         // sleep for 100 mseconds
@@ -2651,8 +2659,9 @@ bool LX200StarGo::Sync(double ra, double dec)
 
     if (!isSimulation() && !sendQuery(":CM#", response))
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Synchronization failed.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Synchronization failed.");
+        EqNP.apply();
         return false;
     }
 
@@ -2661,7 +2670,7 @@ bool LX200StarGo::Sync(double ra, double dec)
 
     LOG_INFO("Synchronization successful.");
 
-    EqNP.s     = IPS_OK;
+    EqNP.setState(IPS_OK);
 
     NewRaDec(currentRA, currentDEC);
 
@@ -2687,8 +2696,9 @@ bool LX200StarGo::setObjectCoords(double ra, double dec)
     // These commands receive a response without a terminating #
     if(!sendQuery(RAStr, response, '1', 2)  || !sendQuery(DecStr, response, '1', 2) )
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Error setting RA/DEC.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting RA/DEC.");
+        EqNP.apply();
         return false;
     }
 

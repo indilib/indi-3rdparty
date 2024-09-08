@@ -36,6 +36,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/linux)
 include_directories( ${CURL_INCLUDE_DIR})
+include_directories( ${USB1_INCLUDE_DIR})
 
 # This is for craft builds
 include_directories("${CMAKE_INSTALL_PREFIX}/include")

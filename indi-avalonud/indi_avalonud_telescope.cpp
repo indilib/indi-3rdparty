@@ -175,12 +175,12 @@ bool AUDTELESCOPE::initProperties()
     ParkOptionSP.fill(getDeviceName(), "TELESCOPE_PARK_OPTION", "Park Options", SITE_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     // Since we have 4 slew rates, let's fill them out
-    IUFillSwitch(&SlewRateS[SLEW_GUIDE], "SLEW_GUIDE", "Guide", ISS_OFF);
-    IUFillSwitch(&SlewRateS[SLEW_CENTERING], "SLEW_CENTER", "Center", ISS_OFF);
-    IUFillSwitch(&SlewRateS[SLEW_FIND], "SLEW_FIND", "Find", ISS_OFF);
-    IUFillSwitch(&SlewRateS[SLEW_MAX], "SLEW_MAX", "Max", ISS_ON);
-    IUFillSwitchVector(&SlewRateSP, SlewRateS, 4, getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    SlewRateSP[SLEW_GUIDE].fill("SLEW_GUIDE", "Guide", ISS_OFF);
+    SlewRateSP[SLEW_CENTERING].fill("SLEW_CENTER", "Center", ISS_OFF);
+    SlewRateSP[SLEW_FIND].fill("SLEW_FIND", "Find", ISS_OFF);
+    SlewRateSP[SLEW_MAX].fill( "SLEW_MAX", "Max", ISS_ON);
+    SlewRateSP.fill(getDeviceName(), "TELESCOPE_SLEW_RATE", "Slew Rate", MOTION_TAB, IP_RW,
+                    ISR_1OFMANY, 60, IPS_IDLE);
 
     // Add Tracking Modes. If you have SOLAR, LUNAR..etc, add them here as well.
     AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
@@ -433,10 +433,10 @@ bool AUDTELESCOPE::Connect()
             free(IPaddress);
             return false;
         }
-        j["longitude"].get_to(LocationN[LOCATION_LONGITUDE].value);
-        j["latitude"].get_to(LocationN[LOCATION_LATITUDE].value);
-        j["elevation"].get_to(LocationN[LOCATION_ELEVATION].value);
-        IDSetNumber(&LocationNP, nullptr);
+        j["longitude"].get_to(LocationNP[LOCATION_LONGITUDE].value);
+        j["latitude"].get_to(LocationNP[LOCATION_LATITUDE].value);
+        j["elevation"].get_to(LocationNP[LOCATION_ELEVATION].value);
+        LocationNP.apply();
     }
     else
     {
@@ -776,7 +776,7 @@ bool AUDTELESCOPE::ReadScopeStatus()
         MeridianFlipHANP.apply();
         setPierSide((TelescopePierSide)pierside);
 
-        if (LocalEqNP[LEQ_HA].value != ha || LocalEqNP[LEQ_DEC].value != dec || LocalEqNP.getState() != EqNP.s)
+        if (LocalEqNP[LEQ_HA].value != ha || LocalEqNP[LEQ_DEC].value != dec || LocalEqNP.getState() != EqNP.getState())
         {
             LocalEqNP[LEQ_HA].value = ha;
             LocalEqNP[LEQ_DEC].value = dec;
@@ -784,7 +784,7 @@ bool AUDTELESCOPE::ReadScopeStatus()
             LocalEqNP.apply();
         }
 
-        if (AltAzNP[ALTAZ_AZ].value != az || AltAzNP[ALTAZ_ALT].value != alt || AltAzNP.getState() != EqNP.s)
+        if (AltAzNP[ALTAZ_AZ].value != az || AltAzNP[ALTAZ_ALT].value != alt || AltAzNP.getState() != EqNP.getState())
         {
             AltAzNP[ALTAZ_AZ].value = az;
             AltAzNP[ALTAZ_ALT].value = alt;
@@ -888,14 +888,14 @@ bool AUDTELESCOPE::Park()
     answer = sendCommand("ASTRO_PARK");
     if ( !answer )
     {
-        ParkSP.s = IPS_BUSY;
-        IDSetSwitch(&ParkSP, NULL);
+        ParkSP.setState(IPS_BUSY);
+        ParkSP.apply();
         TrackState = SCOPE_PARKING;
         DEBUG(INDI::Logger::DBG_SESSION, "Start telescope park completed");
         return true;
     }
-    ParkSP.s = IPS_ALERT;
-    IDSetSwitch(&ParkSP, NULL);
+    ParkSP.setState(IPS_ALERT);
+    ParkSP.apply();
     TrackState = SCOPE_IDLE;
     DEBUGF(INDI::Logger::DBG_WARNING, "Start telescope park failed due to %s", answer);
     free(answer);
@@ -1015,10 +1015,7 @@ bool AUDTELESCOPE::SlewToHome()
 
 bool AUDTELESCOPE::Goto(double ra, double dec)
 {
-    ISwitch *sw;
-
-    sw = IUFindSwitch(&CoordSP, "TRACK");
-    if ((sw != nullptr) && (sw->s == ISS_ON))
+    if (CoordSP.isSwitchOn("TRACK"))
     {
         return Slew(ra, dec, true);
     }
@@ -1093,8 +1090,8 @@ bool AUDTELESCOPE::SetTrackMode(uint8_t mode)
             trackspeeddec = 0;
             break;
         case TRACK_CUSTOM:
-            trackspeedra = TrackRateN[AXIS_RA].value;
-            trackspeeddec = TrackRateN[AXIS_DE].value;
+            trackspeedra = TrackRateNP[AXIS_RA].getValue();
+            trackspeeddec = TrackRateNP[AXIS_DE].getValue();
             break;
     }
     if ( TrackState == SCOPE_TRACKING )
@@ -1115,18 +1112,18 @@ bool AUDTELESCOPE::SetTrackRate(double raRate, double deRate)
     }
 
     DEBUGF(INDI::Logger::DBG_SESSION, "Tracking change to RA:%f\"/s Dec:%f\"/s ...", raRate, deRate);
-    TrackStateSP.s = IPS_BUSY;
+    TrackStateSP.setState(IPS_BUSY);
     answer = sendCommand("ASTRO_TRACK %.8f %.8f", raRate / 3600.0, deRate / 3600.0);
     if ( !answer )
     {
         if ( ( raRate == 0 ) && ( deRate == 0 ) )
-            TrackStateSP.s = IPS_IDLE;
+            TrackStateSP.setState(IPS_IDLE);
         else
-            TrackStateSP.s = IPS_OK;
+            TrackStateSP.setState(IPS_OK);
         DEBUGF(INDI::Logger::DBG_SESSION, "Tracking change to RA:%f\"/s Dec:%f\"/s completed", raRate, deRate);
         return true;
     }
-    TrackStateSP.s = IPS_ALERT;
+    TrackStateSP.setState(IPS_ALERT);
     DEBUGF(INDI::Logger::DBG_WARNING, "Tracking change to RA:%f\"/s Dec:%f\"/s failed due to %s", raRate, deRate, answer);
     free(answer);
     return false;
@@ -1139,7 +1136,7 @@ bool AUDTELESCOPE::SetTrackEnabled(bool enabled)
     DEBUGF(INDI::Logger::DBG_SESSION, "Change tracking to %s...", ((enabled) ? "ENABLED" : "DISABLED"));
     if ( enabled )
     {
-        int mode = IUFindOnSwitchIndex(&TrackModeSP);
+        int mode = TrackModeSP.findOnSwitchIndex();
         SetTrackMode(mode);
         if ( TrackState != SCOPE_TRACKING )
             rc = SetTrackRate( trackspeedra, trackspeeddec );
@@ -1167,8 +1164,8 @@ bool AUDTELESCOPE::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
         return false;
     }
 
-    speedIndex = IUFindOnSwitchIndex(&SlewRateSP);
-    MovementNSSP.s = IPS_BUSY;
+    speedIndex = SlewRateSP.findOnSwitchIndex();
+    MovementNSSP.setState(IPS_BUSY);
     if ( command == MOTION_START )
     {
         // force tracking after motion
@@ -1188,12 +1185,12 @@ bool AUDTELESCOPE::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
     if ( !answer )
     {
         if ( command == MOTION_START )
-            MovementNSSP.s = IPS_OK;
+            MovementNSSP.setState(IPS_OK);
         else
-            MovementNSSP.s = IPS_IDLE;
+            MovementNSSP.setState(IPS_IDLE);
         return true;
     }
-    MovementNSSP.s = IPS_ALERT;
+    MovementNSSP.setState(IPS_ALERT);
     DEBUGF(INDI::Logger::DBG_WARNING, "MoveNS command failed due to %s", answer);
     free(answer);
     return false;
@@ -1212,8 +1209,8 @@ bool AUDTELESCOPE::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
         return false;
     }
 
-    speedIndex = IUFindOnSwitchIndex(&SlewRateSP);
-    MovementWESP.s = IPS_BUSY;
+    speedIndex = SlewRateSP.findOnSwitchIndex();
+    MovementWESP.setState(IPS_BUSY);
     if ( command == MOTION_START )
     {
         // force tracking after motion
@@ -1233,12 +1230,12 @@ bool AUDTELESCOPE::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
     if ( !answer )
     {
         if ( command == MOTION_START )
-            MovementWESP.s = IPS_OK;
+            MovementWESP.setState(IPS_OK);
         else
-            MovementWESP.s = IPS_IDLE;
+            MovementWESP.setState(IPS_IDLE);
         return true;
     }
-    MovementWESP.s = IPS_ALERT;
+    MovementWESP.setState(IPS_ALERT);
     DEBUGF(INDI::Logger::DBG_WARNING, "MoveWE command failed due to %s", answer);
     free(answer);
     return false;
@@ -1368,7 +1365,7 @@ bool AUDTELESCOPE::Abort()
         return false;
     }
 
-    AbortSP.s = IPS_OK;
+    AbortSP.setState(IPS_OK);
 
     DEBUG(INDI::Logger::DBG_SESSION, "Telescope abort ...");
 
@@ -1379,9 +1376,9 @@ bool AUDTELESCOPE::Abort()
         free(answer);
     }
 
-    AbortSP.s = IPS_IDLE;
-    IUResetSwitch(&AbortSP);
-    IDSetSwitch(&AbortSP, NULL);
+    AbortSP.setState(IPS_IDLE);
+    AbortSP.reset();
+    AbortSP.apply();
 
     slewState = IPS_IDLE;
 
@@ -1396,7 +1393,7 @@ void AUDTELESCOPE::TimerHit()
         return;
 
     ReadScopeStatus();
-    IDSetNumber(&EqNP, NULL);
+    EqNP.apply();
 
     SetTimer(getCurrentPollingPeriod());
 }

@@ -633,43 +633,44 @@ AHP_XC::AHP_XC()
     IntegrationRequest = 0.0;
     InIntegration = false;
 
-    autocorrelationsB = static_cast<IBLOB*>(malloc(1));
-    crosscorrelationsB = static_cast<IBLOB*>(malloc(1));
-    plotB = static_cast<IBLOB*>(malloc(1));
+    // These allocations are uninitialised placeholders
 
-    lineStatsN = static_cast<INumber*>(malloc(1));
-    lineStatsNP = static_cast<INumberVectorProperty*>(malloc(1));
+    autocorrelationsB = static_cast<IBLOB*>(malloc(sizeof(IBLOB)));
+    crosscorrelationsB = static_cast<IBLOB*>(malloc(sizeof(IBLOB)));
+    plotB = static_cast<IBLOB*>(malloc(sizeof(IBLOB)));
 
-    lineEnableS = static_cast<ISwitch*>(malloc(1));
-    lineEnableSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+    lineStatsN = static_cast<INumber*>(malloc(sizeof(INumber)));
+    lineStatsNP = static_cast<INumberVectorProperty*>(malloc(sizeof(INumberVectorProperty)));
 
-    linePowerS = static_cast<ISwitch*>(malloc(1));
-    linePowerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+    lineEnableS = static_cast<ISwitch*>(malloc(sizeof(ISwitch)));
+    lineEnableSP = static_cast<ISwitchVectorProperty*>(malloc(sizeof(ISwitchVectorProperty)));
 
-    lineActiveEdgeS = static_cast<ISwitch*>(malloc(1));
-    lineActiveEdgeSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+    linePowerS = static_cast<ISwitch*>(malloc(sizeof(ISwitch)));
+    linePowerSP = static_cast<ISwitchVectorProperty*>(malloc(sizeof(ISwitchVectorProperty)));
 
-    lineEdgeTriggerS = static_cast<ISwitch*>(malloc(1));
-    lineEdgeTriggerSP = static_cast<ISwitchVectorProperty*>(malloc(1));
+    lineActiveEdgeS = static_cast<ISwitch*>(malloc(sizeof(ISwitch)));
+    lineActiveEdgeSP = static_cast<ISwitchVectorProperty*>(malloc(sizeof(ISwitchVectorProperty)));
 
-    lineLocationN = static_cast<INumber*>(malloc(1));
-    lineLocationNP = static_cast<INumberVectorProperty*>(malloc(1));
+    lineEdgeTriggerS = static_cast<ISwitch*>(malloc(sizeof(ISwitch)));
+    lineEdgeTriggerSP = static_cast<ISwitchVectorProperty*>(malloc(sizeof(ISwitchVectorProperty)));
 
-    lineDelayN = static_cast<INumber*>(malloc(1));
-    lineDelayNP = static_cast<INumberVectorProperty*>(malloc(1));
+    lineLocationN = static_cast<INumber*>(malloc(sizeof(INumber)));
+    lineLocationNP = static_cast<INumberVectorProperty*>(malloc(sizeof(INumberVectorProperty)));
 
-    correlationsN = static_cast<INumber*>(malloc(1));
+    lineDelayN = static_cast<INumber*>(malloc(sizeof(INumber)));
+    lineDelayNP = static_cast<INumberVectorProperty*>(malloc(sizeof(INumberVectorProperty)));
 
-    autocorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
-    crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(1));
-    plot_str = static_cast<dsp_stream_p*>(malloc(1));
+    correlationsN = static_cast<INumber*>(malloc(sizeof(INumber)));
 
-    framebuffer = static_cast<double*>(malloc(1));
-    totalcounts = static_cast<double*>(malloc(1));
-    totalcorrelations = static_cast<ahp_xc_correlation*>(malloc(1));
-    delay = static_cast<double*>(malloc(1));
-    baselines = static_cast<baseline**>(malloc(1));
+    autocorrelations_str = static_cast<dsp_stream_p*>(malloc(sizeof(dsp_stream_p)));
+    crosscorrelations_str = static_cast<dsp_stream_p*>(malloc(sizeof(dsp_stream_p)));
+    plot_str = static_cast<dsp_stream_p*>(malloc(sizeof(dsp_stream_p)));
 
+    framebuffer = static_cast<double*>(malloc(sizeof(double)));
+    totalcounts = static_cast<double*>(malloc(sizeof(double)));
+    totalcorrelations = static_cast<ahp_xc_correlation*>(malloc(sizeof(ahp_xc_correlation)));
+    delay = static_cast<double*>(malloc(sizeof(double)));
+    baselines = static_cast<baseline**>(malloc(sizeof(baseline)));
 }
 
 bool AHP_XC::Disconnect()

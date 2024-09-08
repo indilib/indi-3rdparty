@@ -43,7 +43,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 #include <errno.h>
 
