@@ -46,10 +46,10 @@ ENDIF()
 
 #####################################
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_oasis_focuser rt)
 target_link_libraries(indi_oasis_filter_wheel rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_oasis_focuser RUNTIME DESTINATION bin)
 install(TARGETS indi_oasis_filter_wheel RUNTIME DESTINATION bin)

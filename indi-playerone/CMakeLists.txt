@@ -78,12 +78,12 @@ ENDIF()
 
 #####################################
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_playerone_ccd rt)
 target_link_libraries(indi_playerone_single_ccd rt)
 target_link_libraries(indi_playerone_wheel rt)
 target_link_libraries(playerone_camera_test rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_playerone_ccd RUNTIME DESTINATION bin)
 install(TARGETS indi_playerone_single_ccd RUNTIME DESTINATION bin)

@@ -48,10 +48,10 @@ ENDIF()
 
 #####################################
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_atik_ccd rt)
 target_link_libraries(indi_atik_wheel rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_atik_ccd RUNTIME DESTINATION bin)
 install(TARGETS indi_atik_wheel RUNTIME DESTINATION bin)
