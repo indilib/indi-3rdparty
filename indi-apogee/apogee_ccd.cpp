@@ -215,8 +215,8 @@ bool ApogeeCCD::getCameraParams()
 
     if (isSimulation())
     {
-        TemperatureN[0].value = 10;
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP[0].setValue(10);
+        TemperatureNP.apply();
 
         IUResetSwitch(&FanStatusSP);
         FanStatusS[2].s = ISS_ON;
@@ -273,8 +273,8 @@ bool ApogeeCCD::getCameraParams()
     }
 
     LOGF_INFO("The CCD Temperature is %f.", temperature);
-    TemperatureN[0].value = temperature; /* CCD chip temperatre (degrees C) */
-    IDSetNumber(&TemperatureNP, nullptr);
+    TemperatureNP[0].setValue(temperature); /* CCD chip temperatre (degrees C) */
+    TemperatureNP.apply();
 
     Apg::FanMode fStatus = Apg::FanMode_Unknown;
 
@@ -325,7 +325,7 @@ bool ApogeeCCD::getCameraParams()
 int ApogeeCCD::SetTemperature(double temperature)
 {
     // If less than 0.1 of a degree, let's just return OK
-    if (fabs(temperature - TemperatureN[0].value) < 0.1)
+    if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
     activateCooler(true);
@@ -1299,7 +1299,7 @@ void ApogeeCCD::TimerHit()
         }
     }
 
-    switch (TemperatureNP.s)
+    switch (TemperatureNP.getState())
     {
         case IPS_IDLE:
         case IPS_OK:
@@ -1307,22 +1307,22 @@ void ApogeeCCD::TimerHit()
             try
             {
                 if (isSimulation())
-                    ccdTemp = TemperatureN[0].value;
+                    ccdTemp = TemperatureNP[0].getValue();
                 else
                     ccdTemp = ApgCam->GetTempCcd();
             }
             catch (std::runtime_error &err)
             {
-                TemperatureNP.s = IPS_IDLE;
+                TemperatureNP.setState(IPS_IDLE);
                 LOGF_ERROR("GetTempCcd failed. %s.", err.what());
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.apply();
                 return;
             }
 
-            if (fabs(TemperatureN[0].value - ccdTemp) >= TEMP_UPDATE_THRESHOLD)
+            if (fabs(TemperatureNP[0].getValue() - ccdTemp) >= TEMP_UPDATE_THRESHOLD)
             {
-                TemperatureN[0].value = ccdTemp;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP[0].setValue(ccdTemp);
+                TemperatureNP.apply();
             }
             break;
 
@@ -1331,23 +1331,23 @@ void ApogeeCCD::TimerHit()
             try
             {
                 if (isSimulation())
-                    ccdTemp = TemperatureN[0].value;
+                    ccdTemp = TemperatureNP[0].getValue();
                 else
                     ccdTemp = ApgCam->GetTempCcd();
             }
             catch (std::runtime_error &err)
             {
-                TemperatureNP.s = IPS_ALERT;
+                TemperatureNP.setState(IPS_ALERT);
                 LOGF_ERROR("GetTempCcd failed. %s.", err.what());
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.apply();
                 return;
             }
 
             //            if (fabs(TemperatureN[0].value - ccdTemp) <= TEMP_THRESHOLD)
             //                TemperatureNP.s = IPS_OK;
 
-            TemperatureN[0].value = ccdTemp;
-            IDSetNumber(&TemperatureNP, nullptr);
+            TemperatureNP[0].setValue(ccdTemp);
+            TemperatureNP.apply();
             break;
 
         case IPS_ALERT:

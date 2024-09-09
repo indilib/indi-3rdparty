@@ -368,8 +368,8 @@ bool ToupBase::updateProperties()
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
-            TemperatureNP.p = IP_RO;
-            defineProperty(&TemperatureNP);
+            TemperatureNP.setPermission(IP_RO);
+            defineProperty(TemperatureNP);
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
@@ -421,7 +421,7 @@ bool ToupBase::updateProperties()
         }
         else
         {
-            deleteProperty(TemperatureNP.name);
+            deleteProperty(TemperatureNP);
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
@@ -496,10 +496,9 @@ bool ToupBase::Connect()
     {
         int tecRange = 0;
         FP(get_Option(m_Handle, CP(OPTION_TECTARGET_RANGE), &tecRange));
-        TemperatureN[0].min = (static_cast<short>(tecRange & 0xffff)) / 10.0;
-        TemperatureN[0].max
-            = (static_cast<short>((tecRange >> 16) & 0xffff)) / 10.0;
-        TemperatureN[0].value = 0; // reasonable default
+        TemperatureNP[0].setMin((static_cast<short>(tecRange & 0xffff)) / 10.0);
+        TemperatureNP[0].setMax((static_cast<short>((tecRange >> 16) & 0xffff)) / 10.0);
+        TemperatureNP[0].setValue(0); // reasonable default
     }
 
     {
@@ -624,7 +623,7 @@ void ToupBase::setupParams()
         CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str() : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 
         m_Channels = 1;
-        IUSaveText(&BayerT[2], getBayerString());// Get RAW Format
+        BayerTP[2].setText(getBayerString());// Get RAW Format
 
         addCaptureFormat(rgb);
         addCaptureFormat(raw);
@@ -1343,7 +1342,7 @@ bool ToupBase::StopStreaming()
 int ToupBase::SetTemperature(double temperature)
 {
     // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
-    if (temperature < TemperatureN[0].value && activateCooler(true) == false)
+    if (temperature < TemperatureNP[0].getValue() && activateCooler(true) == false)
     {
         LOG_ERROR("Failed to toggle cooler.");
         return -1;
@@ -1569,29 +1568,29 @@ void ToupBase::TimerHit()
         HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
-            if (TemperatureNP.s != IPS_ALERT)
+            if (TemperatureNP.getState() != IPS_ALERT)
             {
-                TemperatureNP.s = IPS_ALERT;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.setState(IPS_ALERT);
+                TemperatureNP.apply();
                 LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
             }
         }
-        else if (TemperatureNP.s == IPS_ALERT)
-            TemperatureNP.s = IPS_OK;
+        else if (TemperatureNP.getState() == IPS_ALERT)
+            TemperatureNP.setState(IPS_OK);
 
-        TemperatureN[0].value = nTemperature / 10.0;
+        TemperatureNP[0].setValue(nTemperature / 10.0);
 
         auto threshold = HasCooler() ? 0.1 : 0.2;
 
-        switch (TemperatureNP.s)
+        switch (TemperatureNP.getState())
         {
             case IPS_IDLE:
             case IPS_OK:
             case IPS_BUSY:
-                if (std::abs(TemperatureN[0].value - m_LastTemperature) > threshold)
+                if (std::abs(TemperatureNP[0].getValue() - m_LastTemperature) > threshold)
                 {
-                    m_LastTemperature = TemperatureN[0].value;
-                    IDSetNumber(&TemperatureNP, nullptr);
+                    m_LastTemperature = TemperatureNP[0].getValue();
+                    TemperatureNP.apply();
                 }
                 break;
 
@@ -2058,8 +2057,8 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
         else
         {
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-            IUSaveText(&BayerT[2], getBayerString());
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(getBayerString());
+            BayerTP.apply();
             m_BitsPerPixel = (m_maxBitDepth > 8) ? 16 : 8;
         }
     }

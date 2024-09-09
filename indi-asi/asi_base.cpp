@@ -345,7 +345,7 @@ bool ASIBase::initProperties()
     BlinkNP.fill(getDeviceName(), "BLINK", "Blink", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     BlinkNP.load();
 
-    IUSaveText(&BayerT[2], getBayerString());
+    BayerTP[2].setText(getBayerString());
 
     ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, mCameraInfo.BitDepth);
     ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
@@ -438,8 +438,8 @@ bool ASIBase::updateProperties()
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
         {
-            TemperatureNP.p = IP_RO;
-            defineProperty(&TemperatureNP);
+            TemperatureNP.setPermission(IP_RO);
+            defineProperty(TemperatureNP);
         }
 
         if (!ControlNP.isEmpty())
@@ -497,7 +497,7 @@ bool ASIBase::updateProperties()
             deleteProperty(CoolerSP.getName());
         }
         else
-            deleteProperty(TemperatureNP.name);
+            deleteProperty(TemperatureNP);
 
         if (!ControlNP.isEmpty())
             deleteProperty(ControlNP.getName());
@@ -712,9 +712,9 @@ void ASIBase::setupParams()
     if (ret != ASI_SUCCESS)
         LOGF_DEBUG("Failed to get temperature (%s).", Helpers::toString(ret));
 
-    TemperatureN[0].value = value / 10.0;
-    IDSetNumber(&TemperatureNP, nullptr);
-    LOGF_INFO("The CCD Temperature is %.3f.", TemperatureN[0].value);
+    TemperatureNP[0].setValue(value / 10.0);
+    TemperatureNP.apply();
+    LOGF_INFO("The CCD Temperature is %.3f.", TemperatureNP[0].getValue());
 
     ret = ASIStopVideoCapture(mCameraInfo.CameraID);
     if (ret != ASI_SUCCESS)
@@ -1280,7 +1280,7 @@ void ASIBase::temperatureTimerTimeout()
     ASI_ERROR_CODE ret;
     ASI_BOOL isAuto = ASI_FALSE;
     long value = 0;
-    IPState newState = TemperatureNP.s;
+    IPState newState = TemperatureNP.getState();
 
     ret = ASIGetControlValue(mCameraInfo.CameraID, ASI_TEMPERATURE, &value, &isAuto);
 
@@ -1303,13 +1303,13 @@ void ASIBase::temperatureTimerTimeout()
 
     // Update if there is a change
     if (
-        std::abs(mCurrentTemperature - TemperatureN[0].value) > 0.05 ||
-        TemperatureNP.s != newState
+        std::abs(mCurrentTemperature - TemperatureNP[0].getValue()) > 0.05 ||
+        TemperatureNP.getState() != newState
     )
     {
-        TemperatureNP.s = newState;
-        TemperatureN[0].value = mCurrentTemperature;
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP.setState(newState);
+        TemperatureNP[0].setValue(mCurrentTemperature);
+        TemperatureNP.apply();
     }
 
     if (HasCooler())
