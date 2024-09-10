@@ -282,6 +282,8 @@ bool RollOffIno::Handshake()
         }
         if (!status)
             LOG_ERROR("Unable to contact the roof controller");
+        else
+            LOGF_INFO("Number of Actions enabled from Arduino: %d", actionCount);
     }
     return status;
 }
@@ -1049,7 +1051,7 @@ bool RollOffIno::getRoofAuxSwitch(bool* switchState)
     }
     else
     {
-        LOGF_WARN("Unable to obtain from the controller whether or not the obs Aux switch is being used %d", ++communicationErrors);
+        LOGF_DEBUG("Unable to obtain from the controller whether or not the obs Aux switch is being used %d", ++communicationErrors);
         return false;
     }
 }
@@ -1070,7 +1072,7 @@ bool RollOffIno::getActionSwitch(const char* action, bool* switchState)
     }
     else
     {
-        LOGF_WARN("Unable to obtain from the controller whether or not the action switch is being used %d", ++communicationErrors);
+        LOGF_DEBUG("Unable to obtain from the controller whether or not the action switch is being used %d", ++communicationErrors);
         return false;
     }
 }
@@ -1172,8 +1174,8 @@ bool RollOffIno::actionCmdUsed(const char* action)
  */
 bool RollOffIno::readRoofSwitch(const char* roofSwitchId, bool *result)
 {
-    char readBuffer[MAXINOBUF];
-    char writeBuffer[MAXINOLINE];
+    char readBuffer[MAXINOBUF] = {};
+    char writeBuffer[MAXINOLINE] = {};
     bool status;
 
     if (!contactEstablished)
@@ -1183,13 +1185,11 @@ bool RollOffIno::readRoofSwitch(const char* roofSwitchId, bool *result)
     }
     if (roofSwitchId == 0)
         return false;
-    memset(writeBuffer, 0, sizeof(writeBuffer));
     strcpy(writeBuffer, "(GET:");
     strcat(writeBuffer, roofSwitchId);
     strcat(writeBuffer, ":0)");
     if (!writeIno(writeBuffer))
         return false;
-    memset(readBuffer, 0, sizeof(readBuffer));
     if (!readIno(readBuffer))
         return false;
     status = evaluateResponse(readBuffer, result);
@@ -1201,26 +1201,28 @@ bool RollOffIno::readRoofSwitch(const char* roofSwitchId, bool *result)
  */
 bool RollOffIno::initialContact(void)
 {
-    char readBuffer[MAXINOBUF];
-    char workBuffer[MAXINOBUF];
+    char readBuffer[MAXINOBUF] = {};
+    char workBuffer[MAXINOBUF] = {};
     bool result = false;
     contactEstablished = false;
     actionCount = 0;
+    LOG_DEBUG("Sent to roof controller: (CON:0:0)");
     if (writeIno("(CON:0:0)"))
     {
-        memset(readBuffer, 0, sizeof(readBuffer));
-        memset(workBuffer, 0, sizeof(workBuffer));
+        LOG_DEBUG("Read response");
         if (readIno(readBuffer))
         {
             strcpy(workBuffer, readBuffer);
             contactEstablished = evaluateResponse(workBuffer, &result);
             if (contactEstablished)
+                LOGF_DEBUG("Contact established %s", workBuffer);
+            if (contactEstablished)
             // (ACK:0:V1.3-0  [ACTn])
             {
-                char scratch[MAXINOVAL + 1];
-                char target[MAXINOTARGET + 1];
-                char version[MAXINOTARGET + 1];
-                char action[MAXINOTARGET + 1];
+                char scratch[MAXINOVAL] = {};
+                char target[MAXINOTARGET] = {};
+                char version[MAXINOTARGET] = {};
+                char action[MAXINOTARGET] = {};
                 strcpy(scratch, strtok(workBuffer, "(:"));
                 strcpy(scratch, strtok(nullptr, ":"));
                 strcpy(target, strtok(nullptr, ")"));
@@ -1233,9 +1235,13 @@ bool RollOffIno::initialContact(void)
                     LOGF_DEBUG("Remote version: %s, action: %s", version, action);
                     int value = strtol(action, &end, 10);
                     if (value > 0 && value <= MAX_ACTIONS )
+                    {
                         actionCount = value;
+                    }
                     else
+                    {
                         actionCount = 0;
+                    }
                 }
                 else
                     LOGF_DEBUG("Remote version %s", target);
@@ -1252,8 +1258,8 @@ bool RollOffIno::initialContact(void)
  */
 bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLock)
 {
-    char readBuffer[MAXINOBUF];
-    char writeBuffer[MAXINOBUF];
+    char readBuffer[MAXINOBUF] = {};
+    char writeBuffer[MAXINOBUF] = {};
     bool status;
     bool switchState = false;
     bool responseState = false;  //true if the value in response to command was "ON"
@@ -1266,7 +1272,6 @@ bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLo
     status = getRoofLockedSwitch(&switchState);        // In case it has been locked since the driver connected
     if ((status && !switchState) || ignoreLock)
     {
-        memset(writeBuffer, 0, sizeof(writeBuffer));
         strcpy(writeBuffer, "(SET:");
         strcat(writeBuffer, button);
         if (switchOn)
@@ -1277,8 +1282,6 @@ bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLo
         if (!writeIno(writeBuffer))             // Push identified button & get response
             return false;
         msSleep(ROR_D_PRESS);
-        memset(readBuffer, 0, sizeof(readBuffer));
-
         status = readIno(readBuffer);
         evaluateResponse(readBuffer, &responseState); // To get a log of what was returned in response to the command
         return status;                                // Did the read itself successfully connect
@@ -1296,20 +1299,21 @@ bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLo
  */
 bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
 {
-    char workBuffer[MAXINOBUF];
-    char inoCmd[MAXINOCMD + 1];
-    char inoTarget[MAXINOTARGET + 1];
-    char inoVal[MAXINOVAL + 1];
-    memset(workBuffer, 0, sizeof(workBuffer));
-    strcpy(workBuffer, inpBuffer);
+    char workBuffer[MAXINOBUF] = {};
+    char inoCmd[MAXINOCMD] = {};
+    char inoTarget[MAXINOTARGET] = {};
+    char inoVal[MAXINOVAL] = {};
     *result = false;
+    if (strlen(inpBuffer) > MAXINOVAL)
+        return false;
+    strcpy(workBuffer, inpBuffer);
     strcpy(inoCmd, strtok(workBuffer, "(:"));
     strcpy(inoTarget, strtok(nullptr, ":"));
     strcpy(inoVal, strtok(nullptr, ")"));
     if ((strcmp(inoCmd, "NAK")) == 0)
     {
-        LOGF_WARN("Negative response from roof controller error: %s", inoTarget);
-        LOGF_WARN("controller response: %s: ", inoVal);
+        LOGF_DEBUG("Negative response from roof controller error: %s", inoTarget);
+        LOGF_DEBUG("controller response: %s: ", inoVal);
         return false;
     }
     // If it is in response to a connect request return result true
@@ -1320,7 +1324,7 @@ bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
     }
     if ((strcmp(inoCmd, "ACK")) != 0)
     {
-        LOGF_ERROR("Unrecognized response from roof controller: %s", inoCmd);
+        LOGF_DEBUG("Unrecognized response from roof controller: %s", inoCmd);
         return false;
     }
 
@@ -1400,7 +1404,7 @@ bool RollOffIno::writeIno(const char* msg)
         LOG_ERROR("Roof controller command message too long");
         return false;
     }
-    LOGF_DEBUG("Sent to roof controller: %s", msg);
+//    LOGF_DEBUG("Sent to roof controller: %s", msg);
     tcflush(PortFD, TCIOFLUSH);
     status = tty_write_string(PortFD, msg, &retMsgLen);
     if (status != TTY_OK)
