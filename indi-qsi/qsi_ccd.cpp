@@ -1269,7 +1269,9 @@ void QSICCD::TimerHit()
         case IPS_BUSY:
             try
             {
-                // QSICam.get_CCDTemperature(&TemperatureN[0].value);
+                double value = 0;
+                QSICam.get_CCDTemperature(&value);
+                TemperatureNP[0].setValue(value);
             }
             catch (std::runtime_error &err)
             {
