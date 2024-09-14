@@ -303,7 +303,7 @@ bool GPhotoCCD::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
 
     // Most cameras have this by default, so let's set it as default.
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
 #ifdef HAVE_WEBSOCKET
     SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING | CCD_HAS_WEB_SOCKET);
@@ -418,8 +418,8 @@ bool GPhotoCCD::updateProperties()
 
         if (isTemperatureSupported)
         {
-            TemperatureNP.p = IP_RO;
-            defineProperty(&TemperatureNP);
+            TemperatureNP.setPermission(IP_RO);
+            defineProperty(TemperatureNP);
         }
 
         defineProperty(ForceBULBSP);
@@ -443,7 +443,7 @@ bool GPhotoCCD::updateProperties()
         }
 
         if (isTemperatureSupported)
-            deleteProperty(TemperatureNP.name);
+            deleteProperty(TemperatureNP);
 
         deleteProperty(SDCardImageSP);
 
@@ -682,12 +682,12 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                     LOG_INFO("Images should only remain in the camera internal storage and will not be downloaded at all.");
 
                     // Upload mode should always be local, no images uploaded.
-                    if (UploadS[UPLOAD_LOCAL].s != ISS_ON)
+                    if (UploadSP[UPLOAD_LOCAL].getState() != ISS_ON)
                     {
-                        IUResetSwitch(&UploadSP);
-                        UploadS[UPLOAD_LOCAL].s = ISS_ON;
-                        UploadSP.s = IPS_OK;
-                        IDSetSwitch(&UploadSP, nullptr);
+                        UploadSP.reset();
+                        UploadSP[UPLOAD_LOCAL].setState(ISS_ON);
+                        UploadSP.setState(IPS_OK);
+                        UploadSP.apply();
                     }
 
                     // Capture target should always be SD card.
@@ -1126,23 +1126,23 @@ void GPhotoCCD::TimerHit()
             if (isTemperatureSupported)
             {
                 double cameraTemperature = static_cast<double>(gphoto_get_last_sensor_temperature(gphotodrv));
-                if (fabs(cameraTemperature - TemperatureN[0].value) > 0.01)
+                if (fabs(cameraTemperature - TemperatureNP[0].getValue()) > 0.01)
                 {
                     // Check if we are getting bogus temperature values and set property to alert
                     // unless it is already set
                     if (cameraTemperature < MINUMUM_CAMERA_TEMPERATURE)
                     {
-                        if (TemperatureNP.s != IPS_ALERT)
+                        if (TemperatureNP.getState() != IPS_ALERT)
                         {
-                            TemperatureNP.s = IPS_ALERT;
-                            IDSetNumber(&TemperatureNP, nullptr);
+                            TemperatureNP.setState(IPS_ALERT);
+                            TemperatureNP.apply();
                         }
                     }
                     else
                     {
-                        TemperatureNP.s = IPS_OK;
-                        TemperatureN[0].value = cameraTemperature;
-                        IDSetNumber(&TemperatureNP, nullptr);
+                        TemperatureNP.setState(IPS_OK);
+                        TemperatureNP[0].setValue(cameraTemperature);
+                        TemperatureNP.apply();
                     }
                 }
             }
@@ -1300,8 +1300,8 @@ bool GPhotoCCD::grabImage()
             if (!isSimulation())
                 unlink(filename);
 
-            IUSaveText(&BayerT[2], bayer_pattern);
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(bayer_pattern);
+            BayerTP.apply();
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
@@ -2070,7 +2070,7 @@ void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FI
 
     if (isTemperatureSupported)
     {
-        fitsKeywords.push_back({"CCD-TEMP", TemperatureN[0].value, 3, "CCD Temperature (Celsius)"});
+        fitsKeywords.push_back({"CCD-TEMP", TemperatureNP[0].getValue(), 3, "CCD Temperature (Celsius)"});
     }
 }
 

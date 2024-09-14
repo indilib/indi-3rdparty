@@ -75,8 +75,8 @@ bool INovaCCD::Connect()
             SetCCDCapability(cap);
             if(iNovaSDK_HasColorSensor())
             {
-                IUSaveText(&BayerT[2], "RGGB");
-                IDSetText(&BayerTP, nullptr);
+                BayerTP[2].setText("RGGB");
+                BayerTP.apply();
                 SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
             }
 

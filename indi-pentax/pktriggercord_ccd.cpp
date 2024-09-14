@@ -84,7 +84,7 @@ bool PkTriggerCordCCD::initProperties()
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
     PrimaryCCD.getCCDInfo()->p = IP_RW;
 
@@ -630,8 +630,8 @@ bool PkTriggerCordCCD::grabImage()
             LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
                        memsize, naxis, w, h, bpp, bayer_pattern);
 
-            IUSaveText(&BayerT[2], bayer_pattern);
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(bayer_pattern);
+            BayerTP.apply(nullptr);
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
@@ -856,7 +856,7 @@ bool PkTriggerCordCCD::getCaptureSettingsState()
 
 string PkTriggerCordCCD::getUploadFilePrefix()
 {
-    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
+    return UploadSettingsTP[UPLOAD_DIR].getText() + string("/") + UploadSettingsTP[UPLOAD_PREFIX].getText();
 }
 
 const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format)
