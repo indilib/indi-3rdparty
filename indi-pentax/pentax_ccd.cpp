@@ -72,7 +72,7 @@ bool PentaxCCD::initProperties()
 
     BayerTP[2].setText("RGGB");
 
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     uint32_t cap = CCD_HAS_BAYER | CCD_HAS_STREAMING;
     SetCCDCapability(cap);
@@ -107,7 +107,7 @@ bool PentaxCCD::updateProperties()
         }
 
         buildCaptureSwitches();
-        
+
         INDI::CCD::updateProperties();
 
         defineProperty(&autoFocusSP);

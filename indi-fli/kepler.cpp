@@ -139,14 +139,6 @@ std::map<FPRODEVICETYPE, double> Kepler::SensorPixelSize
 /********************************************************************************
 *
 ********************************************************************************/
-void Kepler::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
-{
-
-}
-
-/********************************************************************************
-*
-********************************************************************************/
 void Kepler::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     int32_t result = FPROCtrl_SetExposure(m_CameraHandle, duration * 1e9, 0, false);
@@ -881,7 +873,7 @@ void Kepler::prepareUnpacked()
 int Kepler::SetTemperature(double temperature)
 {
     // Return OK for
-    if (std::abs(temperature - TemperatureN[0].value) < TEMPERATURE_THRESHOLD)
+    if (std::abs(temperature - TemperatureNP[0].getValue()) < TEMPERATURE_THRESHOLD)
         return 1;
     int result = FPROCtrl_SetTemperatureSetPoint(m_CameraHandle, temperature);
     if (result >= 0)
@@ -992,8 +984,8 @@ void Kepler::readTemperature()
     int result = FPROCtrl_GetTemperatures(m_CameraHandle, &ambient, &base, &cooler);
     if (result < 0)
     {
-        TemperatureNP.s = IPS_ALERT;
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP.setState(IPS_ALERT);
+        TemperatureNP.apply();
 
 #ifdef LEGACY_MODE
         TemperatureReadNP.setState(IPS_ALERT);
@@ -1002,14 +994,14 @@ void Kepler::readTemperature()
         LOGF_WARN("FPROCtrl_GetTemperatures failed: %d", result);
     }
 
-    switch (TemperatureNP.s)
+    switch (TemperatureNP.getState())
     {
         case IPS_IDLE:
         case IPS_OK:
-            if (std::abs(cooler - TemperatureN[0].value) > TEMPERATURE_THRESHOLD)
+            if (std::abs(cooler - TemperatureNP[0].getValue()) > TEMPERATURE_THRESHOLD)
             {
-                TemperatureN[0].value = cooler;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP[0].setValue(cooler);
+                TemperatureNP.apply();
 
 #ifdef LEGACY_MODE
                 TemperatureReadNP.setState(IPS_OK);
@@ -1022,15 +1014,15 @@ void Kepler::readTemperature()
         case IPS_BUSY:
             if (std::abs(cooler - m_TargetTemperature) <= TEMPERATURE_THRESHOLD)
             {
-                TemperatureNP.s = IPS_OK;
+                TemperatureNP.setState(IPS_OK);
 #ifdef LEGACY_MODE
                 TemperatureReadNP.setState(IPS_OK);
 #endif
                 // Reset now to idle frequency checks.
                 m_TemperatureTimer.setInterval(TEMPERATURE_FREQUENCY_IDLE);
             }
-            TemperatureN[0].value = cooler;
-            IDSetNumber(&TemperatureNP, nullptr);
+            TemperatureNP[0].setValue(cooler);
+            TemperatureNP.apply();
 #ifdef LEGACY_MODE
             TemperatureReadNP[0].value = cooler;
             TemperatureReadNP.apply();
