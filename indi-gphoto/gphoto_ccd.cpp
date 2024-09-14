@@ -324,7 +324,7 @@ bool GPhotoCCD::initProperties()
     FI::SetCapability(FOCUSER_CAN_REL_MOVE);
 
     /* JM 2014-05-20 Make PrimaryCCD.ImagePixelSizeNP writable since we can't know for now the pixel size and bit depth from gphoto */
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     setDriverInterface(getDriverInterface() | FOCUSER_INTERFACE);
 
@@ -355,20 +355,20 @@ void GPhotoCCD::ISGetProperties(const char * dev)
     IUGetConfigNumber(getDeviceName(), "CCD_INFO", "CCD_PIXEL_SIZE_X", &pixel_x);
     IUGetConfigNumber(getDeviceName(), "CCD_INFO", "CCD_PIXEL_SIZE_Y", &pixel_y);
 
-    INumberVectorProperty *nvp = PrimaryCCD.getCCDInfo();
+    auto nvp = PrimaryCCD.getCCDInfo();
 
-    if (!nvp)
+    if (!nvp.isValid())
         return;
 
     // Load the necessary pixel size information
     // The maximum resolution and bits per pixel depend on the capture itself.
     // while the pixel size data remains constant.
     if (pixel > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE].value = pixel;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE].setValue(pixel);
     if (pixel_x > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE_X].value = pixel_x;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE_X].setValue(pixel_x);
     if (pixel_y > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE_Y].value = pixel_y;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE_Y].setValue(pixel_y);
 
 }
 
@@ -2020,7 +2020,7 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
         PortTP.save(fp);
 
     // Second save the CCD Info property
-    IUSaveConfigNumber(fp, PrimaryCCD.getCCDInfo());
+    PrimaryCCD.getCCDInfo().save(fp);
 
     // Save regular CCD properties
     INDI::CCD::saveConfigItems(fp);
