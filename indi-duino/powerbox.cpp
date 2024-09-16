@@ -34,7 +34,7 @@ static std::unique_ptr<PowerBox> powerbox_ptr(new PowerBox());
 
 #define MAX_POWERBOXBUFFER 512
 
-PowerBox::PowerBox() : LightBoxInterface(this, true)
+PowerBox::PowerBox() : LightBoxInterface(this)
 {
     setVersion(DUINOPOWERBOX_VERSION_MAJOR, DUINOPOWERBOX_VERSION_MINOR);
 
@@ -51,6 +51,14 @@ PowerBox::PowerBox() : LightBoxInterface(this, true)
 void PowerBox::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
+    LI::ISGetProperties(dev);
+}
+
+bool PowerBox::ISSnoopDevice(XMLEle *root)
+{
+    LI::snoop(root);
+
+    return INDI::DefaultDevice::ISSnoopDevice(root);
 }
 
 bool PowerBox::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -83,14 +91,14 @@ bool PowerBox::ISNewNumber(const char *dev, const char *name, double values[], c
             bool result = setPWMDutyCycle(2, static_cast<int>(values[0]));
             return result;
         }
-        else if (strcmp(name, LightIntensityNP.name) == 0)
-        {
-            // forward the light box intensity to the selected PWM port
-            IUUpdateNumber(&LightIntensityNP, values, names, n);
-            double intensity = LightIntensityN[0].value;
-            int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
-            setPWMDutyCycle(pwmPort, static_cast<int>(round(intensity)));
-        }
+        // else if (strcmp(name, LightIntensityNP.name) == 0)
+        // {
+        //     // forward the light box intensity to the selected PWM port
+        //     IUUpdateNumber(&LightIntensityNP, values, names, n);
+        //     double intensity = LightIntensityN[0].value;
+        //     int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
+        //     setPWMDutyCycle(pwmPort, static_cast<int>(round(intensity)));
+        // }
     }
     // in all other cases let the default device handle the switch
     return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
@@ -98,11 +106,17 @@ bool PowerBox::ISNewNumber(const char *dev, const char *name, double values[], c
 
 bool PowerBox::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
+    if (LI::processText(dev, name, texts, names, n))
+        return true;
+
     return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
 }
 
 bool PowerBox::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    if (LI::processSwitch(dev, name, states, names, n))
+        return true;
+
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
 
@@ -142,21 +156,16 @@ bool PowerBox::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             IDSetSwitch(&LightBoxPWMPortSP, nullptr);
             updateLightBoxSettings();
         }
-        else if (strcmp(name, LightSP.name) == 0)
-        {
-            IUUpdateSwitch(&LightSP, states, names, n);
-            bool powerOn = (IUFindOnSwitchIndex(&LightSP) == FLAT_LIGHT_ON);
-            int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
-            setPWMPortStatus(pwmPort, powerOn);
-        }
+        // else if (strcmp(name, LightSP.name) == 0)
+        // {
+        //     IUUpdateSwitch(&LightSP, states, names, n);
+        //     bool powerOn = (IUFindOnSwitchIndex(&LightSP) == FLAT_LIGHT_ON);
+        //     int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
+        //     setPWMPortStatus(pwmPort, powerOn);
+        // }
     }
     // in all other cases let the default device handle the switch
     return INDI::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
-}
-
-bool PowerBox::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-    return INDI::DefaultDevice::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 bool PowerBox::Handshake()
@@ -192,7 +201,8 @@ bool PowerBox::initProperties()
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
     // PWM frequency
     IUFillNumber(&PWMFrequencyN[0], "PWM_FREQUENCY", "PWM Frequency (Hz)", "%.f", 0, 50000, 100, getTTYTimeout());
-    IUFillNumberVector(&PWMFrequencyNP, PWMFrequencyN, 1, getDeviceName(), "PWM_SETUP", "PWM Setup", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&PWMFrequencyNP, PWMFrequencyN, 1, getDeviceName(), "PWM_SETUP", "PWM Setup", MAIN_CONTROL_TAB, IP_RW,
+                       60, IPS_IDLE);
 
     // PWM Port 1
     IUFillSwitch(&PWMPortStatus_1_S[POWER_ON], "ON", "On", ISS_OFF);
@@ -200,15 +210,18 @@ bool PowerBox::initProperties()
     IUFillSwitchVector(&PWMPortStatus_1_SP, PWMPortStatus_1_S, 2, getDeviceName(), "PWM_PORT_1", "PWM Port 1",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
     IUFillNumber(&PWMDutyCycle_1_N[0], "PWM_DUTY_CYCLE", "PWM Duty Cycle", "%.f", 0, 255, 1, getTTYTimeout());
-    IUFillNumberVector(&PWMDutyCycle_1_NP, PWMDutyCycle_1_N, 1, getDeviceName(), "PWM_PORT_1_DC", " ", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    IUFillNumberVector(&PWMDutyCycle_1_NP, PWMDutyCycle_1_N, 1, getDeviceName(), "PWM_PORT_1_DC", " ", MAIN_CONTROL_TAB, IP_RW,
+                       60, IPS_IDLE);
     // PWM Port 2
     IUFillSwitch(&PWMPortStatus_2_S[POWER_ON], "ON", "On", ISS_OFF);
     IUFillSwitch(&PWMPortStatus_2_S[POWER_OFF], "OFF", "Off", ISS_OFF);
     IUFillSwitchVector(&PWMPortStatus_2_SP, PWMPortStatus_2_S, 2, getDeviceName(), "PWM_PORT_2", "PWM Port 2",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
     IUFillNumber(&PWMDutyCycle_2_N[0], "PWM_DUTY_CYCLE", "PWM Duty Cycle", "%.f", 0, 255, 1, getTTYTimeout());
-    IUFillNumberVector(&PWMDutyCycle_2_NP, PWMDutyCycle_2_N, 1, getDeviceName(), "PWM_PORT_2_DC", " ", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-    initLightBoxProperties(getDeviceName(), LIGHT_BOX_TAB);
+    IUFillNumberVector(&PWMDutyCycle_2_NP, PWMDutyCycle_2_N, 1, getDeviceName(), "PWM_PORT_2_DC", " ", MAIN_CONTROL_TAB, IP_RW,
+                       60, IPS_IDLE);
+
+    LI::initProperties(LIGHT_BOX_TAB, INDI::LightBoxInterface::CAN_DIM);
 
     addConfigurationControl();
 
@@ -233,7 +246,6 @@ bool PowerBox::initProperties()
 
 bool PowerBox::updateProperties()
 {
-    bool result = true;
     if (isConnected())
     {
         defineProperty(&PowerPortStatus_1_SP);
@@ -243,17 +255,11 @@ bool PowerBox::updateProperties()
         defineProperty(&PWMDutyCycle_1_NP);
         defineProperty(&PWMPortStatus_2_SP);
         defineProperty(&PWMDutyCycle_2_NP);
-        defineProperty(&LightSP);
-        defineProperty(&LightIntensityNP);
         defineProperty(&LightBoxPWMPortSP);
-
-        result = updateLightBoxProperties();
     }
     else
     {
         deleteProperty(LightBoxPWMPortSP.name);
-        deleteProperty(LightSP.name);
-        deleteProperty(LightIntensityNP.name);
         deleteProperty(PWMPortStatus_2_SP.name);
         deleteProperty(PWMDutyCycle_2_NP.name);
         deleteProperty(PWMPortStatus_1_SP.name);
@@ -261,11 +267,10 @@ bool PowerBox::updateProperties()
         deleteProperty(PWMFrequencyNP.name);
         deleteProperty(PowerPortStatus_2_SP.name);
         deleteProperty(PowerPortStatus_1_SP.name);
-
-        result = updateLightBoxProperties();
     }
 
-    return result;
+    LI::updateProperties();
+    return true;
 }
 
 bool PowerBox::getBasicData()
@@ -283,25 +288,24 @@ bool PowerBox::getStatus()
 
 bool PowerBox::SetLightBoxBrightness(uint16_t value)
 {
-    LOG_WARN("PowerBox::SetLightBoxBrightness not implemented");
-    INDI_UNUSED(value);
-    return true;
+    // forward the light box intensity to the selected PWM port
+    int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
+    return setPWMDutyCycle(pwmPort, value);
 }
 
 bool PowerBox::EnableLightBox(bool enable)
 {
-    LOG_WARN("PowerBox::EnableLightBox not implemented");
-    INDI_UNUSED(enable);
-    return true;
+    int pwmPort = 1 + IUFindOnSwitchIndex(&LightBoxPWMPortSP);
+    return setPWMPortStatus(pwmPort, enable);
 }
 
 bool PowerBox::saveConfigItems(FILE *fp)
 {
-    bool result = saveLightBoxConfigItems(fp);
-    result &= INDI::DefaultDevice::saveConfigItems(fp);
+    INDI::DefaultDevice::saveConfigItems(fp);
     // remember the PWM port selection for the light port
     IUSaveConfigSwitch(fp, &LightBoxPWMPortSP);
-    return result;
+
+    return LI::saveConfigItems(fp);;
 }
 
 void PowerBox::TimerHit()
@@ -344,31 +348,31 @@ IPState PowerBox::handleStatus(JsonValue jvalue)
             PwmStatus status = readPWMPortStatus(statusIter->value);
             switch (switch_nr)
             {
-            case 1:
-                // set PWM 1 status
-                PWMPortStatus_1_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
-                PWMPortStatus_1_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
-                PWMPortStatus_1_SP.s = IPS_OK;
-                IDSetSwitch(&PWMPortStatus_1_SP, nullptr);
-                // set PWM 1 duty cycle
-                PWMDutyCycle_1_N[0].value = status.duty_cycle;
-                PWMDutyCycle_1_NP.s = IPS_OK;
-                IDSetNumber(&PWMDutyCycle_1_NP, nullptr);
-                break;
-            case 2:
-                // set PWM 2 status
-                PWMPortStatus_2_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
-                PWMPortStatus_2_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
-                PWMPortStatus_2_SP.s = IPS_OK;
-                IDSetSwitch(&PWMPortStatus_2_SP, nullptr);
-                // set PWM 2 duty cycle
-                PWMDutyCycle_2_N[0].value = status.duty_cycle;
-                PWMDutyCycle_2_NP.s = IPS_OK;
-                IDSetNumber(&PWMDutyCycle_2_NP, nullptr);
-                break;
-            default:
-                LOGF_WARN("Unknown PWM control %d %s, duty cycle %f", switch_nr, status.power ? "on" : "off", status.duty_cycle);
-                break;
+                case 1:
+                    // set PWM 1 status
+                    PWMPortStatus_1_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
+                    PWMPortStatus_1_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
+                    PWMPortStatus_1_SP.s = IPS_OK;
+                    IDSetSwitch(&PWMPortStatus_1_SP, nullptr);
+                    // set PWM 1 duty cycle
+                    PWMDutyCycle_1_N[0].value = status.duty_cycle;
+                    PWMDutyCycle_1_NP.s = IPS_OK;
+                    IDSetNumber(&PWMDutyCycle_1_NP, nullptr);
+                    break;
+                case 2:
+                    // set PWM 2 status
+                    PWMPortStatus_2_S[POWER_ON].s = status.power ? ISS_ON : ISS_OFF;
+                    PWMPortStatus_2_S[POWER_OFF].s = status.power ? ISS_OFF : ISS_ON;
+                    PWMPortStatus_2_SP.s = IPS_OK;
+                    IDSetSwitch(&PWMPortStatus_2_SP, nullptr);
+                    // set PWM 2 duty cycle
+                    PWMDutyCycle_2_N[0].value = status.duty_cycle;
+                    PWMDutyCycle_2_NP.s = IPS_OK;
+                    IDSetNumber(&PWMDutyCycle_2_NP, nullptr);
+                    break;
+                default:
+                    LOGF_WARN("Unknown PWM control %d %s, duty cycle %f", switch_nr, status.power ? "on" : "off", status.duty_cycle);
+                    break;
             }
         }
         else if (strncmp(statusIter->key, "Switch", 6) == 0 && strlen(statusIter->key) > 7)
@@ -377,23 +381,23 @@ IPState PowerBox::handleStatus(JsonValue jvalue)
             bool status = readPowerPortStatus(statusIter->value);
             switch (switch_nr)
             {
-            case 1:
-                // set power switch 1 status
-                PowerPortStatus_1_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
-                PowerPortStatus_1_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
-                PowerPortStatus_1_SP.s = IPS_OK;
-                IDSetSwitch(&PowerPortStatus_1_SP, nullptr);
-                break;
-            case 2:
-                // set power switch 2 status
-                PowerPortStatus_2_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
-                PowerPortStatus_2_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
-                PowerPortStatus_2_SP.s = IPS_OK;
-                IDSetSwitch(&PowerPortStatus_2_SP, nullptr);
-                break;
-            default:
-                LOGF_WARN("Unknown power switch %d %s", switch_nr, status ? "on" : "off");
-                break;
+                case 1:
+                    // set power switch 1 status
+                    PowerPortStatus_1_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
+                    PowerPortStatus_1_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
+                    PowerPortStatus_1_SP.s = IPS_OK;
+                    IDSetSwitch(&PowerPortStatus_1_SP, nullptr);
+                    break;
+                case 2:
+                    // set power switch 2 status
+                    PowerPortStatus_2_S[POWER_ON].s = status ? ISS_ON : ISS_OFF;
+                    PowerPortStatus_2_S[POWER_OFF].s = status ? ISS_OFF : ISS_ON;
+                    PowerPortStatus_2_SP.s = IPS_OK;
+                    IDSetSwitch(&PowerPortStatus_2_SP, nullptr);
+                    break;
+                default:
+                    LOGF_WARN("Unknown power switch %d %s", switch_nr, status ? "on" : "off");
+                    break;
             }
         }
     }
@@ -475,14 +479,14 @@ void PowerBox::updateLightBoxSettings()
     double value   = dutyCycle->value;
 
     //update light settings
-    LightS[POWER_ON].s = pwmPortOn ? ISS_ON : ISS_OFF;
-    LightS[POWER_OFF].s = pwmPortOn ? ISS_OFF : ISS_ON;
-    LightSP.s = IPS_OK;
+    LightSP[POWER_ON].setState(pwmPortOn ? ISS_ON : ISS_OFF);
+    LightSP[POWER_OFF].setState(pwmPortOn ? ISS_OFF : ISS_ON);
+    LightSP.setState(IPS_OK);
     // update intensity
-    LightIntensityN[0].value = value;
-    LightIntensityNP.s = IPS_OK;
-    IDSetSwitch(&LightSP, nullptr);
-    IDSetNumber(&LightIntensityNP, nullptr);
+    LightIntensityNP[0].setValue(value);
+    LightIntensityNP.setState(IPS_OK);
+    LightSP.apply();
+    LightIntensityNP.apply();
 }
 
 /**************************************************************************************
