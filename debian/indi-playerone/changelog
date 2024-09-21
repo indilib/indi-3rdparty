@@ -1,4 +1,10 @@
-indi-playerone (1.15) bionic; urgency=low
+indi-playerone (1.16) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.7.0
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 21 Sep 2024 12:00:00 +0900
+ 
+ indi-playerone (1.15) bionic; urgency=low
 
   * Update PlayerOneCamera SDK v3.6.3
 
