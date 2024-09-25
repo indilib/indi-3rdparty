@@ -1,7 +1,7 @@
 #ifndef __ogmacam_h__
 #define __ogmacam_h__
 
-/* Version: 56.26054.20240715 */
+/* Version: 57.26523.20240917 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -93,19 +93,19 @@ extern "C" {
 /********************************************************************************/
 #if defined(OGMACAM_HRESULT_ERRORCODE_NEEDED)
 #define S_OK                (HRESULT)(0x00000000) /* Success */
-#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */
-#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */
-#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */
+#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */ /* Remark: Different from S_OK, such as internal values and user-set values have coincided, equivalent to noop */
+#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */ /* Remark: Generally indicates that the conditions are not met, such as calling put_Option setting some options that do not support modification when the camera is running, and so on */
+#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */ /* Remark: This feature is not supported on this model of camera */
 #define E_NOINTERFACE       (HRESULT)(0x80004002)
-#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */
+#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */ /* Remark: The program on Linux does not have permission to open the USB device, please enable udev rules file or run as root */
 #define E_OUTOFMEMORY       (HRESULT)(0x8007000e) /* Out of memory */
 #define E_INVALIDARG        (HRESULT)(0x80070057) /* One or more arguments are not valid */
-#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */
+#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */ /* Remark: Pointer is NULL */
 #define E_FAIL              (HRESULT)(0x80004005) /* Generic failure */
 #define E_WRONG_THREAD      (HRESULT)(0x8001010e) /* Call function in the wrong thread */
-#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */
-#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */
-#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */
+#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */ /* Remark: It is generally caused by hardware errors, such as cable problems, USB port problems, poor contact, camera hardware damage, etc */
+#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */ /* Remark: The camera is already in use, such as duplicated opening/starting the camera, or being used by other application, etc */
+#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */ /* Remark: No data is available at this time */
 #define E_TIMEOUT           (HRESULT)(0x8001011f) /* This operation returned because the timeout period expired */
 #endif
 
@@ -190,8 +190,8 @@ typedef struct Ogmacam_t { int unused; } *HOgmacam;
 #define OGMACAM_BRIGHTNESS_MIN           (-128)  /* brightness */
 #define OGMACAM_BRIGHTNESS_MAX           128     /* brightness */
 #define OGMACAM_CONTRAST_DEF             0       /* contrast */
-#define OGMACAM_CONTRAST_MIN             (-150)  /* contrast */
-#define OGMACAM_CONTRAST_MAX             150     /* contrast */
+#define OGMACAM_CONTRAST_MIN             (-200)  /* contrast */
+#define OGMACAM_CONTRAST_MAX             200     /* contrast */
 #define OGMACAM_GAMMA_DEF                100     /* gamma */
 #define OGMACAM_GAMMA_MIN                20      /* gamma */
 #define OGMACAM_GAMMA_MAX                180     /* gamma */
@@ -248,6 +248,8 @@ typedef struct Ogmacam_t { int unused; } *HOgmacam;
 #define OGMACAM_HDR_B_MAX                65535
 #define OGMACAM_HDR_THRESHOLD_MIN        0
 #define OGMACAM_HDR_THRESHOLD_MAX        4094
+#define OGMACAM_CDS_MIN                  0       /* Correlated Double Sampling */
+#define OGMACAM_CDS_MAX                  100
 
 typedef struct {
     unsigned    width;
@@ -286,7 +288,7 @@ typedef struct {
 } OgmacamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 56.26054.20240715
+    get the version of this dll/so/dylib, which is: 57.26523.20240917
 */
 #if defined(_WIN32)
 OGMACAM_API(const wchar_t*)   Ogmacam_Version();
@@ -369,6 +371,9 @@ OGMACAM_API(HRESULT)  Ogmacam_StartPullModeWithCallback(HOgmacam h, POGMACAM_EVE
 #define OGMACAM_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
 #define OGMACAM_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
 #define OGMACAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define OGMACAM_FRAMEINFO_FLAG_GPS          0x00000040 /* GPS */
+#define OGMACAM_FRAMEINFO_FLAG_AUTOFOCUS    0x00000080 /* auto focus: uLum & uFV */
+#define OGMACAM_FRAMEINFO_FLAG_COUNT        0x00000100 /* timecount, framecount, tricount */
 #define OGMACAM_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
@@ -383,9 +388,29 @@ typedef struct {
     unsigned short      blacklevel; /* black level */
 } OgmacamFrameInfoV3;
 
+typedef struct {
+    unsigned long long utcstart;    /* exposure start time: nanosecond since epoch (00:00:00 UTC on Thursday, 1 January 1970, see https://en.wikipedia.org/wiki/Unix_time) */
+    unsigned long long utcend;      /* exposure end time */
+    int                longitude;   /* millionth of a degree, 0.000001 degree */
+    int                latitude;
+    int                altitude;    /* millimeter */
+    unsigned short     satellite;   /* number of satellite */
+    unsigned short     reserved;    /* not used */
+} OgmacamGps;
+
+typedef struct {
+    OgmacamFrameInfoV3 v3;
+    unsigned reserved; /* not used */
+    unsigned uLum;
+    unsigned long long uFV;
+    unsigned long long timecount;
+    unsigned framecount, tricount;
+    OgmacamGps gps;
+} OgmacamFrameInfoV4;
+
 /*
     nWaitMS: The timeout interval, in milliseconds. If a nonzero value is specified, the function waits until the image is ok or the interval elapses.
-             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Ogmacam_PullImageV3.
+             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Ogmacam_PullImageV4.
     bStill: to pull still image, set to 1, otherwise 0
     bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Grey), 16 (Grey), 64 (RGB64).
           In RAW mode, this parameter is ignored.
@@ -425,6 +450,8 @@ typedef struct {
             |           | 10/12/14/16bits Mode   | Width * 2                     | Width * 2             |
             |-----------|------------------------|-------------------------------|-----------------------|
 */
+OGMACAM_API(HRESULT)  Ogmacam_PullImageV4(HOgmacam h, void* pImageData, int bStill, int bits, int rowPitch, OgmacamFrameInfoV4* pInfo);
+OGMACAM_API(HRESULT)  Ogmacam_WaitImageV4(HOgmacam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, OgmacamFrameInfoV4* pInfo);
 OGMACAM_API(HRESULT)  Ogmacam_PullImageV3(HOgmacam h, void* pImageData, int bStill, int bits, int rowPitch, OgmacamFrameInfoV3* pInfo);
 OGMACAM_API(HRESULT)  Ogmacam_WaitImageV3(HOgmacam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, OgmacamFrameInfoV3* pInfo);
 
@@ -463,7 +490,7 @@ OGMACAM_API(HRESULT)  Ogmacam_StartPushModeV3(HOgmacam h, POGMACAM_DATA_CALLBACK
 OGMACAM_API(HRESULT)  Ogmacam_Stop(HOgmacam h);
 OGMACAM_API(HRESULT)  Ogmacam_Pause(HOgmacam h, int bPause); /* 1 => pause, 0 => continue */
 
-/*  for pull mode: OGMACAM_EVENT_STILLIMAGE, and then Ogmacam_PullStillImageXXXX/Ogmacam_PullImageV3
+/*  for pull mode: OGMACAM_EVENT_STILLIMAGE, and then Ogmacam_PullStillImageXXXX/Ogmacam_PullImageV4
     for push mode: the snapped image will be return by POGMACAM_DATA_CALLBACK(V2/V3), with the parameter 'bSnap' set to 'TRUE'
     nResolutionIndex = 0xffffffff means use the cureent preview resolution
 */
@@ -484,6 +511,7 @@ OGMACAM_API(HRESULT)  Ogmacam_Trigger(HOgmacam h, unsigned short nNumber);
                 0xffffffff:     wait infinite
                 other:          milliseconds to wait
 */
+OGMACAM_API(HRESULT)  Ogmacam_TriggerSyncV4(HOgmacam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, OgmacamFrameInfoV4* pInfo);
 OGMACAM_API(HRESULT)  Ogmacam_TriggerSync(HOgmacam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, OgmacamFrameInfoV3* pInfo);
 
 /*
@@ -542,7 +570,7 @@ OGMACAM_API(HRESULT)  Ogmacam_get_RawFormat(HOgmacam h, unsigned* pFourCC, unsig
     | Temp                    |   1000~25000  |   6503                |
     | Tint                    |   100~2500    |   1000                |
     | LevelRange              |   0~255       |   Low = 0, High = 255 |
-    | Contrast                |   -150~150    |   0                   |
+    | Contrast                |   -250~250    |   0                   |
     | Hue                     |   -180~180    |   0                   |
     | Saturation              |   0~255       |   128                 |
     | Brightness              |   -64~64      |   0                   |
@@ -845,7 +873,10 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
                                                              default value: 1
                                                          */
 #define OGMACAM_OPTION_FRAMERATE              0x11       /* limit the frame rate, the default value 0 means no limit */
-#define OGMACAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
+#define OGMACAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing
+                                                              In terms of CPU usage, EA is the lowest, followed by BILINEAR, and the others are higher.
+                                                              default value: 0
+                                                         */
 #define OGMACAM_OPTION_DEMOSAIC_VIDEO         0x13       /* demosaic method for video */
 #define OGMACAM_OPTION_DEMOSAIC_STILL         0x14       /* demosaic method for still image */
 #define OGMACAM_OPTION_BLACKLEVEL             0x15       /* black level */
@@ -1093,6 +1124,11 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
                                                                 n<0: every -n frame
                                                          */
 #define OGMACAM_OPTION_TECTARGET_RANGE        0x6d       /* TEC target range: min(low 16 bits) = (short)(val & 0xffff), max(high 16 bits) = (short)((val >> 16) & 0xffff) */
+#define OGMACAM_OPTION_CDS                    0x6e       /* Correlated Double Sampling */
+#define OGMACAM_OPTION_LOW_POWER_EXPOTIME     0x6f       /* Low Power Consumption: Enable if exposure time is greater than the set value */
+#define OGMACAM_OPTION_ZERO_OFFSET            0x70       /* Sensor output offset to zero: 0 => disable, 1 => eanble; default: 0 */
+#define OGMACAM_OPTION_GVCP_TIMEOUT           0x71       /* GVCP Timeout: millisecond, range = [3, 75], default: 15 */
+#define OGMACAM_OPTION_GVCP_RETRY             0x72       /* GVCP Retry: range = [2, 8], default: 4 */
 
 /* pixel format */
 #define OGMACAM_PIXELFORMAT_RAW8              0x00
@@ -1117,12 +1153,16 @@ OGMACAM_API(HRESULT)  Ogmacam_feed_Pipe(HOgmacam h, unsigned pipeId);
 
 /*
 * cmd: input
-*   -1:         query the number
-*   0~number:   query the nth pixel format
-* piValue: output, OGMACAM_PIXELFORMAT_xxxx
+*    -1:       query the number
+*    0~number: query the nth pixel format
+* pixelFormat: output, OGMACAM_PIXELFORMAT_xxxx
 */
-OGMACAM_API(HRESULT)     Ogmacam_get_PixelFormatSupport(HOgmacam h, char cmd, int* piValue);
-OGMACAM_API(const char*) Ogmacam_get_PixelFormatName(int val);
+OGMACAM_API(HRESULT)     Ogmacam_get_PixelFormatSupport(HOgmacam h, char cmd, int* pixelFormat);
+
+/*
+* pixelFormat: OGMACAM_PIXELFORMAT_XXXX
+*/
+OGMACAM_API(const char*) Ogmacam_get_PixelFormatName(int pixelFormat);
 
 OGMACAM_API(HRESULT)  Ogmacam_put_Option(HOgmacam h, unsigned iOption, int iValue);
 OGMACAM_API(HRESULT)  Ogmacam_get_Option(HOgmacam h, unsigned iOption, int* piValue);
@@ -1481,7 +1521,7 @@ OGMACAM_API(double)   Ogmacam_calc_ClarityFactorV2(const void* pImageData, int b
                     48 => RGB48
                     64 => RGB64
 */
-OGMACAM_API(void)     Ogmacam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+OGMACAM_API(void)     Ogmacam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, unsigned char nBitCount);
 
 
 #ifndef __OGMACAMFOCUSMOTOR_DEFINED__
@@ -1501,12 +1541,17 @@ OGMACAM_DEPRECATED
 OGMACAM_API(HRESULT)  Ogmacam_get_FocusMotor(HOgmacam h, OgmacamFocusMotor* pFocusMotor);
 
 /*
-    obsolete, please use Ogmacam_deBayerV2
-*/
-OGMACAM_DEPRECATED
-OGMACAM_API(void)     Ogmacam_deBayer(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth);
+* raw image process
+* step:
+*  'F': very beginning
+*  'B': just before black balance
+*  'D': just before demosaic
+ */
+typedef void (__stdcall* POGMACAM_PROCESS_CALLBACK)(char step, char bStill, unsigned nFourCC, int nW, int nH, void* pRaw, unsigned char pixelFormat, void* ctxProcess);
+OGMACAM_API(HRESULT)  Ogmacam_put_Process(HOgmacam h, POGMACAM_PROCESS_CALLBACK funProcess, void* ctxProcess);
 
-typedef void (__stdcall* POGMACAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, void* ctxDemosaic);
+/* debayer: raw to RGB */
+typedef void (__stdcall* POGMACAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, void* ctxDemosaic);
 OGMACAM_API(HRESULT)  Ogmacam_put_Demosaic(HOgmacam h, POGMACAM_DEMOSAIC_CALLBACK funDemosaic, void* ctxDemosaic);
 
 /*
@@ -1524,6 +1569,12 @@ typedef struct {
     unsigned            still;      /* number of still resolution, same as Ogmacam_get_StillResolutionNumber() */
     OgmacamResolution   res[16];
 } OgmacamModel; /* camera model */
+
+/*
+    obsolete, please use Ogmacam_deBayerV2
+*/
+OGMACAM_DEPRECATED
+OGMACAM_API(void)     Ogmacam_deBayer(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth);
 
 /*
     obsolete, please use OgmacamDeviceV2
