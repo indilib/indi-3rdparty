@@ -1,7 +1,7 @@
 #ifndef __bressercam_h__
 #define __bressercam_h__
 
-/* Version: 56.26054.20240715 */
+/* Version: 57.26598.20240928 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -93,19 +93,19 @@ extern "C" {
 /********************************************************************************/
 #if defined(BRESSERCAM_HRESULT_ERRORCODE_NEEDED)
 #define S_OK                (HRESULT)(0x00000000) /* Success */
-#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */
-#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */
-#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */
+#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */ /* Remark: Different from S_OK, such as internal values and user-set values have coincided, equivalent to noop */
+#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */ /* Remark: Generally indicates that the conditions are not met, such as calling put_Option setting some options that do not support modification when the camera is running, and so on */
+#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */ /* Remark: This feature is not supported on this model of camera */
 #define E_NOINTERFACE       (HRESULT)(0x80004002)
-#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */
+#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */ /* Remark: The program on Linux does not have permission to open the USB device, please enable udev rules file or run as root */
 #define E_OUTOFMEMORY       (HRESULT)(0x8007000e) /* Out of memory */
 #define E_INVALIDARG        (HRESULT)(0x80070057) /* One or more arguments are not valid */
-#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */
+#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */ /* Remark: Pointer is NULL */
 #define E_FAIL              (HRESULT)(0x80004005) /* Generic failure */
 #define E_WRONG_THREAD      (HRESULT)(0x8001010e) /* Call function in the wrong thread */
-#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */
-#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */
-#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */
+#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */ /* Remark: It is generally caused by hardware errors, such as cable problems, USB port problems, poor contact, camera hardware damage, etc */
+#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */ /* Remark: The camera is already in use, such as duplicated opening/starting the camera, or being used by other application, etc */
+#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */ /* Remark: No data is available at this time */
 #define E_TIMEOUT           (HRESULT)(0x8001011f) /* This operation returned because the timeout period expired */
 #endif
 
@@ -187,11 +187,11 @@ typedef struct Bressercam_t { int unused; } *HBressercam;
 #define BRESSERCAM_SATURATION_MIN           0       /* saturation */
 #define BRESSERCAM_SATURATION_MAX           255     /* saturation */
 #define BRESSERCAM_BRIGHTNESS_DEF           0       /* brightness */
-#define BRESSERCAM_BRIGHTNESS_MIN           (-128)  /* brightness */
-#define BRESSERCAM_BRIGHTNESS_MAX           128     /* brightness */
+#define BRESSERCAM_BRIGHTNESS_MIN           (-255)  /* brightness */
+#define BRESSERCAM_BRIGHTNESS_MAX           255     /* brightness */
 #define BRESSERCAM_CONTRAST_DEF             0       /* contrast */
-#define BRESSERCAM_CONTRAST_MIN             (-150)  /* contrast */
-#define BRESSERCAM_CONTRAST_MAX             150     /* contrast */
+#define BRESSERCAM_CONTRAST_MIN             (-255)  /* contrast */
+#define BRESSERCAM_CONTRAST_MAX             255     /* contrast */
 #define BRESSERCAM_GAMMA_DEF                100     /* gamma */
 #define BRESSERCAM_GAMMA_MIN                20      /* gamma */
 #define BRESSERCAM_GAMMA_MAX                180     /* gamma */
@@ -248,6 +248,8 @@ typedef struct Bressercam_t { int unused; } *HBressercam;
 #define BRESSERCAM_HDR_B_MAX                65535
 #define BRESSERCAM_HDR_THRESHOLD_MIN        0
 #define BRESSERCAM_HDR_THRESHOLD_MAX        4094
+#define BRESSERCAM_CDS_MIN                  0       /* Correlated Double Sampling */
+#define BRESSERCAM_CDS_MAX                  100
 
 typedef struct {
     unsigned    width;
@@ -286,7 +288,7 @@ typedef struct {
 } BressercamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 56.26054.20240715
+    get the version of this dll/so/dylib, which is: 57.26598.20240928
 */
 #if defined(_WIN32)
 BRESSERCAM_API(const wchar_t*)   Bressercam_Version();
@@ -369,6 +371,9 @@ BRESSERCAM_API(HRESULT)  Bressercam_StartPullModeWithCallback(HBressercam h, PBR
 #define BRESSERCAM_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
 #define BRESSERCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
 #define BRESSERCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define BRESSERCAM_FRAMEINFO_FLAG_GPS          0x00000040 /* GPS */
+#define BRESSERCAM_FRAMEINFO_FLAG_AUTOFOCUS    0x00000080 /* auto focus: uLum & uFV */
+#define BRESSERCAM_FRAMEINFO_FLAG_COUNT        0x00000100 /* timecount, framecount, tricount */
 #define BRESSERCAM_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
@@ -383,9 +388,29 @@ typedef struct {
     unsigned short      blacklevel; /* black level */
 } BressercamFrameInfoV3;
 
+typedef struct {
+    unsigned long long utcstart;    /* exposure start time: nanosecond since epoch (00:00:00 UTC on Thursday, 1 January 1970, see https://en.wikipedia.org/wiki/Unix_time) */
+    unsigned long long utcend;      /* exposure end time */
+    int                longitude;   /* millionth of a degree, 0.000001 degree */
+    int                latitude;
+    int                altitude;    /* millimeter */
+    unsigned short     satellite;   /* number of satellite */
+    unsigned short     reserved;    /* not used */
+} BressercamGps;
+
+typedef struct {
+    BressercamFrameInfoV3 v3;
+    unsigned reserved; /* not used */
+    unsigned uLum;
+    unsigned long long uFV;
+    unsigned long long timecount;
+    unsigned framecount, tricount;
+    BressercamGps gps;
+} BressercamFrameInfoV4;
+
 /*
     nWaitMS: The timeout interval, in milliseconds. If a nonzero value is specified, the function waits until the image is ok or the interval elapses.
-             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Bressercam_PullImageV3.
+             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Bressercam_PullImageV4.
     bStill: to pull still image, set to 1, otherwise 0
     bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Grey), 16 (Grey), 64 (RGB64).
           In RAW mode, this parameter is ignored.
@@ -425,6 +450,8 @@ typedef struct {
             |           | 10/12/14/16bits Mode   | Width * 2                     | Width * 2             |
             |-----------|------------------------|-------------------------------|-----------------------|
 */
+BRESSERCAM_API(HRESULT)  Bressercam_PullImageV4(HBressercam h, void* pImageData, int bStill, int bits, int rowPitch, BressercamFrameInfoV4* pInfo);
+BRESSERCAM_API(HRESULT)  Bressercam_WaitImageV4(HBressercam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, BressercamFrameInfoV4* pInfo);
 BRESSERCAM_API(HRESULT)  Bressercam_PullImageV3(HBressercam h, void* pImageData, int bStill, int bits, int rowPitch, BressercamFrameInfoV3* pInfo);
 BRESSERCAM_API(HRESULT)  Bressercam_WaitImageV3(HBressercam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, BressercamFrameInfoV3* pInfo);
 
@@ -463,7 +490,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_StartPushModeV3(HBressercam h, PBRESSERCAM_D
 BRESSERCAM_API(HRESULT)  Bressercam_Stop(HBressercam h);
 BRESSERCAM_API(HRESULT)  Bressercam_Pause(HBressercam h, int bPause); /* 1 => pause, 0 => continue */
 
-/*  for pull mode: BRESSERCAM_EVENT_STILLIMAGE, and then Bressercam_PullStillImageXXXX/Bressercam_PullImageV3
+/*  for pull mode: BRESSERCAM_EVENT_STILLIMAGE, and then Bressercam_PullStillImageXXXX/Bressercam_PullImageV4
     for push mode: the snapped image will be return by PBRESSERCAM_DATA_CALLBACK(V2/V3), with the parameter 'bSnap' set to 'TRUE'
     nResolutionIndex = 0xffffffff means use the cureent preview resolution
 */
@@ -484,6 +511,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_Trigger(HBressercam h, unsigned short nNumbe
                 0xffffffff:     wait infinite
                 other:          milliseconds to wait
 */
+BRESSERCAM_API(HRESULT)  Bressercam_TriggerSyncV4(HBressercam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, BressercamFrameInfoV4* pInfo);
 BRESSERCAM_API(HRESULT)  Bressercam_TriggerSync(HBressercam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, BressercamFrameInfoV3* pInfo);
 
 /*
@@ -542,10 +570,10 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_RawFormat(HBressercam h, unsigned* pFour
     | Temp                    |   1000~25000  |   6503                |
     | Tint                    |   100~2500    |   1000                |
     | LevelRange              |   0~255       |   Low = 0, High = 255 |
-    | Contrast                |   -150~150    |   0                   |
+    | Contrast                |   -255~255    |   0                   |
     | Hue                     |   -180~180    |   0                   |
     | Saturation              |   0~255       |   128                 |
-    | Brightness              |   -64~64      |   0                   |
+    | Brightness              |   -255~255    |   0                   |
     | Gamma                   |   20~180      |   100                 |
     | WBGain                  |   -127~127    |   0                   |
     ------------------------------------------------------------------|
@@ -722,7 +750,8 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_MonoMode(HBressercam h);
 BRESSERCAM_API(HRESULT)  Bressercam_get_StillResolutionNumber(HBressercam h);
 BRESSERCAM_API(HRESULT)  Bressercam_get_StillResolution(HBressercam h, unsigned nResolutionIndex, int* pWidth, int* pHeight);
 
-/*  0: stop grab frame when frame buffer deque is full, until the frames in the queue are pulled away and the queue is not full
+/*  0: no realtime
+          stop grab frame when frame buffer deque is full, until the frames in the queue are pulled away and the queue is not full
     1: realtime
           use minimum frame buffer. When new frame arrive, drop all the pending frame regardless of whether the frame buffer is full.
           If DDR present, also limit the DDR frame buffer to only one frame.
@@ -845,7 +874,10 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
                                                              default value: 1
                                                          */
 #define BRESSERCAM_OPTION_FRAMERATE              0x11       /* limit the frame rate, the default value 0 means no limit */
-#define BRESSERCAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
+#define BRESSERCAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing
+                                                              In terms of CPU usage, EA is the lowest, followed by BILINEAR, and the others are higher.
+                                                              default value: 0
+                                                         */
 #define BRESSERCAM_OPTION_DEMOSAIC_VIDEO         0x13       /* demosaic method for video */
 #define BRESSERCAM_OPTION_DEMOSAIC_STILL         0x14       /* demosaic method for still image */
 #define BRESSERCAM_OPTION_BLACKLEVEL             0x15       /* black level */
@@ -922,7 +954,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
 #define BRESSERCAM_OPTION_BYTEORDER              0x2a       /* Byte order, BGR or RGB: 0 => RGB, 1 => BGR, default value: 1(Win), 0(macOS, Linux, Android) */
 #define BRESSERCAM_OPTION_NOPACKET_TIMEOUT       0x2b       /* no packet timeout: 0 => disable, positive value (>= BRESSERCAM_NOPACKET_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define BRESSERCAM_OPTION_MAX_PRECISE_FRAMERATE  0x2c       /* get the precise frame rate maximum value in 0.1 fps, such as 115 means 11.5 fps */
-#define BRESSERCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
+#define BRESSERCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps. use BRESSERCAM_OPTION_MAX_PRECISE_FRAMERATE, BRESSERCAM_OPTION_MIN_PRECISE_FRAMERATE to get the range. if the set value is out of range, E_INVALIDARG will be returned */
 #define BRESSERCAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
 #define BRESSERCAM_OPTION_RELOAD                 0x2f       /* reload the last frame in trigger mode */
 #define BRESSERCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback: 0 => disable, 1 => enable, default: 0 */
@@ -1093,6 +1125,15 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
                                                                 n<0: every -n frame
                                                          */
 #define BRESSERCAM_OPTION_TECTARGET_RANGE        0x6d       /* TEC target range: min(low 16 bits) = (short)(val & 0xffff), max(high 16 bits) = (short)((val >> 16) & 0xffff) */
+#define BRESSERCAM_OPTION_CDS                    0x6e       /* Correlated Double Sampling */
+#define BRESSERCAM_OPTION_LOW_POWER_EXPOTIME     0x6f       /* Low Power Consumption: Enable if exposure time is greater than the set value */
+#define BRESSERCAM_OPTION_ZERO_OFFSET            0x70       /* Sensor output offset to zero: 0 => disable, 1 => eanble; default: 0 */
+#define BRESSERCAM_OPTION_GVCP_TIMEOUT           0x71       /* GVCP Timeout: millisecond, range = [3, 75], default: 15
+                                                              Unless in very special circumstances, generally no modification is required, just use the default value
+                                                         */
+#define BRESSERCAM_OPTION_GVCP_RETRY             0x72       /* GVCP Retry: range = [2, 8], default: 4
+                                                              Unless in very special circumstances, generally no modification is required, just use the default value
+                                                         */
 
 /* pixel format */
 #define BRESSERCAM_PIXELFORMAT_RAW8              0x00
@@ -1117,12 +1158,16 @@ BRESSERCAM_API(HRESULT)  Bressercam_feed_Pipe(HBressercam h, unsigned pipeId);
 
 /*
 * cmd: input
-*   -1:         query the number
-*   0~number:   query the nth pixel format
-* piValue: output, BRESSERCAM_PIXELFORMAT_xxxx
+*    -1:       query the number
+*    0~number: query the nth pixel format
+* pixelFormat: output, BRESSERCAM_PIXELFORMAT_xxxx
 */
-BRESSERCAM_API(HRESULT)     Bressercam_get_PixelFormatSupport(HBressercam h, char cmd, int* piValue);
-BRESSERCAM_API(const char*) Bressercam_get_PixelFormatName(int val);
+BRESSERCAM_API(HRESULT)     Bressercam_get_PixelFormatSupport(HBressercam h, char cmd, int* pixelFormat);
+
+/*
+* pixelFormat: BRESSERCAM_PIXELFORMAT_XXXX
+*/
+BRESSERCAM_API(const char*) Bressercam_get_PixelFormatName(int pixelFormat);
 
 BRESSERCAM_API(HRESULT)  Bressercam_put_Option(HBressercam h, unsigned iOption, int iValue);
 BRESSERCAM_API(HRESULT)  Bressercam_get_Option(HBressercam h, unsigned iOption, int* piValue);
@@ -1481,7 +1526,7 @@ BRESSERCAM_API(double)   Bressercam_calc_ClarityFactorV2(const void* pImageData,
                     48 => RGB48
                     64 => RGB64
 */
-BRESSERCAM_API(void)     Bressercam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+BRESSERCAM_API(void)     Bressercam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, unsigned char nBitCount);
 
 
 #ifndef __BRESSERCAMFOCUSMOTOR_DEFINED__
@@ -1501,12 +1546,17 @@ BRESSERCAM_DEPRECATED
 BRESSERCAM_API(HRESULT)  Bressercam_get_FocusMotor(HBressercam h, BressercamFocusMotor* pFocusMotor);
 
 /*
-    obsolete, please use Bressercam_deBayerV2
-*/
-BRESSERCAM_DEPRECATED
-BRESSERCAM_API(void)     Bressercam_deBayer(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth);
+* raw image process
+* step:
+*  'F': very beginning
+*  'B': just before black balance
+*  'D': just before demosaic
+ */
+typedef void (__stdcall* PBRESSERCAM_PROCESS_CALLBACK)(char step, char bStill, unsigned nFourCC, int nW, int nH, void* pRaw, unsigned char pixelFormat, void* ctxProcess);
+BRESSERCAM_API(HRESULT)  Bressercam_put_Process(HBressercam h, PBRESSERCAM_PROCESS_CALLBACK funProcess, void* ctxProcess);
 
-typedef void (__stdcall* PBRESSERCAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, void* ctxDemosaic);
+/* debayer: raw to RGB */
+typedef void (__stdcall* PBRESSERCAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, void* ctxDemosaic);
 BRESSERCAM_API(HRESULT)  Bressercam_put_Demosaic(HBressercam h, PBRESSERCAM_DEMOSAIC_CALLBACK funDemosaic, void* ctxDemosaic);
 
 /*
@@ -1524,6 +1574,12 @@ typedef struct {
     unsigned            still;      /* number of still resolution, same as Bressercam_get_StillResolutionNumber() */
     BressercamResolution   res[16];
 } BressercamModel; /* camera model */
+
+/*
+    obsolete, please use Bressercam_deBayerV2
+*/
+BRESSERCAM_DEPRECATED
+BRESSERCAM_API(void)     Bressercam_deBayer(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth);
 
 /*
     obsolete, please use BressercamDeviceV2

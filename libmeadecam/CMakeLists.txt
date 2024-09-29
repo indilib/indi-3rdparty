@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libmeadecam)
 
-set (LIBMEADECAM_VERSION "56.26054")
-set (LIBMEADECAM_SOVERSION "56")
+set (LIBMEADECAM_VERSION "57.26598")
+set (LIBMEADECAM_SOVERSION "57")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
