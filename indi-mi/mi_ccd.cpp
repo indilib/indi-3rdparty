@@ -465,7 +465,7 @@ bool MICCD::setupParams()
 int MICCD::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than TEMP_THRESHOLD degrees, let's immediately return OK.
-    if (fabs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD)
+    if (fabs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;
 
     TemperatureRequest = temperature;
@@ -928,10 +928,10 @@ void MICCD::updateTemperature()
 
     if (isSimulation())
     {
-        ccdtemp = TemperatureN[0].value;
-        if (TemperatureN[0].value < TemperatureRequest)
+        ccdtemp = TemperatureNP[0].getValue();
+        if (TemperatureNP[0].getValue() < TemperatureRequest)
             ccdtemp += TEMP_THRESHOLD;
-        else if (TemperatureN[0].value > TemperatureRequest)
+        else if (TemperatureNP[0].getValue() > TemperatureRequest)
             ccdtemp -= TEMP_THRESHOLD;
 
         ccdpower = 30;
@@ -954,7 +954,7 @@ void MICCD::updateTemperature()
         }
     }
 
-    TemperatureN[0].value = ccdtemp;
+    TemperatureNP[0].setValue(ccdtemp);
     CoolerN[0].value      = ccdpower * 100.0;
 
     //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
@@ -967,7 +967,7 @@ void MICCD::updateTemperature()
     if (err)
     {
         if (err & 1)
-            TemperatureNP.s = IPS_ALERT;
+            TemperatureNP.setState(IPS_ALERT);
         if (err & 2)
             CoolerNP.s = IPS_ALERT;
     }
@@ -976,7 +976,7 @@ void MICCD::updateTemperature()
         CoolerNP.s = IPS_OK;
     }
 
-    IDSetNumber(&TemperatureNP, nullptr);
+    TemperatureNP.apply();
     IDSetNumber(&CoolerNP, nullptr);
     temperatureID = IEAddTimer(getCurrentPollingPeriod(), MICCD::updateTemperatureHelper, this);
 }

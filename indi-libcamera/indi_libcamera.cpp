@@ -130,7 +130,8 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
     auto options = app.GetOptions();
     configureVideoOptions(options, framerate);
     std::unique_ptr<Output> output = std::unique_ptr<Output>(Output::Create(options));
-    app.SetEncodeOutputReadyCallback(std::bind(&INDILibCamera::outputReady, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    app.SetEncodeOutputReadyCallback(std::bind(&INDILibCamera::outputReady, this, std::placeholders::_1, std::placeholders::_2,
+                                     std::placeholders::_3, std::placeholders::_4));
     app.SetMetadataReadyCallback(std::bind(&INDILibCamera::metadataReady, this, std::placeholders::_1));
 
     try
@@ -162,18 +163,18 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
         RPiCamEncoder::Msg msg = app.Wait();
 
         if (msg.type == RPiCamApp::MsgType::Timeout)
-		{
-			LOG_WARN("Device timeout detected, attempting a restart!");
-			app.StopCamera();
-			app.StartCamera();
-			continue;
-		}
+        {
+            LOG_WARN("Device timeout detected, attempting a restart!");
+            app.StopCamera();
+            app.StartCamera();
+            continue;
+        }
         else if (msg.type == RPiCamEncoder::MsgType::Quit)
         {
             return;
         }
         else if (msg.type != RPiCamEncoder::MsgType::RequestComplete)
-        {            
+        {
             LOGF_ERROR("Video Streaming failed: %d", msg.type);
             shutdownVideo();
             return;
@@ -195,13 +196,13 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
 void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bool keyframe)
 {
     INDI_UNUSED(timestamp_us);
-    
+
     if (!keyframe)
         return;
 
     // Read buffer from memory
     std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-    
+
     Streamer->newFrame(static_cast<uint8_t*>(mem), size);
 
     // We are done with writing to CCD buffer
@@ -212,7 +213,7 @@ void INDILibCamera::outputReady(void *mem, size_t size, int64_t timestamp_us, bo
 ///
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::metadataReady(libcamera::ControlList &metadata)
-{    
+{
     // TODO could this metadata be useful?
     INDI_UNUSED(metadata);
 }
@@ -303,8 +304,8 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 }
 
                 SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-                IUSaveText(&BayerT[2], bayer_pattern);
-                IDSetText(&BayerTP, nullptr);
+                BayerTP[2].setText(bayer_pattern);
+                BayerTP.apply();
             }
             else
             {
@@ -508,7 +509,7 @@ void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char
 {
 
     switchSP.resize(n);
-    for (size_t i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
         switchSP[i].fill(names[i], names[i], ISS_OFF);
     }
@@ -530,7 +531,8 @@ bool INDILibCamera::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
 
     const char *IMAGE_CONTROLS_TAB = MAIN_CONTROL_TAB;
-    AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
+                              IPS_IDLE);
     const char *exposureModes[] = {"normal", "sport", "short", "long", "custom"};
     initSwitch(AdjustExposureModeSP, 5, exposureModes);
 
@@ -538,11 +540,13 @@ bool INDILibCamera::initProperties()
     const char *awbModes[] = { "auto", "normal", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"};
     initSwitch(AdjustAwbModeSP, 9, awbModes);
 
-    AdjustMeteringModeSP.fill(getDeviceName(), "MeteringMode", "Metering Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    AdjustMeteringModeSP.fill(getDeviceName(), "MeteringMode", "Metering Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
+                              IPS_IDLE);
     const char *meteringModes[] = { "centre", "spot", "average", "matrix", "custom"};
     initSwitch(AdjustMeteringModeSP, 5, meteringModes);
 
-    AdjustDenoiseModeSP.fill(getDeviceName(), "DenoiseMode", "Denoise Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    AdjustDenoiseModeSP.fill(getDeviceName(), "DenoiseMode", "Denoise Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
+                             IPS_IDLE);
     const char *denoiseModes[] = { "off", "cdn_off", "cdn_fast", "cdn_hq"};
     initSwitch(AdjustDenoiseModeSP, 4, denoiseModes);
 
@@ -659,6 +663,7 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
 void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerate)
 {
     int argc = 0;
+    INDI_UNUSED(framerate);
     char *argv[] = {};
     options->Parse(argc, argv);
 
@@ -1060,7 +1065,8 @@ bool INDILibCamera::processRAW(const char *filename, uint8_t **memptr, size_t *m
 /////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////
-bool INDILibCamera::processRAWMemory(unsigned char *inBuffer, unsigned long inSize, uint8_t **memptr, size_t *memsize, int *n_axis, int *w, int *h,
+bool INDILibCamera::processRAWMemory(unsigned char *inBuffer, unsigned long inSize, uint8_t **memptr, size_t *memsize,
+                                     int *n_axis, int *w, int *h,
                                      int *bitsperpixel, char *bayer_pattern)
 {
     int ret = 0;

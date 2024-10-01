@@ -154,7 +154,7 @@ bool SXCCD::initProperties()
     //    IUFillSwitch(&BayerS[1], "BAYER_FALSE", "False", ISS_ON);
     //    IUFillSwitchVector(&BayerSP, BayerS, 2, getDeviceName(), "CCD_BAYER_FILTER", "Bayer Filter", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY,
     //                       60, IPS_IDLE);
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
     //  we can expose less than 0.01 seconds at a time
     //  and we need to for an allsky in daytime
@@ -365,15 +365,15 @@ void SXCCD::TimerHit()
             unsigned short temperature;
             sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON),
                         (unsigned short)(TemperatureRequest * 10 + 2730), &status, &temperature);
-            TemperatureN[0].value = (temperature - 2730) / 10.0;
-            if (TemperatureReported != TemperatureN[0].value)
+            TemperatureNP[0].setValue((temperature - 2730) / 10.0);
+            if (TemperatureReported != TemperatureNP[0].getValue())
             {
-                TemperatureReported = TemperatureN[0].value;
+                TemperatureReported = TemperatureNP[0].getValue();
                 //                if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
                 //                    TemperatureNP.s = IPS_OK;
                 //                else
                 //TemperatureNP.s = IPS_BUSY;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.apply();
             }
         }
     }
@@ -393,7 +393,9 @@ int SXCCD::SetTemperature(double temperature)
     unsigned short sx_temperature;
     sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON), (unsigned short)(TemperatureRequest * 10 + 2730),
                 &status, &sx_temperature);
-    TemperatureReported = TemperatureN[0].value = (sx_temperature - 2730) / 10.0;
+    TemperatureReported =(sx_temperature - 2730) / 10.0;
+    TemperatureNP[0].setValue((sx_temperature - 2730) / 10.0);
+
     if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
         result = 1;
     else
@@ -771,9 +773,11 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
         unsigned short temperature;
         sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON), (unsigned short)(TemperatureRequest * 10 + 2730),
                     &status, &temperature);
-        TemperatureReported = TemperatureN[0].value = (temperature - 2730) / 10.0;
-        TemperatureNP.s                             = IPS_OK;
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureReported = (temperature - 2730) / 10.0;
+        TemperatureNP[0].setValue((temperature - 2730) / 10.0);
+
+        TemperatureNP.setState(IPS_OK);
+        TemperatureNP.apply();
         result = true;
     }
     //    else if (strcmp(name, BayerSP.name) == 0)

@@ -1,7 +1,7 @@
 #ifndef __altaircam_h__
 #define __altaircam_h__
 
-/* Version: 56.26054.20240715 */
+/* Version: 57.26598.20240928 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -93,19 +93,19 @@ extern "C" {
 /********************************************************************************/
 #if defined(ALTAIRCAM_HRESULT_ERRORCODE_NEEDED)
 #define S_OK                (HRESULT)(0x00000000) /* Success */
-#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */
-#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */
-#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */
+#define S_FALSE             (HRESULT)(0x00000001) /* Yet another success */ /* Remark: Different from S_OK, such as internal values and user-set values have coincided, equivalent to noop */
+#define E_UNEXPECTED        (HRESULT)(0x8000ffff) /* Catastrophic failure */ /* Remark: Generally indicates that the conditions are not met, such as calling put_Option setting some options that do not support modification when the camera is running, and so on */
+#define E_NOTIMPL           (HRESULT)(0x80004001) /* Not supported or not implemented */ /* Remark: This feature is not supported on this model of camera */
 #define E_NOINTERFACE       (HRESULT)(0x80004002)
-#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */
+#define E_ACCESSDENIED      (HRESULT)(0x80070005) /* Permission denied */ /* Remark: The program on Linux does not have permission to open the USB device, please enable udev rules file or run as root */
 #define E_OUTOFMEMORY       (HRESULT)(0x8007000e) /* Out of memory */
 #define E_INVALIDARG        (HRESULT)(0x80070057) /* One or more arguments are not valid */
-#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */
+#define E_POINTER           (HRESULT)(0x80004003) /* Pointer that is not valid */ /* Remark: Pointer is NULL */
 #define E_FAIL              (HRESULT)(0x80004005) /* Generic failure */
 #define E_WRONG_THREAD      (HRESULT)(0x8001010e) /* Call function in the wrong thread */
-#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */
-#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */
-#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */
+#define E_GEN_FAILURE       (HRESULT)(0x8007001f) /* Device not functioning */ /* Remark: It is generally caused by hardware errors, such as cable problems, USB port problems, poor contact, camera hardware damage, etc */
+#define E_BUSY              (HRESULT)(0x800700aa) /* The requested resource is in use */ /* Remark: The camera is already in use, such as duplicated opening/starting the camera, or being used by other application, etc */
+#define E_PENDING           (HRESULT)(0x8000000a) /* The data necessary to complete this operation is not yet available */ /* Remark: No data is available at this time */
 #define E_TIMEOUT           (HRESULT)(0x8001011f) /* This operation returned because the timeout period expired */
 #endif
 
@@ -187,11 +187,11 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_SATURATION_MIN           0       /* saturation */
 #define ALTAIRCAM_SATURATION_MAX           255     /* saturation */
 #define ALTAIRCAM_BRIGHTNESS_DEF           0       /* brightness */
-#define ALTAIRCAM_BRIGHTNESS_MIN           (-128)  /* brightness */
-#define ALTAIRCAM_BRIGHTNESS_MAX           128     /* brightness */
+#define ALTAIRCAM_BRIGHTNESS_MIN           (-255)  /* brightness */
+#define ALTAIRCAM_BRIGHTNESS_MAX           255     /* brightness */
 #define ALTAIRCAM_CONTRAST_DEF             0       /* contrast */
-#define ALTAIRCAM_CONTRAST_MIN             (-150)  /* contrast */
-#define ALTAIRCAM_CONTRAST_MAX             150     /* contrast */
+#define ALTAIRCAM_CONTRAST_MIN             (-255)  /* contrast */
+#define ALTAIRCAM_CONTRAST_MAX             255     /* contrast */
 #define ALTAIRCAM_GAMMA_DEF                100     /* gamma */
 #define ALTAIRCAM_GAMMA_MIN                20      /* gamma */
 #define ALTAIRCAM_GAMMA_MAX                180     /* gamma */
@@ -248,6 +248,8 @@ typedef struct Altaircam_t { int unused; } *HAltaircam;
 #define ALTAIRCAM_HDR_B_MAX                65535
 #define ALTAIRCAM_HDR_THRESHOLD_MIN        0
 #define ALTAIRCAM_HDR_THRESHOLD_MAX        4094
+#define ALTAIRCAM_CDS_MIN                  0       /* Correlated Double Sampling */
+#define ALTAIRCAM_CDS_MAX                  100
 
 typedef struct {
     unsigned    width;
@@ -286,7 +288,7 @@ typedef struct {
 } AltaircamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 56.26054.20240715
+    get the version of this dll/so/dylib, which is: 57.26598.20240928
 */
 #if defined(_WIN32)
 ALTAIRCAM_API(const wchar_t*)   Altaircam_Version();
@@ -369,6 +371,9 @@ ALTAIRCAM_API(HRESULT)  Altaircam_StartPullModeWithCallback(HAltaircam h, PALTAI
 #define ALTAIRCAM_FRAMEINFO_FLAG_EXPOGAIN     0x00000008 /* exposure gain */
 #define ALTAIRCAM_FRAMEINFO_FLAG_BLACKLEVEL   0x00000010 /* black level */
 #define ALTAIRCAM_FRAMEINFO_FLAG_SHUTTERSEQ   0x00000020 /* sequence shutter counter */
+#define ALTAIRCAM_FRAMEINFO_FLAG_GPS          0x00000040 /* GPS */
+#define ALTAIRCAM_FRAMEINFO_FLAG_AUTOFOCUS    0x00000080 /* auto focus: uLum & uFV */
+#define ALTAIRCAM_FRAMEINFO_FLAG_COUNT        0x00000100 /* timecount, framecount, tricount */
 #define ALTAIRCAM_FRAMEINFO_FLAG_STILL        0x00008000 /* still image */
 
 typedef struct {
@@ -383,9 +388,29 @@ typedef struct {
     unsigned short      blacklevel; /* black level */
 } AltaircamFrameInfoV3;
 
+typedef struct {
+    unsigned long long utcstart;    /* exposure start time: nanosecond since epoch (00:00:00 UTC on Thursday, 1 January 1970, see https://en.wikipedia.org/wiki/Unix_time) */
+    unsigned long long utcend;      /* exposure end time */
+    int                longitude;   /* millionth of a degree, 0.000001 degree */
+    int                latitude;
+    int                altitude;    /* millimeter */
+    unsigned short     satellite;   /* number of satellite */
+    unsigned short     reserved;    /* not used */
+} AltaircamGps;
+
+typedef struct {
+    AltaircamFrameInfoV3 v3;
+    unsigned reserved; /* not used */
+    unsigned uLum;
+    unsigned long long uFV;
+    unsigned long long timecount;
+    unsigned framecount, tricount;
+    AltaircamGps gps;
+} AltaircamFrameInfoV4;
+
 /*
     nWaitMS: The timeout interval, in milliseconds. If a nonzero value is specified, the function waits until the image is ok or the interval elapses.
-             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Altaircam_PullImageV3.
+             If nWaitMS is zero, the function does not enter a wait state if the image is not available; it always returns immediately; this is equal to Altaircam_PullImageV4.
     bStill: to pull still image, set to 1, otherwise 0
     bits: 24 (RGB24), 32 (RGB32), 48 (RGB48), 8 (Grey), 16 (Grey), 64 (RGB64).
           In RAW mode, this parameter is ignored.
@@ -425,6 +450,8 @@ typedef struct {
             |           | 10/12/14/16bits Mode   | Width * 2                     | Width * 2             |
             |-----------|------------------------|-------------------------------|-----------------------|
 */
+ALTAIRCAM_API(HRESULT)  Altaircam_PullImageV4(HAltaircam h, void* pImageData, int bStill, int bits, int rowPitch, AltaircamFrameInfoV4* pInfo);
+ALTAIRCAM_API(HRESULT)  Altaircam_WaitImageV4(HAltaircam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, AltaircamFrameInfoV4* pInfo);
 ALTAIRCAM_API(HRESULT)  Altaircam_PullImageV3(HAltaircam h, void* pImageData, int bStill, int bits, int rowPitch, AltaircamFrameInfoV3* pInfo);
 ALTAIRCAM_API(HRESULT)  Altaircam_WaitImageV3(HAltaircam h, unsigned nWaitMS, void* pImageData, int bStill, int bits, int rowPitch, AltaircamFrameInfoV3* pInfo);
 
@@ -463,7 +490,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_StartPushModeV3(HAltaircam h, PALTAIRCAM_DATA_
 ALTAIRCAM_API(HRESULT)  Altaircam_Stop(HAltaircam h);
 ALTAIRCAM_API(HRESULT)  Altaircam_Pause(HAltaircam h, int bPause); /* 1 => pause, 0 => continue */
 
-/*  for pull mode: ALTAIRCAM_EVENT_STILLIMAGE, and then Altaircam_PullStillImageXXXX/Altaircam_PullImageV3
+/*  for pull mode: ALTAIRCAM_EVENT_STILLIMAGE, and then Altaircam_PullStillImageXXXX/Altaircam_PullImageV4
     for push mode: the snapped image will be return by PALTAIRCAM_DATA_CALLBACK(V2/V3), with the parameter 'bSnap' set to 'TRUE'
     nResolutionIndex = 0xffffffff means use the cureent preview resolution
 */
@@ -484,6 +511,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_Trigger(HAltaircam h, unsigned short nNumber);
                 0xffffffff:     wait infinite
                 other:          milliseconds to wait
 */
+ALTAIRCAM_API(HRESULT)  Altaircam_TriggerSyncV4(HAltaircam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, AltaircamFrameInfoV4* pInfo);
 ALTAIRCAM_API(HRESULT)  Altaircam_TriggerSync(HAltaircam h, unsigned nWaitMS, void* pImageData, int bits, int rowPitch, AltaircamFrameInfoV3* pInfo);
 
 /*
@@ -542,10 +570,10 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_RawFormat(HAltaircam h, unsigned* pFourCC,
     | Temp                    |   1000~25000  |   6503                |
     | Tint                    |   100~2500    |   1000                |
     | LevelRange              |   0~255       |   Low = 0, High = 255 |
-    | Contrast                |   -150~150    |   0                   |
+    | Contrast                |   -255~255    |   0                   |
     | Hue                     |   -180~180    |   0                   |
     | Saturation              |   0~255       |   128                 |
-    | Brightness              |   -64~64      |   0                   |
+    | Brightness              |   -255~255    |   0                   |
     | Gamma                   |   20~180      |   100                 |
     | WBGain                  |   -127~127    |   0                   |
     ------------------------------------------------------------------|
@@ -722,7 +750,8 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_MonoMode(HAltaircam h);
 ALTAIRCAM_API(HRESULT)  Altaircam_get_StillResolutionNumber(HAltaircam h);
 ALTAIRCAM_API(HRESULT)  Altaircam_get_StillResolution(HAltaircam h, unsigned nResolutionIndex, int* pWidth, int* pHeight);
 
-/*  0: stop grab frame when frame buffer deque is full, until the frames in the queue are pulled away and the queue is not full
+/*  0: no realtime
+          stop grab frame when frame buffer deque is full, until the frames in the queue are pulled away and the queue is not full
     1: realtime
           use minimum frame buffer. When new frame arrive, drop all the pending frame regardless of whether the frame buffer is full.
           If DDR present, also limit the DDR frame buffer to only one frame.
@@ -845,7 +874,10 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
                                                              default value: 1
                                                          */
 #define ALTAIRCAM_OPTION_FRAMERATE              0x11       /* limit the frame rate, the default value 0 means no limit */
-#define ALTAIRCAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing, default value: 0 */
+#define ALTAIRCAM_OPTION_DEMOSAIC               0x12       /* demosaic method for both video and still image: BILINEAR = 0, VNG(Variable Number of Gradients) = 1, PPG(Patterned Pixel Grouping) = 2, AHD(Adaptive Homogeneity Directed) = 3, EA(Edge Aware) = 4, see https://en.wikipedia.org/wiki/Demosaicing
+                                                              In terms of CPU usage, EA is the lowest, followed by BILINEAR, and the others are higher.
+                                                              default value: 0
+                                                         */
 #define ALTAIRCAM_OPTION_DEMOSAIC_VIDEO         0x13       /* demosaic method for video */
 #define ALTAIRCAM_OPTION_DEMOSAIC_STILL         0x14       /* demosaic method for still image */
 #define ALTAIRCAM_OPTION_BLACKLEVEL             0x15       /* black level */
@@ -922,7 +954,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
 #define ALTAIRCAM_OPTION_BYTEORDER              0x2a       /* Byte order, BGR or RGB: 0 => RGB, 1 => BGR, default value: 1(Win), 0(macOS, Linux, Android) */
 #define ALTAIRCAM_OPTION_NOPACKET_TIMEOUT       0x2b       /* no packet timeout: 0 => disable, positive value (>= ALTAIRCAM_NOPACKET_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define ALTAIRCAM_OPTION_MAX_PRECISE_FRAMERATE  0x2c       /* get the precise frame rate maximum value in 0.1 fps, such as 115 means 11.5 fps */
-#define ALTAIRCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps */
+#define ALTAIRCAM_OPTION_PRECISE_FRAMERATE      0x2d       /* precise frame rate current value in 0.1 fps. use ALTAIRCAM_OPTION_MAX_PRECISE_FRAMERATE, ALTAIRCAM_OPTION_MIN_PRECISE_FRAMERATE to get the range. if the set value is out of range, E_INVALIDARG will be returned */
 #define ALTAIRCAM_OPTION_BANDWIDTH              0x2e       /* bandwidth, [1-100]% */
 #define ALTAIRCAM_OPTION_RELOAD                 0x2f       /* reload the last frame in trigger mode */
 #define ALTAIRCAM_OPTION_CALLBACK_THREAD        0x30       /* dedicated thread for callback: 0 => disable, 1 => enable, default: 0 */
@@ -1093,6 +1125,15 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
                                                                 n<0: every -n frame
                                                          */
 #define ALTAIRCAM_OPTION_TECTARGET_RANGE        0x6d       /* TEC target range: min(low 16 bits) = (short)(val & 0xffff), max(high 16 bits) = (short)((val >> 16) & 0xffff) */
+#define ALTAIRCAM_OPTION_CDS                    0x6e       /* Correlated Double Sampling */
+#define ALTAIRCAM_OPTION_LOW_POWER_EXPOTIME     0x6f       /* Low Power Consumption: Enable if exposure time is greater than the set value */
+#define ALTAIRCAM_OPTION_ZERO_OFFSET            0x70       /* Sensor output offset to zero: 0 => disable, 1 => eanble; default: 0 */
+#define ALTAIRCAM_OPTION_GVCP_TIMEOUT           0x71       /* GVCP Timeout: millisecond, range = [3, 75], default: 15
+                                                              Unless in very special circumstances, generally no modification is required, just use the default value
+                                                         */
+#define ALTAIRCAM_OPTION_GVCP_RETRY             0x72       /* GVCP Retry: range = [2, 8], default: 4
+                                                              Unless in very special circumstances, generally no modification is required, just use the default value
+                                                         */
 
 /* pixel format */
 #define ALTAIRCAM_PIXELFORMAT_RAW8              0x00
@@ -1117,12 +1158,16 @@ ALTAIRCAM_API(HRESULT)  Altaircam_feed_Pipe(HAltaircam h, unsigned pipeId);
 
 /*
 * cmd: input
-*   -1:         query the number
-*   0~number:   query the nth pixel format
-* piValue: output, ALTAIRCAM_PIXELFORMAT_xxxx
+*    -1:       query the number
+*    0~number: query the nth pixel format
+* pixelFormat: output, ALTAIRCAM_PIXELFORMAT_xxxx
 */
-ALTAIRCAM_API(HRESULT)     Altaircam_get_PixelFormatSupport(HAltaircam h, char cmd, int* piValue);
-ALTAIRCAM_API(const char*) Altaircam_get_PixelFormatName(int val);
+ALTAIRCAM_API(HRESULT)     Altaircam_get_PixelFormatSupport(HAltaircam h, char cmd, int* pixelFormat);
+
+/*
+* pixelFormat: ALTAIRCAM_PIXELFORMAT_XXXX
+*/
+ALTAIRCAM_API(const char*) Altaircam_get_PixelFormatName(int pixelFormat);
 
 ALTAIRCAM_API(HRESULT)  Altaircam_put_Option(HAltaircam h, unsigned iOption, int iValue);
 ALTAIRCAM_API(HRESULT)  Altaircam_get_Option(HAltaircam h, unsigned iOption, int* piValue);
@@ -1481,7 +1526,7 @@ ALTAIRCAM_API(double)   Altaircam_calc_ClarityFactorV2(const void* pImageData, i
                     48 => RGB48
                     64 => RGB64
 */
-ALTAIRCAM_API(void)     Altaircam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, unsigned char nBitCount);
+ALTAIRCAM_API(void)     Altaircam_deBayerV2(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, unsigned char nBitCount);
 
 
 #ifndef __ALTAIRCAMFOCUSMOTOR_DEFINED__
@@ -1501,12 +1546,17 @@ ALTAIRCAM_DEPRECATED
 ALTAIRCAM_API(HRESULT)  Altaircam_get_FocusMotor(HAltaircam h, AltaircamFocusMotor* pFocusMotor);
 
 /*
-    obsolete, please use Altaircam_deBayerV2
-*/
-ALTAIRCAM_DEPRECATED
-ALTAIRCAM_API(void)     Altaircam_deBayer(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth);
+* raw image process
+* step:
+*  'F': very beginning
+*  'B': just before black balance
+*  'D': just before demosaic
+ */
+typedef void (__stdcall* PALTAIRCAM_PROCESS_CALLBACK)(char step, char bStill, unsigned nFourCC, int nW, int nH, void* pRaw, unsigned char pixelFormat, void* ctxProcess);
+ALTAIRCAM_API(HRESULT)  Altaircam_put_Process(HAltaircam h, PALTAIRCAM_PROCESS_CALLBACK funProcess, void* ctxProcess);
 
-typedef void (__stdcall* PALTAIRCAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* input, void* output, unsigned char nBitDepth, void* ctxDemosaic);
+/* debayer: raw to RGB */
+typedef void (__stdcall* PALTAIRCAM_DEMOSAIC_CALLBACK)(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth, void* ctxDemosaic);
 ALTAIRCAM_API(HRESULT)  Altaircam_put_Demosaic(HAltaircam h, PALTAIRCAM_DEMOSAIC_CALLBACK funDemosaic, void* ctxDemosaic);
 
 /*
@@ -1524,6 +1574,12 @@ typedef struct {
     unsigned            still;      /* number of still resolution, same as Altaircam_get_StillResolutionNumber() */
     AltaircamResolution   res[16];
 } AltaircamModel; /* camera model */
+
+/*
+    obsolete, please use Altaircam_deBayerV2
+*/
+ALTAIRCAM_DEPRECATED
+ALTAIRCAM_API(void)     Altaircam_deBayer(unsigned nFourCC, int nW, int nH, const void* pRaw, void* pRGB, unsigned char nBitDepth);
 
 /*
     obsolete, please use AltaircamDeviceV2

@@ -219,8 +219,8 @@ int FishCampCCD::SetTemperature(double temperature)
     else
         CoolerNP.s = IPS_IDLE;
 
-    TemperatureNP.s = IPS_BUSY;
-    IDSetNumber(&TemperatureNP, nullptr);
+    TemperatureNP.setState(IPS_BUSY);
+    TemperatureNP.apply();
 
     LOGF_INFO("Setting CCD temperature to %+06.2f C", temperature);
 
@@ -475,7 +475,7 @@ void FishCampCCD::TimerHit()
         }
     }
 
-    switch (TemperatureNP.s)
+    switch (TemperatureNP.getState())
     {
         case IPS_IDLE:
         case IPS_OK:
@@ -487,10 +487,10 @@ void FishCampCCD::TimerHit()
 
             LOGF_DEBUG("Temperature %g", ccdTemp);
 
-            if (fabs(TemperatureN[0].value - ccdTemp) >= TEMP_THRESHOLD)
+            if (fabs(TemperatureNP[0].getValue() - ccdTemp) >= TEMP_THRESHOLD)
             {
-                TemperatureN[0].value = ccdTemp;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP[0].setValue(ccdTemp);
+                TemperatureNP.apply();
             }
 
             break;
@@ -498,7 +498,7 @@ void FishCampCCD::TimerHit()
         case IPS_BUSY:
             if (sim)
             {
-                TemperatureN[0].value = TemperatureRequest;
+                TemperatureNP[0].setValue(TemperatureRequest);
             }
             else
             {
@@ -506,14 +506,14 @@ void FishCampCCD::TimerHit()
 
                 LOGF_DEBUG("fcUsb_cmd_getTemperature returns %d", rc);
 
-                TemperatureN[0].value = rc / 100.0;
+                TemperatureNP[0].setValue(rc / 100.0);
             }
 
             // If we're within threshold, let's make it BUSY ---> OK
             //            if (fabs(TemperatureRequest - TemperatureN[0].value) <= TEMP_THRESHOLD)
             //                TemperatureNP.s = IPS_OK;
 
-            IDSetNumber(&TemperatureNP, nullptr);
+            TemperatureNP.apply();
             break;
 
         case IPS_ALERT:
