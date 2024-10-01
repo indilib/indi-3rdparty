@@ -55,6 +55,9 @@ int mcp3421::openMCP3421()
     }
     else
         return nErr;
+
+    return nErr;
+
 }
 
 int mcp3421::closeMCP3421()
