@@ -95,7 +95,7 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_In
 
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
-    setDeviceName(name.c_str());
+    setDeviceName((std::string(DNAME) + " " + name).c_str());
 
     if (m_Instance->model->flag & CP(FLAG_MONO))
         m_MonoCamera = true;
