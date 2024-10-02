@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstdint>
 #include <sys/ioctl.h>
 
 #define ADC_ADDR0 0x68
