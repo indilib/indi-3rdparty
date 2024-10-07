@@ -19,11 +19,13 @@ Requirements
 	libusb-1 is required.
 	
 + libqhy
-	libqhy SDK is required.
+
+	libqhy SDK (located in ../libqhy/) is required.
 	
 + fxload
-  fxload that can upload FX3 EZUSB firmware files is required. Some distributions include an old version that do not support the fx3 flag.
-  Compile a compatible version (https://github.com/lhondareyte/fxload.git) to support FX3.
+
+	fxload that can upload FX3 EZUSB firmware files is required. Some distributions include an old version that do not support the fx3 flag.
+	Compile a compatible version (https://github.com/lhondareyte/fxload.git) to support FX3.
 
 + nlohmann-json
 
