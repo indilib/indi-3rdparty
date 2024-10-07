@@ -6,7 +6,7 @@ This package provides QHY CCD/CMOS and Filter Wheels INDI driver.
 Requirements
 ============
 
-+ INDI >= v1.9.6 (http://www.indilib.org)
++ INDI >= v2.1.0 (http://www.indilib.org)
 
 	You need to install both indi and indi-devel to build this package.
 	
