@@ -25,6 +25,11 @@ Requirements
   fxload that can upload FX3 EZUSB firmware files is required. Some distributions include an old version that do not support the fx3 flag.
   Compile a compatible version (https://github.com/lhondareyte/fxload.git) to support FX3.
 
++ nlohmann-json
+
+	@nlohmann's JSON for Modern C++ library (https://github.com/nlohmann/json) is required to build this driver using CMake.
+	It can be installed via APT as 'nlohmann-json3-dev' on Debian-based distros.
+
 Installation
 ============
 
