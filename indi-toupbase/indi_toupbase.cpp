@@ -59,7 +59,7 @@ static class Loader
 
             for (int i = 0; i < iConnectedCount; i++)
             {
-                if (0 == (CP(FLAG_FILTERWHEEL) & pCameraInfo[i].model->flag))
+                if ((CP(FLAG_CCD_INTERLACED) | CP(FLAG_CCD_PROGRESSIVE) | CP(FLAG_CMOS)) & pCameraInfo[i].model->flag)
                     cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i], names[i])));
             }
             if (cameras.empty())
