@@ -3,7 +3,7 @@ INDI-3rd Party Driver Update Tool
 About: 
 The INDI Driver Update Tool helps keep Debian packages up-to-date with the latest drivers from the INDI third-party repository with the aim of keeping Debian packages current with the latest INDI drivers, making astronomical instrumentation control easier and more reliable.
 
-Function: 
+Functions: 
 - Finds available drivers in the repository.
 - Checks existing Debian packages.
 - Identifies packages needing updates.
