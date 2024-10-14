@@ -10,22 +10,25 @@ Functions:
 - Prepares updated packages for upload.
 
 Requirements: 
-INDI >= V1.0
-Python >= 3.6
-...
+- INDI Library v2.1.0
+- ...
 
 Installation: 
 See <<<INSTALL>>> for installation instructions.
 
 Usage: 
-To update your INDI-3rd party drivers, simply run the following command:
+- To update your INDI-3rd party drivers, simply run the following command:
 <<<command>>>
 
 Configuration: 
-You can customize the update process by editing the config.json file.
-This file allows you to specify the drivers you want to update, as well as the update frequency.
+- Enable user to be selective of particular drivers for update.
+- Also enable user to set update frequency
 
 Troubleshooting: 
+- Lorem ipsum dolor sit amet, consectetur adipisc ...
 
 Supported drivers: 
 Currently, supported INDI-3rd party drivers include the following:
+- lorem
+- ipsum
+- ...
