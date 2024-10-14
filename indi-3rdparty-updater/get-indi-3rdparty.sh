@@ -4,7 +4,7 @@
 GITHUB_API="https://api.github.com"
 REPO_OWNER="amprebonne"
 REPO_NAME="indi-3rdparty"
-GITHUB_TOKEN="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"
+GITHUB_TOKEN="---token---"
 
 # Set API endpoint and headers
 ENDPOINT="/repos/${REPO_OWNER}/${REPO_NAME}/contents/"
