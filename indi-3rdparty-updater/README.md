@@ -1,27 +1,31 @@
-INDI-3rd Party Driver Updater
+INDI-3rd Party Driver Update Tool
 
-An automated INDI-3rd party driver updater.
+About: 
+The INDI Driver Update Tool helps keep Debian packages up-to-date with the latest drivers from the INDI third-party repository with the aim of keeping Debian packages current with the latest INDI drivers, making astronomical instrumentation control easier and more reliable.
 
-Overview:
-This project provides an automated driver updater for INDI-3rd party drivers. It aims to simplify the process of updating drivers for INDI-compatible devices, ensuring that users have access to the latest features and bug fixes.
+Function: 
+- Finds available drivers in the repository.
+- Checks existing Debian packages.
+- Identifies packages needing updates.
+- Prepares updated packages for upload.
 
-Requirements:
+Requirements: 
 INDI >= V1.0
 Python >= 3.6
+...
 
-Installation:
+Installation: 
 See <<<INSTALL>>> for installation instructions.
 
-Usage:
+Usage: 
 To update your INDI-3rd party drivers, simply run the following command:
 <<<command>>>
 
-Configuration:
+Configuration: 
 You can customize the update process by editing the config.json file.
 This file allows you to specify the drivers you want to update, as well as the update frequency.
 
-Supported drivers:
-Currently, supported INDI-3rd party drivers include:
-- <<<driver name>>>
-- <<<driver name>>>
-- <<<driver name>>>
+Troubleshooting: 
+
+Supported drivers: 
+Currently, supported INDI-3rd party drivers include the following:
