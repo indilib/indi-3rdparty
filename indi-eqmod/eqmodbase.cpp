@@ -67,7 +67,7 @@ using namespace INDI::AlignmentSubsystem;
 
 /* Preset Slew Speeds */
 #define SLEWMODES 11
-double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
+int slewspeeds[SLEWMODES - 1] = { 1, 2, 4, 8, 32, 64, 128, 600, 700, 800 };
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
@@ -3062,7 +3062,7 @@ double EQMod::GetRASlew()
     if (!strcmp(sw->name, "SLEWCUSTOM"))
         rate = SlewSpeedsNP.findWidgetByName("RASLEW")->getValue();
     else
-        rate = *((double *)sw->aux);
+        rate = *((int *)sw->aux);
     return rate;
 }
 
@@ -3074,7 +3074,7 @@ double EQMod::GetDESlew()
     if (!strcmp(sw->name, "SLEWCUSTOM"))
         rate = SlewSpeedsNP.findWidgetByName("DESLEW")->getValue();
     else
-        rate = *((double *)sw->aux);
+        rate = *((int *)sw->aux);
     return rate;
 }
 
