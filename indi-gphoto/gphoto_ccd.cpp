@@ -822,11 +822,17 @@ bool GPhotoCCD::Connect()
 
     if (isSimulation() == false)
     {
-        // Regular detect
+        // If no port is specified, connect to first camera detected on bus
         if (port[0] == '\0')
             gphotodrv = gphoto_open(camera, loader.context, nullptr, nullptr, shutter_release_port);
         else
+        {
+            // Connect to specific model on specific USB device end point.
             gphotodrv = gphoto_open(camera, loader.context, model, port, shutter_release_port);
+            // Otherwise, try to specify the model only without the USB device end point.
+            if (gphotodrv == nullptr)
+                gphotodrv = gphoto_open(camera, loader.context, model, nullptr, shutter_release_port);
+        }
         if (gphotodrv == nullptr)
         {
             LOG_ERROR("Can not open camera: Power OK? If camera is auto-mounted as external disk "

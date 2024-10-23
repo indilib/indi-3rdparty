@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <cstdlib>
+#include <thread>
 
 #include <config.h>
 #include <indilogger.h>
@@ -1401,6 +1402,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 return -1;
             }
 
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             continue;
         }
 
