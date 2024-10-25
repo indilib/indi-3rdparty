@@ -8,7 +8,7 @@ import os
 GITHUB_API = "https://api.github.com"
 REPO_OWNER = "amprebonne"
 REPO_NAME = "indi-3rdparty"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "---access token here---"
 
 # Output file name
 OUTPUT_FILE = "drivers_info.json"
