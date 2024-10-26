@@ -1,0 +1,442 @@
+[
+    {
+        "name": "indi-aagcloudwatcher-ng",
+        "version": "1.7",
+        "hash": "c194d3dd77b92fb5c42e90112c03632c0ef8e1e1"
+    },
+    {
+        "name": "indi-aagcloudwatcher",
+        "version": "1.4",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-ahp-xc",
+        "version": "0.3",
+        "hash": "58f592aa751d347b368cdc25b23f0e6b52159b5c"
+    },
+    {
+        "name": "indi-aok",
+        "version": "2.0",
+        "hash": "c194d3dd77b92fb5c42e90112c03632c0ef8e1e1"
+    },
+    {
+        "name": "indi-apogee",
+        "version": "1.9",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-armadillo-platypus",
+        "version": "1.0",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-asi-power",
+        "version": "0.95",
+        "hash": "7a6d3dbd86e1d4d99f646c33f0c51078b855c26b"
+    },
+    {
+        "name": "indi-asi",
+        "version": "2.4",
+        "hash": "e65d225e167808bd96817d0bdbe16d358b1ecc07"
+    },
+    {
+        "name": "indi-astarbox",
+        "version": "1.0",
+        "hash": "dafbbdf67e55e5a1a591e9009139a29bc751067e"
+    },
+    {
+        "name": "indi-astroasis",
+        "version": "1.1",
+        "hash": "7e54b353c576feeae4f47beecc6bafd409bc2aeb"
+    },
+    {
+        "name": "indi-atik",
+        "version": "3.0",
+        "hash": "b0a230aa0f6a264b910d0fe4725f5451442634e8"
+    },
+    {
+        "name": "indi-avalon",
+        "version": "1.14",
+        "hash": "dc8edd58e082bed41509a45d87be98937f4d9fa6"
+    },
+    {
+        "name": "indi-avalonud",
+        "version": "2.2",
+        "hash": "7544ea40f5048789a3b5198190cbefbad7554696"
+    },
+    {
+        "name": "indi-beefocus",
+        "version": "0.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-bresserexos2",
+        "version": "1.0",
+        "hash": "c2150860c3f31601112e3c54318ac337abc94951"
+    },
+    {
+        "name": "indi-celestronaux",
+        "version": "1.4",
+        "hash": "46ef19b22801d488f7f97ec693cd85a9c0c4831d"
+    },
+    {
+        "name": "indi-dsi",
+        "version": "0.4",
+        "hash": "542200b884a4017c4d4e0816d624a565bfa0cfd7"
+    },
+    {
+        "name": "indi-duino",
+        "version": "1.17",
+        "hash": "530af1a47044e0191e9c77226fdbfcc3f343330e"
+    },
+    {
+        "name": "indi-eqmod",
+        "version": "1.3",
+        "hash": "15bcfc842d1427887668370858aa2b5fdea41201"
+    },
+    {
+        "name": "indi-ffmv",
+        "version": "0.3",
+        "hash": "0673179a6a443fa4a7ddc539c885155ece2252ce"
+    },
+    {
+        "name": "indi-fishcamp",
+        "version": "1.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-fli",
+        "version": "1.5",
+        "hash": "989acd14623e96718a81823534706a830078321a"
+    },
+    {
+        "name": "indi-full",
+        "version": "2.1.0",
+        "hash": "c93942a8ad8c5a999d474b134481bf66f46037e1"
+    },
+    {
+        "name": "indi-gige",
+        "version": "0.1",
+        "hash": "791e38fa5e3b5de67dc84360c998bdfa72dc8c32"
+    },
+    {
+        "name": "indi-gphoto",
+        "version": "3.3",
+        "hash": "913c233635f4af305461442bc079c19db1a5872d"
+    },
+    {
+        "name": "indi-gpio",
+        "version": "0.1",
+        "hash": "100c55f84b3907ba1050e2f6bb8a8fefa0a6c9ef"
+    },
+    {
+        "name": "indi-gpsd",
+        "version": "0.6",
+        "hash": "0d6682c7dcb0bbadf8e3be844fee12ab6f675fc4"
+    },
+    {
+        "name": "indi-gpsnmea",
+        "version": "0.2",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-inovaplx",
+        "version": "1.4",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-libcamera",
+        "version": "1.1",
+        "hash": "a1d1d88e501e52803a04b998efaec7672ebb5425"
+    },
+    {
+        "name": "indi-limesdr",
+        "version": "1.4",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-maxdomeii",
+        "version": "1.3",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-mgen",
+        "version": "0.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-mi",
+        "version": "2.1",
+        "hash": "030339334553a292e3a0d6f671760e74f47c8598"
+    },
+    {
+        "name": "indi-nexdome",
+        "version": "1.5",
+        "hash": "aba55e508c971ad2ca0cd3def405b10bb8729f6f"
+    },
+    {
+        "name": "indi-nexstarevo",
+        "version": "0.4",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-nightscape",
+        "version": "1.0.6",
+        "hash": "cfc09e153109ceb8627822d9f58949e7ea0946c2"
+    },
+    {
+        "name": "indi-nut",
+        "version": "1.0",
+        "hash": "a6171809e7a85d49c4cc7ee1ab8a5b22960fde19"
+    },
+    {
+        "name": "indi-ocs",
+        "version": "1.0",
+        "hash": "966ed8517cd03a335074745db8afa45cc756bf82"
+    },
+    {
+        "name": "indi-orion-ssg3",
+        "version": "0.1",
+        "hash": "83408faf48d8688df3433ec68d18005742904ee6"
+    },
+    {
+        "name": "indi-pentax",
+        "version": "1.1",
+        "hash": "2086287d833aacf7ae57b420d99825c10a34a411"
+    },
+    {
+        "name": "indi-playerone",
+        "version": "1.16",
+        "hash": "31cbb08f25088641c1fbd1d32b420e9e7050bdd6"
+    },
+    {
+        "name": "indi-qhy",
+        "version": "2.7",
+        "hash": "92898e908d4cb613c98d375094f83eb54acd3488"
+    },
+    {
+        "name": "indi-qsi",
+        "version": "0.9",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-rolloffino",
+        "version": "1.0",
+        "hash": "416e63dfb2e5b6d279bc1744488a8befaa767a46"
+    },
+    {
+        "name": "indi-rpi-gpio",
+        "version": "0.4",
+        "hash": "7a6d3dbd86e1d4d99f646c33f0c51078b855c26b"
+    },
+    {
+        "name": "indi-rpicam",
+        "version": "1.4",
+        "hash": "a24788f67fdb784b1b0d71a242343b7bb3a34526"
+    },
+    {
+        "name": "indi-rtklib",
+        "version": "1.0",
+        "hash": "f58be3e17ecda0fd7f48c46fb462affe6238a45d"
+    },
+    {
+        "name": "indi-sbig",
+        "version": "2.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-shelyak",
+        "version": "1.0",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-starbook-ten",
+        "version": "0.1",
+        "hash": "39e877183cf04f90c37140e0a79da453c3723c7b"
+    },
+    {
+        "name": "indi-starbook",
+        "version": "0.8",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-svbony",
+        "version": "1.4.2",
+        "hash": "72902f3d81271ea1b101ea415fa27ed29edfc1b6"
+    },
+    {
+        "name": "indi-sx",
+        "version": "1.16",
+        "hash": "64aed359570f65b336f9bcea24b23d422b1f4847"
+    },
+    {
+        "name": "indi-talon6",
+        "version": "2.0",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-toupbase",
+        "version": "2.1",
+        "hash": "89ac6e305ced0a52b08686f1f026f0d9bd5587b9"
+    },
+    {
+        "name": "indi-webcam",
+        "version": "1.0",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "indi-weewx-json",
+        "version": "1.0",
+        "hash": "b416754c602167b71ebb4c89551b13a2f786b1f9"
+    },
+    {
+        "name": "indiwebmanagerapp",
+        "version": "6:1.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "libahp-gt",
+        "version": "1.5.8",
+        "hash": "9c1149a02283d0e231896828015ff5cbb2f9fe74"
+    },
+    {
+        "name": "libahp-xc",
+        "version": "1.0.10",
+        "hash": "0d9c47d0acd02cd3d2e2d835f3370784936d86b2"
+    },
+    {
+        "name": "libaltaircam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libapogee3",
+        "version": "3.2",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "libasi",
+        "version": "1.360",
+        "hash": "c73c4e7e5feca92ac069969690f7fd5aa15ce635"
+    },
+    {
+        "name": "libastroasis",
+        "version": "1.1.0",
+        "hash": "7e54b353c576feeae4f47beecc6bafd409bc2aeb"
+    },
+    {
+        "name": "libatik",
+        "version": "2.2.9",
+        "hash": "19711ca278302bae9a1abb78969f6418a2f4d5b3"
+    },
+    {
+        "name": "libbressercam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libfishcamp",
+        "version": "1.2",
+        "hash": "92d6d8a5ed4727418c5edfd35a455fcb58451607"
+    },
+    {
+        "name": "libfli",
+        "version": "2.0",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "libgphoto2",
+        "version": "2.5.31",
+        "hash": "289ef708d3ae1f642a7ca109719e0099a0c45693"
+    },
+    {
+        "name": "libinovasdk",
+        "version": "1.3.6",
+        "hash": "3bdda0e633a901672021b1732776587864dfac69"
+    },
+    {
+        "name": "libmallincam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libmeadecam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libmicam",
+        "version": "1.3",
+        "hash": "030339334553a292e3a0d6f671760e74f47c8598"
+    },
+    {
+        "name": "libnncam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libogmacam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libomegonprocam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libpigpiod",
+        "version": "0.2",
+        "hash": "7a6d3dbd86e1d4d99f646c33f0c51078b855c26b"
+    },
+    {
+        "name": "libpktriggercord",
+        "version": "0.85.02",
+        "hash": "2086287d833aacf7ae57b420d99825c10a34a411"
+    },
+    {
+        "name": "libplayerone",
+        "version": "1.12",
+        "hash": "31cbb08f25088641c1fbd1d32b420e9e7050bdd6"
+    },
+    {
+        "name": "libqhy",
+        "version": "24.7.29",
+        "hash": "225232137c4ec5195ab517fca01888983e2514d9"
+    },
+    {
+        "name": "libqsi",
+        "version": "7.6.1",
+        "hash": "dc3ca4509280269ff16d9ca2eb1f57c073021d0e"
+    },
+    {
+        "name": "libricohcamerasdk",
+        "version": "1.1.0",
+        "hash": "92d212f840b60c10d8984bb936906c1c81999100"
+    },
+    {
+        "name": "libsbig",
+        "version": "4.9.9",
+        "hash": "a1686d6a04effa0ae2c155910a431907dcb61052"
+    },
+    {
+        "name": "libstarshootg",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libsvbony",
+        "version": "1.12.8",
+        "hash": "a04954805621af4dacb394583e1b2ef6e152df52"
+    },
+    {
+        "name": "libtoupcam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    },
+    {
+        "name": "libtscam",
+        "version": "57.26598.20240928",
+        "hash": "9dcba8590ff36d106e92698bae92ac2feaeb9b1b"
+    }
+]
