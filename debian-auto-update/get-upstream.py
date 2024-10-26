@@ -11,7 +11,7 @@ from typing import Dict, List
 GITHUB_API = "https://api.github.com"
 REPO_OWNER = "amprebonne"
 REPO_NAME = "indi-3rdparty"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "---access-token---"
 DEBIAN_DIR = "debian"
 
 # Output file name
