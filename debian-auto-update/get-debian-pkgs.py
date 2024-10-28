@@ -1,6 +1,24 @@
 #!/usr/bin/python3
 
 import requests
+
+# access and download debian astro packages webpage
+# URL for Debian package information
+url = "https://qa.debian.org/developer.php?email=debian-astro-maintainers%40lists.alioth.debian.org"
+
+# Send GET request
+response = requests.get(url)
+
+# Save HTML content to file
+with open("debian-astro-packages.html", "w") as file:
+    file.write(response.text)
+
+'''
+
+
+# parse debian packages site data from package tracker api endpoint
+
+import requests
 from lxml import html
 
 url = 'https://tracker.debian.org/pkg/indi-apogee'
@@ -43,3 +61,6 @@ for i, item in enumerate(list_items):
 # Print extracted source and version
 print("\nSource:", source['source'])
 print("Version:", version['version'])
+
+
+'''
