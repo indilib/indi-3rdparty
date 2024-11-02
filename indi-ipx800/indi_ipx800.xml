@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driversList>
+<devGroup group="Auxiliary">
+	<device label="IPX800" manufacturer="GCE">
+                <driver name="IPX800">indi_ipx800</driver>
+                <version>0.5</version>
+	</device>
+</devGroup>
+</driversList>
