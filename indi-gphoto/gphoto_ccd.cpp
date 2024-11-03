@@ -291,6 +291,11 @@ bool GPhotoCCD::initProperties()
     SDCardImageSP[SD_CARD_IGNORE_IMAGE].fill("Ignore", "Ignore", ISS_OFF);
     SDCardImageSP.fill(getDeviceName(), "CCD_SD_CARD_ACTION", "SD Image", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
+    // Download Timeout
+    DownloadTimeoutNP[0].fill("VALUE", "Seconds", "%.f", 0, 300, 30, 60);
+    DownloadTimeoutNP.fill(getDeviceName(), "CCD_DOWNLOAD_TIMEOUT", "Download Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    DownloadTimeoutNP.load();
+
     // Nikon should have force bulb off by default.
     ForceBULBSP[INDI_ENABLED].fill("On", "On", isNikon ? ISS_OFF : ISS_ON);
     ForceBULBSP[INDI_DISABLED].fill("Off", "Off", isNikon ? ISS_ON : ISS_OFF);
@@ -423,6 +428,7 @@ bool GPhotoCCD::updateProperties()
         }
 
         defineProperty(ForceBULBSP);
+        defineProperty(DownloadTimeoutNP);
     }
     else
     {
@@ -448,6 +454,7 @@ bool GPhotoCCD::updateProperties()
         deleteProperty(SDCardImageSP);
 
         deleteProperty(ForceBULBSP);
+        deleteProperty(DownloadTimeoutNP);
 
         HideExtendedOptions();
     }
@@ -774,6 +781,17 @@ bool GPhotoCCD::ISNewNumber(const char * dev, const char * name, double values[]
             MirrorLockNP.setState(IPS_OK);
             MirrorLockNP.apply();
             saveConfig(MirrorLockNP);
+            return true;
+        }
+
+        // Download Timeout
+        if (DownloadTimeoutNP.isNameMatch(name))
+        {
+            DownloadTimeoutNP.update(values, names, n);
+            DownloadTimeoutNP.setState(IPS_OK);
+            DownloadTimeoutNP.apply();
+            saveConfig(DownloadTimeoutNP);
+            gphoto_set_download_timeout(gphotodrv, DownloadTimeoutNP[0].getValue());
             return true;
         }
 
@@ -2033,6 +2051,9 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
 
     // Mirror Locking
     MirrorLockNP.save(fp);
+
+    // Download Timeout
+    DownloadTimeoutNP.save(fp);
 
     // Capture Target
     if (CaptureTargetSP.getState() == IPS_OK)
