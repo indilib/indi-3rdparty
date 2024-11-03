@@ -9,7 +9,6 @@
 #ifndef __QHYCCDSTRUCTDEF_H__
 #define __QHYCCDSTRUCTDEF_H__
 
-#if __CPP_MODE__
 #if defined (_WIN32)
 #ifndef EXPORTFUNC
 #define EXPORTFUNC extern "C" __declspec(dllexport)
@@ -24,23 +23,6 @@
 #define EXPORTFUNC extern "C"
 #define STDCALL
 #define EXPORTC extern "C"
-#endif
-#else
-#if defined (_WIN32)
-#ifndef EXPORTFUNC
-#define EXPORTFUNC
-#endif
-#ifndef STDCALL
-#define STDCALL
-#endif
-#ifndef EXPORTC
-#define EXPORTC
-#endif
-#else
-#define EXPORTFUNC
-#define STDCALL
-#define EXPORTC
-#endif
 #endif
 
 #include "stdint.h"
@@ -64,10 +46,6 @@ typedef uint64_t QHYDWORD;
 
 #endif
 
-/**
- * usb vendor request command
- */
-#define QHYCCD_REQUEST_RQT  0x00
 
 /**
  * usb vendor request command
@@ -382,5 +360,9 @@ typedef QHYDWORD  (*QHYCCDProcCallBack) (void *handle,
     QHYDWORD lParam);
 #endif
 
+/**
+ * usb vendor request command
+ */
+#define QHYCCD_REQUEST_RQT  0x00
 
 #endif
