@@ -160,6 +160,7 @@ bool ToupWheel::Connect()
         FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &slot));
     if ((5 == slot) || (7 == slot) || (8 == slot))
     {
+        LOGF_INFO("%s: get slot number from builtin EEPROM, %d", getDeviceName(), slot);
         const char* names[] = { "SLOTS_5", "SLOTS_7", "SLOTS_8" };
         ISState states[3];
         states[0] = (5 == slot) ? ISS_ON : ISS_OFF;
@@ -176,6 +177,7 @@ bool ToupWheel::Connect()
             slot = 8;
         else
             slot = 5;
+        LOGF_INFO("%s: get slot number from config file, %d", getDeviceName(), slot);
     }
     FilterSlotN[0].max = slot;
 
