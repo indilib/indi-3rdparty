@@ -665,7 +665,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
             nHomeAzimuth              = nVal;
             nHomeTicks                = floor(0.5 + nHomeAzimuth * nTicksPerTurn / 360.0);
             HomeAzimuthNP.setState(IPS_OK);
-            // HomeAzimuthNP.[0].value = nVal;
+            HomeAzimuthNP[0].setValue(nVal);
             LOGF_INFO("%s", cLog);
             HomeAzimuthNP.apply();
             return true;
