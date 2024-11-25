@@ -21,7 +21,7 @@ jobs:
           path: indi-3rdparty
 
       - name: Get INDI Core Package
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           repo: indilib/indi
           branch: master
