@@ -28,7 +28,7 @@
 #include <indifilterwheel.h>
 
 #define EFW_IS_MOVING -1
-#define POA_EFW_TIMEOUT 5000		// millisecond
+#define POA_EFW_TIMEOUT 10000		// millisecond
 
 class POAWHEEL : public INDI::FilterWheel
 {
