@@ -25,70 +25,25 @@
  * by default to 38400 baud. The Arduino code determines which pins open/close a relay to start/stop the
  * roof motor, and read state of switches indicating if the roof is  opened or closed.
  */
-#include "rolloffino.h"
-#include "indicom.h"
-#include "termios.h"
-#include <stdlib.h>
-#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <memory>
 #include <string>
-#include <fstream>
+#include <regex>
+#include <array>
+#include "rolloffino.h"
 
 #define ROLLOFF_DURATION 60               // Seconds until Roof is fully opened or closed
 #define INACTIVE_STATUS  4                // Seconds between updating status lights
-#define ROR_D_PRESS      1000             // Milliseconds after issuing command before expecting response
 #define MAX_CNTRL_COM_ERR 10              // Maximum consecutive errors communicating with Arduino
-
-// Arduino controller interface limits
-#define MAXINOCMD        15          // Command buffer
-#define MAXINOTARGET     15          // Target buffer
-#define MAXINOVAL        127         // Value bufffer, sized to contain NAK error strings
 #define MAXINOLINE       63          // Sized to contain outgoing command requests
 #define MAXINOBUF        255         // Sized for maximum overall input / output
 #define MAXINOERR        255         // System call error message buffer
 #define MAXINOWAIT       3           // seconds
 
-// Driver version id
-#define VERSION_ID      "20240801"
-
 // We declare an auto pointer to RollOffIno.
 std::unique_ptr<RollOffIno> rollOffIno(new RollOffIno());
-
-void ISPoll(void *p);
-
-void ISGetProperties(const char *dev)
-{
-    rollOffIno->ISGetProperties(dev);
-}
-
-void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
-{
-    rollOffIno->ISNewSwitch(dev, name, states, names, n);
-}
-void ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-    rollOffIno->ISNewText(dev, name, texts, names, n);
-}
-
-void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
-{
-    rollOffIno->ISNewNumber(dev, name, values, names, n);
-}
-
-void ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[],
-               char *names[], int n)
-{
-    INDI_UNUSED(dev);
-    INDI_UNUSED(name);
-    INDI_UNUSED(sizes);
-    INDI_UNUSED(blobsizes);
-    INDI_UNUSED(blobs);
-    INDI_UNUSED(formats);
-    INDI_UNUSED(names);
-    INDI_UNUSED(n);
-}
 
 void ISSnoopDevice(XMLEle *root)
 {
@@ -121,66 +76,71 @@ bool RollOffIno::initProperties()
     char var_act [MAX_LABEL];
     char var_lab [MAX_LABEL];
     INDI::Dome::initProperties();
-    // Roof related controls
-    IUFillSwitch(&LockS[LOCK_DISABLE], "LOCK_DISABLE", "Off", ISS_ON);
-    IUFillSwitch(&LockS[LOCK_ENABLE],  "LOCK_ENABLE",  "On",  ISS_OFF);
-    IUFillSwitchVector(&LockSP, LockS, 2, getDeviceName(), "LOCK", "Lock", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    IUFillSwitch(&AuxS[AUX_DISABLE],   "AUX_DISABLE",  "Off", ISS_ON);
-    IUFillSwitch(&AuxS[AUX_ENABLE],    "AUX_ENABLE",   "On",  ISS_OFF);
-    IUFillSwitchVector(&AuxSP,  AuxS,  2, getDeviceName(), "AUX",  "Auxiliary", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Main tab
+    LockSP[LOCK_ENABLE].fill("LOCK_ENABLE", "On", ISS_OFF);
+    LockSP[LOCK_DISABLE].fill("LOCK_DISABLE", "Off", ISS_ON);
+    LockSP.fill(getDeviceName(), "LOCK", "Lock", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    AuxSP[AUX_ENABLE].fill("AUX_ENABLE",   "On",  ISS_OFF);
+    AuxSP[AUX_DISABLE].fill("AUX_DISABLE",  "Off", ISS_ON);
+    AuxSP.fill(getDeviceName(), "AUX",  "Auxiliary", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     //Roof status lights
-    IUFillLight(&RoofStatusL[ROOF_STATUS_OPENED],   "ROOF_OPENED", "Opened", IPS_IDLE);
-    IUFillLight(&RoofStatusL[ROOF_STATUS_CLOSED],   "ROOF_CLOSED", "Closed", IPS_IDLE);
-    IUFillLight(&RoofStatusL[ROOF_STATUS_MOVING],   "ROOF_MOVING", "Moving", IPS_IDLE);
-    IUFillLight(&RoofStatusL[ROOF_STATUS_LOCKED],   "ROOF_LOCK",   "Roof Lock", IPS_IDLE);
-    IUFillLight(&RoofStatusL[ROOF_STATUS_AUXSTATE], "ROOF_AUXILIARY", "Roof Auxiliary", IPS_IDLE);
-    IUFillLightVector(&RoofStatusLP, RoofStatusL, 5, getDeviceName(), "ROOF STATUS", "Roof Status", MAIN_CONTROL_TAB, IPS_BUSY);
+    RoofStatusLP[0].fill("ROOF_OPENED", "Opened", IPS_IDLE);
+    RoofStatusLP[1].fill("ROOF_CLOSED", "Closed", IPS_IDLE);
+    RoofStatusLP[2].fill("ROOF_MOVING", "Moving", IPS_IDLE);
+    RoofStatusLP[3].fill("ROOF_LOCK",   "Roof Lock", IPS_IDLE);
+    RoofStatusLP[4].fill("ROOF_AUXILIARY", "Roof Auxiliary", IPS_IDLE);
+    RoofStatusLP.fill(getDeviceName(), "ROOF STATUS","Roof Status", MAIN_CONTROL_TAB, IPS_OK);
+
     // Options tab
-    IUFillNumber(&RoofTimeoutN[0], "ROOF_TIMEOUT", "Timeout in Seconds", "%3.0f", 1, 300, 1, 40);
-    IUFillNumberVector(&RoofTimeoutNP, RoofTimeoutN, 1, getDeviceName(), "ROOF_MOVEMENT", "Roof Movement", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    addAuxControls();         // This is for the standard controls
+    RoofTimeoutNP[0].fill("ROOF_TIMEOUT", "Timeout in Seconds", "%3.0f", 1, 300, 1, 40);
+    RoofTimeoutNP.fill(getDeviceName(), "ROOF_MOVEMENT", "Roof Movement", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+
     // Action labels
     for (int i = 0; i < MAX_ACTIONS; i++)
     {
         sprintf(var_act, "Action %d", i+1);
         sprintf(var_lab, "Label  %d", i+1);
-        IUFillText(&labelsT[i], action_labels[i], var_lab, var_act);
-        IUFillTextVector(labelsTP[i], &labelsT[i], 1, getDeviceName(), action_labels[i], labelsT[i].text,   ACTION_LABEL_TAB, IP_RW, 60, IPS_IDLE);
-        defineProperty(labelsTP[i]);
+        actionLabels_tp[i][0].fill(action_labels[i], var_lab, var_act);
+        actionLabels_tp[i].fill(getDeviceName(), label_init[i],  var_act,   ACTION_LABEL_TAB, IP_RW, 60, IPS_IDLE);
+        defineProperty(actionLabels_tp[i]);
     }
     loadConfig(true);
-    // Actions
+
+    // Action Switches
     for (int i = 0; i < MAX_ACTIONS; i++)
     {
-        char* aLabel = labelsT[i].text;
+        char* aLabel = actionLabels_tp[i][0].text;
         sprintf(var_act, "Action %d", i+1);
         sprintf(var_lab, "Label %d", i+1);
         if (strlen(aLabel) == 0)
         {
-//            sprintf(aLabel, "Empty Label %d", i);
-            aLabel = var_act;
+            aLabel = var_act;       // sprintf(aLabel, "Empty Label %d", i);
         }
         else
         {
             for (int j = 0; j < i; j++)
             {
-                if (strcmp(aLabel, labelsT[j].text) == 0)
+                if (strcmp(aLabel, actionLabels_tp[j][0].text) == 0)
                 {
                     sprintf(aLabel, "Duplicate Label %d", j);
-//                    aLabel = var_act;
                     break;
                 }
             }
         }
-        IUFillSwitch(&actionSwitches[i][ACTION_DISABLE], "ACTION_DISABLE", "Off", ISS_ON);
-        IUFillSwitch(&actionSwitches[i][ACTION_ENABLE],  "ACTION_ENABLE",  "On",  ISS_OFF);
-        IUFillSwitchVector(actionSwitchesSP[i], actionSwitches[i], 2, getDeviceName(),
-                           actionSwitchesText[i], aLabel,   ACTION_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
-    // Action Status Lights
-        IUFillLight(&ActionStatusL[i], actionSwitchesText[i], aLabel, IPS_IDLE);
+        actionSwitches_sp[i][ACT_ENABLE].fill("ACTION_ENABLE", "On", ISS_OFF);
+        actionSwitches_sp[i][ACT_DISABLE].fill("ACTION_DISABLE", "Off", ISS_ON);
+        actionSwitches_sp[i].fill(getDeviceName(),actionSwitchesText[i], aLabel,   ACTION_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
+
+        // Action Status Lights
+        ActionStatusLP[i].fill(actionSwitchesText[i], aLabel, IPS_IDLE);
     }
-    IUFillLightVector(&ActionStatusLP, ActionStatusL, 8, getDeviceName(), "ACTION STATUS","Returned State", ACTION_CONTROL_TAB, IPS_BUSY);
+    ActionStatusLP.fill(getDeviceName(), "ACTION STATUS","Returned State", ACTION_CONTROL_TAB, IPS_BUSY);
+
     SetParkDataType(PARK_NONE);
-    addAuxControls();         // This is for the standard controls
     loadConfig(true);
     return true;
 }
@@ -193,42 +153,32 @@ bool RollOffIno::updateProperties()
     INDI::Dome::updateProperties();
     if (isConnected())
     {
-        if (InitPark())
-        {
-            DEBUG(INDI::Logger::DBG_SESSION, "Dome parking data was obtained");
-        }
-        // If we do not have Dome parking data
-        else
+        if (!InitPark())
         {
             DEBUG(INDI::Logger::DBG_SESSION, "Dome parking data was not obtained");
         }
-        defineProperty(&LockSP);            // Lock Switch,
-        defineProperty(&AuxSP);             // Aux Switch,
-        defineProperty(&RoofStatusLP);      // Roof status lights
-        defineProperty(&RoofTimeoutNP);     // Roof timeout
+        defineProperty(LockSP);              // Lock Switch,
+        defineProperty(AuxSP);               // Aux Switch,
+        defineProperty(RoofStatusLP);        // Roof status lights
+        defineProperty(RoofTimeoutNP);       // Roof timeout
         for (int i = 0; i < MAX_ACTIONS; i++)
-        {
-            defineProperty(labelsTP[i]);          // Action labels
-        }
+            defineProperty(actionLabels_tp[i]);  // Labels
         for (int i = 0; i < MAX_ACTIONS; i++)
-        {
-            defineProperty(actionSwitchesSP[i]);  // Actions
-        }
-        defineProperty(&ActionStatusLP);                  // Action status lights
+            defineProperty(actionSwitches_sp[i]);  // Actions
+        defineProperty(ActionStatusLP);      // Action status lights
         checkConditions();
     }
     else
     {
-        deleteProperty(LockSP.name);        // Delete the Lock Switch buttons
-        deleteProperty(AuxSP.name);         // Delete the Auxiliary Switch buttons
-        deleteProperty(RoofStatusLP.name);  // Delete the roof status lights
-        deleteProperty(RoofTimeoutNP.name); // Roof timeout
+        deleteProperty(LockSP);              // Delete the Lock Switch buttons
+        deleteProperty(AuxSP);               // Delete the Auxiliary Switch buttons
+        deleteProperty(RoofStatusLP);        // Delete the roof status lights
+        deleteProperty(RoofTimeoutNP);       // Roof timeout
         for (int i = 0; i < MAX_ACTIONS; i++)
-        {
-            deleteProperty(actionSwitchesSP[i]->name);
-            deleteProperty(labelsTP[i]->name);
-        }
-        deleteProperty(ActionStatusLP.name);  // Delete the action status lights
+            deleteProperty(actionLabels_tp[i]);  // Labels
+        for (int i = 0; i < MAX_ACTIONS; i++)
+            deleteProperty(actionSwitches_sp[i]);  // Actions
+        deleteProperty(ActionStatusLP);      // Delete the action status lights
     }
     return true;
 }
@@ -236,56 +186,26 @@ bool RollOffIno::updateProperties()
 void RollOffIno::ISGetProperties(const char *dev)
 {
     INDI::Dome::ISGetProperties(dev);
-    defineProperty(&LockSP);            // Lock Switch,
-    defineProperty(&AuxSP);             // Aux Switch,
-    defineProperty(&RoofTimeoutNP);     // Roof timeout
-    for(int i = 0; i < MAX_ACTIONS; i++)
-    {
-        defineProperty(labelsTP[i]);
-        defineProperty(actionSwitchesSP[i]);
-    }
+    defineProperty(LockSP);        // Lock Switch,
+    defineProperty(AuxSP);         // Aux Switch,
+    defineProperty(RoofTimeoutNP); // Roof timeout
+    for (int i = 0; i < MAX_ACTIONS; i++)
+        defineProperty(actionLabels_tp[i]);  // Labels
+    for (int i = 0; i < MAX_ACTIONS; i++)
+        defineProperty(actionSwitches_sp[i]);  // Actions
 }
 
 bool RollOffIno::saveConfigItems(FILE *fp)
 {
     INDI::Dome::saveConfigItems(fp);
-    IUSaveConfigSwitch(fp, &LockSP);
-    IUSaveConfigSwitch(fp, &AuxSP);
-    IUSaveConfigNumber(fp, &RoofTimeoutNP);
-    for(int i = 0; i < MAX_ACTIONS; i++)
-    {
-        IUSaveConfigText(fp, labelsTP[i]);
-        IUSaveConfigSwitch(fp, actionSwitchesSP[i]);
-    }
+    LockSP.save(fp);
+    AuxSP.save(fp);
+    RoofTimeoutNP.save(fp);
+    for (int i = 0; i < MAX_ACTIONS; i++)
+        actionLabels_tp[i].save(fp);  // Labels
+    for (int i = 0; i < MAX_ACTIONS; i++)
+        actionSwitches_sp[i].save(fp);  // Actions
     return true;
-}
-
-/************************************************************************************
- * Called from Dome, BaseDevice to establish contact with device
- ************************************************************************************/
-bool RollOffIno::Handshake()
-{
-    bool status = false;
-    LOG_INFO("Documentation: https://github.com/indilib/indi-3rdparty [indi-rolloffino]");
-    LOGF_DEBUG("Driver id: %s", VERSION_ID);
-
-    if (PortFD <= 0)
-        DEBUG(INDI::Logger::DBG_WARNING, "The connection port has not been established");
-    else
-    {
-        status = initialContact();
-        if (!status)
-        {
-            DEBUG(INDI::Logger::DBG_WARNING, "Initial controller contact failed, retrying");
-            msSleep(1000);              // In case it is a Arduino still resetting from upload
-            status = initialContact();
-        }
-        if (!status)
-            LOG_ERROR("Unable to contact the roof controller");
-        else
-            LOGF_INFO("Number of Actions enabled from Arduino: %d", actionCount);
-    }
-    return status;
 }
 
 /**************************************************************************************
@@ -366,11 +286,11 @@ bool RollOffIno::ISNewNumber(const char *dev, const char *name, double values[],
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        if (!strcmp(RoofTimeoutNP.name, name))
+        if (RoofTimeoutNP.isNameMatch(name))
         {
-            IUUpdateNumber(&RoofTimeoutNP, values, names, n);
-            RoofTimeoutNP.s = IPS_OK;
-            IDSetNumber(&RoofTimeoutNP, nullptr);
+            RoofTimeoutNP.update(values, names, n);
+            RoofTimeoutNP.setState(IPS_OK);
+            RoofTimeoutNP.apply();
             return true;
         }
     }
@@ -383,13 +303,13 @@ bool RollOffIno::ISNewText(const char *dev, const char *name, char *texts[], cha
     {
         for (int i = 0; i < MAX_ACTIONS; i++)
         {
-            if (name != nullptr && strcmp(name, labelsTP[i]->name) == 0)
+            if (actionLabels_tp[i].isNameMatch(name))
             {
-                labelsTP[i]->s = IPS_OK;
-                IUUpdateText(labelsTP[i], texts, names, n);
-                IDSetText(labelsTP[i], nullptr);
+                actionLabels_tp[i].update(texts, names, n);
+                actionLabels_tp[i].setState(IPS_OK);
+                actionLabels_tp[i].apply();
                 saveConfig(true);
-                break;
+                return true;
             }
         }
     }
@@ -406,112 +326,152 @@ bool RollOffIno::ISNewSwitch(const char *dev, const char *name, ISState *states,
     {
         ////////////////////////////////////////
         // Check if the call for our Lock switch
-        if (strcmp(name, LockSP.name) == 0)
+        if (LockSP.isNameMatch(name))
         {
-            // Find out which state is requested by the client
-            const char *actionName = IUFindOnSwitchName(states, names, n);
-            if (actionName == nullptr)
-                return false;
+            // Find out if requested state is the same as previous100
+            auto previous = LockSP.findOnSwitchIndex();
+            LockSP.update(states, names, n);
+            auto requested = LockSP.findOnSwitchIndex();
 
-            // If it is the same state as actionName, then we do nothing. i.e.
-            // if actionName is LOCK_ON and our Lock switch is already on, we return
-            int currentLockIndex = IUFindOnSwitchIndex(&LockSP);
-            //DEBUGF(INDI::Logger::DBG_SESSION, "Lock state Requested: %s, Current: %s", actionName, LockS[currentLockIndex].name);
-            if (!strcmp(actionName, LockS[currentLockIndex].name))
+            if (requested < 0)
+                return true;
+
+            //DEBUGF(INDI::Logger::DBG_SESSION, "Prev %d, Cur %d", previous, requested);
+            if (previous == requested )
             {
-                //DEBUGF(INDI::Logger::DBG_SESSION, "Lock switch is already %s", LockS[currentLockIndex].label);
-                LockSP.s = IPS_IDLE;
-                IDSetSwitch(&LockSP, nullptr);
+                //DEBUGF(INDI::Logger::DBG_SESSION, "Lock switch is already %s", (requested == 0 ? "On" : "Off"));
+                LockSP.reset();
+                LockSP.setState(IPS_OK);
+                LockSP[previous].setState(ISS_ON);
+                LockSP.apply();
                 return true;
             }
+
+            //DEBUGF(INDI::Logger::DBG_SESSION, "Lock switch requesting %s", (requested == 0 ? "On" : "Off"));
             // Update the switch state
-            IUUpdateSwitch(&LockSP, states, names, n);
-            currentLockIndex = IUFindOnSwitchIndex(&LockSP);
-            LockSP.s = IPS_OK;
-            IDSetSwitch(&LockSP, nullptr);
-            if (strcmp(LockS[currentLockIndex].name, "LOCK_ENABLE") == 0)
-                setRoofLock(true);
+            if (requested == 0)
+            {
+                LockSP.setState(IPS_OK);
+            //    LockSP.reset();
+                LockSP[requested].s = ISS_ON;
+                //LOGF_INFO("Roof %s", (requested == 0 ? "Lock" : "Unlocked"));
+                LockSP.apply();
+                sendRoofCommand(ROOF_LOCK_CMD, true, true);
+                updateRoofStatus();
+                return true;
+            }
             else
-                setRoofLock(false);
-            updateRoofStatus();
-            return true;
+            {
+                LockSP.setState(IPS_IDLE);
+            //    LockSP.reset();
+                LockSP[requested].s = ISS_OFF;
+                //LOGF_INFO("Roof %s", (requested == 0 ? "Lock" : "UnLocked"));
+                LockSP.apply();
+                sendRoofCommand(ROOF_LOCK_CMD, false, true);
+                updateRoofStatus();
+                return true;
+            }
         }
         
         ////////////////////////////////////////
         // Check if the call for our Aux switch
-        if (strcmp(name, AuxSP.name) == 0)
+        if (AuxSP.isNameMatch(name))
         {
-            // Find out which state is requested by the client
-            const char *actionName = IUFindOnSwitchName(states, names, n);
-            if (actionName == nullptr)
-                return false;
+            // Find out if requested state is the same as previous
+            auto previous = AuxSP.findOnSwitchIndex();
+            AuxSP.update(states, names, n);
+            auto requested = AuxSP.findOnSwitchIndex();
 
-            // If it is the same state as the current state, then we do nothing. i.e.
-            // if actionName is AUX_ON and our Aux switch is already on, we return
-            int currentAuxIndex = IUFindOnSwitchIndex(&AuxSP);
-            //DEBUGF(INDI::Logger::DBG_SESSION, "Auxiliary state Requested (actionName): %s, Current: %s", actionName, AuxS[currentAuxIndex].name);
-            if (!strcmp(actionName, AuxS[currentAuxIndex].name))
+            if (requested < 0)
+                return true;
+
+            //DEBUGF(INDI::Logger::DBG_SESSION, "Prev %d, Cur %d", previous, requested);
+            if (previous == requested)
             {
-                //DEBUGF(INDI::Logger::DBG_SESSION, "Auxiliary switch is already %s", AuxS[currentAuxIndex].label);
-                AuxSP.s = IPS_IDLE;
-                IDSetSwitch(&AuxSP, nullptr);
+                //DEBUGF(INDI::Logger::DBG_SESSION, "Aux switch is already %s", (requested == 0 ? "On" : "Off"));
+                AuxSP.reset();
+                AuxSP.setState(IPS_OK);
+                AuxSP[previous].setState(ISS_ON);
+                AuxSP.apply();
                 return true;
             }
 
-            // Different state requested, Update the switch state
-            IUUpdateSwitch(&AuxSP, states, names, n);
-            currentAuxIndex = IUFindOnSwitchIndex(&AuxSP);
-            AuxSP.s = IPS_OK;
-            IDSetSwitch(&AuxSP, nullptr);
-            if (strcmp(AuxS[currentAuxIndex].name, "AUX_ENABLE") == 0)
-                setRoofAux(true);
+            //DEBUGF(INDI::Logger::DBG_SESSION, "Aux switch requesting %s", (requested == 0 ? "On" : "Off"));
+            // Update the switch state
+            if (requested == 0)
+            {
+                AuxSP.setState(IPS_OK);
+            //    AuxSP.reset();
+                AuxSP[requested].s = ISS_ON;
+                //LOGF_INFO("Aux Switch %s", (requested == 0 ? "On" : "Off"));
+                AuxSP.apply();
+                sendRoofCommand(ROOF_AUX_CMD, true, true);
+                updateRoofStatus();
+                return true;
+            }
             else
-                setRoofAux(false);
-            updateRoofStatus();
-            return true;
+            {
+                AuxSP.setState(IPS_IDLE);
+            //    AuxSP.reset();
+                AuxSP[requested].s = ISS_OFF;
+                //LOGF_INFO("Aux Switch %s", (requested == 0 ? "On" : "Off"));
+                sendRoofCommand(ROOF_AUX_CMD, false, true);
+                AuxSP.apply();
+                updateRoofStatus();
+                return true;
+            }
         }
 
         ////////////////////////////////////////
         // Check if the call for one of the Action switches
         for (int i = 0; i < MAX_ACTIONS; i++)
         {
-            if (strcmp(name, actionSwitchesSP[i]->name) == 0)
+            if (actionSwitches_sp[i].isNameMatch(name))
             {
-                // Find out which state is requested by the Ekos client
-                const char *actionName = IUFindOnSwitchName(states, names, n);
-                if (actionName == nullptr)
-                    return false;
-                int currentActIndex = IUFindOnSwitchIndex(actionSwitchesSP[i]);
-                //LOGF_DEBUG("Action Requested (actionName) %s", actionName);
-                // If the current state is the same as actionName, then we do nothing.
-                if (!strcmp(actionName, actionSwitches[i][currentActIndex].name))
+                // Find out if requested state is the same as previous
+                auto previous = actionSwitches_sp[i].findOnSwitchIndex();
+                actionSwitches_sp[i].update(states, names, n);
+                auto requested = actionSwitches_sp[i].findOnSwitchIndex();
+                if (requested < 0)
+                    return true;
+
+                //DEBUGF(INDI::Logger::DBG_SESSION, "Prev %d, Cur %d", previous, requested);
+                if (previous == requested)
                 {
-                    //LOGF_DEBUG("Action switch is already %s", actionSwitches[i][currentActIndex].label);
-                    actionSwitchesSP[i]->s = IPS_IDLE;
-                    IDSetSwitch(actionSwitchesSP[i], nullptr);
+                    //DEBUGF(INDI::Logger::DBG_SESSION, "Action%d switch is already %s", i+1, (requested == 0 ? "On" : "Off"));
+                    actionSwitches_sp[i].reset();
+                    actionSwitches_sp[i].setState(IPS_OK);
+                    actionSwitches_sp[i][previous].setState(ISS_ON);
+                    actionSwitches_sp[i].apply();
                     return true;
                 }
 
-                // Update the switch state and send command
-                IUUpdateSwitch(actionSwitchesSP[i], states, names, n);
-                currentActIndex = IUFindOnSwitchIndex(actionSwitchesSP[i]);
-
-                if (strcmp(actionName, "ACTION_ENABLE") == 0)
-                    actionSwitchesSP[i]->s = IPS_OK;
-                else
-                    actionSwitchesSP[i]->s = IPS_IDLE;
-                IDSetSwitch(actionSwitchesSP[i], nullptr);
-                //LOGF_DEBUG("switchName: %s", actionSwitches[i][currentActIndex].name);
-                if (strcmp(actionSwitches[i][currentActIndex].name, "ACTION_ENABLE") == 0)
+                //DEBUGF(INDI::Logger::DBG_SESSION, "Action%d switch requesting %s", i+1, (requested == 0 ? "On" : "Off"));
+                // Update the switch state
+                if (requested == 0)
                 {
-                    setAction(act_cmd_used[i], true);
+                //    actionSwitches_sp[i].reset();
+                    actionSwitches_sp[i].setState(IPS_OK);
+                    actionSwitches_sp[i][requested].s = ISS_ON;
+                    //LOGF_INFO("Action%d %s", i+1, (requested == 0 ? "On" : "Off"));
+                    actionSwitches_sp[i].apply();
+                    if (actionCmdUsed(act_cmd_used[i]))
+                        return sendRoofCommand(act_cmd_used[i], true, true);
+                    updateActionStatus();
+                    return true;
                 }
                 else
                 {
-                    setAction(act_cmd_used[i], false);
+                    actionSwitches_sp[i].setState(IPS_IDLE);
+                //    actionSwitches_sp[i].reset();
+                    actionSwitches_sp[i][requested].s = ISS_ON;
+                    //LOGF_INFO("Action%d %s", i+1, (requested == 0 ? "On" : "Off"));
+                    actionSwitches_sp[i].apply();
+                    if (actionCmdUsed(act_cmd_used[i]))
+                        return sendRoofCommand(act_cmd_used[i], false, true);
+                    updateActionStatus();
+                    return true;
                 }
-                updateActionStatus();
-                return true;
             }
         }
     }
@@ -520,123 +480,124 @@ bool RollOffIno::ISNewSwitch(const char *dev, const char *name, ISState *states,
 
 void RollOffIno::updateRoofStatus()
 {
-    bool auxiliaryState = false;
-    bool lockedState = false;
-    bool openedState = false;
-    bool closedState = false;
+    bool auxiliaryStatus = false;
+    bool lockedStatus = false;
+    bool openedStatus = false;
+    bool closedStatus = false;
 
-    getFullOpenedLimitSwitch(&openedState);
-    getFullClosedLimitSwitch(&closedState);
-    getRoofLockedSwitch(&lockedState);
-    getRoofAuxSwitch(&auxiliaryState);
+    getRoofSwitch(ROOF_OPENED_SWITCH, &openedStatus, &fullyOpenedLimitSwitch);
+    getRoofSwitch(ROOF_CLOSED_SWITCH, &closedStatus, &fullyClosedLimitSwitch);
+    getRoofSwitch(ROOF_LOCKED_SWITCH, &lockedStatus, &roofLockedSwitch);
+    getRoofSwitch(ROOF_AUX_SWITCH, &auxiliaryStatus, &roofAuxiliarySwitch);
 
-    if (!openedState && !closedState && !roofOpening && !roofClosing)
+    if (!openedStatus && !closedStatus && !roofOpening && !roofClosing)
+    {
+        RoofStatusLP.setState(IPS_ALERT);
         DEBUG(INDI::Logger::DBG_WARNING, "Roof stationary, neither opened or closed, adjust to match PARK button");
-    if (openedState && closedState)
-        DEBUG(INDI::Logger::DBG_WARNING, "Roof showing it is both opened and closed according to the controller");
-
-    RoofStatusL[ROOF_STATUS_AUXSTATE].s = IPS_IDLE;
-    RoofStatusL[ROOF_STATUS_LOCKED].s = IPS_IDLE;
-    RoofStatusL[ROOF_STATUS_OPENED].s = IPS_IDLE;
-    RoofStatusL[ROOF_STATUS_CLOSED].s = IPS_IDLE;
-    RoofStatusL[ROOF_STATUS_MOVING].s = IPS_IDLE;
-    RoofStatusLP.s = IPS_IDLE;
-
-    if (auxiliaryState)
-    {
-        RoofStatusL[ROOF_STATUS_AUXSTATE].s = IPS_OK;
     }
-    if (lockedState)
+    if (openedStatus && closedStatus)
     {
-        RoofStatusL[ROOF_STATUS_LOCKED].s = IPS_ALERT;         // Red to indicate lock is on
-        if (closedState)
+        RoofStatusLP.setState(IPS_ALERT);
+        DEBUG(INDI::Logger::DBG_WARNING, "Roof showing it is both opened and closed according to the controller");
+    }
+    RoofStatusLP[ROOF_STATUS_AUXSTATE].setState(IPS_IDLE);
+    RoofStatusLP[ROOF_STATUS_LOCKED].setState(IPS_IDLE);
+    RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_IDLE);
+    RoofStatusLP[ROOF_STATUS_CLOSED].setState(IPS_IDLE);
+    RoofStatusLP[ROOF_STATUS_MOVING].setState(IPS_IDLE);
+    RoofStatusLP.apply();
+
+    if (auxiliaryStatus)
+    {
+        RoofStatusLP[ROOF_STATUS_AUXSTATE].setState(IPS_OK);
+    }
+    if (lockedStatus)
+    {
+        RoofStatusLP[ROOF_STATUS_LOCKED].setState(IPS_ALERT);         // Red to indicate lock is on
+        if (closedStatus)
         {
-            RoofStatusL[ROOF_STATUS_CLOSED].s = IPS_OK;            // Closed and locked roof status is normal
-            RoofStatusLP.s = IPS_OK;                               // Summary roof status
+            RoofStatusLP[ROOF_STATUS_CLOSED].setState(IPS_OK);            // Closed and locked roof status is normal
+            RoofStatusLP.setState(IPS_OK);
         }
+
         // An actual roof lock would not be expected unless roof was closed.
         // However the controller might be using it to prevent motion for some other reason.
-        else if (openedState)
+        else if (openedStatus)
         {
-            RoofStatusL[ROOF_STATUS_OPENED].s = IPS_OK;         // Possible, rely on open/close lights to indicate situation
-            RoofStatusLP.s = IPS_OK;
+            RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_OK);         // Possible, rely on open/close lights to indicate situation
         }
         else if (roofOpening || roofClosing)
         {
-            RoofStatusLP.s = IPS_ALERT;                            // Summary roof status
-            RoofStatusL[ROOF_STATUS_MOVING].s = IPS_ALERT;         // Should not be moving while locked
+            RoofStatusLP[ROOF_STATUS_MOVING].setState(IPS_ALERT);         // Should not be moving while locked
+            RoofStatusLP.setState(IPS_ALERT);
         }
     }
     else
     {
-        if (openedState || closedState)
+        if (openedStatus || closedStatus)
         {
-            if (openedState && !closedState)
+            if (openedStatus && !closedStatus)
             {
                 roofOpening = false;
-                RoofStatusL[ROOF_STATUS_OPENED].s = IPS_OK;
-                RoofStatusLP.s = IPS_OK;
+                RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_OK);
             }
-            if (closedState && !openedState)
+            if (closedStatus && !openedStatus)
             {
                 roofClosing = false;
-                RoofStatusL[ROOF_STATUS_CLOSED].s = IPS_OK;
-                RoofStatusLP.s = IPS_OK;
+                RoofStatusLP[ROOF_STATUS_CLOSED].setState(IPS_OK);
             }
+            RoofStatusLP.setState(IPS_OK);
         }
         else if (roofOpening || roofClosing)
         {
             if (roofOpening)
             {
-                RoofStatusL[ROOF_STATUS_OPENED].s = IPS_BUSY;
-                RoofStatusL[ROOF_STATUS_MOVING].s = IPS_BUSY;
+                RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_BUSY);
+                RoofStatusLP[ROOF_STATUS_MOVING].setState(IPS_BUSY);
             }
             else if (roofClosing)
             {
-                RoofStatusL[ROOF_STATUS_CLOSED].s = IPS_BUSY;
-                RoofStatusL[ROOF_STATUS_MOVING].s = IPS_BUSY;
+                RoofStatusLP[ROOF_STATUS_CLOSED].setState(IPS_BUSY);
+                RoofStatusLP[ROOF_STATUS_MOVING].setState(IPS_BUSY);
             }
-            RoofStatusLP.s = IPS_BUSY;
+            RoofStatusLP.setState(IPS_BUSY);
         }
 
         // Roof is stationary, neither opened or closed
         else
         {
             if (roofTimedOut == EXPIRED_OPEN)
-                RoofStatusL[ROOF_STATUS_OPENED].s = IPS_ALERT;
+                RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_ALERT);
             else if (roofTimedOut == EXPIRED_CLOSE)
-                RoofStatusL[ROOF_STATUS_CLOSED].s = IPS_ALERT;
-            RoofStatusLP.s = IPS_ALERT;
+                RoofStatusLP[ROOF_STATUS_CLOSED].setState(IPS_ALERT);
+            RoofStatusLP.setState(IPS_ALERT);
         }
     }
-    IDSetLight(&RoofStatusLP, nullptr);
+    RoofStatusLP.apply();
 }
 
 void RollOffIno::updateActionStatus()
 {
     for (int i = 0; i < MAX_ACTIONS; i++)
     {
-        actionState[i] = false;
-        ActionStatusL[i].s = IPS_IDLE;
-        if (getActionSwitch(action_state_used[i], &actionState[i]))
+        actionStatus[i] = false;
+        ActionStatusLP[i].setState(IPS_IDLE);
+
+        if (actionStateUsed(action_state_used[i]))
         {
-            if (actionState[i])
-                actionStatusState[i] = ISS_ON;
-            else
-                actionStatusState[i] = ISS_OFF;
+            getRoofSwitch(action_state_used[i], &actionStatus[i], &actionStatusState[i]);
         }
     }
 
-    ActionStatusLP.s = IPS_IDLE;
     for (int i = 0; i < MAX_ACTIONS; i++)
     {
-        if (actionState[i])
+        if (actionStatus[i])
         {
-            ActionStatusL[i].s = IPS_OK;
-            ActionStatusLP.s = IPS_OK;
+            ActionStatusLP[i].setState(IPS_OK);
         }
     }
-    IDSetLight(&ActionStatusLP, nullptr);
+    ActionStatusLP.setState(IPS_OK);
+    ActionStatusLP.apply();
 }
 
 /********************************************************************************************
@@ -649,22 +610,6 @@ void RollOffIno::TimerHit()
     if (!isConnected())
         return; //  No need to reset timer if we are not connected anymore
 
-    if (isSimulation())
-    {
-        if (timeleft - 5 <= 0)           // Use timeout approaching to set faux switch indicator
-        {
-            if (DomeMotionSP[DOME_CW].getState() == ISS_ON)              // Opening
-            {
-                simRoofOpen = true;
-                simRoofClosed = false;
-            }
-            else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)        // Closing
-            {
-                simRoofClosed = true;
-                simRoofOpen = false;
-            }
-        }
-    }
     updateRoofStatus();
     updateActionStatus();
 
@@ -732,13 +677,12 @@ void RollOffIno::TimerHit()
         checkConditions();
     }
     // Added to highlight WiFi issues, not able to recover lost connection without a reconnect
-    if (communicationErrors > MAX_CNTRL_COM_ERR)
+    if (communicationErrors >= MAX_CNTRL_COM_ERR)
     {
         LOG_ERROR("Too many errors communicating with Arduino");
         LOG_ERROR("Try a fresh connect. Check communication equipment and operation of Arduino controller.");
-        INDI::Dome::Disconnect();
-        initProperties();
-        communicationErrors = 0;
+        //communicationErrors = 0;
+        //INDI::Dome::Disconnect();
     }
 
     // Even when no roof movement requested, will come through occasionally. Use timer to update roof status
@@ -761,6 +705,14 @@ float RollOffIno::CalcTimeLeft(timeval start)
     timesince = timesince / 1000;
     timeleft  = MotionRequest - timesince;
     return timeleft;
+}
+
+void RollOffIno::msSleep (int mSec)
+{
+    struct timespec req = {0, 0};
+    req.tv_sec = 0;
+    req.tv_nsec = mSec * 1000000L;
+    nanosleep(&req, (struct timespec *)nullptr);
 }
 
 /*
@@ -801,7 +753,7 @@ IPState RollOffIno::Move(DomeDirection dir, DomeMotionCommand operation)
             }
 
             // Initiate action
-            if (roofOpen())
+            if (sendRoofCommand(ROOF_OPEN_CMD, true, false))
             {
                 roofOpening = true;
                 roofClosing = false;
@@ -830,7 +782,7 @@ IPState RollOffIno::Move(DomeDirection dir, DomeMotionCommand operation)
                 return IPS_ALERT;
             }
             // Initiate action
-            if (roofClose())
+            if (sendRoofCommand(ROOF_CLOSE_CMD, true, false))
             {
                 roofClosing = true;
                 roofOpening = false;
@@ -843,7 +795,7 @@ IPState RollOffIno::Move(DomeDirection dir, DomeMotionCommand operation)
             }
         }
         roofTimedOut = EXPIRED_CLEAR;
-        MotionRequest = (int)RoofTimeoutN[0].value;
+        MotionRequest = (int)RoofTimeoutNP[0].getValue();
         LOGF_DEBUG("Roof motion timeout setting: %d", (int)MotionRequest);
         gettimeofday(&MotionStart, nullptr);
         SetTimer(1000);
@@ -931,7 +883,7 @@ bool RollOffIno::Abort()
         roofClosing = false;
         roofOpening = false;
         MotionRequest = -1;
-        roofAbort();
+        sendRoofCommand(ROOF_ABORT_CMD, true, false);
     }
 
     // If both limit switches are off, then we're neither parked nor unparked.
@@ -944,144 +896,11 @@ bool RollOffIno::Abort()
     return true;
 }
 
-bool RollOffIno::getFullOpenedLimitSwitch(bool* switchState)
-{
-    if (isSimulation())
-    {
-        if (simRoofOpen)
-        {
-            fullyOpenedLimitSwitch = ISS_ON;
-            *switchState = true;
-        }
-        else
-        {
-            fullyOpenedLimitSwitch = ISS_OFF;
-            *switchState = false;
-        }
-        return true;
-    }
-
-    if (readRoofSwitch(ROOF_OPENED_SWITCH, switchState))
-    {
-        if (*switchState)
-            fullyOpenedLimitSwitch = ISS_ON;
-        else
-            fullyOpenedLimitSwitch = ISS_OFF;
-        return true;
-    }
-    else
-    {
-        LOGF_WARN("Unable to obtain from the controller whether or not the roof is opened %d", ++communicationErrors);
-        return false;
-    }
-}
-
-bool RollOffIno::getFullClosedLimitSwitch(bool* switchState)
-{
-    if (isSimulation())
-    {
-        if (simRoofClosed)
-        {
-            fullyClosedLimitSwitch = ISS_ON;
-            *switchState = true;
-        }
-        else
-        {
-            fullyClosedLimitSwitch = ISS_OFF;
-            *switchState = false;
-        }
-        return true;
-    }
-
-    if (readRoofSwitch(ROOF_CLOSED_SWITCH, switchState))
-    {
-        if (*switchState)
-            fullyClosedLimitSwitch = ISS_ON;
-        else
-            fullyClosedLimitSwitch = ISS_OFF;
-        return true;
-    }
-    else
-    {
-        LOGF_WARN("Unable to obtain from the controller whether or not the roof is closed %d", ++communicationErrors);
-        return false;
-    }
-}
-
-bool RollOffIno::getRoofLockedSwitch(bool* switchState)
-{
-    // If there is no lock switch, return success with status false
-    if (isSimulation())
-    {
-        roofLockedSwitch = ISS_OFF;
-        *switchState = false;                     // Not locked
-        return true;
-    }
-    if (readRoofSwitch(ROOF_LOCKED_SWITCH, switchState))
-    {
-        if (*switchState)
-            roofLockedSwitch = ISS_ON;
-        else
-            roofLockedSwitch = ISS_OFF;
-        return true;
-    }
-    else
-    {
-        LOGF_WARN("Unable to obtain from the controller whether or not the roof is externally locked %d", ++communicationErrors);
-        return false;
-    }
-}
-
-bool RollOffIno::getRoofAuxSwitch(bool* switchState)
-{
-    // If there is no Aux switch, return success with status false
-    if (isSimulation())
-    {
-         roofAuxiliarySwitch = ISS_OFF;
-         *switchState = false;
-         return true;
-    }
-    if (readRoofSwitch(ROOF_AUX_SWITCH, switchState))
-    {
-        if (*switchState)
-            roofAuxiliarySwitch = ISS_ON;
-        else
-            roofAuxiliarySwitch = ISS_OFF;
-        return true;
-    }
-    else
-    {
-        LOGF_DEBUG("Unable to obtain from the controller whether or not the obs Aux switch is being used %d", ++communicationErrors);
-        return false;
-    }
-}
-
-bool RollOffIno::getActionSwitch(const char* action, bool* switchState)
-{
-    // If there is no lock switch, return success with status false
-    if (isSimulation())
-    {
-        *switchState = false;
-        return true;
-    }
-    if (!actionSwitchUsed(action))
-        return false;
-    if (readRoofSwitch(action, switchState))
-    {
-        return true;
-    }
-    else
-    {
-        LOGF_DEBUG("Unable to obtain from the controller whether or not the action switch is being used %d", ++communicationErrors);
-        return false;
-    }
-}
-
-bool RollOffIno::actionSwitchUsed(const char* action)
+bool RollOffIno::actionStateUsed(const char* action)
 {
     if (actionCount > 0)
     {
-        for (int i = 0; i < actionCount; i++)
+        for (unsigned int i = 0; i < actionCount; i++)
         {
             if (!strcmp(action, action_state_used[i]))
             {
@@ -1092,72 +911,11 @@ bool RollOffIno::actionSwitchUsed(const char* action)
     return false;
 }
 
-/*
- * -------------------------------------------------------------------------------------------
- *
- */
-bool RollOffIno::roofOpen()
-{
-    if (isSimulation())
-    {
-        return true;
-    }
-    return pushRoofButton(ROOF_OPEN_CMD, true, false);
-}
-
-bool RollOffIno::roofClose()
-{
-    if (isSimulation())
-    {
-        return true;
-    }
-    return pushRoofButton(ROOF_CLOSE_CMD, true, false);
-}
-
-bool RollOffIno::roofAbort()
-{
-    if (isSimulation())
-    {
-        return true;
-    }
-    return pushRoofButton(ROOF_ABORT_CMD, true, false);
-}
-
-bool RollOffIno::setRoofLock(bool switchOn)
-{
-    if (isSimulation())
-    {
-        return false;
-    }
-    return pushRoofButton(ROOF_LOCK_CMD, switchOn, true);
-}
-
-bool RollOffIno::setRoofAux(bool switchOn)
-{
-    if (isSimulation())
-    {
-        return false;
-    }
-    return pushRoofButton(ROOF_AUX_CMD, switchOn, true);
-}
-
-bool RollOffIno::setAction(const char* action, bool switchOn)
-{
-    if (isSimulation())
-    {
-        return false;
-    }
-    if (actionCmdUsed(action))
-        return pushRoofButton(action, switchOn, true);
-    else
-        return false;
-}
-
 bool RollOffIno::actionCmdUsed(const char* action)
 {
     if (actionCount > 0)
     {
-        for(int i = 0; i < actionCount; i++)
+        for(unsigned int i = 0; i < actionCount; i++)
         {
             if (!strcmp(action, act_cmd_used[i]))
             {
@@ -1168,109 +926,64 @@ bool RollOffIno::actionCmdUsed(const char* action)
     return false;
 }
 
-/*
- * If unable to determine switch state due to errors, return false.
- * If no errors return true. Return in result true if switch and false if switch off.
- */
-bool RollOffIno::readRoofSwitch(const char* roofSwitchId, bool *result)
+bool RollOffIno::getRoofSwitch(const char *switchId, bool *result,  ISState *switchState)
 {
     char readBuffer[MAXINOBUF] = {};
     char writeBuffer[MAXINOLINE] = {};
-    bool status;
-
     if (!contactEstablished)
     {
-        LOG_WARN("No contact with the roof controller has been established");
+        if (communicationErrors < MAX_CNTRL_COM_ERR)
+            LOG_WARN("No contact with the roof controller has been established");
         return false;
     }
-    if (roofSwitchId == 0)
+    if (switchId == nullptr || result == nullptr || switchState == nullptr)
+    {
+        LOG_ERROR("Internal Error");
         return false;
+    }
+
     strcpy(writeBuffer, "(GET:");
-    strcat(writeBuffer, roofSwitchId);
+    strcat(writeBuffer, switchId);
     strcat(writeBuffer, ":0)");
     if (!writeIno(writeBuffer))
         return false;
     if (!readIno(readBuffer))
         return false;
-    status = evaluateResponse(readBuffer, result);
-    return status;
-}
 
-/*
- * See if the controller is running
- */
-bool RollOffIno::initialContact(void)
-{
-    char readBuffer[MAXINOBUF] = {};
-    char workBuffer[MAXINOBUF] = {};
-    bool result = false;
-    contactEstablished = false;
-    actionCount = 0;
-    LOG_DEBUG("Sent to roof controller: (CON:0:0)");
-    if (writeIno("(CON:0:0)"))
+    if (evaluateResponse(writeBuffer, readBuffer, result))
     {
-        LOG_DEBUG("Read response");
-        if (readIno(readBuffer))
-        {
-            strcpy(workBuffer, readBuffer);
-            contactEstablished = evaluateResponse(workBuffer, &result);
-            if (contactEstablished)
-                LOGF_DEBUG("Contact established %s", workBuffer);
-            if (contactEstablished)
-            // (ACK:0:V1.3-0  [ACTn])
-            {
-                char scratch[MAXINOVAL] = {};
-                char target[MAXINOTARGET] = {};
-                char version[MAXINOTARGET] = {};
-                char action[MAXINOTARGET] = {};
-                strcpy(scratch, strtok(workBuffer, "(:"));
-                strcpy(scratch, strtok(nullptr, ":"));
-                strcpy(target, strtok(nullptr, ")"));
-                if (strstr(target, "[") != NULL)
-                {
-                    char* end = action + 6;
-                    strcpy(version, strtok(target, "["));
-                    strcpy(scratch, strtok(nullptr, "T"));
-                    strcpy(action, strtok(nullptr, "]"));
-                    LOGF_DEBUG("Remote version: %s, action: %s", version, action);
-                    int value = strtol(action, &end, 10);
-                    if (value > 0 && value <= MAX_ACTIONS )
-                    {
-                        actionCount = value;
-                    }
-                    else
-                    {
-                        actionCount = 0;
-                    }
-                }
-                else
-                    LOGF_DEBUG("Remote version %s", target);
-            }
-            return contactEstablished;
-        }
+        if (*result)
+            *switchState = ISS_ON;
+        else
+            *switchState = ISS_OFF;
+        return true;
     }
-    return false;
+    else
+    {
+        if (communicationErrors < MAX_CNTRL_COM_ERR)
+            LOGF_WARN("Unable to obtain from the controller status: %s, errors: %d", switchId, ++communicationErrors);
+        return false;
+    }
 }
 
 /*
- * Whether roof is moving or stopped in any position along with the nature of the button requested will
+ * Type of roof controller and whether roof is moving or stopped, along with the command sent will
  * determine the effect on the roof. This could mean stopping, or starting in a reversed direction.
  */
-bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLock)
+bool RollOffIno::sendRoofCommand(const char* button, bool switchOn, bool ignoreLock)
 {
     char readBuffer[MAXINOBUF] = {};
     char writeBuffer[MAXINOBUF] = {};
     bool status;
-    bool switchState = false;
-    bool responseState = false;  //true if the value in response to command was "ON"
+    bool responseState = false;
 
     if (!contactEstablished)
     {
-        LOG_WARN("No contact with the roof controller has been established");
+        if (communicationErrors < MAX_CNTRL_COM_ERR)
+            LOG_WARN("No contact with the roof controller has been established");
         return false;
     }
-    status = getRoofLockedSwitch(&switchState);        // In case it has been locked since the driver connected
-    if ((status && !switchState) || ignoreLock)
+    if ((roofLockedSwitch == ISS_OFF) || ignoreLock)
     {
         strcpy(writeBuffer, "(SET:");
         strcat(writeBuffer, button);
@@ -1279,12 +992,11 @@ bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLo
         else
             strcat(writeBuffer, ":OFF)");
         LOGF_DEBUG("Button pushed: %s", writeBuffer);
-        if (!writeIno(writeBuffer))             // Push identified button & get response
+        if (!writeIno(writeBuffer))
             return false;
-        msSleep(ROR_D_PRESS);
-        status = readIno(readBuffer);
-        evaluateResponse(readBuffer, &responseState); // To get a log of what was returned in response to the command
-        return status;                                // Did the read itself successfully connect
+        if ((status = readIno(readBuffer)))
+            status = evaluateResponse(writeBuffer, readBuffer, &responseState);
+        return status;
     }
     else
     {
@@ -1293,105 +1005,114 @@ bool RollOffIno::pushRoofButton(const char* button, bool switchOn, bool ignoreLo
     }
 }
 
-/*
- * if ACK return true and set result true|false indicating if switch is on
- *
- */
-bool RollOffIno::evaluateResponse(char* inpBuffer, bool* result)
+bool RollOffIno::evaluateResponse(char* request, char* response, bool* result)
 {
-    char workBuffer[MAXINOBUF] = {};
-    char inoCmd[MAXINOCMD] = {};
-    char inoTarget[MAXINOTARGET] = {};
-    char inoVal[MAXINOVAL] = {};
-    *result = false;
-    if (strlen(inpBuffer) > MAXINOVAL)
-        return false;
-    strcpy(workBuffer, inpBuffer);
-    strcpy(inoCmd, strtok(workBuffer, "(:"));
-    strcpy(inoTarget, strtok(nullptr, ":"));
-    strcpy(inoVal, strtok(nullptr, ")"));
-    if ((strcmp(inoCmd, "NAK")) == 0)
+    std::string s_response = response;
+    std::string ack = "ACK";
+    std::string on = "ON";
+    // If successful response, confirm its match.
+    if (s_response.find(ack))
     {
-        LOGF_DEBUG("Negative response from roof controller error: %s", inoTarget);
-        LOGF_DEBUG("controller response: %s: ", inoVal);
-        return false;
-    }
-    // If it is in response to a connect request return result true
-    if (strcmp(inoTarget, "0") == 0)
-    {
-        *result = true;
+        // Return ON/OFF as true/false
+        size_t pos = s_response.find(on);
+        *result = (pos != std::string::npos ? true : false);
         return true;
     }
-    if ((strcmp(inoCmd, "ACK")) != 0)
+    LOGF_WARN("The request %s, returned failed response %s", request, response);
+    return false;
+}
+
+
+/************************************************************************************
+ * Called from Dome, BaseDevice to establish contact with device
+ ************************************************************************************/
+bool RollOffIno::Handshake()
+{
+    LOG_INFO("Documentation: https://github.com/indilib/indi-3rdparty [indi-rolloffino]");
+    if (PortFD <= 0)
     {
-        LOGF_DEBUG("Unrecognized response from roof controller: %s", inoCmd);
+        LOG_WARN("The connection port has not been established");
         return false;
     }
 
-     // Otherwise return result ON/OFF as true/false
-    *result = (strcmp(inoVal, "ON") == 0);
+    if (!initialContact())
+    {
+        DEBUG(INDI::Logger::DBG_WARNING, "Initial controller contact failed, retrying");
+        msSleep(1000);
+        if (!initialContact())
+        {
+            LOG_ERROR("Unable to contact the roof controller");
+            return false;
+        }
+    }
     return true;
+}
+
+/*
+ * See if the controller is running
+ */
+bool RollOffIno::initialContact()
+{
+    char readBuffer[MAXINOBUF] = {};
+    char init[MAXINOBUF] = {"(CON:0:0)"};
+    contactEstablished = false;
+    actionCount = 0;
+    if (!writeIno(init))
+    {
+        return false;
+    }
+    if (!readIno(readBuffer))
+    {
+        LOGF_WARN("Failed reading initial contact reponse to %s", init);
+        return false;
+    }
+    // "(ACK:0:V1.3-0  [ACTn])",
+    std::string s_response = readBuffer;
+    std::string ack = "ACK";
+    // If successful response, See if it is from updated client supporting Actions.
+    if (s_response.find(ack))
+    {
+        std::regex regexp("[[ACT(\\d)]]");
+        std::smatch match;
+        if (std::regex_search(s_response, match, regexp))
+        {
+            std::string result = match.str();
+            actionCount = std::stoi(result);
+        }
+        contactEstablished = true;
+        //DEBUGF(INDI::Logger::DBG_SESSION, "Initial contact response: %s", readBuffer);
+        LOGF_INFO("Number of Action commands enabled by controller. %d", actionCount);
+        return true;
+    }
+    LOGF_WARN("Initial contact returned a negative acknowledgement %s", readBuffer);
+    return false;
 }
 
 bool RollOffIno::readIno(char* retBuf)
 {
-    bool stop = false;
-    bool startFound = false;
-    bool endFound = false;
-    int status;
-    int retCount = 0;
-    int totalCount = 0;
-    int delimCount = 0;
-    int cmdLen = MAXINOCMD - 5;
-    int targetLen = MAXINOTARGET + cmdLen - 5;
-    char* bufPtr = retBuf;
-    char errMsg[MAXINOERR];
-    const char* canned = "(NAK:NONE:OFF)";
-    while (!stop)
+    const char stop_char { 0x29 };
+    int nbytes_read = 0;
+    int rc = TTY_OK;
+
+    for (int i= 0; i < 2; i++)
     {
-        if (startFound)
-            bufPtr = bufPtr + retCount;
-        status = tty_read(PortFD, bufPtr, 1, MAXINOWAIT, &retCount);
-        if (status != TTY_OK)
+        rc = tty_nread_section(PortFD, retBuf, MAXINOBUF-1, stop_char, MAXINOWAIT, &nbytes_read);
+        if (rc != TTY_OK)
         {
-            tty_error_msg(status, errMsg, MAXINOERR);
-            LOGF_WARN("Roof control connection error: %s", errMsg);
-            communicationErrors++;
-            return false;
-        }
-        if (retCount <= 0)
+            usleep(100000);
             continue;
-        if (*bufPtr == 0X28)          // '('   Start found
-            startFound = true;
-        else if (*bufPtr == 0X3A)     // ':'   delim found
-            delimCount++;
-        else if (*bufPtr == 0X29)     // ')'   End found
-            endFound = true;
-        if (startFound)
-            totalCount += retCount;
-
-        // Protect against input probes
-        if ((totalCount >= MAXINOVAL) || ((totalCount >= 2) && !startFound) ||
-            ((totalCount >= cmdLen) && (delimCount == 0)) ||
-            ((totalCount >= targetLen) && (delimCount < 2)) ||
-            (endFound && delimCount != 2))
-        {
-            communicationErrors++;
-            *(++bufPtr) = 0;
-            LOGF_ERROR("Received communication protocol not valid %s", retBuf);
-            strcpy(retBuf, canned);
-            return false;
         }
-        else if (endFound)
-        {
-            *(++bufPtr) = 0;
-            stop = true;
-        }
+        //LOGF_DEBUG("Read from roof controller: %s", retBuf);
+        return true;
     }
-    return true;
+    if (rc != TTY_OK)
+    {
+        char errstr[MAXRBUF] = {0};
+        tty_error_msg(rc, errstr, MAXRBUF);
+        LOGF_ERROR("Serial read error: %s.", errstr);
+    }
+    return false;
 }
-
-
 
 bool RollOffIno::writeIno(const char* msg)
 {
@@ -1404,7 +1125,7 @@ bool RollOffIno::writeIno(const char* msg)
         LOG_ERROR("Roof controller command message too long");
         return false;
     }
-//    LOGF_DEBUG("Sent to roof controller: %s", msg);
+    //LOGF_DEBUG("Sent to roof controller: %s", msg);
     tcflush(PortFD, TCIOFLUSH);
     status = tty_write_string(PortFD, msg, &retMsgLen);
     if (status != TTY_OK)
@@ -1414,13 +1135,5 @@ bool RollOffIno::writeIno(const char* msg)
         return false;
     }
     return true;
-}
-
-void RollOffIno::msSleep (int mSec)
-{
-    struct timespec req = {0, 0};
-    req.tv_sec = 0;
-    req.tv_nsec = mSec * 1000000L;
-    nanosleep(&req, (struct timespec *)nullptr);
 }
 
