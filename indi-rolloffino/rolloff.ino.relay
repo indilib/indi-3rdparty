@@ -12,17 +12,18 @@
  *
  * tg July 2024     Add additional Actions. Indicate to the driver during handshake
  *                  that they are supported and the driver can issue them. The driver needs 
- *                  to be later than INDI V2.0.9. 
+ *                  to be more recent than INDI V2.1.0. 
  */
 
 /*
  * The driver can support up to 8 extra actions. The Arduino sketch indicates it can accept 
- * actions and how many during the initial connection. It does so in the following manner.
- *     Use version_id like "V1.3" which indicates the extra actions not supported.
- *     Use version_id like "V1.3 [ACT2]" if extra actions are supported.
+ * actions and how many during the initial connection request from the driver.
+ *     Return version_id like "V1.3" which indicates the extra actions not supported.
+ *     Return version_id like "V1.3 [ACT2]" if two extra actions are supported.
+ *
  * Additional actions will typically be used to set extra relays. But this depends on the
  * Arduino implementation. Only indicate support for the number of additional actions the 
- * sketch can recognise and support. For each additional action the Arduino requests it needs
+ * sketch can recognise and support. For each additional action the Arduino requests, it needs
  * to be prepared to accept a corresponding request for completion status.
  */
  
@@ -39,25 +40,32 @@
 //#define VERSION_ID "V1.3"        // Action relays not connected
 #define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
 
-// Switch definition, indicates when switch is open the voltage on the pin will be HIGH indicating off.
-// Changing to LOW requires installation of external pull-down resistors.
+//////////////////////////////////////////////////////////
+// Input sensor definitions
+//////////////////////////////////////////////////////////
+
+
+// Input Switch definition, indicates when input sensor switch is open the voltage on the pin will be
+// HIGH indicating off. Changing to LOW requires installation of external pull-down resistors.
 #define OPEN_CONTACT HIGH
 
+
+// The driver uses software switches to initiate output commands. Here switches usually refer
+// to local status input indicators like a roof fully opened detector. Implementation could
+// be in the form of an actual switch or a sensor of some kind. 
 // Note on the following Switch definitions
 // Define completion status like OPENED in terms of a sensor or switch name. In the normal
-// case if the response is to be used, set the definition to the corresponding pin name.
+// case if the response is to be used, set the switch name to the Arduino pin.
 // If there is no assigned switch, set the definition to 0. Then  any related driver
 // requests will be ignored.
-// There are times when you might not want a status request to be automatically handled by a
-// status switch. Before responding with a status switch the switch info will be passed to
+// You might not want a status request to be automatically handled by a status switch.
+// Before responding with a status switch the switch info will be passed to
 // "requestReceived" routine for any special handling. For example a generic example does
-// not knowif what the Actions will be used for. So no provision for any specific operational
-// differences. The initial Linear Actuator example uses just one switch in the driver. But 
-// it needs two sensors, one for fully opened and one for fully closed. It will be using ACT1 
-// to make the request and will default to look for ACT1STATE for the response. Let that pass 
-// through the default code and catch it in the breakout routine "requestReceived".
+// not know what an Action will be used for. By default there is no provision for any specific
+// operational differences. In the requestReceived routine you can match the sensor switch name
+// and add any pin specific condition handling code.
 
-// Define input switch pins, and name to pin assignment
+// Define input sensor switch name to pin assignment
 #define SWITCH_1 A0
 #define SWITCH_2 A1
 #define SWITCH_3 A2
@@ -83,6 +91,9 @@
 #define ACT7STATE 0
 #define ACT8STATE 0
 
+//////////////////////////////////////////////////////////
+// Command definitions
+//////////////////////////////////////////////////////////
 
 // Define output relays, name to pin assignments. The first 4 definitions match the
 // Arduino.cc standard Uno relay shield
@@ -102,19 +113,19 @@
 // requests will be ignored. There are times when you might not want a command to
 // be handled by a relay. If a command such as open does not use a relay set its
 // definition to 100. That will prevent attempts to initialize it like relay control
-// pin. It will pass through the dispatch code and you can pick it up in thev breakout
-// routines "commandReceived" dor speial handling.
+// pin. It will pass through the dispatch code and you can pick it up in the breakout
+// routines "commandReceived" for special handling.
 
 // Indirection to define a functional name in terms of a relay
 // There are 5 functions here, by default only 4 relays are allocated. Some
 // functions might map to the same relay. If open, close and stop all require
 // their own relay, then choose between use of AUX or LOCK. Or extend the relay definitions.
-// Use 0 if function not supportd.  Set to 100 if there is special code added to handle it.
+// Use 0 if function not supported.  Set to 100 if there is special code added to handle it.
 //
 
 #define FUNC_OPEN RELAY_1
 #define FUNC_CLOSE RELAY_1  // For a single button controller might map this also to RELAY_1
-#define FUNC_ABORT RELAY_1   // For a single button controller might map this also to RELAY_1
+#define FUNC_ABORT RELAY_1  // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK 0         // If automated roof lock is available.
 #define FUNC_AUX 0          // Relay to perform some unspecified function
 
@@ -627,7 +638,7 @@ void requestReceived(int sw) {
 void setup() {
 
   //////////////////////////
-  // Initialize the switches
+  // Initialize the input sensors/switches
   //
   for (int i = 0; i < switch_count; i++) {
     initInput(switch_info[i].source);
@@ -653,6 +664,7 @@ void initInput(int pin) {
   }
 }
 
+// Receives what activates the relay and sets the opposite
 void initRelay(unsigned int pin, unsigned int activate) {
   if (pin > 0 && pin < 100) {
     pinMode(pin, OUTPUT);
