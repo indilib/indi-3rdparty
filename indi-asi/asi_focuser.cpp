@@ -168,6 +168,13 @@ bool ASIEAF::initProperties()
     FocusAbsPosN[0].value = 0;
     FocusAbsPosN[0].step  = m_MaxSteps / 20.0;
 
+    PresetN[0].max = m_MaxSteps;
+    PresetN[0].step = m_MaxSteps / 20.0;
+    PresetN[1].max = m_MaxSteps;
+    PresetN[1].step = m_MaxSteps / 20.0;
+    PresetN[2].max = m_MaxSteps;
+    PresetN[2].step = m_MaxSteps / 20.0;
+
     setDefaultPollingPeriod(500);
 
     addDebugControl();

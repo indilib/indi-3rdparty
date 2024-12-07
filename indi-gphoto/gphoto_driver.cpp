@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <cstdlib>
+#include <thread>
 
 #include <config.h>
 #include <indilogger.h>
@@ -147,6 +148,7 @@ struct _gphoto_driver
     int bulb_exposure_index;
     double max_exposure, min_exposure;
     bool force_bulb;
+    int download_timeout {60};
 
     int iso;
     int format;
@@ -1381,9 +1383,8 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     }
 
     //Bulb mode
-    int timeoutCounter = 0;
     gphoto->command    = 0;
-    uint32_t waitMS = 1000;
+    uint32_t waitMS = gphoto->download_timeout * 1000;
     bool downloadComplete = false;
 
     while (1)
@@ -1394,14 +1395,8 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         if (result != GP_OK)
         {
             DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Could not wait for event.");
-            timeoutCounter++;
-            if (timeoutCounter >= 10)
-            {
-                pthread_mutex_unlock(&gphoto->mutex);
-                return -1;
-            }
-
-            continue;
+            pthread_mutex_unlock(&gphoto->mutex);
+            return -1;
         }
 
         switch (event)
@@ -1428,13 +1423,9 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                     pthread_mutex_unlock(&gphoto->mutex);
                     return GP_OK;
                 }
-                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out #%d, retrying...", ++timeoutCounter);
-                // So retry for 5 seconds before giving up
-                if (timeoutCounter >= 10)
-                {
-                    pthread_mutex_unlock(&gphoto->mutex);
-                    return -1;
-                }
+                DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out.");
+                pthread_mutex_unlock(&gphoto->mutex);
+                return -1;
                 break;
 
             default:
@@ -2401,6 +2392,11 @@ int gphoto_handle_sdcard_image(gphoto_driver *gphoto, CameraImageHandling handli
 void gphoto_force_bulb(gphoto_driver *gphoto, bool enabled)
 {
     gphoto->force_bulb = enabled;
+}
+
+void gphoto_set_download_timeout(gphoto_driver *gphoto, int timeout)
+{
+    gphoto->download_timeout = timeout;
 }
 
 #ifdef GPHOTO_TEST

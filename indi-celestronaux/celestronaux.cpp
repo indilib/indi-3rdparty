@@ -1204,7 +1204,7 @@ void CelestronAUX::syncCoordWrapPosition()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 {
-    int rate = IUFindOnSwitchIndex(&SlewRateSP) + 1;
+    int rate = SlewRateSP.findOnSwitchIndex() + 1;
     m_AxisDirection[AXIS_ALT] = (dir == DIRECTION_NORTH) ? FORWARD : REVERSE;
     m_AxisStatus[AXIS_ALT] = (command == MOTION_START) ? SLEWING : STOPPED;
     ScopeStatus      = SLEWING_MANUAL;
@@ -1223,7 +1223,7 @@ bool CelestronAUX::MoveNS(INDI_DIR_NS dir, TelescopeMotionCommand command)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::MoveWE(INDI_DIR_WE dir, TelescopeMotionCommand command)
 {
-    int rate = IUFindOnSwitchIndex(&SlewRateSP) + 1;
+    int rate = SlewRateSP.findOnSwitchIndex() + 1;
     if (isNorthHemisphere())
         m_AxisDirection[AXIS_AZ] = (dir == DIRECTION_WEST) ? FORWARD : REVERSE;
     else
@@ -1364,7 +1364,7 @@ void CelestronAUX::resetTracking()
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::isTrackingRequested()
 {
-    return (ISS_ON == IUFindSwitch(&CoordSP, "TRACK")->s);
+    return CoordSP.isSwitchOn("TRACK");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1495,7 +1495,7 @@ bool CelestronAUX::ReadScopeStatus()
 
                 // For equatorial mounts, engage tracking.
                 if (m_MountType != ALT_AZ)
-                    SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
+                    SetTrackMode(TrackModeSP.findOnSwitchIndex());
                 LOG_INFO("Tracking started.");
             }
             else
@@ -1771,17 +1771,6 @@ bool CelestronAUX::mountToSkyCoords()
     return true;
 }
 
-
-double range180(double r)
-{
-    double res = r;
-    while (res < -180.0)
-        res += 360.0;
-    while (res > 180.0)
-        res -= 360.0;
-    return res;
-}
-
 bool CelestronAUX::enforceSlewLimits()
 {
 
@@ -1808,10 +1797,10 @@ bool CelestronAUX::enforceSlewLimits()
 
         Abort();
 
-        if (EqNP.s != IPS_IDLE)
+        if (EqNP.getState() != IPS_IDLE)
         {
-            EqNP.s = IPS_ALERT;
-            IDSetNumber(&EqNP, nullptr);
+            EqNP.setState(IPS_ALERT);
+            EqNP.apply();
         }
 
         if (HorizontalCoordsNP.getState() != IPS_IDLE)
@@ -1826,23 +1815,23 @@ bool CelestronAUX::enforceSlewLimits()
             HomeSP.apply();
         }
 
-        if (MovementNSSP.s != IPS_IDLE)
+        if (MovementNSSP.getState() != IPS_IDLE)
         {
-            MovementNSSP.s = IPS_ALERT;
-            IDSetSwitch(&MovementNSSP, nullptr);
+            MovementNSSP.setState(IPS_ALERT);
+            MovementNSSP.apply();
         }
 
-        if (MovementWESP.s != IPS_IDLE)
+        if (MovementWESP.getState() != IPS_IDLE)
         {
-            MovementWESP.s = IPS_ALERT;
-            IDSetSwitch(&MovementWESP, nullptr);
+            MovementWESP.setState(IPS_ALERT);
+            MovementWESP.apply();
         }
 
 
-        if (TrackStateSP.s != IPS_IDLE)
+        if (TrackStateSP.getState() != IPS_IDLE)
         {
-            TrackStateSP.s = IPS_ALERT;
-            IDSetSwitch(&TrackStateSP, nullptr);
+            TrackStateSP.setState(IPS_ALERT);
+            TrackStateSP.apply();
         }
 
         return false;
@@ -1877,8 +1866,8 @@ void CelestronAUX::TimerHit()
                 m_ManualMotionActive = false;
                 // If we slewed manually using NSWE keys, then we need to restart tracking
                 // whatever point we are AT now. We need to update the SkyTrackingTarget accordingly.
-                m_SkyTrackingTarget.rightascension = EqN[AXIS_RA].value;
-                m_SkyTrackingTarget.declination = EqN[AXIS_DE].value;
+                m_SkyTrackingTarget.rightascension = EqNP[AXIS_RA].getValue();
+                m_SkyTrackingTarget.declination = EqNP[AXIS_DE].getValue();
                 resetTracking();
             }
             // If we're manually moving by WESN controls, update the tracking coordinates.
@@ -2176,7 +2165,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
         auto deEncoder = 360.0 - (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
         // Northern Hemisphere
-        if (LocationN[LOCATION_LATITUDE].value >= 0)
+        if (LocationNP[LOCATION_LATITUDE].getValue() >= 0)
         {
             pierSide = PIER_UNKNOWN;
             if (deEncoder >= 270)
@@ -2216,14 +2205,14 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
         // Pier Side West range: +90 to -90 (Mechanically 2^24*0.25 to 2^24*0.75)
         auto deEncoder = (EncoderNP[AXIS_DE].getValue() / STEPS_PER_REVOLUTION) * 360.0;
 
-        de = LocationN[LOCATION_LATITUDE].value >= 0 ? deEncoder : -deEncoder;
-        ha = LocationN[LOCATION_LATITUDE].value >= 0 ? range24(haEncoder / 15.0) : range24((180 - haEncoder) / 15.0);
+        de = LocationNP[LOCATION_LATITUDE].getValue() >= 0 ? deEncoder : -deEncoder;
+        ha = LocationNP[LOCATION_LATITUDE].getValue() >= 0 ? range24(haEncoder / 15.0) : range24((180 - haEncoder) / 15.0);
         //pierSide = LocationN[LOCATION_LATITUDE].value >= 0 ? PIER_EAST : PIER_WEST;
         pierSide = PIER_EAST;
 
         // "Normal" Pointing State (West, looking East)
-        if ( (LocationN[LOCATION_LATITUDE].value >= 0 && (deEncoder < 90 || deEncoder > 270)) ||
-                (LocationN[LOCATION_LATITUDE].value < 0 && deEncoder > 90 && deEncoder < 270))
+        if ( (LocationNP[LOCATION_LATITUDE].getValue() >= 0 && (deEncoder < 90 || deEncoder > 270)) ||
+                (LocationNP[LOCATION_LATITUDE].getValue() < 0 && deEncoder > 90 && deEncoder < 270))
         {
             pierSide = PIER_WEST;
             de = rangeDec(180 - de);
@@ -2235,7 +2224,7 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
             de = (de + 180) * -1;
     }
 
-    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
+    double lst = get_local_sidereal_time(LocationNP[LOCATION_LONGITUDE].getValue());
     double ra = range24(lst - ha);
 
     coords.rightascension = ra;
@@ -2264,13 +2253,13 @@ void CelestronAUX::EncodersToRADE(INDI::IEquatorialCoordinates &coords, Telescop
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, uint32_t &haEncoder, uint32_t &deEncoder)
 {
-    double lst = get_local_sidereal_time(LocationN[LOCATION_LONGITUDE].value);
+    double lst = get_local_sidereal_time(LocationNP[LOCATION_LONGITUDE].getValue());
     double dHA = rangeHA(lst - coords.rightascension);
     double de = 0, ha = 0;
 
     if (m_MountType == EQ_FORK)
     {
-        if (LocationN[LOCATION_LATITUDE].value >= 0)
+        if (LocationNP[LOCATION_LATITUDE].getValue() >= 0)
         {
             if (coords.declination < 0)
                 de = -coords.declination;
@@ -2302,7 +2291,7 @@ void CelestronAUX::RADEToEncoders(const INDI::IEquatorialCoordinates &coords, ui
     else
     {
         // Northern Hemisphere
-        if (LocationN[LOCATION_LATITUDE].value >= 0)
+        if (LocationNP[LOCATION_LATITUDE].getValue() >= 0)
         {
 
             // "Normal" Pointing State (East, looking West)
@@ -2772,13 +2761,13 @@ bool CelestronAUX::SetTrackEnabled(bool enabled)
     {
         TrackState = SCOPE_TRACKING;
         resetTracking();
-        m_SkyTrackingTarget.rightascension = EqN[AXIS_RA].value;
-        m_SkyTrackingTarget.declination = EqN[AXIS_DE].value;
+        m_SkyTrackingTarget.rightascension = EqNP[AXIS_RA].getValue();
+        m_SkyTrackingTarget.declination = EqNP[AXIS_DE].getValue();
 
-        if (IUFindOnSwitchIndex(&TrackModeSP) == TRACK_CUSTOM)
-            return SetTrackRate(TrackRateN[AXIS_AZ].value, TrackRateN[AXIS_ALT].value);
+        if (TrackModeSP.findOnSwitchIndex() == TRACK_CUSTOM)
+            return SetTrackRate(TrackRateNP[AXIS_AZ].getValue(), TrackRateNP[AXIS_ALT].getValue());
         else
-            return SetTrackMode(IUFindOnSwitchIndex(&TrackModeSP));
+            return SetTrackMode(TrackModeSP.findOnSwitchIndex());
     }
     else
     {
@@ -2830,8 +2819,8 @@ bool CelestronAUX::SetTrackMode(uint8_t mode)
         m_TrackRates[AXIS_AZ] = TRACKRATE_LUNAR;
     else if (mode == TRACK_CUSTOM)
     {
-        m_TrackRates[AXIS_AZ] = TrackRateN[AXIS_RA].value;
-        m_TrackRates[AXIS_ALT] = TrackRateN[AXIS_DE].value;
+        m_TrackRates[AXIS_AZ] = TrackRateNP[AXIS_RA].getValue();
+        m_TrackRates[AXIS_ALT] = TrackRateNP[AXIS_DE].getValue();
     }
 
     if (TrackState == SCOPE_TRACKING)
@@ -2911,13 +2900,13 @@ void CelestronAUX::emulateGPS(AUXCommand &m)
         case GPS_GET_LAT:
         case GPS_GET_LONG:
         {
-            LOGF_DEBUG("GPS: Sending LAT/LONG Lat:%f Lon:%f", LocationN[LOCATION_LATITUDE].value,
-                       LocationN[LOCATION_LONGITUDE].value);
+            LOGF_DEBUG("GPS: Sending LAT/LONG Lat:%f Lon:%f", LocationNP[LOCATION_LATITUDE].getValue(),
+                       LocationNP[LOCATION_LONGITUDE].getValue());
             AUXCommand cmd(m.command(), GPS, m.source());
             if (m.command() == GPS_GET_LAT)
-                cmd.setData(STEPS_PER_DEGREE * LocationN[LOCATION_LATITUDE].value);
+                cmd.setData(STEPS_PER_DEGREE * LocationNP[LOCATION_LATITUDE].getValue());
             else
-                cmd.setData(STEPS_PER_DEGREE * LocationN[LOCATION_LONGITUDE].value);
+                cmd.setData(STEPS_PER_DEGREE * LocationNP[LOCATION_LONGITUDE].getValue());
             sendAUXCommand(cmd);
             //readAUXResponse(cmd);
             break;

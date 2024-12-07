@@ -360,5 +360,9 @@ typedef QHYDWORD  (*QHYCCDProcCallBack) (void *handle,
     QHYDWORD lParam);
 #endif
 
+/**
+ * usb vendor request command
+ */
+#define QHYCCD_REQUEST_RQT  0x00
 
 #endif

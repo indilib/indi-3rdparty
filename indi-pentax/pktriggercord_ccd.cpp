@@ -70,12 +70,12 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&autoFocusS[1], "OFF", "Off", ISS_ON);
     IUFillSwitchVector(&autoFocusSP, autoFocusS, 2, getDeviceName(), "AUTO_FOCUS", "Auto Focus", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 0, IPS_IDLE);
-/*
-    IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
-    IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
-    IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB,
-                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-*/
+    /*
+        IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
+        IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
+        IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB,
+                           IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    */
 
     IUFillSwitch(&preserveOriginalS[1], "PRESERVE_ON", "Also Copy Native Image", ISS_OFF);
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
@@ -84,9 +84,9 @@ bool PkTriggerCordCCD::initProperties()
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     uint32_t cap = CCD_HAS_BAYER;
     SetCCDCapability(cap);
@@ -113,7 +113,7 @@ bool PkTriggerCordCCD::updateProperties()
 
         // defineProperty(&transferFormatSP);
         defineProperty(&autoFocusSP);
-        //if (transferFormatS[0].s == ISS_ON)        
+        //if (transferFormatS[0].s == ISS_ON)
         if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
         {
             defineProperty(&preserveOriginalSP);
@@ -177,9 +177,11 @@ void PkTriggerCordCCD::buildCaptureSwitches()
     {
         current_format_name = "PEF";
     }
-    for (size_t i=0; i<(sizeof(imageformat)/sizeof(imageformat[0])); i++) {
+    for (size_t i = 0; i < (sizeof(imageformat) / sizeof(imageformat[0])); i++)
+    {
         auto isOn = false;
-        if (imageformat[i]==current_format_name) {
+        if (imageformat[i] == current_format_name)
+        {
             isOn = true;
         }
         CaptureFormat format = {imageformat[i], imageformat[i], 8, isOn};
@@ -593,7 +595,7 @@ bool PkTriggerCordCCD::grabImage()
 
 
     // fits handling code
-    // if (transferFormatS[0].s == ISS_ON)    
+    // if (transferFormatS[0].s == ISS_ON)
     if ( EncodeFormatSP[FORMAT_FITS].s == ISS_ON )
     {
         PrimaryCCD.setImageExtension("fits");
@@ -630,8 +632,8 @@ bool PkTriggerCordCCD::grabImage()
             LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
                        memsize, naxis, w, h, bpp, bayer_pattern);
 
-            IUSaveText(&BayerT[2], bayer_pattern);
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(bayer_pattern);
+            BayerTP.apply(nullptr);
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
@@ -706,7 +708,7 @@ bool PkTriggerCordCCD::grabImage()
 ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, string options[], size_t numOptions, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), numOptions));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(numOptions, sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];
@@ -734,22 +736,22 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         autoFocusSP.s = IPS_OK;
         IDSetSwitch(&autoFocusSP, nullptr);
     }
- /*
-    else if (!strcmp(name, transferFormatSP.name))
-    {
-        IUUpdateSwitch(&transferFormatSP, states, names, n);
-        transferFormatSP.s = IPS_OK;
-        IDSetSwitch(&transferFormatSP, nullptr);
-        if (transferFormatS[0].s == ISS_ON)
-        {
-            defineProperty(&preserveOriginalSP);
-        }
-        else
-        {
-            deleteProperty(preserveOriginalSP.name);
-        }
-    }
-    */
+    /*
+       else if (!strcmp(name, transferFormatSP.name))
+       {
+           IUUpdateSwitch(&transferFormatSP, states, names, n);
+           transferFormatSP.s = IPS_OK;
+           IDSetSwitch(&transferFormatSP, nullptr);
+           if (transferFormatS[0].s == ISS_ON)
+           {
+               defineProperty(&preserveOriginalSP);
+           }
+           else
+           {
+               deleteProperty(preserveOriginalSP.name);
+           }
+       }
+       */
     else if (!strcmp(name, preserveOriginalSP.name))
     {
         IUUpdateSwitch(&preserveOriginalSP, states, names, n);
@@ -856,7 +858,7 @@ bool PkTriggerCordCCD::getCaptureSettingsState()
 
 string PkTriggerCordCCD::getUploadFilePrefix()
 {
-    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
+    return UploadSettingsTP[UPLOAD_DIR].getText() + string("/") + UploadSettingsTP[UPLOAD_PREFIX].getText();
 }
 
 const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format)
@@ -898,7 +900,7 @@ bool PkTriggerCordCCD::SetCaptureFormat(uint8_t index)
     {
         uff = USER_FILE_FORMAT_JPEG;
     }
-    pslr_set_user_file_format(device, uff);    
+    pslr_set_user_file_format(device, uff);
 
     return true;
 }

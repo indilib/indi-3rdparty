@@ -111,12 +111,12 @@ void LX200Skywalker::ISGetProperties(const char *dev)
     LX200Telescope::ISGetProperties(dev);
     if (isConnected())
     {
-        if (HasTrackMode() && TrackModeS != nullptr)
-            defineProperty(&TrackModeSP);
+        if (HasTrackMode() && TrackModeSP.isValid())
+            defineProperty(TrackModeSP);
         if (CanControlTrack())
-            defineProperty(&TrackStateSP);
+            defineProperty(TrackStateSP);
         if (HasTrackRate())
-            defineProperty(&TrackRateNP);
+            defineProperty(TrackRateNP);
     }
     /*
         if (isConnected())
@@ -155,11 +155,11 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         // tracking state
-        if (!strcmp(name, TrackStateSP.name))
+        if (TrackStateSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&TrackStateSP, states, names, n) < 0)
+            if (TrackStateSP.update( states, names, n) == false)
                 return false;
-            int trackState = IUFindOnSwitchIndex(&TrackStateSP);
+            int trackState = TrackStateSP.findOnSwitchIndex();
             bool result = false;
 
             if (INDI::Telescope::TrackState != SCOPE_PARKED)
@@ -180,16 +180,16 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             else
                 LOG_WARN("Mount still parked");
 
-            TrackStateSP.s = result ? IPS_OK : IPS_ALERT;
-            IDSetSwitch(&TrackStateSP, nullptr);
+            TrackStateSP.setState(result ? IPS_OK : IPS_ALERT);
+            TrackStateSP.apply();
             return result;
         }
         // tracking mode
-        else if (!strcmp(name, TrackModeSP.name))
+        else if (TrackModeSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
+            if (TrackModeSP.update(states, names, n) == false)
                 return false;
-            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+            int trackMode = TrackModeSP.findOnSwitchIndex();
             bool result = false;
 
             switch (trackMode) // ToDo: Custom tracking
@@ -211,8 +211,8 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
                     break;
             }
 
-            TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
-            IDSetSwitch(&TrackModeSP, nullptr);
+            TrackModeSP.setState(result ? IPS_OK : IPS_ALERT);
+            TrackModeSP.apply();
             return result;
         }
         // mount state
@@ -245,12 +245,12 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             IDSetSwitch(&MountStateSP, nullptr);
             return result;
         }
-        if (!strcmp(name, ParkSP.name))
+        if (ParkSP.isNameMatch(name))
         {
             if (LX200Telescope::ISNewSwitch(dev, name, states, names, n))
             {
-                ParkSP.s = IPS_OK; //INDI::Telescope::SetParked(false) sets IPS_IDLE (!?)
-                IDSetSwitch(&ParkSP, nullptr);
+                ParkSP.setState(IPS_OK); //INDI::Telescope::SetParked(false) sets IPS_IDLE (!?)
+                ParkSP.apply();
                 return true;
             }
             else
@@ -263,8 +263,8 @@ bool LX200Skywalker::ISNewSwitch(const char *dev, const char *name, ISState *sta
             if (index == -1)
                 return false;
             ParkOptionSP.reset();
-            if ((TrackState != SCOPE_IDLE && TrackState != SCOPE_TRACKING) || MovementNSSP.s == IPS_BUSY ||
-                    MovementWESP.s == IPS_BUSY)
+            if ((TrackState != SCOPE_IDLE && TrackState != SCOPE_TRACKING) || MovementNSSP.getState() == IPS_BUSY ||
+                MovementWESP.getState() == IPS_BUSY)
             {
                 LOG_WARN("Mount slewing or already parked...");
                 ParkOptionSP.setState(IPS_ALERT);
@@ -421,8 +421,8 @@ void LX200Skywalker::getBasicData()
 
         if (INDI::Telescope::capability & TELESCOPE_CAN_PARK)
         {
-            ParkSP.s = IPS_OK;
-            IDSetSwitch(&ParkSP, nullptr);
+            ParkSP.setState(IPS_OK);
+            ParkSP.apply();
         }
 
         if (genericCapability & LX200_HAS_ALIGNMENT_TYPE)
@@ -450,11 +450,11 @@ void LX200Skywalker::getBasicData()
 
         if (INDI::Telescope::capability & TELESCOPE_HAS_TRACK_MODE)
         {
-            int trackMode = IUFindOnSwitchIndex(&TrackModeSP);
+            int trackMode = TrackModeSP.findOnSwitchIndex();
             //int modes = sizeof(TelescopeTrackMode); (enum Sidereal, Solar, Lunar, Custom)
             int modes = TRACK_LUNAR; // ToDo: Custom tracking
-            TrackModeSP.s = (trackMode <= modes) ? IPS_OK : IPS_ALERT;
-            IDSetSwitch(&TrackModeSP, nullptr);
+            TrackModeSP.setState((trackMode <= modes) ? IPS_OK : IPS_ALERT);
+            TrackModeSP.apply();
         }
         if (InitPark())
         {
@@ -465,8 +465,8 @@ void LX200Skywalker::getBasicData()
                 {
                     notifyMountLock(true);
                     notifyTrackState(SCOPE_TRACKING);
-                    ParkSP.s = IPS_OK;
-                    IDSetSwitch(&ParkSP, nullptr);
+                    ParkSP.setState(IPS_OK);
+                    ParkSP.apply();
                     //LOG_INFO("Mount is working");
                 }
                 else
@@ -664,19 +664,19 @@ void LX200Skywalker::notifyTrackState(INDI::Telescope::TelescopeStatus state)
 {
     if (state == SCOPE_TRACKING)
     {
-        TrackStateS[TRACK_ON].s = ISS_ON;
-        TrackStateS[TRACK_OFF].s = ISS_OFF;
-        TrackStateSP.s = IPS_OK;
+        TrackStateSP[TRACK_ON].setState(ISS_ON);
+        TrackStateSP[TRACK_OFF].setState(ISS_OFF);
+        TrackStateSP.setState(IPS_OK);
         INDI::Telescope::TrackState = state;
     }
     else
     {
-        TrackStateS[TRACK_ON].s = ISS_OFF;
-        TrackStateS[TRACK_OFF].s = ISS_ON;
-        TrackStateSP.s = IPS_OK;
+        TrackStateSP[TRACK_ON].setState(ISS_OFF);
+        TrackStateSP[TRACK_OFF].setState(ISS_ON);
+        TrackStateSP.setState(IPS_OK);
         INDI::Telescope::TrackState = state;
     }
-    IDSetSwitch(&TrackStateSP, nullptr);
+    TrackStateSP.apply();
 }
 
 /*********************************************************************************
@@ -789,8 +789,8 @@ bool LX200Skywalker::SetCurrentPark() // Current mount position is copied into p
     // Libnova south = 0, west = 90, north = 180, east = 270
 
     ln_lnlat_posn observer;
-    observer.lat = LocationN[LOCATION_LATITUDE].value;
-    observer.lng = LocationN[LOCATION_LONGITUDE].value;
+    observer.lat = LocationNP[LOCATION_LATITUDE].getValue();
+    observer.lng = LocationNP[LOCATION_LONGITUDE].getValue();
     if (observer.lng > 180)
         observer.lng -= 360;
 
@@ -876,13 +876,14 @@ bool LX200Skywalker::SetSlewRate(int index)
 
     if (!isSimulation() && !setSlewMode(index))
     {
-        SlewRateSP.s = IPS_ALERT;
-        IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+        SlewRateSP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting slew mode.");
+        SlewRateSP.apply();
         return false;
     }
 
-    SlewRateSP.s = IPS_OK;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.setState(IPS_OK);
+    SlewRateSP.apply();
     return true;
 }
 
@@ -931,8 +932,9 @@ bool LX200Skywalker::setObjectCoords(double ra, double dec)
     // These commands receive a response without a terminating #
     if(!sendQuery(RAStr, response, '1', 2)  || !sendQuery(DecStr, response, '1', 2) )
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Error setting RA/DEC.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting RA/DEC.");
+        EqNP.apply();
         return false;
     }
 
@@ -1026,28 +1028,31 @@ bool LX200Skywalker::Goto(double ra, double dec)
     fs_sexa(DecStr, targetDEC, 2, fracbase);
 
     // If moving, let's stop it first.
-    if (EqNP.s == IPS_BUSY)
+    if (EqNP.getState() == IPS_BUSY)
     {
         if (!isSimulation() && !Abort())
         {
-            AbortSP.s = IPS_ALERT;
-            IDSetSwitch(&AbortSP, "Abort slew failed.");
+            AbortSP.setState(IPS_ALERT);
+            LOG_ERROR("Abort slew failed.");
+            AbortSP.apply();
             return false;
         }
 
-        AbortSP.s = IPS_OK;
-        EqNP.s    = IPS_IDLE;
-        IDSetSwitch(&AbortSP, "Slew aborted.");
-        IDSetNumber(&EqNP, nullptr);
+        AbortSP.setState(IPS_OK);
+        EqNP.setState(IPS_IDLE);
+        LOG_ERROR("Slew aborted.");
+        AbortSP.apply();
+        EqNP.apply();
 
-        if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+        if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
         {
-            MovementNSSP.s = MovementWESP.s = IPS_IDLE;
-            EqNP.s                          = IPS_IDLE;
-            IUResetSwitch(&MovementNSSP);
-            IUResetSwitch(&MovementWESP);
-            IDSetSwitch(&MovementNSSP, nullptr);
-            IDSetSwitch(&MovementWESP, nullptr);
+            MovementNSSP.setState(IPS_IDLE);
+            MovementWESP.setState(IPS_IDLE);
+            EqNP.setState(IPS_IDLE);
+            MovementNSSP.reset();
+            MovementWESP.reset();
+            MovementNSSP.apply();
+            MovementWESP.apply();
         }
 
         // sleep for 100 mseconds
@@ -1072,7 +1077,7 @@ bool LX200Skywalker::Goto(double ra, double dec)
     }
 
     TrackState = SCOPE_SLEWING;
-    EqNP.s     = IPS_BUSY;
+    EqNP.setState(IPS_BUSY);
 
     LOGF_INFO("Slewing to RA: %s / DEC: %s", RAStr, DecStr);
 
@@ -1125,8 +1130,9 @@ bool LX200Skywalker::Sync(double ra, double dec)
 
     if (!isSimulation() && !sendQuery(":CM#", response))
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Synchronization failed.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Synchronization failed");
+        EqNP.apply();
         return false;
     }
 
@@ -1135,7 +1141,7 @@ bool LX200Skywalker::Sync(double ra, double dec)
 
     LOG_INFO("Synchronization successful.");
 
-    EqNP.s     = IPS_OK;
+    EqNP.setState(IPS_OK);
 
     NewRaDec(currentRA, currentDEC);
 
@@ -1158,11 +1164,11 @@ bool LX200Skywalker::Sync(double ra, double dec)
         IDSetSwitch(&MountStateSP, nullptr);
         if (SetTrackEnabled(false))
         {
-            TrackStateS[TRACK_ON].s = ISS_ON;
-            TrackStateS[TRACK_OFF].s = ISS_OFF;
-            TrackStateSP.s = IPS_ALERT;
+            TrackStateSP[TRACK_ON].setState(ISS_ON);
+            TrackStateSP[TRACK_OFF].setState(ISS_OFF);
+            TrackStateSP.setState(IPS_ALERT);
             // INDI::Telescope::TrackState = SCOPE_PARKED; // ALWAYS set status!
-            IDSetSwitch(&TrackStateSP, nullptr);
+            TrackStateSP.apply();
             LOG_WARN("Telescope still parked!");
             return false;
         }
@@ -1175,11 +1181,11 @@ bool LX200Skywalker::Sync(double ra, double dec)
     // set tracking
     if (MountTracking()) // Normally tracking is set by TCS on syncing
     {
-        TrackStateS[TRACK_ON].s = ISS_ON;
-        TrackStateS[TRACK_OFF].s = ISS_OFF;
-        TrackStateSP.s = IPS_OK;
+        TrackStateSP[TRACK_ON].setState(ISS_ON);
+        TrackStateSP[TRACK_OFF].setState(ISS_OFF);
+        TrackStateSP.setState(IPS_OK);
         INDI::Telescope::TrackState = SCOPE_TRACKING; // ALWAYS set status!
-        IDSetSwitch(&TrackStateSP, nullptr);
+        TrackStateSP.apply();
     }
     else
     {
@@ -1216,8 +1222,8 @@ bool LX200Skywalker::UnPark()
             // INDI::Telescope::SetParked(false) sets TrackState = SCOPE_IDLE but TCS is tracking
             notifyTrackState(SCOPE_TRACKING);
             // INDI::Telescope::SetParked(false) sets ParkSP.S = IPS_IDLE but mount IS unparked!
-            ParkSP.s = IPS_OK;
-            IDSetSwitch(&ParkSP, nullptr);
+            ParkSP.setState(IPS_OK);
+            ParkSP.apply();
             return SyncDefaultPark();
         }
         else
@@ -1258,8 +1264,8 @@ bool LX200Skywalker::SyncDefaultPark() // Saved mount position is loaded and syn
 
     ln_lnlat_posn observer;
 
-    observer.lat = LocationN[LOCATION_LATITUDE].value;
-    observer.lng = LocationN[LOCATION_LONGITUDE].value;
+    observer.lat = LocationNP[LOCATION_LATITUDE].getValue();
+    observer.lng = LocationNP[LOCATION_LONGITUDE].getValue();
 
     if (observer.lng > 180)
         observer.lng -= 360;
@@ -1323,7 +1329,7 @@ bool LX200Skywalker::Abort()
 IPState LX200Skywalker::GuideNorth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
-    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
@@ -1334,7 +1340,7 @@ IPState LX200Skywalker::GuideNorth(uint32_t ms)
 IPState LX200Skywalker::GuideSouth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
-    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
@@ -1345,7 +1351,7 @@ IPState LX200Skywalker::GuideSouth(uint32_t ms)
 IPState LX200Skywalker::GuideEast(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
-    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
@@ -1356,7 +1362,7 @@ IPState LX200Skywalker::GuideEast(uint32_t ms)
 IPState LX200Skywalker::GuideWest(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms", __FUNCTION__, ms);
-    if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;

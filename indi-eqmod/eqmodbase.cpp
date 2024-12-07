@@ -67,7 +67,7 @@ using namespace INDI::AlignmentSubsystem;
 
 /* Preset Slew Speeds */
 #define SLEWMODES 11
-double slewspeeds[SLEWMODES - 1] = { 1.0, 2.0, 4.0, 8.0, 32.0, 64.0, 128.0, 600.0, 700.0, 800.0 };
+int slewspeeds[SLEWMODES - 1] = { 1, 2, 4, 8, 32, 64, 128, 600, 700, 800 };
 
 #define RA_AXIS     0
 #define DEC_AXIS    1
@@ -188,12 +188,20 @@ const char *EQMod::getDefaultName()
 
 double EQMod::getLongitude()
 {
-    return (IUFindNumber(&LocationNP, "LONG")->value);
+    auto number = LocationNP.findWidgetByName("LONG");
+    if (number)
+        return number->getValue();
+    else
+        return 0;
 }
 
 double EQMod::getLatitude()
 {
-    return (IUFindNumber(&LocationNP, "LAT")->value);
+    auto number = LocationNP.findWidgetByName("LAT");
+    if(number)
+        return number->getValue();
+    else
+        return 0;
 }
 
 double EQMod::getJulianDate()
@@ -290,19 +298,21 @@ bool EQMod::initProperties()
 
 void EQMod::initSlewRates()
 {
-    for (int i = 0; i < SlewRateSP.nsp - 1; i++)
+    for (size_t i = 0; i < SlewRateSP.count() - 1; i++)
     {
-        SlewRateSP.sp[i].s = ISS_OFF;
-        sprintf(SlewRateSP.sp[i].label, "%.fx", slewspeeds[i]);
-        SlewRateSP.sp[i].aux = (void *)&slewspeeds[i];
+        SlewRateSP[i].setState(ISS_OFF);
+        SlewRateSP[i].setLabel(std::to_string(slewspeeds[i]) + "x");
+
+        SlewRateSP[i].setAux((void *)&slewspeeds[i]);
     }
 
     // Since last item is NOT maximum (but custom), let's set item before custom to SLEWMAX
-    SlewRateSP.sp[SlewRateSP.nsp - 2].s = ISS_ON;
-    strncpy(SlewRateSP.sp[SlewRateSP.nsp - 2].name, "SLEW_MAX", MAXINDINAME);
+    SlewRateSP[SlewRateSP.count() - 2].setState(ISS_ON);
+    SlewRateSP[SlewRateSP.count() - 2].setName("SLEW_MAX");
     // Last is custom
-    strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].name, "SLEWCUSTOM", MAXINDINAME);
-    strncpy(SlewRateSP.sp[SlewRateSP.nsp - 1].label, "Custom", MAXINDILABEL);
+    SlewRateSP[SlewRateSP.count() - 1].setName("SLEWCUSTOM");
+    SlewRateSP[SlewRateSP.count() - 1].setLabel("Custom");
+
 }
 
 void EQMod::ISGetProperties(const char *dev)
@@ -590,11 +600,11 @@ bool EQMod::updateProperties()
             parkRAEncoder = GetAxis1Park();
             parkDEEncoder = GetAxis2Park();
 
-            INumber *latitude = IUFindNumber(&LocationNP, "LAT");
-            INumber *longitude = IUFindNumber(&LocationNP, "LONG");
-            INumber *elevation = IUFindNumber(&LocationNP, "ELEV");
+            auto latitude = LocationNP.findWidgetByName("LAT");
+            auto longitude = LocationNP.findWidgetByName("LONG");
+            auto elevation = LocationNP.findWidgetByName("ELEV");
             if (latitude && longitude && elevation)
-                updateLocation(latitude->value, longitude->value, elevation->value);
+                updateLocation(latitude->getValue(), longitude->getValue(), elevation->getValue());
 
             sendTimeFromSystem();
         }
@@ -777,8 +787,8 @@ void EQMod::TimerHit()
         if (rc == false)
         {
             // read was not good
-            EqNP.s = IPS_ALERT;
-            IDSetNumber(&EqNP, nullptr);
+            EqNP.setState(IPS_ALERT);
+            EqNP.apply();
         }
 
         SetTimer(getCurrentPollingPeriod());
@@ -990,8 +1000,6 @@ bool EQMod::ReadScopeStatus()
                 }
                 else
                 {
-                    ISwitch *sw;
-                    sw = IUFindSwitch(&CoordSP, "TRACK");
                     if ((gotoparams.iterative_count > GOTO_ITERATIVE_LIMIT) &&
                             (((3600 * fabs(gotoparams.ratarget - currentRA)) > RAGOTORESOLUTION) ||
                              ((3600 * fabs(gotoparams.detarget - currentDEC)) > DEGOTORESOLUTION)))
@@ -1006,21 +1014,19 @@ bool EQMod::ReadScopeStatus()
                     // For AstroEQ (needs an explicit :G command at the end of gotos)
                     mount->ResetMotions();
 
-                    if ((RememberTrackState == SCOPE_TRACKING) || ((sw != nullptr) && (sw->s == ISS_ON)))
+                    if ((RememberTrackState == SCOPE_TRACKING) || CoordSP.isSwitchOn("TRACK"))
                     {
-                        char *name;
+                        std::string name;
 
                         if (RememberTrackState == SCOPE_TRACKING)
                         {
-                            sw   = IUFindOnSwitch(&TrackModeSP);
-                            name = sw->name;
+                            name = TrackModeSP.findOnSwitchName();;
                             mount->StartRATracking(GetRATrackRate());
                             mount->StartDETracking(GetDETrackRate());
                         }
                         else
                         {
-                            sw    = TrackDefaultSP.findOnSwitch();
-                            name  = sw->name;
+                            name = TrackDefaultSP.findOnSwitchName();
                             mount->StartRATracking(GetDefaultRATrackRate());
                             mount->StartDETracking(GetDefaultDETrackRate());
 
@@ -1039,7 +1045,7 @@ bool EQMod::ReadScopeStatus()
                         TrackModeSP->s = IPS_BUSY;
                         IDSetSwitch(TrackModeSP, nullptr);
 #endif
-                        LOGF_INFO("Telescope slew is complete. Tracking %s...", name);
+                        LOGF_INFO("Telescope slew is complete. Tracking %s...", name.c_str());
                     }
                     else
                     {
@@ -1048,7 +1054,6 @@ bool EQMod::ReadScopeStatus()
                         LOG_INFO("Telescope slew is complete. Stopping...");
                     }
                     gotoparams.completed = true;
-                    //EqNP.s               = IPS_OK;
                 }
             }
         }
@@ -1647,7 +1652,7 @@ double EQMod::GetRATrackRate()
 {
     double rate = 0.0;
     ISwitch *sw;
-    sw = IUFindOnSwitch(&TrackModeSP);
+    sw = TrackModeSP.findOnSwitch();
     if (!sw)
         return 0.0;
     if (!strcmp(sw->name, "TRACK_SIDEREAL"))
@@ -1664,7 +1669,9 @@ double EQMod::GetRATrackRate()
     }
     else if (!strcmp(sw->name, "TRACK_CUSTOM"))
     {
-        rate = IUFindNumber(&TrackRateNP, "TRACK_RATE_RA")->value;
+        auto number = TrackRateNP.findWidgetByName("TRACK_RATE_RA");
+        if(number)
+            rate = number->getValue();
     }
     else
         return 0.0;
@@ -1677,7 +1684,7 @@ double EQMod::GetDETrackRate()
 {
     double rate = 0.0;
     ISwitch *sw;
-    sw = IUFindOnSwitch(&TrackModeSP);
+    sw = TrackModeSP.findOnSwitch();
     if (!sw)
         return 0.0;
     if (!strcmp(sw->name, "TRACK_SIDEREAL"))
@@ -1694,7 +1701,9 @@ double EQMod::GetDETrackRate()
     }
     else if (!strcmp(sw->name, "TRACK_CUSTOM"))
     {
-        rate = IUFindNumber(&TrackRateNP, "TRACK_RATE_DE")->value;
+        auto number = TrackRateNP.findWidgetByName("TRACK_RATE_DE");
+        if(number)
+            rate = number->getValue();
     }
     else
         return 0.0;
@@ -1706,25 +1715,26 @@ double EQMod::GetDETrackRate()
 double EQMod::GetDefaultRATrackRate()
 {
     double rate = 0.0;
-    ISwitch *sw;
-    sw = TrackDefaultSP.findOnSwitch();
-    if (!sw)
+    auto element = TrackDefaultSP.findOnSwitch();
+    if (!element)
         return 0.0;
-    if (!strcmp(sw->name, "TRACK_SIDEREAL"))
+    if (element->isNameMatch("TRACK_SIDEREAL"))
     {
         rate = TRACKRATE_SIDEREAL;
     }
-    else if (!strcmp(sw->name, "TRACK_LUNAR"))
+    else if (element->isNameMatch("TRACK_LUNAR"))
     {
         rate = TRACKRATE_LUNAR;
     }
-    else if (!strcmp(sw->name, "TRACK_SOLAR"))
+    else if (element->isNameMatch("TRACK_SOLAR"))
     {
         rate = TRACKRATE_SOLAR;
     }
-    else if (!strcmp(sw->name, "TRACK_CUSTOM"))
+    else if (element->isNameMatch("TRACK_CUSTOM"))
     {
-        rate = IUFindNumber(&TrackRateNP, "TRACK_RATE_RA")->value;
+        auto number = TrackRateNP.findWidgetByName("TRACK_RATE_RA");
+        if(number)
+            rate = number->getValue();
     }
     else
         return 0.0;
@@ -1754,7 +1764,9 @@ double EQMod::GetDefaultDETrackRate()
     }
     else if (!strcmp(sw->name, "TRACK_CUSTOM"))
     {
-        rate = IUFindNumber(&TrackRateNP, "TRACK_RATE_DE")->value;
+        auto number = TrackRateNP.findWidgetByName("TRACK_RATE_DE");
+        if(number)
+            rate = number->getValue();
     }
     else
         return 0.0;
@@ -1975,8 +1987,8 @@ bool EQMod::Park()
         if (TrackState == SCOPE_SLEWING)
         {
             LOG_INFO("Can not park while slewing...");
-            ParkSP.s = IPS_ALERT;
-            IDSetSwitch(&ParkSP, nullptr);
+            ParkSP.setState(IPS_ALERT);
+            ParkSP.apply();
             return false;
         }
 
@@ -2147,7 +2159,7 @@ bool EQMod::Sync(double ra, double dec)
             SyncPolarAlignNP.findWidgetByName("SYNCPOLARALIGN_ALT")->setValue(tpa_alt);
             SyncPolarAlignNP.findWidgetByName("SYNCPOLARALIGN_AZ")->setValue(tpa_az);
             SyncPolarAlignNP.apply();
-            IDLog("computePolarAlign: Telescope Polar Axis: alt = %g, az = %g\n", tpa_alt, tpa_az);
+            LOGF_DEBUG("computePolarAlign: Telescope Polar Axis: alt = %g, az = %g", tpa_alt, tpa_az);
         }
     }
     return true;
@@ -3046,11 +3058,11 @@ double EQMod::GetRASlew()
 {
     ISwitch *sw;
     double rate = 1.0;
-    sw          = IUFindOnSwitch(&SlewRateSP);
+    sw          = SlewRateSP.findOnSwitch();
     if (!strcmp(sw->name, "SLEWCUSTOM"))
         rate = SlewSpeedsNP.findWidgetByName("RASLEW")->getValue();
     else
-        rate = *((double *)sw->aux);
+        rate = *((int *)sw->aux);
     return rate;
 }
 
@@ -3058,11 +3070,11 @@ double EQMod::GetDESlew()
 {
     ISwitch *sw;
     double rate = 1.0;
-    sw          = IUFindOnSwitch(&SlewRateSP);
+    sw          = SlewRateSP.findOnSwitch();
     if (!strcmp(sw->name, "SLEWCUSTOM"))
         rate = SlewSpeedsNP.findWidgetByName("DESLEW")->getValue();
     else
-        rate = *((double *)sw->aux);
+        rate = *((int *)sw->aux);
     return rate;
 }
 
@@ -3584,7 +3596,7 @@ bool EQMod::SetTrackEnabled(bool enabled)
     {
         if (enabled)
         {
-            LOGF_INFO("Start Tracking (%s).", IUFindOnSwitch(&TrackModeSP)->label);
+            LOGF_INFO("Start Tracking (%s).", TrackModeSP.findOnSwitch()->getLabel());
             TrackState     = SCOPE_TRACKING;
             RememberTrackState = TrackState;
             mount->StartRATracking(GetRATrackRate());
@@ -3592,7 +3604,7 @@ bool EQMod::SetTrackEnabled(bool enabled)
         }
         else if (enabled == false)
         {
-            LOGF_WARN("Stopping Tracking (%s).", IUFindOnSwitch(&TrackModeSP)->label);
+            LOGF_WARN("Stopping Tracking (%s).", TrackModeSP.findOnSwitch()->getLabel());
             TrackState     = SCOPE_IDLE;
             RememberTrackState = TrackState;
             mount->StopRA();

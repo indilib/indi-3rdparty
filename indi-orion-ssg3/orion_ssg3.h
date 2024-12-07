@@ -21,7 +21,7 @@
 #define ORION_SSG3_H
 #include <stdint.h>
 #include <sys/time.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus

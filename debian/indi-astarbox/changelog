@@ -1,0 +1,5 @@
+indi-astarbox (1.0) buster; urgency=medium
+
+  * all - Initial release of astarbox driver
+
+ -- Colin McGill <info@astarbox.co.uk>  Sun, 8 Sep 2024 16:25:00 +0100

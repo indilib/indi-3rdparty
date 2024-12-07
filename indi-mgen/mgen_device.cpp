@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <libftdi1/ftdi.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 #include <unistd.h>
 
 #include "indilogger.h"
@@ -47,7 +47,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 int ftdi_tcioflush() __attribute__((weak));
-int ftdi_tcioflush(struct ftdi_context *ftdi) { return ftdi_usb_purge_buffers(ftdi); }
+int ftdi_tcioflush(struct ftdi_context *ftdi)
+{
+    return ftdi_usb_purge_buffers(ftdi);
+}
 #pragma GCC diagnostic pop
 
 MGenDevice::MGenDevice()
@@ -147,7 +150,7 @@ int MGenDevice::Connect(unsigned short vid, unsigned short pid)
                         for (struct ftdi_device_list const *dev_index = devlist; dev_index; dev_index = dev_index->next)
                         {
                             struct libusb_device_descriptor desc;
-                            memset(&desc,0,sizeof(desc));
+                            memset(&desc, 0, sizeof(desc));
 
                             if (libusb_get_device_descriptor(dev_index->dev, &desc) < 0)
                             {

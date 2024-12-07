@@ -1,0 +1,23 @@
+Source: indi-astarbox
+Section: science
+Priority: extra
+Maintainer: Colin McGill <info@astarbox.co.uk>
+Build-Depends: debhelper (>= 5), pkg-config, cdbs, cmake, libindi-dev, zlib1g-dev
+Standards-Version: 3.9.1
+
+Package: indi-astarbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI Driver for AStarBox
+ INDI Driver for AStarBox power control.
+ This driver is compatible with any INDI client but only works on an AStarBox.
+
+Package: indi-astarbox-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-astarbox (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for AStarBox
+ INDI Driver for AStarBox power control.
+ This driver is compatible with any INDI client but only works on an AStarBox.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

@@ -259,9 +259,12 @@ bool GPhotoCCD::initProperties()
 
     FI::initProperties(FOCUS_TAB);
 
-    PortTP[0].fill("PORT", "Port", "");
+    PortTP[0].fill("PORT", "Port", port);
     PortTP.fill(getDeviceName(), "DEVICE_PORT", "Shutter Release", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     PortTP.load();
+    // In case port is empty, always revert back to the detected port
+    if (PortTP[0].isEmpty())
+        PortTP[0].setText(port);
 
     MirrorLockNP[0].fill("MIRROR_LOCK_SECONDS", "Seconds", "%1.0f", 0, 10, 1, 0);
     MirrorLockNP.fill(getDeviceName(), "MIRROR_LOCK", "Mirror Lock", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
@@ -288,6 +291,11 @@ bool GPhotoCCD::initProperties()
     SDCardImageSP[SD_CARD_IGNORE_IMAGE].fill("Ignore", "Ignore", ISS_OFF);
     SDCardImageSP.fill(getDeviceName(), "CCD_SD_CARD_ACTION", "SD Image", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
+    // Download Timeout
+    DownloadTimeoutNP[0].fill("VALUE", "Seconds", "%.f", 0, 300, 30, 60);
+    DownloadTimeoutNP.fill(getDeviceName(), "CCD_DOWNLOAD_TIMEOUT", "Download Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    DownloadTimeoutNP.load();
+
     // Nikon should have force bulb off by default.
     ForceBULBSP[INDI_ENABLED].fill("On", "On", isNikon ? ISS_OFF : ISS_ON);
     ForceBULBSP[INDI_DISABLED].fill("Off", "Off", isNikon ? ISS_ON : ISS_OFF);
@@ -300,7 +308,7 @@ bool GPhotoCCD::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
 
     // Most cameras have this by default, so let's set it as default.
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
 #ifdef HAVE_WEBSOCKET
     SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING | CCD_HAS_WEB_SOCKET);
@@ -321,7 +329,7 @@ bool GPhotoCCD::initProperties()
     FI::SetCapability(FOCUSER_CAN_REL_MOVE);
 
     /* JM 2014-05-20 Make PrimaryCCD.ImagePixelSizeNP writable since we can't know for now the pixel size and bit depth from gphoto */
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     setDriverInterface(getDriverInterface() | FOCUSER_INTERFACE);
 
@@ -352,20 +360,20 @@ void GPhotoCCD::ISGetProperties(const char * dev)
     IUGetConfigNumber(getDeviceName(), "CCD_INFO", "CCD_PIXEL_SIZE_X", &pixel_x);
     IUGetConfigNumber(getDeviceName(), "CCD_INFO", "CCD_PIXEL_SIZE_Y", &pixel_y);
 
-    INumberVectorProperty *nvp = PrimaryCCD.getCCDInfo();
+    auto nvp = PrimaryCCD.getCCDInfo();
 
-    if (!nvp)
+    if (!nvp.isValid())
         return;
 
     // Load the necessary pixel size information
     // The maximum resolution and bits per pixel depend on the capture itself.
     // while the pixel size data remains constant.
     if (pixel > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE].value = pixel;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE].setValue(pixel);
     if (pixel_x > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE_X].value = pixel_x;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE_X].setValue(pixel_x);
     if (pixel_y > 0)
-        nvp->np[INDI::CCDChip::CCD_PIXEL_SIZE_Y].value = pixel_y;
+        nvp[INDI::CCDChip::CCD_PIXEL_SIZE_Y].setValue(pixel_y);
 
 }
 
@@ -415,11 +423,12 @@ bool GPhotoCCD::updateProperties()
 
         if (isTemperatureSupported)
         {
-            TemperatureNP.p = IP_RO;
-            defineProperty(&TemperatureNP);
+            TemperatureNP.setPermission(IP_RO);
+            defineProperty(TemperatureNP);
         }
 
         defineProperty(ForceBULBSP);
+        defineProperty(DownloadTimeoutNP);
     }
     else
     {
@@ -440,11 +449,12 @@ bool GPhotoCCD::updateProperties()
         }
 
         if (isTemperatureSupported)
-            deleteProperty(TemperatureNP.name);
+            deleteProperty(TemperatureNP);
 
         deleteProperty(SDCardImageSP);
 
         deleteProperty(ForceBULBSP);
+        deleteProperty(DownloadTimeoutNP);
 
         HideExtendedOptions();
     }
@@ -679,12 +689,12 @@ bool GPhotoCCD::ISNewSwitch(const char * dev, const char * name, ISState * state
                     LOG_INFO("Images should only remain in the camera internal storage and will not be downloaded at all.");
 
                     // Upload mode should always be local, no images uploaded.
-                    if (UploadS[UPLOAD_LOCAL].s != ISS_ON)
+                    if (UploadSP[UPLOAD_LOCAL].getState() != ISS_ON)
                     {
-                        IUResetSwitch(&UploadSP);
-                        UploadS[UPLOAD_LOCAL].s = ISS_ON;
-                        UploadSP.s = IPS_OK;
-                        IDSetSwitch(&UploadSP, nullptr);
+                        UploadSP.reset();
+                        UploadSP[UPLOAD_LOCAL].setState(ISS_ON);
+                        UploadSP.setState(IPS_OK);
+                        UploadSP.apply();
                     }
 
                     // Capture target should always be SD card.
@@ -774,6 +784,17 @@ bool GPhotoCCD::ISNewNumber(const char * dev, const char * name, double values[]
             return true;
         }
 
+        // Download Timeout
+        if (DownloadTimeoutNP.isNameMatch(name))
+        {
+            DownloadTimeoutNP.update(values, names, n);
+            DownloadTimeoutNP.setState(IPS_OK);
+            DownloadTimeoutNP.apply();
+            saveConfig(DownloadTimeoutNP);
+            gphoto_set_download_timeout(gphotodrv, DownloadTimeoutNP[0].getValue());
+            return true;
+        }
+
         if (CamOptions.find(name) != CamOptions.end())
         {
             cam_opt * opt = CamOptions[name];
@@ -811,18 +832,25 @@ bool GPhotoCCD::Connect()
     LOGF_DEBUG("Mirror lock value: %f", MirrorLockNP[0].getValue());
 
     const auto port = PortTP[0].getText();
-    if (port && strlen(port))
+    // Do not set automatically detected USB device ids as the shutter port
+    if (port && strlen(port) && strstr(port, "usb:") == nullptr)
     {
         shutter_release_port = port;
     }
 
     if (isSimulation() == false)
     {
-        // Regular detect
+        // If no port is specified, connect to first camera detected on bus
         if (port[0] == '\0')
             gphotodrv = gphoto_open(camera, loader.context, nullptr, nullptr, shutter_release_port);
         else
+        {
+            // Connect to specific model on specific USB device end point.
             gphotodrv = gphoto_open(camera, loader.context, model, port, shutter_release_port);
+            // Otherwise, try to specify the model only without the USB device end point.
+            if (gphotodrv == nullptr)
+                gphotodrv = gphoto_open(camera, loader.context, model, nullptr, shutter_release_port);
+        }
         if (gphotodrv == nullptr)
         {
             LOG_ERROR("Can not open camera: Power OK? If camera is auto-mounted as external disk "
@@ -1122,23 +1150,23 @@ void GPhotoCCD::TimerHit()
             if (isTemperatureSupported)
             {
                 double cameraTemperature = static_cast<double>(gphoto_get_last_sensor_temperature(gphotodrv));
-                if (fabs(cameraTemperature - TemperatureN[0].value) > 0.01)
+                if (fabs(cameraTemperature - TemperatureNP[0].getValue()) > 0.01)
                 {
                     // Check if we are getting bogus temperature values and set property to alert
                     // unless it is already set
                     if (cameraTemperature < MINUMUM_CAMERA_TEMPERATURE)
                     {
-                        if (TemperatureNP.s != IPS_ALERT)
+                        if (TemperatureNP.getState() != IPS_ALERT)
                         {
-                            TemperatureNP.s = IPS_ALERT;
-                            IDSetNumber(&TemperatureNP, nullptr);
+                            TemperatureNP.setState(IPS_ALERT);
+                            TemperatureNP.apply();
                         }
                     }
                     else
                     {
-                        TemperatureNP.s = IPS_OK;
-                        TemperatureN[0].value = cameraTemperature;
-                        IDSetNumber(&TemperatureNP, nullptr);
+                        TemperatureNP.setState(IPS_OK);
+                        TemperatureNP[0].setValue(cameraTemperature);
+                        TemperatureNP.apply();
                     }
                 }
             }
@@ -1296,8 +1324,8 @@ bool GPhotoCCD::grabImage()
             if (!isSimulation())
                 unlink(filename);
 
-            IUSaveText(&BayerT[2], bayer_pattern);
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(bayer_pattern);
+            BayerTP.apply();
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
@@ -2016,13 +2044,16 @@ bool GPhotoCCD::saveConfigItems(FILE * fp)
         PortTP.save(fp);
 
     // Second save the CCD Info property
-    IUSaveConfigNumber(fp, PrimaryCCD.getCCDInfo());
+    PrimaryCCD.getCCDInfo().save(fp);
 
     // Save regular CCD properties
     INDI::CCD::saveConfigItems(fp);
 
     // Mirror Locking
     MirrorLockNP.save(fp);
+
+    // Download Timeout
+    DownloadTimeoutNP.save(fp);
 
     // Capture Target
     if (CaptureTargetSP.getState() == IPS_OK)
@@ -2066,7 +2097,7 @@ void GPhotoCCD::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FI
 
     if (isTemperatureSupported)
     {
-        fitsKeywords.push_back({"CCD-TEMP", TemperatureN[0].value, 3, "CCD Temperature (Celsius)"});
+        fitsKeywords.push_back({"CCD-TEMP", TemperatureNP[0].getValue(), 3, "CCD Temperature (Celsius)"});
     }
 }
 

@@ -79,7 +79,7 @@ class Kepler : public INDI::CCD
         INDI::PropertyNumber CoolerDutyNP {1};
         INDI::PropertySwitch FanSP {2};
 
-        // Merging        
+        // Merging
         INDI::PropertySwitch MergePlanesSP {3};
         INDI::PropertySwitch RequestStatSP {2};
         INDI::PropertyText MergeCalibrationFilesTP {2};
@@ -132,7 +132,6 @@ class Kepler : public INDI::CCD
         //****************************************************************************************
         // Workers
         //****************************************************************************************
-        void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
         //****************************************************************************************

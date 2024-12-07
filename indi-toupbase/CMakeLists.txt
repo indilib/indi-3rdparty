@@ -161,7 +161,7 @@ target_link_libraries(indi_meadecam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIE
 
 #####################################
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_toupcam_ccd rt)
 target_link_libraries(indi_altair_ccd rt)
 target_link_libraries(indi_bressercam_ccd rt)
@@ -192,7 +192,7 @@ target_link_libraries(indi_omegonprocam_focuser rt)
 target_link_libraries(indi_starshootg_focuser rt)
 target_link_libraries(indi_tscam_focuser rt)
 target_link_libraries(indi_meadecam_focuser rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS
     indi_toupcam_ccd

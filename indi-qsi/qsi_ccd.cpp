@@ -246,8 +246,8 @@ bool QSICCD::setupParams()
 
     LOGF_INFO("The CCD Temperature is %f.", temperature);
 
-    TemperatureN[0].value = temperature; /* CCD chip temperatre (degrees C) */
-    IDSetNumber(&TemperatureNP, nullptr);
+    TemperatureNP[0].setValue(temperature); /* CCD chip temperatre (degrees C) */
+    TemperatureNP.apply();
 
     SetCCDParams(sub_frame_x, sub_frame_y, 16, pixel_size_x, pixel_size_y);
 
@@ -467,7 +467,7 @@ int QSICCD::SetTemperature(double temperature)
     targetTemperature = temperature;
 
     // If less than 0.1 of a degree, let's just return OK
-    if (fabs(temperature - TemperatureN[0].value) < 0.1)
+    if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
     activateCooler(true);
@@ -1243,7 +1243,7 @@ void QSICCD::TimerHit()
         }
     }
 
-    switch (TemperatureNP.s)
+    switch (TemperatureNP.getState())
     {
         case IPS_IDLE:
         case IPS_OK:
@@ -1253,36 +1253,38 @@ void QSICCD::TimerHit()
             }
             catch (std::runtime_error &err)
             {
-                TemperatureNP.s = IPS_IDLE;
+                TemperatureNP.setState(IPS_IDLE);
                 LOGF_ERROR("get_CCDTemperature() failed. %s.", err.what());
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.apply();
                 return;
             }
 
-            if (fabs(TemperatureN[0].value - ccdTemp) >= TEMP_THRESHOLD)
+            if (fabs(TemperatureNP[0].getValue() - ccdTemp) >= TEMP_THRESHOLD)
             {
-                TemperatureN[0].value = ccdTemp;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP[0].setValue(ccdTemp);
+                TemperatureNP.apply();
             }
             break;
 
         case IPS_BUSY:
             try
             {
-                QSICam.get_CCDTemperature(&TemperatureN[0].value);
+                double value = 0;
+                QSICam.get_CCDTemperature(&value);
+                TemperatureNP[0].setValue(value);
             }
             catch (std::runtime_error &err)
             {
-                TemperatureNP.s = IPS_ALERT;
+                TemperatureNP.setState(IPS_ALERT);
                 LOGF_ERROR("get_CCDTemperature() failed. %s.", err.what());
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.apply();
                 return;
             }
 
             //            if (fabs(TemperatureN[0].value - targetTemperature) <= TEMP_THRESHOLD)
             //                TemperatureNP.s = IPS_OK;
 
-            IDSetNumber(&TemperatureNP, nullptr);
+            TemperatureNP.apply();
             break;
 
         case IPS_ALERT:

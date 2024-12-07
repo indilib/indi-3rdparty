@@ -203,6 +203,8 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         INDI::PropertySwitch ExposurePresetSP {0};
         // Force BULB mode (vs predefined exposure indexes) when capturing
         INDI::PropertySwitch ForceBULBSP {2};
+        // Wait this many seconds before giving up on exposure download
+        INDI::PropertyNumber DownloadTimeoutNP {1};
         // Upload file, used for testing purposes under simulation under native mode
         INDI::PropertyText UploadFileTP {1};
         INDI::PropertyBlob imageBP {INDI::Property()};

@@ -13,7 +13,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(PLAYERONE_VERSION_MAJOR 1)
-set(PLAYERONE_VERSION_MINOR 15)
+set(PLAYERONE_VERSION_MINOR 17)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)
@@ -78,12 +78,12 @@ ENDIF()
 
 #####################################
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_playerone_ccd rt)
 target_link_libraries(indi_playerone_single_ccd rt)
 target_link_libraries(indi_playerone_wheel rt)
 target_link_libraries(playerone_camera_test rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_playerone_ccd RUNTIME DESTINATION bin)
 install(TARGETS indi_playerone_single_ccd RUNTIME DESTINATION bin)
