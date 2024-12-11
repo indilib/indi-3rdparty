@@ -377,6 +377,11 @@ pslr_handle_t pslr_init( char *model, char *device ) {
     for ( i=0; i<driveNum; ++i ) {
         pslr_result result = get_drive_info( drives[i], &fd, vendorId, sizeof(vendorId), productId, sizeof(productId));
 
+        // If device error, we shouldn't do anything esle with the file descriptor, so skip to next drive
+        if (result == PSLR_DEVICE_ERROR) {
+            continue;
+        }
+        
         DPRINT("\tChecking drive:  %s %s %s\n", drives[i], vendorId, productId);
         if ( find_in_array( valid_vendors, sizeof(valid_vendors)/sizeof(valid_vendors[0]),vendorId) != -1
                 && find_in_array( valid_models, sizeof(valid_models)/sizeof(valid_models[0]), productId) != -1 ) {

@@ -70,9 +70,9 @@ bool PentaxCCD::initProperties()
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 30, 1, false);
 
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     uint32_t cap = CCD_HAS_BAYER | CCD_HAS_STREAMING;
     SetCCDCapability(cap);
@@ -92,8 +92,6 @@ void PentaxCCD::ISGetProperties(const char *dev)
 
 bool PentaxCCD::updateProperties()
 {
-    INDI::CCD::updateProperties();
-
     if (isConnected())
     {
         setupParams();
@@ -109,6 +107,8 @@ bool PentaxCCD::updateProperties()
         }
 
         buildCaptureSwitches();
+
+        INDI::CCD::updateProperties();
 
         defineProperty(&autoFocusSP);
         if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
@@ -504,7 +504,7 @@ bool PentaxCCD::StopStreaming()
 ISwitch * PentaxCCD::create_switch(const char * basestr, std::vector<string> options, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), options.size()));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(options.size(), sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];
@@ -726,7 +726,7 @@ void PentaxCCD::getCaptureSettingsState()
 
 string PentaxCCD::getUploadFilePrefix()
 {
-    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
+    return UploadSettingsTP[UPLOAD_DIR].getText() + string("/") + UploadSettingsTP[UPLOAD_PREFIX].getText();
 }
 
 bool PentaxCCD::SetCaptureFormat(uint8_t index)

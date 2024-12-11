@@ -445,7 +445,26 @@
 #define DEVICETYPE_QHY533M_OEM             4140
 #define DEVICETYPE_QHY533C_OEM             4141
 
-#define DEVICETYPE_QHY487              4142
+#define DEVICETYPE_QHY487                  4142
+#define DEVICETYPE_QHY992                  4143
+
+#define DEVICETYPE_QHY533M_OI533M          4144
+#define DEVICETYPE_QHY533C_OI533C          4145
+
+#define DEVICETYPE_QHY268M_OI268M          4146
+#define DEVICETYPE_QHY268C_OI268C          4147
+
+#define DEVICETYPE_QHY600M_C600MC2         4148
+
+#define DEVICETYPE_QHY5III585M              4149
+#define DEVICETYPE_QHY661					4150
+
+#define DEVICETYPE_ORIGIN678C              4151
+#define DEVICETYPE_ORIGIN678M              4152
+
+#define DEVICETYPE_QHY1920M_OI1920M        4153
+#define DEVICETYPE_QHY1920C_OI1920C        4154
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
@@ -1121,6 +1140,9 @@
 #define QHY411_MAX_WIDTH        	14304
 #define QHY411_MAX_HEIGHT        	10748
 
+#define QHY661_MAX_WIDTH        	13960
+#define QHY661_MAX_HEIGHT        	9696
+
 // 10802-92-54=10656 max_y-topBlank-bottomBlank=imageHeight
 // 14304-48-48=14208 max_x-leftBlank-rightBlank=imageWidth
 // only y-shift is supported by most sensor
@@ -1495,6 +1517,8 @@
 #define	PCIE_NIOS_WRITE_C		(0x00007771)
 
 #define	PCIE_CAPTURE_WRITE_C	(0x66666665)
+
+#define PCIE_EMMC_WRITE_C       (0x00001111)
 
 
 #define	PCIE_DWORD				(4)

@@ -437,7 +437,7 @@ int SSG3CCD::SetTemperature(double temperature)
 
     TemperatureRequest = temperature;
 
-    if (std::abs(temperature - TemperatureN[0].value) < TEMP_THRESHOLD)
+    if (std::abs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;
 
     if (!activateCooler(true))
@@ -496,15 +496,15 @@ void SSG3CCD::updateTemperature(void)
     rc = orion_ssg3_get_temperature(&ssg3, &temp);
     if (rc < 0)
     {
-        TemperatureNP.s = IPS_ALERT;
+        TemperatureNP.setState(IPS_ALERT);
     }
     else
     {
         LOGF_DEBUG("Read temperature: %f", temp);
-        TemperatureN[0].value = temp;
-        TemperatureNP.s = IPS_OK;
+        TemperatureNP[0].setValue(temp);
+        TemperatureNP.setState(IPS_OK);
     }
-    IDSetNumber(&TemperatureNP, nullptr);
+    TemperatureNP.apply();
 
     if (CoolerSP[COOLER_ON].getState() == ISS_ON)
     {

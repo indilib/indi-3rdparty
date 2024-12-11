@@ -1,5 +1,5 @@
-PROJECT(indi-eqmod C CXX)
 cmake_minimum_required(VERSION 3.16)
+PROJECT(indi-eqmod C CXX)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -13,7 +13,7 @@ find_package(ZLIB REQUIRED)
 find_package(GSL REQUIRED)
 
 set(EQMOD_VERSION_MAJOR 1)
-set(EQMOD_VERSION_MINOR 2)
+set(EQMOD_VERSION_MINOR 3)
 
 if (CYGWIN)
 add_definitions(-U__STRICT_ANSI__)
@@ -83,9 +83,9 @@ else(WITH_ALIGN)
   target_link_libraries(indi_eqmod_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
 endif(WITH_ALIGN)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_eqmod_telescope rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_eqmod_telescope RUNTIME DESTINATION bin )
 
@@ -144,9 +144,9 @@ if(WITH_AHP_GT)
 
         target_link_libraries(indi_ahpgt_telescope ${AHP_GT_LIBRARIES})
 
-        if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+        if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
         target_link_libraries(indi_ahpgt_telescope rt)
-        endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+        endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
         install(TARGETS indi_ahpgt_telescope RUNTIME DESTINATION bin )
     endif(AHP_GT_FOUND)
@@ -191,9 +191,9 @@ else(WITH_ALIGN)
   target_link_libraries(indi_azgti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
 endif(WITH_ALIGN)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_azgti_telescope rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_azgti_telescope RUNTIME DESTINATION bin )
 
@@ -236,9 +236,9 @@ else(WITH_ALIGN)
   target_link_libraries(indi_staradventurergti_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
 endif(WITH_ALIGN)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_staradventurergti_telescope rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_staradventurergti_telescope RUNTIME DESTINATION bin )
 
@@ -281,9 +281,9 @@ else(WITH_ALIGN)
   target_link_libraries(indi_staradventurer2i_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES})
 endif(WITH_ALIGN)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 target_link_libraries(indi_staradventurer2i_telescope rt)
-endif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_staradventurer2i_telescope RUNTIME DESTINATION bin )
 

@@ -75,8 +75,26 @@ class IOError : std::exception
 /** \brief One word in the I/O protocol */
 typedef unsigned char IOByte;
 
-/** \brief A buffer of protocol words */
-typedef std::vector<IOByte> IOBuffer;
+/** \brief A buffer of protocol words
+ *
+ * Those three constructors are implemented here to work around C++14 warnings about out-of-bounds copies on std::vector
+ */
+class IOBuffer : public std::vector<IOByte>
+{
+  public:
+    IOBuffer(IOBuffer const &b): std::vector<IOByte>(b.size())
+    {
+      assign(b.begin(),b.end());
+    }
+    IOBuffer(std::initializer_list<IOByte> const &b): std::vector<IOByte>(b.size())
+    {
+      assign(b.begin(),b.end());
+    }
+    IOBuffer(std::size_t s = 0): std::vector<IOByte>(s)
+    {
+      /* no-op */
+    }
+};
 
 /** \internal Logging helpers */
 /** @{ */

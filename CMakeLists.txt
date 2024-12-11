@@ -204,6 +204,7 @@ option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
+option(WITH_GPIO "Install GPIO Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -239,6 +240,15 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_AHP_XC Off)
     set(WITH_AHP_GT Off)
     set(WITH_ASTROASIS Off)
+    # The drivers below are not yet compatible with Apple Silicon since their libraries are not universal binaries
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        SET(WITH_ASICAM Off)
+        SET(WITH_SBIG Off)
+        SET(WITH_ATIK Off)
+        SET(WITH_TOUPBASE Off)
+        SET(WITH_QHY Off)
+        SET(WITH_SVBONY Off)
+    endif()
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
@@ -378,11 +388,6 @@ if (WITH_EQMOD)
 add_subdirectory(indi-eqmod)
 endif(WITH_EQMOD)
 
-## AstroLink4
-if (WITH_ASTROLINK4)
-add_subdirectory(indi-astrolink4)
-endif(WITH_ASTROLINK4)
-
 ## SkyWalker
 if (WITH_SKYWALKER)
 add_subdirectory(indi-aok)
@@ -422,11 +427,6 @@ endif(WITH_TALON6)
 if (WITH_ROLLOFFINO)
 add_subdirectory(indi-rolloffino)
 endif(WITH_ROLLOFFINO)
-
-## SpectraCyber
-if (WITH_SPECTRACYBER)
-add_subdirectory(indi-spectracyber)
-endif(WITH_SPECTRACYBER)
 
 ## Shelyak
 if (WITH_SHELYAK)
@@ -653,11 +653,6 @@ if (WITH_MGEN)
 add_subdirectory(indi-mgen)
 endif (WITH_MGEN)
 
-# Astromechanics Focuser
-if (WITH_ASTROMECHFOC)
-add_subdirectory(indi-astromechfoc)
-endif(WITH_ASTROMECHFOC)
-
 ## LIME-SDR
 if (WITH_LIMESDR)
 find_package(LIMESUITE)
@@ -683,10 +678,6 @@ endif()
 if (WITH_NIGHTSCAPE)
 add_subdirectory(indi-nightscape)
 endif(WITH_NIGHTSCAPE)
-
-if (WITH_DREAMFOCUSER)
-add_subdirectory(indi-dreamfocuser)
-endif()
 
 # Avalon StarGO
 if (WITH_AVALON)
@@ -773,6 +764,14 @@ endif(WITH_ASTROASIS)
 # OCS
 if (WITH_OCS)
 add_subdirectory(indi-ocs)
+endif()
+
+# GPIO
+if (WITH_GPIO)
+find_package(GPIOD)
+if (GPIOD_FOUND)
+add_subdirectory(indi-gpio)
+endif(GPIOD_FOUND)
 endif()
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.

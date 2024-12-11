@@ -1,0 +1,23 @@
+Source: indi-gpio
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), debhelper (>= 9) | dh-systemd (>= 1.5), pkg-config, cdbs, cmake, libindi-dev, libgpiod-dev
+Standards-Version: 3.9.1
+
+Package: indi-gpio
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgpiod2
+Description: INDI Driver for GPIOD
+ INDI Driver for Boards with GPIOs to read digital inputs and toggle digital outputs.
+ This driver is compatible with any INDI client.
+
+Package: indi-gpio-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-gpio (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for GPIOD
+ INDI Driver for Boards with GPIOs to read digital inputs and toggle digital outputs.
+ This driver is compatible with any INDI client.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

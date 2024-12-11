@@ -1,14 +1,32 @@
+libtscam (57.26598.20240928) jammy; urgency=medium
+
+  * Upstream release
+
+ -- teleskop <teleskop@teleskop.com>  Sun, 29 Sep 2024 13:29:21 +0800
+
+libtscam (56.26054.20240714) jammy; urgency=medium
+
+  * Upstream release
+
+ -- teleskop <>  Mon, 15 Jul 2024 09:57:56 +0800
+
+libtscam (56.25996.20240707) jammy; urgency=medium
+
+  * Upstream release
+
+ -- teleskop <>  Sun, 07 Jul 2024 20:31:42 +0800
+
 libtscam (55.25633.20240519) jammy; urgency=medium
 
   * Upstream release
 
- -- teleskop; Mon, 20 May 2024 08:38:18 +0800
+ -- teleskop <>  Mon, 20 May 2024 08:38:18 +0800
 
 libtscam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release
 
- -- teleskop; Mon, 05 Feb 2024 08:24:26 +0800
+ -- teleskop <>  Mon, 05 Feb 2024 08:24:26 +0800
 
 libtscam (1.54.2) jammy; urgency=medium
 

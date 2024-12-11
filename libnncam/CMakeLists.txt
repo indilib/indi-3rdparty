@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libnncam)
 
-set (LIBNNCAM_VERSION "55.25633")
-set (LIBNNCAM_SOVERSION "55")
+set (LIBNNCAM_VERSION "57.26598")
+set (LIBNNCAM_SOVERSION "57")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")

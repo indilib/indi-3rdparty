@@ -142,6 +142,11 @@ bool MISFW::initProperties()
     IUFillSwitch(&ReinitS[0], "REINIT", "Reinit Filter Wheel", ISS_OFF);
     IUFillSwitchVector(&ReinitSP, ReinitS, 1, getDeviceName(), "SFW_REINIT", "Commands", MAIN_CONTROL_TAB, IP_WO, ISR_ATMOST1, 0, IPS_IDLE);
 
+    IUFillText(&InfoT[0], "Model", "", "");
+    IUFillText(&InfoT[1], "Firmware Rev.", "", "");
+    IUFillText(&InfoT[2], "Serial No.", "", "");
+    IUFillTextVector(&InfoTP, InfoT, 3, getDeviceName(), "Wheel Info", "Wheel Info", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
     addAuxControls();
 
     return true;
@@ -154,10 +159,12 @@ bool MISFW::updateProperties()
     if (isConnected())
     {
         defineProperty(&ReinitSP);
+        defineProperty(&InfoTP);
     }
     else
     {
         deleteProperty(ReinitSP.name);
+        deleteProperty(InfoTP.name);
     }
 
     return true;
@@ -183,6 +190,22 @@ bool MISFW::Connect()
         LOGF_ERROR("Error connecting to %s.", name);
         return false;
     }
+
+    int fw_ver[4];
+    char sp[MAXINDILABEL];
+
+    gxfw_get_string_parameter(wheelHandle, FW_GSP_DESCRIPTION, sp, MAXINDILABEL);
+    IUSaveText(&InfoT[0], sp);
+
+    gxfw_get_integer_parameter(wheelHandle, FW_GIP_VERSION_1, &fw_ver[0]);
+    gxfw_get_integer_parameter(wheelHandle, FW_GIP_VERSION_2, &fw_ver[1]);
+    gxfw_get_integer_parameter(wheelHandle, FW_GIP_VERSION_3, &fw_ver[2]);
+    gxfw_get_integer_parameter(wheelHandle, FW_GIP_VERSION_4, &fw_ver[3]);
+    snprintf(sp, MAXINDILABEL, "%d.%d.%d.%d", fw_ver[0], fw_ver[1], fw_ver[2], fw_ver[3]);
+    IUSaveText(&InfoT[1], sp);
+
+    gxfw_get_string_parameter(wheelHandle, FW_GSP_SERIAL_NUMBER, sp, MAXINDILABEL);
+    IUSaveText(&InfoT[2], sp);
 
     LOGF_INFO("Connected to %s.", name);
     return true;

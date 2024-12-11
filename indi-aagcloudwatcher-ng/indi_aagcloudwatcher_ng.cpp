@@ -71,8 +71,11 @@ bool AAGCloudWatcher::Handshake()
 
         if (m_FirmwareVersion >= 5.6)
         {
-            addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
-            setCriticalParameter("WEATHER_HUMIDITY");
+            // add humidity parameter, if not already present
+            if (!ParametersNP.findWidgetByName("WEATHER_HUMIDITY")) {
+                addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
+                setCriticalParameter("WEATHER_HUMIDITY");
+            }
         }
 
         return true;

@@ -1,3 +1,15 @@
+indi-gphoto (3.4) jammy; urgency=medium
+
+  * Added configurable timeout for download.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 10 Nov 2024 13:00:00 +0300
+
+indi-gphoto (3.3) jammy; urgency=medium
+
+  * Updated INDI properties.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 28 Jun 2024 20:00:00 +0300
+
 indi-gphoto (3.2) jammy; urgency=medium
 
   * Fixed opening of remote serial shutter.

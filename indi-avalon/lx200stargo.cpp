@@ -27,6 +27,7 @@
 #include <memory>
 #include <cstring>
 #include <unistd.h>
+#include <numeric>
 #ifndef _WIN32
 #include <termios.h>
 #endif
@@ -164,11 +165,11 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
             return setParkPosition(states, names, n);
         }
         // tracking mode
-        else if (!strcmp(name, TrackModeSP.name))
+        else if (TrackModeSP.isNameMatch(name))
         {
-            if (IUUpdateSwitch(&TrackModeSP, states, names, n) < 0)
+            if (TrackModeSP.update(states, names, n) == false)
                 return false;
-            uint8_t trackMode = static_cast<uint8_t>(IUFindOnSwitchIndex(&TrackModeSP));
+            uint8_t trackMode = static_cast<uint8_t>(TrackModeSP.findOnSwitchIndex());
 
             bool result = SetTrackMode(trackMode);
 
@@ -184,9 +185,9 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                     LOG_INFO("Lunar tracking rate selected");
                     break;
             }
-            TrackModeSP.s = result ? IPS_OK : IPS_ALERT;
+            TrackModeSP.setState(result ? IPS_OK : IPS_ALERT);
 
-            IDSetSwitch(&TrackModeSP, nullptr);
+            TrackModeSP.apply();
             return result;
         }
         else if (!strcmp(name, ST4StatusSP.name))
@@ -291,6 +292,18 @@ bool LX200StarGo::ISNewSwitch(const char *dev, const char *name, ISState *states
                 IDSetSwitch(&Aux1FocuserSP, nullptr);
                 return false;
             }
+        }
+        else if (!strcmp(name, TrackingAutoAdjustmentSP.name))
+        {
+            if (IUUpdateSwitch(&TrackingAutoAdjustmentSP, states, names, n) < 0)
+                return false;
+
+            LOGF_INFO("Automatic tracking adjustment %s", isTrackingAutoAdjustmentEnabled() ? "enabled" : "disabled");
+
+            // The tracking state is stored directly in the property
+            TrackingAutoAdjustmentSP.s = IPS_OK;
+            IDSetSwitch(&TrackingAutoAdjustmentSP, nullptr);
+            return true;
         }
     }
 
@@ -427,6 +440,10 @@ bool LX200StarGo::initProperties()
     IUFillNumber(&TrackingAdjustment[0], "ADJUSTMENT_RA", "Adj. (max +/- 5%)", "%.2f", -5.0, 5.0, 0.01, 0.0);
     IUFillNumberVector(&TrackingAdjustmentNP, TrackingAdjustment, 1, getDeviceName(), "TRACKING_ADJUSTMENT", "Tracking",
                        RA_DEC_TAB, IP_RW, 60.0, IPS_IDLE);
+    IUFillSwitch(&TrackingAutoAdjustmentS[INDI_ENABLED], "INDI_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&TrackingAutoAdjustmentS[INDI_DISABLED], "INDI_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitchVector(&TrackingAutoAdjustmentSP, TrackingAutoAdjustmentS, 2, getDeviceName(), "TRACKING_AUTO_ADJUSTMENT",
+                       "Tracking Auto Adj.", RA_DEC_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // meridian flip
     IUFillSwitch(&MeridianFlipModeS[0], "MERIDIAN_FLIP_AUTO", "auto", ISS_OFF);
@@ -460,6 +477,7 @@ bool LX200StarGo::updateProperties()
         defineProperty(&KeypadStatusSP);
         defineProperty(&SystemSpeedSlewSP);
         defineProperty(&TrackingAdjustmentNP);
+        defineProperty(&TrackingAutoAdjustmentSP);
         defineProperty(&MeridianFlipModeSP);
         defineProperty(&MountRequestDelayNP);
         defineProperty(&MountFirmwareInfoTP);
@@ -474,6 +492,7 @@ bool LX200StarGo::updateProperties()
         deleteProperty(GuidingSpeedNP.name);
         deleteProperty(ST4StatusSP.name);
         deleteProperty(KeypadStatusSP.name);
+        deleteProperty(TrackingAutoAdjustmentSP.name);
         deleteProperty(TrackingAdjustmentNP.name);
         deleteProperty(SystemSpeedSlewSP.name);
         deleteProperty(MeridianFlipModeSP.name);
@@ -904,13 +923,13 @@ bool LX200StarGo::sendScopeLocation()
         LOG_WARN("Failed to get site longitude from device.");
         return false;
     }
-    LocationNP.np[LOCATION_LATITUDE].value = siteLat;
-    LocationNP.np[LOCATION_LONGITUDE].value = siteLong;
+    LocationNP[LOCATION_LATITUDE].setValue(siteLat);
+    LocationNP[LOCATION_LONGITUDE].setValue(siteLong);
 
-    LOGF_DEBUG("Mount Controller Latitude: %lg Longitude: %lg", LocationN[LOCATION_LATITUDE].value,
-               LocationN[LOCATION_LONGITUDE].value);
+    LOGF_DEBUG("Mount Controller Latitude: %lg Longitude: %lg", LocationNP[LOCATION_LATITUDE].getValue(),
+               LocationNP[LOCATION_LONGITUDE].getValue());
 
-    IDSetNumber(&LocationNP, nullptr);
+    LocationNP.apply();
     if(!setLocalSiderealTime(siteLong))
     {
         LOG_ERROR("Error setting local sidereal time");
@@ -1134,6 +1153,7 @@ bool LX200StarGo::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &SiteNameTP);
     IUSaveConfigSwitch(fp, &Aux1FocuserSP);
     IUSaveConfigNumber(fp, &MountRequestDelayNP);
+    IUSaveConfigSwitch(fp, &TrackingAutoAdjustmentSP);
 
     if (loader.isFocuserAux1Activated())
         loader.getFocuserAux1()->saveConfigItems(fp);
@@ -1947,13 +1967,14 @@ bool LX200StarGo::SetSlewRate(int index)
 
     if (!isSimulation() && !setSlewMode(index))
     {
-        SlewRateSP.s = IPS_ALERT;
-        IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+        SlewRateSP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting slew mode.");
+        SlewRateSP.apply();
         return false;
     }
 
-    SlewRateSP.s = IPS_OK;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.setState(IPS_OK);
+    SlewRateSP.apply();
     return true;
 }
 bool LX200StarGo::setSlewMode(int slewMode)
@@ -2149,16 +2170,16 @@ bool LX200StarGo::GetMeridianFlipMode(int* index)
 IPState LX200StarGo::GuideNorth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+        int dir = MovementNSSP.findOnSwitchIndex();
 
         MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
     }
@@ -2177,19 +2198,20 @@ IPState LX200StarGo::GuideNorth(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementNSS[DIRECTION_NORTH].s = ISS_ON;
+        MovementNSSP[DIRECTION_NORTH].setState(ISS_ON);
         MoveNS(DIRECTION_NORTH, MOTION_START);
     }
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_ns = LX200_NORTH;
     GuideNSTID      = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
@@ -2198,16 +2220,16 @@ IPState LX200StarGo::GuideNorth(uint32_t ms)
 IPState LX200StarGo::GuideSouth(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementNSSP.s == IPS_BUSY)
+    if (MovementNSSP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementNSSP);
+        int dir = MovementNSSP.findOnSwitchIndex();
 
         MoveNS(dir == 0 ? DIRECTION_NORTH : DIRECTION_SOUTH, MOTION_STOP);
     }
@@ -2226,19 +2248,20 @@ IPState LX200StarGo::GuideSouth(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementNSS[DIRECTION_SOUTH].s = ISS_ON;
+        MovementNSSP[DIRECTION_SOUTH].setState(ISS_ON);
         MoveNS(DIRECTION_SOUTH, MOTION_START);
     }
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_ns = LX200_SOUTH;
     GuideNSTID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperNS, this);
     return IPS_BUSY;
@@ -2247,16 +2270,16 @@ IPState LX200StarGo::GuideSouth(uint32_t ms)
 IPState LX200StarGo::GuideEast(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
+    if (MovementWESP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
+        int dir = MovementWESP.findOnSwitchIndex();
 
         MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
     }
@@ -2275,19 +2298,23 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementWES[DIRECTION_EAST].s = ISS_ON;
+        MovementWESP[DIRECTION_EAST].setState(ISS_ON);
         MoveWE(DIRECTION_EAST, MOTION_START);
     }
 
+    // update statistics for tracking optimization
+    updateGuidingStatistics(LX200_EAST, ms);
+
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_we = LX200_EAST;
     GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
@@ -2296,16 +2323,16 @@ IPState LX200StarGo::GuideEast(uint32_t ms)
 IPState LX200StarGo::GuideWest(uint32_t ms)
 {
     LOGF_DEBUG("%s %dms %d", __FUNCTION__, ms, usePulseCommand);
-    if (usePulseCommand && (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY))
+    if (usePulseCommand && (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY))
     {
         LOG_ERROR("Cannot guide while moving.");
         return IPS_ALERT;
     }
 
     // If already moving (no pulse command), then stop movement
-    if (MovementWESP.s == IPS_BUSY)
+    if (MovementWESP.getState() == IPS_BUSY)
     {
-        int dir = IUFindOnSwitchIndex(&MovementWESP);
+        int dir = MovementWESP.findOnSwitchIndex();
 
         MoveWE(dir == 0 ? DIRECTION_WEST : DIRECTION_EAST, MOTION_STOP);
     }
@@ -2324,22 +2351,44 @@ IPState LX200StarGo::GuideWest(uint32_t ms)
     {
         if (!setSlewMode(LX200_SLEW_GUIDE))
         {
-            SlewRateSP.s = IPS_ALERT;
-            IDSetSwitch(&SlewRateSP, "Error setting slew mode.");
+            SlewRateSP.setState(IPS_ALERT);
+            LOG_ERROR("Error setting slew mode.");
+            SlewRateSP.apply();
             return IPS_ALERT;
         }
 
-        MovementWES[DIRECTION_WEST].s = ISS_ON;
+        MovementWESP[DIRECTION_WEST].setState(ISS_ON);
         MoveWE(DIRECTION_WEST, MOTION_START);
     }
+    // update statistics for tracking optimization
+    updateGuidingStatistics(LX200_WEST, ms);
 
     // Set slew to guiding
-    IUResetSwitch(&SlewRateSP);
-    SlewRateS[SLEW_GUIDE].s = ISS_ON;
-    IDSetSwitch(&SlewRateSP, nullptr);
+    SlewRateSP.reset();
+    SlewRateSP[SLEW_GUIDE].setState(ISS_ON);
+    SlewRateSP.apply();
     guide_direction_we = LX200_WEST;
     GuideWETID         = IEAddTimer(static_cast<int>(ms), guideTimeoutHelperWE, this);
     return IPS_BUSY;
+}
+
+void LX200StarGo::updateGuidingStatistics(TDirection direction, uint32_t ms)
+{
+    // skip if automatic tracking adjustment is disabled
+    if (!isTrackingAutoAdjustmentEnabled())
+        return;
+
+    switch (direction)
+    {
+        case LX200_WEST:
+            raPulsesList.push_back(ms);
+            break;
+        case LX200_EAST:
+            raPulsesList.push_back(-ms);
+            break;
+        default:
+            break;
+    }
 }
 
 int LX200StarGo::SendPulseCmd(int8_t direction, uint32_t duration_msec)
@@ -2415,10 +2464,10 @@ void LX200StarGo::ISGetProperties(const char *dev)
     LX200Telescope::ISGetProperties(dev);
     if (isConnected())
     {
-        if (HasTrackMode() && TrackModeS != nullptr)
-            defineProperty(&TrackModeSP);
+        if (HasTrackMode() && TrackModeSP)
+            defineProperty(TrackModeSP);
         if (CanControlTrack())
-            defineProperty(&TrackStateSP);
+            defineProperty(TrackStateSP);
         //        if (HasTrackRate())
         //            defineProperty(&TrackRateNP);
     }
@@ -2465,28 +2514,31 @@ bool LX200StarGo::Goto(double ra, double dec)
     //    fs_sexa(DecStr, targetDEC, 2, fracbase);
 
     // If moving, let's stop it first.
-    if (EqNP.s == IPS_BUSY)
+    if (EqNP.getState() == IPS_BUSY)
     {
         if (!isSimulation() && !Abort())
         {
-            AbortSP.s = IPS_ALERT;
-            IDSetSwitch(&AbortSP, "Abort slew failed.");
+            AbortSP.setState(IPS_ALERT);
+            LOG_ERROR("Abort slew failed.");
+            SlewRateSP.apply();
             return false;
         }
 
-        AbortSP.s = IPS_OK;
-        EqNP.s    = IPS_IDLE;
-        IDSetSwitch(&AbortSP, "Slew aborted.");
-        IDSetNumber(&EqNP, nullptr);
+        AbortSP.setState(IPS_OK);
+        EqNP.setState(IPS_IDLE);
+        LOG_ERROR("Slew aborted.");
+        SlewRateSP.apply();
+        EqNP.apply();
 
-        if (MovementNSSP.s == IPS_BUSY || MovementWESP.s == IPS_BUSY)
+        if (MovementNSSP.getState() == IPS_BUSY || MovementWESP.getState() == IPS_BUSY)
         {
-            MovementNSSP.s = MovementWESP.s = IPS_IDLE;
-            EqNP.s                          = IPS_IDLE;
-            IUResetSwitch(&MovementNSSP);
-            IUResetSwitch(&MovementWESP);
-            IDSetSwitch(&MovementNSSP, nullptr);
-            IDSetSwitch(&MovementWESP, nullptr);
+            MovementNSSP.setState(IPS_IDLE);
+            MovementWESP.setState(IPS_IDLE);
+            EqNP.setState(IPS_IDLE);
+            MovementNSSP.reset();
+            MovementWESP.reset();
+            MovementNSSP.apply();
+            MovementWESP.apply();
         }
 
         // sleep for 100 mseconds
@@ -2563,11 +2615,14 @@ bool LX200StarGo::Abort()
         return false;
     }
 
-    if (GuideNSNP.s == IPS_BUSY || GuideWENP.s == IPS_BUSY)
+    if (GuideNSNP.getState() == IPS_BUSY || GuideWENP.getState() == IPS_BUSY)
     {
-        GuideNSNP.s = GuideWENP.s = IPS_IDLE;
-        GuideNSN[0].value = GuideNSN[1].value = 0.0;
-        GuideWEN[0].value = GuideWEN[1].value = 0.0;
+        GuideNSNP.setState(IPS_IDLE);
+        GuideWENP.setState(IPS_IDLE);
+        GuideNSNP[0].setValue(0);
+        GuideNSNP[1].setValue(0);
+        GuideWENP[0].setValue(0);
+        GuideWENP[1].setValue(0);
 
         if (GuideNSTID)
         {
@@ -2582,9 +2637,8 @@ bool LX200StarGo::Abort()
         }
 
         LOG_INFO("Guide aborted.");
-        IDSetNumber(&GuideNSNP, nullptr);
-        IDSetNumber(&GuideWENP, nullptr);
-
+        GuideNSNP.apply();
+        GuideWENP.apply();
         return true;
     }
 
@@ -2605,8 +2659,9 @@ bool LX200StarGo::Sync(double ra, double dec)
 
     if (!isSimulation() && !sendQuery(":CM#", response))
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Synchronization failed.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Synchronization failed.");
+        EqNP.apply();
         return false;
     }
 
@@ -2615,7 +2670,7 @@ bool LX200StarGo::Sync(double ra, double dec)
 
     LOG_INFO("Synchronization successful.");
 
-    EqNP.s     = IPS_OK;
+    EqNP.setState(IPS_OK);
 
     NewRaDec(currentRA, currentDEC);
 
@@ -2641,8 +2696,9 @@ bool LX200StarGo::setObjectCoords(double ra, double dec)
     // These commands receive a response without a terminating #
     if(!sendQuery(RAStr, response, '1', 2)  || !sendQuery(DecStr, response, '1', 2) )
     {
-        EqNP.s = IPS_ALERT;
-        IDSetNumber(&EqNP, "Error setting RA/DEC.");
+        EqNP.setState(IPS_ALERT);
+        LOG_ERROR("Error setting RA/DEC.");
+        EqNP.apply();
         return false;
     }
 
@@ -2788,7 +2844,49 @@ bool LX200StarGo::getUTFOffset(double *offset)
     return true;
 }
 
-bool LX200StarGo::getTrackFrequency(double *value)
+void LX200StarGo::TimerHit()
+{
+    const int n = raPulsesList.size();
+
+    // update regularly the evaluation of the guiding statistics
+    // and optimize the tracking
+    if (isTrackingAutoAdjustmentEnabled() && isConnected() && n >= 15)
+    {
+        // sort the list first
+        raPulsesList.sort();
+
+        const int delta = n / 10;
+        auto start = raPulsesList.begin();
+        auto end = raPulsesList.end();
+        // skip first and last 10%
+        start.operator++(delta);
+        end.operator--(delta);
+
+        // take the average value of the pulses, cutting off 10% min and max values
+        int average = accumulate(start, end, 0) / (n - 2 * delta);
+        LOGF_INFO("Average RA pulse duration: %dms", average);
+
+        if (TrackingAdjustmentNP.s == IPS_OK)
+        {
+            // adjustment of the tracking speed
+            // 100ms --> 1% adjustment
+            // We take only 50%
+            double diff = 0.5 * static_cast<double>(average) / 100.0;
+            double adj = TrackingAdjustment[0].value + diff;
+            // ensure that -5 <= adj <= 5
+            adj = std::min(adj, 5.0);
+            adj = std::max(adj, -5.0);
+            setTrackingAdjustment(adj);
+        }
+        // reset values
+        raPulsesList.clear();
+    }
+
+    // hand over to base class
+    Telescope::TimerHit();
+}
+
+bool LX200StarGo::getTrackFrequency(double * value)
 {
     LOG_DEBUG(__FUNCTION__);
     float Freq;

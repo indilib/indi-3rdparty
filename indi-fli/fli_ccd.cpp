@@ -422,11 +422,11 @@ bool FLICCD::setupParams()
     }
     else
     {
-        TemperatureN[0].value = FLICam.temperature; /* CCD chip temperatre (degrees C) */
-        TemperatureN[0].min   = MIN_CCD_TEMP;
-        TemperatureN[0].max   = MAX_CCD_TEMP;
-        IUUpdateMinMax(&TemperatureNP);
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP[0].setValue(FLICam.temperature); /* CCD chip temperatre (degrees C) */
+        TemperatureNP[0].setMin(MIN_CCD_TEMP);
+        TemperatureNP[0].setMax(MAX_CCD_TEMP);
+        TemperatureNP.updateMinMax();
+        TemperatureNP.apply();
         LOGF_DEBUG("FLIGetTemperature() succeed -> %f", FLICam.temperature);
     }
 
@@ -745,7 +745,7 @@ void FLICCD::TimerHit()
         }
     }
 
-    switch (TemperatureNP.s)
+    switch (TemperatureNP.getState())
     {
         case IPS_IDLE:
         case IPS_OK:
@@ -753,30 +753,30 @@ void FLICCD::TimerHit()
             {
                 if ((err = FLIGetTemperature(fli_dev, &ccdTemp)))
                 {
-                    TemperatureNP.s = IPS_IDLE;
-                    IDSetNumber(&TemperatureNP, nullptr);
+                    TemperatureNP.setState(IPS_IDLE);
+                    TemperatureNP.apply();
                     LOGF_ERROR("FLIGetTemperature() failed. %s.", strerror(-err));
                     break;
                 }
                 if ((err = FLIGetCoolerPower(fli_dev, &ccdPower)))
                 {
                     CoolerNP.s = IPS_IDLE;
-                    IDSetNumber(&TemperatureNP, nullptr);
-                    IDSetNumber(&TemperatureNP, "FLIGetCoolerPower() failed. %s.", strerror(-err));
+                    LOGF_ERROR("FLIGetCoolerPower() failed. %s.", strerror(-err));
+                    TemperatureNP.apply();
                     break;
                 }
             }
 
-            if (fabs(TemperatureN[0].value - ccdTemp) >= TEMP_THRESHOLD)
+            if (fabs(TemperatureNP[0].getValue() - ccdTemp) >= TEMP_THRESHOLD)
             {
-                TemperatureN[0].value = ccdTemp;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP[0].setValue(ccdTemp);
+                TemperatureNP.apply();
             }
 
             if (fabs(CoolerN[0].value - ccdPower) >= TEMP_THRESHOLD)
             {
                 CoolerN[0].value = ccdPower;
-                CoolerNP.s       = TemperatureNP.s;
+                CoolerNP.s       = TemperatureNP.getState();
                 IDSetNumber(&CoolerNP, nullptr);
             }
             break;
@@ -785,14 +785,14 @@ void FLICCD::TimerHit()
             if (sim)
             {
                 ccdTemp               = FLICam.temperature;
-                TemperatureN[0].value = ccdTemp;
+                TemperatureNP[0].setValue(ccdTemp);
             }
             else
             {
                 if ((err = FLIGetTemperature(fli_dev, &ccdTemp)))
                 {
-                    TemperatureNP.s = IPS_IDLE;
-                    IDSetNumber(&TemperatureNP, nullptr);
+                    TemperatureNP.setState(IPS_IDLE);
+                    TemperatureNP.apply();
                     LOGF_ERROR("FLIGetTemperature() failed. %s.", strerror(-err));
                     break;
                 }
@@ -800,7 +800,8 @@ void FLICCD::TimerHit()
                 if ((err = FLIGetCoolerPower(fli_dev, &ccdPower)))
                 {
                     CoolerNP.s = IPS_IDLE;
-                    IDSetNumber(&TemperatureNP, "FLIGetCoolerPower() failed. %s.", strerror(-err));
+                    LOGF_ERROR("FLIGetCoolerPower() failed. %s.", strerror(-err));
+                    TemperatureNP.apply();
                     break;
                 }
             }
@@ -814,12 +815,12 @@ void FLICCD::TimerHit()
             if (fabs(CoolerN[0].value - ccdPower) >= TEMP_THRESHOLD)
             {
                 CoolerN[0].value = ccdPower;
-                CoolerNP.s       = TemperatureNP.s;
+                CoolerNP.s       = TemperatureNP.getState();
                 IDSetNumber(&CoolerNP, nullptr);
             }
 
-            TemperatureN[0].value = ccdTemp;
-            IDSetNumber(&TemperatureNP, nullptr);
+            TemperatureNP[0].setValue(ccdTemp);
+            TemperatureNP.apply();
             break;
 
         case IPS_ALERT:

@@ -1,3 +1,14 @@
+libpktriggercord (0.85.02) jammy; urgency=low
+
+  [ Karl Rees]
+  * Fixed bad file descriptor error when MSC connection is unsuccesful
+  * Experimental support for K3III
+
+  [ Dmitriy Galamaga]
+  * Fixed Pentax K20d connection
+
+ -- Dmitriy Galamaga <graf2242@gmail.com>  Wed, 11 Jul 2024 13:00:00 +0300
+
 libpktriggercord (0.85.01) bionic; urgency=low
 
   * New release

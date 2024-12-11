@@ -70,12 +70,12 @@ bool PkTriggerCordCCD::initProperties()
     IUFillSwitch(&autoFocusS[1], "OFF", "Off", ISS_ON);
     IUFillSwitchVector(&autoFocusSP, autoFocusS, 2, getDeviceName(), "AUTO_FOCUS", "Auto Focus", MAIN_CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 0, IPS_IDLE);
-/*
-    IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
-    IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
-    IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB,
-                       IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-*/
+    /*
+        IUFillSwitch(&transferFormatS[0], "FORMAT_FITS", "FITS", ISS_ON);
+        IUFillSwitch(&transferFormatS[1], "FORMAT_NATIVE", "Native", ISS_OFF);
+        IUFillSwitchVector(&transferFormatSP, transferFormatS, 2, getDeviceName(), "CCD_TRANSFER_FORMAT", "Output", OPTIONS_TAB,
+                           IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    */
 
     IUFillSwitch(&preserveOriginalS[1], "PRESERVE_ON", "Also Copy Native Image", ISS_OFF);
     IUFillSwitch(&preserveOriginalS[0], "PRESERVE_OFF", "Keep FITS Only", ISS_ON);
@@ -84,9 +84,9 @@ bool PkTriggerCordCCD::initProperties()
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.0001, 7200, 1, false);
 
-    IUSaveText(&BayerT[2], "RGGB");
+    BayerTP[2].setText("RGGB");
 
-    PrimaryCCD.getCCDInfo()->p = IP_RW;
+    PrimaryCCD.getCCDInfo().setPermission(IP_RW);
 
     uint32_t cap = CCD_HAS_BAYER;
     SetCCDCapability(cap);
@@ -103,17 +103,17 @@ void PkTriggerCordCCD::ISGetProperties(const char *dev)
 
 bool PkTriggerCordCCD::updateProperties()
 {
-    INDI::CCD::updateProperties();
-
     if (isConnected())
     {
         setupParams();
 
         buildCaptureSwitches();
 
+        INDI::CCD::updateProperties();
+
         // defineProperty(&transferFormatSP);
         defineProperty(&autoFocusSP);
-        //if (transferFormatS[0].s == ISS_ON)        
+        //if (transferFormatS[0].s == ISS_ON)
         if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
         {
             defineProperty(&preserveOriginalSP);
@@ -168,16 +168,25 @@ void PkTriggerCordCCD::buildCaptureSwitches()
     else
         buildCaptureSettingSwitch(&mExpCompSP, exposurecomp1_3, NARRAY(exposurecomp1_3), "Exp Comp", "CCD_EC", string(current));
 
-    string f = "JPEG";
+    string current_format_name = "JPEG";
     if (uff == USER_FILE_FORMAT_DNG)
     {
-        f = "DNG";
+        current_format_name = "DNG";
     }
     else if (uff == USER_FILE_FORMAT_PEF)
     {
-        f = "PEF";
+        current_format_name = "PEF";
     }
-    buildCaptureSettingSwitch(&mFormatSP, imageformat, NARRAY(imageformat), "Format", "CAPTURE_FORMAT", f);
+    for (size_t i = 0; i < (sizeof(imageformat) / sizeof(imageformat[0])); i++)
+    {
+        auto isOn = false;
+        if (imageformat[i] == current_format_name)
+        {
+            isOn = true;
+        }
+        CaptureFormat format = {imageformat[i], imageformat[i], 8, isOn};
+        addCaptureFormat(format);
+    }
 
     refreshBatteryStatus();
 
@@ -205,7 +214,6 @@ void PkTriggerCordCCD::deleteCaptureSwitches()
     if (mExpCompSP.nsp > 0) deleteProperty(mExpCompSP.name);
     if (mWhiteBalanceSP.nsp > 0) deleteProperty(mWhiteBalanceSP.name);
     if (mIQualitySP.nsp > 0) deleteProperty(mIQualitySP.name);
-    // if (mFormatSP.nsp > 0) deleteProperty(mFormatSP.name);
 }
 
 
@@ -587,7 +595,7 @@ bool PkTriggerCordCCD::grabImage()
 
 
     // fits handling code
-    // if (transferFormatS[0].s == ISS_ON)    
+    // if (transferFormatS[0].s == ISS_ON)
     if ( EncodeFormatSP[FORMAT_FITS].s == ISS_ON )
     {
         PrimaryCCD.setImageExtension("fits");
@@ -624,8 +632,8 @@ bool PkTriggerCordCCD::grabImage()
             LOGF_DEBUG("read_libraw: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d) bayer pattern (%s)",
                        memsize, naxis, w, h, bpp, bayer_pattern);
 
-            IUSaveText(&BayerT[2], bayer_pattern);
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(bayer_pattern);
+            BayerTP.apply(nullptr);
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         }
 
@@ -700,7 +708,7 @@ bool PkTriggerCordCCD::grabImage()
 ISwitch * PkTriggerCordCCD::create_switch(const char * basestr, string options[], size_t numOptions, int setidx)
 {
 
-    ISwitch * sw     = static_cast<ISwitch *>(calloc(sizeof(ISwitch), numOptions));
+    ISwitch * sw     = static_cast<ISwitch *>(calloc(numOptions, sizeof(ISwitch)));
     ISwitch * one_sw = sw;
 
     char sw_name[MAXINDINAME];
@@ -728,22 +736,22 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         autoFocusSP.s = IPS_OK;
         IDSetSwitch(&autoFocusSP, nullptr);
     }
- /*
-    else if (!strcmp(name, transferFormatSP.name))
-    {
-        IUUpdateSwitch(&transferFormatSP, states, names, n);
-        transferFormatSP.s = IPS_OK;
-        IDSetSwitch(&transferFormatSP, nullptr);
-        if (transferFormatS[0].s == ISS_ON)
-        {
-            defineProperty(&preserveOriginalSP);
-        }
-        else
-        {
-            deleteProperty(preserveOriginalSP.name);
-        }
-    }
-    */
+    /*
+       else if (!strcmp(name, transferFormatSP.name))
+       {
+           IUUpdateSwitch(&transferFormatSP, states, names, n);
+           transferFormatSP.s = IPS_OK;
+           IDSetSwitch(&transferFormatSP, nullptr);
+           if (transferFormatS[0].s == ISS_ON)
+           {
+               defineProperty(&preserveOriginalSP);
+           }
+           else
+           {
+               deleteProperty(preserveOriginalSP.name);
+           }
+       }
+       */
     else if (!strcmp(name, preserveOriginalSP.name))
     {
         IUUpdateSwitch(&preserveOriginalSP, states, names, n);
@@ -787,24 +795,6 @@ bool PkTriggerCordCCD::ISNewSwitch(const char * dev, const char * name, ISState 
         updateCaptureSettingSwitch(&mIQualitySP, states, names, n);
         pslr_set_jpeg_stars(device, atoi(IUFindOnSwitch(&mIQualitySP)->label));
     }
-    else if (!strcmp(name, mFormatSP.name))
-    {
-        updateCaptureSettingSwitch(&mFormatSP, states, names, n);
-        char *f = IUFindOnSwitch(&mFormatSP)->label;
-        if (!strcmp(f, "DNG"))
-        {
-            uff = USER_FILE_FORMAT_DNG;
-        }
-        else if (!strcmp(f, "PEF"))
-        {
-            uff = USER_FILE_FORMAT_PEF;
-        }
-        else
-        {
-            uff = USER_FILE_FORMAT_JPEG;
-        }
-        pslr_set_user_file_format(device, uff);
-    }
     else
     {
         return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -823,7 +813,7 @@ void PkTriggerCordCCD::updateCaptureSettingSwitch(ISwitchVectorProperty * sw, IS
 bool PkTriggerCordCCD::saveConfigItems(FILE * fp)
 {
 
-    for (auto sw : std::vector<ISwitchVectorProperty*> {&mIsoSP, &mApertureSP, &mExpCompSP, &mWhiteBalanceSP, &mIQualitySP, &mFormatSP})
+    for (auto sw : std::vector<ISwitchVectorProperty*> {&mIsoSP, &mApertureSP, &mExpCompSP, &mWhiteBalanceSP, &mIQualitySP})
     {
         if (sw->nsp > 0) IUSaveConfigSwitch(fp, sw);
     }
@@ -868,7 +858,7 @@ bool PkTriggerCordCCD::getCaptureSettingsState()
 
 string PkTriggerCordCCD::getUploadFilePrefix()
 {
-    return UploadSettingsT[UPLOAD_DIR].text + string("/") + UploadSettingsT[UPLOAD_PREFIX].text;
+    return UploadSettingsTP[UPLOAD_DIR].getText() + string("/") + UploadSettingsTP[UPLOAD_PREFIX].getText();
 }
 
 const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format)
@@ -879,7 +869,7 @@ const char * PkTriggerCordCCD::getFormatFileExtension(user_file_format format)
     }
     else if (format == USER_FILE_FORMAT_DNG)
     {
-        return "raw";
+        return "dng";
     }
     else
     {
@@ -894,4 +884,23 @@ void PkTriggerCordCCD::refreshBatteryStatus()
             0.01 * status.battery_3, 0.01 * status.battery_4);
     IUSaveText(&DeviceInfoT[2], batterylevel);
     IDSetText(&DeviceInfoTP, nullptr);
+}
+
+bool PkTriggerCordCCD::SetCaptureFormat(uint8_t index)
+{
+    if (m_CaptureFormats[index].label == "DNG")
+    {
+        uff = USER_FILE_FORMAT_DNG;
+    }
+    else if (m_CaptureFormats[index].label == "PEF")
+    {
+        uff = USER_FILE_FORMAT_PEF;
+    }
+    else
+    {
+        uff = USER_FILE_FORMAT_JPEG;
+    }
+    pslr_set_user_file_format(device, uff);
+
+    return true;
 }

@@ -22,6 +22,7 @@
 #include "indi_toupbase.h"
 #include "config.h"
 #include <stream/streammanager.h>
+#include <unordered_map>
 #include <unistd.h>
 #include <deque>
 
@@ -44,25 +45,57 @@ static class Loader
         Loader()
         {
             const int iConnectedCount = FP(EnumV2(pCameraInfo));
+
+            // In case we have identical cameras we need to fix that.
+            // e.g. if we have Camera, Camera, it will become
+            // Camera, Camera #2
+            std::vector<std::string> names;
             for (int i = 0; i < iConnectedCount; i++)
             {
-                if (0 == (CP(FLAG_FILTERWHEEL) & pCameraInfo[i].model->flag))
-                    cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i])));
+                names.push_back(pCameraInfo[i].model->name);
+            }
+            if (iConnectedCount > 0)
+                fixDuplicates(names);
+
+            for (int i = 0; i < iConnectedCount; i++)
+            {
+                if ((CP(FLAG_CCD_INTERLACED) | CP(FLAG_CCD_PROGRESSIVE) | CP(FLAG_CMOS)) & pCameraInfo[i].model->flag)
+                    cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i], names[i])));
             }
             if (cameras.empty())
                 IDLog("No camera detected");
         }
+
+        // If duplicate cameras are found, append a number to the camera to set it apart.
+        void fixDuplicates(std::vector<std::string> &strings)
+        {
+            std::unordered_map<std::string, int> stringCounts;
+
+            for (std::string &str : strings)
+            {
+                if (stringCounts.count(str) > 0)
+                {
+                    int count = stringCounts[str]++;
+                    str += " #" + std::to_string(count + 1);
+                    stringCounts[str]++;
+                }
+                else
+                {
+                    stringCounts[str] = 1;
+                }
+            }
+        }
 } loader;
 
-ToupBase::ToupBase(const XP(DeviceV2) *instance) : m_Instance(instance)
+ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_Instance(instance)
 {
-    IDLog("model: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, m_Instance->model->maxspeed,
+    IDLog("model: %s, name: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, name.c_str(),
+          m_Instance->model->maxspeed,
           m_Instance->model->preview, m_Instance->model->maxfanspeed);
 
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
-    snprintf(this->m_name, MAXINDIDEVICE, "%s %s", getDefaultName(), m_Instance->model->name);
-    setDeviceName(this->m_name);
+    setDeviceName((std::string(DNAME) + " " + name).c_str());
 
     if (m_Instance->model->flag & CP(FLAG_MONO))
         m_MonoCamera = true;
@@ -94,10 +127,6 @@ bool ToupBase::initProperties()
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
-        TemperatureN[0].min = CP(TEC_TARGET_MIN);
-        TemperatureN[0].max = CP(TEC_TARGET_MAX);
-        TemperatureN[0].value = CP(TEC_TARGET_DEF);
-
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
@@ -247,6 +276,12 @@ bool ToupBase::initProperties()
     IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Tail Light
+    IUFillSwitch(&m_TailLightS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
+    IUFillSwitch(&m_TailLightS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
+    IUFillSwitchVector(&m_TailLightSP, m_TailLightS, 2, getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW,
+                       ISR_1OFMANY, 60, IPS_IDLE);
+
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
@@ -330,12 +365,11 @@ bool ToupBase::updateProperties()
             defineProperty(&m_CoolerSP);
             defineProperty(m_CoolerNP);
         }
-
         // Even if there is no cooler, we define temperature property as READ ONLY
         else if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
         {
-            TemperatureNP.p = IP_RO;
-            defineProperty(&TemperatureNP);
+            TemperatureNP.setPermission(IP_RO);
+            defineProperty(TemperatureNP);
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
@@ -357,6 +391,9 @@ bool ToupBase::updateProperties()
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             defineProperty(&m_GainConversionSP);
+
+        if (m_SupportTailLight)
+            defineProperty(&m_TailLightSP);
 
         // Binning mode
         defineProperty(&m_BinningModeSP);
@@ -384,7 +421,7 @@ bool ToupBase::updateProperties()
         }
         else
         {
-            deleteProperty(TemperatureNP.name);
+            deleteProperty(TemperatureNP);
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
@@ -406,6 +443,9 @@ bool ToupBase::updateProperties()
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
             deleteProperty(m_GainConversionSP.name);
+
+        if (m_SupportTailLight)
+            deleteProperty(m_TailLightSP.name);
 
         deleteProperty(m_BinningModeSP.name);
         if (m_MonoCamera == false)
@@ -451,6 +491,21 @@ bool ToupBase::Connect()
     if (m_Instance->model->flag & CP(FLAG_ST4))
         cap |= CCD_HAS_ST4_PORT;
     SetCCDCapability(cap);
+
+    if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
+    {
+        int tecRange = 0;
+        FP(get_Option(m_Handle, CP(OPTION_TECTARGET_RANGE), &tecRange));
+        TemperatureNP[0].setMin((static_cast<short>(tecRange & 0xffff)) / 10.0);
+        TemperatureNP[0].setMax((static_cast<short>((tecRange >> 16) & 0xffff)) / 10.0);
+        TemperatureNP[0].setValue(0); // reasonable default
+    }
+
+    {
+        int taillight = 0;
+        HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
+        m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+    }
 
     // Get min/max exposures
     uint32_t min = 0, max = 0, current = 0;
@@ -568,7 +623,7 @@ void ToupBase::setupParams()
         CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str() : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 
         m_Channels = 1;
-        IUSaveText(&BayerT[2], getBayerString());// Get RAW Format
+        BayerTP[2].setText(getBayerString());// Get RAW Format
 
         addCaptureFormat(rgb);
         addCaptureFormat(raw);
@@ -1057,6 +1112,26 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             return true;
         }
 
+        // Tail Light
+        if (!strcmp(name, m_TailLightSP.name))
+        {
+            int prevIndex = IUFindOnSwitchIndex(&m_TailLightSP);
+            IUUpdateSwitch(&m_TailLightSP, states, names, n);
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightS[INDI_ENABLED].s));
+            if (SUCCEEDED(rc))
+                m_TailLightSP.s = IPS_OK;
+            else
+            {
+                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF",
+                           errorCodes(rc).c_str());
+                m_TailLightSP.s = IPS_ALERT;
+                IUResetSwitch(&m_TailLightSP);
+                m_TailLightS[prevIndex].s = ISS_ON;
+            }
+            IDSetSwitch(&m_TailLightSP, nullptr);
+            return true;
+        }
+
         //////////////////////////////////////////////////////////////////////
         /// Auto Exposure
         //////////////////////////////////////////////////////////////////////
@@ -1267,7 +1342,7 @@ bool ToupBase::StopStreaming()
 int ToupBase::SetTemperature(double temperature)
 {
     // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
-    if (temperature < TemperatureN[0].value && activateCooler(true) == false)
+    if (temperature < TemperatureNP[0].getValue() && activateCooler(true) == false)
     {
         LOG_ERROR("Failed to toggle cooler.");
         return -1;
@@ -1493,29 +1568,29 @@ void ToupBase::TimerHit()
         HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
-            if (TemperatureNP.s != IPS_ALERT)
+            if (TemperatureNP.getState() != IPS_ALERT)
             {
-                TemperatureNP.s = IPS_ALERT;
-                IDSetNumber(&TemperatureNP, nullptr);
+                TemperatureNP.setState(IPS_ALERT);
+                TemperatureNP.apply();
                 LOGF_ERROR("get Temperature error. %s", errorCodes(rc).c_str());
             }
         }
-        else if (TemperatureNP.s == IPS_ALERT)
-            TemperatureNP.s = IPS_OK;
+        else if (TemperatureNP.getState() == IPS_ALERT)
+            TemperatureNP.setState(IPS_OK);
 
-        TemperatureN[0].value = nTemperature / 10.0;
+        TemperatureNP[0].setValue(nTemperature / 10.0);
 
         auto threshold = HasCooler() ? 0.1 : 0.2;
 
-        switch (TemperatureNP.s)
+        switch (TemperatureNP.getState())
         {
             case IPS_IDLE:
             case IPS_OK:
             case IPS_BUSY:
-                if (std::abs(TemperatureN[0].value - m_LastTemperature) > threshold)
+                if (std::abs(TemperatureNP[0].getValue() - m_LastTemperature) > threshold)
                 {
-                    m_LastTemperature = TemperatureN[0].value;
-                    IDSetNumber(&TemperatureNP, nullptr);
+                    m_LastTemperature = TemperatureNP[0].getValue();
+                    TemperatureNP.apply();
                 }
                 break;
 
@@ -1982,8 +2057,8 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
         else
         {
             SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-            IUSaveText(&BayerT[2], getBayerString());
-            IDSetText(&BayerTP, nullptr);
+            BayerTP[2].setText(getBayerString());
+            BayerTP.apply();
             m_BitsPerPixel = (m_maxBitDepth > 8) ? 16 : 8;
         }
     }

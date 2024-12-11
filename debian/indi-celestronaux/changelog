@@ -1,3 +1,9 @@
+indi-celestronaux (1.4) jammy; urgency=medium
+
+  * Implement predictive tracking with PID corrections in AltAz mode (#960) by Paweł T. Jochym
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Wed, 21 Aug 2024 17:00:00 +0300
+
 indi-celestronaux (1.3) jammy; urgency=medium
 
   * Fix GOTO in southern hemisphere.

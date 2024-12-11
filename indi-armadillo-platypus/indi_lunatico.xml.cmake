@@ -15,6 +15,10 @@
             <driver name="Seletek Rotator">indi_seletek_rotator</driver>
             <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
         </device>
+        <device label="DragonFly Controller" manufacturer="Lunatico">
+            <driver name="DragonFly Controller">indi_dragonfly</driver>
+            <version>@LUNATICO_VERSION_MAJOR@.@LUNATICO_VERSION_MINOR@</version>
+        </device>
     </devGroup>
     <devGroup group="Domes">
         <device label="DragonFly Dome" manufacturer="Lunatico">

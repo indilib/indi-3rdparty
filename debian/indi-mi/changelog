@@ -1,3 +1,9 @@
+indi-mi (2.1) buster; urgency=low
+
+  * Add new properties to Standalone Filter Wheel driver
+
+ -- Jakub Smutny <linux@gxccd.com>  Fri, 02 Aug 2024 13:00:00 +0100
+
 indi-mi (2.0) buster; urgency=medium
 
   * Add MI Standalone Filter Wheel driver

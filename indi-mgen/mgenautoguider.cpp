@@ -36,6 +36,8 @@
     \author Eric Dejouhanet
 */
 
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
 #include <stdio.h>
 #include <unistd.h>
 

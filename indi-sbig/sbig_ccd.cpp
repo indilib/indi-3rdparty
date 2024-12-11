@@ -470,7 +470,7 @@ bool SBIGCCD::initProperties()
                        ISR_1OFMANY, 60, IPS_IDLE);
 
 
-    IUSaveText(&BayerT[2], "BGGR");
+    BayerTP[2].setText("BGGR");
 
     INDI::FilterInterface::initProperties(FILTER_TAB);
 
@@ -678,7 +678,7 @@ bool SBIGCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         {
             IUUpdateSwitch(&CoolerSP, states, names, n);
             bool coolerON = CoolerS[0].s == ISS_ON;
-            if (SetTemperatureRegulation(TemperatureN[0].value, coolerON) == CE_NO_ERROR)
+            if (SetTemperatureRegulation(TemperatureNP[0].getValue(), coolerON) == CE_NO_ERROR)
             {
                 CoolerSP.s = coolerON ? IPS_OK : IPS_IDLE;
                 LOGF_INFO("Cooler turned %s.", coolerON ? "On" : "Off");
@@ -1010,9 +1010,9 @@ bool SBIGCCD::setupParams()
         IDSetSwitch(&CoolerSP, nullptr);
         CoolerN[0].value = power * 100;
         IDSetNumber(&CoolerNP, nullptr);
-        TemperatureN[0].min = MIN_CCD_TEMP;
-        TemperatureN[0].max = MAX_CCD_TEMP;
-        IUUpdateMinMax(&TemperatureNP);
+        TemperatureNP[0].setMin(MIN_CCD_TEMP);
+        TemperatureNP[0].setMax(MAX_CCD_TEMP);
+        TemperatureNP.updateMinMax();
     }
 
     IUSaveText(&ProductInfoT[0], GetCameraName());
@@ -1024,7 +1024,7 @@ bool SBIGCCD::setupParams()
 
 int SBIGCCD::SetTemperature(double temperature)
 {
-    if (fabs(temperature - TemperatureN[0].value) < 0.1)
+    if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
     if (SetTemperatureRegulation(temperature) == CE_NO_ERROR)
     {
@@ -1679,7 +1679,7 @@ int SBIGCCD::SetTemperatureRegulation(double temperature, bool enable)
     SetTemperatureRegulationParams strp;
     if (isSimulation())
     {
-        TemperatureN[0].value = temperature;
+        TemperatureNP[0].setValue(temperature);
         return CE_NO_ERROR;
     }
     if (CheckLink())
@@ -1706,7 +1706,7 @@ int SBIGCCD::QueryTemperatureStatus(bool &enabled, double &ccdTemp, double &setp
     if (isSimulation())
     {
         enabled      = (CoolerS[0].s == ISS_ON);
-        ccdTemp      = TemperatureN[0].value;
+        ccdTemp      = TemperatureNP[0].getValue();
         setpointTemp = ccdTemp;
         power        = enabled ? 0.5 : 0;
         return CE_NO_ERROR;
@@ -2534,14 +2534,14 @@ void SBIGCCD::updateTemperature()
         //        }
         if (power == 0)
         {
-            TemperatureNP.s = IPS_IDLE;
+            TemperatureNP.setState(IPS_IDLE);
         }
         else
         {
-            TemperatureNP.s = IPS_BUSY;
+            TemperatureNP.setState(IPS_BUSY);
             LOGF_DEBUG("CCD temperature %+.1f [C], TE cooler: %.1f [%%].", ccdTemp, power);
         }
-        TemperatureN[0].value = ccdTemp;
+        TemperatureNP[0].setValue(ccdTemp);
         // Check the TE cooler if inside the range:
         if (power <= CCD_COOLER_THRESHOLD)
         {
@@ -2552,7 +2552,7 @@ void SBIGCCD::updateTemperature()
             CoolerNP.s = IPS_BUSY;
         }
         CoolerN[0].value = power;
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP.apply();
         IDSetNumber(&CoolerNP, nullptr);
     }
     else
@@ -2561,14 +2561,14 @@ void SBIGCCD::updateTemperature()
         if (res == CE_SHARE_ERROR)
         {
             LOGF_DEBUG("Erro reading temperature. %s", GetErrorString(res));
-            TemperatureNP.s = IPS_IDLE;
+            TemperatureNP.setState(IPS_IDLE);
         }
         else
         {
             LOGF_ERROR("Erro reading temperature. %s", GetErrorString(res));
-            TemperatureNP.s = IPS_ALERT;
+            TemperatureNP.setState(IPS_ALERT);
         }
-        IDSetNumber(&TemperatureNP, nullptr);
+        TemperatureNP.apply();
     }
     IEAddTimer(TEMPERATURE_POLL_MS, SBIGCCD::updateTemperatureHelper, this);
 }

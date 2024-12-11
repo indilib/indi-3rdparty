@@ -1,14 +1,32 @@
+libaltaircam (57.26598.20240928) jammy; urgency=medium
+
+  * Upstream release
+
+ -- altair <altair@altair.com>  Sun, 29 Sep 2024 13:28:23 +0800
+
+libaltaircam (56.26054.20240714) jammy; urgency=medium
+
+  * Upstream release
+
+ -- altair <>  Mon, 15 Jul 2024 09:56:43 +0800
+
+libaltaircam (56.25996.20240707) jammy; urgency=medium
+
+  * Upstream release
+
+ -- altair <>  Sun, 07 Jul 2024 20:30:55 +0800
+
 libaltaircam (55.25633.20240519) jammy; urgency=medium
 
   * Upstream release
 
- -- altair; Mon, 20 May 2024 08:37:31 +0800
+ -- altair <>  Mon, 20 May 2024 08:37:31 +0800
 
 libaltaircam (55.24621.20240204) jammy; urgency=medium
 
   * Upstream release
 
- -- altair; Mon, 05 Feb 2024 08:23:48 +0800
+ -- altair <>  Mon, 05 Feb 2024 08:23:48 +0800
 
 libaltaircam (1.54.2) jammy; urgency=medium
 

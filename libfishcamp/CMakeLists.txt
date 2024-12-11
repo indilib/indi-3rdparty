@@ -21,6 +21,7 @@ ELSE(APPLE)
 ENDIF(APPLE)
 #***********************************************************
 find_package(USB1 REQUIRED)
+include_directories( ${USB1_INCLUDE_DIR})
 ADD_DEFINITIONS(-Wno-multichar)
 
 set(LIBFISHCAMP_VERSION "1.1")
