@@ -52,9 +52,9 @@ class OasisFilterWheel : public INDI::FilterWheel
 
         bool GetConfig(OFWConfig *config);
 
-        // Mode
-        ISwitchVectorProperty ModeSP;
-        ISwitch ModeS[3];
+        // Speed
+        ISwitchVectorProperty SpeedSP;
+        ISwitch SpeedS[3];
 
         // Auto run on power up
         ISwitchVectorProperty AutoRunSP;
