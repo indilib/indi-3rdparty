@@ -34,6 +34,7 @@ BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
 BuildRequires: libasi
+BuildRequires: libcamera-apps-devel
 
 BuildRequires: gmock
 
