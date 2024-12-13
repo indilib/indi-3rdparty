@@ -31,7 +31,7 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
-BuildRequires: libnutclient-dev
+BuildRequires: nut-devel
 
 BuildRequires: gmock
 
