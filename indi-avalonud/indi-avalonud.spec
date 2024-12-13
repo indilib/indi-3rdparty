@@ -43,7 +43,8 @@ BuildRequires: pkgconfig(libjpeg)
 BuildRequires: pkgconfig(libusb-1.0)
 BuildRequires: pkgconfig(zlib)
 
-BuildRequires: libzmq-devel
+BuildRequires: cppzmq-devel
+BuildRequires: zeromq-devel
 Requires: libzmq
 
 
