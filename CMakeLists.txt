@@ -239,7 +239,6 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_GPSD Off)
     set(WITH_AHP_XC Off)
     set(WITH_AHP_GT Off)
-    set(WITH_ASTROASIS Off)
     # The drivers below are not yet compatible with Apple Silicon since their libraries are not universal binaries
     if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
         SET(WITH_ASICAM Off)
