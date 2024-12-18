@@ -1370,6 +1370,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         {
             gphoto->command = 0;
             pthread_mutex_unlock(&gphoto->mutex);
+            DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Image is ignored per settings.");
             return GP_OK;
         }
 
@@ -1386,6 +1387,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     gphoto->command    = 0;
     uint32_t waitMS = gphoto->download_timeout * 1000;
     bool downloadComplete = false;
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Waiting for event for %d seconds.", gphoto->download_timeout);
 
     while (1)
     {
