@@ -1346,8 +1346,8 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
 
 int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 {
-    CameraFilePath *fn;
-    CameraEventType event;
+    CameraFilePath *fn = nullptr;
+    CameraEventType event = GP_EVENT_UNKNOWN;
     void *data = nullptr;
     int result;
 
@@ -1374,7 +1374,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
             return GP_OK;
         }
 
-        result          = download_image(gphoto, &gphoto->camerapath, fd);
+        result = download_image(gphoto, &gphoto->camerapath, fd);
         gphoto->command = 0;
         //Set exposure back to original value
         // JM 2018-08-06: Why do we really need to reset values here?
@@ -1384,10 +1384,10 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     }
 
     //Bulb mode
-    gphoto->command    = 0;
+    gphoto->command = 0;
     uint32_t waitMS = gphoto->download_timeout * 1000;
     bool downloadComplete = false;
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Waiting for event for %d seconds.", gphoto->download_timeout);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "BULB Mode: Waiting for event for %d seconds.", gphoto->download_timeout);
 
     while (1)
     {
@@ -1410,7 +1410,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
             case GP_EVENT_FILE_ADDED:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
-                fn     = static_cast<CameraFilePath *>(data);
+                fn = static_cast<CameraFilePath *>(data);
                 if (gphoto->handle_sdcard_image != IGNORE_IMAGE)
                     download_image(gphoto, fn, fd);
                 waitMS = 100;
