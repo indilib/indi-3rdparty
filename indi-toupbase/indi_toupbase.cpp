@@ -464,7 +464,7 @@ bool ToupBase::updateProperties()
 
         deleteProperty(m_CameraTP.name);
         deleteProperty(m_SDKVersionTP.name);
-		deleteProperty(ADCDepthNP.getName());
+		deleteProperty(m_ADCDepthNP.getName());
     }
 
     return true;
