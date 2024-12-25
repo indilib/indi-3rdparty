@@ -1404,7 +1404,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
             if (no_event_retries-- > 0)
             {
                 usleep(250000);
-                break;
+                continue;
             }
             pthread_mutex_unlock(&gphoto->mutex);
             return -1;
