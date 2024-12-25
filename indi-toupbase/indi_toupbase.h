@@ -269,7 +269,7 @@ class ToupBase : public INDI::CCD
         ITextVectorProperty m_SDKVersionTP;
         IText m_SDKVersionT;
 		
-		PropertyNumber  m_ADCDepthNP{1};
+		INDI::PropertyNumber  m_ADCDepthNP{1};
 
         // Timeout factor
         INumberVectorProperty m_TimeoutFactorNP;
