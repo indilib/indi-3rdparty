@@ -597,6 +597,10 @@ void ToupBase::setupParams()
         FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
         m_BitsPerPixel = 16;
     }
+    
+    uint32_t nBitDepth = 0;
+    FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));
+    m_ADCDepthNP[0].setValue(nBitDepth);
 
     FP(put_Option(m_Handle, CP(OPTION_RAW), 1));
 
