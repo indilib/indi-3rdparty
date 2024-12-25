@@ -1390,6 +1390,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     struct timeval start_time;
     gettimeofday(&start_time, nullptr);
     DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "BULB Mode: Waiting for event for %d seconds (waitMS: %d).", gphoto->download_timeout, waitMS);
+    int no_event_retries = 3;
 
     while (1)
     {
@@ -1399,6 +1400,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         if (result != GP_OK)
         {
             DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Could not wait for event.");
+            // Try up to 3 times before giving up
+            if (no_event_retries-- > 0)
+            {
+                usleep(250000);
+                break;
+            }
             pthread_mutex_unlock(&gphoto->mutex);
             return -1;
         }
