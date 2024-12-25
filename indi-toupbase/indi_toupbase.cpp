@@ -2073,7 +2073,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
 	
     uint32_t nBitDepth = 0;
     FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));	
-	m_ADCDepthNP.setValue(nBitDepth);
+	m_ADCDepthNP[0].setValue(nBitDepth);
 
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)
