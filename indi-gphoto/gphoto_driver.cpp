@@ -1424,6 +1424,7 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 //DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Unknown event.");
                 break;
             case GP_EVENT_TIMEOUT:
+            {
                 // If already downloaded, then return immediately.
                 if (downloadComplete)
                 {
@@ -1449,10 +1450,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out after %d ms (elapsed: %d ms).", waitMS, elapsed);
                 pthread_mutex_unlock(&gphoto->mutex);
                 return -1;
-                break;
+            }
+            break;
 
             default:
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Got unexpected message: %d", event);
+                break;
         }
     }
     return GP_OK;
