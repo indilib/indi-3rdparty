@@ -180,6 +180,7 @@ bool ToupWheel::Connect()
         LOGF_INFO("%s: get slot number from config file, %d", getDeviceName(), slot);
     }
     FilterSlotN[0].max = slot;
+    IUUpdateMinMax(&FilterSlotNP);
 
     FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
     TargetFilter = 1; // if desconnected during spinning, TargetFilter must be initialize when reconnect.
@@ -236,9 +237,9 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             auto currentSlot = SlotsSP.findOnSwitchIndex();
             if (previousSlot != currentSlot && isConnected())
             {
-                if (SUCCEEDED(FP(get_Option(m_Handle, OPTION_EEPROMCFG, nullptr))))
-                    FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), currentSlot));
-                LOG_INFO("Please disconnect and reconnect to apply settings.");
+                FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), currentSlot));
+                FilterSlotN[0].max = currentSlot;
+                IUUpdateMinMax(&FilterSlotNP);
             }
             saveConfig(SlotsSP);
             return true;
