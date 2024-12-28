@@ -1,55 +1,122 @@
-# - Try to find GPIOD
-# Once done this will define
-#
-#  GPIOD_FOUND - system has libgpiod
-#  GPIOD_INCLUDE_DIR - the libgpiod include directory
-#  GPIOD_LIBRARIES - Link these to use libgpiod
-#
-# N.B. This is for C++ only, you need to include
-#
-#include <gpiod.hpp>
-#
-# Redistribution and use is allowed according to the terms of the BSD license.
-# For details see the accompanying COPYING-CMAKE-SCRIPTS file.
+include(FindPackageHandleStandardArgs)
 
-if (GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
+# Define GPIOD components
+set(GPIOD_VALID_COMPONENTS C CXX)
 
-  # in cache already
-  set(GPIOD_FOUND TRUE)
-  message(STATUS "Found libgpiod: ${GPIOD_LIBRARIES}")
+# Set component dependencies
+set(GPIOD_CXX_DEPENDS C)
 
-else (GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
+# Function to handle component search
+function(_gpiod_find_component component)
+    string(TOUPPER "${component}" upper_comp)
+    
+    if(component STREQUAL "C")
+        # Find C library and headers
+        find_path(GPIOD_C_INCLUDE_DIR
+            NAMES gpiod.h
+            PATH_SUFFIXES gpiod
+        )
+        find_library(GPIOD_C_LIBRARY
+            NAMES gpiod
+        )
+        
+        if(GPIOD_C_LIBRARY AND GPIOD_C_INCLUDE_DIR)
+            set(GPIOD_${upper_comp}_FOUND TRUE PARENT_SCOPE)
+            set(GPIOD_C_LIBRARIES ${GPIOD_C_LIBRARY} PARENT_SCOPE)
+            set(GPIOD_C_INCLUDE_DIRS ${GPIOD_C_INCLUDE_DIR} PARENT_SCOPE)
+            
+            if(NOT TARGET GPIOD::C)
+                add_library(GPIOD::C UNKNOWN IMPORTED)
+                set_target_properties(GPIOD::C PROPERTIES
+                    IMPORTED_LOCATION "${GPIOD_C_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${GPIOD_C_INCLUDE_DIR}"
+                )
+            endif()
+        endif()
+        
+    elseif(component STREQUAL "CXX")
+        # Find C++ library and headers
+        find_path(GPIOD_CXX_INCLUDE_DIR
+            NAMES gpiod.hpp
+            PATH_SUFFIXES gpiod
+        )
+        find_library(GPIOD_CXX_LIBRARY
+            NAMES gpiodcxx
+        )
+        
+        if(GPIOD_CXX_LIBRARY AND GPIOD_CXX_INCLUDE_DIR)
+            set(GPIOD_${upper_comp}_FOUND TRUE PARENT_SCOPE)
+            set(GPIOD_CXX_LIBRARIES ${GPIOD_CXX_LIBRARY} PARENT_SCOPE)
+            set(GPIOD_CXX_INCLUDE_DIRS ${GPIOD_CXX_INCLUDE_DIR} PARENT_SCOPE)
+            
+            if(NOT TARGET GPIOD::CXX)
+                add_library(GPIOD::CXX UNKNOWN IMPORTED)
+                set_target_properties(GPIOD::CXX PROPERTIES
+                    IMPORTED_LOCATION "${GPIOD_CXX_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${GPIOD_CXX_INCLUDE_DIR}"
+                    INTERFACE_LINK_LIBRARIES "GPIOD::C"
+                )
+            endif()
+        endif()
+    endif()
+endfunction()
 
-  find_path(GPIOD_INCLUDE_DIR gpiod.hpp
-    ${_obIncDir}
-    ${GNUWIN32_DIR}/include
-    /usr/local/include
-  )
+# Handle components
+if(NOT GPIOD_FIND_COMPONENTS)
+    # If no components specified, find all
+    set(GPIOD_FIND_COMPONENTS ${GPIOD_VALID_COMPONENTS})
+endif()
 
-  find_library(GPIOD_LIBRARIES NAMES gpiodcxx
-    PATHS
-    ${_obLinkDir}
-    ${GNUWIN32_DIR}/lib
-    /usr/local/lib
-  )
+# Validate components
+foreach(comp IN LISTS GPIOD_FIND_COMPONENTS)
+    if(NOT comp IN_LIST GPIOD_VALID_COMPONENTS)
+        message(FATAL_ERROR "Invalid GPIOD component: ${comp}")
+    endif()
+endforeach()
 
-  if(GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
-    set(GPIOD_FOUND TRUE)
-  else (GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
-    set(GPIOD_FOUND FALSE)
-  endif(GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
+# Find each component and its dependencies
+foreach(comp IN LISTS GPIOD_FIND_COMPONENTS)
+    if(NOT GPIOD_${comp}_FOUND)
+        # Check dependencies
+        if(DEFINED GPIOD_${comp}_DEPENDS)
+            foreach(dep IN LISTS GPIOD_${comp}_DEPENDS)
+                if(NOT dep IN_LIST GPIOD_FIND_COMPONENTS)
+                    list(APPEND GPIOD_FIND_COMPONENTS ${dep})
+                    _gpiod_find_component(${dep})
+                endif()
+            endforeach()
+        endif()
+        
+        _gpiod_find_component(${comp})
+    endif()
+endforeach()
 
+# Set GPIOD_LIBRARIES and GPIOD_INCLUDE_DIRS
+set(GPIOD_LIBRARIES)
+set(GPIOD_INCLUDE_DIRS)
+foreach(comp IN LISTS GPIOD_FIND_COMPONENTS)
+    if(GPIOD_${comp}_FOUND)
+        if(GPIOD_${comp}_LIBRARIES)
+            list(APPEND GPIOD_LIBRARIES ${GPIOD_${comp}_LIBRARIES})
+        endif()
+        if(GPIOD_${comp}_INCLUDE_DIRS)
+            list(APPEND GPIOD_INCLUDE_DIRS ${GPIOD_${comp}_INCLUDE_DIRS})
+        endif()
+    endif()
+endforeach()
 
-  if (GPIOD_FOUND)
-    if (NOT GPIOD_FIND_QUIETLY)
-      message(STATUS "Found GPIOD: ${GPIOD_LIBRARIES}")
-    endif (NOT GPIOD_FIND_QUIETLY)
-  else (GPIOD_FOUND)
-    if (GPIOD_FIND_REQUIRED)
-      message(FATAL_ERROR "libgpiod not found. Please install libgpiod-dev")
-    endif (GPIOD_FIND_REQUIRED)
-  endif (GPIOD_FOUND)
+# Remove duplicate include directories
+list(REMOVE_DUPLICATES GPIOD_INCLUDE_DIRS)
 
-  mark_as_advanced(GPIOD_INCLUDE_DIR GPIOD_LIBRARIES)
-  
-endif (GPIOD_INCLUDE_DIR AND GPIOD_LIBRARIES)
+# Handle REQUIRED, QUIET, etc.
+find_package_handle_standard_args(GPIOD
+    REQUIRED_VARS GPIOD_LIBRARIES GPIOD_INCLUDE_DIRS
+    HANDLE_COMPONENTS
+)
+
+mark_as_advanced(
+    GPIOD_C_INCLUDE_DIR
+    GPIOD_C_LIBRARY
+    GPIOD_CXX_INCLUDE_DIR
+    GPIOD_CXX_LIBRARY
+)
