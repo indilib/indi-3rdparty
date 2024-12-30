@@ -7,7 +7,7 @@ libsvbony (1.13.2) bionic; urgency=low
   * Fixup exposure time of SV905C2
   * Optimize gain settings of SV905C2
 
- -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 24 Jun 2024 14:00:00 +0900
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 30 Dec 2024 14:00:00 +0900
 
 libsvbony (1.12.8) bionic; urgency=low
 
