@@ -44,11 +44,11 @@ bool OasisFilterWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
 
-    // Mode
-    IUFillSwitch(&ModeS[0], "MODE_0", "Fast", ISS_OFF);
-    IUFillSwitch(&ModeS[1], "MODE_1", "Normal", ISS_OFF);
-    IUFillSwitch(&ModeS[2], "MODE_2", "Slow", ISS_OFF);
-    IUFillSwitchVector(&ModeSP, ModeS, 3, getDeviceName(), "MODE", "Mode",
+    // Speed
+    IUFillSwitch(&SpeedS[0], "SPEED_FAST", "Fast", ISS_OFF);
+    IUFillSwitch(&SpeedS[1], "SPEED_NORMAL", "Normal", ISS_OFF);
+    IUFillSwitch(&SpeedS[2], "SPEED_SLOW", "Slow", ISS_OFF);
+    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "SPEED", "Speed",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     // Auto run on power up
@@ -87,23 +87,23 @@ bool OasisFilterWheel::updateProperties()
             AutoRunS[INDI_ENABLED].s = config.autorun ? ISS_ON : ISS_OFF;
             AutoRunS[INDI_DISABLED].s = config.autorun ? ISS_OFF : ISS_ON;
 
-            ModeS[0].s = (config.mode == 0) ? ISS_ON : ISS_OFF;
-            ModeS[1].s = (config.mode == 1) ? ISS_ON : ISS_OFF;
-            ModeS[2].s = (config.mode == 2) ? ISS_ON : ISS_OFF;
+            SpeedS[0].s = (config.speed == 0) ? ISS_ON : ISS_OFF;
+            SpeedS[1].s = (config.speed == 1) ? ISS_ON : ISS_OFF;
+            SpeedS[2].s = (config.speed == 2) ? ISS_ON : ISS_OFF;
         }
         else
         {
             AutoRunSP.s = IPS_ALERT;
         }
 
-        defineProperty(&ModeSP);
+        defineProperty(&SpeedSP);
         defineProperty(&AutoRunSP);
         defineProperty(&FactoryResetSP);
         defineProperty(&CalibrateSP);
     }
     else
     {
-        deleteProperty(ModeSP.name);
+        deleteProperty(SpeedSP.name);
         deleteProperty(AutoRunSP.name);
         deleteProperty(FactoryResetSP.name);
         deleteProperty(CalibrateSP.name);
@@ -240,38 +240,38 @@ bool OasisFilterWheel::ISNewSwitch(const char *dev, const char *name, ISState *s
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, ModeSP.name))
+        if (!strcmp(name, SpeedSP.name))
         {
             OFWConfig config;
             AOReturn ret;
             int prev, target;
 
-            prev = IUFindOnSwitchIndex(&ModeSP);
-            IUUpdateSwitch(&ModeSP, states, names, n);
-            target = IUFindOnSwitchIndex(&ModeSP);
+            prev = IUFindOnSwitchIndex(&SpeedSP);
+            IUUpdateSwitch(&SpeedSP, states, names, n);
+            target = IUFindOnSwitchIndex(&SpeedSP);
 
-            config.mask = MASK_MODE;
-            config.mode = target;
+            config.mask = MASK_SPEED;
+            config.speed = target;
 
             ret = OFWSetConfig(mID, &config);
 
             if (ret == AO_SUCCESS)
             {
-                ModeSP.s = IPS_OK;
+                SpeedSP.s = IPS_OK;
             }
             else
             {
-                LOGF_ERROR("Failed to set Oasis filter wheel mode, ret = %d\n", ret);
+                LOGF_ERROR("Failed to set Oasis filter wheel speed, ret = %d\n", ret);
 
-                IUResetSwitch(&ModeSP);
+                IUResetSwitch(&SpeedSP);
 
                 if ((prev >= 0) && (prev < 3))
-                    ModeS[prev].s = ISS_ON;
+                    SpeedS[prev].s = ISS_ON;
 
-                ModeSP.s = IPS_ALERT;
+                SpeedSP.s = IPS_ALERT;
             }
 
-            IDSetSwitch(&ModeSP, nullptr);
+            IDSetSwitch(&SpeedSP, nullptr);
 
             return true;
         }

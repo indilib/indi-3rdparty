@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <deque>
 
+#define OPTION_EEPROMCFG                0x00001002      /* eeprom cfg support? */
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,13 +154,33 @@ bool ToupWheel::Connect()
         return false;
     }
 
-    auto currentSlot = SlotsSP.findOnSwitchIndex();
-    auto slot = 5;
-    if (currentSlot == SLOTS_7)
-        slot = 7;
-    else if (currentSlot == SLOTS_8)
-        slot = 8;
+    int slot = 0;
+    /* Is there builtin EEPROM to save config? */
+    if (SUCCEEDED(FP(get_Option(m_Handle, OPTION_EEPROMCFG, nullptr))))
+        FP(get_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), &slot));
+    if ((5 == slot) || (7 == slot) || (8 == slot))
+    {
+        LOGF_INFO("%s: get slot number from builtin EEPROM, %d", getDeviceName(), slot);
+        const char* names[] = { "SLOTS_5", "SLOTS_7", "SLOTS_8" };
+        ISState states[3];
+        states[0] = (5 == slot) ? ISS_ON : ISS_OFF;
+        states[1] = (7 == slot) ? ISS_ON : ISS_OFF;
+        states[2] = (8 == slot) ? ISS_ON : ISS_OFF;
+        SlotsSP.update(states, names, 3);
+    }
+    else
+    {
+        auto currentSlot = SlotsSP.findOnSwitchIndex();
+        if (currentSlot == SLOTS_7)
+            slot = 7;
+        else if (currentSlot == SLOTS_8)
+            slot = 8;
+        else
+            slot = 5;
+        LOGF_INFO("%s: get slot number from config file, %d", getDeviceName(), slot);
+    }
     FilterSlotN[0].max = slot;
+    IUUpdateMinMax(&FilterSlotNP);
 
     FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
     TargetFilter = 1; // if desconnected during spinning, TargetFilter must be initialize when reconnect.
@@ -214,7 +236,11 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             SlotsSP.apply();
             auto currentSlot = SlotsSP.findOnSwitchIndex();
             if (previousSlot != currentSlot && isConnected())
-                LOG_INFO("Please disconnect and reconnect to apply settings.");
+            {
+                FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), currentSlot));
+                FilterSlotN[0].max = currentSlot;
+                IUUpdateMinMax(&FilterSlotNP);
+            }
             saveConfig(SlotsSP);
             return true;
         }

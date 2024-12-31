@@ -1346,8 +1346,8 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
 
 int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 {
-    CameraFilePath *fn;
-    CameraEventType event;
+    CameraFilePath *fn = nullptr;
+    CameraEventType event = GP_EVENT_UNKNOWN;
     void *data = nullptr;
     int result;
 
@@ -1370,10 +1370,11 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         {
             gphoto->command = 0;
             pthread_mutex_unlock(&gphoto->mutex);
+            DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Image is ignored per settings.");
             return GP_OK;
         }
 
-        result          = download_image(gphoto, &gphoto->camerapath, fd);
+        result = download_image(gphoto, &gphoto->camerapath, fd);
         gphoto->command = 0;
         //Set exposure back to original value
         // JM 2018-08-06: Why do we really need to reset values here?
@@ -1383,9 +1384,13 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
     }
 
     //Bulb mode
-    gphoto->command    = 0;
+    gphoto->command = 0;
     uint32_t waitMS = gphoto->download_timeout * 1000;
     bool downloadComplete = false;
+    struct timeval start_time;
+    gettimeofday(&start_time, nullptr);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "BULB Mode: Waiting for event for %d seconds (waitMS: %d).", gphoto->download_timeout, waitMS);
+    int no_event_retries = 3;
 
     while (1)
     {
@@ -1395,6 +1400,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         if (result != GP_OK)
         {
             DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Could not wait for event.");
+            // Try up to 3 times before giving up
+            if (no_event_retries-- > 0)
+            {
+                usleep(250000);
+                continue;
+            }
             pthread_mutex_unlock(&gphoto->mutex);
             return -1;
         }
@@ -1408,28 +1419,50 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
             case GP_EVENT_FILE_ADDED:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
-                fn     = static_cast<CameraFilePath *>(data);
+                fn = static_cast<CameraFilePath *>(data);
                 if (gphoto->handle_sdcard_image != IGNORE_IMAGE)
                     download_image(gphoto, fn, fd);
-                waitMS = 100;
                 downloadComplete = true;
+                // Wait 1 second for GP_EVENT_CAPTURE_COMPLETE
+                // If that times out, we already marked downloadComplete as true so we will exist gracefully.
+                waitMS = 1000;
                 break;
             case GP_EVENT_UNKNOWN:
                 //DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Unknown event.");
                 break;
             case GP_EVENT_TIMEOUT:
+            {
+                // If already downloaded, then return immediately.
                 if (downloadComplete)
                 {
                     pthread_mutex_unlock(&gphoto->mutex);
                     return GP_OK;
                 }
-                DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out.");
+
+                // Check how much time actually elapsed.
+                struct timeval current_time;
+                gettimeofday(&current_time, nullptr);
+                uint32_t elapsed = ((current_time.tv_sec - start_time.tv_sec) * 1000 +
+                                    (current_time.tv_usec - start_time.tv_usec) / 1000);
+
+                // If we haven't waited the full timeout period yet, continue waiting
+                if (elapsed < waitMS)
+                {
+                    DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Timeout was premature, continuing to wait...");
+                    usleep(100000);
+                    break;
+                }
+
+                // Give up as we timed out.
+                DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out after %d ms (elapsed: %d ms).", waitMS, elapsed);
                 pthread_mutex_unlock(&gphoto->mutex);
                 return -1;
-                break;
+            }
+            break;
 
             default:
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Got unexpected message: %d", event);
+                break;
         }
     }
     return GP_OK;

@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 Suzhou Astroasis Vision Technology, Inc. All Rights Reserved.
+ * Copyright 2024 Suzhou Astroasis Vision Technology, Inc. All Rights Reserved.
  *
- * This is header file for Astroasis Oasis Filter Wheel .
+ * This is header file for Astroasis Oasis Filter Wheel.
  *
  * Note:
  * 1. OFWScan() should be called before any other APIs (except for
@@ -40,6 +40,7 @@
  *        OFWGetCalibrateData(int id, AOCalibrateData* calibrate);
  *        OFWFirmwareUpgrade(int id, unsigned char *data, int len);
  *        OFWGetSDKVersion(char *version);
+ *        OFWSetLogLevel(int level);
  *
  * Refer to SDK demo application for the details of the API usage.
  */
@@ -57,10 +58,20 @@ extern "C" {
 #define AOAPI
 #endif
 
+#define VERSION_INVALID				0
+
+#define PROTOCAL_VERSION_1_1_0		0x01010000
+#define PROTOCAL_VERSION_1_2_0		0x01020000
+
 #define OFW_MAX_NUM					32		/* Maximum filter wheel numbers supported by this SDK */
 #define OFW_VERSION_LEN				32		/* Buffer length for version strings */
 #define OFW_NAME_LEN				32		/* Buffer length for name strings */
 #define OFW_SLOT_NAME_LEN			16		/* Buffer length for slot name strings */
+
+#define AO_LOG_LEVEL_QUIET			0
+#define AO_LOG_LEVEL_ERROR			1
+#define AO_LOG_LEVEL_INFO			2
+#define AO_LOG_LEVEL_DEBUG			3
 
 typedef enum _AOReturn {
 	AO_SUCCESS = 0,					/* Success */
@@ -83,9 +94,10 @@ typedef enum _AOReturn {
 /*
  * Used by OFWSetConfig() to indicate which field wants to be set
  */
-#define MASK_MODE					0x00000001
+#define MASK_SPEED					0x00000001
 #define MASK_AUTORUN				0x00000002
 #define MASK_BLUETOOTH				0x00000004
+#define MASK_TURBO					0x00000008
 #define MASK_ALL					0xFFFFFFFF
 
 /*
@@ -104,20 +116,36 @@ typedef struct _OFWVersion
 	char built[24];					/* Null-terminated string which indicates firmware building time */
 } OFWVersion;
 
+/*
+ * Since protocal version 1.1.0:
+ * 1. Changed field "mode" to "speed"
+ * 2. Added field "turbo"
+ */
 typedef struct _OFWConfig {
-	unsigned int mask;				/* Used by OFWSetConfig() to indicates which field wants to be set */
-	int mode;						/* Mode of the filter wheel operation */
-	int autorun;					/* Automatic switch to the target slot when power on */
+	unsigned int mask;				/* Used by OFWSetConfig() to indicate which field wants to be set */
+	int speed;						/* Motor speed. 0 - Fast, 1 - Normal, 2 - Slow */
+	int autorun;					/* Automatic switch to the target slot when power on. 0 - Do not switch, 1 - Auto switch  */
 	int bluetoothOn;				/* 0 - Turn off Bluetooth, others - Turn on Bluetooth */
+	int turbo;						/* 0 - Turn off turbo mode, others - Turn on turbo mode */
 } OFWConfig;
 
 typedef struct _OFWStatus {
 	int temperature;				/* Internal (on board) temperature in 0.01 degree unit */
 	int filterStatus;				/* Current motor position */
 	int filterPosition;				/* Current motor position, zero - unknown position */
+	int seq;						/* Sequence number for debug purpose */
 } OFWStatus;
 
+/*
+ * Since protocal version 1.1.0
+ * 1. Added field "index"
+ * 2. Added field "active"
+ * 3. Added field "temperature"
+ */
 typedef struct _OFWCalibrateData {
+	int index;						/* Index of the calibration data */
+	int active;						/* 0 - Non-active calibration data, 1 - Active calibration data */
+	int temperature;				/* Calibration temperature */
 	int low[4];						/* Calibration low value */
 	int high[4];					/* Calibration high value */
 } OFWCalibrateData;
@@ -182,6 +210,7 @@ AOAPI AOReturn OFWGetCalibrateData(int id, OFWCalibrateData *calibrate);
 AOAPI AOReturn OFWUpgrade(int id);
 AOAPI AOReturn OFWFirmwareUpgrade(int id, unsigned char *data, int len);
 AOAPI AOReturn OFWGetSDKVersion(char *version);
+AOAPI AOReturn OFWSetLogLevel(int level);
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,9 @@
+libomegonprocam (57.27348.20241224) jammy; urgency=medium
+
+  * Upstream release
+
+ -- nimax <nimax@nimax.com>  Wed, 25 Dec 2024 15:45:43 +0800
+
 libomegonprocam (57.26598.20240928) jammy; urgency=medium
 
   * Upstream release
