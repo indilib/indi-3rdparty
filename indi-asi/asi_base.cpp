@@ -93,8 +93,6 @@ void ASIBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
         Streamer->newFrame(targetFrame, totalBytes);
     }
-
-    ASIStopVideoCapture(mCameraInfo.CameraID);
 }
 
 void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration)
@@ -1073,6 +1071,15 @@ bool ASIBase::StartStreaming()
 
 bool ASIBase::StopStreaming()
 {
+    // First stop video capture
+    ASI_ERROR_CODE ret = ASIStopVideoCapture(mCameraInfo.CameraID);
+    if (ret != ASI_SUCCESS)
+    {
+        LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    // Then stop the worker thread
     mWorker.quit();
     return true;
 }
