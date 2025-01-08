@@ -91,7 +91,7 @@ IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 target_link_libraries(asi_camera_test ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(asi_camera_test ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(asi_camera_test ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} usb-1.0)
 ENDIF()
 
 #####################################

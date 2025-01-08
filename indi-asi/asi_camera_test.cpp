@@ -29,131 +29,236 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <errno.h>
+#include <libgen.h>
+#include <libusb-1.0/libusb.h>
+
+void reset_usb_device(uint16_t vendor_id, uint16_t product_id)
+{
+    char cmd[512];
+    char path[256] = {0};
+    printf("Finding USB port for device %04x:%04x...\n", vendor_id, product_id);
+
+    // Find the device's USB port path
+    snprintf(cmd, sizeof(cmd),
+             "for dev in /sys/bus/usb/devices/*; do "
+             "  if [ -f \"$dev/idVendor\" ] && [ -f \"$dev/idProduct\" ]; then "
+             "    if [ \"$(cat $dev/idVendor)\" = \"%04x\" ] && [ \"$(cat $dev/idProduct)\" = \"%04x\" ]; then "
+             "      echo \"$dev\"; "
+             "      exit 0; "
+             "    fi; "
+             "  fi; "
+             "done",
+             vendor_id, product_id);
+
+    FILE *fp = popen(cmd, "r");
+    if (!fp)
+    {
+        fprintf(stderr, "Failed to execute device search\n");
+        return;
+    }
+
+    if (fgets(path, sizeof(path), fp) == NULL)
+    {
+        fprintf(stderr, "Failed to find device path\n");
+        pclose(fp);
+        return;
+    }
+    pclose(fp);
+
+    // Remove newline if present
+    char *newline = strchr(path, '\n');
+    if (newline)
+        *newline = '\0';
+
+    printf("Found device at: %s\n", path);
+
+    // First try to unbind the device
+    printf("Unbinding USB device...\n");
+    char unbind_path[512];
+    snprintf(unbind_path, sizeof(unbind_path), "%s/driver/unbind", path);
+
+    // Get the device name (last part of path)
+    char *device_name = strrchr(path, '/');
+    if (device_name)
+        device_name++; // Skip the '/'
+    else
+        device_name = path;
+
+    FILE *unbind_fp = fopen(unbind_path, "w");
+    if (!unbind_fp)
+    {
+        fprintf(stderr, "Failed to open unbind path: %s\n", strerror(errno));
+        return;
+    }
+    fprintf(unbind_fp, "%s\n", device_name);
+    fclose(unbind_fp);
+    printf("Device unbound\n");
+    usleep(1000000); // 1 second
+
+    // Try to reset the parent hub port
+    char parent_path[512];
+    snprintf(parent_path, sizeof(parent_path), "%s/..", path);
+    char real_parent[512];
+    if (realpath(parent_path, real_parent))
+    {
+        printf("Found parent hub: %s\n", real_parent);
+
+        // Try port power control
+        char port_power[512];
+        snprintf(port_power, sizeof(port_power), "%s/power/level", real_parent);
+        if (access(port_power, W_OK) == 0)
+        {
+            printf("Cycling parent hub port power...\n");
+            FILE *power_fp = fopen(port_power, "w");
+            if (!power_fp)
+            {
+                fprintf(stderr, "Failed to open power control: %s\n", strerror(errno));
+            }
+            else
+            {
+                fprintf(power_fp, "suspend\n");
+                fclose(power_fp);
+                usleep(2000000); // 2 seconds
+
+                power_fp = fopen(port_power, "w");
+                if (!power_fp)
+                {
+                    fprintf(stderr, "Failed to reopen power control: %s\n", strerror(errno));
+                }
+                else
+                {
+                    fprintf(power_fp, "on\n");
+                    fclose(power_fp);
+                }
+            }
+        }
+        else
+        {
+            fprintf(stderr, "No write access to power control\n");
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Failed to resolve parent hub path: %s\n", strerror(errno));
+    }
+
+    // Now rebind the device
+    printf("Rebinding USB device...\n");
+    char bind_path[512];
+    snprintf(bind_path, sizeof(bind_path), "%s/../bind", unbind_path);
+    FILE *bind_fp = fopen(bind_path, "w");
+    if (!bind_fp)
+    {
+        // If direct bind fails, try the generic USB driver path
+        snprintf(bind_path, sizeof(bind_path), "/sys/bus/usb/drivers/usb/bind");
+        bind_fp = fopen(bind_path, "w");
+        if (!bind_fp)
+        {
+            fprintf(stderr, "Failed to open bind path: %s\n", strerror(errno));
+            // Continue anyway as the device might rebind automatically
+        }
+    }
+
+    if (bind_fp)
+    {
+        fprintf(bind_fp, "%s\n", device_name);
+        fclose(bind_fp);
+        printf("Device rebound\n");
+    }
+
+    // Wait for device to be rediscovered
+    printf("Waiting for device to be rediscovered...\n");
+    usleep(5000000); // 5 seconds
+
+    printf("USB port power cycle complete\n");
+}
 
 void probe_usb_system()
 {
     printf("\n=== USB Subsystem Diagnostics ===\n");
-
-    // Run dmesg to check for recent USB errors
-    printf("\nChecking recent USB messages from dmesg:\n");
-    FILE *fp = popen("dmesg | grep -i usb | tail -n 10", "r");
-    if (fp)
+    libusb_context *ctx = NULL;
+    libusb_device **list = NULL;
+    ssize_t count;
+    int ret = libusb_init(&ctx);
+    if (ret < 0)
     {
-        char buffer[256];
-        while (fgets(buffer, sizeof(buffer), fp))
-            printf("%s", buffer);
-        pclose(fp);
+        fprintf(stderr, "Failed to initialize libusb: %s\n", libusb_error_name(ret));
+        return;
     }
-    else
-        fprintf(stderr, "Failed to run dmesg command\n");
 
-    // Get USB device information
-    printf("\nUSB device information:\n");
-    fp = popen("lsusb -v 2>/dev/null | grep -A 2 -B 2 \"ZWO\"", "r");
-    if (fp)
+    count = libusb_get_device_list(ctx, &list);
+    if (count < 0)
     {
-        char buffer[256];
-        while (fgets(buffer, sizeof(buffer), fp))
-            printf("%s", buffer);
-        pclose(fp);
+        fprintf(stderr, "Failed to get device list: %s\n", libusb_error_name(count));
+        libusb_exit(ctx);
+        return;
     }
-    else
-        fprintf(stderr, "Failed to run lsusb command\n");
 
-    // Check USB controller status
-    printf("\nUSB Controller Status:\n");
-    fp = popen("lspci -v | grep -A 4 USB", "r");
-    if (fp)
+    printf("\nScanning USB devices:\n");
+    for (ssize_t i = 0; i < count; i++)
     {
-        char buffer[256];
-        while (fgets(buffer, sizeof(buffer), fp))
-            printf("%s", buffer);
-        pclose(fp);
-    }
-    else
-        fprintf(stderr, "Failed to get USB controller status\n");
-
-    // Check USB device kernel driver
-    printf("\nUSB Device Kernel Driver:\n");
-    DIR *dir;
-    struct dirent *ent;
-    dir = opendir("/sys/bus/usb/devices");
-    if (dir)
-    {
-        while ((ent = readdir(dir)))
+        libusb_device *device = list[i];
+        struct libusb_device_descriptor desc;
+        ret = libusb_get_device_descriptor(device, &desc);
+        if (ret < 0)
         {
-            if (ent->d_name[0] != '.')
-            {
-                char path[256];
-                char buffer[256];
-
-                // Check manufacturer
-                snprintf(path, sizeof(path), "/sys/bus/usb/devices/%s/manufacturer", ent->d_name);
-                FILE *f = fopen(path, "r");
-                if (f)
-                {
-                    if (fgets(buffer, sizeof(buffer), f))
-                    {
-                        if (strstr(buffer, "ZWO"))
-                        {
-                            printf("Found ZWO device at: %s\n", ent->d_name);
-
-                            // Check driver
-                            snprintf(path, sizeof(path), "/sys/bus/usb/devices/%s/driver", ent->d_name);
-                            char driver_path[256];
-                            ssize_t len = readlink(path, driver_path, sizeof(driver_path) - 1);
-                            if (len != -1)
-                            {
-                                driver_path[len] = '\0';
-                                printf("Driver: %s\n", basename(driver_path));
-                            }
-
-                            // Check speed
-                            snprintf(path, sizeof(path), "/sys/bus/usb/devices/%s/speed", ent->d_name);
-                            f = fopen(path, "r");
-                            if (f)
-                            {
-                                if (fgets(buffer, sizeof(buffer), f))
-                                    printf("Speed: %s", buffer);
-                                fclose(f);
-                            }
-
-                            // Check power
-                            snprintf(path, sizeof(path), "/sys/bus/usb/devices/%s/power/", ent->d_name);
-                            DIR *power_dir = opendir(path);
-                            if (power_dir)
-                            {
-                                struct dirent *power_ent;
-                                while ((power_ent = readdir(power_dir)))
-                                {
-                                    if (strcmp(power_ent->d_name, "control") == 0 ||
-                                            strcmp(power_ent->d_name, "autosuspend") == 0)
-                                    {
-                                        char power_path[512];
-                                        snprintf(power_path, sizeof(power_path), "%s%s", path, power_ent->d_name);
-                                        f = fopen(power_path, "r");
-                                        if (f)
-                                        {
-                                            if (fgets(buffer, sizeof(buffer), f))
-                                                printf("Power %s: %s", power_ent->d_name, buffer);
-                                            fclose(f);
-                                        }
-                                    }
-                                }
-                                closedir(power_dir);
-                            }
-                        }
-                    }
-                    fclose(f);
-                }
-            }
+            fprintf(stderr, "Failed to get device descriptor: %s\n", libusb_error_name(ret));
+            continue;
         }
-        closedir(dir);
+
+        // Check if this is a ZWO device
+        if (desc.idVendor == 0x03c3)
+        {
+            libusb_device_handle *handle;
+            ret = libusb_open(device, &handle);
+            if (ret < 0)
+            {
+                fprintf(stderr, "Failed to open device: %s\n", libusb_error_name(ret));
+                continue;
+            }
+
+            unsigned char string[256];
+            if (desc.iManufacturer > 0)
+            {
+                ret = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, string, sizeof(string));
+                if (ret > 0)
+                    printf("Manufacturer: %s\n", string);
+            }
+
+            if (desc.iProduct > 0)
+            {
+                ret = libusb_get_string_descriptor_ascii(handle, desc.iProduct, string, sizeof(string));
+                if (ret > 0)
+                    printf("Product: %s\n", string);
+            }
+
+            if (desc.iSerialNumber > 0)
+            {
+                ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, string, sizeof(string));
+                if (ret > 0)
+                    printf("Serial Number: %s\n", string);
+            }
+
+            printf("Bus: %d, Port: %d\n", libusb_get_bus_number(device), libusb_get_port_number(device));
+            printf("VID:PID: %04x:%04x\n", desc.idVendor, desc.idProduct);
+            printf("USB Version: %04x\n", desc.bcdUSB);
+            printf("Device Class: %d\n", desc.bDeviceClass);
+
+            struct libusb_config_descriptor *config;
+            ret = libusb_get_active_config_descriptor(device, &config);
+            if (ret == 0)
+            {
+                printf("Number of interfaces: %d\n", config->bNumInterfaces);
+                libusb_free_config_descriptor(config);
+            }
+
+            libusb_close(handle);
+        }
     }
-    else
-        fprintf(stderr, "Failed to access USB device information in sysfs\n");
 
     printf("\n================================\n");
+    libusb_free_device_list(list, 1);
+    libusb_exit(ctx);
 }
 
 void print_usage()
@@ -367,7 +472,14 @@ int main(int argc, char *argv[])
 
             // Start exposure
             ASI_ERROR_CODE exp_result = ASIStartExposure(CamNum, ASI_FALSE);
-            if (exp_result != ASI_SUCCESS)
+            if (exp_result == ASI_ERROR_EXPOSURE_IN_PROGRESS)
+            {
+                fprintf(stderr, "Exposure already in progress, stopping it first\n");
+                ASIStopExposure(CamNum);
+                retry_count++;
+                continue;
+            }
+            else if (exp_result != ASI_SUCCESS)
             {
                 fprintf(stderr, "Failed to start exposure (error code: %d). ", exp_result);
                 switch(exp_result)
@@ -384,16 +496,9 @@ int main(int argc, char *argv[])
                     case ASI_ERROR_INVALID_MODE:
                         fprintf(stderr, "Invalid mode\n");
                         break;
-                    case ASI_ERROR_EXPOSURE_IN_PROGRESS:
-                        fprintf(stderr, "Exposure already in progress\n");
-                        break;
                     default:
                         fprintf(stderr, "Unknown error\n");
                 }
-
-                // Probe USB system for diagnostic information
-                probe_usb_system();
-
                 retry_count++;
                 continue;
             }
@@ -419,7 +524,7 @@ int main(int argc, char *argv[])
                 usleep(100000);  // 100ms delay between checks
             }
 
-            if(status == ASI_EXP_SUCCESS)
+            if (status == ASI_EXP_SUCCESS)
             {
                 ASI_ERROR_CODE data_result = ASIGetDataAfterExp(CamNum, imgBuf, imgSize);
                 if (data_result != ASI_SUCCESS)
@@ -468,13 +573,39 @@ int main(int argc, char *argv[])
                         fprintf(stderr, "Unknown status\n");
                 }
 
-                // Probe USB system for diagnostic information
+                // Stop exposure and try USB reset
+                ASIStopExposure(CamNum);
+                ASICloseCamera(CamNum);
+
+                // Get USB device info
                 probe_usb_system();
 
-                retry_count++;
-            }
+                printf("\nAttempting recovery sequence...\n");
+                reset_usb_device(0x03c3, 0x120e);  // Reset ASI120MC-S
 
-            ASIStopExposure(CamNum);
+                printf("Waiting for device to settle...\n");
+                usleep(3000000);  // Wait 3 seconds
+
+                // Reopen camera after reset
+                printf("Reopening camera...\n");
+                if(ASIOpenCamera(CamNum) != ASI_SUCCESS)
+                {
+                    fprintf(stderr, "Failed to reopen camera after USB reset\n");
+                    return -1;
+                }
+
+                printf("Reinitializing camera...\n");
+                ASIInitCamera(CamNum);
+
+                // Restore previous settings
+                ASISetROIFormat(CamNum, width, height, bin, static_cast<ASI_IMG_TYPE>(imageFormat));
+                ASISetControlValue(CamNum, ASI_GAIN, 0, ASI_FALSE);
+                ASISetControlValue(CamNum, ASI_EXPOSURE, exp_ms * 1000, ASI_FALSE);
+                ASISetControlValue(CamNum, ASI_BANDWIDTHOVERLOAD, usb_traffic, ASI_FALSE);
+
+                retry_count++;
+                continue;
+            }
         }
 
         if (!capture_success)
