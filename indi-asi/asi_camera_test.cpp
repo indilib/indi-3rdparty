@@ -365,12 +365,6 @@ int main(int argc, char *argv[])
                 usleep(500000);  // 500ms delay
             }
 
-            // Get USB traffic before starting exposure
-            long usb_traffic = 0;
-            ASI_BOOL is_auto = ASI_FALSE;
-            ASIGetControlValue(CamNum, ASI_BANDWIDTHOVERLOAD, &usb_traffic, &is_auto);
-            printf("Current USB traffic: %ld\n", usb_traffic);
-
             // Start exposure
             ASI_ERROR_CODE exp_result = ASIStartExposure(CamNum, ASI_FALSE);
             if (exp_result != ASI_SUCCESS)
@@ -420,10 +414,6 @@ int main(int argc, char *argv[])
                 {
                     progress_counter++;
                     printf("Exposure in progress... %d seconds elapsed\n", progress_counter);
-
-                    // Check USB traffic during exposure
-                    ASIGetControlValue(CamNum, ASI_BANDWIDTHOVERLOAD, &usb_traffic, &is_auto);
-                    printf("USB traffic during exposure: %ld\n", usb_traffic);
                 }
 
                 usleep(100000);  // 100ms delay between checks
