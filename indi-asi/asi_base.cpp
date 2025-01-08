@@ -33,8 +33,10 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
+#include <cstring>
+#include <errno.h>
 
-#define MAX_EXP_RETRIES         3
+#define MAX_EXP_RETRIES         2
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
 #define TEMP_THRESHOLD          .25  /* Differential temperature threshold (C)*/
@@ -93,6 +95,8 @@ void ASIBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
 
         Streamer->newFrame(targetFrame, totalBytes);
     }
+
+    ASIStopVideoCapture(mCameraInfo.CameraID);
 }
 
 void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int blinks, float duration)
@@ -269,9 +273,57 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
                 return;
             }
 
-            LOGF_ERROR("Exposure failed after %d attempts.", mExposureRetry);
+            LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
             ASIStopExposure(mCameraInfo.CameraID);
-            PrimaryCCD.setExposureFailed();
+            ASICloseCamera(mCameraInfo.CameraID);
+
+            resetUSBDevice();
+
+            LOG_INFO("Reopening camera after reset...");
+            ASI_ERROR_CODE ret = ASIOpenCamera(mCameraInfo.CameraID);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to reopen camera after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            LOG_INFO("Reinitializing camera...");
+            ret = ASIInitCamera(mCameraInfo.CameraID);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to reinitialize camera after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            // Restore previous settings
+            ASI_IMG_TYPE currentType = getImageType();
+            ret = ASISetROIFormat(mCameraInfo.CameraID,
+                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
+                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
+                                  PrimaryCCD.getBinX(), currentType);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to restore ROI format after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            ret = ASISetStartPos(mCameraInfo.CameraID,
+                                 PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
+                                 PrimaryCCD.getSubY() / PrimaryCCD.getBinY());
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to restore start position after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            // Try one more time after reset
+            LOG_INFO("Attempting exposure again after USB reset...");
+            ASIStopExposure(mCameraInfo.CameraID);
+            workerExposure(isAboutToQuit, duration);
             return;
         }
     }
@@ -1577,6 +1629,147 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
             fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
         }
     }
+}
+
+void ASIBase::resetUSBDevice()
+{
+    char cmd[512];
+    char path[256] = {0};
+    LOGF_INFO("Finding USB port for device %04x:%04x...", 0x03c3, mCameraInfo.CameraID);
+
+    // Find the device's USB port path
+    snprintf(cmd, sizeof(cmd),
+             "for dev in /sys/bus/usb/devices/*; do "
+             "  if [ -f \"$dev/idVendor\" ] && [ -f \"$dev/idProduct\" ]; then "
+             "    if [ \"$(cat $dev/idVendor)\" = \"%04x\" ] && [ \"$(cat $dev/idProduct)\" = \"%04x\" ]; then "
+             "      echo \"$dev\"; "
+             "      exit 0; "
+             "    fi; "
+             "  fi; "
+             "done",
+             0x03c3, mCameraInfo.CameraID);
+
+    FILE *fp = popen(cmd, "r");
+    if (!fp)
+    {
+        LOGF_ERROR("Failed to execute device search: %s", strerror(errno));
+        return;
+    }
+
+    if (fgets(path, sizeof(path), fp) == NULL)
+    {
+        LOG_ERROR("Failed to find device path");
+        pclose(fp);
+        return;
+    }
+    pclose(fp);
+
+    // Remove newline if present
+    char *newline = strchr(path, '\n');
+    if (newline)
+        *newline = '\0';
+
+    LOGF_DEBUG("Found device at: %s", path);
+
+    // First try to unbind the device
+    LOG_INFO("Unbinding USB device...");
+    char unbind_path[512];
+    snprintf(unbind_path, sizeof(unbind_path), "%s/driver/unbind", path);
+
+    // Get the device name (last part of path)
+    char *device_name = strrchr(path, '/');
+    if (device_name)
+        device_name++; // Skip the '/'
+    else
+        device_name = path;
+
+    FILE *unbind_fp = fopen(unbind_path, "w");
+    if (!unbind_fp)
+    {
+        LOGF_ERROR("Failed to open unbind path: %s", strerror(errno));
+        return;
+    }
+    fprintf(unbind_fp, "%s\n", device_name);
+    fclose(unbind_fp);
+    LOG_INFO("Device unbound");
+    usleep(1000000); // 1 second
+
+    // Try to reset the parent hub port
+    char parent_path[512];
+    snprintf(parent_path, sizeof(parent_path), "%s/..", path);
+    char real_parent[512];
+    if (realpath(parent_path, real_parent))
+    {
+        LOGF_DEBUG("Found parent hub: %s", real_parent);
+
+        // Try port power control
+        char port_power[512];
+        snprintf(port_power, sizeof(port_power), "%s/power/level", real_parent);
+        if (access(port_power, W_OK) == 0)
+        {
+            LOG_INFO("Cycling parent hub port power...");
+            FILE *power_fp = fopen(port_power, "w");
+            if (!power_fp)
+            {
+                LOGF_ERROR("Failed to open power control: %s", strerror(errno));
+            }
+            else
+            {
+                fprintf(power_fp, "suspend\n");
+                fclose(power_fp);
+                usleep(2000000); // 2 seconds
+
+                power_fp = fopen(port_power, "w");
+                if (!power_fp)
+                {
+                    LOGF_ERROR("Failed to reopen power control: %s", strerror(errno));
+                }
+                else
+                {
+                    fprintf(power_fp, "on\n");
+                    fclose(power_fp);
+                }
+            }
+        }
+        else
+        {
+            LOG_ERROR("No write access to power control");
+        }
+    }
+    else
+    {
+        LOGF_ERROR("Failed to resolve parent hub path: %s", strerror(errno));
+    }
+
+    // Now rebind the device
+    LOG_INFO("Rebinding USB device...");
+    char bind_path[512];
+    snprintf(bind_path, sizeof(bind_path), "%s/../bind", unbind_path);
+    FILE *bind_fp = fopen(bind_path, "w");
+    if (!bind_fp)
+    {
+        // If direct bind fails, try the generic USB driver path
+        snprintf(bind_path, sizeof(bind_path), "/sys/bus/usb/drivers/usb/bind");
+        bind_fp = fopen(bind_path, "w");
+        if (!bind_fp)
+        {
+            LOGF_ERROR("Failed to open bind path: %s", strerror(errno));
+            // Continue anyway as the device might rebind automatically
+        }
+    }
+
+    if (bind_fp)
+    {
+        fprintf(bind_fp, "%s\n", device_name);
+        fclose(bind_fp);
+        LOG_INFO("Device rebound");
+    }
+
+    // Wait for device to be rediscovered
+    LOG_INFO("Waiting for device to be rediscovered...");
+    usleep(5000000); // 5 seconds
+
+    LOG_INFO("USB port power cycle complete");
 }
 
 bool ASIBase::saveConfigItems(FILE *fp)
