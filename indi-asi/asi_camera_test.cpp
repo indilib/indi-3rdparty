@@ -26,12 +26,84 @@
 #include <time.h>
 #include <unistd.h>
 #include "pthread.h"
+#include <stdlib.h>
 
-int  main()
+void print_usage()
 {
-    int width, height;
-    const char *formats[] = {"RAW 8-bit", "RGB 24-bit", "RAW 16-bit", "Luma 8-bit" };
-    int CamNum = 0;
+    printf("Usage: asi_camera_test [options]\n");
+    printf("Options:\n");
+    printf("  -c <camera_id>     Camera ID to use (default: 0)\n");
+    printf("  -w <width>         Image width (0 for max)\n");
+    printf("  -h <height>        Image height (0 for max)\n");
+    printf("  -b <bin>           Binning value (default: 1)\n");
+    printf("  -f <format>        Image format (default: 0)\n");
+    printf("                     0: RAW 8-bit\n");
+    printf("                     1: RGB 24-bit\n");
+    printf("                     2: RAW 16-bit\n");
+    printf("                     3: Luma 8-bit\n");
+    printf("  -e <exposure>      Exposure time in milliseconds (default: 100)\n");
+    printf("  -n <count>         Number of images to capture (minimum: 1, default: 1)\n");
+    printf("  -?                 Show this help message\n");
+}
+
+int main(int argc, char *argv[])
+{
+    int width = 0, height = 0;
+    int CamNum = 0, bin = 1, imageFormat = 0;
+    int exp_ms = 100;
+    int capture_count = 1;
+
+    // Parse command line arguments
+    int opt;
+    while ((opt = getopt(argc, argv, "c:w:h:b:f:e:n:?")) != -1)
+    {
+        switch (opt)
+        {
+            case 'c':
+                CamNum = atoi(optarg);
+                break;
+            case 'w':
+                width = atoi(optarg);
+                break;
+            case 'h':
+                height = atoi(optarg);
+                break;
+            case 'b':
+                bin = atoi(optarg);
+                break;
+            case 'f':
+                imageFormat = atoi(optarg);
+                if (imageFormat < 0 || imageFormat > 3)
+                {
+                    fprintf(stderr, "Invalid format. Must be between 0 and 3.\n");
+                    return -1;
+                }
+                break;
+            case 'e':
+                exp_ms = atoi(optarg);
+                if (exp_ms <= 0)
+                {
+                    fprintf(stderr, "Exposure time must be positive.\n");
+                    return -1;
+                }
+                break;
+            case 'n':
+                capture_count = atoi(optarg);
+                if (capture_count < 1)
+                {
+                    fprintf(stderr, "Capture count must be at least 1.\n");
+                    return -1;
+                }
+                break;
+            case '?':
+                print_usage();
+                return 0;
+            default:
+                fprintf(stderr, "Unknown option: %c\n", opt);
+                print_usage();
+                return -1;
+        }
+    }
 
     int numDevices = ASIGetNumOfConnectedCameras();
     if(numDevices <= 0)
@@ -75,13 +147,6 @@ int  main()
 
     }
 
-    printf("\nselect one to preview\n");
-    if (scanf("%d", &CamNum) != 1)
-    {
-        fprintf(stderr, "Error no input. Assuming camera 0");
-        CamNum = 0;
-    }
-
     if(ASIOpenCamera(CamNum) != ASI_SUCCESS)
     {
         printf("OpenCamera error,are you root?\n");
@@ -119,33 +184,20 @@ int  main()
     ASIGetControlValue(CamNum, ASI_TEMPERATURE, &ltemp, &bAuto);
     printf("sensor temperature:%02f\n", (float)ltemp / 10.0);
 
-    printf("\nImage Formats:\n\n");
-    for (int i = 0; i < 8; i++)
+    // If width or height is 0, use maximum values
+    if(width == 0 || height == 0)
     {
-        if (ASICameraInfo.SupportedVideoFormat[i] == ASI_IMG_END)
-            break;
-
-        printf("Format #%d : %s\n", i, formats[i]);
+        width = iMaxWidth;
+        height = iMaxHeight;
     }
 
-    int bin = 1, imageFormat = 0;
-
-    do
+    if(ASI_SUCCESS != ASISetROIFormat(CamNum, width, height, bin, static_cast<ASI_IMG_TYPE>(imageFormat)))
     {
-        printf("\nPlease input the <width height bin format> with one space, ie. 640 480 2 0. Leave w/h to zero to use maximum.\n");
-
-        if (scanf("%d %d %d %d", &width, &height, &bin, &imageFormat) == 4)
-        {
-            if(width == 0 || height == 0)
-            {
-                width = iMaxWidth;
-                height = iMaxHeight;
-            }
-        }
+        fprintf(stderr, "Failed to set ROI format\n");
+        return -1;
     }
-    while(ASI_SUCCESS != ASISetROIFormat(CamNum, width, height, bin, static_cast<ASI_IMG_TYPE>(imageFormat)));
 
-    printf("\nset image format %d %d %d %d success, Will capture now a 100ms image.\n", width, height, bin, imageFormat);
+    printf("Set image format %d %d %d %d success\n", width, height, bin, imageFormat);
 
     ASIGetROIFormat(CamNum, &width, &height, &bin, (ASI_IMG_TYPE*)&imageFormat);
     long imgSize = width * height * (1 + (imageFormat == ASI_IMG_RAW16));
@@ -153,46 +205,65 @@ int  main()
 
     ASISetControlValue(CamNum, ASI_GAIN, 0, ASI_FALSE);
 
-    int exp_ms = 100;
     ASISetControlValue(CamNum, ASI_EXPOSURE, exp_ms * 1000, ASI_FALSE);
     ASISetControlValue(CamNum, ASI_BANDWIDTHOVERLOAD, 40, ASI_FALSE);
 
-    ASI_EXPOSURE_STATUS status;
-
-
-    ASIStartExposure(CamNum, ASI_FALSE);
-    //10ms
-    usleep(10000);
-    status = ASI_EXP_WORKING;
-    while(status == ASI_EXP_WORKING)
+    for(int capture = 1; capture <= capture_count; capture++)
     {
-        ASIGetExpStatus(CamNum, &status);
-    }
-    if(status == ASI_EXP_SUCCESS)
-    {
-        ASIGetDataAfterExp(CamNum, imgBuf, imgSize);
+        ASI_EXPOSURE_STATUS status;
 
-        printf("Image successfully captured. Writing image to image.raw file...\n");
+        printf("Capturing image %d of %d...\n", capture, capture_count);
 
-        FILE *output = fopen("image.raw", "wb");
-        if (output)
+        ASIStartExposure(CamNum, ASI_FALSE);
+        usleep(10000);
+        status = ASI_EXP_WORKING;
+        while(status == ASI_EXP_WORKING)
         {
-            int n = 0 ;
-            for (int i = 0; i < imgSize; i += n)
-                n = fwrite(imgBuf + i, 1, imgSize - i, output);
-            fclose(output);
+            ASIGetExpStatus(CamNum, &status);
+        }
+
+        if(status == ASI_EXP_SUCCESS)
+        {
+            ASIGetDataAfterExp(CamNum, imgBuf, imgSize);
+
+            char filename[32];
+            snprintf(filename, sizeof(filename), "image_%03d.raw", capture);
+            printf("Image successfully captured. Writing to %s...\n", filename);
+
+            FILE *output = fopen(filename, "wb");
+            if (output)
+            {
+                int n = 0;
+                for (int i = 0; i < imgSize; i += n)
+                    n = fwrite(imgBuf + i, 1, imgSize - i, output);
+                fclose(output);
+            }
+            else
+            {
+                fprintf(stderr, "Failed to open %s for writing!\n", filename);
+                ASIStopExposure(CamNum);
+                ASICloseCamera(CamNum);
+                if(imgBuf)
+                    delete[] imgBuf;
+                return -1;
+            }
         }
         else
         {
-            fprintf(stderr, "Failed to open a file for writing!");
-            printf("ASI Camera Test failed.\n");
+            fprintf(stderr, "Failed to capture image %d: %d\n", capture, status);
+            ASIStopExposure(CamNum);
+            ASICloseCamera(CamNum);
+            if(imgBuf)
+                delete[] imgBuf;
             return -1;
         }
-    }
-    else
-        fprintf(stderr, "Failed to capture an image: %d\n", status);
 
-    ASIStopExposure(CamNum);
+        ASIStopExposure(CamNum);
+
+        // If we have more images to capture, add a small delay
+        if(capture < capture_count)
+            usleep(100000);  // 100ms delay between captures
+    }
     ASICloseCamera(CamNum);
     if(imgBuf)
         delete[] imgBuf;
