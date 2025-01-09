@@ -38,6 +38,7 @@ endif()
 set(indi_asi_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_ccd.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/usb_utils.cpp
    )
 
 add_executable(indi_asi_ccd ${indi_asi_SRCS})
@@ -50,6 +51,7 @@ endif()
 set(indi_asi_single_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_single_ccd.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/usb_utils.cpp
    )
 
 add_executable(indi_asi_single_ccd ${indi_asi_single_SRCS})
@@ -124,16 +126,15 @@ install(TARGETS indi_asi_rotator RUNTIME DESTINATION bin)
 install(TARGETS asi_camera_test RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml DESTINATION ${INDI_DATA_DIR})
 
-########### get_asi_serials ###########
-add_executable(get_asi_serials ${CMAKE_CURRENT_SOURCE_DIR}/get_asi_serials.cpp)
+########### test-usb-utils ###########
+add_executable(test-usb-utils ${CMAKE_CURRENT_SOURCE_DIR}/test-usb-utils.cpp ${CMAKE_CURRENT_SOURCE_DIR}/usb_utils.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
-target_link_libraries(get_asi_serials ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
+target_link_libraries(test-usb-utils ${LIBUSB_LIBRARIES})
 ELSE()
-target_link_libraries(get_asi_serials ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} usb-1.0)
+target_link_libraries(test-usb-utils ${INDI_LIBRARIES} ${USB1_LIBRARIES} usb-1.0)
 ENDIF()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-target_link_libraries(get_asi_serials rt)
+target_link_libraries(test-usb-utils rt)
 endif()
-
