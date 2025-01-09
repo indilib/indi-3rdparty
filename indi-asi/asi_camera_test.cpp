@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
     int exp_ms = 100;
     int capture_count = 1;
     int usb_traffic = 40;  // Default USB traffic value
+    uint16_t camera_product_id = 0;  // Store the camera's product ID
 
     // Parse command line arguments
     int opt;
@@ -399,6 +400,7 @@ int main(int argc, char *argv[])
     ASIInitCamera(CamNum);
 
     ASIGetCameraProperty(&ASICameraInfo, CamNum);
+    camera_product_id = ASICameraInfo.CameraID;  // Store the product ID for USB reset
 
     printf("%s information\n", ASICameraInfo.Name);
     int iMaxWidth, iMaxHeight;
@@ -581,7 +583,7 @@ int main(int argc, char *argv[])
                 probe_usb_system();
 
                 printf("\nAttempting recovery sequence...\n");
-                reset_usb_device(0x03c3, 0x120e);  // Reset ASI120MC-S
+                reset_usb_device(0x03c3, camera_product_id);  // Reset using detected camera ID
 
                 printf("Waiting for device to settle...\n");
                 usleep(3000000);  // Wait 3 seconds
