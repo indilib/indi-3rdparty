@@ -334,6 +334,9 @@ bool ToupBase::initProperties()
 
     IUFillText(&m_SDKVersionT, "VERSION", "Version", FP(Version()));
     IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
+	
+    m_ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, m_maxBitDepth);
+    m_ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);	
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -411,6 +414,7 @@ bool ToupBase::updateProperties()
         // Firmware
         defineProperty(&m_CameraTP);
         defineProperty(&m_SDKVersionTP);
+		defineProperty(m_ADCDepthNP);
     }
     else
     {
@@ -460,6 +464,7 @@ bool ToupBase::updateProperties()
 
         deleteProperty(m_CameraTP.name);
         deleteProperty(m_SDKVersionTP.name);
+		deleteProperty(m_ADCDepthNP.getName());
     }
 
     return true;
@@ -563,6 +568,7 @@ void ToupBase::setupParams()
 
     FP(put_AutoExpoEnable(m_Handle, 0));
     FP(put_Option(m_Handle, CP(OPTION_NOFRAME_TIMEOUT), 1));
+    FP(put_Option(m_Handle, CP(OPTION_ZERO_PADDING), 1));
 
     // Get Firmware Info
     char tmpBuffer[64] = {0};
@@ -591,12 +597,16 @@ void ToupBase::setupParams()
         FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
         m_BitsPerPixel = 16;
     }
+    
+    uint32_t nBitDepth = 0;
+    FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));
+    m_ADCDepthNP[0].setValue(nBitDepth);
 
     FP(put_Option(m_Handle, CP(OPTION_RAW), 1));
 
     if (m_MonoCamera)// Check if mono camera
     {
-        CaptureFormat mono16 = {"INDI_MONO_16", (std::string("Mono ") + std::to_string(m_maxBitDepth)).c_str(), 16, false};
+        CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
         CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
         if (m_maxBitDepth > 8)
         {
@@ -620,7 +630,7 @@ void ToupBase::setupParams()
     else// Color Camera
     {
         CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
-        CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? (std::string("RAW ") + std::to_string(m_maxBitDepth)).c_str() : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
+        CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 
         m_Channels = 1;
         BayerTP[2].setText(getBayerString());// Get RAW Format
@@ -2028,7 +2038,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             return false;
         }
 
-        m_BitsPerPixel = (index ? 8 : 16);
+        m_BitsPerPixel = index ? 8 : 16;
     }
     // Color
     else
@@ -2064,6 +2074,10 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     }
 
     m_CurrentVideoFormat = index;
+	
+    uint32_t nBitDepth = 0;
+    FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));	
+	m_ADCDepthNP[0].setValue(nBitDepth);
 
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)
