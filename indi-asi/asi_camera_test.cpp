@@ -31,6 +31,23 @@
 #include <errno.h>
 #include <libgen.h>
 #include <libusb-1.0/libusb.h>
+#include <vector>
+#include <string>
+
+struct ASIUSBDevice
+{
+    uint16_t product_id;
+    std::string manufacturer;
+    std::string product;
+    std::string serial;
+    int bus_number;
+    int port_number;
+    uint16_t usb_version;
+    uint8_t device_class;
+    int num_interfaces;
+};
+
+std::vector<ASIUSBDevice> probe_usb_system(bool verbose = true);
 
 void reset_usb_device(uint16_t vendor_id, uint16_t product_id)
 {
@@ -173,10 +190,12 @@ void reset_usb_device(uint16_t vendor_id, uint16_t product_id)
 
     printf("USB port power cycle complete\n");
 }
-
-void probe_usb_system()
+std::vector<ASIUSBDevice> probe_usb_system(bool verbose)
 {
-    printf("\n=== USB Subsystem Diagnostics ===\n");
+    std::vector<ASIUSBDevice> devices;
+    if (verbose)
+        printf("\n=== USB Subsystem Diagnostics ===\n");
+
     libusb_context *ctx = NULL;
     libusb_device **list = NULL;
     ssize_t count;
@@ -184,7 +203,7 @@ void probe_usb_system()
     if (ret < 0)
     {
         fprintf(stderr, "Failed to initialize libusb: %s\n", libusb_error_name(ret));
-        return;
+        return std::vector<ASIUSBDevice>();
     }
 
     count = libusb_get_device_list(ctx, &list);
@@ -192,10 +211,11 @@ void probe_usb_system()
     {
         fprintf(stderr, "Failed to get device list: %s\n", libusb_error_name(count));
         libusb_exit(ctx);
-        return;
+        return std::vector<ASIUSBDevice>();
     }
 
-    printf("\nScanning USB devices:\n");
+    if (verbose)
+        printf("\nScanning USB devices:\n");
     for (ssize_t i = 0; i < count; i++)
     {
         libusb_device *device = list[i];
@@ -210,56 +230,81 @@ void probe_usb_system()
         // Check if this is a ZWO device
         if (desc.idVendor == 0x03c3)
         {
+            ASIUSBDevice asi_device;
+            asi_device.product_id = desc.idProduct;
+            asi_device.bus_number = libusb_get_bus_number(device);
+            asi_device.port_number = libusb_get_port_number(device);
+            asi_device.usb_version = desc.bcdUSB;
+            asi_device.device_class = desc.bDeviceClass;
+
             libusb_device_handle *handle;
             ret = libusb_open(device, &handle);
-            if (ret < 0)
+            if (ret >= 0)
             {
-                fprintf(stderr, "Failed to open device: %s\n", libusb_error_name(ret));
-                continue;
+                unsigned char string[256];
+                if (desc.iManufacturer > 0)
+                {
+                    ret = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, string, sizeof(string));
+                    if (ret > 0)
+                    {
+                        asi_device.manufacturer = std::string((char*)string);
+                        if (verbose)
+                            printf("Manufacturer: %s\n", asi_device.manufacturer.c_str());
+                    }
+                }
+
+                if (desc.iProduct > 0)
+                {
+                    ret = libusb_get_string_descriptor_ascii(handle, desc.iProduct, string, sizeof(string));
+                    if (ret > 0)
+                    {
+                        asi_device.product = std::string((char*)string);
+                        if (verbose)
+                            printf("Product: %s\n", asi_device.product.c_str());
+                    }
+                }
+
+                if (desc.iSerialNumber > 0)
+                {
+                    ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, string, sizeof(string));
+                    if (ret > 0)
+                    {
+                        asi_device.serial = std::string((char*)string);
+                        if (verbose)
+                            printf("Serial Number: %s\n", asi_device.serial.c_str());
+                    }
+                }
+
+                struct libusb_config_descriptor *config;
+                ret = libusb_get_active_config_descriptor(device, &config);
+                if (ret == 0)
+                {
+                    asi_device.num_interfaces = config->bNumInterfaces;
+                    if (verbose)
+                        printf("Number of interfaces: %d\n", asi_device.num_interfaces);
+                    libusb_free_config_descriptor(config);
+                }
+
+                libusb_close(handle);
             }
 
-            unsigned char string[256];
-            if (desc.iManufacturer > 0)
+            if (verbose)
             {
-                ret = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, string, sizeof(string));
-                if (ret > 0)
-                    printf("Manufacturer: %s\n", string);
+                printf("Bus: %d, Port: %d\n", asi_device.bus_number, asi_device.port_number);
+                printf("VID:PID: %04x:%04x\n", desc.idVendor, asi_device.product_id);
+                printf("USB Version: %04x\n", asi_device.usb_version);
+                printf("Device Class: %d\n", asi_device.device_class);
             }
 
-            if (desc.iProduct > 0)
-            {
-                ret = libusb_get_string_descriptor_ascii(handle, desc.iProduct, string, sizeof(string));
-                if (ret > 0)
-                    printf("Product: %s\n", string);
-            }
-
-            if (desc.iSerialNumber > 0)
-            {
-                ret = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, string, sizeof(string));
-                if (ret > 0)
-                    printf("Serial Number: %s\n", string);
-            }
-
-            printf("Bus: %d, Port: %d\n", libusb_get_bus_number(device), libusb_get_port_number(device));
-            printf("VID:PID: %04x:%04x\n", desc.idVendor, desc.idProduct);
-            printf("USB Version: %04x\n", desc.bcdUSB);
-            printf("Device Class: %d\n", desc.bDeviceClass);
-
-            struct libusb_config_descriptor *config;
-            ret = libusb_get_active_config_descriptor(device, &config);
-            if (ret == 0)
-            {
-                printf("Number of interfaces: %d\n", config->bNumInterfaces);
-                libusb_free_config_descriptor(config);
-            }
-
-            libusb_close(handle);
+            devices.push_back(asi_device);
         }
     }
 
-    printf("\n================================\n");
+    if (verbose)
+        printf("\n================================\n");
     libusb_free_device_list(list, 1);
     libusb_exit(ctx);
+    return devices;
 }
 
 void print_usage()
@@ -290,8 +335,6 @@ int main(int argc, char *argv[])
     int exp_ms = 100;
     int capture_count = 1;
     int usb_traffic = 40;  // Default USB traffic value
-    uint16_t camera_product_id = 0;  // Store the camera's product ID
-
     // Parse command line arguments
     int opt;
     while ((opt = getopt(argc, argv, "prc:w:h:b:f:e:n:t:?")) != -1)
@@ -299,60 +342,21 @@ int main(int argc, char *argv[])
         switch (opt)
         {
             case 'p':
-                probe_usb_system();
+                probe_usb_system(true);
                 return 0;
             case 'r':
             {
-                // First probe to get device info
                 printf("Probing USB system to find ZWO camera...\n");
-                libusb_context *ctx = NULL;
-                libusb_device **list = NULL;
-                ssize_t count;
-                uint16_t product_id = 0;
-
-                int ret = libusb_init(&ctx);
-                if (ret < 0)
-                {
-                    fprintf(stderr, "Failed to initialize libusb: %s\n", libusb_error_name(ret));
-                    return -1;
-                }
-
-                count = libusb_get_device_list(ctx, &list);
-                if (count < 0)
-                {
-                    fprintf(stderr, "Failed to get device list: %s\n", libusb_error_name(count));
-                    libusb_exit(ctx);
-                    return -1;
-                }
-
-                // Look for ZWO camera
-                for (ssize_t i = 0; i < count; i++)
-                {
-                    libusb_device *device = list[i];
-                    struct libusb_device_descriptor desc;
-                    ret = libusb_get_device_descriptor(device, &desc);
-                    if (ret < 0) continue;
-
-                    // If this is a ZWO device
-                    if (desc.idVendor == 0x03c3)
-                    {
-                        product_id = desc.idProduct;
-                        break;
-                    }
-                }
-
-                libusb_free_device_list(list, 1);
-                libusb_exit(ctx);
-
-                if (product_id == 0)
+                auto devices = probe_usb_system(true);
+                if (devices.empty())
                 {
                     fprintf(stderr, "No ZWO camera found in USB system\n");
                     return -1;
                 }
 
-                printf("Found ZWO camera with product ID: 0x%04x\n", product_id);
-                probe_usb_system();
-                reset_usb_device(0x03c3, product_id);
+                // Use the first found device
+                printf("Found ZWO camera with product ID: 0x%04x\n", devices[0].product_id);
+                reset_usb_device(0x03c3, devices[0].product_id);
                 return 0;
             }
             case 'c':
@@ -460,7 +464,6 @@ int main(int argc, char *argv[])
     ASIInitCamera(CamNum);
 
     ASIGetCameraProperty(&ASICameraInfo, CamNum);
-    camera_product_id = ASICameraInfo.CameraID;  // Store the product ID for USB reset
 
     printf("%s information\n", ASICameraInfo.Name);
     int iMaxWidth, iMaxHeight;
@@ -594,7 +597,12 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "Failed to get image data (error code: %d)\n", data_result);
 
                     // Probe USB system for diagnostic information
-                    probe_usb_system();
+                    auto devices = probe_usb_system(true);
+                    if (!devices.empty())
+                    {
+                        printf("\nAttempting recovery sequence...\n");
+                        reset_usb_device(0x03c3, devices[0].product_id);  // Reset using detected camera ID
+                    }
 
                     retry_count++;
                     ASIStopExposure(CamNum);
@@ -640,10 +648,12 @@ int main(int argc, char *argv[])
                 ASICloseCamera(CamNum);
 
                 // Get USB device info
-                probe_usb_system();
-
-                printf("\nAttempting recovery sequence...\n");
-                reset_usb_device(0x03c3, camera_product_id);  // Reset using detected camera ID
+                auto devices = probe_usb_system(true);
+                if (!devices.empty())
+                {
+                    printf("\nAttempting recovery sequence...\n");
+                    reset_usb_device(0x03c3, devices[0].product_id);  // Reset using detected camera ID
+                }
 
                 printf("Waiting for device to settle...\n");
                 usleep(3000000);  // Wait 3 seconds
