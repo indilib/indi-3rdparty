@@ -106,6 +106,7 @@ void reset_usb_device(uint16_t vendor_id, uint16_t product_id)
         // Try port power control
         char port_power[512];
         snprintf(port_power, sizeof(port_power), "%s/power/level", real_parent);
+        printf("Attempting to access power control at: %s\n", port_power);
         if (access(port_power, W_OK) == 0)
         {
             printf("Cycling parent hub port power...\n");
@@ -265,6 +266,8 @@ void print_usage()
 {
     printf("Usage: asi_camera_test [options]\n");
     printf("Options:\n");
+    printf("  -p                 Probe USB system and exit\n");
+    printf("  -r                 Probe and reset USB device and exit\n");
     printf("  -c <camera_id>     Camera ID to use (default: 0)\n");
     printf("  -w <width>         Image width (0 for max)\n");
     printf("  -h <height>        Image height (0 for max)\n");
@@ -291,10 +294,67 @@ int main(int argc, char *argv[])
 
     // Parse command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "c:w:h:b:f:e:n:t:?")) != -1)
+    while ((opt = getopt(argc, argv, "prc:w:h:b:f:e:n:t:?")) != -1)
     {
         switch (opt)
         {
+            case 'p':
+                probe_usb_system();
+                return 0;
+            case 'r':
+            {
+                // First probe to get device info
+                printf("Probing USB system to find ZWO camera...\n");
+                libusb_context *ctx = NULL;
+                libusb_device **list = NULL;
+                ssize_t count;
+                uint16_t product_id = 0;
+
+                int ret = libusb_init(&ctx);
+                if (ret < 0)
+                {
+                    fprintf(stderr, "Failed to initialize libusb: %s\n", libusb_error_name(ret));
+                    return -1;
+                }
+
+                count = libusb_get_device_list(ctx, &list);
+                if (count < 0)
+                {
+                    fprintf(stderr, "Failed to get device list: %s\n", libusb_error_name(count));
+                    libusb_exit(ctx);
+                    return -1;
+                }
+
+                // Look for ZWO camera
+                for (ssize_t i = 0; i < count; i++)
+                {
+                    libusb_device *device = list[i];
+                    struct libusb_device_descriptor desc;
+                    ret = libusb_get_device_descriptor(device, &desc);
+                    if (ret < 0) continue;
+
+                    // If this is a ZWO device
+                    if (desc.idVendor == 0x03c3)
+                    {
+                        product_id = desc.idProduct;
+                        break;
+                    }
+                }
+
+                libusb_free_device_list(list, 1);
+                libusb_exit(ctx);
+
+                if (product_id == 0)
+                {
+                    fprintf(stderr, "No ZWO camera found in USB system\n");
+                    return -1;
+                }
+
+                printf("Found ZWO camera with product ID: 0x%04x\n", product_id);
+                probe_usb_system();
+                reset_usb_device(0x03c3, product_id);
+                return 0;
+            }
             case 'c':
                 CamNum = atoi(optarg);
                 break;
