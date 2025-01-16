@@ -7,4 +7,8 @@ SUBSYSTEM=="module", KERNEL=="usb", ATTR{drivers_autoprobe}=="*", MODE="0666"
 SUBSYSTEM=="usb", DRIVER=="usb", RUN+="/bin/chmod 666 /sys/bus/usb/drivers/usb/bind /sys/bus/usb/drivers/usb/unbind"
 
 # Set permissions for USB power management
-SUBSYSTEM=="usb", ATTR{idVendor}=="03c3", ATTR{power/level}=="*", MODE="0666"
+# For ASI device power control
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="03c3", MODE="0666", RUN+="/bin/sh -c 'chmod 666 /sys$devpath/power/level'"
+
+# For parent hub power control
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="03c3", MODE="0666", RUN+="/bin/sh -c 'chmod 666 /sys$devpath/../power/level'"

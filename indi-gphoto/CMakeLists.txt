@@ -114,6 +114,25 @@ set_target_properties(indi_gphoto_ccd PROPERTIES POST_INSTALL_SCRIPT ${CMAKE_CUR
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_gphoto.xml DESTINATION ${INDI_DATA_DIR})
 
+# Build the camera test application
+add_executable(gphoto_camera_test
+    ${CMAKE_CURRENT_SOURCE_DIR}/gphoto_camera_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gphoto_driver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dsusbdriver.cpp
+)
+
+target_link_libraries(gphoto_camera_test
+    ${GPHOTO2_LIBRARY}
+    ${GPHOTO2_PORT_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${INDI_LIBRARIES}
+    ${JPEG_LIBRARIES}
+    ${LibRaw_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+)
+
+install(TARGETS gphoto_camera_test DESTINATION bin)
+
 # Disable automount for DSLR cameras
 IF (UNIX AND NOT APPLE)
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/85-disable-dslr-automout.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
