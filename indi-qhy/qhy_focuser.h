@@ -46,10 +46,10 @@ public:
 
 private:
   int SendCommand(char *cmd_line);
-  int ReadResponse(char *buf);
+  int ReadResponse(char *buf, int &cmd_id);
   void GetFocusParams();
 
-  int updatePosition(double *value);
+  int updatePosition(double &value);
   int updateTemperature();
   int updatePositionRelativeInward(double value);
   int updatePositionRelativeOutward(double value);
