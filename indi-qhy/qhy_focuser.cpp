@@ -420,7 +420,7 @@ bool QFocuser::Handshake()
     int rc = updatePosition(newPos);
     if (rc >= 0)
     {
-        LOGF_INFO("QFocuser current Position: %f", newPos);
+        LOGF_DEBUG("QFocuser current Position: %f", newPos);
     }
 
     return true;
