@@ -103,6 +103,9 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         std::vector<INDI::PropertyNumber> PWMDutyCycleNP;
         std::vector<INDI::PropertySwitch> PWMEnableSP;
 
+        // Pulse Mode Properties - one per digital output
+        std::vector<INDI::PropertyNumber> PulseDurationNP;
+
         // PWM Methods
         bool detectHardwarePWM();
         bool setPWMFrequency(size_t index, int frequency);
