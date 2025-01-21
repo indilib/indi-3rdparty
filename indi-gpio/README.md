@@ -26,6 +26,16 @@ Each input and output label may be changed. Next time the driver runs, the new l
 
 Tested on Raspberry PI and Orange PI, but should work under any board support by libgpiod. Make sure you have proper permissions and that the user running the driver is part of the gpio group (at least on Raspberry PI).
 
+# PWM
+
+For Raspberry PI, enable PWM in /boot/firmware/config.txt:
+```
+dtparam=audio=off
+dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4
+```
+
+Audio=off is very important otherwise the PWM functionality may not work. This should enable GPIO 12 and 13 hardware PWM.
+
 # TODO
 
 Need to adopt libgpiod 2.x+ but it is still not in widespread use in most distributions.

@@ -99,15 +99,25 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         std::vector<PWMPinConfig> m_PWMPins;
 
         // PWM Properties - one set per hardware PWM pin
-        std::vector<INDI::PropertyNumber> PWMFrequencyNP;
-        std::vector<INDI::PropertyNumber> PWMDutyCycleNP;
+        // PWM Configuration indices
+        enum
+        {
+            FREQUENCY = 0,
+            DUTY_CYCLE,
+            N_PWM_CONFIG  // Total number of config parameters
+        };
+        std::vector<INDI::PropertyNumber> PWMConfigNP;
         std::vector<INDI::PropertySwitch> PWMEnableSP;
 
         // Pulse Mode Properties - one per digital output
         std::vector<INDI::PropertyNumber> PulseDurationNP;
 
         // PWM Methods
+        // PWM GPIO mapping configuration - one per PWM chip
+        std::map<std::string, INDI::PropertyNumber> PWMGPIOMappingNP;
         bool detectHardwarePWM();
+        void updatePWMProperties();
+        int getTotalPWMChannels();
         bool setPWMFrequency(size_t index, int frequency);
         bool setPWMDutyCycle(size_t index, int dutyCycle);
         bool enablePWM(size_t index, bool enabled);
