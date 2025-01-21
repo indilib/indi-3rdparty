@@ -995,6 +995,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             int mode = SensorModeSP.findOnSwitchIndex();
             SensorModeSP.setState(POASetSensorMode(mCameraInfo.cameraID, mode) == POA_OK ? IPS_OK : IPS_ALERT);
             SensorModeSP.apply();
+            saveConfig(SensorModeSP);
             return true;
         }
     }
