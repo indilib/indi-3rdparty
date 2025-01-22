@@ -271,12 +271,18 @@ int QFocuser::ReadResponse(char *buf, int &cmd_id)
                 else if (cmd_id == 1)
                 {
                     LOGF_DEBUG("<RES> %s", cmd_json.dump().c_str());
-                    if (cmd_json.find("id") != cmd_json.end() && cmd_json.find("version") != cmd_json.end() && cmd_json.find("bv") != cmd_json.end())
+                    
+                    if (cmd_json.find("id") == cmd_json.end()) { return -1; }
+		    if (cmd_json.find("version") == cmd_json.end()) { return -1; }
+                    
+		    cmd_version = cmd_json["version"];                 
+
+		    if (cmd_json.find("bv") != cmd_json.end())
                     {
-                        cmd_version = cmd_json["version"];
                         cmd_version_board = cmd_json["bv"];
-                        return bytesRead;  // 返回字节数
                     }
+
+                    return bytesRead;  // 返回字节数
                 }
                 else if (cmd_id == 4)
                 {
