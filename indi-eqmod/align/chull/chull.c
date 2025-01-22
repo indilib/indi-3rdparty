@@ -23,10 +23,8 @@ not removed.
 
 #include "macros.h"
 
+#include <stdbool.h>
 #include <stdio.h>
-
-/*Define Boolean type */
-typedef enum { FALSE, TRUE } bool;
 
 /* Define vertex indices. */
 #define X 0
@@ -71,18 +69,18 @@ struct tFaceStructure
 };
 
 /* Define flags */
-#define ONHULL    TRUE
-#define REMOVED   TRUE
-#define VISIBLE   TRUE
-#define PROCESSED TRUE
+#define ONHULL    true
+#define REMOVED   true
+#define VISIBLE   true
+#define PROCESSED true
 #define SAFE      1000000 /* Range of safe coord values. */
 
 /* Global variable definitions */
 tVertex vertices = NULL;
 tEdge edges      = NULL;
 tFace faces      = NULL;
-bool debug       = FALSE;
-bool check       = FALSE;
+bool debug       = false;
+bool check       = false;
 
 /* Function declarations */
 tVertex MakeNullVertex(void);
@@ -124,12 +122,12 @@ main( int argc, char *argv[] )
 
   if ( argc > 1 && argv[1][0] == '-' ) {
     if( argv[1][1] ==  'd' ) {
-      debug = TRUE;
-      check = TRUE;
+      debug = true;
+      check = true;
       fprintf( stderr, "Debug and check mode\n");
     }
     if( argv[1][1] == 'c' ) {
-      check = TRUE;
+      check = true;
       fprintf( stderr, "Check mode\n");
     }
   }
@@ -301,7 +299,7 @@ void Print(void)
 
     printf("\nshowpage\n\n");
 
-    check = TRUE;
+    check = true;
     CheckEuler(V, E, F);
 }
 
@@ -382,7 +380,7 @@ vertices are those in the list marked as onhull.
 void ConstructHull(void)
 {
     tVertex v, vnext;
-    bool changed = FALSE; /* T if addition changes hull; not used. */
+    bool changed = false; /* T if addition changes hull; not used. */
     (void)changed;
     v = vertices;
     do
@@ -418,7 +416,7 @@ bool AddOne(tVertex p)
     tFace f;
     tEdge e, temp;
     int vol;
-    bool vis = FALSE;
+    bool vis = false;
 
     if (debug)
     {
@@ -436,7 +434,7 @@ bool AddOne(tVertex p)
         if (vol < 0)
         {
             f->visible = VISIBLE;
-            vis        = TRUE;
+            vis        = true;
         }
         f = f->next;
     } while (f != faces);
@@ -445,7 +443,7 @@ bool AddOne(tVertex p)
     if (!vis)
     {
         p->onhull = !ONHULL;
-        return FALSE;
+        return false;
     }
 
     /* Mark edges in interior of visible region for deletion.
@@ -462,7 +460,7 @@ bool AddOne(tVertex p)
             e->newface = MakeConeFace(e, p);
         e = temp;
     } while (e != edges);
-    return TRUE;
+    return true;
 }
 
 /*---------------------------------------------------------------------
@@ -1083,7 +1081,7 @@ void CheckEndpts(void)
     tFace fstart;
     tEdge e;
     tVertex v;
-    bool error = FALSE;
+    bool error = false;
 
     fstart = faces;
     if (faces)
@@ -1095,7 +1093,7 @@ void CheckEndpts(void)
                 e = faces->edge[i];
                 if (v != e->endpts[0] && v != e->endpts[1])
                 {
-                    error = TRUE;
+                    error = true;
                     fprintf(stderr, "CheckEndpts: Error!\n");
                     fprintf(stderr, "  addr: %8p;", faces);
                     fprintf(stderr, "  edges:");
