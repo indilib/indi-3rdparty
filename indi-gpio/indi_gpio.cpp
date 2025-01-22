@@ -238,7 +238,7 @@ bool INDIGPIO::Connect()
     // At this stage, all the labels and outputs are GPIO #1, GPIO #2 ..etc, but we
     // need to update the number to matches to actual offsets
     // We only do this if configuration is not loaded up
-    if (!m_DigitalLabelConfig)
+    if (!m_DigitalInputLabelsConfig)
     {
         for (size_t i = 0; i < m_InputOffsets.size(); i++)
         {
@@ -251,7 +251,7 @@ bool INDIGPIO::Connect()
     // Initialize outputs
     INDI::OutputInterface::initProperties("Outputs", m_OutputOffsets.size(), "GPIO");
     // If config not loaded, use default values
-    if (!m_AnalogLabelConfig)
+    if (!m_DigitalOutputLabelsConfig)
     {
         // At this stage, all the labels and outputs are GPIO #1, GPIO #2 ..etc, but we
         // need to update the number to matches to actual offsets
@@ -516,11 +516,14 @@ bool INDIGPIO::ISNewNumber(const char * dev, const char * name, double values[],
         {
             if (mapping.isNameMatch(name))
             {
-                mapping.update(values, names, n);
+                if (mapping.isUpdated(values, names, n))
+                {
+                    mapping.update(values, names, n);
+                    saveConfig(mapping);
+                    LOG_INFO("PWM GPIO mapping updated. You must restart the system for this change to take effect.");
+                }
                 mapping.setState(IPS_OK);
                 mapping.apply();
-                saveConfig(mapping);
-                updatePWMProperties();
                 return true;
             }
         }
@@ -999,12 +1002,6 @@ bool INDIGPIO::detectHardwarePWM()
                 {
                     LOGF_DEBUG("Skipping PWM channel %d on %s: no GPIO mapping provided", channel, entry->d_name);
                     continue;
-                }
-
-                // Special logging for GPIO12
-                if (gpioMapping == 12)
-                {
-                    LOGF_INFO("Found GPIO12 mapping on PWM chip %s channel %d", entry->d_name, channel);
                 }
 
                 // Get GPIO number from mapping
