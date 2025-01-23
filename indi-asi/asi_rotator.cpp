@@ -32,15 +32,6 @@ static class Loader
         Loader()
         {
             load(false);
-
-            hotPlugTimer.start(1000);
-            hotPlugTimer.callOnTimeout([&]
-            {
-                if (getCountOfConnectedRotators() != rotators.size())
-                {
-                    load(true);
-                }
-            });
         }
 
     public:
@@ -134,6 +125,8 @@ ASICAA::ASICAA(int ID, const std::string &rotatorName) : m_ID(ID)
 
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
 
+    setRotatorConnection(CONNECTION_NONE);
+
     // Can move in absolute position
     RI::SetCapability(ROTATOR_CAN_ABORT |
                       ROTATOR_CAN_REVERSE |
@@ -159,11 +152,6 @@ bool ASICAA::initProperties()
     VersionInfoTP[VERSION_FIRMWARE].fill("FIRMWARE_VERSION", "Firmware", "Unknown");
     VersionInfoTP[VERSION_SDK].fill("SDK_VERSION", "SDK", "Unknown");
     VersionInfoTP[VERSION_SERIAL].fill("SERIAL_NUMBER", "Serial Number", "Unknown");
-
-    // Max Degree Limit
-    MaxDegreeLimitNP[0].fill("LIMIT", "Max Degrees", "%.2f", 0, 360, 0., 360.);
-    MaxDegreeLimitNP.fill(getDeviceName(), "MAX_DEGREE", "Max Degree",
-                          MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
     VersionInfoTP.fill(getDeviceName(), "VERSION_INFO", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     addDebugControl();
@@ -207,14 +195,12 @@ bool ASICAA::updateProperties()
         }
 
         defineProperty(VersionInfoTP);
-        defineProperty(MaxDegreeLimitNP);
     }
     else
     {
         deleteProperty(TemperatureNP);
         deleteProperty(BeepSP);
         deleteProperty(VersionInfoTP);
-        deleteProperty(MaxDegreeLimitNP);
     }
 
     return true;
@@ -276,11 +262,11 @@ bool ASICAA::Connect()
     code = CAAGetMaxDegree(m_ID, &maxDegree);
     if (code == CAA_SUCCESS)
     {
-        MaxDegreeLimitNP[0].setValue(maxDegree);
-        MaxDegreeLimitNP.setState(IPS_OK);
+        RotatorLimitsNP[0].setValue(maxDegree);
+        RotatorLimitsNP.setState(IPS_OK);
     }
     else
-        MaxDegreeLimitNP.setState(IPS_ALERT);
+        RotatorLimitsNP.setState(IPS_ALERT);
 
     return true;
 }
@@ -296,7 +282,7 @@ bool ASICAA::ISNewNumber(const char * dev, const char * name, double values[], c
 {
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        if (MaxDegreeLimitNP.isNameMatch(name))
+        if (RotatorLimitsNP.isNameMatch(name))
         {
             if (!isSimulation())
             {
@@ -304,15 +290,15 @@ bool ASICAA::ISNewNumber(const char * dev, const char * name, double values[], c
                 if (code != CAA_SUCCESS)
                 {
                     LOGF_ERROR("Failed to set max degree limit: %d", code);
-                    MaxDegreeLimitNP.setState(IPS_ALERT);
-                    MaxDegreeLimitNP.apply();
+                    RotatorLimitsNP.setState(IPS_ALERT);
+                    RotatorLimitsNP.apply();
                     return true;
                 }
             }
 
-            MaxDegreeLimitNP.update(values, names, n);
-            MaxDegreeLimitNP.setState(IPS_OK);
-            MaxDegreeLimitNP.apply();
+            RotatorLimitsNP.update(values, names, n);
+            RotatorLimitsNP.setState(IPS_OK);
+            RotatorLimitsNP.apply();
             return true;
         }
     }
@@ -366,10 +352,10 @@ IPState ASICAA::MoveRotator(double angle)
     }
 
     // Check if target angle exceeds max limit
-    if (angle > MaxDegreeLimitNP[0].getValue())
+    if (angle > RotatorLimitsNP[0].getValue())
     {
         LOGF_ERROR("Target angle %.2f exceeds max limit %.2f", angle,
-                   MaxDegreeLimitNP[0].getValue());
+                   RotatorLimitsNP[0].getValue());
         return IPS_ALERT;
     }
 
