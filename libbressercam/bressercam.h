@@ -1,7 +1,7 @@
 #ifndef __bressercam_h__
 #define __bressercam_h__
 
-/* Version: 57.27348.20241224 */
+/* Version: 57.27591.20250122 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -294,7 +294,7 @@ typedef struct {
 } BressercamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 57.27348.20241224
+    get the version of this dll/so/dylib, which is: 57.27591.20250122
 */
 #if defined(_WIN32)
 BRESSERCAM_API(const wchar_t*)   Bressercam_Version();
@@ -629,7 +629,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_MinAutoExpoTimeAGain(HBressercam h, unsi
 
 BRESSERCAM_API(HRESULT)  Bressercam_get_ExpoTime(HBressercam h, unsigned* Time); /* in microseconds */
 BRESSERCAM_API(HRESULT)  Bressercam_put_ExpoTime(HBressercam h, unsigned Time); /* in microseconds */
-BRESSERCAM_API(HRESULT)  Bressercam_get_RealExpoTime(HBressercam h, unsigned* Time); /* in microseconds, based on 50HZ/60HZ/DC */
+BRESSERCAM_API(HRESULT)  Bressercam_get_RealExpoTime(HBressercam h, unsigned* Time); /* actual exposure time */
 BRESSERCAM_API(HRESULT)  Bressercam_get_ExpTimeRange(HBressercam h, unsigned* nMin, unsigned* nMax, unsigned* nDef);
 
 BRESSERCAM_API(HRESULT)  Bressercam_get_ExpoAGain(HBressercam h, unsigned short* Gain); /* percent, such as 300 */
@@ -1198,6 +1198,16 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_Roi(HBressercam h, unsigned* pxOffset, u
 /* multiple Roi */
 BRESSERCAM_API(HRESULT)  Bressercam_put_RoiN(HBressercam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
+/* Hardware Binning
+* Value: 1x1, 2x2, etc
+* Method: Average, Add, Skip
+*/
+BRESSERCAM_API(HRESULT)  Bressercam_put_Binning(HBressercam h, const char* pValue, const char* pMethod);
+BRESSERCAM_API(HRESULT)  Bressercam_get_Binning(HBressercam h, const char** ppValue, const char** ppMethod);
+BRESSERCAM_API(HRESULT)  Bressercam_get_BinningNumber(HBressercam h);
+BRESSERCAM_API(HRESULT)  Bressercam_get_BinningValue(HBressercam h, unsigned index, const char** ppValue);
+BRESSERCAM_API(HRESULT)  Bressercam_get_BinningMethod(HBressercam h, unsigned index, const char** ppMethod);
+
 BRESSERCAM_API(HRESULT)  Bressercam_put_XY(HBressercam h, int x, int y);
 
 #define BRESSERCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE            0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
@@ -1296,13 +1306,13 @@ BRESSERCAM_API(HRESULT)  Bressercam_put_XY(HBressercam h, int x, int y);
 #define BRESSERCAM_IOCONTROL_DELAYTIME_MAX                    (5 * 1000 * 1000)
 
 /*
-  ioLineNumber:
+  ioLine:
     0 => Opto-isolated input
     1 => Opto-isolated output
     2 => GPIO0
     3 => GPIO1
 */
-BRESSERCAM_API(HRESULT)  Bressercam_IoControl(HBressercam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+BRESSERCAM_API(HRESULT)  Bressercam_IoControl(HBressercam h, unsigned ioLine, unsigned nType, int outVal, int* inVal);
 
 #ifndef __BRESSERCAMSELFTRIGGER_DEFINED__
 #define __BRESSERCAMSELFTRIGGER_DEFINED__

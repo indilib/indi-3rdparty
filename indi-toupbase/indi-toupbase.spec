@@ -51,6 +51,7 @@ BuildRequires: libogmacam
 BuildRequires: libomegonprocam
 BuildRequires: libstarshootg
 BuildRequires: libtscam
+BuildRequires: libsvbonycam
 BuildRequires: libmeadecam
 
 
