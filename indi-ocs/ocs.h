@@ -452,7 +452,7 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     long int OCSTimeoutMicroSeconds = 100000;
 
 private:
-    float minimum_OCS_fw = 3.04;
+    float minimum_OCS_fw = 3.08;
     int conversion_error = -10000;
 
     // Capability queries on connection
@@ -518,6 +518,7 @@ private:
     // Thermostat tab controls
     //------------------------
     bool thermostat_controls_enabled = false;
+
 
     enum {
         THERMOSTAT_TEMERATURE,

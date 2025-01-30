@@ -588,8 +588,14 @@ bool OCS::updateProperties()
         if (thermostat_controls_enabled) {
             defineProperty(&Thermostat_StatusTP);
             defineProperty(&Thermostat_setpointsNP);
+        }
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
             defineProperty(&Thermostat_heat_relaySP);
+        }
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
             defineProperty(&Thermostat_cool_relaySP);
+        }
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
             defineProperty(&Thermostat_humidity_relaySP);
         }
         if (power_device_relays[0] > 0) {
@@ -660,8 +666,14 @@ bool OCS::updateProperties()
         if (thermostat_controls_enabled) {
             deleteProperty(Thermostat_StatusTP.name);
             deleteProperty(Thermostat_setpointsNP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
             deleteProperty(Thermostat_heat_relaySP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
             deleteProperty(Thermostat_cool_relaySP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
             deleteProperty(Thermostat_humidity_relaySP.name);
         }
         if (power_device_relays[0] > 0) {
@@ -1090,36 +1102,42 @@ void OCS::SlowTimerHit()
         }
 
         // Get the Thermostat setpoints
-        char heat_response[RB_MAX_LEN] = {0};
-        int heat_int_response = 0;
-        int heat_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, heat_response, &heat_int_response,
-                                                                        OCS_get_thermostat_heat_setpoint);
-        if (heat_setpoint_error_or_fail >= 0 && heat_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_HEAT_SETPOINT].value = heat_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Heat Setpoint %d, this update aborted, will try again...", heat_int_response);
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
+            char heat_response[RB_MAX_LEN] = {0};
+            int heat_int_response = 0;
+            int heat_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, heat_response, &heat_int_response,
+                                                                            OCS_get_thermostat_heat_setpoint);
+            if (heat_setpoint_error_or_fail >= 0 && heat_int_response != conversion_error) { // errors are negative
+                Thermostat_setpointN[THERMOSTAT_HEAT_SETPOINT].value = heat_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Heat Setpoint %d, this update aborted, will try again...", heat_int_response);
+            }
         }
 
-        char cool_response[RB_MAX_LEN] = {0};
-        int cool_int_response = 0;
-        int cool_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, cool_response, &cool_int_response,
-                                                                        OCS_get_thermostat_cool_setpoint);
-        if (cool_setpoint_error_or_fail >= 0 && cool_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_COOL_SETPOINT].value = cool_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Cool Setpoint %d, this update aborted, will try again...", cool_int_response);
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
+            char cool_response[RB_MAX_LEN] = {0};
+            int cool_int_response = 0;
+            int cool_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, cool_response, &cool_int_response,
+                                                                            OCS_get_thermostat_cool_setpoint);
+            if (cool_setpoint_error_or_fail >= 0 && cool_int_response != conversion_error) { // errors are negative
+                Thermostat_setpointN[THERMOSTAT_COOL_SETPOINT].value = cool_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Cool Setpoint %d, this update aborted, will try again...", cool_int_response);
+            }
         }
 
-        char humidity_response[RB_MAX_LEN] = {0};
-        int humidity_int_response = 0;
-        int humidity_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, humidity_response, &humidity_int_response,
-                                                                            OCS_get_thermostat_humidity_setpoint);
-        if (humidity_setpoint_error_or_fail >= 0 && humidity_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_HUMIDITY_SETPOINT].value = humidity_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Humidity Setpoint %d, this update aborted, will try again...", humidity_int_response);
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
+            char humidity_response[RB_MAX_LEN] = {0};
+            int humidity_int_response = 0;
+            int humidity_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, humidity_response, &humidity_int_response,
+                                                                                OCS_get_thermostat_humidity_setpoint);
+            if (humidity_setpoint_error_or_fail >= 0 && humidity_int_response != conversion_error) { // errors are negative
+                Thermostat_setpointN[THERMOSTAT_HUMIDITY_SETPOINT].value = humidity_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Humidity Setpoint %d, this update aborted, will try again...", humidity_int_response);
+            }
+            IDSetNumber(&Thermostat_setpointsNP, nullptr);
         }
-        IDSetNumber(&Thermostat_setpointsNP, nullptr);
 
         // Get the Thermostat relay status'
         for (int relay = 0; relay < THERMOSTAT_RELAY_COUNT; relay++) {
@@ -1320,8 +1338,6 @@ IPState OCS::updateWeather() {
                     indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
                 } else if (measurement == WEATHER_RAIN) {
                     indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                } else if (measurement == WEATHER_CLOUD) {
-                    indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
                 } else if (measurement == WEATHER_SKY) {
                     indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
                 }
@@ -1339,9 +1355,7 @@ IPState OCS::updateWeather() {
                         setParameterValue("WEATHER_WIND", value);
                     } else if (measurement == WEATHER_DIFF_SKY_TEMP && weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1) {
                         setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-                    } else if (measurement == WEATHER_CLOUD && weather_enabled[WEATHER_CLOUD] ==1) {
-                        IUSaveText(&Weather_CloudT[0], measurement_reponse);
-                        IDSetText(&Weather_CloudTP, nullptr);
+                    }
                     } else if (measurement == WEATHER_SKY && weather_enabled[WEATHER_SKY] ==1) {
                         IUSaveText(&Weather_SkyT[0], measurement_reponse);
                         IDSetText(&Weather_SkyTP, nullptr);
@@ -1350,6 +1364,16 @@ IPState OCS::updateWeather() {
                         IDSetText(&Weather_Sky_TempTP, nullptr);
                     }
                 }
+
+                // Separate becasue WEATHER_CLOUD is the only weather parameter that return a string
+                if (measurement == WEATHER_CLOUD && weather_enabled[WEATHER_CLOUD] ==1) {
+                    char measurement_reponse[RB_MAX_LEN];
+                    int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
+                                                                             OCS_get_cloud_description);
+                    if (measurement_error_or_fail > 1 ) {
+                        IUSaveText(&Weather_CloudT[0], measurement_reponse);
+                        IDSetText(&Weather_CloudTP, nullptr);
+                    }
             }
         }
         if (WI::syncCriticalParameters())
