@@ -25,5 +25,9 @@
                 <driver name="AHP GT Mount">indi_ahpgt_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
+        <device label="Wave 150i" manufacturer="SkyWatcher">
+                <driver name="EQMod Mount">indi_eqmod_telescope</driver>
+                <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>
