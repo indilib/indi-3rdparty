@@ -1,7 +1,7 @@
 #ifndef __tscam_h__
 #define __tscam_h__
 
-/* Version: 57.27348.20241224 */
+/* Version: 57.27591.20250122 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -294,7 +294,7 @@ typedef struct {
 } TscamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 57.27348.20241224
+    get the version of this dll/so/dylib, which is: 57.27591.20250122
 */
 #if defined(_WIN32)
 TSCAM_API(const wchar_t*)   Tscam_Version();
@@ -629,7 +629,7 @@ TSCAM_API(HRESULT)  Tscam_get_MinAutoExpoTimeAGain(HTscam h, unsigned* minTime, 
 
 TSCAM_API(HRESULT)  Tscam_get_ExpoTime(HTscam h, unsigned* Time); /* in microseconds */
 TSCAM_API(HRESULT)  Tscam_put_ExpoTime(HTscam h, unsigned Time); /* in microseconds */
-TSCAM_API(HRESULT)  Tscam_get_RealExpoTime(HTscam h, unsigned* Time); /* in microseconds, based on 50HZ/60HZ/DC */
+TSCAM_API(HRESULT)  Tscam_get_RealExpoTime(HTscam h, unsigned* Time); /* actual exposure time */
 TSCAM_API(HRESULT)  Tscam_get_ExpTimeRange(HTscam h, unsigned* nMin, unsigned* nMax, unsigned* nDef);
 
 TSCAM_API(HRESULT)  Tscam_get_ExpoAGain(HTscam h, unsigned short* Gain); /* percent, such as 300 */
@@ -1198,6 +1198,16 @@ TSCAM_API(HRESULT)  Tscam_get_Roi(HTscam h, unsigned* pxOffset, unsigned* pyOffs
 /* multiple Roi */
 TSCAM_API(HRESULT)  Tscam_put_RoiN(HTscam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
+/* Hardware Binning
+* Value: 1x1, 2x2, etc
+* Method: Average, Add, Skip
+*/
+TSCAM_API(HRESULT)  Tscam_put_Binning(HTscam h, const char* pValue, const char* pMethod);
+TSCAM_API(HRESULT)  Tscam_get_Binning(HTscam h, const char** ppValue, const char** ppMethod);
+TSCAM_API(HRESULT)  Tscam_get_BinningNumber(HTscam h);
+TSCAM_API(HRESULT)  Tscam_get_BinningValue(HTscam h, unsigned index, const char** ppValue);
+TSCAM_API(HRESULT)  Tscam_get_BinningMethod(HTscam h, unsigned index, const char** ppMethod);
+
 TSCAM_API(HRESULT)  Tscam_put_XY(HTscam h, int x, int y);
 
 #define TSCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE            0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
@@ -1296,13 +1306,13 @@ TSCAM_API(HRESULT)  Tscam_put_XY(HTscam h, int x, int y);
 #define TSCAM_IOCONTROL_DELAYTIME_MAX                    (5 * 1000 * 1000)
 
 /*
-  ioLineNumber:
+  ioLine:
     0 => Opto-isolated input
     1 => Opto-isolated output
     2 => GPIO0
     3 => GPIO1
 */
-TSCAM_API(HRESULT)  Tscam_IoControl(HTscam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+TSCAM_API(HRESULT)  Tscam_IoControl(HTscam h, unsigned ioLine, unsigned nType, int outVal, int* inVal);
 
 #ifndef __TSCAMSELFTRIGGER_DEFINED__
 #define __TSCAMSELFTRIGGER_DEFINED__

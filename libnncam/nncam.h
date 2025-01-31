@@ -1,7 +1,7 @@
 #ifndef __nncam_h__
 #define __nncam_h__
 
-/* Version: 57.27348.20241224 */
+/* Version: 57.27591.20250122 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -294,7 +294,7 @@ typedef struct {
 } NncamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 57.27348.20241224
+    get the version of this dll/so/dylib, which is: 57.27591.20250122
 */
 #if defined(_WIN32)
 NNCAM_API(const wchar_t*)   Nncam_Version();
@@ -629,7 +629,7 @@ NNCAM_API(HRESULT)  Nncam_get_MinAutoExpoTimeAGain(HNncam h, unsigned* minTime, 
 
 NNCAM_API(HRESULT)  Nncam_get_ExpoTime(HNncam h, unsigned* Time); /* in microseconds */
 NNCAM_API(HRESULT)  Nncam_put_ExpoTime(HNncam h, unsigned Time); /* in microseconds */
-NNCAM_API(HRESULT)  Nncam_get_RealExpoTime(HNncam h, unsigned* Time); /* in microseconds, based on 50HZ/60HZ/DC */
+NNCAM_API(HRESULT)  Nncam_get_RealExpoTime(HNncam h, unsigned* Time); /* actual exposure time */
 NNCAM_API(HRESULT)  Nncam_get_ExpTimeRange(HNncam h, unsigned* nMin, unsigned* nMax, unsigned* nDef);
 
 NNCAM_API(HRESULT)  Nncam_get_ExpoAGain(HNncam h, unsigned short* Gain); /* percent, such as 300 */
@@ -1198,6 +1198,16 @@ NNCAM_API(HRESULT)  Nncam_get_Roi(HNncam h, unsigned* pxOffset, unsigned* pyOffs
 /* multiple Roi */
 NNCAM_API(HRESULT)  Nncam_put_RoiN(HNncam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
+/* Hardware Binning
+* Value: 1x1, 2x2, etc
+* Method: Average, Add, Skip
+*/
+NNCAM_API(HRESULT)  Nncam_put_Binning(HNncam h, const char* pValue, const char* pMethod);
+NNCAM_API(HRESULT)  Nncam_get_Binning(HNncam h, const char** ppValue, const char** ppMethod);
+NNCAM_API(HRESULT)  Nncam_get_BinningNumber(HNncam h);
+NNCAM_API(HRESULT)  Nncam_get_BinningValue(HNncam h, unsigned index, const char** ppValue);
+NNCAM_API(HRESULT)  Nncam_get_BinningMethod(HNncam h, unsigned index, const char** ppMethod);
+
 NNCAM_API(HRESULT)  Nncam_put_XY(HNncam h, int x, int y);
 
 #define NNCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE            0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
@@ -1296,13 +1306,13 @@ NNCAM_API(HRESULT)  Nncam_put_XY(HNncam h, int x, int y);
 #define NNCAM_IOCONTROL_DELAYTIME_MAX                    (5 * 1000 * 1000)
 
 /*
-  ioLineNumber:
+  ioLine:
     0 => Opto-isolated input
     1 => Opto-isolated output
     2 => GPIO0
     3 => GPIO1
 */
-NNCAM_API(HRESULT)  Nncam_IoControl(HNncam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+NNCAM_API(HRESULT)  Nncam_IoControl(HNncam h, unsigned ioLine, unsigned nType, int outVal, int* inVal);
 
 #ifndef __NNCAMSELFTRIGGER_DEFINED__
 #define __NNCAMSELFTRIGGER_DEFINED__
