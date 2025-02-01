@@ -627,7 +627,23 @@ static void *stop_bulb(void *arg)
                     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing DSUSB shutter.");
                     gphoto->dsusb->closeShutter();
                 }
-                if (gphoto->bulb_widget)
+
+                if (gphoto->bulb_port[0] && (gphoto->bulb_fd >= 0))
+                {
+                    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing remote serial shutter (%s)",gphoto->bulb_port);
+
+                    // Close Nikon Shutter
+                    if (strstr(device, "Nikon"))
+                    {
+                        uint8_t close_shutter[3] = {0xFF, 0x01, 0x00};
+                        if (write(gphoto->bulb_fd, close_shutter, 3) != 3)
+                            DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Closing Nikon remote serial shutter failed.");
+                    }
+
+                    ioctl(gphoto->bulb_fd, TIOCMBIC, &RTS_flag);
+                    close(gphoto->bulb_fd);
+                }
+                else if (gphoto->bulb_widget)
                 {
                     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing internal shutter.");
                     DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Using widget:%s", gphoto->bulb_widget->name);
@@ -640,21 +656,6 @@ static void *stop_bulb(void *arg)
                     {
                         gphoto_set_widget_num(gphoto, gphoto->bulb_widget, FALSE);
                     }
-                }
-                if (gphoto->bulb_port[0] && (gphoto->bulb_fd >= 0))
-                {
-                    DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing remote serial shutter.");
-
-                    // Close Nikon Shutter
-                    if (!strstr(device, "Nikon"))
-                    {
-                        uint8_t close_shutter[3] = {0xFF, 0x01, 0x00};
-                        if (write(gphoto->bulb_fd, close_shutter, 3) != 3)
-                            DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Closing Nikon remote serial shutter failed.");
-                    }
-
-                    ioctl(gphoto->bulb_fd, TIOCMBIC, &RTS_flag);
-                    close(gphoto->bulb_fd);
                 }
                 gphoto->command |= DSLR_CMD_DONE;
                 pthread_cond_signal(&gphoto->signal);
@@ -1221,7 +1222,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
             }
 
             // Open Nikon Shutter
-            if (!strstr(device, "Nikon"))
+            if (strstr(device, "Nikon"))
             {
                 uint8_t open_shutter[3] = {0xFF, 0x01, 0x01};
                 if (write(gphoto->bulb_fd, open_shutter, 3) != 3)
@@ -1418,10 +1419,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 return GP_OK;
 
             case GP_EVENT_FILE_ADDED:
+                if (downloadComplete) break;
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "File added event completed.");
                 fn = static_cast<CameraFilePath *>(data);
                 if (gphoto->handle_sdcard_image != IGNORE_IMAGE)
                     download_image(gphoto, fn, fd);
+
                 downloadComplete = true;
                 // Wait 1 second for GP_EVENT_CAPTURE_COMPLETE
                 // If that times out, we already marked downloadComplete as true so we will exist gracefully.

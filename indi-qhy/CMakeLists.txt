@@ -37,7 +37,7 @@ include_directories( ${QHY_INCLUDE_DIR})
 include_directories( ${USB1_INCLUDE_DIRS})
 include_directories( ${NOVA_INCLUDE_DIRS})
 
-add_definitions(-DCALLBACK_MODE_SUPPORT)
+add_definitions(-DCALLBACK_MODE_SUPPORT -D__CPP_MODE__)
 
 include(CMakeCommon)
 

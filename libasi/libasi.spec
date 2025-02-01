@@ -18,11 +18,13 @@ Provides: libASICamera2.so
 Provides: libEAFFocuser.so
 Provides: libEFWFilter.so
 Provides: libUSB2ST4Conv.so
+Provides: libCAARotator.so
 
 Provides: libASICamera2.so()(64bit)
 Provides: libEAFFocuser.so()(64bit)
 Provides: libEFWFilter.so()(64bit)
 Provides: libUSB2ST4Conv.so()(64bit)
+Provides: libCAARotator.so()(64bit)
 
 
 BuildRequires: cmake

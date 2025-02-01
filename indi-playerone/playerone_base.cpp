@@ -572,9 +572,6 @@ bool POABase::Connect()
 
 bool POABase::Disconnect()
 {
-    // Save all config before shutdown
-    saveConfig(true);
-
     LOGF_DEBUG("Closing %s...", mCameraName.c_str());
 
     stopGuidePulse(mTimerNS);
@@ -591,7 +588,6 @@ bool POABase::Disconnect()
     }
 
     LOG_INFO("Camera is offline.");
-
 
     setConnected(false, IPS_IDLE);
     return true;
@@ -995,6 +991,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             int mode = SensorModeSP.findOnSwitchIndex();
             SensorModeSP.setState(POASetSensorMode(mCameraInfo.cameraID, mode) == POA_OK ? IPS_OK : IPS_ALERT);
             SensorModeSP.apply();
+            saveConfig(SensorModeSP);
             return true;
         }
     }
