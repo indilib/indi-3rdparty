@@ -1158,7 +1158,7 @@ void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         auto bayerString = getBayerString();
         // Send if different
-        if (BayerTP[2].isNameMatch(bayerString))
+        if (!(BayerTP[2].isNameMatch(bayerString)))
         {
             BayerTP[2].setText(bayerString);
             BayerTP.apply();
