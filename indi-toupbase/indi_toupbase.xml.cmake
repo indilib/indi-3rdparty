@@ -41,6 +41,10 @@
                 <driver name="Meade">indi_meadecam_ccd</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Svbonycam" mdpd="true" manufacturer="SVBONY2">
+                <driver name="SVBONY2">indi_svbonycam_ccd</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 <devGroup group="Filter Wheels">
         <device label="Toupcam EFW" mdpd="true" manufacturer="Toupcam">
@@ -83,6 +87,10 @@
                 <driver name="Meade">indi_meadecam_wheel</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
+        <device label="Svbonycam EFW" mdpd="true" manufacturer="SVBONY2">
+                <driver name="SVBONY2">indi_svbonycam_wheel</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 <devGroup group="Focusers">
         <device label="Toupcam AAF" mdpd="true" manufacturer="Toupcam">
@@ -123,6 +131,10 @@
         </device>
         <device label="Meadecam AAF" mdpd="true" manufacturer="Meade">
                 <driver name="Meade">indi_meadecam_focuser</driver>
+                <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
+        </device>
+        <device label="Svbonycam AAF" mdpd="true" manufacturer="SVBONY">
+                <driver name="SVBONY2">indi_svbonycam_focuser</driver>
                 <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
         </device>
 </devGroup>

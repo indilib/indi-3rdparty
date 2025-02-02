@@ -116,7 +116,7 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         // PWM GPIO mapping configuration - one per PWM chip
         std::map<std::string, INDI::PropertyNumber> PWMGPIOMappingNP;
         bool detectHardwarePWM();
-        void updatePWMProperties();
+        void setupPWMProperties();
         int getTotalPWMChannels();
         bool setPWMFrequency(size_t index, int frequency);
         bool setPWMDutyCycle(size_t index, int dutyCycle);

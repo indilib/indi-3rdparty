@@ -186,7 +186,7 @@ bool INDIGPIO::Connect()
         m_GPIO.reset(new gpiod::chip(ChipNameTP[0].getText()));
 
         // Detect and setup PWM pins
-        updatePWMProperties();
+        setupPWMProperties();
     }
     catch (const std::exception &e)
     {
@@ -846,15 +846,8 @@ bool INDIGPIO::enablePWM(size_t index, bool enabled)
 ////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
-void INDIGPIO::updatePWMProperties()
+void INDIGPIO::setupPWMProperties()
 {
-    // Delete existing PWM properties
-    for (size_t i = 0; i < m_PWMPins.size(); i++)
-    {
-        deleteProperty(PWMConfigNP[i]);
-        deleteProperty(PWMEnableSP[i]);
-    }
-
     // Detect new PWM pins
     if (!detectHardwarePWM())
     {
@@ -898,13 +891,6 @@ void INDIGPIO::updatePWMProperties()
                        (label + " Enable").c_str(),
                        tab.c_str(), IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
         PWMEnableSP.push_back(std::move(oneEnable));
-
-        // Define properties if connected
-        if (isConnected())
-        {
-            defineProperty(PWMConfigNP.back());
-            defineProperty(PWMEnableSP.back());
-        }
     }
 
     // Optimize memory usage
