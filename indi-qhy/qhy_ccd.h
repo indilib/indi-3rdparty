@@ -105,13 +105,13 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         /////////////////////////////////////////////////////////////////////////////
 
         bool m_SupportedBins[4];
-		enum
-		{
-		Bin1x1,
-		Bin2x2,
-		Bin3x3,
-		Bin4x4,
-		};
+        enum
+        {
+            Bin1x1,
+            Bin2x2,
+            Bin3x3,
+            Bin4x4,
+        };
 
 
         // Cooler Switch
@@ -314,12 +314,12 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             uint32_t subH = 0;
         } effectiveROI, sensorROI;  //NEW CODE - Add support for overscan/calibration area, obsolete overscanROI
 
-        typedef struct
+        typedef struct QHYReadModeInfo
         {
-            char label[128] = {0};
-            uint32_t id = 0;
-            uint32_t subW = 0;
-            uint32_t subH = 0;
+            char label[128];  // Will be zero-initialized
+            uint32_t id;
+            uint32_t subW;
+            uint32_t subH;
         } QHYReadModeInfo; // N.R. - Add support for read mode selection
 
         typedef enum GPSState
