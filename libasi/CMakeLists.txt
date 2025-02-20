@@ -51,7 +51,7 @@ if (APPLE)
   FIX_MACOS_LIBRARIES("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
-  FIX_MACOS_LIBRARIES("libCAARotator" "mac/libEAFFocuser.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libCAARotator" "mac/libCAARotator.bin" "ASI/ZWO")
 
 elseif (UNIX AND NOT WIN32)
 
