@@ -109,9 +109,6 @@ class INDIGPIO : public INDI::DefaultDevice, public INDI::InputInterface, public
         std::vector<INDI::PropertyNumber> PWMConfigNP;
         std::vector<INDI::PropertySwitch> PWMEnableSP;
 
-        // Pulse Mode Properties - one per digital output
-        std::vector<INDI::PropertyNumber> PulseDurationNP;
-
         // PWM Methods
         // PWM GPIO mapping configuration - one per PWM chip
         std::map<std::string, INDI::PropertyNumber> PWMGPIOMappingNP;
