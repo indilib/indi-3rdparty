@@ -36,6 +36,8 @@
 #include <map>
 #include <unistd.h>
 
+#define USE_POA_EXP     // since SDK v3.8.0: change time unit of exposure from micor second to second
+
 #define MAX_EXP_RETRIES         3
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
@@ -56,9 +58,15 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
     POAErrors ret;
     double ExposureRequest = 1.0 / Streamer->getTargetFPS();
     POAConfigValue confVal;
+#ifdef USE_POA_EXP
+    confVal.floatValue = static_cast<double>(ExposureRequest * 0.95);
+
+    ret = POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
+#else
     confVal.intValue = static_cast<long>(ExposureRequest * 950000.0);
 
     ret = POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, confVal, POA_FALSE);
+#endif
     if (ret != POA_OK)
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
 
@@ -117,11 +125,19 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
 
     POAErrors ret;
     POAConfigValue confVal;
+#ifdef USE_POA_EXP
+    confVal.floatValue = (double)duration;
+
+    LOGF_DEBUG("Blinking %ld time(s) before exposure.", blinks);
+
+    ret = POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
+#else
     confVal.intValue = duration * 1000 * 1000;
 
     LOGF_DEBUG("Blinking %ld time(s) before exposure.", blinks);
 
     ret = POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, confVal, POA_FALSE);
+#endif
     if (ret != POA_OK)
     {
         LOGF_ERROR("Failed to set blink exposure to %ldus (%s).", confVal.intValue, Helpers::toString(ret));
@@ -182,8 +198,13 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
 
     LOGF_DEBUG("StartExposure->setexp : %.3fs", duration);
 
+#ifdef USE_POA_EXP
+    confVal.floatValue = (double)(duration);
+    ret = POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
+#else
     confVal.intValue = (long)(duration * 1000 * 1000);
     ret = POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, confVal, POA_FALSE);
+#endif
     if (ret != POA_OK)
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
@@ -1495,6 +1516,18 @@ void POABase::createControls(int piNumberOfControls)
             continue;
 
         // Update Min/Max exposure as supported by the camera
+#ifdef USE_POA_EXP
+        if (cap.configID == POA_EXPOSURE)
+            continue;
+            
+        if (cap.configID == POA_EXP)
+        {
+            double minExp = cap.minValue.floatValue;
+            double maxExp = cap.maxValue.floatValue;
+            PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExp, maxExp, 1);
+            continue;
+        }
+#else
         if (cap.configID == POA_EXPOSURE)
         {
             double minExp = cap.minValue.intValue / 1000000.0;
@@ -1502,6 +1535,7 @@ void POABase::createControls(int piNumberOfControls)
             PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExp, maxExp, 1);
             continue;
         }
+#endif
 
         if (cap.configID == POA_USB_BANDWIDTH_LIMIT)
         {
