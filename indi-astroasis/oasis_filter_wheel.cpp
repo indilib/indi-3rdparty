@@ -150,8 +150,8 @@ bool OasisFilterWheel::Connect()
         return false;
     }
 
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = number;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(number);
 
     LOGF_INFO("Oasis filter wheel connected, %d slots\n", number);
 
@@ -169,20 +169,11 @@ bool OasisFilterWheel::GetFilterNames()
 {
     char filterName[MAXINDINAME];
     char filterLabel[MAXINDILABEL];
-    int MaxFilter = FilterSlotN[0].max;
+    int MaxFilter = FilterSlotNP[0].getMax();
     IPState state = IPS_IDLE;
 
-    FilterNameTP->s = IPS_BUSY;
-
-    if (FilterNameT != nullptr)
-    {
-        for (int i = 0; i < FilterNameTP->ntp; i++)
-            free(FilterNameT[i].text);
-        delete [] FilterNameT;
-    }
-
-    FilterNameT = new IText[MaxFilter];
-    memset(FilterNameT, 0, sizeof(IText) * MaxFilter);
+    FilterNameTP.setState(IPS_BUSY);
+    FilterNameTP.resize(0);
 
     for (int i = 0; i < MaxFilter; i++)
     {
@@ -191,7 +182,10 @@ bool OasisFilterWheel::GetFilterNames()
 
         snprintf(filterName, MAXINDINAME, "FILTER_SLOT_NAME_%d", i + 1);
         snprintf(filterLabel, MAXINDILABEL, "Filter#%d", i + 1);
-        IUFillText(&FilterNameT[i], filterName, filterLabel, (ret == AO_SUCCESS) ? name : filterLabel);
+
+        INDI::WidgetText oneText;
+        oneText.fill(filterName, filterLabel, (ret == AO_SUCCESS) ? name : filterLabel);
+        FilterNameTP.push(std::move(oneText));
 
         if (ret != AO_SUCCESS)
         {
@@ -200,8 +194,9 @@ bool OasisFilterWheel::GetFilterNames()
         }
     }
 
-    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter",
-                     FilterSlotNP.group, IP_RW, 0, state);
+    FilterNameTP.fill(getDeviceName(), "FILTER_NAME", "Filter",
+                      FilterSlotNP.getGroupName(), IP_RW, 0, state);
+    FilterNameTP.shrink_to_fit();
 
     return true;
 }
@@ -211,9 +206,9 @@ bool OasisFilterWheel::SetFilterNames()
     // Verify allowed filter names
     std::regex rx("^[A-Za-z0-9=.#/_%[:space:]-]{1,32}$");
 
-    for (int i = 0; i < FilterSlotN[0].max; i++)
+    for (int i = 0; i < FilterSlotNP[0].getMax(); i++)
     {
-        if (!std::regex_match(FilterNameT[i].text, rx))
+        if (!std::regex_match(FilterNameTP[i].getText(), rx))
         {
             LOGF_ERROR("Filter #%d: the filter name is not valid. It should not have more than 32 chars", i + 1);
             LOGF_ERROR("Filter #%d: and the valid chars are A to Z, a to z, 0 to 9 = . # / - _ percent or space", i + 1);
@@ -222,9 +217,13 @@ bool OasisFilterWheel::SetFilterNames()
         }
     }
 
-    for (int i = 0; i < FilterSlotN[0].max; i++)
+    for (int i = 0; i < FilterSlotNP[0].getMax(); i++)
     {
-        AOReturn ret = OFWSetSlotName(mID, i + 1, FilterNameT[i].text);
+        // Create a non-const copy of the string since OFWSetSlotName expects char*
+        char name[MAXINDINAME];
+        strncpy(name, FilterNameTP[i].getText(), MAXINDINAME - 1);
+        name[MAXINDINAME - 1] = '\0'; // Ensure null termination
+        AOReturn ret = OFWSetSlotName(mID, i + 1, name);
 
         if (ret != AO_SUCCESS)
         {

@@ -474,8 +474,8 @@ bool SBIGCCD::initProperties()
 
     INDI::FilterInterface::initProperties(FILTER_TAB);
 
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = MAX_CFW_TYPES;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(MAX_CFW_TYPES);
 
     // Set minimum exposure speed to 0.001 seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.001, 3600, 1, false);
@@ -585,10 +585,7 @@ bool SBIGCCD::updateProperties()
             deleteProperty(FilterConnectionSP.name);
             deleteProperty(FilterTypeSP.name);
             deleteProperty(FilterProdcutTP.name);
-            if (FilterNameT != nullptr)
-            {
-                deleteProperty(FilterNameTP->name);
-            }
+            deleteProperty(FilterNameTP);
         }
         rmTimer(m_TimerID);
     }
@@ -616,7 +613,7 @@ bool SBIGCCD::ISNewText(const char *dev, const char *name, char *texts[], char *
             return true;
         }
         // Filter Name
-        else if (strcmp(name, FilterNameTP->name) == 0)
+        else if (strcmp(name, FilterNameTP.getName()) == 0)
         {
             INDI::FilterInterface::processText(dev, name, texts, names, n);
             return true;
@@ -756,13 +753,11 @@ bool SBIGCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         // Filter Slot Handling
-        if (!strcmp(name, FilterSlotNP.name))
-        {
-            INDI::FilterInterface::processNumber(dev, name, values, names, n);
+        if (INDI::FilterInterface::processNumber(dev, name, values, names, n))
             return true;
-        }
+
         // NS Adaptive Optics
-        else if (!strcmp(name, AONSNP.name))
+        if (!strcmp(name, AONSNP.name))
         {
             IUUpdateNumber(&AONSNP, values, names, n);
             uint16_t deflection = 0;
@@ -1495,8 +1490,7 @@ bool SBIGCCD::saveConfigItems(FILE *fp)
     IUSaveConfigText(fp, &IpTP);
     IUSaveConfigSwitch(fp, &IgnoreErrorsSP);
 
-    if (FilterNameT)
-        INDI::FilterInterface::saveConfigItems(fp);
+    INDI::FilterInterface::saveConfigItems(fp);
 
     IUSaveConfigSwitch(fp, &FilterTypeSP);
     return true;
@@ -2497,8 +2491,8 @@ bool SBIGCCD::SelectFilter(int position)
     }
     else
     {
-        FilterSlotNP.s = IPS_ALERT;
-        IDSetNumber(&FilterSlotNP, nullptr);
+        FilterSlotNP.setState(IPS_ALERT);
+        FilterSlotNP.apply();
         LOG_INFO("Failed to reach position");
         return false;
     }
@@ -2795,24 +2789,24 @@ int SBIGCCD::CFWConnect()
         LOGF_DEBUG("CFW Firmware: %s", fw);
         FilterProdcutTP.s = IPS_OK;
         defineProperty(&FilterProdcutTP);
-        FilterSlotN[0].min   = 1;
-        FilterSlotN[0].max   = CFWr.cfwResult2;
-        FilterSlotN[0].value = CFWr.cfwPosition;
-        if (FilterSlotN[0].value < FilterSlotN[0].min)
+        FilterSlotNP[0].setMin(1);
+        FilterSlotNP[0].setMax(CFWr.cfwResult2);
+        FilterSlotNP[0].setValue(CFWr.cfwPosition);
+        if (FilterSlotNP[0].getValue() < FilterSlotNP[0].getMin())
         {
-            FilterSlotN[0].value = FilterSlotN[0].min;
+            FilterSlotNP[0].setValue(FilterSlotNP[0].getMin());
         }
-        else if (FilterSlotN[0].value > FilterSlotN[0].max)
+        else if (FilterSlotNP[0].getValue() > FilterSlotNP[0].getMax())
         {
-            FilterSlotN[0].value = FilterSlotN[0].max;
+            FilterSlotNP[0].setValue(FilterSlotNP[0].getMax());
         }
 
-        LOGF_DEBUG("CFW min: 1 Max: %g Current Slot: %g", FilterSlotN[0].max, FilterSlotN[0].value);
+        LOGF_DEBUG("CFW min: 1 Max: %g Current Slot: %g", FilterSlotNP[0].getMax(), FilterSlotNP[0].getValue());
 
-        defineProperty(&FilterSlotNP);
-        if (FilterNameT == nullptr)
+        defineProperty(FilterSlotNP);
+        if (FilterNameTP.size() == 0)
             GetFilterNames();
-        if (FilterNameT)
+        if (FilterNameTP.size() > 0)
             defineProperty(FilterNameTP);
 
         LOG_DEBUG("Loading FILTER_SLOT from config file...");
@@ -2857,9 +2851,9 @@ int SBIGCCD::CFWDisconnect()
         FilterConnectionS[1].s = ISS_ON;
         FilterConnectionSP.s   = IPS_IDLE;
         IDSetSwitch(&FilterConnectionSP, "CFW disconnected");
-        deleteProperty(FilterSlotNP.name);
+        deleteProperty(FilterSlotNP);
         deleteProperty(FilterProdcutTP.name);
-        deleteProperty(FilterNameTP->name);
+        deleteProperty(FilterNameTP);
     }
     return res;
 }
