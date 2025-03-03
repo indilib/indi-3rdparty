@@ -865,14 +865,6 @@ if (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 message(STATUS "libplayerone was not found and will now be built. Please install this libplayerone first before running cmake again to install indi-playerone.")
 endif (WITH_PLAYERONE AND NOT PLAYERONE_FOUND)
 
-if (WITH_AHP_XC AND NOT AHP_XC_FOUND)
-message(STATUS "libahp-xc was not found and will now be built. Please install libahp-xc first before running cmake again to install indi-ahp-xc.")
-endif (WITH_AHP_XC AND NOT AHP_XC_FOUND)
-
-if (WITH_AHP_GT AND NOT AHP_GT_FOUND)
-message(STATUS "lib-gt was not found and will now be built. Please install libahp-gt first before running cmake again to install indi-ahpgt.")
-endif (WITH_AHP_GT AND NOT AHP_GT_FOUND)
-
 if (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
 message(STATUS "libastroasis was not found and will now be built. Please install libastroasis first before running cmake again to install indi-astroasis.")
 endif (WITH_ASTROASIS AND NOT ASTROASIS_FOUND)
