@@ -447,6 +447,7 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntResponse(int fd, int *value, char *data, const char *cmd);
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
+    void blockUntilClear();
 
     long int OCSTimeoutSeconds = 0;
     long int OCSTimeoutMicroSeconds = 100000;
@@ -461,6 +462,9 @@ private:
 
     // Timer for slow updates, once per minute
     INDI::Timer SlowTimer;
+
+    // Command sequence enforcement
+    bool waitingForResponse = false;
 
     // Roof/Shutter control
     //---------------------
@@ -534,8 +538,16 @@ private:
         THERMOSTAT_HUMIDITY_SETPOINT,
         THERMOSTAT_SETPOINT_COUNT
     };
-    INumberVectorProperty Thermostat_setpointsNP;
-    INumber Thermostat_setpointN[THERMOSTAT_SETPOINT_COUNT];
+//    INumberVectorProperty Thermostat_setpointsNP;
+//    INumber Thermostat_setpointN[THERMOSTAT_SETPOINT_COUNT];
+
+    INumberVectorProperty Thermostat_heat_setpointNP;
+    INumber Thermostat_heat_setpointN[1];
+    INumberVectorProperty Thermostat_cool_setpointNP;
+    INumber Thermostat_cool_setpointN[1];
+    INumberVectorProperty Thermostat_humidity_setpointNP;
+    INumber Thermostat_humidity_setpointN[1];
+
 
     ISwitchVectorProperty Thermostat_heat_relaySP;
     ISwitch Thermostat_heat_relayS[SWITCH_TOGGLE_COUNT];
