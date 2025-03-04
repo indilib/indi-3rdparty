@@ -448,7 +448,6 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
     void blockUntilClear();
-    void clearBlock();
 
     long int OCSTimeoutSeconds = 0;
     long int OCSTimeoutMicroSeconds = 100000;
@@ -539,6 +538,8 @@ private:
         THERMOSTAT_HUMIDITY_SETPOINT,
         THERMOSTAT_SETPOINT_COUNT
     };
+//    INumberVectorProperty Thermostat_setpointsNP;
+//    INumber Thermostat_setpointN[THERMOSTAT_SETPOINT_COUNT];
 
     INumberVectorProperty Thermostat_heat_setpointNP;
     INumber Thermostat_heat_setpointN[1];
