@@ -394,8 +394,8 @@ bool ATIKCCD::setupParams()
             setDriverInterface(getDriverInterface() | FILTER_INTERFACE);
             syncDriverInfo();
 
-            FilterSlotN[0].min = 1;
-            FilterSlotN[0].max = numFilters;
+            FilterSlotNP[0].setMin(1);
+            FilterSlotNP[0].setMax(numFilters);
 
             LOGF_INFO("Detected %d-position internal filter wheel.", numFilters);
         }
@@ -646,11 +646,9 @@ bool ATIKCCD::ISNewText(const char *dev, const char *name, char *texts[], char *
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (strcmp(name, FilterNameTP->name) == 0)
-        {
-            INDI::FilterInterface::processText(dev, name, texts, names, n);
+        if (INDI::FilterInterface::processText(dev, name, texts, names, n))
             return true;
-        }
+
     }
 
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -660,12 +658,10 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, FilterSlotNP.name))
-        {
-            INDI::FilterInterface::processNumber(dev, name, values, names, n);
+        if (INDI::FilterInterface::processNumber(dev, name, values, names, n))
             return true;
-        }
-        else if (!strcmp(name, ControlNP.name))
+
+        if (!strcmp(name, ControlNP.name))
         {
             bool changed = false;
 
@@ -1209,7 +1205,7 @@ void ATIKCCD::TimerHit()
     }
 
     // If filter wheel is in motion
-    if (FilterSlotNP.s == IPS_BUSY)
+    if (FilterSlotNP.getState() == IPS_BUSY)
     {
         int numFilters, moving, currentPos, targetPos;
         pthread_mutex_lock(&accessMutex);
@@ -1543,7 +1539,7 @@ bool ATIKCCD::saveConfigItems(FILE *fp)
     }
 
     if (m_CameraFlags & ARTEMIS_PROPERTIES_CAMERAFLAGS_HAS_FILTERWHEEL)
-        IUSaveConfigText(fp, FilterNameTP);
+        FilterNameTP.save(fp);
     // JM 2020-01-15: Seems like setting filter slot results in spinning
     // of filter wheel. So we just save the filter names.
     //INDI::FilterInterface::saveConfigItems(fp);

@@ -1,7 +1,7 @@
 /*
  Toupcam & oem CCD Driver
 
- Copyright (C) 2018-2019 Jasem Mutlaq (mutlaqja@ikarustech.com)
+ Copyright (C) 2018-2025 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -99,6 +99,9 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_In
 
     if (m_Instance->model->flag & CP(FLAG_MONO))
         m_MonoCamera = true;
+
+    mTimerWE.setSingleShot(true);
+    mTimerNS.setSingleShot(true);
 }
 
 ToupBase::~ToupBase()
@@ -334,9 +337,9 @@ bool ToupBase::initProperties()
 
     IUFillText(&m_SDKVersionT, "VERSION", "Version", FP(Version()));
     IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
-	
+
     m_ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, m_maxBitDepth);
-    m_ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);	
+    m_ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
 
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -414,7 +417,7 @@ bool ToupBase::updateProperties()
         // Firmware
         defineProperty(&m_CameraTP);
         defineProperty(&m_SDKVersionTP);
-		defineProperty(m_ADCDepthNP);
+        defineProperty(m_ADCDepthNP);
     }
     else
     {
@@ -464,7 +467,7 @@ bool ToupBase::updateProperties()
 
         deleteProperty(m_CameraTP.name);
         deleteProperty(m_SDKVersionTP.name);
-		deleteProperty(m_ADCDepthNP.getName());
+        deleteProperty(m_ADCDepthNP.getName());
     }
 
     return true;
@@ -524,8 +527,8 @@ bool ToupBase::Connect()
 
 bool ToupBase::Disconnect()
 {
-    stopTimerNS();
-    stopTimerWE();
+    stopGuidePulse(mTimerNS);
+    stopGuidePulse(mTimerWE);
 
     FP(Close(m_Handle));
 
@@ -597,7 +600,7 @@ void ToupBase::setupParams()
         FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
         m_BitsPerPixel = 16;
     }
-    
+
     uint32_t nBitDepth = 0;
     FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));
     m_ADCDepthNP[0].setValue(nBitDepth);
@@ -1657,57 +1660,75 @@ void ToupBase::TimerHit()
     SetTimer(getCurrentPollingPeriod());
 }
 
-/* Helper function for NS timer call back */
-void ToupBase::TimerHelperNS(void *context)
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+IPState ToupBase::guidePulse(INDI::Timer &timer, float ms, eGUIDEDIRECTION dir)
 {
-    static_cast<ToupBase*>(context)->TimerNS();
-}
-
-/* The timer call back for NS guiding */
-void ToupBase::TimerNS()
-{
-    LOG_DEBUG("Guide NS pulse complete");
-    m_NStimerID = -1;
-    GuideComplete(AXIS_DE);
-}
-
-/* Stop the timer for NS guiding */
-void ToupBase::stopTimerNS()
-{
-    if (m_NStimerID != -1)
+    timer.stop();
+    HRESULT rc = FP(ST4PlusGuide(m_Handle, dir, ms));
+    if (FAILED(rc))
     {
-        LOG_DEBUG("Guide NS pulse complete");
-        GuideComplete(AXIS_DE);
-        IERmTimer(m_NStimerID);
-        m_NStimerID = -1;
+        LOGF_ERROR("%s pulse guiding failed: %s", toString(dir), errorCodes(rc).c_str());
+        return IPS_ALERT;
+    }
+
+    LOGF_DEBUG("Starting %s guide for %f ms.", toString(dir), ms);
+
+    timer.callOnTimeout([this, dir]
+    {
+        // BUG in SDK. ST4 guiding pulses do not stop after duration.
+        // N.B. Pulse guiding has to be explicitly stopped.
+        FP(ST4PlusGuide(m_Handle, TOUPBASE_STOP, 0));
+        LOGF_DEBUG("Stopped %s guide.", toString(dir));
+
+        if (dir == TOUPBASE_NORTH || dir == TOUPBASE_SOUTH)
+            GuideComplete(AXIS_DE);
+        else if (dir == TOUPBASE_EAST || dir == TOUPBASE_WEST)
+            GuideComplete(AXIS_RA);
+    });
+
+    if (ms < 1)
+    {
+        usleep(ms * 1000);
+        timer.timeout();
+        return IPS_OK;
+    }
+
+    timer.start(ms);
+    return IPS_BUSY;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////
+void ToupBase::stopGuidePulse(INDI::Timer &timer)
+{
+    if (timer.isActive())
+    {
+        timer.stop();
+        timer.timeout();
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IPState ToupBase::guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName)
+const char *ToupBase::toString(eGUIDEDIRECTION dir)
 {
-    stopTimerNS();
-    LOGF_DEBUG("Starting %s guide for %d ms", dirName, ms);
-
-    // If pulse < 50ms, we wait. Otherwise, we schedule it.
-    int uSecs = ms * 1000;
-    HRESULT rc = FP(ST4PlusGuide(m_Handle, dir, ms));
-    if (FAILED(rc))
+    switch (dir)
     {
-        LOGF_ERROR("%s pulse guiding failed: %s", dirName, errorCodes(rc).c_str());
-        return IPS_ALERT;
+        case TOUPBASE_NORTH:
+            return "North";
+        case TOUPBASE_SOUTH:
+            return "South";
+        case TOUPBASE_EAST:
+            return "East";
+        case TOUPBASE_WEST:
+            return "West";
+        default:
+            return "Stop";
     }
-
-    if (ms < 50)
-    {
-        usleep(uSecs);
-        return IPS_OK;
-    }
-
-    m_NStimerID = IEAddTimer(ms, ToupBase::TimerHelperNS, this);
-    return IPS_BUSY;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1715,7 +1736,7 @@ IPState ToupBase::guidePulseNS(uint32_t ms, eGUIDEDIRECTION dir, const char *dir
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 IPState ToupBase::GuideNorth(uint32_t ms)
 {
-    return guidePulseNS(ms, TOUPBASE_NORTH, "North");
+    return guidePulse(mTimerNS, ms, TOUPBASE_NORTH);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1723,62 +1744,7 @@ IPState ToupBase::GuideNorth(uint32_t ms)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 IPState ToupBase::GuideSouth(uint32_t ms)
 {
-    return guidePulseNS(ms, TOUPBASE_SOUTH, "South");
-}
-
-/* Helper function for WE timer call back */
-void ToupBase::TimerHelperWE(void *context)
-{
-    static_cast<ToupBase*>(context)->TimerWE();
-}
-
-/* The timer call back for WE guiding */
-void ToupBase::TimerWE()
-{
-    LOG_DEBUG("Guide WE pulse complete");
-    m_WEtimerID = -1;
-    GuideComplete(AXIS_RA);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-void ToupBase::stopTimerWE()
-{
-    if (m_WEtimerID != -1)
-    {
-        LOG_DEBUG("Guide WE pulse complete");
-        GuideComplete(AXIS_RA);
-        IERmTimer(m_WEtimerID);
-        m_WEtimerID = -1;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-///
-////////////////////////////////////////////////////////////////////////////////////////////////////
-IPState ToupBase::guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dirName)
-{
-    stopTimerWE();
-    LOGF_DEBUG("Starting %s guide for %d ms", dirName, ms);
-
-    // If pulse < 50ms, we wait. Otherwise, we schedule it.
-    int uSecs = ms * 1000;
-    HRESULT rc = FP(ST4PlusGuide(m_Handle, dir, ms));
-    if (FAILED(rc))
-    {
-        LOGF_ERROR("%s pulse guiding failed: %s", dirName, errorCodes(rc).c_str());
-        return IPS_ALERT;
-    }
-
-    if (ms < 50)
-    {
-        usleep(uSecs);
-        return IPS_OK;
-    }
-
-    m_WEtimerID = IEAddTimer(ms, ToupBase::TimerHelperWE, this);
-    return IPS_BUSY;
+    return guidePulse(mTimerNS, ms, TOUPBASE_SOUTH);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1786,7 +1752,7 @@ IPState ToupBase::guidePulseWE(uint32_t ms, eGUIDEDIRECTION dir, const char *dir
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 IPState ToupBase::GuideEast(uint32_t ms)
 {
-    return guidePulseWE(ms, TOUPBASE_EAST, "East");
+    return guidePulse(mTimerWE, ms, TOUPBASE_EAST);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1794,7 +1760,7 @@ IPState ToupBase::GuideEast(uint32_t ms)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 IPState ToupBase::GuideWest(uint32_t ms)
 {
-    return guidePulseWE(ms, TOUPBASE_WEST, "West");
+    return guidePulse(mTimerWE, ms, TOUPBASE_WEST);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2074,10 +2040,10 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     }
 
     m_CurrentVideoFormat = index;
-	
+
     uint32_t nBitDepth = 0;
-    FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));	
-	m_ADCDepthNP[0].setValue(nBitDepth);
+    FP(get_RawFormat(m_Handle, nullptr, &nBitDepth));
+    m_ADCDepthNP[0].setValue(nBitDepth);
 
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)

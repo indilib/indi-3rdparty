@@ -35,46 +35,46 @@
 
 static class Loader
 {
-    std::deque<std::unique_ptr<ATIKWHEEL>> filterWheels;
-public:
-    Loader()
-    {
-        int iAvailablefilterWheelsCount = MAX_DEVICES;
-        std::vector<std::string> filterWheelNames;
-
-        INDI_UNUSED(hArtemisDLL);
-
-        for (int i = 0; i < iAvailablefilterWheelsCount; i++)
+        std::deque<std::unique_ptr<ATIKWHEEL>> filterWheels;
+    public:
+        Loader()
         {
-            // We only do filterWheels in this driver.
-            if (ArtemisEFWIsPresent(i) == false)
-                continue;
+            int iAvailablefilterWheelsCount = MAX_DEVICES;
+            std::vector<std::string> filterWheelNames;
 
-            ARTEMISEFWTYPE type;
-            char *serialNumber = new char[MAXINDIDEVICE];
-            int rc = ArtemisEFWGetDeviceDetails(i, &type, serialNumber);
-            delete [] serialNumber;
+            INDI_UNUSED(hArtemisDLL);
 
-            if (rc != ARTEMIS_OK)
+            for (int i = 0; i < iAvailablefilterWheelsCount; i++)
             {
-                IDLog("ArtemisEFWGetDeviceDetails for device %d failed with errpr %d.", i, rc);
-                continue;
+                // We only do filterWheels in this driver.
+                if (ArtemisEFWIsPresent(i) == false)
+                    continue;
+
+                ARTEMISEFWTYPE type;
+                char *serialNumber = new char[MAXINDIDEVICE];
+                int rc = ArtemisEFWGetDeviceDetails(i, &type, serialNumber);
+                delete [] serialNumber;
+
+                if (rc != ARTEMIS_OK)
+                {
+                    IDLog("ArtemisEFWGetDeviceDetails for device %d failed with errpr %d.", i, rc);
+                    continue;
+                }
+
+                const char *fwName = (type == ARTEMIS_EFW1) ? "EFW1" : "EFW2";
+
+                std::string filterWheelName;
+
+                if (std::find(filterWheelNames.begin(), filterWheelNames.end(), fwName) == filterWheelNames.end())
+                    filterWheelName = "Atik " + std::string(fwName);
+                else
+                    filterWheelName = "Atik " + std::string(fwName) + " " +
+                                      std::to_string(static_cast<int>(std::count(filterWheelNames.begin(), filterWheelNames.end(), fwName)) + 1);
+
+                filterWheels.push_back(std::unique_ptr<ATIKWHEEL>(new ATIKWHEEL(filterWheelName, i)));
+                filterWheelNames.push_back(fwName);
             }
-
-            const char *fwName = (type == ARTEMIS_EFW1) ? "EFW1" : "EFW2";
-
-            std::string filterWheelName;
-
-            if (std::find(filterWheelNames.begin(), filterWheelNames.end(), fwName) == filterWheelNames.end())
-                filterWheelName = "Atik " + std::string(fwName);
-            else
-                filterWheelName = "Atik " + std::string(fwName) + " " +
-                                  std::to_string(static_cast<int>(std::count(filterWheelNames.begin(), filterWheelNames.end(), fwName)) + 1);
-
-            filterWheels.push_back(std::unique_ptr<ATIKWHEEL>(new ATIKWHEEL(filterWheelName, i)));
-            filterWheelNames.push_back(fwName);
         }
-    }
 } loader;
 
 ATIKWHEEL::ATIKWHEEL(const std::string &filterWheelName, int id)
@@ -140,9 +140,9 @@ bool ATIKWHEEL::setupParams()
     }
 
     CurrentFilter = QueryFilter();
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = numOfFilter;
-    FilterSlotN[0].value = CurrentFilter;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(numOfFilter);
+    FilterSlotNP[0].setValue(CurrentFilter);
 
     return true;
 }
@@ -155,7 +155,7 @@ bool ATIKWHEEL::Disconnect()
 
 void ATIKWHEEL::TimerHit()
 {
-    if (FilterSlotNP.s == IPS_BUSY)
+    if (FilterSlotNP.getState() == IPS_BUSY)
     {
         CurrentFilter = QueryFilter();
         if (TargetFilter == CurrentFilter)
@@ -190,4 +190,3 @@ int ATIKWHEEL::QueryFilter()
 
     return iPosition + 1;
 }
-

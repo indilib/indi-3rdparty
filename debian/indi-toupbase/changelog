@@ -1,3 +1,9 @@
+indi-toupbase (2.2) jammy; urgency=low
+
+  * Fix ST4 guiding.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 20 Feb 2025 09:00:00 +0300
+
 indi-toupbase (2.1) jammy; urgency=low
 
   * Updated driver.

@@ -268,6 +268,8 @@ bool ASICAA::Connect()
     else
         RotatorLimitsNP.setState(IPS_ALERT);
 
+    SetTimer(getCurrentPollingPeriod());
+
     return true;
 }
 

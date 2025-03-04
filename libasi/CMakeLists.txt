@@ -45,11 +45,13 @@ if (APPLE)
   set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "mac/libEFWFilter.bin")
   set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "mac/libUSB2ST4Conv.bin")
   set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "mac/libEAFFocuser.bin")
+  set_property (TARGET CAARotator  PROPERTY IMPORTED_LOCATION "mac/libCAARotator.bin")
 
   FIX_MACOS_LIBRARIES("libASICamera2" "mac/libASICamera2.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libCAARotator" "mac/libCAARotator.bin" "ASI/ZWO")
 
 elseif (UNIX AND NOT WIN32)
 

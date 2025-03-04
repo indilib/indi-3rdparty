@@ -1,7 +1,7 @@
 #ifndef __altaircam_h__
 #define __altaircam_h__
 
-/* Version: 57.27348.20241224 */
+/* Version: 57.27591.20250122 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -294,7 +294,7 @@ typedef struct {
 } AltaircamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 57.27348.20241224
+    get the version of this dll/so/dylib, which is: 57.27591.20250122
 */
 #if defined(_WIN32)
 ALTAIRCAM_API(const wchar_t*)   Altaircam_Version();
@@ -629,7 +629,7 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_MinAutoExpoTimeAGain(HAltaircam h, unsigne
 
 ALTAIRCAM_API(HRESULT)  Altaircam_get_ExpoTime(HAltaircam h, unsigned* Time); /* in microseconds */
 ALTAIRCAM_API(HRESULT)  Altaircam_put_ExpoTime(HAltaircam h, unsigned Time); /* in microseconds */
-ALTAIRCAM_API(HRESULT)  Altaircam_get_RealExpoTime(HAltaircam h, unsigned* Time); /* in microseconds, based on 50HZ/60HZ/DC */
+ALTAIRCAM_API(HRESULT)  Altaircam_get_RealExpoTime(HAltaircam h, unsigned* Time); /* actual exposure time */
 ALTAIRCAM_API(HRESULT)  Altaircam_get_ExpTimeRange(HAltaircam h, unsigned* nMin, unsigned* nMax, unsigned* nDef);
 
 ALTAIRCAM_API(HRESULT)  Altaircam_get_ExpoAGain(HAltaircam h, unsigned short* Gain); /* percent, such as 300 */
@@ -1198,6 +1198,16 @@ ALTAIRCAM_API(HRESULT)  Altaircam_get_Roi(HAltaircam h, unsigned* pxOffset, unsi
 /* multiple Roi */
 ALTAIRCAM_API(HRESULT)  Altaircam_put_RoiN(HAltaircam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
+/* Hardware Binning
+* Value: 1x1, 2x2, etc
+* Method: Average, Add, Skip
+*/
+ALTAIRCAM_API(HRESULT)  Altaircam_put_Binning(HAltaircam h, const char* pValue, const char* pMethod);
+ALTAIRCAM_API(HRESULT)  Altaircam_get_Binning(HAltaircam h, const char** ppValue, const char** ppMethod);
+ALTAIRCAM_API(HRESULT)  Altaircam_get_BinningNumber(HAltaircam h);
+ALTAIRCAM_API(HRESULT)  Altaircam_get_BinningValue(HAltaircam h, unsigned index, const char** ppValue);
+ALTAIRCAM_API(HRESULT)  Altaircam_get_BinningMethod(HAltaircam h, unsigned index, const char** ppMethod);
+
 ALTAIRCAM_API(HRESULT)  Altaircam_put_XY(HAltaircam h, int x, int y);
 
 #define ALTAIRCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE            0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
@@ -1296,13 +1306,13 @@ ALTAIRCAM_API(HRESULT)  Altaircam_put_XY(HAltaircam h, int x, int y);
 #define ALTAIRCAM_IOCONTROL_DELAYTIME_MAX                    (5 * 1000 * 1000)
 
 /*
-  ioLineNumber:
+  ioLine:
     0 => Opto-isolated input
     1 => Opto-isolated output
     2 => GPIO0
     3 => GPIO1
 */
-ALTAIRCAM_API(HRESULT)  Altaircam_IoControl(HAltaircam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+ALTAIRCAM_API(HRESULT)  Altaircam_IoControl(HAltaircam h, unsigned ioLine, unsigned nType, int outVal, int* inVal);
 
 #ifndef __ALTAIRCAMSELFTRIGGER_DEFINED__
 #define __ALTAIRCAMSELFTRIGGER_DEFINED__

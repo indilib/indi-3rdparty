@@ -75,6 +75,5 @@ class ASICAA : public INDI::Rotator
         INDI::PropertyText VersionInfoTP {VERSION_COUNT};
 
         // Timer
-        int timerID { -1 };
         static constexpr double THRESHOLD { 0.1 };
 };

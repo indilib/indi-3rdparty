@@ -155,8 +155,8 @@ bool QHYCCD::initProperties()
     INDI::CCD::initProperties();
     INDI::FilterInterface::initProperties(FILTER_TAB);
 
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = 9;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(9);
 
     // QHY SDK Version
     IUFillText(&SDKVersionT[0], "VERSION", "Version", "NA");
@@ -361,8 +361,8 @@ void QHYCCD::ISGetProperties(const char *dev)
         if (HasFilters)
         {
             //Define the Filter Slot and name properties
-            defineProperty(&FilterSlotNP);
-            if (FilterNameT != nullptr)
+            defineProperty(FilterSlotNP);
+            if (FilterNameTP.size() > 0)
                 defineProperty(FilterNameTP);
         }
 
@@ -976,7 +976,7 @@ bool QHYCCD::Connect()
                     if (GetQHYCCDCFWStatus(m_CameraHandle, currentPos) == QHYCCD_SUCCESS)
                     {
                         CurrentFilter = strtol(currentPos, nullptr, 16) + 1;
-                        FilterSlotN[0].value = CurrentFilter;
+                        FilterSlotNP[0].setValue(CurrentFilter);
                     }
 
                     updateFilterProperties();
@@ -1584,7 +1584,7 @@ void QHYCCD::TimerHit()
     //        }
     //    }
 
-    if (FilterSlotNP.s == IPS_BUSY)
+    if (FilterSlotNP.getState() == IPS_BUSY)
     {
         char currentPos[MAXINDINAME] = {0};
         int rc = GetQHYCCDCFWStatus(m_CameraHandle, currentPos);
@@ -1605,9 +1605,9 @@ void QHYCCD::TimerHit()
         }
         else if (++m_FilterCheckCounter > 30)
         {
-            FilterSlotNP.s = IPS_ALERT;
+            FilterSlotNP.setState(IPS_ALERT);
             LOG_ERROR("Filter change timed out.");
-            IDSetNumber(&FilterSlotNP, nullptr);
+            FilterSlotNP.apply();
         }
     }
 
@@ -1902,11 +1902,9 @@ bool QHYCCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
     {
         //  This is for our device
         //  Now lets see if it's something we process here
-        if (strcmp(name, FilterNameTP->name) == 0)
-        {
-            INDI::FilterInterface::processText(dev, name, texts, names, n);
+        if (INDI::FilterInterface::processText(dev, name, texts, names, n))
             return true;
-        }
+
     }
 
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -1917,10 +1915,8 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
     //  first check if it's for our device
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        if (!strcmp(name, FilterSlotNP.name))
-        {
-            return INDI::FilterInterface::processNumber(dev, name, values, names, n);
-        }
+        if (INDI::FilterInterface::processNumber(dev, name, values, names, n))
+            return true;
 
         //////////////////////////////////////////////////////////////////////
         /// Gain Control
@@ -2699,36 +2695,36 @@ void QHYCCD::debugTriggered(bool enable)
 
 bool QHYCCD::updateFilterProperties()
 {
-    if (FilterNameTP->ntp != m_MaxFilterCount)
+    if (FilterNameTP.size() != static_cast<size_t>(m_MaxFilterCount))
     {
         LOGF_DEBUG("Max filter count is: %d", m_MaxFilterCount);
-        FilterSlotN[0].max = m_MaxFilterCount;
+        FilterSlotNP[0].setMax(m_MaxFilterCount);
+
         char filterName[MAXINDINAME];
         char filterLabel[MAXINDILABEL];
-        if (FilterNameT != nullptr)
-        {
-            for (int i = 0; i < FilterNameTP->ntp; i++)
-                free(FilterNameT[i].text);
-            delete [] FilterNameT;
-        }
 
-        FilterNameT = new IText[m_MaxFilterCount];
-        memset(FilterNameT, 0, sizeof(IText) * m_MaxFilterCount);
+        FilterNameTP.resize(0);
+
         for (int i = 0; i < m_MaxFilterCount; i++)
         {
             snprintf(filterName, MAXINDINAME, "FILTER_SLOT_NAME_%d", i + 1);
             snprintf(filterLabel, MAXINDILABEL, "Filter#%d", i + 1);
-            IUFillText(&FilterNameT[i], filterName, filterLabel, filterLabel);
+
+            INDI::WidgetText oneText;
+            oneText.fill(filterName, filterLabel, filterLabel);
+            FilterNameTP.push(std::move(oneText));
         }
-        IUFillTextVector(FilterNameTP, FilterNameT, m_MaxFilterCount, getDeviceName(), "FILTER_NAME", "Filter",
-                         FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
+
+        FilterNameTP.fill(getDeviceName(), "FILTER_NAME", "Filter",
+                          FilterSlotNP.getGroupName(), IP_RW, 0, IPS_IDLE);
+        FilterNameTP.shrink_to_fit();
 
         // Try to load config filter labels
         for (int i = 0; i < m_MaxFilterCount; i++)
         {
             char oneFilter[MAXINDINAME] = {0};
-            if (IUGetConfigText(getDeviceName(), FilterNameTP->name, FilterNameT[i].name, oneFilter, MAXINDINAME) == 0)
-                IUSaveText(&FilterNameT[i], oneFilter);
+            if (IUGetConfigText(getDeviceName(), FilterNameTP.getName(), FilterNameTP[i].getName(), oneFilter, MAXINDINAME) == 0)
+                FilterNameTP[i].setText(oneFilter);
         }
 
         return true;

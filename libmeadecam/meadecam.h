@@ -1,7 +1,7 @@
 #ifndef __meadecam_h__
 #define __meadecam_h__
 
-/* Version: 57.27348.20241224 */
+/* Version: 57.27591.20250122 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -294,7 +294,7 @@ typedef struct {
 } ToupcamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 57.27348.20241224
+    get the version of this dll/so/dylib, which is: 57.27591.20250122
 */
 #if defined(_WIN32)
 TOUPCAM_API(const wchar_t*)   Toupcam_Version();
@@ -629,7 +629,7 @@ TOUPCAM_API(HRESULT)  Toupcam_get_MinAutoExpoTimeAGain(HToupcam h, unsigned* min
 
 TOUPCAM_API(HRESULT)  Toupcam_get_ExpoTime(HToupcam h, unsigned* Time); /* in microseconds */
 TOUPCAM_API(HRESULT)  Toupcam_put_ExpoTime(HToupcam h, unsigned Time); /* in microseconds */
-TOUPCAM_API(HRESULT)  Toupcam_get_RealExpoTime(HToupcam h, unsigned* Time); /* in microseconds, based on 50HZ/60HZ/DC */
+TOUPCAM_API(HRESULT)  Toupcam_get_RealExpoTime(HToupcam h, unsigned* Time); /* actual exposure time */
 TOUPCAM_API(HRESULT)  Toupcam_get_ExpTimeRange(HToupcam h, unsigned* nMin, unsigned* nMax, unsigned* nDef);
 
 TOUPCAM_API(HRESULT)  Toupcam_get_ExpoAGain(HToupcam h, unsigned short* Gain); /* percent, such as 300 */
@@ -1198,6 +1198,16 @@ TOUPCAM_API(HRESULT)  Toupcam_get_Roi(HToupcam h, unsigned* pxOffset, unsigned* 
 /* multiple Roi */
 TOUPCAM_API(HRESULT)  Toupcam_put_RoiN(HToupcam h, unsigned xOffset[], unsigned yOffset[], unsigned xWidth[], unsigned yHeight[], unsigned Num);
 
+/* Hardware Binning
+* Value: 1x1, 2x2, etc
+* Method: Average, Add, Skip
+*/
+TOUPCAM_API(HRESULT)  Toupcam_put_Binning(HToupcam h, const char* pValue, const char* pMethod);
+TOUPCAM_API(HRESULT)  Toupcam_get_Binning(HToupcam h, const char** ppValue, const char** ppMethod);
+TOUPCAM_API(HRESULT)  Toupcam_get_BinningNumber(HToupcam h);
+TOUPCAM_API(HRESULT)  Toupcam_get_BinningValue(HToupcam h, unsigned index, const char** ppValue);
+TOUPCAM_API(HRESULT)  Toupcam_get_BinningMethod(HToupcam h, unsigned index, const char** ppMethod);
+
 TOUPCAM_API(HRESULT)  Toupcam_put_XY(HToupcam h, int x, int y);
 
 #define TOUPCAM_IOCONTROLTYPE_GET_SUPPORTEDMODE            0x01 /* 0x01 => Input, 0x02 => Output, (0x01 | 0x02) => support both Input and Output */
@@ -1296,13 +1306,13 @@ TOUPCAM_API(HRESULT)  Toupcam_put_XY(HToupcam h, int x, int y);
 #define TOUPCAM_IOCONTROL_DELAYTIME_MAX                    (5 * 1000 * 1000)
 
 /*
-  ioLineNumber:
+  ioLine:
     0 => Opto-isolated input
     1 => Opto-isolated output
     2 => GPIO0
     3 => GPIO1
 */
-TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLineNumber, unsigned nType, int outVal, int* inVal);
+TOUPCAM_API(HRESULT)  Toupcam_IoControl(HToupcam h, unsigned ioLine, unsigned nType, int outVal, int* inVal);
 
 #ifndef __TOUPCAMSELFTRIGGER_DEFINED__
 #define __TOUPCAMSELFTRIGGER_DEFINED__

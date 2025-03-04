@@ -127,7 +127,8 @@ bool ToupWheel::updateProperties()
 
         SpinningDirectionSP[TCFW_SD_CLOCKWISE].fill("CLOCKWISE", "Clockwise", ISS_ON);
         SpinningDirectionSP[TCFW_SD_AUTO].fill("AUTO", "Auto Direction", ISS_OFF);
-        SpinningDirectionSP.fill(getDeviceName(), "SPINNINGDIRECTION", "Spinning Direction", FILTER_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+        SpinningDirectionSP.fill(getDeviceName(), "SPINNINGDIRECTION", "Spinning Direction", FILTER_TAB, IP_RW, ISR_1OFMANY, 0,
+                                 IPS_IDLE);
         SpinningDirectionSP.load();
 
         defineProperty(SpinningDirectionSP);
@@ -179,8 +180,8 @@ bool ToupWheel::Connect()
             slot = 5;
         LOGF_INFO("%s: get slot number from config file, %d", getDeviceName(), slot);
     }
-    FilterSlotN[0].max = slot;
-    IUUpdateMinMax(&FilterSlotNP);
+    FilterSlotNP[0].setMax(slot);
+    FilterSlotNP.updateMinMax();
 
     FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), slot));
     TargetFilter = 1; // if desconnected during spinning, TargetFilter must be initialize when reconnect.
@@ -238,8 +239,8 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             if (previousSlot != currentSlot && isConnected())
             {
                 FP(put_Option(m_Handle, CP(OPTION_FILTERWHEEL_SLOT), currentSlot));
-                FilterSlotN[0].max = currentSlot;
-                IUUpdateMinMax(&FilterSlotNP);
+                FilterSlotNP[0].setMax(currentSlot);
+                FilterSlotNP.updateMinMax();
             }
             saveConfig(SlotsSP);
             return true;
