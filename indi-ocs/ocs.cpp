@@ -52,7 +52,7 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    setVersion(1, 2);
+    setVersion(1, 1);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -76,9 +76,9 @@ bool OCS::Handshake()
     if (PortFD > 0) {
         Connection::Interface *activeConnection = getActiveConnection();
         if (!activeConnection->name().compare("CONNECTION_TCP")) {
-            LOG_INFO("Network based connection, detection timeouts set to 0.5 seconds");
-            OCSTimeoutMicroSeconds = 500000;
-            OCSTimeoutSeconds = 0;
+            LOG_INFO("Network based connection, detection timeouts set to 1 second");
+            OCSTimeoutMicroSeconds = 0;
+            OCSTimeoutSeconds = 1;
         }
         else {
             LOG_INFO("Non-Network based connection, detection timeouts set to 0.1 seconds");
@@ -1390,16 +1390,10 @@ void OCS::SlowTimerHit()
 ******************************************************************/
 IPState OCS::updateWeather() {
     if (weather_tab_enabled) {
-
-        LOG_DEBUG("Weathe update called");
-
         for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
             if (weather_enabled[measurement] == 1) {
                 char measurement_reponse[RB_MAX_LEN];
                 char measurement_command[CMD_MAX_LEN];
-
-                LOGF_DEBUG("In weather measurements loop, %u", measurement);
-
                 switch (measurement) {
                     case WEATHER_TEMPERATURE:
                         indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
@@ -1431,25 +1425,6 @@ IPState OCS::updateWeather() {
                     default:
                         break;
                 }
-
-//                if (measurement == WEATHER_TEMPERATURE) {
-//                    indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_SKY_TEMP) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_DIFF_SKY_TEMP) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_PRESSURE) {
-//                    indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_HUMIDITY) {
-//                    indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_WIND) {
-//                    indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_RAIN) {
-//                    indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_SKY) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-//                }
-
                 double value = conversion_error;
                 int measurement_error_or_fail = getCommandDoubleResponse(PortFD, &value, measurement_reponse,
                                                                          measurement_command);
@@ -1488,24 +1463,6 @@ IPState OCS::updateWeather() {
                         default:
                             break;
                     }
-
-//                     if ((measurement == WEATHER_TEMPERATURE) && (weather_enabled[WEATHER_TEMPERATURE] == 1)) {
-//                        setParameterValue("WEATHER_TEMPERATURE", value);
-//                    } else if ((measurement == WEATHER_PRESSURE) && (weather_enabled[WEATHER_PRESSURE] == 1)) {
-//                        setParameterValue("WEATHER_PRESSURE", value);
-//                    } else if ((measurement == WEATHER_HUMIDITY) && (weather_enabled[WEATHER_HUMIDITY] == 1)) {
-//                        setParameterValue("WEATHER_HUMIDITY", value);
-//                    } else if ((measurement == WEATHER_WIND) && (weather_enabled[WEATHER_WIND] == 1)) {
-//                        setParameterValue("WEATHER_WIND", value);
-//                    } else if ((measurement == WEATHER_DIFF_SKY_TEMP) && (weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1)) {
-//                        setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-//                    } else if ((measurement == WEATHER_SKY) && (weather_enabled[WEATHER_SKY] == 1)) {
-//                        IUSaveText(&Weather_SkyT[0], measurement_reponse);
-//                        IDSetText(&Weather_SkyTP, nullptr);
-//                    } else if ((measurement == WEATHER_SKY_TEMP) && (weather_enabled[WEATHER_SKY_TEMP] == 1)) {
-//                        IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
-//                        IDSetText(&Weather_Sky_TempTP, nullptr);
-//                    }
                 }
 
                 // Separate because WEATHER_CLOUD is the only weather parameter that return a string
@@ -2112,52 +2069,6 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
             }
         }
 
-//
-//            if (THERMOSTAT_SETPOINT_COUNT == n) {
-//                for (int parameter = THERMOSTAT_HEAT_SETPOINT; parameter < THERMOSTAT_SETPOINT_COUNT; parameter++) {
-//                    if (parameter == THERMOSTAT_HEAT_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
-//                        }
-//                    }
-//                    else if (parameter == THERMOSTAT_COOL_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
-//                        }
-//                    } else if (parameter == THERMOSTAT_HUMIDITY_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat humidity setpoint to: %.0f %%", values[THERMOSTAT_HUMIDITY_SETPOINT]);
-//                        }
-//                    }
-//                }
-//                IUUpdateNumber(&Thermostat_setpointsNP, values, names, n);
-//                Thermostat_setpointsNP.s = IPS_OK;
-//                IDSetNumber(&Thermostat_setpointsNP, nullptr);
-
         return true;
     }
 
@@ -2271,12 +2182,13 @@ bool OCS::sendOCSCommand(const char *cmd)
 
     tcflush(PortFD, TCIFLUSH);
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%c>", response[0]);
-    waitingForResponse = false;
+
 
     if (nbytes_read < 1) {
         LOG_WARN("Timeout/Error on response. Check connection.");
         return false;
     }
+    clearBlock();
 
     return (response[0] == '0'); //OCS uses 0 for success and non zero for failure, in *most* cases;
 }
@@ -2318,7 +2230,7 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2358,7 +2270,6 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2373,6 +2284,8 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
         tcflush(fd, TCIOFLUSH);
         return RES_ERR_FORMAT; //-1001, so as not to conflict with TTY_RESPONSE;
     }
+
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2412,7 +2325,6 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2426,6 +2338,8 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
         tcflush(fd, TCIOFLUSH);
         return RES_ERR_FORMAT; //-1001, so as not to conflict with TTY_RESPONSE;
     }
+
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2465,12 +2379,13 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
         return error_type;
     }
+
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2540,8 +2455,17 @@ void OCS::blockUntilClear()
 {
     // Blocking wait for last command response to clear
     while (waitingForResponse) {
-        usleep(OCSTimeoutMicroSeconds / 10);
+        usleep(((OCSTimeoutSeconds * 1000000) + OCSTimeoutMicroSeconds) / 10);
     }
     // Grab the response waiting command blocker
     waitingForResponse = true;
+}
+
+/************************************
+ * Flush port and clear command block
+ * **********************************/
+void OCS::clearBlock()
+{
+    flushIO(PortFD);
+    waitingForResponse = false;
 }
