@@ -539,8 +539,6 @@ private:
         THERMOSTAT_HUMIDITY_SETPOINT,
         THERMOSTAT_SETPOINT_COUNT
     };
-//    INumberVectorProperty Thermostat_setpointsNP;
-//    INumber Thermostat_setpointN[THERMOSTAT_SETPOINT_COUNT];
 
     INumberVectorProperty Thermostat_heat_setpointNP;
     INumber Thermostat_heat_setpointN[1];
@@ -708,5 +706,6 @@ private:
     // Debug only
     // ITextVectorProperty Arbitary_CommandTP;
     // IText Arbitary_CommandT[1];
+    // Debug only end
 };
 

@@ -28,12 +28,12 @@ Hardware communication is via a simple text protocol similar to the LX200.
 USB and network connections supported.
 *******************************************************************************/
 
-// For Debug only
+// Debug only
 
 // #include <signal.h>
 // #include <unistd.h>;
 
-// For Debug only end
+// Debug only end
 
 #include "ocs.h"
 #include "termios.h"
@@ -59,13 +59,11 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    // For Debug only
+    // Debug only
     // Halts the process at this point. Allows remote debugger to attach which is required
     // when launching the driver from a client eg. Ekos
-
     // kill(getpid(), SIGSTOP);
-
-    // For Debug only end
+    // Debug only end
 
     setVersion(1, 2);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
@@ -606,7 +604,7 @@ bool OCS::initProperties()
     // IUFillTextVector(&Arbitary_CommandTP, Arbitary_CommandT, 1, getDeviceName(), "ARBITARY_COMMAND", "Command",
     //                  MANUAL_TAB, IP_RW, 60, IPS_IDLE);
     // IUFillText(&Arbitary_CommandT[0], "ARBITARY_COMMANDT", "Response:", ":IP#");
-
+    // Debug only end
 
     // Standard Indi aux controls
     //---------------------------
@@ -710,6 +708,7 @@ bool OCS::updateProperties()
 
         // Debug only
         // defineProperty(&Arbitary_CommandTP);
+        // Debug only end
     }
     else {
         deleteProperty(ShutterStatusTP.name);
@@ -790,6 +789,7 @@ bool OCS::updateProperties()
 
         // Debug only
         // deleteProperty(Arbitary_CommandTP.name);
+        // Debug only end
 
         // As we're disconnected, stop calling one minute updates
         SlowTimer.stop();
@@ -2127,52 +2127,6 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
             }
         }
 
-//
-//            if (THERMOSTAT_SETPOINT_COUNT == n) {
-//                for (int parameter = THERMOSTAT_HEAT_SETPOINT; parameter < THERMOSTAT_SETPOINT_COUNT; parameter++) {
-//                    if (parameter == THERMOSTAT_HEAT_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
-//                        }
-//                    }
-//                    else if (parameter == THERMOSTAT_COOL_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
-//                        }
-//                    } else if (parameter == THERMOSTAT_HUMIDITY_SETPOINT) {
-//                        char thermostat_setpoint_command[CMD_MAX_LEN];
-//                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-//                                OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
-//                        char response[RB_MAX_LEN];
-//                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-//                        if(res < 0 || response[0] == '0') {
-//                            LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
-//                            return false;
-//                        } else {
-//                            LOGF_INFO("Set Thermostat humidity setpoint to: %.0f %%", values[THERMOSTAT_HUMIDITY_SETPOINT]);
-//                        }
-//                    }
-//                }
-//                IUUpdateNumber(&Thermostat_setpointsNP, values, names, n);
-//                Thermostat_setpointsNP.s = IPS_OK;
-//                IDSetNumber(&Thermostat_setpointsNP, nullptr);
-
         return true;
     }
 
@@ -2192,36 +2146,34 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
  *****************************************/
 bool OCS::ISNewText(const char *dev,const char *name,char *texts[],char *names[],int n)
 {
-    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0) {
-
-        // Debug only
-        // Manual tab - Arbitary command
-        // if (!strcmp(Arbitary_CommandTP.name, name)) {
-        //     if (1 == n) {
-        //         char command_response[RB_MAX_LEN] = {0};
-        //         int command_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, command_response, texts[0]);
-        //         if (command_error_or_fail > 0) {
-        //             if (strcmp(command_response, "") == 0) {
-        //                 indi_strlcpy(command_response, "No response", sizeof(command_response));
-        //             }
-        //         } else {
-        //             char error_code[RB_MAX_LEN] = {0};
-        //             if (command_error_or_fail == TTY_TIME_OUT) {
-        //                 indi_strlcpy(command_response, "No response", sizeof(command_response));
-        //             } else {
-        //                 sprintf(error_code, "Error: %d", command_error_or_fail);
-        //                 indi_strlcpy(command_response, error_code, sizeof(command_response));
-        //             }
-        //         }
-        //
-        //         // Replace the user entered string with the OCS response
-        //         indi_strlcpy(texts[0], command_response, RB_MAX_LEN);
-        //         IUUpdateText(&Arbitary_CommandTP, texts, names, n);
-        //         IDSetText(&Arbitary_CommandTP, nullptr);
-        //         return true;
-        //     }
-        // }
-    }
+    // Debug only - Manual tab, Arbitary command
+    // if (dev != nullptr && strcmp(dev, getDeviceName()) == 0) {
+    //     if (!strcmp(Arbitary_CommandTP.name, name)) {
+    //         if (1 == n) {
+    //             char command_response[RB_MAX_LEN] = {0};
+    //             int command_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, command_response, texts[0]);
+    //             if (command_error_or_fail > 0) {
+    //                 if (strcmp(command_response, "") == 0) {
+    //                     indi_strlcpy(command_response, "No response", sizeof(command_response));
+    //                 }
+    //             } else {
+    //                 char error_code[RB_MAX_LEN] = {0};
+    //                 if (command_error_or_fail == TTY_TIME_OUT) {
+    //                     indi_strlcpy(command_response, "No response", sizeof(command_response));
+    //                 } else {
+    //                     sprintf(error_code, "Error: %d", command_error_or_fail);
+    //                     indi_strlcpy(command_response, error_code, sizeof(command_response));
+    //                 }
+    //             }
+    //                     // Replace the user entered string with the OCS response
+    //             indi_strlcpy(texts[0], command_response, RB_MAX_LEN);
+    //             IUUpdateText(&Arbitary_CommandTP, texts, names, n);
+    //             IDSetText(&Arbitary_CommandTP, nullptr);
+    //             return true;
+    //         }
+    //     }
+    // }
+    // Debug only end
 
     return INDI::Dome::ISNewText(dev,name,texts,names,n);
 }
