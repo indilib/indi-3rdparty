@@ -28,6 +28,13 @@ Hardware communication is via a simple text protocol similar to the LX200.
 USB and network connections supported.
 *******************************************************************************/
 
+// For Debug only
+
+// #include <signal.h>
+// #include <unistd.h>;
+
+// For Debug only end
+
 #include "ocs.h"
 #include "termios.h"
 
@@ -52,6 +59,14 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
+    // For Debug only
+    // Halts the process at this point. Allows remote debugger to attach which is required
+    // when launching the driver from a client eg. Ekos
+
+    // kill(getpid(), SIGSTOP);
+
+    // For Debug only end
+
     setVersion(1, 2);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
@@ -76,9 +91,9 @@ bool OCS::Handshake()
     if (PortFD > 0) {
         Connection::Interface *activeConnection = getActiveConnection();
         if (!activeConnection->name().compare("CONNECTION_TCP")) {
-            LOG_INFO("Network based connection, detection timeouts set to 0.5 seconds");
-            OCSTimeoutMicroSeconds = 500000;
-            OCSTimeoutSeconds = 0;
+            LOG_INFO("Network based connection, detection timeouts set to 1 second");
+            OCSTimeoutMicroSeconds = 0;
+            OCSTimeoutSeconds = 1;
         }
         else {
             LOG_INFO("Non-Network based connection, detection timeouts set to 0.1 seconds");
@@ -2271,7 +2286,8 @@ bool OCS::sendOCSCommand(const char *cmd)
 
     tcflush(PortFD, TCIFLUSH);
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%c>", response[0]);
-    waitingForResponse = false;
+    //waitingForResponse = false;
+    clearBlock();
 
     if (nbytes_read < 1) {
         LOG_WARN("Timeout/Error on response. Check connection.");
@@ -2318,7 +2334,8 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
+    //waitingForResponse = false;
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2358,7 +2375,8 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2412,7 +2430,8 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2465,7 +2484,8 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
-    waitingForResponse = false;
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2540,8 +2560,17 @@ void OCS::blockUntilClear()
 {
     // Blocking wait for last command response to clear
     while (waitingForResponse) {
-        usleep(OCSTimeoutMicroSeconds / 10);
+        usleep(((OCSTimeoutSeconds * 1000000) + OCSTimeoutMicroSeconds) / 10);
+//        usleep(OCSTimeoutMicroSeconds / 10);
     }
     // Grab the response waiting command blocker
     waitingForResponse = true;
+}
+
+/*********************************************
+ * Flush port and clear command sequence block
+ * *******************************************/
+void OCS::clearBlock()
+{
+    waitingForResponse = false;
 }
