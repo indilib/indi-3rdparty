@@ -148,7 +148,7 @@ struct _gphoto_driver
     int bulb_exposure_index;
     double max_exposure, min_exposure;
     bool force_bulb;
-    int download_timeout {60};
+    int download_timeout;
 
     int iso;
     int format;
@@ -630,7 +630,7 @@ static void *stop_bulb(void *arg)
 
                 if (gphoto->bulb_port[0] && (gphoto->bulb_fd >= 0))
                 {
-                    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing remote serial shutter (%s)",gphoto->bulb_port);
+                    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing remote serial shutter (%s)", gphoto->bulb_port);
 
                     // Close Nikon Shutter
                     if (strstr(device, "Nikon"))
@@ -1386,11 +1386,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
     //Bulb mode
     gphoto->command = 0;
-    uint32_t waitMS = gphoto->download_timeout * 1000;
+    uint32_t waitMS = std::max(gphoto->download_timeout, 1) * 1000;
     bool downloadComplete = false;
     struct timeval start_time;
     gettimeofday(&start_time, nullptr);
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "BULB Mode: Waiting for event for %d seconds (waitMS: %d).", gphoto->download_timeout, waitMS);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "BULB Mode: Waiting for event for %d seconds (waitMS: %d).",
+                 gphoto->download_timeout, waitMS);
     int no_event_retries = 3;
 
     while (1)
@@ -1724,6 +1725,7 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
     gphoto->exposure_presets_count = 0;
     gphoto->max_exposure           = 3600;
     gphoto->min_exposure           = 0.001;
+    gphoto->download_timeout       = 60;
     gphoto->dsusb                  = nullptr;
     gphoto->force_bulb             = true;
     gphoto->last_sensor_temp       = -273.0; // 0 degrees Kelvin
