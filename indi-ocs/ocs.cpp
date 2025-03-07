@@ -65,7 +65,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 2);
+    setVersion(1, 1);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
