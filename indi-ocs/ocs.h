@@ -447,12 +447,14 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntResponse(int fd, int *value, char *data, const char *cmd);
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
+    void blockUntilClear();
+    void clearBlock();
 
     long int OCSTimeoutSeconds = 0;
     long int OCSTimeoutMicroSeconds = 100000;
 
 private:
-    float minimum_OCS_fw = 3.04;
+    float minimum_OCS_fw = 3.08;
     int conversion_error = -10000;
 
     // Capability queries on connection
@@ -461,6 +463,9 @@ private:
 
     // Timer for slow updates, once per minute
     INDI::Timer SlowTimer;
+
+    // Command sequence enforcement
+    bool waitingForResponse = false;
 
     // Roof/Shutter control
     //---------------------
@@ -519,6 +524,7 @@ private:
     //------------------------
     bool thermostat_controls_enabled = false;
 
+
     enum {
         THERMOSTAT_TEMERATURE,
         THERMOSTAT_HUMIDITY,
@@ -533,8 +539,14 @@ private:
         THERMOSTAT_HUMIDITY_SETPOINT,
         THERMOSTAT_SETPOINT_COUNT
     };
-    INumberVectorProperty Thermostat_setpointsNP;
-    INumber Thermostat_setpointN[THERMOSTAT_SETPOINT_COUNT];
+
+    INumberVectorProperty Thermostat_heat_setpointNP;
+    INumber Thermostat_heat_setpointN[1];
+    INumberVectorProperty Thermostat_cool_setpointNP;
+    INumber Thermostat_cool_setpointN[1];
+    INumberVectorProperty Thermostat_humidity_setpointNP;
+    INumber Thermostat_humidity_setpointN[1];
+
 
     ISwitchVectorProperty Thermostat_heat_relaySP;
     ISwitch Thermostat_heat_relayS[SWITCH_TOGGLE_COUNT];
@@ -694,5 +706,6 @@ private:
     // Debug only
     // ITextVectorProperty Arbitary_CommandTP;
     // IText Arbitary_CommandT[1];
+    // Debug only end
 };
 

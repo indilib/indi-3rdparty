@@ -28,6 +28,13 @@ Hardware communication is via a simple text protocol similar to the LX200.
 USB and network connections supported.
 *******************************************************************************/
 
+// Debug only
+
+// #include <signal.h>
+// #include <unistd.h>
+
+// Debug only end
+
 #include "ocs.h"
 #include "termios.h"
 
@@ -52,7 +59,13 @@ std::unique_ptr<OCS> ocs(new OCS());
 
 OCS::OCS() : INDI::Dome(), WI(this)
 {
-    setVersion(1, 0);
+    // Debug only
+    // Halts the process at this point. Allows remote debugger to attach which is required
+    // when launching the driver from a client eg. Ekos
+    // kill(getpid(), SIGSTOP);
+    // Debug only end
+
+    setVersion(1, 1);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -76,9 +89,9 @@ bool OCS::Handshake()
     if (PortFD > 0) {
         Connection::Interface *activeConnection = getActiveConnection();
         if (!activeConnection->name().compare("CONNECTION_TCP")) {
-            LOG_INFO("Network based connection, detection timeouts set to 0.5 seconds");
-            OCSTimeoutMicroSeconds = 50000;
-            OCSTimeoutSeconds = 0;
+            LOG_INFO("Network based connection, detection timeouts set to 1 second");
+            OCSTimeoutMicroSeconds = 0;
+            OCSTimeoutSeconds = 1;
         }
         else {
             LOG_INFO("Non-Network based connection, detection timeouts set to 0.1 seconds");
@@ -169,7 +182,7 @@ void OCS::GetCapabilites()
             LOG_INFO("OCS does not have a thermostat, disabling tab");
         } else {
             thermostat_controls_enabled = true;
-            LOG_WARN("OCS has a thermostat, enabling tab");
+            LOG_INFO("OCS has a thermostat, enabling tab");
 
             // Get thermostat relay definitions
             char thermostat_relay_definitions_response[RB_MAX_LEN] = {0};
@@ -221,30 +234,39 @@ void OCS::GetCapabilites()
                     int power_relay_name_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, power_relay_name_response,
                                                                                                  get_power_device_name_command);
                     if (power_relay_name_error_or_fail > 0) {
-                        if (deviceNo == 1) {
-                            indi_strlcpy(POWER_DEVICE1_NAME, power_relay_name_response, sizeof(POWER_DEVICE1_NAME));
-                            IUSaveText(&Power_Device_Name1T[0], POWER_DEVICE1_NAME);
-                            IDSetText(&Power_Device_Name1TP, nullptr);
-                        } else if (deviceNo == 2) {
-                            indi_strlcpy(POWER_DEVICE2_NAME, power_relay_name_response, sizeof(POWER_DEVICE2_NAME));
-                            IUSaveText(&Power_Device_Name2T[0], POWER_DEVICE2_NAME);
-                            IDSetText(&Power_Device_Name2TP, nullptr);
-                        } else if (deviceNo == 3) {
-                            indi_strlcpy(POWER_DEVICE3_NAME, power_relay_name_response, sizeof(POWER_DEVICE3_NAME));
-                            IUSaveText(&Power_Device_Name3T[0], POWER_DEVICE3_NAME);
-                            IDSetText(&Power_Device_Name3TP, nullptr);
-                        } else if (deviceNo == 4) {
-                            indi_strlcpy(POWER_DEVICE4_NAME, power_relay_name_response, sizeof(POWER_DEVICE4_NAME));
-                            IUSaveText(&Power_Device_Name4T[0], POWER_DEVICE4_NAME);
-                            IDSetText(&Power_Device_Name4TP, nullptr);
-                        } else if (deviceNo == 5) {
-                            indi_strlcpy(POWER_DEVICE5_NAME, power_relay_name_response, sizeof(POWER_DEVICE5_NAME));
-                            IUSaveText(&Power_Device_Name5T[0], POWER_DEVICE5_NAME);
-                            IDSetText(&Power_Device_Name5TP, nullptr);
-                        } else if (deviceNo == 61) {
-                            indi_strlcpy(POWER_DEVICE6_NAME, power_relay_name_response, sizeof(POWER_DEVICE6_NAME));
-                            IUSaveText(&Power_Device_Name6T[0], POWER_DEVICE6_NAME);
-                            IDSetText(&Power_Device_Name6TP, nullptr);
+                        switch(deviceNo) {
+                            case 1:
+                                indi_strlcpy(POWER_DEVICE1_NAME, power_relay_name_response, sizeof(POWER_DEVICE1_NAME));
+                                IUSaveText(&Power_Device_Name1T[0], POWER_DEVICE1_NAME);
+                                IDSetText(&Power_Device_Name1TP, nullptr);
+                                break;
+                            case 2:
+                                indi_strlcpy(POWER_DEVICE2_NAME, power_relay_name_response, sizeof(POWER_DEVICE2_NAME));
+                                IUSaveText(&Power_Device_Name2T[0], POWER_DEVICE2_NAME);
+                                IDSetText(&Power_Device_Name2TP, nullptr);
+                                break;
+                            case 3:
+                                indi_strlcpy(POWER_DEVICE3_NAME, power_relay_name_response, sizeof(POWER_DEVICE3_NAME));
+                                IUSaveText(&Power_Device_Name3T[0], POWER_DEVICE3_NAME);
+                                IDSetText(&Power_Device_Name3TP, nullptr);
+                                break;
+                            case 4:
+                                indi_strlcpy(POWER_DEVICE4_NAME, power_relay_name_response, sizeof(POWER_DEVICE4_NAME));
+                                IUSaveText(&Power_Device_Name4T[0], POWER_DEVICE4_NAME);
+                                IDSetText(&Power_Device_Name4TP, nullptr);
+                                break;
+                            case 5:
+                                indi_strlcpy(POWER_DEVICE5_NAME, power_relay_name_response, sizeof(POWER_DEVICE5_NAME));
+                                IUSaveText(&Power_Device_Name5T[0], POWER_DEVICE5_NAME);
+                                IDSetText(&Power_Device_Name5TP, nullptr);
+                                break;
+                            case 6:
+                                indi_strlcpy(POWER_DEVICE6_NAME, power_relay_name_response, sizeof(POWER_DEVICE6_NAME));
+                                IUSaveText(&Power_Device_Name6T[0], POWER_DEVICE6_NAME);
+                                IDSetText(&Power_Device_Name6TP, nullptr);
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
@@ -289,28 +311,42 @@ void OCS::GetCapabilites()
     for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
         char measurement_reponse[RB_MAX_LEN];
         char measurement_command[CMD_MAX_LEN];
-        if (measurement == WEATHER_TEMPERATURE) {
-            indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-        } else if (measurement == WEATHER_SKY_TEMP) {
-            indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-        } else if (measurement == WEATHER_DIFF_SKY_TEMP) {
-            indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-        } else if (measurement == WEATHER_PRESSURE) {
-            indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-        } else if (measurement == WEATHER_HUMIDITY) {
-            indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-        } else if (measurement == WEATHER_WIND) {
-            indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-        } else if (measurement == WEATHER_RAIN) {
-            indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-        } else if (measurement == WEATHER_CLOUD) {
-            indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
-        } else if (measurement == WEATHER_SKY) {
-            indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
+        switch(measurement) {
+            case WEATHER_TEMPERATURE:
+                indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
+                break;
+            case WEATHER_PRESSURE:
+                indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
+                break;
+            case WEATHER_HUMIDITY:
+                indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
+                break;
+            case WEATHER_WIND:
+                indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
+                break;
+            case WEATHER_RAIN:
+                indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
+                break;
+            case WEATHER_DIFF_SKY_TEMP:
+                indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
+                break;
+            case WEATHER_CLOUD:
+                indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
+                break;
+            case WEATHER_SKY:
+                indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
+                break;
+            case WEATHER_SKY_TEMP:
+                indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
+                break;
+            default:
+                break;
         }
+
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
                                                                                 measurement_command);
-        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") && strcmp(measurement_reponse, "0") != 0) {
+        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") != 0 &&
+            strcmp(measurement_reponse, "NAN") != 0 && strcmp(measurement_reponse, "0") != 0) {
             weather_enabled[measurement] = 1;
         } else {
             weather_enabled[measurement] = 0;
@@ -353,25 +389,36 @@ void OCS::GetCapabilites()
 
         // Loop through only the first 6 measurements rather than WEATHER_MEASUREMENTS_COUNT
         // as only these are usable for safety status with limits
-        for (int measurements = 0; measurements < 6; measurements ++) {
-            if (measurements == WEATHER_TEMPERATURE && weather_enabled[WEATHER_TEMPERATURE] == 1) {
-                addParameter("WEATHER_TEMPERATURE", "Temperature °C", -10, 40, 15);
-                setCriticalParameter("WEATHER_TEMPERATURE");
-            } else if (measurements == WEATHER_PRESSURE && weather_enabled[WEATHER_PRESSURE] == 1) {
-                addParameter("WEATHER_PRESSURE", "Pressure mbar", 970, 1050, 10);
-                setCriticalParameter("WEATHER_PRESSURE");
-            } else if (measurements == WEATHER_HUMIDITY && weather_enabled[WEATHER_HUMIDITY] == 1) {
-                addParameter("WEATHER_HUMIDITY", "Humidity %", 0, 95, 15);
-                setCriticalParameter("WEATHER_HUMIDITY");
-            } else if (measurements == WEATHER_WIND && weather_enabled[WEATHER_WIND] == 1) {
-                addParameter("WEATHER_WIND", "Wind kph", 0, wind_speed_threshold, 15);
-                setCriticalParameter("WEATHER_WIND");
-            } else if (measurements == WEATHER_RAIN && weather_enabled[WEATHER_RAIN] == 1) {
-                addParameter("WEATHER_RAIN", "Rain state", 3, 3, 67);
-                setCriticalParameter("WEATHER_RAIN");
-            } else if (measurements == WEATHER_DIFF_SKY_TEMP && weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1) {
-                addParameter("WEATHER_SKY_DIFF_TEMP", "Sky vs Cloud °C", -50, diff_temp_threshold, 15);
-                setCriticalParameter("WEATHER_SKY_DIFF_TEMP");
+        for (int measurement = 0; measurement < 6; measurement ++) {
+            if (weather_enabled[measurement] == 1) {
+                switch(measurement) {
+                    case WEATHER_TEMPERATURE:
+                        addParameter("WEATHER_TEMPERATURE", "Temperature °C", -10, 40, 15);
+                        setCriticalParameter("WEATHER_TEMPERATURE");
+                        break;
+                    case WEATHER_PRESSURE:
+                        addParameter("WEATHER_PRESSURE", "Pressure mbar", 970, 1050, 10);
+                        setCriticalParameter("WEATHER_PRESSURE");
+                        break;
+                    case WEATHER_HUMIDITY:
+                        addParameter("WEATHER_HUMIDITY", "Humidity %", 0, 95, 15);
+                        setCriticalParameter("WEATHER_HUMIDITY");
+                        break;
+                    case WEATHER_WIND:
+                        addParameter("WEATHER_WIND", "Wind kph", 0, wind_speed_threshold, 15);
+                        setCriticalParameter("WEATHER_WIND");
+                        break;
+                    case WEATHER_RAIN:
+                        addParameter("WEATHER_RAIN", "Rain state", 3, 3, 67);
+                        setCriticalParameter("WEATHER_RAIN");
+                        break;
+                    case WEATHER_DIFF_SKY_TEMP:
+                        addParameter("WEATHER_SKY_DIFF_TEMP", "Sky vs Cloud °C", -50, diff_temp_threshold, 15);
+                        setCriticalParameter("WEATHER_SKY_DIFF_TEMP");
+                            break;
+                    default:
+                        break;
+                }
             }
         }
     } else {
@@ -422,11 +469,16 @@ bool OCS::initProperties()
     IUFillText(&Thermostat_StatusT[THERMOSTAT_TEMERATURE], "THERMOSTAT_TEMPERATURE", "Temperature °C", "---");
     IUFillText(&Thermostat_StatusT[THERMOSTAT_HUMIDITY], "THERMOSTAT_HUMIDITY", "Humidity %", "---");
 
-    IUFillNumberVector(&Thermostat_setpointsNP, Thermostat_setpointN, THERMOSTAT_SETPOINT_COUNT, getDeviceName(), "THERMOSTAT_SETPOINTS", "Setpoints",
+    IUFillNumberVector(&Thermostat_heat_setpointNP, Thermostat_heat_setpointN, 1, getDefaultName(), "THERMOSTAT_HEAT_SETPOINT", "Heat setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_setpointN[THERMOSTAT_HEAT_SETPOINT], "THERMOSTAT_HEAT_SETPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumber(&Thermostat_setpointN[THERMOSTAT_COOL_SETPOINT], "THERMOSTAT_COOL_SETPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumber(&Thermostat_setpointN[THERMOSTAT_HUMIDITY_SETPOINT], "THERMOSTAT_HUMIDITY_SETPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
+    IUFillNumber(&Thermostat_heat_setpointN[1], "THERMOSTAT_HEAT_SEPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_cool_setpointNP, Thermostat_cool_setpointN, 1, getDefaultName(), "THERMOSTAT_COOL_SETPOINT", "Cool setpoint",
+                       THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
+    IUFillNumber(&Thermostat_cool_setpointN[1], "THERMOSTAT_COOL_SEPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_humidity_setpointNP, Thermostat_humidity_setpointN, 1, getDefaultName(), "THERMOSTAT_HUMIDITY_SETPOINT", "Humidity setpoint",
+                       THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
+    IUFillNumber(&Thermostat_humidity_setpointN[1], "THERMOSTAT_HUMIDITY_SEPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
+
     IUFillSwitchVector(&Thermostat_heat_relaySP, Thermostat_heat_relayS, SWITCH_TOGGLE_COUNT, getDeviceName(), "Thermo_heat_relay", "Heat Relay",
                        THERMOSTAT_TAB, IP_RO, ISR_1OFMANY, 60, IPS_OK);
     IUFillSwitch(&Thermostat_heat_relayS[ON_SWITCH], "Heat_Relay_On", "ON", ISS_OFF);
@@ -552,7 +604,7 @@ bool OCS::initProperties()
     // IUFillTextVector(&Arbitary_CommandTP, Arbitary_CommandT, 1, getDeviceName(), "ARBITARY_COMMAND", "Command",
     //                  MANUAL_TAB, IP_RW, 60, IPS_IDLE);
     // IUFillText(&Arbitary_CommandT[0], "ARBITARY_COMMANDT", "Response:", ":IP#");
-
+    // Debug only end
 
     // Standard Indi aux controls
     //---------------------------
@@ -574,9 +626,6 @@ bool OCS::updateProperties()
     //------------------------------------
     deleteProperty(DomeMotionSP);
 
-//    if (weather_tab_enabled) {
-//        WI::updateProperties();
-//    }
     if (isConnected()) {
         defineProperty(&ShutterStatusTP);
         defineProperty(&DomeControlsSP);
@@ -587,9 +636,17 @@ bool OCS::updateProperties()
         //-------------------------------
         if (thermostat_controls_enabled) {
             defineProperty(&Thermostat_StatusTP);
-            defineProperty(&Thermostat_setpointsNP);
+            defineProperty(&Thermostat_heat_setpointNP);
+            defineProperty(&Thermostat_cool_setpointNP);
+            defineProperty(&Thermostat_humidity_setpointNP);
+        }
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
             defineProperty(&Thermostat_heat_relaySP);
+        }
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
             defineProperty(&Thermostat_cool_relaySP);
+        }
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
             defineProperty(&Thermostat_humidity_relaySP);
         }
         if (power_device_relays[0] > 0) {
@@ -648,6 +705,7 @@ bool OCS::updateProperties()
 
         // Debug only
         // defineProperty(&Arbitary_CommandTP);
+        // Debug only end
     }
     else {
         deleteProperty(ShutterStatusTP.name);
@@ -659,9 +717,17 @@ bool OCS::updateProperties()
         //-------------------------------
         if (thermostat_controls_enabled) {
             deleteProperty(Thermostat_StatusTP.name);
-            deleteProperty(Thermostat_setpointsNP.name);
+            deleteProperty(Thermostat_heat_setpointNP.name);
+            deleteProperty(Thermostat_cool_setpointNP.name);
+            deleteProperty(Thermostat_humidity_setpointNP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
             deleteProperty(Thermostat_heat_relaySP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
             deleteProperty(Thermostat_cool_relaySP.name);
+        }
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
             deleteProperty(Thermostat_humidity_relaySP.name);
         }
         if (power_device_relays[0] > 0) {
@@ -720,6 +786,7 @@ bool OCS::updateProperties()
 
         // Debug only
         // deleteProperty(Arbitary_CommandTP.name);
+        // Debug only end
 
         // As we're disconnected, stop calling one minute updates
         SlowTimer.stop();
@@ -856,6 +923,7 @@ void OCS::TimerHit()
             IDSetText(&DomeStatusTP, nullptr);
         } else {
             LOGF_WARN("Communication error on get Dome status %s, this update aborted, will try again...", OCS_get_dome_status);
+            LOGF_WARN("Received %S", dome_status_response);
         }
 
         // Get the dome position
@@ -869,6 +937,7 @@ void OCS::TimerHit()
             DomeAbsPosNP.apply();
         } else {
             LOGF_WARN("Communication error on get Dome position %s, this update aborted, will try again...", OCS_get_dome_azimuth);
+            LOGF_WARN("Received %d", position);
         }
     }
 
@@ -1090,36 +1159,44 @@ void OCS::SlowTimerHit()
         }
 
         // Get the Thermostat setpoints
-        char heat_response[RB_MAX_LEN] = {0};
-        int heat_int_response = 0;
-        int heat_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, heat_response, &heat_int_response,
-                                                                        OCS_get_thermostat_heat_setpoint);
-        if (heat_setpoint_error_or_fail >= 0 && heat_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_HEAT_SETPOINT].value = heat_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Heat Setpoint %d, this update aborted, will try again...", heat_int_response);
+        if (thermostat_relays[THERMOSTAT_HEAT_RELAY] > 0) {
+            char heat_response[RB_MAX_LEN] = {0};
+            int heat_int_response = 0;
+            int heat_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, heat_response, &heat_int_response,
+                                                                            OCS_get_thermostat_heat_setpoint);
+            if (heat_setpoint_error_or_fail >= 0 && heat_int_response != conversion_error) { // errors are negative
+                Thermostat_heat_setpointN[0].value = heat_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Heat Setpoint %d, this update aborted, will try again...", heat_int_response);
+            }
+            IDSetNumber(&Thermostat_heat_setpointNP, nullptr);
         }
 
-        char cool_response[RB_MAX_LEN] = {0};
-        int cool_int_response = 0;
-        int cool_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, cool_response, &cool_int_response,
-                                                                        OCS_get_thermostat_cool_setpoint);
-        if (cool_setpoint_error_or_fail >= 0 && cool_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_COOL_SETPOINT].value = cool_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Cool Setpoint %d, this update aborted, will try again...", cool_int_response);
+        if (thermostat_relays[THERMOSTAT_COOL_RELAY] > 0) {
+            char cool_response[RB_MAX_LEN] = {0};
+            int cool_int_response = 0;
+            int cool_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, cool_response, &cool_int_response,
+                                                                            OCS_get_thermostat_cool_setpoint);
+            if (cool_setpoint_error_or_fail >= 0 && cool_int_response != conversion_error) { // errors are negative
+                Thermostat_cool_setpointN[0].value =cool_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Cool Setpoint %d, this update aborted, will try again...", cool_int_response);
+            }
+            IDSetNumber(&Thermostat_cool_setpointNP, nullptr);
         }
 
-        char humidity_response[RB_MAX_LEN] = {0};
-        int humidity_int_response = 0;
-        int humidity_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, humidity_response, &humidity_int_response,
-                                                                            OCS_get_thermostat_humidity_setpoint);
-        if (humidity_setpoint_error_or_fail >= 0 && humidity_int_response != conversion_error) { // errors are negative
-            Thermostat_setpointN[THERMOSTAT_HUMIDITY_SETPOINT].value = humidity_int_response;
-        } else {
-            LOGF_WARN("Communication error on get Thermostat Humidity Setpoint %d, this update aborted, will try again...", humidity_int_response);
+        if (thermostat_relays[THERMOSTAT_HUMIDITY_RELAY] > 0) {
+            char humidity_response[RB_MAX_LEN] = {0};
+            int humidity_int_response = 0;
+            int humidity_setpoint_error_or_fail = getCommandIntFromCharResponse(PortFD, humidity_response, &humidity_int_response,
+                                                                                OCS_get_thermostat_humidity_setpoint);
+            if (humidity_setpoint_error_or_fail >= 0 && humidity_int_response != conversion_error) { // errors are negative
+                Thermostat_humidity_setpointN[0].value = humidity_int_response;
+            } else {
+                LOGF_WARN("Communication error on get Thermostat Humidity Setpoint %d, this update aborted, will try again...", humidity_int_response);
+            }
+            IDSetNumber(&Thermostat_humidity_setpointNP, nullptr);
         }
-        IDSetNumber(&Thermostat_setpointsNP, nullptr);
 
         // Get the Thermostat relay status'
         for (int relay = 0; relay < THERMOSTAT_RELAY_COUNT; relay++) {
@@ -1130,33 +1207,39 @@ void OCS::SlowTimerHit()
                 int thermo_relay_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, thermo_relay_response,
                                                                                          thermo_relay_command);
                 if (thermo_relay_error_or_fail > 1) {
-                    if (relay == THERMOSTAT_HEAT_RELAY) {
-                        if (strcmp(thermo_relay_response, "ON") == 0) {
-                            Thermostat_heat_relayS[ON_SWITCH].s = ISS_ON;
-                            Thermostat_heat_relayS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(thermo_relay_response, "OFF") == 0) {
-                            Thermostat_heat_relayS[ON_SWITCH].s = ISS_OFF;
-                            Thermostat_heat_relayS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Thermostat_heat_relaySP, nullptr);
-                    } else if (relay == THERMOSTAT_COOL_RELAY) {
-                        if (strcmp(thermo_relay_response, "ON") == 0) {
-                            Thermostat_cool_relayS[ON_SWITCH].s = ISS_ON;
-                            Thermostat_cool_relayS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(thermo_relay_response, "OFF") == 0) {
-                            Thermostat_cool_relayS[ON_SWITCH].s = ISS_OFF;
-                            Thermostat_cool_relayS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Thermostat_cool_relaySP, nullptr);
-                    } else if (relay == THERMOSTAT_HUMIDITY_RELAY) {
-                        if (strcmp(thermo_relay_response, "ON") == 0) {
-                            Thermostat_humidity_relayS[ON_SWITCH].s = ISS_ON;
-                            Thermostat_humidity_relayS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(thermo_relay_response, "OFF") == 0) {
-                            Thermostat_humidity_relayS[ON_SWITCH].s = ISS_OFF;
-                            Thermostat_humidity_relayS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Thermostat_humidity_relaySP, nullptr);
+                    switch(relay) {
+                        case THERMOSTAT_HEAT_RELAY:
+                            if (strcmp(thermo_relay_response, "ON") == 0) {
+                                Thermostat_heat_relayS[ON_SWITCH].s = ISS_ON;
+                                Thermostat_heat_relayS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(thermo_relay_response, "OFF") == 0) {
+                                Thermostat_heat_relayS[ON_SWITCH].s = ISS_OFF;
+                                Thermostat_heat_relayS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Thermostat_heat_relaySP, nullptr);
+                            break;
+                        case THERMOSTAT_COOL_RELAY:
+                            if (strcmp(thermo_relay_response, "ON") == 0) {
+                                Thermostat_cool_relayS[ON_SWITCH].s = ISS_ON;
+                                Thermostat_cool_relayS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(thermo_relay_response, "OFF") == 0) {
+                                Thermostat_cool_relayS[ON_SWITCH].s = ISS_OFF;
+                                Thermostat_cool_relayS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Thermostat_cool_relaySP, nullptr);
+                            break;
+                        case THERMOSTAT_HUMIDITY_RELAY:
+                            if (strcmp(thermo_relay_response, "ON") == 0) {
+                                Thermostat_humidity_relayS[ON_SWITCH].s = ISS_ON;
+                                Thermostat_humidity_relayS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(thermo_relay_response, "OFF") == 0) {
+                                Thermostat_humidity_relayS[ON_SWITCH].s = ISS_OFF;
+                                Thermostat_humidity_relayS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Thermostat_humidity_relaySP, nullptr);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -1174,60 +1257,69 @@ void OCS::SlowTimerHit()
                 int power_relay_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, power_relay_response,
                                                                                         power_relay_command);
                 if (power_relay_error_or_fail > 1) {
-                    if (relay == POWER_DEVICE1) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device1S[ON_SWITCH].s = ISS_ON;
-                            Power_Device1S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device1S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device1S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device1SP, nullptr);
-                    } else if (relay == POWER_DEVICE2) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device2S[ON_SWITCH].s = ISS_ON;
-                            Power_Device2S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device2S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device2S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device2SP, nullptr);
-                    } else if (relay == POWER_DEVICE3) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device3S[ON_SWITCH].s = ISS_ON;
-                            Power_Device3S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device3S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device3S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device3SP, nullptr);
-                    } else if (relay == POWER_DEVICE4) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device4S[ON_SWITCH].s = ISS_ON;
-                            Power_Device4S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device4S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device4S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device4SP, nullptr);
-                    } else if (relay == POWER_DEVICE5) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device5S[ON_SWITCH].s = ISS_ON;
-                            Power_Device5S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device5S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device5S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device5SP, nullptr);
-                    } else if (relay == POWER_DEVICE6) {
-                        if (strcmp(power_relay_response, "ON") == 0) {
-                            Power_Device6S[ON_SWITCH].s = ISS_ON;
-                            Power_Device6S[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(power_relay_response, "OFF") == 0) {
-                            Power_Device6S[ON_SWITCH].s = ISS_OFF;
-                            Power_Device6S[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&Power_Device6SP, nullptr);
+                    switch(relay) {
+                        case POWER_DEVICE1:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device1S[ON_SWITCH].s = ISS_ON;
+                                Power_Device1S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device1S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device1S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device1SP, nullptr);
+                            break;
+                        case POWER_DEVICE2:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device2S[ON_SWITCH].s = ISS_ON;
+                                Power_Device2S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device2S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device2S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device2SP, nullptr);
+                            break;
+                        case POWER_DEVICE3:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device3S[ON_SWITCH].s = ISS_ON;
+                                Power_Device3S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device3S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device3S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device3SP, nullptr);
+                            break;
+                        case POWER_DEVICE4:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device4S[ON_SWITCH].s = ISS_ON;
+                                Power_Device4S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device4S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device4S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device4SP, nullptr);
+                            break;
+                        case POWER_DEVICE5:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device5S[ON_SWITCH].s = ISS_ON;
+                                Power_Device5S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device5S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device5S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device5SP, nullptr);
+                            break;
+                        case POWER_DEVICE6:
+                            if (strcmp(power_relay_response, "ON") == 0) {
+                                Power_Device6S[ON_SWITCH].s = ISS_ON;
+                                Power_Device6S[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(power_relay_response, "OFF") == 0) {
+                                Power_Device6S[ON_SWITCH].s = ISS_OFF;
+                                Power_Device6S[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&Power_Device6SP, nullptr);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -1245,51 +1337,59 @@ void OCS::SlowTimerHit()
                 int light_relay_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, light_relay_response,
                                                                                         light_relay_command);
                 if (light_relay_error_or_fail > 1) {
-                    if (relay == LIGHT_WRW_RELAY) {
-                        if (strcmp(light_relay_response, "ON") == 0) {
-                            LIGHT_WRWS[ON_SWITCH].s = ISS_ON;
-                            LIGHT_WRWS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(light_relay_response, "OFF") == 0) {
-                            LIGHT_WRWS[ON_SWITCH].s = ISS_OFF;
-                            LIGHT_WRWS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&LIGHT_WRWSP, nullptr);
-                    } else if (relay == LIGHT_WRR_RELAY) {
-                        if (strcmp(light_relay_response, "ON") == 0) {
-                            LIGHT_WRRS[ON_SWITCH].s = ISS_ON;
-                            LIGHT_WRRS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(light_relay_response, "OFF") == 0) {
-                            LIGHT_WRRS[ON_SWITCH].s = ISS_OFF;
-                            LIGHT_WRRS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&LIGHT_WRRSP, nullptr);
-                    } else if (relay == LIGHT_ORW_RELAY) {
-                        if (strcmp(light_relay_response, "ON") == 0) {
-                            LIGHT_ORWS[ON_SWITCH].s = ISS_ON;
-                            LIGHT_ORWS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(light_relay_response, "OFF") == 0) {
-                            LIGHT_ORWS[ON_SWITCH].s = ISS_OFF;
-                            LIGHT_ORWS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&LIGHT_ORWSP, nullptr);
-                    } else if (relay == LIGHT_ORR_RELAY) {
-                        if (strcmp(light_relay_response, "ON") == 0) {
-                            LIGHT_ORRS[ON_SWITCH].s = ISS_ON;
-                            LIGHT_ORRS[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(light_relay_response, "OFF") == 0) {
-                            LIGHT_ORRS[ON_SWITCH].s = ISS_OFF;
-                            LIGHT_ORRS[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&LIGHT_ORRSP, nullptr);
-                    } else if (relay == LIGHT_OUTSIDE_RELAY) {
-                        if (strcmp(light_relay_response, "ON") == 0) {
-                            LIGHT_OUTSIDES[ON_SWITCH].s = ISS_ON;
-                            LIGHT_OUTSIDES[OFF_SWITCH].s = ISS_OFF;
-                        } else if (strcmp(light_relay_response, "OFF") == 0) {
-                            LIGHT_OUTSIDES[ON_SWITCH].s = ISS_OFF;
-                            LIGHT_OUTSIDES[OFF_SWITCH].s = ISS_ON;
-                        }
-                        IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
+                    switch (relay) {
+                        case LIGHT_WRW_RELAY:
+                            if (strcmp(light_relay_response, "ON") == 0) {
+                                LIGHT_WRWS[ON_SWITCH].s = ISS_ON;
+                                LIGHT_WRWS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(light_relay_response, "OFF") == 0) {
+                                LIGHT_WRWS[ON_SWITCH].s = ISS_OFF;
+                                LIGHT_WRWS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&LIGHT_WRWSP, nullptr);
+                            break;
+                        case LIGHT_WRR_RELAY:
+                            if (strcmp(light_relay_response, "ON") == 0) {
+                                LIGHT_WRRS[ON_SWITCH].s = ISS_ON;
+                                LIGHT_WRRS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(light_relay_response, "OFF") == 0) {
+                                LIGHT_WRRS[ON_SWITCH].s = ISS_OFF;
+                                LIGHT_WRRS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&LIGHT_WRRSP, nullptr);
+                            break;
+                        case LIGHT_ORW_RELAY:
+                            if (strcmp(light_relay_response, "ON") == 0) {
+                                LIGHT_ORWS[ON_SWITCH].s = ISS_ON;
+                                LIGHT_ORWS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(light_relay_response, "OFF") == 0) {
+                                LIGHT_ORWS[ON_SWITCH].s = ISS_OFF;
+                                LIGHT_ORWS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&LIGHT_ORWSP, nullptr);
+                            break;
+                        case LIGHT_ORR_RELAY:
+                            if (strcmp(light_relay_response, "ON") == 0) {
+                                LIGHT_ORRS[ON_SWITCH].s = ISS_ON;
+                                LIGHT_ORRS[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(light_relay_response, "OFF") == 0) {
+                                LIGHT_ORRS[ON_SWITCH].s = ISS_OFF;
+                                LIGHT_ORRS[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&LIGHT_ORRSP, nullptr);
+                            break;
+                        case LIGHT_OUTSIDE_RELAY:
+                            if (strcmp(light_relay_response, "ON") == 0) {
+                                LIGHT_OUTSIDES[ON_SWITCH].s = ISS_ON;
+                                LIGHT_OUTSIDES[OFF_SWITCH].s = ISS_OFF;
+                            } else if (strcmp(light_relay_response, "OFF") == 0) {
+                                LIGHT_OUTSIDES[ON_SWITCH].s = ISS_OFF;
+                                LIGHT_OUTSIDES[OFF_SWITCH].s = ISS_ON;
+                            }
+                            IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -1302,61 +1402,104 @@ void OCS::SlowTimerHit()
 ******************************************************************/
 IPState OCS::updateWeather() {
     if (weather_tab_enabled) {
+
+        LOG_DEBUG("Weathe update called");
+
         for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
             if (weather_enabled[measurement] == 1) {
                 char measurement_reponse[RB_MAX_LEN];
                 char measurement_command[CMD_MAX_LEN];
-                if (measurement == WEATHER_TEMPERATURE) {
-                    indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-                } else if (measurement == WEATHER_SKY_TEMP) {
-                    indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-                } else if (measurement == WEATHER_DIFF_SKY_TEMP) {
-                    indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-                } else if (measurement == WEATHER_PRESSURE) {
-                    indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-                } else if (measurement == WEATHER_HUMIDITY) {
-                    indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-                } else if (measurement == WEATHER_WIND) {
-                    indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-                } else if (measurement == WEATHER_RAIN) {
-                    indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                } else if (measurement == WEATHER_CLOUD) {
-                    indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
-                } else if (measurement == WEATHER_SKY) {
-                    indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
+
+                LOGF_DEBUG("In weather measurements loop, %u", measurement);
+
+                switch (measurement) {
+                    case WEATHER_TEMPERATURE:
+                        indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
+                        break;
+                    case WEATHER_PRESSURE:
+                        indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
+                        break;
+                    case WEATHER_HUMIDITY:
+                        indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
+                        break;
+                    case WEATHER_WIND:
+                        indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
+                        break;
+                    case WEATHER_RAIN:
+                        indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
+                        break;
+                    case WEATHER_DIFF_SKY_TEMP:
+                        indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
+                        break;
+
+                    // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
+
+                    case WEATHER_SKY:
+                        indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
+                        break;
+                    case WEATHER_SKY_TEMP:
+                        indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
+                        break;
+                    default:
+                        break;
                 }
+
                 double value = conversion_error;
                 int measurement_error_or_fail = getCommandDoubleResponse(PortFD, &value, measurement_reponse,
                                                                          measurement_command);
-                if (measurement_error_or_fail >= 0 && value != conversion_error) {
-                     if (measurement == WEATHER_TEMPERATURE && weather_enabled[WEATHER_TEMPERATURE] == 1) {
-                        setParameterValue("WEATHER_TEMPERATURE", value);
-                    } else if (measurement == WEATHER_PRESSURE && weather_enabled[WEATHER_PRESSURE] == 1) {
-                        setParameterValue("WEATHER_PRESSURE", value);
-                    } else if (measurement == WEATHER_HUMIDITY && weather_enabled[WEATHER_HUMIDITY] == 1) {
-                        setParameterValue("WEATHER_HUMIDITY", value);
-                    } else if (measurement == WEATHER_WIND && weather_enabled[WEATHER_WIND] == 1) {
-                        setParameterValue("WEATHER_WIND", value);
-                    } else if (measurement == WEATHER_DIFF_SKY_TEMP && weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1) {
-                        setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-                    } else if (measurement == WEATHER_CLOUD && weather_enabled[WEATHER_CLOUD] ==1) {
+                if ((measurement_error_or_fail >= 0) && (value != conversion_error) &&
+                    (weather_enabled[measurement] == 1)) {
+                    switch(measurement) {
+                        case WEATHER_TEMPERATURE:
+                            setParameterValue("WEATHER_TEMPERATURE", value);
+                            break;
+                        case WEATHER_PRESSURE:
+                            setParameterValue("WEATHER_PRESSURE", value);
+                            break;
+                        case WEATHER_HUMIDITY:
+                            setParameterValue("WEATHER_HUMIDITY", value);
+                            break;
+                        case WEATHER_WIND:
+                            setParameterValue("WEATHER_WIND", value);
+                            break;
+                        case WEATHER_RAIN:
+                            setParameterValue("WEATHER_RAIN", value);
+                            break;
+                        case WEATHER_DIFF_SKY_TEMP:
+                            setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
+                            break;
+
+                     // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
+
+                        case WEATHER_SKY:
+                            IUSaveText(&Weather_SkyT[0], measurement_reponse);
+                            IDSetText(&Weather_SkyTP, nullptr);
+                            break;
+                        case WEATHER_SKY_TEMP:
+                            IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
+                            IDSetText(&Weather_Sky_TempTP, nullptr);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                // Separate because WEATHER_CLOUD is the only weather parameter that return a string
+                if ((measurement == WEATHER_CLOUD) && (weather_enabled[WEATHER_CLOUD] == 1)) {
+                    char measurement_reponse[RB_MAX_LEN];
+                    int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
+                                                                             OCS_get_cloud_description);
+                    if (measurement_error_or_fail > 1) {
                         IUSaveText(&Weather_CloudT[0], measurement_reponse);
                         IDSetText(&Weather_CloudTP, nullptr);
-                    } else if (measurement == WEATHER_SKY && weather_enabled[WEATHER_SKY] ==1) {
-                        IUSaveText(&Weather_SkyT[0], measurement_reponse);
-                        IDSetText(&Weather_SkyTP, nullptr);
-                    } else if (measurement == WEATHER_SKY_TEMP && weather_enabled[WEATHER_SKY_TEMP] ==1) {
-                        IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
-                        IDSetText(&Weather_Sky_TempTP, nullptr);
                     }
                 }
             }
-        }
-        if (WI::syncCriticalParameters())
-        {
-            LOG_DEBUG("SyncCriticalParameters = true");
-        } else {
-            LOG_DEBUG("SyncCriticalParameters = false");
+            if (WI::syncCriticalParameters()) {
+                LOG_DEBUG("SyncCriticalParameters = true");
+            } else {
+                LOG_DEBUG("SyncCriticalParameters = false");
+            }
         }
     }
 
@@ -1902,51 +2045,48 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
 
         LOGF_DEBUG("Got an IsNewNumber for: %s", name);
 
-        if (!strcmp(Thermostat_setpointsNP.name, name)) {
-            if (THERMOSTAT_SETPOINT_COUNT == n) {
-                for (int parameter = THERMOSTAT_HEAT_SETPOINT; parameter < THERMOSTAT_SETPOINT_COUNT; parameter++) {
-                    if (parameter == THERMOSTAT_HEAT_SETPOINT) {
-                        char thermostat_setpoint_command[CMD_MAX_LEN];
-                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                                OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
-                        char response[RB_MAX_LEN];
-                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-                        if(res < 0 || response[0] == '0') {
-                            LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
-                            return false;
-                        } else {
-                            LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
-                        }
-                    }
-                    else if (parameter == THERMOSTAT_COOL_SETPOINT) {
-                        char thermostat_setpoint_command[CMD_MAX_LEN];
-                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                                OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
-                        char response[RB_MAX_LEN];
-                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-                        if(res < 0 || response[0] == '0') {
-                            LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
-                            return false;
-                        } else {
-                            LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
-                        }
-                    } else if (parameter == THERMOSTAT_HUMIDITY_SETPOINT) {
-                        char thermostat_setpoint_command[CMD_MAX_LEN];
-                        sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                                OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
-                        char response[RB_MAX_LEN];
-                        int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
-                        if(res < 0 || response[0] == '0') {
-                            LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
-                            return false;
-                        } else {
-                            LOGF_INFO("Set Thermostat humidity setpoint to: %.0f %%", values[THERMOSTAT_HUMIDITY_SETPOINT]);
-                        }
-                    }
-                }
-                IUUpdateNumber(&Thermostat_setpointsNP, values, names, n);
-                Thermostat_setpointsNP.s = IPS_OK;
-                IDSetNumber(&Thermostat_setpointsNP, nullptr);
+        if (!strcmp(Thermostat_heat_setpointNP.name, name)) {
+            char thermostat_setpoint_command[CMD_MAX_LEN];
+            sprintf(thermostat_setpoint_command, "%s%.0f%s",
+                    OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
+            char response[RB_MAX_LEN];
+            int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
+            if(res < 0 || response[0] == '0') {
+                LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
+                return false;
+            } else {
+                LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
+                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HEAT_SETPOINT], &names[THERMOSTAT_HEAT_SETPOINT], n);
+                return true;
+            }
+        }
+        if (!strcmp(Thermostat_cool_setpointNP.name, name)) {
+            char thermostat_setpoint_command[CMD_MAX_LEN];
+            sprintf(thermostat_setpoint_command, "%s%.0f%s",
+                    OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
+            char response[RB_MAX_LEN];
+            int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
+            if(res < 0 || response[0] == '0') {
+                LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
+                return false;
+            } else {
+                LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
+                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_COOL_SETPOINT], &names[THERMOSTAT_COOL_SETPOINT], n);
+                return true;
+            }
+        }
+        if (!strcmp(Thermostat_humidity_setpointNP.name, name)) {
+            char thermostat_setpoint_command[CMD_MAX_LEN];
+            sprintf(thermostat_setpoint_command, "%s%.0f%s",
+                    OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
+            char response[RB_MAX_LEN];
+            int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
+            if(res < 0 || response[0] == '0') {
+                LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
+                return false;
+            } else {
+                LOGF_INFO("Set Thermostat humidity setpoint to: %.0f °C", values[THERMOSTAT_HUMIDITY_SETPOINT]);
+                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HUMIDITY_SETPOINT], &names[THERMOSTAT_HUMIDITY_SETPOINT], n);
                 return true;
             }
         }
@@ -1968,36 +2108,34 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
  *****************************************/
 bool OCS::ISNewText(const char *dev,const char *name,char *texts[],char *names[],int n)
 {
-    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0) {
-
-        // Debug only
-        // Manual tab - Arbitary command
-        // if (!strcmp(Arbitary_CommandTP.name, name)) {
-        //     if (1 == n) {
-        //         char command_response[RB_MAX_LEN] = {0};
-        //         int command_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, command_response, texts[0]);
-        //         if (command_error_or_fail > 0) {
-        //             if (strcmp(command_response, "") == 0) {
-        //                 indi_strlcpy(command_response, "No response", sizeof(command_response));
-        //             }
-        //         } else {
-        //             char error_code[RB_MAX_LEN] = {0};
-        //             if (command_error_or_fail == TTY_TIME_OUT) {
-        //                 indi_strlcpy(command_response, "No response", sizeof(command_response));
-        //             } else {
-        //                 sprintf(error_code, "Error: %d", command_error_or_fail);
-        //                 indi_strlcpy(command_response, error_code, sizeof(command_response));
-        //             }
-        //         }
-        //
-        //         // Replace the user entered string with the OCS response
-        //         indi_strlcpy(texts[0], command_response, RB_MAX_LEN);
-        //         IUUpdateText(&Arbitary_CommandTP, texts, names, n);
-        //         IDSetText(&Arbitary_CommandTP, nullptr);
-        //         return true;
-        //     }
-        // }
-    }
+    // Debug only - Manual tab, Arbitary command
+    // if (dev != nullptr && strcmp(dev, getDeviceName()) == 0) {
+    //     if (!strcmp(Arbitary_CommandTP.name, name)) {
+    //         if (1 == n) {
+    //             char command_response[RB_MAX_LEN] = {0};
+    //             int command_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, command_response, texts[0]);
+    //             if (command_error_or_fail > 0) {
+    //                 if (strcmp(command_response, "") == 0) {
+    //                     indi_strlcpy(command_response, "No response", sizeof(command_response));
+    //                 }
+    //             } else {
+    //                 char error_code[RB_MAX_LEN] = {0};
+    //                 if (command_error_or_fail == TTY_TIME_OUT) {
+    //                     indi_strlcpy(command_response, "No response", sizeof(command_response));
+    //                 } else {
+    //                     sprintf(error_code, "Error: %d", command_error_or_fail);
+    //                     indi_strlcpy(command_response, error_code, sizeof(command_response));
+    //                 }
+    //             }
+    //                     // Replace the user entered string with the OCS response
+    //             indi_strlcpy(texts[0], command_response, RB_MAX_LEN);
+    //             IUUpdateText(&Arbitary_CommandTP, texts, names, n);
+    //             IDSetText(&Arbitary_CommandTP, nullptr);
+    //             return true;
+    //         }
+    //     }
+    // }
+    // Debug only end
 
     return INDI::Dome::ISNewText(dev,name,texts,names,n);
 }
@@ -2019,22 +2157,21 @@ bool OCS::ISSnoopDevice(XMLEle *root)
  * *******************************************************************/
 bool OCS::sendOCSCommandBlind(const char *cmd)
 {
+    // No need to block this command as there is no response
+
     int error_type;
     int nbytes_write = 0;
-
     DEBUGF(INDI::Logger::DBG_DEBUG, "CMD <%s>", cmd);
-
     flushIO(PortFD);
     /* Add mutex */
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(PortFD, TCIFLUSH);
-
     if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK) {
         LOGF_ERROR("CHECK CONNECTION: Error sending command %s", cmd);
+        waitingForResponse = false;
         return 0; //Fail if we can't write
         //return error_type;
     }
-
     return 1;
 }
 
@@ -2043,6 +2180,8 @@ bool OCS::sendOCSCommandBlind(const char *cmd)
  * *******************************************************************/
 bool OCS::sendOCSCommand(const char *cmd)
 {
+    blockUntilClear();
+
     char response[1] = {0};
     int error_type;
     int nbytes_write = 0, nbytes_read = 0;
@@ -2061,6 +2200,8 @@ bool OCS::sendOCSCommand(const char *cmd)
 
     tcflush(PortFD, TCIFLUSH);
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%c>", response[0]);
+    //waitingForResponse = false;
+    clearBlock();
 
     if (nbytes_read < 1) {
         LOG_WARN("Timeout/Error on response. Check connection.");
@@ -2075,6 +2216,8 @@ bool OCS::sendOCSCommand(const char *cmd)
  * **********************************************************/
 int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
 {
+    blockUntilClear();
+
     char *term;
     int error_type;
     int nbytes_write = 0, nbytes_read = 0;
@@ -2105,6 +2248,8 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
+    //waitingForResponse = false;
+    clearBlock();
 
     return nbytes_read;
 }
@@ -2114,6 +2259,8 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
  * ************************************************/
 int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char *cmd)
 {
+    blockUntilClear();
+
     char *term;
     int error_type;
     int nbytes_write = 0, nbytes_read = 0;
@@ -2142,6 +2289,8 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2165,6 +2314,8 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
  * **********************************************/
 int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
 {
+    blockUntilClear();
+
     char *term;
     int error_type;
     int nbytes_write = 0, nbytes_read = 0;
@@ -2193,6 +2344,8 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2215,6 +2368,8 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
  * *************************************************************************/
 int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char *cmd)
 {
+    blockUntilClear();
+
     char *term;
     int error_type;
     int nbytes_write = 0, nbytes_read = 0;
@@ -2243,6 +2398,8 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     }
 
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%s>", data);
+    //waitingForResponse = false;
+    clearBlock();
 
     if (error_type != TTY_OK) {
         LOGF_DEBUG("Error %d", error_type);
@@ -2259,6 +2416,7 @@ int OCS::getCommandIntFromCharResponse(int fd, char *data, int *response, const 
 {
     int errorOrFail = getCommandSingleCharErrorOrLongResponse(fd, data, cmd);
     if (errorOrFail < 1) {
+        waitingForResponse = false;
         return errorOrFail;
     } else {
         int value = conversion_error;
@@ -2307,4 +2465,26 @@ int OCS::charToInt (char *inString)
     } catch (const std::out_of_range&) {
     }
     return value;
+}
+
+/*******************************************************
+ * Block outgoing command until previous return is clear
+ * *****************************************************/
+void OCS::blockUntilClear()
+{
+    // Blocking wait for last command response to clear
+    while (waitingForResponse) {
+        usleep(((OCSTimeoutSeconds * 1000000) + OCSTimeoutMicroSeconds) / 10);
+//        usleep(OCSTimeoutMicroSeconds / 10);
+    }
+    // Grab the response waiting command blocker
+    waitingForResponse = true;
+}
+
+/*********************************************
+ * Flush port and clear command sequence block
+ * *******************************************/
+void OCS::clearBlock()
+{
+    waitingForResponse = false;
 }
