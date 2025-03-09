@@ -3,6 +3,8 @@
 
     Copyright (C) 2024 Chen Jiaqi (cjq@qhyccd.com)
 
+    Copyright (C) 2025 Jasem Mutlaq (mutlaqja@ikarustech.com)
+
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
     License as published by the Free Software Foundation; either
@@ -41,33 +43,32 @@ class QFocuser : public INDI::Focuser
 
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
-        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual void TimerHit() override;
+
+    protected:
+        virtual bool Handshake() override;
+        virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
+        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
+        virtual bool SetFocuserSpeed(int speed) override;
+        virtual bool SyncFocuser(uint32_t ticks) override;
+        virtual bool AbortFocuser() override;
+        virtual bool ReverseFocuser(bool enabled) override;
 
     private:
         int SendCommand(char *cmd_line);
         int ReadResponse(char *buf, int &cmd_id);
         void GetFocusParams();
 
-        int updatePosition(double &value);
-        int updateTemperature();
-        int updatePositionRelativeInward(double value);
-        int updatePositionRelativeOutward(double value);
-        int updatePositionAbsolute(double value);
+        bool getTemperature();
 
-        int updateSetPosition(int value);
+        bool getPosition(double &position);
+        bool setAbsolutePosition(double position);
+        bool syncPosition(int position);
 
-        int updateSetReverse(int value);
+        bool setReverseDirection(int enabled);
 
-        int updateSetSpeed(int value);
-
-        int timerID { -1 };
-        bool initTargetPos = true;
         double targetPos{ 0 };
         bool isReboot = false;
-
-        int FocusSpeedMin = 0;
-        int FocusSpeedMax = 8;
 
         uint8_t buff[USB_CDC_RX_LEN];
 
@@ -77,6 +78,12 @@ class QFocuser : public INDI::Focuser
         int32_t cmd_out_temp;
         int32_t cmd_chip_temp;
         int32_t cmd_voltage;
+
+        // Variables to track last values to avoid unnecessary updates
+        double lastPosition { 0 };
+        double lastOutTemp { 0 };
+        double lastChipTemp { 0 };
+        double lastVoltage { 0 };
 
         INDI::PropertyNumber TemperatureNP{1};
 
@@ -88,14 +95,4 @@ class QFocuser : public INDI::Focuser
 
         INDI::PropertyNumber BOARDVersionNP{1};
 
-        INDI::PropertyNumber FocusSpeedNP{1};
-
-    protected:
-        virtual bool Handshake() override;
-        virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
-        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
-        virtual bool SetFocuserSpeed(int speed) override;
-        virtual bool SyncFocuser(uint32_t ticks) override;
-        virtual bool AbortFocuser() override;
-        virtual bool ReverseFocuser(bool enabled) override;
 };
