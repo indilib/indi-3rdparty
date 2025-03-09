@@ -1,9 +1,9 @@
 /** \file indi_ahp_gt.cpp
-    \brief Driver for the GT1 GOTO telescope mount controller.
+    \brief Driver for the GT GOTO telescope mount controllers.
     \author Ilia Platone
 
     \example indi_ahp_gt.cpp
-    Driver for the GT1 GOTO telescope mount controller.
+    Driver for the GT GOTO telescope mount controllers.
     See https://www.iliaplatone.com/gt1 for more information
 */
 
@@ -30,16 +30,13 @@ bool AHPGTBase::Handshake()
     {
         if(!ahp_gt_connect_fd(PortFD))
         {
-            if(!ahp_gt_detect_device())
-            {
-                ahp_gt_set_motor_steps(0, 200);
-                ahp_gt_set_motor_teeth(0, 1);
-                ahp_gt_read_values(0);
-                ahp_gt_set_motor_steps(1, 200);
-                ahp_gt_set_motor_teeth(1, 1);
-                ahp_gt_read_values(1);
-                return true;
-            }
+            ahp_gt_set_motor_steps(0, 200);
+            ahp_gt_set_motor_teeth(0, 1);
+            ahp_gt_read_values(0);
+            ahp_gt_set_motor_steps(1, 200);
+            ahp_gt_set_motor_teeth(1, 1);
+            ahp_gt_read_values(1);
+            return true;
         }
     }
     Disconnect();
@@ -198,12 +195,12 @@ bool AHPGTBase::updateProperties()
         GTDEConfigurationNP[GT_MOTOR_TEETH].setValue(ahp_gt_get_motor_teeth(1));
         GTDEConfigurationNP[GT_WORM_TEETH].setValue(ahp_gt_get_worm_teeth(1));
         GTDEConfigurationNP[GT_CROWN_TEETH].setValue(ahp_gt_get_crown_teeth(1));
-        GTDEConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(1));
-        GTDEConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(1) * 180.0 / M_PI);
+        GTDEConfigurationNP[GT_MAX_SPEED].setValue(get_max_speed(1));
+        GTDEConfigurationNP[GT_ACCELERATION].setValue(get_acceleration_angle(1) * 180.0 / M_PI);
         GTDEConfigurationNP.apply();
         for(int x = 0; x < GT_N_MOUNT_CONFIG; x++)
             GTMountConfigSP[x].setState(ISS_OFF);
-        int fork = (ahp_gt_get_mount_flags() & isForkMount) ? 1 : 0;
+        int fork = (get_mount_flags() & isForkMount) ? 1 : 0;
         int azeq = 0;
         azeq |= ((ahp_gt_get_features(0) & isAZEQ) != 0) ? 1 : 0;
         azeq |= ((ahp_gt_get_features(1) & isAZEQ) != 0) ? 1 : 0;
@@ -214,7 +211,7 @@ bool AHPGTBase::updateProperties()
         else
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
-        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency() * 700 + 1500);
+        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
         GTConfigurationNP.apply();
     }
     else
@@ -263,7 +260,7 @@ bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], 
         }
         if(!strcmp(GTConfigurationNP.getName(), name))
         {
-            ahp_gt_set_pwm_frequency((GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 700);
+            ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
             ahp_gt_write_values(0, &progress, &write_finished);
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
@@ -284,12 +281,12 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 case GT_GEM:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) & ~static_cast<int>(isAZEQ)));
                     ahp_gt_set_features(1, static_cast<SkywatcherFeature>(ahp_gt_get_features(1) & ~static_cast<int>(isAZEQ)));
-                    ahp_gt_set_mount_flags(static_cast<GT1Flags>(0));
+                    ahp_gt_set_mount_flags(static_cast<GTFlags>(0));
                     break;
                 case GT_AZEQ:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) | static_cast<int>(isAZEQ)));
                     ahp_gt_set_features(1, static_cast<SkywatcherFeature>(ahp_gt_get_features(1) | static_cast<int>(isAZEQ)));
-                    ahp_gt_set_mount_flags(static_cast<GT1Flags>(0));
+                    ahp_gt_set_mount_flags(static_cast<GTFlags>(0));
                     break;
                 case GT_FORK:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) & ~static_cast<int>(isAZEQ)));
@@ -311,19 +308,19 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
         if(!strcmp(GTRASteppingModeSP.getName(), name))
         {
-            ahp_gt_set_stepping_mode(0, static_cast<GT1SteppingMode>(GTRASteppingModeSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_mode(0, static_cast<GTSteppingMode>(GTRASteppingModeSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTRAWindingSP.getName(), name))
         {
-            ahp_gt_set_stepping_conf(0, static_cast<GT1SteppingConfiguration>(GTRAWindingSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_conf(0, static_cast<GTSteppingConfiguration>(GTRAWindingSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTRAGPIOConfigSP.getName(), name))
         {
-            ahp_gt_set_feature(0, static_cast<GT1Feature>(GTRAGPIOConfigSP.findOnSwitchIndex()));
+            ahp_gt_set_feature(0, static_cast<GTFeature>(GTRAGPIOConfigSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
@@ -335,19 +332,19 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
         if(!strcmp(GTDESteppingModeSP.getName(), name))
         {
-            ahp_gt_set_stepping_mode(1, static_cast<GT1SteppingMode>(GTDESteppingModeSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_mode(1, static_cast<GTSteppingMode>(GTDESteppingModeSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTDEWindingSP.getName(), name))
         {
-            ahp_gt_set_stepping_conf(1, static_cast<GT1SteppingConfiguration>(GTDEWindingSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_conf(1, static_cast<GTSteppingConfiguration>(GTDEWindingSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTDEGPIOConfigSP.getName(), name))
         {
-            ahp_gt_set_feature(1, static_cast<GT1Feature>(GTDEGPIOConfigSP.findOnSwitchIndex()));
+            ahp_gt_set_feature(1, static_cast<GTFeature>(GTDEGPIOConfigSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }

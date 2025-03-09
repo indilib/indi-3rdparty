@@ -1163,7 +1163,7 @@ bool AHP_XC::Connect()
     if(serialConnection->port() == nullptr)
         return false;
 
-    if(0 != ahp_xc_connect(serialConnection->port(), false))
+    if(0 != ahp_xc_connect(serialConnection->port()))
     {
         ahp_xc_disconnect();
         return false;
