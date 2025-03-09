@@ -31,7 +31,7 @@ USB and network connections supported.
 // Debug only
 
 // #include <signal.h>
-// #include <unistd.h>;
+// #include <unistd.h>
 
 // Debug only end
 
@@ -626,9 +626,6 @@ bool OCS::updateProperties()
     //------------------------------------
     deleteProperty(DomeMotionSP);
 
-//    if (weather_tab_enabled) {
-//        WI::updateProperties();
-//    }
     if (isConnected()) {
         defineProperty(&ShutterStatusTP);
         defineProperty(&DomeControlsSP);
@@ -1447,24 +1444,6 @@ IPState OCS::updateWeather() {
                         break;
                 }
 
-//                if (measurement == WEATHER_TEMPERATURE) {
-//                    indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_SKY_TEMP) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_DIFF_SKY_TEMP) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_PRESSURE) {
-//                    indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_HUMIDITY) {
-//                    indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_WIND) {
-//                    indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_RAIN) {
-//                    indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-//                } else if (measurement == WEATHER_SKY) {
-//                    indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-//                }
-
                 double value = conversion_error;
                 int measurement_error_or_fail = getCommandDoubleResponse(PortFD, &value, measurement_reponse,
                                                                          measurement_command);
@@ -1503,24 +1482,6 @@ IPState OCS::updateWeather() {
                         default:
                             break;
                     }
-
-//                     if ((measurement == WEATHER_TEMPERATURE) && (weather_enabled[WEATHER_TEMPERATURE] == 1)) {
-//                        setParameterValue("WEATHER_TEMPERATURE", value);
-//                    } else if ((measurement == WEATHER_PRESSURE) && (weather_enabled[WEATHER_PRESSURE] == 1)) {
-//                        setParameterValue("WEATHER_PRESSURE", value);
-//                    } else if ((measurement == WEATHER_HUMIDITY) && (weather_enabled[WEATHER_HUMIDITY] == 1)) {
-//                        setParameterValue("WEATHER_HUMIDITY", value);
-//                    } else if ((measurement == WEATHER_WIND) && (weather_enabled[WEATHER_WIND] == 1)) {
-//                        setParameterValue("WEATHER_WIND", value);
-//                    } else if ((measurement == WEATHER_DIFF_SKY_TEMP) && (weather_enabled[WEATHER_DIFF_SKY_TEMP] == 1)) {
-//                        setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-//                    } else if ((measurement == WEATHER_SKY) && (weather_enabled[WEATHER_SKY] == 1)) {
-//                        IUSaveText(&Weather_SkyT[0], measurement_reponse);
-//                        IDSetText(&Weather_SkyTP, nullptr);
-//                    } else if ((measurement == WEATHER_SKY_TEMP) && (weather_enabled[WEATHER_SKY_TEMP] == 1)) {
-//                        IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
-//                        IDSetText(&Weather_Sky_TempTP, nullptr);
-//                    }
                 }
 
                 // Separate because WEATHER_CLOUD is the only weather parameter that return a string
@@ -2096,6 +2057,7 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
             } else {
                 LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
                 IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HEAT_SETPOINT], &names[THERMOSTAT_HEAT_SETPOINT], n);
+                return true;
             }
         }
         if (!strcmp(Thermostat_cool_setpointNP.name, name)) {
@@ -2110,6 +2072,7 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
             } else {
                 LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
                 IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_COOL_SETPOINT], &names[THERMOSTAT_COOL_SETPOINT], n);
+                return true;
             }
         }
         if (!strcmp(Thermostat_humidity_setpointNP.name, name)) {
@@ -2124,10 +2087,9 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
             } else {
                 LOGF_INFO("Set Thermostat humidity setpoint to: %.0f °C", values[THERMOSTAT_HUMIDITY_SETPOINT]);
                 IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HUMIDITY_SETPOINT], &names[THERMOSTAT_HUMIDITY_SETPOINT], n);
+                return true;
             }
         }
-
-        return true;
     }
 
     if (strstr(name, "WEATHER_")) {
