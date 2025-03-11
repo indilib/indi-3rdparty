@@ -1,11 +1,11 @@
 # An INDI Roll Off Roof Driver
 
-RollOff ino roof driver using an Arduino to open and close the roof.
-The roof driver communicates with an Arduino that in turn interfaces with a roof motor or roof controller. The driver communicates using a basic set of directives. It is the Arduino working from this standard interface with the driver that requires adaptation to control the selected motor. The driver provides an interface sufficient to open, close and determine if the roof is fully opened or fully closed for a roll-off or similar roof.
+RollOffino roof driver using an Arduino to open and close the roof.
+The roof driver communicates with an Arduino that in turn interfaces with a roof motor or roof controller. The driver communicates with the Arduino using a basic set of commands. It is the Arduino working from this standard interface with the driver that requires adaptation to control the selected motor. The driver provides an interface sufficient to open, close and determine if the roof is fully opened or fully closed for a roll-off or similar roof.
 
 ![Components](components.png)
 
-The driver as with other INDI drivers can be on the same host as the Ekos client or remote on a different computer located in the observatory. The Arduino can be local to the roll-off roof driver using a USB connection. A suitably equired Arduino can be connected to the roll-off roof driver using a WiFi connection. The Arduino activates the circuits that control the roof motor. The motor control can be provided by a re-purposed commercial opener, or a controller suitably built or bought to match requirements for the selected motor.
+The driver as with other INDI drivers can be on the same host as the Ekos client or remote on a different computer located in the observatory. The Arduino can be local to the roll-off roof driver using a USB connection. A suitably equired Arduino could be connected to the roll-off roof driver using a WiFi connection. The Arduino activates the circuits that control the roof motor. The motor control can be provided by a re-purposed commercial opener, or a controller suitably built or bought to match requirements for the selected motor.
 
 # The driver
 
@@ -13,19 +13,20 @@ When installed, the RollOff ino driver will be available for selection under Dom
 
 ![Ekos Profile](ekos_profile.png)
 
-Provided as an INDI third party driver. The driver is derived from the Ekos roll-off roof simulator driver. USB is the normal connection method, and it uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Park and Unpark commands from the Ekos Observatory panel. These are sent to the Arduino in the form of open and close requests. The Arduino uses the requests to open or close relays in order to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed sensors to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code. Action switches that can be activated to most likely set relays have been added since the first driver release. The Actions are to provide more user implemented options in the Arduino. There are some Arduino examples to show the use of Actions.
+USB is the normal connection method between the driver and the Arduino. It uses a default transmission rate of 38400 baud which can be changed in the Arduino code. The driver responds to Open and Close commands from the Ekos Observatory panel. These commands are sent to the Arduino in the form of open and close requests. The Arduino uses the requests to set relays to activate roof movement. The driver will generate requests to obtain the state of the fully open and fully closed switches to determine when the park or unpark request have been completed. The Arduino responds to to those request by reading the assigned switches. There is also an Abort request which should stop any movement in progress. A lock status intended to indicate some form of external mechanical roof lock has been applied. If the lock switch is closed it will block the driver from issuing movement requests. There is an Auxiliary function and status. The use of this auxiliary function is undefined in the driver, if and how it is used is up to the Arduino code.
+
+In the current version of the driver aditional digital input and output switches are available. These additional switches are referred to as Actions in the Arduino code. They can be used to set relays and receive the state of switches. The Actions are to provide more user implemented options in the Arduino. There is a need to maintain backward compatibility with previous versions of Arduino code. The Arduino will inform the driver how many if any digital input and outputs it expects.
 
 ## Observatory interface.
 The observatory interface's open and close buttons can used to open and close the roof.
 
 ![Observatory](roof_obs.png)
 
-
 ## INDI control panels.
 The INDI Control panels provide the detail and setup interfaces.
 
 ### The Main Panel
-The Main panel's periodic monitoring of the roof status as provided by the Arduino code is reflected in the status lights. The Park/Unpark provides local replication of the Observatory functions. The Open/Close buttons might be of use, if for some reason there is a discrepancy between the drivers notion of where the roof is versus the actual position.
+The Main panel's periodic monitoring of the roof status as provided by the Arduino code is reflected in the status lights. The Open and Close buttons provide local roof controls.
 
 ![Main Panel](roof_main.png)
 
@@ -39,10 +40,15 @@ The Options panel is for the setting of the standard driver INDI options and for
 
 ![Options Panel](roof_options.png)
 
-### The Action Panel
-The Actions panel is for sending Action requests to the Arduino..
+### The Output Panel
+The Output panel is for sending digital on/off requests to the Arduino..
 
-![Action Panel](action-controls.png)
+![Output Panel](roof_output.png)
+
+### The Input Panel
+The Input panel is for receving digital on/off status from the Arduino..
+
+![Input Panel](roof_input.png)
 
 ## Weather protection.
 The driver will interact with the Ekos weather monitoring applications or DIY local sensors and the watchdog timer along with the other dome related drivers.
@@ -55,17 +61,17 @@ It is the Arduino code along with hardware build that is responsible for control
 Using a commercial controller of some kind can simplify the design of the Arduino project. A controller can provide proper sizing of the motor for the size and weight of the roof. Provide obstruction protection, enforce range limits, variable force adjustments, slow start and slow stop to lessen the impact of sudden activation to get the roof moving. Some models will run off solar power and the choice of chain or track. With a controller that can be activated by a single or a pair of on/off button it is a simple job to wire a relay in parallel to emulate the pushing of a button. There is built in support in the example relay code to temporarily close a relay for a particular length of time. Such controllers have their own way of detecting the end of roof travel in order to stop movement. Additional switches are required to notify the Arduino when the roof is fully opened or fully closed. The Arduino can then relay that information to the driver when requested.
 
 ## Version Change
-After the INDI release 2.1.1, Actions were added to the driver. The driver provides an interface for eight Actions. Arduino code written before the Actions were added can not support the action requests and would report errors if they were communicated from the driver. The driver will always show the extra actions in its Action panels. Whether the Actions can be used will be determined when the Arduino first connects to the Rolloff Ino driver. If the Arduino code is older it will not indicate support for actions when it responds to the driver's connection. The driver will suppress the actions preventing them from being sent to the Arduino. Current examples provided with the action code implemented will inform the driver how many it can support. Only the number of actions that are supported in software and hardware should be requested. This will reduce chances for errors and limit the communication trafic. 
-These rolloff.ino examples have been removed: ar1450, linear_actuator, motor, boutons.
-These have been renamed for interim use, standard and wifi to standard.prev and wifi.prev. Arduino code based on  removed examples can continue to be used.
-The following rolloff.ino examples have been added. standard, relay, linear, syren. 
+In the INDI 2.1.2 release Aditional digital input and outputs were added to the driver. The driver provides for up to eight od each. Arduino code written before the additions were added can not support the action requests and would report errors if they were communicated from the driver. Whether the additional input/outputs can be used will be determined when the Arduino first connects to the Rolloff Ino driver. If the Arduino code is older it will not indicate support for them when it responds to the driver's connection. Current examples provided with what the Arduino code refers to as Actions will inform the driver how many it can support. Only the number of actions that are supported in software and hardware should be requested. This will reduce chances for errors and limit the communication trafic.
+
+The following Arduino rolloff.ino examples have been removed: ar1450, linear_actuator, motor, boutons.
+These examples have been renamed for interim use, standard and wifi to standard.prev and wifi.prev. Arduino code based on  removed examples can continue to be used.
+The following rolloff.ino examples extended for the additional input/outputs have been updated. standard, relay, linear, syren. 
 
 ## Arduino Examples
 Example Arduino code is provided as a starting point. The Arduino code examples provides communication with the driver and template code for reading switches and setting relays. The selected starting code will need to be moved to a directory for development. The name of the directory and the name of the Arduino sketch should be the same. The code name must have a .ino extension. For example ~/Projects/arduino/roof/roof.ino Then you work in the Arduino IDE to edit and load the code onto your Arduino device. The IDE can be downloaded and installed from the arduino.cc web site. You use the IDE to select the type of Arduino board you are working with and define the USB port connecting it. The IDE can be used to edit the code, run builds and load the built sketch onto the Arduino board. https://www.arduino.cc/en/software. Use the most recent Arduino IDE 2 release.
 
 ### rolloff.ino.standard
-General example as a starting point. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This might be the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1. Another kind of controller might not provice the abiltiy to stop itself when end of travel is reached. In that case as well as sending the status back the driver would need to add activation of the stop.
-Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions. 
+General example as a starting point. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This is the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1. Another kind of controller might not provide the abiltiy to stop itself when end of travel is reached. In that case as well as sending the status back the driver would need to add activation of the stop. Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions. 
 
 ### rolloff.ino.relay
 Like the standard but does indicate Actions accepted during the handshake with the driver. Uses both a relay shield and a four channel relay module. Provides two example Actions associated with the four channel relay module. The first Action sets a momentary relay (push button) and provide status feedback. The second action sets and holds a relay until manually released no status response provided.
@@ -74,7 +80,7 @@ Like the standard but does indicate Actions accepted during the handshake with t
 Use of a separate four channel relay module and no relay shield. Two Linear Actuators operating in unison activated by the roof open and close buttons. A LN298N motor controller is used to operate the linear actuators. The LN298N PWM option is used to compensate for differences in performance between the linear actuators. Uses one of the relays to apply power to the LN298N when movement activated. Shows example of Actions using the ones from rolloff.ino.relay.
 
 ### rolloff.ino.syren.
-This example controls a 12 volt DC motor using a SyRen motor driver. This is an Arduino Mega example, no relays are used. Fully open and fully closed sensors are used to know when to stop the motor. Two extra sensors provide slow start and stop. The code uses a SyRen 50A motor driver to vary power to the motor and reverse polarity in order to change direction. It uses soft start and soft stop by ramping up and down the speed of the motor to open and close the roof. The SyRen powers the motor and can also supply 5 volts to power an Arduino. It includes code for using local buttons. Code is a subset from a working system with the extended Action edits made. It has not received testing in its presnt form. The SyRen documentation indicates that if using a power supply a 12V battery should also be used. The image shows a completely batery powered installation.
+This example controls a 12 volt DC motor using a SyRen motor driver. This is an Arduino Mega example, no relays are used. Fully open and fully closed sensors are used to know when to stop the motor. Two extra sensors provide slow start and stop. The code uses a SyRen 50A motor driver to vary power to the motor and reverse polarity in order to change direction. It uses soft start and soft stop by ramping up and down the speed of the motor to open and close the roof. The SyRen powers the motor and can also supply 5 volts to power an Arduino. It includes code for using local buttons. Code is a subset from a working system with the extended Action edits made. It has not received testing in its presnt form. The SyRen documentation indicates that if using a power supply a 12V battery should also be used. The image shows a batery powered SyRen installation. The Arduino uses a separate power supply.
 
 ### rolloff.ino.standard.prev
 Example code undisturbed by the addition of Actions. Used for testing old Arduino to newer driver. Retained for a while. 
@@ -180,14 +186,7 @@ Set a relay     (SET:CLOSE:ON|OFF) >
 
 # A project build example.
 
-The images match with the rolloffino.ino.ar1450 install.
-
-The Arduino Due with a relay board. The additional DC supply is to provide the higher voltage required for the relays. The relay bank is opto-isolated from the protected 3.3V Arduino Due which has its own supply. Here only one of the two USB connections is in use. The other can be connected if debug logging is required. Just the single relay on the right is in use with the red and black wires routed to the Aleko controller. When the relay closes, then opens it will replace the action of a manual push button closing a connection.
-
-![Due Image](arduino_due.jpg)
-
-
-An Arduino Uno with a relay shield would make for a cleaner install here. With its 5 volt power and built in pull-up resistors it can be a more straight forward installation.
+An Arduino Uno with a matching relay shield can be a straight forward installation.
 
 ![Uno Shield](uno_shield.png)
 
