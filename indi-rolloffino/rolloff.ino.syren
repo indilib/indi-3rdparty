@@ -7,7 +7,7 @@
  *                  Communication protocol in terms of function not switches/relays
  *                  ~ 15KB 2% of Due, 50% of Nano
  *
- * tg November 2021 Break out commandReceived and requestReceived to make alernate actions more 
+ * tg November 2021 Break out commandReceived and requestReceived to make alternate actions more 
  *                  obvious/accessible, Remove Due specific code.
  *
  * tg November 2023 Rework to use sensors and SyRen 50A in place of switches and SyRen25.
@@ -723,13 +723,13 @@ void requestReceived(int sw) {
 // Process INDI driver requests to determine if roof fully opened or fully closed
 bool requestProcess(int pin, const char** error) {
   if (strcmp(target, "OPENED") == 0) {
-    if (roof_state == OPENED)
+    if ((roof_state == OPENED) || (isSensorOn(SENSOR_OPENED)))
       strcpy(value, "ON");
     else
       strcpy(value, "OFF");
     return true;
   } else if (strcmp(target, "CLOSED") == 0) {
-    if (roof_state == CLOSED)
+    if ((roof_state == CLOSED) || (isSensorOn(SENSOR_CLOSED)))
       strcpy(value, "ON");
     else
       strcpy(value, "OFF");
@@ -841,12 +841,12 @@ bool commandProcess(int cmd, bool button, const char** error) {
     case CMD_ABORT:
       {
         if (roof_state == OPENING || roof_state == CLOSING) {
-          roof_state = PARTIALLY_OPEN;
           if (roof_state == OPENING) {
             rampDown(true, ROOF_SPEED_STOPPED);
           } else {
             rampDown(false, ROOF_SPEED_STOPPED);
           }
+          roof_state = PARTIALLY_OPEN;
         } else {
           *error = ERROR10;
           return false;
@@ -1002,7 +1002,7 @@ void monitorRoofSensors() {
       rampDown(true, ROOF_SPEED_STOPPED);
     } else if (roof_state == CLOSING && (SWITCH_CLOSED != 0) && (digitalRead(SWITCH_CLOSED) != OPEN_CONTACT)) {
       roof_state = CLOSED;
-      rampDown(true, ROOF_SPEED_STOPPED);
+      rampDown(false, ROOF_SPEED_STOPPED);
     }
   }
   return;
