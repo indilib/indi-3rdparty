@@ -43,12 +43,12 @@ The Options panel is for the setting of the standard driver INDI options and for
 ### The Output Panel
 The Output panel is for sending digital on/off requests to the Arduino..
 
-![Output Panel](roof_output.png)
+![Output Panel](roof_outputs.png)
 
 ### The Input Panel
 The Input panel is for receving digital on/off status from the Arduino..
 
-![Input Panel](roof_input.png)
+![Input Panel](roof_inputs.png)
 
 ## Weather protection.
 The driver will interact with the Ekos weather monitoring applications or DIY local sensors and the watchdog timer along with the other dome related drivers.
