@@ -128,17 +128,17 @@ bool AUDFOCUSER::initProperties()
     addDebugControl();
 
     // Set limits as per documentation
-    FocusAbsPosN[0].min  = 0;
-    FocusAbsPosN[0].max  = 999999;
-    FocusAbsPosN[0].step = 1000;
+    FocusAbsPosNP[0].setMin(0);
+    FocusAbsPosNP[0].setMax(999999);
+    FocusAbsPosNP[0].setStep(1000);
 
-    FocusRelPosN[0].min  = 0;
-    FocusRelPosN[0].max  = 999;
-    FocusRelPosN[0].step = 100;
+    FocusRelPosNP[0].setMin(0);
+    FocusRelPosNP[0].setMax(999);
+    FocusRelPosNP[0].setStep(100);
 
-    FocusSpeedN[0].min  = 1;
-    FocusSpeedN[0].max  = 254;
-    FocusSpeedN[0].step = 10;
+    FocusSpeedNP[0].setMin(1);
+    FocusSpeedNP[0].setMax(254);
+    FocusSpeedNP[0].setStep(10);
 
     pthread_mutex_init( &connectionmutex, NULL );
 
@@ -397,18 +397,18 @@ void AUDFOCUSER::TimerHit()
     // Check if we have a pending motion
     // if isMoving() is false, then we stopped, so we need to set the Focus Absolute
     // and relative properties to OK
-    if ( (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY) && ( statusCode >= STILL ) )
+    if ( (FocusAbsPosNP.getState() == IPS_BUSY || FocusRelPosNP.getState() == IPS_BUSY) && ( statusCode >= STILL ) )
     {
-        FocusAbsPosNP.s = IPS_OK;
-        IDSetNumber(&FocusAbsPosNP, nullptr);
-        FocusRelPosNP.s = IPS_OK;
-        IDSetNumber(&FocusRelPosNP, nullptr);
+        FocusAbsPosNP.setState(IPS_OK);
+        FocusAbsPosNP.apply();
+        FocusRelPosNP.setState(IPS_OK);
+        FocusRelPosNP.apply();
     }
     // If there was a different between last and current positions, let's update all clients
-    else if (currentPosition != FocusAbsPosN[0].value)
+    else if (currentPosition != FocusAbsPosNP[0].getValue())
     {
-        FocusAbsPosN[0].value = currentPosition;
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP[0].setValue(currentPosition);
+        FocusAbsPosNP.apply();
     }
 
     SetTimer(getCurrentPollingPeriod());
